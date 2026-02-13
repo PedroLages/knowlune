@@ -1,19 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router";
 import {
-  LayoutDashboard,
-  BookOpen,
   GraduationCap,
-  BarChart3,
-  Settings as SettingsIcon,
   Search,
   Bell,
   ChevronDown,
-  Library,
   Sun,
   Moon,
-  Info,
-  Notebook,
+  Menu,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { useTheme } from "next-themes";
@@ -21,25 +15,92 @@ import { allCourses } from "@/data/courses";
 import { getTotalCompletedLessons, getCompletedCourses } from "@/lib/progress";
 import { SearchCommandPalette } from "./figma/SearchCommandPalette";
 import { KeyboardShortcutsDialog } from "./figma/KeyboardShortcutsDialog";
+import { BottomNav } from "./navigation/BottomNav";
+import { useIsMobile, useIsTablet, useIsDesktop } from "@/app/hooks/useMediaQuery";
+import { Sheet, SheetContent } from "./ui/sheet";
+import { navigationItems } from "@/app/config/navigation";
 
-const navigation = [
-  { name: "Overview", path: "/", icon: LayoutDashboard },
-  { name: "My Progress", path: "/my-class", icon: BookOpen },
-  { name: "Courses", path: "/courses", icon: GraduationCap },
-  { name: "Library", path: "/library", icon: Library },
-  { name: "Journal", path: "/messages", icon: Notebook },
-  { name: "About", path: "/instructors", icon: Info },
-  { name: "Reports", path: "/reports", icon: BarChart3 },
-  { name: "Settings", path: "/settings", icon: SettingsIcon },
-];
+// Reusable sidebar content component
+function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+  const location = useLocation();
+
+  return (
+    <>
+      {/* Logo */}
+      <div className="flex items-center gap-2 mb-8">
+        <div
+          className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center"
+          aria-hidden="true"
+        >
+          <GraduationCap className="w-5 h-5 text-white" />
+        </div>
+        <span className="font-bold text-xl">Eduvi</span>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1" aria-label="Main navigation">
+        <ul className="space-y-2">
+          {navigationItems.map((item) => {
+            const isActive =
+              item.path === "/"
+                ? location.pathname === "/"
+                : location.pathname.startsWith(item.path);
+            const Icon = item.icon;
+
+            return (
+              <li key={item.path}>
+                <Link
+                  to={item.path}
+                  onClick={onNavigate}
+                  aria-current={isActive ? "page" : undefined}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-150 ${
+                    isActive
+                      ? "bg-blue-600 text-white"
+                      : "text-muted-foreground hover:bg-accent"
+                  }`}
+                >
+                  <Icon className="w-5 h-5" aria-hidden="true" />
+                  <span className="text-sm font-medium">{item.name}</span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+
+      {/* Progress Widget */}
+      <div
+        className="mt-auto bg-muted rounded-xl p-4 text-center"
+        role="status"
+        aria-label="Course progress summary"
+      >
+        <p className="text-sm font-semibold">
+          {getCompletedCourses(allCourses).length}/{allCourses.length} courses
+        </p>
+        <p className="text-xs text-muted-foreground mt-1">
+          {getTotalCompletedLessons()} lessons completed
+        </p>
+      </div>
+    </>
+  );
+}
 
 export function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
+  const isDesktop = useIsDesktop();
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+
+  // Tablet sidebar state with localStorage persistence
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    const saved = localStorage.getItem("eduvi-sidebar-v1");
+    return saved !== null ? JSON.parse(saved) : true; // Default to open
+  });
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -81,6 +142,11 @@ export function Layout() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
+  // Persist sidebar state to localStorage
+  useEffect(() => {
+    localStorage.setItem("eduvi-sidebar-v1", JSON.stringify(sidebarOpen));
+  }, [sidebarOpen]);
+
   return (
     <div className="flex h-screen bg-background">
       {/* Skip to content link for keyboard/screen-reader users */}
@@ -91,80 +157,66 @@ export function Layout() {
         Skip to content
       </a>
 
-      {/* Sidebar */}
-      <aside
-        className="w-[220px] bg-card rounded-[24px] m-6 p-6 flex flex-col"
-        aria-label="Sidebar"
-      >
-        {/* Logo */}
-        <div className="flex items-center gap-2 mb-8">
-          <div
-            className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center"
-            aria-hidden="true"
-          >
-            <GraduationCap className="w-5 h-5 text-white" />
-          </div>
-          <span className="font-bold text-xl">Eduvi</span>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1" aria-label="Main navigation">
-          <ul className="space-y-2">
-            {navigation.map((item) => {
-              const isActive =
-                item.path === "/"
-                  ? location.pathname === "/"
-                  : location.pathname.startsWith(item.path);
-              const Icon = item.icon;
-
-              return (
-                <li key={item.path}>
-                  <Link
-                    to={item.path}
-                    aria-current={isActive ? "page" : undefined}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
-                      isActive
-                        ? "bg-blue-600 text-white"
-                        : "text-muted-foreground hover:bg-accent"
-                    }`}
-                  >
-                    <Icon className="w-5 h-5" aria-hidden="true" />
-                    <span className="text-sm font-medium">{item.name}</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-
-        {/* Progress Widget */}
-        <div
-          className="mt-auto bg-muted rounded-xl p-4 text-center"
-          role="status"
-          aria-label="Course progress summary"
+      {/* Desktop Sidebar - Persistent on desktop (≥1024px), hidden on tablet/mobile */}
+      {isDesktop && (
+        <aside
+          className="w-[220px] bg-card rounded-[24px] m-6 p-6 flex flex-col"
+          aria-label="Sidebar"
         >
-          <p className="text-sm font-semibold">
-            {getCompletedCourses(allCourses).length}/{allCourses.length} courses
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            {getTotalCompletedLessons()} lessons completed
-          </p>
-        </div>
-      </aside>
+          <SidebarContent />
+        </aside>
+      )}
+
+      {/* Tablet Sidebar - Collapsible Sheet on tablet (640-1023px) */}
+      {isTablet && (
+        <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+          <SheetContent
+            side="left"
+            className="w-[280px] p-6 flex flex-col"
+            aria-label="Sidebar"
+          >
+            <SidebarContent onNavigate={() => setSidebarOpen(false)} />
+          </SheetContent>
+        </Sheet>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header
-          className="bg-card rounded-[24px] m-6 mb-0 p-4 px-6 flex items-center justify-between"
+          className="bg-card rounded-[24px] m-6 mb-0 p-4 px-6 flex items-center gap-4 justify-between"
           role="banner"
         >
-          {/* Search trigger */}
-          <div className="relative w-96" role="search" aria-label="Site search">
+          {/* Hamburger Menu Button - Only on tablet (640-1023px) */}
+          {isTablet && (
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 rounded-lg hover:bg-accent transition-colors duration-150"
+              aria-label="Open navigation menu"
+              aria-expanded={sidebarOpen}
+            >
+              <Menu className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
+            </button>
+          )}
+
+          {/* Search trigger - Responsive */}
+          <div className="relative flex-1 max-w-md sm:flex-none sm:w-96 lg:w-80" role="search" aria-label="Site search">
+            {/* Mobile: Icon-only button */}
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
-              className="flex items-center w-full pl-10 pr-4 py-2 bg-muted rounded-md text-sm text-muted-foreground hover:bg-accent transition-colors text-left cursor-pointer"
+              className="sm:hidden p-2 rounded-lg hover:bg-accent transition-colors duration-150"
+              aria-label="Open search (Cmd+K)"
+              aria-keyshortcuts="Meta+K Control+K"
+            >
+              <Search className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
+            </button>
+
+            {/* Tablet/Desktop: Full search bar */}
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              className="hidden sm:flex items-center w-full pl-10 pr-4 py-2 bg-muted rounded-md text-sm text-muted-foreground hover:bg-accent transition-colors duration-150 text-left cursor-pointer"
               aria-label="Open search (Cmd+K)"
               aria-keyshortcuts="Meta+K Control+K"
             >
@@ -222,8 +274,8 @@ export function Layout() {
           </div>
         </header>
 
-        {/* Page Content */}
-        <main id="main-content" className="flex-1 overflow-auto p-6 pt-6">
+        {/* Page Content - Extra bottom padding on mobile for bottom nav */}
+        <main id="main-content" className="flex-1 overflow-auto p-6 pt-6 pb-20 sm:pb-6">
           <Outlet />
         </main>
       </div>
@@ -236,6 +288,9 @@ export function Layout() {
         open={shortcutsOpen}
         onOpenChange={setShortcutsOpen}
       />
+
+      {/* Mobile Bottom Navigation - Only visible on mobile (<640px) */}
+      {isMobile && <BottomNav />}
     </div>
   );
 }
