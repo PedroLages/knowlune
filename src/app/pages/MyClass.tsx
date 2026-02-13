@@ -176,7 +176,7 @@ export default function MyClass() {
                       In Progress
                     </h2>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 stagger-children">
                     {sortCourses(inProgress).map((course) => (
                       <ProgressCourseCard
                         key={course.id}
@@ -198,7 +198,7 @@ export default function MyClass() {
                       Completed
                     </h2>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 stagger-children">
                     {sortCourses(completed).map((course) => (
                       <ProgressCourseCard key={course.id} course={course} status="completed" />
                     ))}
@@ -214,7 +214,7 @@ export default function MyClass() {
                       Not Started
                     </h2>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 stagger-children">
                     {sortCourses(notStarted).map((course) => (
                       <ProgressCourseCard key={course.id} course={course} status="not-started" />
                     ))}

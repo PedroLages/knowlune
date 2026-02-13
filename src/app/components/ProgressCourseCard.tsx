@@ -66,7 +66,7 @@ export function ProgressCourseCard({
 
   return (
     <Card
-      className={`hover:shadow-md transition-shadow h-full rounded-[24px] ${
+      className={`card-hover-lift h-full rounded-[24px] ${
         status === "completed"
           ? "border-green-200 dark:border-green-800"
           : status === "not-started"
@@ -90,16 +90,16 @@ export function ProgressCourseCard({
         </div>
         <div className="p-4 flex flex-col gap-3">
           <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant="secondary">{course.category}</Badge>
+            <Badge variant="secondary" className="badge-entrance">{course.category}</Badge>
             <Badge
               variant={getDifficultyBadgeVariant(course.difficulty)}
-              className={
+              className={`badge-entrance ${
                 course.difficulty.toLowerCase() === "beginner"
                   ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 hover:bg-green-100 dark:hover:bg-green-900"
                   : course.difficulty.toLowerCase() === "intermediate"
                   ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100 hover:bg-amber-100 dark:hover:bg-amber-900"
                   : ""
-              }
+              }`}
             >
               {course.difficulty}
             </Badge>
@@ -126,7 +126,7 @@ export function ProgressCourseCard({
                 )}
               </div>
               <Link to={`/courses/${course.id}`} className="mt-auto">
-                <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                <Button className="button-press w-full bg-blue-600 hover:bg-blue-700">
                   Resume Learning
                 </Button>
               </Link>
@@ -139,7 +139,7 @@ export function ProgressCourseCard({
                 Completed • {totalLessons} lessons
               </p>
               <Link to={`/courses/${course.id}`} className="mt-auto">
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="button-press w-full">
                   Review Course
                 </Button>
               </Link>
@@ -150,7 +150,7 @@ export function ProgressCourseCard({
             <>
               <p className="text-xs text-muted-foreground">{totalLessons} lessons</p>
               <Link to={`/courses/${course.id}`} className="mt-auto">
-                <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                <Button className="button-press w-full bg-blue-600 hover:bg-blue-700">
                   Start Course
                 </Button>
               </Link>

@@ -1,0 +1,240 @@
+/**
+ * Animation Utilities and Polish
+ *
+ * Duration standards:
+ * - Micro interactions (hover, focus): 150ms
+ * - UI element transitions (tabs, cards): 250ms
+ * - Modal/drawer entrances: 300-350ms
+ * - Page transitions: 400-500ms
+ *
+ * Easing functions:
+ * - ease-out: Default for most UI transitions (decelerating)
+ * - ease-in-out: Smooth bidirectional (modals, drawers)
+ * - spring: Playful interactions (buttons, cards)
+ *
+ * Note: prefers-reduced-motion is handled globally in index.css
+ */
+
+/* Enhanced Card Interactions */
+.card-hover-lift {
+  transition:
+    transform 250ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 250ms ease-out;
+}
+
+.card-hover-lift:hover {
+  transform: translateY(-4px);
+}
+
+.card-hover-lift:active {
+  transform: translateY(-2px);
+}
+
+/* Button Press Animation */
+.button-press {
+  transition:
+    transform 150ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    background-color 150ms ease-out;
+}
+
+.button-press:active {
+  transform: scale(0.98);
+}
+
+/* Smooth Fade In (for lazy-loaded content) */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 300ms ease-out;
+}
+
+/* Stagger children animations */
+.stagger-children > * {
+  animation: fadeIn 300ms ease-out;
+  animation-fill-mode: both;
+}
+
+.stagger-children > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.stagger-children > *:nth-child(2) {
+  animation-delay: 50ms;
+}
+.stagger-children > *:nth-child(3) {
+  animation-delay: 100ms;
+}
+.stagger-children > *:nth-child(4) {
+  animation-delay: 150ms;
+}
+.stagger-children > *:nth-child(5) {
+  animation-delay: 200ms;
+}
+.stagger-children > *:nth-child(6) {
+  animation-delay: 250ms;
+}
+
+/* Progress Bar Smooth Fill */
+@keyframes progressFill {
+  from {
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.progress-animate {
+  animation: progressFill 800ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Circular Progress Ring Animation */
+@keyframes circularProgress {
+  from {
+    stroke-dashoffset: var(--circumference);
+  }
+  to {
+    stroke-dashoffset: var(--offset);
+  }
+}
+
+/* Pulse for active/in-progress indicators */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.pulse-subtle {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Slide Up (for modals, drawers) */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 350ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Slide In From Left (for sidebar) */
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Smooth height expansion (for accordions, collapsible sections) */
+.expand-height {
+  transition: height 250ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Navigation active indicator slide */
+@keyframes slideIndicator {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+.nav-active-indicator::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: currentColor;
+  border-radius: 0 4px 4px 0;
+  animation: slideIndicator 200ms ease-out;
+}
+
+/* Skeleton loading shimmer */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted) / 0.1) 0%,
+    hsl(var(--muted) / 0.3) 50%,
+    hsl(var(--muted) / 0.1) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Focus ring enhancement */
+.focus-ring-enhanced:focus-visible {
+  outline: 2px solid hsl(var(--blue-600));
+  outline-offset: 2px;
+  transition: outline-offset 150ms ease-out;
+}
+
+.focus-ring-enhanced:focus-visible:active {
+  outline-offset: 4px;
+}
+
+/* Badge/tag entrance */
+@keyframes badgeEntrance {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.badge-entrance {
+  animation: badgeEntrance 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Smooth color transitions for theme switching */
+.theme-transition {
+  transition:
+    background-color 300ms ease-out,
+    color 300ms ease-out,
+    border-color 300ms ease-out;
+}

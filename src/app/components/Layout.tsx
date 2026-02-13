@@ -11,11 +11,10 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { useTheme } from "next-themes";
-import { allCourses } from "@/data/courses";
-import { getTotalCompletedLessons, getCompletedCourses } from "@/lib/progress";
 import { SearchCommandPalette } from "./figma/SearchCommandPalette";
 import { KeyboardShortcutsDialog } from "./figma/KeyboardShortcutsDialog";
 import { BottomNav } from "./navigation/BottomNav";
+import { ProgressWidget } from "./ProgressWidget";
 import { useIsMobile, useIsTablet, useIsDesktop } from "@/app/hooks/useMediaQuery";
 import { Sheet, SheetContent } from "./ui/sheet";
 import { navigationItems } from "@/app/config/navigation";
@@ -69,18 +68,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       {/* Progress Widget */}
-      <div
-        className="mt-auto bg-muted rounded-xl p-4 text-center"
-        role="status"
-        aria-label="Course progress summary"
-      >
-        <p className="text-sm font-semibold">
-          {getCompletedCourses(allCourses).length}/{allCourses.length} courses
-        </p>
-        <p className="text-xs text-muted-foreground mt-1">
-          {getTotalCompletedLessons()} lessons completed
-        </p>
-      </div>
+      <ProgressWidget />
     </>
   );
 }

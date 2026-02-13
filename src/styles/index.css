@@ -1,6 +1,7 @@
 @import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';
+@import './animations.css';
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
