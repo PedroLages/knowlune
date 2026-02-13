@@ -2,6 +2,7 @@ import { Course } from "@/data/types"
 import { logStudyAction, getStudyLog } from "./studyLog"
 
 const STORAGE_KEY = "course-progress"
+const MINUTES_PER_LESSON = 15
 
 export interface CourseProgress {
   courseId: string
@@ -211,4 +212,24 @@ export function getWeeklyChange(metric: "lessons" | "courses" | "notes"): number
   })
 
   return thisWeek - lastWeek
+}
+
+export function getAverageProgressPercent(courses: Course[]): number {
+  const inProgress = getCoursesInProgress(courses)
+  if (inProgress.length === 0) return 0
+
+  const totalPercent = inProgress.reduce((sum, course) => sum + course.completionPercent, 0)
+  return Math.round(totalPercent / inProgress.length)
+}
+
+export function getTotalEstimatedStudyHours(): number {
+  const totalLessons = getTotalCompletedLessons()
+  return Math.round((totalLessons * MINUTES_PER_LESSON) / 60 * 10) / 10 // Round to 1 decimal
+}
+
+export function getTimeRemaining(courseId: string, course: Course): number {
+  const progress = getProgress(courseId)
+  const totalLessons = course.modules.reduce((sum, m) => sum + m.lessons.length, 0)
+  const remainingLessons = totalLessons - progress.completedLessons.length
+  return Math.round((remainingLessons * MINUTES_PER_LESSON) / 60 * 10) / 10 // Round to 1 decimal
 }

@@ -70,11 +70,8 @@ export function Overview() {
       label: "Lessons Completed",
       value: completedLessons,
       icon: CheckCircle,
-      trend: {
-        value: Math.abs(lessonsChange),
-        direction: lessonsChange >= 0 ? "up" as const : "down" as const,
-        period: "this week",
-      },
+      trend: lessonsChange >= 0 ? "up" as const : "down" as const,
+      trendValue: `${Math.abs(lessonsChange)} this week`,
       sparkline: lessonSparkline,
     },
     {
