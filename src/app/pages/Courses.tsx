@@ -72,9 +72,7 @@ export function Courses() {
     }
 
     if (selectedTopics.length > 0) {
-      courses = courses.filter(c =>
-        selectedTopics.every(topic => c.tags.includes(topic))
-      )
+      courses = courses.filter(c => selectedTopics.every(topic => c.tags.includes(topic)))
     }
 
     if (selectedStatuses.length > 0) {
@@ -203,12 +201,16 @@ export function Courses() {
             </Card>
           ) : filteredImportedCourses.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No imported courses match your {selectedTopics.length > 0 || selectedStatuses.length > 0 ? 'filters' : 'search'}
+              No imported courses match your{' '}
+              {selectedTopics.length > 0 || selectedStatuses.length > 0 ? 'filters' : 'search'}
             </div>
           ) : (
-            <div data-testid="imported-courses-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div
+              data-testid="imported-courses-grid"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+            >
               {sortedImportedCourses.map(course => (
-                <ImportedCourseCard key={course.id} course={course} />
+                <ImportedCourseCard key={course.id} course={course} allTags={allTags} />
               ))}
             </div>
           )}

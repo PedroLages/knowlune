@@ -140,9 +140,7 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
 
     // Optimistic update
     set(state => ({
-      importedCourses: state.importedCourses.map(c =>
-        c.id === courseId ? { ...c, status } : c
-      ),
+      importedCourses: state.importedCourses.map(c => (c.id === courseId ? { ...c, status } : c)),
       importError: null,
     }))
 

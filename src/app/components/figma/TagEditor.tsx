@@ -25,7 +25,8 @@ export function TagEditor({ currentTags, allTags, onAddTag }: TagEditorProps) {
   )
 
   const trimmed = inputValue.trim().toLowerCase()
-  const canCreate = trimmed.length > 0 && !allTags.includes(trimmed) && !currentTags.includes(trimmed)
+  const canCreate =
+    trimmed.length > 0 && !allTags.includes(trimmed) && !currentTags.includes(trimmed)
 
   function handleSelect(tag: string) {
     onAddTag(tag)

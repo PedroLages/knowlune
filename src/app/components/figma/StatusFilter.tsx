@@ -1,5 +1,6 @@
 import { Circle, CheckCircle2, PauseCircle } from 'lucide-react'
 import { Badge } from '@/app/components/ui/badge'
+import { cn } from '@/app/components/ui/utils'
 import type { LearnerCourseStatus } from '@/data/types'
 
 const statuses: {
@@ -24,7 +25,7 @@ const statuses: {
     value: 'paused',
     label: 'Paused',
     icon: PauseCircle,
-    activeClass: 'bg-gray-500 text-white hover:bg-gray-600',
+    activeClass: 'bg-gray-400 text-white hover:bg-gray-500',
   },
 ]
 
@@ -62,13 +63,12 @@ export function StatusFilter({ selectedStatuses, onSelectedStatusesChange }: Sta
           >
             <Badge
               variant={isSelected ? 'default' : 'outline'}
-              className={
-                isSelected
-                  ? `${activeClass} cursor-pointer gap-1`
-                  : 'cursor-pointer hover:bg-accent gap-1'
-              }
+              className={cn(
+                'cursor-pointer gap-1',
+                isSelected ? activeClass : 'hover:bg-accent'
+              )}
             >
-              <Icon className="h-3 w-3" aria-hidden="true" />
+              <Icon className="size-3" aria-hidden="true" />
               {label}
             </Badge>
           </button>

@@ -25,7 +25,9 @@ export function StatsCard({
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <p className="text-sm text-muted-foreground mb-1">{label}</p>
-            <p data-testid="stat-value" className="text-3xl font-bold">{value}</p>
+            <p data-testid="stat-value" className="text-3xl font-bold">
+              {value}
+            </p>
 
             {/* Trend indicator */}
             {trend && (

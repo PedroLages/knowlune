@@ -1,6 +1,7 @@
 import { FolderOpen, Video, FileText, Circle, CheckCircle2, PauseCircle } from 'lucide-react'
 import { Card } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
+import { cn } from '@/app/components/ui/utils'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,25 +30,28 @@ const statusConfig: Record<
   paused: {
     label: 'Paused',
     icon: PauseCircle,
-    badgeClass: 'bg-gray-100 text-gray-500 dark:bg-gray-800/50 dark:text-gray-400',
+    badgeClass: 'bg-gray-100 text-gray-400 dark:bg-gray-800/50 dark:text-gray-400',
   },
 }
 
 interface ImportedCourseCardProps {
   course: ImportedCourse
+  allTags: string[]
 }
 
-export function ImportedCourseCard({ course }: ImportedCourseCardProps) {
+export function ImportedCourseCard({ course, allTags }: ImportedCourseCardProps) {
   const updateCourseTags = useCourseImportStore(state => state.updateCourseTags)
   const updateCourseStatus = useCourseImportStore(state => state.updateCourseStatus)
-  const allTags = useCourseImportStore(state => state.getAllTags)()
 
-  const status = course.status || 'active'
+  const status = course.status
   const config = statusConfig[status]
   const StatusIcon = config.icon
 
   function handleRemoveTag(tag: string) {
-    updateCourseTags(course.id, course.tags.filter(t => t !== tag))
+    updateCourseTags(
+      course.id,
+      course.tags.filter(t => t !== tag)
+    )
   }
 
   function handleAddTag(tag: string) {
@@ -70,8 +74,11 @@ export function ImportedCourseCard({ course }: ImportedCourseCardProps) {
         tabIndex={0}
       >
         <Card className="group bg-card rounded-[24px] border-0 shadow-sm overflow-hidden hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 motion-reduce:hover:scale-100">
-          <div data-testid="course-card-placeholder" className="relative h-44 bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-950/50 dark:to-teal-950/50 flex items-center justify-center">
-            <FolderOpen className="h-16 w-16 text-emerald-300 dark:text-emerald-600" />
+          <div
+            data-testid="course-card-placeholder"
+            className="relative h-44 bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-950/50 dark:to-teal-950/50 flex items-center justify-center"
+          >
+            <FolderOpen className="size-16 text-emerald-300 dark:text-emerald-600" />
             <div className="absolute top-3 right-3">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -81,16 +88,15 @@ export function ImportedCourseCard({ course }: ImportedCourseCardProps) {
                     className="focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded-full outline-none"
                     aria-label={`Course status: ${config.label}. Click to change.`}
                   >
-                    <Badge className={`border-0 text-xs gap-1 cursor-pointer hover:opacity-80 transition-opacity ${config.badgeClass}`}>
-                      <StatusIcon className="h-3 w-3" aria-hidden="true" />
+                    <Badge
+                      className={cn('border-0 text-xs gap-1 cursor-pointer hover:opacity-80 transition-opacity', config.badgeClass)}
+                    >
+                      <StatusIcon className="size-3" aria-hidden="true" />
                       {config.label}
                     </Badge>
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  onClick={e => e.stopPropagation()}
-                >
+                <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
                   {(Object.entries(statusConfig) as [LearnerCourseStatus, typeof config][]).map(
                     ([key, cfg]) => {
                       const Icon = cfg.icon
@@ -100,10 +106,13 @@ export function ImportedCourseCard({ course }: ImportedCourseCardProps) {
                           onClick={() => handleStatusChange(key)}
                           className="gap-2"
                         >
-                          <Icon className="h-4 w-4" aria-hidden="true" />
+                          <Icon className="size-4" aria-hidden="true" />
                           {cfg.label}
                           {key === status && (
-                            <CheckCircle2 className="h-3.5 w-3.5 ml-auto text-blue-600" aria-hidden="true" />
+                            <CheckCircle2
+                              className="size-3.5 ml-auto text-blue-600"
+                              aria-hidden="true"
+                            />
                           )}
                         </DropdownMenuItem>
                       )
@@ -114,33 +123,28 @@ export function ImportedCourseCard({ course }: ImportedCourseCardProps) {
             </div>
           </div>
           <div className="p-5">
-            <h3 data-testid="course-card-title" className="font-bold text-base mb-1 line-clamp-2 group-hover:text-blue-600 transition-colors">
+            <h3
+              data-testid="course-card-title"
+              className="font-bold text-base mb-1 line-clamp-2 group-hover:text-blue-600 transition-colors"
+            >
               {course.name}
             </h3>
             <p className="text-sm text-muted-foreground mb-2">
               Imported {new Date(course.importedAt).toLocaleDateString()}
             </p>
             <div className="flex items-center gap-1.5 mb-3">
-              <TagBadgeList
-                tags={course.tags}
-                onRemove={handleRemoveTag}
-                maxVisible={3}
-              />
-              <TagEditor
-                currentTags={course.tags}
-                allTags={allTags}
-                onAddTag={handleAddTag}
-              />
+              <TagBadgeList tags={course.tags} onRemove={handleRemoveTag} maxVisible={3} />
+              <TagEditor currentTags={course.tags} allTags={allTags} onAddTag={handleAddTag} />
             </div>
             <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               <span data-testid="course-card-video-count" className="flex items-center gap-1">
-                <Video className="h-3.5 w-3.5" aria-hidden="true" />
+                <Video className="size-3.5" aria-hidden="true" />
                 <span>
                   {course.videoCount} {course.videoCount === 1 ? 'video' : 'videos'}
                 </span>
               </span>
               <span data-testid="course-card-pdf-count" className="flex items-center gap-1">
-                <FileText className="h-3.5 w-3.5" aria-hidden="true" />
+                <FileText className="size-3.5" aria-hidden="true" />
                 <span>
                   {course.pdfCount} {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
                 </span>

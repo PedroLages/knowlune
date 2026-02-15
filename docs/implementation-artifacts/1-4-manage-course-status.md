@@ -1,12 +1,12 @@
 ---
 story_id: E01-S04
 story_name: "Manage Course Status"
-status: in-progress
+status: done
 started: 2026-02-15
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-02-15
+reviewed: true
+review_started: 2026-02-15
+review_gates_passed: [build, lint, unit-tests, e2e-tests, design-review, code-review]
 ---
 
 # Story 1.4: Manage Course Status
@@ -58,11 +58,26 @@ so that I can focus on what I'm currently studying and filter out completed or p
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+**2026-02-15 (re-review)** — Report: `docs/reviews/design/design-review-2026-02-15-e01-s04.md`
+
+- Previous blocker (gray-500) has been **fixed** — now uses gray-400 correctly
+- **Medium**: Empty filtered state could have "Clear filters" action button
+- **Medium**: Missing visual testing evidence (code-based review only)
+- Overall: Excellent accessibility (A), design system compliance (A), responsive code patterns correct
+- Verdict: **Pass** — 0 blockers, 2 medium suggestions
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**2026-02-15 (re-review)** — Report: `docs/reviews/code/code-review-2026-02-15-e01-s04.md`
+
+- Previous blockers **all fixed**: gray-400 correct, updateCourseStatus tests added, status filtering tests added, badge/dropdown tests added, getAllTags re-render fixed
+- **High**: `updateCourseTags` has zero test coverage (parity gap with updateCourseStatus)
+- **High**: `updateCourseStatus` rollback/error path untested
+- **High**: No dedicated StatusFilter unit tests (tested indirectly via Courses.test.tsx)
+- **High**: Inline makeCourse factories instead of shared factory
+- **Medium**: Inconsistent `h-N w-N` vs `size-N`, string interpolation vs `cn()`, weak combined filter test
+- Issues: 10 total (0 blockers, 4 high, 4 medium, 2 nits)
+- Verdict: **Pass** — no blockers
 
 ## Challenges and Lessons Learned
 
