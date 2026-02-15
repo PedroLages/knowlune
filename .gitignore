@@ -8,3 +8,13 @@ dist/
 
 *storybook.log
 storybook-static
+
+# Test artifacts
+playwright-report/
+test-results/
+test-results.json/
+test-output.txt
+coverage/
+
+# Lighthouse
+.lighthouseci/
