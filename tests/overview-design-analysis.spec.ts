@@ -16,11 +16,8 @@ test.describe('Overview Page - Comprehensive Design Analysis', () => {
       await expect(page.getByText('Study Notes')).toBeVisible()
       await expect(page.getByText('Courses Completed')).toBeVisible()
 
-      // Continue Studying section (if courses in progress)
-      const continueSection = page.getByRole('heading', { name: 'Continue Studying' })
-      if (await continueSection.isVisible()) {
-        await expect(continueSection).toBeVisible()
-      }
+      // Continue Studying section (always rendered — shows courses or empty state)
+      await expect(page.getByRole('heading', { name: 'Continue Studying' })).toBeVisible()
 
       // All Courses section
       await expect(page.getByRole('heading', { name: 'All Courses' })).toBeVisible()
@@ -36,11 +33,11 @@ test.describe('Overview Page - Comprehensive Design Analysis', () => {
     })
 
     test('should render stats cards in grid layout', async ({ page }) => {
-      const statsSection = page.locator('.grid').first()
-      const cards = statsSection.locator('[class*="card"]')
-      const cardCount = await cards.count()
+      const statsGrid = page.getByTestId('stats-grid')
+      const statValues = statsGrid.getByTestId('stat-value')
+      const count = await statValues.count()
 
-      expect(cardCount).toBe(4)
+      expect(count).toBe(4)
     })
   })
 
@@ -52,7 +49,7 @@ test.describe('Overview Page - Comprehensive Design Analysis', () => {
       await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible()
 
       // Stats cards should stack vertically
-      const statsGrid = page.locator('.grid').first()
+      const statsGrid = page.getByTestId('stats-grid')
       await expect(statsGrid).toBeVisible()
     })
 
@@ -69,7 +66,7 @@ test.describe('Overview Page - Comprehensive Design Analysis', () => {
       await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible()
 
       // Stats should be in horizontal row on desktop
-      const statsGrid = page.locator('.grid').first()
+      const statsGrid = page.getByTestId('stats-grid')
       const boundingBox = await statsGrid.boundingBox()
       expect(boundingBox?.width).toBeGreaterThan(800)
     })
@@ -90,11 +87,9 @@ test.describe('Overview Page - Comprehensive Design Analysis', () => {
 
       expect(linkCount).toBeGreaterThan(0)
 
-      // Check first course link has accessible content
-      if (linkCount > 0) {
-        const firstLink = links.first()
-        await expect(firstLink).toBeVisible()
-      }
+      // First link should be visible and accessible
+      const firstLink = links.first()
+      await expect(firstLink).toBeVisible()
     })
 
     test('should have proper image alt text', async ({ page }) => {
@@ -131,13 +126,14 @@ test.describe('Overview Page - Comprehensive Design Analysis', () => {
     })
 
     test('should show hover effects on cards', async ({ page }) => {
-      const card = page.locator('[class*="cursor-pointer"]').first()
-      await expect(card).toBeVisible()
+      // Target a course link (always present in All Courses)
+      const courseLink = page.getByRole('link').filter({ hasText: /lessons$/ }).first()
+      await expect(courseLink).toBeVisible()
 
       // Hover and check for shadow change
-      await card.hover()
+      await courseLink.hover()
 
-      const boxShadow = await card.evaluate((el) =>
+      const boxShadow = await courseLink.evaluate((el) =>
         window.getComputedStyle(el).boxShadow
       )
 
@@ -164,43 +160,56 @@ test.describe('Overview Page - Comprehensive Design Analysis', () => {
     })
 
     test('should handle missing images gracefully', async ({ page }) => {
-      // Check if placeholder icons are shown for courses without images
-      const bookIcons = page.locator('[class*="lucide-book-open"]')
+      // All course cards should have visual content (image or icon placeholder)
+      const courseImages = page.getByRole('img')
+      const imageCount = await courseImages.count()
 
-      // Should have either images or placeholder icons
-      const images = await page.getByRole('img').count()
-      const icons = await bookIcons.count()
+      // At minimum, the page should have images (course covers, sparkline, etc.)
+      expect(imageCount).toBeGreaterThan(0)
 
-      expect(images + icons).toBeGreaterThan(0)
+      // Verify first image renders successfully
+      await expect(courseImages.first()).toBeVisible()
     })
   })
 
   test.describe('Content & Data Display', () => {
     test('should display accurate statistics', async ({ page }) => {
       // Check if stat values are numbers
-      const statCards = page.locator('.text-3xl.font-bold')
-      const count = await statCards.count()
+      const statValues = page.getByTestId('stat-value')
+      const count = await statValues.count()
+
+      expect(count).toBe(4)
 
       for (let i = 0; i < count; i++) {
-        const value = await statCards.nth(i).textContent()
+        const value = await statValues.nth(i).textContent()
         expect(value).toMatch(/^\d+$/)
       }
     })
 
     test('should show progress bars in continue studying', async ({ page }) => {
-      const continueSection = page.getByRole('heading', { name: 'Continue Studying' })
+      // Seed progress data to guarantee Continue Studying shows courses
+      await page.evaluate(() => {
+        localStorage.setItem('course-progress', JSON.stringify({
+          'operative-six': {
+            courseId: 'operative-six',
+            completedLessons: ['lesson-1', 'lesson-2'],
+            lastWatchedLesson: 'lesson-3',
+            notes: {},
+            startedAt: new Date().toISOString(),
+            lastAccessedAt: new Date().toISOString()
+          }
+        }))
+      })
+      await page.reload()
+      await page.waitForLoadState('domcontentloaded')
 
-      if (await continueSection.isVisible()) {
-        // Check for progress bars
-        const progressBars = page.locator('[role="progressbar"]')
-        const progressCount = await progressBars.count()
+      // Assert unconditionally — seeded data guarantees these exist
+      await expect(page.getByRole('heading', { name: 'Continue Studying' })).toBeVisible()
+      const progressBars = page.locator('[role="progressbar"]')
+      await expect(progressBars.first()).toBeVisible()
 
-        if (progressCount > 0) {
-          // Check if progress percentages are displayed
-          const percentages = page.locator('text=/%$/')
-          expect(await percentages.count()).toBeGreaterThan(0)
-        }
-      }
+      // Verify percentage is displayed
+      await expect(page.getByText(/%$/)).toBeVisible()
     })
 
     test('should display all courses', async ({ page }) => {
@@ -232,15 +241,17 @@ test.describe('Overview Page - Comprehensive Design Analysis', () => {
     })
 
     test('should use theme colors consistently', async ({ page }) => {
-      // Check if blue accent color is used
-      const blueElements = page.locator('[class*="blue-600"]')
+      // StatsCard icons use blue-600 accent color per design system
+      const blueElements = page.locator('.text-blue-600')
       const count = await blueElements.count()
 
       expect(count).toBeGreaterThan(0)
     })
 
     test('should have rounded corners on cards', async ({ page }) => {
-      const card = page.locator('[class*="rounded"]').first()
+      // StatsCard uses rounded-[24px] per design system
+      const statsGrid = page.getByTestId('stats-grid')
+      const card = statsGrid.locator('> *').first()
       await expect(card).toBeVisible()
 
       const borderRadius = await card.evaluate((el) =>
@@ -254,16 +265,19 @@ test.describe('Overview Page - Comprehensive Design Analysis', () => {
   test.describe('Screenshot Analysis', () => {
     test('should capture desktop view', async ({ page }) => {
       await page.setViewportSize({ width: 1920, height: 1080 })
+      await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible()
       await page.screenshot({ path: 'tests/screenshots/overview-desktop.png', fullPage: true })
     })
 
     test('should capture tablet view', async ({ page }) => {
       await page.setViewportSize({ width: 768, height: 1024 })
+      await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible()
       await page.screenshot({ path: 'tests/screenshots/overview-tablet.png', fullPage: true })
     })
 
     test('should capture mobile view', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 })
+      await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible()
       await page.screenshot({ path: 'tests/screenshots/overview-mobile.png', fullPage: true })
     })
   })

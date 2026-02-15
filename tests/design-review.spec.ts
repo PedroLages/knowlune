@@ -125,6 +125,7 @@ test.describe('Design Review - Accessibility', () => {
     if (missingLabels.length > 0) {
       addFinding('high', 'Accessibility', `${missingLabels.length} icon buttons missing ARIA labels`)
     }
+    expect(missingLabels).toHaveLength(0)
   })
 
   test('should have alt text on images', async ({ page }) => {
@@ -146,6 +147,7 @@ test.describe('Design Review - Accessibility', () => {
     if (missingAlt.length > 0) {
       addFinding('high', 'Accessibility', `${missingAlt.length} images missing alt attribute`)
     }
+    expect(missingAlt).toHaveLength(0)
   })
 
   test('should have proper form labels', async ({ page }) => {
@@ -174,6 +176,7 @@ test.describe('Design Review - Accessibility', () => {
     if (unlabeledInputs.length > 0) {
       addFinding('high', 'Accessibility', `${unlabeledInputs.length} form inputs missing proper labels`)
     }
+    expect(unlabeledInputs).toHaveLength(0)
   })
 
   test('should use semantic HTML', async ({ page }) => {
@@ -182,16 +185,19 @@ test.describe('Design Review - Accessibility', () => {
     if (divButtons > 0) {
       addFinding('medium', 'Accessibility', `${divButtons} div elements used as buttons`)
     }
+    expect(divButtons).toBe(0)
 
     const mainCount = await page.locator('main').count()
     if (mainCount === 0) {
       addFinding('medium', 'Accessibility', 'No <main> landmark found')
     }
+    expect(mainCount).toBeGreaterThan(0)
 
     const navCount = await page.locator('nav').count()
     if (navCount === 0) {
       addFinding('low', 'Accessibility', 'No <nav> landmark found')
     }
+    expect(navCount).toBeGreaterThan(0)
   })
 })
 
@@ -224,6 +230,7 @@ test.describe('Design Review - Interaction States', () => {
       if (!hasOutline && !hasRing) {
         addFinding('medium', 'Interaction States', 'Focus indicators may not be visible')
       }
+      expect(hasOutline || hasRing).toBe(true)
     }
   })
 
@@ -244,6 +251,8 @@ test.describe('Design Review - Interaction States', () => {
     if (missingHover > count * 0.5) {
       addFinding('low', 'Interaction States', 'Many interactive elements may lack hover states')
     }
+    // At least half of interactive elements should have hover states
+    expect(missingHover).toBeLessThanOrEqual(count * 0.5)
   })
 })
 
@@ -264,20 +273,20 @@ test.describe('Design Review - Visual Consistency', () => {
     if (!expectedColors.includes(bgColor)) {
       addFinding('medium', 'Visual Consistency', 'Background color does not match design system')
     }
+    expect(expectedColors).toContain(bgColor)
   })
 
   test('should have consistent border radius on cards', async ({ page }) => {
     const card = page.locator('[class*="card"], [class*="rounded-"]').first()
-    const count = await card.count()
+    await expect(card).toBeVisible()
 
-    if (count > 0) {
-      const borderRadius = await card.evaluate((el) => {
-        return window.getComputedStyle(el).borderRadius
-      })
+    const borderRadius = await card.evaluate((el) => {
+      return window.getComputedStyle(el).borderRadius
+    })
 
-      if (borderRadius && borderRadius !== '24px' && borderRadius !== '1.5rem') {
-        addFinding('low', 'Visual Consistency', 'Card border radius may not match design system')
-      }
+    if (borderRadius && borderRadius !== '24px' && borderRadius !== '1.5rem') {
+      addFinding('low', 'Visual Consistency', 'Card border radius may not match design system')
     }
+    expect(borderRadius).toBeTruthy()
   })
 })
