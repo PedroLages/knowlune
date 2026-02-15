@@ -1,9 +1,37 @@
-import { FolderOpen, Video, FileText } from 'lucide-react'
+import { FolderOpen, Video, FileText, Circle, CheckCircle2, PauseCircle } from 'lucide-react'
 import { Card } from '@/app/components/ui/card'
+import { Badge } from '@/app/components/ui/badge'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/app/components/ui/dropdown-menu'
 import { TagBadgeList } from '@/app/components/figma/TagBadgeList'
 import { TagEditor } from '@/app/components/figma/TagEditor'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
-import type { ImportedCourse } from '@/data/types'
+import type { ImportedCourse, LearnerCourseStatus } from '@/data/types'
+
+const statusConfig: Record<
+  LearnerCourseStatus,
+  { label: string; icon: typeof Circle; badgeClass: string }
+> = {
+  active: {
+    label: 'Active',
+    icon: Circle,
+    badgeClass: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  },
+  completed: {
+    label: 'Completed',
+    icon: CheckCircle2,
+    badgeClass: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+  },
+  paused: {
+    label: 'Paused',
+    icon: PauseCircle,
+    badgeClass: 'bg-gray-100 text-gray-500 dark:bg-gray-800/50 dark:text-gray-400',
+  },
+}
 
 interface ImportedCourseCardProps {
   course: ImportedCourse
@@ -11,7 +39,12 @@ interface ImportedCourseCardProps {
 
 export function ImportedCourseCard({ course }: ImportedCourseCardProps) {
   const updateCourseTags = useCourseImportStore(state => state.updateCourseTags)
+  const updateCourseStatus = useCourseImportStore(state => state.updateCourseStatus)
   const allTags = useCourseImportStore(state => state.getAllTags)()
+
+  const status = course.status || 'active'
+  const config = statusConfig[status]
+  const StatusIcon = config.icon
 
   function handleRemoveTag(tag: string) {
     updateCourseTags(course.id, course.tags.filter(t => t !== tag))
@@ -19,6 +52,12 @@ export function ImportedCourseCard({ course }: ImportedCourseCardProps) {
 
   function handleAddTag(tag: string) {
     updateCourseTags(course.id, [...course.tags, tag])
+  }
+
+  function handleStatusChange(newStatus: LearnerCourseStatus) {
+    if (newStatus !== status) {
+      updateCourseStatus(course.id, newStatus)
+    }
   }
 
   return (
@@ -33,6 +72,46 @@ export function ImportedCourseCard({ course }: ImportedCourseCardProps) {
         <Card className="group bg-card rounded-[24px] border-0 shadow-sm overflow-hidden hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 motion-reduce:hover:scale-100">
           <div data-testid="course-card-placeholder" className="relative h-44 bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-950/50 dark:to-teal-950/50 flex items-center justify-center">
             <FolderOpen className="h-16 w-16 text-emerald-300 dark:text-emerald-600" />
+            <div className="absolute top-3 right-3">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    data-testid="status-badge"
+                    onClick={e => e.stopPropagation()}
+                    className="focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 rounded-full outline-none"
+                    aria-label={`Course status: ${config.label}. Click to change.`}
+                  >
+                    <Badge className={`border-0 text-xs gap-1 cursor-pointer hover:opacity-80 transition-opacity ${config.badgeClass}`}>
+                      <StatusIcon className="h-3 w-3" aria-hidden="true" />
+                      {config.label}
+                    </Badge>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  onClick={e => e.stopPropagation()}
+                >
+                  {(Object.entries(statusConfig) as [LearnerCourseStatus, typeof config][]).map(
+                    ([key, cfg]) => {
+                      const Icon = cfg.icon
+                      return (
+                        <DropdownMenuItem
+                          key={key}
+                          onClick={() => handleStatusChange(key)}
+                          className="gap-2"
+                        >
+                          <Icon className="h-4 w-4" aria-hidden="true" />
+                          {cfg.label}
+                          {key === status && (
+                            <CheckCircle2 className="h-3.5 w-3.5 ml-auto text-blue-600" aria-hidden="true" />
+                          )}
+                        </DropdownMenuItem>
+                      )
+                    }
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
           <div className="p-5">
             <h3 data-testid="course-card-title" className="font-bold text-base mb-1 line-clamp-2 group-hover:text-blue-600 transition-colors">
