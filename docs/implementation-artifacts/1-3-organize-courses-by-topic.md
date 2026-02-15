@@ -102,4 +102,12 @@ Full report: `docs/reviews/code/code-review-2026-02-15-e01-s03.md`
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+1. **Lift computed values out of list items.** `getAllTags()` was called inside each `ImportedCourseCard`, recomputing on every render. Compute once in the parent and pass as a prop. Watch for this pattern whenever a store getter appears inside a mapped component.
+
+2. **Systemic theme token debt.** Design review flagged `bg-blue-600` vs `--primary` as a blocker, but the mismatch exists across the entire codebase — not introduced by this story. Worth a dedicated cleanup story to replace hardcoded Tailwind color classes with CSS custom property references.
+
+3. **Tag normalization matters early.** `addImportedCourse` accepted raw tags without trimming or lowercasing. Normalize at the store boundary to prevent "React" and "react" from becoming separate tags.
+
+4. **Autocomplete needs a ceiling.** `TagEditor` has no max tag limit per course. Not a problem with small libraries, but worth adding a cap (e.g., 10) before tag counts grow.
+
+5. **Workflow skills need idempotent steps.** `/start-story` and `/review-story` failed on re-run after interruption. Made all steps check-before-act (branch exists? skip creation; file exists? skip writing). Saves time when resuming after context loss.
