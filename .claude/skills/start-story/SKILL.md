@@ -69,7 +69,38 @@ When invoked with a story ID (e.g., `E01-S03`):
     - UX design references (if applicable)
     - Note: during implementation, make granular commits after each small task as save points
 
-11. **Completion output**: Display the following summary to the user:
+11. **Link plan to story file**: After `ExitPlanMode` returns (plan approved), append an `## Implementation Plan` section to the story file so the developer can find the plan in a later session. If the section already exists, skip.
+
+    Format:
+    ```markdown
+    ## Implementation Plan
+
+    See [plan](.claude/plans/{plan-filename}.md) for implementation approach.
+    ```
+
+    Use the actual plan file path from the current session.
+
+12. **Assess workflow recommendation**: Based on research from Steps 9-10, determine which shipping workflow to recommend:
+
+    **Recommend "Review first"** (`/review-story` → `/finish-story`) when ANY of:
+    - Story involves UI changes (pages, components, styles in affected files)
+    - Story has 3 or more tasks
+    - Story creates new components or pages
+    - Story has complex acceptance criteria (4+ ACs)
+    - Story touches multiple areas of the codebase (store + component + page)
+
+    **Recommend "Quick ship"** (`/finish-story`) when ALL of:
+    - Story has 1-2 tasks
+    - No UI changes (config, data, refactoring only)
+    - Simple acceptance criteria (1-3 ACs)
+    - Changes confined to a single area
+
+13. **Initial commit** (idempotent):
+    - Check if an initial commit already exists: `git log --oneline --grep="chore: start story E##-S##"`.
+    - **Commit exists**: Skip. Inform user: "Initial commit already made."
+    - **Commit does not exist**: `git add docs/implementation-artifacts/{story-key}.md docs/implementation-artifacts/sprint-status.yaml` (and `tests/e2e/story-{id}.spec.ts` if ATDD tests were created). Commit: `chore: start story E##-S##`.
+
+14. **Completion output**: Display the following summary to the user:
 
     ```markdown
     ---
@@ -82,17 +113,26 @@ When invoked with a story ID (e.g., `E01-S03`):
     | Story file       | `docs/implementation-artifacts/{key}.md`  |
     | Sprint status    | Updated to `in-progress`                  |
     | ATDD tests       | [Created N tests / Skipped]               |
+    | Initial commit   | `chore: start story E##-S##`              |
 
     ### Next Steps
 
     1. **Implement the story** following the approved plan
     2. Make **granular commits** after each task as save points
-    3. When done, choose your workflow:
-       - **Quick ship**: `/finish-story` (auto-runs all reviews)
-       - **Review first**: `/review-story` → fix issues → `/finish-story`
+    3. When done, ship it:
+
+       **Recommended: [Review first / Quick ship]**
+       [reason — bold the criterion that triggered the recommendation. E.g., "This story has **UI changes** across **4 tasks** — a design review will catch visual regressions before shipping." or "**1 task**, no UI changes — reviews run inline during finish."]
+
+       | Workflow | Command | When to use |
+       |----------|---------|-------------|
+       | Review first | `/review-story` → fix → `/finish-story` | UI changes, complex stories, 3+ tasks |
+       | Quick ship | `/finish-story` (auto-runs reviews) | Simple changes, config, 1-2 tasks |
 
     ---
     ```
+
+    **IMPORTANT**: After displaying this completion output, STOP. Do not begin implementing the story. The developer chooses when and how to implement. The next action is theirs.
 
 **Without arguments**: Read sprint-status.yaml + epics.md, find first `backlog` story, confirm with user via AskUserQuestion, then proceed from step 1.
 
@@ -149,4 +189,6 @@ All steps are idempotent — re-running `/start-story` after an interruption saf
 - **Step 6** (story file): If file exists, keeps it instead of overwriting.
 - **Step 7** (sprint status): If already in-progress, skips update.
 - **Step 8** (ATDD tests): If test file exists, skips suggestion.
+- **Step 11** (plan link): If `## Implementation Plan` section exists, skips.
+- **Step 13** (initial commit): If commit exists, skips.
 - **General cleanup** (if needed): `git checkout main && git branch -D feature/e##-s##-slug`
