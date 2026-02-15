@@ -96,36 +96,62 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
 
 11. **Lessons learned** (optional): Ask the developer via AskUserQuestion if there are patterns worth capturing in the story's "Challenges and Lessons Learned" section. If yes, append them.
 
-12. **Completion output**: Display the following summary to the user:
+12. **Completion output**: Display the following summary to the user.
+
+    **Preparation** (not shown to user): Read the story file's acceptance criteria, tasks, and the git diff for the branch to understand what was delivered.
+
+    **Writing guidelines** (not shown to user):
+    - "What's New" bullets must describe what the user can now DO, not implementation details. Plain, non-technical language. 2-5 bullets.
+      - Good: "You can now tag courses with topics like React or TypeScript and filter your library by subject"
+      - Bad: "Added updateCourseTags method to Zustand store"
+    - "Try It" steps must be concrete — name the page, the button, the expected result. 2-4 steps derived from acceptance criteria.
+    - Apply `writing-clearly-and-concisely` rules throughout — active voice, no filler, no AI puffery.
+
+    **Output template** (this is what the user sees):
 
     ```markdown
     ---
 
     ## Story Shipped: E##-S## — [Story Name]
 
-    | Item           | Result                                   |
-    | -------------- | ---------------------------------------- |
-    | Build          | passed                                   |
-    | Lint           | [passed/skipped]                         |
-    | Unit tests     | [passed (N tests)/skipped]               |
-    | E2E tests      | [passed (N tests)/skipped]               |
-    | Design review  | [passed/N warnings/skipped]              |
-    | Code review    | [passed/N warnings]                      |
-    | Story status   | done                                     |
-    | Sprint status  | updated                                  |
-    | PR             | [PR URL]                                 |
+    **PR**: [PR URL]
 
-    ### What Happened
+    ### What's New
 
-    - [Mode used]: [Comprehensive (reviews pre-done) / Streamlined (reviews inline)]
+    - [bullet 1]
+    - [bullet 2]
+    - [bullet 3]
+
+    ### Try It
+
+    1. [step 1]
+    2. [step 2]
+    3. [step 3]
+
+    ---
+
+    <details>
+    <summary>Verification</summary>
+
+    | Check         | Result               |
+    | ------------- | -------------------- |
+    | Build         | passed               |
+    | Lint          | passed / skipped     |
+    | Unit tests    | passed (N) / skipped |
+    | E2E tests     | passed (N) / skipped |
+    | Design review | passed / N warnings  |
+    | Code review   | passed / N warnings  |
+
+    - Mode: Comprehensive / Streamlined
     - Branch: `feature/e##-s##-slug`
-    - Review reports: `docs/reviews/design/` + `docs/reviews/code/`
+    - Reports: `docs/reviews/design/` + `docs/reviews/code/`
+
+    </details>
+
+    ---
 
     [If epic NOT complete:]
-    ### Next Story
-
-    The next backlog story in this epic is **E##-S##: [Name]**.
-    Run `/start-story E##-S##` when ready.
+    **Next up** — **E##-S##: [Name]**. Run `/start-story E##-S##` when ready.
 
     [If epic IS complete:]
     ### Epic Complete!
