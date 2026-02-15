@@ -1,6 +1,6 @@
 # Testing Guide
 
-Complete guide to running and interpreting tests for the E-learning Platform Wireframes project.
+Complete guide to running and interpreting tests for the LevelUp project.
 
 ## Quick Reference
 

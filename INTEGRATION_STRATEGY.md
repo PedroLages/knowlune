@@ -1,5 +1,5 @@
 # Integration Strategy Analysis
-## E-Learning Platform Wireframes ↔ OpsLog (The Operative Kit)
+## LevelUp ↔ OpsLog (The Operative Kit)
 
 **Analysis Date:** February 13, 2026
 **Analyst:** Claude Code
@@ -9,7 +9,7 @@
 ## Executive Summary
 
 This document analyzes integration strategies between:
-- **Project A**: E-learning Platform Wireframes (generic course delivery UI)
+- **Project A**: LevelUp (generic course delivery UI)
 - **Project B**: OpsLog (specialized NCI behavioral training tracker)
 
 **Recommendation**: **Hybrid Integration** - Use wireframe components to enhance OpsLog's course delivery while preserving its specialized behavioral tracking capabilities.

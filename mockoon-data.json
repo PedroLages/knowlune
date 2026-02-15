@@ -1,0 +1,467 @@
+{
+  "uuid": "e-learning-platform-mock-api",
+  "lastMigration": 32,
+  "name": "E-Learning Platform API",
+  "endpointPrefix": "api",
+  "latency": 0,
+  "port": 3000,
+  "hostname": "0.0.0.0",
+  "folders": [],
+  "routes": [
+    {
+      "uuid": "route-courses-list",
+      "type": "http",
+      "documentation": "Get all courses",
+      "method": "get",
+      "endpoint": "courses",
+      "responses": [
+        {
+          "uuid": "response-courses-list",
+          "body": "{\n  \"courses\": [\n    {\n      \"id\": \"1\",\n      \"title\": \"Introduction to Web Development\",\n      \"description\": \"Learn the fundamentals of modern web development with HTML, CSS, and JavaScript\",\n      \"instructor\": {\n        \"id\": \"inst-1\",\n        \"name\": \"Sarah Johnson\",\n        \"avatar\": \"https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400\",\n        \"title\": \"Senior Web Developer\"\n      },\n      \"thumbnail\": \"https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800\",\n      \"duration\": \"8 weeks\",\n      \"level\": \"Beginner\",\n      \"rating\": 4.8,\n      \"studentsEnrolled\": 2456,\n      \"progress\": 75,\n      \"totalModules\": 6,\n      \"completedModules\": 4,\n      \"totalLessons\": 42,\n      \"completedLessons\": 31,\n      \"category\": \"Web Development\",\n      \"tags\": [\"HTML\", \"CSS\", \"JavaScript\", \"Frontend\"],\n      \"price\": 49.99,\n      \"currency\": \"USD\",\n      \"enrolled\": true,\n      \"lastAccessed\": \"2026-02-13T10:30:00Z\",\n      \"certificateAvailable\": true\n    },\n    {\n      \"id\": \"2\",\n      \"title\": \"Advanced React & TypeScript\",\n      \"description\": \"Master React 18 and TypeScript for building scalable enterprise applications\",\n      \"instructor\": {\n        \"id\": \"inst-2\",\n        \"name\": \"Michael Chen\",\n        \"avatar\": \"https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400\",\n        \"title\": \"React Architect\"\n      },\n      \"thumbnail\": \"https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800\",\n      \"duration\": \"12 weeks\",\n      \"level\": \"Advanced\",\n      \"rating\": 4.9,\n      \"studentsEnrolled\": 1823,\n      \"progress\": 45,\n      \"totalModules\": 8,\n      \"completedModules\": 3,\n      \"totalLessons\": 56,\n      \"completedLessons\": 25,\n      \"category\": \"Frontend Development\",\n      \"tags\": [\"React\", \"TypeScript\", \"Hooks\", \"Redux\"],\n      \"price\": 79.99,\n      \"currency\": \"USD\",\n      \"enrolled\": true,\n      \"lastAccessed\": \"2026-02-14T09:15:00Z\",\n      \"certificateAvailable\": false\n    },\n    {\n      \"id\": \"3\",\n      \"title\": \"UI/UX Design Fundamentals\",\n      \"description\": \"Learn user-centered design principles and create beautiful, functional interfaces\",\n      \"instructor\": {\n        \"id\": \"inst-3\",\n        \"name\": \"Emma Rodriguez\",\n        \"avatar\": \"https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400\",\n        \"title\": \"Lead UX Designer\"\n      },\n      \"thumbnail\": \"https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800\",\n      \"duration\": \"6 weeks\",\n      \"level\": \"Intermediate\",\n      \"rating\": 4.7,\n      \"studentsEnrolled\": 3102,\n      \"progress\": 0,\n      \"totalModules\": 5,\n      \"completedModules\": 0,\n      \"totalLessons\": 35,\n      \"completedLessons\": 0,\n      \"category\": \"Design\",\n      \"tags\": [\"UI Design\", \"UX Research\", \"Figma\", \"Prototyping\"],\n      \"price\": 59.99,\n      \"currency\": \"USD\",\n      \"enrolled\": false,\n      \"lastAccessed\": null,\n      \"certificateAvailable\": false\n    },\n    {\n      \"id\": \"4\",\n      \"title\": \"Node.js & Express Backend Development\",\n      \"description\": \"Build robust REST APIs and microservices with Node.js and Express\",\n      \"instructor\": {\n        \"id\": \"inst-4\",\n        \"name\": \"David Kumar\",\n        \"avatar\": \"https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400\",\n        \"title\": \"Backend Engineer\"\n      },\n      \"thumbnail\": \"https://images.unsplash.com/photo-1627398242454-45a1465c2479?w=800\",\n      \"duration\": \"10 weeks\",\n      \"level\": \"Intermediate\",\n      \"rating\": 4.6,\n      \"studentsEnrolled\": 1567,\n      \"progress\": 20,\n      \"totalModules\": 7,\n      \"completedModules\": 1,\n      \"totalLessons\": 48,\n      \"completedLessons\": 9,\n      \"category\": \"Backend Development\",\n      \"tags\": [\"Node.js\", \"Express\", \"MongoDB\", \"REST API\"],\n      \"price\": 69.99,\n      \"currency\": \"USD\",\n      \"enrolled\": true,\n      \"lastAccessed\": \"2026-02-10T14:20:00Z\",\n      \"certificateAvailable\": false\n    }\n  ],\n  \"total\": 4,\n  \"page\": 1,\n  \"pageSize\": 10\n}",
+          "latency": 0,
+          "statusCode": 200,
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            },
+            {
+              "key": "Access-Control-Allow-Methods",
+              "value": "GET, POST, PUT, DELETE, OPTIONS"
+            },
+            {
+              "key": "Access-Control-Allow-Headers",
+              "value": "Content-Type, Authorization"
+            }
+          ],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "crudKey": "id"
+        }
+      ],
+      "enabled": true,
+      "responseMode": null
+    },
+    {
+      "uuid": "route-course-detail",
+      "type": "http",
+      "documentation": "Get course details by ID",
+      "method": "get",
+      "endpoint": "courses/:id",
+      "responses": [
+        {
+          "uuid": "response-course-1",
+          "body": "{\n  \"id\": \"{{urlParam 'id'}}\",\n  \"title\": \"{{#eq (urlParam 'id') '1'}}Introduction to Web Development{{/eq}}{{#eq (urlParam 'id') '2'}}Advanced React & TypeScript{{/eq}}{{#eq (urlParam 'id') '3'}}UI/UX Design Fundamentals{{/eq}}{{#eq (urlParam 'id') '4'}}Node.js & Express Backend Development{{/eq}}\",\n  \"description\": \"{{#eq (urlParam 'id') '1'}}Learn the fundamentals of modern web development with HTML, CSS, and JavaScript{{/eq}}{{#eq (urlParam 'id') '2'}}Master React 18 and TypeScript for building scalable enterprise applications{{/eq}}{{#eq (urlParam 'id') '3'}}Learn user-centered design principles and create beautiful, functional interfaces{{/eq}}{{#eq (urlParam 'id') '4'}}Build robust REST APIs and microservices with Node.js and Express{{/eq}}\",\n  \"instructor\": {\n    \"id\": \"inst-{{urlParam 'id'}}\",\n    \"name\": \"{{#eq (urlParam 'id') '1'}}Sarah Johnson{{/eq}}{{#eq (urlParam 'id') '2'}}Michael Chen{{/eq}}{{#eq (urlParam 'id') '3'}}Emma Rodriguez{{/eq}}{{#eq (urlParam 'id') '4'}}David Kumar{{/eq}}\",\n    \"avatar\": \"{{#eq (urlParam 'id') '1'}}https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400{{/eq}}{{#eq (urlParam 'id') '2'}}https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400{{/eq}}{{#eq (urlParam 'id') '3'}}https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400{{/eq}}{{#eq (urlParam 'id') '4'}}https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400{{/eq}}\",\n    \"title\": \"{{#eq (urlParam 'id') '1'}}Senior Web Developer{{/eq}}{{#eq (urlParam 'id') '2'}}React Architect{{/eq}}{{#eq (urlParam 'id') '3'}}Lead UX Designer{{/eq}}{{#eq (urlParam 'id') '4'}}Backend Engineer{{/eq}}\",\n    \"bio\": \"Expert instructor with 10+ years of industry experience\",\n    \"coursesCount\": 12,\n    \"studentsCount\": 15000,\n    \"rating\": 4.8\n  },\n  \"thumbnail\": \"{{#eq (urlParam 'id') '1'}}https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800{{/eq}}{{#eq (urlParam 'id') '2'}}https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800{{/eq}}{{#eq (urlParam 'id') '3'}}https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800{{/eq}}{{#eq (urlParam 'id') '4'}}https://images.unsplash.com/photo-1627398242454-45a1465c2479?w=800{{/eq}}\",\n  \"duration\": \"8 weeks\",\n  \"level\": \"Beginner\",\n  \"rating\": 4.8,\n  \"studentsEnrolled\": 2456,\n  \"progress\": 75,\n  \"category\": \"Web Development\",\n  \"tags\": [\"HTML\", \"CSS\", \"JavaScript\", \"Frontend\"],\n  \"price\": 49.99,\n  \"currency\": \"USD\",\n  \"enrolled\": true,\n  \"lastAccessed\": \"2026-02-13T10:30:00Z\",\n  \"certificateAvailable\": true,\n  \"modules\": [\n    {\n      \"id\": \"mod-1\",\n      \"title\": \"Getting Started\",\n      \"description\": \"Introduction to web development basics\",\n      \"order\": 1,\n      \"duration\": \"1 week\",\n      \"completed\": true,\n      \"lessons\": [\n        {\n          \"id\": \"lesson-1\",\n          \"title\": \"What is Web Development?\",\n          \"type\": \"video\",\n          \"duration\": \"15:30\",\n          \"completed\": true,\n          \"order\": 1\n        },\n        {\n          \"id\": \"lesson-2\",\n          \"title\": \"Setting Up Your Development Environment\",\n          \"type\": \"video\",\n          \"duration\": \"22:15\",\n          \"completed\": true,\n          \"order\": 2\n        },\n        {\n          \"id\": \"lesson-3\",\n          \"title\": \"Course Resources\",\n          \"type\": \"pdf\",\n          \"duration\": \"5:00\",\n          \"completed\": true,\n          \"order\": 3\n        }\n      ]\n    },\n    {\n      \"id\": \"mod-2\",\n      \"title\": \"HTML Fundamentals\",\n      \"description\": \"Learn HTML structure and semantic markup\",\n      \"order\": 2,\n      \"duration\": \"2 weeks\",\n      \"completed\": true,\n      \"lessons\": [\n        {\n          \"id\": \"lesson-4\",\n          \"title\": \"HTML Basics\",\n          \"type\": \"video\",\n          \"duration\": \"18:45\",\n          \"completed\": true,\n          \"order\": 1\n        },\n        {\n          \"id\": \"lesson-5\",\n          \"title\": \"Semantic HTML\",\n          \"type\": \"video\",\n          \"duration\": \"25:30\",\n          \"completed\": true,\n          \"order\": 2\n        },\n        {\n          \"id\": \"lesson-6\",\n          \"title\": \"Forms and Input Elements\",\n          \"type\": \"video\",\n          \"duration\": \"30:00\",\n          \"completed\": true,\n          \"order\": 3\n        }\n      ]\n    },\n    {\n      \"id\": \"mod-3\",\n      \"title\": \"CSS Styling\",\n      \"description\": \"Master CSS for beautiful web designs\",\n      \"order\": 3,\n      \"duration\": \"2 weeks\",\n      \"completed\": false,\n      \"lessons\": [\n        {\n          \"id\": \"lesson-7\",\n          \"title\": \"CSS Basics and Selectors\",\n          \"type\": \"video\",\n          \"duration\": \"20:15\",\n          \"completed\": true,\n          \"order\": 1\n        },\n        {\n          \"id\": \"lesson-8\",\n          \"title\": \"Flexbox Layout\",\n          \"type\": \"video\",\n          \"duration\": \"28:30\",\n          \"completed\": false,\n          \"order\": 2\n        },\n        {\n          \"id\": \"lesson-9\",\n          \"title\": \"CSS Grid\",\n          \"type\": \"video\",\n          \"duration\": \"32:00\",\n          \"completed\": false,\n          \"order\": 3\n        }\n      ]\n    }\n  ],\n  \"totalModules\": 6,\n  \"completedModules\": 4,\n  \"totalLessons\": 42,\n  \"completedLessons\": 31,\n  \"syllabus\": \"Full course curriculum available upon enrollment\",\n  \"requirements\": [\n    \"Basic computer skills\",\n    \"A computer with internet connection\",\n    \"Willingness to learn\"\n  ],\n  \"whatYouWillLearn\": [\n    \"Build complete websites from scratch\",\n    \"Understand HTML5 and semantic markup\",\n    \"Master modern CSS including Flexbox and Grid\",\n    \"Write clean, maintainable JavaScript code\",\n    \"Deploy websites to production\"\n  ],\n  \"reviews\": [\n    {\n      \"id\": \"rev-1\",\n      \"user\": {\n        \"name\": \"John Doe\",\n        \"avatar\": \"https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400\"\n      },\n      \"rating\": 5,\n      \"comment\": \"Excellent course! The instructor explains everything clearly.\",\n      \"date\": \"2026-02-10T12:00:00Z\"\n    },\n    {\n      \"id\": \"rev-2\",\n      \"user\": {\n        \"name\": \"Jane Smith\",\n        \"avatar\": \"https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400\"\n      },\n      \"rating\": 4,\n      \"comment\": \"Great content, would love more hands-on projects.\",\n      \"date\": \"2026-02-08T09:30:00Z\"\n    }\n  ]\n}",
+          "latency": 0,
+          "statusCode": 200,
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            },
+            {
+              "key": "Access-Control-Allow-Methods",
+              "value": "GET, POST, PUT, DELETE, OPTIONS"
+            },
+            {
+              "key": "Access-Control-Allow-Headers",
+              "value": "Content-Type, Authorization"
+            }
+          ],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [
+            {
+              "target": "params",
+              "modifier": "id",
+              "value": "1|2|3|4",
+              "invert": false,
+              "operator": "regex"
+            }
+          ],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "crudKey": "id"
+        },
+        {
+          "uuid": "response-course-404",
+          "body": "{\n  \"error\": \"Course not found\",\n  \"message\": \"No course exists with ID: {{urlParam 'id'}}\",\n  \"statusCode\": 404\n}",
+          "latency": 0,
+          "statusCode": 404,
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            }
+          ],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": true,
+          "default": false,
+          "crudKey": "id"
+        }
+      ],
+      "enabled": true,
+      "responseMode": null
+    },
+    {
+      "uuid": "route-lesson-detail",
+      "type": "http",
+      "documentation": "Get lesson details by ID",
+      "method": "get",
+      "endpoint": "lessons/:id",
+      "responses": [
+        {
+          "uuid": "response-lesson-detail",
+          "body": "{\n  \"id\": \"{{urlParam 'id'}}\",\n  \"title\": \"{{#eq (urlParam 'id') 'lesson-1'}}What is Web Development?{{/eq}}{{#eq (urlParam 'id') 'lesson-2'}}Setting Up Your Development Environment{{/eq}}{{#eq (urlParam 'id') 'lesson-7'}}CSS Basics and Selectors{{/eq}}{{#eq (urlParam 'id') 'lesson-8'}}Flexbox Layout{{/eq}}\",\n  \"description\": \"Comprehensive lesson covering key concepts and practical examples\",\n  \"type\": \"{{#eq (urlParam 'id') 'lesson-3'}}pdf{{else}}video{{/eq}}\",\n  \"duration\": \"{{#eq (urlParam 'id') 'lesson-1'}}15:30{{/eq}}{{#eq (urlParam 'id') 'lesson-2'}}22:15{{/eq}}{{#eq (urlParam 'id') 'lesson-7'}}20:15{{/eq}}{{#eq (urlParam 'id') 'lesson-8'}}28:30{{/eq}}\",\n  \"videoUrl\": \"{{#eq (urlParam 'id') 'lesson-3'}}{{else}}https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4{{/eq}}\",\n  \"pdfUrl\": \"{{#eq (urlParam 'id') 'lesson-3'}}https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf{{/eq}}\",\n  \"thumbnailUrl\": \"https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800\",\n  \"courseId\": \"1\",\n  \"courseTitle\": \"Introduction to Web Development\",\n  \"moduleId\": \"mod-1\",\n  \"moduleTitle\": \"Getting Started\",\n  \"order\": 1,\n  \"completed\": {{#eq (urlParam 'id') 'lesson-1'}}true{{else}}{{#eq (urlParam 'id') 'lesson-7'}}true{{else}}false{{/eq}}{{/eq}},\n  \"lastWatchedPosition\": {{#eq (urlParam 'id') 'lesson-8'}}450{{else}}0{{/eq}},\n  \"resources\": [\n    {\n      \"id\": \"res-1\",\n      \"title\": \"Lesson Slides\",\n      \"type\": \"pdf\",\n      \"url\": \"https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf\",\n      \"size\": \"2.4 MB\"\n    },\n    {\n      \"id\": \"res-2\",\n      \"title\": \"Code Examples\",\n      \"type\": \"zip\",\n      \"url\": \"https://example.com/code-examples.zip\",\n      \"size\": \"1.1 MB\"\n    },\n    {\n      \"id\": \"res-3\",\n      \"title\": \"Additional Reading\",\n      \"type\": \"link\",\n      \"url\": \"https://developer.mozilla.org/en-US/\",\n      \"size\": null\n    }\n  ],\n  \"transcript\": \"Full lesson transcript available for all video lessons...\",\n  \"notes\": [\n    {\n      \"id\": \"note-1\",\n      \"timestamp\": \"5:30\",\n      \"content\": \"Key point: Always use semantic HTML elements\",\n      \"createdAt\": \"2026-02-13T10:35:00Z\"\n    }\n  ],\n  \"quiz\": {\n    \"id\": \"quiz-1\",\n    \"totalQuestions\": 5,\n    \"passingScore\": 80,\n    \"completed\": false,\n    \"score\": null\n  },\n  \"nextLesson\": {\n    \"id\": \"lesson-{{#eq (urlParam 'id') 'lesson-1'}}2{{/eq}}{{#eq (urlParam 'id') 'lesson-2'}}3{{/eq}}{{#eq (urlParam 'id') 'lesson-7'}}8{{/eq}}\",\n    \"title\": \"Next Lesson Title\"\n  },\n  \"previousLesson\": {{#eq (urlParam 'id') 'lesson-1'}}null{{else}}{\n    \"id\": \"lesson-1\",\n    \"title\": \"Previous Lesson Title\"\n  }{{/eq}}\n}",
+          "latency": 0,
+          "statusCode": 200,
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            },
+            {
+              "key": "Access-Control-Allow-Methods",
+              "value": "GET, POST, PUT, DELETE, OPTIONS"
+            },
+            {
+              "key": "Access-Control-Allow-Headers",
+              "value": "Content-Type, Authorization"
+            }
+          ],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "crudKey": "id"
+        },
+        {
+          "uuid": "response-lesson-404",
+          "body": "{\n  \"error\": \"Lesson not found\",\n  \"message\": \"No lesson exists with ID: {{urlParam 'id'}}\",\n  \"statusCode\": 404\n}",
+          "latency": 0,
+          "statusCode": 404,
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            }
+          ],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": true,
+          "default": false,
+          "crudKey": "id"
+        }
+      ],
+      "enabled": true,
+      "responseMode": null
+    },
+    {
+      "uuid": "route-progress-update",
+      "type": "http",
+      "documentation": "Update learning progress",
+      "method": "post",
+      "endpoint": "progress",
+      "responses": [
+        {
+          "uuid": "response-progress-success",
+          "body": "{\n  \"success\": true,\n  \"message\": \"Progress updated successfully\",\n  \"data\": {\n    \"userId\": \"user-123\",\n    \"lessonId\": \"{{body 'lessonId'}}\",\n    \"courseId\": \"{{body 'courseId'}}\",\n    \"completed\": {{body 'completed'}},\n    \"watchedDuration\": {{body 'watchedDuration'}},\n    \"totalDuration\": {{body 'totalDuration'}},\n    \"progressPercentage\": {{body 'progressPercentage'}},\n    \"updatedAt\": \"{{now 'iso-8601'}}\"\n  }\n}",
+          "latency": 0,
+          "statusCode": 200,
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            },
+            {
+              "key": "Access-Control-Allow-Methods",
+              "value": "GET, POST, PUT, DELETE, OPTIONS"
+            },
+            {
+              "key": "Access-Control-Allow-Headers",
+              "value": "Content-Type, Authorization"
+            }
+          ],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "crudKey": "id"
+        },
+        {
+          "uuid": "response-progress-error",
+          "body": "{\n  \"success\": false,\n  \"error\": \"Validation error\",\n  \"message\": \"Missing required fields\",\n  \"statusCode\": 400\n}",
+          "latency": 0,
+          "statusCode": 400,
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            }
+          ],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": false,
+          "crudKey": "id"
+        }
+      ],
+      "enabled": true,
+      "responseMode": null
+    },
+    {
+      "uuid": "route-user-profile",
+      "type": "http",
+      "documentation": "Get user profile",
+      "method": "get",
+      "endpoint": "user/profile",
+      "responses": [
+        {
+          "uuid": "response-user-profile",
+          "body": "{\n  \"id\": \"user-123\",\n  \"name\": \"Alex Martinez\",\n  \"email\": \"alex.martinez@example.com\",\n  \"avatar\": \"https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400\",\n  \"role\": \"student\",\n  \"joinedDate\": \"2025-06-15T00:00:00Z\",\n  \"bio\": \"Passionate learner exploring web development and design\",\n  \"location\": \"San Francisco, CA\",\n  \"timezone\": \"America/Los_Angeles\",\n  \"stats\": {\n    \"coursesEnrolled\": 3,\n    \"coursesCompleted\": 0,\n    \"totalLearningTime\": 4320,\n    \"certificatesEarned\": 0,\n    \"currentStreak\": 7,\n    \"longestStreak\": 21,\n    \"totalPoints\": 1250,\n    \"rank\": \"Bronze\"\n  },\n  \"preferences\": {\n    \"emailNotifications\": true,\n    \"pushNotifications\": false,\n    \"weeklyDigest\": true,\n    \"autoPlayVideos\": true,\n    \"playbackSpeed\": 1.0,\n    \"subtitles\": true,\n    \"theme\": \"light\",\n    \"language\": \"en\"\n  },\n  \"socialLinks\": {\n    \"github\": \"https://github.com/alexmartinez\",\n    \"linkedin\": \"https://linkedin.com/in/alexmartinez\",\n    \"twitter\": \"https://twitter.com/alexmartinez\",\n    \"website\": \"https://alexmartinez.dev\"\n  },\n  \"badges\": [\n    {\n      \"id\": \"badge-1\",\n      \"name\": \"Early Adopter\",\n      \"description\": \"Joined in the first month\",\n      \"icon\": \"🌟\",\n      \"earnedAt\": \"2025-06-15T00:00:00Z\"\n    },\n    {\n      \"id\": \"badge-2\",\n      \"name\": \"Quick Learner\",\n      \"description\": \"Completed first lesson within 24 hours\",\n      \"icon\": \"⚡\",\n      \"earnedAt\": \"2025-06-16T10:30:00Z\"\n    },\n    {\n      \"id\": \"badge-3\",\n      \"name\": \"Week Warrior\",\n      \"description\": \"Maintained 7-day learning streak\",\n      \"icon\": \"🔥\",\n      \"earnedAt\": \"2026-02-14T00:00:00Z\"\n    }\n  ]\n}",
+          "latency": 0,
+          "statusCode": 200,
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            },
+            {
+              "key": "Access-Control-Allow-Methods",
+              "value": "GET, POST, PUT, DELETE, OPTIONS"
+            },
+            {
+              "key": "Access-Control-Allow-Headers",
+              "value": "Content-Type, Authorization"
+            }
+          ],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "crudKey": "id"
+        }
+      ],
+      "enabled": true,
+      "responseMode": null
+    },
+    {
+      "uuid": "route-reports",
+      "type": "http",
+      "documentation": "Get progress reports",
+      "method": "get",
+      "endpoint": "reports",
+      "responses": [
+        {
+          "uuid": "response-reports",
+          "body": "{\n  \"userId\": \"user-123\",\n  \"generatedAt\": \"{{now 'iso-8601'}}\",\n  \"period\": \"last_30_days\",\n  \"overview\": {\n    \"totalLearningTime\": 4320,\n    \"averageDailyTime\": 144,\n    \"lessonsCompleted\": 65,\n    \"coursesInProgress\": 3,\n    \"coursesCompleted\": 0,\n    \"quizzesCompleted\": 12,\n    \"averageQuizScore\": 87.5,\n    \"currentStreak\": 7,\n    \"skillsAcquired\": 15\n  },\n  \"weeklyActivity\": [\n    {\n      \"week\": \"2026-W06\",\n      \"startDate\": \"2026-02-08\",\n      \"endDate\": \"2026-02-14\",\n      \"totalMinutes\": 840,\n      \"lessonsCompleted\": 12,\n      \"daysActive\": 6\n    },\n    {\n      \"week\": \"2026-W05\",\n      \"startDate\": \"2026-02-01\",\n      \"endDate\": \"2026-02-07\",\n      \"totalMinutes\": 720,\n      \"lessonsCompleted\": 10,\n      \"daysActive\": 5\n    },\n    {\n      \"week\": \"2026-W04\",\n      \"startDate\": \"2026-01-25\",\n      \"endDate\": \"2026-01-31\",\n      \"totalMinutes\": 960,\n      \"lessonsCompleted\": 15,\n      \"daysActive\": 7\n    },\n    {\n      \"week\": \"2026-W03\",\n      \"startDate\": \"2026-01-18\",\n      \"endDate\": \"2026-01-24\",\n      \"totalMinutes\": 600,\n      \"lessonsCompleted\": 8,\n      \"daysActive\": 4\n    }\n  ],\n  \"courseProgress\": [\n    {\n      \"courseId\": \"1\",\n      \"courseTitle\": \"Introduction to Web Development\",\n      \"progress\": 75,\n      \"timeSpent\": 2400,\n      \"lessonsCompleted\": 31,\n      \"totalLessons\": 42,\n      \"lastAccessed\": \"2026-02-13T10:30:00Z\",\n      \"estimatedCompletion\": \"2026-02-28\"\n    },\n    {\n      \"courseId\": \"2\",\n      \"courseTitle\": \"Advanced React & TypeScript\",\n      \"progress\": 45,\n      \"timeSpent\": 1560,\n      \"lessonsCompleted\": 25,\n      \"totalLessons\": 56,\n      \"lastAccessed\": \"2026-02-14T09:15:00Z\",\n      \"estimatedCompletion\": \"2026-03-20\"\n    },\n    {\n      \"courseId\": \"4\",\n      \"courseTitle\": \"Node.js & Express Backend Development\",\n      \"progress\": 20,\n      \"timeSpent\": 360,\n      \"lessonsCompleted\": 9,\n      \"totalLessons\": 48,\n      \"lastAccessed\": \"2026-02-10T14:20:00Z\",\n      \"estimatedCompletion\": \"2026-04-15\"\n    }\n  ],\n  \"skillsProgress\": [\n    {\n      \"skill\": \"JavaScript\",\n      \"level\": \"Intermediate\",\n      \"progress\": 65,\n      \"lessonsCompleted\": 18,\n      \"totalLessons\": 28\n    },\n    {\n      \"skill\": \"React\",\n      \"level\": \"Beginner\",\n      \"progress\": 40,\n      \"lessonsCompleted\": 12,\n      \"totalLessons\": 30\n    },\n    {\n      \"skill\": \"TypeScript\",\n      \"level\": \"Beginner\",\n      \"progress\": 35,\n      \"lessonsCompleted\": 8,\n      \"totalLessons\": 23\n    },\n    {\n      \"skill\": \"Node.js\",\n      \"level\": \"Beginner\",\n      \"progress\": 20,\n      \"lessonsCompleted\": 5,\n      \"totalLessons\": 25\n    }\n  ],\n  \"achievements\": [\n    {\n      \"id\": \"ach-1\",\n      \"title\": \"First Lesson Complete\",\n      \"description\": \"Completed your first lesson\",\n      \"date\": \"2025-06-16T10:30:00Z\",\n      \"type\": \"milestone\"\n    },\n    {\n      \"id\": \"ach-2\",\n      \"title\": \"Speed Learner\",\n      \"description\": \"Completed 10 lessons in one week\",\n      \"date\": \"2025-06-23T18:45:00Z\",\n      \"type\": \"performance\"\n    },\n    {\n      \"id\": \"ach-3\",\n      \"title\": \"Module Master\",\n      \"description\": \"Completed an entire module with 100% quiz scores\",\n      \"date\": \"2025-07-05T12:00:00Z\",\n      \"type\": \"excellence\"\n    }\n  ],\n  \"recommendations\": [\n    {\n      \"type\": \"course\",\n      \"title\": \"UI/UX Design Fundamentals\",\n      \"reason\": \"Complements your web development skills\",\n      \"courseId\": \"3\"\n    },\n    {\n      \"type\": \"practice\",\n      \"title\": \"Daily coding challenge\",\n      \"reason\": \"Maintain your 7-day streak\",\n      \"url\": \"/challenges/daily\"\n    }\n  ]\n}",
+          "latency": 0,
+          "statusCode": 200,
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            },
+            {
+              "key": "Access-Control-Allow-Methods",
+              "value": "GET, POST, PUT, DELETE, OPTIONS"
+            },
+            {
+              "key": "Access-Control-Allow-Headers",
+              "value": "Content-Type, Authorization"
+            }
+          ],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "crudKey": "id"
+        }
+      ],
+      "enabled": true,
+      "responseMode": null
+    },
+    {
+      "uuid": "route-options",
+      "type": "http",
+      "documentation": "CORS preflight handler",
+      "method": "options",
+      "endpoint": "*",
+      "responses": [
+        {
+          "uuid": "response-options",
+          "body": "",
+          "latency": 0,
+          "statusCode": 204,
+          "headers": [
+            {
+              "key": "Access-Control-Allow-Origin",
+              "value": "*"
+            },
+            {
+              "key": "Access-Control-Allow-Methods",
+              "value": "GET, POST, PUT, DELETE, OPTIONS"
+            },
+            {
+              "key": "Access-Control-Allow-Headers",
+              "value": "Content-Type, Authorization"
+            },
+            {
+              "key": "Access-Control-Max-Age",
+              "value": "86400"
+            }
+          ],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "crudKey": "id"
+        }
+      ],
+      "enabled": true,
+      "responseMode": null
+    }
+  ],
+  "rootChildren": [
+    {
+      "type": "route",
+      "uuid": "route-courses-list"
+    },
+    {
+      "type": "route",
+      "uuid": "route-course-detail"
+    },
+    {
+      "type": "route",
+      "uuid": "route-lesson-detail"
+    },
+    {
+      "type": "route",
+      "uuid": "route-progress-update"
+    },
+    {
+      "type": "route",
+      "uuid": "route-user-profile"
+    },
+    {
+      "type": "route",
+      "uuid": "route-reports"
+    },
+    {
+      "type": "route",
+      "uuid": "route-options"
+    }
+  ],
+  "proxyMode": false,
+  "proxyHost": "",
+  "proxyRemovePrefix": false,
+  "tlsOptions": {
+    "enabled": false,
+    "type": "CERT",
+    "pfxPath": "",
+    "certPath": "",
+    "keyPath": "",
+    "caPath": "",
+    "passphrase": ""
+  },
+  "cors": true,
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    },
+    {
+      "key": "Access-Control-Allow-Origin",
+      "value": "*"
+    },
+    {
+      "key": "Access-Control-Allow-Methods",
+      "value": "GET, POST, PUT, DELETE, OPTIONS"
+    },
+    {
+      "key": "Access-Control-Allow-Headers",
+      "value": "Content-Type, Authorization"
+    }
+  ],
+  "proxyReqHeaders": [
+    {
+      "key": "",
+      "value": ""
+    }
+  ],
+  "proxyResHeaders": [
+    {
+      "key": "",
+      "value": ""
+    }
+  ],
+  "data": []
+}

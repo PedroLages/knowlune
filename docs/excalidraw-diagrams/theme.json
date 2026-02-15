@@ -1,0 +1,45 @@
+{
+  "name": "LevelUp Theme",
+  "colors": {
+    "background": "#FAF5EE",
+    "card": "#FFFFFF",
+    "container": "#FFFFFF",
+    "containerStroke": "rgba(0, 0, 0, 0.1)",
+    "primary": "#2563EB",
+    "primaryForeground": "#FFFFFF",
+    "text": "#030213",
+    "textMuted": "#717182",
+    "muted": "#ECECF0",
+    "accent": "#E9EBEF",
+    "inputBackground": "#F3F3F5",
+    "sidebar": "#FBFBFB",
+    "sidebarBorder": "#EAEAEA",
+    "destructive": "#D4183D",
+    "success": "#16A34A",
+    "warning": "#F59E0B",
+    "streakOrange": "#F97316",
+    "progressBlue": "#2563EB",
+    "completedGreen": "#16A34A",
+    "coldGray": "#9CA3AF"
+  },
+  "borderRadius": {
+    "card": 24,
+    "button": 12,
+    "input": 12,
+    "badge": 8
+  },
+  "typography": {
+    "fontFamily": "system-ui, -apple-system, sans-serif",
+    "heading": 24,
+    "subheading": 18,
+    "body": 16,
+    "caption": 14,
+    "small": 12
+  },
+  "spacing": {
+    "grid": 20,
+    "sectionGap": 24,
+    "cardPadding": 20,
+    "elementGap": 12
+  }
+}

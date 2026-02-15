@@ -73,20 +73,25 @@ The pipeline uses Playwright configuration from `playwright.config.ts`:
 - **Retries in CI**: 2
 - **Workers in CI**: 1 (single-threaded per shard)
 - **Reporter**: HTML
-- **Trace**: on-first-retry
+- **Trace**: retain-on-failure
 - **Screenshots**: only-on-failure
+- **Video**: retain-on-failure
 
-## Relationship to Existing CI
+## Retry Logic
 
-This pipeline (`test.yml`) focuses on comprehensive E2E testing. The existing `ci.yml` handles:
+E2E shard steps use `nick-invision/retry@v3` with 2 attempts and a 30-minute timeout. This catches transient infrastructure failures (dev server crash, browser install issues) without interfering with Playwright's built-in test-level retries (`retries: 2` in CI).
+
+## Relationship to CI Pipeline
+
+This pipeline (`test.yml`) focuses exclusively on E2E testing. The `ci.yml` pipeline handles:
+
 - TypeScript type checking
 - ESLint linting
 - Prettier format checking
 - Production build
-- Unit tests
-- Basic E2E tests (no sharding)
+- Unit tests (Vitest with coverage)
 
-Both pipelines run independently. The `test.yml` pipeline provides deeper test coverage with sharding and flaky detection.
+Both pipelines run independently on the same triggers. The `test.yml` pipeline provides comprehensive E2E coverage with sharding, burn-in, and retry logic.
 
 ## Badge
 

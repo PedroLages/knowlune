@@ -72,3 +72,54 @@ export interface Note {
   updatedAt: string // ISO 8601 timestamp
   tags: string[] // Extracted from #hashtags in content
 }
+
+// --- Imported Course Types (Story 1.1) ---
+// These types support the File System Access API import flow.
+// They exist alongside the existing Course/Module/Lesson types.
+
+export type CourseStatus = 'importing' | 'ready' | 'error'
+
+export type VideoFormat = 'mp4' | 'mkv' | 'avi' | 'webm'
+
+export type SupportedFileExtension = '.mp4' | '.mkv' | '.avi' | '.webm' | '.pdf'
+
+export interface VideoMetadata {
+  duration: number
+  width: number
+  height: number
+}
+
+export interface PdfMetadata {
+  pageCount: number
+}
+
+export interface ImportedCourse {
+  id: string
+  name: string
+  importedAt: string // ISO 8601
+  category: string
+  tags: string[]
+  videoCount: number
+  pdfCount: number
+  directoryHandle: FileSystemDirectoryHandle
+}
+
+export interface ImportedVideo {
+  id: string
+  courseId: string
+  filename: string
+  path: string
+  duration: number
+  format: VideoFormat
+  order: number
+  fileHandle: FileSystemFileHandle
+}
+
+export interface ImportedPdf {
+  id: string
+  courseId: string
+  filename: string
+  path: string
+  pageCount: number
+  fileHandle: FileSystemFileHandle
+}

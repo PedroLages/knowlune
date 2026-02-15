@@ -50,7 +50,7 @@ export default function Settings() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'operative-study-backup.json'
+    a.download = 'levelup-backup.json'
     a.click()
     URL.revokeObjectURL(url)
   }

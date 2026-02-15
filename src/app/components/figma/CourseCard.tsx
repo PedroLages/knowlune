@@ -29,8 +29,11 @@ interface CourseCardProps {
 
 export function CourseCard({ course, completionPercent }: CourseCardProps) {
   return (
-    <Link to={`/courses/${course.id}`}>
-      <Card className="group bg-card rounded-3xl border-0 shadow-sm overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer">
+    <Link
+      to={`/courses/${course.id}`}
+      className="rounded-[24px] focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 outline-none block"
+    >
+      <Card className="group bg-card rounded-[24px] border-0 shadow-sm overflow-hidden hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 motion-reduce:hover:scale-100 cursor-pointer">
         <div className="relative h-44 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/50 dark:to-indigo-950/50 flex items-center justify-center overflow-hidden">
           {course.coverImage ? (
             <picture className="absolute inset-0">
@@ -80,15 +83,15 @@ export function CourseCard({ course, completionPercent }: CourseCardProps) {
 
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
-              <Video className="h-3.5 w-3.5" />
+              <Video className="h-3.5 w-3.5" aria-hidden="true" />
               {course.totalVideos} videos
             </span>
             <span className="flex items-center gap-1">
-              <FileText className="h-3.5 w-3.5" />
+              <FileText className="h-3.5 w-3.5" aria-hidden="true" />
               {course.totalPDFs} docs
             </span>
             <span className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" />
+              <Clock className="h-3.5 w-3.5" aria-hidden="true" />
               {course.estimatedHours}h
             </span>
           </div>

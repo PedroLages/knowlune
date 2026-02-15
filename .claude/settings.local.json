@@ -7,7 +7,8 @@
       "WebFetch(domain:downarchive.org)",
       "Bash(npm run dev:*)",
       "Bash(npm install:*)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "mcp__playwright__*"
     ]
   }
 }

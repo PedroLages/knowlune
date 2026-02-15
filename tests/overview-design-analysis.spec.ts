@@ -121,33 +121,27 @@ test.describe('Overview Page - Comprehensive Design Analysis', () => {
 
   test.describe('User Interactions', () => {
     test('should navigate to course on card click', async ({ page }) => {
-      const courseLinks = page.getByRole('link').filter({ hasText: /lessons$/ })
+      const firstCourse = page.getByRole('link').filter({ hasText: /lessons$/ }).first()
+      await expect(firstCourse).toBeVisible()
 
-      if ((await courseLinks.count()) > 0) {
-        const firstCourse = courseLinks.first()
-        const href = await firstCourse.getAttribute('href')
+      await firstCourse.click()
+      await page.waitForURL(/\/courses\//)
 
-        await firstCourse.click()
-        await page.waitForURL(/\/courses\//)
-
-        expect(page.url()).toContain('/courses/')
-      }
+      expect(page.url()).toContain('/courses/')
     })
 
     test('should show hover effects on cards', async ({ page }) => {
-      const cards = page.locator('[class*="cursor-pointer"]').first()
+      const card = page.locator('[class*="cursor-pointer"]').first()
+      await expect(card).toBeVisible()
 
-      if (await cards.isVisible()) {
-        // Hover and check for shadow change
-        await cards.hover()
+      // Hover and check for shadow change
+      await card.hover()
 
-        // Get computed style
-        const boxShadow = await cards.evaluate((el) =>
-          window.getComputedStyle(el).getBoxShadow
-        )
+      const boxShadow = await card.evaluate((el) =>
+        window.getComputedStyle(el).boxShadow
+      )
 
-        expect(boxShadow).not.toBe('none')
-      }
+      expect(boxShadow).not.toBe('none')
     })
   })
 
@@ -155,20 +149,18 @@ test.describe('Overview Page - Comprehensive Design Analysis', () => {
     test('should load within acceptable time', async ({ page }) => {
       const startTime = Date.now()
       await page.goto('/')
-      await page.waitForLoadState('networkidle')
+      await page.waitForLoadState('domcontentloaded')
       const loadTime = Date.now() - startTime
 
       expect(loadTime).toBeLessThan(3000) // Should load in under 3 seconds
     })
 
     test('should lazy load images', async ({ page }) => {
-      const images = page.getByRole('img')
-      const firstImage = images.first()
+      const firstImage = page.getByRole('img').first()
+      await expect(firstImage).toBeVisible()
 
-      if (await firstImage.isVisible()) {
-        const loading = await firstImage.getAttribute('loading')
-        expect(loading).toBe('lazy')
-      }
+      const loading = await firstImage.getAttribute('loading')
+      expect(loading).toBe('lazy')
     })
 
     test('should handle missing images gracefully', async ({ page }) => {
@@ -248,15 +240,14 @@ test.describe('Overview Page - Comprehensive Design Analysis', () => {
     })
 
     test('should have rounded corners on cards', async ({ page }) => {
-      const cards = page.locator('[class*="rounded"]').first()
+      const card = page.locator('[class*="rounded"]').first()
+      await expect(card).toBeVisible()
 
-      if (await cards.isVisible()) {
-        const borderRadius = await cards.evaluate((el) =>
-          window.getComputedStyle(el).borderRadius
-        )
+      const borderRadius = await card.evaluate((el) =>
+        window.getComputedStyle(el).borderRadius
+      )
 
-        expect(borderRadius).not.toBe('0px')
-      }
+      expect(borderRadius).not.toBe('0px')
     })
   })
 

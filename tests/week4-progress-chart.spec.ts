@@ -1,11 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 test('Week 4 - Progress Chart visualization', async ({ page }) => {
-  // Listen for errors
-  page.on('console', msg => console.log('Browser:', msg.text()))
-  page.on('pageerror', err => console.error('Page error:', err.message))
-
-  await page.goto('/', { waitUntil: 'networkidle' })
+  await page.goto('/')
 
   // Add comprehensive test data with varied activity across 14 days
   await page.evaluate(() => {
@@ -40,7 +36,6 @@ test('Week 4 - Progress Chart visualization', async ({ page }) => {
     }
 
     // Study log with varied activity across 14 days
-    // Pattern: 5 actions on day 0, 3 on day 1, 4 on day 2, etc.
     const studyLog = [
       // Today (5 actions)
       { type: 'lesson_complete', courseId: 'operative-six', lessonId: 'lesson-5', timestamp: now.toISOString() },
@@ -54,16 +49,6 @@ test('Week 4 - Progress Chart visualization', async ({ page }) => {
       { type: 'video_progress', courseId: 'operative-six', lessonId: 'lesson-4', timestamp: daysAgo(1).toISOString() },
       { type: 'lesson_complete', courseId: '6mx', lessonId: 'lesson-3', timestamp: daysAgo(1).toISOString() },
 
-      // 2 days ago (4 actions)
-      { type: 'lesson_complete', courseId: 'operative-six', lessonId: 'lesson-3', timestamp: daysAgo(2).toISOString() },
-      { type: 'video_progress', courseId: 'operative-six', lessonId: 'lesson-3', timestamp: daysAgo(2).toISOString() },
-      { type: 'lesson_complete', courseId: '6mx', lessonId: 'lesson-2', timestamp: daysAgo(2).toISOString() },
-      { type: 'note_saved', courseId: 'operative-six', lessonId: 'lesson-1', timestamp: daysAgo(2).toISOString() },
-
-      // 3 days ago (2 actions)
-      { type: 'lesson_complete', courseId: 'operative-six', lessonId: 'lesson-2', timestamp: daysAgo(3).toISOString() },
-      { type: 'video_progress', courseId: 'operative-six', lessonId: 'lesson-2', timestamp: daysAgo(3).toISOString() },
-
       // 4 days ago (6 actions - peak day)
       { type: 'lesson_complete', courseId: 'operative-six', lessonId: 'lesson-1', timestamp: daysAgo(4).toISOString() },
       { type: 'video_progress', courseId: 'operative-six', lessonId: 'lesson-1', timestamp: daysAgo(4).toISOString() },
@@ -72,42 +57,11 @@ test('Week 4 - Progress Chart visualization', async ({ page }) => {
       { type: 'video_progress', courseId: '6mx', lessonId: 'lesson-1', timestamp: daysAgo(4).toISOString() },
       { type: 'course_started', courseId: '6mx', timestamp: daysAgo(4).toISOString() },
 
-      // 5 days ago (1 action - low activity)
-      { type: 'video_progress', courseId: '6mx', lessonId: 'lesson-1', timestamp: daysAgo(5).toISOString() },
-
-      // 6 days ago (3 actions)
-      { type: 'video_progress', courseId: 'operative-six', lessonId: 'lesson-1', timestamp: daysAgo(6).toISOString() },
-      { type: 'note_saved', courseId: 'operative-six', lessonId: 'lesson-1', timestamp: daysAgo(6).toISOString() },
-      { type: 'video_progress', courseId: '6mx', lessonId: 'lesson-1', timestamp: daysAgo(6).toISOString() },
-
       // 7 days ago (4 actions)
       { type: 'video_progress', courseId: 'operative-six', lessonId: 'lesson-1', timestamp: daysAgo(7).toISOString() },
       { type: 'note_saved', courseId: 'operative-six', lessonId: 'lesson-1', timestamp: daysAgo(7).toISOString() },
       { type: 'video_progress', courseId: '6mx', lessonId: 'lesson-1', timestamp: daysAgo(7).toISOString() },
       { type: 'note_saved', courseId: '6mx', lessonId: 'lesson-1', timestamp: daysAgo(7).toISOString() },
-
-      // 8 days ago (2 actions)
-      { type: 'video_progress', courseId: 'operative-six', lessonId: 'lesson-1', timestamp: daysAgo(8).toISOString() },
-      { type: 'video_progress', courseId: '6mx', lessonId: 'lesson-1', timestamp: daysAgo(8).toISOString() },
-
-      // 9 days ago (1 action)
-      { type: 'video_progress', courseId: '6mx', lessonId: 'lesson-1', timestamp: daysAgo(9).toISOString() },
-
-      // 10 days ago (5 actions)
-      { type: 'video_progress', courseId: 'operative-six', lessonId: 'lesson-1', timestamp: daysAgo(10).toISOString() },
-      { type: 'note_saved', courseId: 'operative-six', lessonId: 'lesson-1', timestamp: daysAgo(10).toISOString() },
-      { type: 'video_progress', courseId: '6mx', lessonId: 'lesson-1', timestamp: daysAgo(10).toISOString() },
-      { type: 'note_saved', courseId: '6mx', lessonId: 'lesson-1', timestamp: daysAgo(10).toISOString() },
-      { type: 'course_started', courseId: '6mx', timestamp: daysAgo(10).toISOString() },
-
-      // 11 days ago (3 actions)
-      { type: 'video_progress', courseId: 'operative-six', lessonId: 'lesson-1', timestamp: daysAgo(11).toISOString() },
-      { type: 'video_progress', courseId: '6mx', lessonId: 'lesson-1', timestamp: daysAgo(11).toISOString() },
-      { type: 'note_saved', courseId: '6mx', lessonId: 'lesson-1', timestamp: daysAgo(11).toISOString() },
-
-      // 12 days ago (2 actions)
-      { type: 'video_progress', courseId: 'operative-six', lessonId: 'lesson-1', timestamp: daysAgo(12).toISOString() },
-      { type: 'video_progress', courseId: '6mx', lessonId: 'lesson-1', timestamp: daysAgo(12).toISOString() },
 
       // 13 days ago (4 actions)
       { type: 'video_progress', courseId: 'operative-six', lessonId: 'lesson-1', timestamp: daysAgo(13).toISOString() },
@@ -120,40 +74,20 @@ test('Week 4 - Progress Chart visualization', async ({ page }) => {
     localStorage.setItem('study-log', JSON.stringify(studyLog))
   })
 
-  await page.reload({ waitUntil: 'networkidle' })
-  await page.waitForTimeout(3000)
+  await page.reload()
 
-  // Verify progress chart is visible
-  const chartTitle = await page.getByText('Learning Activity')
+  // Wait for the chart to render by checking for key elements
+  const chartTitle = page.getByText('Learning Activity')
   await expect(chartTitle).toBeVisible()
 
-  // Verify chart description
-  const chartDescription = await page.getByText('Your study activity over the last 14 days')
+  const chartDescription = page.getByText('Your study activity over the last 14 days')
   await expect(chartDescription).toBeVisible()
 
-  // Scroll to the chart section
-  await chartTitle.scrollIntoViewIfNeeded()
-  await page.waitForTimeout(1000)
+  // Verify the chart rendered (Recharts wrapper exists)
+  const chartWrapper = page.locator('.recharts-wrapper').first()
+  await expect(chartWrapper).toBeVisible()
 
-  // Take screenshot of the chart section
-  const chartCard = page.locator('.recharts-wrapper').first()
-  await chartCard.screenshot({
-    path: 'tests/screenshots/week4-chart-only.png'
-  })
-
-  // Take full page screenshot to show all Week 4 features
-  await page.screenshot({
-    path: 'tests/screenshots/week4-full-desktop.png',
-    fullPage: true
-  })
-
-  // Scroll back to top and take viewport screenshot
-  await page.evaluate(() => window.scrollTo(0, 0))
-  await page.waitForTimeout(500)
-  await page.screenshot({
-    path: 'tests/screenshots/week4-hero.png',
-    fullPage: false
-  })
-
-  console.log('✅ Week 4 Progress Chart test completed successfully')
+  // Verify chart has SVG bars rendered (confirms data is displayed)
+  const chartBars = page.locator('.recharts-bar-rectangle')
+  await expect(chartBars.first()).toBeVisible()
 })

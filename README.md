@@ -1,6 +1,6 @@
-# E-learning platform wireframes
+# LevelUp
 
-This is a code bundle for E-learning platform wireframes. The original project is available at <https://www.figma.com/design/q4x6ttJD11avObQNFoeQ2D/E-learning-platform-wireframes>.
+LevelUp is a personal learning platform for tracking progress, courses, and achievements. Built with React, TypeScript, and Tailwind CSS. The original Figma design is available at <https://www.figma.com/design/q4x6ttJD11avObQNFoeQ2D/E-learning-platform-wireframes>.
 
 ## Running the code
 

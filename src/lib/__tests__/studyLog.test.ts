@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import {
   logStudyAction,
   getStudyLog,
@@ -17,9 +17,18 @@ function makeAction(overrides: Partial<StudyAction> = {}): StudyAction {
   }
 }
 
+// Fixed date to prevent midnight boundary flakiness
+const FIXED_NOW = new Date('2026-01-15T12:00:00Z')
+
 describe('studyLog', () => {
   beforeEach(() => {
     localStorage.clear()
+    vi.useFakeTimers()
+    vi.setSystemTime(FIXED_NOW)
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   describe('logStudyAction', () => {
@@ -153,13 +162,12 @@ describe('studyLog', () => {
 
   describe('getActionsPerDay', () => {
     it('returns correct counts for actions', () => {
-      const today = new Date().toISOString().split('T')[0]
-      logStudyAction(makeAction({ timestamp: `${today}T10:00:00Z` }))
-      logStudyAction(makeAction({ timestamp: `${today}T11:00:00Z` }))
-      logStudyAction(makeAction({ timestamp: `${today}T12:00:00Z` }))
+      logStudyAction(makeAction({ timestamp: '2026-01-15T10:00:00Z' }))
+      logStudyAction(makeAction({ timestamp: '2026-01-15T11:00:00Z' }))
+      logStudyAction(makeAction({ timestamp: '2026-01-15T12:00:00Z' }))
 
       const perDay = getActionsPerDay(7)
-      const todayEntry = perDay.find(d => d.date === today)
+      const todayEntry = perDay.find(d => d.date === '2026-01-15')
       expect(todayEntry).toBeDefined()
       expect(todayEntry!.count).toBe(3)
     })
@@ -195,12 +203,11 @@ describe('studyLog', () => {
     })
 
     it('counts actions from different courses on same day', () => {
-      const today = new Date().toISOString().split('T')[0]
-      logStudyAction(makeAction({ courseId: 'course-1', timestamp: `${today}T08:00:00Z` }))
-      logStudyAction(makeAction({ courseId: 'course-2', timestamp: `${today}T09:00:00Z` }))
+      logStudyAction(makeAction({ courseId: 'course-1', timestamp: '2026-01-15T08:00:00Z' }))
+      logStudyAction(makeAction({ courseId: 'course-2', timestamp: '2026-01-15T09:00:00Z' }))
 
       const perDay = getActionsPerDay(7)
-      const todayEntry = perDay.find(d => d.date === today)
+      const todayEntry = perDay.find(d => d.date === '2026-01-15')
       expect(todayEntry!.count).toBe(2)
     })
   })

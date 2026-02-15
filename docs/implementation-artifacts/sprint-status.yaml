@@ -1,0 +1,114 @@
+# generated: 2026-02-15
+# project: Elearningplatformwireframes
+# tracking_system: file-system
+# story_location: docs/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog -> in-progress: Automatically when first story is created (via create-story)
+#   - in-progress -> done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-02-15
+project: Elearningplatformwireframes
+tracking_system: file-system
+story_location: docs/implementation-artifacts
+
+development_status:
+  # Epic 1: Course Import & Library Management (4 stories)
+  epic-1: in-progress
+  1-1-set-up-data-foundation-and-import-course-folder: done
+  1-2-display-course-library: done
+  1-3-organize-courses-by-topic: backlog
+  1-4-manage-course-status: backlog
+  epic-1-retrospective: optional
+
+  # Epic 2: Video & PDF Content Playback (5 stories)
+  epic-2: backlog
+  2-1-lesson-player-page-with-video-playback: backlog
+  2-2-video-playback-controls-and-keyboard-shortcuts: backlog
+  2-3-video-bookmarking-and-resume: backlog
+  2-4-pdf-viewer-with-page-navigation: backlog
+  2-5-course-structure-navigation: backlog
+  epic-2-retrospective: optional
+
+  # Epic 3: Note-Taking & Knowledge Capture (7 stories)
+  epic-3: backlog
+  3-1-markdown-note-editor-with-autosave: backlog
+  3-2-side-by-side-study-layout: backlog
+  3-3-timestamp-notes-and-video-navigation: backlog
+  3-4-tag-based-note-organization: backlog
+  3-5-full-text-note-search: backlog
+  3-6-view-course-notes-collection: backlog
+  3-7-bookmarks-page: backlog
+  epic-3-retrospective: optional
+
+  # Epic 4: Progress Tracking & Visual Maps (5 stories)
+  epic-4: backlog
+  4-1-video-completion-status-tracking: backlog
+  4-2-course-completion-percentage: backlog
+  4-3-study-session-auto-logging: backlog
+  4-4-study-session-history: backlog
+  4-5-visual-progress-dashboard-widget: backlog
+  epic-4-retrospective: optional
+
+  # Epic 5: Study Streaks & Gamification (6 stories)
+  epic-5: backlog
+  5-1-daily-study-streak-tracking: backlog
+  5-2-streak-calendar-visualization: backlog
+  5-3-streak-pause-and-recovery: backlog
+  5-4-study-reminders: backlog
+  5-5-create-learning-challenges: backlog
+  5-6-challenge-progress-tracking-and-celebrations: backlog
+  epic-5-retrospective: optional
+
+  # Epic 6: Learning Intelligence & Momentum (5 stories)
+  epic-6: backlog
+  6-1-course-momentum-score-algorithm: backlog
+  6-2-momentum-based-course-display: backlog
+  6-3-continue-learning-zero-decision-resume: backlog
+  6-4-course-recommendations-and-abandonment-detection: backlog
+  6-5-adaptive-study-scheduling-suggestions: backlog
+  epic-6-retrospective: optional
+
+  # Epic 7: Analytics & Reporting Dashboard (5 stories)
+  epic-7: backlog
+  7-1-study-time-analytics: backlog
+  7-2-completion-rate-tracking: backlog
+  7-3-learning-velocity-metrics: backlog
+  7-4-retention-insights: backlog
+  7-5-personalized-insights-and-recommendations: backlog
+  epic-7-retrospective: optional
+
+  # Epic 8: AI-Powered Learning Assistant (6 stories)
+  epic-8: backlog
+  8-1-ai-provider-configuration: backlog
+  8-2-ai-video-summaries: backlog
+  8-3-ai-note-qa: backlog
+  8-4-ai-learning-path-optimization: backlog
+  8-5-knowledge-gap-identification: backlog
+  8-6-ai-note-enhancement-and-concept-connections: backlog
+  epic-8-retrospective: optional
