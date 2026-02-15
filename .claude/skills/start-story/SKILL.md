@@ -24,24 +24,37 @@ When invoked with a story ID (e.g., `E01-S03`):
 
 2. **Check status** in `docs/implementation-artifacts/sprint-status.yaml`. Warn if not `backlog` or `ready-for-dev`.
    - **ID normalization**: `E01-S03` → strip leading zeros → key `1-3-organize-courses-by-topic`.
+   - If status is already `in-progress`: this is a **resumed start**. Inform the user and skip to the resumption check in step 3.
 
 3. **Derive branch name**: `feature/` + lowercase story ID + slugified name. Strip `& ( ) , .` and filler words (and, the, a, with, for, of). Lowercase. Hyphens between words.
    - Example: `E01-S03` "Organize Courses by Topic" → `feature/e01-s03-organize-courses-by-topic`
 
 4. **Check working tree**: `git status`. Warn if uncommitted changes. Suggest commit or stash.
 
-5. **Create branch**: `git checkout main && git pull && git checkout -b feature/e##-s##-slug`. Skip pull if no remote.
+5. **Create branch** (idempotent):
+   - Check if branch already exists: `git branch --list feature/e##-s##-slug`.
+   - **Branch exists**: Switch to it (`git checkout feature/e##-s##-slug`). Inform user: "Branch already exists, switching to it."
+   - **Branch does not exist**: `git checkout main && git pull && git checkout -b feature/e##-s##-slug`. Skip pull if no remote.
 
-6. **Create story file**: Create `docs/implementation-artifacts/{key}.md` using the template at `docs/implementation-artifacts/story-template.md`. Populate frontmatter (`story_id`, `story_name`, `status: in-progress`, `started: YYYY-MM-DD`, `reviewed: false`) and fill in Story, Acceptance Criteria, and Tasks from the epic.
+6. **Create story file** (idempotent):
+   - Check if `docs/implementation-artifacts/{key}.md` already exists.
+   - **File exists**: Skip creation. Inform user: "Story file already exists, keeping it."
+   - **File does not exist**: Create using the template at `docs/implementation-artifacts/story-template.md`. Populate frontmatter (`story_id`, `story_name`, `status: in-progress`, `started: YYYY-MM-DD`, `reviewed: false`, `review_started:`, `review_gates_passed: []`) and fill in Story, Acceptance Criteria, and Tasks from the epic.
 
-7. **Update sprint status**: In `docs/implementation-artifacts/sprint-status.yaml`, set story → `in-progress`. If this is the first story in the epic, set epic → `in-progress`.
+7. **Update sprint status** (idempotent):
+   - Check current status in `docs/implementation-artifacts/sprint-status.yaml`.
+   - **Already `in-progress`**: Skip update. Inform user: "Sprint status already in-progress."
+   - **Not `in-progress`**: Set story → `in-progress`. If this is the first story in the epic, set epic → `in-progress`.
 
-8. **ATDD test suggestion**: Analyze the acceptance criteria content:
-   - If ACs mention UI elements ("page", "button", "display", "show", "component", "render", "modal", "form", "input", "click"), suggest generating ATDD tests with reasoning: "ACs describe user-facing behavior — failing E2E tests help validate implementation."
-   - If ACs are about config, refactoring, data, or infrastructure, suggest skipping with reasoning: "ACs are technical/internal — unit tests during implementation are more appropriate."
-   - Present the suggestion to the user via AskUserQuestion. User makes the final decision.
-   - If user accepts: Generate failing acceptance tests in `tests/e2e/story-{id}.spec.ts` using existing Playwright fixture patterns from `tests/support/`. Tests should follow RED-GREEN-REFACTOR: write minimal failing tests that map to acceptance criteria.
-   - If user declines: Continue without tests.
+8. **ATDD test suggestion** (idempotent):
+   - Check if `tests/e2e/story-{id}.spec.ts` already exists.
+   - **File exists**: Skip ATDD suggestion. Inform user: "ATDD tests already exist."
+   - **File does not exist**: Analyze the acceptance criteria content:
+     - If ACs mention UI elements ("page", "button", "display", "show", "component", "render", "modal", "form", "input", "click"), suggest generating ATDD tests with reasoning: "ACs describe user-facing behavior — failing E2E tests help validate implementation."
+     - If ACs are about config, refactoring, data, or infrastructure, suggest skipping with reasoning: "ACs are technical/internal — unit tests during implementation are more appropriate."
+     - Present the suggestion to the user via AskUserQuestion. User makes the final decision.
+     - If user accepts: Generate failing acceptance tests in `tests/e2e/story-{id}.spec.ts` using existing Playwright fixture patterns from `tests/support/`. Tests should follow RED-GREEN-REFACTOR: write minimal failing tests that map to acceptance criteria.
+     - If user declines: Continue without tests.
 
 9. **Launch 3 parallel Explore agents** via Task tool:
    - **Agent 1 — Story context**: Read story ACs, dependencies, related stories in `docs/planning-artifacts/epics.md`. Check if dependent stories are `done` in sprint-status.
@@ -56,7 +69,10 @@ When invoked with a story ID (e.g., `E01-S03`):
     - UX design references (if applicable)
     - Note: during implementation, make granular commits after each small task as save points
 
-11. **Initial commit**: `git add docs/implementation-artifacts/{story-key}.md docs/implementation-artifacts/sprint-status.yaml` (and `tests/e2e/story-{id}.spec.ts` if ATDD tests were created). Commit: `chore: start story E##-S##`.
+11. **Initial commit** (idempotent):
+    - Check if an initial commit already exists: `git log --oneline --grep="chore: start story E##-S##"`.
+    - **Commit exists**: Skip. Inform user: "Initial commit already made."
+    - **Commit does not exist**: `git add docs/implementation-artifacts/{story-key}.md docs/implementation-artifacts/sprint-status.yaml` (and `tests/e2e/story-{id}.spec.ts` if ATDD tests were created). Commit: `chore: start story E##-S##`.
 
 12. **Completion output**: Display the following summary to the user:
 
@@ -132,9 +148,12 @@ Map changed files to routes for design review context:
 
 ## Recovery
 
-If the workflow fails mid-run:
+All steps are idempotent — re-running `/start-story` after an interruption safely resumes:
 - **Steps 1-2 fail** (lookup/status): Nothing changed. Fix and re-run.
 - **Step 4 fail** (uncommitted changes): Commit or stash, re-run.
-- **Step 5 fail** (branch creation): Check if branch exists (`git branch -a`), delete if partial, re-run.
-- **Steps 6-7 fail** (file creation/status update): Delete partial files, re-run.
-- **General cleanup**: `git checkout main && git branch -D feature/e##-s##-slug`
+- **Step 5** (branch): If branch exists, switches to it instead of failing.
+- **Step 6** (story file): If file exists, keeps it instead of overwriting.
+- **Step 7** (sprint status): If already in-progress, skips update.
+- **Step 8** (ATDD tests): If test file exists, skips suggestion.
+- **Step 11** (initial commit): If commit exists, skips.
+- **General cleanup** (if needed): `git checkout main && git branch -D feature/e##-s##-slug`

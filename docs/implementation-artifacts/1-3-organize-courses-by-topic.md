@@ -1,10 +1,10 @@
 ---
 story_id: E01-S03
 story_name: "Organize Courses by Topic"
-status: in-progress
+status: done
 started: 2026-02-15
-completed:
-reviewed: false
+completed: 2026-02-15
+reviewed: true
 ---
 
 # Story 1.3: Organize Courses by Topic
@@ -66,11 +66,39 @@ So that I can find related courses quickly as my library grows.
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+**Reviewed 2026-02-15** — 11 issues (2 blockers [systemic/pre-existing], 2 high, 3 medium, 4 nits)
+
+Blockers are systemic: `bg-blue-600` vs `--primary` theme token mismatch exists across entire codebase, not introduced by this story.
+
+### Key findings
+
+1. TopicFilter button missing `focus-visible:ring-*` for keyboard users (high)
+2. Tag badge height `h-5` non-standard; popover width `w-56` may be narrow (medium)
+3. Accessibility praised: proper ARIA, `aria-pressed`, `role="group"`, semantic HTML
+
+Full report: `docs/reviews/design/design-review-2026-02-15-e01-s03.md`
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**Reviewed 2026-02-15** — 10 issues (0 blockers, 4 high, 4 medium, 4 nits)
+
+### High Priority
+1. `ImportedCourseCard.tsx:14` — `getAllTags()` recomputed per card. Lift to parent and pass as prop.
+2. `useCourseImportStore.ts:46-65` — `addImportedCourse` doesn't normalize tags.
+3. `useCourseImportStore.test.ts` — Missing unit tests for `updateCourseTags` and `getAllTags`.
+4. `Courses.test.tsx:30-41` — Store mock missing `updateCourseTags` and `getAllTags`.
+
+### Medium
+1. `TagBadgeList.tsx:18` — Use `cn()` utility instead of string interpolation.
+2. `TagEditor.tsx` — No max tag limit.
+3. `TagEditor.tsx:51`, `TagBadgeList.tsx:37` — Use Tailwind v4 `size-5` shorthand.
+4. `TopicFilter.tsx:41` — Hardcoded colors (acceptable per project convention).
+
+### Nits
+1. Lone "+" button margin when no tags. 2. `create-` prefix collision potential.
+3. `toLocaleDateString()` without format options. 4. Non-obvious memo dependency.
+
+Full report: `docs/reviews/code/code-review-2026-02-15-e01-s03.md`
 
 ## Challenges and Lessons Learned
 

@@ -34,15 +34,32 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
 
 2. **Verify story file**: Check `docs/implementation-artifacts/{key}.md` exists. Missing → STOP with error.
 
-3. **Check reviewed status**: Read story file frontmatter `reviewed` field.
+3. **Check reviewed status**: Read story file frontmatter `reviewed` field. Three possible states:
 
-4. **If NOT reviewed** (streamlined mode):
-   - Run the full review pipeline inline — same steps as `/review-story` steps 3-7:
+   - **`reviewed: true`** → comprehensive mode (step 5)
+   - **`reviewed: in-progress`** → interrupted review mode (step 4a)
+   - **`reviewed: false`** → streamlined mode (step 4b)
+
+4a. **If `reviewed: in-progress`** (interrupted review):
+   - Inform the user: "Previous `/review-story` was interrupted. Checking what completed."
+   - Read `review_gates_passed` from frontmatter. Check for existing report files.
+   - **If agent reviews completed** (both `design-review` and `code-review` in gates, reports exist):
+     - Treat as comprehensive mode — run lightweight validation only (step 5).
+   - **If agent reviews incomplete**:
+     - Inform the user: "Review was interrupted before completion. Running full review inline."
+     - Run the full review pipeline with resumption — same as `/review-story` steps 3-8 (respecting `review_gates_passed` to skip completed agent reviews).
+     - If **Blockers** found → STOP with fix instructions.
+     - If no blockers → continue to step 6.
+
+4b. **If NOT reviewed** (streamlined mode):
+   - Set `reviewed: in-progress`, `review_started: YYYY-MM-DD`, `review_gates_passed: []` in story frontmatter.
+   - Run the full review pipeline inline — same steps as `/review-story` steps 4-8:
      a. Pre-checks: build, lint, unit tests, E2E tests
      b. Design review (if UI changes)
      c. Code review
      d. Consolidated report
-   - If **Blockers** found → STOP with fix instructions. Developer fixes and re-runs `/finish-story`.
+   - Update `review_gates_passed` after each gate completes.
+   - If **Blockers** found → STOP with fix instructions. Developer fixes and re-runs `/finish-story`. Completed gates are preserved.
    - If no blockers → continue to step 6.
 
 5. **If already reviewed** (comprehensive mode):
@@ -170,7 +187,7 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
 
 - **Steps 1-2 fail** (lookup): Nothing changed. Fix and re-run.
 - **Steps 3-5 fail** (validation): Fix errors, re-run `/finish-story`.
-- **Step 4 fail** (inline review blockers): Fix issues, re-run.
+- **Step 4a/4b fail** (inline review): Story stays `reviewed: in-progress` with `review_gates_passed` tracking progress. Re-run `/finish-story` resumes — pre-checks re-run, completed agent reviews are skipped.
 - **Step 9 fail** (push): Check `git remote -v`, fix remote config, re-run.
 - **Step 10 fail** (PR): Check `gh auth status`, authenticate if needed, re-run.
 

@@ -7,7 +7,7 @@ disable-model-invocation: true
 
 # Review Story
 
-Runs all quality gates: pre-checks, design review, code review, and test quality review. Produces a consolidated severity-triaged report.
+Runs all quality gates: pre-checks, design review, code review, and test quality review. Produces a consolidated severity-triaged report. Supports resumption — interrupted reviews skip already-completed gates on re-run.
 
 ## Usage
 
@@ -20,9 +20,20 @@ Runs all quality gates: pre-checks, design review, code review, and test quality
 
 1. **Identify story**: Parse ID from `$ARGUMENTS` or from branch name (`git branch --show-current` → `feature/e01-s03-...` → `E01-S03`).
 
-2. **Read story file** from `docs/implementation-artifacts/`. Extract acceptance criteria, tasks, and current status.
+2. **Read story file** from `docs/implementation-artifacts/`. Extract acceptance criteria, tasks, current status, and **review tracking fields** (`reviewed`, `review_started`, `review_gates_passed`).
 
-3. **Pre-checks** (fast fail before slow reviews):
+3. **Detect resumption**: Check if this is a resumed review:
+
+   - If `reviewed: in-progress` and `review_gates_passed` is non-empty:
+     - Inform the user: "Resuming interrupted review. Previously passed gates: [list]. Re-running pre-checks (code may have changed), then skipping already-completed agent reviews."
+     - Set `resuming = true` and note which gates passed.
+   - If `reviewed: true`:
+     - Inform the user: "Story already reviewed. Re-running full review to validate current state."
+     - Reset: set `reviewed: in-progress`, clear `review_gates_passed`, update `review_started`.
+   - If `reviewed: false` (fresh review):
+     - Set `reviewed: in-progress`, `review_started: YYYY-MM-DD`, `review_gates_passed: []` in story frontmatter.
+
+4. **Pre-checks** (always run — fast, validates current state):
 
    Run these sequentially — stop on first failure:
 
@@ -31,11 +42,15 @@ Runs all quality gates: pre-checks, design review, code review, and test quality
    c. `npm run test:unit -- --run` — STOP on failure. If no unit test script or no test files, note and continue.
    d. `npx playwright test tests/e2e/` — STOP on failure. If no E2E test files, note and continue. Do NOT run `tests/design-review.spec.ts` here — that's separate.
 
-   If any pre-check fails: show the error output, suggest fixes, and STOP. Do not proceed to reviews.
+   If any pre-check fails: show the error output, suggest fixes, and STOP. Do not proceed to reviews. Keep `reviewed: in-progress` so next run resumes.
 
-4. **Design review** (conditional):
+   On success: update `review_gates_passed` to include `build`, `lint`, `unit-tests`, `e2e-tests` as applicable.
 
-   Only run if `git diff --name-only main...HEAD` shows changes in `src/app/` (pages, components, styles):
+5. **Design review** (conditional, skippable on resume):
+
+   **Skip condition**: If resuming AND `design-review` is already in `review_gates_passed` AND the report file `docs/reviews/design/design-review-*-{story-id}.md` exists — skip with message: "Design review already completed. Report: [path]".
+
+   Otherwise, only run if `git diff --name-only main...HEAD` shows changes in `src/app/` (pages, components, styles):
 
    a. Check dev server: `curl -s -o /dev/null -w "%{http_code}" http://localhost:5173`.
       - Not reachable → start `npm run dev` in background via Bash (`npm run dev &`), wait up to 30s. Still unreachable → warn and skip.
@@ -49,8 +64,13 @@ Runs all quality gates: pre-checks, design review, code review, and test quality
       ```
    c. Save report: `docs/reviews/design/design-review-{YYYY-MM-DD}-{story-id}.md`
    d. Parse severity from returned report.
+   e. Update `review_gates_passed` to include `design-review`.
 
-5. **Code review**:
+6. **Code review** (skippable on resume):
+
+   **Skip condition**: If resuming AND `code-review` is already in `review_gates_passed` AND the report file `docs/reviews/code/code-review-*-{story-id}.md` exists — skip with message: "Code review already completed. Report: [path]".
+
+   Otherwise:
 
    Dispatch to `code-review` agent via Task tool:
    ```
@@ -62,8 +82,9 @@ Runs all quality gates: pre-checks, design review, code review, and test quality
    ```
    Save report: `docs/reviews/code/code-review-{YYYY-MM-DD}-{story-id}.md`
    Parse severity from returned report.
+   Update `review_gates_passed` to include `code-review`.
 
-6. **Test quality review** (conditional):
+7. **Test quality review** (conditional):
 
    Only if `git diff --name-only main...HEAD` shows new or changed test files (`*.test.ts`, `*.spec.ts`):
 
@@ -73,7 +94,7 @@ Runs all quality gates: pre-checks, design review, code review, and test quality
    - Check AC coverage completeness
    - Apply `systematic-debugging` patterns if test failures were found
 
-7. **Consolidated report**:
+8. **Consolidated report**:
 
    Combine all findings into a single severity-triaged view:
 
@@ -87,11 +108,11 @@ Runs all quality gates: pre-checks, design review, code review, and test quality
    - E2E tests: [pass/fail/skipped] ([N] tests)
 
    ### Design Review
-   [Summary or "Skipped — no UI changes"]
+   [Summary or "Skipped — no UI changes" or "Reused from previous run — [path]"]
    Report: docs/reviews/design/design-review-{date}-{id}.md
 
    ### Code Review
-   [Summary with finding counts by severity]
+   [Summary with finding counts by severity or "Reused from previous run — [path]"]
    Report: docs/reviews/code/code-review-{date}-{id}.md
 
    ### Test Quality
@@ -118,9 +139,12 @@ Runs all quality gates: pre-checks, design review, code review, and test quality
    - **Blocker/Critical findings** → STOP with specific fix instructions and file:line references.
    - **Non-blocking findings** → listed as warnings. Story can proceed to `/finish-story`.
 
-8. **Mark reviewed**: Update story file frontmatter `reviewed: true`. Append review summary to `## Design Review Feedback` and `## Code Review Feedback` sections.
+9. **Mark reviewed**: Update story file frontmatter:
+   - Set `reviewed: true`
+   - Set `review_gates_passed` to the full list of completed gates
+   - Append review summary to `## Design Review Feedback` and `## Code Review Feedback` sections.
 
-9. **Completion output**: Display the following summary to the user:
+10. **Completion output**: Display the following summary to the user:
 
     **If PASS (no blockers)**:
 
@@ -167,12 +191,12 @@ Runs all quality gates: pre-checks, design review, code review, and test quality
 
     ### After Fixing
 
-    Re-run `/review-story` to validate fixes.
+    Re-run `/review-story` to validate fixes. Pre-checks will re-run; completed agent reviews will be reused.
 
     ---
     ```
 
-After fixing issues, re-run `/review-story` until clean.
+After fixing issues, re-run `/review-story` — completed agent reviews are preserved and reused.
 
 ## Route Map
 
@@ -198,7 +222,8 @@ Apply `receiving-code-review` principles when processing review feedback:
 
 ## Recovery
 
-- **Pre-checks fail**: Fix errors, re-run `/review-story`.
-- **Design review agent fails**: Check dev server, check Playwright MCP tools available, re-run.
-- **Code review agent fails**: Check git diff is accessible, re-run.
-- **Partial completion**: Reports already saved are preserved. Re-run executes all steps from scratch.
+- **Pre-checks fail**: Fix errors, re-run `/review-story`. Agent reviews already completed are preserved.
+- **Design review agent fails**: Check dev server, check Playwright MCP tools available, re-run. Only the failed gate re-runs.
+- **Code review agent fails**: Check git diff is accessible, re-run. Only the failed gate re-runs.
+- **Interrupted mid-review**: Story stays `reviewed: in-progress` with `review_gates_passed` tracking progress. Re-run resumes from where it left off — pre-checks always re-run (fast), completed agent reviews are skipped.
+- **Stale review after code changes**: If you fix blockers and re-run, pre-checks validate the new code. Agent reviews from the previous run are reused unless you want a fresh review — in that case, manually set `reviewed: false` and clear `review_gates_passed: []` in the story frontmatter.

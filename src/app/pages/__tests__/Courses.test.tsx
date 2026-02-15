@@ -27,7 +27,7 @@ const mockCourses: ImportedCourse[] = [
   },
 ]
 
-let storeState = {
+const storeState = {
   importedCourses: [] as ImportedCourse[],
   isImporting: false,
   importError: null as string | null,

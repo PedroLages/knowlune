@@ -4,7 +4,9 @@ story_name: "[Name from epic]"
 status: in-progress
 started: YYYY-MM-DD
 completed:
-reviewed: false
+reviewed: false          # false | in-progress | true
+review_started:          # YYYY-MM-DD — set when /review-story begins
+review_gates_passed: []  # tracks completed gates: [build, lint, unit-tests, e2e-tests, design-review, code-review]
 ---
 
 # Story ##.##: [Story Name]
