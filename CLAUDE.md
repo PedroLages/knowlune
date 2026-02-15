@@ -230,3 +230,60 @@ PRs with UI changes are automatically reviewed via `.github/workflows/design-rev
 3. **Learn Patterns**: Review `design-principles.md` to internalize standards
 4. **Iterate**: Use agent feedback to improve, then re-review
 5. **Include Screenshots**: Add generated screenshots to PR descriptions
+
+## Story Development Workflow
+
+Per-story development loop with integrated quality gates. Three slash commands orchestrate the full cycle from branch creation to PR.
+
+### Commands
+
+| Command                 | Purpose                                                          |
+| ----------------------- | ---------------------------------------------------------------- |
+| `/start-story E##-S##`  | Create branch, story file, optional ATDD tests, enter plan mode  |
+| `/review-story E##-S##` | Run all quality gates: build, lint, tests, design review, code review |
+| `/finish-story E##-S##` | Validate, create PR. Auto-runs reviews if not already done       |
+| `/design-review`        | Standalone design review via Playwright MCP (also used by `/review-story`) |
+
+### Workflow Modes
+
+**Streamlined** (2 commands):
+
+```text
+/start-story E##-S##  →  implement  →  /finish-story
+                                       (auto-runs reviews)
+```
+
+**Comprehensive** (3 commands):
+
+```text
+/start-story E##-S##  →  implement  →  /review-story  →  fix  →  /finish-story
+                                       (dedicated)        loop    (lightweight)
+```
+
+### After Epic Completion
+
+When all stories in an epic are done, run:
+
+- `/testarch-trace` — Requirements-to-tests traceability matrix
+- `/testarch-nfr` — Non-functional requirements validation
+- `/retrospective` — Lessons learned and pattern extraction
+
+### Key Files
+
+| File                                              | Purpose                                      |
+| ------------------------------------------------- | -------------------------------------------- |
+| `.claude/skills/start-story/SKILL.md`             | Story setup orchestrator                     |
+| `.claude/skills/review-story/SKILL.md`            | Quality gate hub                             |
+| `.claude/skills/finish-story/SKILL.md`            | Adaptive shipping skill                      |
+| `.claude/agents/code-review.md`                   | Adversarial code reviewer (Opus, with memory) |
+| `.claude/agents/design-review.md`                 | Playwright MCP design reviewer               |
+| `docs/implementation-artifacts/story-template.md` | Story file template                          |
+| `docs/implementation-artifacts/sprint-status.yaml` | Sprint tracking                             |
+| `docs/reviews/design/`                            | Design review reports                        |
+| `docs/reviews/code/`                              | Code review reports                          |
+
+### Branch Naming
+
+Format: `feature/e##-s##-slug` (lowercase, hyphens, no filler words)
+
+Example: `E01-S03` "Organize Courses by Topic" → `feature/e01-s03-organize-courses-by-topic`

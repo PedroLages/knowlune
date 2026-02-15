@@ -5,6 +5,7 @@ import { Button } from '@/app/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs'
 import { CourseCard } from '@/app/components/figma/CourseCard'
 import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
+import { TopicFilter } from '@/app/components/figma/TopicFilter'
 import { Search, FolderOpen, Loader2 } from 'lucide-react'
 import { allCourses } from '@/data/courses'
 import { getCourseCompletionPercent } from '@/lib/progress'
@@ -24,10 +25,12 @@ const tabs: { value: string; label: string; category?: CourseCategory }[] = [
 export function Courses() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState('all')
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([])
 
   const importedCourses = useCourseImportStore(state => state.importedCourses)
   const isImporting = useCourseImportStore(state => state.isImporting)
   const loadImportedCourses = useCourseImportStore(state => state.loadImportedCourses)
+  const getAllTags = useCourseImportStore(state => state.getAllTags)
 
   useEffect(() => {
     loadImportedCourses()
@@ -54,15 +57,26 @@ export function Courses() {
     return courses
   }, [activeTab, searchQuery])
 
+  const allTags = useMemo(() => getAllTags(), [getAllTags, importedCourses])
+
   const filteredImportedCourses = useMemo(() => {
+    let courses = importedCourses
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
-      return importedCourses.filter(
+      courses = courses.filter(
         c => c.name.toLowerCase().includes(q) || c.tags.some(t => t.toLowerCase().includes(q))
       )
     }
-    return importedCourses
-  }, [importedCourses, searchQuery])
+
+    if (selectedTopics.length > 0) {
+      courses = courses.filter(c =>
+        selectedTopics.every(topic => c.tags.includes(topic))
+      )
+    }
+
+    return courses
+  }, [importedCourses, searchQuery, selectedTopics])
 
   const sortedImportedCourses = useMemo(
     () =>
@@ -132,12 +146,19 @@ export function Courses() {
         </div>
       </Card>
 
+      <TopicFilter
+        availableTags={allTags}
+        selectedTags={selectedTopics}
+        onSelectedTagsChange={setSelectedTopics}
+      />
+
       {/* Imported Courses Section */}
       {(importedCourses.length > 0 || !searchQuery.trim()) && (
         <div className="mb-8">
           <h2 className="text-xl font-semibold mb-4">Imported Courses</h2>
           {importedCourses.length === 0 ? (
             <Card
+              data-testid="imported-courses-empty-state"
               className="bg-card rounded-[24px] border-0 shadow-sm p-8 text-center"
               role="region"
               aria-label="Import courses"
@@ -148,6 +169,7 @@ export function Courses() {
               />
               <p className="text-muted-foreground mb-4">Import your first course to get started</p>
               <Button
+                data-testid="import-first-course-cta"
                 onClick={handleImportCourse}
                 disabled={isImporting}
                 className="bg-blue-600 hover:bg-blue-700 rounded-xl focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
@@ -167,10 +189,10 @@ export function Courses() {
             </Card>
           ) : filteredImportedCourses.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No imported courses match your search
+              No imported courses match your {selectedTopics.length > 0 ? 'filters' : 'search'}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div data-testid="imported-courses-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {sortedImportedCourses.map(course => (
                 <ImportedCourseCard key={course.id} course={course} />
               ))}

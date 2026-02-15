@@ -2,6 +2,12 @@ import { create } from 'zustand'
 import { db } from '@/db'
 import type { ImportedCourse } from '@/data/types'
 
+function normalizeTags(tags: string[]): string[] {
+  const unique = [...new Set(tags.map(t => t.trim().toLowerCase()).filter(Boolean))]
+  unique.sort()
+  return unique
+}
+
 interface CourseImportState {
   importedCourses: ImportedCourse[]
   isImporting: boolean
@@ -10,6 +16,8 @@ interface CourseImportState {
 
   addImportedCourse: (course: ImportedCourse) => Promise<void>
   removeImportedCourse: (courseId: string) => Promise<void>
+  updateCourseTags: (courseId: string, tags: string[]) => Promise<void>
+  getAllTags: () => string[]
   loadImportedCourses: () => Promise<void>
   setImporting: (isImporting: boolean) => void
   setImportError: (error: string | null) => void
@@ -88,6 +96,49 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
       }
       console.error('[Database] Failed to remove course:', error)
     }
+  },
+
+  updateCourseTags: async (courseId: string, tags: string[]) => {
+    const { importedCourses } = get()
+    const course = importedCourses.find(c => c.id === courseId)
+    if (!course) return
+
+    const oldTags = course.tags
+    const normalized = normalizeTags(tags)
+
+    // Optimistic update
+    set(state => ({
+      importedCourses: state.importedCourses.map(c =>
+        c.id === courseId ? { ...c, tags: normalized } : c
+      ),
+      importError: null,
+    }))
+
+    try {
+      await persistWithRetry(async () => {
+        await db.importedCourses.update(courseId, { tags: normalized })
+      })
+    } catch (error) {
+      // Rollback on failure
+      set(state => ({
+        importedCourses: state.importedCourses.map(c =>
+          c.id === courseId ? { ...c, tags: oldTags } : c
+        ),
+        importError: `Failed to update tags`,
+      }))
+      console.error('[Database] Failed to update tags:', error)
+    }
+  },
+
+  getAllTags: () => {
+    const { importedCourses } = get()
+    const tagSet = new Set<string>()
+    for (const course of importedCourses) {
+      for (const tag of course.tags) {
+        tagSet.add(tag)
+      }
+    }
+    return [...tagSet].sort()
   },
 
   loadImportedCourses: async () => {
