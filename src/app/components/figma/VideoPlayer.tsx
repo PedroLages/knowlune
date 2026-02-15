@@ -14,7 +14,7 @@ import type { CaptionTrack } from '@/data/types'
 import { AspectRatio } from '@/app/components/ui/aspect-ratio'
 import { Button } from '@/app/components/ui/button'
 import { Slider } from '@/app/components/ui/slider'
-import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
+// Radix Popover Portal miscalculates position inside scroll containers — using plain CSS dropdown
 import { cn } from '@/app/components/ui/utils'
 
 interface VideoPlayerProps {
@@ -79,6 +79,9 @@ export function VideoPlayer({
     const saved = localStorage.getItem(STORAGE_KEY_PLAYBACK_SPEED)
     return saved ? parseFloat(saved) : 1
   })
+
+  // Track whether speed menu is open (prevents controls auto-hide)
+  const [speedMenuOpen, setSpeedMenuOpen] = useState(false)
 
   // Load saved caption preference from localStorage
   const [captionsEnabled, setCaptionsEnabled] = useState(() => {
@@ -344,12 +347,12 @@ export function VideoPlayer({
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current)
     }
-    if (isPlaying) {
+    if (isPlaying && !speedMenuOpen) {
       controlsTimeoutRef.current = setTimeout(() => {
         setShowControls(false)
       }, 3000)
     }
-  }, [isPlaying])
+  }, [isPlaying, speedMenuOpen])
 
   useEffect(() => {
     return () => {
@@ -388,7 +391,7 @@ export function VideoPlayer({
       ref={containerRef}
       className="relative w-full overflow-hidden rounded-2xl bg-black group"
       onMouseMove={resetControlsTimeout}
-      onMouseLeave={() => isPlaying && setShowControls(false)}
+      onMouseLeave={() => isPlaying && !speedMenuOpen && setShowControls(false)}
       tabIndex={0}
       role="region"
       aria-label={title || 'Video player'}
@@ -500,25 +503,28 @@ export function VideoPlayer({
 
               <div className="flex items-center gap-2">
                 {/* Playback Speed */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 px-2 text-white hover:bg-white/20 text-xs font-medium"
-                      aria-label="Playback speed"
-                    >
-                      <Settings className="h-4 w-4 mr-1" />
-                      {playbackSpeed}x
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-32 p-2" align="end">
-                    <div className="space-y-1">
+                <div className="relative">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2 text-white hover:bg-white/20 text-xs font-medium"
+                    aria-label="Playback speed"
+                    aria-expanded={speedMenuOpen}
+                    onClick={() => setSpeedMenuOpen(prev => !prev)}
+                  >
+                    <Settings className="h-4 w-4 mr-1" />
+                    {playbackSpeed}x
+                  </Button>
+                  {speedMenuOpen && (
+                    <div className="absolute bottom-full right-0 mb-2 w-32 rounded-md border bg-popover p-2 shadow-md z-50">
                       <p className="text-xs font-semibold mb-2">Speed</p>
                       {PLAYBACK_SPEEDS.map(speed => (
                         <button
                           key={speed}
-                          onClick={() => changePlaybackSpeed(speed)}
+                          onClick={() => {
+                            changePlaybackSpeed(speed)
+                            setSpeedMenuOpen(false)
+                          }}
                           className={cn(
                             'w-full text-left px-2 py-1 text-sm rounded hover:bg-accent',
                             speed === playbackSpeed && 'bg-accent font-semibold'
@@ -528,8 +534,8 @@ export function VideoPlayer({
                         </button>
                       ))}
                     </div>
-                  </PopoverContent>
-                </Popover>
+                  )}
+                </div>
 
                 {/* Bookmark Button */}
                 {onBookmarkAdd && (
