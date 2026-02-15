@@ -43,7 +43,7 @@ development_status:
   1-1-set-up-data-foundation-and-import-course-folder: done
   1-2-display-course-library: done
   1-3-organize-courses-by-topic: done
-  1-4-manage-course-status: backlog
+  1-4-manage-course-status: in-progress
   epic-1-retrospective: optional
 
   # Epic 2: Video & PDF Content Playback (5 stories)
