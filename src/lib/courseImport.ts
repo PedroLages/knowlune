@@ -165,6 +165,7 @@ export async function importCourseFromFolder(): Promise<ImportedCourse> {
       importedAt: now,
       category: '',
       tags: [],
+      status: 'active',
       videoCount: videos.length,
       pdfCount: pdfs.length,
       directoryHandle: dirHandle,

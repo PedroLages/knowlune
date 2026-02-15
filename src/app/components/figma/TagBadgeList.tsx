@@ -40,11 +40,7 @@ export function TagBadgeList({ tags, onRemove, maxVisible, className }: TagBadge
         </Badge>
       ))}
       {overflow > 0 && (
-        <Badge
-          variant="outline"
-          data-testid="tag-overflow-badge"
-          className="text-xs py-0 px-2 h-5"
-        >
+        <Badge variant="outline" data-testid="tag-overflow-badge" className="text-xs py-0 px-2 h-5">
           +{overflow} more
         </Badge>
       )}

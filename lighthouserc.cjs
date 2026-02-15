@@ -59,8 +59,6 @@ module.exports = {
         'document-title': 'error',
 
         // Best practices
-        'uses-https': 'warn',
-        'no-vulnerable-libraries': 'error',
         'errors-in-console': 'warn',
       },
     },

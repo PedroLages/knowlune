@@ -141,7 +141,10 @@ export function Overview() {
       <h1 className="text-2xl font-bold mb-6">Overview</h1>
 
       {/* Stats Row */}
-      <div data-testid="stats-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div
+        data-testid="stats-grid"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+      >
         {statsCards.map(stat => (
           <StatsCard key={stat.label} {...stat} />
         ))}

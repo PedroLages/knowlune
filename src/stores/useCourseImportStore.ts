@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { db } from '@/db'
-import type { ImportedCourse } from '@/data/types'
+import type { ImportedCourse, LearnerCourseStatus } from '@/data/types'
 
 function normalizeTags(tags: string[]): string[] {
   const unique = [...new Set(tags.map(t => t.trim().toLowerCase()).filter(Boolean))]
@@ -17,6 +17,7 @@ interface CourseImportState {
   addImportedCourse: (course: ImportedCourse) => Promise<void>
   removeImportedCourse: (courseId: string) => Promise<void>
   updateCourseTags: (courseId: string, tags: string[]) => Promise<void>
+  updateCourseStatus: (courseId: string, status: LearnerCourseStatus) => Promise<void>
   getAllTags: () => string[]
   loadImportedCourses: () => Promise<void>
   setImporting: (isImporting: boolean) => void
@@ -127,6 +128,35 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
         importError: `Failed to update tags`,
       }))
       console.error('[Database] Failed to update tags:', error)
+    }
+  },
+
+  updateCourseStatus: async (courseId: string, status: LearnerCourseStatus) => {
+    const { importedCourses } = get()
+    const course = importedCourses.find(c => c.id === courseId)
+    if (!course) return
+
+    const oldStatus = course.status
+
+    // Optimistic update
+    set(state => ({
+      importedCourses: state.importedCourses.map(c => (c.id === courseId ? { ...c, status } : c)),
+      importError: null,
+    }))
+
+    try {
+      await persistWithRetry(async () => {
+        await db.importedCourses.update(courseId, { status })
+      })
+    } catch (error) {
+      // Rollback on failure
+      set(state => ({
+        importedCourses: state.importedCourses.map(c =>
+          c.id === courseId ? { ...c, status: oldStatus } : c
+        ),
+        importError: `Failed to update status`,
+      }))
+      console.error('[Database] Failed to update status:', error)
     }
   },
 

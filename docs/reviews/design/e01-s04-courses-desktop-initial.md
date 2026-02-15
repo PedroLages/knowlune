@@ -1,0 +1,262 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - link "Skip to content" [ref=e4] [cursor=pointer]:
+      - /url: "#main-content"
+    - complementary "Sidebar" [ref=e5]:
+      - generic [ref=e6]:
+        - img [ref=e8]
+        - generic [ref=e11]: Eduvi
+      - navigation "Main navigation" [ref=e12]:
+        - list [ref=e13]:
+          - listitem [ref=e14]:
+            - link "Overview" [ref=e15] [cursor=pointer]:
+              - /url: /
+              - img [ref=e16]
+              - generic [ref=e21]: Overview
+          - listitem [ref=e22]:
+            - link "My Classes" [ref=e23] [cursor=pointer]:
+              - /url: /my-class
+              - img [ref=e24]
+              - generic [ref=e26]: My Classes
+          - listitem [ref=e27]:
+            - link "Courses" [ref=e28] [cursor=pointer]:
+              - /url: /courses
+              - img [ref=e29]
+              - generic [ref=e32]: Courses
+          - listitem [ref=e33]:
+            - link "Library" [ref=e34] [cursor=pointer]:
+              - /url: /library
+              - img [ref=e35]
+              - generic [ref=e37]: Library
+          - listitem [ref=e38]:
+            - link "Messages" [ref=e39] [cursor=pointer]:
+              - /url: /messages
+              - img [ref=e40]
+              - generic [ref=e42]: Messages
+          - listitem [ref=e43]:
+            - link "Instructors" [ref=e44] [cursor=pointer]:
+              - /url: /instructors
+              - img [ref=e45]
+              - generic [ref=e47]: Instructors
+          - listitem [ref=e48]:
+            - link "Reports" [ref=e49] [cursor=pointer]:
+              - /url: /reports
+              - img [ref=e50]
+              - generic [ref=e52]: Reports
+          - listitem [ref=e53]:
+            - link "Settings" [ref=e54] [cursor=pointer]:
+              - /url: /settings
+              - img [ref=e55]
+              - generic [ref=e58]: Settings
+      - 'status "Course progress: 0 of 8 courses completed, 0 lessons finished" [ref=e59]':
+        - img [ref=e61]:
+          - generic [ref=e64]: 0%
+        - paragraph [ref=e65]: 0/8 courses
+        - paragraph [ref=e66]: 0 lessons completed
+    - generic [ref=e67]:
+      - banner [ref=e68]:
+        - search "Site search" [ref=e69]:
+          - button "Open search (Cmd+K)" [ref=e70] [cursor=pointer]:
+            - img [ref=e71]
+            - generic [ref=e74]: Search...
+            - generic [ref=e75]:
+              - generic [ref=e76]: ⌘
+              - text: K
+        - generic [ref=e77]:
+          - button "Switch to dark mode" [ref=e78] [cursor=pointer]:
+            - img [ref=e79]
+          - button "Notifications" [ref=e85] [cursor=pointer]:
+            - img [ref=e86]
+          - group "User profile" [ref=e89]:
+            - generic [ref=e91]: S
+            - generic [ref=e93]: Student
+            - img [ref=e94]
+      - main [ref=e96]:
+        - generic [ref=e97]:
+          - generic [ref=e98]:
+            - generic [ref=e99]:
+              - heading "All Courses" [level=1] [ref=e100]
+              - paragraph [ref=e101]: Chase Hughes — The Operative Kit (8 courses)
+            - button "Import Course" [ref=e102]:
+              - img
+              - text: Import Course
+          - generic [ref=e104]:
+            - generic [ref=e105]:
+              - img [ref=e106]
+              - textbox "Search courses" [ref=e109]:
+                - /placeholder: Search for courses...
+            - button "Search courses" [ref=e110]: Search
+          - generic [ref=e111]:
+            - heading "Imported Courses" [level=2] [ref=e112]
+            - region "Import courses" [ref=e113]:
+              - img [ref=e114]
+              - paragraph [ref=e116]: Import your first course to get started
+              - button "Import Your First Course" [ref=e117]:
+                - img
+                - text: Import Your First Course
+          - generic [ref=e118]:
+            - tablist [ref=e119]:
+              - tab "All Courses" [selected] [ref=e120]
+              - tab "Behavioral Analysis" [ref=e121]
+              - tab "Influence & Authority" [ref=e122]
+              - tab "Confidence" [ref=e123]
+              - tab "Operative Training" [ref=e124]
+              - tab "Research Library" [ref=e125]
+            - tabpanel "All Courses" [ref=e126]:
+              - generic [ref=e127]:
+                - link "NCI Access Research Library NCI Access The central hub for the National Collective Intelligence community. A comprehensive library-style resource collection featuring Friday Night Live replays, graduate school previews, declassified file vault documents, profiling and self-mastery resources, behavioral analysis tools, and the Behavioral Table of Elements. 83 videos 138 docs 95h" [ref=e128] [cursor=pointer]:
+                  - /url: /courses/nci-access
+                  - generic [ref=e129]:
+                    - generic [ref=e130]:
+                      - img "NCI Access" [ref=e132]
+                      - generic [ref=e133]: Research Library
+                    - generic [ref=e134]:
+                      - heading "NCI Access" [level=3] [ref=e135]
+                      - paragraph [ref=e136]: The central hub for the National Collective Intelligence community. A comprehensive library-style resource collection featuring Friday Night Live replays, graduate school previews, declassified file vault documents, profiling and self-mastery resources, behavioral analysis tools, and the Behavioral Table of Elements.
+                      - generic [ref=e137]:
+                        - generic [ref=e138]:
+                          - img [ref=e139]
+                          - text: 83 videos
+                        - generic [ref=e142]:
+                          - img [ref=e143]
+                          - text: 138 docs
+                        - generic [ref=e146]:
+                          - img [ref=e147]
+                          - text: 95h
+                - link "Authority - The Influence Master Key Influence & Authority Authority - The Influence Master Key A structured six-lesson course on building personal authority through the science of communication, composure, confidence, discipline, and overcoming anxiety. Includes the Behavior Flight Manual, Hughes Authority Assessment Matrix, and Leakage Tracker tools. 6 videos 12 docs 9h" [ref=e150] [cursor=pointer]:
+                  - /url: /courses/authority
+                  - generic [ref=e151]:
+                    - generic [ref=e152]:
+                      - img "Authority - The Influence Master Key" [ref=e154]
+                      - generic [ref=e155]: Influence & Authority
+                    - generic [ref=e156]:
+                      - heading "Authority - The Influence Master Key" [level=3] [ref=e157]
+                      - paragraph [ref=e158]: A structured six-lesson course on building personal authority through the science of communication, composure, confidence, discipline, and overcoming anxiety. Includes the Behavior Flight Manual, Hughes Authority Assessment Matrix, and Leakage Tracker tools.
+                      - generic [ref=e159]:
+                        - generic [ref=e160]:
+                          - img [ref=e161]
+                          - text: 6 videos
+                        - generic [ref=e164]:
+                          - img [ref=e165]
+                          - text: 12 docs
+                        - generic [ref=e168]:
+                          - img [ref=e169]
+                          - text: 9h
+                - link "Confidence Reboot Confidence Mastery Confidence Reboot A seven-phase sequential program designed to systematically rebuild confidence from the ground up. Progresses from mission briefing through installation, core training, programming with video entrainment, mentor visualization sessions, and graduation, with supporting audio programs and assessment tools. 12 videos 25 docs 20h" [ref=e172] [cursor=pointer]:
+                  - /url: /courses/confidence-reboot
+                  - generic [ref=e173]:
+                    - generic [ref=e174]:
+                      - img "Confidence Reboot" [ref=e176]
+                      - generic [ref=e177]: Confidence Mastery
+                    - generic [ref=e178]:
+                      - heading "Confidence Reboot" [level=3] [ref=e179]
+                      - paragraph [ref=e180]: A seven-phase sequential program designed to systematically rebuild confidence from the ground up. Progresses from mission briefing through installation, core training, programming with video entrainment, mentor visualization sessions, and graduation, with supporting audio programs and assessment tools.
+                      - generic [ref=e181]:
+                        - generic [ref=e182]:
+                          - img [ref=e183]
+                          - text: 12 videos
+                        - generic [ref=e186]:
+                          - img [ref=e187]
+                          - text: 25 docs
+                        - generic [ref=e190]:
+                          - img [ref=e191]
+                          - text: 20h
+                - link "6-Minute X-Ray (6MX) Behavior Course Behavioral Analysis 6-Minute X-Ray (6MX) Behavior Course A 5-day intensive behavioral analysis course covering human communication, eye behavior, facial reading, suggestibility, deception detection, elicitation methods, the Six-Axis Model, human needs mapping, neuropeptides, the Six Pillars, the Hughes Quadrant, the Behavior Compass, de-escalation, and consistency hacking. 28 videos 15 docs 32h" [ref=e194] [cursor=pointer]:
+                  - /url: /courses/6mx
+                  - generic [ref=e195]:
+                    - generic [ref=e196]:
+                      - img "6-Minute X-Ray (6MX) Behavior Course" [ref=e198]
+                      - generic [ref=e199]: Behavioral Analysis
+                    - generic [ref=e200]:
+                      - heading "6-Minute X-Ray (6MX) Behavior Course" [level=3] [ref=e201]
+                      - paragraph [ref=e202]: A 5-day intensive behavioral analysis course covering human communication, eye behavior, facial reading, suggestibility, deception detection, elicitation methods, the Six-Axis Model, human needs mapping, neuropeptides, the Six Pillars, the Hughes Quadrant, the Behavior Compass, de-escalation, and consistency hacking.
+                      - generic [ref=e203]:
+                        - generic [ref=e204]:
+                          - img [ref=e205]
+                          - text: 28 videos
+                        - generic [ref=e208]:
+                          - img [ref=e209]
+                          - text: 15 docs
+                        - generic [ref=e212]:
+                          - img [ref=e213]
+                          - text: 32h
+                - link "Operative Six Operative Training Operative Six A comprehensive operative training course covering the pillars of influence, the Milgram experiment, the Six-Axis Model, confidence building, reading people, deception detection, elicitation, influence and authority, persuasive language, tradecraft, and the Behavior Compass Interview. 12 videos 7 docs 14h" [ref=e216] [cursor=pointer]:
+                  - /url: /courses/operative-six
+                  - generic [ref=e217]:
+                    - generic [ref=e218]:
+                      - img "Operative Six" [ref=e220]
+                      - generic [ref=e221]: Operative Training
+                    - generic [ref=e222]:
+                      - heading "Operative Six" [level=3] [ref=e223]
+                      - paragraph [ref=e224]: A comprehensive operative training course covering the pillars of influence, the Milgram experiment, the Six-Axis Model, confidence building, reading people, deception detection, elicitation, influence and authority, persuasive language, tradecraft, and the Behavior Compass Interview.
+                      - generic [ref=e225]:
+                        - generic [ref=e226]:
+                          - img [ref=e227]
+                          - text: 12 videos
+                        - generic [ref=e230]:
+                          - img [ref=e231]
+                          - text: 7 docs
+                        - generic [ref=e234]:
+                          - img [ref=e235]
+                          - text: 14h
+                - link "Behavior Skills Breakthrough Behavioral Analysis Behavior Skills Breakthrough A foundational course on understanding and influencing human behavior, covering behavioral patterns, persuasion techniques, authority dynamics, and the science behind obedience and social influence. 12 videos 12 docs 15h" [ref=e238] [cursor=pointer]:
+                  - /url: /courses/behavior-skills-breakthrough
+                  - generic [ref=e239]:
+                    - generic [ref=e240]:
+                      - img "Behavior Skills Breakthrough" [ref=e242]
+                      - generic [ref=e243]: Behavioral Analysis
+                    - generic [ref=e244]:
+                      - heading "Behavior Skills Breakthrough" [level=3] [ref=e245]
+                      - paragraph [ref=e246]: A foundational course on understanding and influencing human behavior, covering behavioral patterns, persuasion techniques, authority dynamics, and the science behind obedience and social influence.
+                      - generic [ref=e247]:
+                        - generic [ref=e248]:
+                          - img [ref=e249]
+                          - text: 12 videos
+                        - generic [ref=e252]:
+                          - img [ref=e253]
+                          - text: 12 docs
+                        - generic [ref=e256]:
+                          - img [ref=e257]
+                          - text: 15h
+                - link "OPS Manual Resources Research Library OPS Manual Resources An advanced resource library for operative training, including the Authority Inventory, Drawing Board tools, official intelligence resources, mind control analysis, and an extensive archive of Q&A sessions and monthly training recordings from 2023-2024. 58 videos 18 docs 62.5h" [ref=e260] [cursor=pointer]:
+                  - /url: /courses/ops-manual-resources
+                  - generic [ref=e261]:
+                    - generic [ref=e262]:
+                      - img "OPS Manual Resources" [ref=e264]
+                      - generic [ref=e265]: Research Library
+                    - generic [ref=e266]:
+                      - heading "OPS Manual Resources" [level=3] [ref=e267]
+                      - paragraph [ref=e268]: An advanced resource library for operative training, including the Authority Inventory, Drawing Board tools, official intelligence resources, mind control analysis, and an extensive archive of Q&A sessions and monthly training recordings from 2023-2024.
+                      - generic [ref=e269]:
+                        - generic [ref=e270]:
+                          - img [ref=e271]
+                          - text: 58 videos
+                        - generic [ref=e274]:
+                          - img [ref=e275]
+                          - text: 18 docs
+                        - generic [ref=e278]:
+                          - img [ref=e279]
+                          - text: 62.5h
+                - link "Study Materials Research Library Study Materials Companion study guides and quick-reference materials for the Authority course, providing condensed notes and reference cards for each module to reinforce key concepts. 0 videos 0 docs 1.25h" [ref=e282] [cursor=pointer]:
+                  - /url: /courses/study-materials
+                  - generic [ref=e283]:
+                    - generic [ref=e284]:
+                      - img "Study Materials" [ref=e286]
+                      - generic [ref=e287]: Research Library
+                    - generic [ref=e288]:
+                      - heading "Study Materials" [level=3] [ref=e289]
+                      - paragraph [ref=e290]: Companion study guides and quick-reference materials for the Authority course, providing condensed notes and reference cards for each module to reinforce key concepts.
+                      - generic [ref=e291]:
+                        - generic [ref=e292]:
+                          - img [ref=e293]
+                          - text: 0 videos
+                        - generic [ref=e296]:
+                          - img [ref=e297]
+                          - text: 0 docs
+                        - generic [ref=e300]:
+                          - img [ref=e301]
+                          - text: 1.25h
+    - generic [ref=e304]:
+      - heading "Search" [level=2] [ref=e305]
+      - paragraph [ref=e306]: Search for pages, courses, and lessons
+  - region "Notifications alt+T"

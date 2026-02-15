@@ -25,6 +25,7 @@ export interface ImportedCourseTestData {
   importedAt: string
   category: string
   tags: string[]
+  status: 'active' | 'completed' | 'paused'
   videoCount: number
   pdfCount: number
 }
@@ -39,6 +40,7 @@ export function createImportedCourse(
     importedAt: new Date().toISOString(),
     category: 'Development',
     tags: ['test', 'imported'],
+    status: 'active',
     videoCount: Math.floor(Math.random() * 20) + 1,
     pdfCount: Math.floor(Math.random() * 10),
     ...overrides,

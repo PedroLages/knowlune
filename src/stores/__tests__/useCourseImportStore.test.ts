@@ -13,6 +13,7 @@ function makeCourse(overrides: Partial<ImportedCourse> = {}): ImportedCourse {
     importedAt: new Date().toISOString(),
     category: '',
     tags: [],
+    status: 'active',
     videoCount: 5,
     pdfCount: 1,
     directoryHandle: {} as FileSystemDirectoryHandle,
@@ -167,6 +168,46 @@ describe('loadImportedCourses', () => {
     const state = useCourseImportStore.getState()
     expect(state.importedCourses).toHaveLength(1)
     expect(state.importedCourses[0].name).toBe('Fresh')
+  })
+})
+
+describe('updateCourseStatus', () => {
+  it('should update status optimistically in store', async () => {
+    const course = makeCourse({ status: 'active' })
+    await act(async () => {
+      await useCourseImportStore.getState().addImportedCourse(course)
+    })
+
+    await act(async () => {
+      await useCourseImportStore.getState().updateCourseStatus(course.id, 'completed')
+    })
+
+    const updated = useCourseImportStore.getState().importedCourses.find(c => c.id === course.id)
+    expect(updated?.status).toBe('completed')
+  })
+
+  it('should persist status change to IndexedDB', async () => {
+    const course = makeCourse({ status: 'active' })
+    await act(async () => {
+      await useCourseImportStore.getState().addImportedCourse(course)
+    })
+
+    await act(async () => {
+      await useCourseImportStore.getState().updateCourseStatus(course.id, 'paused')
+    })
+
+    const { db } = await import('@/db')
+    const stored = await db.importedCourses.get(course.id)
+    expect(stored?.status).toBe('paused')
+  })
+
+  it('should not update if course does not exist', async () => {
+    await act(async () => {
+      await useCourseImportStore.getState().updateCourseStatus('nonexistent', 'completed')
+    })
+
+    expect(useCourseImportStore.getState().importedCourses).toHaveLength(0)
+    expect(useCourseImportStore.getState().importError).toBeNull()
   })
 })
 

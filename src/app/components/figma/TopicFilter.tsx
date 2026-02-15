@@ -6,7 +6,11 @@ interface TopicFilterProps {
   onSelectedTagsChange: (tags: string[]) => void
 }
 
-export function TopicFilter({ availableTags, selectedTags, onSelectedTagsChange }: TopicFilterProps) {
+export function TopicFilter({
+  availableTags,
+  selectedTags,
+  onSelectedTagsChange,
+}: TopicFilterProps) {
   if (availableTags.length === 0) return null
 
   function toggleTag(tag: string) {

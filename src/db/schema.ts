@@ -13,4 +13,21 @@ db.version(1).stores({
   importedPdfs: 'id, courseId, filename',
 })
 
+db.version(2)
+  .stores({
+    importedCourses: 'id, name, importedAt, status, *tags',
+    importedVideos: 'id, courseId, filename',
+    importedPdfs: 'id, courseId, filename',
+  })
+  .upgrade(tx => {
+    return tx
+      .table('importedCourses')
+      .toCollection()
+      .modify(course => {
+        if (!course.status) {
+          course.status = 'active'
+        }
+      })
+  })
+
 export { db }

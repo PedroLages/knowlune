@@ -111,7 +111,11 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
 
     Print the PR URL.
 
-11. **Lessons learned** (optional): Ask the developer via AskUserQuestion if there are patterns worth capturing in the story's "Challenges and Lessons Learned" section. If yes, append them.
+11. **Lessons learned** (optional): Ask the developer via AskUserQuestion with these options:
+
+    - **"Claude, write them"** — Auto-generate lessons learned by analyzing the story's git log, review reports, and any blocker/fix cycles encountered during implementation. Write concise, actionable bullets covering: patterns discovered, pitfalls avoided, decisions made and why. Append to the story's "Challenges and Lessons Learned" section.
+    - **"Yes, let me share"** — Wait for the developer to provide lessons, then append them.
+    - **"Skip"** — No lessons to capture. Continue.
 
 12. **Completion output**: Display the following summary to the user.
 

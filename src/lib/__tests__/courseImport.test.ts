@@ -102,6 +102,7 @@ describe('importCourseFromFolder', () => {
     expect(course.pdfCount).toBe(1)
     expect(course.id).toBeTruthy()
     expect(course.importedAt).toBeTruthy()
+    expect(course.status).toBe('active') // AC-3: Default status on import
     expect(toastMocks.success).toHaveBeenCalledWith('Imported: React Patterns — 1 video, 1 PDF')
   })
 

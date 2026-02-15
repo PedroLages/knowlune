@@ -79,6 +79,8 @@ export interface Note {
 
 export type CourseStatus = 'importing' | 'ready' | 'error'
 
+export type LearnerCourseStatus = 'active' | 'completed' | 'paused'
+
 export type VideoFormat = 'mp4' | 'mkv' | 'avi' | 'webm'
 
 export type SupportedFileExtension = '.mp4' | '.mkv' | '.avi' | '.webm' | '.pdf'
@@ -99,6 +101,7 @@ export interface ImportedCourse {
   importedAt: string // ISO 8601
   category: string
   tags: string[]
+  status: LearnerCourseStatus
   videoCount: number
   pdfCount: number
   directoryHandle: FileSystemDirectoryHandle

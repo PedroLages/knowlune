@@ -20,6 +20,7 @@ function makeCourse(overrides: Record<string, unknown> = {}) {
     importedAt: new Date().toISOString(),
     category: '',
     tags: [] as string[],
+    status: 'active' as const,
     videoCount: 0,
     pdfCount: 0,
     directoryHandle: {} as FileSystemDirectoryHandle,
@@ -51,8 +52,8 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 1', () => {
-    expect(db.verno).toBe(1)
+  it('should be at version 2', () => {
+    expect(db.verno).toBe(2)
   })
 })
 
