@@ -7,6 +7,7 @@ import {
   VolumeX,
   Maximize,
   Minimize,
+  RectangleHorizontal,
   Settings,
   Subtitles,
   Bookmark,
@@ -38,6 +39,9 @@ interface VideoPlayerProps {
   onBookmarkAdd?: (timestamp: number) => void
   bookmarks?: Array<{ id: string; timestamp: number; label: string }>
   onBookmarkSeek?: (timestamp: number) => void
+  onPlayStateChange?: (isPlaying: boolean) => void
+  theaterMode?: boolean
+  onTheaterModeToggle?: () => void
 }
 
 const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2]
@@ -70,6 +74,9 @@ export function VideoPlayer({
   bookmarks,
   onBookmarkSeek,
   poster,
+  onPlayStateChange,
+  theaterMode,
+  onTheaterModeToggle,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -179,10 +186,11 @@ export function VideoPlayer({
   // Handle video ended
   const handleEnded = useCallback(() => {
     setIsPlaying(false)
+    onPlayStateChange?.(false)
     setShowControls(true)
     onEnded?.()
     announce('Video ended')
-  }, [onEnded])
+  }, [onEnded, onPlayStateChange])
 
   // Play/Pause toggle
   const togglePlayPause = useCallback(() => {
@@ -190,14 +198,16 @@ export function VideoPlayer({
       if (isPlaying) {
         videoRef.current.pause()
         setIsPlaying(false)
+        onPlayStateChange?.(false)
         announce('Paused')
       } else {
         videoRef.current.play()
         setIsPlaying(true)
+        onPlayStateChange?.(true)
         announce('Playing')
       }
     }
-  }, [isPlaying])
+  }, [isPlaying, onPlayStateChange])
 
   // Seek forward/backward
   const seek = useCallback((seconds: number) => {
@@ -522,6 +532,10 @@ export function VideoPlayer({
           e.preventDefault()
           handleAddBookmark()
           break
+        case 't':
+          e.preventDefault()
+          onTheaterModeToggle?.()
+          break
         case '0':
         case '1':
         case '2':
@@ -553,6 +567,7 @@ export function VideoPlayer({
     speedMenuOpen,
     shortcutsOpen,
     handleAddBookmark,
+    onTheaterModeToggle,
   ])
 
   // Auto-hide controls (mouse interaction — only hides when playing)
@@ -934,6 +949,22 @@ export function VideoPlayer({
                     aria-label={captionsEnabled ? 'Disable captions' : 'Enable captions'}
                   >
                     <Subtitles className="size-5" />
+                  </Button>
+                )}
+
+                {/* Theater Mode - desktop only (sidebar already hidden on mobile) */}
+                {onTheaterModeToggle && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      'hidden xl:flex size-11 text-white hover:bg-white/20',
+                      theaterMode && 'bg-white/20'
+                    )}
+                    onClick={onTheaterModeToggle}
+                    aria-label="Toggle theater mode"
+                  >
+                    <RectangleHorizontal className="size-5" />
                   </Button>
                 )}
 
