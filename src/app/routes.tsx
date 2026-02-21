@@ -22,9 +22,6 @@ const MyClass = React.lazy(() => import('./pages/MyClass'))
 const Messages = React.lazy(() => import('./pages/Messages'))
 const Reports = React.lazy(() => import('./pages/Reports'))
 const Settings = React.lazy(() => import('./pages/Settings'))
-const DesignSystem = React.lazy(() =>
-  import('./pages/DesignSystem').then(m => ({ default: m.DesignSystem }))
-)
 
 function PageLoader() {
   return (
@@ -120,14 +117,6 @@ export const router = createBrowserRouter([
         element: (
           <SuspensePage>
             <Settings />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'design-system',
-        element: (
-          <SuspensePage>
-            <DesignSystem />
           </SuspensePage>
         ),
       },
