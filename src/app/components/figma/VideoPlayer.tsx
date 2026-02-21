@@ -10,6 +10,9 @@ import {
   Settings,
   Subtitles,
   Bookmark,
+  SkipBack,
+  SkipForward,
+  PictureInPicture2,
 } from 'lucide-react'
 import type { CaptionTrack } from '@/data/types'
 import { AspectRatio } from '@/app/components/ui/aspect-ratio'
@@ -18,6 +21,7 @@ import { Slider } from '@/app/components/ui/slider'
 // Radix Popover Portal miscalculates position inside scroll containers — using plain CSS dropdown
 import { cn } from '@/app/components/ui/utils'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/app/components/ui/tooltip'
+import { VideoShortcutsOverlay } from '@/app/components/figma/VideoShortcutsOverlay'
 
 interface VideoPlayerProps {
   src: string
@@ -92,6 +96,12 @@ export function VideoPlayer({
 
   // Mobile volume popover state
   const [mobileVolumeOpen, setMobileVolumeOpen] = useState(false)
+
+  // Picture-in-Picture state
+  const [isPiP, setIsPiP] = useState(false)
+
+  // Video shortcuts overlay state
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
 
   // Refs for speed menu focus trap
   const speedTriggerRef = useRef<HTMLButtonElement>(null)
@@ -290,6 +300,40 @@ export function VideoPlayer({
     }
   }, [onBookmarkAdd, currentTime])
 
+  // Toggle Picture-in-Picture
+  const togglePiP = useCallback(async () => {
+    if (!videoRef.current) return
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture()
+      } else {
+        await videoRef.current.requestPictureInPicture()
+      }
+    } catch {
+      announce('Picture-in-Picture not available')
+    }
+  }, [announce])
+
+  // PiP event listeners for state sync
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+    const onEnterPiP = () => {
+      setIsPiP(true)
+      announce('Picture-in-Picture activated')
+    }
+    const onLeavePiP = () => {
+      setIsPiP(false)
+      announce('Picture-in-Picture deactivated')
+    }
+    video.addEventListener('enterpictureinpicture', onEnterPiP)
+    video.addEventListener('leavepictureinpicture', onLeavePiP)
+    return () => {
+      video.removeEventListener('enterpictureinpicture', onEnterPiP)
+      video.removeEventListener('leavepictureinpicture', onLeavePiP)
+    }
+  }, [announce])
+
   // Speed menu keyboard navigation — document-level handler for Safari compatibility
   // (Safari doesn't focus buttons on click, so element-level onKeyDown won't fire)
   useEffect(() => {
@@ -369,6 +413,20 @@ export function VideoPlayer({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [mobileVolumeOpen])
 
+  // ? key: capture phase on document to prevent Layout handler from firing
+  useEffect(() => {
+    const handleQuestionMark = (e: KeyboardEvent) => {
+      if (e.key !== '?') return
+      if (!containerRef.current?.contains(document.activeElement)) return
+      if (speedMenuOpen) return
+      e.stopPropagation()
+      e.preventDefault()
+      setShortcutsOpen(prev => !prev)
+    }
+    document.addEventListener('keydown', handleQuestionMark, true)
+    return () => document.removeEventListener('keydown', handleQuestionMark, true)
+  }, [speedMenuOpen])
+
   // Close mobile volume popover when controls hide
   useEffect(() => {
     if (!showControls) {
@@ -384,6 +442,15 @@ export function VideoPlayer({
       // Speed menu handles its own keyboard events
       if (speedMenuOpen) return
 
+      // When shortcuts overlay is open, only Escape works
+      if (shortcutsOpen) {
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          setShortcutsOpen(false)
+        }
+        return
+      }
+
       switch (e.key) {
         case ' ':
           // Don't toggle play/pause if a Slider thumb has focus — let Slider handle Space natively
@@ -394,6 +461,16 @@ export function VideoPlayer({
         case 'k':
           e.preventDefault()
           togglePlayPause()
+          break
+        case 'j':
+          e.preventDefault()
+          seek(-10)
+          announce('Skipped back 10 seconds')
+          break
+        case 'l':
+          e.preventDefault()
+          seek(10)
+          announce('Skipped forward 10 seconds')
           break
         case 'ArrowLeft':
           e.preventDefault()
@@ -423,6 +500,10 @@ export function VideoPlayer({
           e.preventDefault()
           toggleFullscreen()
           break
+        case 'p':
+          e.preventDefault()
+          togglePiP()
+          break
         case 'b':
           e.preventDefault()
           handleAddBookmark()
@@ -448,12 +529,15 @@ export function VideoPlayer({
   }, [
     togglePlayPause,
     seek,
+    announce,
     changeVolume,
     toggleMute,
     toggleCaptions,
     toggleFullscreen,
+    togglePiP,
     jumpToPercentage,
     speedMenuOpen,
+    shortcutsOpen,
   ])
 
   // Auto-hide controls (mouse interaction — only hides when playing)
@@ -461,7 +545,7 @@ export function VideoPlayer({
     // Skip synthesized mouse events that follow touch events on mobile
     if (touchActiveRef.current) return
     setShowControls(true)
-    if (isPlaying && !speedMenuOpen) {
+    if (isPlaying && !speedMenuOpen && !shortcutsOpen) {
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current)
       }
@@ -469,7 +553,7 @@ export function VideoPlayer({
         setShowControls(false)
       }, 3000)
     }
-  }, [isPlaying, speedMenuOpen])
+  }, [isPlaying, speedMenuOpen, shortcutsOpen])
 
   // Touch-specific handler: always starts hide timeout (mobile UX — tap to show, auto-hide)
   const handleTouchShow = useCallback(() => {
@@ -481,12 +565,12 @@ export function VideoPlayer({
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current)
     }
-    if (!speedMenuOpen) {
+    if (!speedMenuOpen && !shortcutsOpen) {
       controlsTimeoutRef.current = setTimeout(() => {
         setShowControls(false)
       }, 3000)
     }
-  }, [speedMenuOpen])
+  }, [speedMenuOpen, shortcutsOpen])
 
   useEffect(() => {
     return () => {
@@ -526,12 +610,11 @@ export function VideoPlayer({
       data-testid="video-player-container"
       className="relative w-full overflow-hidden rounded-2xl bg-black group focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
       onMouseMove={resetControlsTimeout}
-      onMouseLeave={() => isPlaying && !speedMenuOpen && setShowControls(false)}
+      onMouseLeave={() => isPlaying && !speedMenuOpen && !shortcutsOpen && setShowControls(false)}
       onTouchStart={handleTouchShow}
       tabIndex={0}
       role="region"
       aria-label={title || 'Video player'}
-      data-testid="video-player"
     >
       <AspectRatio ratio={16 / 9}>
         <video
@@ -636,6 +719,28 @@ export function VideoPlayer({
                   {isPlaying ? <Pause className="size-5" /> : <Play className="size-5" />}
                 </Button>
 
+                {/* Skip Back */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-11 text-white hover:bg-white/20"
+                  onClick={() => { seek(-10); announce('Skipped back 10 seconds') }}
+                  aria-label="Skip back 10 seconds"
+                >
+                  <SkipBack className="size-5" />
+                </Button>
+
+                {/* Skip Forward */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-11 text-white hover:bg-white/20"
+                  onClick={() => { seek(10); announce('Skipped forward 10 seconds') }}
+                  aria-label="Skip forward 10 seconds"
+                >
+                  <SkipForward className="size-5" />
+                </Button>
+
                 {/* Volume */}
                 <div ref={mobileVolumeWrapperRef} className="relative flex items-center gap-2">
                   <Button
@@ -736,6 +841,23 @@ export function VideoPlayer({
                   )}
                 </div>
 
+                {/* Picture-in-Picture — only if browser supports it */}
+                {typeof document !== 'undefined' && document.pictureInPictureEnabled && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      'size-11 text-white hover:bg-white/20',
+                      isPiP && 'bg-white/20'
+                    )}
+                    onClick={togglePiP}
+                    aria-label={isPiP ? 'Exit Picture-in-Picture' : 'Enter Picture-in-Picture'}
+                    aria-pressed={isPiP}
+                  >
+                    <PictureInPicture2 className="size-5" />
+                  </Button>
+                )}
+
                 {/* Bookmark Button */}
                 {onBookmarkAdd && (
                   <Button
@@ -783,6 +905,8 @@ export function VideoPlayer({
             </div>
           </div>
         </div>
+        {/* Video Shortcuts Overlay */}
+        <VideoShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       </AspectRatio>
 
       {/* ARIA Live Region for Announcements */}
