@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback, useState } from 'react'
+import { flushSync } from 'react-dom'
 import {
   Play,
   Pause,
@@ -65,6 +66,7 @@ export function VideoPlayer({
   const containerRef = useRef<HTMLDivElement>(null)
   const hasRestoredPosition = useRef(false)
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const touchActiveRef = useRef(false)
 
   // Video state
   const [isPlaying, setIsPlaying] = useState(false)
@@ -152,6 +154,7 @@ export function VideoPlayer({
   // Handle video ended
   const handleEnded = useCallback(() => {
     setIsPlaying(false)
+    setShowControls(true)
     onEnded?.()
     announce('Video ended')
   }, [onEnded])
@@ -282,51 +285,59 @@ export function VideoPlayer({
     }
   }, [onBookmarkAdd, currentTime])
 
-  // Speed menu keyboard navigation (focus trap)
-  const handleSpeedMenuKeyDown = useCallback((e: React.KeyboardEvent) => {
-    const items = speedMenuItemsRef.current.filter(Boolean) as HTMLButtonElement[]
-    const currentIdx = items.indexOf(e.target as HTMLButtonElement)
+  // Speed menu keyboard navigation — document-level handler for Safari compatibility
+  // (Safari doesn't focus buttons on click, so element-level onKeyDown won't fire)
+  useEffect(() => {
+    if (!speedMenuOpen) return
 
-    switch (e.key) {
-      case 'Tab': {
-        e.preventDefault()
-        if (e.shiftKey) {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const items = speedMenuItemsRef.current.filter(Boolean) as HTMLButtonElement[]
+      const currentIdx = items.indexOf(document.activeElement as HTMLButtonElement)
+
+      switch (e.key) {
+        case 'Tab': {
+          e.preventDefault()
+          if (currentIdx === -1) {
+            // Focus not on any menu item — go to first
+            items[0]?.focus()
+          } else if (e.shiftKey) {
+            const prevIdx = currentIdx <= 0 ? items.length - 1 : currentIdx - 1
+            items[prevIdx]?.focus()
+          } else {
+            const nextIdx = currentIdx >= items.length - 1 ? 0 : currentIdx + 1
+            items[nextIdx]?.focus()
+          }
+          break
+        }
+        case 'ArrowDown': {
+          e.preventDefault()
+          if (currentIdx === -1) {
+            items[0]?.focus()
+          } else {
+            const nextIdx = currentIdx >= items.length - 1 ? 0 : currentIdx + 1
+            items[nextIdx]?.focus()
+          }
+          break
+        }
+        case 'ArrowUp': {
+          e.preventDefault()
           const prevIdx = currentIdx <= 0 ? items.length - 1 : currentIdx - 1
           items[prevIdx]?.focus()
-        } else {
-          const nextIdx = currentIdx >= items.length - 1 ? 0 : currentIdx + 1
-          items[nextIdx]?.focus()
+          break
         }
-        break
-      }
-      case 'ArrowDown': {
-        e.preventDefault()
-        const nextIdx = currentIdx >= items.length - 1 ? 0 : currentIdx + 1
-        items[nextIdx]?.focus()
-        break
-      }
-      case 'ArrowUp': {
-        e.preventDefault()
-        const prevIdx = currentIdx <= 0 ? items.length - 1 : currentIdx - 1
-        items[prevIdx]?.focus()
-        break
-      }
-      case 'Escape': {
-        e.preventDefault()
-        setSpeedMenuOpen(false)
-        speedTriggerRef.current?.focus()
-        break
+        case 'Escape': {
+          e.preventDefault()
+          // flushSync ensures React re-renders synchronously so focus
+          // lands on the trigger after menu DOM is removed (Safari compat)
+          flushSync(() => setSpeedMenuOpen(false))
+          speedTriggerRef.current?.focus()
+          break
+        }
       }
     }
-  }, [])
 
-  // Auto-focus first speed menu item on open
-  useEffect(() => {
-    if (speedMenuOpen) {
-      requestAnimationFrame(() => {
-        speedMenuItemsRef.current[0]?.focus()
-      })
-    }
+    document.addEventListener('keydown', handleKeyDown, true)
+    return () => document.removeEventListener('keydown', handleKeyDown, true)
   }, [speedMenuOpen])
 
   // Close mobile volume popover when controls hide
@@ -407,18 +418,37 @@ export function VideoPlayer({
     speedMenuOpen,
   ])
 
-  // Auto-hide controls
+  // Auto-hide controls (mouse interaction — only hides when playing)
   const resetControlsTimeout = useCallback(() => {
+    // Skip synthesized mouse events that follow touch events on mobile
+    if (touchActiveRef.current) return
     setShowControls(true)
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current)
-    }
     if (isPlaying && !speedMenuOpen) {
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current)
+      }
       controlsTimeoutRef.current = setTimeout(() => {
         setShowControls(false)
       }, 3000)
     }
   }, [isPlaying, speedMenuOpen])
+
+  // Touch-specific handler: always starts hide timeout (mobile UX — tap to show, auto-hide)
+  const handleTouchShow = useCallback(() => {
+    // Block synthesized mouse events that follow touchstart (~300ms on mobile)
+    touchActiveRef.current = true
+    setTimeout(() => { touchActiveRef.current = false }, 500)
+
+    setShowControls(true)
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current)
+    }
+    if (!speedMenuOpen) {
+      controlsTimeoutRef.current = setTimeout(() => {
+        setShowControls(false)
+      }, 3000)
+    }
+  }, [speedMenuOpen])
 
   useEffect(() => {
     return () => {
@@ -459,7 +489,7 @@ export function VideoPlayer({
       className="relative w-full overflow-hidden rounded-2xl bg-black group focus:outline focus:outline-2 focus:outline-blue-600 focus:outline-offset-2"
       onMouseMove={resetControlsTimeout}
       onMouseLeave={() => isPlaying && !speedMenuOpen && setShowControls(false)}
-      onTouchStart={resetControlsTimeout}
+      onTouchStart={handleTouchShow}
       tabIndex={0}
       role="region"
       aria-label={title || 'Video player'}
@@ -496,10 +526,10 @@ export function VideoPlayer({
         <div
           data-testid="player-controls-overlay"
           className={cn(
-            'absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent transition-opacity duration-300',
-            showControls || !isPlaying ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            'absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent transition-[opacity,visibility] duration-300',
+            showControls ? 'opacity-100' : 'opacity-0 invisible pointer-events-none'
           )}
-          onTouchStart={resetControlsTimeout}
+          onTouchStart={handleTouchShow}
         >
           {/* Play/Pause Button Center */}
           <div className="absolute inset-0 flex items-center justify-center">
@@ -612,6 +642,7 @@ export function VideoPlayer({
                     aria-label="Playback speed"
                     aria-expanded={speedMenuOpen}
                     aria-haspopup="menu"
+                    tabIndex={0}
                     onClick={() => setSpeedMenuOpen(prev => !prev)}
                   >
                     <Settings className="size-5 mr-1" />
@@ -622,7 +653,6 @@ export function VideoPlayer({
                       role="menu"
                       aria-label="Playback speed"
                       className="absolute bottom-full right-0 mb-2 w-32 rounded-md border bg-popover p-2 shadow-md z-50"
-                      onKeyDown={handleSpeedMenuKeyDown}
                     >
                       <p className="text-xs font-semibold mb-2">Speed</p>
                       {PLAYBACK_SPEEDS.map((speed, index) => (
