@@ -21,3 +21,4 @@ coverage/
 
 # External tools
 .autoforge/
+supabase/
