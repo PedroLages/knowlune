@@ -60,7 +60,7 @@ export function ChapterProgressBar({
               <TooltipTrigger asChild>
                 <button
                   data-testid="chapter-marker"
-                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-full flex items-center justify-center z-20 cursor-pointer"
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 min-w-[44px] min-h-[44px] flex items-center justify-center z-20 cursor-pointer"
                   style={{ left: `${pct}%` }}
                   onClick={(e) => handleChapterClick(e, chapter.time)}
                   aria-label={`Go to chapter: ${chapter.title} at ${formatTime(chapter.time)}`}

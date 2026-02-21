@@ -4,9 +4,9 @@ story_name: "Chapter Progress Bar & Transcript Panel"
 status: in-progress
 started: 2026-02-21
 completed:
-reviewed: false          # false | in-progress | true
-review_started:          # YYYY-MM-DD — set when /review-story begins
-review_gates_passed: []  # tracks completed gates: [build, lint, unit-tests, e2e-tests, design-review, code-review]
+reviewed: in-progress    # false | in-progress | true
+review_started: 2026-02-21
+review_gates_passed: [build, lint, unit-tests, e2e-tests, design-review, code-review]
 ---
 
 # Story 2.8: Chapter Progress Bar & Transcript Panel
@@ -80,12 +80,44 @@ Then no "Transcript" tab is shown in the sidebar.
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+**2026-02-21** — Report: `docs/reviews/design/design-review-2026-02-21-e02-s08.md`
+
+All 4 ACs pass functionally. Blockers:
+- **B1 (Blocker)**: Chapter marker touch targets 16×28px on mobile — need `min-w-[44px] min-h-[44px]` on ChapterProgressBar marker buttons (same fix as bookmark markers in the same file)
+
+High priority:
+- **H1**: Inline `style={{ height: '400px' }}` in LessonPlayer:414 — replace with `h-[400px]`
+- **H2**: Array index used as React key in ChapterProgressBar and TranscriptPanel — use `chapter.time` / `cue.startTime`
+
+Medium:
+- **M1**: Sample VTT/chapter data timestamps exceed video duration (2:24) — cues reference up to 6:00
+- **M2**: `captionSrc` hardcoded to first track only — acceptable for this story, mark with TODO comment
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**2026-02-21** — Report: `docs/reviews/code/code-review-2026-02-21-e02-s08.md`
+
+Blockers:
+- **B1**: Uncommitted changes (course data, VTT file, E2E test fixes) break AC coverage on the committed branch — commit all changes together
+- **B2**: `captions` prop not passed from LessonPlayer to VideoPlayer — subtitle rendering is silently broken; add `captions={videoResource.metadata?.captions}` to VideoPlayer invocation in LessonPlayer
+
+High priority:
+- **H1**: Inline `style={{ height: '400px' }}` violates Tailwind-only convention — use `h-[400px]`
+- **H2**: `setVideoCurrentTime` fires on every `onTimeUpdate` (~4×/sec) causing full LessonPlayer re-render — throttle to 1s intervals
+- **H3**: `scrollIntoView({ behavior: 'smooth' })` does not respect `prefers-reduced-motion` — check `window.matchMedia` before using smooth
+- **H4**: Zero unit tests for ChapterProgressBar and TranscriptPanel — add tests for `parseVTT()`, `parseTime()`, `formatTime()`
+
+Medium:
+- **M1**: `formatTime()` duplicated across ChapterProgressBar and VideoPlayer — extract to `src/lib/time.ts`
+- **M2**: Chapter marker buttons are 16px wide with no touch target minimum (WCAG 2.5.5)
+- **M3**: VTT parser does not strip styling tags (`<b>`, `<i>`, `<c>`) — renders as literal text
+- **M4**: `cue === activeCue` uses reference equality — use index comparison instead
+- **M5**: "Loading transcript..." shown permanently if VTT parses to zero cues — add `loaded` state flag
 
 ## Challenges and Lessons Learned
 
 [Document issues, solutions, and patterns worth remembering]
+
+## Implementation Plan
+
+See [plan](/Users/pedro/.claude/plans/lovely-cooking-pillow.md) for implementation approach.

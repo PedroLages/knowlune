@@ -535,7 +535,6 @@ export function VideoPlayer({
       tabIndex={0}
       role="region"
       aria-label={title || 'Video player'}
-      data-testid="video-player"
     >
       <AspectRatio ratio={16 / 9}>
         <video

@@ -26,13 +26,24 @@ import { navigateAndWait } from '../support/helpers/navigation'
 // Helpers
 // ---------------------------------------------------------------------------
 
+// Lesson with chapters + captions metadata (for AC1, AC3, AC5, AC6 presence tests)
 const LESSON_URL = '/courses/operative-six/op6-introduction'
+// Lesson with no chapter/caption metadata (for AC2, AC4 absence tests)
+const LESSON_URL_NO_EXTRAS = '/courses/operative-six/op6-pillars-of-influence'
 
 async function goToLesson(page: Parameters<typeof navigateAndWait>[0]) {
   await page.addInitScript(() => {
     localStorage.setItem('eduvi-sidebar-v1', 'false')
   })
   await navigateAndWait(page, LESSON_URL)
+  await page.locator('video').waitFor({ state: 'visible', timeout: 10000 })
+}
+
+async function goToLessonNoExtras(page: Parameters<typeof navigateAndWait>[0]) {
+  await page.addInitScript(() => {
+    localStorage.setItem('eduvi-sidebar-v1', 'false')
+  })
+  await navigateAndWait(page, LESSON_URL_NO_EXTRAS)
   await page.locator('video').waitFor({ state: 'visible', timeout: 10000 })
 }
 
@@ -74,8 +85,8 @@ test.describe('AC1: Chapter markers when chapter data present', () => {
 
 test.describe('AC2: No chapter markers when chapter data absent', () => {
   test('no chapter markers rendered when course has no chapter metadata', async ({ page }) => {
-    // GIVEN: The operative-six course with no chapter data (static data)
-    await goToLesson(page)
+    // GIVEN: A lesson with no chapter metadata
+    await goToLessonNoExtras(page)
 
     // THEN: No chapter markers are rendered
     const markers = page.getByTestId('chapter-marker')
@@ -117,8 +128,8 @@ test.describe('AC3: Transcript tab when captions src present', () => {
 
 test.describe('AC4: Transcript tab hidden when no captions', () => {
   test('no transcript tab shown when course has no captions metadata', async ({ page }) => {
-    // GIVEN: The operative-six course with no captions (static data, no captions key)
-    await goToLesson(page)
+    // GIVEN: A lesson with no captions metadata
+    await goToLessonNoExtras(page)
 
     // THEN: No transcript tab is shown
     const transcriptTab = page.getByRole('tab', { name: /transcript/i })

@@ -247,6 +247,7 @@ export function LessonPlayer() {
               onBookmarkAdd={handleBookmarkAdd}
               bookmarks={bookmarks}
               onBookmarkSeek={handleVideoSeek}
+              captions={videoResource.metadata?.captions}
             />
           </div>
         )}
@@ -411,7 +412,7 @@ export function LessonPlayer() {
 
           {captionSrc && (
             <TabsContent value="transcript" className="mt-4">
-              <div className="bg-card rounded-2xl shadow-sm overflow-hidden" style={{ height: '400px' }}>
+              <div className="bg-card rounded-2xl shadow-sm overflow-hidden h-[400px]">
                 <TranscriptPanel
                   src={captionSrc}
                   currentTime={videoCurrentTime}

@@ -53,6 +53,17 @@ export const operativeSix: Course = {
               type: 'video',
               filePath: `${BASE}/01-The Course/01-00- Introduction.mp4`,
               fileName: '01-00- Introduction.mp4',
+              metadata: {
+                duration: 360,
+                chapters: [
+                  { time: 30, title: 'Course Overview' },
+                  { time: 120, title: 'Training Objectives' },
+                  { time: 240, title: 'Program Structure' },
+                ],
+                captions: [
+                  { src: '/captions/op6-introduction.vtt', label: 'English', language: 'en', default: true },
+                ],
+              },
             },
             {
               id: 'op6-introduction-pdf',
