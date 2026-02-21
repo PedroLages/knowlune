@@ -41,6 +41,19 @@
 - String interpolation for className persists in ModuleAccordion Link (not using `cn()`)
 - `openModules` referenced in useEffect but not in dependency array (lint warning suppressed?)
 
+### E02-S08: Chapter Progress Bar & Transcript Panel
+- `captions` prop exists on VideoPlayer but LessonPlayer NEVER passes it -- subtitle rendering broken since captions were added
+- `formatTime()` is duplicated in VideoPlayer and ChapterProgressBar (identical), plus variants in bookmarks.ts and NoteEditor.tsx -- needs shared utility
+- `setVideoCurrentTime(time)` on every `onTimeUpdate` (~4x/sec) causes full LessonPlayer tree re-render -- needs throttle or ref
+- TranscriptPanel `scrollIntoView({ behavior: 'smooth' })` does NOT respect `prefers-reduced-motion` (recurring pattern from S05/S06)
+- Inline `style={{ height: '400px' }}` on transcript container in LessonPlayer (violates Tailwind-only convention)
+- Chapter markers have no 44x44px min touch target (bookmarks have it, chapters don't)
+- VTT parser does not strip VTT styling tags (`<b>`, `<i>`, etc.) from cue text
+- TranscriptPanel shows "Loading..." permanently if VTT parses to zero cues (no `loaded` state)
+- No unit tests for ChapterProgressBar or TranscriptPanel (VTT parser especially needs coverage)
+- E2E tests + course data + VTT file were left uncommitted -- branch was broken without them
+- `cn()` correctly used in TranscriptPanel (improvement over previous stories)
+
 ## Project Conventions
 - Import alias: `@/` resolves to `./src`
 - Card border radius: `rounded-[24px]`
