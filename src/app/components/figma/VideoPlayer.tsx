@@ -281,6 +281,10 @@ export function VideoPlayer({
 
       switch (e.key) {
         case ' ':
+          // Don't toggle play/pause if a Slider thumb has focus — let Slider handle Space natively
+          if (document.activeElement?.getAttribute('role') === 'slider') return
+          // fall through to 'k'
+        // eslint-disable-next-line no-fallthrough
         case 'k':
           e.preventDefault()
           togglePlayPause()
@@ -313,6 +317,10 @@ export function VideoPlayer({
           e.preventDefault()
           toggleFullscreen()
           break
+        case 'b':
+          e.preventDefault()
+          handleAddBookmark()
+          break
         case '0':
         case '1':
         case '2':
@@ -339,6 +347,7 @@ export function VideoPlayer({
     toggleCaptions,
     toggleFullscreen,
     jumpToPercentage,
+    handleAddBookmark,
   ])
 
   // Auto-hide controls
@@ -395,6 +404,7 @@ export function VideoPlayer({
       tabIndex={0}
       role="region"
       aria-label={title || 'Video player'}
+      data-testid="video-player"
     >
       <AspectRatio ratio={16 / 9}>
         <video
