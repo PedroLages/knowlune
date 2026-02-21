@@ -89,4 +89,7 @@ See [plan](../../.claude/plans/zesty-imagining-scott.md) for implementation appr
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- Use a `ref` (not state) to guard one-shot callbacks like auto-completion thresholds: refs prevent re-renders and double-firing without closure issues, and reset cleanly when the source prop changes.
+- Wire component props end-to-end before marking tasks complete: the caption feature was implemented in `VideoPlayer` but initially never received the `captions` prop from `LessonPlayer`, leaving an acceptance criterion dead on arrival until code review caught it.
+- The CSS `::cue` pseudo-element does not inherit custom properties from ancestor elements, so dynamic caption styling requires injecting a `<style>` tag into the document head rather than setting a CSS variable on a parent div.
+- `prefers-reduced-motion` suppression differs from providing an alternative animation: the global `transition-duration: 0.01ms !important` rule kills opacity transitions too, so reduced-motion alternatives must use `@keyframes` with their own duration instead of CSS `transition`.
