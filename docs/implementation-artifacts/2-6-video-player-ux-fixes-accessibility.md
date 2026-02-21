@@ -117,7 +117,12 @@ So that I can use the player comfortably on mobile, tablet, and desktop with key
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **`focus:` vs `focus-visible:` matters.** Using `focus:` on interactive containers shows focus rings on every click. Always use `focus-visible:` for keyboard-only indicators. Both design and code reviews flagged this independently.
+- **shadcn/ui Button needs forwardRef for ref forwarding.** The default shadcn `Button` is a plain function component. Speed menu focus-return on Escape failed silently because `speedTriggerRef` was always null. Wrapping with `React.forwardRef` fixed it. Check ref behavior when adding refs to library components.
+- **Speed menus need click-outside handlers.** Opening a dropdown without a document-level click-outside listener is a common miss. Add `mousedown` listener on document when menu is open; clean up on close.
+- **AutoAdvanceCountdown interval must clear at zero.** `setInterval` keeps firing after the countdown reaches 0, causing negative values and multiple `onAdvance` calls. Clear the interval when remaining hits zero, not just on unmount.
+- **Test selectors break when Tailwind classes change.** Unit tests that query by CSS class (`.hover\\:scale-\\[1\\.02\\]`) are brittle — any refactor to arbitrary properties breaks them. Prefer `data-testid` or role-based queries where possible. When class selectors are necessary, update them alongside the component.
+- **Tablet E2E tests have a pre-existing sidebar navigation issue.** All Tablet project failures in navigation/overview specs pre-date this story. The sidebar likely doesn't open at tablet width. Tracked as known debt.
 
 ## Implementation Plan
 
