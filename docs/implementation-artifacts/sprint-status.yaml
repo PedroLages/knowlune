@@ -48,8 +48,8 @@ development_status:
 
   # Epic 2: Video & PDF Content Playback (5 stories)
   epic-2: in-progress
-  2-1-lesson-player-page-with-video-playback: in-progress
-  2-2-video-playback-controls-and-keyboard-shortcuts: backlog
+  2-1-lesson-player-page-with-video-playback: done
+  2-2-video-playback-controls-and-keyboard-shortcuts: done
   2-3-video-bookmarking-and-resume: backlog
   2-4-pdf-viewer-with-page-navigation: backlog
   2-5-course-structure-navigation: backlog

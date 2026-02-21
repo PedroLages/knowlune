@@ -1,16 +1,17 @@
 import { useParams, Link, useNavigate } from 'react-router'
 import { useMemo, useState, useCallback, useRef, useEffect } from 'react'
 import { ArrowLeft, ChevronLeft, ChevronRight, CheckCircle2, Circle, Menu } from 'lucide-react'
-import { Button } from '../components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
-import { Sheet, SheetContent, SheetTrigger } from '../components/ui/sheet'
-import { VideoPlayer } from '../components/figma/VideoPlayer'
-import { PdfViewer } from '../components/figma/PdfViewer'
-import { LessonList } from '../components/figma/LessonList'
-import { ResourceBadge } from '../components/figma/ResourceBadge'
-import { NoteEditor } from '../components/notes/NoteEditor'
-import { CompletionModal, type CelebrationType } from '../components/celebrations/CompletionModal'
-import { BookmarksList } from '../components/BookmarksList'
+import { Button } from '@/app/components/ui/button'
+import { cn } from '@/app/components/ui/utils'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs'
+import { Sheet, SheetContent, SheetTrigger } from '@/app/components/ui/sheet'
+import { VideoPlayer } from '@/app/components/figma/VideoPlayer'
+import { PdfViewer } from '@/app/components/figma/PdfViewer'
+import { LessonList } from '@/app/components/figma/LessonList'
+import { ResourceBadge } from '@/app/components/figma/ResourceBadge'
+import { NoteEditor } from '@/app/components/notes/NoteEditor'
+import { CompletionModal, type CelebrationType } from '@/app/components/celebrations/CompletionModal'
+import { BookmarksList } from '@/app/components/BookmarksList'
 import { allCourses } from '@/data/courses'
 import { getResourceUrl } from '@/lib/media'
 import {
@@ -53,10 +54,16 @@ export function LessonPlayer() {
     courseId && lessonId ? getLessonBookmarks(courseId, lessonId) : []
   )
 
+  // Timeout cleanup ref
+  const justCompletedTimerRef = useRef<ReturnType<typeof setTimeout>>()
+
   // Celebration modal state
   const [celebrationModal, setCelebrationModal] = useState(false)
   const [celebrationType, setCelebrationType] = useState<CelebrationType>('lesson')
   const [celebrationTitle, setCelebrationTitle] = useState('')
+
+  // Brief animation state for checkmark transition
+  const [justCompleted, setJustCompleted] = useState(false)
 
   // Update bookmarks when lesson changes
   useEffect(() => {
@@ -69,6 +76,11 @@ export function LessonPlayer() {
   useEffect(() => {
     titleRef.current?.focus()
   }, [lessonId])
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => clearTimeout(justCompletedTimerRef.current)
+  }, [])
 
   const prevLesson = currentIndex > 0 ? allLessons[currentIndex - 1] : null
   const nextLesson = currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null
@@ -85,16 +97,25 @@ export function LessonPlayer() {
     [courseId, lessonId]
   )
 
-  const handleVideoEnded = useCallback(() => {
-    if (courseId && lessonId && !completed) {
-      markLessonComplete(courseId, lessonId)
-      setCompleted(true)
-      // Trigger celebration
-      setCelebrationType('lesson')
-      setCelebrationTitle(lesson?.title || 'Lesson')
-      setCelebrationModal(true)
-    }
+  const triggerCompletion = useCallback(() => {
+    if (!courseId || !lessonId || completed) return
+    markLessonComplete(courseId, lessonId)
+    setCompleted(true)
+    setJustCompleted(true)
+    clearTimeout(justCompletedTimerRef.current)
+    justCompletedTimerRef.current = setTimeout(() => setJustCompleted(false), 600)
+    setCelebrationType('lesson')
+    setCelebrationTitle(lesson?.title || 'Lesson')
+    setCelebrationModal(true)
   }, [courseId, lessonId, completed, lesson])
+
+  const handleAutoComplete = useCallback(() => {
+    triggerCompletion()
+  }, [triggerCompletion])
+
+  const handleVideoEnded = useCallback(() => {
+    triggerCompletion()
+  }, [triggerCompletion])
 
   const handleVideoSeek = useCallback((timestamp: number) => {
     setSeekToTime(timestamp)
@@ -126,12 +147,7 @@ export function LessonPlayer() {
       markLessonIncomplete(courseId, lessonId)
       setCompleted(false)
     } else {
-      markLessonComplete(courseId, lessonId)
-      setCompleted(true)
-      // Trigger celebration when manually marking complete
-      setCelebrationType('lesson')
-      setCelebrationTitle(lesson?.title || 'Lesson')
-      setCelebrationModal(true)
+      triggerCompletion()
     }
   }
 
@@ -146,9 +162,9 @@ export function LessonPlayer() {
     return (
       <div className="flex flex-col items-center justify-center py-24">
         <h2 className="text-xl font-semibold mb-2">Lesson Not Found</h2>
-        <Link to="/courses">
-          <Button>Back to Courses</Button>
-        </Link>
+        <Button asChild>
+          <Link to="/courses">Back to Courses</Link>
+        </Button>
       </div>
     )
   }
@@ -171,6 +187,7 @@ export function LessonPlayer() {
             <VideoPlayer
               src={getResourceUrl(videoResource)}
               title={lesson.title}
+              captions={videoResource.metadata?.captions}
               initialPosition={
                 progress?.lastWatchedLesson === lessonId ? progress?.lastVideoPosition : undefined
               }
@@ -179,6 +196,7 @@ export function LessonPlayer() {
               lessonId={lessonId}
               onTimeUpdate={handleTimeUpdate}
               onEnded={handleVideoEnded}
+              onAutoComplete={handleAutoComplete}
               onSeekComplete={handleSeekComplete}
               onBookmarkAdd={handleBookmarkAdd}
             />
@@ -216,12 +234,17 @@ export function LessonPlayer() {
               <button
                 onClick={toggleComplete}
                 aria-label={completed ? 'Mark lesson incomplete' : 'Mark lesson complete'}
-                className="flex items-center gap-1.5 text-sm shrink-0 cursor-pointer"
+                className="flex items-center gap-1.5 text-sm shrink-0 cursor-pointer min-h-[44px] py-2 px-2 -mr-2 rounded-lg hover:bg-accent/50 transition-colors"
               >
                 {completed ? (
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  <CheckCircle2
+                    className={cn(
+                      'size-5 text-green-500 transition-all duration-300 reduced-motion-fade',
+                      justCompleted && 'motion-safe:scale-125 motion-reduce:opacity-60'
+                    )}
+                  />
                 ) : (
-                  <Circle className="h-5 w-5 text-muted-foreground/40" />
+                  <Circle className="size-5 text-muted-foreground/40" />
                 )}
                 <span className={completed ? 'text-green-600' : 'text-muted-foreground'}>
                   {completed ? 'Completed' : 'Mark Complete'}

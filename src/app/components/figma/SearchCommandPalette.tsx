@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import {
   LayoutDashboard,
@@ -145,15 +145,33 @@ interface SearchCommandPaletteProps {
 
 export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPaletteProps) {
   const navigate = useNavigate()
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null)
+
+  // Capture the element that had focus before the dialog opened
+  useEffect(() => {
+    if (open) {
+      previouslyFocusedRef.current = document.activeElement as HTMLElement
+    }
+  }, [open])
+
+  const handleOpenChange = useCallback(
+    (newOpen: boolean) => {
+      onOpenChange(newOpen)
+      if (!newOpen && previouslyFocusedRef.current) {
+        requestAnimationFrame(() => previouslyFocusedRef.current?.focus())
+      }
+    },
+    [onOpenChange]
+  )
 
   const searchIndex = useMemo(() => buildSearchIndex(), [])
 
   const handleSelect = useCallback(
     (path: string) => {
-      onOpenChange(false)
+      handleOpenChange(false)
       navigate(path)
     },
-    [navigate, onOpenChange]
+    [navigate, handleOpenChange]
   )
 
   // Group items
@@ -164,7 +182,7 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
   return (
     <CommandDialog
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={handleOpenChange}
       title="Search"
       description="Search for pages, courses, and lessons"
     >

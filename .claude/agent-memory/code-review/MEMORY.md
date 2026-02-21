@@ -18,6 +18,21 @@
 - String interpolation for className instead of cn() continues in new components (StatusFilter, ImportedCourseCard)
 - Courses.test.tsx doesn't test status filtering (AC2), combined topic+status filtering, or default-to-active (AC3)
 
+### E02-S02: Video Playback Controls and Keyboard Shortcuts
+- LessonPlayer does NOT pass `captions` prop to VideoPlayer -- caption toggle and font size controls never render
+- `video::cue` pseudo-element CANNOT inherit CSS custom properties from parent elements -- must use dynamic `<style>` injection
+- `h-N w-N` instead of `size-N` continues in VideoPlayer (19 instances) -- recurring pattern from S03/S04
+- `setTimeout` without cleanup in `triggerCompletion` and `announce` -- no ref-based timer management
+- Speed menu dropdown has no click-outside-to-close behavior
+- No unit tests exist for VideoPlayer.tsx or LessonPlayer.tsx -- all coverage is E2E only
+- `prefers-reduced-motion` global override in index.css sets `transition-duration: 0.01ms !important`, which kills ALL transitions including intentional reduced-motion alternatives
+- `motion-safe:` Tailwind prefix used correctly for conditional animations
+
+## Recurring Anti-Patterns (cross-story)
+- Missing unit tests for new/modified components (S03 factories unused, S04 StatusFilter untested, S02 VideoPlayer untested)
+- `h-N w-N` instead of Tailwind v4 `size-N` shorthand (every story since S03)
+- Props available in data types but not threaded through to components (S02 captions)
+
 ## Project Conventions
 - Import alias: `@/` resolves to `./src`
 - Card border radius: `rounded-[24px]`

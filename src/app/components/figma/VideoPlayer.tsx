@@ -9,10 +9,12 @@ import {
   Settings,
   Subtitles,
   Bookmark,
+  Minus,
+  Plus,
 } from 'lucide-react'
 import type { CaptionTrack } from '@/data/types'
 import { AspectRatio } from '@/app/components/ui/aspect-ratio'
-import { Button } from '@/app/components/ui/button'
+import { Button, buttonVariants } from '@/app/components/ui/button'
 import { Slider } from '@/app/components/ui/slider'
 // Radix Popover Portal miscalculates position inside scroll containers — using plain CSS dropdown
 import { cn } from '@/app/components/ui/utils'
@@ -29,11 +31,15 @@ interface VideoPlayerProps {
   onEnded?: () => void
   onSeekComplete?: () => void
   onBookmarkAdd?: (timestamp: number) => void
+  onAutoComplete?: () => void
 }
 
 const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2]
 const STORAGE_KEY_PLAYBACK_SPEED = 'video-playback-speed'
 const STORAGE_KEY_CAPTIONS_ENABLED = 'video-captions-enabled'
+const STORAGE_KEY_CAPTION_FONT_SIZE = 'video-caption-font-size'
+const CAPTION_FONT_SIZES = [14, 16, 18, 20]
+const COMPLETION_THRESHOLD = 0.95
 
 function formatTime(seconds: number): string {
   const hrs = Math.floor(seconds / 3600)
@@ -58,11 +64,14 @@ export function VideoPlayer({
   onEnded,
   onSeekComplete,
   onBookmarkAdd,
+  onAutoComplete,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const hasRestoredPosition = useRef(false)
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const announceTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const speedMenuRef = useRef<HTMLDivElement>(null)
 
   // Video state
   const [isPlaying, setIsPlaying] = useState(false)
@@ -74,6 +83,9 @@ export function VideoPlayer({
   const [showControls, setShowControls] = useState(true)
   const [announcement, setAnnouncement] = useState('')
 
+  // Completion tracking — ref prevents re-rendering and re-firing
+  const hasAutoCompleted = useRef(false)
+
   // Load saved playback speed from localStorage
   const [playbackSpeed, setPlaybackSpeed] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEY_PLAYBACK_SPEED)
@@ -82,6 +94,9 @@ export function VideoPlayer({
 
   // Track whether speed menu is open (prevents controls auto-hide)
   const [speedMenuOpen, setSpeedMenuOpen] = useState(false)
+  const speedButtonRef = useRef<HTMLButtonElement>(null)
+  const speedMenuItemsRef = useRef<(HTMLButtonElement | null)[]>([])
+  const [focusedSpeedIndex, setFocusedSpeedIndex] = useState(0)
 
   // Load saved caption preference from localStorage
   const [captionsEnabled, setCaptionsEnabled] = useState(() => {
@@ -89,9 +104,16 @@ export function VideoPlayer({
     return saved === 'true'
   })
 
+  // Caption font size (14-20pt, persisted to localStorage)
+  const [captionFontSize, setCaptionFontSize] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEY_CAPTION_FONT_SIZE)
+    return saved ? parseInt(saved, 10) : 18
+  })
+
   // Reset position flag when source changes
   useEffect(() => {
     hasRestoredPosition.current = false
+    hasAutoCompleted.current = false
   }, [src])
 
   // Apply playback speed to video
@@ -100,6 +122,26 @@ export function VideoPlayer({
       videoRef.current.playbackRate = playbackSpeed
     }
   }, [playbackSpeed])
+
+  // Dynamic <style> injection for ::cue font size (CSS custom properties don't inherit into ::cue)
+  useEffect(() => {
+    const styleEl = document.createElement('style')
+    document.head.appendChild(styleEl)
+    styleEl.textContent = `video::cue { font-size: ${captionFontSize / 16}rem; }`
+    return () => { styleEl.remove() }
+  }, [captionFontSize])
+
+  // Close speed menu on click outside
+  useEffect(() => {
+    if (!speedMenuOpen) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!speedMenuRef.current?.contains(e.target as Node)) {
+        setSpeedMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [speedMenuOpen])
 
   // Manage caption track visibility
   useEffect(() => {
@@ -137,8 +179,18 @@ export function VideoPlayer({
       const time = videoRef.current.currentTime
       setCurrentTime(time)
       onTimeUpdate?.(time)
+
+      // Check if 95% threshold has been reached
+      if (
+        videoRef.current.duration > 0 &&
+        time / videoRef.current.duration >= COMPLETION_THRESHOLD &&
+        !hasAutoCompleted.current
+      ) {
+        hasAutoCompleted.current = true
+        onAutoComplete?.()
+      }
     }
-  }, [onTimeUpdate])
+  }, [onTimeUpdate, onAutoComplete])
 
   // Handle video ended
   const handleEnded = useCallback(() => {
@@ -249,6 +301,19 @@ export function VideoPlayer({
     announce(`Speed changed to ${speed}x`)
   }, [])
 
+  // Change caption font size
+  const changeCaptionFontSize = useCallback((delta: number) => {
+    setCaptionFontSize(prev => {
+      const rawIdx = CAPTION_FONT_SIZES.indexOf(prev)
+      const currentIdx = rawIdx >= 0 ? rawIdx : CAPTION_FONT_SIZES.indexOf(18)
+      const newIdx = Math.max(0, Math.min(CAPTION_FONT_SIZES.length - 1, currentIdx + delta))
+      const newSize = CAPTION_FONT_SIZES[newIdx]
+      localStorage.setItem(STORAGE_KEY_CAPTION_FONT_SIZE, newSize.toString())
+      announce(`Caption font size ${newSize}pt`)
+      return newSize
+    })
+  }, [])
+
   // Jump to percentage
   const jumpToPercentage = useCallback((percentage: number) => {
     if (videoRef.current) {
@@ -262,7 +327,8 @@ export function VideoPlayer({
   // ARIA announcement helper
   const announce = useCallback((message: string) => {
     setAnnouncement(message)
-    setTimeout(() => setAnnouncement(''), 1000)
+    clearTimeout(announceTimerRef.current)
+    announceTimerRef.current = setTimeout(() => setAnnouncement(''), 1000)
   }, [])
 
   // Add bookmark at current timestamp
@@ -273,25 +339,62 @@ export function VideoPlayer({
     }
   }, [onBookmarkAdd, currentTime])
 
+  // Focus speed menu items when index changes
+  useEffect(() => {
+    if (speedMenuOpen) {
+      speedMenuItemsRef.current[focusedSpeedIndex]?.focus()
+    }
+  }, [focusedSpeedIndex, speedMenuOpen])
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Only handle if video player is in focus or controls are visible
       if (!containerRef.current?.contains(document.activeElement)) return
 
+      // Speed menu keyboard navigation
+      if (speedMenuOpen) {
+        switch (e.key) {
+          case 'ArrowDown':
+            e.preventDefault()
+            setFocusedSpeedIndex(prev => Math.min(PLAYBACK_SPEEDS.length - 1, prev + 1))
+            return
+          case 'ArrowUp':
+            e.preventDefault()
+            setFocusedSpeedIndex(prev => Math.max(0, prev - 1))
+            return
+          case 'Enter':
+          case ' ':
+            e.preventDefault()
+            changePlaybackSpeed(PLAYBACK_SPEEDS[focusedSpeedIndex])
+            setSpeedMenuOpen(false)
+            requestAnimationFrame(() => speedButtonRef.current?.focus())
+            return
+          case 'Escape':
+            e.preventDefault()
+            setSpeedMenuOpen(false)
+            requestAnimationFrame(() => speedButtonRef.current?.focus())
+            return
+        }
+      }
+
       switch (e.key) {
         case ' ':
+          // Don't toggle play/pause if a Slider thumb has focus — let Slider handle Space natively
+          if (document.activeElement?.getAttribute('role') === 'slider') return
+          // fall through to 'k'
+        // eslint-disable-next-line no-fallthrough
         case 'k':
           e.preventDefault()
           togglePlayPause()
           break
         case 'ArrowLeft':
           e.preventDefault()
-          seek(-5)
+          seek(e.shiftKey ? -10 : -5)
           break
         case 'ArrowRight':
           e.preventDefault()
-          seek(5)
+          seek(e.shiftKey ? 10 : 5)
           break
         case 'ArrowUp':
           e.preventDefault()
@@ -339,6 +442,9 @@ export function VideoPlayer({
     toggleCaptions,
     toggleFullscreen,
     jumpToPercentage,
+    speedMenuOpen,
+    focusedSpeedIndex,
+    changePlaybackSpeed,
   ])
 
   // Auto-hide controls
@@ -356,9 +462,8 @@ export function VideoPlayer({
 
   useEffect(() => {
     return () => {
-      if (controlsTimeoutRef.current) {
-        clearTimeout(controlsTimeoutRef.current)
-      }
+      clearTimeout(controlsTimeoutRef.current)
+      clearTimeout(announceTimerRef.current)
     }
   }, [])
 
@@ -433,7 +538,7 @@ export function VideoPlayer({
             <Button
               variant="ghost"
               size="icon"
-              className="h-16 w-16 rounded-full bg-black/50 hover:bg-black/70 text-white"
+              className="h-16 w-16 rounded-full bg-black/50 hover:bg-black/70 text-white focus-visible:ring-2 focus-visible:ring-white"
               onClick={togglePlayPause}
               aria-label={isPlaying ? 'Pause' : 'Play'}
             >
@@ -445,7 +550,7 @@ export function VideoPlayer({
           <div className="absolute bottom-0 left-0 right-0 p-4 space-y-2">
             {/* Progress Bar */}
             <div className="flex items-center gap-2">
-              <span className="text-white text-xs font-medium min-w-[45px]">
+              <span className="text-white text-xs font-medium min-w-[45px]" data-testid="current-time">
                 {formatTime(currentTime)}
               </span>
               <Slider
@@ -462,32 +567,32 @@ export function VideoPlayer({
             </div>
 
             {/* Control Buttons */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between flex-wrap gap-y-1">
+              <div className="flex items-center gap-1">
                 {/* Play/Pause */}
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-white hover:bg-white/20"
+                  className="size-11 text-white hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-white"
                   onClick={togglePlayPause}
                   aria-label={isPlaying ? 'Pause' : 'Play'}
                 >
-                  {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                  {isPlaying ? <Pause className="size-4" /> : <Play className="size-4" />}
                 </Button>
 
                 {/* Volume */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-white hover:bg-white/20"
+                    className="size-11 text-white hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-white"
                     onClick={toggleMute}
                     aria-label={isMuted ? 'Unmute' : 'Mute'}
                   >
                     {isMuted || volume === 0 ? (
-                      <VolumeX className="h-4 w-4" />
+                      <VolumeX className="size-4" />
                     ) : (
-                      <Volume2 className="h-4 w-4" />
+                      <Volume2 className="size-4" />
                     )}
                   </Button>
                   <Slider
@@ -501,29 +606,48 @@ export function VideoPlayer({
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 {/* Playback Speed */}
-                <div className="relative">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 px-2 text-white hover:bg-white/20 text-xs font-medium"
+                <div className="relative" ref={speedMenuRef}>
+                  <button
+                    ref={speedButtonRef}
+                    className={cn(
+                      buttonVariants({ variant: 'ghost', size: 'sm' }),
+                      'h-11 px-3 text-white hover:bg-white/20 text-xs font-medium focus-visible:ring-2 focus-visible:ring-white'
+                    )}
                     aria-label="Playback speed"
+                    aria-haspopup="menu"
                     aria-expanded={speedMenuOpen}
-                    onClick={() => setSpeedMenuOpen(prev => !prev)}
+                    onClick={() => {
+                      const opening = !speedMenuOpen
+                      setSpeedMenuOpen(opening)
+                      if (opening) {
+                        const idx = PLAYBACK_SPEEDS.indexOf(playbackSpeed)
+                        setFocusedSpeedIndex(idx >= 0 ? idx : 2)
+                      }
+                    }}
                   >
-                    <Settings className="h-4 w-4 mr-1" />
+                    <Settings className="size-4 mr-1" />
                     {playbackSpeed}x
-                  </Button>
+                  </button>
                   {speedMenuOpen && (
-                    <div className="absolute bottom-full right-0 mb-2 w-32 rounded-md border bg-popover p-2 shadow-md z-50">
+                    <div
+                      role="menu"
+                      aria-label="Playback speed"
+                      className="absolute bottom-full right-0 mb-2 w-32 rounded-md border bg-popover p-2 shadow-md z-50"
+                    >
                       <p className="text-xs font-semibold mb-2">Speed</p>
-                      {PLAYBACK_SPEEDS.map(speed => (
+                      {PLAYBACK_SPEEDS.map((speed, i) => (
                         <button
                           key={speed}
+                          ref={el => { speedMenuItemsRef.current[i] = el }}
+                          role="menuitem"
+                          tabIndex={focusedSpeedIndex === i ? 0 : -1}
+                          aria-current={speed === playbackSpeed ? true : undefined}
                           onClick={() => {
                             changePlaybackSpeed(speed)
                             setSpeedMenuOpen(false)
+                            requestAnimationFrame(() => speedButtonRef.current?.focus())
                           }}
                           className={cn(
                             'w-full text-left px-2 py-1 text-sm rounded hover:bg-accent',
@@ -542,42 +666,74 @@ export function VideoPlayer({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-white hover:bg-white/20"
+                    className="size-11 text-white hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-white"
                     onClick={handleAddBookmark}
                     aria-label="Add bookmark at current time"
                   >
-                    <Bookmark className="h-4 w-4" />
+                    <Bookmark className="size-4" />
                   </Button>
                 )}
 
                 {/* Captions Toggle - Only show if captions are available */}
                 {captions && captions.length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      'h-8 w-8 text-white hover:bg-white/20',
-                      captionsEnabled && 'bg-white/20'
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        'size-11 text-white hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-white',
+                        captionsEnabled && 'bg-white/20'
+                      )}
+                      onClick={toggleCaptions}
+                      aria-label={captionsEnabled ? 'Disable captions' : 'Enable captions'}
+                      aria-pressed={captionsEnabled}
+                    >
+                      <Subtitles className="size-4" />
+                    </Button>
+
+                    {/* Caption Font Size Controls */}
+                    {captionsEnabled && (
+                      <div className="flex items-center gap-0.5" data-testid="caption-font-size">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-10 text-white hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-white"
+                          onClick={() => changeCaptionFontSize(-1)}
+                          aria-label="Decrease caption font size"
+                          disabled={captionFontSize <= CAPTION_FONT_SIZES[0]}
+                        >
+                          <Minus className="size-3.5" />
+                        </Button>
+                        <span className="text-white text-[10px] font-medium min-w-[28px] text-center">
+                          {captionFontSize}pt
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-10 text-white hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-white"
+                          onClick={() => changeCaptionFontSize(1)}
+                          aria-label="Increase caption font size"
+                          disabled={captionFontSize >= CAPTION_FONT_SIZES[CAPTION_FONT_SIZES.length - 1]}
+                        >
+                          <Plus className="size-3.5" />
+                        </Button>
+                      </div>
                     )}
-                    onClick={toggleCaptions}
-                    aria-label={captionsEnabled ? 'Disable captions' : 'Enable captions'}
-                  >
-                    <Subtitles className="h-4 w-4" />
-                  </Button>
+                  </>
                 )}
 
                 {/* Fullscreen */}
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-white hover:bg-white/20"
+                  className="size-11 text-white hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-white"
                   onClick={toggleFullscreen}
                   aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
                 >
                   {isFullscreen ? (
-                    <Minimize className="h-4 w-4" />
+                    <Minimize className="size-4" />
                   ) : (
-                    <Maximize className="h-4 w-4" />
+                    <Maximize className="size-4" />
                   )}
                 </Button>
               </div>
