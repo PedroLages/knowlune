@@ -95,11 +95,11 @@ export function CompletionModal({
   const getIcon = () => {
     switch (type) {
       case 'course':
-        return <Trophy className="w-16 h-16 text-blue-600" aria-hidden="true" />
+        return <Trophy className="w-16 h-16 text-brand" aria-hidden="true" />
       case 'module':
-        return <Star className="w-16 h-16 text-blue-600" aria-hidden="true" />
+        return <Star className="w-16 h-16 text-brand" aria-hidden="true" />
       case 'lesson':
-        return <CheckCircle2 className="w-16 h-16 text-blue-600" aria-hidden="true" />
+        return <CheckCircle2 className="w-16 h-16 text-brand" aria-hidden="true" />
     }
   }
 
@@ -147,7 +147,7 @@ export function CompletionModal({
           <div className="grid grid-cols-2 gap-4 py-6">
             {stats.lessonsCompleted !== undefined && stats.totalLessons !== undefined && (
               <div className="text-center p-4 bg-muted rounded-xl">
-                <div className="text-2xl font-bold text-blue-600">
+                <div className="text-2xl font-bold text-brand">
                   {stats.lessonsCompleted}/{stats.totalLessons}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">Lessons</div>
@@ -156,14 +156,14 @@ export function CompletionModal({
 
             {stats.completionPercent !== undefined && (
               <div className="text-center p-4 bg-muted rounded-xl">
-                <div className="text-2xl font-bold text-blue-600">{stats.completionPercent}%</div>
+                <div className="text-2xl font-bold text-brand">{stats.completionPercent}%</div>
                 <div className="text-xs text-muted-foreground mt-1">Complete</div>
               </div>
             )}
 
             {stats.timeSpent !== undefined && (
               <div className="text-center p-4 bg-muted rounded-xl col-span-2">
-                <div className="text-2xl font-bold text-blue-600">{stats.timeSpent}h</div>
+                <div className="text-2xl font-bold text-brand">{stats.timeSpent}h</div>
                 <div className="text-xs text-muted-foreground mt-1">Time Invested</div>
               </div>
             )}

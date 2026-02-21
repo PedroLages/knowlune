@@ -7,6 +7,7 @@ import {
   Info,
   BarChart3,
   Settings as SettingsIcon,
+  Palette,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -26,6 +27,7 @@ export const navigationItems: NavigationItem[] = [
   { name: 'Instructors', path: '/instructors', icon: Info },
   { name: 'Reports', path: '/reports', icon: BarChart3 },
   { name: 'Settings', path: '/settings', icon: SettingsIcon },
+  { name: 'Design System', path: '/design-system', icon: Palette },
 ]
 
 // Paths for primary navigation (shown in mobile bottom bar)

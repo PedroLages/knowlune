@@ -18,6 +18,19 @@
 - String interpolation for className instead of cn() continues in new components (StatusFilter, ImportedCourseCard)
 - Courses.test.tsx doesn't test status filtering (AC2), combined topic+status filtering, or default-to-active (AC3)
 
+### E02-S03: Video Bookmarking and Resume (Third Review Pass)
+- Committed code has two known blockers: TS7029 fallthrough in switch (VideoPlayer.tsx:288), broken debounce (LessonPlayer.tsx:100 `Math.floor(time) % 5 === 0`)
+- Uncommitted changes fix both blockers but are NOT committed -- 44 files with uncommitted changes
+- `bookmarks.ts` uses localStorage, NOT IndexedDB as specified in AC3 ("saved as a bookmark in IndexedDB")
+- No `beforeunload`/`visibilitychange` save handlers (Task 2.2 in story)
+- Zero unit tests for bookmarks.ts (8 exported functions, 0 coverage)
+- `hasBookmarkAt()` exists in bookmarks.ts but is never called -- duplicate prevention not wired up
+- `getProgress()` called outside useMemo on every render in LessonPlayer (line 44)
+- E2E test for "persist bookmarks in IndexedDB after page reload" (line 212) tests localStorage persistence but comments claim IndexedDB
+- 29+ scratch/temp files in project root (new_vp_v*.tsx, update*.py/js, etc.)
+- BookmarksList seek button (line 40-42) still missing aria-label
+- BookmarksList delete button (line 59) opacity-0 hides from keyboard users (focus-visible not handled)
+
 ## Project Conventions
 - Import alias: `@/` resolves to `./src`
 - Card border radius: `rounded-[24px]`
@@ -26,3 +39,5 @@
 - shadcn/ui components in `src/app/components/ui/`
 - Custom components in `src/app/components/figma/`
 - Dexie.js DB defined in `src/db/schema.ts`, re-exported from `src/db/index.ts`
+- tsconfig.json has `noFallthroughCasesInSwitch: true` -- fallthrough switch requires special handling
+- `Tooltip` component from shadcn/ui wraps each instance in its own `TooltipProvider`, so multiple Tooltip uses are fine

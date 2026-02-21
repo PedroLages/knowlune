@@ -31,9 +31,9 @@ export function CourseCard({ course, completionPercent }: CourseCardProps) {
   return (
     <Link
       to={`/courses/${course.id}`}
-      className="rounded-[24px] focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 outline-none block"
+      className="rounded-[24px] focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none block"
     >
-      <Card className="group bg-card rounded-[24px] border-0 shadow-sm overflow-hidden hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 motion-reduce:hover:scale-100 cursor-pointer">
+      <Card className="group bg-card border-0 shadow-sm overflow-hidden hover:shadow-xl hover:scale-[1.02] transition-all duration-300 motion-reduce:hover:scale-100 cursor-pointer">
         <div className="relative h-44 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/50 dark:to-indigo-950/50 flex items-center justify-center overflow-hidden">
           {course.coverImage ? (
             <picture className="absolute inset-0">
@@ -76,7 +76,7 @@ export function CourseCard({ course, completionPercent }: CourseCardProps) {
         </div>
 
         <div className="p-5">
-          <h3 className="font-bold text-base mb-1 group-hover:text-blue-600 transition-colors line-clamp-2">
+          <h3 className="font-semibold text-base mb-1 group-hover:text-brand transition-colors line-clamp-2">
             {course.title}
           </h3>
           <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{course.description}</p>

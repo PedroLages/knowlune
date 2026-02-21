@@ -203,7 +203,7 @@ export default function Messages() {
                       <div className="flex items-center gap-2 mb-1">
                         <Link
                           to={`/courses/${note.courseId}/${note.lessonId}`}
-                          className="text-sm font-medium text-blue-600 hover:underline"
+                          className="text-sm font-medium text-brand hover:underline"
                         >
                           {note.lessonName}
                         </Link>

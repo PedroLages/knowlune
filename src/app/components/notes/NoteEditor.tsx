@@ -63,7 +63,7 @@ function createVideoLinkComponent(onVideoSeek?: (seconds: number) => void) {
               e.preventDefault()
               onVideoSeek(seconds)
             }}
-            className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline cursor-pointer font-medium"
+            className="text-brand hover:text-brand-hover underline cursor-pointer font-medium"
             type="button"
           >
             {children}
@@ -162,7 +162,7 @@ export function NoteEditor({
   const characterCount = content.length
 
   return (
-    <div className={cn('bg-card rounded-2xl shadow-sm', className)}>
+    <div className={cn('bg-card rounded-[24px] shadow-sm', className)}>
       <Tabs value={activeTab} onValueChange={v => setActiveTab(v as 'edit' | 'preview')}>
         <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border">
           <h3 className="text-sm font-semibold">Your Notes</h3>

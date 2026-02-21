@@ -26,6 +26,13 @@ const COURSE_ID = '6mx'
 const LESSON_ID = '6mx-welcome-intro'
 const LESSON_PATH = `/courses/${COURSE_ID}/${LESSON_ID}`
 
+// Ensure sidebar starts closed on tablet viewport (Layout defaults to open)
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('eduvi-sidebar-v1', JSON.stringify(false))
+  })
+})
+
 // ===========================================================================
 // AC1: Position Auto-Save (every 5 seconds, debounced, silent)
 // ===========================================================================
@@ -38,9 +45,11 @@ test.describe('AC1: Position Auto-Save', () => {
     // GIVEN: User navigates to a lesson with video
     await navigateAndWait(page, LESSON_PATH)
 
-    // WHEN: Video plays for some time (simulate via timeupdate)
-    // The position should be saved silently
-    await page.waitForTimeout(1000)
+    // WHEN: Video fires timeupdate (simulate via Playwright dispatchEvent)
+    const video = page.locator('video')
+    await expect(video).toBeAttached()
+    await video.dispatchEvent('timeupdate')
+    await page.waitForTimeout(500)
 
     // THEN: course-progress in localStorage has a lastVideoPosition value
     const progress = await localStorage.get<Record<string, unknown>>('course-progress')

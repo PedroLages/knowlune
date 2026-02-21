@@ -288,8 +288,9 @@ export function VideoPlayer({
         case ' ':
           // Don't toggle play/pause if a Slider thumb has focus — let Slider handle Space natively
           if (document.activeElement?.getAttribute('role') === 'slider') return
-          // fall through to 'k'
-        // eslint-disable-next-line no-fallthrough
+          e.preventDefault()
+          togglePlayPause()
+          break
         case 'k':
           e.preventDefault()
           togglePlayPause()
@@ -471,16 +472,19 @@ export function VideoPlayer({
                   step={0.1}
                   aria-label="Video progress"
                 />
+                {/* Bookmark markers — visible dot is w-2 h-2, wrapped in 44x44px hit area for touch targets */}
                 {bookmarks && duration > 0 && bookmarks.map(bm => (
                   <Tooltip key={bm.id}>
                     <TooltipTrigger asChild>
                       <button
                         data-testid="bookmark-marker"
-                        className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-yellow-400 border border-yellow-600 z-10 cursor-pointer hover:scale-150 transition-transform"
+                        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 min-w-[44px] min-h-[44px] flex items-center justify-center z-10 cursor-pointer group/marker"
                         style={{ left: `${(bm.timestamp / duration) * 100}%` }}
                         onClick={(e) => { e.stopPropagation(); onBookmarkSeek?.(bm.timestamp) }}
                         aria-label={`Bookmark at ${formatTime(bm.timestamp)}`}
-                      />
+                      >
+                        <span className="w-2 h-2 rounded-full bg-yellow-400 border border-yellow-600 group-hover/marker:scale-150 transition-transform" />
+                      </button>
                     </TooltipTrigger>
                     <TooltipContent side="top">{formatTime(bm.timestamp)}</TooltipContent>
                   </Tooltip>

@@ -1,12 +1,12 @@
 ---
 story_id: E02-S03
 story_name: "Video Bookmarking and Resume"
-status: in-progress
+status: done
 started: 2026-02-21
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-02-21
+reviewed: true
+review_started: 2026-02-21
+review_gates_passed: [build, lint, unit-tests, e2e-tests, design-review, code-review]
 ---
 
 # Story 2.3: Video Bookmarking and Resume
@@ -69,7 +69,7 @@ So that I never waste time searching for where I stopped watching.
 
 ## Implementation Plan
 
-See [plan](../../.claude/plans/flickering-shimmying-trinket.md) for implementation approach.
+See [plan](../../.claude/plans/fuzzy-leaping-storm.md) for implementation approach.
 
 ## Implementation Notes
 
@@ -81,11 +81,34 @@ See [plan](../../.claude/plans/flickering-shimmying-trinket.md) for implementati
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+Full report: `docs/reviews/design/design-review-2026-02-21-e02-s03.md`
+
+**Re-review (2026-02-21):** Previous blocker (touch targets) **FIXED**. No new blockers.
+
+**High Priority (2):**
+1. `BookmarksList.tsx:40-42` — Seek button missing `aria-label`
+2. `BookmarksList.tsx:59` — Delete button hidden from keyboard users (needs `focus-visible:opacity-100`)
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+Full report: `docs/reviews/code/code-review-2026-02-21-e02-s03.md`
+
+**Re-review (2026-02-21):**
+
+**Blockers (2):**
+1. `VideoPlayer.tsx:288` — TypeScript fallthrough error (`tsc --noEmit` fails TS7029). Vite build passes but strict CI would fail.
+2. Working-tree fixes (debounce + touch targets) not yet committed to branch.
+
+**High Priority (4):**
+3. `src/lib/bookmarks.ts` — uses localStorage, not IndexedDB as specified by ACs
+4. No `beforeunload`/`visibilitychange` save handlers (Task 2.2)
+5. No unit tests for `src/lib/bookmarks.ts` (8 functions, 0 coverage)
+6. No duplicate bookmark prevention (`hasBookmarkAt()` exists but unused)
+
+**Medium (3):**
+7. `getProgress()` called on every render without memoization
+8. BookmarksList seek button missing `aria-label` (also design review H1)
+9. BookmarksList delete button needs `focus-visible:opacity-100` (also design review H2)
 
 ## Challenges and Lessons Learned
 

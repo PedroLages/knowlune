@@ -40,7 +40,7 @@ export function BottomNav() {
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   'flex flex-col items-center justify-center gap-1 flex-1 h-14 transition-colors duration-150',
-                  active ? 'text-blue-600' : 'text-muted-foreground active:text-blue-600'
+                  active ? 'text-brand' : 'text-muted-foreground active:text-brand'
                 )}
               >
                 <Icon className="w-6 h-6" aria-hidden="true" />
@@ -56,7 +56,7 @@ export function BottomNav() {
             aria-expanded={moreOpen}
             className={cn(
               'flex flex-col items-center justify-center gap-1 flex-1 h-14 transition-colors duration-150',
-              isMoreActive ? 'text-blue-600' : 'text-muted-foreground active:text-blue-600'
+              isMoreActive ? 'text-brand' : 'text-muted-foreground active:text-brand'
             )}
           >
             <MoreHorizontal className="w-6 h-6" aria-hidden="true" />
@@ -87,7 +87,7 @@ export function BottomNav() {
                       className={cn(
                         'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-150',
                         active
-                          ? 'bg-blue-600 text-white'
+                          ? 'bg-brand text-brand-foreground'
                           : 'text-foreground hover:bg-accent active:bg-accent'
                       )}
                     >

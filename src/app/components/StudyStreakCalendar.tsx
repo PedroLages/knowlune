@@ -83,7 +83,7 @@ export function StudyStreakCalendar({ days = 30, className }: StudyStreakCalenda
               Longest Streak
             </span>
           </div>
-          <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{longestStreak}</div>
+          <div className="text-3xl font-bold text-brand">{longestStreak}</div>
           <div className="text-xs text-blue-700 dark:text-blue-300 mt-1">personal best</div>
         </div>
       </div>
@@ -96,7 +96,7 @@ export function StudyStreakCalendar({ days = 30, className }: StudyStreakCalenda
             variant="outline"
             size="sm"
             onClick={() => setPauseDialogOpen(true)}
-            className="text-xs"
+            className="text-xs min-h-[44px]"
           >
             <Pause className="h-3 w-3 mr-1" />
             Pause Streak

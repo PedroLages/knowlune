@@ -41,11 +41,11 @@ export function AchievementBanner({ completedLessons }: AchievementBannerProps) 
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <Target className="w-5 h-5 text-blue-600" />
+              <Target className="w-5 h-5 text-brand" />
               <h2 className="text-lg font-bold">Keep Going!</h2>
             </div>
             <p className="text-sm text-muted-foreground">
-              You've completed <span className="font-bold text-blue-600">{completedLessons}</span>{' '}
+              You've completed <span className="font-bold text-brand">{completedLessons}</span>{' '}
               {completedLessons === 1 ? 'lesson' : 'lessons'}.
             </p>
             <p className="text-sm font-medium text-blue-700 dark:text-blue-400 mt-1">
@@ -57,7 +57,7 @@ export function AchievementBanner({ completedLessons }: AchievementBannerProps) 
               <div className="mt-3">
                 <div className="flex items-center justify-between text-xs mb-1">
                   <span className="text-muted-foreground">Progress to {milestone.next}</span>
-                  <span className="font-semibold text-blue-600">
+                  <span className="font-semibold text-brand">
                     {Math.min(100, Math.round(progress))}%
                   </span>
                 </div>

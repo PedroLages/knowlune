@@ -26,7 +26,7 @@ export function Instructors() {
               href="https://www.chasehughes.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
+              className="inline-flex items-center gap-1 text-sm text-brand hover:underline"
             >
               chasehughes.com <ExternalLink className="w-3 h-3" />
             </a>
@@ -56,7 +56,7 @@ export function Instructors() {
                         <Link
                           key={course.id}
                           to={`/courses/${course.id}`}
-                          className="text-sm text-blue-600 hover:underline"
+                          className="text-sm text-brand hover:underline"
                         >
                           {course.title}
                         </Link>

@@ -25,7 +25,7 @@ export function ModuleAccordion({ modules, courseId, completedLessons }: ModuleA
           <AccordionItem
             key={module.id}
             value={module.id}
-            className="rounded-2xl border border-border bg-card px-5 shadow-sm"
+            className="rounded-[24px] border border-border bg-card px-5 shadow-sm"
           >
             <AccordionTrigger className="hover:no-underline">
               <div className="flex flex-col items-start gap-1">
@@ -56,7 +56,7 @@ export function ModuleAccordion({ modules, courseId, completedLessons }: ModuleA
                         className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-accent transition-colors"
                       >
                         {isComplete ? (
-                          <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                          <CheckCircle2 className="h-5 w-5 text-success shrink-0" />
                         ) : (
                           <Circle className="h-5 w-5 text-muted-foreground/40 shrink-0" />
                         )}
@@ -67,8 +67,8 @@ export function ModuleAccordion({ modules, courseId, completedLessons }: ModuleA
                           )}
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
-                          {hasVideo && <Video className="h-4 w-4 text-blue-400" />}
-                          {hasPdf && <FileText className="h-4 w-4 text-red-400" />}
+                          {hasVideo && <Video className="h-4 w-4 text-info" />}
+                          {hasPdf && <FileText className="h-4 w-4 text-destructive/70" />}
                         </div>
                       </Link>
                     </li>

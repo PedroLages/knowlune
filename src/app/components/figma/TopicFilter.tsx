@@ -42,7 +42,7 @@ export function TopicFilter({
               variant={isSelected ? 'default' : 'outline'}
               className={
                 isSelected
-                  ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                  ? 'bg-brand text-brand-foreground hover:bg-brand-hover cursor-pointer'
                   : 'cursor-pointer hover:bg-accent'
               }
             >

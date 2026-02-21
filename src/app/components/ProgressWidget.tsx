@@ -47,7 +47,7 @@ export function ProgressWidget() {
             strokeDasharray={circumference}
             strokeDashoffset={offset}
             strokeLinecap="round"
-            className="text-blue-600 transition-all duration-500 ease-out"
+            className="text-brand transition-all duration-500 ease-out"
           />
 
           {/* Center text */}

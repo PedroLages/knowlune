@@ -37,7 +37,7 @@ export function ProgressRing({
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           strokeLinecap="round"
-          className="text-blue-600 transition-all duration-500"
+          className="text-brand transition-all duration-500"
         />
       </svg>
       <span className="absolute text-xs font-semibold text-foreground">{percent}%</span>

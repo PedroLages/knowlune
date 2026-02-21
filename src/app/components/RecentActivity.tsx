@@ -19,7 +19,7 @@ export function RecentActivity({ activities }: RecentActivityProps) {
         <h2 className="text-lg font-semibold">Recent Activity</h2>
         <Link
           to="/my-progress"
-          className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+          className="text-sm text-brand hover:text-brand-hover flex items-center gap-1"
         >
           View All
           <ArrowRight className="w-4 h-4" />
@@ -35,7 +35,7 @@ export function RecentActivity({ activities }: RecentActivityProps) {
             >
               {/* Timeline indicator */}
               <div className="flex flex-col items-center">
-                <div className="w-3 h-3 rounded-full bg-blue-600" />
+                <div className="w-3 h-3 rounded-full bg-brand" />
                 {index < activities.length - 1 && (
                   <div className="w-0.5 h-full bg-blue-200 dark:bg-blue-800 mt-1" />
                 )}
@@ -50,7 +50,7 @@ export function RecentActivity({ activities }: RecentActivityProps) {
                 />
               ) : (
                 <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <BookOpen className="w-6 h-6 text-blue-600" />
+                  <BookOpen className="w-6 h-6 text-brand" />
                 </div>
               )}
 

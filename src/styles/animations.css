@@ -196,9 +196,9 @@
 .skeleton-shimmer {
   background: linear-gradient(
     90deg,
-    hsl(var(--muted) / 0.1) 0%,
-    hsl(var(--muted) / 0.3) 50%,
-    hsl(var(--muted) / 0.1) 100%
+    color-mix(in oklch, var(--muted) 10%, transparent) 0%,
+    color-mix(in oklch, var(--muted) 30%, transparent) 50%,
+    color-mix(in oklch, var(--muted) 10%, transparent) 100%
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
@@ -206,7 +206,7 @@
 
 /* Focus ring enhancement */
 .focus-ring-enhanced:focus-visible {
-  outline: 2px solid hsl(var(--blue-600));
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
   transition: outline-offset 150ms ease-out;
 }

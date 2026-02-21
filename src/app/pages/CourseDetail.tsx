@@ -19,9 +19,9 @@ export function CourseDetail() {
         <BookOpen className="mb-4 h-16 w-16 text-muted-foreground/50" />
         <h2 className="text-xl font-semibold mb-2">Course Not Found</h2>
         <p className="text-muted-foreground mb-6">The course you're looking for doesn't exist.</p>
-        <Link to="/courses">
-          <Button>Back to Courses</Button>
-        </Link>
+        <Button asChild>
+          <Link to="/courses">Back to Courses</Link>
+        </Button>
       </div>
     )
   }
@@ -78,19 +78,19 @@ export function CourseDetail() {
             </div>
 
             {resumeLesson && (
-              <Link to={`/courses/${course.id}/${resumeLesson}`}>
-                <Button className="bg-blue-600 hover:bg-blue-700">
+              <Button asChild className="bg-brand hover:bg-brand-hover">
+                <Link to={`/courses/${course.id}/${resumeLesson}`}>
                   <Play className="mr-2 h-4 w-4" />
                   {lastWatchedLesson ? 'Continue Learning' : 'Start Course'}
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             )}
           </div>
 
           {/* Progress sidebar */}
           <div className="w-full lg:w-64 bg-muted rounded-2xl p-5">
             <h3 className="font-semibold text-sm mb-3">Your Progress</h3>
-            <div className="text-3xl font-bold text-blue-600 mb-1">{completionPercent}%</div>
+            <div className="text-3xl font-bold text-brand mb-1">{completionPercent}%</div>
             <Progress value={completionPercent} className="mb-3" />
             <p className="text-xs text-muted-foreground">
               {progress.completedLessons.length} of {course.totalLessons} lessons completed

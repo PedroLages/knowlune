@@ -192,7 +192,7 @@ export function Overview() {
                       />
                     ) : (
                       <div className="w-16 h-16 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                        <BookOpen className="w-8 h-8 text-blue-600" />
+                        <BookOpen className="w-8 h-8 text-brand" />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">

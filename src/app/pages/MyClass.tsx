@@ -130,12 +130,12 @@ export default function MyClass() {
           <p className="text-muted-foreground mb-6 max-w-md">
             Browse our course catalog to find the perfect course to kickstart your learning journey.
           </p>
-          <Link to="/courses">
-            <Button className="bg-blue-600 hover:bg-blue-700">
+          <Button asChild className="bg-brand hover:bg-brand-hover">
+            <Link to="/courses">
               Browse All Courses
               <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
       </div>
     )
@@ -180,7 +180,7 @@ export default function MyClass() {
                 <section className="mb-8">
                   <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-xl mb-4">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
-                      <Clock className="w-6 h-6 text-blue-600" />
+                      <Clock className="w-6 h-6 text-brand" />
                       In Progress
                     </h2>
                   </div>
@@ -241,12 +241,12 @@ export default function MyClass() {
                   <p className="text-muted-foreground mb-6 max-w-md">
                     Start a new course from your library to begin learning!
                   </p>
-                  <Link to="/library">
-                    <Button className="bg-blue-600 hover:bg-blue-700">
+                  <Button asChild className="bg-brand hover:bg-brand-hover">
+                    <Link to="/library">
                       Go to Library
                       <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </Link>
+                    </Link>
+                  </Button>
                 </div>
               )}
             </TabsContent>

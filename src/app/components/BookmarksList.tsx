@@ -21,7 +21,7 @@ export function BookmarksList({ bookmarks, onSeek, onBookmarksChange }: Bookmark
   if (bookmarks.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground text-sm">
-        <Clock className="h-8 w-8 mx-auto mb-2 opacity-40" />
+        <Clock className="size-8 mx-auto mb-2 opacity-40" />
         <p>No bookmarks yet</p>
         <p className="text-xs mt-1">
           Click the bookmark icon in the video player to save important moments
@@ -56,11 +56,11 @@ export function BookmarksList({ bookmarks, onSeek, onBookmarksChange }: Bookmark
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+            className="size-8 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
             onClick={() => handleDelete(bookmark.id)}
             aria-label="Delete bookmark"
           >
-            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+            <Trash2 className="size-4 text-muted-foreground hover:text-destructive" />
           </Button>
         </div>
       ))}

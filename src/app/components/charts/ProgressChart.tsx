@@ -24,7 +24,7 @@ export function ProgressChart({ data }: ProgressChartProps) {
   const chartConfig = {
     activities: {
       label: 'Activities',
-      color: 'hsl(var(--chart-1))',
+      color: 'var(--chart-1)',
     },
   } satisfies ChartConfig
 

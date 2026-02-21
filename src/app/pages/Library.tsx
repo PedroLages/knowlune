@@ -80,7 +80,7 @@ export function Library() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Resource Library</h1>
+        <h1 className="text-2xl font-bold mb-2">Resource Library</h1>
         <p className="text-muted-foreground">Browse all documents and materials across courses</p>
       </div>
 

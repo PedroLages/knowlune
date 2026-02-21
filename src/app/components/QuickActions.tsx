@@ -54,7 +54,7 @@ export function QuickActions({
               asChild
             >
               <Link to={action.href}>
-                <Icon className="w-6 h-6 text-blue-600 group-hover:scale-110 transition-transform" />
+                <Icon className="w-6 h-6 text-brand group-hover:scale-110 transition-transform" />
                 <span className="text-sm font-medium">{action.label}</span>
               </Link>
             </Button>

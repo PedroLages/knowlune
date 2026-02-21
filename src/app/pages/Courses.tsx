@@ -102,7 +102,7 @@ export function Courses() {
     <div>
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold mb-2">All Courses</h1>
+          <h1 className="text-2xl font-bold mb-2">All Courses</h1>
           <p className="text-muted-foreground">
             Chase Hughes — The Operative Kit ({allCourses.length} courses
             {importedCourses.length > 0 && ` + ${importedCourses.length} imported`})
@@ -111,7 +111,7 @@ export function Courses() {
         <Button
           onClick={handleImportCourse}
           disabled={isImporting}
-          className="bg-blue-600 hover:bg-blue-700 hover:scale-[1.02] hover:shadow-md rounded-xl transition-all duration-200 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+          className="bg-brand hover:bg-brand-hover hover:scale-[1.02] hover:shadow-md rounded-xl transition-all duration-200 focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
         >
           {isImporting ? (
             <>
@@ -141,7 +141,7 @@ export function Courses() {
             />
           </div>
           <Button
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-brand hover:bg-brand-hover"
             onClick={() => setSearchQuery('')}
             aria-label={searchQuery ? 'Clear search' : 'Search courses'}
           >
@@ -184,7 +184,7 @@ export function Courses() {
                 data-testid="import-first-course-cta"
                 onClick={handleImportCourse}
                 disabled={isImporting}
-                className="bg-blue-600 hover:bg-blue-700 rounded-xl focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                className="bg-brand hover:bg-brand-hover rounded-xl focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
               >
                 {isImporting ? (
                   <>

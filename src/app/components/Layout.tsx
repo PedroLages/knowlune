@@ -20,7 +20,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       {/* Logo */}
       <div className="flex items-center gap-2 mb-8">
         <div
-          className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center"
+          className="w-8 h-8 bg-brand rounded-lg flex items-center justify-center"
           aria-hidden="true"
         >
           <GraduationCap className="w-5 h-5 text-white" />
@@ -45,7 +45,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                   onClick={onNavigate}
                   aria-current={isActive ? 'page' : undefined}
                   className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-150 ${
-                    isActive ? 'bg-blue-600 text-white' : 'text-muted-foreground hover:bg-accent'
+                    isActive ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:bg-accent'
                   }`}
                 >
                   <Icon className="w-5 h-5" aria-hidden="true" />
@@ -126,7 +126,7 @@ export function Layout() {
       {/* Skip to content link for keyboard/screen-reader users */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:rounded-lg focus:bg-blue-600 focus:px-4 focus:py-2 focus:text-white focus:outline-none"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:rounded-lg focus:bg-brand focus:px-4 focus:py-2 focus:text-brand-foreground focus:outline-none"
       >
         Skip to content
       </a>
@@ -134,7 +134,7 @@ export function Layout() {
       {/* Desktop Sidebar - Persistent on desktop (≥1024px), hidden on tablet/mobile */}
       {isDesktop && (
         <aside
-          className="w-[220px] bg-card rounded-[24px] m-6 p-6 flex flex-col"
+          className="w-[220px] bg-card m-6 p-6 flex flex-col"
           aria-label="Sidebar"
         >
           <SidebarContent />
@@ -154,14 +154,14 @@ export function Layout() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header
-          className="bg-card rounded-[24px] m-6 mb-0 p-4 px-6 flex items-center gap-4 justify-between"
+          className="bg-card m-6 mb-0 p-4 px-6 flex items-center gap-4 justify-between"
           role="banner"
         >
           {/* Hamburger Menu Button - Only on tablet (640-1023px) */}
           {isTablet && (
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-2 rounded-lg hover:bg-accent transition-colors duration-150"
+              className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-accent transition-colors duration-150"
               aria-label="Open navigation menu"
               aria-expanded={sidebarOpen}
             >
@@ -179,7 +179,7 @@ export function Layout() {
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
-              className="sm:hidden p-2 rounded-lg hover:bg-accent transition-colors duration-150"
+              className="sm:hidden p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-accent transition-colors duration-150"
               aria-label="Open search (Cmd+K)"
               aria-keyshortcuts="Meta+K Control+K"
             >
@@ -209,7 +209,7 @@ export function Layout() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="p-2 rounded-lg hover:bg-accent cursor-pointer"
+              className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-accent cursor-pointer"
               aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
             >
               <Sun className="w-5 h-5 text-muted-foreground dark:hidden" aria-hidden="true" />
@@ -220,7 +220,7 @@ export function Layout() {
             </button>
 
             <button
-              className="relative p-2 rounded-lg hover:bg-accent cursor-pointer"
+              className="relative p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-accent cursor-pointer"
               aria-label="Notifications"
             >
               <Bell className="w-5 h-5 text-muted-foreground" aria-hidden="true" />

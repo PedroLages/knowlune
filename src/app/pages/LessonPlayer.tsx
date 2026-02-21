@@ -96,9 +96,11 @@ export function LessonPlayer() {
   const videoResource = lesson?.resources.find(r => r.type === 'video')
   const pdfResources = lesson?.resources.filter(r => r.type === 'pdf') ?? []
 
+  const lastSaveTimeRef = useRef(-Infinity)
   const handleTimeUpdate = useCallback(
     (time: number) => {
-      if (courseId && lessonId && Math.floor(time) % 5 === 0) {
+      if (courseId && lessonId && time - lastSaveTimeRef.current >= 5) {
+        lastSaveTimeRef.current = time
         saveVideoPosition(courseId, lessonId, time)
       }
     },

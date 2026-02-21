@@ -20,7 +20,7 @@ export function StatsCard({
   sparkline,
 }: StatsCardProps) {
   return (
-    <Card className="hover:shadow-xl transition-shadow duration-200 rounded-[24px] overflow-hidden group">
+    <Card className="hover:shadow-xl transition-shadow duration-300 overflow-hidden group">
       <CardContent className="p-6">
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
@@ -34,7 +34,7 @@ export function StatsCard({
               <div
                 className={cn(
                   'flex items-center gap-1 text-xs font-medium mt-2',
-                  trend === 'up' ? 'text-green-600' : 'text-red-600'
+                  trend === 'up' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                 )}
               >
                 {trend === 'up' ? (
@@ -49,7 +49,7 @@ export function StatsCard({
 
           {/* Icon */}
           <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-            <Icon className="w-6 h-6 text-blue-600" aria-hidden="true" />
+            <Icon className="w-6 h-6 text-brand" aria-hidden="true" />
           </div>
         </div>
 

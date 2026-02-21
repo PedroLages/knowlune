@@ -13,19 +13,19 @@ const statuses: {
     value: 'active',
     label: 'Active',
     icon: Circle,
-    activeClass: 'bg-blue-600 text-white hover:bg-blue-700',
+    activeClass: 'bg-brand text-brand-foreground hover:bg-brand-hover',
   },
   {
     value: 'completed',
     label: 'Completed',
     icon: CheckCircle2,
-    activeClass: 'bg-green-600 text-white hover:bg-green-700',
+    activeClass: 'bg-success text-success-foreground hover:bg-success/90',
   },
   {
     value: 'paused',
     label: 'Paused',
     icon: PauseCircle,
-    activeClass: 'bg-gray-400 text-white hover:bg-gray-500',
+    activeClass: 'bg-muted-foreground text-white hover:bg-muted-foreground/90',
   },
 ]
 
