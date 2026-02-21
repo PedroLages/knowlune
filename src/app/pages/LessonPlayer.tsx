@@ -2,6 +2,7 @@ import { useParams, Link, useNavigate } from 'react-router'
 import { useMemo, useState, useCallback, useRef, useEffect } from 'react'
 import { ArrowLeft, ChevronLeft, ChevronRight, CheckCircle2, Circle, Menu } from 'lucide-react'
 import { Button } from '../components/ui/button'
+import { cn } from '../components/ui/utils'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Sheet, SheetContent, SheetTrigger } from '../components/ui/sheet'
 import { VideoPlayer } from '../components/figma/VideoPlayer'
@@ -58,6 +59,9 @@ export function LessonPlayer() {
   const [celebrationType, setCelebrationType] = useState<CelebrationType>('lesson')
   const [celebrationTitle, setCelebrationTitle] = useState('')
 
+  // Brief animation state for checkmark transition
+  const [justCompleted, setJustCompleted] = useState(false)
+
   // Update bookmarks when lesson changes
   useEffect(() => {
     if (courseId && lessonId) {
@@ -85,25 +89,24 @@ export function LessonPlayer() {
     [courseId, lessonId]
   )
 
-  const handleAutoComplete = useCallback(() => {
-    if (courseId && lessonId && !completed) {
-      markLessonComplete(courseId, lessonId)
-      setCompleted(true)
-      setCelebrationType('lesson')
-      setCelebrationTitle(lesson?.title || 'Lesson')
-      setCelebrationModal(true)
-    }
+  const triggerCompletion = useCallback(() => {
+    if (!courseId || !lessonId || completed) return
+    markLessonComplete(courseId, lessonId)
+    setCompleted(true)
+    setJustCompleted(true)
+    setTimeout(() => setJustCompleted(false), 600)
+    setCelebrationType('lesson')
+    setCelebrationTitle(lesson?.title || 'Lesson')
+    setCelebrationModal(true)
   }, [courseId, lessonId, completed, lesson])
 
+  const handleAutoComplete = useCallback(() => {
+    triggerCompletion()
+  }, [triggerCompletion])
+
   const handleVideoEnded = useCallback(() => {
-    if (courseId && lessonId && !completed) {
-      markLessonComplete(courseId, lessonId)
-      setCompleted(true)
-      setCelebrationType('lesson')
-      setCelebrationTitle(lesson?.title || 'Lesson')
-      setCelebrationModal(true)
-    }
-  }, [courseId, lessonId, completed, lesson])
+    triggerCompletion()
+  }, [triggerCompletion])
 
   const handleVideoSeek = useCallback((timestamp: number) => {
     setSeekToTime(timestamp)
@@ -135,12 +138,7 @@ export function LessonPlayer() {
       markLessonIncomplete(courseId, lessonId)
       setCompleted(false)
     } else {
-      markLessonComplete(courseId, lessonId)
-      setCompleted(true)
-      // Trigger celebration when manually marking complete
-      setCelebrationType('lesson')
-      setCelebrationTitle(lesson?.title || 'Lesson')
-      setCelebrationModal(true)
+      triggerCompletion()
     }
   }
 
@@ -229,7 +227,12 @@ export function LessonPlayer() {
                 className="flex items-center gap-1.5 text-sm shrink-0 cursor-pointer"
               >
                 {completed ? (
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  <CheckCircle2
+                    className={cn(
+                      'h-5 w-5 text-green-500 transition-all duration-300',
+                      justCompleted && 'motion-safe:scale-125'
+                    )}
+                  />
                 ) : (
                   <Circle className="h-5 w-5 text-muted-foreground/40" />
                 )}
