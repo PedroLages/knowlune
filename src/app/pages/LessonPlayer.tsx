@@ -171,7 +171,7 @@ export function LessonPlayer() {
   }
 
   return (
-    <div className="flex gap-6 h-[calc(100vh-120px)]">
+    <div className="flex gap-6 h-full">
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
         <Link
@@ -366,7 +366,7 @@ export function LessonPlayer() {
         <div className="px-4 py-3 border-b border-border">
           <h3 className="text-sm font-semibold">Course Content</h3>
         </div>
-        <div className="p-3 overflow-y-auto h-[calc(100%-49px)]" data-testid="course-sidebar-accordion">
+        <div className="p-3 overflow-y-auto h-[calc(100%-49px)] [scrollbar-gutter:stable]" data-testid="course-sidebar-accordion">
           <ModuleAccordion
             modules={course.modules}
             courseId={course.id}

@@ -3,6 +3,13 @@
 @import './theme.css';
 @import './animations.css';
 
+/* Global thin scrollbar styling (standards-only, no ::-webkit-scrollbar needed)
+ * Chrome 121+, Firefox 64+, Safari 26.2+, Edge 121+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
