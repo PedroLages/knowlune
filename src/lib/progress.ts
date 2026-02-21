@@ -11,6 +11,7 @@ export interface CourseProgress {
   completedLessons: string[]
   lastWatchedLesson?: string
   lastVideoPosition?: number
+  lastPdfPages?: Record<string, number>
   notes: Record<string, Note[]>
   startedAt: string
   lastAccessedAt: string
@@ -174,6 +175,30 @@ export function saveVideoPosition(courseId: string, lessonId: string, seconds: n
     timestamp: new Date().toISOString(),
     metadata: { seconds },
   })
+}
+
+export function savePdfPage(courseId: string, resourceId: string, page: number) {
+  const all = getAllProgress()
+  const progress = ensureProgress(courseId)
+  if (!progress.lastPdfPages) {
+    progress.lastPdfPages = {}
+  }
+  progress.lastPdfPages[resourceId] = page
+  progress.lastAccessedAt = new Date().toISOString()
+  all[courseId] = progress
+  saveAllProgress(all)
+  logStudyAction({
+    type: 'pdf_progress',
+    courseId,
+    lessonId: resourceId,
+    timestamp: new Date().toISOString(),
+    metadata: { page },
+  })
+}
+
+export function getPdfPage(courseId: string, resourceId: string): number | undefined {
+  const progress = getProgress(courseId)
+  return progress.lastPdfPages?.[resourceId]
 }
 
 /**

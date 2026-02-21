@@ -18,6 +18,8 @@ import {
   markLessonComplete,
   markLessonIncomplete,
   saveVideoPosition,
+  savePdfPage,
+  getPdfPage,
   saveNote,
   getNote,
   isLessonComplete,
@@ -74,7 +76,22 @@ export function LessonPlayer() {
   const nextLesson = currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null
 
   const videoResource = lesson?.resources.find(r => r.type === 'video')
-  const pdfResources = lesson?.resources.filter(r => r.type === 'pdf') ?? []
+  const allPdfResources = lesson?.resources.filter(r => r.type === 'pdf') ?? []
+  // When no video exists, promote first PDF to primary content
+  const primaryPdf = !videoResource && allPdfResources.length > 0 ? allPdfResources[0] : null
+  const pdfResources = primaryPdf ? allPdfResources.slice(1) : allPdfResources
+
+  const handlePdfPageChangeRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const handlePdfPageChange = useCallback(
+    (page: number) => {
+      if (!courseId || !primaryPdf) return
+      clearTimeout(handlePdfPageChangeRef.current)
+      handlePdfPageChangeRef.current = setTimeout(() => {
+        savePdfPage(courseId, primaryPdf.id, page)
+      }, 500)
+    },
+    [courseId, primaryPdf]
+  )
 
   const handleTimeUpdate = useCallback(
     (time: number) => {
@@ -185,6 +202,20 @@ export function LessonPlayer() {
           </div>
         )}
 
+        {/* Primary PDF (when no video) */}
+        {primaryPdf && (
+          <div className="mb-5">
+            <PdfViewer
+              src={getResourceUrl(primaryPdf)}
+              title={primaryPdf.title}
+              initialPage={courseId ? getPdfPage(courseId, primaryPdf.id) ?? 1 : 1}
+              courseId={courseId}
+              resourceId={primaryPdf.id}
+              onPageChange={handlePdfPageChange}
+            />
+          </div>
+        )}
+
         {/* Lesson Header */}
         <div className="bg-card rounded-2xl shadow-sm p-5 mb-5">
           <div className="flex items-start justify-between mb-3">
@@ -257,7 +288,7 @@ export function LessonPlayer() {
         </div>
 
         {/* Tabs: PDFs / Notes / Bookmarks */}
-        <Tabs defaultValue={pdfResources.length > 0 ? 'materials' : 'notes'}>
+        <Tabs defaultValue={pdfResources.length > 0 ? 'materials' : 'notes'} key={lessonId}>
           <TabsList>
             {pdfResources.length > 0 && (
               <TabsTrigger value="materials">Materials ({pdfResources.length})</TabsTrigger>
@@ -271,7 +302,17 @@ export function LessonPlayer() {
           {pdfResources.length > 0 && (
             <TabsContent value="materials" className="mt-4 space-y-4">
               {pdfResources.map(pdf => (
-                <PdfViewer key={pdf.id} src={getResourceUrl(pdf)} title={pdf.title} />
+                <PdfViewer
+                  key={pdf.id}
+                  src={getResourceUrl(pdf)}
+                  title={pdf.title}
+                  initialPage={courseId ? getPdfPage(courseId, pdf.id) ?? 1 : 1}
+                  courseId={courseId}
+                  resourceId={pdf.id}
+                  onPageChange={(page) => {
+                    if (courseId) savePdfPage(courseId, pdf.id, page)
+                  }}
+                />
               ))}
             </TabsContent>
           )}
