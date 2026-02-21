@@ -116,7 +116,17 @@ Medium:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Commit related files together.** Course data, VTT fixture, and E2E tests all landed in separate commits. The code-review blocker (B1) caught that the committed branch had broken E2E tests because the data they depended on was uncommitted. When adding test fixtures and sample data that E2E tests rely on, commit them in the same atomic commit as the tests.
+
+- **Wire every prop, not just the new one.** The `captions` prop already existed on `VideoPlayer` for subtitle rendering, but `LessonPlayer` only passed the new `chapters` prop. The transcript panel worked, but video subtitle toggling was silently broken. When a parent passes props to a child, check that all props on the child's interface are accounted for — not just the ones the current story added.
+
+- **Touch targets need explicit sizing regardless of z-layering.** The chapter marker z-layering (markers at z-20, range input at z-10) is a clever pattern — but it made it easy to forget that the marker `<button>` itself needed a 44x44px tap area. Bookmark markers in the same file already had `min-w-[44px] min-h-[44px]`; chapter markers did not. When extracting a component that contains interactive elements, audit every `<button>` for WCAG 2.5.5 compliance even if you're adapting an existing pattern.
+
+- **`setVideoCurrentTime` on every `timeupdate` is expensive.** The `onTimeUpdate` handler fires ~4×/second during playback. Storing that value in React state causes the entire LessonPlayer tree to re-render at the same rate. Throttle to once per second (the granularity cues actually change) using a ref, or move the time-sensitive state down to only the components that need it (TranscriptPanel in this case).
+
+- **`scrollIntoView({ behavior: 'smooth' })` bypasses CSS reduced-motion.** The global `prefers-reduced-motion` media query in CSS only governs CSS animations and transitions — it does not affect the JavaScript `scrollIntoView` API. Any JS-triggered smooth scroll needs an explicit `window.matchMedia('(prefers-reduced-motion: reduce)').matches` check before using `behavior: 'smooth'`. This recurs across stories (noted in S05/S06 reviews); worth adding a shared utility.
+
+- **Inline `style={{}}` attributes accumulate invisibly.** Both code and design reviewers flagged `style={{ height: '400px' }}`. The project convention (Tailwind utilities only) is easy to violate under time pressure. The fix is always a one-word swap (`h-[400px]`) — but the violation creates inconsistency that future agents will inherit. Default to Tailwind arbitrary values from the start.
 
 ## Implementation Plan
 
