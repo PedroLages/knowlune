@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Sheet, SheetContent, SheetTrigger } from '../components/ui/sheet'
 import { VideoPlayer } from '../components/figma/VideoPlayer'
 import { PdfViewer } from '../components/figma/PdfViewer'
-import { LessonList } from '../components/figma/LessonList'
+import { ModuleAccordion } from '../components/figma/ModuleAccordion'
 import { ResourceBadge } from '../components/figma/ResourceBadge'
 import { NoteEditor } from '../components/notes/NoteEditor'
 import { CompletionModal, type CelebrationType } from '../components/celebrations/CompletionModal'
@@ -204,12 +204,14 @@ export function LessonPlayer() {
                   <div className="mb-4">
                     <h3 className="text-sm font-semibold">Course Content</h3>
                   </div>
-                  <LessonList
-                    modules={course.modules}
-                    courseId={course.id}
-                    activeLessonId={lessonId}
-                    completedLessons={progress?.completedLessons ?? []}
-                  />
+                  <div data-testid="mobile-course-accordion">
+                    <ModuleAccordion
+                      modules={course.modules}
+                      courseId={course.id}
+                      activeLessonId={lessonId}
+                      completedLessons={progress?.completedLessons ?? []}
+                    />
+                  </div>
                 </SheetContent>
               </Sheet>
 
@@ -327,17 +329,19 @@ export function LessonPlayer() {
         </div>
       </div>
 
-      {/* Sidebar Lesson List */}
+      {/* Sidebar Course Structure */}
       <div className="hidden xl:block w-72 bg-card rounded-2xl shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b border-border">
           <h3 className="text-sm font-semibold">Course Content</h3>
         </div>
-        <LessonList
-          modules={course.modules}
-          courseId={course.id}
-          activeLessonId={lessonId}
-          completedLessons={progress?.completedLessons ?? []}
-        />
+        <div className="p-3 overflow-y-auto h-[calc(100%-49px)]" data-testid="course-sidebar-accordion">
+          <ModuleAccordion
+            modules={course.modules}
+            courseId={course.id}
+            activeLessonId={lessonId}
+            completedLessons={progress?.completedLessons ?? []}
+          />
+        </div>
       </div>
 
       {/* Completion Celebration Modal */}
