@@ -287,11 +287,11 @@ export function VideoPlayer({
           break
         case 'ArrowLeft':
           e.preventDefault()
-          seek(-5)
+          seek(e.shiftKey ? -10 : -5)
           break
         case 'ArrowRight':
           e.preventDefault()
-          seek(5)
+          seek(e.shiftKey ? 10 : 5)
           break
         case 'ArrowUp':
           e.preventDefault()
