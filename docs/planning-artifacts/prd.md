@@ -822,7 +822,7 @@ Single Page Application (SPA) built with React + Vite, designed as a local-first
   > **Note:** FR45 was reassigned during epic decomposition from learning velocity metrics to bookmarks management. The original velocity metrics requirement is preserved as FR78 below.
 - FR46: User can see retention insights comparing completed versus abandoned courses
 - FR47: User can receive personalized insights and recommendations based on study patterns
-- FR78: User can view learning velocity metrics — completion rate over time (videos completed per week), content consumed per hour (duration watched / time spent), and progress acceleration/deceleration trends (week-over-week comparison). *(Added to preserve original FR45 intent after FR45 was reassigned to bookmarks. Deferred to future epic.)*
+- FR78: User can view learning velocity metrics — completion rate over time (videos completed per week), content consumed per hour (duration watched / time spent), and progress acceleration/deceleration trends (week-over-week comparison). *(Added to preserve original FR45 intent after FR45 was reassigned to bookmarks. Implemented in Epic 7 Story 7.3.)*
 
 ### AI-Powered Assistance
 

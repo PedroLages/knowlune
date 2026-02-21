@@ -90,10 +90,10 @@ This document provides the complete epic and story breakdown for Elearningplatfo
 
 - FR43: User can view study time analytics broken down by daily, weekly, and monthly periods
 - FR44: User can track course completion rates over time
-- FR45: User can view learning velocity metrics
+- FR45: User can view and manage bookmarked lessons on a dedicated Bookmarks page *(reassigned from velocity metrics during epic decomposition; see FR78)*
 - FR46: User can see retention insights comparing completed versus abandoned courses
 - FR47: User can receive personalized insights and recommendations based on study patterns
-- FR78: User can view learning velocity metrics — completion rate over time (videos completed per week), content consumed per hour, and progress acceleration/deceleration trends. *(Expanded definition of FR45 for implementation clarity.)*
+- FR78: User can view learning velocity metrics — completion rate over time (videos completed per week), content consumed per hour, and progress acceleration/deceleration trends. *(Preserves original FR45 velocity intent after FR45 was reassigned to bookmarks. Implemented in Epic 7 Story 7.3.)*
 
 **AI-Powered Assistance (6 Requirements):**
 
@@ -268,7 +268,7 @@ This document provides the complete epic and story breakdown for Elearningplatfo
 - FR42: Epic 6 - Receive adaptive scheduling suggestions
 - FR43: Epic 7 - Study time analytics (daily/weekly/monthly)
 - FR44: Epic 7 - Track completion rates over time
-- FR45: Epic 3 - View and manage bookmarked lessons (Bookmarks page)
+- FR45: Epic 3 - View and manage bookmarked lessons (Bookmarks page, Story 3.7)
 - FR46: Epic 7 - Retention insights (completed vs abandoned)
 - FR47: Epic 7 - Personalized insights and recommendations
 - FR48: Epic 8 - AI-generated video summaries
@@ -279,6 +279,9 @@ This document provides the complete epic and story breakdown for Elearningplatfo
 - FR53: Epic 8 - Suggest concept connections across courses
 - FR76: Epic 3 - Insert video timestamp via keyboard shortcut
 - FR77: Epic 3 - Side-by-side layout (video + notes)
+- NFR34: Epic 3 - Data export in standard formats (JSON, Markdown) for migration (Story 3.10)
+- NFR35: Epic 3 - Note storage structure compatible with Notion/Obsidian (Story 3.10)
+- NFR42: Epic 3 - Note editor keyboard shortcuts and keyboard-only editing (Story 3.1)
 - FR78: Epic 7 - Learning velocity (completion rate, content/hour, trends)
 
 ## Epic List
@@ -305,11 +308,11 @@ User can watch course videos and view PDFs with full playback controls, bookmark
 
 ### Epic 3: Note-Taking & Knowledge Capture
 
-User can take Markdown notes linked to specific videos with timestamps, organize via tags, search across all notes, and auto-save without manual action.
+User can take Markdown notes linked to specific videos with timestamps, capture video frames, organize via tags, search across all notes, export for external tools, and auto-save without manual action.
 
-**FRs covered:** FR20, FR21, FR22, FR23, FR24, FR25, FR26, FR27, FR45, FR76, FR77
+**FRs covered:** FR20, FR21, FR22, FR23, FR24, FR25, FR26, FR27, FR45, FR76, FR77 | **NFRs:** NFR34, NFR35, NFR42
 
-**Implementation notes:** @uiw/react-md-editor + react-markdown + rehype-sanitize. MiniSearch for full-text search with fuzzy matching. Custom timestamp link format `[MM:SS](video://id#t=seconds)`. Side-by-side layout (60/40) on desktop, stacked on mobile. 3-second debounced autosave with 10-second max wait.
+**Implementation notes:** @uiw/react-md-editor + react-markdown + rehype-sanitize. MiniSearch for full-text search with fuzzy matching. Custom timestamp link format `[MM:SS](video://id#t=seconds)`. Side-by-side layout (60/40) on desktop, stacked on mobile. 3-second debounced autosave with 10-second max wait. Video frame capture via canvas API. Note export in Markdown/JSON. Data migration from localStorage to Dexie.js. Global Notes dashboard page.
 
 ---
 
@@ -347,7 +350,7 @@ User can view course momentum scores, receive smart course recommendations, and 
 
 User can view comprehensive study analytics with time breakdowns, completion trends, learning velocity metrics, and personalized insights.
 
-**FRs covered:** FR43, FR44, FR45, FR46, FR47, FR78
+**FRs covered:** FR43, FR44, FR46, FR47, FR78
 
 **Implementation notes:** Recharts-based visualizations on Reports page. Study time charts (daily/weekly/monthly). Completion rate trends over time. Learning velocity (videos/week, content/hour, acceleration trends). Retention insights (completed vs abandoned). StatsCard components with sparklines.
 
@@ -591,7 +594,7 @@ So that I never waste time searching for where I stopped watching.
 
 **Technical Notes:**
 - Add `bookmarks` table to Dexie.js: `id, courseId, lessonId, timestamp, createdAt`
-- Save playback position in `progress` table: `courseId, videoId, currentTime, completionPercentage`
+- **Schema ownership — `progress` table v1 (this story owns version 1):** Create Dexie schema version 1 with fields `courseId, videoId, currentTime` (playback resume only). Story 4.1 will extend this schema to version 2 — do not add completion or session fields here.
 - Use 5-second debounce for position saves
 
 ---
@@ -833,7 +836,55 @@ So that I can keep watching while reading materials below and maximize the video
 
 ## Epic 3: Note-Taking & Knowledge Capture
 
-User can take Markdown notes linked to specific videos with timestamps, organize via tags, search across all notes, and auto-save without manual action.
+User can take Markdown notes linked to specific videos with timestamps, capture video frames, organize via tags, search across all notes, export for external tools, and auto-save without manual action.
+
+### Story 3.0: Data Layer Migration (Notes & Bookmarks)
+
+As a learner,
+I want my existing notes and bookmarks seamlessly migrated to the new database,
+So that I don't lose any data when the platform upgrades its storage engine.
+
+**Acceptance Criteria:**
+
+**Given** the app loads after the Epic 3 upgrade
+**When** the Dexie.js schema initializes
+**Then** the database upgrades from version 2 to version 3, adding `notes` and `bookmarks` tables
+**And** the `notes` table schema is: `id, courseId, &videoId, *tags, createdAt, updatedAt`
+**And** the `bookmarks` table schema is: `id, courseId, lessonId, timestamp, label, createdAt`
+
+**Given** existing notes are stored in localStorage (`course-progress` key)
+**When** the migration detects un-migrated note data
+**Then** all notes from `CourseProgress.notes` (Record<lessonId, Note[]>) are extracted and inserted into the Dexie `notes` table
+**And** note IDs, content, tags, timestamps, createdAt, and updatedAt are preserved exactly
+**And** courseId and videoId are derived from the progress record structure
+
+**Given** existing bookmarks are stored in localStorage (`video-bookmarks` key)
+**When** the migration detects un-migrated bookmark data
+**Then** all bookmarks are inserted into the Dexie `bookmarks` table with all fields preserved
+
+**Given** migration completes successfully
+**When** the app continues loading
+**Then** localStorage data is retained as backup (not deleted) for one version cycle
+**And** a console log confirms: `[Migration] Migrated {N} notes and {M} bookmarks to IndexedDB`
+**And** subsequent loads skip migration (version-guarded via Dexie upgrade callback)
+
+**Given** the migration encounters an error
+**When** a Dexie write fails
+**Then** the error is logged: `[Migration] Failed: {error}`
+**And** the app falls back to localStorage reads gracefully (no data loss, no crash)
+**And** a toast notification warns: "Data migration incomplete. Some features may be limited."
+
+**Technical Notes:**
+- Dexie.js `db.version(3).stores({...}).upgrade(tx => { ... })` for schema + data migration
+- New Zustand stores: `useNoteStore` (notes CRUD + optimistic updates), `useBookmarkStore` (bookmarks CRUD)
+- Both stores use optimistic update pattern: Zustand first (UI), Dexie second (persistence)
+- Initialize MiniSearch index from Dexie `notes` table on app load (<2s budget for 500 notes)
+- MiniSearch fields: `content`, `tags`, `courseName`, `videoTitle` with boost config (tags 2x, courseName 1.5x)
+- Search index updated incrementally on note add/update/delete (not full rebuild)
+- All existing note/bookmark lib functions (`src/lib/progress.ts`, `src/lib/bookmarks.ts`) refactored to use Dexie + Zustand
+- Pattern reference: `useCourseImportStore.ts` for Dexie-backed Zustand store with optimistic updates
+
+---
 
 ### Story 3.1: Markdown Note Editor with Autosave
 
@@ -848,12 +899,14 @@ So that I can capture knowledge while studying without worrying about losing my 
 **Then** @uiw/react-md-editor renders with a toolbar (bold, italic, lists, code blocks, headings, links)
 **And** the editor supports side-by-side edit/preview mode
 **And** the note is automatically linked to the current course and video (courseId, videoId stored in the note record)
+**And** keyboard shortcuts work natively (Cmd+B bold, Cmd+I italic, etc. — NFR42)
 
 **Given** the user is typing in the note editor
 **When** 3 seconds elapse since the last keystroke
-**Then** the note content is auto-saved to IndexedDB (Dexie.js `notes` table)
+**Then** the note content is auto-saved to IndexedDB (Dexie.js `notes` table) via `useNoteStore`
 **And** if 10 seconds pass with continuous typing, a forced save occurs (max wait)
 **And** a subtle autosave indicator fades in ("Saved") and fades out after 2 seconds
+**And** the MiniSearch index is updated incrementally with the saved note content
 
 **Given** the user returns to a video they previously took notes on
 **When** the note editor loads
@@ -863,14 +916,18 @@ So that I can capture knowledge while studying without worrying about losing my 
 **Given** the note contains user-generated Markdown
 **When** the note is rendered in preview mode
 **Then** the content is sanitized via rehype-sanitize to prevent XSS attacks
-**And** the custom sanitization schema allows `video://` protocol links
+**And** the custom sanitization schema allows `video://` and `screenshot://` protocol links
 
 **Technical Notes:**
-- Add `notes` table to Dexie.js: `id, courseId, videoId, content, *tags, createdAt, updatedAt`
-- Use `crypto.randomUUID()` for note IDs
-- Initialize Zustand `useNoteStore` for note state
-- Optimistic update pattern: update Zustand first, persist to Dexie.js async
+
+- **Brownfield upgrade**: Existing `NoteEditor.tsx` (263 lines) has textarea + react-markdown preview + autosave + hashtag extraction. This story REPLACES the textarea with `@uiw/react-md-editor`. Leave the existing `#hashtag` extraction logic in place — Story 3.4 owns its removal when the explicit tag UI is introduced.
+- Install: `@uiw/react-md-editor`, `rehype-sanitize`, `use-debounce`
+- **Fix currentVideoTime gap**: Add `const [currentVideoTime, setCurrentVideoTime] = useState(0)` to LessonPlayer, wire VideoPlayer's `onTimeUpdate` to update it, pass to NoteEditor. This unblocks the "Add Timestamp" button.
+- **Fix tag-dropping bug**: LessonPlayer's `handleNoteChange` must pass the `tags` parameter to the save function (currently silently drops it)
+- Use `crypto.randomUUID()` for note IDs, ISO 8601 for dates
+- Optimistic update pattern: update `useNoteStore` first, persist to Dexie.js async
 - Use `use-debounce` library for 3s debounce / 10s max wait
+- NFR35 compatibility: pure Markdown content + string[] tags = naturally compatible with Notion/Obsidian
 
 ---
 
@@ -888,6 +945,15 @@ So that I can watch and take notes simultaneously without context switching.
 **And** the split is resizable via a drag handle (shadcn/ui Resizable component)
 **And** minimum width for each panel prevents content from being unusably small
 
+**Given** the user navigates to a lesson directly (not via "Continue Learning")
+**When** the Lesson Player loads on desktop
+**Then** the notes panel is collapsed by default with a toggle button to expand
+**And** if the lesson has existing notes, a subtle indicator shows "Notes available"
+
+**Given** the user navigates via "Continue Learning" or with `?panel=notes` URL param
+**When** the Lesson Player loads
+**Then** the notes panel opens automatically with existing notes pre-loaded
+
 **Given** the user is on tablet (640px-1023px)
 **When** the note editor is open
 **Then** the layout stacks video on top, notes below
@@ -897,6 +963,10 @@ So that I can watch and take notes simultaneously without context switching.
 **When** the note editor is open
 **Then** the video and notes are fully stacked (video top, notes bottom)
 **And** the note editor can expand to full screen for focused note-taking
+
+**Technical Notes:**
+- LessonPlayer reads `?panel=notes` search param to control initial tab/panel state (enables deep-linking from search results and "Continue Learning")
+- Convert Tabs from uncontrolled (`defaultValue`) to controlled (`value` + `onChange`) to support programmatic tab switching
 
 ---
 
@@ -925,8 +995,9 @@ So that I can link my knowledge to exact video moments for future recall.
 
 **Technical Notes:**
 - Custom react-markdown renderer for `video://` protocol links
-- Alt+T keyboard shortcut handler reads current time from `useVideoPlayerStore`
+- Alt+T keyboard shortcut handler reads current time from LessonPlayer's `currentVideoTime` state (fixed in Story 3.1)
 - Custom rehype-sanitize schema to allow `video` protocol in href
+- The `video://` renderer pattern is reused by Story 3.9 for `screenshot://` protocol
 
 ---
 
@@ -946,17 +1017,21 @@ So that I can categorize and discover related notes across courses.
 **And** tag input supports autocomplete from previously used tags across all notes
 
 **Given** the user has notes with various tags
-**When** browsing notes on the Notes page
+**When** browsing notes on the Global Notes page (Story 3.8)
 **Then** notes can be filtered by tag
 **And** a tag cloud or list shows all available tags with note counts
 
 **Given** tags are managed
 **When** tags are added or removed
-**Then** changes are persisted to IndexedDB immediately
+**Then** changes are persisted to IndexedDB via `useNoteStore` immediately
 **And** the Dexie.js multi-entry index (`*tags`) enables efficient tag-based queries
+**And** the MiniSearch index is updated with the new tag values
 
 **Technical Notes:**
 - Tag management is via explicit UI, NOT automatic hashtag extraction from markdown content (per Architecture decision)
+- **Must remove** the existing `#hashtag` extraction logic from NoteEditor (this story owns the removal — Story 3.1 replaces the textarea but does not own tag logic)
+- Tag normalization (trim + lowercase) at the store boundary, not in UI (per Epic 1 team agreement)
+- Query all unique tags across notes via Dexie for autocomplete: `db.notes.orderBy('tags').uniqueKeys()`
 
 ---
 
@@ -979,19 +1054,23 @@ So that I can find specific knowledge I've captured in under 10 seconds.
 **Then** fuzzy matching still returns relevant results (e.g., notes containing "custom hooks")
 **And** prefix search works for autocomplete (searching "java" finds "javascript")
 
-**Given** a search result contains a timestamp link
-**When** the user clicks the result
-**Then** the Lesson Player opens with the linked video at the exact timestamp position
+**Given** a search result is clicked
+**When** the user selects a note result
+**Then** the Lesson Player opens with the linked video and `?panel=notes` param to auto-open the Notes tab
+**And** if the note contains a timestamp link, the video seeks to that position
 
 **Given** no results match the query
 **When** search returns empty
 **Then** a helpful message is shown: "No notes found. Try different keywords or browse by tag."
 
 **Technical Notes:**
-- MiniSearch index rebuilt from IndexedDB on app load (< 2s for 500 notes)
+- Install: `minisearch`
+- MiniSearch index initialized in Story 3.0, updated incrementally on note CRUD
 - Search fields: content, tags, courseName, videoTitle
 - Combine with 'AND' for multi-term queries
 - Limit to top 20 results
+- **SearchCommandPalette.tsx modification required**: Add a "Notes" result group to the existing component. The current static `useMemo` index must be extended to incorporate MiniSearch note results. Results render with note icon, content snippet, course/video context, and tag badges. Navigation uses `?panel=notes` param for deep-linking.
+- The palette's `useMemo(() => buildSearchIndex(), [])` needs dependency on open state or a separate dynamic fetch for notes, since notes change at runtime
 
 ---
 
@@ -1003,7 +1082,7 @@ So that I can review my captured knowledge for an entire course at a glance.
 
 **Acceptance Criteria:**
 
-**Given** the user is viewing a course detail page
+**Given** the user is viewing a course on the CourseDetail page
 **When** the user navigates to the Notes tab/section
 **Then** all notes for that course are listed, grouped by video
 **And** each note shows: preview snippet, tags, timestamp links, and last updated date
@@ -1013,11 +1092,17 @@ So that I can review my captured knowledge for an entire course at a glance.
 **When** the note detail opens
 **Then** the full note content renders in Markdown preview with timestamp links active
 **And** the user can edit the note inline
-**And** the user can delete a note with a confirmation dialog
+**And** the user can delete a note with a confirmation dialog (NFR23)
+**And** deleting a note also removes it from the MiniSearch index
 
 **Given** a course has no notes
 **When** viewing the Notes section
 **Then** an empty state shows: "No notes yet. Start taking notes while watching videos."
+
+**Technical Notes:**
+- This adds a "Notes" tab to the CourseDetail page (`src/app/pages/CourseDetail.tsx`)
+- Query: `db.notes.where('courseId').equals(courseId).toArray()` grouped by videoId
+- Note deletion triggers: Dexie remove + Zustand update + MiniSearch index removal
 
 ---
 
@@ -1067,7 +1152,8 @@ So that I can quickly revisit important content without searching through course
 **And** a toast notification shows "Removed {N} bookmarks for deleted lessons"
 
 **Technical Notes:**
-- Reads from existing `bookmarks` table in Dexie.js (defined in Story 2.3): `id, courseId, lessonId, timestamp, createdAt`
+- Reads from Dexie `bookmarks` table (migrated from localStorage in Story 3.0)
+- Uses `useBookmarkStore` (created in Story 3.0) for reactive state
 - Sidebar nav: Bookmark icon between "Library" and "Messages", route `/bookmarks`
 - BookmarkCard component: `rounded-[24px]` card with horizontal layout (thumbnail + content + action)
 - Loading state: 4-6 skeleton bookmark cards with `animate-pulse`, 500ms delay before showing, `aria-busy="true"`
@@ -1078,7 +1164,138 @@ So that I can quickly revisit important content without searching through course
 
 ---
 
-**Epic 3 Summary:** 7 stories covering all 11 FRs (FR20-FR27, FR45, FR76, FR77).
+### Story 3.8: Global Notes Dashboard
+
+As a learner,
+I want a dedicated Notes page where I can browse, filter, and search all my notes across every course,
+So that I can find and review my captured knowledge without remembering which course it came from.
+
+**Acceptance Criteria:**
+
+**Given** the user has notes across multiple courses
+**When** the user navigates to the Notes page from the sidebar
+**Then** all notes are displayed in reverse chronological order
+**And** notes are visually grouped by course with collapsible section headers
+**And** each note card shows: content preview (first 2-3 lines), course name, video title, tags as badges, timestamp link count, and last updated date
+**And** the page header shows total note count ("{N} notes across {M} courses")
+
+**Given** the user wants to filter by tag
+**When** the tag filter bar is visible at the top of the page
+**Then** a horizontal scrollable list of tag pills shows all tags with note counts
+**And** clicking a tag filters the list to only notes with that tag
+**And** multiple tags can be selected (AND filter)
+**And** an "All" pill clears the filter
+
+**Given** the user wants to search notes
+**When** typing in the search bar at the top
+**Then** MiniSearch filters results in real-time (reuses Story 3.5 infrastructure)
+**And** matching keywords are highlighted in note previews
+
+**Given** the user clicks a note card
+**When** the card is activated
+**Then** the app navigates to the Lesson Player with `?panel=notes` to auto-open the note
+**And** if the note has timestamp links, the first timestamp is used as the video start position
+
+**Given** the user has no notes
+**When** the Notes page loads
+**Then** a centered empty state shows: FileText icon, "No notes yet", "Start taking notes while watching videos to build your knowledge base.", and a "Browse Courses" CTA button
+
+**Technical Notes:**
+- New page: `src/app/pages/Notes.tsx`
+- New route: `/notes` in `src/app/routes.tsx` (lazy-loaded)
+- Sidebar nav: NotebookPen icon between "Library" and "Bookmarks"
+- Dashboard "My Notes" Quick Action links to `/notes` (update `Overview.tsx`)
+- Query: `db.notes.orderBy('updatedAt').reverse().toArray()` with optional tag filter via `db.notes.where('tags').anyOf(selectedTags)`
+- Reuses MiniSearch instance from Story 3.5 for in-page search
+- Loading state: skeleton cards with `animate-pulse`, 500ms delay, `aria-busy="true"`
+- Responsive: single-column on mobile, two-column grid on tablet, three-column on desktop
+
+---
+
+### Story 3.9: Video Frame Capture in Notes
+
+As a learner,
+I want to capture the current video frame as a screenshot and embed it in my notes with a timestamp,
+So that I can save visual content like slides, diagrams, and code examples alongside my written notes for better recall.
+
+**Acceptance Criteria:**
+
+**Given** the user is watching a video and taking notes
+**When** the user clicks the "Capture Frame" button (Camera icon) in the NoteEditor toolbar or presses S while the video player has focus
+**Then** the current video frame is captured via canvas
+**And** a compressed JPEG image (~50KB at 720p) is stored in IndexedDB
+**And** a markdown reference is inserted at the cursor: `![Frame at MM:SS](screenshot://id)`
+**And** a brief flash animation on the video confirms the capture
+**And** an ARIA announcement confirms: "Frame captured at MM:SS"
+
+**Given** a note contains a screenshot reference like `![Frame at 2:34](screenshot://abc123)`
+**When** the note is rendered in preview mode
+**Then** the screenshot displays as an inline image with rounded corners and a subtle border
+**And** a caption below shows "Frame at 2:34" as a clickable timestamp link (seeks video on click)
+**And** clicking the image opens a larger preview in a Dialog
+
+**Given** the user wants to remove a captured frame
+**When** the user deletes the markdown reference in the editor
+**Then** the screenshot blob is cleaned up from IndexedDB on the next save (orphan detection)
+
+**Given** the browser cannot capture the video frame (e.g., cross-origin restriction)
+**When** the capture fails
+**Then** an error toast shows: "Could not capture frame. The video source may not allow screenshots."
+**And** the note editor remains in its current state (no partial insertion)
+
+**Technical Notes:**
+- New Dexie table in schema v3 (or v4 if needed): `screenshots`: `id, courseId, lessonId, timestamp, blob, createdAt`
+- Capture: `const canvas = document.createElement('canvas'); canvas.getContext('2d').drawImage(videoEl, 0, 0); canvas.toBlob(cb, 'image/jpeg', 0.7)`
+- Access the `<video>` element via ref forwarded from VideoPlayer
+- Custom react-markdown renderer for `screenshot://` protocol (same pattern as `video://` from Story 3.3)
+- Custom rehype-sanitize schema extended to allow `screenshot` protocol
+- Storage budget: warn in console at 100+ screenshots per course (~5MB)
+- Local file:// videos are same-origin, so canvas capture works without CORS issues
+
+---
+
+### Story 3.10: Note Export
+
+As a learner,
+I want to export my notes as Markdown files or JSON data,
+So that I can use them in other tools like Notion or Obsidian, create backups, or share my study notes.
+
+**Acceptance Criteria:**
+
+**Given** the user is on the Global Notes page (Story 3.8) or Course Notes collection (Story 3.6)
+**When** the user clicks the "Export" button
+**Then** a dropdown offers format options: "Markdown (.md)" and "JSON (.json)"
+
+**Given** the user selects Markdown export for a single course
+**When** the export generates
+**Then** a `.md` file downloads with: course title as H1, video titles as H2, note content under each video section, timestamp links converted to readable `[MM:SS]` format, tags as a comma-separated list per note
+**And** the filename follows: `{course-name}-notes.md`
+
+**Given** the user selects Markdown export for all notes (global)
+**When** the export generates
+**Then** a single `.md` file downloads organized by course (H1) and video (H2)
+**And** the filename follows: `levelup-notes-{YYYY-MM-DD}.md`
+
+**Given** the user selects JSON export
+**When** the export generates
+**Then** a `.json` file downloads containing an array of note records with all metadata (id, courseId, videoId, content, tags, createdAt, updatedAt, courseName, videoTitle)
+**And** screenshot references are included as metadata (screenshot ID + timestamp) but blob data is excluded by default to keep file size reasonable
+
+**Given** the export contains screenshot references
+**When** rendering the Markdown export
+**Then** screenshot references are converted to `[Screenshot at MM:SS]` text placeholders with a note: "Screenshots are stored locally and not included in this export."
+
+**Technical Notes:**
+- Export uses browser download API: `URL.createObjectURL(new Blob([content])) + <a download>`
+- Markdown generation: iterate notes grouped by course -> video, render with proper heading hierarchy
+- JSON generation: `JSON.stringify(notes, null, 2)` with enriched course/video names from static data
+- No external dependencies needed
+- Export button placement: top-right of Notes page header and Course Notes tab header
+- NFR34 (standard formats) and NFR35 (Notion/Obsidian compatibility) satisfied
+
+---
+
+**Epic 3 Summary:** 11 stories covering 11 FRs (FR20-FR27, FR45, FR76, FR77) plus NFR34, NFR35, and NFR42. Stories 3.0 (data migration) and 3.9 (frame capture) are new capabilities not in the original FR list but essential for a robust, competitive note-taking experience.
 
 ---
 
@@ -1114,7 +1331,8 @@ So that I can see exactly where I am in each course at a glance.
 **And** the selected status persists to IndexedDB
 
 **Technical Notes:**
-- Use `progress` table in Dexie.js: `courseId, videoId, completionStatus, currentTime, completionPercentage`
+
+- **Schema ownership — `progress` table v2 (this story owns version 2):** Story 2.3 created `progress` at Dexie version 1. This story migrates to version 2, adding fields `completionStatus, completionPercentage` to the existing `courseId, videoId, currentTime` schema. Increment Dexie version number; do not re-create the table from scratch.
 - Atomic state changes (NFR15)
 - Initialize Zustand `useProgressStore`
 
@@ -1257,11 +1475,20 @@ So that I build consistent study habits through the power of "don't break the ch
 **When** viewing the streak widget
 **Then** the message shows "Start your streak today!" with a dimmed flame icon
 
+**Given** the user has at least 30 days of study history
+**When** viewing the streak widget
+**Then** a consistency rate is displayed alongside the streak count (e.g., "24/30 days this month")
+**And** on days when the streak count is low, the consistency rate is surfaced as the primary metric to reduce anxiety about imperfect streaks
+
 **Technical Notes:**
 - Add `streaks` table to Dexie.js: `++id, date, minutesStudied`
 - 10-minute minimum threshold for a "study day"
 - Calculate streak by checking consecutive dates backward from today
 - Track and display longest streak alongside current streak
+- Consistency rate: count of distinct study days in the last 30 days displayed as "X/30 days"
+- Always store timestamps as UTC ISO 8601 with IANA timezone (`Intl.DateTimeFormat().resolvedOptions().timeZone`) per activity record — never store ambiguous local date strings
+- Day boundary: use `Intl.DateTimeFormat('en-CA', { timeZone })` for local date strings, never `new Date('YYYY-MM-DD')` (parsed as UTC midnight)
+- Mirror streak count, last activity date, and freeze token count to `localStorage` as IndexedDB eviction backup
 
 ---
 
@@ -1318,6 +1545,36 @@ So that I can take breaks (vacation, illness) without guilt or losing my progres
 **When** viewing streak history
 **Then** the "days since last study" counter shows instead of streak count
 **And** no shaming language is used (message: "Welcome back! Ready to start a new streak?")
+
+**Given** the user misses a single study day and has freeze tokens available
+**When** the system detects the gap on next app open or session completion
+**Then** one freeze token is automatically consumed (no manual activation required)
+**And** the streak is preserved with a visual "Freeze used" indicator on the calendar for that day
+**And** a toast notifies: "Streak saved with a freeze token. X tokens remaining."
+
+**Given** freeze token earning milestones are reached
+**When** the user achieves a streak or challenge milestone
+**Then** freeze tokens are awarded:
+
+- 7-day streak: +1 token
+- Challenge completion: +1 token
+- 30-day streak: +2 tokens
+- 100-day streak: +3 tokens
+- Maximum holdable: 5 tokens
+
+**And** a toast notifies the user of earned tokens
+
+**Given** no freeze tokens remain and one day is missed
+**When** recovery options are evaluated
+**Then** if the monthly grace restore has not yet been used this month, the system offers: "Use your one-time monthly restore?"
+**And** multi-day gaps (2+ missed days) are never protected — streak resets with no restore option
+
+**Technical Notes:**
+
+- Add `freezeTokens` (0–5), `lastActivityDateLocal`, and `manualRestoreUsedThisMonth` fields to streak state in Dexie
+- Use Dexie transactions for all streak state updates to prevent multi-tab race conditions
+- Show longest streak alongside current streak — prevents abandonment after a break
+- Show freeze/restore option before the user leaves after a break; never send guilt notifications after a streak has already broken
 
 ---
 
@@ -1378,9 +1635,11 @@ So that I have concrete targets to work toward and stay motivated.
 **Then** active challenges are displayed with their type, target, and current progress
 
 **Technical Notes:**
+
 - Add `challenges` table to Dexie.js: `++id, type, target, currentValue, deadline, status, createdAt`
 - Challenge statuses: active, completed, expired
 - Initialize Zustand `useChallengeStore`
+- **Post-import challenge suggestion:** The "first course import" trigger (second AC block above) is implemented by subscribing to the `coursesStore` in Zustand — when `courses.length` transitions from 0 to 1, render the suggestion UI. No cross-epic event bus required; this story reads existing Zustand state.
 
 ---
 
@@ -1410,8 +1669,11 @@ So that I feel rewarded for my effort and motivated to continue.
 **And** the user can choose to restart or dismiss it
 
 **Technical Notes:**
+
 - Framer Motion for celebration animations (LazyMotion loaded async)
-- Respect `prefers-reduced-motion` — use opacity transitions instead of confetti
+- Confetti: use `canvas-confetti` (~4 KB gzipped) with `useWorker: true` (off-main-thread Canvas) — do NOT use `react-confetti` (DOM-based, thrashes React reconciler)
+- `prefers-reduced-motion`: if reduced motion is preferred, skip confetti entirely and replace pulse animation with a simple opacity fade (200ms); use `useReducedMotion()` from Framer Motion
+- Badge unlock animation: spring transition (`stiffness: 400, damping: 20`) with reduced-motion fallback to opacity fade only — never skip animation entirely
 - Progress calculated from `studySessions` and `progress` tables
 
 ---
@@ -1696,9 +1958,28 @@ So that I can optimize my learning approach.
 **When** viewing the insights section
 **Then** a message shows: "Keep studying for a few more days to unlock personalized insights."
 
+**Given** the user has 2+ weeks of study history and 3+ sessions for a course
+**When** viewing the insights section
+**Then** a completion forecast is displayed: "At your current pace (~45 min/week), you'll finish React Patterns in ~3 weeks"
+**And** confidence is indicated: high (low variance), medium, or low (high variance) — low confidence cards use an amber tint
+**And** extreme forecasts (1+ year out) show: "Pick up the pace to unlock a completion estimate" instead of a date
+**And** the pace assumption is always visible ("At your current pace of X min/week...")
+
+**Given** the user wants to export their study history
+**When** clicking "Export Data" on the Reports page
+**Then** a CSV file downloads with columns: `date`, `course_name`, `duration_minutes`, `chapters_completed`, `cumulative_minutes`, `streak_day`
+**And** the filename follows: `levelup-study-data-{YYYY-MM-DD}.csv`
+
+**Technical Notes:**
+
+- Forecast algorithm: exponential-weighted average of weekly minutes (most recent week highest weight); coefficient of variation determines confidence tier
+- Show forecast only with ≥ 2 weeks history and ≥ 3 sessions; use fuzzy language ("~3 weeks"), never an exact date
+- CSV export: use `papaparse` (~7.6 KB gzipped) for RFC 4180 compliance; trigger via `URL.createObjectURL(new Blob([csv]))`
+- `prefers-reduced-motion`: disable sparkline animations on insights cards; show static values instead
+
 ---
 
-**Epic 7 Summary:** 5 stories covering all 6 FRs (FR43-FR47, FR78).
+**Epic 7 Summary:** 5 stories covering 5 FRs (FR43, FR44, FR46, FR47, FR78). FR45 is covered in Epic 3 Story 3.7 (Bookmarks Page).
 
 ---
 

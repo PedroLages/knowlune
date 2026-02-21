@@ -18,7 +18,8 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
-import type { CaptionTrack } from '@/data/types'
+import type { CaptionTrack, Chapter } from '@/data/types'
+import { ChapterProgressBar } from './ChapterProgressBar'
 import { AspectRatio } from '@/app/components/ui/aspect-ratio'
 import { Button } from '@/app/components/ui/button'
 import { Slider } from '@/app/components/ui/slider'
@@ -32,6 +33,7 @@ interface VideoPlayerProps {
   title?: string
   initialPosition?: number
   captions?: CaptionTrack[]
+  chapters?: Chapter[]
   seekToTime?: number
   courseId?: string
   lessonId?: string
@@ -67,6 +69,7 @@ export function VideoPlayer({
   title,
   initialPosition,
   captions,
+  chapters,
   seekToTime,
   courseId: _courseId,
   lessonId: _lessonId,
@@ -698,11 +701,11 @@ export function VideoPlayer({
     }
   }, [showControls])
 
-  // Handle progress bar change
+  // Handle progress bar change (percent 0–100)
   const handleProgressChange = useCallback(
-    (value: number[]) => {
+    (percent: number) => {
       if (videoRef.current) {
-        const newTime = (value[0] / 100) * duration
+        const newTime = (percent / 100) * duration
         videoRef.current.currentTime = newTime
         setCurrentTime(newTime)
       }
@@ -841,53 +844,17 @@ export function VideoPlayer({
           <div className="absolute bottom-0 left-0 right-0 p-4 space-y-2">
             {/* Progress Bar */}
             <div className="flex items-center gap-2">
-              <span className="text-white text-xs font-medium min-w-[45px]">
+              <span data-testid="current-time" className="text-white text-xs font-medium min-w-[45px]">
                 {formatTime(currentTime)}
               </span>
-              <div className="relative flex-1 group/seekbar">
-                {/* Buffered progress indicator */}
-                {duration > 0 && bufferedRanges.map((r, i) => (
-                  <div
-                    key={i}
-                    className="absolute top-1/2 -translate-y-1/2 h-1 group-hover/seekbar:h-3 bg-white/25 rounded-full pointer-events-none transition-[height] duration-150"
-                    style={{ left: `${(r.start / duration) * 100}%`, width: `${((r.end - r.start) / duration) * 100}%` }}
-                  />
-                ))}
-                <Slider
-                  value={[progress]}
-                  onValueChange={handleProgressChange}
-                  max={100}
-                  step={0.1}
-                  aria-label="Video progress"
-                  className={cn(
-                    // Track: white/semi-transparent, 4px tall by default, 12px on hover
-                    '[&_[data-slot=slider-track]]:!h-1 [&_[data-slot=slider-track]]:bg-white/30 [&_[data-slot=slider-track]]:transition-[height] [&_[data-slot=slider-track]]:duration-150 [&_[data-slot=slider-track]]:ease-in-out',
-                    'group-hover/seekbar:[&_[data-slot=slider-track]]:!h-3',
-                    // Range: white fill
-                    '[&_[data-slot=slider-range]]:bg-white',
-                    // Thumb: white, hidden by default, appears on hover
-                    '[&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:border-white/50 [&_[data-slot=slider-thumb]]:opacity-0 [&_[data-slot=slider-thumb]]:scale-0 [&_[data-slot=slider-thumb]]:transition-[opacity,transform] [&_[data-slot=slider-thumb]]:duration-150',
-                    'group-hover/seekbar:[&_[data-slot=slider-thumb]]:opacity-100 group-hover/seekbar:[&_[data-slot=slider-thumb]]:scale-100',
-                  )}
-                />
-                {/* Bookmark markers — visible dot is w-2 h-2, wrapped in 44x44px hit area for touch targets */}
-                {bookmarks && duration > 0 && bookmarks.map(bm => (
-                  <Tooltip key={bm.id}>
-                    <TooltipTrigger asChild>
-                      <button
-                        data-testid="bookmark-marker"
-                        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 min-w-[44px] min-h-[44px] flex items-center justify-center z-10 cursor-pointer group/marker"
-                        style={{ left: `${(bm.timestamp / duration) * 100}%` }}
-                        onClick={(e) => { e.stopPropagation(); onBookmarkSeek?.(bm.timestamp) }}
-                        aria-label={`Bookmark at ${formatTime(bm.timestamp)}`}
-                      >
-                        <span className="w-2 h-2 rounded-full bg-yellow-400 border border-yellow-600 group-hover/marker:scale-150 transition-transform motion-reduce:transition-none" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">{formatTime(bm.timestamp)}</TooltipContent>
-                  </Tooltip>
-                ))}
-              </div>
+              <ChapterProgressBar
+                progress={progress}
+                duration={duration}
+                chapters={chapters}
+                bookmarks={bookmarks}
+                onSeek={handleProgressChange}
+                onBookmarkSeek={onBookmarkSeek}
+              />
               <button
                 className="text-white text-xs font-medium min-w-[45px] text-right hover:text-white/80 transition-colors cursor-pointer"
                 onClick={() => setShowRemainingTime(prev => !prev)}

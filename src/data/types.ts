@@ -16,6 +16,17 @@ export interface CaptionTrack {
   default?: boolean
 }
 
+export interface Chapter {
+  time: number    // start time in seconds
+  title: string
+}
+
+export interface TranscriptCue {
+  startTime: number
+  endTime: number
+  text: string
+}
+
 export interface Resource {
   id: string
   title: string
@@ -24,6 +35,7 @@ export interface Resource {
   fileName: string
   metadata?: {
     captions?: CaptionTrack[]
+    chapters?: Chapter[]
     duration?: number
   }
 }

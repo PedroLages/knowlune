@@ -55,12 +55,13 @@ development_status:
   2-5-course-structure-navigation: done
   2-6-video-player-ux-fixes-accessibility: done
   2-7-skip-controls-pip-shortcuts-help: done
-  2-8-chapter-progress-bar-transcript-panel: backlog
+  2-8-chapter-progress-bar-transcript-panel: done
   2-9-mini-player-theater-mode: done
   epic-2-retrospective: optional
 
-  # Epic 3: Note-Taking & Knowledge Capture (7 stories)
+  # Epic 3: Note-Taking & Knowledge Capture (11 stories)
   epic-3: backlog
+  3-0-data-layer-migration: backlog
   3-1-markdown-note-editor-with-autosave: backlog
   3-2-side-by-side-study-layout: backlog
   3-3-timestamp-notes-and-video-navigation: backlog
@@ -68,6 +69,9 @@ development_status:
   3-5-full-text-note-search: backlog
   3-6-view-course-notes-collection: backlog
   3-7-bookmarks-page: backlog
+  3-8-global-notes-dashboard: backlog
+  3-9-video-frame-capture-in-notes: backlog
+  3-10-note-export: backlog
   epic-3-retrospective: optional
 
   # Epic 4: Progress Tracking & Visual Maps (5 stories)

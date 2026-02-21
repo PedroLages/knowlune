@@ -125,8 +125,8 @@ The **critical interaction** that defines success: **Instant resume with zero fr
 
 **Secondary Considerations:**
 
-- Tablet (768px-1439px) - reviewing notes on iPad
-- Mobile (375px-767px) - quick progress checks only (not primary study sessions)
+- Tablet (640px-1023px) - reviewing notes on iPad
+- Mobile (375px-639px) - quick progress checks only (not primary study sessions)
 
 **Platform Constraints:**
 
@@ -688,9 +688,9 @@ All design decisions controlled via CSS custom properties:
 
 **Responsive Behavior:**
 
-- Desktop (1440px+): Full side-by-side layouts, spacious padding
-- Tablet (768px-1439px): Stacked layouts, collapsible panels
-- Mobile (375px-767px): Single-column, hide non-essential elements
+- Desktop (1024px+): Full side-by-side layouts, spacious padding
+- Tablet (640px-1023px): Stacked layouts, collapsible panels
+- Mobile (375px-639px): Single-column, hide non-essential elements
 
 **Dark Mode Support (Future Enhancement):**
 
@@ -1006,9 +1006,9 @@ All spacing uses multiples of 8px (0.5rem in Tailwind):
 
 **Responsive Breakpoints:**
 
-- **Mobile (375px-767px)**: Single-column layouts, stack side-by-side content
-- **Tablet (768px-1439px)**: Hybrid layouts, collapsible sidebar, 16px page margins
-- **Desktop (1440px+)**: Full side-by-side layouts, persistent sidebar, 32px page margins
+- **Mobile (375px-639px)**: Single-column layouts, stack side-by-side content
+- **Tablet (640px-1023px)**: Hybrid layouts, collapsible sidebar, 16px page margins
+- **Desktop (1024px+)**: Full side-by-side layouts, persistent sidebar, 32px page margins
 
 **Grid System:**
 
@@ -2330,7 +2330,7 @@ Forms follow inclusive design patterns:
 - **Real Device Testing**: Test on actual physical devices (not just emulators)
   - iPhone SE (375px - smallest modern mobile)
   - iPhone 14 Pro (393px - typical mobile)
-  - iPad Mini (768px portrait - tablet lower bound)
+  - iPad Mini (768px portrait - within tablet range, Tailwind `sm` breakpoint at 640px)
   - iPad Pro (1024px landscape - desktop lower bound)
   - MacBook Pro (1440px - primary development viewport)
   - External monitor (1920px+ - verify max-width constraints)
