@@ -19,9 +19,9 @@ export function CourseDetail() {
         <BookOpen className="mb-4 h-16 w-16 text-muted-foreground/50" />
         <h2 className="text-xl font-semibold mb-2">Course Not Found</h2>
         <p className="text-muted-foreground mb-6">The course you're looking for doesn't exist.</p>
-        <Link to="/courses">
-          <Button>Back to Courses</Button>
-        </Link>
+        <Button asChild>
+          <Link to="/courses">Back to Courses</Link>
+        </Button>
       </div>
     )
   }
@@ -78,12 +78,12 @@ export function CourseDetail() {
             </div>
 
             {resumeLesson && (
-              <Link to={`/courses/${course.id}/${resumeLesson}`}>
-                <Button className="bg-blue-600 hover:bg-blue-700">
+              <Button asChild className="bg-blue-600 hover:bg-blue-700">
+                <Link to={`/courses/${course.id}/${resumeLesson}`}>
                   <Play className="mr-2 h-4 w-4" />
                   {lastWatchedLesson ? 'Continue Learning' : 'Start Course'}
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             )}
           </div>
 

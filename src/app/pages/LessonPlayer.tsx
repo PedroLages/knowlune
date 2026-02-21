@@ -162,9 +162,9 @@ export function LessonPlayer() {
     return (
       <div className="flex flex-col items-center justify-center py-24">
         <h2 className="text-xl font-semibold mb-2">Lesson Not Found</h2>
-        <Link to="/courses">
-          <Button>Back to Courses</Button>
-        </Link>
+        <Button asChild>
+          <Link to="/courses">Back to Courses</Link>
+        </Button>
       </div>
     )
   }

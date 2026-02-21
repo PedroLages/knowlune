@@ -133,11 +133,11 @@ export function ProgressCourseCard({
                   </span>
                 )}
               </div>
-              <Link to={`/courses/${course.id}`} className="mt-auto">
-                <Button className="button-press w-full bg-blue-600 hover:bg-blue-700">
+              <Button asChild className="button-press w-full bg-blue-600 hover:bg-blue-700 mt-auto">
+                <Link to={`/courses/${course.id}`}>
                   Resume Learning
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </>
           )}
 
@@ -146,22 +146,22 @@ export function ProgressCourseCard({
               <p className="text-sm text-green-600 dark:text-green-400 font-medium">
                 Completed • {totalLessons} lessons
               </p>
-              <Link to={`/courses/${course.id}`} className="mt-auto">
-                <Button variant="outline" className="button-press w-full">
+              <Button asChild variant="outline" className="button-press w-full mt-auto">
+                <Link to={`/courses/${course.id}`}>
                   Review Course
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </>
           )}
 
           {status === 'not-started' && (
             <>
               <p className="text-xs text-muted-foreground">{totalLessons} lessons</p>
-              <Link to={`/courses/${course.id}`} className="mt-auto">
-                <Button className="button-press w-full bg-blue-600 hover:bg-blue-700">
+              <Button asChild className="button-press w-full bg-blue-600 hover:bg-blue-700 mt-auto">
+                <Link to={`/courses/${course.id}`}>
                   Start Course
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </>
           )}
         </div>
