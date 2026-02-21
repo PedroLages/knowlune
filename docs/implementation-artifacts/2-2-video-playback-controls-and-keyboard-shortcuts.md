@@ -49,27 +49,27 @@ So that I can control my learning pace efficiently without leaving the keyboard.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add Shift+Arrow ±10s seeking (AC: seek forward/backward)
-  - [ ] 1.1 Add e.shiftKey check to ArrowLeft/ArrowRight keyboard handler
-- [ ] Task 2: Add 95% auto-completion threshold (AC: 95% threshold)
-  - [ ] 2.1 Add `onAutoComplete` prop to VideoPlayer
-  - [ ] 2.2 Track 95% threshold with hasAutoCompleted ref
-  - [ ] 2.3 Wire up auto-completion handler in LessonPlayer
-- [ ] Task 3: Add caption font size adjustment (AC: caption font size 14pt-20pt)
-  - [ ] 3.1 Add captionFontSize state with localStorage persistence
-  - [ ] 3.2 Add font size controls near captions button
-  - [ ] 3.3 Apply font size via CSS ::cue pseudo-element
-- [ ] Task 4: Support prefers-reduced-motion for inline celebrations (AC: reduced motion)
-  - [ ] 4.1 Add motion-safe animation to completion checkmark in LessonPlayer
-- [ ] Task 5: WCAG AA+ compliance audit and fixes (AC: WCAG AA+)
-  - [ ] 5.1 Add focus-visible ring styles to ghost buttons on dark background
-  - [ ] 5.2 Add keyboard navigation to speed menu (Escape, arrow keys)
-  - [ ] 5.3 Add role="menu"/role="menuitem" to speed menu
-  - [ ] 5.4 Add aria-pressed to captions toggle button
+- [x] Task 1: Add Shift+Arrow ±10s seeking (AC: seek forward/backward)
+  - [x] 1.1 Add e.shiftKey check to ArrowLeft/ArrowRight keyboard handler
+- [x] Task 2: Add 95% auto-completion threshold (AC: 95% threshold)
+  - [x] 2.1 Add `onAutoComplete` prop to VideoPlayer
+  - [x] 2.2 Track 95% threshold with hasAutoCompleted ref
+  - [x] 2.3 Wire up auto-completion handler in LessonPlayer
+- [x] Task 3: Add caption font size adjustment (AC: caption font size 14pt-20pt)
+  - [x] 3.1 Add captionFontSize state with localStorage persistence
+  - [x] 3.2 Add font size controls near captions button
+  - [x] 3.3 Apply font size via CSS ::cue pseudo-element
+- [x] Task 4: Support prefers-reduced-motion for inline celebrations (AC: reduced motion)
+  - [x] 4.1 Add motion-safe animation to completion checkmark in LessonPlayer
+- [x] Task 5: WCAG AA+ compliance audit and fixes (AC: WCAG AA+)
+  - [x] 5.1 Add focus-visible ring styles to ghost buttons on dark background
+  - [x] 5.2 Add keyboard navigation to speed menu (Escape, arrow keys)
+  - [x] 5.3 Add role="menu"/role="menuitem" to speed menu
+  - [x] 5.4 Add aria-pressed to captions toggle button
 
 ## Implementation Plan
 
-See [plan](../../.claude/plans/vectorized-prancing-hejlsberg.md) for implementation approach.
+See [plan](../../.claude/plans/zesty-imagining-scott.md) for implementation approach.
 
 ## Implementation Notes
 
