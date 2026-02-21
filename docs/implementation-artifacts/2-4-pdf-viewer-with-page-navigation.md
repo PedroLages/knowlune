@@ -87,4 +87,12 @@ See [plan](../../.claude/plans/cached-crafting-petal.md) for implementation appr
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **AC wording must match the existing tech stack.** The story AC originally referenced "IndexedDB" for page persistence, but the codebase already uses localStorage for all progress tracking (established in Epic 1). The code review flagged this as a blocker. Lesson: audit ACs against existing patterns during `/start-story` planning and update them before implementation begins, not after review catches the mismatch.
+
+- **`flex-1` silently overrides fixed-height utilities.** The content area combined `flex-1` with responsive `h-[400px] sm:h-[500px]` classes, but Flexbox `flex-grow` won the specificity fight, producing a 1762px-tall viewer. Caught by design review. Lesson: when constraining height inside a flex column, use `max-h-*` or drop `flex-1` entirely — never combine them and assume the fixed value wins.
+
+- **Draft/commit pattern required for numeric page input.** The initial implementation called `setCurrentPage` on every keystroke, making multi-digit page entry impossible (typing "12" navigated to page 1 then page 1 again). Switching to a local draft state committed on blur/Enter fixed it. This is a general pattern: any text input that drives navigation or API calls needs a draft buffer.
+
+- **Accessibility scored high, touch targets did not.** ARIA roles, live regions, keyboard shortcuts, and focus rings were all implemented correctly from the start. But toolbar buttons shipped at 32x32px, failing the 44x44px WCAG touch target minimum. Lesson: add `min-h-11 min-w-11` (44px) as a default for all icon-only buttons in the design system rather than relying on per-component checks.
+
+- **Review-then-fix cycle compressed well into a single commit.** Both design review and code review ran, producing 23 total findings. The fixes (dead props removal, unmount cleanup, debounce parity, border radius normalization) were batched into one follow-up commit. Running `/review-story` before `/finish-story` kept the PR clean — two focused commits instead of a sprawling fix trail.
