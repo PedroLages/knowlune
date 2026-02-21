@@ -1,8 +1,6 @@
 /**
  * Story 2.9: Mini-Player & Theater Mode — ATDD Acceptance Tests
  *
- * RED PHASE: All tests are expected to FAIL until implementation is complete.
- *
  * Tests verify:
  *   - AC1: Mini-player appears fixed bottom-right when video scrolls out of view (playing only)
  *   - AC2: Theater mode hides desktop sidebar and expands video (T key + button)
@@ -20,6 +18,22 @@ async function goToLessonPlayer(page: Parameters<typeof navigateAndWait>[0]) {
   })
   await navigateAndWait(page, LESSON_URL)
   await page.locator('video').waitFor({ state: 'visible', timeout: 10000 })
+}
+
+/** Scroll the lesson content container (inner overflow-y-auto div). */
+async function scrollLessonContent(page: Parameters<typeof navigateAndWait>[0], y: number) {
+  await page.getByTestId('lesson-content-scroll').evaluate((el, scrollY) => el.scrollBy(0, scrollY), y)
+}
+
+/**
+ * Activate playing state via VideoPlayer's click handler (togglePlayPause).
+ * This sets isPlaying = true synchronously regardless of video source availability,
+ * and calls onPlayStateChange(true) which updates LessonPlayer's isVideoPlaying state.
+ */
+async function activatePlayState(page: Parameters<typeof navigateAndWait>[0]) {
+  // Click the video element — VideoPlayer has onClick={togglePlayPause} on <video>
+  await page.locator('video').click({ force: true })
+  await page.waitForTimeout(100)
 }
 
 // ===========================================================================
@@ -48,65 +62,51 @@ test.describe('AC1: Mini-player on scroll', () => {
     await page.setViewportSize({ width: 1440, height: 800 })
     await goToLessonPlayer(page)
 
-    // Start playing the video
-    await page.evaluate(() => {
-      const video = document.querySelector('video') as HTMLVideoElement
-      if (video) video.play().catch(() => {})
-    })
+    // Activate play state via VideoPlayer's click handler
+    await activatePlayState(page)
 
-    // Scroll past the video
-    await page.evaluate(() => window.scrollBy(0, 1000))
-    await page.waitForTimeout(300) // Allow IntersectionObserver to fire
+    // Scroll the lesson content container past the video
+    await scrollLessonContent(page, 1000)
 
-    // THEN: wrapper should now be position: fixed
-    const wrapper = page.getByTestId('mini-player')
-    const position = await wrapper.evaluate((el) => window.getComputedStyle(el).position)
-    expect(position).toBe('fixed')
+    // THEN: wrapper should become position: fixed (waits up to 5s for IntersectionObserver)
+    await expect(page.getByTestId('mini-player')).toHaveCSS('position', 'fixed', { timeout: 5000 })
   })
 
-  test('spacer div appears when mini-player is active', async ({ page }) => {
+  test('layout anchor preserves space when mini-player is active', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 800 })
     await goToLessonPlayer(page)
 
-    // Before scrolling: spacer should NOT be present
-    await expect(page.getByTestId('mini-player-spacer')).not.toBeVisible()
+    // Before scrolling: anchor is in normal flow (not fixed)
+    const anchor = page.getByTestId('video-anchor')
+    await expect(anchor).toBeVisible()
 
-    // Start playing and scroll
-    await page.evaluate(() => {
-      const video = document.querySelector('video') as HTMLVideoElement
-      if (video) video.play().catch(() => {})
-    })
-    await page.evaluate(() => window.scrollBy(0, 1000))
-    await page.waitForTimeout(300)
+    // Activate play state and scroll
+    await activatePlayState(page)
+    await scrollLessonContent(page, 1000)
 
-    // THEN: spacer should appear
-    await expect(page.getByTestId('mini-player-spacer')).toBeVisible()
+    // THEN: anchor div stays visible (preserving layout space) while mini-player is fixed
+    await expect(page.getByTestId('mini-player')).toHaveCSS('position', 'fixed', { timeout: 5000 })
+    await expect(anchor).toBeVisible()
   })
 
   test('clicking mini-player scrolls back to main player', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 800 })
     await goToLessonPlayer(page)
 
-    // Start playing and scroll to activate mini-player
-    await page.evaluate(() => {
-      const video = document.querySelector('video') as HTMLVideoElement
-      if (video) video.play().catch(() => {})
-    })
-    await page.evaluate(() => window.scrollBy(0, 1000))
-    await page.waitForTimeout(300)
+    // Activate play state and scroll to activate mini-player
+    await activatePlayState(page)
+    await scrollLessonContent(page, 1000)
 
-    // Confirm mini-player is active
+    // Wait for mini-player to become active
     const wrapper = page.getByTestId('mini-player')
-    const positionBefore = await wrapper.evaluate((el) => window.getComputedStyle(el).position)
-    expect(positionBefore).toBe('fixed')
+    await expect(wrapper).toHaveCSS('position', 'fixed', { timeout: 5000 })
 
-    // WHEN: Click the mini-player
-    await wrapper.click()
+    // WHEN: Click the mini-player to scroll back
+    await wrapper.click({ force: true })
     await page.waitForTimeout(500)
 
-    // THEN: Should scroll back — mini-player position returns to static
-    const positionAfter = await wrapper.evaluate((el) => window.getComputedStyle(el).position)
-    expect(positionAfter).not.toBe('fixed')
+    // THEN: Should scroll back — mini-player position returns to absolute (in-flow)
+    await expect(wrapper).not.toHaveCSS('position', 'fixed', { timeout: 5000 })
   })
 
   test('mini-player does NOT appear when video is paused and scrolled past', async ({ page }) => {
@@ -114,7 +114,7 @@ test.describe('AC1: Mini-player on scroll', () => {
     await goToLessonPlayer(page)
 
     // Ensure video is paused (default state), then scroll
-    await page.evaluate(() => window.scrollBy(0, 1000))
+    await scrollLessonContent(page, 1000)
     await page.waitForTimeout(300)
 
     // THEN: wrapper should remain static (mini-player inactive)
@@ -145,18 +145,12 @@ test.describe('AC2: Theater mode', () => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await goToLessonPlayer(page)
 
-    // Confirm sidebar is initially visible on desktop
-    const sidebar = page.locator('[data-testid="desktop-sidebar"]').or(
-      page.locator('.hidden.xl\\:block').first()
-    )
-
     // Make controls visible and click theater button
     await page.locator('video').hover({ force: true })
     await page.getByRole('button', { name: /toggle theater mode/i }).click()
 
-    // THEN: Sidebar should be hidden
-    const sidebarVisible = await page.locator('text=Course Content').isVisible()
-    expect(sidebarVisible).toBe(false)
+    // THEN: Desktop sidebar should be hidden
+    await expect(page.getByTestId('desktop-sidebar')).not.toBeVisible()
   })
 
   test('pressing T key toggles theater mode on', async ({ page }) => {
@@ -170,10 +164,9 @@ test.describe('AC2: Theater mode', () => {
     // WHEN: Press T
     await page.keyboard.press('t')
 
-    // THEN: Sidebar should be hidden (theater mode active)
+    // THEN: Desktop sidebar should be hidden (theater mode active)
     await page.waitForTimeout(200)
-    const sidebarVisible = await page.locator('text=Course Content').isVisible()
-    expect(sidebarVisible).toBe(false)
+    await expect(page.getByTestId('desktop-sidebar')).not.toBeVisible()
   })
 
   test('pressing T again toggles theater mode off', async ({ page }) => {
@@ -190,9 +183,8 @@ test.describe('AC2: Theater mode', () => {
     await page.keyboard.press('t')
     await page.waitForTimeout(200)
 
-    // THEN: Sidebar should be visible again
-    const sidebarVisible = await page.locator('text=Course Content').isVisible()
-    expect(sidebarVisible).toBe(true)
+    // THEN: Desktop sidebar should be visible again
+    await expect(page.getByTestId('desktop-sidebar')).toBeVisible()
   })
 })
 

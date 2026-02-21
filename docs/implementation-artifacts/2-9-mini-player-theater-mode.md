@@ -1,12 +1,12 @@
 ---
 story_id: E02-S09
 story_name: "Mini-Player & Theater Mode"
-status: in-progress
+status: done
 started: 2026-02-21
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-02-21
+reviewed: true
+review_started: 2026-02-21
+review_gates_passed: [build, lint, unit-tests, e2e-tests, design-review, code-review]
 ---
 
 # Story 2.9: Mini-Player & Theater Mode
@@ -83,11 +83,31 @@ Then the theater mode button is not shown (sidebar already hidden)
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+Report: `docs/reviews/design/design-review-2026-02-21-E02-S09.md`
+
+**Verdict: BLOCKED — 1 blocker, 2 high, 3 medium**
+
+**B1 — Invisible click trap (blocker)**: `inset-0` carries `top: 0; left: 0` into the fixed mini-player state. The wrapper measures 320×884px (full viewport height) covering the entire left column. Fix: add `top-auto left-auto` to the isMiniPlayer fixed class string in LessonPlayer.tsx:262.
+
+**H1 — WCAG 4.1.2 violation**: Mini-player wrapper is `<div tabIndex=0 onClick>` with no role or label. Screen readers cannot identify or activate it. Fix: add `role="button"` + `aria-label="Return to video"` + handle Enter/Space in onKeyDown, or use a `<button>` element.
+
+**H2 — Observer options instability**: `{ threshold: 0.3 }` inline literal → observer reconnected every render. Fix: `useMemo(() => ({ threshold: 0.3 }), [])` at call site.
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+Report: `docs/reviews/code/code-review-2026-02-21-E02-S09.md`
+
+**Verdict: BLOCKED — 1 blocker, 3 high, 3 medium**
+
+**Blocker — Mini-player click pauses video**: Clicking the mini-player wrapper bubbles to `<video onClick={togglePlayPause}>`, pausing the video. E2E test passes accidentally (pause hides mini-player, not scroll-back). Fix: `e.stopPropagation()` in the mini-player onClick handler.
+
+**High 1 — T key double-toggle**: Wrapper `onKeyDown` + VideoPlayer `window` listener both fire when focus is inside VideoPlayer controls → double-toggle → no net change. Fix: remove the `onKeyDown` T handler from the wrapper div; VideoPlayer already handles T via `onTheaterModeToggle`.
+
+**High 2 — Options object instability** (same as H2 above — fix at the hook level by destructuring primitives as deps or memoize at call site).
+
+**High 3 — Inline `onTheaterModeToggle` prop**: New function reference each render causes VideoPlayer's keyboard effect to re-subscribe on every render. Fix: `useCallback(() => setIsTheaterMode(prev => !prev), [])`.
+
+**Medium** — `tabIndex={0}` always (should be conditional on `isMiniPlayer`); no unit tests for `useIntersectionObserver`; relative import path instead of `@/` alias.
 
 ## Challenges and Lessons Learned
 

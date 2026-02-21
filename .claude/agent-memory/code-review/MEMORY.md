@@ -28,6 +28,15 @@
 - `defaultValue` on Radix Accordion is uncontrolled -- won't re-expand when navigating between lessons in different modules
 - `handleVideoEnded` has `completed` in closure -- rewatching a completed video shows auto-advance but skips celebration (intended?) but also triggers auto-advance even for already-completed lessons
 
+### E02-S09: Mini-Player & Theater Mode
+- `useIntersectionObserver` has `options` in useEffect deps -- inline `{ threshold: 0.3 }` causes observer teardown/recreate every render
+- Double T-key toggle: wrapper `onKeyDown` AND VideoPlayer window handler both toggle theater when focus is inside VideoPlayer container
+- Mini-player click pauses video (click bubbles to `<video onClick={togglePlayPause}>` before wrapper handler) -- AC says click should scroll back, not pause
+- `onTheaterModeToggle` passed as inline arrow `() => setIsTheaterMode(prev => !prev)` -- new ref every render, causes VideoPlayer keyboard effect to re-subscribe
+- No unit tests for `useIntersectionObserver` hook
+- E2E mini-player click test passes accidentally (pause hides mini-player, removing `fixed` class = test assertion passes)
+- Import alias: `useIntersectionObserver` import uses relative `'../hooks/useIntersectionObserver'` instead of `@/app/hooks/useIntersectionObserver`
+
 ### E02-S06: Video Player UX Fixes & Accessibility
 - S05 interval bug fixed (stable interval with no deps on `remaining`)
 - S05 uncontrolled Accordion fixed (now uses controlled `value`/`onValueChange`)

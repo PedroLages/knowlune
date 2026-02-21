@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet'
 import { VideoPlayer } from '../components/figma/VideoPlayer'
 import { cn } from '../components/ui/utils'
-import { useIntersectionObserver } from '../hooks/useIntersectionObserver'
+import { useIntersectionObserver } from '@/app/hooks/useIntersectionObserver'
 import { PdfViewer } from '../components/figma/PdfViewer'
 import { ModuleAccordion } from '../components/figma/ModuleAccordion'
 import { AutoAdvanceCountdown } from '../components/figma/AutoAdvanceCountdown'
@@ -71,8 +71,11 @@ export function LessonPlayer() {
   const [isTheaterMode, setIsTheaterMode] = useState(false)
   const [isVideoPlaying, setIsVideoPlaying] = useState(false)
   const videoWrapperRef = useRef<HTMLDivElement>(null)
-  const isVideoIntersecting = useIntersectionObserver(videoWrapperRef, { threshold: 0.3 })
+  const intersectionOptions = useMemo(() => ({ threshold: 0.3 }), [])
+  const isVideoIntersecting = useIntersectionObserver(videoWrapperRef, intersectionOptions)
   const isMiniPlayer = !isVideoIntersecting && isVideoPlaying
+
+  const handleTheaterModeToggle = useCallback(() => setIsTheaterMode((prev) => !prev), [])
 
   const handleMiniPlayerClick = useCallback(() => {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -230,7 +233,7 @@ export function LessonPlayer() {
   return (
     <div className="flex gap-6 h-full">
       {/* Main Content */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto" data-testid="lesson-content-scroll">
         <Link
           to={`/courses/${courseId}`}
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
@@ -241,30 +244,48 @@ export function LessonPlayer() {
 
         {/* Video Player */}
         {videoResource && (
-          <>
-            {/* Spacer — preserves layout height when mini-player is floating */}
-            {isMiniPlayer && (
-              <div className="w-full aspect-video mb-5" data-testid="mini-player-spacer" />
-            )}
-
-            {/* Video wrapper — repositions to fixed bottom-right when mini-player is active */}
+          /*
+           * Outer anchor: always in normal flow at original position.
+           * videoWrapperRef points here — watched by IntersectionObserver.
+           * Preserves layout space (prevents layout shift) when inner div
+           * becomes position:fixed in mini-player mode.
+           */
+          <div
+            ref={videoWrapperRef}
+            data-testid="video-anchor"
+            className="relative mb-5 aspect-video w-full"
+          >
+            {/* Inner: becomes fixed mini-player when scrolled past while playing */}
             <div
-              ref={videoWrapperRef}
               data-testid="mini-player"
-              tabIndex={0}
+              tabIndex={isMiniPlayer ? 0 : -1}
+              role={isMiniPlayer ? 'button' : undefined}
+              aria-label={isMiniPlayer ? 'Mini player — click to return to main video' : undefined}
               className={cn(
-                'mb-5',
+                'absolute inset-0',
                 isMiniPlayer &&
-                  'fixed bottom-4 right-4 w-80 z-50 rounded-2xl overflow-hidden shadow-2xl cursor-pointer'
+                  'fixed bottom-4 right-4 top-auto left-auto w-80 z-50 rounded-2xl overflow-hidden shadow-2xl cursor-pointer'
               )}
-              onClick={isMiniPlayer ? handleMiniPlayerClick : undefined}
               onKeyDown={(e) => {
-                if (e.key === 't') {
+                // Enter/Space: scroll back to main video (mini-player mode only)
+                if (isMiniPlayer && (e.key === 'Enter' || e.key === ' ')) {
                   e.preventDefault()
-                  setIsTheaterMode((prev) => !prev)
+                  handleMiniPlayerClick()
                 }
               }}
             >
+              {/* Transparent overlay intercepts pointer events in mini-player mode,
+                  preventing clicks from reaching the <video> element (which would toggle play/pause). */}
+              {isMiniPlayer && (
+                <div
+                  className="absolute inset-0 z-10 cursor-pointer"
+                  aria-hidden="true"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleMiniPlayerClick()
+                  }}
+                />
+              )}
               <VideoPlayer
                 src={getResourceUrl(videoResource)}
                 title={lesson.title}
@@ -282,10 +303,10 @@ export function LessonPlayer() {
                 onBookmarkSeek={handleVideoSeek}
                 onPlayStateChange={setIsVideoPlaying}
                 theaterMode={isTheaterMode}
-                onTheaterModeToggle={() => setIsTheaterMode((prev) => !prev)}
+                onTheaterModeToggle={handleTheaterModeToggle}
               />
             </div>
-          </>
+          </div>
         )}
 
         {/* Auto-Advance Countdown */}
@@ -472,7 +493,7 @@ export function LessonPlayer() {
       </div>
 
       {/* Sidebar Course Structure — hidden in theater mode */}
-      <div className={cn('w-72 bg-card rounded-2xl shadow-sm overflow-hidden', isTheaterMode ? 'hidden' : 'hidden xl:block')}>
+      <div data-testid="desktop-sidebar" className={cn('w-72 bg-card rounded-2xl shadow-sm overflow-hidden', isTheaterMode ? 'hidden' : 'hidden xl:block')}>
         <div className="px-4 py-3 border-b border-border">
           <h3 className="text-sm font-semibold">Course Content</h3>
         </div>

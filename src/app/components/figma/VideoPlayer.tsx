@@ -14,6 +14,7 @@ import {
   SkipBack,
   SkipForward,
   PictureInPicture2,
+  BookmarkCheck,
 } from 'lucide-react'
 import type { CaptionTrack } from '@/data/types'
 import { AspectRatio } from '@/app/components/ui/aspect-ratio'
@@ -83,8 +84,10 @@ export function VideoPlayer({
   const hasRestoredPosition = useRef(false)
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const announceTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const bookmarkFlashRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const touchActiveRef = useRef(false)
-  const bookmarkTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  const [justBookmarked, setJustBookmarked] = useState(false)
 
   // Video state
   const [isPlaying, setIsPlaying] = useState(false)
@@ -115,7 +118,6 @@ export function VideoPlayer({
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
 
   // Progress bar hover state for expand-on-hover effect
-  const [progressHovered, setProgressHovered] = useState(false)
 
   // Bookmark confirmation flash state
   const [justBookmarked, setJustBookmarked] = useState(false)
@@ -318,9 +320,10 @@ export function VideoPlayer({
     if (onBookmarkAdd) {
       onBookmarkAdd(currentTime)
       announce(`Bookmark added at ${formatTime(currentTime)}`)
+      // Brief visual feedback: flash the button yellow for 600ms
+      clearTimeout(bookmarkFlashRef.current)
       setJustBookmarked(true)
-      clearTimeout(bookmarkTimeoutRef.current)
-      bookmarkTimeoutRef.current = setTimeout(() => setJustBookmarked(false), 1500)
+      bookmarkFlashRef.current = setTimeout(() => setJustBookmarked(false), 600)
     }
   }, [onBookmarkAdd, currentTime, announce])
 
@@ -461,7 +464,18 @@ export function VideoPlayer({
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Only handle if video player is in focus or controls are visible
+      // T: theater toggle fires globally — not restricted to containerRef focus.
+      // This ensures T works even when focus is lost after theater mode DOM re-renders
+      // (e.g. Mobile Safari loses focus on the mini-player wrapper after toggle).
+      if (e.key === 't') {
+        if (!speedMenuOpen) {
+          e.preventDefault()
+          onTheaterModeToggle?.()
+        }
+        return
+      }
+
+      // All other shortcuts: only when video player has focus
       if (!containerRef.current?.contains(document.activeElement)) return
       // Speed menu handles its own keyboard events
       if (speedMenuOpen) return
@@ -531,10 +545,6 @@ export function VideoPlayer({
         case 'b':
           e.preventDefault()
           handleAddBookmark()
-          break
-        case 't':
-          e.preventDefault()
-          onTheaterModeToggle?.()
           break
         case '0':
         case '1':
@@ -606,7 +616,7 @@ export function VideoPlayer({
     return () => {
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current)
       if (announceTimeoutRef.current) clearTimeout(announceTimeoutRef.current)
-      if (bookmarkTimeoutRef.current) clearTimeout(bookmarkTimeoutRef.current)
+      if (bookmarkFlashRef.current) clearTimeout(bookmarkFlashRef.current)
     }
   }, [])
 
@@ -644,7 +654,7 @@ export function VideoPlayer({
   return (
     <div
       ref={containerRef}
-      data-testid="video-player-container"
+      data-testid="video-player"
       className="relative w-full overflow-hidden rounded-2xl bg-black group focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
       onMouseDown={() => containerRef.current?.focus()}
       onMouseMove={resetControlsTimeout}
@@ -712,25 +722,22 @@ export function VideoPlayer({
               <span className="text-white text-xs font-medium min-w-[45px]">
                 {formatTime(currentTime)}
               </span>
-              <div
-                className="relative flex-1 py-3 -my-3 cursor-pointer"
-                onMouseEnter={() => setProgressHovered(true)}
-                onMouseLeave={() => setProgressHovered(false)}
-              >
+              <div className="relative flex-1 group/seekbar">
                 <Slider
                   value={[progress]}
                   onValueChange={handleProgressChange}
                   max={100}
                   step={0.1}
                   aria-label="Video progress"
-                  trackClassName={cn(
-                    'bg-white/30',
-                    progressHovered ? '' : '!h-1'
-                  )}
-                  rangeClassName="bg-white"
-                  thumbClassName={cn(
-                    'bg-white border-2 border-white shadow-[0_0_0_3px_rgba(255,255,255,0.25)] transition-[opacity,width,height] duration-200 motion-reduce:transition-none',
-                    progressHovered ? 'opacity-100' : 'opacity-0 !size-2.5'
+                  className={cn(
+                    // Track: white/semi-transparent, 4px tall by default, 12px on hover
+                    '[&_[data-slot=slider-track]]:!h-1 [&_[data-slot=slider-track]]:bg-white/30 [&_[data-slot=slider-track]]:transition-[height] [&_[data-slot=slider-track]]:duration-150 [&_[data-slot=slider-track]]:ease-in-out',
+                    'group-hover/seekbar:[&_[data-slot=slider-track]]:!h-3',
+                    // Range: white fill
+                    '[&_[data-slot=slider-range]]:bg-white',
+                    // Thumb: white, hidden by default, appears on hover
+                    '[&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:border-white/50 [&_[data-slot=slider-thumb]]:opacity-0 [&_[data-slot=slider-thumb]]:scale-0 [&_[data-slot=slider-thumb]]:transition-[opacity,transform] [&_[data-slot=slider-thumb]]:duration-150',
+                    'group-hover/seekbar:[&_[data-slot=slider-thumb]]:opacity-100 group-hover/seekbar:[&_[data-slot=slider-thumb]]:scale-100',
                   )}
                 />
                 {/* Bookmark markers — visible dot is w-2 h-2, wrapped in 44x44px hit area for touch targets */}
@@ -817,17 +824,22 @@ export function VideoPlayer({
                   </Button>
 
                   {/* Desktop: inline volume slider */}
-                  <Slider
-                    value={[isMuted ? 0 : volume * 100]}
-                    onValueChange={handleVolumeChange}
-                    max={100}
-                    step={1}
-                    className="w-20 hidden sm:block"
-                    aria-label="Volume"
-                    trackClassName="bg-white/30"
-                    rangeClassName="bg-white"
-                    thumbClassName="bg-white border-white"
-                  />
+                  <div className="group/volume w-20 hidden sm:block">
+                    <Slider
+                      value={[isMuted ? 0 : volume * 100]}
+                      onValueChange={handleVolumeChange}
+                      max={100}
+                      step={1}
+                      aria-label="Volume"
+                      className={cn(
+                        '[&_[data-slot=slider-track]]:!h-1 [&_[data-slot=slider-track]]:bg-white/30 [&_[data-slot=slider-track]]:transition-[height] [&_[data-slot=slider-track]]:duration-150',
+                        'group-hover/volume:[&_[data-slot=slider-track]]:!h-3',
+                        '[&_[data-slot=slider-range]]:bg-white',
+                        '[&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:border-white/50 [&_[data-slot=slider-thumb]]:opacity-0 [&_[data-slot=slider-thumb]]:scale-0 [&_[data-slot=slider-thumb]]:transition-[opacity,transform] [&_[data-slot=slider-thumb]]:duration-150',
+                        'group-hover/volume:[&_[data-slot=slider-thumb]]:opacity-100 group-hover/volume:[&_[data-slot=slider-thumb]]:scale-100',
+                      )}
+                    />
+                  </div>
 
                   {/* Mobile: volume popover */}
                   {mobileVolumeOpen && (
@@ -921,18 +933,16 @@ export function VideoPlayer({
                     variant="ghost"
                     size="icon"
                     className={cn(
-                      'size-11 hover:bg-white/20 transition-colors duration-200',
-                      justBookmarked ? 'text-yellow-400' : 'text-white'
+                      'size-11 text-white hover:bg-white/20 transition-colors duration-150',
+                      justBookmarked && 'bg-yellow-500/30 text-yellow-300 hover:bg-yellow-500/40'
                     )}
                     onClick={handleAddBookmark}
                     aria-label="Add bookmark at current time"
                   >
-                    <Bookmark
-                      className={cn(
-                        'size-5 transition-all duration-300 motion-reduce:transition-none',
-                        justBookmarked && 'fill-yellow-400 scale-125'
-                      )}
-                    />
+                    {justBookmarked
+                      ? <BookmarkCheck className="size-5" />
+                      : <Bookmark className="size-5" />
+                    }
                   </Button>
                 )}
 
