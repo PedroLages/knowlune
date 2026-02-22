@@ -546,7 +546,7 @@ export function LessonPlayer() {
       </div>
 
       {/* Sidebar Course Structure — hidden in theater mode */}
-      <div data-testid="desktop-sidebar" className={cn('sticky top-0 self-start flex-shrink-0 w-72 bg-card rounded-2xl shadow-sm overflow-hidden flex flex-col max-h-[calc(100svh-3rem)]', isTheaterMode ? 'hidden' : 'hidden lg:flex')}>
+      <div data-testid="desktop-sidebar" className={cn('sticky top-0 self-start flex-shrink-0 w-96 bg-card rounded-2xl shadow-sm overflow-hidden flex flex-col max-h-[calc(100svh-3rem)]', isTheaterMode ? 'hidden' : 'hidden lg:flex')}>
         <div className="px-4 py-3 border-b border-border flex-shrink-0">
           <h3 className="text-sm font-semibold">Course Content</h3>
         </div>
