@@ -1,10 +1,10 @@
 ---
 story_id: E03-S00
 story_name: "Data Layer Migration (Notes & Bookmarks)"
-status: in-progress
+status: done
 started: 2026-02-22
-completed:
-reviewed: in-progress
+completed: 2026-02-22
+reviewed: true
 review_started: 2026-02-22
 review_gates_passed: [pre-checks, design-review, code-review]
 ---
