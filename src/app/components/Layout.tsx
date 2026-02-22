@@ -181,7 +181,7 @@ export function Layout() {
       {isDesktop && (
         <aside
           data-theater-hide
-          className={`${sidebarCollapsed ? 'w-[72px] px-0 py-6' : 'w-[220px] p-6'} bg-card m-6 flex flex-col overflow-hidden transition-[width] duration-200`}
+          className={`${sidebarCollapsed ? 'w-[72px] px-0 py-6' : 'w-[220px] p-6'} bg-card mt-6 mb-6 ml-6 flex flex-col overflow-hidden transition-[width] duration-200`}
           aria-label="Sidebar"
         >
           <SidebarContent

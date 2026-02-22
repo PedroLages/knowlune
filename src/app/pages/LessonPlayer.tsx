@@ -287,7 +287,7 @@ export function LessonPlayer() {
               'relative mb-5',
               // Theater mode: back link is hidden via data-theater-hide, so video starts at
               // header-bottom + main-padding = ~7.75rem from viewport top. Using 8rem for a 4px buffer.
-              isTheaterMode ? 'w-full h-[calc(100svh-8rem)]' : 'w-full aspect-video'
+              isTheaterMode ? 'w-full h-[calc(100svh-8rem)]' : 'w-full aspect-video max-h-[calc(60svh)]'
             )}
           >
             {/* Inner: becomes fixed mini-player when scrolled past while playing */}

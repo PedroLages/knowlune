@@ -908,7 +908,7 @@ export function VideoPlayer({
                       {isPlaying ? <Pause className="size-5" /> : <Play className="size-5" />}
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="top">{isPlaying ? 'Pause (K)' : 'Play (K)'}</TooltipContent>
+                  {!isFullscreen && <TooltipContent side="top">{isPlaying ? 'Pause (K)' : 'Play (K)'}</TooltipContent>}
                 </Tooltip>
 
                 {/* Skip Back */}
@@ -966,7 +966,7 @@ export function VideoPlayer({
                         )}
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent side="top">{isMuted ? 'Unmute (M)' : 'Mute (M)'}</TooltipContent>
+                    {!isFullscreen && <TooltipContent side="top">{isMuted ? 'Unmute (M)' : 'Mute (M)'}</TooltipContent>}
                   </Tooltip>
 
                   {/* Desktop: inline volume slider */}
@@ -1028,7 +1028,7 @@ export function VideoPlayer({
                         {playbackSpeed}x
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent side="top">Playback speed</TooltipContent>
+                    {!isFullscreen && <TooltipContent side="top">Playback speed</TooltipContent>}
                   </Tooltip>
                   {speedMenuOpen && (
                     <div
@@ -1081,7 +1081,7 @@ export function VideoPlayer({
                         }
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent side="top">Add bookmark (B)</TooltipContent>
+                    {!isFullscreen && <TooltipContent side="top">Add bookmark (B)</TooltipContent>}
                   </Tooltip>
                 )}
 
@@ -1104,9 +1104,11 @@ export function VideoPlayer({
                       <Subtitles className="size-5" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="top">
-                    {captions && captions.length > 0 ? 'Captions (C)' : 'No captions available'}
-                  </TooltipContent>
+                  {!isFullscreen && (
+                    <TooltipContent side="top">
+                      {captions && captions.length > 0 ? 'Captions (C)' : 'No captions available'}
+                    </TooltipContent>
+                  )}
                 </Tooltip>
 
                 {/* Theater Mode - desktop only (sidebar already hidden on mobile) */}
@@ -1126,7 +1128,7 @@ export function VideoPlayer({
                         <RectangleHorizontal className="size-5" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent side="top">Theater mode (T)</TooltipContent>
+                    {!isFullscreen && <TooltipContent side="top">Theater mode (T)</TooltipContent>}
                   </Tooltip>
                 )}
 
@@ -1145,7 +1147,7 @@ export function VideoPlayer({
                         <PictureInPicture2 className="size-5" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent side="top">Picture in picture</TooltipContent>
+                    {!isFullscreen && <TooltipContent side="top">Picture in picture</TooltipContent>}
                   </Tooltip>
                 )}
 
@@ -1166,7 +1168,7 @@ export function VideoPlayer({
                       )}
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="top">{isFullscreen ? 'Exit fullscreen (F)' : 'Fullscreen (F)'}</TooltipContent>
+                  {!isFullscreen && <TooltipContent side="top">Fullscreen (F)</TooltipContent>}
                 </Tooltip>
               </div>
             </div>
