@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Document, Page } from 'react-pdf'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 import 'react-pdf/dist/Page/TextLayer.css'
@@ -57,14 +57,11 @@ export function PdfScrollView({
   const lastReportedPageRef = useRef(currentPage)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const { width: slotWidth, height: slotHeight } = useMemo(
-    () => getScaledDimensions(pageWidth, pageHeight, scale, rotation),
-    [pageWidth, pageHeight, scale, rotation]
-  )
+  const { width: slotWidth, height: slotHeight } = getScaledDimensions(pageWidth, pageHeight, scale, rotation)
 
   const BUFFER = 2
 
-  const renderedPages = useMemo(() => {
+  const renderedPages = (() => {
     if (visiblePages.size === 0) {
       // Render currentPage as initial fallback
       const initial = new Set<number>()
@@ -89,7 +86,7 @@ export function PdfScrollView({
       buffered.add(p)
     }
     return buffered
-  }, [visiblePages, currentPage, totalPages])
+  })()
 
   // IntersectionObserver to track visible pages
   useEffect(() => {
@@ -186,18 +183,15 @@ export function PdfScrollView({
     }
   }, [currentPage])
 
-  const setPageRef = useCallback(
-    (pageNum: number) => (el: HTMLDivElement | null) => {
-      if (el) {
-        pageRefs.current.set(pageNum, el)
-      } else {
-        pageRefs.current.delete(pageNum)
-      }
-    },
-    []
-  )
+  const setPageRef = (pageNum: number) => (el: HTMLDivElement | null) => {
+    if (el) {
+      pageRefs.current.set(pageNum, el)
+    } else {
+      pageRefs.current.delete(pageNum)
+    }
+  }
 
-  const pageSlots = useMemo(() => {
+  const pageSlots = (() => {
     const slots: React.ReactNode[] = []
     for (let n = 1; n <= totalPages; n++) {
       const shouldRender = renderedPages.has(n)
@@ -232,16 +226,7 @@ export function PdfScrollView({
       )
     }
     return slots
-  }, [
-    totalPages,
-    renderedPages,
-    slotWidth,
-    slotHeight,
-    scale,
-    rotation,
-    makeTextRenderer,
-    setPageRef,
-  ])
+  })()
 
   return (
     <div

@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { Document, Page } from 'react-pdf'
 import 'react-pdf/dist/Page/TextLayer.css'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
@@ -96,14 +96,14 @@ export function PdfThumbnailSidebar({
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Auto-scroll to current page thumbnail
-  const scrollToPage = useCallback((page: number) => {
+  const scrollToPage = (page: number) => {
     const container = scrollRef.current
     if (!container) return
     const thumb = container.querySelector(`[data-thumb-page="${page}"]`)
     if (thumb) {
       thumb.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
     }
-  }, [])
+  }
 
   useEffect(() => {
     scrollToPage(currentPage)

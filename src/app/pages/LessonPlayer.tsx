@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from 'react-router'
-import { useMemo, useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { ArrowLeft, ChevronLeft, ChevronRight, CheckCircle2, Circle, Menu } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
@@ -40,12 +40,12 @@ export function LessonPlayer() {
 
   const course = allCourses.find(c => c.id === courseId)
 
-  const { lesson, allLessons, currentIndex } = useMemo(() => {
+  const { lesson, allLessons, currentIndex } = (() => {
     if (!course) return { lesson: null, allLessons: [], currentIndex: -1 }
     const all = course.modules.flatMap(m => m.lessons)
     const idx = all.findIndex(l => l.id === lessonId)
     return { lesson: all[idx] ?? null, allLessons: all, currentIndex: idx }
-  }, [course, lessonId])
+  })()
 
   const progress = course ? getProgress(course.id) : null
   const titleRef = useRef<HTMLHeadingElement>(null)
@@ -72,11 +72,11 @@ export function LessonPlayer() {
   const [isTheaterMode, setIsTheaterMode] = useState(false)
   const [isVideoPlaying, setIsVideoPlaying] = useState(false)
   const videoWrapperRef = useRef<HTMLDivElement>(null)
-  const intersectionOptions = useMemo(() => ({ threshold: 0.3 }), [])
+  const intersectionOptions = { threshold: 0.3 }
   const isVideoIntersecting = useIntersectionObserver(videoWrapperRef, intersectionOptions)
   const isMiniPlayer = !isVideoIntersecting && isVideoPlaying
 
-  const handleTheaterModeToggle = useCallback(() => setIsTheaterMode((prev) => !prev), [])
+  const handleTheaterModeToggle = () => setIsTheaterMode((prev) => !prev)
 
   // Sync theater mode to <html> data attribute so Layout can hide the left sidebar via CSS
   useEffect(() => {
@@ -95,13 +95,13 @@ export function LessonPlayer() {
     }
   }, [isTheaterMode])
 
-  const handleMiniPlayerClick = useCallback(() => {
+  const handleMiniPlayerClick = () => {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     videoWrapperRef.current?.scrollIntoView({
       behavior: reduceMotion ? 'instant' : 'smooth',
       block: 'start',
     })
-  }, [])
+  }
 
   // Reset auto-advance and completion state when lesson changes
   useEffect(() => {
@@ -161,45 +161,36 @@ export function LessonPlayer() {
   const pdfResources = primaryPdf ? allPdfResources.slice(1) : allPdfResources
 
   const handlePdfPageChangeRef = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const handlePdfPageChange = useCallback(
-    (page: number) => {
-      if (!courseId || !primaryPdf) return
-      clearTimeout(handlePdfPageChangeRef.current)
-      handlePdfPageChangeRef.current = setTimeout(() => {
-        savePdfPage(courseId, primaryPdf.id, page)
-      }, 500)
-    },
-    [courseId, primaryPdf]
-  )
+  const handlePdfPageChange = (page: number) => {
+    if (!courseId || !primaryPdf) return
+    clearTimeout(handlePdfPageChangeRef.current)
+    handlePdfPageChangeRef.current = setTimeout(() => {
+      savePdfPage(courseId, primaryPdf.id, page)
+    }, 500)
+  }
 
   const materialsPdfTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
-  const handleMaterialsPdfPageChange = useCallback(
-    (resourceId: string, page: number) => {
-      if (!courseId) return
-      clearTimeout(materialsPdfTimers.current.get(resourceId))
-      materialsPdfTimers.current.set(
-        resourceId,
-        setTimeout(() => savePdfPage(courseId, resourceId, page), 500)
-      )
-    },
-    [courseId]
-  )
+  const handleMaterialsPdfPageChange = (resourceId: string, page: number) => {
+    if (!courseId) return
+    clearTimeout(materialsPdfTimers.current.get(resourceId))
+    materialsPdfTimers.current.set(
+      resourceId,
+      setTimeout(() => savePdfPage(courseId, resourceId, page), 500)
+    )
+  }
 
   const [videoCurrentTime, setVideoCurrentTime] = useState(0)
 
   const lastSaveTimeRef = useRef(-Infinity)
-  const handleTimeUpdate = useCallback(
-    (time: number) => {
-      setVideoCurrentTime(time)
-      if (courseId && lessonId && time - lastSaveTimeRef.current >= 5) {
-        lastSaveTimeRef.current = time
-        saveVideoPosition(courseId, lessonId, time)
-      }
-    },
-    [courseId, lessonId]
-  )
+  const handleTimeUpdate = (time: number) => {
+    setVideoCurrentTime(time)
+    if (courseId && lessonId && time - lastSaveTimeRef.current >= 5) {
+      lastSaveTimeRef.current = time
+      saveVideoPosition(courseId, lessonId, time)
+    }
+  }
 
-  const handleVideoEnded = useCallback(() => {
+  const handleVideoEnded = () => {
     if (courseId && lessonId && !completed) {
       markLessonComplete(courseId, lessonId)
       setCompleted(true)
@@ -212,32 +203,29 @@ export function LessonPlayer() {
     if (nextLesson) {
       setShowAutoAdvance(true)
     }
-  }, [courseId, lessonId, completed, lesson, nextLesson])
+  }
 
-  const handleVideoSeek = useCallback((timestamp: number) => {
+  const handleVideoSeek = (timestamp: number) => {
     setSeekToTime(timestamp)
-  }, [])
+  }
 
-  const handleSeekComplete = useCallback(() => {
+  const handleSeekComplete = () => {
     setSeekToTime(undefined)
-  }, [])
+  }
 
-  const handleBookmarkAdd = useCallback(
-    (timestamp: number) => {
-      if (courseId && lessonId) {
-        addBookmark(courseId, lessonId, timestamp)
-        setBookmarks(getLessonBookmarks(courseId, lessonId))
-        toast(`Bookmarked at ${formatBookmarkTimestamp(timestamp)}`, { duration: 2000 })
-      }
-    },
-    [courseId, lessonId]
-  )
+  const handleBookmarkAdd = (timestamp: number) => {
+    if (courseId && lessonId) {
+      addBookmark(courseId, lessonId, timestamp)
+      setBookmarks(getLessonBookmarks(courseId, lessonId))
+      toast(`Bookmarked at ${formatBookmarkTimestamp(timestamp)}`, { duration: 2000 })
+    }
+  }
 
-  const handleBookmarksChange = useCallback(() => {
+  const handleBookmarksChange = () => {
     if (courseId && lessonId) {
       setBookmarks(getLessonBookmarks(courseId, lessonId))
     }
-  }, [courseId, lessonId])
+  }
 
   const toggleComplete = () => {
     if (!courseId || !lessonId) return
@@ -254,12 +242,12 @@ export function LessonPlayer() {
     }
   }
 
-  const handleNoteChange = useCallback((value: string) => {
+  const handleNoteChange = (value: string) => {
     setNoteText(value)
     if (courseId && lessonId) {
       saveNote(courseId, lessonId, value)
     }
-  }, [courseId, lessonId])
+  }
 
   if (!course || !lesson) {
     return (

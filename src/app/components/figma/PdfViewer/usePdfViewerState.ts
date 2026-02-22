@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 import { ZOOM_PRESETS, ZOOM_LABELS, type ZoomMode, type ScrollMode } from './types'
 
@@ -82,149 +82,137 @@ export function usePdfViewerState(
     return () => document.removeEventListener('mousedown', handleClick)
   }, [zoomDropdownOpen])
 
-  const goToPage = useCallback(
-    (page: number) => {
-      const clamped = Math.max(1, Math.min(page, totalPages))
-      if (clamped === currentPage) return
-      setCurrentPage(clamped)
-      setAnnouncement(`Page ${clamped} of ${totalPages}`)
-      onPageChange?.(clamped, totalPages)
-    },
-    [totalPages, currentPage, onPageChange]
-  )
+  const goToPage = (page: number) => {
+    const clamped = Math.max(1, Math.min(page, totalPages))
+    if (clamped === currentPage) return
+    setCurrentPage(clamped)
+    setAnnouncement(`Page ${clamped} of ${totalPages}`)
+    onPageChange?.(clamped, totalPages)
+  }
 
-  const handleDocumentLoadSuccess = useCallback(
-    (doc: PDFDocumentProxy) => {
-      setPdfDocument(doc)
-      setTotalPages(doc.numPages)
-      setIsLoading(false)
-      const startPage = Math.min(initialPage, doc.numPages)
-      setCurrentPage(startPage)
-      setAnnouncement(`PDF loaded. ${doc.numPages} pages. Showing page ${startPage}.`)
-    },
-    [initialPage]
-  )
+  const handleDocumentLoadSuccess = (doc: PDFDocumentProxy) => {
+    setPdfDocument(doc)
+    setTotalPages(doc.numPages)
+    setIsLoading(false)
+    const startPage = Math.min(initialPage, doc.numPages)
+    setCurrentPage(startPage)
+    setAnnouncement(`PDF loaded. ${doc.numPages} pages. Showing page ${startPage}.`)
+  }
 
-  const handleDocumentLoadError = useCallback(() => {
+  const handleDocumentLoadError = () => {
     setLoadError(true)
     setIsLoading(false)
-  }, [])
+  }
 
-  const handlePageLoadSuccess = useCallback(
-    (page: { width: number; height: number }) => {
-      if (!pageWidth) {
-        setPageWidth(page.width)
-        setPageHeight(page.height)
-      }
-    },
-    [pageWidth]
-  )
+  const handlePageLoadSuccess = (page: { width: number; height: number }) => {
+    if (!pageWidth) {
+      setPageWidth(page.width)
+      setPageHeight(page.height)
+    }
+  }
 
-  const zoomIn = useCallback(() => {
+  const zoomIn = () => {
     const next = ZOOM_PRESETS.find(z => z > scale + 0.01)
     if (next) {
       setScale(next)
       setZoomMode('custom')
       setAnnouncement(`Zoom ${ZOOM_LABELS[next]}`)
     }
-  }, [scale])
+  }
 
-  const zoomOut = useCallback(() => {
+  const zoomOut = () => {
     const prev = [...ZOOM_PRESETS].reverse().find(z => z < scale - 0.01)
     if (prev) {
       setScale(prev)
       setZoomMode('custom')
       setAnnouncement(`Zoom ${ZOOM_LABELS[prev]}`)
     }
-  }, [scale])
+  }
 
-  const setZoomPreset = useCallback((value: number) => {
+  const setZoomPreset = (value: number) => {
     setScale(value)
     setZoomMode('custom')
     setZoomDropdownOpen(false)
     setAnnouncement(`Zoom ${ZOOM_LABELS[value]}`)
-  }, [])
+  }
 
-  const fitWidth = useCallback(() => {
+  const fitWidth = () => {
     setZoomMode('fit-width')
     setZoomDropdownOpen(false)
     setAnnouncement('Fit to width')
-  }, [])
+  }
 
-  const fitPage = useCallback(() => {
+  const fitPage = () => {
     setZoomMode('fit-page')
     setZoomDropdownOpen(false)
     setAnnouncement('Fit to page')
-  }, [])
+  }
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      // Don't capture when typing in the page input
-      if ((e.target as HTMLElement).tagName === 'INPUT') return
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Don't capture when typing in the page input
+    if ((e.target as HTMLElement).tagName === 'INPUT') return
 
-      switch (e.key) {
-        case 'PageDown':
-        case 'ArrowDown':
-        case 'ArrowRight':
+    switch (e.key) {
+      case 'PageDown':
+      case 'ArrowDown':
+      case 'ArrowRight':
+        e.preventDefault()
+        goToPage(currentPage + 1)
+        break
+      case 'PageUp':
+      case 'ArrowUp':
+      case 'ArrowLeft':
+        e.preventDefault()
+        goToPage(currentPage - 1)
+        break
+      case 'Home':
+        e.preventDefault()
+        goToPage(1)
+        break
+      case 'End':
+        e.preventDefault()
+        goToPage(totalPages)
+        break
+      case '+':
+      case '=':
+        e.preventDefault()
+        zoomIn()
+        break
+      case '-':
+        e.preventDefault()
+        zoomOut()
+        break
+      case '0':
+        e.preventDefault()
+        setScale(1)
+        setZoomMode('custom')
+        setAnnouncement('Zoom 100%')
+        break
+      case 'Escape':
+        if (zoomDropdownOpen) {
           e.preventDefault()
-          goToPage(currentPage + 1)
-          break
-        case 'PageUp':
-        case 'ArrowUp':
-        case 'ArrowLeft':
-          e.preventDefault()
-          goToPage(currentPage - 1)
-          break
-        case 'Home':
-          e.preventDefault()
-          goToPage(1)
-          break
-        case 'End':
-          e.preventDefault()
-          goToPage(totalPages)
-          break
-        case '+':
-        case '=':
-          e.preventDefault()
-          zoomIn()
-          break
-        case '-':
-          e.preventDefault()
-          zoomOut()
-          break
-        case '0':
-          e.preventDefault()
-          setScale(1)
-          setZoomMode('custom')
-          setAnnouncement('Zoom 100%')
-          break
-        case 'Escape':
-          if (zoomDropdownOpen) {
-            e.preventDefault()
-            setZoomDropdownOpen(false)
-          }
-          break
-      }
-    },
-    [currentPage, totalPages, goToPage, zoomIn, zoomOut, zoomDropdownOpen]
-  )
+          setZoomDropdownOpen(false)
+        }
+        break
+    }
+  }
 
-  const rotateClockwise = useCallback(() => {
+  const rotateClockwise = () => {
     setRotation(r => (r + 90) % 360)
     setAnnouncement('Rotated clockwise')
-  }, [])
+  }
 
-  const toggleThumbnails = useCallback(() => {
+  const toggleThumbnails = () => {
     setThumbnailsOpen(prev => !prev)
-  }, [])
+  }
 
-  const toggleOutline = useCallback(() => {
+  const toggleOutline = () => {
     setOutlineOpen(prev => !prev)
-  }, [])
+  }
 
-  const toggleScrollMode = useCallback(() => {
+  const toggleScrollMode = () => {
     setScrollMode(prev => prev === 'single' ? 'continuous' : 'single')
-  }, [])
+  }
 
   const [isFullscreen, setIsFullscreen] = useState(false)
 
@@ -239,7 +227,7 @@ export function usePdfViewerState(
     return () => document.removeEventListener('fullscreenchange', handleChange)
   }, [])
 
-  const toggleFullscreen = useCallback(() => {
+  const toggleFullscreen = () => {
     const el = containerRef.current
     if (!el) return
     if (document.fullscreenElement) {
@@ -247,9 +235,9 @@ export function usePdfViewerState(
     } else {
       el.requestFullscreen()
     }
-  }, [])
+  }
 
-  const toggleDarkMode = useCallback(() => {
+  const toggleDarkMode = () => {
     setDarkMode(prev => {
       const next = !prev
       try {
@@ -260,20 +248,20 @@ export function usePdfViewerState(
       setAnnouncement(next ? 'Dark mode on' : 'Dark mode off')
       return next
     })
-  }, [])
+  }
 
   const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPageInputValue(e.target.value)
   }
 
-  const commitPageInput = useCallback(() => {
+  const commitPageInput = () => {
     const val = parseInt(pageInputValue, 10)
     if (!isNaN(val)) {
       goToPage(val)
     } else {
       setPageInputValue(String(currentPage))
     }
-  }, [pageInputValue, goToPage, currentPage])
+  }
 
   const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {

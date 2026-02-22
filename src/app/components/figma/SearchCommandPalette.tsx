@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useEffect } from 'react'
+import { useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import {
   LayoutDashboard,
@@ -154,25 +154,19 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
     }
   }, [open])
 
-  const handleOpenChange = useCallback(
-    (newOpen: boolean) => {
-      onOpenChange(newOpen)
-      if (!newOpen && previouslyFocusedRef.current) {
-        requestAnimationFrame(() => previouslyFocusedRef.current?.focus())
-      }
-    },
-    [onOpenChange]
-  )
+  const handleOpenChange = (newOpen: boolean) => {
+    onOpenChange(newOpen)
+    if (!newOpen && previouslyFocusedRef.current) {
+      requestAnimationFrame(() => previouslyFocusedRef.current?.focus())
+    }
+  }
 
-  const searchIndex = useMemo(() => buildSearchIndex(), [])
+  const searchIndex = buildSearchIndex()
 
-  const handleSelect = useCallback(
-    (path: string) => {
-      handleOpenChange(false)
-      navigate(path)
-    },
-    [navigate, handleOpenChange]
-  )
+  const handleSelect = (path: string) => {
+    handleOpenChange(false)
+    navigate(path)
+  }
 
   // Group items
   const pages = searchIndex.filter(item => item.group === 'Pages')

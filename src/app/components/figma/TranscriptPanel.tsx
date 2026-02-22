@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { TranscriptCue } from '@/data/types'
 import { cn } from '@/app/components/ui/utils'
 
@@ -85,10 +85,7 @@ export function TranscriptPanel({ src, currentTime, onSeek }: TranscriptPanelPro
     }
   }, [src])
 
-  const activeCue = useMemo(
-    () => cues.find(c => currentTime >= c.startTime && currentTime < c.endTime),
-    [cues, currentTime],
-  )
+  const activeCue = cues.find(c => currentTime >= c.startTime && currentTime < c.endTime)
 
   // Auto-scroll active cue into view
   useEffect(() => {

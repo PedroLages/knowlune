@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import { FileText, ExternalLink } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { cn } from '@/app/components/ui/utils'
@@ -26,31 +25,28 @@ export function PdfViewer({
   const search = usePdfSearch(state.pdfDocument, state.goToPage)
   const isMobile = useIsMobile()
 
-  const toggleSearch = useCallback(() => {
+  const toggleSearch = () => {
     if (search.searchOpen) {
       search.closeSearch()
     } else {
       search.openSearch()
     }
-  }, [search])
+  }
 
   // Wrap handleKeyDown to intercept Ctrl+F for search
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-        e.preventDefault()
-        search.openSearch()
-        return
-      }
-      if (e.key === 'Escape' && search.searchOpen) {
-        e.preventDefault()
-        search.closeSearch()
-        return
-      }
-      state.handleKeyDown(e)
-    },
-    [state.handleKeyDown, search]
-  )
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+      e.preventDefault()
+      search.openSearch()
+      return
+    }
+    if (e.key === 'Escape' && search.searchOpen) {
+      e.preventDefault()
+      search.closeSearch()
+      return
+    }
+    state.handleKeyDown(e)
+  }
 
   if (state.loadError) {
     return (

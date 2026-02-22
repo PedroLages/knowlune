@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { Search, FileText, ExternalLink, FolderOpen } from 'lucide-react'
 import { Card } from '@/app/components/ui/card'
 import { Input } from '@/app/components/ui/input'
@@ -57,9 +57,9 @@ export function Library() {
   const [activeTab, setActiveTab] = useState('all')
   const [selectedItem, setSelectedItem] = useState<LibraryItem | null>(null)
 
-  const allItems = useMemo(() => collectLibraryItems(), [])
+  const allItems = collectLibraryItems()
 
-  const filtered = useMemo(() => {
+  const filtered = (() => {
     let items = allItems
     if (activeTab !== 'all') {
       items = items.filter(item => item.category === activeTab)
@@ -75,7 +75,7 @@ export function Library() {
       )
     }
     return items
-  }, [allItems, activeTab, searchQuery])
+  })()
 
   return (
     <div>

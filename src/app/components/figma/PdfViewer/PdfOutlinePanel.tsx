@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { ChevronRight, FileText } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
@@ -30,12 +30,12 @@ function OutlineNode({
   const [expanded, setExpanded] = useState(depth < 2)
   const hasChildren = item.items && item.items.length > 0
 
-  const handleClick = useCallback(async () => {
+  const handleClick = async () => {
     const page = await resolveDestination(item.dest)
     if (page !== null) {
       onPageClick(page)
     }
-  }, [item.dest, resolveDestination, onPageClick])
+  }
 
   return (
     <div>
@@ -105,28 +105,25 @@ export function PdfOutlinePanel({
     return () => { cancelled = true }
   }, [pdfDocument])
 
-  const resolveDestination = useCallback(
-    async (dest: string | Array<unknown> | null): Promise<number | null> => {
-      if (!pdfDocument || !dest) return null
-      try {
-        // Named destination (string) — resolve to explicit dest array first
-        let explicitDest: Array<unknown> | null
-        if (typeof dest === 'string') {
-          explicitDest = await pdfDocument.getDestination(dest)
-        } else {
-          explicitDest = dest
-        }
-        if (!explicitDest || explicitDest.length === 0) return null
-        // First element is the page ref
-        const ref = explicitDest[0] as { num: number; gen: number }
-        const pageIndex = await pdfDocument.getPageIndex(ref)
-        return pageIndex + 1 // 0-indexed → 1-indexed
-      } catch {
-        return null
+  const resolveDestination = async (dest: string | Array<unknown> | null): Promise<number | null> => {
+    if (!pdfDocument || !dest) return null
+    try {
+      // Named destination (string) — resolve to explicit dest array first
+      let explicitDest: Array<unknown> | null
+      if (typeof dest === 'string') {
+        explicitDest = await pdfDocument.getDestination(dest)
+      } else {
+        explicitDest = dest
       }
-    },
-    [pdfDocument]
-  )
+      if (!explicitDest || explicitDest.length === 0) return null
+      // First element is the page ref
+      const ref = explicitDest[0] as { num: number; gen: number }
+      const pageIndex = await pdfDocument.getPageIndex(ref)
+      return pageIndex + 1 // 0-indexed → 1-indexed
+    } catch {
+      return null
+    }
+  }
 
   if (loading) {
     return (

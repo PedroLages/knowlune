@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Card } from '@/app/components/ui/card'
 import { Input } from '@/app/components/ui/input'
 import { Button } from '@/app/components/ui/button'
@@ -38,7 +38,7 @@ export function Courses() {
     loadImportedCourses()
   }, [loadImportedCourses])
 
-  const filtered = useMemo(() => {
+  const filtered = (() => {
     let courses = allCourses
 
     const tab = tabs.find(t => t.value === activeTab)
@@ -57,11 +57,11 @@ export function Courses() {
     }
 
     return courses
-  }, [activeTab, searchQuery])
+  })()
 
-  const allTags = useMemo(() => getAllTags(), [getAllTags, importedCourses])
+  const allTags = getAllTags()
 
-  const filteredImportedCourses = useMemo(() => {
+  const filteredImportedCourses = (() => {
     let courses = importedCourses
 
     if (searchQuery.trim()) {
@@ -80,14 +80,10 @@ export function Courses() {
     }
 
     return courses
-  }, [importedCourses, searchQuery, selectedTopics, selectedStatuses])
+  })()
 
-  const sortedImportedCourses = useMemo(
-    () =>
-      [...filteredImportedCourses].sort(
-        (a, b) => new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime()
-      ),
-    [filteredImportedCourses]
+  const sortedImportedCourses = [...filteredImportedCourses].sort(
+    (a, b) => new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime()
   )
 
   async function handleImportCourse() {

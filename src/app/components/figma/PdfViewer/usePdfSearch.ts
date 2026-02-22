@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 
 export interface SearchMatch {
@@ -145,87 +145,81 @@ export function usePdfSearch(
     }
   }, [searchQuery, goToPage])
 
-  const openSearch = useCallback(() => {
+  const openSearch = () => {
     setSearchOpen(true)
-  }, [])
+  }
 
-  const closeSearch = useCallback(() => {
+  const closeSearch = () => {
     setSearchOpen(false)
     setSearchQueryState('')
     setMatches([])
     setActiveMatchIndex(0)
-  }, [])
+  }
 
-  const setSearchQuery = useCallback((query: string) => {
+  const setSearchQuery = (query: string) => {
     setSearchQueryState(query)
-  }, [])
+  }
 
-  const nextMatch = useCallback(() => {
+  const nextMatch = () => {
     if (matches.length === 0) return
 
     const nextIndex = (activeMatchIndex + 1) % matches.length
     setActiveMatchIndex(nextIndex)
     goToPage(matches[nextIndex].pageNumber)
-  }, [matches, activeMatchIndex, goToPage])
+  }
 
-  const prevMatch = useCallback(() => {
+  const prevMatch = () => {
     if (matches.length === 0) return
 
     const prevIndex =
       (activeMatchIndex - 1 + matches.length) % matches.length
     setActiveMatchIndex(prevIndex)
     goToPage(matches[prevIndex].pageNumber)
-  }, [matches, activeMatchIndex, goToPage])
+  }
 
-  const getHighlightsForPage = useCallback(
-    (pageNumber: number): Array<{ start: number; end: number; active: boolean }> => {
-      return matches
-        .map((match, idx) => ({ match, idx }))
-        .filter(({ match }) => match.pageNumber === pageNumber)
-        .map(({ match, idx }) => ({
-          start: match.index,
-          end: match.index + match.length,
-          active: idx === activeMatchIndex,
-        }))
-    },
-    [matches, activeMatchIndex]
-  )
+  const getHighlightsForPage = (pageNumber: number): Array<{ start: number; end: number; active: boolean }> => {
+    return matches
+      .map((match, idx) => ({ match, idx }))
+      .filter(({ match }) => match.pageNumber === pageNumber)
+      .map(({ match, idx }) => ({
+        start: match.index,
+        end: match.index + match.length,
+        active: idx === activeMatchIndex,
+      }))
+  }
 
-  const makeTextRenderer = useCallback(
-    (pageNumber: number): ((item: { str: string; itemIndex: number }) => string) | undefined => {
-      if (!searchQuery.trim() || matches.length === 0) return undefined
+  const makeTextRenderer = (pageNumber: number): ((item: { str: string; itemIndex: number }) => string) | undefined => {
+    if (!searchQuery.trim() || matches.length === 0) return undefined
 
-      const highlights = getHighlightsForPage(pageNumber)
-      if (highlights.length === 0) return undefined
+    const highlights = getHighlightsForPage(pageNumber)
+    if (highlights.length === 0) return undefined
 
-      const offsets = pageItemOffsetsRef.current[pageNumber - 1]
-      if (!offsets) return undefined
+    const offsets = pageItemOffsetsRef.current[pageNumber - 1]
+    if (!offsets) return undefined
 
-      return ({ str, itemIndex }: { str: string; itemIndex: number }) => {
-        const itemStart = offsets[itemIndex] ?? 0
-        const itemEnd = itemStart + str.length
+    return ({ str, itemIndex }: { str: string; itemIndex: number }) => {
+      const itemStart = offsets[itemIndex] ?? 0
+      const itemEnd = itemStart + str.length
 
-        const overlapping = highlights.filter(h => h.start < itemEnd && h.end > itemStart)
-        if (overlapping.length === 0) return str
+      const overlapping = highlights.filter(h => h.start < itemEnd && h.end > itemStart)
+      if (overlapping.length === 0) return str
 
-        let result = ''
-        let pos = 0
-        for (const h of overlapping) {
-          const hStart = Math.max(h.start - itemStart, 0)
-          const hEnd = Math.min(h.end - itemStart, str.length)
-          if (hStart > pos) {
-            result += str.slice(pos, hStart)
-          }
-          const cls = h.active ? 'bg-orange-400 rounded' : 'bg-yellow-300/70 rounded'
-          result += `<mark class="${cls}">${str.slice(hStart, hEnd)}</mark>`
-          pos = hEnd
+      let result = ''
+      let pos = 0
+      for (const h of overlapping) {
+        const hStart = Math.max(h.start - itemStart, 0)
+        const hEnd = Math.min(h.end - itemStart, str.length)
+        if (hStart > pos) {
+          result += str.slice(pos, hStart)
         }
-        result += str.slice(pos)
-        return result
+        const cls = h.active ? 'bg-orange-400 rounded' : 'bg-yellow-300/70 rounded'
+        result += `<mark class="${cls}">${str.slice(hStart, hEnd)}</mark>`
+        pos = hEnd
       }
-    },
-    [searchQuery, matches, getHighlightsForPage]
-  )
+      result += str.slice(pos)
+      return result
+    }
+  }
 
   return {
     searchOpen,

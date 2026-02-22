@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { Clock, CheckCircle, PlayCircle, ArrowRight } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
@@ -27,25 +27,23 @@ export default function MyClass() {
   const hasAnyCourses = inProgress.length > 0 || completed.length > 0 || notStarted.length > 0
 
   // Get all courses with their status
-  const allCoursesWithStatus = useMemo(() => {
-    return allCourses.map(course => {
-      const inProgressCourse = inProgress.find(c => c.id === course.id)
-      const completedCourse = completed.find(c => c.id === course.id)
+  const allCoursesWithStatus = allCourses.map(course => {
+    const inProgressCourse = inProgress.find(c => c.id === course.id)
+    const completedCourse = completed.find(c => c.id === course.id)
 
-      if (inProgressCourse) {
-        return {
-          ...course,
-          status: 'in-progress' as const,
-          completionPercent: inProgressCourse.completionPercent,
-          lastAccessedAt: inProgressCourse.progress.lastAccessedAt,
-        }
+    if (inProgressCourse) {
+      return {
+        ...course,
+        status: 'in-progress' as const,
+        completionPercent: inProgressCourse.completionPercent,
+        lastAccessedAt: inProgressCourse.progress.lastAccessedAt,
       }
-      if (completedCourse) {
-        return { ...course, status: 'completed' as const }
-      }
-      return { ...course, status: 'not-started' as const }
-    })
-  }, [inProgress, completed])
+    }
+    if (completedCourse) {
+      return { ...course, status: 'completed' as const }
+    }
+    return { ...course, status: 'not-started' as const }
+  })
 
   // Sort function
   const sortCourses = (courses: typeof allCoursesWithStatus) => {
@@ -83,7 +81,7 @@ export default function MyClass() {
   }
 
   // Group courses by category
-  const coursesByCategory = useMemo(() => {
+  const coursesByCategory = (() => {
     const groups: Record<string, typeof allCoursesWithStatus> = {}
     allCoursesWithStatus.forEach(course => {
       if (!groups[course.category]) {
@@ -92,10 +90,10 @@ export default function MyClass() {
       groups[course.category].push(course)
     })
     return groups
-  }, [allCoursesWithStatus])
+  })()
 
   // Group courses by difficulty
-  const coursesByDifficulty = useMemo(() => {
+  const coursesByDifficulty = (() => {
     const groups: Record<string, typeof allCoursesWithStatus> = {}
     allCoursesWithStatus.forEach(course => {
       if (!groups[course.difficulty]) {
@@ -104,21 +102,12 @@ export default function MyClass() {
       groups[course.difficulty].push(course)
     })
     return groups
-  }, [allCoursesWithStatus])
+  })()
 
   // Filter courses by status from allCoursesWithStatus
-  const inProgressWithStatus = useMemo(
-    () => allCoursesWithStatus.filter(c => c.status === 'in-progress'),
-    [allCoursesWithStatus]
-  )
-  const completedWithStatus = useMemo(
-    () => allCoursesWithStatus.filter(c => c.status === 'completed'),
-    [allCoursesWithStatus]
-  )
-  const notStartedWithStatus = useMemo(
-    () => allCoursesWithStatus.filter(c => c.status === 'not-started'),
-    [allCoursesWithStatus]
-  )
+  const inProgressWithStatus = allCoursesWithStatus.filter(c => c.status === 'in-progress')
+  const completedWithStatus = allCoursesWithStatus.filter(c => c.status === 'completed')
+  const notStartedWithStatus = allCoursesWithStatus.filter(c => c.status === 'not-started')
 
   if (!hasAnyCourses) {
     return (

@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import type { Chapter } from '@/data/types'
 
 function formatTime(seconds: number): string {
@@ -28,15 +27,12 @@ export function ChapterProgressBar({
   onSeek,
   onBookmarkSeek,
 }: ChapterProgressBarProps) {
-  const handleChapterClick = useCallback(
-    (e: React.MouseEvent, time: number) => {
-      e.stopPropagation()
-      if (duration > 0) {
-        onSeek((time / duration) * 100)
-      }
-    },
-    [duration, onSeek],
-  )
+  const handleChapterClick = (e: React.MouseEvent, time: number) => {
+    e.stopPropagation()
+    if (duration > 0) {
+      onSeek((time / duration) * 100)
+    }
+  }
 
   return (
     <div className="relative flex-1 py-3 -my-3 group/progress">

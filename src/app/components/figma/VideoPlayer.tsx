@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useState } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { flushSync } from 'react-dom'
 import {
   Play,
@@ -188,7 +188,7 @@ export function VideoPlayer({
   }, [seekToTime, onSeekComplete])
 
   // Restore initial position
-  const handleLoadedMetadata = useCallback(() => {
+  const handleLoadedMetadata = () => {
     if (videoRef.current) {
       setDuration(videoRef.current.duration)
       if (initialPosition && !hasRestoredPosition.current) {
@@ -196,28 +196,28 @@ export function VideoPlayer({
         hasRestoredPosition.current = true
       }
     }
-  }, [initialPosition])
+  }
 
   // Handle time updates
-  const handleTimeUpdate = useCallback(() => {
+  const handleTimeUpdate = () => {
     if (videoRef.current) {
       const time = videoRef.current.currentTime
       setCurrentTime(time)
       onTimeUpdate?.(time)
     }
-  }, [onTimeUpdate])
+  }
 
   // Handle video ended
-  const handleEnded = useCallback(() => {
+  const handleEnded = () => {
     setIsPlaying(false)
     onPlayStateChange?.(false)
     setShowControls(true)
     onEnded?.()
     announce('Video ended')
-  }, [onEnded, onPlayStateChange])
+  }
 
   // Play/Pause toggle
-  const togglePlayPause = useCallback(() => {
+  const togglePlayPause = () => {
     if (videoRef.current) {
       if (isPlaying) {
         videoRef.current.pause()
@@ -231,10 +231,10 @@ export function VideoPlayer({
         announce('Playing')
       }
     }
-  }, [isPlaying, onPlayStateChange])
+  }
 
   // Seek forward/backward
-  const seek = useCallback((seconds: number) => {
+  const seek = (seconds: number) => {
     if (videoRef.current) {
       const newTime = Math.max(
         0,
@@ -243,34 +243,31 @@ export function VideoPlayer({
       videoRef.current.currentTime = newTime
       setCurrentTime(newTime)
     }
-  }, [])
+  }
 
   // Change volume
-  const changeVolume = useCallback(
-    (delta: number) => {
-      if (videoRef.current) {
-        const newVolume = Math.max(0, Math.min(1, volume + delta))
-        setVolume(newVolume)
-        videoRef.current.volume = newVolume
-        setIsMuted(newVolume === 0)
-        announce(`Volume ${Math.round(newVolume * 100)}%`)
-      }
-    },
-    [volume]
-  )
+  const changeVolume = (delta: number) => {
+    if (videoRef.current) {
+      const newVolume = Math.max(0, Math.min(1, volume + delta))
+      setVolume(newVolume)
+      videoRef.current.volume = newVolume
+      setIsMuted(newVolume === 0)
+      announce(`Volume ${Math.round(newVolume * 100)}%`)
+    }
+  }
 
   // Toggle mute
-  const toggleMute = useCallback(() => {
+  const toggleMute = () => {
     if (videoRef.current) {
       const newMuted = !isMuted
       setIsMuted(newMuted)
       videoRef.current.muted = newMuted
       announce(newMuted ? 'Muted' : 'Unmuted')
     }
-  }, [isMuted])
+  }
 
   // Toggle fullscreen
-  const toggleFullscreen = useCallback(() => {
+  const toggleFullscreen = () => {
     if (!containerRef.current) return
 
     if (!isFullscreen) {
@@ -282,7 +279,7 @@ export function VideoPlayer({
         document.exitFullscreen()
       }
     }
-  }, [isFullscreen])
+  }
 
   // Listen for fullscreen changes
   useEffect(() => {
@@ -295,7 +292,7 @@ export function VideoPlayer({
   }, [])
 
   // Toggle captions
-  const toggleCaptions = useCallback(() => {
+  const toggleCaptions = () => {
     if (!captions || captions.length === 0) return
 
     const newEnabled = !captionsEnabled
@@ -310,66 +307,66 @@ export function VideoPlayer({
     }
 
     announce(newEnabled ? 'Captions enabled' : 'Captions disabled')
-  }, [captions, captionsEnabled])
+  }
 
   // Change playback speed
-  const changePlaybackSpeed = useCallback((speed: number) => {
+  const changePlaybackSpeed = (speed: number) => {
     setPlaybackSpeed(speed)
     localStorage.setItem(STORAGE_KEY_PLAYBACK_SPEED, speed.toString())
     announce(`Speed changed to ${speed}x`)
-  }, [])
+  }
 
   // Jump to percentage
-  const jumpToPercentage = useCallback((percentage: number) => {
+  const jumpToPercentage = (percentage: number) => {
     if (videoRef.current) {
       const newTime = (percentage / 100) * videoRef.current.duration
       videoRef.current.currentTime = newTime
       setCurrentTime(newTime)
       announce(`Jumped to ${percentage}%`)
     }
-  }, [])
+  }
 
   // ARIA announcement helper — clears after 3s so screen readers
   // have time to process and the next announcement triggers a fresh change
-  const announce = useCallback((message: string) => {
+  const announce = (message: string) => {
     clearTimeout(announceTimeoutRef.current)
     setAnnouncement(message)
     announceTimeoutRef.current = setTimeout(() => setAnnouncement(''), 3000)
-  }, [])
+  }
 
   // Buffering handlers (200ms debounce to avoid flicker on fast seeks)
-  const handleWaiting = useCallback(() => {
+  const handleWaiting = () => {
     bufferingTimeoutRef.current = setTimeout(() => setIsBuffering(true), 200)
-  }, [])
-  const handleCanPlay = useCallback(() => {
+  }
+  const handleCanPlay = () => {
     clearTimeout(bufferingTimeoutRef.current)
     setIsBuffering(false)
-  }, [])
+  }
 
   // Buffered ranges (progress event)
-  const handleProgress = useCallback(() => {
+  const handleProgress = () => {
     if (!videoRef.current) return
     const ranges: Array<{ start: number; end: number }> = []
     for (let i = 0; i < videoRef.current.buffered.length; i++) {
       ranges.push({ start: videoRef.current.buffered.start(i), end: videoRef.current.buffered.end(i) })
     }
     setBufferedRanges(ranges)
-  }, [])
+  }
 
   // Error handler
-  const handleVideoError = useCallback(() => setHasError(true), [])
+  const handleVideoError = () => setHasError(true)
 
   // Seek with overlay animation
-  const seekWithOverlay = useCallback((seconds: number) => {
+  const seekWithOverlay = (seconds: number) => {
     seek(seconds)
     const direction = seconds > 0 ? 'right' : 'left'
     clearTimeout(seekOverlayTimeoutRef.current)
     setSeekOverlay({ direction, amount: Math.abs(seconds), id: Date.now() })
     seekOverlayTimeoutRef.current = setTimeout(() => setSeekOverlay(null), 650)
-  }, [seek])
+  }
 
   // Add bookmark at current timestamp
-  const handleAddBookmark = useCallback(() => {
+  const handleAddBookmark = () => {
     if (onBookmarkAdd) {
       onBookmarkAdd(currentTime)
       announce(`Bookmark added at ${formatTime(currentTime)}`)
@@ -378,10 +375,10 @@ export function VideoPlayer({
       setJustBookmarked(true)
       bookmarkFlashRef.current = setTimeout(() => setJustBookmarked(false), 600)
     }
-  }, [onBookmarkAdd, currentTime, announce])
+  }
 
   // Toggle Picture-in-Picture
-  const togglePiP = useCallback(async () => {
+  const togglePiP = async () => {
     if (!videoRef.current) return
     try {
       if (document.pictureInPictureElement) {
@@ -392,7 +389,7 @@ export function VideoPlayer({
     } catch {
       announce('Picture-in-Picture not available')
     }
-  }, [announce])
+  }
 
   // PiP event listeners for state sync
   useEffect(() => {
@@ -651,7 +648,7 @@ export function VideoPlayer({
   ])
 
   // Auto-hide controls (mouse interaction — only hides when playing)
-  const resetControlsTimeout = useCallback(() => {
+  const resetControlsTimeout = () => {
     // Skip synthesized mouse events that follow touch events on mobile
     if (touchActiveRef.current) return
     setShowControls(true)
@@ -663,10 +660,10 @@ export function VideoPlayer({
         setShowControls(false)
       }, 3000)
     }
-  }, [isPlaying, speedMenuOpen, shortcutsOpen])
+  }
 
   // Touch-specific handler: always starts hide timeout + double-tap seek detection
-  const handleTouchShow = useCallback((e: React.TouchEvent) => {
+  const handleTouchShow = (e: React.TouchEvent) => {
     const touch = e.touches[0]
     const now = Date.now()
     const lastTap = lastTapRef.current
@@ -696,7 +693,7 @@ export function VideoPlayer({
         setShowControls(false)
       }, 3000)
     }
-  }, [speedMenuOpen, shortcutsOpen, seekWithOverlay])
+  }
 
   useEffect(() => {
     return () => {
@@ -716,26 +713,23 @@ export function VideoPlayer({
   }, [showControls])
 
   // Handle progress bar change (percent 0–100)
-  const handleProgressChange = useCallback(
-    (percent: number) => {
-      if (videoRef.current) {
-        const newTime = (percent / 100) * duration
-        videoRef.current.currentTime = newTime
-        setCurrentTime(newTime)
-      }
-    },
-    [duration]
-  )
+  const handleProgressChange = (percent: number) => {
+    if (videoRef.current) {
+      const newTime = (percent / 100) * duration
+      videoRef.current.currentTime = newTime
+      setCurrentTime(newTime)
+    }
+  }
 
   // Handle volume slider change
-  const handleVolumeChange = useCallback((value: number[]) => {
+  const handleVolumeChange = (value: number[]) => {
     const newVolume = value[0] / 100
     setVolume(newVolume)
     if (videoRef.current) {
       videoRef.current.volume = newVolume
       setIsMuted(newVolume === 0)
     }
-  }, [])
+  }
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0
 
