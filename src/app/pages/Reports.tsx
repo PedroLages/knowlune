@@ -171,15 +171,16 @@ export default function Reports() {
                   }: {
                     cx: number
                     cy: number
-                    midAngle: number
+                    midAngle?: number
                     outerRadius: number
-                    name: string
+                    name?: string | number
                     value: number
                   }) => {
                     const RADIAN = Math.PI / 180
+                    const angle = midAngle ?? 0
                     const radius = outerRadius + 20
-                    const x = cx + radius * Math.cos(-midAngle * RADIAN)
-                    const y = cy + radius * Math.sin(-midAngle * RADIAN)
+                    const x = cx + radius * Math.cos(-angle * RADIAN)
+                    const y = cy + radius * Math.sin(-angle * RADIAN)
                     return (
                       <text
                         x={x}
