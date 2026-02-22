@@ -16,9 +16,10 @@ interface ModuleAccordionProps {
   courseId: string
   completedLessons: string[]
   activeLessonId?: string
+  compact?: boolean
 }
 
-export function ModuleAccordion({ modules, courseId, completedLessons, activeLessonId }: ModuleAccordionProps) {
+export function ModuleAccordion({ modules, courseId, completedLessons, activeLessonId, compact }: ModuleAccordionProps) {
   // Controlled accordion — auto-expand module containing the active lesson
   const [openModules, setOpenModules] = useState<string[]>(() => {
     if (!activeLessonId) return []
@@ -54,7 +55,7 @@ export function ModuleAccordion({ modules, courseId, completedLessons, activeLes
                     </Badge>
                   )}
                 </div>
-                {module.description && (
+                {!compact && module.description && (
                   <span className="text-xs text-muted-foreground">{module.description}</span>
                 )}
               </div>

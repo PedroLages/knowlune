@@ -96,13 +96,19 @@ export function NoteEditor({
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  // Latest-ref pattern: keep stable refs to avoid stale closures in effects
+  const contentRef = useRef(content)
+  const onSaveRef = useRef(onSave)
+  useEffect(() => { contentRef.current = content })
+  useEffect(() => { onSaveRef.current = onSave })
+
   // Update content when initialContent changes (e.g., lesson navigation)
   useEffect(() => {
     setContent(initialContent)
     setExtractedTags(extractTags(initialContent))
   }, [initialContent, courseId, lessonId])
 
-  // Debounced autosave (3 seconds)
+  // Debounced autosave (3 seconds) — only depends on content
   useEffect(() => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current)
@@ -111,7 +117,7 @@ export function NoteEditor({
     saveTimeoutRef.current = setTimeout(() => {
       const tags = extractTags(content)
       setExtractedTags(tags)
-      onSave?.(content, tags)
+      onSaveRef.current?.(content, tags)
     }, 3000)
 
     return () => {
@@ -119,18 +125,18 @@ export function NoteEditor({
         clearTimeout(saveTimeoutRef.current)
       }
     }
-  }, [content, onSave])
+  }, [content])
 
-  // Force save on unmount
+  // Force save on TRUE unmount only (empty deps = runs only once on mount/unmount)
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current)
       }
-      const tags = extractTags(content)
-      onSave?.(content, tags)
+      const tags = extractTags(contentRef.current)
+      onSaveRef.current?.(contentRef.current, tags)
     }
-  }, [content, onSave])
+  }, [])
 
   const handleContentChange = useCallback((value: string) => {
     setContent(value)

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router'
-import { Search, Bell, ChevronDown, Sun, Moon, Menu } from 'lucide-react'
+import { Search, Bell, ChevronDown, ChevronLeft, ChevronRight, Sun, Moon, Menu } from 'lucide-react'
 import { LevelUpLogo } from './figma/LevelUpLogo'
 import { Avatar, AvatarFallback } from './ui/avatar'
 import { useTheme } from 'next-themes'
@@ -13,14 +13,37 @@ import { Sheet, SheetContent } from './ui/sheet'
 import { navigationItems } from '@/app/config/navigation'
 
 // Reusable sidebar content component
-function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarContent({
+  onNavigate,
+  iconOnly,
+  onToggleCollapse,
+}: {
+  onNavigate?: () => void
+  iconOnly?: boolean
+  onToggleCollapse?: () => void
+}) {
   const location = useLocation()
 
   return (
     <>
       {/* Logo */}
-      <div className="mb-8">
-        <LevelUpLogo />
+      <div className={iconOnly ? 'mb-8 flex justify-center' : 'mb-8'}>
+        {iconOnly ? (
+          <svg
+            viewBox="0 0 60 60"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-8 h-8"
+            aria-label="LevelUp"
+          >
+            <rect x="0" y="40" width="60" height="20" fill="currentColor" />
+            <rect x="24" y="22" width="36" height="18" fill="currentColor" />
+            <rect x="34" y="6" width="12" height="16" fill="currentColor" />
+            <polygon points="40,0 22,6 58,6" fill="currentColor" />
+          </svg>
+        ) : (
+          <LevelUpLogo />
+        )}
       </div>
 
       {/* Navigation */}
@@ -39,12 +62,15 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                   to={item.path}
                   onClick={onNavigate}
                   aria-current={isActive ? 'page' : undefined}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-150 ${
+                  title={iconOnly ? item.name : undefined}
+                  className={`flex items-center rounded-xl transition-colors duration-150 ${
+                    iconOnly ? 'justify-center py-3 mx-2' : 'gap-3 px-4 py-3'
+                  } ${
                     isActive ? 'bg-brand text-brand-foreground' : 'text-muted-foreground hover:bg-accent'
                   }`}
                 >
                   <Icon className="w-5 h-5" aria-hidden="true" />
-                  <span className="text-sm font-medium">{item.name}</span>
+                  {!iconOnly && <span className="text-sm font-medium">{item.name}</span>}
                 </Link>
               </li>
             )
@@ -52,8 +78,26 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </ul>
       </nav>
 
-      {/* Progress Widget */}
-      <ProgressWidget />
+      {/* Progress Widget — hidden in icon-only mode */}
+      {!iconOnly && <ProgressWidget />}
+
+      {/* Collapse toggle button */}
+      {onToggleCollapse && (
+        <div className={`mt-4 pt-4 border-t border-border ${iconOnly ? 'flex justify-center' : 'flex justify-end'}`}>
+          <button
+            onClick={onToggleCollapse}
+            title={iconOnly ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={iconOnly ? 'Expand sidebar' : 'Collapse sidebar'}
+            className="p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors duration-150"
+          >
+            {iconOnly ? (
+              <ChevronRight className="w-4 h-4" aria-hidden="true" />
+            ) : (
+              <ChevronLeft className="w-4 h-4" aria-hidden="true" />
+            )}
+          </button>
+        </div>
+      )}
     </>
   )
 }
@@ -68,31 +112,34 @@ export function Layout() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
 
-  // Tablet sidebar state with localStorage persistence
+  // Tablet sidebar sheet state with localStorage persistence
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     const saved = localStorage.getItem('eduvi-sidebar-v1')
-    return saved !== null ? JSON.parse(saved) : true // Default to open
+    return saved !== null ? JSON.parse(saved) : true
+  })
+
+  // Desktop sidebar collapsed state with localStorage persistence
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem('eduvi-sidebar-collapsed-v1')
+    return saved !== null ? JSON.parse(saved) : false
   })
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       const isMod = e.metaKey || e.ctrlKey
 
-      // Cmd+K / Ctrl+K -> Open search
       if (isMod && e.key === 'k') {
         e.preventDefault()
         setSearchOpen(prev => !prev)
         return
       }
 
-      // Cmd+, / Ctrl+, -> Navigate to Settings
       if (isMod && e.key === ',') {
         e.preventDefault()
         navigate('/settings')
         return
       }
 
-      // ? -> Show keyboard shortcuts (only when not in an input/textarea/contenteditable)
       if (e.key === '?' && !isMod) {
         const target = e.target as HTMLElement
         const tagName = target.tagName.toLowerCase()
@@ -111,10 +158,14 @@ export function Layout() {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
 
-  // Persist sidebar state to localStorage
+  // Persist sidebar states to localStorage
   useEffect(() => {
     localStorage.setItem('eduvi-sidebar-v1', JSON.stringify(sidebarOpen))
   }, [sidebarOpen])
+
+  useEffect(() => {
+    localStorage.setItem('eduvi-sidebar-collapsed-v1', JSON.stringify(sidebarCollapsed))
+  }, [sidebarCollapsed])
 
   return (
     <div className="flex h-screen bg-background">
@@ -126,14 +177,17 @@ export function Layout() {
         Skip to content
       </a>
 
-      {/* Desktop Sidebar - Persistent on desktop (≥1024px), hidden on tablet/mobile */}
+      {/* Desktop Sidebar - Persistent on desktop (≥1024px), collapsible by user */}
       {isDesktop && (
         <aside
           data-theater-hide
-          className="w-[220px] bg-card m-6 p-6 flex flex-col"
+          className={`${sidebarCollapsed ? 'w-[72px] px-0 py-6' : 'w-[220px] p-6'} bg-card m-6 flex flex-col overflow-hidden transition-[width] duration-200`}
           aria-label="Sidebar"
         >
-          <SidebarContent />
+          <SidebarContent
+            iconOnly={sidebarCollapsed}
+            onToggleCollapse={() => setSidebarCollapsed(prev => !prev)}
+          />
         </aside>
       )}
 
@@ -147,7 +201,7 @@ export function Layout() {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Header */}
         <header
           className="bg-card m-6 mb-0 p-4 px-6 flex items-center gap-4 justify-between"
