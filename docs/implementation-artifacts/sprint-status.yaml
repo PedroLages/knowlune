@@ -57,7 +57,7 @@ development_status:
   2-7-skip-controls-pip-shortcuts-help: done
   2-8-chapter-progress-bar-transcript-panel: done
   2-9-mini-player-theater-mode: done
-  epic-2-retrospective: optional
+  epic-2-retrospective: done
 
   # Epic 3: Note-Taking & Knowledge Capture (11 stories)
   epic-3: backlog
