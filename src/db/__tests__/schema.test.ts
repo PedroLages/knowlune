@@ -46,14 +46,16 @@ describe('ElearningDB schema', () => {
   it('should create the database with correct tables', async () => {
     expect(db.name).toBe('ElearningDB')
     expect(db.tables.map(t => t.name).sort()).toEqual([
+      'bookmarks',
       'importedCourses',
       'importedPdfs',
       'importedVideos',
+      'progress',
     ])
   })
 
-  it('should be at version 2', () => {
-    expect(db.verno).toBe(2)
+  it('should be at version 3', () => {
+    expect(db.verno).toBe(3)
   })
 })
 

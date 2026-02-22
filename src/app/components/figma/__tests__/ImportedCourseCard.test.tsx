@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router'
 import { ImportedCourseCard } from '../ImportedCourseCard'
 import type { ImportedCourse } from '@/data/types'
 
@@ -31,7 +32,11 @@ function makeCourse(overrides: Partial<ImportedCourse> = {}): ImportedCourse {
 }
 
 function renderCard(overrides: Partial<ImportedCourse> = {}, allTags: string[] = []) {
-  return render(<ImportedCourseCard course={makeCourse(overrides)} allTags={allTags} />)
+  return render(
+    <MemoryRouter>
+      <ImportedCourseCard course={makeCourse(overrides)} allTags={allTags} />
+    </MemoryRouter>
+  )
 }
 
 beforeEach(() => {
@@ -142,12 +147,12 @@ describe('ImportedCourseCard', () => {
       expect(badgeEl?.className).toMatch(/bg-blue-100/)
       expect(badgeEl?.className).toMatch(/text-blue-700/)
 
-      rerender(<ImportedCourseCard course={makeCourse({ status: 'completed' })} allTags={[]} />)
+      rerender(<MemoryRouter><ImportedCourseCard course={makeCourse({ status: 'completed' })} allTags={[]} /></MemoryRouter>)
       badgeEl = container.querySelector('[data-testid="status-badge"] > span')
       expect(badgeEl?.className).toMatch(/bg-green-100/)
       expect(badgeEl?.className).toMatch(/text-green-700/)
 
-      rerender(<ImportedCourseCard course={makeCourse({ status: 'paused' })} allTags={[]} />)
+      rerender(<MemoryRouter><ImportedCourseCard course={makeCourse({ status: 'paused' })} allTags={[]} /></MemoryRouter>)
       badgeEl = container.querySelector('[data-testid="status-badge"] > span')
       expect(badgeEl?.className).toMatch(/bg-gray-100/)
       expect(badgeEl?.className).toMatch(/text-gray-400/)
