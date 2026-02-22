@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from '@/app/components/ui/select'
 import { ProgressStats } from '@/app/components/ProgressStats'
-import { ProgressCourseCard } from '@/app/components/ProgressCourseCard'
+import { CourseCard } from '@/app/components/figma/CourseCard'
 import { allCourses } from '@/data/courses'
 import { getCoursesInProgress, getCompletedCourses, getNotStartedCourses } from '@/lib/progress'
 
@@ -178,9 +178,10 @@ export default function MyClass() {
                       // Type guard: course is guaranteed to be in-progress status
                       if (course.status !== 'in-progress') return null
                       return (
-                        <ProgressCourseCard
+                        <CourseCard
                           key={course.id}
                           course={course}
+                          variant="progress"
                           status="in-progress"
                           completionPercent={course.completionPercent}
                           lastAccessedAt={course.lastAccessedAt}
@@ -201,7 +202,7 @@ export default function MyClass() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 stagger-children">
                     {sortCourses(completedWithStatus).map(course => (
-                      <ProgressCourseCard key={course.id} course={course} status="completed" />
+                      <CourseCard key={course.id} course={course} variant="progress" status="completed" />
                     ))}
                   </div>
                 </section>
@@ -217,7 +218,7 @@ export default function MyClass() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 stagger-children">
                     {sortCourses(notStartedWithStatus).map(course => (
-                      <ProgressCourseCard key={course.id} course={course} status="not-started" />
+                      <CourseCard key={course.id} course={course} variant="progress" status="not-started" />
                     ))}
                   </div>
                 </section>
@@ -244,9 +245,10 @@ export default function MyClass() {
             <TabsContent value="all">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {sortCourses(allCoursesWithStatus).map(course => (
-                  <ProgressCourseCard
+                  <CourseCard
                     key={course.id}
                     course={course}
+                    variant="progress"
                     status={course.status}
                     completionPercent={'completionPercent' in course ? course.completionPercent : 0}
                     lastAccessedAt={'lastAccessedAt' in course ? course.lastAccessedAt : undefined}
@@ -262,9 +264,10 @@ export default function MyClass() {
                   <h2 className="text-lg font-semibold mb-4">{category}</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                     {sortCourses(courses).map(course => (
-                      <ProgressCourseCard
+                      <CourseCard
                         key={course.id}
                         course={course}
+                        variant="progress"
                         status={course.status}
                         completionPercent={
                           'completionPercent' in course ? course.completionPercent : 0
@@ -290,9 +293,10 @@ export default function MyClass() {
                     <h2 className="text-lg font-semibold mb-4">{difficulty}</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                       {sortCourses(courses).map(course => (
-                        <ProgressCourseCard
+                        <CourseCard
                           key={course.id}
                           course={course}
+                          variant="progress"
                           status={course.status}
                           completionPercent={
                             'completionPercent' in course ? course.completionPercent : 0

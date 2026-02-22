@@ -10,7 +10,7 @@ import { RecentActivity } from '@/app/components/RecentActivity'
 import { StatsCard } from '@/app/components/StatsCard'
 import { QuickActions } from '@/app/components/QuickActions'
 import { StudyStreakCalendar } from '@/app/components/StudyStreakCalendar'
-import { EnhancedCourseCard } from '@/app/components/figma/EnhancedCourseCard'
+import { CourseCard } from '@/app/components/figma/CourseCard'
 import { ProgressChart } from '@/app/components/charts/ProgressChart'
 import { allCourses } from '@/data/courses'
 import {
@@ -22,6 +22,7 @@ import {
   getLast7DaysLessonCompletions,
   getWeeklyChange,
   getAllProgress,
+  getCourseCompletionPercent,
 } from '@/lib/progress'
 import { getActionsPerDay } from '@/lib/studyLog'
 
@@ -233,7 +234,12 @@ export function Overview() {
         <h2 className="text-lg font-semibold mb-4">All Courses</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {allCourses.map(course => (
-            <EnhancedCourseCard key={course.id} course={course} />
+            <CourseCard
+              key={course.id}
+              course={course}
+              variant="overview"
+              completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
+            />
           ))}
         </div>
       </section>
