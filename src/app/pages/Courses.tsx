@@ -207,7 +207,7 @@ export function Courses() {
           ) : (
             <div
               data-testid="imported-courses-grid"
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
             >
               {sortedImportedCourses.map(course => (
                 <ImportedCourseCard key={course.id} course={course} allTags={allTags} />
@@ -233,7 +233,7 @@ export function Courses() {
                 No courses match your search
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                 {filtered.map(course => (
                   <CourseCard
                     key={course.id}

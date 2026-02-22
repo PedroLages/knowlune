@@ -38,9 +38,9 @@ export function CourseCard({ course, completionPercent }: CourseCardProps) {
   return (
     <Link
       to={lessonLink}
-      className="rounded-[24px] focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none block"
+      className="rounded-[24px] focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none block h-full"
     >
-      <Card className="group bg-card border-0 shadow-sm overflow-hidden hover:shadow-xl hover:scale-[1.02] transition-all duration-300 motion-reduce:hover:scale-100 cursor-pointer">
+      <Card className="group bg-card border-0 shadow-sm overflow-hidden hover:shadow-xl hover:scale-[1.02] transition-all duration-300 motion-reduce:hover:scale-100 cursor-pointer h-full flex flex-col">
         <div className="relative h-44 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/50 dark:to-indigo-950/50 flex items-center justify-center overflow-hidden">
           {course.coverImage ? (
             <picture className="absolute inset-0">
@@ -96,13 +96,13 @@ export function CourseCard({ course, completionPercent }: CourseCardProps) {
           </Badge>
         </div>
 
-        <div className="p-5">
+        <div className="p-5 flex flex-col flex-1">
           <h3 className="font-semibold text-base mb-1 group-hover:text-brand transition-colors line-clamp-2">
             {course.title}
           </h3>
           <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{course.description}</p>
 
-          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-auto">
             <span className="flex items-center gap-1">
               <Video className="h-3.5 w-3.5" aria-hidden="true" />
               {course.totalVideos} videos

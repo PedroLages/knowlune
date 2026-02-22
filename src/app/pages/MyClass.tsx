@@ -184,7 +184,7 @@ export default function MyClass() {
                       In Progress
                     </h2>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 stagger-children">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 stagger-children">
                     {sortCourses(inProgressWithStatus).map(course => {
                       // Type guard: course is guaranteed to be in-progress status
                       if (course.status !== 'in-progress') return null
@@ -210,7 +210,7 @@ export default function MyClass() {
                       Completed
                     </h2>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 stagger-children">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 stagger-children">
                     {sortCourses(completedWithStatus).map(course => (
                       <ProgressCourseCard key={course.id} course={course} status="completed" />
                     ))}
@@ -226,7 +226,7 @@ export default function MyClass() {
                       Not Started
                     </h2>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 stagger-children">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 stagger-children">
                     {sortCourses(notStartedWithStatus).map(course => (
                       <ProgressCourseCard key={course.id} course={course} status="not-started" />
                     ))}
@@ -253,7 +253,7 @@ export default function MyClass() {
 
             {/* All Courses View */}
             <TabsContent value="all">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {sortCourses(allCoursesWithStatus).map(course => (
                   <ProgressCourseCard
                     key={course.id}
@@ -271,7 +271,7 @@ export default function MyClass() {
               {Object.entries(coursesByCategory).map(([category, courses]) => (
                 <section key={category} className="mb-8">
                   <h2 className="text-lg font-semibold mb-4">{category}</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                     {sortCourses(courses).map(course => (
                       <ProgressCourseCard
                         key={course.id}
@@ -299,7 +299,7 @@ export default function MyClass() {
                 return (
                   <section key={difficulty} className="mb-8">
                     <h2 className="text-lg font-semibold mb-4">{difficulty}</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                       {sortCourses(courses).map(course => (
                         <ProgressCourseCard
                           key={course.id}

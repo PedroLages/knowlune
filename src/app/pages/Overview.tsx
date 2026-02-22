@@ -120,7 +120,7 @@ export function Overview() {
 
         {/* All Courses Skeleton */}
         <Skeleton className="h-6 w-32 mb-4" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
             <div key={i} className="rounded-2xl border overflow-hidden">
               <Skeleton className="w-full h-32" />
@@ -231,7 +231,7 @@ export function Overview() {
       {/* All Courses */}
       <section>
         <h2 className="text-lg font-semibold mb-4">All Courses</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {allCourses.map(course => (
             <EnhancedCourseCard key={course.id} course={course} />
           ))}

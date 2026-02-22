@@ -28,9 +28,9 @@ export function EnhancedCourseCard({ course }: EnhancedCourseCardProps) {
     : `/courses/${course.id}`
 
   return (
-    <Link to={lessonLink}>
-      <Card className="group hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer overflow-hidden border-2 border-transparent hover:border-blue-200">
-        <CardContent className="p-0">
+    <Link to={lessonLink} className="block h-full">
+      <Card className="group hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer overflow-hidden border-2 border-transparent hover:border-blue-200 h-full flex flex-col">
+        <CardContent className="p-0 flex flex-col flex-1">
           {/* Cover Image */}
           <div className="relative">
             {course.coverImage ? (
@@ -74,7 +74,7 @@ export function EnhancedCourseCard({ course }: EnhancedCourseCardProps) {
           </div>
 
           {/* Card Content */}
-          <div className="p-5">
+          <div className="p-5 flex-1 flex flex-col">
             {/* Category Badge */}
             <Badge
               variant="secondary"
@@ -89,7 +89,7 @@ export function EnhancedCourseCard({ course }: EnhancedCourseCardProps) {
             </h3>
 
             {/* Metadata */}
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto">
               <span className="flex items-center gap-1">
                 <Play className="h-3.5 w-3.5" aria-hidden="true" />
                 {totalLessons} {totalLessons === 1 ? 'lesson' : 'lessons'}
