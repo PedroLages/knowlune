@@ -224,7 +224,7 @@ Key learnings from Epic 1 that apply to this story:
 
 ## Implementation Plan
 
-See [plan](/Users/pedro/.claude/plans/sorted-exploring-floyd.md) for implementation approach.
+See [plan](/Users/pedro/.claude/plans/agile-forging-gem.md) for implementation approach.
 
 ## Dev Agent Record
 
