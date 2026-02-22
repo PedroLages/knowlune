@@ -1,6 +1,7 @@
 import { Course, Note } from '@/data/types'
 import { db } from '@/db'
 import { logStudyAction, getStudyLog } from './studyLog'
+import { addToIndex, updateInIndex, removeFromIndex } from '@/lib/noteSearch'
 
 const STORAGE_KEY = 'course-progress'
 const MINUTES_PER_LESSON = 15
@@ -219,15 +220,18 @@ export async function saveNote(
   videoTimestamp?: number
 ): Promise<void> {
   try {
-    const existing = await db.notes.where({ videoId: lessonId }).first()
+    const existing = await db.notes.where({ courseId, videoId: lessonId }).first()
 
     if (existing) {
-      await db.notes.update(existing.id, {
+      const updated = {
+        ...existing,
         content,
         tags,
         updatedAt: new Date().toISOString(),
         ...(videoTimestamp !== undefined ? { timestamp: videoTimestamp } : {}),
-      })
+      }
+      await db.notes.update(existing.id, updated)
+      updateInIndex(updated)
     } else {
       const newNote: Note = {
         id: crypto.randomUUID(),
@@ -240,6 +244,7 @@ export async function saveNote(
         tags,
       }
       await db.notes.add(newNote)
+      addToIndex(newNote)
     }
 
     logStudyAction({ type: 'note_saved', courseId, lessonId, timestamp: new Date().toISOString() })
@@ -292,6 +297,7 @@ export async function addNote(
 
   try {
     await db.notes.add(newNote)
+    addToIndex(newNote)
     logStudyAction({ type: 'note_saved', courseId, lessonId, timestamp: new Date().toISOString() })
   } catch (error) {
     console.error('[Progress] Failed to add note to Dexie:', error)
@@ -306,6 +312,7 @@ export async function addNote(
 export async function deleteNote(_courseId: string, _lessonId: string, noteId: string): Promise<void> {
   try {
     await db.notes.delete(noteId)
+    removeFromIndex(noteId)
   } catch (error) {
     console.error('[Progress] Failed to delete note from Dexie:', error)
   }

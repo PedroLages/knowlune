@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/app/components/ui/card'
 import { Progress } from '@/app/components/ui/progress'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
+import { cn } from '@/app/components/ui/utils'
 import { Course, CourseCategory } from '@/data/types'
 import { getProgress } from '@/lib/progress'
 
@@ -70,7 +71,7 @@ export function ProgressCourseCard({
   lastAccessedAt,
 }: ProgressCourseCardProps) {
   const navigate = useNavigate()
-const totalLessons = course.modules.reduce((sum, m) => sum + m.lessons.length, 0)
+  const totalLessons = course.modules.reduce((sum, m) => sum + m.lessons.length, 0)
   const firstLesson = course.modules[0]?.lessons[0]?.id
   const resumeLesson = getProgress(course.id).lastWatchedLesson ?? firstLesson
   const lessonLink = resumeLesson
@@ -79,14 +80,21 @@ const totalLessons = course.modules.reduce((sum, m) => sum + m.lessons.length, 0
 
   return (
     <Card
+      tabIndex={0}
+      role="link"
+      aria-label={course.title}
       onClick={() => navigate(lessonLink)}
-      className={`group card-hover-lift h-full cursor-pointer ${
-        status === 'completed'
-          ? 'border-green-200 dark:border-green-800'
-          : status === 'not-started'
-            ? 'opacity-80 hover:opacity-100'
-            : ''
-      }`}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          navigate(lessonLink)
+        }
+      }}
+      className={cn(
+        'group card-hover-lift h-full cursor-pointer focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none',
+        status === 'completed' && 'border-green-200 dark:border-green-800',
+        status === 'not-started' && 'opacity-80 hover:opacity-100'
+      )}
     >
       <CardContent className="p-0 flex flex-col h-full">
         {/* Image with hover play overlay */}
@@ -133,13 +141,11 @@ const totalLessons = course.modules.reduce((sum, m) => sum + m.lessons.length, 0
             </Badge>
             <Badge
               variant={getDifficultyBadgeVariant(course.difficulty)}
-              className={`badge-entrance ${
-                course.difficulty.toLowerCase() === 'beginner'
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 hover:bg-green-100 dark:hover:bg-green-900'
-                  : course.difficulty.toLowerCase() === 'intermediate'
-                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100 hover:bg-amber-100 dark:hover:bg-amber-900'
-                    : ''
-              }`}
+              className={cn(
+                'badge-entrance',
+                course.difficulty.toLowerCase() === 'beginner' && 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 hover:bg-green-100 dark:hover:bg-green-900',
+                course.difficulty.toLowerCase() === 'intermediate' && 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100 hover:bg-amber-100 dark:hover:bg-amber-900'
+              )}
             >
               {course.difficulty}
             </Badge>

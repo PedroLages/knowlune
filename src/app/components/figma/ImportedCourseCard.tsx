@@ -148,7 +148,7 @@ export function ImportedCourseCard({ course, allTags }: ImportedCourseCardProps)
           <div className="p-5">
             <h3
               data-testid="course-card-title"
-              className="font-bold text-base mb-1 line-clamp-2 group-hover:text-[#2563eb]"
+              className="font-bold text-base mb-1 line-clamp-2 group-hover:text-brand"
             >
               {course.name}
             </h3>

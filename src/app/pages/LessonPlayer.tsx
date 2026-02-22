@@ -54,12 +54,6 @@ export function LessonPlayer() {
   )
   const [noteText, setNoteText] = useState('')
 
-  // Load note from Dexie on mount
-  useEffect(() => {
-    if (courseId && lessonId) {
-      getNote(courseId, lessonId).then(setNoteText)
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [seekToTime, setSeekToTime] = useState<number | undefined>(undefined)
   const [bookmarks, setBookmarks] = useState<import('@/data/types').VideoBookmark[]>([])
 

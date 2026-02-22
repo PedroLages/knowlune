@@ -47,8 +47,8 @@ db.version(4)
     importedVideos: 'id, courseId, filename',
     importedPdfs: 'id, courseId, filename',
     progress: '[courseId+videoId], courseId, videoId',
-    bookmarks: 'id, courseId, lessonId, createdAt',
-    notes: 'id, courseId, &videoId, *tags, createdAt, updatedAt',
+    bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+    notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
   })
   .upgrade(async tx => {
     try {
@@ -103,6 +103,7 @@ db.version(4)
       console.log(`[Migration] Migrated ${notesToInsert.length} notes and ${bookmarkCount} bookmarks to IndexedDB`)
     } catch (error) {
       console.error('[Migration] Failed:', error)
+      throw error
     }
   })
 

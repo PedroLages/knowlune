@@ -91,7 +91,7 @@ describe('ImportedCourseCard', () => {
 
   it('has group-hover title color change', () => {
     const { container } = renderCard()
-    const title = container.querySelector('.group-hover\\:text-\\[\\#2563eb\\]')
+    const title = container.querySelector('.group-hover\\:text-brand')
     expect(title).toBeInTheDocument()
   })
 

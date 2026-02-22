@@ -217,11 +217,14 @@ describe('notes table (v4)', () => {
     expect(retrieved!.content).toBe('Study notes on influence')
   })
 
-  it('should enforce unique videoId index', async () => {
+  it('should allow same videoId across different courses via compound index', async () => {
     const videoId = 'lesson-1'
-    await db.notes.add(makeNote({ videoId }))
+    await db.notes.add(makeNote({ courseId: 'course-a', videoId }))
+    await db.notes.add(makeNote({ courseId: 'course-b', videoId }))
 
-    await expect(db.notes.add(makeNote({ videoId }))).rejects.toThrow()
+    const results = await db.notes.where({ courseId: 'course-a', videoId }).toArray()
+    expect(results).toHaveLength(1)
+    expect(results[0].courseId).toBe('course-a')
   })
 
   it('should query notes by courseId index', async () => {
@@ -246,11 +249,11 @@ describe('notes table (v4)', () => {
     expect(reactNotes[0].tags).toContain('react')
   })
 
-  it('should query notes by videoId unique index', async () => {
-    const note = makeNote({ videoId: 'unique-lesson' })
+  it('should query notes by compound [courseId+videoId] index', async () => {
+    const note = makeNote({ courseId: 'c1', videoId: 'unique-lesson' })
     await db.notes.add(note)
 
-    const result = await db.notes.where('videoId').equals('unique-lesson').first()
+    const result = await db.notes.where({ courseId: 'c1', videoId: 'unique-lesson' }).first()
     expect(result).toBeDefined()
     expect(result!.id).toBe(note.id)
   })

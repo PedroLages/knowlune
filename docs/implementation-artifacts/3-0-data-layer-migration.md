@@ -4,9 +4,9 @@ story_name: "Data Layer Migration (Notes & Bookmarks)"
 status: in-progress
 started: 2026-02-22
 completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+reviewed: in-progress
+review_started: 2026-02-22
+review_gates_passed: [pre-checks, design-review, code-review]
 ---
 
 # Story 3.0: Data Layer Migration (Notes & Bookmarks)
@@ -69,11 +69,11 @@ So that I don't lose any data when the platform upgrades its storage engine.
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+See [design review report](../reviews/design/design-review-2026-02-22-E03-S00.md) — 2 blockers, 2 high, 2 medium, 2 nits.
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+See [code review report](../reviews/code/code-review-2026-02-22-E03-S00.md) — 2 blockers, 3 high, 3 medium, 2 nits.
 
 ## Challenges and Lessons Learned
 

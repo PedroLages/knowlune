@@ -28,7 +28,7 @@ export function EnhancedCourseCard({ course }: EnhancedCourseCardProps) {
     : `/courses/${course.id}`
 
   return (
-    <Link to={lessonLink} className="block h-full">
+    <Link to={lessonLink} className="rounded-[24px] focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none block h-full">
       <Card className="group hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer overflow-hidden border-2 border-transparent hover:border-blue-200 h-full flex flex-col">
         <CardContent className="p-0 flex flex-col flex-1">
           {/* Cover Image */}

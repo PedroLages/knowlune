@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { db } from '@/db'
 import type { Note } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
+import { addToIndex, updateInIndex, removeFromIndex } from '@/lib/noteSearch'
 
 interface NoteState {
   notes: Note[]
@@ -74,6 +75,11 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       await persistWithRetry(async () => {
         await db.notes.put(note)
       })
+      if (existingIndex >= 0) {
+        updateInIndex(note)
+      } else {
+        addToIndex(note)
+      }
     } catch (error) {
       // Rollback on failure
       set({ notes: oldNotes, error: 'Failed to save note' })
@@ -91,6 +97,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       await persistWithRetry(async () => {
         await db.notes.add(note)
       })
+      addToIndex(note)
     } catch (error) {
       // Rollback on failure
       set({
@@ -115,6 +122,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       await persistWithRetry(async () => {
         await db.notes.delete(noteId)
       })
+      removeFromIndex(noteId)
     } catch (error) {
       // Rollback on failure
       if (noteToDelete) {
