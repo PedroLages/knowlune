@@ -125,8 +125,9 @@ export function LessonPlayer() {
   }, [lessonId])
 
   // Focus management for accessibility
+  // preventScroll: true so focus doesn't undo the scroll-to-top effect above
   useEffect(() => {
-    titleRef.current?.focus()
+    titleRef.current?.focus({ preventScroll: true })
   }, [lessonId])
 
   // Resume toast — show "Resuming from MM:SS" when restoring a saved position
