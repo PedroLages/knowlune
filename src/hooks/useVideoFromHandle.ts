@@ -17,15 +17,15 @@ export function useVideoFromHandle(handle: FileSystemFileHandle | null | undefin
     async function load() {
       setState({ blobUrl: null, error: null, loading: true })
       try {
-        const permission = await handle.queryPermission({ mode: 'read' })
+        const permission = await handle!.queryPermission({ mode: 'read' })
         if (permission !== 'granted') {
-          const result = await handle.requestPermission({ mode: 'read' })
+          const result = await handle!.requestPermission({ mode: 'read' })
           if (result !== 'granted') {
             if (!cancelled) setState({ blobUrl: null, error: 'permission-denied', loading: false })
             return
           }
         }
-        const file = await handle.getFile()
+        const file = await handle!.getFile()
         objectUrl = URL.createObjectURL(file)
         if (!cancelled) setState({ blobUrl: objectUrl, error: null, loading: false })
       } catch {

@@ -96,7 +96,7 @@ export function VideoPlayer({
   const [justBookmarked, setJustBookmarked] = useState(false)
   const [isBuffering, setIsBuffering] = useState(false)
   const [hasError, setHasError] = useState(false)
-  const [bufferedRanges, setBufferedRanges] = useState<Array<{ start: number; end: number }>>([])
+  const [, setBufferedRanges] = useState<Array<{ start: number; end: number }>>([])
 
   type SeekOverlayState = { direction: 'left' | 'right'; amount: number; id: number } | null
   const [seekOverlay, setSeekOverlay] = useState<SeekOverlayState>(null)

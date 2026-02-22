@@ -1,7 +1,7 @@
 const STORAGE_KEY = 'study-log'
 
 export interface StudyAction {
-  type: 'lesson_complete' | 'video_progress' | 'note_saved' | 'course_started'
+  type: 'lesson_complete' | 'video_progress' | 'note_saved' | 'course_started' | 'pdf_progress'
   courseId: string
   lessonId?: string
   timestamp: string
