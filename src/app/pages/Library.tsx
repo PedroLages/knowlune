@@ -179,6 +179,7 @@ export function Library() {
                 <PdfViewer
                   src={getResourceUrl(selectedItem.resource)}
                   title={selectedItem.resource.title}
+                  compact
                 />
               </>
             )}

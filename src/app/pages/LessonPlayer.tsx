@@ -172,6 +172,19 @@ export function LessonPlayer() {
     [courseId, primaryPdf]
   )
 
+  const materialsPdfTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  const handleMaterialsPdfPageChange = useCallback(
+    (resourceId: string, page: number) => {
+      if (!courseId) return
+      clearTimeout(materialsPdfTimers.current.get(resourceId))
+      materialsPdfTimers.current.set(
+        resourceId,
+        setTimeout(() => savePdfPage(courseId, resourceId, page), 500)
+      )
+    },
+    [courseId]
+  )
+
   const [videoCurrentTime, setVideoCurrentTime] = useState(0)
 
   const lastSaveTimeRef = useRef(-Infinity)
@@ -368,8 +381,6 @@ export function LessonPlayer() {
               src={getResourceUrl(primaryPdf)}
               title={primaryPdf.title}
               initialPage={courseId ? getPdfPage(courseId, primaryPdf.id) ?? 1 : 1}
-              courseId={courseId}
-              resourceId={primaryPdf.id}
               onPageChange={handlePdfPageChange}
             />
           </div>
@@ -472,11 +483,7 @@ export function LessonPlayer() {
                   src={getResourceUrl(pdf)}
                   title={pdf.title}
                   initialPage={courseId ? getPdfPage(courseId, pdf.id) ?? 1 : 1}
-                  courseId={courseId}
-                  resourceId={pdf.id}
-                  onPageChange={(page) => {
-                    if (courseId) savePdfPage(courseId, pdf.id, page)
-                  }}
+                  onPageChange={(page) => handleMaterialsPdfPageChange(pdf.id, page)}
                 />
               ))}
             </TabsContent>
