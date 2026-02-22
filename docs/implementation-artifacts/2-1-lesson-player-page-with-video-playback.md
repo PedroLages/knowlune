@@ -1,7 +1,7 @@
 ---
 story_id: E02-S01
 story_name: "Lesson Player Page with Video Playback"
-status: in-progress
+status: done
 created: 2026-02-15
 started: 2026-02-15
 reviewed: false
