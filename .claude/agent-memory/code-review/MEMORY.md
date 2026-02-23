@@ -71,6 +71,18 @@
 - E2E tests + course data + VTT file were left uncommitted -- branch was broken without them
 - `cn()` correctly used in TranscriptPanel (improvement over previous stories)
 
+### E03-S01: Markdown Note Editor with Autosave
+- `video://` protocol NOT registered in Tiptap Link extension -- `parseHTML` strips `video://` links on `setContent` (persistence broken)
+- `onVideoSeek` captured in `useEditor` closure (stale closure risk), while `onSave` correctly uses latest-ref pattern
+- `formatTimestamp` is yet another copy of `formatTime` (now in 5+ places) -- shared utility still not extracted
+- `handleNoteChange` calls both `setNoteText(value)` AND `saveNote(...)` -- double write path, and `setNoteText` triggers re-render that updates `initialContent` prop (potential `setContent` thrash)
+- ToolbarButton is `h-8 w-8` (32px) -- below 44px WCAG touch target minimum (recurring pattern)
+- `h-4 w-4` / `h-8 w-8` used instead of `size-4` / `size-8` Tailwind v4 shorthand (recurring pattern)
+- `insertLink` uses `window.prompt()` with no URL validation -- user can input arbitrary URLs
+- No unit tests for NoteEditor component
+- E2E tests missing: keyboard shortcuts (AC1), max-wait 10s forced save (AC2), MiniSearch index update (AC2), timestamp link click-to-seek (AC4)
+- `cn()` correctly used throughout (improvement over earlier stories)
+
 ## Project Conventions
 - Import alias: `@/` resolves to `./src`
 - Card border radius: `rounded-[24px]`

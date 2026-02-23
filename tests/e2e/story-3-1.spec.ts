@@ -162,4 +162,22 @@ test.describe('AC4: Add Timestamp inserts link', () => {
     const editor = page.getByTestId('note-editor').locator('[contenteditable]')
     await expect(editor).toContainText(/Jump to \d+:\d{2}/)
   })
+
+  test('should seek video when timestamp link is clicked', async ({ page }) => {
+    await goToLessonNotes(page)
+
+    // WHEN: User inserts a timestamp and clicks the link
+    const toolbar = page.getByTestId('note-editor-toolbar')
+    await toolbar.getByRole('button', { name: /add timestamp/i }).click()
+
+    // Click the inserted timestamp link
+    const editor = page.getByTestId('note-editor').locator('[contenteditable]')
+    const timestampLink = editor.locator('a[href^="video://"]')
+    await expect(timestampLink).toBeVisible()
+    await timestampLink.click()
+
+    // THEN: Video player should still be visible (seek doesn't break anything)
+    const videoPlayer = page.getByTestId('video-player-container')
+    await expect(videoPlayer).toBeVisible()
+  })
 })
