@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useRef, useState } from 'react'
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor, EditorContent, ReactNodeViewRenderer } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import Highlight from '@tiptap/extension-highlight'
@@ -8,6 +8,14 @@ import TaskItem from '@tiptap/extension-task-item'
 import Typography from '@tiptap/extension-typography'
 import CharacterCount from '@tiptap/extension-character-count'
 import TextAlign from '@tiptap/extension-text-align'
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
+import Image from '@tiptap/extension-image'
+import { FileHandler } from '@tiptap/extension-file-handler'
+import Youtube from '@tiptap/extension-youtube'
+import { Details, DetailsContent, DetailsSummary } from '@tiptap/extension-details'
+import { common, createLowlight } from 'lowlight'
+import { toast } from 'sonner'
+import { CodeBlockView } from './CodeBlockView'
 import {
   Bold,
   Italic,
@@ -24,6 +32,9 @@ import {
   AlignRight,
   ChevronDown,
   Clock,
+  Image as ImageIcon,
+  Youtube as YoutubeIcon,
+  ChevronRight,
 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Separator } from '@/app/components/ui/separator'
@@ -46,6 +57,10 @@ import {
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu'
 import { cn } from '@/app/components/ui/utils'
+
+const lowlight = createLowlight(common)
+
+const IMAGE_MAX_SIZE = 5 * 1024 * 1024 // 5MB
 
 interface NoteEditorProps {
   courseId: string
@@ -87,6 +102,21 @@ function formatTimestamp(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
+/** Convert a File to a base64 data URL */
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+/** Validate a YouTube URL and return true if valid */
+function isValidYoutubeUrl(url: string): boolean {
+  return /^https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)/.test(url)
+}
+
 export function NoteEditor({
   courseId,
   lessonId,
@@ -100,6 +130,9 @@ export function NoteEditor({
   const [wordCount, setWordCount] = useState(0)
   const [linkDialogOpen, setLinkDialogOpen] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
+  const [youtubeDialogOpen, setYoutubeDialogOpen] = useState(false)
+  const [youtubeUrl, setYoutubeUrl] = useState('')
+  const imageInputRef = useRef<HTMLInputElement>(null)
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const maxWaitRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const fadeTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -132,6 +165,21 @@ export function NoteEditor({
     }, 2000)
   }, [])
 
+  const handleImageFiles = useCallback(
+    async (files: File[], editor: ReturnType<typeof useEditor> extends infer E ? NonNullable<E> : never) => {
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) continue
+        if (file.size > IMAGE_MAX_SIZE) {
+          toast.warning(`Image "${file.name}" exceeds 5 MB limit`)
+          continue
+        }
+        const src = await fileToBase64(file)
+        editor.chain().focus().setImage({ src }).run()
+      }
+    },
+    [],
+  )
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -141,6 +189,7 @@ export function NoteEditor({
           protocols: ['video'],
           HTMLAttributes: { class: 'text-brand underline cursor-pointer' },
         },
+        codeBlock: false,
       }),
       Placeholder.configure({
         placeholder:
@@ -152,6 +201,21 @@ export function NoteEditor({
       Typography,
       CharacterCount,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      CodeBlockLowlight.configure({ lowlight }).extend({
+        addNodeView() {
+          return ReactNodeViewRenderer(CodeBlockView)
+        },
+      }),
+      Image.configure({ allowBase64: true }),
+      FileHandler.configure({
+        allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],
+        onDrop: (editor, files) => handleImageFiles(files, editor),
+        onPaste: (editor, files) => handleImageFiles(files, editor),
+      }),
+      Youtube.configure({ nocookie: true }),
+      Details,
+      DetailsContent,
+      DetailsSummary,
     ],
     content: initialContent,
     editorProps: {
@@ -294,6 +358,24 @@ export function NoteEditor({
     setLinkUrl('')
   }, [editor])
 
+  const handleInsertYoutube = useCallback(() => {
+    if (!editor || !youtubeUrl.trim()) return
+
+    const url = youtubeUrl.trim()
+    if (!isValidYoutubeUrl(url)) return
+
+    editor.chain().focus().setYoutubeVideo({ src: url }).run()
+    setYoutubeDialogOpen(false)
+    setYoutubeUrl('')
+  }, [editor, youtubeUrl])
+
+  const handleImageUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!editor || !e.target.files?.length) return
+    await handleImageFiles(Array.from(e.target.files), editor)
+    // Reset input so the same file can be re-selected
+    e.target.value = ''
+  }, [editor, handleImageFiles])
+
   if (!editor) return null
 
   return (
@@ -407,13 +489,34 @@ export function NoteEditor({
 
         <Separator orientation="vertical" decorative={false} className="h-6 mx-1" />
 
-        {/* Code group */}
+        {/* Code & media group */}
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleCodeBlock().run()}
           active={editor.isActive('codeBlock')}
           aria-label="Code block"
         >
           <Code className="size-4" />
+        </ToolbarButton>
+
+        <ToolbarButton
+          onClick={() => imageInputRef.current?.click()}
+          aria-label="Insert image"
+        >
+          <ImageIcon className="size-4" />
+        </ToolbarButton>
+
+        <ToolbarButton
+          onClick={() => { setYoutubeUrl(''); setYoutubeDialogOpen(true) }}
+          aria-label="YouTube embed"
+        >
+          <YoutubeIcon className="size-4" />
+        </ToolbarButton>
+
+        <ToolbarButton
+          onClick={() => editor.chain().focus().setDetails().run()}
+          aria-label="Toggle block"
+        >
+          <ChevronRight className="size-4" />
         </ToolbarButton>
 
         <Separator orientation="vertical" decorative={false} className="h-6 mx-1" />
@@ -476,6 +579,24 @@ export function NoteEditor({
                   </DropdownMenuItem>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
+              <DropdownMenuItem
+                onClick={() => imageInputRef.current?.click()}
+              >
+                <ImageIcon className="size-4 mr-2" />
+                Image
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => { setYoutubeUrl(''); setYoutubeDialogOpen(true) }}
+              >
+                <YoutubeIcon className="size-4 mr-2" />
+                YouTube
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => editor.chain().focus().setDetails().run()}
+              >
+                <ChevronRight className="size-4 mr-2" />
+                Toggle
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -492,6 +613,15 @@ export function NoteEditor({
           Add Timestamp
         </Button>
       </div>
+
+      {/* Hidden file input for image uploads */}
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/gif,image/webp"
+        className="hidden"
+        onChange={handleImageUpload}
+      />
 
       {/* Editor */}
       <EditorContent editor={editor} />
@@ -543,6 +673,41 @@ export function NoteEditor({
               size="sm"
               onClick={handleInsertLink}
               disabled={!linkUrl.trim() || !/^(https?:\/\/|\/|video:\/\/)/.test(linkUrl.trim())}
+            >
+              Insert
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* YouTube dialog */}
+      <Dialog open={youtubeDialogOpen} onOpenChange={setYoutubeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Embed YouTube Video</DialogTitle>
+            <DialogDescription>
+              Paste a YouTube video URL to embed it in your notes.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            value={youtubeUrl}
+            onChange={e => setYoutubeUrl(e.target.value)}
+            placeholder="https://www.youtube.com/watch?v=..."
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                handleInsertYoutube()
+              }
+            }}
+          />
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setYoutubeDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleInsertYoutube}
+              disabled={!youtubeUrl.trim() || !isValidYoutubeUrl(youtubeUrl.trim())}
             >
               Insert
             </Button>
