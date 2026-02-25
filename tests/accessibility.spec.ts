@@ -226,7 +226,7 @@ test.describe('Keyboard Navigation', () => {
     const playButton = page.locator('button[aria-label*="Play"], button[aria-label*="Pause"]').first()
     await playButton.focus()
 
-    const initialLabel = await playButton.getAttribute('aria-label')
+    const _initialLabel = await playButton.getAttribute('aria-label')
 
     // Press Space to toggle play/pause
     await page.keyboard.press('Space')
@@ -314,7 +314,7 @@ test.describe('Component Accessibility', () => {
       expect(title).toBeTruthy()
 
       // Verify there's a fallback button for opening in new tab
-      const openButton = page.locator('button:has-text("Open in New Tab")')
+      const _openButton = page.locator('button:has-text("Open in New Tab")')
       // Button might not be visible if iframe loads successfully
       // Just verify the component structure exists
     }

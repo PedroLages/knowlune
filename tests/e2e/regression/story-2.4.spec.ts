@@ -225,7 +225,7 @@ test.describe('AC2: Zoom Controls and Text Selection', () => {
     await expect(page.getByTestId('pdf-zoom-select')).toBeVisible()
   })
 
-  test('should have fit-width option in zoom controls', async ({ page, browserName }, testInfo) => {
+  test('should have fit-width option in zoom controls', async ({ page }, testInfo) => {
     // Fit-width button uses `hidden sm:inline-flex` — hidden on viewports < 640px
     test.skip(testInfo.project.name.startsWith('Mobile'), 'Fit-width button hidden on mobile viewports')
 
@@ -237,7 +237,7 @@ test.describe('AC2: Zoom Controls and Text Selection', () => {
     await expect(page.getByTestId('pdf-fit-width')).toBeVisible()
   })
 
-  test('should have fit-page option in zoom controls', async ({ page, browserName }, testInfo) => {
+  test('should have fit-page option in zoom controls', async ({ page }, testInfo) => {
     // Fit-page button uses `hidden sm:inline-flex` — hidden on viewports < 640px
     test.skip(testInfo.project.name.startsWith('Mobile'), 'Fit-page button hidden on mobile viewports')
 

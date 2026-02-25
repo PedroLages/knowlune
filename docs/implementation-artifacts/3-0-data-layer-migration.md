@@ -4,9 +4,9 @@ story_name: "Data Layer Migration (Notes & Bookmarks)"
 status: done
 started: 2026-02-22
 completed: 2026-02-22
-reviewed: true
-review_started: 2026-02-22
-review_gates_passed: [pre-checks, design-review, code-review]
+reviewed: in-progress
+review_started: 2026-02-23
+review_gates_passed: []
 ---
 
 # Story 3.0: Data Layer Migration (Notes & Bookmarks)

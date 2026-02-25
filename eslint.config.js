@@ -5,7 +5,7 @@ import eslint from '@eslint/js'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(eslint.configs.recommended, ...tseslint.configs.recommended, {
-  ignores: ['dist/', 'node_modules/', 'playwright-report/'],
+  ignores: ['dist/', 'node_modules/', 'playwright-report/', 'storybook-static/', 'coverage/', 'test-results/'],
 }, {
   rules: {
     '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],

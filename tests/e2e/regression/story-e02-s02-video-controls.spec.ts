@@ -92,7 +92,7 @@ test.describe('AC1: Shift+Arrow ±10s Seeking', () => {
 // ===========================================================================
 
 test.describe('AC2: 95% Auto-Completion', () => {
-  test('should auto-mark lesson complete when 95% threshold is crossed', async ({ page, localStorage }) => {
+  test('should auto-mark lesson complete when 95% threshold is crossed', async ({ page }) => {
     await goToLessonPlayer(page)
 
     // GIVEN: Lesson is not yet completed

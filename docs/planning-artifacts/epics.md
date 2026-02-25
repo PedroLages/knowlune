@@ -931,6 +931,173 @@ So that I can capture knowledge while studying without worrying about losing my 
 
 ---
 
+### Story 3.11: Rich Text Toolbar Expansion
+
+As a learner,
+I want richer formatting options (highlighting, checkboxes, text alignment, colors) in my note editor,
+So that I can structure and emphasize my study notes visually.
+
+**Acceptance Criteria:**
+
+**Given** the user opens the note editor toolbar
+**When** the toolbar renders
+**Then** formatting buttons are organized in logical groups separated by dividers: Inline (Bold, Italic, Underline, Highlight) | Block (Heading, Align) | Lists (Bullet, Ordered, Task) | Code | Links
+**And** all toolbar buttons have 44x44px minimum touch targets (WCAG 2.5.5)
+**And** all toolbar buttons have visible focus rings (WCAG 2.4.7)
+
+**Given** the user selects text and clicks Highlight
+**When** the highlight is applied
+**Then** the selected text gets a colored background (default yellow)
+**And** clicking Highlight again removes it
+
+**Given** the user clicks the Task List button
+**When** a task list is inserted
+**Then** interactive checkboxes render inline that can be toggled
+**And** checked items show strikethrough styling
+
+**Given** the user types straight quotes or double hyphens
+**When** Typography extension processes the input
+**Then** smart quotes and em-dashes are auto-corrected
+
+**Given** the editor has content
+**When** the user looks at the status bar
+**Then** a word count displays next to the autosave indicator (e.g., "42 words")
+
+**Pre-flight fixes (carried from 3.1 review blockers):**
+
+- Remove `@tiptap/extension-link` from package.json (duplicate — StarterKit bundles it)
+- Increase ToolbarButton touch targets to 44x44px minimum
+- Replace `window.prompt('Enter URL:')` with shadcn Dialog for link insertion
+
+**Extensions:** TaskList, TaskItem, Highlight, Underline, Typography, CharacterCount, TextAlign, TextStyle, Color, BackgroundColor
+
+**Toolbar overflow strategy:** At mobile widths (<640px), group less-used buttons (Align, Color, Background) into a "More" dropdown using shadcn DropdownMenu. Primary formatting (Bold, Italic, Underline, Lists) stays visible.
+
+**Implementation Notes:**
+
+- Install: `@tiptap/extension-task-list`, `@tiptap/extension-task-item`, `@tiptap/extension-highlight`, `@tiptap/extension-underline`, `@tiptap/extension-typography`, `@tiptap/extension-character-count`, `@tiptap/extension-text-align`, `@tiptap/extension-text-style`, `@tiptap/extension-color`, `@tiptap/extension-background-color`
+- Uninstall: `@tiptap/extension-link` (duplicate of StarterKit's bundled Link)
+- CSS: Task list checkbox styles, highlight background colors in `src/styles/index.css`
+
+---
+
+### Story 3.12: Code & Media Blocks
+
+As a learner,
+I want syntax-highlighted code blocks, embedded images, and YouTube videos in my notes,
+So that I can capture technical content and reference materials alongside my study notes.
+
+**Acceptance Criteria:**
+
+**Given** the user inserts a code block
+**When** code is typed or pasted
+**Then** syntax highlighting renders for the detected language
+**And** a language selector dropdown appears in the top-right corner of the code block
+**And** supported languages: JavaScript, TypeScript, Python, CSS, HTML, Bash (selective imports, ~25KB)
+
+**Given** the user drags an image file onto the editor
+**When** the file is dropped
+**Then** the image embeds inline as a block element
+**And** accepted formats: PNG, JPG, GIF, WebP
+**And** images are stored as base64 data URLs in the HTML content
+
+**Given** the user inserts a YouTube URL via toolbar button or paste
+**When** the URL is recognized as YouTube
+**Then** a responsive YouTube embed renders inline
+**And** the embed respects 16:9 aspect ratio
+
+**Given** the user clicks the collapsible toggle button (or types `/toggle`)
+**When** a Details block is inserted
+**Then** a collapsible section renders with a summary line and hidden content
+**And** clicking the summary toggles visibility
+
+**Extensions:** CodeBlockLowlight (with selective lowlight imports), Image, FileHandler, YouTube, Details, DetailsContent, DetailsSummary
+
+**Implementation Notes:**
+
+- Install: `@tiptap/extension-code-block-lowlight`, `lowlight`, `@tiptap/extension-image`, `@tiptap/extension-file-handler`, `@tiptap/extension-youtube`, `@tiptap/extension-details`, `@tiptap/extension-details-content`, `@tiptap/extension-details-summary`
+- Lowlight: Use selective imports only (~25KB for 6 languages vs 200KB for all 190)
+- CSS: Syntax highlight theme, details toggle arrow, YouTube responsive wrapper in `src/styles/index.css`
+
+---
+
+### Story 3.13: Smart Editor UX
+
+As a learner,
+I want a Notion-like editing experience with floating menus, slash commands, drag-and-drop reordering, and emoji,
+So that I can format notes quickly without leaving the keyboard.
+
+**Acceptance Criteria:**
+
+**Given** the user selects text in the editor
+**When** a selection exists
+**Then** a Bubble Menu appears above the selection with: Bold, Italic, Underline, Highlight, Link, Color
+**And** the menu disappears when selection is cleared
+
+**Given** the cursor is on an empty line
+**When** the user types `/`
+**Then** a command palette appears with block options: Heading 1/2/3, Bullet List, Ordered List, Task List, Code Block, Image, YouTube, Toggle, Blockquote
+**And** the palette filters as the user types (e.g., `/code` shows Code Block)
+**And** built using Tiptap's `@tiptap/suggestion` + shadcn `Command` component (no community dependency)
+
+**Given** the user hovers over a block (paragraph, heading, list, etc.)
+**When** the cursor enters the left gutter area
+**Then** a drag handle grip icon appears
+**And** the user can drag the block to reorder it within the document
+
+**Given** the user wants to insert an emoji
+**When** the user types `:` followed by a search term
+**Then** an emoji suggestion popup appears
+**And** selecting an emoji inserts it as an inline node
+
+**Given** the user wants to find text in the current note
+**When** the user presses Cmd+F (or clicks Search in toolbar)
+**Then** a find/replace panel appears at the top of the editor
+**And** matches are highlighted in the document
+**And** replace/replace-all functionality is available
+
+**Given** a note has multiple headings
+**When** the editor renders
+**Then** a Table of Contents auto-generates from H1/H2/H3 headings
+**And** clicking a TOC entry scrolls to that heading
+
+**Extensions:** BubbleMenu, FloatingMenu, DragHandleReact, Emoji, Mention, TableOfContents
+**Custom built (no community deps):** Slash Command (via `@tiptap/suggestion` + shadcn `Command`), Search & Replace (via ProseMirror search plugin)
+
+**Implementation Notes:**
+
+- Install: `@tiptap/extension-bubble-menu`, `@tiptap/extension-floating-menu`, `@tiptap/extension-drag-handle-react`, `@tiptap/extension-emoji`, `@tiptap/extension-mention`, `@tiptap/extension-table-of-contents`
+- Community packages `tiptap-search-and-replace` (v2 only, unmaintained) and `tiptap-slash-command` (medium risk) replaced with custom builds using Tiptap primitives
+
+---
+
+### Story 3.14: Tables
+
+As a learner,
+I want to create and edit tables in my notes,
+So that I can organize structured data like comparisons, vocabulary lists, and reference information.
+
+**Acceptance Criteria:**
+
+**Given** the user clicks the Table button in the toolbar (or types `/table`)
+**When** the table insert UI appears
+**Then** a grid picker lets the user choose rows x columns (up to 6x6)
+**And** a default 3x3 table is inserted on click
+
+**Given** a table exists in the editor
+**When** the user right-clicks a cell (or uses a toolbar menu)
+**Then** options appear: Add Row Above, Add Row Below, Add Column Left, Add Column Right, Delete Row, Delete Column, Delete Table
+**And** Tab moves between cells, Enter creates a new row at the end
+
+**Extensions:** TableKit (Table, TableRow, TableCell, TableHeader)
+
+**Implementation Notes:**
+
+- Install: `@tiptap/extension-table-kit`
+- CSS: Table borders, cell padding, header row styling, selected cell highlight in `src/styles/index.css`
+
+---
+
 ### Story 3.2: Side-by-Side Study Layout
 
 As a learner,

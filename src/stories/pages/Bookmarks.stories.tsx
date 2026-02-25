@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { Bookmark, Play, Trash2, Clock, BookOpen, ArrowUpDown } from 'lucide-react'
+import { formatTimestamp } from '@/lib/format'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
@@ -80,12 +81,6 @@ const bookmarks = [
     date: '2026-02-08T14:00:00Z',
   },
 ]
-
-function formatTimestamp(seconds: number) {
-  const mins = Math.floor(seconds / 60)
-  const secs = seconds % 60
-  return `${mins}:${secs.toString().padStart(2, '0')}`
-}
 
 const sortOptions = ['Most Recent', 'Course Name', 'A-Z']
 

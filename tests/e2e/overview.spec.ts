@@ -11,7 +11,6 @@
 import { test, expect } from '../support/fixtures'
 import {
   createCourseProgress,
-  createStudyAction,
 } from '../support/fixtures/factories/course-factory'
 import { goToOverview } from '../support/helpers/navigation'
 

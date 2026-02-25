@@ -40,7 +40,11 @@ Runs all quality gates: pre-checks, design review, code review, and test quality
    a. `npm run build` — STOP on failure with build errors.
    b. `npm run lint` — STOP on failure with lint errors (if lint script exists, otherwise skip).
    c. `npm run test:unit -- --run` — STOP on failure. If no unit test script or no test files, note and continue.
-   d. `npx playwright test tests/e2e/` — STOP on failure. If no E2E test files, note and continue. Do NOT run `tests/design-review.spec.ts` here — that's separate.
+   d. E2E tests — run smoke specs + current story's spec on Chromium only:
+      ```
+      npx playwright test tests/e2e/navigation.spec.ts tests/e2e/overview.spec.ts tests/e2e/courses.spec.ts tests/e2e/story-{id}.spec.ts --project=chromium
+      ```
+      If the current story has no spec file in `tests/e2e/`, run smoke specs only. STOP on failure. Do NOT run `tests/design-review.spec.ts` or `tests/e2e/regression/` specs here — those are separate.
 
    If any pre-check fails: show the error output, suggest fixes, and STOP. Do not proceed to reviews. Keep `reviewed: in-progress` so next run resumes.
 

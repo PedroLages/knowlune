@@ -54,7 +54,7 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
 4b. **If NOT reviewed** (streamlined mode):
    - Set `reviewed: in-progress`, `review_started: YYYY-MM-DD`, `review_gates_passed: []` in story frontmatter.
    - Run the full review pipeline inline — same steps as `/review-story` steps 4-8:
-     a. Pre-checks: build, lint, unit tests, E2E tests
+     a. Pre-checks: build, lint, unit tests, E2E tests (smoke specs + current story spec, Chromium only — see review-story step 4d)
      b. Design review (if UI changes)
      c. Code review
      d. Consolidated report
@@ -67,7 +67,11 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
      a. `npm run build` — STOP on failure.
      b. `npm run lint` — STOP on failure (if script exists).
      c. `npm run test:unit -- --run` — STOP on failure (if tests exist).
-     d. `npx playwright test tests/e2e/` — STOP on failure (if tests exist).
+     d. E2E tests — run smoke specs + current story's spec on Chromium only:
+        ```
+        npx playwright test tests/e2e/navigation.spec.ts tests/e2e/overview.spec.ts tests/e2e/courses.spec.ts tests/e2e/story-{id}.spec.ts --project=chromium
+        ```
+        If the current story has no spec file in `tests/e2e/`, run smoke specs only. STOP on failure.
    - If any fail → STOP. Developer fixes and re-runs.
 
 6. **Update story file**:
@@ -82,9 +86,16 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
    git commit -m "feat(E##-S##): [concise description of what the story delivers]"
    ```
 
-9. **Push branch**: `git push -u origin feature/e##-s##-slug`.
+9. **Archive story spec**: If `tests/e2e/story-*.spec.ts` exists for this story, move it to `tests/e2e/regression/`:
+   ```
+   git mv tests/e2e/story-{id}.spec.ts tests/e2e/regression/
+   git commit -m "chore: archive E##-S## spec to regression"
+   ```
+   If no story spec exists in `tests/e2e/`, skip this step.
 
-10. **Create PR** via `gh pr create`:
+10. **Push branch**: `git push -u origin feature/e##-s##-slug`.
+
+11. **Create PR** via `gh pr create`:
 
     Apply `writing-clearly-and-concisely` to PR title and body. Active voice, no AI puffery, no filler.
 
@@ -111,13 +122,13 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
 
     Print the PR URL.
 
-11. **Lessons learned** (optional): Ask the developer via AskUserQuestion with these options:
+12. **Lessons learned** (optional): Ask the developer via AskUserQuestion with these options:
 
     - **"Claude, write them"** — Auto-generate lessons learned by analyzing the story's git log, review reports, and any blocker/fix cycles encountered during implementation. Write concise, actionable bullets covering: patterns discovered, pitfalls avoided, decisions made and why. Append to the story's "Challenges and Lessons Learned" section.
     - **"Yes, let me share"** — Wait for the developer to provide lessons, then append them.
     - **"Skip"** — No lessons to capture. Continue.
 
-12. **Completion output**: Display the following summary to the user.
+13. **Completion output**: Display the following summary to the user.
 
     **Preparation** (not shown to user): Read the story file's acceptance criteria, tasks, and the git diff for the branch to understand what was delivered.
 
