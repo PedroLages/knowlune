@@ -33,8 +33,7 @@ import { createEmojiSuggestionRender } from './emoji-suggestion-render'
 import { SearchReplace, FindReplacePanel } from './search-replace'
 import { TableOfContents } from '@tiptap/extension-table-of-contents'
 import { TableOfContentsPanel } from './TableOfContentsPanel'
-import {
-  Bold,
+import { Bold,
   Italic,
   Underline as UnderlineIcon,
   Highlighter,
@@ -51,11 +50,10 @@ import {
   Clock,
   Image as ImageIcon,
   Youtube as YoutubeIcon,
-  ChevronRight,
   GripVertical,
   ListTree,
   Search,
-} from 'lucide-react'
+  ChevronsUpDown } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Separator } from '@/app/components/ui/separator'
 import {
@@ -146,6 +144,7 @@ export function NoteEditor({
   const [youtubeUrl, setYoutubeUrl] = useState('')
   const [findReplaceOpen, setFindReplaceOpen] = useState(false)
   const [, setTocVersion] = useState(0)
+  const editorContainerRef = useRef<HTMLDivElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const maxWaitRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -405,16 +404,18 @@ export function NoteEditor({
     }
   }, [editor])
 
-  // Cmd+F to toggle find/replace panel
+  // Cmd+F to toggle find/replace panel (scoped to editor container)
   useEffect(() => {
+    const container = editorContainerRef.current
+    if (!container) return
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
         e.preventDefault()
         setFindReplaceOpen((prev) => !prev)
       }
     }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    container.addEventListener('keydown', handleKeyDown)
+    return () => container.removeEventListener('keydown', handleKeyDown)
   }, [])
 
   // Force save on unmount
@@ -509,6 +510,7 @@ export function NoteEditor({
 
   return (
     <div
+      ref={editorContainerRef}
       data-testid="note-editor"
       className={cn('bg-card rounded-[24px] shadow-sm overflow-hidden', className)}
     >
@@ -517,7 +519,7 @@ export function NoteEditor({
         role="toolbar"
         aria-label="Text formatting"
         data-testid="note-editor-toolbar"
-        className="flex items-center gap-1 px-4 py-2 border-b border-border bg-muted/30 flex-wrap"
+        className="flex items-center gap-1 px-4 py-2 border-b border-border bg-muted/30 flex-wrap sm:flex-nowrap sm:overflow-x-auto"
       >
         {/* Inline formatting group */}
         <ToolbarButton
@@ -645,7 +647,7 @@ export function NoteEditor({
           onClick={() => editor.chain().focus().setDetails().run()}
           aria-label="Toggle block"
         >
-          <ChevronRight className="size-4" />
+          <ChevronsUpDown className="size-4" />
         </ToolbarButton>
 
         <Separator orientation="vertical" decorative={false} className="h-6 mx-1" />
@@ -752,7 +754,7 @@ export function NoteEditor({
               <DropdownMenuItem
                 onClick={() => editor.chain().focus().setDetails().run()}
               >
-                <ChevronRight className="size-4 mr-2" />
+                <ChevronsUpDown className="size-4 mr-2" />
                 Toggle
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -803,7 +805,7 @@ export function NoteEditor({
         <div data-testid="drag-handle">
           <button
             type="button"
-            className="flex items-center justify-center size-6 rounded cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            className="flex items-center justify-center size-7 rounded cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
             aria-label="Drag to reorder"
           >
             <GripVertical className="size-4" />

@@ -1,12 +1,12 @@
 ---
 story_id: E03-S13
 story_name: "Smart Editor UX"
-status: in-progress
+status: done
 started: 2026-02-25
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-02-25
+reviewed: true
+review_started: 2026-02-25
+review_gates_passed: [build, lint, e2e-tests, design-review, code-review]
 ---
 
 # Story 3.13: Smart Editor UX
@@ -104,11 +104,23 @@ See plan file for full architecture details. Key decisions:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+Reviewed 2026-02-25. Report: `docs/reviews/design/design-review-2026-02-25-E03-S13.md`
+
+All 6 ACs pass functionally. Key findings:
+- **H1**: Bubble menu buttons 36px (below 44px touch target) — `BubbleMenuBar.tsx`
+- **H2**: Toolbar wraps to 2+ rows at all viewports — cumulative button count issue
+- **H3**: TOC panel buttons 32px (below 44px) — `TableOfContentsPanel.tsx`
+- **H4**: `tippyOptions` React console error — investigate API mismatch
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+Reviewed 2026-02-25. Report: `docs/reviews/code/code-review-2026-02-25-E03-S13.md`
+
+1 blocker, 3 high, 5 medium, 4 nits. Key findings:
+- **BLOCKER**: `replaceAll` dispatches transaction before updating storage.results — stale decoration positions
+- **H1**: Cmd+F handler on `document` hijacks browser-native find
+- **H2**: 7 `eslint-disable` for `any` casts — needs Tiptap module augmentation
+- **H3**: `scrollIntoView({ behavior: 'smooth' })` ignores `prefers-reduced-motion`
 
 ## Implementation Plan
 

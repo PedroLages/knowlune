@@ -23,43 +23,36 @@ export function FindReplacePanel({ editor, onClose }: FindReplacePanelProps) {
 
   const handleSearchChange = useCallback(
     (value: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(editor.commands as any).setSearchTerm(value)
+      editor.commands.setSearchTerm(value)
     },
     [editor],
   )
 
   const handleReplaceChange = useCallback(
     (value: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(editor.commands as any).setReplaceTerm(value)
+      editor.commands.setReplaceTerm(value)
     },
     [editor],
   )
 
   const handleFindNext = useCallback(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(editor.commands as any).findNext()
+    editor.commands.findNext()
   }, [editor])
 
   const handleFindPrev = useCallback(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(editor.commands as any).findPrev()
+    editor.commands.findPrev()
   }, [editor])
 
   const handleReplace = useCallback(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(editor.commands as any).replaceCurrent()
+    editor.commands.replaceCurrent()
   }, [editor])
 
   const handleReplaceAll = useCallback(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(editor.commands as any).replaceAll()
+    editor.commands.replaceAll()
   }, [editor])
 
   const handleClose = useCallback(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(editor.commands as any).clearSearch()
+    editor.commands.clearSearch()
     onClose()
   }, [editor, onClose])
 

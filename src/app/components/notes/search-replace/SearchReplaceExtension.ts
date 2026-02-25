@@ -16,6 +16,11 @@ export interface SearchReplaceStorage {
 
 const searchReplacePluginKey = new PluginKey('searchReplace')
 
+/** Respects `prefers-reduced-motion` for programmatic scrolling. */
+export function getScrollBehavior(): ScrollBehavior {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'
+}
+
 function findMatches(doc: { textContent: string; descendants: (cb: (node: { isText: boolean; text?: string }, pos: number) => void) => void }, searchTerm: string): { from: number; to: number }[] {
   if (!searchTerm) return []
 
@@ -33,6 +38,20 @@ function findMatches(doc: { textContent: string; descendants: (cb: (node: { isTe
   })
 
   return results
+}
+
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    searchReplace: {
+      setSearchTerm: (term: string) => ReturnType
+      setReplaceTerm: (term: string) => ReturnType
+      findNext: () => ReturnType
+      findPrev: () => ReturnType
+      replaceCurrent: () => ReturnType
+      replaceAll: () => ReturnType
+      clearSearch: () => ReturnType
+    }
+  }
 }
 
 export const SearchReplace = Extension.create<SearchReplaceOptions, SearchReplaceStorage>({
@@ -114,9 +133,10 @@ export const SearchReplace = Extension.create<SearchReplaceOptions, SearchReplac
           tr.insertText(replaceTerm, match.from, match.to)
         }
         editor.view.dispatch(tr)
-        // Re-search
+        // Re-search on updated doc, then dispatch to update decorations
         this.storage.results = findMatches(editor.state.doc, this.storage.searchTerm)
         this.storage.currentIndex = this.storage.results.length > 0 ? 0 : -1
+        editor.view.dispatch(editor.state.tr)
         return true
       },
 
@@ -167,13 +187,9 @@ export const SearchReplace = Extension.create<SearchReplaceOptions, SearchReplac
   },
 })
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function scrollToMatch(editor: any, match: { from: number; to: number } | undefined) {
+function scrollToMatch(editor: { view: { domAtPos: (pos: number) => { node: Node } } }, match: { from: number; to: number } | undefined) {
   if (!match) return
   const dom = editor.view.domAtPos(match.from)
-  if (dom.node instanceof Element) {
-    dom.node.scrollIntoView({ block: 'center', behavior: 'smooth' })
-  } else if (dom.node.parentElement) {
-    dom.node.parentElement.scrollIntoView({ block: 'center', behavior: 'smooth' })
-  }
+  const el = dom.node instanceof Element ? dom.node : dom.node.parentElement
+  el?.scrollIntoView({ block: 'center', behavior: getScrollBehavior() })
 }

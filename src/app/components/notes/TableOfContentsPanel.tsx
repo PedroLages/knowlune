@@ -1,5 +1,6 @@
 import type { Editor } from '@tiptap/react'
 import { cn } from '@/app/components/ui/utils'
+import { getScrollBehavior } from './search-replace'
 
 interface TableOfContentsPanelProps {
   editor: Editor
@@ -23,7 +24,7 @@ export function TableOfContentsPanel({ editor, onClose }: TableOfContentsPanelPr
     // Scroll the heading into view
     const { node } = editor.view.domAtPos(pos)
     const el = node instanceof Element ? node : node.parentElement
-    el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    el?.scrollIntoView({ block: 'center', behavior: getScrollBehavior() })
 
     onClose?.()
   }
@@ -52,7 +53,7 @@ export function TableOfContentsPanel({ editor, onClose }: TableOfContentsPanelPr
           type="button"
           onClick={() => handleClick(item.pos)}
           className={cn(
-            'block w-full text-left text-sm py-1.5 px-4 transition-colors cursor-pointer',
+            'block w-full text-left text-sm py-2.5 px-4 transition-colors cursor-pointer',
             'hover:bg-accent hover:text-accent-foreground',
             'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
             item.level === 1 && 'font-semibold',

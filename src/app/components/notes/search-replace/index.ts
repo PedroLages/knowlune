@@ -1,2 +1,2 @@
-export { SearchReplace } from './SearchReplaceExtension'
+export { SearchReplace, getScrollBehavior } from './SearchReplaceExtension'
 export { FindReplacePanel } from './FindReplacePanel'

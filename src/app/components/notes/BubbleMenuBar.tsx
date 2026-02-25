@@ -35,7 +35,6 @@ export function BubbleMenuBar({ editor, onOpenLinkDialog }: BubbleMenuBarProps) 
   return (
     <BubbleMenu
       editor={editor}
-      tippyOptions={{ duration: 150, maxWidth: 'none' }}
     >
       <div
         data-testid="bubble-menu"
@@ -88,7 +87,7 @@ export function BubbleMenuBar({ editor, onOpenLinkDialog }: BubbleMenuBarProps) 
             <button
               type="button"
               className={cn(
-                'inline-flex items-center justify-center size-9 rounded-md text-sm transition-colors cursor-pointer',
+                'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer',
                 'hover:bg-accent hover:text-accent-foreground',
                 'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
               )}
@@ -111,7 +110,7 @@ export function BubbleMenuBar({ editor, onOpenLinkDialog }: BubbleMenuBarProps) 
                     }
                   }}
                   className={cn(
-                    'size-7 rounded-full border border-border transition-transform cursor-pointer',
+                    'size-8 rounded-full border border-border transition-transform cursor-pointer',
                     'hover:scale-110 focus-visible:ring-2 focus-visible:ring-ring',
                     color.swatch,
                   )}
@@ -143,7 +142,7 @@ function BubbleButton({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        'inline-flex items-center justify-center size-9 rounded-md text-sm transition-colors cursor-pointer',
+        'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer',
         'hover:bg-accent hover:text-accent-foreground',
         'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
         active && 'bg-accent text-accent-foreground',

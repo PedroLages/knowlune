@@ -252,6 +252,10 @@ test.describe('AC5: Find/Replace', () => {
   }) => {
     await openNoteEditor(page)
 
+    // Focus the editor first (Cmd+F is scoped to editor container)
+    const editor = page.locator('.tiptap')
+    await editor.click()
+
     // Press Cmd+F
     await page.keyboard.press('Meta+f')
 
