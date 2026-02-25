@@ -4,9 +4,9 @@ story_name: "Tables"
 status: in-progress
 started: 2026-02-25
 completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+reviewed: true
+review_started: 2026-02-25
+review_gates_passed: [build, lint, e2e-tests, design-review, code-review]
 ---
 
 # Story 3.14: Tables
@@ -27,7 +27,7 @@ And a default 3x3 table is inserted on click
 **AC2**: Given a table exists in the editor
 When the user right-clicks a cell
 Then options appear: Add Row Above, Add Row Below, Add Column Left, Add Column Right, Delete Row, Delete Column, Delete Table
-And Tab moves between cells, Enter creates a new row at the end
+And Tab moves between cells, Tab at the last cell creates a new row
 
 ## Tasks / Subtasks
 
@@ -53,11 +53,15 @@ And Tab moves between cells, Enter creates a new row at the end
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+**Reviewed 2026-02-25 (re-run)** — Report: `docs/reviews/design/design-review-2026-02-25-E03-S14.md`
+
+1 Blocker (B1: context menu keyboard inaccessible — no focus management, missing ARIA roles), 4 High (H1: grid cells 28px on mobile below 44px min, H2: missing aria-live on size label, H3: dead `.tableWrapper` CSS / wide tables overflow on mobile, H4: menuHeight underestimate clips bottom items), 3 Medium (M1: inline style, M2: button+gridcell ARIA conflict, M3: nested table possible via slash command), 2 Nits. All ACs verified working functionally.
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**Reviewed 2026-02-25 (re-run)** — Report: `docs/reviews/code/code-review-2026-02-25-E03-S14.md`
+
+0 Blockers, 3 High (H1: arrow key navigation missing on role="menu", H2: --table-selected missing from .dark, H3: Enter vs Tab AC ambiguity untested), 4 Medium (M4: useLayoutEffect double-render, M5: col x row label inversion, M6: comment contrast ratio, M7: inline style for position:fixed), 3 Nits. Good component architecture, thorough first-review remediation noted.
 
 ## Challenges and Lessons Learned
 
