@@ -222,6 +222,26 @@ test.describe('AC2: Table Context Menu & Navigation', () => {
     await expect(table).not.toBeVisible({ timeout: 5000 })
   })
 
+  test('Tab at end of table creates new row', async ({ page }) => {
+    await openNoteEditor(page)
+    await insertTable(page)
+
+    // 3x3 table: 1 header row + 2 body rows = 3 total
+    const table = page.locator('.tiptap table')
+    await expect(table.locator('tr')).toHaveCount(3)
+
+    // Click the last body cell and type to ensure TipTap cursor is there
+    const lastCell = table.locator('td').last()
+    await lastCell.click()
+    await page.keyboard.type('x')
+
+    // Tab from the last cell should create a new row
+    await page.keyboard.press('Tab')
+
+    // Row count should increase from 3 to 4
+    await expect(table.locator('tr')).toHaveCount(4)
+  })
+
   test('context menu closes on Escape', async ({ page }) => {
     await openNoteEditor(page)
     await insertTable(page)
