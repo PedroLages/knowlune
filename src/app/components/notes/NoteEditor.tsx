@@ -31,6 +31,8 @@ import { createSlashCommandRender } from './slash-command/suggestion-render'
 import { Emoji, emojis as emojiData } from '@tiptap/extension-emoji'
 import { createEmojiSuggestionRender } from './emoji-suggestion-render'
 import { SearchReplace, FindReplacePanel } from './search-replace'
+import { TableOfContents } from '@tiptap/extension-table-of-contents'
+import { TableOfContentsPanel } from './TableOfContentsPanel'
 import {
   Bold,
   Italic,
@@ -51,6 +53,8 @@ import {
   Youtube as YoutubeIcon,
   ChevronRight,
   GripVertical,
+  ListTree,
+  Search,
 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Separator } from '@/app/components/ui/separator'
@@ -72,6 +76,11 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/app/components/ui/popover'
 import { cn } from '@/app/components/ui/utils'
 import { formatTimestamp } from '@/lib/format'
 
@@ -136,6 +145,7 @@ export function NoteEditor({
   const [youtubeDialogOpen, setYoutubeDialogOpen] = useState(false)
   const [youtubeUrl, setYoutubeUrl] = useState('')
   const [findReplaceOpen, setFindReplaceOpen] = useState(false)
+  const [, setTocVersion] = useState(0)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const maxWaitRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -274,6 +284,9 @@ export function NoteEditor({
         },
       }),
       SearchReplace,
+      TableOfContents.configure({
+        onUpdate: () => setTocVersion((v) => v + 1),
+      }),
     ],
     content: initialContent,
     editorProps: {
@@ -635,6 +648,35 @@ export function NoteEditor({
         >
           <Link2 className="size-4" />
         </ToolbarButton>
+
+        {/* Find/Replace */}
+        <ToolbarButton
+          onClick={() => setFindReplaceOpen((prev) => !prev)}
+          active={findReplaceOpen}
+          aria-label="Find and replace"
+        >
+          <Search className="size-4" />
+        </ToolbarButton>
+
+        {/* Table of Contents */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer',
+                'hover:bg-accent hover:text-accent-foreground',
+                'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+              )}
+              aria-label="Table of contents"
+            >
+              <ListTree className="size-4" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 p-0" align="start">
+            <TableOfContentsPanel editor={editor} />
+          </PopoverContent>
+        </Popover>
 
         {/* Mobile overflow menu */}
         <div className="sm:hidden">
