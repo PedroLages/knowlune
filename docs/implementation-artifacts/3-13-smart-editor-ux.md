@@ -128,4 +128,12 @@ See [plan](/Users/pedro/.claude/plans/modular-baking-squirrel.md) for implementa
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Transaction order in ProseMirror**: `replaceAll` dispatched before updating `storage.results`, causing stale decoration positions. Always update storage before dispatching.
+- **Cmd+F scoped to `document` hijacks browser Find**: Scope keyboard handlers to the editor container, not the document.
+- **`scrollIntoView({ behavior: 'smooth' })` ignores `prefers-reduced-motion`**: Use a shared utility that checks `matchMedia` for reduced-motion preference.
+- **Tiptap module augmentation eliminates `any` casts**: Declare custom commands in `@tiptap/core` module augmentation within the extension file itself — prevents scattered `eslint-disable` lines.
+- **Component decomposition kept NoteEditor manageable**: Each feature (BubbleMenu, SlashCommand, TOC, FindReplace) lives in its own file/directory with barrel exports.
+- **Touch targets below 44px across bubble menu (36px), TOC buttons (32px), color swatches (28px)**: Design review caught these; enforce minimum size via reusable button component props.
+- **Toolbar cumulative button count causes wrapping at all viewports**: Preview designs at 375/768/1440px before implementation; consider button grouping or mobile drawer patterns.
+- **Suggestion popup positioning requires inline styles**: Portal-rendered lists need dynamic `top`/`left` — Tailwind can't handle this. Document intentional inline styles to prevent refactoring surprises.
+- **Drag-to-reorder test gap**: E2E tests verify handle presence but not actual reorder (Playwright drag simulation is unreliable). Manual verification covers the gap.
