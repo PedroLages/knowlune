@@ -28,6 +28,8 @@ import { DragHandle } from '@tiptap/extension-drag-handle-react'
 import { BubbleMenuBar } from './BubbleMenuBar'
 import { SlashCommand, getSlashCommandItems } from './slash-command'
 import { createSlashCommandRender } from './slash-command/suggestion-render'
+import { Emoji, emojis as emojiData } from '@tiptap/extension-emoji'
+import { createEmojiSuggestionRender } from './emoji-suggestion-render'
 import {
   Bold,
   Italic,
@@ -184,8 +186,9 @@ export function NoteEditor({
     [],
   )
 
-  // Stable slash command configuration (callbacks use refs, no re-creation needed)
+  // Stable suggestion popup renders (created once, mounted/unmounted by Tiptap)
   const slashCommandRender = useMemo(() => createSlashCommandRender(), [])
+  const emojiSuggestionRender = useMemo(() => createEmojiSuggestionRender(), [])
   const slashCommandItems = useMemo(
     () => getSlashCommandItems({
       onImageUpload: () => imageInputRef.current?.click(),
@@ -259,6 +262,13 @@ export function NoteEditor({
               item.title.toLowerCase().includes(query.toLowerCase()),
             ),
           render: slashCommandRender,
+        },
+      }),
+      Emoji.configure({
+        emojis: emojiData,
+        enableEmoticons: false,
+        suggestion: {
+          render: emojiSuggestionRender,
         },
       }),
     ],
