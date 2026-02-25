@@ -193,6 +193,14 @@
   clear: both;
 }
 
+/* ── Drag handle ── */
+.drag-handle {
+  position: fixed;
+  opacity: 1;
+  transition: opacity 200ms ease;
+  z-index: 50;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

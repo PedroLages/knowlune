@@ -24,6 +24,7 @@ import xml from 'highlight.js/lib/languages/xml'
 import bash from 'highlight.js/lib/languages/bash'
 import { toast } from 'sonner'
 import { CodeBlockView } from './CodeBlockView'
+import { DragHandle } from '@tiptap/extension-drag-handle-react'
 import { BubbleMenuBar } from './BubbleMenuBar'
 import { SlashCommand, getSlashCommandItems } from './slash-command'
 import { createSlashCommandRender } from './slash-command/suggestion-render'
@@ -46,6 +47,7 @@ import {
   Image as ImageIcon,
   Youtube as YoutubeIcon,
   ChevronRight,
+  GripVertical,
 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Separator } from '@/app/components/ui/separator'
@@ -704,6 +706,17 @@ export function NoteEditor({
 
       {/* Bubble Menu (appears on text selection) */}
       <BubbleMenuBar editor={editor} onOpenLinkDialog={openLinkDialog} />
+
+      {/* Drag Handle (appears on block hover in left gutter) */}
+      <DragHandle editor={editor} data-testid="drag-handle">
+        <button
+          type="button"
+          className="flex items-center justify-center size-6 rounded cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          aria-label="Drag to reorder"
+        >
+          <GripVertical className="size-4" />
+        </button>
+      </DragHandle>
 
       {/* Editor */}
       <EditorContent editor={editor} />
