@@ -280,6 +280,16 @@ export function NoteEditor({
         emojis: emojiData,
         enableEmoticons: false,
         suggestion: {
+          items: ({ query }) => {
+            if (!query) return emojiData.slice(0, 20)
+            const q = query.toLowerCase()
+            return emojiData
+              .filter((item) =>
+                item.shortcodes.some((sc) => sc.includes(q)) ||
+                item.tags.some((tag) => tag.includes(q)),
+              )
+              .slice(0, 20)
+          },
           render: emojiSuggestionRender,
         },
       }),
@@ -789,14 +799,16 @@ export function NoteEditor({
       <BubbleMenuBar editor={editor} onOpenLinkDialog={openLinkDialog} />
 
       {/* Drag Handle (appears on block hover in left gutter) */}
-      <DragHandle editor={editor} data-testid="drag-handle">
-        <button
-          type="button"
-          className="flex items-center justify-center size-6 rounded cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-          aria-label="Drag to reorder"
-        >
-          <GripVertical className="size-4" />
-        </button>
+      <DragHandle editor={editor}>
+        <div data-testid="drag-handle">
+          <button
+            type="button"
+            className="flex items-center justify-center size-6 rounded cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            aria-label="Drag to reorder"
+          >
+            <GripVertical className="size-4" />
+          </button>
+        </div>
       </DragHandle>
 
       {/* Editor */}
