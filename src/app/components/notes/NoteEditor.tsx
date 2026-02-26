@@ -1,11 +1,22 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
 import { Clock } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs'
 import { Textarea } from '@/app/components/ui/textarea'
 import { Button } from '@/app/components/ui/button'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/app/components/ui/tooltip'
 import { cn } from '@/app/components/ui/utils'
+
+/** rehype-sanitize schema that allows video:// protocol in href */
+const noteSchema = {
+  ...defaultSchema,
+  protocols: {
+    ...defaultSchema.protocols,
+    href: [...(defaultSchema.protocols?.href ?? []), 'video'],
+  },
+}
 
 interface NoteEditorProps {
   courseId: string
@@ -48,31 +59,48 @@ function formatTimestamp(seconds: number): string {
 }
 
 /**
+ * Parse seconds from a video:// href.
+ * Supports: video://lessonId#t=123 (new) and video://123 (legacy)
+ */
+function parseVideoSeconds(href: string): number | null {
+  const hashMatch = href.match(/#t=(\d+)/)
+  if (hashMatch) return parseInt(hashMatch[1], 10)
+  const legacy = parseInt(href.replace('video://', ''), 10)
+  return isNaN(legacy) ? null : legacy
+}
+
+/**
  * Custom link component for ReactMarkdown that handles video:// links
  */
 function createVideoLinkComponent(onVideoSeek?: (seconds: number) => void) {
   return function VideoLink({ href, children, ...props }: any) {
-    // Handle video:// timestamp links
     if (href && href.startsWith('video://')) {
-      const seconds = parseInt(href.replace('video://', ''), 10)
+      const seconds = parseVideoSeconds(href)
 
-      if (!isNaN(seconds) && onVideoSeek) {
+      if (seconds != null && onVideoSeek) {
+        const label = `Jump to ${formatTimestamp(seconds)}`
         return (
-          <button
-            onClick={e => {
-              e.preventDefault()
-              onVideoSeek(seconds)
-            }}
-            className="text-brand hover:text-brand-hover underline cursor-pointer font-medium"
-            type="button"
-          >
-            {children}
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={e => {
+                  e.preventDefault()
+                  onVideoSeek(seconds)
+                }}
+                className="inline-flex items-center gap-1 text-brand hover:text-brand-hover underline cursor-pointer font-medium"
+                type="button"
+                aria-label={label}
+              >
+                <Clock className="h-3 w-3" />
+                {children}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{label}</TooltipContent>
+          </Tooltip>
         )
       }
     }
 
-    // Regular links
     return (
       <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
         {children}
@@ -145,8 +173,9 @@ export function NoteEditor({
   const insertTimestamp = useCallback(() => {
     if (!textareaRef.current) return
 
-    const timestamp = formatTimestamp(currentVideoTime)
-    const timestampLink = `[Jump to ${timestamp}](video://${Math.floor(currentVideoTime)})`
+    const seconds = Math.floor(currentVideoTime)
+    const timestamp = formatTimestamp(seconds)
+    const timestampLink = `[${timestamp}](video://${lessonId}#t=${seconds})`
 
     const textarea = textareaRef.current
     const start = textarea.selectionStart
@@ -163,7 +192,7 @@ export function NoteEditor({
       textarea.focus()
       textarea.setSelectionRange(newCursorPos, newCursorPos)
     }, 0)
-  }, [content, currentVideoTime])
+  }, [content, currentVideoTime, lessonId])
 
   const characterCount = content.length
 
@@ -198,6 +227,12 @@ export function NoteEditor({
             ref={textareaRef}
             value={content}
             onChange={e => handleContentChange(e.target.value)}
+            onKeyDown={e => {
+              if (e.altKey && e.key === 't') {
+                e.preventDefault()
+                insertTimestamp()
+              }
+            }}
             placeholder="Write your notes for this lesson... Use **bold**, *italic*, `code`, # for tags, and click 'Add Timestamp' to link to video moments."
             className="min-h-[300px] resize-y font-mono text-sm"
             aria-label="Lesson notes editor"
@@ -236,6 +271,7 @@ export function NoteEditor({
             <div className="prose prose-sm dark:prose-invert max-w-none min-h-[300px]">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
+                rehypePlugins={[[rehypeSanitize, noteSchema]]}
                 components={{
                   a: createVideoLinkComponent(onVideoSeek),
                 }}

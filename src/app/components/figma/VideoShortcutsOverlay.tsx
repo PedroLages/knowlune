@@ -28,6 +28,7 @@ const controlShortcuts: ShortcutEntry[] = [
   { keys: ['C'], description: 'Captions' },
   { keys: ['F'], description: 'Fullscreen' },
   { keys: ['B'], description: 'Add bookmark' },
+  { keys: ['Alt', 'T'], description: 'Insert timestamp' },
   { keys: ['?'], description: 'Show shortcuts' },
 ]
 

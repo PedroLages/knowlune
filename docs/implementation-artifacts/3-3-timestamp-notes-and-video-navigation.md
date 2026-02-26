@@ -36,14 +36,14 @@ So that I can link my knowledge to exact video moments for future recall.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Pass `currentVideoTime` to NoteEditor instances in LessonPlayer (AC: #1)
-- [ ] Task 2: Update timestamp insertion format to `[MM:SS](video://lessonId#t=seconds)` (AC: #1)
-- [ ] Task 3: Update video link parser for new `video://lessonId#t=seconds` format (AC: #2)
-- [ ] Task 4: Add Clock icon to rendered timestamp links (AC: #3)
-- [ ] Task 5: Add tooltip on timestamp link hover (AC: #3)
-- [ ] Task 6: Add Alt+T keyboard shortcut on textarea (AC: #1)
-- [ ] Task 7: Install and configure rehype-sanitize for video protocol (AC: #2)
-- [ ] Task 8: Add Alt+T to VideoShortcutsOverlay (AC: #1)
+- [x] Task 1: Pass `currentVideoTime` to NoteEditor instances in LessonPlayer (AC: #1)
+- [x] Task 2: Update timestamp insertion format to `[MM:SS](video://lessonId#t=seconds)` (AC: #1)
+- [x] Task 3: Update video link parser for new `video://lessonId#t=seconds` format (AC: #2)
+- [x] Task 4: Add Clock icon to rendered timestamp links (AC: #3)
+- [x] Task 5: Add tooltip on timestamp link hover (AC: #3)
+- [x] Task 6: Add Alt+T keyboard shortcut on textarea (AC: #1)
+- [x] Task 7: Install and configure rehype-sanitize for video protocol (AC: #2)
+- [x] Task 8: Add Alt+T to VideoShortcutsOverlay (AC: #1)
 
 ## Implementation Notes
 

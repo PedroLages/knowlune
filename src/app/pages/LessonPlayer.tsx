@@ -571,6 +571,7 @@ export function LessonPlayer() {
               courseId={courseId || ''}
               lessonId={lessonId || ''}
               initialContent={noteText}
+              currentVideoTime={videoCurrentTime}
               onSave={handleNoteChange}
               onVideoSeek={handleVideoSeek}
             />
@@ -691,6 +692,7 @@ export function LessonPlayer() {
                   courseId={courseId || ''}
                   lessonId={lessonId || ''}
                   initialContent={noteText}
+                  currentVideoTime={videoCurrentTime}
                   onSave={handleNoteChange}
                   onVideoSeek={handleVideoSeek}
                 />
@@ -731,6 +733,7 @@ export function LessonPlayer() {
               courseId={courseId || ''}
               lessonId={lessonId || ''}
               initialContent={noteText}
+              currentVideoTime={videoCurrentTime}
               onSave={handleNoteChange}
               onVideoSeek={handleVideoSeek}
             />
@@ -784,6 +787,7 @@ export function LessonPlayer() {
               courseId={courseId || ''}
               lessonId={lessonId || ''}
               initialContent={noteText}
+              currentVideoTime={videoCurrentTime}
               onSave={handleNoteChange}
               onVideoSeek={handleVideoSeek}
             />
