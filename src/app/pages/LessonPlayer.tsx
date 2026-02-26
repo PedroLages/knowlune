@@ -1,6 +1,6 @@
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router'
 import { useState, useRef, useEffect } from 'react'
-import { ArrowLeft, ChevronLeft, ChevronRight, CheckCircle2, Circle, Menu, X } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, CheckCircle2, Circle, Menu, PencilLine, X } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet'
@@ -437,6 +437,25 @@ export function LessonPlayer() {
               </SheetContent>
             </Sheet>
 
+            {/* Notes toggle — desktop only, hidden in theater mode */}
+            {isDesktop && !isTheaterMode && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNotesToggle}
+                aria-expanded={notesOpen}
+                className="gap-1.5"
+              >
+                <span className="relative">
+                  <PencilLine className="h-4 w-4" />
+                  {hasNotes && !notesOpen && (
+                    <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-blue-500" />
+                  )}
+                </span>
+                Notes
+              </Button>
+            )}
+
             <button
               onClick={toggleComplete}
               aria-label={completed ? 'Mark lesson incomplete' : 'Mark lesson complete'}
@@ -486,7 +505,9 @@ export function LessonPlayer() {
           {pdfResources.length > 0 && (
             <TabsTrigger value="materials">Materials ({pdfResources.length})</TabsTrigger>
           )}
-          <TabsTrigger value="notes">Notes</TabsTrigger>
+          {(!isDesktop || !notesOpen) && (
+            <TabsTrigger value="notes">Notes</TabsTrigger>
+          )}
           {videoResource && (
             <TabsTrigger value="bookmarks">Bookmarks ({bookmarks.length})</TabsTrigger>
           )}
@@ -510,15 +531,17 @@ export function LessonPlayer() {
           </TabsContent>
         )}
 
-        <TabsContent value="notes" className="mt-4">
-          <NoteEditor
-            courseId={courseId || ''}
-            lessonId={lessonId || ''}
-            initialContent={noteText}
-            onSave={handleNoteChange}
-            onVideoSeek={handleVideoSeek}
-          />
-        </TabsContent>
+        {(!isDesktop || !notesOpen) && (
+          <TabsContent value="notes" className="mt-4">
+            <NoteEditor
+              courseId={courseId || ''}
+              lessonId={lessonId || ''}
+              initialContent={noteText}
+              onSave={handleNoteChange}
+              onVideoSeek={handleVideoSeek}
+            />
+          </TabsContent>
+        )}
 
         {videoResource && (
           <TabsContent value="bookmarks" className="mt-4">
@@ -638,7 +661,7 @@ export function LessonPlayer() {
       )}
 
       {/* Sidebar Course Structure — hidden in theater mode */}
-      <div data-testid="desktop-sidebar" className={cn('sticky top-0 self-start flex-shrink-0 w-96 bg-card rounded-2xl shadow-sm overflow-hidden flex flex-col max-h-[calc(100svh-3rem)]', isTheaterMode ? 'hidden' : 'hidden lg:flex')}>
+      <div data-testid="desktop-sidebar" className={cn('sticky top-0 self-start flex-shrink-0 w-96 bg-card rounded-2xl shadow-sm overflow-hidden flex flex-col max-h-[calc(100svh-3rem)]', (isTheaterMode || notesOpen) ? 'hidden' : 'hidden lg:flex')}>
         <div className="px-4 py-3 border-b border-border flex-shrink-0">
           <h3 className="text-sm font-semibold">Course Content</h3>
         </div>
