@@ -1,9 +1,9 @@
 ---
 story_id: E03-S14
 story_name: "Tables"
-status: in-progress
+status: done
 started: 2026-02-25
-completed:
+completed: 2026-02-26
 reviewed: true
 review_started: 2026-02-25
 review_gates_passed: [build, lint, e2e-tests, design-review, code-review]

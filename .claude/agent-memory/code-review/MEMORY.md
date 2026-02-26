@@ -132,6 +132,16 @@
 - S12 `isValidYoutubeUrl` regex fixed (now accepts `shorts/` and `v/` paths)
 - Details toggle button now `width: 2.75rem; height: 2.75rem` (44px) -- WCAG fix from S12
 
+### E03-S14: Tables
+- Context menu has `role="menu"`/`role="menuitem"` but NO arrow key navigation between items -- WAI-ARIA menu pattern requires ArrowUp/ArrowDown
+- `--table-selected` token defined in `:root` but NOT in `.dark` -- table cell selection will look wrong in dark mode
+- AC2 says "Enter creates a new row at the end" but E2E test only covers Tab at end (which is the actual TipTap behavior)
+- `useLayoutEffect` with `position.y` in deps triggers a guaranteed double-render when clamping (safe but wasteful)
+- Grid picker label shows "col x row" (e.g., "2 x 4") which is inverted vs conventional "rows x cols" -- confusing
+- S13 items that persist: `@tiptap/extension-floating-menu` dead dep, emoji eager loading, syntax comment contrast
+- Items FIXED from first review: stale closure in grid picker, `role="menu"`/`role="menuitem"` added, `selectedCell` uses CSS variable, column-resize-handle dead CSS removed, inline styles replaced with Tailwind, `aria-live` on size label, `min-h-11` replaces inline style, `useLayoutEffect` for viewport clamping, focus management on open, Tab-at-end E2E test added
+- `cn()` and `size-*` consistently used throughout (continuing improvement)
+
 ## Project Conventions
 - Import alias: `@/` resolves to `./src`
 - Card border radius: `rounded-[24px]`

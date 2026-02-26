@@ -97,7 +97,10 @@ export function getSlashCommandItems(callbacks: {
       title: 'Table',
       description: 'Insert a table',
       icon: <Table2 className="size-4" />,
-      command: (editor) => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+      command: (editor) => {
+        if (editor.isActive('table')) return
+        editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+      },
     },
   ]
 }
