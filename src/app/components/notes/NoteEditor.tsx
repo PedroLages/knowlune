@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import ReactMarkdown from 'react-markdown'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
 import { Clock } from 'lucide-react'
@@ -8,6 +8,7 @@ import { Textarea } from '@/app/components/ui/textarea'
 import { Button } from '@/app/components/ui/button'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/app/components/ui/tooltip'
 import { cn } from '@/app/components/ui/utils'
+import { formatTimestamp } from '@/lib/time'
 
 /** rehype-sanitize schema that allows video:// protocol in href */
 const noteSchema = {
@@ -45,20 +46,6 @@ function extractTags(content: string): string[] {
 }
 
 /**
- * Format seconds to MM:SS or HH:MM:SS
- */
-function formatTimestamp(seconds: number): string {
-  const hrs = Math.floor(seconds / 3600)
-  const mins = Math.floor((seconds % 3600) / 60)
-  const secs = Math.floor(seconds % 60)
-
-  if (hrs > 0) {
-    return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-  }
-  return `${mins}:${secs.toString().padStart(2, '0')}`
-}
-
-/**
  * Parse seconds from a video:// href.
  * Supports: video://lessonId#t=123 (new) and video://123 (legacy)
  */
@@ -73,7 +60,7 @@ function parseVideoSeconds(href: string): number | null {
  * Custom link component for ReactMarkdown that handles video:// links
  */
 function createVideoLinkComponent(onVideoSeek?: (seconds: number) => void) {
-  return function VideoLink({ href, children, ...props }: any) {
+  return function VideoLink({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) {
     if (href && href.startsWith('video://')) {
       const seconds = parseVideoSeconds(href)
 
@@ -87,11 +74,11 @@ function createVideoLinkComponent(onVideoSeek?: (seconds: number) => void) {
                   e.preventDefault()
                   onVideoSeek(seconds)
                 }}
-                className="inline-flex items-center gap-1 text-brand hover:text-brand-hover underline cursor-pointer font-medium"
+                className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline cursor-pointer font-medium"
                 type="button"
                 aria-label={label}
               >
-                <Clock className="h-3 w-3" />
+                <Clock className="size-3" />
                 {children}
               </button>
             </TooltipTrigger>
@@ -194,6 +181,11 @@ export function NoteEditor({
     }, 0)
   }, [content, currentVideoTime, lessonId])
 
+  const videoLinkComponent = useMemo(
+    () => createVideoLinkComponent(onVideoSeek),
+    [onVideoSeek]
+  )
+
   const characterCount = content.length
 
   return (
@@ -205,17 +197,16 @@ export function NoteEditor({
             {activeTab === 'edit' && (
               <Button
                 variant="ghost"
-                size="sm"
+                size="default"
                 onClick={insertTimestamp}
-                className="h-8 px-3 text-xs"
                 disabled={currentVideoTime === 0}
                 title={currentVideoTime === 0 ? 'No video playing' : 'Insert current timestamp'}
               >
-                <Clock className="h-3.5 w-3.5 mr-1.5" />
+                <Clock className="size-4 mr-1.5" />
                 Add Timestamp
               </Button>
             )}
-            <TabsList>
+            <TabsList className="min-h-11">
               <TabsTrigger value="edit">Edit</TabsTrigger>
               <TabsTrigger value="preview">Preview</TabsTrigger>
             </TabsList>
@@ -270,10 +261,13 @@ export function NoteEditor({
           ) : (
             <div className="prose prose-sm dark:prose-invert max-w-none min-h-[300px]">
               <ReactMarkdown
+                urlTransform={(url) =>
+                  url.startsWith('video://') ? url : defaultUrlTransform(url)
+                }
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[[rehypeSanitize, noteSchema]]}
                 components={{
-                  a: createVideoLinkComponent(onVideoSeek),
+                  a: videoLinkComponent,
                 }}
               >
                 {content}

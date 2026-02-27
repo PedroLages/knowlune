@@ -1,5 +1,6 @@
 import { db } from '@/db/schema'
 import type { VideoBookmark } from '@/data/types'
+import { formatTimestamp } from '@/lib/time'
 
 const LEGACY_STORAGE_KEY = 'video-bookmarks'
 
@@ -68,20 +69,6 @@ export async function deleteBookmark(bookmarkId: string): Promise<void> {
 export async function hasBookmarkAt(courseId: string, lessonId: string, timestamp: number): Promise<boolean> {
   const bookmarks = await getLessonBookmarks(courseId, lessonId)
   return bookmarks.some(b => Math.abs(b.timestamp - timestamp) < 1)
-}
-
-/**
- * Format timestamp as HH:MM:SS or MM:SS
- */
-function formatTimestamp(seconds: number): string {
-  const hrs = Math.floor(seconds / 3600)
-  const mins = Math.floor((seconds % 3600) / 60)
-  const secs = Math.floor(seconds % 60)
-
-  if (hrs > 0) {
-    return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-  }
-  return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
 /**

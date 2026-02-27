@@ -303,10 +303,10 @@ export function LessonPlayer() {
     }
   }
 
-  const handleNoteChange = (value: string) => {
-    setNoteText(value)
+  const handleNoteChange = (content: string, tags: string[]) => {
+    setNoteText(content)
     if (courseId && lessonId) {
-      saveNote(courseId, lessonId, value)
+      saveNote(courseId, lessonId, content, tags)
     }
   }
 

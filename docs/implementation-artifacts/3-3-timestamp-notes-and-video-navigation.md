@@ -1,12 +1,12 @@
 ---
 story_id: E03-S03
 story_name: "Timestamp Notes and Video Navigation"
-status: in-progress
+status: done
 started: 2026-02-26
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-02-27
+reviewed: true
+review_started: 2026-02-27
+review_gates_passed: [build, lint, unit-tests, e2e-tests, design-review, code-review, code-review-testing]
 ---
 
 # Story 3.3: Timestamp Notes and Video Navigation
@@ -59,11 +59,20 @@ So that I can link my knowledge to exact video moments for future recall.
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+**2026-02-27 — 2 High Priority findings, 0 Blockers**
+- H1: `hover:text-brand-hover` doesn't resolve to blue in Tailwind v4 — use `hover:text-blue-700`
+- H2: Touch targets (Add Timestamp button, Edit/Preview tabs) below 44px WCAG minimum on mobile
+- Full report: `docs/reviews/design/design-review-2026-02-27-e03-s03.md`
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**2026-02-27 — 1 Blocker, 3 High, 3 Medium**
+- B1: `urlTransform` fix for `video://` protocol is UNCOMMITTED — committed branch renders broken links
+- H1: `handleNoteChange` drops tags param — silent data loss
+- H2: `createVideoLinkComponent` recreated every render — memoize with useMemo
+- H3: Alt+T shortcut scope mismatch (only works in textarea, listed as global in overlay)
+- Full report: `docs/reviews/code/code-review-2026-02-27-e03-s03.md`
+- Test coverage: `docs/reviews/code/code-review-testing-2026-02-27-e03-s03.md`
 
 ## Implementation Plan
 

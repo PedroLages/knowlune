@@ -33,9 +33,15 @@ test.describe('AC1: Timestamp insertion', () => {
     const textarea = page.getByRole('textbox', { name: /lesson notes editor/i })
     await expect(textarea).toBeVisible()
 
+    // Advance video time so currentVideoTime > 0 (button is disabled at t=0)
+    await page.locator('video').evaluate((el: HTMLVideoElement) => {
+      el.currentTime = 5
+      el.dispatchEvent(new Event('timeupdate'))
+    })
+
     // Click Add Timestamp button
     const timestampBtn = page.getByRole('button', { name: /add timestamp/i })
-    await expect(timestampBtn).toBeVisible()
+    await expect(timestampBtn).toBeEnabled()
     await timestampBtn.click()
 
     // THEN: Textarea should contain a timestamp in the spec format
@@ -83,16 +89,16 @@ test.describe('AC2: Click timestamp to seek video', () => {
   test('clicking a timestamp link in preview mode seeks the video', async ({ page }) => {
     await goToLessonWithNotes(page)
 
-    // Type a timestamp link manually in the editor
+    // Type a timestamp link manually in the editor (use 90s — within video duration)
     const textarea = page.getByRole('textbox', { name: /lesson notes editor/i })
-    await textarea.fill('[2:34](video://op6-introduction#t=154)')
+    await textarea.fill('[1:30](video://op6-introduction#t=90)')
 
     // Switch to Preview tab
     const previewTab = page.getByRole('tab', { name: /preview/i })
     await previewTab.click()
 
     // WHEN: Click the timestamp link in preview
-    const timestampLink = page.getByRole('button', { name: /2:34/i })
+    const timestampLink = page.getByRole('button', { name: /1:30/i })
     await expect(timestampLink).toBeVisible()
     await timestampLink.click()
 
@@ -100,8 +106,8 @@ test.describe('AC2: Click timestamp to seek video', () => {
     const video = page.locator('video')
     await expect(async () => {
       const currentTime = await video.evaluate((el: HTMLVideoElement) => el.currentTime)
-      expect(currentTime).toBeGreaterThanOrEqual(153) // within 1 second of 154
-      expect(currentTime).toBeLessThanOrEqual(155)
+      expect(currentTime).toBeGreaterThanOrEqual(89) // within 1 second of 90
+      expect(currentTime).toBeLessThanOrEqual(91)
     }).toPass({ timeout: 3000 })
   })
 })

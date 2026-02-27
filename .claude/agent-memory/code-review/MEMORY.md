@@ -71,6 +71,16 @@
 - E2E tests + course data + VTT file were left uncommitted -- branch was broken without them
 - `cn()` correctly used in TranscriptPanel (improvement over previous stories)
 
+### E03-S03: Timestamp Notes and Video Navigation
+- BLOCKER: `urlTransform` override for `video://` protocol exists ONLY in working tree -- committed version strips video:// URLs via react-markdown's defaultUrlTransform, breaking AC2/AC3
+- `handleNoteChange` in LessonPlayer takes `(value: string)` but NoteEditor's onSave provides `(content, tags)` -- tags silently discarded, never persisted to IndexedDB
+- `createVideoLinkComponent(onVideoSeek)` called inside JSX `components` prop -- creates new component function every render, causing unmount/remount of all links
+- Alt+T shortcut added to VideoShortcutsOverlay but only works on textarea onKeyDown, NOT on video player (misleading shortcut listing)
+- `formatTimestamp` duplicated AGAIN (now in NoteEditor, VideoPlayer, ChapterProgressBar, bookmarks.ts) -- recurring pattern from S08
+- `setVideoCurrentTime` re-render cascade (~4x/sec) now affects 4 NoteEditor instances via `currentVideoTime` prop -- recurring from S08
+- No unit tests for NoteEditor (parseVideoSeconds, formatTimestamp, insertTimestamp, createVideoLinkComponent)
+- `h-3 w-3` / `h-3.5 w-3.5` used instead of `size-3` / `size-3.5` Tailwind v4 shorthand (recurring)
+
 ### E03-S02: Side-by-Side Study Layout (Round 2)
 - CRITICAL: Blocker fixes (focus trap, Escape handler, ARIA attrs, `!noteFullScreen` guard) exist ONLY as uncommitted working tree changes -- never committed to the branch
 - Previous review identified 2 blockers, 4 high, 3 medium, 3 nits; fixes applied locally but shipped commit (1351fd3) only contains review report, not the actual code fixes
