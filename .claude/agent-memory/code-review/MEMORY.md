@@ -81,6 +81,16 @@
 - `handleNotesToggle` tab fallback chain: materials > bookmarks > transcript -- lands on non-existent tab for lessons without PDFs, video, or captions
 - E2E tests missing: Escape key dismissal on fullscreen overlay, keyboard navigation in fullscreen overlay
 
+### E03-S04: Tag-Based Note Organization
+- Duplicate `setTags(initialTags)` across two useEffects in NoteEditor -- second one triggers on every `initialTags` reference change, potentially overwriting rapid user tag additions
+- AC1 requires "tags can be added by pressing Enter or comma" but TagEditor has NO comma key handler (cmdk handles Enter only)
+- Add-tag button in TagEditor is 20x20px (`h-5 w-5`), well below 44px WCAG touch target (recurring sub-44px button pattern)
+- `handleNoteChange` and `handleTagsChange` in LessonPlayer call async Dexie operations fire-and-forget with no `.catch()` (recurring silent failure pattern)
+- `getAllNoteTags()` does full table scan (`db.notes.toArray()`) instead of using the `*tags` multi-entry index
+- TagBadgeList uses string interpolation for className instead of `cn()` (recurring since E01-S03)
+- `tagSection` JSX shared between edit and preview tabs -- preview tab shows add/remove controls (arguably should be read-only)
+- Tag immediate-save effect doesn't cancel the pending content debounce timer, causing redundant double-writes
+
 ## Silent Failure Patterns to Watch
 
 - Empty catch blocks (seen in several IndexedDB operations across stories)
