@@ -176,6 +176,17 @@ export function LessonPlayer() {
     }
   }, [courseId, lessonId])
 
+  // Seek video to timestamp from ?t= query param (e.g. from note search deep-link)
+  useEffect(() => {
+    const seekParam = searchParams.get('t')
+    if (seekParam) {
+      const time = Number(seekParam)
+      if (!Number.isNaN(time) && time >= 0) {
+        setSeekToTime(time)
+      }
+    }
+  }, [searchParams])
+
   // Scroll to top when navigating to a new lesson
   useEffect(() => {
     document.getElementById('main-content')?.scrollTo({ top: 0, behavior: 'instant' })
