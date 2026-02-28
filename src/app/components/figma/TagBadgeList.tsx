@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import { Badge } from '@/app/components/ui/badge'
+import { cn } from '@/app/components/ui/utils'
 
 interface TagBadgeListProps {
   tags: string[]
@@ -15,7 +16,7 @@ export function TagBadgeList({ tags, onRemove, maxVisible, className }: TagBadge
   const overflow = maxVisible ? tags.length - maxVisible : 0
 
   return (
-    <div data-testid="course-card-tags" className={`flex flex-wrap gap-1.5 ${className ?? ''}`}>
+    <div data-testid="course-card-tags" className={cn('flex flex-wrap gap-1.5', className)}>
       {visible.map(tag => (
         <Badge
           key={tag}
@@ -32,9 +33,9 @@ export function TagBadgeList({ tags, onRemove, maxVisible, className }: TagBadge
                 e.stopPropagation()
                 onRemove(tag)
               }}
-              className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5 -mr-1"
+              className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5 -mr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
             >
-              <X className="h-3 w-3" />
+              <X className="size-3" />
             </button>
           )}
         </Badge>

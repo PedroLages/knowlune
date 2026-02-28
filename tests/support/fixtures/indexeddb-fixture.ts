@@ -25,6 +25,8 @@ type IndexedDBHelper = {
   seedImportedCourses: (courses: ImportedCourseTestData[]) => Promise<void>
   /** Clear all imported courses from IndexedDB. */
   clearImportedCourses: () => Promise<void>
+  /** Clear all records from a named store. Useful for UI-created data (notes, etc). */
+  clearStore: (storeName: string) => Promise<void>
 }
 
 async function putRecords(
@@ -105,6 +107,30 @@ async function clearRecords(
   )
 }
 
+async function clearAllFromStore(page: Page, storeName: string): Promise<void> {
+  await page.evaluate(
+    async ({ dbName, store }) => {
+      return new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open(dbName)
+        request.onsuccess = () => {
+          const db = request.result
+          if (!db.objectStoreNames.contains(store)) {
+            db.close()
+            resolve()
+            return
+          }
+          const tx = db.transaction(store, 'readwrite')
+          tx.objectStore(store).clear()
+          tx.oncomplete = () => { db.close(); resolve() }
+          tx.onerror = () => { db.close(); reject(tx.error) }
+        }
+        request.onerror = () => reject(request.error)
+      })
+    },
+    { dbName: DB_NAME, store: storeName },
+  )
+}
+
 export const test = base.extend<{ indexedDB: IndexedDBHelper }>({
   indexedDB: async ({ page }, use) => {
     const seededIds: string[] = []
@@ -120,6 +146,10 @@ export const test = base.extend<{ indexedDB: IndexedDBHelper }>({
           await clearRecords(page, seededIds)
           seededIds.length = 0
         }
+      },
+
+      clearStore: async (storeName: string) => {
+        await clearAllFromStore(page, storeName)
       },
     }
 

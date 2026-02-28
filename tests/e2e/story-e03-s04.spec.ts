@@ -11,7 +11,7 @@ import { test, expect } from '../support/fixtures'
 import { navigateAndWait } from '../support/helpers/navigation'
 
 const LESSON_URL = '/courses/operative-six/op6-introduction'
-const LESSON_URL_2 = '/courses/operative-six/op6-lesson-2'
+const LESSON_URL_2 = '/courses/operative-six/op6-pillars-of-influence'
 
 /** Navigate to lesson player with notes panel open, suppressing mobile sidebar. */
 async function goToLessonWithNotes(page: Parameters<typeof navigateAndWait>[0], url = LESSON_URL) {
@@ -19,6 +19,52 @@ async function goToLessonWithNotes(page: Parameters<typeof navigateAndWait>[0], 
     localStorage.setItem('eduvi-sidebar-v1', 'false')
   })
   await navigateAndWait(page, url + '?panel=notes')
+  // Wait for NoteEditor to be fully rendered (handles slow dev server under parallel load)
+  await page.getByTestId('note-editor').waitFor({ state: 'visible', timeout: 30000 })
+}
+
+/** Add a tag via the TagEditor popover. */
+async function addTag(page: Parameters<typeof navigateAndWait>[0], tagName: string) {
+  const noteEditor = page.getByTestId('note-editor')
+  await noteEditor.getByTestId('add-tag-button').click()
+  const popover = page.getByTestId('tag-editor-popover')
+  await expect(popover).toBeVisible()
+  await popover.getByPlaceholder(/add a tag/i).fill(tagName)
+  await popover.getByText(new RegExp(`create.*${tagName}`, 'i')).click()
+  // Wait for tag badge to appear (confirms state + save completed)
+  await expect(noteEditor.getByTestId('tag-badge').filter({ hasText: tagName })).toBeVisible()
+}
+
+/** Wait for a tag to be persisted to IndexedDB. */
+async function waitForTagInDB(page: Parameters<typeof navigateAndWait>[0], tagName: string) {
+  await page.waitForFunction(
+    (tag) => {
+      return new Promise<boolean>((resolve) => {
+        const request = indexedDB.open('ElearningDB')
+        request.onsuccess = () => {
+          const db = request.result
+          if (!db.objectStoreNames.contains('notes')) {
+            db.close()
+            resolve(false)
+            return
+          }
+          const tx = db.transaction('notes', 'readonly')
+          const store = tx.objectStore('notes')
+          const getAll = store.getAll()
+          getAll.onsuccess = () => {
+            const notes = getAll.result as Array<{ tags: string[] }>
+            const found = notes.some(n => n.tags.includes(tag))
+            db.close()
+            resolve(found)
+          }
+          getAll.onerror = () => { db.close(); resolve(false) }
+        }
+        request.onerror = () => resolve(false)
+      })
+    },
+    tagName,
+    { timeout: 5000 },
+  )
 }
 
 // ===========================================================================
@@ -28,9 +74,15 @@ async function goToLessonWithNotes(page: Parameters<typeof navigateAndWait>[0], 
 test.describe('AC1: Tag Management UI', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
 
-  test('tag add button is visible in note editor', async ({ page }) => {
+  test.beforeEach(async ({ page, indexedDB }) => {
+    // Clear notes between tests for isolation
     await goToLessonWithNotes(page)
+    await indexedDB.clearStore('notes')
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await page.getByTestId('note-editor').waitFor({ state: 'visible', timeout: 30000 })
+  })
 
+  test('tag add button is visible in note editor', async ({ page }) => {
     const noteEditor = page.getByTestId('note-editor')
     await expect(noteEditor).toBeVisible()
 
@@ -40,8 +92,6 @@ test.describe('AC1: Tag Management UI', () => {
   })
 
   test('clicking add tag opens popover and typing creates a tag', async ({ page }) => {
-    await goToLessonWithNotes(page)
-
     const noteEditor = page.getByTestId('note-editor')
 
     // WHEN: Click the add tag button
@@ -51,7 +101,7 @@ test.describe('AC1: Tag Management UI', () => {
     const popover = page.getByTestId('tag-editor-popover')
     await expect(popover).toBeVisible()
 
-    // WHEN: Type a new tag and press Enter
+    // WHEN: Type a new tag and click Create
     await popover.getByPlaceholder(/add a tag/i).fill('react')
     await popover.getByText(/create.*react/i).click()
 
@@ -60,20 +110,25 @@ test.describe('AC1: Tag Management UI', () => {
     await expect(tagBadge).toBeVisible()
   })
 
-  test('tag badges are removable via X button', async ({ page }) => {
-    await goToLessonWithNotes(page)
-
+  test('comma key creates a tag', async ({ page }) => {
     const noteEditor = page.getByTestId('note-editor')
 
-    // Add a tag first
+    // WHEN: Open tag editor and type a tag followed by comma
     await noteEditor.getByTestId('add-tag-button').click()
     const popover = page.getByTestId('tag-editor-popover')
-    await popover.getByPlaceholder(/add a tag/i).fill('typescript')
-    await popover.getByText(/create.*typescript/i).click()
+    await popover.getByPlaceholder(/add a tag/i).fill('hooks')
+    await popover.getByPlaceholder(/add a tag/i).press(',')
 
-    // Verify tag exists
+    // THEN: A tag badge should appear
+    await expect(noteEditor.getByTestId('tag-badge').filter({ hasText: 'hooks' })).toBeVisible()
+  })
+
+  test('tag badges are removable via X button', async ({ page }) => {
+    // Add a tag
+    await addTag(page, 'typescript')
+
+    const noteEditor = page.getByTestId('note-editor')
     const tagBadge = noteEditor.getByTestId('tag-badge').filter({ hasText: 'typescript' })
-    await expect(tagBadge).toBeVisible()
 
     // WHEN: Click the remove button on the tag badge
     await tagBadge.getByRole('button', { name: /remove.*typescript/i }).click()
@@ -82,42 +137,39 @@ test.describe('AC1: Tag Management UI', () => {
     await expect(tagBadge).toBeHidden()
   })
 
-  test('autocomplete suggests previously used tags', async ({ page }) => {
-    await goToLessonWithNotes(page)
+  test('autocomplete suggests previously used tags from other notes', async ({ page }) => {
+    // Add a tag on lesson 1
+    await addTag(page, 'javascript')
+
+    // Wait for tag to persist to IndexedDB
+    await waitForTagInDB(page, 'javascript')
+
+    // WHEN: Navigate to lesson 2 and open tag editor
+    await goToLessonWithNotes(page, LESSON_URL_2)
 
     const noteEditor = page.getByTestId('note-editor')
-
-    // Add a tag first
     await noteEditor.getByTestId('add-tag-button').click()
-    let popover = page.getByTestId('tag-editor-popover')
-    await popover.getByPlaceholder(/add a tag/i).fill('javascript')
-    await popover.getByText(/create.*javascript/i).click()
-
-    // WHEN: Open tag editor again and type partial match
-    await noteEditor.getByTestId('add-tag-button').click()
-    popover = page.getByTestId('tag-editor-popover')
+    const popover = page.getByTestId('tag-editor-popover')
     await popover.getByPlaceholder(/add a tag/i).fill('java')
 
-    // THEN: Previously created tag should appear in suggestions
+    // THEN: Tag from lesson 1 should appear in suggestions (cross-note autocomplete)
     const suggestion = popover.getByText('javascript')
     await expect(suggestion).toBeVisible()
   })
 
-  test('tags display in preview tab as read-only badges', async ({ page }) => {
-    await goToLessonWithNotes(page)
+  test('tags display in preview tab as badges', async ({ page }) => {
+    // Add a tag
+    await addTag(page, 'design')
 
     const noteEditor = page.getByTestId('note-editor')
 
-    // Add a tag
-    await noteEditor.getByTestId('add-tag-button').click()
-    const popover = page.getByTestId('tag-editor-popover')
-    await popover.getByPlaceholder(/add a tag/i).fill('design')
-    await popover.getByText(/create.*design/i).click()
+    // Type some content so preview has something to show
+    await noteEditor.getByRole('textbox', { name: /notes editor/i }).fill('Some note content')
 
     // WHEN: Switch to Preview tab
     await noteEditor.getByRole('tab', { name: /preview/i }).click()
 
-    // THEN: Tag should be visible as a badge (without remove button)
+    // THEN: Tag should be visible as a badge
     const previewBadge = noteEditor.getByTestId('tag-badge').filter({ hasText: 'design' })
     await expect(previewBadge).toBeVisible()
   })
@@ -130,55 +182,46 @@ test.describe('AC1: Tag Management UI', () => {
 test.describe('AC3: Persistence & Indexing', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
 
-  test('tags persist across page reload', async ({ page }) => {
+  test.beforeEach(async ({ page, indexedDB }) => {
+    // Clear notes between tests for isolation
     await goToLessonWithNotes(page)
+    await indexedDB.clearStore('notes')
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await page.getByTestId('note-editor').waitFor({ state: 'visible', timeout: 30000 })
+  })
 
-    const noteEditor = page.getByTestId('note-editor')
+  test('tags persist across page reload', async ({ page }) => {
+    // Add a tag (addTag waits for badge to appear, confirming save)
+    await addTag(page, 'persistent')
 
-    // Add a tag
-    await noteEditor.getByTestId('add-tag-button').click()
-    const popover = page.getByTestId('tag-editor-popover')
-    await popover.getByPlaceholder(/add a tag/i).fill('persistent')
-    await popover.getByText(/create.*persistent/i).click()
-
-    // Verify tag exists before reload
-    await expect(noteEditor.getByTestId('tag-badge').filter({ hasText: 'persistent' })).toBeVisible()
-
-    // Wait for save to complete (immediate for tags, but small buffer)
-    await page.waitForTimeout(500)
+    // Wait for IndexedDB write to fully commit
+    await waitForTagInDB(page, 'persistent')
 
     // WHEN: Reload the page
     await page.reload({ waitUntil: 'domcontentloaded' })
+    // Re-navigate to ensure notes panel is open
     await goToLessonWithNotes(page)
 
     // THEN: Tag should still be there
     const persistedBadge = page.getByTestId('note-editor').getByTestId('tag-badge').filter({ hasText: 'persistent' })
-    await expect(persistedBadge).toBeVisible()
+    await expect(persistedBadge).toBeVisible({ timeout: 15000 })
   })
 
   test('tags persist after navigating to another lesson and back', async ({ page }) => {
-    await goToLessonWithNotes(page)
-
-    const noteEditor = page.getByTestId('note-editor')
-
     // Add a tag to lesson 1
-    await noteEditor.getByTestId('add-tag-button').click()
-    const popover = page.getByTestId('tag-editor-popover')
-    await popover.getByPlaceholder(/add a tag/i).fill('navigation-test')
-    await popover.getByText(/create.*navigation-test/i).click()
+    await addTag(page, 'navigation-test')
 
-    // Wait for save
-    await page.waitForTimeout(500)
+    // Wait for IndexedDB write to fully commit
+    await waitForTagInDB(page, 'navigation-test')
 
     // WHEN: Navigate to a different lesson
     await goToLessonWithNotes(page, LESSON_URL_2)
-    await page.waitForTimeout(300)
 
     // AND: Navigate back to original lesson
     await goToLessonWithNotes(page, LESSON_URL)
 
     // THEN: Tag should still be present
     const persistedBadge = page.getByTestId('note-editor').getByTestId('tag-badge').filter({ hasText: 'navigation-test' })
-    await expect(persistedBadge).toBeVisible()
+    await expect(persistedBadge).toBeVisible({ timeout: 15000 })
   })
 })

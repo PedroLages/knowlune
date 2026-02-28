@@ -28,7 +28,8 @@ import {
   savePdfPage,
   getPdfPage,
   saveNote,
-  getNote,
+  getNotes,
+  getAllNoteTags,
   isLessonComplete,
 } from '@/lib/progress'
 import { addBookmark, getLessonBookmarks, formatBookmarkTimestamp } from '@/lib/bookmarks'
@@ -60,6 +61,8 @@ export function LessonPlayer() {
     courseId && lessonId ? isLessonComplete(courseId, lessonId) : false
   )
   const [noteText, setNoteText] = useState('')
+  const [noteTags, setNoteTags] = useState<string[]>([])
+  const [allNoteTags, setAllNoteTags] = useState<string[]>([])
   const [notesOpen, setNotesOpen] = useState(() => searchParams.get('panel') === 'notes')
   const [noteFullScreen, setNoteFullScreen] = useState(false)
   const hasNotes = noteText.length > 0 && noteText !== '<p></p>'
@@ -165,7 +168,16 @@ export function LessonPlayer() {
     setActiveTab(pdfResources.length > 0 ? 'materials' : 'notes')
     if (courseId && lessonId) {
       setCompleted(isLessonComplete(courseId, lessonId))
-      getNote(courseId, lessonId).then(setNoteText)
+      getNotes(courseId, lessonId).then(notes => {
+        if (notes.length > 0) {
+          setNoteText(notes[notes.length - 1].content)
+          setNoteTags(notes[notes.length - 1].tags)
+        } else {
+          setNoteText('')
+          setNoteTags([])
+        }
+      })
+      getAllNoteTags().then(setAllNoteTags)
     }
   }, [courseId, lessonId])
 
@@ -303,11 +315,22 @@ export function LessonPlayer() {
     }
   }
 
-  const handleNoteChange = (value: string) => {
+  const handleNoteChange = (value: string, tags: string[]) => {
     setNoteText(value)
+    setNoteTags(tags)
     if (courseId && lessonId) {
-      saveNote(courseId, lessonId, value)
+      saveNote(courseId, lessonId, value, tags).catch(() => {
+        toast.error('Failed to save note. Please try again.')
+      })
     }
+  }
+
+  const handleTagsChange = (tags: string[]) => {
+    setNoteTags(tags)
+    // Refresh allNoteTags for autocomplete across notes
+    getAllNoteTags().then(setAllNoteTags).catch(() => {
+      console.warn('[LessonPlayer] Failed to refresh tag suggestions')
+    })
   }
 
   const handleNotesToggle = () => {
@@ -571,7 +594,10 @@ export function LessonPlayer() {
               courseId={courseId || ''}
               lessonId={lessonId || ''}
               initialContent={noteText}
+              initialTags={noteTags}
+              allTags={allNoteTags}
               onSave={handleNoteChange}
+              onTagsChange={handleTagsChange}
               onVideoSeek={handleVideoSeek}
             />
             {isMobile && (
@@ -691,7 +717,10 @@ export function LessonPlayer() {
                   courseId={courseId || ''}
                   lessonId={lessonId || ''}
                   initialContent={noteText}
+                  initialTags={noteTags}
+                  allTags={allNoteTags}
                   onSave={handleNoteChange}
+                  onTagsChange={handleTagsChange}
                   onVideoSeek={handleVideoSeek}
                 />
               </div>
@@ -731,7 +760,10 @@ export function LessonPlayer() {
               courseId={courseId || ''}
               lessonId={lessonId || ''}
               initialContent={noteText}
+              initialTags={noteTags}
+              allTags={allNoteTags}
               onSave={handleNoteChange}
+              onTagsChange={handleTagsChange}
               onVideoSeek={handleVideoSeek}
             />
           ) : (
@@ -784,7 +816,10 @@ export function LessonPlayer() {
               courseId={courseId || ''}
               lessonId={lessonId || ''}
               initialContent={noteText}
+              initialTags={noteTags}
+              allTags={allNoteTags}
               onSave={handleNoteChange}
+              onTagsChange={handleTagsChange}
               onVideoSeek={handleVideoSeek}
             />
           </div>

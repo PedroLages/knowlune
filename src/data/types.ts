@@ -84,7 +84,7 @@ export interface Note {
   timestamp?: number // Video position when created (in seconds)
   createdAt: string // ISO 8601 timestamp
   updatedAt: string // ISO 8601 timestamp
-  tags: string[] // Extracted from #hashtags in content
+  tags: string[] // Managed via explicit tag UI (normalized: lowercase, trimmed, sorted)
 }
 
 // --- Imported Course Types (Story 1.1) ---

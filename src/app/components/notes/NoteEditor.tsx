@@ -6,31 +6,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/ta
 import { Textarea } from '@/app/components/ui/textarea'
 import { Button } from '@/app/components/ui/button'
 import { cn } from '@/app/components/ui/utils'
+import { TagBadgeList } from '@/app/components/figma/TagBadgeList'
+import { TagEditor } from '@/app/components/figma/TagEditor'
 
 interface NoteEditorProps {
   courseId: string
   lessonId: string
   initialContent?: string
+  initialTags?: string[]
+  allTags?: string[]
   currentVideoTime?: number
   onSave?: (content: string, tags: string[]) => void
+  onTagsChange?: (tags: string[]) => void
   onVideoSeek?: (seconds: number) => void
   className?: string
-}
-
-/**
- * Extract hashtags from markdown content
- * Matches #word or #word-with-dashes but not ##heading or #123
- */
-function extractTags(content: string): string[] {
-  const tagRegex = /(?:^|\s)#([a-zA-Z][a-zA-Z0-9-]*)/g
-  const tags = new Set<string>()
-  let match
-
-  while ((match = tagRegex.exec(content)) !== null) {
-    tags.add(match[1].toLowerCase())
-  }
-
-  return Array.from(tags)
 }
 
 /**
@@ -85,28 +74,36 @@ export function NoteEditor({
   courseId,
   lessonId,
   initialContent = '',
+  initialTags = [],
+  allTags = [],
   currentVideoTime = 0,
   onSave,
+  onTagsChange,
   onVideoSeek,
   className,
 }: NoteEditorProps) {
   const [content, setContent] = useState(initialContent)
-  const [extractedTags, setExtractedTags] = useState<string[]>([])
+  const [tags, setTags] = useState<string[]>(initialTags)
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit')
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Latest-ref pattern: keep stable refs to avoid stale closures in effects
   const contentRef = useRef(content)
+  const tagsRef = useRef(tags)
   const onSaveRef = useRef(onSave)
   useEffect(() => { contentRef.current = content })
+  useEffect(() => { tagsRef.current = tags })
   useEffect(() => { onSaveRef.current = onSave })
 
-  // Update content when initialContent changes (e.g., lesson navigation)
+  // Update content and tags when lesson changes or async note load completes.
+  // Use value-based key for initialTags to avoid reference-identity re-syncs
+  // while still picking up async getNotes() results.
+  const initialTagsKey = initialTags.join(',')
   useEffect(() => {
     setContent(initialContent)
-    setExtractedTags(extractTags(initialContent))
-  }, [initialContent, courseId, lessonId])
+    setTags(initialTags)
+  }, [initialContent, initialTagsKey, courseId, lessonId])
 
   // Debounced autosave (3 seconds) — only depends on content
   useEffect(() => {
@@ -115,9 +112,7 @@ export function NoteEditor({
     }
 
     saveTimeoutRef.current = setTimeout(() => {
-      const tags = extractTags(content)
-      setExtractedTags(tags)
-      onSaveRef.current?.(content, tags)
+      onSaveRef.current?.(content, tagsRef.current)
     }, 3000)
 
     return () => {
@@ -133,13 +128,42 @@ export function NoteEditor({
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current)
       }
-      const tags = extractTags(contentRef.current)
-      onSaveRef.current?.(contentRef.current, tags)
+      onSaveRef.current?.(contentRef.current, tagsRef.current)
     }
   }, [])
 
+  // Track whether a tag change came from user action (vs prop sync)
+  const tagSavePendingRef = useRef(false)
+  const onTagsChangeRef = useRef(onTagsChange)
+  useEffect(() => { onTagsChangeRef.current = onTagsChange })
+
+  // Immediate save effect: fires when tags change due to user action
+  useEffect(() => {
+    if (!tagSavePendingRef.current) return
+    tagSavePendingRef.current = false
+    // Cancel pending content debounce — we're saving everything now
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+    onSaveRef.current?.(contentRef.current, tags)
+    onTagsChangeRef.current?.(tags)
+  }, [tags])
+
   const handleContentChange = useCallback((value: string) => {
     setContent(value)
+  }, [])
+
+  const handleAddTag = useCallback((tag: string) => {
+    const normalized = tag.trim().toLowerCase()
+    if (!normalized) return
+    tagSavePendingRef.current = true
+    setTags(prev => {
+      if (prev.includes(normalized)) return prev
+      return [...prev, normalized].sort()
+    })
+  }, [])
+
+  const handleRemoveTag = useCallback((tag: string) => {
+    tagSavePendingRef.current = true
+    setTags(prev => prev.filter(t => t !== tag))
   }, [])
 
   const insertTimestamp = useCallback(() => {
@@ -167,6 +191,17 @@ export function NoteEditor({
 
   const characterCount = content.length
 
+  const tagSection = (
+    <div data-testid="note-tags" aria-live="polite" aria-label="Note tags" className="flex items-center gap-2 flex-wrap">
+      <TagBadgeList tags={tags} onRemove={handleRemoveTag} />
+      <TagEditor
+        currentTags={tags}
+        allTags={allTags}
+        onAddTag={handleAddTag}
+      />
+    </div>
+  )
+
   return (
     <div data-testid="note-editor" className={cn('bg-card rounded-[24px] shadow-sm', className)}>
       <Tabs value={activeTab} onValueChange={v => setActiveTab(v as 'edit' | 'preview')}>
@@ -182,7 +217,7 @@ export function NoteEditor({
                 disabled={currentVideoTime === 0}
                 title={currentVideoTime === 0 ? 'No video playing' : 'Insert current timestamp'}
               >
-                <Clock className="h-3.5 w-3.5 mr-1.5" />
+                <Clock className="size-3.5 mr-1.5" />
                 Add Timestamp
               </Button>
             )}
@@ -198,29 +233,13 @@ export function NoteEditor({
             ref={textareaRef}
             value={content}
             onChange={e => handleContentChange(e.target.value)}
-            placeholder="Write your notes for this lesson... Use **bold**, *italic*, `code`, # for tags, and click 'Add Timestamp' to link to video moments."
+            placeholder="Write your notes for this lesson... Use **bold**, *italic*, `code`, and click 'Add Timestamp' to link to video moments."
             className="min-h-[300px] resize-y font-mono text-sm"
             aria-label="Lesson notes editor"
           />
 
           <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-            <div>
-              {extractedTags.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <span>Tags:</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {extractedTags.map(tag => (
-                      <span
-                        key={tag}
-                        className="rounded-full bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-xs text-blue-700 dark:text-blue-300"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            <div>{tagSection}</div>
             <div>
               {characterCount} character{characterCount !== 1 ? 's' : ''}
             </div>
@@ -245,21 +264,9 @@ export function NoteEditor({
             </div>
           )}
 
-          {extractedTags.length > 0 && (
+          {tags.length > 0 && (
             <div className="mt-6 pt-4 border-t border-border">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>Tags:</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {extractedTags.map(tag => (
-                    <span
-                      key={tag}
-                      className="rounded-full bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-xs text-blue-700 dark:text-blue-300"
-                    >
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
+              <TagBadgeList tags={tags} />
             </div>
           )}
         </TabsContent>

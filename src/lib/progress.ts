@@ -210,6 +210,31 @@ export function getPdfPage(courseId: string, resourceId: string): number | undef
 }
 
 /**
+ * Normalize tags at the store boundary: trim, lowercase, deduplicate, sort.
+ */
+export function normalizeTags(tags: string[]): string[] {
+  const normalized = new Set(
+    tags
+      .map(t => t.trim().toLowerCase())
+      .filter(Boolean)
+  )
+  return Array.from(normalized).sort()
+}
+
+/**
+ * Get all unique tags across all notes (for autocomplete).
+ */
+export async function getAllNoteTags(): Promise<string[]> {
+  try {
+    const tags = await db.notes.orderBy('tags').uniqueKeys()
+    return (tags as string[]).sort()
+  } catch (error) {
+    console.error('[Progress] Failed to get all note tags:', error)
+    return []
+  }
+}
+
+/**
  * Save or update a note for a lesson (persists to IndexedDB via Dexie)
  */
 export async function saveNote(
@@ -219,6 +244,8 @@ export async function saveNote(
   tags: string[] = [],
   videoTimestamp?: number
 ): Promise<void> {
+  const normalizedTags = normalizeTags(tags)
+
   try {
     const existing = await db.notes.where({ courseId, videoId: lessonId }).first()
 
@@ -226,7 +253,7 @@ export async function saveNote(
       const updated = {
         ...existing,
         content,
-        tags,
+        tags: normalizedTags,
         updatedAt: new Date().toISOString(),
         ...(videoTimestamp !== undefined ? { timestamp: videoTimestamp } : {}),
       }
@@ -241,7 +268,7 @@ export async function saveNote(
         timestamp: videoTimestamp,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        tags,
+        tags: normalizedTags,
       }
       await db.notes.add(newNote)
       addToIndex(newNote)
@@ -284,6 +311,7 @@ export async function addNote(
   tags: string[] = [],
   videoTimestamp?: number
 ): Promise<string> {
+  const normalizedTags = normalizeTags(tags)
   const newNote: Note = {
     id: crypto.randomUUID(),
     courseId,
@@ -292,7 +320,7 @@ export async function addNote(
     timestamp: videoTimestamp,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    tags,
+    tags: normalizedTags,
   }
 
   try {

@@ -49,9 +49,11 @@ export function TagEditor({ currentTags, allTags, onAddTag }: TagEditorProps) {
           data-testid="add-tag-button"
           aria-label="Add topic tag"
           onClick={e => e.stopPropagation()}
-          className="inline-flex items-center justify-center rounded-full h-5 w-5 bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+          className="group inline-flex items-center justify-center rounded-full p-3 -m-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
         >
-          <Plus className="h-3 w-3" />
+          <span className="flex items-center justify-center rounded-full size-5 bg-secondary text-secondary-foreground group-hover:bg-secondary/80 transition-colors">
+            <Plus className="size-3" />
+          </span>
         </button>
       </PopoverTrigger>
       <PopoverContent
@@ -66,6 +68,16 @@ export function TagEditor({ currentTags, allTags, onAddTag }: TagEditorProps) {
             placeholder="Add a tag..."
             value={inputValue}
             onValueChange={setInputValue}
+            onKeyDown={(e) => {
+              if (e.key === ',') {
+                e.preventDefault()
+                if (trimmed && !currentTags.includes(trimmed)) {
+                  onAddTag(trimmed)
+                  setInputValue('')
+                  setOpen(false)
+                }
+              }
+            }}
           />
           <CommandList>
             <CommandEmpty>
