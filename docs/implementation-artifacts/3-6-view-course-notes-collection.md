@@ -98,4 +98,9 @@ See [plan](../../.claude/plans/playful-roaming-boole.md) for implementation appr
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Tiptap useEditor initializes once** — `useEditor({ content })` captures content at mount time. After editing and saving, the read-only view showed stale pre-edit text. Fixed by extracting a `ReadOnlyContent` child component that mounts fresh when expanding, so content is always current.
+- **Eager editor instantiation is costly** — Creating a Tiptap/ProseMirror instance per NoteCard on tab switch meant 20+ editor instances mounting simultaneously. Deferring to a child component that only exists when expanded eliminated the waste.
+- **Nested interactive elements are a WCAG trap** — `div[role="button"]` wrapping `<Link>` and `<Button>` creates two tab stops and violates 4.1.2. Fixed by using a plain `div` with `onClick` for mouse convenience plus a dedicated `<button>` for keyboard access, with `stopPropagation()` on nested interactives.
+- **NoteEditor's unmount-flush fires on cancel** — The autosave-on-blur behavior in NoteEditor triggers when the component unmounts via Cancel. Used a `cancelRef` flag to suppress the save when the user explicitly cancels.
+- **Fire-and-forget async in handlers** — Both `handleDelete` and `handleSave` initially showed success toasts before the async operation completed. Wrapping in try/catch with awaited promises ensures feedback matches reality.
+- **Zustand full-store subscription** — `useNoteStore()` without a selector subscribes to the entire store, causing unnecessary re-renders on any store mutation. Using `useNoteStore(s => s.specificField)` scopes reactivity.
