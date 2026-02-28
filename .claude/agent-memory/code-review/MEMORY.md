@@ -101,6 +101,18 @@
 - `tagSection` JSX shared between edit and preview tabs -- preview tab shows add/remove controls (arguably should be read-only)
 - Tag immediate-save effect doesn't cancel the pending content debounce timer, causing redundant double-writes
 
+### E03-S06: View Course Notes Collection
+- `readOnlyEditor` in NoteCard initialized with `note.content` once -- does NOT update after editing and saving (useEditor `content` is initial-only), shows stale content in expanded view
+- `handleDelete` in NoteCard calls `onDelete(note.id)` synchronously (fire-and-forget) then immediately shows `toast.success('Note deleted')` -- if delete fails and store rolls back, user sees "Note deleted" but note reappears
+- `handleSave` in NoteCard same pattern -- calls `await saveNote()` but has NO try/catch, so any rejection is unhandled
+- NoteCard has nested interactive elements: `<Button>` and `<Link>` inside `<div role="button">` -- WCAG violation, confusing keyboard navigation
+- Tiptap `useEditor` created for EVERY NoteCard even when collapsed (never visible) -- wasteful, each creates a ProseMirror instance
+- `CourseNotesTab` uses `useNoteStore()` without selector -- subscribes to entire store, re-renders on any state change (recurring from S03/S04)
+- `formatTimestamp` duplicated AGAIN in NoteCard (local copy) -- shared utility exists at `@/lib/format.ts` (recurring from S08/S03)
+- `h-* w-*` instead of `size-*` throughout both new components (recurring from S05+)
+- No unit tests for NoteCard or CourseNotesTab
+- Expand/collapse button is 32px (`h-8 w-8`), below 44px WCAG touch target (recurring sub-44px pattern)
+
 ## Silent Failure Patterns to Watch
 
 - Empty catch blocks (seen in several IndexedDB operations across stories)

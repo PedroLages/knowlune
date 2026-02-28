@@ -45,7 +45,7 @@ async function seedNotes(page: Parameters<typeof navigateAndWait>[0]) {
             content: '<p>Introduction notes about the operative training program.</p>',
             timestamp: 30,
             createdAt: '2026-02-20T10:00:00.000Z',
-            updatedAt: '2026-02-20T10:00:00.000Z',
+            updatedAt: new Date().toISOString(),
             tags: ['overview', 'training'],
           },
           {
@@ -137,6 +137,9 @@ test.describe('AC1: Notes tab with grouped notes', () => {
 
     // Timestamp link should be visible (0:30 for 30 seconds)
     await expect(notesPanel.getByText('0:30')).toBeVisible()
+
+    // Last updated date should be visible (note 1 updatedAt is set to today)
+    await expect(notesPanel.getByText('Today').first()).toBeVisible()
   })
 
   test('sort controls allow switching between video order and date created', async ({ page }) => {
@@ -145,10 +148,22 @@ test.describe('AC1: Notes tab with grouped notes', () => {
     await page.reload()
 
     await page.getByRole('tab', { name: /notes/i }).click()
+    const notesPanel = page.getByRole('tabpanel')
 
-    // Sort control should be present
-    const sortControl = page.getByRole('combobox').or(page.getByRole('button', { name: /sort/i }))
-    await expect(sortControl).toBeVisible()
+    // Sort button should be present showing "Video Order" initially
+    const sortButton = page.getByRole('button', { name: /sort/i })
+    await expect(sortButton).toBeVisible()
+    await expect(sortButton).toContainText('Video Order')
+
+    // Lesson headings should be visible in video order mode
+    await expect(notesPanel.getByRole('heading', { name: /introduction/i })).toBeVisible()
+
+    // Click sort button to switch to date-created mode
+    await sortButton.click()
+    await expect(sortButton).toContainText('Date Created')
+
+    // Lesson headings should disappear (flat list sorted by date)
+    await expect(notesPanel.getByRole('heading', { name: /introduction/i })).not.toBeVisible()
   })
 })
 
@@ -159,12 +174,19 @@ test.describe('AC2: Note detail, inline edit, and delete', () => {
     await page.reload()
 
     await page.getByRole('tab', { name: /notes/i }).click()
+    const notesPanel = page.getByRole('tabpanel')
 
     // Click on the first note to expand
-    await page.getByText('Introduction notes about the operative training program').click()
+    await notesPanel.getByText('Introduction notes about the operative training program').click()
 
-    // Full content should render — look for edit button as indicator of expanded state
-    await expect(page.getByRole('button', { name: /edit/i })).toBeVisible()
+    // Full content should render in a Tiptap read-only viewer (ProseMirror)
+    await expect(
+      notesPanel.locator('.ProseMirror').filter({ hasText: 'Introduction notes about the operative training program' }),
+    ).toBeVisible()
+
+    // Edit and delete buttons should be visible in expanded view
+    await expect(notesPanel.getByRole('button', { name: /edit/i })).toBeVisible()
+    await expect(notesPanel.getByTestId('delete-note-button')).toBeVisible()
   })
 
   test('expanded note can be edited inline', async ({ page }) => {
@@ -183,6 +205,41 @@ test.describe('AC2: Note detail, inline edit, and delete', () => {
 
     // NoteEditor should appear
     await expect(notesPanel.getByTestId('note-editor')).toBeVisible()
+  })
+
+  test('timestamp link navigates to lesson with time parameter', async ({ page }) => {
+    await goToCourseDetail(page)
+    await seedNotes(page)
+    await page.reload()
+
+    await page.getByRole('tab', { name: /notes/i }).click()
+
+    // Click timestamp link (0:30 for 30 seconds)
+    await page.getByText('0:30').click()
+
+    // URL should contain the lesson path and timestamp parameter
+    await expect(page).toHaveURL(/op6-introduction/)
+    await expect(page).toHaveURL(/t=30/)
+  })
+
+  test('cancel-delete dismisses dialog without deleting', async ({ page }) => {
+    await goToCourseDetail(page)
+    await seedNotes(page)
+    await page.reload()
+
+    await page.getByRole('tab', { name: /notes/i }).click()
+    const notesPanel = page.getByRole('tabpanel')
+
+    // Expand note and click delete
+    await notesPanel.getByText('Introduction notes about the operative training program').click()
+    await notesPanel.getByTestId('delete-note-button').click()
+
+    // Cancel in confirmation dialog
+    await page.getByRole('alertdialog').getByRole('button', { name: /cancel/i }).click()
+
+    // Dialog should close and note should still be visible
+    await expect(page.getByRole('alertdialog')).not.toBeVisible()
+    await expect(notesPanel.getByText('Introduction notes about the operative training program').first()).toBeVisible()
   })
 
   test('note can be deleted with confirmation dialog', async ({ page }) => {

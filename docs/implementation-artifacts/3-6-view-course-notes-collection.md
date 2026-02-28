@@ -1,12 +1,12 @@
 ---
 story_id: E03-S06
 story_name: "View Course Notes Collection"
-status: in-progress
+status: done
 started: 2026-02-28
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-02-28
+reviewed: true
+review_started: 2026-02-28
+review_gates_passed: [build, lint, unit-tests, e2e-tests, design-review, code-review, code-review-testing]
 ---
 
 # Story 3.6: View Course Notes Collection
@@ -77,11 +77,20 @@ So that I can review my captured knowledge for an entire course at a glance.
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+Report: docs/reviews/design/design-review-2026-02-28-E03-S06.md
+
+**Blockers**: Nested interactive elements (div[role="button"] wrapping button) — WCAG violation, 2 Tab stops per card.
+**High**: Cancel-saves-note bug (NoteEditor unmount flush), muted text contrast 4.39:1 on #FAF5EE (needs 4.5:1), 32px touch target.
+**Medium**: NoteCard rounded-2xl vs 24px standard, heading hierarchy H1→H3 skip.
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+Report: docs/reviews/code/code-review-2026-02-28-E03-S06.md
+Test report: docs/reviews/code/code-review-testing-2026-02-28-E03-S06.md
+
+**Blockers**: Stale readOnlyEditor content after edit/save (useEditor sets content only on init), nested interactive elements (WCAG 4.1.2).
+**High**: handleDelete fire-and-forget (premature success toast), handleSave no try/catch, eager Tiptap initialization (N instances on mount), useNoteStore without selector.
+**Testing**: 8/15 AC sub-criteria fully covered, 4 gaps (last updated date, sort reorder, markdown render, timestamp navigation).
 
 ## Implementation Plan
 

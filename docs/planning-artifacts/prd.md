@@ -1,41 +1,77 @@
 ---
-stepsCompleted: ['step-01-init', 'step-02-discovery', 'step-03-success', 'step-04-journeys', 'step-05-domain', 'step-06-innovation', 'step-07-project-type', 'step-08-scoping', 'step-09-functional', 'step-10-nonfunctional', 'step-11-polish']
+stepsCompleted: ['step-01-init', 'step-02-discovery', 'step-03-success', 'step-04-journeys', 'step-05-domain', 'step-06-innovation', 'step-07-project-type', 'step-08-scoping', 'step-09-functional', 'step-10-nonfunctional', 'step-11-polish', 'step-e-01-discovery', 'step-e-02-review', 'step-e-03-edit']
 inputDocuments:
   - CLAUDE.md
   - README.md
   - ATTRIBUTIONS.md
+  - domain-lms-personal-learning-dashboards-research-2026-02-28.md
 workflowType: 'prd'
+workflow: 'edit'
 briefCount: 0
-researchCount: 0
+researchCount: 1
 brainstormingCount: 0
 projectDocsCount: 3
 classification:
   projectType: 'web_app'
   domain: 'edtech'
-  complexity: 'medium'
+  complexity: 'medium-high'
   projectContext: 'brownfield'
   specialCharacteristics:
     - 'Single-user personal learning management system'
     - 'Local file integration (videos/PDFs from disk)'
     - 'Focus on course completion and knowledge retention'
+    - 'Gamification-driven motivation (XP, badges, streaks)'
+    - 'FSRS spaced repetition for active recall'
+    - 'AI-powered tutoring and adaptive learning'
   coreFeatures:
     - 'Study Streak Tracker'
     - 'Visual Progress Maps'
-    - 'Smart Note System (Markdown)'
+    - 'Smart Note System (Rich Text via TipTap)'
     - 'Course Momentum Score'
     - 'Learning Challenges'
-    - 'AI-Powered Learning Assistant'
+    - 'XP/Level Progression & Achievement Badges'
+    - 'FSRS Spaced Repetition Flashcards'
+    - 'AI-Powered Learning Tutor'
   technicalApproach:
     architecture: 'Web app (React + Vite)'
     import: 'Manual course import'
-    storage: 'IndexedDB'
+    storage: 'IndexedDB (Dexie.js)'
     contentViewing: 'HTML5 video + react-pdf'
+    stateManagement: 'Zustand'
+    analytics: '@tremor/react'
+    spacedRepetition: 'ts-fsrs'
+    richText: '@tiptap/react'
+    ai: 'Vercel AI SDK (ai + @ai-sdk/react)'
+    celebrations: 'canvas-confetti'
+lastEdited: '2026-02-28'
+editHistory:
+  - date: '2026-02-28'
+    changes: 'Incorporated domain research: added gamification (XP, badges, streak freeze), FSRS spaced repetition, rich text notes (TipTap), AI tutor (Vercel AI SDK), restructured from 3 to 4 development phases, added FR79-FR107 and NFR57-NFR65'
 ---
 
 # Product Requirements Document - Elearningplatformwireframes
 
 **Author:** Pedro
 **Date:** 2026-02-13
+
+## Executive Summary
+
+LevelUp is a local-first personal learning platform that transforms a learner's existing course library into a structured, gamified, and AI-assisted study environment. It runs entirely in the browser against IndexedDB and the Web File System Access API — no server, no subscription, no data leaving the device. The platform targets the unserved gap between heavyweight institutional LMS platforms and single-purpose productivity tools.
+
+The primary user is a self-directed developer or knowledge worker who owns a library of video courses and PDFs on local storage and needs more than a file system to learn from them effectively.
+
+The $28.6B LMS market is dominated by institutional platforms (Canvas, Moodle) built for course delivery, not personal mastery. Single-purpose alternatives — Anki for flashcards, Notion for notes, manual spreadsheets for progress — require the learner to stitch together their own system. LevelUp delivers the complete stack — progress tracking, gamification, spaced repetition, and AI tutoring — in a single offline-capable application purpose-built for self-directed learning against local content.
+
+**Key capabilities:**
+
+- Course management with local video/PDF playback via File System Access API
+- Granular progress tracking with study streaks and session analytics
+- XP system, badges, and achievement gamification with milestone celebrations
+- Integrated note-taking with rich text editing (TipTap) and tag organization
+- FSRS-algorithm spaced repetition flashcard system for active recall
+- Interactive analytics dashboards (Tremor charts) across courses and time periods
+- AI tutoring layer with adaptive difficulty and contextual Q&A (Vercel AI SDK)
+- Fully offline, local-first data architecture with zero backend dependency
 
 ## Success Criteria
 
@@ -108,6 +144,11 @@ classification:
 - ✅ 50+ notes created across courses
 - ✅ 3+ learning challenges completed
 - ✅ Successful recall of concepts from completed courses (validated by project work)
+- ✅ Reach Level 10 or higher (XP accumulation via daily sessions + completions)
+- ✅ 10+ distinct badges/achievements unlocked
+- ✅ 200+ flashcard reviews completed across all decks
+- ✅ 85%+ recall rate on spaced repetition reviews (measured by correct responses)
+- ✅ Streak freeze usage below 3 per month average
 
 **6-Month Success Metrics:**
 
@@ -115,6 +156,11 @@ classification:
 - ✅ Consistent study habit maintained (80%+ weekly adherence)
 - ✅ Active application of learned skills in real projects
 - ✅ Measurable improvement in learning speed/efficiency
+- ✅ Reach Level 25 or higher with visible XP progression curve
+- ✅ 25+ distinct badges/achievements unlocked across all categories
+- ✅ 750+ flashcard reviews completed with spaced repetition scheduling
+- ✅ 88%+ recall rate sustained across all reviewed flashcard decks
+- ✅ Streak freeze usage below 2 per month average (habit stabilization indicator)
 
 ## Product Scope
 
@@ -190,36 +236,41 @@ classification:
 
 **Technical Foundation:**
 
-- React + TypeScript + Vite architecture
-- IndexedDB for data persistence
+- React 18 + TypeScript + Vite architecture
+- Zustand for state management
+- Dexie.js (IndexedDB wrapper) for data persistence
 - Tailwind CSS v4 for styling
 - shadcn/ui component library
+- @tremor/react for dashboard analytics components
+- @tiptap/react + extensions for rich text note editing
+- ai + @ai-sdk/react (Vercel AI SDK) for AI tutor integration
+- ts-fsrs for FSRS spaced repetition algorithm
+- canvas-confetti for milestone celebrations
 - Web File System Access API for local file integration
-- AI API integration (OpenAI, Anthropic, or local models)
 
-### Growth Features (Post-MVP)
+### Growth Features (Post-Phase 4)
 
-**Version 2.0 Candidates:**
+**Version 5.0+ Candidates:**
 
-1. **Learning Echoes (Spaced Repetition)**
-   - Resurface your own notes at intelligent intervals
-   - Reinforce concepts weeks after completion
-   - Personalized review schedules based on retention patterns
+1. **Social & Accountability**
+   - Study buddy pairing and shared progress visibility
+   - Cohort-based learning with group streaks
+   - Public profile with opt-in achievement sharing
 
-2. **Quick Reviews & Quizzes**
-   - Mini-quizzes for completed sections
-   - Spaced repetition alerts
-   - Self-assessment tools
+2. **External Platform Sync**
+   - Import courses from Udemy, Coursera, and YouTube playlists
+   - Sync completion state and certificates from third-party platforms
+   - Unified progress dashboard across all learning sources
 
-3. **Enhanced Visualizations**
-   - Skill tree showing course relationships
-   - Learning heatmaps (study patterns over time)
-   - Progress animations and celebrations
+3. **Advanced AI Capabilities**
+   - Voice interaction for hands-free note capture and Q&A
+   - Visual content analysis for diagrams, slides, and screenshots
+   - Proactive learning recommendations based on knowledge gaps
 
-4. **Batch Operations**
-   - Bulk course import
-   - Tag management across multiple courses
-   - Export notes to external tools
+4. **Cross-Platform Expansion**
+   - Native mobile app (iOS + Android) with offline support
+   - Desktop app via Tauri for system-level file access
+   - Cloud sync for seamless continuity across devices
 
 ### Vision (Future)
 
@@ -562,15 +613,15 @@ Single Page Application (SPA) built with React + Vite, designed as a local-first
 - All-or-nothing bet that the full experience is necessary to solve the core problem
 
 **Trade-offs Accepted:**
-- ✅ Longer development timeline (6-9 months solo)
-- ✅ Higher technical complexity with AI integration
+- ✅ Longer development timeline (10-12 months solo)
+- ✅ Higher technical complexity with AI integration, spaced repetition, and gamification
 - ✅ Benefits: Complete, polished product that truly solves the learning problem
 
 **Resource Requirements:**
 - **Development Team:** Solo developer
-- **Estimated Timeline:** 6-9 months to full MVP
-- **Technical Skills Required:** React, TypeScript, IndexedDB, AI API integration
-- **Acceptable Time-to-Launch:** 6-9 months (phased approach ensures usability at each milestone)
+- **Estimated Timeline:** 10-12 months to full MVP
+- **Technical Skills Required:** React, TypeScript, IndexedDB, AI API integration, FSRS algorithm
+- **Acceptable Time-to-Launch:** 10-12 months (phased approach ensures usability at each milestone)
 
 ### Phased Development Roadmap
 
@@ -592,45 +643,66 @@ Single Page Application (SPA) built with React + Vite, designed as a local-first
 
 **Validation Milestone:** You can use this to study daily. If not, fix UX before proceeding.
 
-#### Phase 2: Intelligence & Gamification (Months 4-6)
+#### Phase 2: Gamification & Analytics (Months 4-6)
 
 **Enhanced Features:**
-7. Course Momentum Score (hot/warm/cold algorithm based on recency + completion + frequency)
-8. Learning Challenges (personal goals: completion-based, time-based, streak-based)
-9. Learning Intelligence (basic course recommendations based on patterns)
-10. Enhanced note search (full-text, timestamp linking to video positions)
+7. XP/points system with level progression and rank titles
+8. Achievement badges and milestone celebrations (canvas-confetti)
+9. Study streak enhancements (streak freeze tokens, streak milestone rewards)
+10. Course momentum score (hot/warm/cold algorithm based on recency + completion + frequency)
+11. Learning challenges (personal goals: completion-based, time-based, streak-based)
+12. Enhanced analytics dashboard (study time charts, completion heatmaps, trend lines via @tremor/react)
 
 **Success Criteria:**
-- ✅ App actively motivates you to study
-- ✅ Using challenges and momentum indicators to decide what to study
-- ✅ Recommendations are helpful, not noise
+- ✅ XP and level system drives measurable increase in daily session frequency
+- ✅ Achievement badges are earned within first two weeks of regular use
+- ✅ Momentum scores and challenges actively influence which course to study next
+- ✅ Analytics dashboard surfaces actionable patterns (peak study times, completion velocity)
 
-**Validation Milestone:** Are you using it daily? Is it helping completion rates? If yes, continue.
+**Validation Milestone:** Are gamification signals changing study behavior? If completion rates and session frequency increase, continue.
 
-#### Phase 3: AI & Advanced Analytics (Months 7-9)
+#### Phase 3: Spaced Repetition & Rich Notes (Months 7-9)
 
 **Advanced Features:**
-11. Advanced Analytics & Insights (study time charts, completion trends, learning velocity)
-12. AI-Powered Learning Assistant:
-    - Note Q&A (query your notes using semantic search)
-    - Video summaries (AI-generated overviews)
-    - Learning path optimization (AI suggests course sequence)
-    - Knowledge gap identification and reinforcement suggestions
+13. FSRS-based spaced repetition engine (ts-fsrs) with per-card scheduling
+14. Flashcard creation from course content and existing notes
+15. Rich text note editor upgrade (@tiptap/react replacing Markdown, supporting embeds, callouts, checklists)
+16. Note search and organization enhancements (full-text, timestamp linking to video positions, tag hierarchies)
+17. Learning Echoes (resurface notes and flashcards at FSRS-optimal intervals with in-app notifications)
 
 **Success Criteria:**
-- ✅ AI provides actual value (helps recall, suggests next courses)
-- ✅ Analytics show measurable improvement in completion rates
-- ✅ AI features are used regularly, not ignored
+- ✅ Flashcard review sessions complete within 5 minutes for a 50-card deck
+- ✅ FSRS scheduling demonstrably reduces re-learning time (measured by card pass rate over 30 days)
+- ✅ Rich text notes replace Markdown for 80%+ of new notes taken
+- ✅ Learning Echoes resurface at least one relevant note per study session
 
-**Validation Milestone:** Does AI make a difference, or is it over-engineered?
+**Validation Milestone:** Is spaced repetition improving recall? Track card retention rates at 1-week and 1-month intervals before proceeding.
 
-### MVP Feature Set (All 11 Features - Phased Delivery)
+#### Phase 4: AI-Powered Tutor (Months 10-12)
+
+**Advanced Features:**
+18. AI chat tutor contextual to current course and notes (Vercel AI SDK)
+19. Personalized learning path recommendations based on completion patterns and goals
+20. Adaptive difficulty adjustment for flashcard decks and challenge targets
+21. Smart study session suggestions (optimal duration, content mix, timing)
+22. AI-generated content summaries for videos and PDF chapters
+23. Knowledge gap identification and targeted reinforcement suggestions
+
+**Success Criteria:**
+- ✅ AI chat tutor answers course-specific questions with >80% user-rated accuracy
+- ✅ Learning path recommendations lead to measurable reduction in course abandonment
+- ✅ AI-generated summaries reduce re-watch time by at least 30%
+- ✅ Knowledge gap alerts result in targeted review sessions within 48 hours
+
+**Validation Milestone:** Does AI make a measurable difference in learning outcomes, or is it over-engineered? Ship only what earns regular use.
+
+### MVP Feature Set (All 23 Features - Phased Delivery)
 
 **Core User Journeys Supported:**
 - Journey 1: Fresh Start (onboarding, first course import, initial session)
-- Journey 2: Daily Learner (consistent study sessions, streak maintenance)
-- Journey 3: Knowledge Seeker (note search, recall, application)
-- Journey 4: Curator (course library management, momentum tracking)
+- Journey 2: Daily Learner (consistent study sessions, streak maintenance, XP progression)
+- Journey 3: Knowledge Seeker (note search, flashcard recall, AI Q&A)
+- Journey 4: Curator (course library management, momentum tracking, learning path optimization)
 
 **Must-Have Capabilities (Phase 1):**
 - Frictionless course import from local disk
@@ -640,16 +712,22 @@ Single Page Application (SPA) built with React + Vite, designed as a local-first
 - Study streak calendar and counter
 
 **Enhanced Capabilities (Phase 2):**
+- XP/points system with level progression and achievement badges
 - Course momentum scoring (hot/warm/cold)
-- Personal learning challenges
-- Smart course recommendations
-- Advanced note search with timestamps
+- Personal learning challenges (completion, time, streak-based)
+- Enhanced analytics dashboard with heatmaps and trend lines
 
 **Advanced Capabilities (Phase 3):**
-- Study time analytics and insights
-- AI-powered note Q&A
-- Video content summaries
-- Learning path optimization
+- FSRS spaced repetition engine with flashcard creation
+- Rich text note editor (@tiptap/react) with full-text search and timestamp links
+- Learning Echoes for optimal note and flashcard resurfacing
+
+**AI Capabilities (Phase 4):**
+- Contextual AI chat tutor per course
+- Personalized learning path recommendations
+- Adaptive difficulty and smart session suggestions
+- AI-generated video and PDF summaries
+- Knowledge gap identification and reinforcement
 
 ### Risk Mitigation Strategy
 
@@ -689,25 +767,29 @@ Single Page Application (SPA) built with React + Vite, designed as a local-first
 
 #### Resource Risks
 
-**Risk: Running Out of Steam Before Completing All 11 Features**
+**Risk: Running Out of Steam Before Completing All 23 Features**
 
 **Mitigation:**
 
 **Phase 1 Fallback:**
 - If you run out of steam after Phase 1: **Ship what you have**
 - Features 1-6 still deliver a functional learning platform that solves core problem
-- AI features can always be added later once you're actively using the platform
+- Gamification, spaced repetition, and AI can always be added later
 
 **Phase 2 Fallback:**
-- If you complete Phase 2 but can't finish Phase 3: **Ship without AI**
-- Features 1-9 provide complete gamification + intelligence
-- Analytics can be simple (basic charts)
-- AI is "nice-to-have" enhancement, not core value
+- If you complete Phase 2 but can't finish Phases 3-4: **Ship with gamification**
+- Features 1-12 provide gamified learning with analytics
+- Spaced repetition and AI are enhancements, not core value
 
-**Phase 3 Contingency:**
+**Phase 3 Fallback:**
+- If you complete Phase 3 but can't finish Phase 4: **Ship without AI**
+- Features 1-17 provide gamification + spaced repetition + rich notes
+- AI tutor is the final enhancement layer, not a dependency
+
+**Phase 4 Contingency:**
 - Break AI features into smaller increments
-- Ship basic AI (note Q&A only) first
-- Add video summaries and path optimization later
+- Ship basic AI (chat tutor only) first
+- Add adaptive difficulty and summaries later
 
 **Timeline Flexibility:**
 - If progress is faster than expected: Great! Ship early.
@@ -723,20 +805,26 @@ Single Page Application (SPA) built with React + Vite, designed as a local-first
 - **If NO:** Fix UX before proceeding. If YES: Continue to Phase 2.
 
 **Phase 2 Validation (Month 6):**
-- Are you using challenges and momentum indicators?
+- Are XP, badges, and challenges changing study behavior?
 - Is it helping you complete courses faster?
-- Do recommendations feel helpful?
+- Do analytics surface actionable insights?
 - **If NO:** Iterate on gamification. If YES: Continue to Phase 3.
 
 **Phase 3 Validation (Month 9):**
+- Is spaced repetition improving recall measurably?
+- Are you creating and reviewing flashcards regularly?
+- Is the rich text editor preferred over Markdown?
+- **If NO:** Iterate on retention features. If YES: Continue to Phase 4.
+
+**Phase 4 Validation (Month 12):**
 - Does AI provide actual value or is it a distraction?
-- Are analytics showing measurable improvement?
-- Are you using AI features regularly?
+- Are AI features used regularly, not ignored?
+- Do learning path recommendations reduce course abandonment?
 - **If NO:** Consider shipping without AI. If YES: Full MVP complete.
 
 ### Final Scope Decision
 
-**Commitment:** Build all 11 features over 6-9 months using phased approach.
+**Commitment:** Build all 23 features over 10-12 months using phased approach.
 
 **Why This Works:**
 - Personal tool with immediate feedback loop
@@ -746,9 +834,9 @@ Single Page Application (SPA) built with React + Vite, designed as a local-first
 
 **What Success Looks Like:**
 - Month 3: Using daily for studying (Phase 1 validated)
-- Month 6: Completing courses consistently (Phase 2 validated)
-- Month 9: Full MVP with AI assistance (Phase 3 complete)
-- Month 12: Measurable improvement in course completion rates
+- Month 6: Gamification driving consistent study habits (Phase 2 validated)
+- Month 9: Spaced repetition improving knowledge retention (Phase 3 validated)
+- Month 12: Full MVP with AI tutoring assistance (Phase 4 complete)
 
 ## Functional Requirements
 
@@ -833,6 +921,47 @@ Single Page Application (SPA) built with React + Vite, designed as a local-first
 - FR52: User can receive AI assistance with note organization and enhancement
 - FR53: System can suggest connections between concepts across different courses
 
+### Gamification & Rewards
+
+- FR79: User can earn XP points for completing video lessons, submitting notes, reviewing flashcard sessions, and maintaining daily streaks.
+- FR80: User can progress through named levels as accumulated XP crosses defined thresholds.
+- FR81: User can unlock achievement badges across four categories: streak, completion, mastery, and exploration.
+- FR82: System displays a milestone celebration animation when a user levels up or unlocks a badge.
+- FR83: User can view a personal performance leaderboard comparing current progress metrics against their own historical bests.
+- FR84: User can activate one streak freeze per calendar week to preserve an active streak when a study day is missed.
+- FR85: System awards a special streak badge when a user reaches a 7-day, 30-day, or 100-day continuous streak milestone.
+
+### Spaced Repetition
+
+- FR86: User can create a flashcard in front/back format from any saved course note.
+- FR87: User can create a flashcard linked to a specific video timestamp.
+- FR88: System schedules each flashcard's next review date using the FSRS spaced-repetition algorithm.
+- FR89: User can rate their recall difficulty for each flashcard using four options: Again, Hard, Good, or Easy.
+- FR90: User can view a daily review queue listing all flashcards due for review across all enrolled courses.
+- FR91: System displays retention statistics per course and as an aggregate across all courses.
+- FR92: User can create, edit, and archive flashcard decks scoped to individual courses.
+- FR93: User can export a flashcard deck in a format compatible with Anki (.apkg).
+
+### Rich Notes
+
+- FR94: User can format note content using a toolbar that supports bold, italic, headings, ordered lists, unordered lists, and code blocks.
+- FR95: User can embed images and diagrams directly within a note.
+- FR96: User can insert a cross-reference link from one note to another note in any course.
+- FR97: User can apply a predefined note template when creating a note, with available templates including lecture summary, concept map, and Q&A.
+- FR98: User can import a note from a Markdown file and export any note as a Markdown file.
+- FR99: System surfaces related concepts from the user's other notes when a note is open for editing.
+- FR100: User can view the full version history of a note and restore any previous version.
+
+### Enhanced AI Tutor
+
+- FR101: User can conduct a conversational session with an AI tutor whose responses are scoped to the content of the current course and the user's own notes for that course.
+- FR102: System generates practice questions based on the learning material the user has studied within the past 7 days.
+- FR103: System adjusts the complexity of AI-generated practice questions based on the user's recent response accuracy.
+- FR104: System produces a suggested study sequence for the current day based on due flashcard reviews, course progress, and streak status.
+- FR105: System generates a concept map that links topics and terms across two or more of the user's enrolled courses.
+- FR106: User can select any text passage or concept label and request an AI-generated deeper explanation of that content.
+- FR107: System delivers a weekly learning summary to the user containing performance metrics and a minimum of three actionable study recommendations.
+
 ## Non-Functional Requirements
 
 ### Performance
@@ -845,7 +974,7 @@ Single Page Application (SPA) built with React + Vite, designed as a local-first
 - NFR5: Note autosave completes in less than 50ms (invisible to user)
 
 **Resource Constraints:**
-- NFR6: Initial bundle size does not exceed 500KB (gzipped)
+- NFR6: Initial bundle size does not exceed 750KB (gzipped) with code splitting enforced such that any single initial route chunk loads under 300KB (gzipped)
 - NFR7: Memory footprint remains stable during extended use (no memory leaks)
 
 **Optimization Strategies:**
@@ -945,4 +1074,16 @@ Single Page Application (SPA) built with React + Vite, designed as a local-first
 
 **Authentication:**
 - NFR56: No authentication required (personal single-user tool on local device)
+
+### Gamification & Spaced Repetition Performance
+
+- NFR57: XP calculation and level-up evaluation complete within 50ms of the triggering user action
+- NFR58: Badge unlock eligibility checks complete within 100ms of the triggering event
+- NFR59: Confetti animation (canvas-confetti) renders at sustained 60fps without blocking the main UI thread
+- NFR60: Flashcard review queue for up to 500 due cards loads and renders within 200ms of navigation to the review screen
+- NFR61: FSRS scheduling recalculation for a single card review completes within 100ms
+- NFR62: TipTap rich text editor instance initializes and is interactive within 300ms of the host component mounting
+- NFR63: TipTap rich text editor handles documents of up to 50,000 characters without input latency exceeding 16ms per keystroke
+- NFR64: AI tutor begins streaming the first response token within 2 seconds of query submission under normal network conditions
+- NFR65: AI tutor conversation context supports up to 20 message turns without increase in response initiation time beyond 500ms over the NFR64 baseline
 

@@ -21,7 +21,10 @@ interface LessonInfo {
 }
 
 export function CourseNotesTab({ courseId, modules }: CourseNotesTabProps) {
-  const { notes, isLoading, loadNotesByCourse, deleteNote } = useNoteStore()
+  const notes = useNoteStore(s => s.notes)
+  const isLoading = useNoteStore(s => s.isLoading)
+  const loadNotesByCourse = useNoteStore(s => s.loadNotesByCourse)
+  const deleteNote = useNoteStore(s => s.deleteNote)
   const [sortMode, setSortMode] = useState<SortMode>('video-order')
 
   useEffect(() => {
@@ -113,8 +116,8 @@ export function CourseNotesTab({ courseId, modules }: CourseNotesTabProps) {
   // Empty state (AC3)
   if (notes.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
+      <div className="flex flex-col items-center justify-center py-16 text-center bg-card rounded-[24px] border">
+        <FileText className="size-12 text-muted-foreground/50 mb-4" />
         <p className="text-muted-foreground">
           No notes yet. Start taking notes while watching videos.
         </p>
@@ -135,7 +138,7 @@ export function CourseNotesTab({ courseId, modules }: CourseNotesTabProps) {
           onClick={() => setSortMode(m => m === 'video-order' ? 'date-created' : 'video-order')}
           aria-label="Sort notes"
         >
-          <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />
+          <ArrowUpDown className="size-3.5 mr-1.5" />
           {sortMode === 'video-order' ? 'Video Order' : 'Date Created'}
         </Button>
       </div>
