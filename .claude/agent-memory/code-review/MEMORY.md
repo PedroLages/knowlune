@@ -91,15 +91,22 @@
 - `handleNotesToggle` tab fallback chain: materials > bookmarks > transcript -- lands on non-existent tab for lessons without PDFs, video, or captions
 - E2E tests missing: Escape key dismissal on fullscreen overlay, keyboard navigation in fullscreen overlay
 
-### E03-S05: Full-Text Note Search
-- `notesOpen` state initialized from `searchParams.get('panel')` in useState initializer -- only runs on mount, NOT when navigating from search to the same LessonPlayer component (AC3 broken for same-page navigation)
-- `buildSearchIndex()` called inside render body (line 197) -- recreates entire static search index on every render cycle
-- `combineWith: 'AND'` in MiniSearch config may cause fuzzy "custm hooks" to fail -- "custm" fuzzy-matches "custom" but AND requires BOTH terms to match; if MiniSearch fuzzy doesn't find "custm" it returns nothing
-- `searchParams` in `[searchParams]` deps causes `?t=` seek effect to re-run on ANY param change (e.g., `panel` param change), not just `t=` changes
-- E2E timestamp test (line 218-231) does NOT assert `t=42` in URL -- comment says "should reflect time seek" but assertion only checks `panel=notes`
-- No unit test for fuzzy matching in noteSearch.test.ts (AC2 gap)
-- AC1 says "highlighted matching keywords" in snippets but `truncateSnippet()` strips HTML and returns plain text -- no keyword highlighting
-- `h-4 w-4` used instead of `size-4` Tailwind v4 shorthand in new StickyNote icon (recurring)
+### E03-S05: Full-Text Note Search (Round 2)
+- BLOCKER (RECURRING): Fixes exist ONLY as uncommitted working tree changes -- committed branch ships broken code. Recurring from E03-S03 and E03-S02.
+  - `combineWith: 'AND'` in committed noteSearch.ts breaks fuzzy multi-term search ("custm hooks" returns nothing)
+  - `searchParams` object in useEffect deps causes over-firing of seek/panel effects in committed LessonPlayer.tsx
+  - `highlightMatches` takes `string` query arg in committed version (recreates RegExp on every call) instead of memoized patterns
+  - `buildSearchIndex()` assigned to module-level const in committed version (not wrapped in useMemo)
+  - Tags joined with space in committed version -- multi-word tags like "machine learning" corrupt on round-trip
+  - OR semantics test and multi-word tag test only exist in uncommitted working tree
+- `h-4 w-4` used instead of `size-4` Tailwind v4 shorthand in StickyNote icon (recurring)
+- `bg-yellow-200` hardcoded in highlightMatches `<mark>` tag instead of using theme token
+
+## Recurring Anti-Pattern: Uncommitted Fixes
+- E03-S02: Blocker fixes (focus trap, ARIA attrs) existed only in working tree
+- E03-S03: `urlTransform` override for video:// protocol existed only in working tree
+- E03-S05: 6+ fixes (combineWith, searchParams deps, tag separator, highlight memoization, searchIndex useMemo, tests) exist only in working tree
+- Root cause: Review findings are applied locally but never committed before shipping
 
 ### E03-S04: Tag-Based Note Organization
 

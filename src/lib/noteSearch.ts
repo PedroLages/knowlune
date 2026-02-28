@@ -19,7 +19,7 @@ const miniSearch = new MiniSearch<SearchableNote>({
     boost: { tags: 2, courseName: 1.5 },
     prefix: true,
     fuzzy: 0.2,
-    combineWith: 'AND',
+    combineWith: 'OR',
   },
 })
 
@@ -50,7 +50,7 @@ function toSearchableNote(note: Note): SearchableNote {
   return {
     id: note.id,
     content: note.content,
-    tags: note.tags.join(' '),
+    tags: note.tags.join(' | '),
     courseName: courseNameMap.get(note.courseId) ?? '',
     videoTitle: lessonTitleMap.get(note.videoId) ?? '',
     courseId: note.courseId,
@@ -87,8 +87,11 @@ export function updateInIndex(note: Note): void {
   if (!initialized) return
   try {
     miniSearch.discard(note.id)
-  } catch {
-    // Note might not be in the index yet
+  } catch (e) {
+    // MiniSearch throws when ID not in index — expected during first add
+    if (!(e instanceof Error && e.message.includes('not in the index'))) {
+      console.error('Unexpected error updating search index:', e)
+    }
   }
   miniSearch.add(toSearchableNote(note))
 }
@@ -153,7 +156,7 @@ export function searchNotesWithContext(query: string): NoteSearchResult[] {
       videoTitle: (result.videoTitle as string) ?? '',
       courseId: (result.courseId as string) ?? '',
       videoId: (result.videoId as string) ?? '',
-      tags: ((result.tags as string) ?? '').split(' ').filter(Boolean),
+      tags: ((result.tags as string) ?? '').split(' | ').filter(Boolean),
       timestamp: result.timestamp as number | undefined,
     }))
 }

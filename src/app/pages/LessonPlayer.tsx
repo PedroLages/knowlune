@@ -177,22 +177,23 @@ export function LessonPlayer() {
   }, [courseId, lessonId])
 
   // Open notes panel when navigating with ?panel=notes (e.g. from note search deep-link)
+  const panelParam = searchParams.get('panel')
   useEffect(() => {
-    if (searchParams.get('panel') === 'notes') {
+    if (panelParam === 'notes') {
       setNotesOpen(true)
     }
-  }, [searchParams])
+  }, [panelParam])
 
   // Seek video to timestamp from ?t= query param (e.g. from note search deep-link)
+  const seekParam = searchParams.get('t')
   useEffect(() => {
-    const seekParam = searchParams.get('t')
     if (seekParam) {
       const time = Number(seekParam)
       if (!Number.isNaN(time) && time >= 0) {
         setSeekToTime(time)
       }
     }
-  }, [searchParams])
+  }, [seekParam])
 
   // Scroll to top when navigating to a new lesson
   useEffect(() => {

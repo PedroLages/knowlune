@@ -7,10 +7,11 @@
  *   - AC3: Clicking a note result navigates to Lesson Player with ?panel=notes
  *   - AC4: Empty results show helpful message
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
 
-/** Seed notes directly into IndexedDB for search tests. */
+/** Seed notes directly into IndexedDB for search tests.
+ *  Must be called after navigateAndWait so the DB and stores exist. */
 async function seedNotes(
   page: Parameters<typeof navigateAndWait>[0],
   notes: Array<{
@@ -26,28 +27,23 @@ async function seedNotes(
 ) {
   await page.evaluate(
     async ({ dbName, storeName, data }) => {
-      for (let attempt = 0; attempt < 10; attempt++) {
-        const result = await new Promise<'ok' | 'store-missing'>((resolve, reject) => {
-          const request = indexedDB.open(dbName)
-          request.onsuccess = () => {
-            const db = request.result
-            if (!db.objectStoreNames.contains(storeName)) {
-              db.close()
-              resolve('store-missing')
-              return
-            }
-            const tx = db.transaction(storeName, 'readwrite')
-            const store = tx.objectStore(storeName)
-            for (const item of data) store.put(item)
-            tx.oncomplete = () => { db.close(); resolve('ok') }
-            tx.onerror = () => { db.close(); reject(tx.error) }
+      await new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open(dbName)
+        request.onsuccess = () => {
+          const db = request.result
+          if (!db.objectStoreNames.contains(storeName)) {
+            db.close()
+            reject(new Error(`Store "${storeName}" not found — was the app loaded first?`))
+            return
           }
-          request.onerror = () => reject(request.error)
-        })
-        if (result === 'ok') return
-        await new Promise(r => setTimeout(r, 200))
-      }
-      throw new Error(`Store "${storeName}" not found after 10 retries`)
+          const tx = db.transaction(storeName, 'readwrite')
+          const store = tx.objectStore(storeName)
+          for (const item of data) store.put(item)
+          tx.oncomplete = () => { db.close(); resolve() }
+          tx.onerror = () => { db.close(); reject(tx.error) }
+        }
+        request.onerror = () => reject(request.error)
+      })
     },
     { dbName: 'ElearningDB', storeName: 'notes', data: notes },
   )
@@ -94,6 +90,28 @@ async function setupWithNotes(page: Parameters<typeof navigateAndWait>[0]) {
   await page.reload({ waitUntil: 'domcontentloaded' })
 }
 
+/** Clear seeded notes from IndexedDB to prevent test pollution. */
+async function clearSeededNotes(page: Parameters<typeof navigateAndWait>[0]) {
+  await page.evaluate(async () => {
+    await new Promise<void>((resolve) => {
+      const request = indexedDB.open('ElearningDB')
+      request.onsuccess = () => {
+        const db = request.result
+        if (db.objectStoreNames.contains('notes')) {
+          const tx = db.transaction('notes', 'readwrite')
+          tx.objectStore('notes').clear()
+          tx.oncomplete = () => { db.close(); resolve() }
+          tx.onerror = () => { db.close(); resolve() }
+        } else {
+          db.close()
+          resolve()
+        }
+      }
+      request.onerror = () => resolve()
+    })
+  })
+}
+
 /** Open the command palette via keyboard shortcut. */
 async function openCommandPalette(page: Parameters<typeof navigateAndWait>[0]) {
   await page.keyboard.press('Meta+k')
@@ -110,6 +128,10 @@ test.describe('AC1: Search results via Cmd+K command palette', () => {
     await setupWithNotes(page)
   })
 
+  test.afterEach(async ({ page }) => {
+    await clearSeededNotes(page)
+  })
+
   test('Cmd+K opens search and typing a query returns matching notes', async ({ page }) => {
     await openCommandPalette(page)
 
@@ -121,8 +143,9 @@ test.describe('AC1: Search results via Cmd+K command palette', () => {
     await expect(notesGroup).toBeVisible({ timeout: 5000 })
 
     // Result should show snippet with matching content
-    const noteResult = notesGroup.locator('[cmdk-item]').first()
+    const noteResult = notesGroup.getByRole('option').first()
     await expect(noteResult).toBeVisible()
+    await expect(noteResult).toContainText(/custom hooks/i)
   })
 
   test('results show note snippet, course name, and tag badges', async ({ page }) => {
@@ -132,11 +155,26 @@ test.describe('AC1: Search results via Cmd+K command palette', () => {
     const notesGroup = page.getByRole('group', { name: /notes/i })
     await expect(notesGroup).toBeVisible({ timeout: 5000 })
 
-    const noteResult = notesGroup.locator('[cmdk-item]').first()
+    const noteResult = notesGroup.getByRole('option').first()
     // Result should contain tag badge
     await expect(noteResult).toContainText(/react/i)
     // Result should show course context
     await expect(noteResult).toContainText(/operative/i)
+    // Result should show video title
+    await expect(noteResult).toContainText(/introduction/i)
+  })
+
+  test('results highlight matching keywords with mark elements', async ({ page }) => {
+    await openCommandPalette(page)
+    await page.keyboard.type('react')
+
+    const notesGroup = page.getByRole('group', { name: /notes/i })
+    await expect(notesGroup).toBeVisible({ timeout: 5000 })
+
+    // Matching keywords should be wrapped in <mark> elements
+    const marks = notesGroup.locator('mark')
+    await expect(marks.first()).toBeVisible()
+    await expect(marks.first()).toHaveText(/react/i)
   })
 
   test('results are ranked by relevance — tag matches rank higher', async ({ page }) => {
@@ -148,7 +186,7 @@ test.describe('AC1: Search results via Cmd+K command palette', () => {
     const notesGroup = page.getByRole('group', { name: /notes/i })
     await expect(notesGroup).toBeVisible({ timeout: 5000 })
 
-    const results = notesGroup.locator('[cmdk-item]')
+    const results = notesGroup.getByRole('option')
     const firstResult = results.first()
     // The note with the "react" tag should appear first due to 2x boost
     await expect(firstResult).toContainText(/hooks/i)
@@ -165,6 +203,10 @@ test.describe('AC2: Fuzzy matching and prefix search', () => {
     await setupWithNotes(page)
   })
 
+  test.afterEach(async ({ page }) => {
+    await clearSeededNotes(page)
+  })
+
   test('fuzzy matching finds results despite typos', async ({ page }) => {
     await openCommandPalette(page)
 
@@ -174,7 +216,7 @@ test.describe('AC2: Fuzzy matching and prefix search', () => {
     const notesGroup = page.getByRole('group', { name: /notes/i })
     await expect(notesGroup).toBeVisible({ timeout: 5000 })
 
-    const results = notesGroup.locator('[cmdk-item]')
+    const results = notesGroup.getByRole('option')
     await expect(results.first()).toBeVisible()
   })
 
@@ -187,7 +229,7 @@ test.describe('AC2: Fuzzy matching and prefix search', () => {
     const notesGroup = page.getByRole('group', { name: /notes/i })
     await expect(notesGroup).toBeVisible({ timeout: 5000 })
 
-    const results = notesGroup.locator('[cmdk-item]')
+    const results = notesGroup.getByRole('option')
     await expect(results.first()).toContainText(/javascript/i)
   })
 })
@@ -202,6 +244,10 @@ test.describe('AC3: Result navigation to Lesson Player', () => {
     await setupWithNotes(page)
   })
 
+  test.afterEach(async ({ page }) => {
+    await clearSeededNotes(page)
+  })
+
   test('clicking a note result opens the Lesson Player with notes panel', async ({ page }) => {
     await openCommandPalette(page)
     await page.keyboard.type('custom hooks')
@@ -210,7 +256,7 @@ test.describe('AC3: Result navigation to Lesson Player', () => {
     await expect(notesGroup).toBeVisible({ timeout: 5000 })
 
     // Click the first note result
-    await notesGroup.locator('[cmdk-item]').first().click()
+    await notesGroup.getByRole('option').first().click()
 
     // Should navigate to Lesson Player with ?panel=notes
     await page.waitForURL(/\/courses\/.*\?panel=notes/, { timeout: 10000 })
@@ -228,7 +274,7 @@ test.describe('AC3: Result navigation to Lesson Player', () => {
     const notesGroup = page.getByRole('group', { name: /notes/i })
     await expect(notesGroup).toBeVisible({ timeout: 5000 })
 
-    await notesGroup.locator('[cmdk-item]').first().click()
+    await notesGroup.getByRole('option').first().click()
 
     // URL should include the timestamp parameter (note has timestamp: 42)
     await page.waitForURL(/\/courses\/.*t=42/, { timeout: 10000 })
@@ -246,6 +292,10 @@ test.describe('AC4: Empty results show helpful message', () => {
     await setupWithNotes(page)
   })
 
+  test.afterEach(async ({ page }) => {
+    await clearSeededNotes(page)
+  })
+
   test('searching for non-existent content shows empty state', async ({ page }) => {
     await openCommandPalette(page)
 
@@ -254,7 +304,7 @@ test.describe('AC4: Empty results show helpful message', () => {
 
     // Should show the exact empty state message from CommandEmpty
     await expect(
-      page.getByText('No notes found. Try different keywords or browse by tag.'),
+      page.getByText('No results found. Try different keywords or browse by tag.'),
     ).toBeVisible({ timeout: 5000 })
   })
 })

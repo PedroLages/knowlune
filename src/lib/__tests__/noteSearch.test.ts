@@ -133,6 +133,21 @@ describe('searchNotes', () => {
     expect(results[0].score).toBeGreaterThan(0)
   })
 
+  it('should use OR semantics for multi-word queries', () => {
+    initializeSearchIndex([
+      makeNote({ id: '1', content: 'React hooks are powerful' }),
+      makeNote({ id: '2', content: 'TypeScript generics guide' }),
+      makeNote({ id: '3', content: 'Hooks and closures explained' }),
+    ])
+
+    // "React hooks" with OR: matches notes with "React" OR "hooks"
+    const results = searchNotes('React hooks')
+    // Note 1 has both terms, note 3 has "hooks" only — both should appear
+    expect(results.length).toBeGreaterThanOrEqual(2)
+    // Note with both terms should rank highest
+    expect(results[0].id).toBe('1')
+  })
+
   it('should find results with fuzzy matching despite typos', () => {
     initializeSearchIndex([
       makeNote({ id: '1', content: 'Understanding custom hooks in React' }),
@@ -204,6 +219,20 @@ describe('searchNotesWithContext', () => {
     expect(results.length).toBeLessThanOrEqual(20)
   })
 
+  it('should preserve multi-word tags through index round-trip', () => {
+    initializeSearchIndex([
+      makeNote({
+        id: 'multi-tag',
+        content: 'Deep learning fundamentals',
+        tags: ['machine learning', 'deep learning'],
+      }),
+    ])
+
+    const results = searchNotesWithContext('deep')
+    expect(results.length).toBeGreaterThan(0)
+    expect(results[0].tags).toEqual(['machine learning', 'deep learning'])
+  })
+
   it('should boost courseName matches over content-only matches', () => {
     buildCourseLookup([
       {
@@ -233,5 +262,22 @@ describe('searchNotesWithContext', () => {
     expect(results.length).toBe(2)
     // courseName match (1.5x boost) should rank higher than content-only (1x)
     expect(results[0].id).toBe('course-match')
+  })
+})
+
+describe('search performance (AC1a)', () => {
+  it('should complete search in under 1ms for 100 notes', () => {
+    buildCourseLookup(allCourses)
+    const notes = Array.from({ length: 100 }, (_, i) =>
+      makeNote({ id: `perf-${i}`, content: `Performance test note number ${i} about searchable topics and concepts` }),
+    )
+    initializeSearchIndex(notes)
+
+    const start = performance.now()
+    const results = searchNotesWithContext('searchable')
+    const elapsed = performance.now() - start
+
+    expect(elapsed).toBeLessThan(1) // sub-1ms as per AC1a
+    expect(results.length).toBeGreaterThan(0)
   })
 })

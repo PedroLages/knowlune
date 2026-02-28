@@ -79,7 +79,7 @@ See [plan](../../.claude/plans/wobbly-inventing-hearth.md) for implementation ap
 
 ## Design Review Feedback
 
-Reviewed 2026-02-28. Report: `docs/reviews/design/design-review-2026-02-28-e03-s05.md`
+Reviewed 2026-02-28 (re-run). Report: `docs/reviews/design/design-review-2026-02-28-e03-s05.md`
 
 **No blockers.** 2 high-priority, 3 medium findings:
 
@@ -91,21 +91,24 @@ Reviewed 2026-02-28. Report: `docs/reviews/design/design-review-2026-02-28-e03-s
 
 ## Code Review Feedback
 
-Reviewed 2026-02-28. Reports:
+Reviewed 2026-02-28 (re-run). Reports:
 
 - `docs/reviews/code/code-review-2026-02-28-e03-s05.md`
 - `docs/reviews/code/code-review-testing-2026-02-28-e03-s05.md`
 
-**No blockers.** 5 high-priority (code) + 4 high-priority (testing) findings:
+**1 blocker (code), 2 blockers (testing).** 4 high (code) + 4 high (testing):
 
-- notesOpen deep-link limited to fresh mounts (edge case: intra-LessonPlayer nav)
-- Missing keyword highlighting in snippets (AC mentions "highlighted matching keywords")
-- buildSearchIndex() on every render (duplicate of design review M1)
-- E2E timestamp test doesn't assert t=42
-- No fuzzy matching unit test
-- E2E doesn't assert course name/video title in results
-- Empty state regex too loose
-- Panel open state not verified in DOM
+- **B1 (code):** Uncommitted working tree fixes — combineWith, tag separator, searchParams deps, highlight memoization, and tests not committed
+- **B1 (testing):** AC1a latency guarantee has zero test coverage
+- **B2 (testing):** AC1b keyword highlighting has zero test coverage
+- H1: Silent empty results when index not initialized
+- H2: "No notes found" message scope ambiguity (cross-domain)
+- H3: updateInIndex swallows all errors silently
+- H4: h-4 w-4 instead of size-4 Tailwind v4 shorthand
+- E2E timestamp test doesn't assert t=42 or video seek
+- E2E doesn't assert video title in results
+- No snippet content assertion in first AC1 test
+- No afterEach cleanup for seeded IndexedDB notes
 
 ## Challenges and Lessons Learned
 

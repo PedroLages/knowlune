@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router'
 import {
   LayoutDashboard,
@@ -25,6 +25,7 @@ import {
 import { Badge } from '@/app/components/ui/badge'
 import { allCourses } from '@/data/courses'
 import { searchNotesWithContext, type NoteSearchResult } from '@/lib/noteSearch'
+import { truncateSnippet, highlightMatches, buildHighlightPatterns } from '@/lib/searchUtils'
 
 interface SearchItem {
   id: string
@@ -141,30 +142,6 @@ function buildSearchIndex(): SearchItem[] {
   return items
 }
 
-const searchIndex = buildSearchIndex()
-
-function truncateSnippet(content: string, maxLength = 80): string {
-  const text = content
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/<[^>]*>/g, '')
-  if (text.length <= maxLength) return text
-  return text.slice(0, maxLength).trimEnd() + '…'
-}
-
-function highlightMatches(text: string, query: string): React.ReactNode {
-  if (!query.trim()) return text
-  const terms = query.trim().split(/\s+/).filter(Boolean)
-  const escaped = terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')
-  const splitPattern = new RegExp(`(${escaped})`, 'gi')
-  const testPattern = new RegExp(`^(?:${escaped})$`, 'i')
-  const parts = text.split(splitPattern)
-  return parts.map((part, i) =>
-    testPattern.test(part)
-      ? <mark key={i} className="bg-yellow-200 text-inherit rounded-sm">{part}</mark>
-      : part,
-  )
-}
-
 interface SearchCommandPaletteProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -176,6 +153,18 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [noteResults, setNoteResults] = useState<NoteSearchResult[]>([])
+
+  const searchIndex = useMemo(() => buildSearchIndex(), [])
+
+  const commandFilter = useCallback((value: string, search: string) => {
+    // Note items are managed by MiniSearch — always show them
+    if (value.startsWith('note:')) return 1
+    // Default filtering for pages/courses/lessons
+    if (!search) return 1
+    return value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
+  }, [])
+
+  const highlightPatterns = useMemo(() => buildHighlightPatterns(debouncedQuery), [debouncedQuery])
 
   // Capture focus and reset state on open/close
   useEffect(() => {
@@ -240,13 +229,7 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
       onOpenChange={handleOpenChange}
       title="Search"
       description="Search for pages, courses, lessons, and notes"
-      filter={(value, search) => {
-        // Note items are managed by MiniSearch — always show them
-        if (value.startsWith('note:')) return 1
-        // Default filtering for pages/courses/lessons
-        if (!search) return 1
-        return value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
-      }}
+      filter={commandFilter}
     >
       <CommandInput
         placeholder="Search pages, courses, lessons, notes..."
@@ -255,7 +238,7 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
       <CommandList>
         <CommandEmpty>
           {hasActiveQuery
-            ? 'No notes found. Try different keywords or browse by tag.'
+            ? 'No results found. Try different keywords or browse by tag.'
             : 'No results found.'}
         </CommandEmpty>
 
@@ -269,7 +252,7 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
               >
                 <StickyNote className="mr-2 h-4 w-4 shrink-0 text-amber-500" />
                 <div className="flex flex-col gap-0.5 min-w-0">
-                  <span className="text-sm truncate">{highlightMatches(truncateSnippet(result.content), debouncedQuery)}</span>
+                  <span className="text-sm truncate">{highlightMatches(truncateSnippet(result.content), highlightPatterns)}</span>
                   <span className="text-xs text-muted-foreground truncate">
                     {result.courseName}{result.videoTitle ? ` · ${result.videoTitle}` : ''}
                   </span>
