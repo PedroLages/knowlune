@@ -117,7 +117,7 @@ test.describe('AC1: Search results via Cmd+K command palette', () => {
     await page.keyboard.type('custom hooks')
 
     // Notes group should appear with matching results
-    const notesGroup = page.getByRole('group').filter({ hasText: /notes/i })
+    const notesGroup = page.getByRole('group', { name: /notes/i })
     await expect(notesGroup).toBeVisible({ timeout: 5000 })
 
     // Result should show snippet with matching content
@@ -129,7 +129,7 @@ test.describe('AC1: Search results via Cmd+K command palette', () => {
     await openCommandPalette(page)
     await page.keyboard.type('react')
 
-    const notesGroup = page.getByRole('group').filter({ hasText: /notes/i })
+    const notesGroup = page.getByRole('group', { name: /notes/i })
     await expect(notesGroup).toBeVisible({ timeout: 5000 })
 
     const noteResult = notesGroup.locator('[cmdk-item]').first()
@@ -143,7 +143,7 @@ test.describe('AC1: Search results via Cmd+K command palette', () => {
     // Search for "react" — note-search-1 has tag "react" (boosted 2x), should rank first
     await page.keyboard.type('react')
 
-    const notesGroup = page.getByRole('group').filter({ hasText: /notes/i })
+    const notesGroup = page.getByRole('group', { name: /notes/i })
     await expect(notesGroup).toBeVisible({ timeout: 5000 })
 
     const results = notesGroup.locator('[cmdk-item]')
@@ -169,7 +169,7 @@ test.describe('AC2: Fuzzy matching and prefix search', () => {
     // "custm hooks" has a typo — should still find "custom hooks"
     await page.keyboard.type('custm hooks')
 
-    const notesGroup = page.getByRole('group').filter({ hasText: /notes/i })
+    const notesGroup = page.getByRole('group', { name: /notes/i })
     await expect(notesGroup).toBeVisible({ timeout: 5000 })
 
     const results = notesGroup.locator('[cmdk-item]')
@@ -182,7 +182,7 @@ test.describe('AC2: Fuzzy matching and prefix search', () => {
     // "java" should match "javascript" via prefix search
     await page.keyboard.type('java')
 
-    const notesGroup = page.getByRole('group').filter({ hasText: /notes/i })
+    const notesGroup = page.getByRole('group', { name: /notes/i })
     await expect(notesGroup).toBeVisible({ timeout: 5000 })
 
     const results = notesGroup.locator('[cmdk-item]')
@@ -204,7 +204,7 @@ test.describe('AC3: Result navigation to Lesson Player', () => {
     await openCommandPalette(page)
     await page.keyboard.type('custom hooks')
 
-    const notesGroup = page.getByRole('group').filter({ hasText: /notes/i })
+    const notesGroup = page.getByRole('group', { name: /notes/i })
     await expect(notesGroup).toBeVisible({ timeout: 5000 })
 
     // Click the first note result
@@ -219,7 +219,7 @@ test.describe('AC3: Result navigation to Lesson Player', () => {
     await openCommandPalette(page)
     await page.keyboard.type('custom hooks')
 
-    const notesGroup = page.getByRole('group').filter({ hasText: /notes/i })
+    const notesGroup = page.getByRole('group', { name: /notes/i })
     await expect(notesGroup).toBeVisible({ timeout: 5000 })
 
     await notesGroup.locator('[cmdk-item]').first().click()
