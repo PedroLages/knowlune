@@ -109,4 +109,8 @@ Reviewed 2026-02-28. Reports:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **MiniSearch field enrichment**: The existing index only stored `content` and `tags`. Extending it with `courseName` and `videoTitle` required enriching documents at index time by joining against the Dexie `courses` and `lessons` tables. The lookup runs once at build time, keeping search itself sub-millisecond.
+- **cmdk group locator ambiguity**: Playwright's `getByRole('group')` with `hasText` matching was fragile — it matched ancestor groups containing the text anywhere in descendants. Switching to `{ name: /notes/i }` (accessible name) produced stable, semantically correct selectors. Same issue hit the "Notes" toggle button vs "Close notes panel" button — fixed with `{ name: 'Notes', exact: true }`.
+- **`?panel=notes` deep-link timing**: The LessonPlayer reads `panel=notes` from the URL on mount to auto-expand the notes panel. This only works on fresh mounts — navigating between lessons within the same LessonPlayer instance doesn't re-trigger. Acceptable for search navigation (always a fresh mount) but worth noting for future intra-player navigation features.
+- **Fuzzy matching trade-off**: MiniSearch's `fuzzy: 0.2` catches common typos (1-2 character edits) without flooding results with irrelevant matches. Combined with `prefix: true`, it covers both autocomplete ("java" → "javascript") and typo tolerance ("custm" → "custom") — two distinct AC requirements from one configuration.
+- **Snippet truncation**: `truncateSnippet()` strips HTML but not markdown syntax. Raw markdown link syntax (`[text](url)`) appears in search result snippets. Logged as a high-priority finding but deferred — fixing requires a markdown-to-plain-text pass that would add complexity for marginal UX gain in note snippets.
