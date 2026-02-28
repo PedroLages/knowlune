@@ -31,6 +31,10 @@ const controlShortcuts: ShortcutEntry[] = [
   { keys: ['?'], description: 'Show shortcuts' },
 ]
 
+const notesShortcuts: ShortcutEntry[] = [
+  { keys: ['Alt', 'T'], description: 'Insert timestamp (in notes)' },
+]
+
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
     <kbd className="inline-flex items-center justify-center min-w-6 h-6 px-1.5 rounded bg-white/20 border border-white/30 text-xs font-mono font-medium text-white">
@@ -105,10 +109,14 @@ export function VideoShortcutsOverlay({ open, onClose }: VideoShortcutsOverlayPr
             ))}
           </div>
 
-          {/* Column 2: Controls */}
+          {/* Column 2: Controls + Notes */}
           <div data-column="controls" className="space-y-2">
             <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">Controls</p>
             {controlShortcuts.map(s => (
+              <ShortcutRow key={s.description} shortcut={s} />
+            ))}
+            <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2 mt-4">Notes</p>
+            {notesShortcuts.map(s => (
               <ShortcutRow key={s.description} shortcut={s} />
             ))}
           </div>

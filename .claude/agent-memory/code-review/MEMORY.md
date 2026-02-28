@@ -71,76 +71,34 @@
 - E2E tests + course data + VTT file were left uncommitted -- branch was broken without them
 - `cn()` correctly used in TranscriptPanel (improvement over previous stories)
 
-### E03-S00: Data Layer Migration (Notes & Bookmarks)
-- Previous review: 2 blockers fixed (compound index, MiniSearch wiring), 3 high fixed (re-throw migration error, saveNote query by courseId, removed duplicate useEffect)
-- `fake-indexeddb/auto` in progress.test.ts overrides jsdom localStorage -- `localStorage.clear()` throws TypeError, all 45 tests fail
-- `migrateBookmarksFromLocalStorage()` runs fire-and-forget BEFORE `db.open()` -- race condition: Dexie tables may not exist yet
-- `progress.ts` note functions (`saveNote`, `addNote`, `deleteNote`) still do NOT use `persistWithRetry` (no retry on transient failure)
-- `useNoteStore` and `useBookmarkStore` are NOT imported by any component -- stores are dead code in production
-- Bookmark migration (`migrateBookmarksFromLocalStorage`) has ZERO unit tests
-- `handleNoteChange` in LessonPlayer calls `saveNote` from `progress.ts` (no retry) instead of `useNoteStore.saveNote` (with retry + optimistic update)
-- AC1 says "version 2 to version 3" but implementation uses version 4 (version 3 was already taken for progress table)
-- No input validation/sanitization on note content before storing to Dexie (XSS concern if content is rendered as HTML)
+### E03-S03: Timestamp Notes and Video Navigation
+- BLOCKER: `urlTransform` override for `video://` protocol exists ONLY in working tree -- committed version strips video:// URLs via react-markdown's defaultUrlTransform, breaking AC2/AC3
+- `handleNoteChange` in LessonPlayer takes `(value: string)` but NoteEditor's onSave provides `(content, tags)` -- tags silently discarded, never persisted to IndexedDB
+- `createVideoLinkComponent(onVideoSeek)` called inside JSX `components` prop -- creates new component function every render, causing unmount/remount of all links
+- Alt+T shortcut added to VideoShortcutsOverlay but only works on textarea onKeyDown, NOT on video player (misleading shortcut listing)
+- `formatTimestamp` duplicated AGAIN (now in NoteEditor, VideoPlayer, ChapterProgressBar, bookmarks.ts) -- recurring pattern from S08
+- `setVideoCurrentTime` re-render cascade (~4x/sec) now affects 4 NoteEditor instances via `currentVideoTime` prop -- recurring from S08
+- No unit tests for NoteEditor (parseVideoSeconds, formatTimestamp, insertTimestamp, createVideoLinkComponent)
+- `h-3 w-3` / `h-3.5 w-3.5` used instead of `size-3` / `size-3.5` Tailwind v4 shorthand (recurring)
 
-### E03-S01: Markdown Note Editor with Autosave
-- `video://` protocol NOT registered in Tiptap Link extension -- `parseHTML` strips `video://` links on `setContent` (persistence broken)
-- `onVideoSeek` captured in `useEditor` closure (stale closure risk), while `onSave` correctly uses latest-ref pattern
-- `formatTimestamp` is yet another copy of `formatTime` (now in 5+ places) -- shared utility still not extracted
-- `handleNoteChange` calls both `setNoteText(value)` AND `saveNote(...)` -- double write path, and `setNoteText` triggers re-render that updates `initialContent` prop (potential `setContent` thrash)
-- ToolbarButton is `h-8 w-8` (32px) -- below 44px WCAG touch target minimum (recurring pattern)
-- `h-4 w-4` / `h-8 w-8` used instead of `size-4` / `size-8` Tailwind v4 shorthand (recurring pattern)
-- `insertLink` uses `window.prompt()` with no URL validation -- user can input arbitrary URLs
-- No unit tests for NoteEditor component
-- E2E tests missing: keyboard shortcuts (AC1), max-wait 10s forced save (AC2), MiniSearch index update (AC2), timestamp link click-to-seek (AC4)
-- `cn()` correctly used throughout (improvement over earlier stories)
+### E03-S02: Side-by-Side Study Layout (Round 2)
+- CRITICAL: Blocker fixes (focus trap, Escape handler, ARIA attrs, `!noteFullScreen` guard) exist ONLY as uncommitted working tree changes -- never committed to the branch
+- Previous review identified 2 blockers, 4 high, 3 medium, 3 nits; fixes applied locally but shipped commit (1351fd3) only contains review report, not the actual code fixes
+- `usePanelRef` from `react-resizable-panels` imported directly (bypasses shadcn/ui wrapper) -- wrapper doesn't re-export hooks
+- `style={{ overflow: 'visible' }}` inline style needed because library sets `overflow: hidden`; could use `!overflow-visible` Tailwind important modifier instead
+- Notes panel close button uses `h-7 w-7` (28px) -- below 44px WCAG touch target
+- AC2 "notes available" indicator E2E test is still a no-op (no notes seeded, no indicator asserted)
+- `handleNotesToggle` tab fallback chain: materials > bookmarks > transcript -- lands on non-existent tab for lessons without PDFs, video, or captions
+- E2E tests missing: Escape key dismissal on fullscreen overlay, keyboard navigation in fullscreen overlay
 
-### E03-S11: Rich Text Toolbar Expansion
-- `@tiptap/extension-link` still in package.json despite pre-flight AC requiring removal (StarterKit bundles it)
-- `Highlight.configure({ multicolor: true })` enables CSS injection via pasted `<mark data-color="...">` -- toolbar never uses color arg, so multicolor is unnecessary
-- `TextStyle` and `Color` imported from `@tiptap/extension-text-style` but NEVER used in toolbar -- dead extensions that expand paste-parsing attack surface
-- `#fef08a` hardcoded in `index.css` for `.tiptap mark` -- violates design token convention (should use CSS variable)
-- `handleNoteChange` in LessonPlayer no longer calls `setNoteText(value)` -- stale note content on tab switch or lesson navigation
-- `formatTimestamp` duplicated for 6th time across codebase (tech debt from S01/S08 reviews still unresolved)
-- Duplicate E2E specs: `tests/e2e/story-3-11.spec.ts` (active, 315 lines) vs `tests/e2e/regression/story-3-11.spec.ts` (original ATDD, 340 lines) with divergent test approaches
-- S01 review items FIXED in S11: `video://` protocol now registered via StarterKit link config `protocols: ['video']`; ToolbarButton now `size-11` (44px); `window.prompt()` replaced with shadcn Dialog; `onVideoSeek` uses latest-ref pattern
-- `cn()` and `size-*` Tailwind v4 shorthand consistently used (improvement over all previous stories)
+## Silent Failure Patterns to Watch
 
-### E03-S12: Code & Media Blocks
-- `lowlight/common` imports 37 languages (~376KB raw); AC specifies 6 languages (~79KB raw, ~25KB target) -- should use selective `createLowlight()` with individual imports
-- `isValidYoutubeUrl` regex in NoteEditor is stricter than Tiptap's built-in regex -- rejects valid `m.youtube.com`, `music.youtube.com`, `youtube.com/shorts/`, `youtube.com/v/` URLs
-- Syntax highlighting comment color `oklch(0.60 0.02 250)` has ~3.1:1 contrast ratio against muted background -- fails WCAG AA 4.5:1 for normal text
-- Details toggle button CSS is `width: 1.25rem; height: 1.25rem` (20px) -- below 44px WCAG touch target minimum
-- E2E tests do NOT test drag-and-drop image insertion (AC2 specifies "drags an image file onto the editor") -- only tests toolbar file input
-- E2E tests have no edge case coverage: invalid YouTube URLs, oversized images, empty code blocks
-- First AC2 test only asserts button visibility, never actually uploads -- low-value test
-- S11 items FIXED in S12: `multicolor: true` removed from Highlight; `TextStyle`/`Color` dead extensions removed; `@tiptap/extension-link` removed from package.json; `handleNoteChange` now calls `setNoteText(value)` again
-- `formatTimestamp` still duplicated (7th copy across codebase) -- shared utility still not extracted
-- `cn()` and `size-*` consistently used throughout (continuing improvement)
-
-### E03-S13: Smart Editor UX
-- `replaceAll` command in SearchReplaceExtension updates `storage.results` AFTER dispatching the replacement transaction -- decorations read stale positions during that transaction, potentially crashing or misrendering
-- Cmd+F handler uses `document.addEventListener('keydown')` -- hijacks browser native find while Notes tab is active
-- BubbleMenuBar buttons use `size-9` (36px), inconsistent with main toolbar's `size-11` (44px)
-- Color swatch buttons are `size-7` (28px) -- meets AA 2.5.8 (24px min) but not AAA 2.5.5 (44px target)
-- Drag handle button is `size-6` (24px) -- at the exact AA 2.5.8 minimum boundary
-- FindReplacePanel has 7 `eslint-disable` for `@typescript-eslint/no-explicit-any` -- custom commands not typed via module augmentation
-- `@tiptap/extension-floating-menu` in package.json but never imported (dead dependency)
-- `@tiptap/extension-emoji` loads 1933 emojis (582KB raw) eagerly -- no lazy loading
-- `scrollIntoView({ behavior: 'smooth' })` in SearchReplaceExtension and TableOfContentsPanel does NOT respect `prefers-reduced-motion` (recurring pattern)
-- `formatTimestamp` consolidation finally happened via `src/lib/format.ts` -- but `formatTime` duplicates remain in VideoPlayer and ChapterProgressBar
-- `cn()` and `size-*` Tailwind v4 shorthand consistently used throughout (continuing improvement from S11/S12)
-- S12 `isValidYoutubeUrl` regex fixed (now accepts `shorts/` and `v/` paths)
-- Details toggle button now `width: 2.75rem; height: 2.75rem` (44px) -- WCAG fix from S12
-
-### E03-S14: Tables
-- Context menu has `role="menu"`/`role="menuitem"` but NO arrow key navigation between items -- WAI-ARIA menu pattern requires ArrowUp/ArrowDown
-- `--table-selected` token defined in `:root` but NOT in `.dark` -- table cell selection will look wrong in dark mode
-- AC2 says "Enter creates a new row at the end" but E2E test only covers Tab at end (which is the actual TipTap behavior)
-- `useLayoutEffect` with `position.y` in deps triggers a guaranteed double-render when clamping (safe but wasteful)
-- Grid picker label shows "col x row" (e.g., "2 x 4") which is inverted vs conventional "rows x cols" -- confusing
-- S13 items that persist: `@tiptap/extension-floating-menu` dead dep, emoji eager loading, syntax comment contrast
-- Items FIXED from first review: stale closure in grid picker, `role="menu"`/`role="menuitem"` added, `selectedCell` uses CSS variable, column-resize-handle dead CSS removed, inline styles replaced with Tailwind, `aria-live` on size label, `min-h-11` replaces inline style, `useLayoutEffect` for viewport clamping, focus management on open, Tab-at-end E2E test added
-- `cn()` and `size-*` consistently used throughout (continuing improvement)
+- Empty catch blocks (seen in several IndexedDB operations across stories)
+- `.catch(() => {})` on promises — silently swallows errors
+- IndexedDB `put()`/`add()` without error callbacks or try/catch
+- Async event handlers (`onClick={async () => { ... }}`) without try/catch
+- `scrollIntoView()` and DOM APIs called without checking element existence
+- Fire-and-forget store actions — async Dexie operations whose failure silently breaks UI state
 
 ## Project Conventions
 - Import alias: `@/` resolves to `./src`

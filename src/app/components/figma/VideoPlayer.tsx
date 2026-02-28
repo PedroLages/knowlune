@@ -25,6 +25,7 @@ import { Slider } from '@/app/components/ui/slider'
 // Radix Popover Portal miscalculates position inside scroll containers — using plain CSS dropdown
 import { cn } from '@/app/components/ui/utils'
 import { VideoShortcutsOverlay } from '@/app/components/figma/VideoShortcutsOverlay'
+import { formatTimestamp as formatTime } from '@/lib/time'
 
 interface VideoPlayerProps {
   src: string
@@ -50,17 +51,6 @@ interface VideoPlayerProps {
 const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2]
 const STORAGE_KEY_PLAYBACK_SPEED = 'video-playback-speed'
 const STORAGE_KEY_CAPTIONS_ENABLED = 'video-captions-enabled'
-
-function formatTime(seconds: number): string {
-  const hrs = Math.floor(seconds / 3600)
-  const mins = Math.floor((seconds % 3600) / 60)
-  const secs = Math.floor(seconds % 60)
-
-  if (hrs > 0) {
-    return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-  }
-  return `${mins}:${secs.toString().padStart(2, '0')}`
-}
 
 export function VideoPlayer({
   src,
