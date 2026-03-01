@@ -66,7 +66,7 @@ export function createEmojiSuggestionRender(): SuggestionOptions<EmojiItem>['ren
 
   function updatePosition(
     el: HTMLDivElement | null,
-    clientRect: (() => DOMRect | null) | undefined
+    clientRect: (() => DOMRect | null) | null | undefined
   ) {
     if (!el || !clientRect) return
     const rect = clientRect()

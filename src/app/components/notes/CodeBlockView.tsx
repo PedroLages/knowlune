@@ -28,7 +28,7 @@ export function CodeBlockView({ node, updateAttributes }: ReactNodeViewProps) {
         ))}
       </select>
       <pre>
-        <NodeViewContent
+        <NodeViewContent<'code'>
           as="code"
           className={node.attrs.language ? `language-${node.attrs.language}` : undefined}
         />

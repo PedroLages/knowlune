@@ -711,7 +711,7 @@ export function LessonPlayer() {
       {/* Desktop: Resizable split layout */}
       {isDesktop ? (
         <ResizablePanelGroup
-          direction="horizontal"
+          orientation="horizontal"
           className="flex-1 min-w-0"
           style={{ overflow: 'visible' }}
         >

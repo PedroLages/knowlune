@@ -73,7 +73,7 @@ export function createSlashCommandRender(): SuggestionOptions<SlashCommandItem>[
 
   function updatePosition(
     el: HTMLDivElement | null,
-    clientRect: (() => DOMRect | null) | undefined
+    clientRect: (() => DOMRect | null) | null | undefined
   ) {
     if (!el || !clientRect) return
     const rect = clientRect()

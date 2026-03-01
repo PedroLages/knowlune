@@ -13,7 +13,7 @@ interface FindReplacePanelProps {
 export function FindReplacePanel({ editor, onClose }: FindReplacePanelProps) {
   const findInputRef = useRef<HTMLInputElement>(null)
 
-  const storage = editor.storage.searchReplace as SearchReplaceStorage
+  const storage = (editor.storage as unknown as Record<string, SearchReplaceStorage>).searchReplace
   const { results, currentIndex, searchTerm, replaceTerm } = storage
 
   // Focus the find input on mount
