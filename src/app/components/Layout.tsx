@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router'
 import { Search, Bell, ChevronDown, ChevronLeft, ChevronRight, Sun, Moon, Menu } from 'lucide-react'
 import { LevelUpLogo } from './figma/LevelUpLogo'
+import { Button } from './ui/button'
+import { Kbd } from './ui/kbd'
 import { Avatar, AvatarFallback } from './ui/avatar'
 import { useTheme } from 'next-themes'
 import { SearchCommandPalette } from './figma/SearchCommandPalette'
@@ -219,14 +221,16 @@ export function Layout() {
         >
           {/* Hamburger Menu Button - Only on tablet (640-1023px) */}
           {isTablet && (
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setSidebarOpen(true)}
-              className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-accent transition-colors duration-150"
+              className="min-h-[44px] min-w-[44px]"
               aria-label="Open navigation menu"
               aria-expanded={sidebarOpen}
             >
               <Menu className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
-            </button>
+            </Button>
           )}
 
           {/* Search trigger - Responsive */}
@@ -236,15 +240,17 @@ export function Layout() {
             aria-label="Site search"
           >
             {/* Mobile: Icon-only button */}
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               type="button"
               onClick={() => setSearchOpen(true)}
-              className="sm:hidden p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-accent transition-colors duration-150"
+              className="sm:hidden min-h-[44px] min-w-[44px]"
               aria-label="Open search (Cmd+K)"
               aria-keyshortcuts="Meta+K Control+K"
             >
               <Search className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
-            </button>
+            </Button>
 
             {/* Tablet/Desktop: Full search bar */}
             <button
@@ -259,17 +265,19 @@ export function Layout() {
                 aria-hidden="true"
               />
               <span>Search...</span>
-              <kbd className="ml-auto hidden sm:inline-flex items-center gap-0.5 rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-mono font-medium text-muted-foreground">
+              <Kbd className="ml-auto hidden sm:inline-flex">
                 <span className="text-xs">&#8984;</span>K
-              </kbd>
+              </Kbd>
             </button>
           </div>
 
           {/* User Actions */}
           <div className="flex items-center gap-4">
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-accent cursor-pointer"
+              className="min-h-[44px] min-w-[44px]"
               aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
             >
               <Sun className="w-5 h-5 text-muted-foreground dark:hidden" aria-hidden="true" />
@@ -277,14 +285,16 @@ export function Layout() {
                 className="w-5 h-5 text-muted-foreground hidden dark:block"
                 aria-hidden="true"
               />
-            </button>
+            </Button>
 
-            <button
-              className="relative p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-accent cursor-pointer"
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative min-h-[44px] min-w-[44px]"
               aria-label="Notifications"
             >
               <Bell className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
-            </button>
+            </Button>
 
             <div
               className="flex items-center gap-3 pl-4 border-l border-border"

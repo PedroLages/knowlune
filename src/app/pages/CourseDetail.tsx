@@ -1,7 +1,15 @@
 import { useParams, Link } from 'react-router'
-import { ArrowLeft, Clock, Video, FileText, BookOpen, Play } from 'lucide-react'
+import { Clock, Video, FileText, BookOpen, Play } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/app/components/ui/breadcrumb'
 import { Progress } from '@/app/components/ui/progress'
 import { Separator } from '@/app/components/ui/separator'
 import { ModuleAccordion } from '@/app/components/figma/ModuleAccordion'
@@ -35,13 +43,19 @@ export function CourseDetail() {
 
   return (
     <div>
-      <Link
-        to="/courses"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Courses
-      </Link>
+      <Breadcrumb className="mb-4">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to="/courses">Courses</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{course.title}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
       {/* Course Header */}
       <div className="bg-card rounded-3xl shadow-sm p-8 mb-6">

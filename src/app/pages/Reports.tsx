@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react'
-import { useTheme } from 'next-themes'
 import { BookOpen, CheckCircle, FileText, TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from '@/app/components/ui/chart'
 import {
   BarChart,
   Bar,
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
   AreaChart,
   Area,
   PieChart,
@@ -26,25 +29,37 @@ import {
 } from '@/lib/progress'
 import { getActionsPerDay, getRecentActions } from '@/lib/studyLog'
 
-// Chart colors using CSS custom properties and Tailwind theme
-const getChartColors = (isDark: boolean) => ({
-  primary: isDark ? 'rgb(96, 165, 250)' : 'rgb(37, 99, 235)', // blue-400 : blue-600
-  purple: isDark ? 'rgb(192, 132, 252)' : 'rgb(124, 58, 237)', // purple-400 : purple-600
-  green: isDark ? 'rgb(34, 197, 94)' : 'rgb(5, 150, 105)', // green-500 : green-600
-  amber: isDark ? 'rgb(251, 191, 36)' : 'rgb(217, 119, 6)', // amber-400 : amber-600
-  red: isDark ? 'rgb(248, 113, 113)' : 'rgb(220, 38, 38)', // red-400 : red-600
-  tickColor: isDark ? 'rgb(161, 161, 170)' : 'rgb(113, 113, 130)', // zinc-400 : zinc-500
-  tooltipBg: isDark ? 'rgb(39, 39, 42)' : 'rgb(255, 255, 255)', // zinc-800 : white
-  tooltipBorder: isDark ? 'rgb(63, 63, 70)' : 'rgb(228, 228, 231)', // zinc-700 : zinc-200
-})
+/* ------------------------------------------------------------------ */
+/*  Chart configs                                                      */
+/* ------------------------------------------------------------------ */
+
+const barChartConfig = {
+  completion: {
+    label: 'Completion',
+    color: 'var(--chart-1)',
+  },
+} satisfies ChartConfig
+
+const areaChartConfig = {
+  count: {
+    label: 'Activities',
+    color: 'var(--chart-1)',
+  },
+} satisfies ChartConfig
+
+// Pie chart colors mapped to --chart-1 through --chart-5
+const PIE_KEYS = ['slice1', 'slice2', 'slice3', 'slice4', 'slice5'] as const
+
+const pieChartConfig = {
+  value: { label: 'Avg Completion' },
+  slice1: { label: 'Category 1', color: 'var(--chart-1)' },
+  slice2: { label: 'Category 2', color: 'var(--chart-2)' },
+  slice3: { label: 'Category 3', color: 'var(--chart-3)' },
+  slice4: { label: 'Category 4', color: 'var(--chart-4)' },
+  slice5: { label: 'Category 5', color: 'var(--chart-5)' },
+} satisfies ChartConfig
 
 export default function Reports() {
-  const { resolvedTheme } = useTheme()
-  const isDark = resolvedTheme === 'dark'
-  const colors = getChartColors(isDark)
-  const COLORS = [colors.primary, colors.purple, colors.green, colors.amber, colors.red]
-  const { tickColor, tooltipBg, tooltipBorder } = colors
-
   const [studyNotes, setStudyNotes] = useState(0)
   useEffect(() => {
     getTotalStudyNotes().then(setStudyNotes)
@@ -96,6 +111,14 @@ export default function Reports() {
     value: Math.round(data.completed / (allCourses.filter(c => c.category === name).length || 1)),
   }))
 
+  // Dynamically update pieChartConfig labels to match real category names
+  categoryData.forEach((cat, i) => {
+    const key = PIE_KEYS[i % PIE_KEYS.length]
+    if (pieChartConfig[key]) {
+      ;(pieChartConfig[key] as { label: string; color: string }).label = cat.name
+    }
+  })
+
   const activityData = getActionsPerDay(30)
   const recentActions = getRecentActions(10)
 
@@ -130,27 +153,24 @@ export default function Reports() {
             <CardTitle className="text-base">Course Completion</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ChartContainer config={barChartConfig} className="h-[300px] w-full">
               <BarChart data={courseCompletionData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey="name"
-                  tick={{ fontSize: 12, fill: tickColor }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
                   angle={-20}
                   textAnchor="end"
                   height={60}
+                  tick={{ fontSize: 12 }}
                 />
-                <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: tickColor }} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: tooltipBg,
-                    borderColor: tooltipBorder,
-                    borderRadius: 8,
-                  }}
-                />
-                <Bar dataKey="completion" fill={colors.primary} radius={[4, 4, 0, 0]} />
+                <YAxis domain={[0, 100]} tickLine={false} axisLine={false} tickMargin={8} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="completion" fill="var(--color-completion)" radius={[4, 4, 0, 0]} />
               </BarChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
 
@@ -159,7 +179,7 @@ export default function Reports() {
             <CardTitle className="text-base">Progress by Category</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ChartContainer config={pieChartConfig} className="h-[300px] w-full">
               <PieChart>
                 <Pie
                   data={categoryData}
@@ -167,6 +187,7 @@ export default function Reports() {
                   cy="50%"
                   outerRadius={100}
                   dataKey="value"
+                  nameKey="name"
                   label={({
                     cx,
                     cy,
@@ -191,7 +212,7 @@ export default function Reports() {
                       <text
                         x={x}
                         y={y}
-                        fill={tickColor}
+                        className="fill-muted-foreground"
                         textAnchor={x > cx ? 'start' : 'end'}
                         dominantBaseline="central"
                         fontSize={12}
@@ -202,18 +223,15 @@ export default function Reports() {
                   }}
                 >
                   {categoryData.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    <Cell
+                      key={i}
+                      fill={`var(--color-${PIE_KEYS[i % PIE_KEYS.length]})`}
+                    />
                   ))}
                 </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: tooltipBg,
-                    borderColor: tooltipBorder,
-                    borderRadius: 8,
-                  }}
-                />
+                <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
               </PieChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
       </div>
@@ -225,27 +243,27 @@ export default function Reports() {
             <CardTitle className="text-base">Study Activity (Last 30 Days)</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
+            <ChartContainer config={areaChartConfig} className="h-[200px] w-full">
               <AreaChart data={activityData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="date" tick={{ fontSize: 10, fill: tickColor }} />
-                <YAxis tick={{ fontSize: 12, fill: tickColor }} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: tooltipBg,
-                    borderColor: tooltipBorder,
-                    borderRadius: 8,
-                  }}
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="date"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  tick={{ fontSize: 10 }}
                 />
+                <YAxis tickLine={false} axisLine={false} tickMargin={8} />
+                <ChartTooltip content={<ChartTooltipContent />} />
                 <Area
                   type="monotone"
                   dataKey="count"
-                  stroke={colors.primary}
-                  fill={colors.primary}
+                  stroke="var(--color-count)"
+                  fill="var(--color-count)"
                   fillOpacity={0.1}
                 />
               </AreaChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
 

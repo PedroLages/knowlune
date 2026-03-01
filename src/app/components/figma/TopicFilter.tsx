@@ -1,4 +1,4 @@
-import { Badge } from '@/app/components/ui/badge'
+import { ToggleGroup, ToggleGroupItem } from '@/app/components/ui/toggle-group'
 
 interface TopicFilterProps {
   availableTags: string[]
@@ -13,44 +13,29 @@ export function TopicFilter({
 }: TopicFilterProps) {
   if (availableTags.length === 0) return null
 
-  function toggleTag(tag: string) {
-    if (selectedTags.includes(tag)) {
-      onSelectedTagsChange(selectedTags.filter(t => t !== tag))
-    } else {
-      onSelectedTagsChange([...selectedTags, tag])
-    }
-  }
-
   return (
     <div
       data-testid="topic-filter-bar"
-      role="group"
-      aria-label="Filter by topic"
       className="flex flex-wrap gap-2 items-center mb-6"
     >
-      {availableTags.map(tag => {
-        const isSelected = selectedTags.includes(tag)
-        return (
-          <button
+      <ToggleGroup
+        type="multiple"
+        value={selectedTags}
+        onValueChange={onSelectedTagsChange}
+        aria-label="Filter by topic"
+        className="flex flex-wrap gap-2"
+      >
+        {availableTags.map(tag => (
+          <ToggleGroupItem
             key={tag}
-            type="button"
+            value={tag}
             data-testid="topic-filter-button"
-            aria-pressed={isSelected}
-            onClick={() => toggleTag(tag)}
+            className="h-auto rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors first:rounded-full last:rounded-full data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-transparent data-[state=off]:hover:bg-accent data-[state=off]:border-input cursor-pointer shadow-none"
           >
-            <Badge
-              variant={isSelected ? 'default' : 'outline'}
-              className={
-                isSelected
-                  ? 'bg-brand text-brand-foreground hover:bg-brand-hover cursor-pointer'
-                  : 'cursor-pointer hover:bg-accent'
-              }
-            >
-              {tag}
-            </Badge>
-          </button>
-        )
-      })}
+            {tag}
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
       {selectedTags.length > 0 && (
         <button
           type="button"

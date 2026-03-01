@@ -1,12 +1,21 @@
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router'
 import { useState, useRef, useEffect } from 'react'
-import { ArrowLeft, ChevronLeft, ChevronRight, CheckCircle2, Circle, Menu, PencilLine, X, Video, Maximize2, Minimize2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CheckCircle2, Circle, Menu, PencilLine, X, Video, Maximize2, Minimize2 } from 'lucide-react'
 import { Button } from '../components/ui/button'
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '../components/ui/breadcrumb'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet'
 import { VideoPlayer } from '../components/figma/VideoPlayer'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '../components/ui/resizable'
 import { cn } from '../components/ui/utils'
+import { ScrollArea } from '../components/ui/scroll-area'
 import { useIntersectionObserver } from '@/app/hooks/useIntersectionObserver'
 import { useIsDesktop, useIsTablet, useIsMobile } from '@/app/hooks/useMediaQuery'
 import { usePanelRef } from 'react-resizable-panels'
@@ -353,14 +362,25 @@ export function LessonPlayer() {
   // Shared main content JSX — used in both desktop (inside ResizablePanel) and non-desktop layouts
   const mainContent = (
     <>
-      <Link
-        data-theater-hide
-        to={`/courses/${courseId}`}
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        {course.shortTitle}
-      </Link>
+      <Breadcrumb data-theater-hide className="mb-4">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to="/courses">Courses</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to={`/courses/${courseId}`}>{course.shortTitle}</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{lesson.title}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
 
       {/* Video Player */}
       {videoResource && (
@@ -694,7 +714,7 @@ export function LessonPlayer() {
             minSize={25}
           >
             {notesOpen && (
-              <div className="sticky top-0 max-h-[calc(100svh-3rem)] overflow-y-auto pl-4">
+              <ScrollArea className="sticky top-0 max-h-[calc(100svh-3rem)] pl-4">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-semibold">Notes</h3>
                   <Button
@@ -714,7 +734,7 @@ export function LessonPlayer() {
                   onSave={handleNoteChange}
                   onVideoSeek={handleVideoSeek}
                 />
-              </div>
+              </ScrollArea>
             )}
           </ResizablePanel>
         </ResizablePanelGroup>
@@ -765,15 +785,17 @@ export function LessonPlayer() {
         <div className="px-4 py-3 border-b border-border flex-shrink-0">
           <h3 className="text-sm font-semibold">Course Content</h3>
         </div>
-        <div className="p-3 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" data-testid="course-sidebar-accordion">
-          <ModuleAccordion
-            modules={course.modules}
-            courseId={course.id}
-            activeLessonId={lessonId}
-            completedLessons={progress?.completedLessons ?? []}
-            compact
-          />
-        </div>
+        <ScrollArea className="flex-1" data-testid="course-sidebar-accordion">
+          <div className="p-3">
+            <ModuleAccordion
+              modules={course.modules}
+              courseId={course.id}
+              activeLessonId={lessonId}
+              completedLessons={progress?.completedLessons ?? []}
+              compact
+            />
+          </div>
+        </ScrollArea>
       </div>
 
       {/* Mobile full-screen notes overlay */}
@@ -799,15 +821,17 @@ export function LessonPlayer() {
               Minimize
             </Button>
           </div>
-          <div className="flex-1 overflow-y-auto p-4">
-            <NoteEditor
-              courseId={courseId || ''}
-              lessonId={lessonId || ''}
-              initialContent={noteText}
-              onSave={handleNoteChange}
-              onVideoSeek={handleVideoSeek}
-            />
-          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-4">
+              <NoteEditor
+                courseId={courseId || ''}
+                lessonId={lessonId || ''}
+                initialContent={noteText}
+                onSave={handleNoteChange}
+                onVideoSeek={handleVideoSeek}
+              />
+            </div>
+          </ScrollArea>
         </div>
       )}
 

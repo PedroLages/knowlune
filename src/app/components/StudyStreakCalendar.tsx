@@ -15,6 +15,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/app/components/ui/dialog'
+import { Alert, AlertTitle } from '@/app/components/ui/alert'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { Label } from '@/app/components/ui/label'
@@ -68,10 +69,10 @@ export function StudyStreakCalendar({ days = 30, className }: StudyStreakCalenda
             {currentStreak === 1 ? 'day' : 'days'} in a row
           </div>
           {pauseStatus && pauseStatus.enabled && (
-            <div className="mt-2 flex items-center gap-1 text-xs text-orange-600 dark:text-orange-400">
+            <Alert className="mt-2 border-orange-200 bg-orange-50/50 py-2 px-3 text-xs text-orange-600 dark:border-orange-800 dark:bg-orange-900/30 dark:text-orange-400 [&>svg]:size-3">
               <Pause className="h-3 w-3" aria-hidden="true" />
-              <span>Vacation mode active</span>
-            </div>
+              <AlertTitle className="text-xs font-normal">Vacation mode active</AlertTitle>
+            </Alert>
           )}
         </div>
 

@@ -5,6 +5,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/app/components/ui/dialog'
+import { Kbd } from '@/app/components/ui/kbd'
 
 interface Shortcut {
   keys: string[]
@@ -17,14 +18,6 @@ const shortcuts: Shortcut[] = [
   { keys: ['?'], description: 'Show keyboard shortcuts' },
   { keys: ['Escape'], description: 'Close dialog / search' },
 ]
-
-function Kbd({ children }: { children: React.ReactNode }) {
-  return (
-    <kbd className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 rounded bg-muted border border-border text-xs font-mono font-medium text-muted-foreground">
-      {children}
-    </kbd>
-  )
-}
 
 interface KeyboardShortcutsDialogProps {
   open: boolean

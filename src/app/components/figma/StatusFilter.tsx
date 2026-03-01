@@ -1,6 +1,6 @@
 import { Circle, CheckCircle2, PauseCircle } from 'lucide-react'
-import { Badge } from '@/app/components/ui/badge'
 import { cn } from '@/app/components/ui/utils'
+import { ToggleGroup, ToggleGroupItem } from '@/app/components/ui/toggle-group'
 import type { LearnerCourseStatus } from '@/data/types'
 
 const statuses: {
@@ -13,19 +13,19 @@ const statuses: {
     value: 'active',
     label: 'Active',
     icon: Circle,
-    activeClass: 'bg-brand text-brand-foreground hover:bg-brand-hover',
+    activeClass: 'data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover',
   },
   {
     value: 'completed',
     label: 'Completed',
     icon: CheckCircle2,
-    activeClass: 'bg-success text-success-foreground hover:bg-success/90',
+    activeClass: 'data-[state=on]:bg-success data-[state=on]:text-success-foreground data-[state=on]:hover:bg-success/90',
   },
   {
     value: 'paused',
     label: 'Paused',
     icon: PauseCircle,
-    activeClass: 'bg-muted-foreground text-white hover:bg-muted-foreground/90',
+    activeClass: 'data-[state=on]:bg-muted-foreground data-[state=on]:text-white data-[state=on]:hover:bg-muted-foreground/90',
   },
 ]
 
@@ -35,45 +35,36 @@ interface StatusFilterProps {
 }
 
 export function StatusFilter({ selectedStatuses, onSelectedStatusesChange }: StatusFilterProps) {
-  function toggleStatus(status: LearnerCourseStatus) {
-    if (selectedStatuses.includes(status)) {
-      onSelectedStatusesChange(selectedStatuses.filter(s => s !== status))
-    } else {
-      onSelectedStatusesChange([...selectedStatuses, status])
-    }
-  }
-
   return (
     <div
       data-testid="status-filter-bar"
-      role="group"
-      aria-label="Filter by status"
       className="flex flex-wrap gap-2 items-center mb-6"
     >
       <span className="text-xs text-muted-foreground mr-1">Status:</span>
-      {statuses.map(({ value, label, icon: Icon, activeClass }) => {
-        const isSelected = selectedStatuses.includes(value)
-        return (
-          <button
+      <ToggleGroup
+        type="multiple"
+        value={selectedStatuses}
+        onValueChange={(value) => onSelectedStatusesChange(value as LearnerCourseStatus[])}
+        aria-label="Filter by status"
+        className="flex flex-wrap gap-2"
+      >
+        {statuses.map(({ value, label, icon: Icon, activeClass }) => (
+          <ToggleGroupItem
             key={value}
-            type="button"
+            value={value}
             data-testid="status-filter-button"
-            aria-pressed={isSelected}
-            onClick={() => toggleStatus(value)}
+            className={cn(
+              'h-auto rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors first:rounded-full last:rounded-full gap-1 cursor-pointer shadow-none',
+              'data-[state=off]:bg-transparent data-[state=off]:hover:bg-accent data-[state=off]:border-input',
+              'data-[state=on]:border-transparent',
+              activeClass
+            )}
           >
-            <Badge
-              variant={isSelected ? 'default' : 'outline'}
-              className={cn(
-                'cursor-pointer gap-1',
-                isSelected ? activeClass : 'hover:bg-accent'
-              )}
-            >
-              <Icon className="size-3" aria-hidden="true" />
-              {label}
-            </Badge>
-          </button>
-        )
-      })}
+            <Icon className="size-3" aria-hidden="true" />
+            {label}
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
       {selectedStatuses.length > 0 && (
         <button
           type="button"

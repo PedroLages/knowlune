@@ -1,5 +1,4 @@
 import { useRef, useEffect, useState } from 'react'
-import { flushSync } from 'react-dom'
 import {
   Play,
   Pause,
@@ -21,8 +20,15 @@ import {
 import type { CaptionTrack, Chapter } from '@/data/types'
 import { ChapterProgressBar } from './ChapterProgressBar'
 import { Button } from '@/app/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/app/components/ui/dropdown-menu'
 import { Slider } from '@/app/components/ui/slider'
-// Radix Popover Portal miscalculates position inside scroll containers — using plain CSS dropdown
 import { cn } from '@/app/components/ui/utils'
 import { VideoShortcutsOverlay } from '@/app/components/figma/VideoShortcutsOverlay'
 import { formatTimestamp as formatTime } from '@/lib/time'
@@ -119,10 +125,6 @@ export function VideoPlayer({
   // Video shortcuts overlay state
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
 
-  // Refs for speed menu focus trap
-  const speedTriggerRef = useRef<HTMLButtonElement>(null)
-  const speedMenuItemsRef = useRef<(HTMLButtonElement | null)[]>([])
-  const speedMenuWrapperRef = useRef<HTMLDivElement>(null)
   const mobileVolumeWrapperRef = useRef<HTMLDivElement>(null)
 
   // Load saved caption preference from localStorage
@@ -400,73 +402,6 @@ export function VideoPlayer({
       video.removeEventListener('leavepictureinpicture', onLeavePiP)
     }
   }, [announce])
-
-  // Speed menu keyboard navigation — document-level handler for Safari compatibility
-  // (Safari doesn't focus buttons on click, so element-level onKeyDown won't fire)
-  useEffect(() => {
-    if (!speedMenuOpen) return
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const items = speedMenuItemsRef.current.filter(Boolean) as HTMLButtonElement[]
-      const currentIdx = items.indexOf(document.activeElement as HTMLButtonElement)
-
-      switch (e.key) {
-        case 'Tab': {
-          e.preventDefault()
-          if (currentIdx === -1) {
-            // Focus not on any menu item — go to first
-            items[0]?.focus()
-          } else if (e.shiftKey) {
-            const prevIdx = currentIdx <= 0 ? items.length - 1 : currentIdx - 1
-            items[prevIdx]?.focus()
-          } else {
-            const nextIdx = currentIdx >= items.length - 1 ? 0 : currentIdx + 1
-            items[nextIdx]?.focus()
-          }
-          break
-        }
-        case 'ArrowDown': {
-          e.preventDefault()
-          if (currentIdx === -1) {
-            items[0]?.focus()
-          } else {
-            const nextIdx = currentIdx >= items.length - 1 ? 0 : currentIdx + 1
-            items[nextIdx]?.focus()
-          }
-          break
-        }
-        case 'ArrowUp': {
-          e.preventDefault()
-          const prevIdx = currentIdx <= 0 ? items.length - 1 : currentIdx - 1
-          items[prevIdx]?.focus()
-          break
-        }
-        case 'Escape': {
-          e.preventDefault()
-          // flushSync ensures React re-renders synchronously so focus
-          // lands on the trigger after menu DOM is removed (Safari compat)
-          flushSync(() => setSpeedMenuOpen(false))
-          speedTriggerRef.current?.focus()
-          break
-        }
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown, true)
-    return () => document.removeEventListener('keydown', handleKeyDown, true)
-  }, [speedMenuOpen])
-
-  // Click-outside handler for speed menu (B2)
-  useEffect(() => {
-    if (!speedMenuOpen) return
-    const handleClickOutside = (e: MouseEvent) => {
-      if (speedMenuWrapperRef.current && !speedMenuWrapperRef.current.contains(e.target as Node)) {
-        setSpeedMenuOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [speedMenuOpen])
 
   // Click-outside handler for mobile volume popover (M1)
   useEffect(() => {
@@ -999,51 +934,33 @@ export function VideoPlayer({
 
               <div className="flex items-center gap-2">
                 {/* Playback Speed */}
-                <div ref={speedMenuWrapperRef} className="relative">
-                  <Button
-                    ref={speedTriggerRef}
-                    variant="ghost"
-                    size="sm"
-                    data-testid="speed-menu-trigger"
-                    className="h-11 px-3 text-white hover:bg-white/20 text-xs font-medium"
-                    aria-label="Playback speed"
-                    aria-expanded={speedMenuOpen}
-                    aria-haspopup="menu"
-                    onClick={() => setSpeedMenuOpen(prev => !prev)}
-                  >
-                    <Settings className="size-5 mr-1" />
-                    {playbackSpeed}x
-                  </Button>
-                  {speedMenuOpen && (
-                    <div
-                      role="menu"
+                <DropdownMenu open={speedMenuOpen} onOpenChange={setSpeedMenuOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      data-testid="speed-menu-trigger"
+                      className="h-11 px-3 text-white hover:bg-white/20 text-xs font-medium"
                       aria-label="Playback speed"
-                      className="absolute bottom-full right-0 mb-2 w-32 rounded-md border bg-popover p-2 shadow-md z-50"
                     >
-                      <p className="text-xs font-semibold mb-2">Speed</p>
-                      {PLAYBACK_SPEEDS.map((speed, index) => (
-                        <button
-                          key={speed}
-                          ref={(el) => { speedMenuItemsRef.current[index] = el }}
-                          role="menuitem"
-                          aria-checked={speed === playbackSpeed}
-                          tabIndex={-1}
-                          onClick={() => {
-                            changePlaybackSpeed(speed)
-                            setSpeedMenuOpen(false)
-                            speedTriggerRef.current?.focus()
-                          }}
-                          className={cn(
-                            'w-full text-left px-2 py-1 text-sm rounded hover:bg-accent',
-                            speed === playbackSpeed && 'bg-accent font-semibold'
-                          )}
-                        >
+                      <Settings className="size-5 mr-1" />
+                      {playbackSpeed}x
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent side="top" align="end" className="w-32">
+                    <DropdownMenuLabel className="text-xs font-semibold">Speed</DropdownMenuLabel>
+                    <DropdownMenuRadioGroup
+                      value={String(playbackSpeed)}
+                      onValueChange={(value) => changePlaybackSpeed(parseFloat(value))}
+                    >
+                      {PLAYBACK_SPEEDS.map((speed) => (
+                        <DropdownMenuRadioItem key={speed} value={String(speed)}>
                           {speed}x {speed === 1 && '(Normal)'}
-                        </button>
+                        </DropdownMenuRadioItem>
                       ))}
-                    </div>
-                  )}
-                </div>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
                 {/* Bookmark Button */}
                 {onBookmarkAdd && (

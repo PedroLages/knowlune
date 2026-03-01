@@ -1,4 +1,5 @@
 import { Card, CardContent } from '@/app/components/ui/card'
+import { Progress } from '@/app/components/ui/progress'
 import { Trophy, Target } from 'lucide-react'
 
 interface AchievementBannerProps {
@@ -61,12 +62,10 @@ export function AchievementBanner({ completedLessons }: AchievementBannerProps) 
                     {Math.min(100, Math.round(progress))}%
                   </span>
                 </div>
-                <div className="h-2 bg-blue-100 dark:bg-blue-900/30 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500"
-                    style={{ width: `${Math.min(100, progress)}%` }}
-                  />
-                </div>
+                <Progress
+                  value={Math.min(100, progress)}
+                  className="bg-blue-100 dark:bg-blue-900/30 [&_[data-slot=progress-indicator]]:bg-gradient-to-r [&_[data-slot=progress-indicator]]:from-blue-500 [&_[data-slot=progress-indicator]]:to-purple-500 [&_[data-slot=progress-indicator]]:duration-500"
+                />
               </div>
             )}
           </div>
