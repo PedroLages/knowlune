@@ -159,3 +159,13 @@ export interface VideoBookmark {
   label: string
   createdAt: string // ISO 8601
 }
+
+export interface Screenshot {
+  id: string
+  courseId: string
+  lessonId: string
+  timestamp: number // Video position in seconds when captured
+  blob: Blob // Full-resolution JPEG
+  thumbnail: Blob // 200px-wide JPEG thumbnail for inline display
+  createdAt: string // ISO 8601
+}

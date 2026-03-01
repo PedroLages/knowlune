@@ -102,11 +102,23 @@
 - `h-4 w-4` used instead of `size-4` Tailwind v4 shorthand in StickyNote icon (recurring)
 - `bg-yellow-200` hardcoded in highlightMatches `<mark>` tag instead of using theme token
 
+### E03-S09: Video Frame Capture in Notes (Round 2)
+- BLOCKER (RECURRING): ENTIRE implementation STILL exists only in working tree after round 2 fixes -- committed branch has only story doc, sprint-status, and E2E tests. 5th consecutive story with this pattern.
+- Round 1 fixes applied: blob URL leak fixed (CapturedFrame no longer carries thumbnailUrl), global CustomEvent replaced with editor.storage.frameCapture.onSeek, formatFrameTimestamp now delegates to shared formatTimestamp, unit tests added for frame-capture.ts, error state added to FrameCaptureView
+- `handleNoteChange` in LessonPlayer STILL calls `saveNote()` fire-and-forget with no `.catch()` (recurring across S03, S04, S06, S09)
+- FrameCaptureView `.catch(() => {...})` silently swallows IndexedDB errors (no console.error)
+- FrameCaptureView `handleTimestampClick` silently no-ops when onSeek is null (read-only contexts like Notes Dashboard)
+- `handleCaptureFrame` in NoteEditor: editor.chain().insertFrameCapture() after await is not wrapped in try/catch
+- `forwardRef` used on VideoPlayer (required for React 18, can simplify when upgrading to React 19)
+- resizable.tsx uses `bg-brand/60` -- verify `--color-brand` token exists in theme.css
+
 ## Recurring Anti-Pattern: Uncommitted Fixes
 - E03-S02: Blocker fixes (focus trap, ARIA attrs) existed only in working tree
 - E03-S03: `urlTransform` override for video:// protocol existed only in working tree
 - E03-S05: 6+ fixes (combineWith, searchParams deps, tag separator, highlight memoization, searchIndex useMemo, tests) exist only in working tree
-- Root cause: Review findings are applied locally but never committed before shipping
+- E03-S08: ENTIRE implementation (Notes.tsx, NoteCard.tsx, navigation.ts, routes.tsx) exists only in working tree -- committed branch has only the story file, sprint-status, and E2E tests
+- E03-S09: ENTIRE implementation exists only in working tree -- committed branch has only story doc, sprint-status, and E2E tests
+- Root cause: Review findings are applied locally but never committed before shipping. In S08/S09 cases, implementation itself was never committed.
 
 ### E03-S04: Tag-Based Note Organization
 
@@ -118,6 +130,16 @@
 - TagBadgeList uses string interpolation for className instead of `cn()` (recurring since E01-S03)
 - `tagSection` JSX shared between edit and preview tabs -- preview tab shows add/remove controls (arguably should be read-only)
 - Tag immediate-save effect doesn't cancel the pending content debounce timer, causing redundant double-writes
+
+### E03-S08: Global Notes Dashboard
+- BLOCKER (RECURRING): ENTIRE implementation exists only in working tree -- committed branch ships only story doc, sprint-status, and E2E spec. Notes.tsx (untracked), NoteCard.tsx, navigation.ts, routes.tsx are all uncommitted.
+- Tag filter badges use `<Badge>` (renders `<span>`) with `onClick` but NO `tabIndex`, `role="button"`, or `onKeyDown` -- completely inaccessible via keyboard
+- `.catch(() => {})` on `getAllNoteTags()` promise silently swallows errors (recurring pattern)
+- `courseName` prop added to NoteCard interface but NEVER destructured or rendered in the component
+- String interpolation for className instead of `cn()` continues in Notes.tsx (recurring since E01-S03)
+- `ReadOnlyContent` component duplicated in Notes.tsx (exists already in NoteCard.tsx)
+- `stripHtml` function duplicated in Notes.tsx (exists already in NoteCard.tsx)
+- TipTap `useEditor` instantiated per expanded card even for single-card expansion (minor perf concern)
 
 ### E03-S06: View Course Notes Collection
 - `readOnlyEditor` in NoteCard initialized with `note.content` once -- does NOT update after editing and saving (useEditor `content` is initial-only), shows stale content in expanded view

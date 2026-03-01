@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 'react'
 import {
   Play,
   Pause,
@@ -31,7 +31,7 @@ import {
 import { Slider } from '@/app/components/ui/slider'
 import { cn } from '@/app/components/ui/utils'
 import { VideoShortcutsOverlay } from '@/app/components/figma/VideoShortcutsOverlay'
-import { formatTimestamp as formatTime } from '@/lib/time'
+import { formatTimestamp as formatTime } from '@/lib/format'
 
 interface VideoPlayerProps {
   src: string
@@ -54,30 +54,38 @@ interface VideoPlayerProps {
   onTheaterModeToggle?: () => void
 }
 
+export interface VideoPlayerHandle {
+  /** Returns the underlying <video> element for canvas capture */
+  getVideoElement: () => HTMLVideoElement | null
+}
+
 const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2]
 const STORAGE_KEY_PLAYBACK_SPEED = 'video-playback-speed'
 const STORAGE_KEY_CAPTIONS_ENABLED = 'video-captions-enabled'
 
-export function VideoPlayer({
-  src,
-  title,
-  initialPosition,
-  captions,
-  chapters,
-  seekToTime,
-  courseId: _courseId,
-  lessonId: _lessonId,
-  onTimeUpdate,
-  onEnded,
-  onSeekComplete,
-  onBookmarkAdd,
-  bookmarks,
-  onBookmarkSeek,
-  poster,
-  onPlayStateChange,
-  theaterMode,
-  onTheaterModeToggle,
-}: VideoPlayerProps) {
+export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(function VideoPlayer(
+  {
+    src,
+    title,
+    initialPosition,
+    captions,
+    chapters,
+    seekToTime,
+    courseId: _courseId,
+    lessonId: _lessonId,
+    onTimeUpdate,
+    onEnded,
+    onSeekComplete,
+    onBookmarkAdd,
+    bookmarks,
+    onBookmarkSeek,
+    poster,
+    onPlayStateChange,
+    theaterMode,
+    onTheaterModeToggle,
+  },
+  ref
+) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const hasRestoredPosition = useRef(false)
@@ -88,6 +96,10 @@ export function VideoPlayer({
   const seekOverlayTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const lastTapRef = useRef<{ time: number; x: number } | null>(null)
   const touchActiveRef = useRef(false)
+
+  useImperativeHandle(ref, () => ({
+    getVideoElement: () => videoRef.current,
+  }))
 
   const [justBookmarked, setJustBookmarked] = useState(false)
   const [isBuffering, setIsBuffering] = useState(false)
@@ -1089,4 +1101,4 @@ export function VideoPlayer({
       </div>
     </div>
   )
-}
+})
