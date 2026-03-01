@@ -31,10 +31,11 @@ export async function addBookmark(
 /**
  * Get all bookmarks for a specific lesson
  */
-export async function getLessonBookmarks(courseId: string, lessonId: string): Promise<VideoBookmark[]> {
-  const bookmarks = await db.bookmarks
-    .where({ courseId, lessonId })
-    .toArray()
+export async function getLessonBookmarks(
+  courseId: string,
+  lessonId: string
+): Promise<VideoBookmark[]> {
+  const bookmarks = await db.bookmarks.where({ courseId, lessonId }).toArray()
   return bookmarks.sort((a, b) => a.timestamp - b.timestamp)
 }
 
@@ -42,9 +43,7 @@ export async function getLessonBookmarks(courseId: string, lessonId: string): Pr
  * Get all bookmarks for a specific course
  */
 export async function getCourseBookmarks(courseId: string): Promise<VideoBookmark[]> {
-  const bookmarks = await db.bookmarks
-    .where({ courseId })
-    .toArray()
+  const bookmarks = await db.bookmarks.where({ courseId }).toArray()
   return bookmarks.sort((a, b) => a.timestamp - b.timestamp)
 }
 
@@ -66,7 +65,11 @@ export async function deleteBookmark(bookmarkId: string): Promise<void> {
 /**
  * Check if a bookmark exists at a specific timestamp (within 1 second tolerance)
  */
-export async function hasBookmarkAt(courseId: string, lessonId: string, timestamp: number): Promise<boolean> {
+export async function hasBookmarkAt(
+  courseId: string,
+  lessonId: string,
+  timestamp: number
+): Promise<boolean> {
   const bookmarks = await getLessonBookmarks(courseId, lessonId)
   return bookmarks.some(b => Math.abs(b.timestamp - timestamp) < 1)
 }

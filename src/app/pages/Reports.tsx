@@ -223,10 +223,7 @@ export default function Reports() {
                   }}
                 >
                   {categoryData.map((_, i) => (
-                    <Cell
-                      key={i}
-                      fill={`var(--color-${PIE_KEYS[i % PIE_KEYS.length]})`}
-                    />
+                    <Cell key={i} fill={`var(--color-${PIE_KEYS[i % PIE_KEYS.length]})`} />
                   ))}
                 </Pie>
                 <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />

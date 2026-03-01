@@ -14,10 +14,7 @@ export function TopicFilter({
   if (availableTags.length === 0) return null
 
   return (
-    <div
-      data-testid="topic-filter-bar"
-      className="flex flex-wrap gap-2 items-center mb-6"
-    >
+    <div data-testid="topic-filter-bar" className="flex flex-wrap gap-2 items-center mb-6">
       <ToggleGroup
         type="multiple"
         value={selectedTags}

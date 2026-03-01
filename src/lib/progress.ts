@@ -213,11 +213,7 @@ export function getPdfPage(courseId: string, resourceId: string): number | undef
  * Normalize tags at the store boundary: trim, lowercase, deduplicate, sort.
  */
 export function normalizeTags(tags: string[]): string[] {
-  const normalized = new Set(
-    tags
-      .map(t => t.trim().toLowerCase())
-      .filter(Boolean)
-  )
+  const normalized = new Set(tags.map(t => t.trim().toLowerCase()).filter(Boolean))
   return Array.from(normalized).sort()
 }
 
@@ -337,7 +333,11 @@ export async function addNote(
 /**
  * Delete a specific note by ID
  */
-export async function deleteNote(_courseId: string, _lessonId: string, noteId: string): Promise<void> {
+export async function deleteNote(
+  _courseId: string,
+  _lessonId: string,
+  noteId: string
+): Promise<void> {
   try {
     await db.notes.delete(noteId)
     removeFromIndex(noteId)

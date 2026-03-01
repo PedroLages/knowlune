@@ -25,9 +25,7 @@ function CustomTooltip({
   if (!active || !payload || payload.length === 0) return null
 
   const fullDate = payload[0]?.payload?.fullDate
-  const displayDate = fullDate
-    ? format(new Date(fullDate), 'MMMM dd, yyyy')
-    : label
+  const displayDate = fullDate ? format(new Date(fullDate), 'MMMM dd, yyyy') : label
 
   return (
     <div className="rounded-lg bg-white shadow-md border border-neutral-100 px-3 py-2">
@@ -65,12 +63,7 @@ export function HybridProgressChart({ data }: HybridProgressChartProps) {
             tickLine={false}
             axisLine={false}
           />
-          <YAxis
-            tick={{ fontSize: 12 }}
-            stroke="#a3a3a3"
-            tickLine={false}
-            axisLine={false}
-          />
+          <YAxis tick={{ fontSize: 12 }} stroke="#a3a3a3" tickLine={false} axisLine={false} />
           <Tooltip content={<CustomTooltip />} />
           <Line
             type="monotone"

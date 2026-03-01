@@ -22,8 +22,7 @@ export function HybridCourses() {
 
   const filteredCourses = allCourses.filter(course => {
     const matchesCategory =
-      activeTab === 'all' ||
-      course.category === tabs.find(t => t.value === activeTab)?.category
+      activeTab === 'all' || course.category === tabs.find(t => t.value === activeTab)?.category
 
     const matchesSearch =
       searchQuery === '' ||

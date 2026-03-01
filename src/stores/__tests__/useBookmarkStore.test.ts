@@ -134,9 +134,30 @@ describe('loadLessonBookmarks', () => {
   it('should load bookmarks filtered by course and lesson', async () => {
     const { db } = await import('@/db')
     await db.bookmarks.bulkAdd([
-      { id: '1', courseId: 'c1', lessonId: 'l1', timestamp: 10, label: '0:10', createdAt: new Date().toISOString() },
-      { id: '2', courseId: 'c1', lessonId: 'l2', timestamp: 20, label: '0:20', createdAt: new Date().toISOString() },
-      { id: '3', courseId: 'c2', lessonId: 'l1', timestamp: 30, label: '0:30', createdAt: new Date().toISOString() },
+      {
+        id: '1',
+        courseId: 'c1',
+        lessonId: 'l1',
+        timestamp: 10,
+        label: '0:10',
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: '2',
+        courseId: 'c1',
+        lessonId: 'l2',
+        timestamp: 20,
+        label: '0:20',
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: '3',
+        courseId: 'c2',
+        lessonId: 'l1',
+        timestamp: 30,
+        label: '0:30',
+        createdAt: new Date().toISOString(),
+      },
     ])
 
     await act(async () => {
@@ -152,8 +173,22 @@ describe('getTotalCount', () => {
   it('should return total bookmark count from IndexedDB', async () => {
     const { db } = await import('@/db')
     await db.bookmarks.bulkAdd([
-      { id: '1', courseId: 'c1', lessonId: 'l1', timestamp: 10, label: '0:10', createdAt: new Date().toISOString() },
-      { id: '2', courseId: 'c1', lessonId: 'l2', timestamp: 20, label: '0:20', createdAt: new Date().toISOString() },
+      {
+        id: '1',
+        courseId: 'c1',
+        lessonId: 'l1',
+        timestamp: 10,
+        label: '0:10',
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: '2',
+        courseId: 'c1',
+        lessonId: 'l2',
+        timestamp: 20,
+        label: '0:20',
+        createdAt: new Date().toISOString(),
+      },
     ])
 
     const count = await useBookmarkStore.getState().getTotalCount()

@@ -136,7 +136,9 @@ export function PdfToolbar({
 
       {/* Title (always when collapsed, hidden on small screens when expanded) */}
       {title && (
-        <span className={`truncate text-sm font-medium ${collapsed ? 'max-w-[200px]' : 'hidden max-w-[140px] sm:inline'}`}>
+        <span
+          className={`truncate text-sm font-medium ${collapsed ? 'max-w-[200px]' : 'hidden max-w-[140px] sm:inline'}`}
+        >
           {title}
         </span>
       )}
@@ -145,36 +147,38 @@ export function PdfToolbar({
       {title && !collapsed && <div className="hidden h-5 w-px bg-border sm:block" />}
 
       {/* Panel toggles */}
-      {!compact && !collapsed && <div className="hidden items-center gap-1 sm:flex">
-        <Button
-          data-testid="pdf-toggle-thumbnails"
-          variant={thumbnailsOpen ? 'secondary' : 'ghost'}
-          size="icon"
-          className="h-8 w-8"
-          onClick={toggleThumbnails}
-          aria-label={thumbnailsOpen ? 'Hide thumbnails' : 'Show thumbnails'}
-          aria-pressed={thumbnailsOpen}
-          title="Thumbnails"
-        >
-          <PanelLeft className="h-4 w-4" />
-        </Button>
+      {!compact && !collapsed && (
+        <div className="hidden items-center gap-1 sm:flex">
+          <Button
+            data-testid="pdf-toggle-thumbnails"
+            variant={thumbnailsOpen ? 'secondary' : 'ghost'}
+            size="icon"
+            className="h-8 w-8"
+            onClick={toggleThumbnails}
+            aria-label={thumbnailsOpen ? 'Hide thumbnails' : 'Show thumbnails'}
+            aria-pressed={thumbnailsOpen}
+            title="Thumbnails"
+          >
+            <PanelLeft className="h-4 w-4" />
+          </Button>
 
-        <Button
-          data-testid="pdf-toggle-outline"
-          variant={outlineOpen ? 'secondary' : 'ghost'}
-          size="icon"
-          className="h-8 w-8"
-          onClick={toggleOutline}
-          aria-label={outlineOpen ? 'Hide outline' : 'Show outline'}
-          aria-pressed={outlineOpen}
-          title="Outline"
-        >
-          <BookOpen className="h-4 w-4" />
-        </Button>
+          <Button
+            data-testid="pdf-toggle-outline"
+            variant={outlineOpen ? 'secondary' : 'ghost'}
+            size="icon"
+            className="h-8 w-8"
+            onClick={toggleOutline}
+            aria-label={outlineOpen ? 'Hide outline' : 'Show outline'}
+            aria-pressed={outlineOpen}
+            title="Outline"
+          >
+            <BookOpen className="h-4 w-4" />
+          </Button>
 
-        {/* Separator */}
-        <div className="h-5 w-px bg-border" />
-      </div>}
+          {/* Separator */}
+          <div className="h-5 w-px bg-border" />
+        </div>
+      )}
 
       {/* Page navigation */}
       <div className="flex items-center gap-1">
@@ -190,10 +194,7 @@ export function PdfToolbar({
           <ChevronLeft className="h-4 w-4" />
         </Button>
 
-        <div
-          data-testid="pdf-page-indicator"
-          className="flex items-center gap-1 text-sm"
-        >
+        <div data-testid="pdf-page-indicator" className="flex items-center gap-1 text-sm">
           <input
             data-testid="pdf-page-input"
             type="number"
@@ -383,7 +384,9 @@ export function PdfToolbar({
 
             <a href={src} download aria-label="Download PDF" title="Download">
               <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                <span><Download className="h-4 w-4" /></span>
+                <span>
+                  <Download className="h-4 w-4" />
+                </span>
               </Button>
             </a>
           </div>

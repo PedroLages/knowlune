@@ -17,7 +17,7 @@ export interface CaptionTrack {
 }
 
 export interface Chapter {
-  time: number    // start time in seconds
+  time: number // start time in seconds
   title: string
 }
 

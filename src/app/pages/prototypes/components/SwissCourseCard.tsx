@@ -23,9 +23,7 @@ export function SwissCourseCard({ course, completionPercent }: SwissCourseCardPr
     ? `/courses/${course.id}/${resumeLesson}`
     : `/courses/${course.id}`
 
-  const imageSrc = course.coverImage
-    ? `${course.coverImage}-640w.webp`
-    : undefined
+  const imageSrc = course.coverImage ? `${course.coverImage}-640w.webp` : undefined
 
   return (
     <Link
@@ -35,15 +33,9 @@ export function SwissCourseCard({ course, completionPercent }: SwissCourseCardPr
       {/* Cover image */}
       {imageSrc && (
         <div className="relative h-44 overflow-hidden">
-          <img
-            src={imageSrc}
-            alt={course.title}
-            className="w-full h-full object-cover"
-          />
+          <img src={imageSrc} alt={course.title} className="w-full h-full object-cover" />
           {/* Red bottom border on hover */}
-          <div
-            className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#DC2626] opacity-0 group-hover:opacity-100 transition-opacity"
-          />
+          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#DC2626] opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
       )}
 
@@ -55,14 +47,10 @@ export function SwissCourseCard({ course, completionPercent }: SwissCourseCardPr
         </p>
 
         {/* Title */}
-        <h3 className="text-base font-bold text-black mb-1">
-          {course.title}
-        </h3>
+        <h3 className="text-base font-bold text-black mb-1">{course.title}</h3>
 
         {/* Description */}
-        <p className="text-sm text-neutral-500 line-clamp-2 mb-3">
-          {course.description}
-        </p>
+        <p className="text-sm text-neutral-500 line-clamp-2 mb-3">{course.description}</p>
 
         {/* Metadata row */}
         <p className="text-xs text-neutral-400 mb-4">

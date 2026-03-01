@@ -4,17 +4,8 @@ import { Card, CardContent } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
 import { Progress } from '@/app/components/ui/progress'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/app/components/ui/popover'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/app/components/ui/dialog'
+import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog'
 import { ProgressRing } from './ProgressRing'
 import { VideoPlayer } from './VideoPlayer'
 import { getProgress } from '@/lib/progress'
@@ -140,9 +131,7 @@ export function CourseCard({
     .flatMap(l => l.resources)
     .find(r => r.type === 'video')
 
-  const previewSrc = firstVideoResource
-    ? getResourceUrl(firstVideoResource)
-    : undefined
+  const previewSrc = firstVideoResource ? getResourceUrl(firstVideoResource) : undefined
 
   const isInProgress = completionPercent > 0 && completionPercent < 100
   const isCompleted = completionPercent === 100
@@ -161,8 +150,8 @@ export function CourseCard({
       aria-hidden="true"
       onCanPlay={() => setVideoReady(true)}
       className={cn(
-        "absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-500",
-        videoReady ? "opacity-100" : "opacity-0"
+        'absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-500',
+        videoReady ? 'opacity-100' : 'opacity-0'
       )}
     />
   )
@@ -183,9 +172,7 @@ export function CourseCard({
           </Badge>
         ) : (
           <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant="secondary">
-              {categoryLabels[course.category] ?? course.category}
-            </Badge>
+            <Badge variant="secondary">{categoryLabels[course.category] ?? course.category}</Badge>
             <Badge
               variant={getDifficultyBadgeVariant(course.difficulty)}
               className={
@@ -217,8 +204,7 @@ export function CourseCard({
           {course.totalPDFs} docs
         </span>
         <span className="flex items-center gap-1">
-          <Clock className="size-3.5" aria-hidden="true" />
-          ~{course.estimatedHours}h
+          <Clock className="size-3.5" aria-hidden="true" />~{course.estimatedHours}h
         </span>
       </div>
 
@@ -318,7 +304,10 @@ export function CourseCard({
       case 'progress':
         return (
           <>
-            <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" aria-hidden="true" />
+            <div
+              className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"
+              aria-hidden="true"
+            />
             {status === 'completed' && (
               <div
                 className="absolute top-2 right-2 bg-success text-success-foreground rounded-full p-1"
@@ -343,7 +332,9 @@ export function CourseCard({
         <Popover open={infoOpen} onOpenChange={setInfoOpen}>
           <PopoverTrigger asChild>
             <button
-              onClick={e => { e.stopPropagation() }}
+              onClick={e => {
+                e.stopPropagation()
+              }}
               aria-label="Course details"
               className="absolute bottom-2 right-2 z-20 rounded-full bg-black/50 backdrop-blur-sm p-1.5 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black/70 hover:scale-110 cursor-pointer focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none"
             >
@@ -358,7 +349,13 @@ export function CourseCard({
     }
 
     return (
-      <div className="absolute bottom-3 right-3 z-20" onClick={e => { e.preventDefault(); e.stopPropagation() }}>
+      <div
+        className="absolute bottom-3 right-3 z-20"
+        onClick={e => {
+          e.preventDefault()
+          e.stopPropagation()
+        }}
+      >
         <Popover open={infoOpen} onOpenChange={setInfoOpen}>
           <PopoverTrigger asChild>
             <button
@@ -407,7 +404,9 @@ export function CourseCard({
 
     // library + overview: gradient fallback + full responsive srcSet
     return (
-      <div className={`relative ${thumbnailHeight} bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/50 dark:to-indigo-950/50 flex items-center justify-center overflow-hidden`}>
+      <div
+        className={`relative ${thumbnailHeight} bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/50 dark:to-indigo-950/50 flex items-center justify-center overflow-hidden`}
+      >
         {course.coverImage ? (
           variant === 'library' ? (
             <picture className="absolute inset-0">
@@ -535,7 +534,10 @@ export function CourseCard({
               </Badge>
             </div>
 
-            <h3 className="font-semibold text-base line-clamp-2 group-hover:text-brand transition-colors" title={course.title}>
+            <h3
+              className="font-semibold text-base line-clamp-2 group-hover:text-brand transition-colors"
+              title={course.title}
+            >
               {course.title}
             </h3>
 
@@ -550,8 +552,7 @@ export function CourseCard({
                   {course.totalPDFs} docs
                 </span>
                 <span className="flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-                  ~{course.estimatedHours}h
+                  <Clock className="h-3.5 w-3.5" aria-hidden="true" />~{course.estimatedHours}h
                 </span>
               </div>
 
@@ -566,10 +567,12 @@ export function CourseCard({
                     <span className="text-sm font-medium">{completionPercent}%</span>
                   </div>
                   {lastAccessedAt && (
-                    <span className="text-xs text-muted-foreground">{formatRelativeTime(lastAccessedAt)}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatRelativeTime(lastAccessedAt)}
+                    </span>
                   )}
                   <Button asChild className="button-press w-full bg-blue-600 hover:bg-blue-700">
-                    <Link to={lessonLink} onClick={(e) => e.stopPropagation()}>
+                    <Link to={lessonLink} onClick={e => e.stopPropagation()}>
                       Resume Learning
                     </Link>
                   </Button>
@@ -582,7 +585,7 @@ export function CourseCard({
                     Completed · {totalLessons} lessons
                   </p>
                   <Button asChild variant="outline" className="button-press w-full">
-                    <Link to={lessonLink} onClick={(e) => e.stopPropagation()}>
+                    <Link to={lessonLink} onClick={e => e.stopPropagation()}>
                       Review Course
                     </Link>
                   </Button>
@@ -598,12 +601,14 @@ export function CourseCard({
 
   const cardShell = (
     <Card
-      data-preview={showPreview && videoReady ? "" : undefined}
+      data-preview={showPreview && videoReady ? '' : undefined}
       className={cn(
-        "group bg-card border-0 shadow-sm overflow-hidden hover:shadow-xl hover:scale-[1.02] transition-all duration-300 motion-reduce:hover:scale-100 cursor-default h-full flex flex-col",
-        showPreview && videoReady && "!scale-[1.05] z-10",
-        variant === 'progress' && status === 'completed' && 'border-green-200 dark:border-green-800',
-        variant === 'progress' && status === 'not-started' && 'opacity-80 hover:opacity-100',
+        'group bg-card border-0 shadow-sm overflow-hidden hover:shadow-xl hover:scale-[1.02] transition-all duration-300 motion-reduce:hover:scale-100 cursor-default h-full flex flex-col',
+        showPreview && videoReady && '!scale-[1.05] z-10',
+        variant === 'progress' &&
+          status === 'completed' &&
+          'border-green-200 dark:border-green-800',
+        variant === 'progress' && status === 'not-started' && 'opacity-80 hover:opacity-100'
       )}
     >
       {variant === 'progress' ? (
@@ -627,7 +632,10 @@ export function CourseCard({
     return (
       <>
         <div
-          onClick={(e) => { guardNavigation(e); if (!e.defaultPrevented) navigate(lessonLink) }}
+          onClick={e => {
+            guardNavigation(e)
+            if (!e.defaultPrevented) navigate(lessonLink)
+          }}
           {...previewHandlers}
           className="h-full"
         >

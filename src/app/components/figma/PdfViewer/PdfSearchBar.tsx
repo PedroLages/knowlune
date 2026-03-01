@@ -46,11 +46,7 @@ export function PdfSearchBar({
 
   const renderMatchStatus = () => {
     if (isExtracting) {
-      return (
-        <span className="whitespace-nowrap text-xs text-muted-foreground">
-          Extracting...
-        </span>
-      )
+      return <span className="whitespace-nowrap text-xs text-muted-foreground">Extracting...</span>
     }
 
     if (!searchQuery.trim()) {
@@ -58,11 +54,7 @@ export function PdfSearchBar({
     }
 
     if (matches.length === 0) {
-      return (
-        <span className="whitespace-nowrap text-xs text-muted-foreground">
-          No matches
-        </span>
-      )
+      return <span className="whitespace-nowrap text-xs text-muted-foreground">No matches</span>
     }
 
     return (
@@ -84,7 +76,7 @@ export function PdfSearchBar({
           data-testid="pdf-search-input"
           type="text"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={e => setSearchQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Search in document..."
           aria-label="Search in document"

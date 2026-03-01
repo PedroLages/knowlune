@@ -79,7 +79,7 @@ export function VideoShortcutsOverlay({ open, onClose }: VideoShortcutsOverlayPr
       aria-labelledby="shortcuts-title"
       tabIndex={-1}
       className="absolute inset-0 z-50 bg-black/80 flex items-center justify-center"
-      onKeyDown={(e) => {
+      onKeyDown={e => {
         if (e.key === 'Escape') {
           e.stopPropagation()
           onClose()
@@ -98,12 +98,16 @@ export function VideoShortcutsOverlay({ open, onClose }: VideoShortcutsOverlayPr
       </Button>
 
       <div className="w-full max-w-lg px-6">
-        <h3 id="shortcuts-title" className="text-white text-base font-semibold text-center mb-4">Keyboard Shortcuts</h3>
+        <h3 id="shortcuts-title" className="text-white text-base font-semibold text-center mb-4">
+          Keyboard Shortcuts
+        </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0">
           {/* Column 1: Playback */}
           <div data-column="playback" className="space-y-2">
-            <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">Playback</p>
+            <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">
+              Playback
+            </p>
             {playbackShortcuts.map(s => (
               <ShortcutRow key={s.description} shortcut={s} />
             ))}
@@ -111,11 +115,15 @@ export function VideoShortcutsOverlay({ open, onClose }: VideoShortcutsOverlayPr
 
           {/* Column 2: Controls + Notes */}
           <div data-column="controls" className="space-y-2">
-            <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">Controls</p>
+            <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">
+              Controls
+            </p>
             {controlShortcuts.map(s => (
               <ShortcutRow key={s.description} shortcut={s} />
             ))}
-            <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2 mt-4">Notes</p>
+            <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2 mt-4">
+              Notes
+            </p>
             {notesShortcuts.map(s => (
               <ShortcutRow key={s.description} shortcut={s} />
             ))}

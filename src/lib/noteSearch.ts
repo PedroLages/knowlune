@@ -14,7 +14,16 @@ interface SearchableNote {
 
 const miniSearch = new MiniSearch<SearchableNote>({
   fields: ['content', 'tags', 'courseName', 'videoTitle'],
-  storeFields: ['id', 'courseName', 'videoTitle', 'tags', 'courseId', 'videoId', 'content', 'timestamp'],
+  storeFields: [
+    'id',
+    'courseName',
+    'videoTitle',
+    'tags',
+    'courseId',
+    'videoId',
+    'content',
+    'timestamp',
+  ],
   searchOptions: {
     boost: { tags: 2, courseName: 1.5 },
     prefix: true,

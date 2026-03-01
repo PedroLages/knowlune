@@ -171,13 +171,14 @@ export function usePdfSearch(
   const prevMatch = () => {
     if (matches.length === 0) return
 
-    const prevIndex =
-      (activeMatchIndex - 1 + matches.length) % matches.length
+    const prevIndex = (activeMatchIndex - 1 + matches.length) % matches.length
     setActiveMatchIndex(prevIndex)
     goToPage(matches[prevIndex].pageNumber)
   }
 
-  const getHighlightsForPage = (pageNumber: number): Array<{ start: number; end: number; active: boolean }> => {
+  const getHighlightsForPage = (
+    pageNumber: number
+  ): Array<{ start: number; end: number; active: boolean }> => {
     return matches
       .map((match, idx) => ({ match, idx }))
       .filter(({ match }) => match.pageNumber === pageNumber)
@@ -188,7 +189,9 @@ export function usePdfSearch(
       }))
   }
 
-  const makeTextRenderer = (pageNumber: number): ((item: { str: string; itemIndex: number }) => string) | undefined => {
+  const makeTextRenderer = (
+    pageNumber: number
+  ): ((item: { str: string; itemIndex: number }) => string) | undefined => {
     if (!searchQuery.trim() || matches.length === 0) return undefined
 
     const highlights = getHighlightsForPage(pageNumber)

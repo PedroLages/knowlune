@@ -340,7 +340,10 @@ export function VideoPlayer({
     if (!videoRef.current) return
     const ranges: Array<{ start: number; end: number }> = []
     for (let i = 0; i < videoRef.current.buffered.length; i++) {
-      ranges.push({ start: videoRef.current.buffered.start(i), end: videoRef.current.buffered.end(i) })
+      ranges.push({
+        start: videoRef.current.buffered.start(i),
+        end: videoRef.current.buffered.end(i),
+      })
     }
     setBufferedRanges(ranges)
   }
@@ -407,7 +410,10 @@ export function VideoPlayer({
   useEffect(() => {
     if (!mobileVolumeOpen) return
     const handleClickOutside = (e: MouseEvent) => {
-      if (mobileVolumeWrapperRef.current && !mobileVolumeWrapperRef.current.contains(e.target as Node)) {
+      if (
+        mobileVolumeWrapperRef.current &&
+        !mobileVolumeWrapperRef.current.contains(e.target as Node)
+      ) {
         setMobileVolumeOpen(false)
       }
     }
@@ -592,7 +598,7 @@ export function VideoPlayer({
     const touch = e.touches[0]
     const now = Date.now()
     const lastTap = lastTapRef.current
-    if (lastTap && (now - lastTap.time) < 300 && containerRef.current) {
+    if (lastTap && now - lastTap.time < 300 && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect()
       const relX = (touch.clientX - rect.left) / rect.width
       if (relX < 0.4) {
@@ -607,7 +613,9 @@ export function VideoPlayer({
 
     // Block synthesized mouse events that follow touchstart (~300ms on mobile)
     touchActiveRef.current = true
-    setTimeout(() => { touchActiveRef.current = false }, 500)
+    setTimeout(() => {
+      touchActiveRef.current = false
+    }, 500)
 
     setShowControls(true)
     if (controlsTimeoutRef.current) {
@@ -670,7 +678,7 @@ export function VideoPlayer({
       onMouseDown={() => containerRef.current?.focus()}
       onMouseMove={resetControlsTimeout}
       onMouseLeave={() => isPlaying && !speedMenuOpen && !shortcutsOpen && setShowControls(false)}
-      onTouchStart={(e) => handleTouchShow(e)}
+      onTouchStart={e => handleTouchShow(e)}
       tabIndex={0}
       role="region"
       aria-label={title || 'Video player'}
@@ -716,7 +724,10 @@ export function VideoPlayer({
               variant="outline"
               size="sm"
               className="text-white border-white/40 hover:bg-white/10"
-              onClick={() => { setHasError(false); videoRef.current?.load() }}
+              onClick={() => {
+                setHasError(false)
+                videoRef.current?.load()
+              }}
             >
               Retry
             </Button>
@@ -730,11 +741,16 @@ export function VideoPlayer({
             'absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent transition-[opacity,visibility] duration-300 motion-reduce:transition-none',
             showControls ? 'opacity-100' : 'opacity-0 invisible pointer-events-none'
           )}
-          onTouchStart={(e) => handleTouchShow(e)}
-          onClick={(e) => {
+          onTouchStart={e => handleTouchShow(e)}
+          onClick={e => {
             // Toggle play/pause when clicking the canvas (not buttons, sliders, or controls bar)
             const target = e.target as HTMLElement
-            if (target.closest('button') || target.closest('input') || target.closest('[data-controls]')) return
+            if (
+              target.closest('button') ||
+              target.closest('input') ||
+              target.closest('[data-controls]')
+            )
+              return
             togglePlayPause()
           }}
         >
@@ -757,7 +773,10 @@ export function VideoPlayer({
                 <div className="absolute -inset-3 rounded-full bg-brand/50 blur-lg" />
                 <span className="play-pulse-ring absolute inset-0 rounded-full bg-white/60" />
                 <div className="relative rounded-full bg-white p-5 shadow-2xl">
-                  <Play className="size-9 text-brand fill-brand translate-x-0.5" aria-hidden="true" />
+                  <Play
+                    className="size-9 text-brand fill-brand translate-x-0.5"
+                    aria-hidden="true"
+                  />
                 </div>
               </button>
             </div>
@@ -782,7 +801,10 @@ export function VideoPlayer({
           {seekOverlay && (
             <>
               {seekOverlay.direction === 'left' && (
-                <div key={seekOverlay.id} className="absolute left-0 inset-y-0 w-1/3 flex flex-col items-center justify-center pointer-events-none animate-seek-flash">
+                <div
+                  key={seekOverlay.id}
+                  className="absolute left-0 inset-y-0 w-1/3 flex flex-col items-center justify-center pointer-events-none animate-seek-flash"
+                >
                   <div className="rounded-full bg-white/20 p-4 flex flex-col items-center gap-1">
                     <ChevronLeft className="size-6 text-white" />
                     <span className="text-white text-xs font-medium">-{seekOverlay.amount}s</span>
@@ -790,7 +812,10 @@ export function VideoPlayer({
                 </div>
               )}
               {seekOverlay.direction === 'right' && (
-                <div key={seekOverlay.id} className="absolute right-0 inset-y-0 w-1/3 flex flex-col items-center justify-center pointer-events-none animate-seek-flash">
+                <div
+                  key={seekOverlay.id}
+                  className="absolute right-0 inset-y-0 w-1/3 flex flex-col items-center justify-center pointer-events-none animate-seek-flash"
+                >
                   <div className="rounded-full bg-white/20 p-4 flex flex-col items-center gap-1">
                     <ChevronRight className="size-6 text-white" />
                     <span className="text-white text-xs font-medium">+{seekOverlay.amount}s</span>
@@ -804,7 +829,10 @@ export function VideoPlayer({
           <div data-controls className="absolute bottom-0 left-0 right-0 p-4 space-y-2">
             {/* Progress Bar */}
             <div className="flex items-center gap-2">
-              <span data-testid="current-time" className="text-white text-xs font-medium min-w-[45px]">
+              <span
+                data-testid="current-time"
+                className="text-white text-xs font-medium min-w-[45px]"
+              >
                 {formatTime(currentTime)}
               </span>
               <ChapterProgressBar
@@ -845,7 +873,10 @@ export function VideoPlayer({
                   variant="ghost"
                   size="icon"
                   className="size-11 text-white hover:bg-white/20"
-                  onClick={() => { seek(-10); announce('Skipped back 10 seconds') }}
+                  onClick={() => {
+                    seek(-10)
+                    announce('Skipped back 10 seconds')
+                  }}
                   aria-label="Skip back 10 seconds"
                 >
                   <SkipBack className="size-5" />
@@ -856,7 +887,10 @@ export function VideoPlayer({
                   variant="ghost"
                   size="icon"
                   className="size-11 text-white hover:bg-white/20"
-                  onClick={() => { seek(10); announce('Skipped forward 10 seconds') }}
+                  onClick={() => {
+                    seek(10)
+                    announce('Skipped forward 10 seconds')
+                  }}
                   aria-label="Skip forward 10 seconds"
                 >
                   <SkipForward className="size-5" />
@@ -866,7 +900,7 @@ export function VideoPlayer({
                 <div
                   ref={mobileVolumeWrapperRef}
                   className="relative flex items-center gap-2"
-                  onWheel={(e) => {
+                  onWheel={e => {
                     e.preventDefault()
                     changeVolume(e.deltaY < 0 ? 0.05 : -0.05)
                   }}
@@ -906,7 +940,7 @@ export function VideoPlayer({
                         'group-hover/volume:[&_[data-slot=slider-track]]:!h-3',
                         '[&_[data-slot=slider-range]]:bg-white',
                         '[&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:border-white/50 [&_[data-slot=slider-thumb]]:opacity-0 [&_[data-slot=slider-thumb]]:scale-0 [&_[data-slot=slider-thumb]]:transition-[opacity,transform] [&_[data-slot=slider-thumb]]:duration-150',
-                        'group-hover/volume:[&_[data-slot=slider-thumb]]:opacity-100 group-hover/volume:[&_[data-slot=slider-thumb]]:scale-100',
+                        'group-hover/volume:[&_[data-slot=slider-thumb]]:opacity-100 group-hover/volume:[&_[data-slot=slider-thumb]]:scale-100'
                       )}
                     />
                   </div>
@@ -951,9 +985,9 @@ export function VideoPlayer({
                     <DropdownMenuLabel className="text-xs font-semibold">Speed</DropdownMenuLabel>
                     <DropdownMenuRadioGroup
                       value={String(playbackSpeed)}
-                      onValueChange={(value) => changePlaybackSpeed(parseFloat(value))}
+                      onValueChange={value => changePlaybackSpeed(parseFloat(value))}
                     >
-                      {PLAYBACK_SPEEDS.map((speed) => (
+                      {PLAYBACK_SPEEDS.map(speed => (
                         <DropdownMenuRadioItem key={speed} value={String(speed)}>
                           {speed}x {speed === 1 && '(Normal)'}
                         </DropdownMenuRadioItem>
@@ -974,10 +1008,11 @@ export function VideoPlayer({
                     onClick={handleAddBookmark}
                     aria-label="Add bookmark at current time"
                   >
-                    {justBookmarked
-                      ? <BookmarkCheck className="size-5" />
-                      : <Bookmark className="size-5" />
-                    }
+                    {justBookmarked ? (
+                      <BookmarkCheck className="size-5" />
+                    ) : (
+                      <Bookmark className="size-5" />
+                    )}
                   </Button>
                 )}
 
@@ -1015,18 +1050,20 @@ export function VideoPlayer({
                 )}
 
                 {/* Picture-in-Picture */}
-                {typeof document !== 'undefined' && 'pictureInPictureEnabled' in document && document.pictureInPictureEnabled && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn('size-11 text-white hover:bg-white/20', isPiP && 'bg-white/20')}
-                    onClick={togglePiP}
-                    aria-label={isPiP ? 'Exit Picture-in-Picture' : 'Enter Picture-in-Picture'}
-                    aria-pressed={isPiP}
-                  >
-                    <PictureInPicture2 className="size-5" />
-                  </Button>
-                )}
+                {typeof document !== 'undefined' &&
+                  'pictureInPictureEnabled' in document &&
+                  document.pictureInPictureEnabled && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn('size-11 text-white hover:bg-white/20', isPiP && 'bg-white/20')}
+                      onClick={togglePiP}
+                      aria-label={isPiP ? 'Exit Picture-in-Picture' : 'Enter Picture-in-Picture'}
+                      aria-pressed={isPiP}
+                    >
+                      <PictureInPicture2 className="size-5" />
+                    </Button>
+                  )}
 
                 {/* Fullscreen */}
                 <Button
@@ -1036,11 +1073,7 @@ export function VideoPlayer({
                   onClick={toggleFullscreen}
                   aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
                 >
-                  {isFullscreen ? (
-                    <Minimize className="size-5" />
-                  ) : (
-                    <Maximize className="size-5" />
-                  )}
+                  {isFullscreen ? <Minimize className="size-5" /> : <Maximize className="size-5" />}
                 </Button>
               </div>
             </div>

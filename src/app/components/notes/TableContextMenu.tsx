@@ -55,9 +55,7 @@ export function TableContextMenu({ editor, children }: TableContextMenuProps) {
       const menu = menuRef.current
       if (!menu) return
 
-      const items = Array.from(
-        menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')
-      )
+      const items = Array.from(menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
       const current = items.indexOf(document.activeElement as HTMLButtonElement)
 
       let next = current
@@ -95,7 +93,7 @@ export function TableContextMenu({ editor, children }: TableContextMenuProps) {
     const rect = menuRef.current.getBoundingClientRect()
     if (rect.bottom > window.innerHeight - 8) {
       const clampedY = Math.max(8, window.innerHeight - rect.height - 8)
-      setPosition((prev) => ({ ...prev, y: clampedY }))
+      setPosition(prev => ({ ...prev, y: clampedY }))
     }
   }, [visible])
 
@@ -108,13 +106,10 @@ export function TableContextMenu({ editor, children }: TableContextMenuProps) {
     })
   }, [visible])
 
-  const runAction = useCallback(
-    (action: () => void) => {
-      action()
-      setVisible(false)
-    },
-    []
-  )
+  const runAction = useCallback((action: () => void) => {
+    action()
+    setVisible(false)
+  }, [])
 
   const menuItems = useMemo(
     () => [
@@ -176,10 +171,22 @@ export function TableContextMenu({ editor, children }: TableContextMenuProps) {
         >
           {menuItems.map((item, index) => {
             if ('separator' in item && item.separator) {
-              return <div key={`sep-${index}`} role="separator" aria-hidden="true" className="h-px bg-border my-1" />
+              return (
+                <div
+                  key={`sep-${index}`}
+                  role="separator"
+                  aria-hidden="true"
+                  className="h-px bg-border my-1"
+                />
+              )
             }
 
-            const { label, icon: Icon, action, destructive } = item as {
+            const {
+              label,
+              icon: Icon,
+              action,
+              destructive,
+            } = item as {
               label: string
               icon: typeof ArrowUp
               action: () => void

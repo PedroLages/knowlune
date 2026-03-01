@@ -115,13 +115,7 @@ function ChartTooltipContent({
   payload?: ReadonlyArray<Record<string, any>>
   label?: string | number
   labelFormatter?: (label: any, payload: ReadonlyArray<Record<string, any>>) => React.ReactNode
-  formatter?: (
-    value: any,
-    name: any,
-    item: any,
-    index: number,
-    payload: any[]
-  ) => React.ReactNode
+  formatter?: (value: any, name: any, item: any, index: number, payload: any[]) => React.ReactNode
   hideLabel?: boolean
   hideIndicator?: boolean
   indicator?: 'line' | 'dot' | 'dashed'
@@ -277,9 +271,7 @@ function ChartLegendContent({
         return (
           <div
             key={item.value}
-            className={cn(
-              '[&>svg]:text-muted-foreground flex items-center gap-1.5 [&>svg]:size-3'
-            )}
+            className={cn('[&>svg]:text-muted-foreground flex items-center gap-1.5 [&>svg]:size-3')}
           >
             {itemConfig?.icon && !hideIcon ? (
               <itemConfig.icon />

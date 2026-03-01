@@ -1,5 +1,14 @@
 import { useState, useEffect } from 'react'
-import { FolderOpen, Video, FileText, Circle, CheckCircle2, PauseCircle, Eye, Info } from 'lucide-react'
+import {
+  FolderOpen,
+  Video,
+  FileText,
+  Circle,
+  CheckCircle2,
+  PauseCircle,
+  Eye,
+  Info,
+} from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Card } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
@@ -12,17 +21,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/app/components/ui/popover'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/app/components/ui/dialog'
+import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog'
 import { TagBadgeList } from '@/app/components/figma/TagBadgeList'
 import { TagEditor } from '@/app/components/figma/TagEditor'
 import { VideoPlayer } from '@/app/components/figma/VideoPlayer'
@@ -64,8 +64,14 @@ export function ImportedCourseCard({ course, allTags }: ImportedCourseCardProps)
   const navigate = useNavigate()
 
   const {
-    showPreview, videoReady, setVideoReady, previewHandlers,
-    previewOpen, setPreviewOpen, infoOpen, setInfoOpen,
+    showPreview,
+    videoReady,
+    setVideoReady,
+    previewHandlers,
+    previewOpen,
+    setPreviewOpen,
+    infoOpen,
+    setInfoOpen,
     guardNavigation,
   } = useCourseCardPreview()
   const [firstVideo, setFirstVideo] = useState<ImportedVideo | null>(null)
@@ -85,14 +91,17 @@ export function ImportedCourseCard({ course, allTags }: ImportedCourseCardProps)
     }
     let cancelled = false
     db.importedVideos
-      .where('courseId').equals(course.id)
+      .where('courseId')
+      .equals(course.id)
       .sortBy('order')
       .then(vids => {
         if (!cancelled && vids[0]) {
           setPreviewHandle(vids[0].fileHandle)
         }
       })
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [showPreview, course.id, course.videoCount])
 
   const status = course.status
@@ -133,10 +142,7 @@ export function ImportedCourseCard({ course, allTags }: ImportedCourseCardProps)
     setSearching(true)
     setFirstVideo(null)
     setPreviewOpen(true)
-    const vids = await db.importedVideos
-      .where('courseId')
-      .equals(course.id)
-      .sortBy('order')
+    const vids = await db.importedVideos.where('courseId').equals(course.id).sortBy('order')
     setFirstVideo(vids[0] ?? null)
     setSearching(false)
   }
@@ -154,176 +160,184 @@ export function ImportedCourseCard({ course, allTags }: ImportedCourseCardProps)
   return (
     <>
       <article
-            data-testid="imported-course-card"
-            aria-label={`${course.name} — ${course.videoCount} ${course.videoCount === 1 ? 'video' : 'videos'}, ${course.pdfCount} ${course.pdfCount === 1 ? 'PDF' : 'PDFs'}`}
-            tabIndex={0}
-            onClick={handleCardClick}
-            onKeyDown={handleCardKeyDown}
-            {...previewHandlers}
-            data-preview={showPreview && videoReady ? "" : undefined}
-            className={cn("group rounded-[24px] cursor-default focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 outline-none hover:shadow-2xl hover:[transform:scale(1.02)] transition-shadow duration-300 motion-reduce:hover:[transform:scale(1)] h-full", showPreview && videoReady && "[transform:scale(1.05)] z-10")}
+        data-testid="imported-course-card"
+        aria-label={`${course.name} — ${course.videoCount} ${course.videoCount === 1 ? 'video' : 'videos'}, ${course.pdfCount} ${course.pdfCount === 1 ? 'PDF' : 'PDFs'}`}
+        tabIndex={0}
+        onClick={handleCardClick}
+        onKeyDown={handleCardKeyDown}
+        {...previewHandlers}
+        data-preview={showPreview && videoReady ? '' : undefined}
+        className={cn(
+          'group rounded-[24px] cursor-default focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 outline-none hover:shadow-2xl hover:[transform:scale(1.02)] transition-shadow duration-300 motion-reduce:hover:[transform:scale(1)] h-full',
+          showPreview && videoReady && '[transform:scale(1.05)] z-10'
+        )}
+      >
+        <Card className="bg-card rounded-[24px] border-0 shadow-sm overflow-hidden h-full flex flex-col">
+          <div
+            data-testid="course-card-placeholder"
+            className="relative h-44 bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-950/50 dark:to-teal-950/50 flex items-center justify-center"
           >
-            <Card className="bg-card rounded-[24px] border-0 shadow-sm overflow-hidden h-full flex flex-col">
-              <div
-                data-testid="course-card-placeholder"
-                className="relative h-44 bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-950/50 dark:to-teal-950/50 flex items-center justify-center"
-              >
-                <FolderOpen className="size-16 text-emerald-300 dark:text-emerald-600" />
-                {/* Inline video preview */}
-                {showPreview && previewBlobUrl && (
-                  <video
-                    key={previewBlobUrl}
-                    src={previewBlobUrl}
-                    muted
-                    autoPlay
-                    playsInline
-                    loop
-                    preload="none"
-                    aria-hidden="true"
-                    onCanPlay={() => setVideoReady(true)}
-                    className={cn(
-                      "absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-500",
-                      videoReady ? "opacity-100" : "opacity-0"
-                    )}
-                  />
+            <FolderOpen className="size-16 text-emerald-300 dark:text-emerald-600" />
+            {/* Inline video preview */}
+            {showPreview && previewBlobUrl && (
+              <video
+                key={previewBlobUrl}
+                src={previewBlobUrl}
+                muted
+                autoPlay
+                playsInline
+                loop
+                preload="none"
+                aria-hidden="true"
+                onCanPlay={() => setVideoReady(true)}
+                className={cn(
+                  'absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-500',
+                  videoReady ? 'opacity-100' : 'opacity-0'
                 )}
-                <div className="absolute top-3 right-3">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        data-testid="status-badge"
-                        onClick={e => e.stopPropagation()}
-                        className="focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-full outline-none"
-                        aria-label={`Course status: ${config.label}. Click to change.`}
-                      >
-                        <Badge
-                          className={cn('border-0 text-xs gap-1 cursor-pointer hover:opacity-80 transition-opacity', config.badgeClass)}
-                        >
-                          <StatusIcon className="size-3" aria-hidden="true" />
-                          {config.label}
-                        </Badge>
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
-                      {(Object.entries(statusConfig) as [LearnerCourseStatus, typeof config][]).map(
-                        ([key, cfg]) => {
-                          const Icon = cfg.icon
-                          return (
-                            <DropdownMenuItem
-                              key={key}
-                              onClick={() => handleStatusChange(key)}
-                              className="gap-2"
-                            >
-                              <Icon className="size-4" aria-hidden="true" />
-                              {cfg.label}
-                              {key === status && (
-                                <CheckCircle2
-                                  className="size-3.5 ml-auto text-brand"
-                                  aria-hidden="true"
-                                />
-                              )}
-                            </DropdownMenuItem>
-                          )
-                        }
+              />
+            )}
+            <div className="absolute top-3 right-3">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    data-testid="status-badge"
+                    onClick={e => e.stopPropagation()}
+                    className="focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-full outline-none"
+                    aria-label={`Course status: ${config.label}. Click to change.`}
+                  >
+                    <Badge
+                      className={cn(
+                        'border-0 text-xs gap-1 cursor-pointer hover:opacity-80 transition-opacity',
+                        config.badgeClass
                       )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-
-                {/* Info button */}
-                <Popover open={infoOpen} onOpenChange={setInfoOpen}>
-                  <PopoverTrigger asChild>
-                    <button
-                      onClick={e => { e.stopPropagation() }}
-                      aria-label="Course details"
-                      className="absolute bottom-3 right-3 z-20 rounded-full bg-black/50 backdrop-blur-sm p-1.5 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black/70 hover:scale-110 cursor-pointer focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none"
                     >
-                      <Info className="size-4" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent side="top" className="w-72 p-4">
-                    <div className="space-y-3">
-                      <div>
-                        <h4 className="font-semibold text-sm leading-tight">{course.name}</h4>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Imported {new Date(course.importedAt).toLocaleDateString()}
-                        </p>
-                      </div>
-
-                      <Badge className={cn('border-0 text-xs gap-1', config.badgeClass)}>
-                        <StatusIcon className="size-3" aria-hidden="true" />
-                        {config.label}
-                      </Badge>
-
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Video className="size-3.5" aria-hidden="true" />
-                          {course.videoCount} {course.videoCount === 1 ? 'video' : 'videos'}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <FileText className="size-3.5" aria-hidden="true" />
-                          {course.pdfCount} {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
-                        </span>
-                      </div>
-
-                      {course.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {course.tags.slice(0, 4).map(tag => (
-                            <Badge key={tag} variant="secondary" className="text-xs px-2 py-0.5">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-
-                      {course.videoCount > 0 && (
-                        <Button
-                          size="sm"
-                          className="w-full gap-2 hover:brightness-110 active:scale-95 transition-all"
-                          onClick={e => {
-                            e.stopPropagation()
-                            setInfoOpen(false)
-                            handlePreviewClick(e)
-                          }}
+                      <StatusIcon className="size-3" aria-hidden="true" />
+                      {config.label}
+                    </Badge>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
+                  {(Object.entries(statusConfig) as [LearnerCourseStatus, typeof config][]).map(
+                    ([key, cfg]) => {
+                      const Icon = cfg.icon
+                      return (
+                        <DropdownMenuItem
+                          key={key}
+                          onClick={() => handleStatusChange(key)}
+                          className="gap-2"
                         >
-                          <Eye className="size-4" aria-hidden="true" />
-                          Preview First Video
-                        </Button>
-                      )}
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="p-5">
-                <h3
-                  data-testid="course-card-title"
-                  className="font-bold text-base mb-1 line-clamp-2 group-hover:text-brand"
+                          <Icon className="size-4" aria-hidden="true" />
+                          {cfg.label}
+                          {key === status && (
+                            <CheckCircle2
+                              className="size-3.5 ml-auto text-brand"
+                              aria-hidden="true"
+                            />
+                          )}
+                        </DropdownMenuItem>
+                      )
+                    }
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            {/* Info button */}
+            <Popover open={infoOpen} onOpenChange={setInfoOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  onClick={e => {
+                    e.stopPropagation()
+                  }}
+                  aria-label="Course details"
+                  className="absolute bottom-3 right-3 z-20 rounded-full bg-black/50 backdrop-blur-sm p-1.5 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black/70 hover:scale-110 cursor-pointer focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none"
                 >
-                  {course.name}
-                </h3>
-                <p className="text-sm text-muted-foreground mb-2">
-                  Imported {new Date(course.importedAt).toLocaleDateString()}
-                </p>
-                <div className="flex items-center gap-1.5 mb-3">
-                  <TagBadgeList tags={course.tags} onRemove={handleRemoveTag} maxVisible={3} />
-                  <TagEditor currentTags={course.tags} allTags={allTags} onAddTag={handleAddTag} />
-                </div>
-                <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                  <span data-testid="course-card-video-count" className="flex items-center gap-1">
-                    <Video className="size-3.5" aria-hidden="true" />
-                    <span>
+                  <Info className="size-4" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent side="top" className="w-72 p-4">
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-semibold text-sm leading-tight">{course.name}</h4>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Imported {new Date(course.importedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+
+                  <Badge className={cn('border-0 text-xs gap-1', config.badgeClass)}>
+                    <StatusIcon className="size-3" aria-hidden="true" />
+                    {config.label}
+                  </Badge>
+
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Video className="size-3.5" aria-hidden="true" />
                       {course.videoCount} {course.videoCount === 1 ? 'video' : 'videos'}
                     </span>
-                  </span>
-                  <span data-testid="course-card-pdf-count" className="flex items-center gap-1">
-                    <FileText className="size-3.5" aria-hidden="true" />
-                    <span>
+                    <span className="flex items-center gap-1">
+                      <FileText className="size-3.5" aria-hidden="true" />
                       {course.pdfCount} {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
                     </span>
-                  </span>
+                  </div>
+
+                  {course.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {course.tags.slice(0, 4).map(tag => (
+                        <Badge key={tag} variant="secondary" className="text-xs px-2 py-0.5">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+
+                  {course.videoCount > 0 && (
+                    <Button
+                      size="sm"
+                      className="w-full gap-2 hover:brightness-110 active:scale-95 transition-all"
+                      onClick={e => {
+                        e.stopPropagation()
+                        setInfoOpen(false)
+                        handlePreviewClick(e)
+                      }}
+                    >
+                      <Eye className="size-4" aria-hidden="true" />
+                      Preview First Video
+                    </Button>
+                  )}
                 </div>
-              </div>
-            </Card>
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="p-5">
+            <h3
+              data-testid="course-card-title"
+              className="font-bold text-base mb-1 line-clamp-2 group-hover:text-brand"
+            >
+              {course.name}
+            </h3>
+            <p className="text-sm text-muted-foreground mb-2">
+              Imported {new Date(course.importedAt).toLocaleDateString()}
+            </p>
+            <div className="flex items-center gap-1.5 mb-3">
+              <TagBadgeList tags={course.tags} onRemove={handleRemoveTag} maxVisible={3} />
+              <TagEditor currentTags={course.tags} allTags={allTags} onAddTag={handleAddTag} />
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+              <span data-testid="course-card-video-count" className="flex items-center gap-1">
+                <Video className="size-3.5" aria-hidden="true" />
+                <span>
+                  {course.videoCount} {course.videoCount === 1 ? 'video' : 'videos'}
+                </span>
+              </span>
+              <span data-testid="course-card-pdf-count" className="flex items-center gap-1">
+                <FileText className="size-3.5" aria-hidden="true" />
+                <span>
+                  {course.pdfCount} {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
+                </span>
+              </span>
+            </div>
+          </div>
+        </Card>
       </article>
 
       <Dialog open={previewOpen} onOpenChange={handleDialogChange}>

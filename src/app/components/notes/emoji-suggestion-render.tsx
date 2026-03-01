@@ -18,10 +18,12 @@ export function createEmojiSuggestionRender(): SuggestionOptions<EmojiItem>['ren
       root = createRoot(container)
       root.render(
         <EmojiList
-          ref={(ref) => { listRef = ref }}
+          ref={ref => {
+            listRef = ref
+          }}
           items={props.items}
           command={props.command}
-        />,
+        />
       )
 
       updatePosition(container, props.clientRect)
@@ -30,10 +32,12 @@ export function createEmojiSuggestionRender(): SuggestionOptions<EmojiItem>['ren
     onUpdate(props) {
       root?.render(
         <EmojiList
-          ref={(ref) => { listRef = ref }}
+          ref={ref => {
+            listRef = ref
+          }}
           items={props.items}
           command={props.command}
-        />,
+        />
       )
 
       updatePosition(container, props.clientRect)
@@ -62,7 +66,7 @@ export function createEmojiSuggestionRender(): SuggestionOptions<EmojiItem>['ren
 
   function updatePosition(
     el: HTMLDivElement | null,
-    clientRect: (() => DOMRect | null) | undefined,
+    clientRect: (() => DOMRect | null) | undefined
   ) {
     if (!el || !clientRect) return
     const rect = clientRect()

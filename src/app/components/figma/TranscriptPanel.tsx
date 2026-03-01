@@ -25,7 +25,7 @@ function parseVTT(text: string): TranscriptCue[] {
     if (!timestampLine) continue
 
     const match = timestampLine.match(
-      /(\d+:\d{2}(?::\d{2})?(?:[.,]\d+)?)\s*-->\s*(\d+:\d{2}(?::\d{2})?(?:[.,]\d+)?)/,
+      /(\d+:\d{2}(?::\d{2})?(?:[.,]\d+)?)\s*-->\s*(\d+:\d{2}(?::\d{2})?(?:[.,]\d+)?)/
     )
     if (!match) continue
 
@@ -115,7 +115,7 @@ export function TranscriptPanel({ src, currentTime, onSeek }: TranscriptPanelPro
               'w-full text-left px-3 py-2 rounded-lg text-sm transition-colors',
               isActive
                 ? 'bg-blue-50 dark:bg-blue-900/30 border-l-2 border-blue-600 text-foreground font-medium'
-                : 'hover:bg-accent text-muted-foreground',
+                : 'hover:bg-accent text-muted-foreground'
             )}
             onClick={() => onSeek(cue.startTime)}
           >

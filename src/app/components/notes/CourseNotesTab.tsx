@@ -51,20 +51,31 @@ export function CourseNotesTab({ courseId, modules }: CourseNotesTabProps) {
   const groupedNotes = useMemo(() => {
     if (sortMode === 'date-created') {
       // Flat list sorted by creation date (newest first)
-      return [{
-        moduleTitle: '',
-        lessons: [{
-          lessonTitle: '',
-          lessonId: '',
-          notes: [...notes].sort((a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          ),
-        }],
-      }]
+      return [
+        {
+          moduleTitle: '',
+          lessons: [
+            {
+              lessonTitle: '',
+              lessonId: '',
+              notes: [...notes].sort(
+                (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+              ),
+            },
+          ],
+        },
+      ]
     }
 
     // Group by module → lesson in video order
-    const moduleMap = new Map<string, { moduleTitle: string; moduleOrder: number; lessons: Map<string, { lessonTitle: string; lessonOrder: number; notes: Note[] }> }>()
+    const moduleMap = new Map<
+      string,
+      {
+        moduleTitle: string
+        moduleOrder: number
+        lessons: Map<string, { lessonTitle: string; lessonOrder: number; notes: Note[] }>
+      }
+    >()
 
     for (const note of notes) {
       const info = lessonMap.get(note.videoId)
@@ -135,7 +146,7 @@ export function CourseNotesTab({ courseId, modules }: CourseNotesTabProps) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setSortMode(m => m === 'video-order' ? 'date-created' : 'video-order')}
+          onClick={() => setSortMode(m => (m === 'video-order' ? 'date-created' : 'video-order'))}
           aria-label="Sort notes"
         >
           <ArrowUpDown className="size-3.5 mr-1.5" />
@@ -145,7 +156,7 @@ export function CourseNotesTab({ courseId, modules }: CourseNotesTabProps) {
 
       {/* Grouped notes */}
       <div className="space-y-6">
-        {groupedNotes.map((group) => (
+        {groupedNotes.map(group => (
           <div key={group.moduleTitle || 'all'}>
             {group.moduleTitle && (
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
@@ -153,7 +164,7 @@ export function CourseNotesTab({ courseId, modules }: CourseNotesTabProps) {
               </h3>
             )}
             <div className="space-y-4">
-              {group.lessons.map((lesson) => (
+              {group.lessons.map(lesson => (
                 <div key={lesson.lessonId || 'flat'}>
                   {lesson.lessonTitle && (
                     <h4 className="text-sm font-medium mb-2">{lesson.lessonTitle}</h4>

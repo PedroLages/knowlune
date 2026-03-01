@@ -90,10 +90,7 @@ export function ImportedLessonPlayer() {
           <ArrowLeft className="size-4" />
         </Link>
         <div className="flex flex-col min-w-0">
-          <span
-            data-testid="lesson-header-title"
-            className="font-semibold text-sm truncate"
-          >
+          <span data-testid="lesson-header-title" className="font-semibold text-sm truncate">
             {video.filename}
           </span>
           {course && (

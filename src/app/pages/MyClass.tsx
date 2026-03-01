@@ -202,7 +202,12 @@ export default function MyClass() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 stagger-children">
                     {sortCourses(completedWithStatus).map(course => (
-                      <CourseCard key={course.id} course={course} variant="progress" status="completed" />
+                      <CourseCard
+                        key={course.id}
+                        course={course}
+                        variant="progress"
+                        status="completed"
+                      />
                     ))}
                   </div>
                 </section>
@@ -218,7 +223,12 @@ export default function MyClass() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 stagger-children">
                     {sortCourses(notStartedWithStatus).map(course => (
-                      <CourseCard key={course.id} course={course} variant="progress" status="not-started" />
+                      <CourseCard
+                        key={course.id}
+                        course={course}
+                        variant="progress"
+                        status="not-started"
+                      />
                     ))}
                   </div>
                 </section>

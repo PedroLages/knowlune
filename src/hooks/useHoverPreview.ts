@@ -14,7 +14,7 @@ export function useHoverPreview(delay = 1000) {
         setActive(false)
       },
     }),
-    [delay],
+    [delay]
   )
 
   useEffect(() => () => clearTimeout(timerRef.current), [])

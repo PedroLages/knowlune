@@ -81,7 +81,10 @@ function SidebarContent({
                       : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                   }`}
                 >
-                  <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5px]' : ''}`} aria-hidden="true" />
+                  <Icon
+                    className={`w-5 h-5 ${isActive ? 'stroke-[2.5px]' : ''}`}
+                    aria-hidden="true"
+                  />
                   {!iconOnly && <span className="text-sm">{item.name}</span>}
                 </Link>
               </li>
@@ -95,7 +98,9 @@ function SidebarContent({
 
       {/* Collapse toggle button */}
       {onToggleCollapse && (
-        <div className={`mt-4 pt-4 border-t border-border ${iconOnly ? 'flex justify-center' : 'flex justify-end'}`}>
+        <div
+          className={`mt-4 pt-4 border-t border-border ${iconOnly ? 'flex justify-center' : 'flex justify-end'}`}
+        >
           <button
             onClick={onToggleCollapse}
             title={iconOnly ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -313,7 +318,11 @@ export function Layout() {
         </header>
 
         {/* Page Content - Extra bottom padding on mobile for bottom nav */}
-        <main id="main-content" data-testid="main-scroll-container" className="flex-1 overflow-auto p-6 pt-6 pb-20 sm:pb-6">
+        <main
+          id="main-content"
+          data-testid="main-scroll-container"
+          className="flex-1 overflow-auto p-6 pt-6 pb-20 sm:pb-6"
+        >
           <Outlet />
         </main>
       </div>

@@ -145,7 +145,10 @@ describe('ImportedCourseDetail', () => {
 
   it('shows "Back to Courses" link', () => {
     renderDetail()
-    expect(screen.getByRole('link', { name: /back to courses/i })).toHaveAttribute('href', '/courses')
+    expect(screen.getByRole('link', { name: /back to courses/i })).toHaveAttribute(
+      'href',
+      '/courses'
+    )
   })
 
   it('shows not found message when course does not exist', () => {

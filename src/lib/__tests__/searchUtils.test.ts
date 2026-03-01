@@ -93,7 +93,8 @@ describe('highlightMatches', () => {
     const parts = result as Array<unknown>
     // Count mark elements
     const marks = parts.filter(
-      (p): p is { type: string } => typeof p === 'object' && p !== null && (p as { type?: string }).type === 'mark',
+      (p): p is { type: string } =>
+        typeof p === 'object' && p !== null && (p as { type?: string }).type === 'mark'
     )
     expect(marks.length).toBe(2)
   })
@@ -105,7 +106,8 @@ describe('highlightMatches', () => {
     expect(Array.isArray(result)).toBe(true)
     const parts = result as Array<unknown>
     const marks = parts.filter(
-      (p): p is { type: string } => typeof p === 'object' && p !== null && (p as { type?: string }).type === 'mark',
+      (p): p is { type: string } =>
+        typeof p === 'object' && p !== null && (p as { type?: string }).type === 'mark'
     )
     expect(marks.length).toBe(2)
   })
@@ -118,7 +120,8 @@ describe('highlightMatches', () => {
     expect(Array.isArray(result)).toBe(true)
     const parts = result as Array<unknown>
     const marks = parts.filter(
-      (p): p is { type: string } => typeof p === 'object' && p !== null && (p as { type?: string }).type === 'mark',
+      (p): p is { type: string } =>
+        typeof p === 'object' && p !== null && (p as { type?: string }).type === 'mark'
     )
     expect(marks.length).toBe(0)
   })

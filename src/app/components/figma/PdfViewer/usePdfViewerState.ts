@@ -211,7 +211,7 @@ export function usePdfViewerState(
   }
 
   const toggleScrollMode = () => {
-    setScrollMode(prev => prev === 'single' ? 'continuous' : 'single')
+    setScrollMode(prev => (prev === 'single' ? 'continuous' : 'single'))
   }
 
   const [isFullscreen, setIsFullscreen] = useState(false)

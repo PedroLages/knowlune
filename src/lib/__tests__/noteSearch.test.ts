@@ -106,9 +106,7 @@ describe('searchNotes', () => {
   })
 
   it('should support prefix search', () => {
-    initializeSearchIndex([
-      makeNote({ id: '1', content: 'Confidence building workshop' }),
-    ])
+    initializeSearchIndex([makeNote({ id: '1', content: 'Confidence building workshop' })])
 
     const results = searchNotes('confid')
     expect(results.length).toBeGreaterThan(0)
@@ -149,9 +147,7 @@ describe('searchNotes', () => {
   })
 
   it('should find results with fuzzy matching despite typos', () => {
-    initializeSearchIndex([
-      makeNote({ id: '1', content: 'Understanding custom hooks in React' }),
-    ])
+    initializeSearchIndex([makeNote({ id: '1', content: 'Understanding custom hooks in React' })])
 
     const results = searchNotes('custm')
     expect(results.length).toBeGreaterThan(0)
@@ -247,15 +243,42 @@ describe('searchNotesWithContext', () => {
         totalPDFs: 0,
         estimatedHours: 1,
         tags: [],
-        modules: [{ id: 'mod-1', title: 'Module 1', description: '', order: 1, lessons: [{ id: 'les-1', title: 'Lesson 1', description: '', order: 1, resources: [], keyTopics: [] }] }],
+        modules: [
+          {
+            id: 'mod-1',
+            title: 'Module 1',
+            description: '',
+            order: 1,
+            lessons: [
+              {
+                id: 'les-1',
+                title: 'Lesson 1',
+                description: '',
+                order: 1,
+                resources: [],
+                keyTopics: [],
+              },
+            ],
+          },
+        ],
         isSequential: false,
         basePath: '',
       },
     ])
 
     initializeSearchIndex([
-      makeNote({ id: 'content-only', courseId: 'other-course', videoId: 'other-lesson', content: 'This note mentions React in the body' }),
-      makeNote({ id: 'course-match', courseId: 'course-react', videoId: 'les-1', content: 'A general note about programming' }),
+      makeNote({
+        id: 'content-only',
+        courseId: 'other-course',
+        videoId: 'other-lesson',
+        content: 'This note mentions React in the body',
+      }),
+      makeNote({
+        id: 'course-match',
+        courseId: 'course-react',
+        videoId: 'les-1',
+        content: 'A general note about programming',
+      }),
     ])
 
     const results = searchNotesWithContext('react')
@@ -269,7 +292,10 @@ describe('search performance (AC1a)', () => {
   it('should complete search in under 1ms for 100 notes', () => {
     buildCourseLookup(allCourses)
     const notes = Array.from({ length: 100 }, (_, i) =>
-      makeNote({ id: `perf-${i}`, content: `Performance test note number ${i} about searchable topics and concepts` }),
+      makeNote({
+        id: `perf-${i}`,
+        content: `Performance test note number ${i} about searchable topics and concepts`,
+      })
     )
     initializeSearchIndex(notes)
 

@@ -20,7 +20,9 @@ interface PdfScrollViewProps {
   onPageChange: (page: number) => void
   onDocumentLoadSuccess: (doc: PDFDocumentProxy) => void
   onDocumentLoadError: () => void
-  makeTextRenderer?: (pageNumber: number) => ((layer: { str: string; itemIndex: number }) => string) | undefined
+  makeTextRenderer?: (
+    pageNumber: number
+  ) => ((layer: { str: string; itemIndex: number }) => string) | undefined
 }
 
 function getScaledDimensions(
@@ -57,7 +59,12 @@ export function PdfScrollView({
   const lastReportedPageRef = useRef(currentPage)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const { width: slotWidth, height: slotHeight } = getScaledDimensions(pageWidth, pageHeight, scale, rotation)
+  const { width: slotWidth, height: slotHeight } = getScaledDimensions(
+    pageWidth,
+    pageHeight,
+    scale,
+    rotation
+  )
 
   const BUFFER = 2
 
@@ -94,13 +101,11 @@ export function PdfScrollView({
     if (!container) return
 
     const observer = new IntersectionObserver(
-      (entries) => {
-        setVisiblePages((prev) => {
+      entries => {
+        setVisiblePages(prev => {
           const next = new Set(prev)
           for (const entry of entries) {
-            const pageNum = Number(
-              (entry.target as HTMLElement).dataset.pageNumber
-            )
+            const pageNum = Number((entry.target as HTMLElement).dataset.pageNumber)
             if (!pageNum) continue
             if (entry.isIntersecting) {
               next.add(pageNum)
@@ -119,7 +124,7 @@ export function PdfScrollView({
     )
 
     // Observe all page slot elements
-    pageRefs.current.forEach((el) => observer.observe(el))
+    pageRefs.current.forEach(el => observer.observe(el))
 
     return () => observer.disconnect()
   }, [totalPages, slotHeight])
@@ -200,10 +205,7 @@ export function PdfScrollView({
           key={n}
           ref={setPageRef(n)}
           data-page-number={n}
-          className={cn(
-            'flex items-start justify-center',
-            n < totalPages && 'mb-4'
-          )}
+          className={cn('flex items-start justify-center', n < totalPages && 'mb-4')}
           style={{
             minWidth: slotWidth,
             minHeight: slotHeight,

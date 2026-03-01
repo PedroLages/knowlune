@@ -44,35 +44,41 @@
 }
 
 /* Task list checkboxes */
-.tiptap ul[data-type="taskList"] {
+.tiptap ul[data-type='taskList'] {
   list-style: none;
   padding-left: 0;
 }
-.tiptap ul[data-type="taskList"] li {
+.tiptap ul[data-type='taskList'] li {
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
 }
-.tiptap ul[data-type="taskList"] li[data-checked="true"] > div > p {
+.tiptap ul[data-type='taskList'] li[data-checked='true'] > div > p {
   text-decoration: line-through;
   opacity: 0.6;
 }
-.tiptap ul[data-type="taskList"] input[type="checkbox"] {
+.tiptap ul[data-type='taskList'] input[type='checkbox'] {
   cursor: pointer;
   margin-top: 0.25rem;
 }
 
 /* Highlight */
 .tiptap mark {
-  background-color: var(--color-highlight, oklch(0.96 0.10 95));
+  background-color: var(--color-highlight, oklch(0.96 0.1 95));
   border-radius: 2px;
   padding: 0 2px;
 }
 
 /* Text alignment */
-.tiptap .has-text-align-center { text-align: center; }
-.tiptap .has-text-align-right { text-align: right; }
-.tiptap .has-text-align-justify { text-align: justify; }
+.tiptap .has-text-align-center {
+  text-align: center;
+}
+.tiptap .has-text-align-right {
+  text-align: right;
+}
+.tiptap .has-text-align-justify {
+  text-align: justify;
+}
 
 /* ── Code blocks with syntax highlighting ── */
 .code-block-wrapper {
@@ -96,24 +102,40 @@
   padding: 0;
 }
 
-
 /* Lowlight syntax theme — warm palette */
 .tiptap .hljs-keyword,
 .tiptap .hljs-selector-tag,
-.tiptap .hljs-built_in { color: oklch(0.55 0.18 280); }
+.tiptap .hljs-built_in {
+  color: oklch(0.55 0.18 280);
+}
 .tiptap .hljs-string,
-.tiptap .hljs-attr { color: oklch(0.55 0.16 145); }
+.tiptap .hljs-attr {
+  color: oklch(0.55 0.16 145);
+}
 .tiptap .hljs-number,
-.tiptap .hljs-literal { color: oklch(0.55 0.18 30); }
+.tiptap .hljs-literal {
+  color: oklch(0.55 0.18 30);
+}
 .tiptap .hljs-comment,
-.tiptap .hljs-quote { color: oklch(0.40 0.02 250); font-style: italic; }
+.tiptap .hljs-quote {
+  color: oklch(0.4 0.02 250);
+  font-style: italic;
+}
 .tiptap .hljs-function,
-.tiptap .hljs-title { color: oklch(0.55 0.16 230); }
-.tiptap .hljs-tag { color: oklch(0.55 0.18 15); }
+.tiptap .hljs-title {
+  color: oklch(0.55 0.16 230);
+}
+.tiptap .hljs-tag {
+  color: oklch(0.55 0.18 15);
+}
 .tiptap .hljs-variable,
-.tiptap .hljs-template-variable { color: oklch(0.55 0.12 30); }
+.tiptap .hljs-template-variable {
+  color: oklch(0.55 0.12 30);
+}
 .tiptap .hljs-type,
-.tiptap .hljs-params { color: oklch(0.55 0.14 60); }
+.tiptap .hljs-params {
+  color: oklch(0.55 0.14 60);
+}
 
 /* ── Inline images ── */
 .tiptap img {
@@ -144,14 +166,14 @@
 /* ── Collapsible details blocks ── */
 /* The Tiptap Details extension renders div[data-type="details"] with a
    NodeView: toggle button + contentDOM containing summary + hidden content. */
-.tiptap div[data-type="details"] {
+.tiptap div[data-type='details'] {
   border: 1px solid var(--color-border);
   border-radius: 0.5rem;
   padding: 0.75rem 1rem;
   margin: 0.75rem 0;
 }
 
-.tiptap div[data-type="details"] > button {
+.tiptap div[data-type='details'] > button {
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -168,7 +190,7 @@
   margin-top: -0.625rem;
 }
 
-.tiptap div[data-type="details"] > button::before {
+.tiptap div[data-type='details'] > button::before {
   content: '';
   display: inline-block;
   width: 0;
@@ -179,28 +201,28 @@
   transition: transform 200ms ease;
 }
 
-.tiptap div[data-type="details"].is-open > button::before {
+.tiptap div[data-type='details'].is-open > button::before {
   transform: rotate(90deg);
 }
 
-.tiptap div[data-type="details"] summary {
+.tiptap div[data-type='details'] summary {
   font-weight: 600;
   display: block;
 }
 
-.tiptap div[data-type="detailsContent"] {
+.tiptap div[data-type='detailsContent'] {
   margin-top: 0.5rem;
   clear: both;
 }
 
 /* ── Search/Replace match highlighting ── */
 .search-match {
-  background-color: oklch(0.90 0.12 95);
+  background-color: oklch(0.9 0.12 95);
   border-radius: 2px;
 }
 
 .search-match-active {
-  background-color: oklch(0.80 0.16 65);
+  background-color: oklch(0.8 0.16 65);
   border-radius: 2px;
 }
 

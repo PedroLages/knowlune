@@ -57,12 +57,8 @@ export function PdfViewer({
     return (
       <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted p-12">
         <FileText className="mb-4 h-12 w-12 text-muted-foreground" />
-        <p className="mb-2 text-sm font-medium text-muted-foreground">
-          {title || 'PDF Document'}
-        </p>
-        <p className="mb-4 text-xs text-muted-foreground">
-          Unable to preview this document inline
-        </p>
+        <p className="mb-2 text-sm font-medium text-muted-foreground">{title || 'PDF Document'}</p>
+        <p className="mb-4 text-xs text-muted-foreground">Unable to preview this document inline</p>
         <Button variant="outline" size="sm" onClick={() => window.open(src, '_blank')}>
           <ExternalLink className="mr-2 h-4 w-4" />
           Open in New Tab
@@ -81,10 +77,7 @@ export function PdfViewer({
   )
 
   const outlineContent = (
-    <PdfOutlinePanel
-      pdfDocument={state.pdfDocument}
-      onPageClick={state.goToPage}
-    />
+    <PdfOutlinePanel pdfDocument={state.pdfDocument} onPageClick={state.goToPage} />
   )
 
   const isCollapsed = collapsible && collapsed

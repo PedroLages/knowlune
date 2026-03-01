@@ -35,10 +35,7 @@ export function HybridLayout({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
 
   return (
-    <div
-      className="flex h-screen light"
-      style={{ colorScheme: 'light', background: '#FAF5EE' }}
-    >
+    <div className="flex h-screen light" style={{ colorScheme: 'light', background: '#FAF5EE' }}>
       {/* Sidebar */}
       <aside className="w-[220px] flex-shrink-0 flex flex-col bg-white rounded-xl m-4 mr-0 shadow-xs">
         {/* Logo */}
@@ -69,9 +66,11 @@ export function HybridLayout({ children }: { children: ReactNode }) {
                 to={item.path}
                 className={`
                   flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-colors relative mb-0.5
-                  ${isActive
-                    ? 'text-blue-600 font-semibold bg-blue-50'
-                    : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50'}
+                  ${
+                    isActive
+                      ? 'text-blue-600 font-semibold bg-blue-50'
+                      : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50'
+                  }
                 `}
               >
                 {isActive && (
@@ -123,9 +122,7 @@ export function HybridLayout({ children }: { children: ReactNode }) {
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-auto p-6">
-          {children}
-        </main>
+        <main className="flex-1 overflow-auto p-6">{children}</main>
       </div>
     </div>
   )

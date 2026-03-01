@@ -2,7 +2,10 @@
  * Retry a Dexie persistence operation with exponential backoff.
  * Shared across Zustand stores that persist to IndexedDB.
  */
-export async function persistWithRetry(operation: () => Promise<void>, maxRetries = 3): Promise<void> {
+export async function persistWithRetry(
+  operation: () => Promise<void>,
+  maxRetries = 3
+): Promise<void> {
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       await operation()

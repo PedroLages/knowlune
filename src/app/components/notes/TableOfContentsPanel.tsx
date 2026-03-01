@@ -31,10 +31,7 @@ export function TableOfContentsPanel({ editor, onClose }: TableOfContentsPanelPr
 
   if (items.length === 0) {
     return (
-      <div
-        data-testid="toc-panel"
-        className="p-4 text-sm text-muted-foreground"
-      >
+      <div data-testid="toc-panel" className="p-4 text-sm text-muted-foreground">
         No headings yet
       </div>
     )
@@ -47,7 +44,7 @@ export function TableOfContentsPanel({ editor, onClose }: TableOfContentsPanelPr
       role="navigation"
       aria-label="Table of contents"
     >
-      {items.map((item) => (
+      {items.map(item => (
         <button
           key={item.id}
           type="button"
@@ -58,7 +55,7 @@ export function TableOfContentsPanel({ editor, onClose }: TableOfContentsPanelPr
             'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
             item.level === 1 && 'font-semibold',
             item.level === 2 && 'pl-8',
-            item.level === 3 && 'pl-12 text-muted-foreground',
+            item.level === 3 && 'pl-12 text-muted-foreground'
           )}
         >
           {item.textContent}

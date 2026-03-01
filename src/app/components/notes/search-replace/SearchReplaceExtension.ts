@@ -21,7 +21,13 @@ export function getScrollBehavior(): ScrollBehavior {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'
 }
 
-function findMatches(doc: { textContent: string; descendants: (cb: (node: { isText: boolean; text?: string }, pos: number) => void) => void }, searchTerm: string): { from: number; to: number }[] {
+function findMatches(
+  doc: {
+    textContent: string
+    descendants: (cb: (node: { isText: boolean; text?: string }, pos: number) => void) => void
+  },
+  searchTerm: string
+): { from: number; to: number }[] {
   if (!searchTerm) return []
 
   const results: { from: number; to: number }[] = []
@@ -75,79 +81,89 @@ export const SearchReplace = Extension.create<SearchReplaceOptions, SearchReplac
 
   addCommands() {
     return {
-      setSearchTerm: (term: string) => ({ editor }) => {
-        this.storage.searchTerm = term
-        this.storage.results = findMatches(editor.state.doc, term)
-        this.storage.currentIndex = this.storage.results.length > 0 ? 0 : -1
-        // Force decoration update by dispatching an empty transaction
-        editor.view.dispatch(editor.state.tr)
-        return true
-      },
+      setSearchTerm:
+        (term: string) =>
+        ({ editor }) => {
+          this.storage.searchTerm = term
+          this.storage.results = findMatches(editor.state.doc, term)
+          this.storage.currentIndex = this.storage.results.length > 0 ? 0 : -1
+          // Force decoration update by dispatching an empty transaction
+          editor.view.dispatch(editor.state.tr)
+          return true
+        },
 
       setReplaceTerm: (term: string) => () => {
         this.storage.replaceTerm = term
         return true
       },
 
-      findNext: () => ({ editor }) => {
-        const { results, currentIndex } = this.storage
-        if (results.length === 0) return false
-        this.storage.currentIndex = (currentIndex + 1) % results.length
-        editor.view.dispatch(editor.state.tr)
-        scrollToMatch(editor, this.storage.results[this.storage.currentIndex])
-        return true
-      },
+      findNext:
+        () =>
+        ({ editor }) => {
+          const { results, currentIndex } = this.storage
+          if (results.length === 0) return false
+          this.storage.currentIndex = (currentIndex + 1) % results.length
+          editor.view.dispatch(editor.state.tr)
+          scrollToMatch(editor, this.storage.results[this.storage.currentIndex])
+          return true
+        },
 
-      findPrev: () => ({ editor }) => {
-        const { results, currentIndex } = this.storage
-        if (results.length === 0) return false
-        this.storage.currentIndex = (currentIndex - 1 + results.length) % results.length
-        editor.view.dispatch(editor.state.tr)
-        scrollToMatch(editor, this.storage.results[this.storage.currentIndex])
-        return true
-      },
+      findPrev:
+        () =>
+        ({ editor }) => {
+          const { results, currentIndex } = this.storage
+          if (results.length === 0) return false
+          this.storage.currentIndex = (currentIndex - 1 + results.length) % results.length
+          editor.view.dispatch(editor.state.tr)
+          scrollToMatch(editor, this.storage.results[this.storage.currentIndex])
+          return true
+        },
 
-      replaceCurrent: () => ({ editor, chain }) => {
-        const { results, currentIndex, replaceTerm } = this.storage
-        if (results.length === 0 || currentIndex < 0) return false
-        const match = results[currentIndex]
-        chain()
-          .insertContentAt({ from: match.from, to: match.to }, replaceTerm)
-          .run()
-        // Re-search after replacement
-        this.storage.results = findMatches(editor.state.doc, this.storage.searchTerm)
-        if (this.storage.currentIndex >= this.storage.results.length) {
+      replaceCurrent:
+        () =>
+        ({ editor, chain }) => {
+          const { results, currentIndex, replaceTerm } = this.storage
+          if (results.length === 0 || currentIndex < 0) return false
+          const match = results[currentIndex]
+          chain().insertContentAt({ from: match.from, to: match.to }, replaceTerm).run()
+          // Re-search after replacement
+          this.storage.results = findMatches(editor.state.doc, this.storage.searchTerm)
+          if (this.storage.currentIndex >= this.storage.results.length) {
+            this.storage.currentIndex = this.storage.results.length > 0 ? 0 : -1
+          }
+          editor.view.dispatch(editor.state.tr)
+          return true
+        },
+
+      replaceAll:
+        () =>
+        ({ editor }) => {
+          const { results, replaceTerm } = this.storage
+          if (results.length === 0) return false
+          // Replace from end to start to preserve positions
+          const sorted = [...results].sort((a, b) => b.from - a.from)
+          const tr = editor.state.tr
+          for (const match of sorted) {
+            tr.insertText(replaceTerm, match.from, match.to)
+          }
+          editor.view.dispatch(tr)
+          // Re-search on updated doc, then dispatch to update decorations
+          this.storage.results = findMatches(editor.state.doc, this.storage.searchTerm)
           this.storage.currentIndex = this.storage.results.length > 0 ? 0 : -1
-        }
-        editor.view.dispatch(editor.state.tr)
-        return true
-      },
+          editor.view.dispatch(editor.state.tr)
+          return true
+        },
 
-      replaceAll: () => ({ editor }) => {
-        const { results, replaceTerm } = this.storage
-        if (results.length === 0) return false
-        // Replace from end to start to preserve positions
-        const sorted = [...results].sort((a, b) => b.from - a.from)
-        const tr = editor.state.tr
-        for (const match of sorted) {
-          tr.insertText(replaceTerm, match.from, match.to)
-        }
-        editor.view.dispatch(tr)
-        // Re-search on updated doc, then dispatch to update decorations
-        this.storage.results = findMatches(editor.state.doc, this.storage.searchTerm)
-        this.storage.currentIndex = this.storage.results.length > 0 ? 0 : -1
-        editor.view.dispatch(editor.state.tr)
-        return true
-      },
-
-      clearSearch: () => ({ editor }) => {
-        this.storage.searchTerm = ''
-        this.storage.replaceTerm = ''
-        this.storage.results = []
-        this.storage.currentIndex = -1
-        editor.view.dispatch(editor.state.tr)
-        return true
-      },
+      clearSearch:
+        () =>
+        ({ editor }) => {
+          this.storage.searchTerm = ''
+          this.storage.replaceTerm = ''
+          this.storage.results = []
+          this.storage.currentIndex = -1
+          editor.view.dispatch(editor.state.tr)
+          return true
+        },
     }
   },
 
@@ -159,14 +175,14 @@ export const SearchReplace = Extension.create<SearchReplaceOptions, SearchReplac
       new Plugin({
         key: searchReplacePluginKey,
         props: {
-          decorations: (state) => {
+          decorations: state => {
             const { results, currentIndex } = storage
             if (results.length === 0) return DecorationSet.empty
 
             const decorations = results.map((match, i) =>
               Decoration.inline(match.from, match.to, {
                 class: i === currentIndex ? `${searchClass} ${activeClass}` : searchClass,
-              }),
+              })
             )
 
             return DecorationSet.create(state.doc, decorations)
@@ -187,7 +203,10 @@ export const SearchReplace = Extension.create<SearchReplaceOptions, SearchReplac
   },
 })
 
-function scrollToMatch(editor: { view: { domAtPos: (pos: number) => { node: Node } } }, match: { from: number; to: number } | undefined) {
+function scrollToMatch(
+  editor: { view: { domAtPos: (pos: number) => { node: Node } } },
+  match: { from: number; to: number } | undefined
+) {
   if (!match) return
   const dom = editor.view.domAtPos(match.from)
   const el = dom.node instanceof Element ? dom.node : dom.node.parentElement

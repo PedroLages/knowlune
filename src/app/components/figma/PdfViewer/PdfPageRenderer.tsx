@@ -67,9 +67,7 @@ export function PdfPageRenderer({
             renderTextLayer={true}
             renderAnnotationLayer={true}
             customTextRenderer={customTextRenderer}
-            loading={
-              <Skeleton className="h-[500px] w-[400px]" />
-            }
+            loading={<Skeleton className="h-[500px] w-[400px]" />}
           />
         </div>
       </Document>

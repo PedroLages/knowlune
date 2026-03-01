@@ -31,43 +31,43 @@ export function getSlashCommandItems(callbacks: {
       title: 'Heading 1',
       description: 'Large heading',
       icon: <Heading1 className="size-4" />,
-      command: (editor) => editor.chain().focus().toggleHeading({ level: 1 }).run(),
+      command: editor => editor.chain().focus().toggleHeading({ level: 1 }).run(),
     },
     {
       title: 'Heading 2',
       description: 'Medium heading',
       icon: <Heading2 className="size-4" />,
-      command: (editor) => editor.chain().focus().toggleHeading({ level: 2 }).run(),
+      command: editor => editor.chain().focus().toggleHeading({ level: 2 }).run(),
     },
     {
       title: 'Heading 3',
       description: 'Small heading',
       icon: <Heading3 className="size-4" />,
-      command: (editor) => editor.chain().focus().toggleHeading({ level: 3 }).run(),
+      command: editor => editor.chain().focus().toggleHeading({ level: 3 }).run(),
     },
     {
       title: 'Bullet List',
       description: 'Unordered list',
       icon: <List className="size-4" />,
-      command: (editor) => editor.chain().focus().toggleBulletList().run(),
+      command: editor => editor.chain().focus().toggleBulletList().run(),
     },
     {
       title: 'Ordered List',
       description: 'Numbered list',
       icon: <ListOrdered className="size-4" />,
-      command: (editor) => editor.chain().focus().toggleOrderedList().run(),
+      command: editor => editor.chain().focus().toggleOrderedList().run(),
     },
     {
       title: 'Task List',
       description: 'Checklist with todos',
       icon: <ListTodo className="size-4" />,
-      command: (editor) => editor.chain().focus().toggleTaskList().run(),
+      command: editor => editor.chain().focus().toggleTaskList().run(),
     },
     {
       title: 'Code Block',
       description: 'Syntax-highlighted code',
       icon: <Code className="size-4" />,
-      command: (editor) => editor.chain().focus().toggleCodeBlock().run(),
+      command: editor => editor.chain().focus().toggleCodeBlock().run(),
     },
     {
       title: 'Image',
@@ -85,19 +85,19 @@ export function getSlashCommandItems(callbacks: {
       title: 'Toggle',
       description: 'Collapsible section',
       icon: <ChevronRight className="size-4" />,
-      command: (editor) => editor.chain().focus().setDetails().run(),
+      command: editor => editor.chain().focus().setDetails().run(),
     },
     {
       title: 'Blockquote',
       description: 'Quote text',
       icon: <Quote className="size-4" />,
-      command: (editor) => editor.chain().focus().toggleBlockquote().run(),
+      command: editor => editor.chain().focus().toggleBlockquote().run(),
     },
     {
       title: 'Table',
       description: 'Insert a table',
       icon: <Table2 className="size-4" />,
-      command: (editor) => {
+      command: editor => {
         if (editor.isActive('table')) return
         editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
       },
@@ -134,11 +134,11 @@ export const SlashCommandList = forwardRef<SlashCommandListRef, SlashCommandList
     useImperativeHandle(ref, () => ({
       onKeyDown: ({ event }) => {
         if (event.key === 'ArrowUp') {
-          setSelectedIndex((i) => (i + items.length - 1) % items.length)
+          setSelectedIndex(i => (i + items.length - 1) % items.length)
           return true
         }
         if (event.key === 'ArrowDown') {
-          setSelectedIndex((i) => (i + 1) % items.length)
+          setSelectedIndex(i => (i + 1) % items.length)
           return true
         }
         if (event.key === 'Enter') {
@@ -190,7 +190,7 @@ export const SlashCommandList = forwardRef<SlashCommandListRef, SlashCommandList
         ))}
       </div>
     )
-  },
+  }
 )
 
 SlashCommandList.displayName = 'SlashCommandList'

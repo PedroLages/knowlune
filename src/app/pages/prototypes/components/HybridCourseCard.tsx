@@ -54,9 +54,7 @@ export function HybridCourseCard({ course, completionPercent }: HybridCourseCard
           <h3 className="font-semibold text-base text-neutral-900 group-hover:text-blue-600 transition-colors mb-1 line-clamp-2">
             {course.title}
           </h3>
-          <p className="text-sm text-neutral-500 mb-3 line-clamp-2">
-            {course.description}
-          </p>
+          <p className="text-sm text-neutral-500 mb-3 line-clamp-2">{course.description}</p>
 
           {/* Metadata */}
           <div className="flex items-center gap-3 text-xs text-neutral-400 mt-auto">

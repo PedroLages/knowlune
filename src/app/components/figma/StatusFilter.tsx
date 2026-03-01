@@ -13,19 +13,22 @@ const statuses: {
     value: 'active',
     label: 'Active',
     icon: Circle,
-    activeClass: 'data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover',
+    activeClass:
+      'data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover',
   },
   {
     value: 'completed',
     label: 'Completed',
     icon: CheckCircle2,
-    activeClass: 'data-[state=on]:bg-success data-[state=on]:text-success-foreground data-[state=on]:hover:bg-success/90',
+    activeClass:
+      'data-[state=on]:bg-success data-[state=on]:text-success-foreground data-[state=on]:hover:bg-success/90',
   },
   {
     value: 'paused',
     label: 'Paused',
     icon: PauseCircle,
-    activeClass: 'data-[state=on]:bg-muted-foreground data-[state=on]:text-white data-[state=on]:hover:bg-muted-foreground/90',
+    activeClass:
+      'data-[state=on]:bg-muted-foreground data-[state=on]:text-white data-[state=on]:hover:bg-muted-foreground/90',
   },
 ]
 
@@ -36,15 +39,12 @@ interface StatusFilterProps {
 
 export function StatusFilter({ selectedStatuses, onSelectedStatusesChange }: StatusFilterProps) {
   return (
-    <div
-      data-testid="status-filter-bar"
-      className="flex flex-wrap gap-2 items-center mb-6"
-    >
+    <div data-testid="status-filter-bar" className="flex flex-wrap gap-2 items-center mb-6">
       <span className="text-xs text-muted-foreground mr-1">Status:</span>
       <ToggleGroup
         type="multiple"
         value={selectedStatuses}
-        onValueChange={(value) => onSelectedStatusesChange(value as LearnerCourseStatus[])}
+        onValueChange={value => onSelectedStatusesChange(value as LearnerCourseStatus[])}
         aria-label="Filter by status"
         className="flex flex-wrap gap-2"
       >

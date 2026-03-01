@@ -53,9 +53,7 @@ export function SwissCourses() {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
       courses = courses.filter(
-        c =>
-          c.title.toLowerCase().includes(q) ||
-          c.description.toLowerCase().includes(q)
+        c => c.title.toLowerCase().includes(q) || c.description.toLowerCase().includes(q)
       )
     }
 
@@ -65,12 +63,8 @@ export function SwissCourses() {
   return (
     <SwissLayout>
       {/* Page title */}
-      <h1 className="text-[48px] font-bold tracking-tight leading-none mb-2">
-        Courses
-      </h1>
-      <p className="text-sm text-neutral-500 mb-2">
-        {allCourses.length} courses
-      </p>
+      <h1 className="text-[48px] font-bold tracking-tight leading-none mb-2">Courses</h1>
+      <p className="text-sm text-neutral-500 mb-2">{allCourses.length} courses</p>
       <hr className="border-t border-black/10 mb-8" />
 
       {/* Search bar */}
@@ -115,17 +109,12 @@ export function SwissCourses() {
             <SwissCourseCard
               key={course.id}
               course={course}
-              completionPercent={getCourseCompletionPercent(
-                course.id,
-                course.totalLessons
-              )}
+              completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
             />
           ))}
         </div>
       ) : (
-        <p className="text-sm text-neutral-400 py-12 text-center">
-          No courses match your search
-        </p>
+        <p className="text-sm text-neutral-400 py-12 text-center">No courses match your search</p>
       )}
 
       {/* Comparison Toggle */}

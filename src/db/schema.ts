@@ -1,5 +1,12 @@
 import Dexie, { type EntityTable } from 'dexie'
-import type { ImportedCourse, ImportedVideo, ImportedPdf, VideoProgress, VideoBookmark, Note } from '@/data/types'
+import type {
+  ImportedCourse,
+  ImportedVideo,
+  ImportedPdf,
+  VideoProgress,
+  VideoBookmark,
+  Note,
+} from '@/data/types'
 
 const db = new Dexie('ElearningDB') as Dexie & {
   importedCourses: EntityTable<ImportedCourse, 'id'>
@@ -59,17 +66,23 @@ db.version(4)
         return
       }
 
-      const allProgress: Record<string, {
-        courseId: string
-        notes: Record<string, Array<{
-          id: string
-          content: string
-          timestamp?: number
-          createdAt: string
-          updatedAt: string
-          tags: string[]
-        }>>
-      }> = JSON.parse(raw)
+      const allProgress: Record<
+        string,
+        {
+          courseId: string
+          notes: Record<
+            string,
+            Array<{
+              id: string
+              content: string
+              timestamp?: number
+              createdAt: string
+              updatedAt: string
+              tags: string[]
+            }>
+          >
+        }
+      > = JSON.parse(raw)
 
       const notesToInsert: Note[] = []
 
@@ -100,7 +113,9 @@ db.version(4)
       const bookmarkCount = await tx.table('bookmarks').count()
 
       // Retain localStorage as backup (do NOT delete — per AC)
-      console.log(`[Migration] Migrated ${notesToInsert.length} notes and ${bookmarkCount} bookmarks to IndexedDB`)
+      console.log(
+        `[Migration] Migrated ${notesToInsert.length} notes and ${bookmarkCount} bookmarks to IndexedDB`
+      )
     } catch (error) {
       console.error('[Migration] Failed:', error)
       throw error

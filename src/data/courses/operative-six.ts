@@ -61,7 +61,12 @@ export const operativeSix: Course = {
                   { time: 240, title: 'Program Structure' },
                 ],
                 captions: [
-                  { src: '/captions/op6-introduction.vtt', label: 'English', language: 'en', default: true },
+                  {
+                    src: '/captions/op6-introduction.vtt',
+                    label: 'English',
+                    language: 'en',
+                    default: true,
+                  },
                 ],
               },
             },

@@ -8,8 +8,7 @@ export function useCourseCardPreview() {
   const [infoOpen, setInfoOpen] = useState(false)
 
   const prefersReducedMotion =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const showPreview = previewActive && !prefersReducedMotion
 
   useEffect(() => {
@@ -23,7 +22,9 @@ export function useCourseCardPreview() {
   const handleInfoOpenChange = useCallback((open: boolean) => {
     if (!open) {
       dismissingRef.current = true
-      setTimeout(() => { dismissingRef.current = false }, 200)
+      setTimeout(() => {
+        dismissingRef.current = false
+      }, 200)
     }
     setInfoOpen(open)
   }, [])

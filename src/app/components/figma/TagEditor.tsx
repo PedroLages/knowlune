@@ -68,7 +68,7 @@ export function TagEditor({ currentTags, allTags, onAddTag }: TagEditorProps) {
             placeholder="Add a tag..."
             value={inputValue}
             onValueChange={setInputValue}
-            onKeyDown={(e) => {
+            onKeyDown={e => {
               if (e.key === ',') {
                 e.preventDefault()
                 if (trimmed && !currentTags.includes(trimmed)) {

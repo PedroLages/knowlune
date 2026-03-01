@@ -68,9 +68,7 @@ export function SwissOverview() {
   return (
     <SwissLayout>
       {/* Page title */}
-      <h1 className="text-[48px] font-bold tracking-tight leading-none mb-2">
-        Overview
-      </h1>
+      <h1 className="text-[48px] font-bold tracking-tight leading-none mb-2">Overview</h1>
       <hr className="border-t border-black/10 mb-8" />
 
       {/* Stats grid */}
@@ -96,34 +94,22 @@ export function SwissOverview() {
         {recentActivity.map(activity => {
           const lastLesson = activity.progress.lastWatchedLesson
           const lessonObj = lastLesson
-            ? activity.modules
-                .flatMap(m => m.lessons)
-                .find(l => l.id === lastLesson)
+            ? activity.modules.flatMap(m => m.lessons).find(l => l.id === lastLesson)
             : null
 
           return (
-            <div
-              key={activity.id}
-              className="flex gap-3 py-3 border-b border-neutral-100"
-            >
+            <div key={activity.id} className="flex gap-3 py-3 border-b border-neutral-100">
               {/* Red square indicator */}
               <div className="w-2 h-2 bg-[#DC2626] mt-2 flex-shrink-0" />
 
               {/* Content */}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-black">
-                  {activity.title}
-                </p>
-                {lessonObj && (
-                  <p className="text-sm text-neutral-500">
-                    {lessonObj.title}
-                  </p>
-                )}
+                <p className="text-sm font-bold text-black">{activity.title}</p>
+                {lessonObj && <p className="text-sm text-neutral-500">{lessonObj.title}</p>}
                 <p className="text-xs text-neutral-400">
-                  {formatDistanceToNow(
-                    new Date(activity.progress.lastAccessedAt),
-                    { addSuffix: true }
-                  )}
+                  {formatDistanceToNow(new Date(activity.progress.lastAccessedAt), {
+                    addSuffix: true,
+                  })}
                 </p>
               </div>
             </div>
@@ -145,8 +131,7 @@ export function SwissOverview() {
       <div className="grid grid-cols-2 gap-4">
         {inProgress.map(course => {
           const firstLesson = course.modules[0]?.lessons[0]?.id
-          const resumeLesson =
-            course.progress.lastWatchedLesson ?? firstLesson
+          const resumeLesson = course.progress.lastWatchedLesson ?? firstLesson
           const lessonLink = resumeLesson
             ? `/courses/${course.id}/${resumeLesson}`
             : `/courses/${course.id}`
@@ -172,9 +157,7 @@ export function SwissOverview() {
 
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-black truncate">
-                  {course.title}
-                </p>
+                <p className="text-sm font-bold text-black truncate">{course.title}</p>
                 <p className="text-xs text-neutral-400 uppercase tracking-wide mb-2">
                   {course.category
                     .split('-')
@@ -192,9 +175,7 @@ export function SwissOverview() {
                       }}
                     />
                   </div>
-                  <span className="text-xs font-bold text-black">
-                    {course.completionPercent}%
-                  </span>
+                  <span className="text-xs font-bold text-black">{course.completionPercent}%</span>
                 </div>
               </div>
             </Link>
@@ -212,10 +193,7 @@ export function SwissOverview() {
           <SwissCourseCard
             key={course.id}
             course={course}
-            completionPercent={getCourseCompletionPercent(
-              course.id,
-              course.totalLessons
-            )}
+            completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
           />
         ))}
       </div>

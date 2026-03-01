@@ -12,9 +12,7 @@ export function SwissStreakCalendar() {
         {/* Current streak */}
         <div className="border border-neutral-200 bg-white p-5">
           <div className="border-t-2 border-[#DC2626] pt-3">
-            <p className="text-4xl font-bold text-black leading-none mb-1">
-              {currentStreak}
-            </p>
+            <p className="text-4xl font-bold text-black leading-none mb-1">{currentStreak}</p>
             <p className="text-xs font-medium uppercase tracking-[0.1em] text-neutral-400">
               Current Streak
             </p>
@@ -24,9 +22,7 @@ export function SwissStreakCalendar() {
         {/* Longest streak */}
         <div className="border border-neutral-200 bg-white p-5">
           <div className="border-t-2 border-black pt-3">
-            <p className="text-4xl font-bold text-black leading-none mb-1">
-              {longestStreak}
-            </p>
+            <p className="text-4xl font-bold text-black leading-none mb-1">{longestStreak}</p>
             <p className="text-xs font-medium uppercase tracking-[0.1em] text-neutral-400">
               Longest Streak
             </p>
@@ -51,15 +47,11 @@ export function SwissStreakCalendar() {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 bg-neutral-100" />
-          <span className="text-xs uppercase tracking-[0.05em] text-neutral-400">
-            Inactive
-          </span>
+          <span className="text-xs uppercase tracking-[0.05em] text-neutral-400">Inactive</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 bg-[#DC2626]" />
-          <span className="text-xs uppercase tracking-[0.05em] text-neutral-400">
-            Active
-          </span>
+          <span className="text-xs uppercase tracking-[0.05em] text-neutral-400">Active</span>
         </div>
       </div>
     </div>

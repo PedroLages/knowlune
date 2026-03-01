@@ -191,34 +191,34 @@ export function Overview() {
                 ? `/courses/${course.id}/${resumeLesson}`
                 : `/courses/${course.id}`
               return (
-              <Link key={course.id} to={lessonLink}>
-                <Card className="group hover:shadow-xl hover:scale-[1.01] transition-all duration-200 cursor-pointer rounded-2xl">
-                  <CardContent className="p-4 flex items-center gap-4">
-                    {course.coverImage ? (
-                      <img
-                        src={`${course.coverImage}-320w.webp`}
-                        alt={course.title}
-                        className="w-16 h-16 rounded-lg object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="w-16 h-16 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                        <BookOpen className="w-8 h-8 text-brand" />
+                <Link key={course.id} to={lessonLink}>
+                  <Card className="group hover:shadow-xl hover:scale-[1.01] transition-all duration-200 cursor-pointer rounded-2xl">
+                    <CardContent className="p-4 flex items-center gap-4">
+                      {course.coverImage ? (
+                        <img
+                          src={`${course.coverImage}-320w.webp`}
+                          alt={course.title}
+                          className="w-16 h-16 rounded-lg object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                          <BookOpen className="w-8 h-8 text-brand" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium truncate">{course.title}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {formatCategory(course.category)}
+                        </p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Progress value={course.completionPercent} className="h-2 flex-1" />
+                          <span className="text-sm font-medium">{course.completionPercent}%</span>
+                        </div>
                       </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium truncate">{course.title}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {formatCategory(course.category)}
-                      </p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <Progress value={course.completionPercent} className="h-2 flex-1" />
-                        <span className="text-sm font-medium">{course.completionPercent}%</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+                    </CardContent>
+                  </Card>
+                </Link>
               )
             })}
           </div>

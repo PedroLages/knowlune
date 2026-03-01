@@ -104,7 +104,9 @@ describe('ImportedCourseCard', () => {
 
   it('respects prefers-reduced-motion', () => {
     const { container } = renderCard()
-    const motionSafe = container.querySelector('.motion-reduce\\:hover\\:\\[transform\\:scale\\(1\\)\\]')
+    const motionSafe = container.querySelector(
+      '.motion-reduce\\:hover\\:\\[transform\\:scale\\(1\\)\\]'
+    )
     expect(motionSafe).toBeInTheDocument()
   })
 
@@ -147,12 +149,20 @@ describe('ImportedCourseCard', () => {
       expect(badgeEl?.className).toMatch(/bg-blue-100/)
       expect(badgeEl?.className).toMatch(/text-blue-700/)
 
-      rerender(<MemoryRouter><ImportedCourseCard course={makeCourse({ status: 'completed' })} allTags={[]} /></MemoryRouter>)
+      rerender(
+        <MemoryRouter>
+          <ImportedCourseCard course={makeCourse({ status: 'completed' })} allTags={[]} />
+        </MemoryRouter>
+      )
       badgeEl = container.querySelector('[data-testid="status-badge"] > span')
       expect(badgeEl?.className).toMatch(/bg-green-100/)
       expect(badgeEl?.className).toMatch(/text-green-700/)
 
-      rerender(<MemoryRouter><ImportedCourseCard course={makeCourse({ status: 'paused' })} allTags={[]} /></MemoryRouter>)
+      rerender(
+        <MemoryRouter>
+          <ImportedCourseCard course={makeCourse({ status: 'paused' })} allTags={[]} />
+        </MemoryRouter>
+      )
       badgeEl = container.querySelector('[data-testid="status-badge"] > span')
       expect(badgeEl?.className).toMatch(/bg-gray-100/)
       expect(badgeEl?.className).toMatch(/text-gray-400/)

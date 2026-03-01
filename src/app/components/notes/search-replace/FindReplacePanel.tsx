@@ -25,14 +25,14 @@ export function FindReplacePanel({ editor, onClose }: FindReplacePanelProps) {
     (value: string) => {
       editor.commands.setSearchTerm(value)
     },
-    [editor],
+    [editor]
   )
 
   const handleReplaceChange = useCallback(
     (value: string) => {
       editor.commands.setReplaceTerm(value)
     },
-    [editor],
+    [editor]
   )
 
   const handleFindNext = useCallback(() => {
@@ -69,7 +69,7 @@ export function FindReplacePanel({ editor, onClose }: FindReplacePanelProps) {
       className="flex flex-col gap-2 px-4 py-3 border-b border-border bg-muted/50"
       role="search"
       aria-label="Find and replace"
-      onKeyDown={(e) => {
+      onKeyDown={e => {
         if (e.key === 'Escape') {
           e.preventDefault()
           handleClose()
@@ -87,7 +87,7 @@ export function FindReplacePanel({ editor, onClose }: FindReplacePanelProps) {
         <Input
           ref={findInputRef}
           value={searchTerm}
-          onChange={(e) => handleSearchChange(e.target.value)}
+          onChange={e => handleSearchChange(e.target.value)}
           placeholder="Find"
           className="h-9 flex-1 min-w-0"
           aria-label="Find text"
@@ -110,7 +110,7 @@ export function FindReplacePanel({ editor, onClose }: FindReplacePanelProps) {
       <div className="flex items-center gap-2">
         <Input
           value={replaceTerm}
-          onChange={(e) => handleReplaceChange(e.target.value)}
+          onChange={e => handleReplaceChange(e.target.value)}
           placeholder="Replace"
           className="h-9 flex-1 min-w-0"
           aria-label="Replace text"
@@ -124,7 +124,7 @@ export function FindReplacePanel({ editor, onClose }: FindReplacePanelProps) {
           className={cn(
             'inline-flex items-center justify-center h-11 px-3 rounded-md text-xs font-medium transition-colors cursor-pointer whitespace-nowrap',
             'hover:bg-accent hover:text-accent-foreground',
-            'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+            'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
           )}
           aria-label="Replace all"
         >
@@ -150,7 +150,7 @@ function PanelButton({
       className={cn(
         'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer shrink-0',
         'hover:bg-accent hover:text-accent-foreground',
-        'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+        'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
       )}
       {...props}
     >

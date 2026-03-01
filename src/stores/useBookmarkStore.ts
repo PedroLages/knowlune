@@ -12,7 +12,12 @@ interface BookmarkState {
   loadBookmarks: () => Promise<void>
   loadLessonBookmarks: (courseId: string, lessonId: string) => Promise<void>
   loadCourseBookmarks: (courseId: string) => Promise<void>
-  addBookmark: (courseId: string, lessonId: string, timestamp: number, label?: string) => Promise<void>
+  addBookmark: (
+    courseId: string,
+    lessonId: string,
+    timestamp: number,
+    label?: string
+  ) => Promise<void>
   updateBookmarkLabel: (bookmarkId: string, label: string) => Promise<void>
   deleteBookmark: (bookmarkId: string) => Promise<void>
   getTotalCount: () => Promise<number>
@@ -139,7 +144,9 @@ export const useBookmarkStore = create<BookmarkState>((set, get) => ({
       // Rollback on failure
       if (bookmarkToDelete) {
         set({
-          bookmarks: [...get().bookmarks, bookmarkToDelete].sort((a, b) => a.timestamp - b.timestamp),
+          bookmarks: [...get().bookmarks, bookmarkToDelete].sort(
+            (a, b) => a.timestamp - b.timestamp
+          ),
           error: 'Failed to delete bookmark',
         })
       }

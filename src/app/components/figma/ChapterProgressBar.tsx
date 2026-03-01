@@ -2,8 +2,8 @@ import type { Chapter } from '@/data/types'
 import { formatTimestamp as formatTime } from '@/lib/time'
 
 interface ChapterProgressBarProps {
-  progress: number    // 0–100
-  duration: number    // seconds
+  progress: number // 0–100
+  duration: number // seconds
   chapters?: Chapter[]
   bookmarks?: { id: string; timestamp: number; label: string }[]
   onSeek: (percent: number) => void
@@ -37,7 +37,8 @@ export function ChapterProgressBar({
       </div>
 
       {/* Chapter markers — above range input (z-20) for hover tooltips */}
-      {chapters && duration > 0 &&
+      {chapters &&
+        duration > 0 &&
         chapters.map((chapter, idx) => {
           const pct = (chapter.time / duration) * 100
           if (pct <= 0 || pct >= 100) return null
@@ -47,7 +48,7 @@ export function ChapterProgressBar({
               data-testid="chapter-marker"
               className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 min-w-[44px] min-h-[44px] flex items-center justify-center z-20 cursor-pointer"
               style={{ left: `${pct}%` }}
-              onClick={(e) => handleChapterClick(e, chapter.time)}
+              onClick={e => handleChapterClick(e, chapter.time)}
               aria-label={`Go to chapter: ${chapter.title} at ${formatTime(chapter.time)}`}
             >
               <span className="w-0.5 h-3 bg-white/80" />
@@ -58,13 +59,13 @@ export function ChapterProgressBar({
       {/* Bookmark markers — above range input (z-20) */}
       {bookmarks &&
         duration > 0 &&
-        bookmarks.map((bm) => (
+        bookmarks.map(bm => (
           <button
             key={bm.id}
             data-testid="bookmark-marker"
             className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 min-w-[44px] min-h-[44px] flex items-center justify-center z-20 cursor-pointer group/marker"
             style={{ left: `${(bm.timestamp / duration) * 100}%` }}
-            onClick={(e) => {
+            onClick={e => {
               e.stopPropagation()
               onBookmarkSeek?.(bm.timestamp)
             }}
@@ -83,7 +84,7 @@ export function ChapterProgressBar({
         value={progress}
         aria-label="Video progress"
         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-        onChange={(e) => onSeek(parseFloat(e.target.value))}
+        onChange={e => onSeek(parseFloat(e.target.value))}
       />
     </div>
   )

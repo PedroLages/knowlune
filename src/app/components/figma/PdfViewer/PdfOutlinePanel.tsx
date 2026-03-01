@@ -59,10 +59,7 @@ function OutlineNode({
             aria-label={expanded ? 'Collapse' : 'Expand'}
           >
             <ChevronRight
-              className={cn(
-                'h-3.5 w-3.5 transition-transform',
-                expanded && 'rotate-90'
-              )}
+              className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-90')}
             />
           </button>
         )}
@@ -86,10 +83,7 @@ function OutlineNode({
   )
 }
 
-export function PdfOutlinePanel({
-  pdfDocument,
-  onPageClick,
-}: PdfOutlinePanelProps) {
+export function PdfOutlinePanel({ pdfDocument, onPageClick }: PdfOutlinePanelProps) {
   const [outline, setOutline] = useState<OutlineItem[] | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -102,10 +96,14 @@ export function PdfOutlinePanel({
         setLoading(false)
       }
     })
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [pdfDocument])
 
-  const resolveDestination = async (dest: string | Array<unknown> | null): Promise<number | null> => {
+  const resolveDestination = async (
+    dest: string | Array<unknown> | null
+  ): Promise<number | null> => {
     if (!pdfDocument || !dest) return null
     try {
       // Named destination (string) — resolve to explicit dest array first
@@ -143,11 +141,7 @@ export function PdfOutlinePanel({
   }
 
   return (
-    <div
-      className="overflow-y-auto p-2"
-      role="tree"
-      aria-label="Document outline"
-    >
+    <div className="overflow-y-auto p-2" role="tree" aria-label="Document outline">
       {outline.map((item, i) => (
         <OutlineNode
           key={`${item.title}-${i}`}

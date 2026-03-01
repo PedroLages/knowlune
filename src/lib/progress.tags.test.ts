@@ -21,11 +21,7 @@ describe('normalizeTags', () => {
   })
 
   it('returns sorted output', () => {
-    expect(normalizeTags(['zebra', 'alpha', 'middle'])).toEqual([
-      'alpha',
-      'middle',
-      'zebra',
-    ])
+    expect(normalizeTags(['zebra', 'alpha', 'middle'])).toEqual(['alpha', 'middle', 'zebra'])
   })
 
   it('returns empty array for empty input', () => {

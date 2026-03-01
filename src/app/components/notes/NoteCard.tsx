@@ -31,7 +31,14 @@ interface NoteCardProps {
 
 /** Strip HTML tags to extract plain text for preview snippets. */
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim()
+  return html
+    .replace(/<[^>]*>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .trim()
 }
 
 function formatRelativeDate(isoDate: string): string {
@@ -72,7 +79,7 @@ export function NoteCard({ note, courseId, onDelete }: NoteCardProps) {
   const snippet = preview.length > 120 ? preview.slice(0, 120) + '...' : preview
 
   const toggleExpand = () => {
-    setViewState(v => v === 'collapsed' ? 'expanded' : 'collapsed')
+    setViewState(v => (v === 'collapsed' ? 'expanded' : 'collapsed'))
   }
 
   const handleSave = async (content: string, tags: string[]) => {
@@ -111,10 +118,7 @@ export function NoteCard({ note, courseId, onDelete }: NoteCardProps) {
   return (
     <div className="bg-card rounded-[24px] border p-4 transition-shadow hover:shadow-sm">
       {/* Card header — click anywhere to toggle (mouse), use chevron button for keyboard */}
-      <div
-        className="flex items-start justify-between gap-3 cursor-pointer"
-        onClick={toggleExpand}
-      >
+      <div className="flex items-start justify-between gap-3 cursor-pointer" onClick={toggleExpand}>
         <div className="flex-1 min-w-0">
           <p className="text-sm text-foreground line-clamp-2">{snippet}</p>
           <div className="flex flex-wrap items-center gap-2 mt-2">
@@ -144,12 +148,16 @@ export function NoteCard({ note, courseId, onDelete }: NoteCardProps) {
           className="shrink-0 inline-flex items-center justify-center size-11 rounded-md hover:bg-accent transition-colors"
           aria-expanded={viewState !== 'collapsed'}
           aria-label={viewState === 'collapsed' ? 'Expand note' : 'Collapse note'}
-          onClick={e => { e.stopPropagation(); toggleExpand() }}
+          onClick={e => {
+            e.stopPropagation()
+            toggleExpand()
+          }}
         >
-          {viewState === 'collapsed'
-            ? <ChevronDown aria-hidden="true" className="size-4" />
-            : <ChevronUp aria-hidden="true" className="size-4" />
-          }
+          {viewState === 'collapsed' ? (
+            <ChevronDown aria-hidden="true" className="size-4" />
+          ) : (
+            <ChevronUp aria-hidden="true" className="size-4" />
+          )}
         </button>
       </div>
 
@@ -164,7 +172,12 @@ export function NoteCard({ note, courseId, onDelete }: NoteCardProps) {
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" data-testid="delete-note-button">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  data-testid="delete-note-button"
+                >
                   <Trash2 className="size-3.5 mr-1.5" />
                   Delete
                 </Button>
@@ -173,12 +186,16 @@ export function NoteCard({ note, courseId, onDelete }: NoteCardProps) {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Delete this note?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action cannot be undone. The note and its search index entry will be permanently removed.
+                    This action cannot be undone. The note and its search index entry will be
+                    permanently removed.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  <AlertDialogAction
+                    onClick={handleDelete}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
                     Delete
                   </AlertDialogAction>
                 </AlertDialogFooter>

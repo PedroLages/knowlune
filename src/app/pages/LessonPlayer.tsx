@@ -1,6 +1,17 @@
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router'
 import { useState, useRef, useEffect } from 'react'
-import { ChevronLeft, ChevronRight, CheckCircle2, Circle, Menu, PencilLine, X, Video, Maximize2, Minimize2 } from 'lucide-react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle2,
+  Circle,
+  Menu,
+  PencilLine,
+  X,
+  Video,
+  Maximize2,
+  Minimize2,
+} from 'lucide-react'
 import { Button } from '../components/ui/button'
 import {
   Breadcrumb,
@@ -148,7 +159,7 @@ export function LessonPlayer() {
   }, [noteFullScreen])
 
   const handleTheaterModeToggle = () => {
-    setIsTheaterMode((prev) => {
+    setIsTheaterMode(prev => {
       if (!prev) setNotesOpen(false) // Close notes when entering theater mode
       return !prev
     })
@@ -241,7 +252,9 @@ export function LessonPlayer() {
       progress.lastVideoPosition > 0
     ) {
       hasShownResumeToast.current = true
-      toast(`Resuming from ${formatBookmarkTimestamp(progress.lastVideoPosition)}`, { duration: 2000 })
+      toast(`Resuming from ${formatBookmarkTimestamp(progress.lastVideoPosition)}`, {
+        duration: 2000,
+      })
     }
   }, [progress, lessonId])
 
@@ -353,7 +366,9 @@ export function LessonPlayer() {
     setNotesOpen(prev => {
       if (!prev && activeTab === 'notes') {
         // Opening side panel — switch away from notes tab to avoid duplicate editor
-        setActiveTab(pdfResources.length > 0 ? 'materials' : videoResource ? 'bookmarks' : 'transcript')
+        setActiveTab(
+          pdfResources.length > 0 ? 'materials' : videoResource ? 'bookmarks' : 'transcript'
+        )
       }
       return !prev
     })
@@ -406,7 +421,9 @@ export function LessonPlayer() {
           data-testid="video-anchor"
           className={cn(
             'relative mb-5',
-            isTheaterMode ? 'w-full h-[calc(100svh-8rem)]' : 'w-full aspect-video max-h-[calc(60svh)]'
+            isTheaterMode
+              ? 'w-full h-[calc(100svh-8rem)]'
+              : 'w-full aspect-video max-h-[calc(60svh)]'
           )}
         >
           {/* Inner: becomes fixed mini-player when scrolled past while playing */}
@@ -420,7 +437,7 @@ export function LessonPlayer() {
               isMiniPlayer &&
                 'fixed bottom-4 right-4 top-auto left-auto w-80 h-[180px] z-50 rounded-2xl overflow-hidden shadow-2xl cursor-pointer'
             )}
-            onKeyDown={(e) => {
+            onKeyDown={e => {
               if (isMiniPlayer && (e.key === 'Enter' || e.key === ' ')) {
                 e.preventDefault()
                 handleMiniPlayerClick()
@@ -431,7 +448,7 @@ export function LessonPlayer() {
               <div
                 className="absolute inset-0 z-10 cursor-pointer"
                 aria-hidden="true"
-                onClick={(e) => {
+                onClick={e => {
                   e.stopPropagation()
                   handleMiniPlayerClick()
                 }}
@@ -483,7 +500,7 @@ export function LessonPlayer() {
           <PdfViewer
             src={getResourceUrl(primaryPdf)}
             title={primaryPdf.title}
-            initialPage={courseId ? getPdfPage(courseId, primaryPdf.id) ?? 1 : 1}
+            initialPage={courseId ? (getPdfPage(courseId, primaryPdf.id) ?? 1) : 1}
             onPageChange={handlePdfPageChange}
             collapsible
           />
@@ -589,15 +606,11 @@ export function LessonPlayer() {
           {pdfResources.length > 0 && (
             <TabsTrigger value="materials">Materials ({pdfResources.length})</TabsTrigger>
           )}
-          {(!isDesktop || !notesOpen) && (
-            <TabsTrigger value="notes">Notes</TabsTrigger>
-          )}
+          {(!isDesktop || !notesOpen) && <TabsTrigger value="notes">Notes</TabsTrigger>}
           {videoResource && (
             <TabsTrigger value="bookmarks">Bookmarks ({bookmarks.length})</TabsTrigger>
           )}
-          {captionSrc && (
-            <TabsTrigger value="transcript">Transcript</TabsTrigger>
-          )}
+          {captionSrc && <TabsTrigger value="transcript">Transcript</TabsTrigger>}
         </TabsList>
 
         {pdfResources.length > 0 && (
@@ -607,8 +620,8 @@ export function LessonPlayer() {
                 key={pdf.id}
                 src={getResourceUrl(pdf)}
                 title={pdf.title}
-                initialPage={courseId ? getPdfPage(courseId, pdf.id) ?? 1 : 1}
-                onPageChange={(page) => handleMaterialsPdfPageChange(pdf.id, page)}
+                initialPage={courseId ? (getPdfPage(courseId, pdf.id) ?? 1) : 1}
+                onPageChange={page => handleMaterialsPdfPageChange(pdf.id, page)}
                 collapsible
               />
             ))}
@@ -702,13 +715,8 @@ export function LessonPlayer() {
           className="flex-1 min-w-0"
           style={{ overflow: 'visible' }}
         >
-          <ResizablePanel
-            defaultSize={notesOpen ? 60 : 100}
-            minSize={35}
-          >
-            <div data-testid="lesson-content-scroll">
-              {mainContent}
-            </div>
+          <ResizablePanel defaultSize={notesOpen ? 60 : 100} minSize={35}>
+            <div data-testid="lesson-content-scroll">{mainContent}</div>
           </ResizablePanel>
 
           <ResizableHandle
@@ -754,7 +762,10 @@ export function LessonPlayer() {
         <div className="flex-1 min-w-0" data-testid="lesson-content-scroll">
           {/* Tablet Video/Notes toggle */}
           {isTablet && (
-            <div data-testid="tablet-view-toggle" className="flex gap-1 mb-4 bg-muted rounded-lg p-1">
+            <div
+              data-testid="tablet-view-toggle"
+              className="flex gap-1 mb-4 bg-muted rounded-lg p-1"
+            >
               <Button
                 variant={!notesOpen ? 'default' : 'ghost'}
                 size="sm"
@@ -792,7 +803,13 @@ export function LessonPlayer() {
       )}
 
       {/* Sidebar Course Structure — hidden in theater mode */}
-      <div data-testid="desktop-sidebar" className={cn('sticky top-0 self-start flex-shrink-0 w-96 bg-card rounded-2xl shadow-sm overflow-hidden flex flex-col max-h-[calc(100svh-3rem)]', (isTheaterMode || notesOpen) ? 'hidden' : 'hidden lg:flex')}>
+      <div
+        data-testid="desktop-sidebar"
+        className={cn(
+          'sticky top-0 self-start flex-shrink-0 w-96 bg-card rounded-2xl shadow-sm overflow-hidden flex flex-col max-h-[calc(100svh-3rem)]',
+          isTheaterMode || notesOpen ? 'hidden' : 'hidden lg:flex'
+        )}
+      >
         <div className="px-4 py-3 border-b border-border flex-shrink-0">
           <h3 className="text-sm font-semibold">Course Content</h3>
         </div>

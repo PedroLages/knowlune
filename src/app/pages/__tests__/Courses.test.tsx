@@ -56,7 +56,13 @@ vi.mock('@/lib/courseImport', () => ({
 
 vi.mock('@/lib/progress', () => ({
   getCourseCompletionPercent: () => 0,
-  getProgress: () => ({ lastWatchedLesson: null, completedLessons: [], videoPositions: {}, pdfPages: {}, notes: {} }),
+  getProgress: () => ({
+    lastWatchedLesson: null,
+    completedLessons: [],
+    videoPositions: {},
+    pdfPages: {},
+    notes: {},
+  }),
 }))
 
 function renderCourses() {

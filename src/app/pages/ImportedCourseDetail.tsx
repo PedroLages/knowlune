@@ -51,9 +51,9 @@ export function ImportedCourseDetail() {
         {course.name}
       </h1>
       <p className="text-sm text-muted-foreground mb-6">
-        Imported {new Date(course.importedAt).toLocaleDateString()} &middot;{' '}
-        {course.videoCount} {course.videoCount === 1 ? 'video' : 'videos'},{' '}
-        {course.pdfCount} {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
+        Imported {new Date(course.importedAt).toLocaleDateString()} &middot; {course.videoCount}{' '}
+        {course.videoCount === 1 ? 'video' : 'videos'}, {course.pdfCount}{' '}
+        {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
       </p>
 
       <ul data-testid="course-content-list" className="flex flex-col gap-2">

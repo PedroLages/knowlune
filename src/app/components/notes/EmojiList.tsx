@@ -29,11 +29,11 @@ export function EmojiList({ items, command, ref }: EmojiListProps) {
   useImperativeHandle(ref, () => ({
     onKeyDown: ({ event }) => {
       if (event.key === 'ArrowUp') {
-        setSelectedIndex((i) => (i + items.length - 1) % items.length)
+        setSelectedIndex(i => (i + items.length - 1) % items.length)
         return true
       }
       if (event.key === 'ArrowDown') {
-        setSelectedIndex((i) => (i + 1) % items.length)
+        setSelectedIndex(i => (i + 1) % items.length)
         return true
       }
       if (event.key === 'Enter') {

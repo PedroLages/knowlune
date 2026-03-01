@@ -267,20 +267,24 @@ describe('v4 migration from localStorage', () => {
         courseId: 'course-1',
         completedLessons: [],
         notes: {
-          'lesson-1': [{
-            id: 'note-1',
-            content: 'Important concept',
-            createdAt: '2025-01-01T00:00:00.000Z',
-            updatedAt: '2025-01-02T00:00:00.000Z',
-            tags: ['important'],
-          }],
-          'lesson-2': [{
-            id: 'note-2',
-            content: 'Key takeaway',
-            createdAt: '2025-01-03T00:00:00.000Z',
-            updatedAt: '2025-01-03T00:00:00.000Z',
-            tags: [],
-          }],
+          'lesson-1': [
+            {
+              id: 'note-1',
+              content: 'Important concept',
+              createdAt: '2025-01-01T00:00:00.000Z',
+              updatedAt: '2025-01-02T00:00:00.000Z',
+              tags: ['important'],
+            },
+          ],
+          'lesson-2': [
+            {
+              id: 'note-2',
+              content: 'Key takeaway',
+              createdAt: '2025-01-03T00:00:00.000Z',
+              updatedAt: '2025-01-03T00:00:00.000Z',
+              tags: [],
+            },
+          ],
         },
         startedAt: '2025-01-01T00:00:00.000Z',
         lastAccessedAt: '2025-01-03T00:00:00.000Z',

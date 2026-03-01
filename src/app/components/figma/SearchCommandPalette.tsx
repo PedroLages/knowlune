@@ -252,9 +252,12 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
               >
                 <StickyNote className="mr-2 h-4 w-4 shrink-0 text-amber-500" />
                 <div className="flex flex-col gap-0.5 min-w-0">
-                  <span className="text-sm truncate">{highlightMatches(truncateSnippet(result.content), highlightPatterns)}</span>
+                  <span className="text-sm truncate">
+                    {highlightMatches(truncateSnippet(result.content), highlightPatterns)}
+                  </span>
                   <span className="text-xs text-muted-foreground truncate">
-                    {result.courseName}{result.videoTitle ? ` · ${result.videoTitle}` : ''}
+                    {result.courseName}
+                    {result.videoTitle ? ` · ${result.videoTitle}` : ''}
                   </span>
                   {result.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-0.5">

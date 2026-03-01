@@ -10,10 +10,7 @@ const LANGUAGES = [
   { value: 'bash', label: 'Bash' },
 ] as const
 
-export function CodeBlockView({
-  node,
-  updateAttributes,
-}: ReactNodeViewProps) {
+export function CodeBlockView({ node, updateAttributes }: ReactNodeViewProps) {
   return (
     <NodeViewWrapper className="code-block-wrapper">
       <select
@@ -31,7 +28,10 @@ export function CodeBlockView({
         ))}
       </select>
       <pre>
-        <NodeViewContent as="code" className={node.attrs.language ? `language-${node.attrs.language}` : undefined} />
+        <NodeViewContent
+          as="code"
+          className={node.attrs.language ? `language-${node.attrs.language}` : undefined}
+        />
       </pre>
     </NodeViewWrapper>
   )

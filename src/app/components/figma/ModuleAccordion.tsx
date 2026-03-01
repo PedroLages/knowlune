@@ -28,7 +28,13 @@ function formatDuration(seconds: number): string {
   return `${s}s`
 }
 
-export function ModuleAccordion({ modules, courseId, completedLessons, activeLessonId, compact }: ModuleAccordionProps) {
+export function ModuleAccordion({
+  modules,
+  courseId,
+  completedLessons,
+  activeLessonId,
+  compact,
+}: ModuleAccordionProps) {
   // Controlled accordion — auto-expand module containing the active lesson
   const [openModules, setOpenModules] = useState<string[]>(() => {
     if (!activeLessonId) return []
@@ -40,11 +46,16 @@ export function ModuleAccordion({ modules, courseId, completedLessons, activeLes
     if (!activeLessonId) return
     const activeModuleId = modules.find(m => m.lessons.some(l => l.id === activeLessonId))?.id
     if (!activeModuleId) return
-    setOpenModules(prev => prev.includes(activeModuleId) ? prev : [...prev, activeModuleId])
+    setOpenModules(prev => (prev.includes(activeModuleId) ? prev : [...prev, activeModuleId]))
   }, [activeLessonId, modules])
 
   return (
-    <Accordion type="multiple" value={openModules} onValueChange={setOpenModules} className="space-y-3">
+    <Accordion
+      type="multiple"
+      value={openModules}
+      onValueChange={setOpenModules}
+      className="space-y-3"
+    >
       {modules.map(module => {
         const completedInModule = module.lessons.filter(l => completedLessons.includes(l.id)).length
 
@@ -76,8 +87,10 @@ export function ModuleAccordion({ modules, courseId, completedLessons, activeLes
                   const isActive = lesson.id === activeLessonId
                   const hasVideo = lesson.resources.some(r => r.type === 'video')
                   const hasPdf = lesson.resources.some(r => r.type === 'pdf')
-                  const videoDuration = lesson.resources.find(r => r.type === 'video')?.metadata?.duration
-                  const duration = videoDuration != null ? formatDuration(videoDuration) : lesson.duration
+                  const videoDuration = lesson.resources.find(r => r.type === 'video')?.metadata
+                    ?.duration
+                  const duration =
+                    videoDuration != null ? formatDuration(videoDuration) : lesson.duration
 
                   return (
                     <li key={lesson.id}>
@@ -97,9 +110,7 @@ export function ModuleAccordion({ modules, courseId, completedLessons, activeLes
                         )}
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{lesson.title}</p>
-                          {duration && (
-                            <p className="text-xs text-muted-foreground">{duration}</p>
-                          )}
+                          {duration && <p className="text-xs text-muted-foreground">{duration}</p>}
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
                           {hasVideo && <Video className="size-4 text-blue-400" />}

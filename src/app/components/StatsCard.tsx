@@ -34,7 +34,9 @@ export function StatsCard({
               <div
                 className={cn(
                   'flex items-center gap-1 text-xs font-medium mt-2',
-                  trend === 'up' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                  trend === 'up'
+                    ? 'text-green-600 dark:text-green-400'
+                    : 'text-red-600 dark:text-red-400'
                 )}
               >
                 {trend === 'up' ? (

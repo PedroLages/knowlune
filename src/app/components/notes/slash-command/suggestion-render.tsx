@@ -1,6 +1,10 @@
 import { createRoot, type Root } from 'react-dom/client'
 import type { SuggestionOptions, SuggestionKeyDownProps } from '@tiptap/suggestion'
-import { SlashCommandList, type SlashCommandItem, type SlashCommandListRef } from './SlashCommandList'
+import {
+  SlashCommandList,
+  type SlashCommandItem,
+  type SlashCommandListRef,
+} from './SlashCommandList'
 
 /**
  * Creates a Tiptap suggestion `render()` config that mounts a SlashCommandList
@@ -21,10 +25,12 @@ export function createSlashCommandRender(): SuggestionOptions<SlashCommandItem>[
       root = createRoot(container)
       root.render(
         <SlashCommandList
-          ref={(ref) => { listRef = ref }}
+          ref={ref => {
+            listRef = ref
+          }}
           items={props.items}
           command={props.command}
-        />,
+        />
       )
 
       updatePosition(container, props.clientRect)
@@ -33,10 +39,12 @@ export function createSlashCommandRender(): SuggestionOptions<SlashCommandItem>[
     onUpdate(props) {
       root?.render(
         <SlashCommandList
-          ref={(ref) => { listRef = ref }}
+          ref={ref => {
+            listRef = ref
+          }}
           items={props.items}
           command={props.command}
-        />,
+        />
       )
 
       updatePosition(container, props.clientRect)
@@ -65,7 +73,7 @@ export function createSlashCommandRender(): SuggestionOptions<SlashCommandItem>[
 
   function updatePosition(
     el: HTMLDivElement | null,
-    clientRect: (() => DOMRect | null) | undefined,
+    clientRect: (() => DOMRect | null) | undefined
   ) {
     if (!el || !clientRect) return
     const rect = clientRect()

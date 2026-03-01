@@ -98,12 +98,16 @@ describe('ImportedLessonPlayer', () => {
 
   it('shows video filename in header', async () => {
     renderPlayer()
-    expect(await screen.findByTestId('lesson-header-title')).toHaveTextContent('01-Introduction.mp4')
+    expect(await screen.findByTestId('lesson-header-title')).toHaveTextContent(
+      '01-Introduction.mp4'
+    )
   })
 
   it('shows course name in header', async () => {
     renderPlayer()
-    expect(await screen.findByTestId('lesson-header-course')).toHaveTextContent('React Fundamentals')
+    expect(await screen.findByTestId('lesson-header-course')).toHaveTextContent(
+      'React Fundamentals'
+    )
   })
 
   it('shows error state when file handle is null (AC-2)', async () => {

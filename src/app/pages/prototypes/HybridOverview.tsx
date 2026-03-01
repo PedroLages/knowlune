@@ -22,7 +22,10 @@ import {
 import { getActionsPerDay } from '@/lib/studyLog'
 
 function formatCategory(slug: string): string {
-  return slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+  return slug
+    .split('-')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
 }
 
 export function HybridOverview() {
@@ -98,9 +101,7 @@ export function HybridOverview() {
         {recentActivity.map(activity => {
           const lastLesson = activity.progress.lastWatchedLesson
           const lessonObj = lastLesson
-            ? activity.modules
-                .flatMap(m => m.lessons)
-                .find(l => l.id === lastLesson)
+            ? activity.modules.flatMap(m => m.lessons).find(l => l.id === lastLesson)
             : null
 
           return (
@@ -114,14 +115,11 @@ export function HybridOverview() {
               {/* Content */}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium">{activity.title}</p>
-                {lessonObj && (
-                  <p className="text-sm text-neutral-500">{lessonObj.title}</p>
-                )}
+                {lessonObj && <p className="text-sm text-neutral-500">{lessonObj.title}</p>}
                 <p className="text-xs text-neutral-400">
-                  {formatDistanceToNow(
-                    new Date(activity.progress.lastAccessedAt),
-                    { addSuffix: true }
-                  )}
+                  {formatDistanceToNow(new Date(activity.progress.lastAccessedAt), {
+                    addSuffix: true,
+                  })}
                 </p>
               </div>
 

@@ -36,7 +36,8 @@ import { TableKit } from '@tiptap/extension-table'
 import { TableOfContentsPanel } from './TableOfContentsPanel'
 import { TableGridPicker } from './TableGridPicker'
 import { TableContextMenu } from './TableContextMenu'
-import { Bold,
+import {
+  Bold,
   Italic,
   Underline as UnderlineIcon,
   Highlighter,
@@ -57,7 +58,8 @@ import { Bold,
   ListTree,
   Search,
   ChevronsUpDown,
-  Table2 } from 'lucide-react'
+  Table2,
+} from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Separator } from '@/app/components/ui/separator'
 import {
@@ -78,11 +80,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/app/components/ui/popover'
+import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
 import { cn } from '@/app/components/ui/utils'
 import { formatTimestamp } from '@/lib/format'
 
@@ -128,7 +126,9 @@ function fileToBase64(file: File): Promise<string> {
 
 /** Validate a YouTube URL and return true if valid */
 function isValidYoutubeUrl(url: string): boolean {
-  return /^https?:\/\/([a-z]+\.)?youtube\.com\/(watch\?.*v=|embed\/|shorts\/|v\/)|^https?:\/\/youtu\.be\//.test(url)
+  return /^https?:\/\/([a-z]+\.)?youtube\.com\/(watch\?.*v=|embed\/|shorts\/|v\/)|^https?:\/\/youtu\.be\//.test(
+    url
+  )
 }
 
 export function NoteEditor({
@@ -184,7 +184,10 @@ export function NoteEditor({
   }, [])
 
   const handleImageFiles = useCallback(
-    async (files: File[], editor: ReturnType<typeof useEditor> extends infer E ? NonNullable<E> : never) => {
+    async (
+      files: File[],
+      editor: ReturnType<typeof useEditor> extends infer E ? NonNullable<E> : never
+    ) => {
       const validFiles = files.filter(file => {
         if (!file.type.startsWith('image/')) return false
         if (file.size > IMAGE_MAX_SIZE) {
@@ -199,18 +202,22 @@ export function NoteEditor({
         editor.chain().focus().setImage({ src }).run()
       }
     },
-    [],
+    []
   )
 
   // Stable suggestion popup renders (created once, mounted/unmounted by Tiptap)
   const slashCommandRender = useMemo(() => createSlashCommandRender(), [])
   const emojiSuggestionRender = useMemo(() => createEmojiSuggestionRender(), [])
   const slashCommandItems = useMemo(
-    () => getSlashCommandItems({
-      onImageUpload: () => imageInputRef.current?.click(),
-      onYoutubeEmbed: () => { setYoutubeUrl(''); setYoutubeDialogOpen(true) },
-    }),
-    [],
+    () =>
+      getSlashCommandItems({
+        onImageUpload: () => imageInputRef.current?.click(),
+        onYoutubeEmbed: () => {
+          setYoutubeUrl('')
+          setYoutubeDialogOpen(true)
+        },
+      }),
+    []
   )
 
   const editor = useEditor({
@@ -274,8 +281,8 @@ export function NoteEditor({
       SlashCommand.configure({
         suggestion: {
           items: ({ query }) =>
-            slashCommandItems.filter((item) =>
-              item.title.toLowerCase().includes(query.toLowerCase()),
+            slashCommandItems.filter(item =>
+              item.title.toLowerCase().includes(query.toLowerCase())
             ),
           render: slashCommandRender,
         },
@@ -288,9 +295,10 @@ export function NoteEditor({
             if (!query) return emojiData.slice(0, 20)
             const q = query.toLowerCase()
             return emojiData
-              .filter((item) =>
-                item.shortcodes.some((sc) => sc.includes(q)) ||
-                item.tags.some((tag) => tag.includes(q)),
+              .filter(
+                item =>
+                  item.shortcodes.some(sc => sc.includes(q)) ||
+                  item.tags.some(tag => tag.includes(q))
               )
               .slice(0, 20)
           },
@@ -299,7 +307,7 @@ export function NoteEditor({
       }),
       SearchReplace,
       TableOfContents.configure({
-        onUpdate: () => setTocVersion((v) => v + 1),
+        onUpdate: () => setTocVersion(v => v + 1),
       }),
       TableKit.configure({
         table: {
@@ -404,7 +412,9 @@ export function NoteEditor({
     }
 
     // Scan on every transaction (fires after content model changes)
-    const onTransaction = () => { scanForDetails() }
+    const onTransaction = () => {
+      scanForDetails()
+    }
     editor.on('transaction', onTransaction)
     scanForDetails()
 
@@ -422,7 +432,7 @@ export function NoteEditor({
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
         e.preventDefault()
-        setFindReplaceOpen((prev) => !prev)
+        setFindReplaceOpen(prev => !prev)
       }
     }
     container.addEventListener('keydown', handleKeyDown)
@@ -456,9 +466,7 @@ export function NoteEditor({
     editor
       .chain()
       .focus()
-      .insertContent(
-        `<a href="video://${seconds}">Jump to ${timestamp}</a> `
-      )
+      .insertContent(`<a href="video://${seconds}">Jump to ${timestamp}</a> `)
       .run()
   }, [editor, currentVideoTime])
 
@@ -510,12 +518,15 @@ export function NoteEditor({
     setYoutubeUrl('')
   }, [editor, youtubeUrl])
 
-  const handleImageUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!editor || !e.target.files?.length) return
-    await handleImageFiles(Array.from(e.target.files), editor)
-    // Reset input so the same file can be re-selected
-    e.target.value = ''
-  }, [editor, handleImageFiles])
+  const handleImageUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!editor || !e.target.files?.length) return
+      await handleImageFiles(Array.from(e.target.files), editor)
+      // Reset input so the same file can be re-selected
+      e.target.value = ''
+    },
+    [editor, handleImageFiles]
+  )
 
   if (!editor) return null
 
@@ -640,15 +651,15 @@ export function NoteEditor({
           <Code className="size-4" />
         </ToolbarButton>
 
-        <ToolbarButton
-          onClick={() => imageInputRef.current?.click()}
-          aria-label="Insert image"
-        >
+        <ToolbarButton onClick={() => imageInputRef.current?.click()} aria-label="Insert image">
           <ImageIcon className="size-4" />
         </ToolbarButton>
 
         <ToolbarButton
-          onClick={() => { setYoutubeUrl(''); setYoutubeDialogOpen(true) }}
+          onClick={() => {
+            setYoutubeUrl('')
+            setYoutubeDialogOpen(true)
+          }}
           aria-label="YouTube embed"
         >
           <YoutubeIcon className="size-4" />
@@ -669,7 +680,7 @@ export function NoteEditor({
               className={cn(
                 'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer',
                 'hover:bg-accent hover:text-accent-foreground',
-                'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+                'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
               )}
               aria-label="Insert table"
             >
@@ -694,7 +705,7 @@ export function NoteEditor({
 
         {/* Find/Replace */}
         <ToolbarButton
-          onClick={() => setFindReplaceOpen((prev) => !prev)}
+          onClick={() => setFindReplaceOpen(prev => !prev)}
           active={findReplaceOpen}
           aria-label="Find and replace"
         >
@@ -709,7 +720,7 @@ export function NoteEditor({
               className={cn(
                 'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer',
                 'hover:bg-accent hover:text-accent-foreground',
-                'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+                'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
               )}
               aria-label="Table of contents"
             >
@@ -730,7 +741,7 @@ export function NoteEditor({
                 className={cn(
                   'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer',
                   'hover:bg-accent hover:text-accent-foreground',
-                  'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+                  'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
                 )}
                 aria-label="More formatting options"
               >
@@ -770,33 +781,36 @@ export function NoteEditor({
                   </DropdownMenuItem>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
-              <DropdownMenuItem
-                onClick={() => imageInputRef.current?.click()}
-              >
+              <DropdownMenuItem onClick={() => imageInputRef.current?.click()}>
                 <ImageIcon className="size-4 mr-2" />
                 Image
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => { setYoutubeUrl(''); setYoutubeDialogOpen(true) }}
+                onClick={() => {
+                  setYoutubeUrl('')
+                  setYoutubeDialogOpen(true)
+                }}
               >
                 <YoutubeIcon className="size-4 mr-2" />
                 YouTube
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => editor.chain().focus().setDetails().run()}
-              >
+              <DropdownMenuItem onClick={() => editor.chain().focus().setDetails().run()}>
                 <ChevronsUpDown className="size-4 mr-2" />
                 Toggle
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+                onClick={() =>
+                  editor
+                    .chain()
+                    .focus()
+                    .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+                    .run()
+                }
               >
                 <Table2 className="size-4 mr-2" />
                 Table
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => setFindReplaceOpen((prev) => !prev)}
-              >
+              <DropdownMenuItem onClick={() => setFindReplaceOpen(prev => !prev)}>
                 <Search className="size-4 mr-2" />
                 Find & Replace
               </DropdownMenuItem>
@@ -819,10 +833,7 @@ export function NoteEditor({
 
       {/* Find/Replace panel (between toolbar and editor) */}
       {findReplaceOpen && (
-        <FindReplacePanel
-          editor={editor}
-          onClose={() => setFindReplaceOpen(false)}
-        />
+        <FindReplacePanel editor={editor} onClose={() => setFindReplaceOpen(false)} />
       )}
 
       {/* Hidden file input for image uploads */}
@@ -874,9 +885,7 @@ export function NoteEditor({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Insert Link</DialogTitle>
-            <DialogDescription>
-              Enter the URL for this link.
-            </DialogDescription>
+            <DialogDescription>Enter the URL for this link.</DialogDescription>
           </DialogHeader>
           <Input
             value={linkUrl}
