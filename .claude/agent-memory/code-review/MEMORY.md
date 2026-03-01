@@ -153,6 +153,26 @@
 - No unit tests for NoteCard or CourseNotesTab
 - Expand/collapse button is 32px (`h-8 w-8`), below 44px WCAG touch target (recurring sub-44px pattern)
 
+### E03-S07: Bookmarks Page (Round 2)
+
+- BLOCKER (RECURRING x6): ALL implementation + test fixes + unit tests exist ONLY in working tree. Committed branch still has zero functional code. 6th consecutive story with this pattern.
+- Round 1 fixes applied in working tree: `.catch()` on getAllBookmarks, `role="button"` + keyboard handler, `size-11` delete button, course/lesson title E2E assertions, Dexie `orderBy('createdAt').reverse()`, `size-*` shorthand
+- REMAINING: `handleDelete` has `try/finally` but NO `catch` -- `deleteBookmark()` rejection becomes unhandled promise rejection (no error feedback to user)
+- REMAINING: `.catch(() => { setIsLoading(false) })` silently swallows getAllBookmarks errors -- no error state, bookmarks just show as empty
+- REMAINING: `bg-yellow-100`/`text-yellow-800` hardcoded colors not in theme.css (recurring from S05)
+- REMAINING: `w-14 h-9` in timestamp badge uses old h-/w- pattern (dimensions differ so `size-*` does not apply)
+- NEW: Nested interactive elements -- `<Button>` inside `<div role="button">` creates confusing keyboard navigation (recurring from E03-S06)
+- NEW: `findCourseAndLesson` return type not explicitly declared -- TypeScript infers it but inconsistent with codebase conventions
+- Unit tests added for `getAllBookmarks()` (3 tests) -- good coverage of empty, sort order, and cross-course scenarios
+
+## Recurring Anti-Pattern: Uncommitted Fixes
+- E03-S02: Blocker fixes (focus trap, ARIA attrs) existed only in working tree
+- E03-S03: `urlTransform` override for video:// protocol existed only in working tree
+- E03-S05: 6+ fixes existed only in working tree
+- E03-S07 (Round 1): ENTIRE IMPLEMENTATION existed only in working tree
+- E03-S07 (Round 2): ALL implementation + Round 1 fixes + unit tests STILL only in working tree (6th consecutive occurrence)
+- Root cause: Implementation code applied locally but never committed before review/shipping
+
 ## Silent Failure Patterns to Watch
 
 - Empty catch blocks (seen in several IndexedDB operations across stories)

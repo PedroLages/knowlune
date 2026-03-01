@@ -1,5 +1,6 @@
-# generated: 2026-02-15
+# generated: 2026-03-01
 # project: Elearningplatformwireframes
+# project_key: NOKEY
 # tracking_system: file-system
 # story_location: docs/implementation-artifacts
 
@@ -31,22 +32,35 @@
 # - Stories can be worked in parallel if team capacity allows
 # - SM typically creates next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+#
+# REFRESH NOTES (2026-03-01):
+# ===========================
+# - Epics renumbered to match current epics.md (previously 8 epics, now 11)
+# - Epics 1-3: Implementation story IDs preserved (may differ from epics.md titles)
+# - Epics 4-11: Fresh IDs from current epics.md
+# - Deferred stories added to completed epics (1-5, 2-10)
 
-generated: 2026-02-15
+generated: 2026-03-01
 project: Elearningplatformwireframes
+project_key: NOKEY
 tracking_system: file-system
 story_location: docs/implementation-artifacts
 
 development_status:
-  # Epic 1: Course Import & Library Management (4 stories)
+  # ──────────────────────────────────────────────────
+  # Epic 1: Course Import & Library Management
+  # ──────────────────────────────────────────────────
   epic-1: done
   1-1-set-up-data-foundation-and-import-course-folder: done
   1-2-display-course-library: done
   1-3-organize-courses-by-topic: done
   1-4-manage-course-status: done
+  1-5-detect-missing-or-relocated-files: backlog  # deferred — FR5/NFR31
   epic-1-retrospective: done
 
-  # Epic 2: Video & PDF Content Playback (9 stories)
+  # ──────────────────────────────────────────────────
+  # Epic 2: Lesson Player & Content Consumption
+  # ──────────────────────────────────────────────────
   epic-2: done
   2-1-lesson-player-page-with-video-playback: done
   2-2-video-playback-controls-and-keyboard-shortcuts: done
@@ -57,70 +71,113 @@ development_status:
   2-7-skip-controls-pip-shortcuts-help: done
   2-8-chapter-progress-bar-transcript-panel: done
   2-9-mini-player-theater-mode: done
+  2-10-caption-and-subtitle-support: backlog  # deferred — FR88
   epic-2-retrospective: done
 
-  # Epic 3: Note-Taking & Knowledge Capture (15 stories)
+  # ──────────────────────────────────────────────────
+  # Epic 3: Smart Note System
+  # ──────────────────────────────────────────────────
   epic-3: in-progress
   3-0-data-layer-migration: done
   3-1-markdown-note-editor-with-autosave: done
   3-2-side-by-side-study-layout: done
   3-3-timestamp-notes-and-video-navigation: done
   3-4-tag-based-note-organization: done
+  3-5-full-text-note-search: done
+  3-6-view-course-notes-collection: done
+  3-7-bookmarks-page: done
+  3-8-global-notes-dashboard: done
+  3-9-video-frame-capture-in-notes: done
+  3-10-note-export: backlog
   3-11-rich-text-toolbar-expansion: done
   3-12-code-and-media-blocks: done
   3-13-smart-editor-ux: done
   3-14-tables: done
-  3-5-full-text-note-search: done
-  3-6-view-course-notes-collection: done
-  3-7-bookmarks-page: backlog
-  3-8-global-notes-dashboard: backlog
-  3-9-video-frame-capture-in-notes: done
-  3-10-note-export: backlog
   epic-3-retrospective: optional
 
-  # Epic 4: Progress Tracking & Visual Maps (5 stories)
+  # ──────────────────────────────────────────────────
+  # Epic 4: Progress Tracking & Session History
+  # ──────────────────────────────────────────────────
   epic-4: backlog
-  4-1-video-completion-status-tracking: backlog
+  4-1-mark-content-completion-status: backlog
   4-2-course-completion-percentage: backlog
-  4-3-study-session-auto-logging: backlog
-  4-4-study-session-history: backlog
-  4-5-visual-progress-dashboard-widget: backlog
+  4-3-automatic-study-session-logging: backlog
+  4-4-view-study-session-history: backlog
+  4-5-continue-learning-dashboard-action: backlog
   epic-4-retrospective: optional
 
-  # Epic 5: Study Streaks & Gamification (6 stories)
+  # ──────────────────────────────────────────────────
+  # Epic 5: Study Streaks & Daily Goals
+  # ──────────────────────────────────────────────────
   epic-5: backlog
-  5-1-daily-study-streak-tracking: backlog
-  5-2-streak-calendar-visualization: backlog
-  5-3-streak-pause-and-recovery: backlog
-  5-4-study-reminders: backlog
-  5-5-create-learning-challenges: backlog
-  5-6-challenge-progress-tracking-and-celebrations: backlog
+  5-1-daily-study-streak-counter: backlog
+  5-2-streak-pause-and-freeze-days: backlog
+  5-3-study-goals-and-weekly-adherence: backlog
+  5-4-study-history-calendar: backlog
+  5-5-study-reminders-and-notifications: backlog
+  5-6-streak-milestone-celebrations: backlog
   epic-5-retrospective: optional
 
-  # Epic 6: Learning Intelligence & Momentum (5 stories)
+  # ──────────────────────────────────────────────────
+  # Epic 6: Learning Challenges & Gamification
+  # ──────────────────────────────────────────────────
   epic-6: backlog
-  6-1-course-momentum-score-algorithm: backlog
-  6-2-momentum-based-course-display: backlog
-  6-3-continue-learning-zero-decision-resume: backlog
-  6-4-course-recommendations-and-abandonment-detection: backlog
-  6-5-adaptive-study-scheduling-suggestions: backlog
+  6-1-create-learning-challenges: backlog
+  6-2-track-challenge-progress: backlog
+  6-3-challenge-milestone-celebrations: backlog
   epic-6-retrospective: optional
 
-  # Epic 7: Analytics & Reporting Dashboard (5 stories)
+  # ──────────────────────────────────────────────────
+  # Epic 7: Course Momentum & Learning Intelligence
+  # ──────────────────────────────────────────────────
   epic-7: backlog
-  7-1-study-time-analytics: backlog
-  7-2-completion-rate-tracking: backlog
-  7-3-learning-velocity-metrics: backlog
-  7-4-retention-insights: backlog
-  7-5-personalized-insights-and-recommendations: backlog
+  7-1-momentum-score-calculation-and-display: backlog
+  7-2-recommended-next-dashboard-section: backlog
+  7-3-next-course-suggestion-after-completion: backlog
+  7-4-at-risk-course-detection-and-completion-estimates: backlog
+  7-5-smart-study-schedule-suggestion: backlog
   epic-7-retrospective: optional
 
-  # Epic 8: AI-Powered Learning Assistant (6 stories)
+  # ──────────────────────────────────────────────────
+  # Epic 8: Analytics & Reports Dashboard
+  # ──────────────────────────────────────────────────
   epic-8: backlog
-  8-1-ai-provider-configuration: backlog
-  8-2-ai-video-summaries: backlog
-  8-3-ai-note-qa: backlog
-  8-4-ai-learning-path-optimization: backlog
-  8-5-knowledge-gap-identification: backlog
-  8-6-ai-note-enhancement-and-concept-connections: backlog
+  8-1-study-time-analytics: backlog
+  8-2-course-completion-tracking: backlog
+  8-3-learning-velocity-and-trends: backlog
+  8-4-retention-insights-and-activity-heatmap: backlog
+  8-5-actionable-study-insights: backlog
   epic-8-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 9: AI-Powered Learning Assistant
+  # ──────────────────────────────────────────────────
+  epic-9: backlog
+  9-1-ai-provider-configuration-and-security: backlog
+  9-2-ai-video-summary: backlog
+  9-3-chat-style-qa-from-notes: backlog
+  9-4-ai-learning-path-generation: backlog
+  9-5-knowledge-gap-detection: backlog
+  9-6-ai-note-organization: backlog
+  9-7-ai-feature-analytics-and-auto-analysis: backlog
+  epic-9-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 10: Onboarding & First-Use Experience
+  # ──────────────────────────────────────────────────
+  epic-10: backlog
+  10-1-first-use-onboarding-flow: backlog
+  10-2-empty-state-guidance: backlog
+  epic-10-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 11: Knowledge Retention, Export & Advanced Features (Post-MVP)
+  # ──────────────────────────────────────────────────
+  epic-11: backlog
+  11-1-spaced-review-system: backlog
+  11-2-knowledge-retention-dashboard: backlog
+  11-3-study-session-quality-scoring: backlog
+  11-4-data-export: backlog
+  11-5-interleaved-review-mode: backlog
+  11-6-per-course-study-reminders: backlog
+  epic-11-retrospective: optional

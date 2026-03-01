@@ -559,12 +559,15 @@ All critical and warning findings from this validation have been addressed in th
 
 **Executive Summary Added:** New section after title/author/date establishing vision, target user, core problem, solution, and key differentiators.
 
-**Measurability Violations Fixed (31 of 37):**
-- 5 FR format violations fixed (FR13, FR39, FR47, FR79, FR84 → "User/System can" pattern)
-- 7 SMART-flagged FRs rewritten with specific, measurable criteria (FR30, FR32, FR35, FR42, FR46, FR49, FR50)
-- 5 FR ambiguity fixes (FR40 tag-weighted ranking, FR51 note density threshold, FR53 matching criteria, FR82 retention tiers, FR89 traceability)
-- 17 NFR measurability fixes (NFR2, NFR5, NFR8, NFR9, NFR13, NFR15, NFR18, NFR23, NFR24, NFR25, NFR27, NFR33, NFR37, NFR40, NFR43, NFR44, NFR53, NFR54, NFR56)
-- Remaining 6 violations are now borderline or require user input to define thresholds
+**Measurability Violations Fixed (all 37):**
+- 5 FR format violations (FR13, FR39, FR47, FR79, FR84 → "User/System can" pattern)
+- 4 FR measurability violations via SMART rewrites (FR32, FR35, FR42, FR50)
+- 4 FR ambiguity fixes (FR40 tag-weighted ranking, FR51 note density threshold, FR53 matching criteria, FR82 retention tiers)
+- 1 FR leakage fix (FR76 → also listed under Warning Fixes)
+- 19 NFR measurability rewrites (NFR2, NFR5, NFR8, NFR9, NFR13, NFR15, NFR18, NFR23, NFR24, NFR25, NFR27, NFR33, NFR37, NFR40, NFR43, NFR44, NFR53, NFR54, NFR56)
+- 3 additional NFR violations addressed under Warning Fixes below (NFR28 leakage, NFR34 consolidated, Optimization Strategies block removed)
+
+**Additional fixes beyond original 37:** 3 SMART-flagged FRs (FR30, FR46, FR49), FR89 traceability note
 
 ### Warning Fixes
 
@@ -579,7 +582,7 @@ All critical and warning findings from this validation have been addressed in th
 
 **Traceability Gaps (19→~3):**
 - Added FR94: Feature usage telemetry (closes 3 of 5 success criteria gaps)
-- Added FR95: "Continue Learning" dashboard button (promoted from NFR17)
+- Added FR95: "Continue Learning" dashboard action (promoted from NFR17)
 - Added FR96: Onboarding prompts (Journey 1)
 - Added FR97: Proactive AI note-linking suggestions (Journey 2)
 - Added FR98: Streak milestone celebrations (Journey 2)
@@ -591,8 +594,8 @@ All critical and warning findings from this validation have been addressed in th
 ### Post-Fix Status
 
 **Estimated New Ratings:**
-- Measurability: ~8 remaining violations (down from 37) → Warning
+- Measurability: 0 remaining original violations (down from 37) → Pass
 - Traceability: ~3 remaining gaps (down from 19) → Pass
 - Implementation Leakage: 0 violations → Pass
 - Completeness: 8/8 core sections present → Pass
-- Overall: Good → approaching Excellent (re-validation recommended)
+- Overall: Good → Excellent (re-validation recommended to confirm)
