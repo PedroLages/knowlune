@@ -12,6 +12,10 @@
 import { test, expect } from '../support/fixtures'
 import { navigateAndWait } from '../support/helpers/navigation'
 
+// Large video file (149 MB) causes metadata loading contention under parallel workers.
+// Serialize this spec to ensure the dev server can serve the video reliably.
+test.describe.configure({ mode: 'serial' })
+
 const LESSON_URL = '/courses/operative-six/op6-introduction'
 
 /** Navigate to lesson player with notes panel open, suppress sidebar. */
@@ -24,9 +28,23 @@ async function goToLessonWithNotes(page: Parameters<typeof navigateAndWait>[0]) 
 
 /** Advance video to a known time so frame capture has content. */
 async function seekVideoTo(page: Parameters<typeof navigateAndWait>[0], seconds: number) {
+  // Wait for the video to have loaded metadata (dimensions must be non-zero for canvas capture)
+  await page.waitForFunction(
+    () => {
+      const v = document.querySelector('video')
+      return v && v.readyState >= 1
+    },
+    { timeout: 15000 },
+  )
+  // Seek to target time and wait for the browser to decode the frame
   await page.locator('video').evaluate(
-    (el: HTMLVideoElement, t: number) => {
+    async (el: HTMLVideoElement, t: number) => {
       el.currentTime = t
+      if (el.readyState < 3) {
+        await new Promise<void>(resolve =>
+          el.addEventListener('seeked', () => resolve(), { once: true }),
+        )
+      }
       el.dispatchEvent(new Event('timeupdate'))
     },
     seconds,
@@ -60,6 +78,21 @@ test.describe('AC1: Frame capture via keyboard shortcut', () => {
     const toastMessage = page.getByText(/frame captured/i)
     await expect(toastMessage).toBeVisible({ timeout: 3000 })
   })
+
+  test('Meta+Shift+S captures frame on macOS', async ({ page }) => {
+    await goToLessonWithNotes(page)
+    await seekVideoTo(page, 5)
+
+    const editor = page.getByRole('textbox', { name: /lesson notes editor/i })
+    await expect(editor).toBeVisible()
+    await editor.click()
+
+    // Press Meta+Shift+S (macOS shortcut)
+    await page.keyboard.press('Meta+Shift+s')
+
+    const frameImage = page.locator('[data-testid="frame-capture"]')
+    await expect(frameImage).toBeVisible({ timeout: 5000 })
+  })
 })
 
 // ===========================================================================
@@ -78,7 +111,7 @@ test.describe('AC2: Toolbar capture button', () => {
     await editor.click()
 
     // Click the Capture Frame toolbar button
-    const captureBtn = page.getByRole('button', { name: /capture frame/i })
+    const captureBtn = page.getByRole('button', { name: /capture video frame/i })
     await expect(captureBtn).toBeVisible()
     await captureBtn.click()
 
@@ -90,16 +123,17 @@ test.describe('AC2: Toolbar capture button', () => {
   test('Capture Frame button shows camera icon and tooltip', async ({ page }) => {
     await goToLessonWithNotes(page)
 
-    const captureBtn = page.getByRole('button', { name: /capture frame/i })
+    const captureBtn = page.getByRole('button', { name: /capture video frame/i })
     await expect(captureBtn).toBeVisible()
 
     // Verify camera icon is present
     const cameraIcon = captureBtn.locator('svg')
     await expect(cameraIcon).toBeVisible()
 
-    // Hover for tooltip
+    // Hover for tooltip (Radix tooltips have an open delay)
     await captureBtn.hover()
     const tooltip = page.getByRole('tooltip')
+    await expect(tooltip).toBeVisible({ timeout: 2000 })
     await expect(tooltip).toContainText(/capture video frame/i)
   })
 })
@@ -140,10 +174,10 @@ test.describe('AC3: Timestamp caption and click-to-seek', () => {
     // Seek video away from 30s
     await seekVideoTo(page, 0)
 
-    // Click the timestamp caption
-    const caption = page.locator('[data-testid="frame-capture"] figcaption')
-    await expect(caption).toBeVisible({ timeout: 5000 })
-    await caption.click()
+    // Click the timestamp button inside the caption
+    const seekBtn = page.locator('[data-testid="frame-capture"] figcaption button')
+    await expect(seekBtn).toBeVisible({ timeout: 5000 })
+    await seekBtn.click()
 
     // THEN: Video should seek back to ~30s
     const video = page.locator('video')
@@ -192,6 +226,13 @@ test.describe('AC4: IndexedDB frame storage', () => {
     })
 
     expect(screenshotCount).toBeGreaterThanOrEqual(1)
+
+    // Verify frame uses blob URL from IndexedDB, not inline base64
+    const editorHtml = await page
+      .getByRole('textbox', { name: /lesson notes editor/i })
+      .innerHTML()
+    expect(editorHtml).toContain('node-frameCapture')
+    expect(editorHtml).not.toContain('data:image/jpeg')
   })
 })
 

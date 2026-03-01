@@ -6,6 +6,7 @@ import type {
   VideoProgress,
   VideoBookmark,
   Note,
+  Screenshot,
 } from '@/data/types'
 
 const db = new Dexie('ElearningDB') as Dexie & {
@@ -15,6 +16,7 @@ const db = new Dexie('ElearningDB') as Dexie & {
   progress: EntityTable<VideoProgress, 'courseId'>
   bookmarks: EntityTable<VideoBookmark, 'id'>
   notes: EntityTable<Note, 'id'>
+  screenshots: EntityTable<Screenshot, 'id'>
 }
 
 db.version(1).stores({
@@ -121,5 +123,15 @@ db.version(4)
       throw error
     }
   })
+
+db.version(5).stores({
+  importedCourses: 'id, name, importedAt, status, *tags',
+  importedVideos: 'id, courseId, filename',
+  importedPdfs: 'id, courseId, filename',
+  progress: '[courseId+videoId], courseId, videoId',
+  bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+  screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+})
 
 export { db }

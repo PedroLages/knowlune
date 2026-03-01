@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -23,7 +23,7 @@ import {
 } from '../components/ui/breadcrumb'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet'
-import { VideoPlayer } from '../components/figma/VideoPlayer'
+import { VideoPlayer, type VideoPlayerHandle } from '../components/figma/VideoPlayer'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '../components/ui/resizable'
 import { cn } from '../components/ui/utils'
 import { ScrollArea } from '../components/ui/scroll-area'
@@ -53,6 +53,11 @@ import {
 } from '@/lib/progress'
 import { addBookmark, getLessonBookmarks, formatBookmarkTimestamp } from '@/lib/bookmarks'
 import { toast } from 'sonner'
+import {
+  captureVideoFrame,
+  saveFrameCapture,
+  type CapturedFrame,
+} from '@/lib/frame-capture'
 
 export function LessonPlayer() {
   const { courseId, lessonId } = useParams<{
@@ -75,6 +80,7 @@ export function LessonPlayer() {
   })()
 
   const progress = course ? getProgress(course.id) : null
+  const videoPlayerRef = useRef<VideoPlayerHandle>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const [completed, setCompleted] = useState(() =>
     courseId && lessonId ? isLessonComplete(courseId, lessonId) : false
@@ -120,7 +126,7 @@ export function LessonPlayer() {
   useEffect(() => {
     if (!isDesktop) return
     if (notesOpen) {
-      notesPanelRef.current?.expand()
+      notesPanelRef.current?.resize('40%')
     } else {
       notesPanelRef.current?.collapse()
     }
@@ -358,9 +364,30 @@ export function LessonPlayer() {
   const handleNoteChange = (value: string, tags: string[] = []) => {
     setNoteText(value)
     if (courseId && lessonId) {
-      saveNote(courseId, lessonId, value, tags)
+      saveNote(courseId, lessonId, value, tags).catch(() => {
+        toast.error('Failed to save note')
+      })
     }
   }
+
+  const handleCaptureFrame = useCallback(async (): Promise<CapturedFrame | null> => {
+    const videoEl = videoPlayerRef.current?.getVideoElement()
+    if (!videoEl || !courseId || !lessonId) return null
+
+    try {
+      const timestamp = Math.floor(videoEl.currentTime)
+      const { blob, thumbnail } = await captureVideoFrame(videoEl)
+      const screenshot = await saveFrameCapture(courseId, lessonId, timestamp, blob, thumbnail)
+
+      toast('Frame captured', { duration: 2000 })
+
+      return { id: screenshot.id, timestamp }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to capture frame'
+      toast.error(message)
+      return null
+    }
+  }, [courseId, lessonId])
 
   const handleNotesToggle = () => {
     setNotesOpen(prev => {
@@ -455,6 +482,7 @@ export function LessonPlayer() {
               />
             )}
             <VideoPlayer
+              ref={videoPlayerRef}
               src={getResourceUrl(videoResource)}
               title={lesson.title}
               initialPosition={
@@ -637,6 +665,7 @@ export function LessonPlayer() {
               currentVideoTime={videoCurrentTime}
               onSave={handleNoteChange}
               onVideoSeek={handleVideoSeek}
+              onCaptureFrame={videoResource ? handleCaptureFrame : undefined}
             />
             {isMobile && (
               <Button
@@ -715,25 +744,25 @@ export function LessonPlayer() {
           className="flex-1 min-w-0"
           style={{ overflow: 'visible' }}
         >
-          <ResizablePanel defaultSize={notesOpen ? 60 : 100} minSize={35}>
+          <ResizablePanel defaultSize={notesOpen ? '60%' : '100%'} minSize="40%">
             <div data-testid="lesson-content-scroll">{mainContent}</div>
           </ResizablePanel>
 
           <ResizableHandle
             withHandle={notesOpen}
             disabled={!notesOpen}
-            className={cn(!notesOpen && 'invisible w-0')}
+            className={cn(notesOpen ? 'mx-4' : 'invisible w-0')}
           />
 
           <ResizablePanel
             panelRef={notesPanelRef}
             collapsible
-            collapsedSize={0}
-            defaultSize={notesOpen ? 40 : 0}
-            minSize={25}
+            collapsedSize="0%"
+            defaultSize={notesOpen ? '40%' : '0%'}
+            minSize="30%"
           >
             {notesOpen && (
-              <ScrollArea className="sticky top-0 max-h-[calc(100svh-3rem)] pl-4">
+              <ScrollArea className="sticky top-0 max-h-[calc(100svh-3rem)]">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-semibold">Notes</h3>
                   <Button
@@ -750,8 +779,11 @@ export function LessonPlayer() {
                   courseId={courseId || ''}
                   lessonId={lessonId || ''}
                   initialContent={noteText}
+                  currentVideoTime={videoCurrentTime}
                   onSave={handleNoteChange}
                   onVideoSeek={handleVideoSeek}
+                  onCaptureFrame={videoResource ? handleCaptureFrame : undefined}
+                  compact
                 />
               </ScrollArea>
             )}
@@ -793,8 +825,10 @@ export function LessonPlayer() {
               courseId={courseId || ''}
               lessonId={lessonId || ''}
               initialContent={noteText}
+              currentVideoTime={videoCurrentTime}
               onSave={handleNoteChange}
               onVideoSeek={handleVideoSeek}
+              onCaptureFrame={videoResource ? handleCaptureFrame : undefined}
             />
           ) : (
             mainContent
@@ -855,8 +889,10 @@ export function LessonPlayer() {
                 courseId={courseId || ''}
                 lessonId={lessonId || ''}
                 initialContent={noteText}
+                currentVideoTime={videoCurrentTime}
                 onSave={handleNoteChange}
                 onVideoSeek={handleVideoSeek}
+                onCaptureFrame={videoResource ? handleCaptureFrame : undefined}
               />
             </div>
           </ScrollArea>

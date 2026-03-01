@@ -1,5 +1,5 @@
 import type { Chapter } from '@/data/types'
-import { formatTimestamp as formatTime } from '@/lib/time'
+import { formatTimestamp as formatTime } from '@/lib/format'
 
 interface ChapterProgressBarProps {
   progress: number // 0–100

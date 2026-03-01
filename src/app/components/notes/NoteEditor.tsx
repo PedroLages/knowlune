@@ -52,6 +52,7 @@ import {
   AlignRight,
   ChevronDown,
   Clock,
+  Camera,
   Image as ImageIcon,
   Youtube as YoutubeIcon,
   GripVertical,
@@ -81,8 +82,16 @@ import {
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/app/components/ui/tooltip'
 import { cn } from '@/app/components/ui/utils'
 import { formatTimestamp } from '@/lib/format'
+import { FrameCaptureExtension } from './frame-capture'
+import type { CapturedFrame } from '@/lib/frame-capture'
 
 const lowlight = createLowlight({ javascript, typescript, python, css, xml, bash })
 
@@ -95,6 +104,8 @@ interface NoteEditorProps {
   currentVideoTime?: number
   onSave?: (content: string, tags: string[]) => void
   onVideoSeek?: (seconds: number) => void
+  onCaptureFrame?: () => Promise<CapturedFrame | null>
+  compact?: boolean
   className?: string
 }
 
@@ -138,6 +149,8 @@ export function NoteEditor({
   currentVideoTime = 0,
   onSave,
   onVideoSeek,
+  onCaptureFrame,
+  compact = false,
   className,
 }: NoteEditorProps) {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved'>('idle')
@@ -164,6 +177,10 @@ export function NoteEditor({
   const onVideoSeekRef = useRef(onVideoSeek)
   useEffect(() => {
     onVideoSeekRef.current = onVideoSeek
+  })
+  const onCaptureFrameRef = useRef(onCaptureFrame)
+  useEffect(() => {
+    onCaptureFrameRef.current = onCaptureFrame
   })
 
   const doSave = useCallback((html: string) => {
@@ -306,6 +323,7 @@ export function NoteEditor({
         },
       }),
       SearchReplace,
+      FrameCaptureExtension,
       TableOfContents.configure({
         onUpdate: () => setTocVersion(v => v + 1),
       }),
@@ -320,7 +338,8 @@ export function NoteEditor({
     editorProps: {
       attributes: {
         class: 'prose prose-sm dark:prose-invert max-w-none min-h-[250px] outline-none px-5 py-4',
-        'aria-label': 'Lesson notes',
+        role: 'textbox',
+        'aria-label': 'Lesson notes editor',
         'aria-multiline': 'true',
       },
       handleClick: (_view, _pos, event) => {
@@ -425,7 +444,40 @@ export function NoteEditor({
     }
   }, [editor])
 
+  const insertTimestamp = useCallback(() => {
+    if (!editor) return
+
+    const timestamp = formatTimestamp(currentVideoTime)
+    const seconds = Math.floor(currentVideoTime)
+
+    editor
+      .chain()
+      .focus()
+      .insertContent(`<a href="video://${seconds}">Jump to ${timestamp}</a> `)
+      .run()
+  }, [editor, currentVideoTime])
+
+  const handleCaptureFrame = useCallback(async () => {
+    if (!editor || !onCaptureFrameRef.current) return
+    try {
+      const result = await onCaptureFrameRef.current()
+      if (result) {
+        editor
+          .chain()
+          .focus()
+          .insertFrameCapture({
+            screenshotId: result.id,
+            timestamp: result.timestamp,
+          })
+          .run()
+      }
+    } catch (error) {
+      console.error('Frame capture failed:', error)
+    }
+  }, [editor])
+
   // Cmd+F to toggle find/replace panel (scoped to editor container)
+  // Ctrl/Cmd+Shift+S to capture video frame (scoped to editor container)
   useEffect(() => {
     const container = editorContainerRef.current
     if (!container) return
@@ -434,10 +486,14 @@ export function NoteEditor({
         e.preventDefault()
         setFindReplaceOpen(prev => !prev)
       }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        handleCaptureFrame()
+      }
     }
     container.addEventListener('keydown', handleKeyDown)
     return () => container.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  }, [handleCaptureFrame])
 
   // Force save on unmount
   useEffect(() => {
@@ -457,18 +513,18 @@ export function NoteEditor({
     }
   }, [])
 
-  const insertTimestamp = useCallback(() => {
+  // Wire up scoped seek callback via TipTap extension storage
+  useEffect(() => {
     if (!editor) return
-
-    const timestamp = formatTimestamp(currentVideoTime)
-    const seconds = Math.floor(currentVideoTime)
-
-    editor
-      .chain()
-      .focus()
-      .insertContent(`<a href="video://${seconds}">Jump to ${timestamp}</a> `)
-      .run()
-  }, [editor, currentVideoTime])
+    editor.storage.frameCapture.onSeek = (timestamp: number) => {
+      onVideoSeekRef.current?.(timestamp)
+    }
+    return () => {
+      if (!editor.isDestroyed) {
+        editor.storage.frameCapture.onSeek = null
+      }
+    }
+  }, [editor])
 
   const openLinkDialog = useCallback(() => {
     if (!editor) return
@@ -537,11 +593,15 @@ export function NoteEditor({
       className={cn('bg-card rounded-[24px] shadow-sm overflow-hidden', className)}
     >
       {/* Toolbar */}
+      <TooltipProvider>
       <div
         role="toolbar"
         aria-label="Text formatting"
         data-testid="note-editor-toolbar"
-        className="flex items-center gap-1 px-4 py-2 border-b border-border bg-muted/30 flex-wrap sm:flex-nowrap sm:overflow-x-auto"
+        className={cn(
+          'flex items-center gap-1 px-4 py-2 border-b border-border bg-muted/30 flex-wrap',
+          !compact && 'sm:flex-nowrap sm:overflow-x-auto'
+        )}
       >
         {/* Inline formatting group */}
         <ToolbarButton
@@ -578,8 +638,8 @@ export function NoteEditor({
 
         <Separator orientation="vertical" decorative={false} className="h-6 mx-1" />
 
-        {/* Block formatting group — hidden on mobile, in overflow menu */}
-        <div className="hidden sm:flex items-center gap-1">
+        {/* Block formatting group — hidden on mobile and compact, in overflow menu */}
+        <div className={cn('items-center gap-1', compact ? 'hidden' : 'hidden sm:flex')}>
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
             active={editor.isActive('heading', { level: 2 })}
@@ -640,100 +700,107 @@ export function NoteEditor({
           <ListTodo className="size-4" />
         </ToolbarButton>
 
-        <Separator orientation="vertical" decorative={false} className="h-6 mx-1" />
+        {/* Separator before code & media — always visible when not compact */}
+        {!compact && (
+          <Separator orientation="vertical" decorative={false} className="h-6 mx-1" />
+        )}
 
-        {/* Code & media group */}
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-          active={editor.isActive('codeBlock')}
-          aria-label="Code block"
-        >
-          <Code className="size-4" />
-        </ToolbarButton>
-
-        <ToolbarButton onClick={() => imageInputRef.current?.click()} aria-label="Insert image">
-          <ImageIcon className="size-4" />
-        </ToolbarButton>
-
-        <ToolbarButton
-          onClick={() => {
-            setYoutubeUrl('')
-            setYoutubeDialogOpen(true)
-          }}
-          aria-label="YouTube embed"
-        >
-          <YoutubeIcon className="size-4" />
-        </ToolbarButton>
-
-        <ToolbarButton
-          onClick={() => editor.chain().focus().setDetails().run()}
-          aria-label="Toggle block"
-        >
-          <ChevronsUpDown className="size-4" />
-        </ToolbarButton>
-
-        {/* Table */}
-        <Popover open={tablePickerOpen} onOpenChange={setTablePickerOpen}>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              className={cn(
-                'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer',
-                'hover:bg-accent hover:text-accent-foreground',
-                'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
-              )}
-              aria-label="Insert table"
+        {/* Code & media group — hidden in compact, shown in overflow dropdown */}
+        {!compact && (
+          <>
+            <ToolbarButton
+              onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+              active={editor.isActive('codeBlock')}
+              aria-label="Code block"
             >
-              <Table2 className="size-4" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <TableGridPicker editor={editor} onClose={() => setTablePickerOpen(false)} />
-          </PopoverContent>
-        </Popover>
+              <Code className="size-4" />
+            </ToolbarButton>
 
-        <Separator orientation="vertical" decorative={false} className="h-6 mx-1" />
+            <ToolbarButton onClick={() => imageInputRef.current?.click()} aria-label="Insert image">
+              <ImageIcon className="size-4" />
+            </ToolbarButton>
 
-        {/* Link */}
-        <ToolbarButton
-          onClick={openLinkDialog}
-          active={editor.isActive('link')}
-          aria-label="Insert link"
-        >
-          <Link2 className="size-4" />
-        </ToolbarButton>
-
-        {/* Find/Replace */}
-        <ToolbarButton
-          onClick={() => setFindReplaceOpen(prev => !prev)}
-          active={findReplaceOpen}
-          aria-label="Find and replace"
-        >
-          <Search className="size-4" />
-        </ToolbarButton>
-
-        {/* Table of Contents */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              className={cn(
-                'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer',
-                'hover:bg-accent hover:text-accent-foreground',
-                'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
-              )}
-              aria-label="Table of contents"
+            <ToolbarButton
+              onClick={() => {
+                setYoutubeUrl('')
+                setYoutubeDialogOpen(true)
+              }}
+              aria-label="YouTube embed"
             >
-              <ListTree className="size-4" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-64 p-0" align="start">
-            <TableOfContentsPanel editor={editor} />
-          </PopoverContent>
-        </Popover>
+              <YoutubeIcon className="size-4" />
+            </ToolbarButton>
 
-        {/* Mobile overflow menu */}
-        <div className="sm:hidden">
+            <ToolbarButton
+              onClick={() => editor.chain().focus().setDetails().run()}
+              aria-label="Toggle block"
+            >
+              <ChevronsUpDown className="size-4" />
+            </ToolbarButton>
+
+            {/* Table */}
+            <Popover open={tablePickerOpen} onOpenChange={setTablePickerOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer',
+                    'hover:bg-accent hover:text-accent-foreground',
+                    'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
+                  )}
+                  aria-label="Insert table"
+                >
+                  <Table2 className="size-4" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <TableGridPicker editor={editor} onClose={() => setTablePickerOpen(false)} />
+              </PopoverContent>
+            </Popover>
+
+            <Separator orientation="vertical" decorative={false} className="h-6 mx-1" />
+
+            {/* Link */}
+            <ToolbarButton
+              onClick={openLinkDialog}
+              active={editor.isActive('link')}
+              aria-label="Insert link"
+            >
+              <Link2 className="size-4" />
+            </ToolbarButton>
+
+            {/* Find/Replace */}
+            <ToolbarButton
+              onClick={() => setFindReplaceOpen(prev => !prev)}
+              active={findReplaceOpen}
+              aria-label="Find and replace"
+            >
+              <Search className="size-4" />
+            </ToolbarButton>
+
+            {/* Table of Contents */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer',
+                    'hover:bg-accent hover:text-accent-foreground',
+                    'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
+                  )}
+                  aria-label="Table of contents"
+                >
+                  <ListTree className="size-4" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-0" align="start">
+                <TableOfContentsPanel editor={editor} />
+              </PopoverContent>
+            </Popover>
+          </>
+        )}
+
+        {/* Overflow menu — visible on mobile + compact mode */}
+        <div className={compact ? undefined : 'sm:hidden'}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
@@ -814,22 +881,58 @@ export function NoteEditor({
                 <Search className="size-4 mr-2" />
                 Find & Replace
               </DropdownMenuItem>
+              {compact && (
+                <>
+                  <DropdownMenuItem
+                    onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+                  >
+                    <Code className="size-4 mr-2" />
+                    Code Block
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={openLinkDialog}>
+                    <Link2 className="size-4 mr-2" />
+                    Link
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+
+        {/* Capture Frame button */}
+        {onCaptureFrame && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={handleCaptureFrame}
+                className={cn(
+                  'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer ml-auto',
+                  'hover:bg-accent hover:text-accent-foreground',
+                  'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
+                )}
+                aria-label="Capture video frame"
+              >
+                <Camera className="size-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Capture video frame</TooltipContent>
+          </Tooltip>
+        )}
 
         {/* Timestamp button */}
         <Button
           variant="ghost"
           size="sm"
           onClick={insertTimestamp}
-          className="h-11 px-3 text-xs ml-auto"
+          className={cn('h-11 px-3 text-xs', !onCaptureFrame && 'ml-auto')}
           aria-label="Add Timestamp"
         >
           <Clock className="size-3.5 mr-1.5" />
           Add Timestamp
         </Button>
       </div>
+      </TooltipProvider>
 
       {/* Find/Replace panel (between toolbar and editor) */}
       {findReplaceOpen && (

@@ -4,9 +4,9 @@ story_name: "Video Frame Capture in Notes"
 status: in-progress
 started: 2026-03-01
 completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+reviewed: true
+review_started: 2026-03-01
+review_gates_passed: [build, lint, unit-tests, e2e-tests, design-review, code-review, code-review-testing]
 ---
 
 # Story 3.9: Video Frame Capture in Notes
@@ -90,11 +90,30 @@ So that I can reference exact visual moments from a lecture without leaving my s
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+**2026-03-01** — PASS with 2 high-priority fixes (both resolved). No blockers. See `docs/reviews/design/design-review-2026-03-01-E03-S09.md`.
+
+Key findings (resolved):
+- ~~Fix aria-label mismatch on Capture Frame button ("Capture frame" → "Capture video frame")~~ ✓
+- ~~Replace `role="button"` figcaption with native `<button>` for keyboard focus styling~~ ✓
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**2026-03-01 Round 2** — 1 Blocker (uncommitted files) + 3 High + 3 Medium. See `docs/reviews/code/code-review-2026-03-01-E03-S09.md`.
+
+Blocker: Implementation files are uncommitted — must be staged and committed before PR.
+
+Resolved from Round 1:
+- ~~Memory leak: orphaned blob URL~~ ✓ (FrameCaptureView manages its own URL lifecycle)
+- ~~Duplicate formatFrameTimestamp~~ ✓ (now delegates to formatTimestamp from @/lib/format)
+- ~~Global custom event coupling~~ ✓ (replaced with editor.storage.frameCapture.onSeek)
+- ~~Zero unit tests~~ ✓ (17 unit tests in frameCapture.test.ts)
+
+Remaining high findings:
+- handleNoteChange fire-and-forget (recurring from E03-S03)
+- FrameCaptureView swallows IndexedDB errors silently
+- Timestamp click silent no-op in read-only context
+
+**Test Coverage 2026-03-01** — 2/6 ACs fully covered, 4 partial (all ACs have at least one test). See `docs/reviews/code/code-review-testing-2026-03-01-E03-S09.md`.
 
 ## Challenges and Lessons Learned
 
