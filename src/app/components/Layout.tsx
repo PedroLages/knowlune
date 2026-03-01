@@ -309,10 +309,13 @@ export function Layout() {
               <Avatar className="w-10 h-10">
                 <AvatarFallback>S</AvatarFallback>
               </Avatar>
-              <div className="text-left">
+              <div className="text-left hidden sm:block">
                 <div className="font-semibold text-sm">Student</div>
               </div>
-              <ChevronDown className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+              <ChevronDown
+                className="w-4 h-4 text-muted-foreground hidden sm:block"
+                aria-hidden="true"
+              />
             </div>
           </div>
         </header>

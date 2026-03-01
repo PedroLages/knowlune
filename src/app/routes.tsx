@@ -19,6 +19,7 @@ const ImportedLessonPlayer = React.lazy(() =>
   import('./pages/ImportedLessonPlayer').then(m => ({ default: m.ImportedLessonPlayer }))
 )
 const Library = React.lazy(() => import('./pages/Library').then(m => ({ default: m.Library })))
+const Notes = React.lazy(() => import('./pages/Notes').then(m => ({ default: m.Notes })))
 const Instructors = React.lazy(() =>
   import('./pages/Instructors').then(m => ({ default: m.Instructors }))
 )
@@ -107,6 +108,14 @@ export const router = createBrowserRouter([
         element: (
           <SuspensePage>
             <Library />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'notes',
+        element: (
+          <SuspensePage>
+            <Notes />
           </SuspensePage>
         ),
       },

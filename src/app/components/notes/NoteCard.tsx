@@ -1,8 +1,6 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { ChevronDown, ChevronUp, Pencil, Trash2, X, Clock } from 'lucide-react'
-import { useEditor, EditorContent } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
 import {
@@ -17,8 +15,10 @@ import {
   AlertDialogTrigger,
 } from '@/app/components/ui/alert-dialog'
 import { NoteEditor } from './NoteEditor'
+import { ReadOnlyContent } from './ReadOnlyContent'
 import { useNoteStore } from '@/stores/useNoteStore'
 import { formatTimestamp } from '@/lib/format'
+import { stripHtml } from '@/lib/textUtils'
 import { toast } from 'sonner'
 import type { Note } from '@/data/types'
 
@@ -27,18 +27,6 @@ interface NoteCardProps {
   lessonTitle: string
   courseId: string
   onDelete: (noteId: string) => Promise<void>
-}
-
-/** Strip HTML tags to extract plain text for preview snippets. */
-function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .trim()
 }
 
 function formatRelativeDate(isoDate: string): string {
@@ -53,19 +41,6 @@ function formatRelativeDate(isoDate: string): string {
   const weeks = Math.floor(diffDays / 7)
   if (diffDays < 30) return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`
   return date.toLocaleDateString()
-}
-
-/** Read-only Tiptap renderer — mounts only when expanded to avoid stale content. */
-function ReadOnlyContent({ content }: { content: string }) {
-  const editor = useEditor({
-    editable: false,
-    content,
-    extensions: [StarterKit],
-    editorProps: {
-      attributes: { class: 'prose prose-sm max-w-none' },
-    },
-  })
-  return <EditorContent editor={editor} />
 }
 
 type ViewState = 'collapsed' | 'expanded' | 'editing'
