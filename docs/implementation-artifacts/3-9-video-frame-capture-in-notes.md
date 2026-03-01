@@ -117,7 +117,12 @@ Remaining high findings:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Commit implementation files before review.** This was the 5th consecutive story where all implementation existed only in the working tree at review time. The code review correctly flagged this as a blocker — the committed branch was non-functional. Lesson: stage and commit implementation before running `/review-story`.
+- **TipTap extension storage beats global CustomEvent.** Round 1 flagged `window.dispatchEvent(CustomEvent(...))` for cross-component communication. Using `editor.storage.frameCapture.onSeek` scoped the callback to the editor instance, avoiding global coupling and stale closure bugs.
+- **Canvas CORS taint requires `crossOrigin` before `src`.** Setting `crossOrigin="anonymous"` on the video element must happen before the `src` attribute is assigned. Reversing the order causes a taint error when drawing to canvas.
+- **Object URL lifecycle needs explicit management.** FrameCaptureView creates blob URLs from IndexedDB thumbnails — these must be revoked both on unmount and when the fetch is cancelled mid-flight. A `urlRef` pattern with cleanup in both the effect destructor and the cancelled check prevents memory leaks.
+- **Recurring `handleNoteChange` fire-and-forget debt.** The code review has flagged silent note save failures across 4 stories (E03-S03, S04, S06, S09). This should be addressed as tech debt before Epic 4.
+- **Dexie schema versioning creates duplication.** Each new version must redeclare all existing table schemas. A helper function or schema constant would reduce copy-paste errors across migrations.
 
 ## Implementation Plan
 
