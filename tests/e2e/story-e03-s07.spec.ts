@@ -6,8 +6,6 @@
  *   - AC2: Clicking a bookmark navigates to lesson player at that timestamp
  *   - AC3: Seek bar shows visual indicators at bookmarked positions
  *   - AC4: Delete bookmark with confirmation dialog (NFR23)
- *
- * RED phase — these tests are written before implementation and should fail initially.
  */
 import { test, expect } from '../support/fixtures'
 import { navigateAndWait } from '../support/helpers/navigation'
@@ -122,10 +120,12 @@ test.describe('AC1: Bookmarks page lists all bookmarks', () => {
     const bookmarkEntries = page.getByTestId('bookmark-entry')
     await expect(bookmarkEntries).toHaveCount(3)
 
-    // Verify first entry (most recent: bm-2)
+    // Verify first entry (most recent: bm-2, operative-six / op6-pillars-of-influence)
     const firstEntry = bookmarkEntries.first()
-    await expect(firstEntry).toContainText('4:05')             // timestamp
-    await expect(firstEntry).toContainText(/Mar.*2026|Today/i) // date
+    await expect(firstEntry).toContainText('Operative Six')            // course title
+    await expect(firstEntry).toContainText('The Pillars of Influence') // lesson title
+    await expect(firstEntry).toContainText('4:05')                     // timestamp
+    await expect(firstEntry).toContainText('Mar 1, 2026')              // date
   })
 
   test('bookmarks are sorted by most recent first', async ({ page }) => {
@@ -136,7 +136,6 @@ test.describe('AC1: Bookmarks page lists all bookmarks', () => {
     await page.getByRole('tab', { name: /bookmarks/i }).click()
 
     const bookmarkEntries = page.getByTestId('bookmark-entry')
-    const timestamps = await bookmarkEntries.allTextContents()
 
     // bm-2 (Mar 1) should appear before bm-1 (Feb 28) which is before bm-3 (Feb 27)
     const firstText = await bookmarkEntries.nth(0).textContent()
@@ -170,9 +169,9 @@ test.describe('AC2: Click bookmark to navigate to lesson player', () => {
     const bookmarkEntries = page.getByTestId('bookmark-entry')
     await bookmarkEntries.first().click()
 
-    // Should navigate to the lesson player URL with timestamp parameter
-    await expect(page).toHaveURL(/courses\//)
-    await expect(page).toHaveURL(/t=/)
+    // Should navigate to the exact lesson player URL with timestamp parameter
+    // bm-2 (most recent) = operative-six / op6-pillars-of-influence at t=245
+    await expect(page).toHaveURL('/courses/operative-six/op6-pillars-of-influence?t=245')
   })
 })
 
@@ -182,41 +181,20 @@ test.describe('AC3: Seek bar bookmark indicators', () => {
       localStorage.setItem('eduvi-sidebar-v1', 'false')
     })
 
-    // Navigate to a lesson that has bookmarks
+    // Navigate to a lesson that has bookmarks (seedBookmarks includes bm-1 for op6-introduction)
     await navigateAndWait(page, '/courses/operative-six/op6-introduction')
-
-    // Seed a bookmark for this lesson
-    await page.evaluate(() => {
-      return new Promise<void>((resolve, reject) => {
-        const request = indexedDB.open('ElearningDB')
-        request.onsuccess = () => {
-          const db = request.result
-          if (!db.objectStoreNames.contains('bookmarks')) {
-            db.close()
-            reject(new Error('bookmarks store not found'))
-            return
-          }
-          const tx = db.transaction('bookmarks', 'readwrite')
-          const store = tx.objectStore('bookmarks')
-          store.put({
-            id: 'bm-seekbar-1',
-            courseId: 'operative-six',
-            lessonId: 'op6-introduction',
-            timestamp: 90,
-            label: '1:30',
-            createdAt: '2026-02-28T10:00:00.000Z',
-          })
-          tx.oncomplete = () => { db.close(); resolve() }
-          tx.onerror = () => { db.close(); reject(tx.error) }
-        }
-        request.onerror = () => reject(request.error)
-      })
-    })
+    await seedBookmarks(page)
     await page.reload()
 
     // Bookmark indicators should be visible on the seek bar
     const bookmarkMarkers = page.getByTestId('bookmark-marker')
     await expect(bookmarkMarkers.first()).toBeVisible()
+
+    // Marker should be positioned at a non-zero offset (not all at 0%)
+    const leftStyle = await bookmarkMarkers.first().getAttribute('style')
+    expect(leftStyle).toMatch(/left:\s*[\d.]+%/)
+    const leftValue = parseFloat(leftStyle?.match(/left:\s*([\d.]+)%/)?.[1] || '0')
+    expect(leftValue).toBeGreaterThan(0)
   })
 })
 

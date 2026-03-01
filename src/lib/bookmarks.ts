@@ -79,6 +79,13 @@ export function formatBookmarkTimestamp(seconds: number): string {
 }
 
 /**
+ * Get all bookmarks across all courses, sorted by most recently created first
+ */
+export async function getAllBookmarks(): Promise<VideoBookmark[]> {
+  return db.bookmarks.orderBy('createdAt').reverse().toArray()
+}
+
+/**
  * Get total bookmark count across all courses
  */
 export async function getTotalBookmarkCount(): Promise<number> {

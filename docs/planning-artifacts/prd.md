@@ -30,10 +30,19 @@ editHistory:
       - 'Fixed 7 SMART-flagged FRs: FR30 (notification specifics), FR32 (challenge fields), FR35 (milestone thresholds), FR42 (productive hour definition), FR46 (abandoned definition + metrics), FR49 (citation + UI surface), FR50 (ordering justification + override)'
       - 'Fixed FR ambiguity: FR40 (tag-weighted ranking), FR51 (note density threshold), FR53 (matching criteria), FR82 (retention tier ratios)'
       - 'Fixed 3 implementation leakages: FR76 (generalized key binding), NFR28 (vendor names → capability count), removed Optimization Strategies block'
-      - 'Fixed 17 NFR measurability violations: NFR2, NFR5, NFR8, NFR9, NFR13, NFR15, NFR18, NFR23, NFR24, NFR25, NFR27, NFR33, NFR37, NFR40, NFR43, NFR44, NFR53, NFR54, NFR56'
+      - 'Fixed 19 NFR measurability violations: NFR2, NFR5, NFR8, NFR9, NFR13, NFR15, NFR18, NFR23, NFR24, NFR25, NFR27, NFR33, NFR37, NFR40, NFR43, NFR44, NFR53, NFR54, NFR56'
       - 'Consolidated duplicates: NFR34 → FR85, NFR41 → NFR58'
-      - 'Added 8 traceability FRs (FR94-FR101): feature usage telemetry, Continue Learning button, onboarding prompts, proactive AI note-linking, streak milestones, import-triggered AI, per-course reminders, weekly adherence'
+      - 'Added 8 traceability FRs (FR94-FR101): feature usage telemetry, Continue Learning action, onboarding prompts, proactive AI note-linking, streak milestones, import-triggered AI, per-course reminders, weekly adherence'
       - 'Updated NFR17 to reference promoted FR95'
+    validationInput: 'docs/planning-artifacts/prd-validation-report.md'
+  - date: '2026-02-28'
+    scope: 'Critical review remediation'
+    changes:
+      - 'Fixed arithmetic: measurability count corrected from 31/37 to 37/37 (19 NFR fixes, not 17; 3 additional under Warning Fixes)'
+      - 'FR95: removed implementation leakage — "button" → "action"'
+      - 'FR99: added async model with 60s/video latency bound and progress indicator'
+      - 'FR97: defined "key terms" as nouns/noun phrases excluding stop words, cross-referenced FR53'
+      - 'Added cross-references: NFR23↔NFR62 (confirmation scope), NFR37↔NFR48 (element vs workflow level)'
     validationInput: 'docs/planning-artifacts/prd-validation-report.md'
 inputDocuments:
   - CLAUDE.md
@@ -1127,11 +1136,11 @@ Beyond the existing WCAG 2.1 AA+ target, WCAG 2.2 adds edtech-relevant criteria:
 ### Traceability Gap Closures *(Validation-driven)*
 
 - FR94: User can view feature usage statistics showing usage frequency for AI features (summaries generated, Q&A questions asked, cross-course connections viewed) over daily, weekly, and monthly periods *(closes success criteria gaps: "AI summaries used for 50%+ videos," "AI Q&A used 3x/week," "cross-course connections acted on")*
-- FR95: User can resume their last study session directly from a "Continue Learning" button on the dashboard, loading the most recent course at the last video position *(promoted from NFR17 — functional capability, not quality attribute)*
+- FR95: User can resume their last study session directly from a "Continue Learning" action on the dashboard, loading the most recent course at the last video position *(promoted from NFR17 — functional capability, not quality attribute)*
 - FR96: System can display onboarding prompts during first use guiding the user through importing a course, starting a study session, and creating a first learning challenge *(traces to Journey 1 onboarding flow)*
-- FR97: System can proactively suggest AI-generated note links when a newly saved note shares 2+ tags or key terms with existing notes across other courses, with an accept/dismiss action *(traces to Journey 2 — unprompted AI suggestions)*
+- FR97: System can proactively suggest AI-generated note links when a newly saved note shares 2+ tags or key terms (nouns/noun phrases extracted from title and body, excluding stop words — same matching criteria as FR53) with existing notes across other courses, with an accept/dismiss action *(traces to Journey 2 — unprompted AI suggestions)*
 - FR98: System can display a toast notification with streak milestone badge when the user reaches 7-day, 30-day, 60-day, and 100-day streak milestones *(traces to Journey 2 — streak celebrations distinct from challenge milestones in FR35)*
-- FR99: System can trigger AI analysis (summary generation, topic tagging) automatically when a new course is imported, with results available on next course view *(traces to Journey 4 — import-triggered AI)*
+- FR99: System can trigger AI analysis (summary generation, topic tagging) automatically when a new course is imported; processing runs asynchronously with a progress indicator, completing within 60 seconds per video, and results are available on next course view *(traces to Journey 4 — import-triggered AI)*
 - FR100: User can configure per-course study reminders with selectable days and times independent of the streak reminder in FR30 *(traces to Journey 5 — per-course scheduling)*
 - FR101: User can view weekly adherence percentage (study days / target days) on the dashboard and in analytics *(closes success criteria gap: "80%+ weekly adherence")*
 
@@ -1180,7 +1189,7 @@ Beyond the existing WCAG 2.1 AA+ target, WCAG 2.2 adds edtech-relevant criteria:
 - NFR22: Navigation between courses, videos, and notes completes in under 200ms (no visible loading spinners)
 
 **Error Prevention:**
-- NFR23: Destructive actions (delete course, clear progress) require a confirmation dialog with explicit action name before execution
+- NFR23: Destructive actions (delete course, clear progress) require a confirmation dialog with explicit action name before execution *(specific UX mechanism; see also NFR62 for broader predictability requirement)*
 - NFR24: System provides undo for the last destructive action (delete, clear) for at least 10 seconds after execution
 - NFR25: Form validation provides inline feedback on invalid input within 200ms of field blur or submit attempt
 
@@ -1206,7 +1215,7 @@ Beyond the existing WCAG 2.1 AA+ target, WCAG 2.2 adds edtech-relevant criteria:
 
 **WCAG 2.1 AA+ Compliance:**
 - NFR36: All text maintains minimum 4.5:1 contrast ratio (3:1 for large text ≥18pt)
-- NFR37: All interactive elements are reachable via Tab key and operable via Enter/Space; verified by completing all primary workflows using keyboard-only navigation
+- NFR37: All interactive elements are reachable via Tab key and operable via Enter/Space; verified by completing all primary workflows using keyboard-only navigation *(element-level compliance; see also NFR48 for workflow-level validation)*
 - NFR38: Focus indicators are visible on all interactive elements (2px outline minimum)
 - NFR39: ARIA labels are present on all icon-only buttons and complex widgets
 - NFR40: Semantic HTML elements are used for all structural and interactive roles (nav, main, section, button) — verified by automated audit reporting zero instances of clickable div or span without a role attribute
@@ -1223,7 +1232,7 @@ Beyond the existing WCAG 2.1 AA+ target, WCAG 2.2 adds edtech-relevant criteria:
 
 **Validation:**
 - NFR47: Lighthouse accessibility audits score 100 (or identify and document exceptions)
-- NFR48: All primary workflows (import, playback, note-taking, progress tracking) are completable using keyboard-only navigation without mouse interaction
+- NFR48: All primary workflows (import, playback, note-taking, progress tracking) are completable using keyboard-only navigation without mouse interaction *(workflow-level validation of NFR37)*
 - NFR49: Screen reader users (VoiceOver/NVDA) can navigate all page regions, read content, and operate interactive controls via announced labels and landmarks
 
 ### Security
@@ -1249,7 +1258,7 @@ Beyond the existing WCAG 2.1 AA+ target, WCAG 2.2 adds edtech-relevant criteria:
 - NFR59: Loaded caption files (SRT/VTT) display synchronized within 200ms of corresponding audio as measured by timestamp comparison
 - NFR60: All progress indicators use `role="progressbar"` with `aria-valuenow`, `aria-valuemin`, `aria-valuemax` attributes and include a visible text equivalent (e.g., "75% complete")
 - NFR61: Charts and data visualizations include alt text descriptions, provide a data table alternative for complex charts, and never rely on color alone as the sole differentiator (patterns, labels, or textures required)
-- NFR62: Navigation order remains consistent across all pages, all destructive actions require confirmation, and all auto-updating content (animations, live progress) is pausable or stoppable
+- NFR62: Navigation order remains consistent across all pages, all destructive actions require confirmation *(broader scope than NFR23)*, and all auto-updating content (animations, live progress) is pausable or stoppable
 
 ### Data Portability *(Domain-driven: GDPR, xAPI, Learning Records)*
 
