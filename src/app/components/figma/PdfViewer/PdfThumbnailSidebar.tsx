@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from 'react'
 import { Document, Page } from 'react-pdf'
+import { scrollIntoViewReducedMotion } from '@/lib/scroll'
 import 'react-pdf/dist/Page/TextLayer.css'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import '@/lib/pdfWorker'
@@ -101,7 +102,7 @@ export function PdfThumbnailSidebar({
     if (!container) return
     const thumb = container.querySelector(`[data-thumb-page="${page}"]`)
     if (thumb) {
-      thumb.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+      scrollIntoViewReducedMotion(thumb, { block: 'nearest', behavior: 'smooth' })
     }
   }
 

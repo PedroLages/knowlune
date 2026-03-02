@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Document, Page } from 'react-pdf'
+import { scrollIntoViewReducedMotion } from '@/lib/scroll'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 import 'react-pdf/dist/Page/TextLayer.css'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
@@ -184,7 +185,7 @@ export function PdfScrollView({
     if (el) {
       isExternalJumpRef.current = true
       lastReportedPageRef.current = currentPage
-      el.scrollIntoView({ block: 'start', behavior: 'smooth' })
+      scrollIntoViewReducedMotion(el, { block: 'start', behavior: 'smooth' })
     }
   }, [currentPage])
 

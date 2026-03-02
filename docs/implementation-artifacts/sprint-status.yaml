@@ -77,7 +77,7 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 3: Smart Note System
   # ──────────────────────────────────────────────────
-  epic-3: in-progress
+  epic-3: done
   3-0-data-layer-migration: done
   3-1-markdown-note-editor-with-autosave: done
   3-2-side-by-side-study-layout: done
@@ -88,12 +88,12 @@ development_status:
   3-7-bookmarks-page: done
   3-8-global-notes-dashboard: done
   3-9-video-frame-capture-in-notes: done
-  3-10-note-export: backlog
+  3-10-note-export: done
   3-11-rich-text-toolbar-expansion: done
   3-12-code-and-media-blocks: done
   3-13-smart-editor-ux: done
   3-14-tables: done
-  epic-3-retrospective: optional
+  epic-3-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 4: Progress Tracking & Session History

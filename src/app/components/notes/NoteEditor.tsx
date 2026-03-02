@@ -92,6 +92,7 @@ import { cn } from '@/app/components/ui/utils'
 import { formatTimestamp } from '@/lib/format'
 import { FrameCaptureExtension } from './frame-capture'
 import type { CapturedFrame } from '@/lib/frame-capture'
+import type { PatchableNodeView, NodeViewRendererProps, ViewMutationRecord } from '@/types/tiptap'
 
 const lowlight = createLowlight({ javascript, typescript, python, css, xml, bash })
 
@@ -274,14 +275,11 @@ export function NoteEditor({
         addNodeView() {
           const parentFactory = this.parent?.()
           if (!parentFactory) return parentFactory as never
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          return (props: any) => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const view = (parentFactory as any)(props)
+          return (props: NodeViewRendererProps) => {
+            const view = parentFactory(props) as PatchableNodeView
             const origIgnoreMutation = view.ignoreMutation
             // Ignore ARIA attribute mutations on child elements to prevent ProseMirror re-renders
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            view.ignoreMutation = (mutation: any) => {
+            view.ignoreMutation = (mutation: ViewMutationRecord) => {
               if (mutation.type === 'attributes' && view.dom.contains(mutation.target)) {
                 return true
               }

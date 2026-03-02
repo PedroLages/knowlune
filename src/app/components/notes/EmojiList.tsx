@@ -1,5 +1,6 @@
 import { useEffect, useImperativeHandle, useRef, useState } from 'react'
 import type { EmojiItem } from '@tiptap/extension-emoji'
+import { scrollIntoViewReducedMotion } from '@/lib/scroll'
 
 interface EmojiListProps {
   items: EmojiItem[]
@@ -23,7 +24,7 @@ export function EmojiList({ items, command, ref }: EmojiListProps) {
     const container = containerRef.current
     if (!container) return
     const selected = container.querySelector('[data-selected="true"]')
-    selected?.scrollIntoView({ block: 'nearest' })
+    if (selected) scrollIntoViewReducedMotion(selected, { block: 'nearest' })
   }, [selectedIndex])
 
   useImperativeHandle(ref, () => ({

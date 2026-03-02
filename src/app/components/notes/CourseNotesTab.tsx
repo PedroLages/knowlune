@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import { FileText, ArrowUpDown } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
@@ -110,7 +111,11 @@ export function CourseNotesTab({ courseId, modules }: CourseNotesTabProps) {
   }, [notes, lessonMap, sortMode])
 
   const handleDelete = async (noteId: string) => {
-    await deleteNote(noteId)
+    try {
+      await deleteNote(noteId)
+    } catch {
+      toast.error('Failed to delete note')
+    }
   }
 
   // Loading state

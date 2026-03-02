@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/react'
+import { scrollIntoViewReducedMotion } from '@/lib/scroll'
 import {
   Heading1,
   Heading2,
@@ -128,7 +129,7 @@ export const SlashCommandList = forwardRef<SlashCommandListRef, SlashCommandList
       const container = containerRef.current
       if (!container) return
       const selected = container.querySelector('[data-selected="true"]')
-      selected?.scrollIntoView({ block: 'nearest' })
+      if (selected) scrollIntoViewReducedMotion(selected, { block: 'nearest' })
     }, [selectedIndex])
 
     useImperativeHandle(ref, () => ({

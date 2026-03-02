@@ -95,6 +95,15 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
+    testTimeout: 10_000,
+    hookTimeout: 15_000,
+    coverage: {
+      provider: 'v8',
+      reportOnFailure: true,
+      thresholds: {
+        lines: 42,
+      },
+    },
     projects: [{
       extends: true,
       test: {
@@ -103,5 +112,41 @@ export default defineConfig({
         exclude: ['src/**/*.stories.*'],
       }
     }]
-  }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // ProseMirror core (TipTap's editing engine)
+          if (id.includes('prosemirror')) {
+            return 'prosemirror'
+          }
+          // Emoji data is the single heaviest TipTap extension
+          if (id.includes('@tiptap/extension-emoji')) {
+            return 'tiptap-emoji'
+          }
+          // Syntax highlighting (lowlight + highlight.js grammars)
+          if (id.includes('lowlight') || id.includes('highlight.js')) {
+            return 'syntax-highlight'
+          }
+          // Remaining TipTap extensions
+          if (id.includes('@tiptap/')) {
+            return 'tiptap'
+          }
+          // React core runtime
+          if (id.includes('react-dom') || (id.includes('/react/') && id.includes('node_modules'))) {
+            return 'react-vendor'
+          }
+          // Radix UI primitives (used by shadcn/ui)
+          if (id.includes('@radix-ui')) {
+            return 'radix-ui'
+          }
+          // React Router
+          if (id.includes('react-router')) {
+            return 'react-router'
+          }
+        },
+      },
+    },
+  },
 });

@@ -13,6 +13,12 @@ declare module '@tiptap/core' {
       insertFrameCapture: (attrs: FrameCaptureAttributes) => ReturnType
     }
   }
+  // Fix TS2339: tell TypeScript that editor.storage has a frameCapture key
+  interface Storage {
+    frameCapture: {
+      onSeek: ((timestamp: number) => void) | null
+    }
+  }
 }
 
 export const FrameCaptureExtension = Node.create({
@@ -39,11 +45,7 @@ export const FrameCaptureExtension = Node.create({
   },
 
   renderHTML({ HTMLAttributes }) {
-    return [
-      'figure',
-      mergeAttributes(HTMLAttributes, { 'data-type': 'frame-capture' }),
-      0,
-    ]
+    return ['figure', mergeAttributes(HTMLAttributes, { 'data-type': 'frame-capture' }), 0]
   },
 
   addNodeView() {

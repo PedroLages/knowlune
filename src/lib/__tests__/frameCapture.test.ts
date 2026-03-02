@@ -6,11 +6,11 @@ import Dexie from 'dexie'
 let db: Awaited<typeof import('@/db/schema')>['db']
 
 // Re-import module under test after fresh DB
-let saveFrameCapture: typeof import('@/lib/frame-capture')['saveFrameCapture']
-let getFrameThumbnailUrl: typeof import('@/lib/frame-capture')['getFrameThumbnailUrl']
-let getScreenshot: typeof import('@/lib/frame-capture')['getScreenshot']
-let captureVideoFrame: typeof import('@/lib/frame-capture')['captureVideoFrame']
-let formatFrameTimestamp: typeof import('@/lib/frame-capture')['formatFrameTimestamp']
+let saveFrameCapture: (typeof import('@/lib/frame-capture'))['saveFrameCapture']
+let getFrameThumbnailUrl: (typeof import('@/lib/frame-capture'))['getFrameThumbnailUrl']
+let getScreenshot: (typeof import('@/lib/frame-capture'))['getScreenshot']
+let captureVideoFrame: (typeof import('@/lib/frame-capture'))['captureVideoFrame']
+let formatFrameTimestamp: (typeof import('@/lib/frame-capture'))['formatFrameTimestamp']
 
 beforeEach(async () => {
   await Dexie.delete('ElearningDB')
@@ -96,9 +96,7 @@ describe('saveFrameCapture', () => {
     const genericError = new Error('Network failure')
     vi.spyOn(db.screenshots, 'add').mockRejectedValueOnce(genericError)
 
-    await expect(saveFrameCapture('c', 'l', 0, blob, thumbnail)).rejects.toThrow(
-      'Network failure'
-    )
+    await expect(saveFrameCapture('c', 'l', 0, blob, thumbnail)).rejects.toThrow('Network failure')
   })
 })
 
@@ -122,9 +120,7 @@ describe('getFrameThumbnailUrl', () => {
       createdAt: new Date().toISOString(),
     })
 
-    const createObjectURLSpy = vi
-      .spyOn(URL, 'createObjectURL')
-      .mockReturnValue('blob:mock-url')
+    const createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url')
 
     const url = await getFrameThumbnailUrl('ss-1')
     expect(url).toBe('blob:mock-url')
@@ -170,7 +166,7 @@ describe('captureVideoFrame', () => {
     const canvas = {
       width: 0,
       height: 0,
-      getContext: vi.fn(() => ctx),
+      getContext: vi.fn((): typeof ctx | null => ctx),
       toBlob: vi.fn(),
     }
     return { canvas, ctx }

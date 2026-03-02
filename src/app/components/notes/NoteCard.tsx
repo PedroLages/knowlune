@@ -91,9 +91,17 @@ export function NoteCard({ note, courseId, onDelete }: NoteCardProps) {
   }
 
   return (
-    <div className="bg-card rounded-[24px] border p-4 transition-shadow hover:shadow-sm">
-      {/* Card header — click anywhere to toggle (mouse), use chevron button for keyboard */}
-      <div className="flex items-start justify-between gap-3 cursor-pointer" onClick={toggleExpand}>
+    <div className="relative bg-card rounded-[24px] border p-4 transition-shadow hover:shadow-sm">
+      {/* Card header */}
+      <div className="relative flex items-start justify-between gap-3">
+        {/* Overlay button for click-to-expand — sits behind interactive children */}
+        <button
+          type="button"
+          className="absolute inset-0 z-0 cursor-pointer"
+          onClick={toggleExpand}
+          aria-label={viewState === 'collapsed' ? 'Expand note' : 'Collapse note'}
+          tabIndex={0}
+        />
         <div className="flex-1 min-w-0">
           <p className="text-sm text-foreground line-clamp-2">{snippet}</p>
           <div className="flex flex-wrap items-center gap-2 mt-2">
@@ -105,8 +113,7 @@ export function NoteCard({ note, courseId, onDelete }: NoteCardProps) {
             {note.timestamp != null && (
               <Link
                 to={`/courses/${courseId}/${note.videoId}?t=${note.timestamp}&panel=notes`}
-                className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
-                onClick={e => e.stopPropagation()}
+                className="relative z-10 inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
               >
                 <Clock className="size-3" />
                 {formatTimestamp(note.timestamp)}
@@ -120,13 +127,10 @@ export function NoteCard({ note, courseId, onDelete }: NoteCardProps) {
 
         <button
           type="button"
-          className="shrink-0 inline-flex items-center justify-center size-11 rounded-md hover:bg-accent transition-colors"
+          className="relative z-10 shrink-0 inline-flex items-center justify-center size-11 rounded-md hover:bg-accent transition-colors"
           aria-expanded={viewState !== 'collapsed'}
           aria-label={viewState === 'collapsed' ? 'Expand note' : 'Collapse note'}
-          onClick={e => {
-            e.stopPropagation()
-            toggleExpand()
-          }}
+          onClick={toggleExpand}
         >
           {viewState === 'collapsed' ? (
             <ChevronDown aria-hidden="true" className="size-4" />

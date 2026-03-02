@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import type { TranscriptCue } from '@/data/types'
 import { cn } from '@/app/components/ui/utils'
+import { scrollIntoViewReducedMotion } from '@/lib/scroll'
 
 // ---------------------------------------------------------------------------
 // VTT parser (inline, no dependency)
@@ -90,7 +91,7 @@ export function TranscriptPanel({ src, currentTime, onSeek }: TranscriptPanelPro
   // Auto-scroll active cue into view
   useEffect(() => {
     if (activeCueRef.current) {
-      activeCueRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      scrollIntoViewReducedMotion(activeCueRef.current, { behavior: 'smooth', block: 'nearest' })
     }
   }, [activeCue])
 
