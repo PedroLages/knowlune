@@ -143,3 +143,7 @@ See [plan](../../.claude/plans/robust-noodling-sedgewick.md) for implementation 
 
 - The ATDD tests were originally written to seed dynamic courses via IndexedDB, but the `/courses/:courseId` route uses static `allCourses` data — updated tests to use existing `6mx` course
 - The `completedLessons` prop on ModuleAccordion is kept for backward compatibility (prefixed `_completedLessons`) since LessonPlayer still passes it; the Zustand store is now the source of truth
+- **Nested interactive elements**: Code review caught a `<button>` inside `AccordionTrigger` (also a button). Fixed by adding a `mode="display"` prop to StatusIndicator that renders a `<span>` for read-only contexts. Pattern worth reusing for any indicator inside an accordion header.
+- **Dexie transactions matter for atomicity**: Multiple `db.contentProgress.put()` calls without a transaction can leave partial writes. Wrapping in `db.transaction('rw', table, ...)` is essential when AC says "atomic." This was the top blocker from code review.
+- **Zustand selector discipline**: Calling `useStore()` without a selector subscribes to the entire store. Always use `useStore(state => state.field)` to avoid unnecessary re-renders — especially in list components like ModuleAccordion.
+- **E2E timeouts on cold start**: First Playwright run after build timed out on `page.goto` (30s) due to dev server cold start. Retries passed immediately. Consider a warmup request in `globalSetup` if this recurs.
