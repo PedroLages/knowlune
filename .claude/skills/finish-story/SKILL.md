@@ -132,13 +132,71 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
 
     Print the PR URL.
 
-12. **Lessons learned** (optional): Ask the developer via AskUserQuestion with these options:
+12. **Check PR merge status**: Ask the developer via AskUserQuestion:
+
+    ```
+    Has the PR been merged?
+
+    [Yes] - Cleanup worktree and complete story
+    [No]  - Keep worktree for additional changes
+    ```
+
+13a. **If PR NOT merged**:
+    - Inform the user:
+      ```
+      👍 Keeping worktree active.
+
+      You can:
+      • Make additional changes and commit them
+      • Run /finish-story again after PR is merged
+      • Or manually cleanup: worktree-cleanup {story-key-lower}
+
+      [If in worktree, show:]
+      Worktree location: {worktree-path}
+      ```
+    - **STOP here**. Exit workflow. User will re-run `/finish-story` after merge.
+
+13b. **If PR IS merged** (cleanup if in worktree):
+    - Detect if running in a worktree: Check if `$(git rev-parse --show-toplevel)` contains `-worktrees/`.
+    - **If in worktree**:
+      - Extract story key: `STORY_KEY=$(basename $(pwd))`
+      - Save current worktree path: `WORKTREE_PATH=$(pwd)`
+      - Switch to main workspace:
+        ```bash
+        PROJECT_NAME=$(git remote get-url origin | sed 's/.*\///' | sed 's/.git$//')
+        MAIN_WORKSPACE=$(dirname "$(git rev-parse --show-toplevel)" | sed 's/-worktrees$//')
+        cd "$MAIN_WORKSPACE"
+        ```
+      - Clean up worktree:
+        ```bash
+        worktree-cleanup "${STORY_KEY}"
+        ```
+      - Checkout main and pull:
+        ```bash
+        git checkout main
+        git pull
+        ```
+      - Inform user:
+        ```
+        ✅ Worktree cleanup complete!
+        📂 You're now in main workspace
+        🌿 On branch: main
+        ```
+    - **If NOT in worktree**:
+      - Just switch to main and pull:
+        ```bash
+        git checkout main
+        git pull
+        ```
+    - Continue to step 14.
+
+14. **Lessons learned** (optional): Ask the developer via AskUserQuestion with these options:
 
     - **"Claude, write them"** — Auto-generate lessons learned by analyzing the story's git log, review reports, and any blocker/fix cycles encountered during implementation. Write concise, actionable bullets covering: patterns discovered, pitfalls avoided, decisions made and why. Append to the story's "Challenges and Lessons Learned" section.
     - **"Yes, let me share"** — Wait for the developer to provide lessons, then append them.
     - **"Skip"** — No lessons to capture. Continue.
 
-13. **Completion output**: Display the following summary to the user.
+15. **Completion output**: Display the following summary to the user.
 
     **Preparation** (not shown to user): Read the story file's acceptance criteria, tasks, and the git diff for the branch to understand what was delivered.
 
@@ -187,6 +245,7 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
 
     - Mode: Comprehensive / Streamlined
     - Branch: `feature/e##-s##-slug`
+    - Worktree: [Cleaned up / Main workspace]
     - Reports: `docs/reviews/design/` + `docs/reviews/code/`
 
     </details>
@@ -216,6 +275,8 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
 - **Step 4a/4b fail** (inline review): Story stays `reviewed: in-progress` with `review_gates_passed` tracking progress. Re-run `/finish-story` resumes — pre-checks re-run, completed agent reviews are skipped.
 - **Step 9 fail** (push): Check `git remote -v`, fix remote config, re-run.
 - **Step 10 fail** (PR): Check `gh auth status`, authenticate if needed, re-run.
+- **Step 12 (PR not merged yet)**: Re-run `/finish-story` after merge. Worktree stays active for additional changes.
+- **Step 13b fail** (worktree cleanup): If `worktree-cleanup` fails, manually remove: `git worktree remove {path} && git branch -D {branch}`.
 
 ## Common Mistakes
 
