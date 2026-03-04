@@ -167,6 +167,11 @@ When invoked with a story ID (e.g., `E01-S03`):
     ### Next Steps
 
     1. **Implement the story** (new session recommended):
+       [If worktree was used:]
+       ```
+       Implement E##-S## in worktree ${PROJECT_NAME}-worktrees/${STORY_KEY_LOWER} following the plan at docs/implementation-artifacts/plans/{plan-filename}.md
+       ```
+       [If no worktree:]
        ```
        Implement E##-S## following the plan at docs/implementation-artifacts/plans/{plan-filename}.md
        ```
