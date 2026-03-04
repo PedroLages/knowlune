@@ -102,7 +102,7 @@ development_status:
   4-1-mark-content-completion-status: done
   4-2-course-completion-percentage: done
   4-3-automatic-study-session-logging: done
-  4-4-view-study-session-history: backlog
+  4-4-view-study-session-history: done
   4-5-continue-learning-dashboard-action: backlog
   epic-4-retrospective: optional
 
