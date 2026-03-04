@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router'
-import { BookOpen, CheckCircle, FileText } from 'lucide-react'
+import { BookOpen, CheckCircle, FileText, Clock } from 'lucide-react'
+import { useSessionStore } from '@/stores/useSessionStore'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Progress } from '@/app/components/ui/progress'
 import { Skeleton } from '@/app/components/ui/skeleton'
@@ -50,6 +51,17 @@ export function Overview() {
   useEffect(() => {
     getTotalStudyNotes().then(setStudyNotes)
   }, [])
+
+  // Load session stats for Total Study Time
+  const { loadSessionStats, getTotalStudyTime } = useSessionStore()
+
+  useEffect(() => {
+    loadSessionStats()
+  }, [loadSessionStats])
+
+  const totalStudyTimeSeconds = getTotalStudyTime()
+  const totalStudyTimeHours = Math.round((totalStudyTimeSeconds / 3600) * 10) / 10
+
   const recentActivity = getRecentActivity(allCourses, 5)
   const lessonSparkline = getLast7DaysLessonCompletions()
   const lessonsChange = getWeeklyChange('lessons')
@@ -78,6 +90,12 @@ export function Overview() {
       trend: lessonsChange >= 0 ? ('up' as const) : ('down' as const),
       trendValue: `${Math.abs(lessonsChange)} this week`,
       sparkline: lessonSparkline,
+    },
+    {
+      label: 'Total Study Time',
+      value: `${totalStudyTimeHours}h`,
+      icon: Clock,
+      testId: 'total-study-time',
     },
     {
       label: 'Study Notes',

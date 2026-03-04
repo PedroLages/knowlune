@@ -9,6 +9,7 @@ interface StatsCardProps {
   trend?: 'up' | 'down'
   trendValue?: string
   sparkline?: number[] // Last 7 days data
+  testId?: string // Optional test ID for targeted E2E testing
 }
 
 export function StatsCard({
@@ -18,6 +19,7 @@ export function StatsCard({
   trend,
   trendValue,
   sparkline,
+  testId,
 }: StatsCardProps) {
   return (
     <Card className="hover:shadow-xl transition-shadow duration-300 overflow-hidden group">
@@ -25,7 +27,7 @@ export function StatsCard({
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <p className="text-sm text-muted-foreground mb-1">{label}</p>
-            <p data-testid="stat-value" className="text-3xl font-bold">
+            <p data-testid={testId || "stat-value"} className="text-3xl font-bold">
               {value}
             </p>
 

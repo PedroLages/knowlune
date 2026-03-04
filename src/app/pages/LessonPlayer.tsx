@@ -29,7 +29,9 @@ import { cn } from '../components/ui/utils'
 import { ScrollArea } from '../components/ui/scroll-area'
 import { useIntersectionObserver } from '@/app/hooks/useIntersectionObserver'
 import { useIsDesktop, useIsTablet, useIsMobile } from '@/app/hooks/useMediaQuery'
+import { useIdleDetection } from '@/app/hooks/useIdleDetection'
 import { usePanelRef } from 'react-resizable-panels'
+import { useSessionStore } from '@/stores/useSessionStore'
 import { TranscriptPanel } from '../components/figma/TranscriptPanel'
 import { PdfViewer } from '../components/figma/PdfViewer'
 import { ModuleAccordion } from '../components/figma/ModuleAccordion'
@@ -70,6 +72,16 @@ export function LessonPlayer() {
   const isTablet = useIsTablet()
   const isMobile = useIsMobile()
 
+  // Session tracking
+  const {
+    startSession,
+    updateLastActivity,
+    pauseSession,
+    resumeSession,
+    endSession,
+    heartbeat,
+  } = useSessionStore()
+
   const course = allCourses.find(c => c.id === courseId)
 
   const { lesson, allLessons, currentIndex } = (() => {
@@ -92,6 +104,13 @@ export function LessonPlayer() {
 
   const [seekToTime, setSeekToTime] = useState<number | undefined>(undefined)
   const [bookmarks, setBookmarks] = useState<import('@/data/types').VideoBookmark[]>([])
+
+  // Idle detection for session tracking
+  useIdleDetection({
+    onIdle: () => pauseSession(),
+    onActive: () => resumeSession(),
+    onActivity: () => updateLastActivity(),
+  })
 
   // Seek to timestamp from ?t= query param (used by note timestamp links)
   useEffect(() => {
@@ -242,6 +261,48 @@ export function LessonPlayer() {
   useEffect(() => {
     titleRef.current?.focus({ preventScroll: true })
   }, [lessonId])
+
+  // AC1: Start session when content loads
+  useEffect(() => {
+    if (!courseId || !lessonId) return
+
+    const sessionType = videoResource ? 'video' : primaryPdf ? 'pdf' : 'mixed'
+    startSession(courseId, lessonId, sessionType)
+
+    // Note: No cleanup needed - endSession handled by visibility/unload handlers
+  }, [courseId, lessonId, startSession, videoResource, primaryPdf])
+
+  // AC2: End session on navigation away / tab hidden
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        endSession()
+      }
+    }
+
+    const handleBeforeUnload = () => {
+      endSession()
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener('pagehide', handleBeforeUnload)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('pagehide', handleBeforeUnload)
+    }
+  }, [endSession])
+
+  // Periodic heartbeat: persist session state every 30s (ensures orphan recovery has recent data)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      heartbeat()
+    }, 30000)  // 30 seconds
+
+    return () => clearInterval(interval)
+  }, [heartbeat])
 
   // Resume toast — show "Resuming from MM:SS" when restoring a saved position
   const hasShownResumeToast = useRef(false)

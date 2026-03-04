@@ -4,6 +4,8 @@ import { ArrowLeft, FileWarning, FolderSearch } from 'lucide-react'
 import { db } from '@/db/schema'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useVideoFromHandle } from '@/hooks/useVideoFromHandle'
+import { useIdleDetection } from '@/app/hooks/useIdleDetection'
+import { useSessionStore } from '@/stores/useSessionStore'
 import { VideoPlayer } from '@/app/components/figma/VideoPlayer'
 import { Button } from '@/app/components/ui/button'
 import type { ImportedVideo } from '@/data/types'
@@ -13,6 +15,23 @@ export function ImportedLessonPlayer() {
 
   const importedCourses = useCourseImportStore(state => state.importedCourses)
   const course = importedCourses.find(c => c.id === courseId)
+
+  // Session tracking (AC1, AC2, AC3)
+  const {
+    startSession,
+    updateLastActivity,
+    pauseSession,
+    resumeSession,
+    endSession,
+    heartbeat,
+  } = useSessionStore()
+
+  // Idle detection (AC3)
+  useIdleDetection({
+    onIdle: () => pauseSession(),
+    onActive: () => resumeSession(),
+    onActivity: () => updateLastActivity(),
+  })
 
   const [video, setVideo] = useState<ImportedVideo | null | undefined>(undefined)
 
@@ -25,6 +44,48 @@ export function ImportedLessonPlayer() {
   }, [lessonId])
 
   const { blobUrl, error, loading } = useVideoFromHandle(video?.fileHandle)
+
+  // AC1: Start session when lesson player mounts
+  useEffect(() => {
+    if (!courseId || !lessonId) return
+
+    // Start session (always 'video' type for ImportedLessonPlayer)
+    startSession(courseId, lessonId, 'video')
+
+    // Note: No cleanup needed - endSession handled by visibility/unload handlers
+  }, [courseId, lessonId, startSession])
+
+  // AC2: End session on navigation away / tab hidden
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        endSession()
+      }
+    }
+
+    const handleBeforeUnload = () => {
+      endSession()
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener('pagehide', handleBeforeUnload)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('pagehide', handleBeforeUnload)
+    }
+  }, [endSession])
+
+  // Periodic heartbeat: persist session state every 30s (ensures orphan recovery has recent data)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      heartbeat()
+    }, 30000)  // 30 seconds
+
+    return () => clearInterval(interval)
+  }, [heartbeat])
 
   async function handleLocateFile() {
     try {
