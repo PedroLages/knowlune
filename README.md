@@ -8,6 +8,25 @@ Run `npm i` to install the dependencies.
 
 Run `npm run dev` to start the development server.
 
+## Project Structure
+
+```
+src/               # Application source code
+docs/              # Documentation
+  ├── analysis/    # Analysis and research documents
+  ├── api/         # API documentation
+  ├── docker/      # Docker setup guides
+  ├── implementation-artifacts/  # Story files, sprint tracking
+  ├── planning-artifacts/        # Product and epic planning
+  ├── plans/       # Implementation plans
+  ├── reviews/     # Code and design review reports
+  └── research/    # Technical research
+scripts/           # Build and utility scripts
+tests/             # Test suites (E2E, unit, visual)
+.claude/           # Claude Code agent configurations
+_bmad/             # BMAD workflow definitions
+```
+
 ## CI/CD Pipeline
 
 This project includes a comprehensive CI/CD pipeline for automated testing, linting, and building. The pipeline can be run locally or in Docker containers, and is integrated with GitHub Actions for automatic PR checks.
@@ -221,6 +240,9 @@ make format
 ### Further Reading
 
 - [Testing Guide](TESTING.md) - Comprehensive guide to running and interpreting all test suites
+- [Docker Setup Guide](docs/docker/docker-setup-guide.md) - Running the app in Docker containers
+- [Docker Quickstart](docs/docker/quickstart.md) - Quick Docker setup instructions
+- [API Quickstart](docs/api/quickstart.md) - API documentation and testing
 - [GitHub Actions Documentation](.github/workflows/ci.yml)
 - [Docker Compose CI Configuration](docker-compose.ci.yml)
 - [Playwright Configuration](playwright.config.ts)

@@ -50,6 +50,23 @@ src/
     ├── tailwind.css            # Tailwind v4 configuration
     ├── theme.css               # CSS custom properties for theming
     └── fonts.css               # Font definitions
+
+docs/
+├── analysis/                   # Analysis documents
+├── api/                        # API documentation and Mockoon data
+├── docker/                     # Docker setup guides
+├── implementation-artifacts/   # Story files, sprint tracking
+├── planning-artifacts/         # Product briefs, epics, planning docs
+├── plans/                      # Implementation plans
+├── reviews/                    # Design and code review reports
+│   ├── design/                 # Design review reports
+│   └── code/                   # Code review reports
+└── research/                   # Technical research
+
+scripts/                        # Build and utility scripts
+├── check-bundle-size.sh
+├── wait-for-server.sh
+└── worktree-*.sh              # Git worktree management
 ```
 
 ### Import Alias

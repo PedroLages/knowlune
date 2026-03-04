@@ -32,6 +32,7 @@
 - [Architecture](./planning-artifacts/architecture.md) - Architecture decisions and design
 - [Epics & Stories](./planning-artifacts/epics.md) - Implementation backlog (8 epics, 43 stories)
 - [UX Design Specification](./planning-artifacts/ux-design-specification.md) - UX patterns and design spec
+- [Integration Strategy](./planning-artifacts/integration-strategy.md) - Integration approach
 - [Implementation Readiness Report](./planning-artifacts/implementation-readiness-report-2026-02-15.md) - Pre-implementation validation
 - [Epic 4 Review](./planning-artifacts/epic-4-review-2026-02-14.md) - Epic 4 adversarial review
 - [Epic 5 Review](./planning-artifacts/epic-5-review-2026-02-14.md) - Epic 5 adversarial review
@@ -57,6 +58,8 @@
 
 ## Analysis & Research
 
+- [Overview Page Analysis](./analysis/overview-page-analysis.md) - Overview page UI/UX analysis
+- [Overview Improvement Plan](./planning-artifacts/overview-improvement-plan.md) - Overview page improvement roadmap
 - [Brainstorming Session](./analysis/brainstorming-session-2026-02-14.md) - Feature brainstorming
 - [Phase 5 Summary](./PHASE_5_SUMMARY.md) - Phase 5 completion summary
 - [Test Review](./test-review.md) - Test quality review
@@ -65,11 +68,17 @@
 
 - [README](../README.md) - Project README
 - [CLAUDE.md](../CLAUDE.md) - Claude Code development instructions
-- [Docker Guide](../DOCKER.md) - Full Docker documentation
-- [Docker Quickstart](../DOCKER_QUICKSTART.md) - Docker quick start
-- [Quickstart API](../QUICKSTART_API.md) - Mock API quickstart
-- [Integration Strategy](../INTEGRATION_STRATEGY.md) - Integration approach
 - [Attributions](../ATTRIBUTIONS.md) - Image credits
+
+## Docker Documentation
+
+- [Docker Setup Guide](./docker/docker-setup-guide.md) - Full Docker documentation
+- [Docker Quickstart](./docker/quickstart.md) - Docker quick start
+
+## API Documentation
+
+- [API Quickstart](./api/quickstart.md) - Mock API quickstart
+- [Mockoon Data](./api/mockoon-data.json) - Mockoon configuration
 
 ## Design System Reference
 
