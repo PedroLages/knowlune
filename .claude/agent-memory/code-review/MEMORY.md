@@ -165,12 +165,26 @@
 - NEW: `findCourseAndLesson` return type not explicitly declared -- TypeScript infers it but inconsistent with codebase conventions
 - Unit tests added for `getAllBookmarks()` (3 tests) -- good coverage of empty, sort order, and cross-course scenarios
 
+### E04-S02: Course Completion Percentage
+- BLOCKER (RECURRING x7): ENTIRE implementation (progress.tsx, CourseCard.tsx, CourseDetail.tsx) + E2E test fixes exist ONLY in working tree. Committed branch has only story doc, sprint-status, and original E2E spec.
+- `value` prop destructured from Progress component but `normalizedValue` NOT passed back to Radix `<ProgressPrimitive.Root>` as `value` -- Radix sees `value=null`, sets `data-state="indeterminate"` instead of "loading"/"complete"
+- Radix `ProgressPrimitive.Root` already sets `role="progressbar"`, `aria-valuemin`, `aria-valuemax`, `aria-valuenow` internally -- component duplicates all of them (redundant, though no functional harm since spread order means component props override Radix's)
+- Library variant completion badge uses hardcoded `bg-green-600 text-white` instead of `bg-success text-success-foreground` theme tokens (inconsistent with overview/progress variants which use theme tokens)
+- CourseDetail uses hardcoded `text-green-600` for completion badge (no dark mode adaptation via `--success` token)
+- `duration-500 ease-out` animation on progress bar has NO `prefers-reduced-motion` guard (AC2 mentions "animates smoothly" but story notes say "respects motion preferences" -- not actually implemented)
+- `w-3 h-3` / `w-4 h-4` / `w-6 h-6` used instead of `size-*` Tailwind v4 shorthand in new completion badge icons (recurring since E02-S05)
+- AC2 E2E test is entirely conditional (`if (await contentItem.count() > 0)`) -- no content-status UI exists, so test body never executes, providing zero coverage
+- AC3 E2E test also conditional (`if (await progressBar.count() > 0)`) -- if no progressbar found in first card, test passes vacuously
+- AC4 E2E test loops through cards looking for 100% -- if none exist, passes vacuously with no assertions
+- No unit tests for Progress component (value normalization, showLabel, labelFormat)
+
 ## Recurring Anti-Pattern: Uncommitted Fixes
 - E03-S02: Blocker fixes (focus trap, ARIA attrs) existed only in working tree
 - E03-S03: `urlTransform` override for video:// protocol existed only in working tree
 - E03-S05: 6+ fixes existed only in working tree
 - E03-S07 (Round 1): ENTIRE IMPLEMENTATION existed only in working tree
 - E03-S07 (Round 2): ALL implementation + Round 1 fixes + unit tests STILL only in working tree (6th consecutive occurrence)
+- E04-S02: ENTIRE implementation (progress.tsx, CourseCard.tsx, CourseDetail.tsx) exists only in working tree (7th consecutive occurrence)
 - Root cause: Implementation code applied locally but never committed before review/shipping
 
 ## Silent Failure Patterns to Watch

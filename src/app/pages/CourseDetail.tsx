@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router'
-import { Clock, Video, FileText, BookOpen, Play } from 'lucide-react'
+import { Clock, Video, FileText, BookOpen, Play, CheckCircle } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import {
@@ -106,8 +106,15 @@ export function CourseDetail() {
           {/* Progress sidebar */}
           <div className="w-full lg:w-64 bg-muted rounded-2xl p-5">
             <h3 className="font-semibold text-sm mb-3">Your Progress</h3>
-            <div className="text-3xl font-bold text-brand mb-1">{completionPercent}%</div>
-            <Progress value={completionPercent} className="mb-3" />
+            {completionPercent === 100 ? (
+              <div className="flex items-center gap-2 mb-3">
+                <CheckCircle className="size-6 text-success" data-testid="completion-badge" />
+                <div className="text-2xl font-bold text-success">Complete!</div>
+              </div>
+            ) : (
+              <div className="text-3xl font-bold text-brand mb-1">{completionPercent}%</div>
+            )}
+            <Progress value={completionPercent} showLabel className="mb-3" />
             <p className="text-xs text-muted-foreground">
               {progress.completedLessons.length} of {course.totalLessons} lessons completed
             </p>

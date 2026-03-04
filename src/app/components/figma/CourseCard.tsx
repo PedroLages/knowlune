@@ -219,15 +219,7 @@ export function CourseCard({
       )}
 
       {completionPercent > 0 && (
-        <div className="flex items-center gap-2">
-          <div className="flex-1 bg-muted rounded-full h-1.5">
-            <div
-              className="bg-brand h-1.5 rounded-full"
-              style={{ width: `${completionPercent}%` }}
-            />
-          </div>
-          <span className="text-xs text-muted-foreground">{completionPercent}%</span>
-        </div>
+        <Progress value={completionPercent} showLabel className="h-1.5" />
       )}
 
       <Button
@@ -273,11 +265,16 @@ export function CourseCard({
       case 'library':
         return (
           <>
-            {completionPercent > 0 && (
+            {completionPercent === 100 ? (
+              <div className="absolute top-3 right-3 bg-success text-success-foreground rounded-full px-3 py-1 text-xs font-bold shadow-lg flex items-center gap-1" data-testid="completion-badge">
+                <CheckCircle className="size-3" />
+                Complete
+              </div>
+            ) : completionPercent > 0 ? (
               <div className="absolute top-3 right-3">
                 <ProgressRing percent={completionPercent} size={40} strokeWidth={3} />
               </div>
-            )}
+            ) : null}
             <Badge
               className={`absolute top-3 left-3 border-0 text-xs ${categoryColors[course.category]}`}
             >
@@ -295,7 +292,7 @@ export function CourseCard({
             )}
             {isCompleted && (
               <div className="absolute top-2 right-2 bg-success text-success-foreground rounded-full px-3 py-1 text-xs font-bold shadow-lg flex items-center gap-1">
-                <CheckCircle className="w-3 h-3" />
+                <CheckCircle className="size-3" />
                 Completed
               </div>
             )}
@@ -314,7 +311,7 @@ export function CourseCard({
                 role="status"
                 aria-label="Course completed"
               >
-                <CheckCircle className="w-4 h-4" aria-hidden="true" />
+                <CheckCircle className="size-4" aria-hidden="true" />
               </div>
             )}
           </>
@@ -461,7 +458,7 @@ export function CourseCard({
             <h3 className="font-semibold text-base mb-3 group-hover:text-brand transition-colors line-clamp-2">
               {course.title}
             </h3>
-            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-auto">
+            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-auto mb-3">
               <span className="flex items-center gap-1">
                 <Video className="h-3.5 w-3.5" aria-hidden="true" />
                 {course.totalVideos} videos
@@ -475,6 +472,7 @@ export function CourseCard({
                 {course.estimatedHours}h
               </span>
             </div>
+            <Progress value={completionPercent} showLabel className="h-1.5" />
           </div>
         )
 
@@ -497,7 +495,7 @@ export function CourseCard({
               </span>
               {isInProgress && (
                 <span className="flex items-center gap-1 text-brand font-medium">
-                  <Clock className="w-3 h-3" />
+                  <Clock className="size-3" />
                   In Progress
                 </span>
               )}
@@ -507,7 +505,13 @@ export function CourseCard({
             </div>
             {isInProgress && (
               <div className="mt-3">
-                <Progress value={completionPercent} className="h-1.5" />
+                <Progress value={completionPercent} showLabel className="h-1.5" />
+              </div>
+            )}
+            {isCompleted && (
+              <div className="mt-3 flex items-center gap-2 text-sm text-success font-medium">
+                <CheckCircle className="size-4" />
+                Completed
               </div>
             )}
           </div>
@@ -558,14 +562,7 @@ export function CourseCard({
 
               {status === 'in-progress' && (
                 <>
-                  <div className="flex items-center gap-2">
-                    <Progress
-                      value={completionPercent}
-                      className="h-2 flex-1"
-                      aria-label={`${course.title}: ${completionPercent}% complete`}
-                    />
-                    <span className="text-sm font-medium">{completionPercent}%</span>
-                  </div>
+                  <Progress value={completionPercent} showLabel className="h-2" />
                   {lastAccessedAt && (
                     <span className="text-xs text-muted-foreground">
                       {formatRelativeTime(lastAccessedAt)}
