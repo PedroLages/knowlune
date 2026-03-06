@@ -1,24 +1,26 @@
+import { useEffect, useRef } from 'react'
 import { Card, CardContent } from '@/app/components/ui/card'
-import { Progress } from '@/app/components/ui/progress'
-import { Trophy, Target } from 'lucide-react'
+import { Trophy } from 'lucide-react'
+import confetti from 'canvas-confetti'
 
 interface AchievementBannerProps {
   completedLessons: number
 }
+
+const milestones = [10, 25, 50, 100, 250, 500]
 
 function getNextMilestone(completed: number): {
   next: number
   remaining: number
   message: string
 } {
-  const milestones = [10, 25, 50, 100, 250, 500]
   const next = milestones.find(m => m > completed)
 
   if (!next) {
     return {
       next: 0,
       remaining: 0,
-      message: "You're a legend! 🏆",
+      message: "You're a legend!",
     }
   }
 
@@ -26,53 +28,93 @@ function getNextMilestone(completed: number): {
   return {
     next,
     remaining,
-    message: `${remaining} more to reach ${next} lessons!`,
+    message: `${remaining} more to reach ${next}!`,
   }
 }
 
 export function AchievementBanner({ completedLessons }: AchievementBannerProps) {
+  const prevMilestoneRef = useRef<number | null>(null)
+
+  // Fire confetti when crossing a milestone
+  useEffect(() => {
+    if (completedLessons === 0) return
+
+    const currentMilestoneIndex = milestones.findIndex(m => m > completedLessons)
+    const reachedMilestoneIndex = currentMilestoneIndex - 1
+
+    if (
+      prevMilestoneRef.current !== null &&
+      reachedMilestoneIndex >= 0 &&
+      reachedMilestoneIndex > prevMilestoneRef.current
+    ) {
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      if (!prefersReducedMotion) {
+        confetti({
+          particleCount: 80,
+          spread: 60,
+          origin: { y: 0.7 },
+          colors: ['#f59e0b', '#d97706', '#fbbf24', '#2563eb'],
+        })
+      }
+    }
+    prevMilestoneRef.current = reachedMilestoneIndex
+  }, [completedLessons])
+
   if (completedLessons === 0) return null
 
   const milestone = getNextMilestone(completedLessons)
   const progress = milestone.next ? (completedLessons / milestone.next) * 100 : 100
 
-  return (
-    <Card className="mb-8 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/30 dark:via-indigo-950/30 dark:to-purple-950/30 border-2 border-blue-200 dark:border-blue-800">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <Target className="w-5 h-5 text-brand" />
-              <h2 className="text-lg font-bold">Keep Going!</h2>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              You've completed <span className="font-bold text-brand">{completedLessons}</span>{' '}
-              {completedLessons === 1 ? 'lesson' : 'lessons'}.
-            </p>
-            <p className="text-sm font-medium text-blue-700 dark:text-blue-400 mt-1">
-              {milestone.message}
-            </p>
+  // SVG progress ring
+  const size = 52
+  const strokeWidth = 4
+  const radius = (size - strokeWidth) / 2
+  const circumference = 2 * Math.PI * radius
+  const offset = circumference - (Math.min(100, progress) / 100) * circumference
 
-            {/* Progress bar to next milestone */}
-            {milestone.next > 0 && (
-              <div className="mt-3">
-                <div className="flex items-center justify-between text-xs mb-1">
-                  <span className="text-muted-foreground">Progress to {milestone.next}</span>
-                  <span className="font-semibold text-brand">
-                    {Math.min(100, Math.round(progress))}%
-                  </span>
-                </div>
-                <Progress
-                  value={Math.min(100, progress)}
-                  className="bg-blue-100 dark:bg-blue-900/30 [&_[data-slot=progress-indicator]]:bg-gradient-to-r [&_[data-slot=progress-indicator]]:from-blue-500 [&_[data-slot=progress-indicator]]:to-purple-500 [&_[data-slot=progress-indicator]]:duration-500"
-                />
-              </div>
-            )}
+  return (
+    <Card className="rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-200/50 dark:border-amber-800/30 shadow-studio-gold overflow-hidden min-w-[200px]">
+      {/* Gold accent line */}
+      <div className="h-1 bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400" />
+
+      <CardContent className="p-4">
+        <div className="flex items-center gap-4">
+          {/* Circular progress ring */}
+          <div className="relative flex-shrink-0">
+            <svg width={size} height={size} className="rotate-[-90deg]" aria-hidden="true">
+              <circle
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={strokeWidth}
+                className="text-amber-200 dark:text-amber-800/40"
+              />
+              <circle
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={strokeWidth}
+                strokeDasharray={circumference}
+                strokeDashoffset={offset}
+                strokeLinecap="round"
+                className="text-amber-500 motion-safe:transition-[stroke-dashoffset] motion-safe:duration-700"
+              />
+            </svg>
+            <Trophy
+              className="absolute inset-0 m-auto size-5 text-amber-600 dark:text-amber-400"
+              aria-hidden="true"
+            />
           </div>
 
-          {/* Trophy icon */}
-          <div className="ml-6 w-20 h-20 rounded-2xl bg-gradient-to-br from-yellow-100 to-orange-100 dark:from-yellow-900/30 dark:to-orange-900/30 flex items-center justify-center shadow-lg">
-            <Trophy className="w-10 h-10 text-yellow-600 dark:text-yellow-500" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+              {completedLessons} {completedLessons === 1 ? 'lesson' : 'lessons'}
+            </p>
+            <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">{milestone.message}</p>
           </div>
         </div>
       </CardContent>

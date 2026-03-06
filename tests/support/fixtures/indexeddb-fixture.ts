@@ -29,10 +29,7 @@ type IndexedDBHelper = {
   clearStore: (storeName: string) => Promise<void>
 }
 
-async function putRecords(
-  page: Page,
-  courses: ImportedCourseTestData[],
-): Promise<void> {
+async function putRecords(page: Page, courses: ImportedCourseTestData[]): Promise<void> {
   await page.evaluate(
     async ({ dbName, storeName, data, maxRetries, retryDelay }) => {
       for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -67,14 +64,11 @@ async function putRecords(
       }
       throw new Error(`Store "${storeName}" not found in "${dbName}" after ${maxRetries} retries`)
     },
-    { dbName: DB_NAME, storeName: STORE_NAME, data: courses, maxRetries: 10, retryDelay: 200 },
+    { dbName: DB_NAME, storeName: STORE_NAME, data: courses, maxRetries: 10, retryDelay: 200 }
   )
 }
 
-async function clearRecords(
-  page: Page,
-  ids: string[],
-): Promise<void> {
+async function clearRecords(page: Page, ids: string[]): Promise<void> {
   await page.evaluate(
     async ({ dbName, storeName, recordIds }) => {
       return new Promise<void>((resolve, reject) => {
@@ -103,7 +97,7 @@ async function clearRecords(
         request.onerror = () => reject(request.error)
       })
     },
-    { dbName: DB_NAME, storeName: STORE_NAME, recordIds: ids },
+    { dbName: DB_NAME, storeName: STORE_NAME, recordIds: ids }
   )
 }
 
@@ -121,13 +115,19 @@ async function clearAllFromStore(page: Page, storeName: string): Promise<void> {
           }
           const tx = db.transaction(store, 'readwrite')
           tx.objectStore(store).clear()
-          tx.oncomplete = () => { db.close(); resolve() }
-          tx.onerror = () => { db.close(); reject(tx.error) }
+          tx.oncomplete = () => {
+            db.close()
+            resolve()
+          }
+          tx.onerror = () => {
+            db.close()
+            reject(tx.error)
+          }
         }
         request.onerror = () => reject(request.error)
       })
     },
-    { dbName: DB_NAME, store: storeName },
+    { dbName: DB_NAME, store: storeName }
   )
 }
 
@@ -136,9 +136,9 @@ export const test = base.extend<{ indexedDB: IndexedDBHelper }>({
     const seededIds: string[] = []
 
     const helper: IndexedDBHelper = {
-      seedImportedCourses: async (courses) => {
+      seedImportedCourses: async courses => {
         await putRecords(page, courses)
-        seededIds.push(...courses.map((c) => c.id))
+        seededIds.push(...courses.map(c => c.id))
       },
 
       clearImportedCourses: async () => {

@@ -7,7 +7,12 @@ interface StatusSelectorProps {
   onSelect: (status: CompletionStatus) => void
 }
 
-const options: { status: CompletionStatus; label: string; icon: React.ReactNode; className: string }[] = [
+const options: {
+  status: CompletionStatus
+  label: string
+  icon: React.ReactNode
+  className: string
+}[] = [
   {
     status: 'not-started',
     label: 'Not Started',

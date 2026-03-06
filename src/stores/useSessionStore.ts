@@ -8,18 +8,22 @@ interface SessionState {
   sessions: StudySession[]
   isLoading: boolean
   error: string | null
-  activeStartTime: string | null  // When current active period began (for duration calc)
-  lastHeartbeat: number | null    // Last heartbeat timestamp (for periodic persistence)
+  activeStartTime: string | null // When current active period began (for duration calc)
+  lastHeartbeat: number | null // Last heartbeat timestamp (for periodic persistence)
 
-  startSession: (courseId: string, contentItemId: string, sessionType: 'video' | 'pdf' | 'mixed') => Promise<void>
+  startSession: (
+    courseId: string,
+    contentItemId: string,
+    sessionType: 'video' | 'pdf' | 'mixed'
+  ) => Promise<void>
   updateLastActivity: (timestamp?: string) => void
   pauseSession: () => Promise<void>
   resumeSession: () => void
-  endSession: () => void  // Synchronous for beforeunload compatibility
+  endSession: () => void // Synchronous for beforeunload compatibility
   loadSessionStats: (courseId?: string) => Promise<void>
   recoverOrphanedSessions: () => Promise<void>
   getTotalStudyTime: (courseId?: string) => number
-  heartbeat: () => Promise<void>  // Periodic persistence of lastActivity
+  heartbeat: () => Promise<void> // Periodic persistence of lastActivity
 }
 
 export const useSessionStore = create<SessionState>((set, get) => ({
@@ -30,7 +34,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   activeStartTime: null,
   lastHeartbeat: null,
 
-  startSession: async (courseId: string, contentItemId: string, sessionType: 'video' | 'pdf' | 'mixed') => {
+  startSession: async (
+    courseId: string,
+    contentItemId: string,
+    sessionType: 'video' | 'pdf' | 'mixed'
+  ) => {
     const { activeSession, endSession } = get()
 
     // End any existing active session first
@@ -57,7 +65,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       activeSession: newSession,
       activeStartTime: now,
       lastHeartbeat: Date.now(),
-      error: null
+      error: null,
     })
 
     try {
@@ -80,7 +88,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
     // Throttle: only update Zustand state (triggers re-render) if 30s have passed since last heartbeat
     // This reduces re-render churn while still tracking activity for orphan recovery
-    const shouldUpdate = !lastHeartbeat || (currentTime - lastHeartbeat) >= 30000
+    const shouldUpdate = !lastHeartbeat || currentTime - lastHeartbeat >= 30000
 
     if (shouldUpdate) {
       set({
@@ -111,7 +119,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       ...activeSession,
       duration: activeSession.duration + Math.max(0, activeSeconds),
       idleTime: activeSession.idleTime + IDLE_TIMEOUT_SECONDS,
-      lastActivity: now,  // Update to current time for heartbeat
+      lastActivity: now, // Update to current time for heartbeat
     }
 
     // Optimistic update (keep activeStartTime - will reset on resume)
@@ -135,7 +143,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     const now = new Date().toISOString()
     set({
       activeSession: { ...activeSession, lastActivity: now },
-      activeStartTime: now,  // Reset active start time to now
+      activeStartTime: now, // Reset active start time to now
       lastHeartbeat: Date.now(),
     })
   },
@@ -145,7 +153,9 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     if (!activeSession) return
 
     const now = new Date().toISOString()
-    const activeStartMs = activeStartTime ? new Date(activeStartTime).getTime() : new Date(activeSession.startTime).getTime()
+    const activeStartMs = activeStartTime
+      ? new Date(activeStartTime).getTime()
+      : new Date(activeSession.startTime).getTime()
     const lastActivityMs = new Date(activeSession.lastActivity).getTime()
 
     // Calculate active time from session start (or last resume) to last activity
@@ -165,7 +175,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     // If this fails, orphan recovery will handle it on next load
     persistWithRetry(async () => {
       await db.studySessions.put(closedSession)
-    }).catch((error) => {
+    }).catch(error => {
       console.error('[SessionStore] Failed to end session:', error)
       // Don't rollback - let orphan recovery handle incomplete writes
     })
@@ -240,7 +250,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
     const now = Date.now()
     // Only persist if 30+ seconds since last heartbeat (throttle database writes)
-    if (lastHeartbeat && (now - lastHeartbeat) < 30000) return
+    if (lastHeartbeat && now - lastHeartbeat < 30000) return
 
     try {
       // Persist current session state to database (ensures orphan recovery has recent data)

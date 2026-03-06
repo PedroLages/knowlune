@@ -38,8 +38,8 @@ async function addTag(page: Parameters<typeof navigateAndWait>[0], tagName: stri
 /** Wait for a tag to be persisted to IndexedDB. */
 async function waitForTagInDB(page: Parameters<typeof navigateAndWait>[0], tagName: string) {
   await page.waitForFunction(
-    (tag) => {
-      return new Promise<boolean>((resolve) => {
+    tag => {
+      return new Promise<boolean>(resolve => {
         const request = indexedDB.open('ElearningDB')
         request.onsuccess = () => {
           const db = request.result
@@ -57,13 +57,16 @@ async function waitForTagInDB(page: Parameters<typeof navigateAndWait>[0], tagNa
             db.close()
             resolve(found)
           }
-          getAll.onerror = () => { db.close(); resolve(false) }
+          getAll.onerror = () => {
+            db.close()
+            resolve(false)
+          }
         }
         request.onerror = () => resolve(false)
       })
     },
     tagName,
-    { timeout: 5000 },
+    { timeout: 5000 }
   )
 }
 
@@ -203,7 +206,10 @@ test.describe('AC3: Persistence & Indexing', () => {
     await goToLessonWithNotes(page)
 
     // THEN: Tag should still be there
-    const persistedBadge = page.getByTestId('note-editor').getByTestId('tag-badge').filter({ hasText: 'persistent' })
+    const persistedBadge = page
+      .getByTestId('note-editor')
+      .getByTestId('tag-badge')
+      .filter({ hasText: 'persistent' })
     await expect(persistedBadge).toBeVisible({ timeout: 15000 })
   })
 
@@ -221,7 +227,10 @@ test.describe('AC3: Persistence & Indexing', () => {
     await goToLessonWithNotes(page, LESSON_URL)
 
     // THEN: Tag should still be present
-    const persistedBadge = page.getByTestId('note-editor').getByTestId('tag-badge').filter({ hasText: 'navigation-test' })
+    const persistedBadge = page
+      .getByTestId('note-editor')
+      .getByTestId('tag-badge')
+      .filter({ hasText: 'navigation-test' })
     await expect(persistedBadge).toBeVisible({ timeout: 15000 })
   })
 })

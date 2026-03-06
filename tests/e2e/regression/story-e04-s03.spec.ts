@@ -56,10 +56,7 @@ const TEST_VIDEOS: ImportedVideoTestData[] = [
 const DB_NAME = 'ElearningDB'
 
 /** Seed imported videos into IndexedDB with retry logic for Dexie initialization. */
-async function seedImportedVideos(
-  page: Page,
-  videos: ImportedVideoTestData[],
-): Promise<void> {
+async function seedImportedVideos(page: Page, videos: ImportedVideoTestData[]): Promise<void> {
   await page.evaluate(
     async ({ dbName, data, maxRetries, retryDelay }) => {
       for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -94,7 +91,7 @@ async function seedImportedVideos(
       }
       throw new Error(`Store "importedVideos" not found in "${dbName}" after ${maxRetries} retries`)
     },
-    { dbName: DB_NAME, data: videos, maxRetries: 10, retryDelay: 200 },
+    { dbName: DB_NAME, data: videos, maxRetries: 10, retryDelay: 200 }
   )
 }
 
@@ -134,7 +131,7 @@ async function seedStudySessions(page: Page, sessions: any[]): Promise<void> {
       }
       throw new Error(`Store "studySessions" not found in "${dbName}" after ${maxRetries} retries`)
     },
-    { dbName: DB_NAME, data: sessions, maxRetries: 10, retryDelay: 200 },
+    { dbName: DB_NAME, data: sessions, maxRetries: 10, retryDelay: 200 }
   )
 }
 
@@ -142,10 +139,8 @@ async function seedStudySessions(page: Page, sessions: any[]): Promise<void> {
 async function seedCourseAndReload(
   page: Page,
   indexedDB: {
-    seedImportedCourses: (
-      c: ReturnType<typeof createImportedCourse>[],
-    ) => Promise<void>
-  },
+    seedImportedCourses: (c: ReturnType<typeof createImportedCourse>[]) => Promise<void>
+  }
 ) {
   await goToCourses(page)
   await indexedDB.seedImportedCourses([TEST_COURSE])
@@ -154,11 +149,7 @@ async function seedCourseAndReload(
 }
 
 /** Navigate to imported lesson player. */
-async function goToLessonPlayer(
-  page: Page,
-  courseId: string,
-  lessonId: string,
-): Promise<void> {
+async function goToLessonPlayer(page: Page, courseId: string, lessonId: string): Promise<void> {
   await navigateAndWait(page, `/imported-courses/${courseId}/lessons/${lessonId}`)
 }
 
@@ -251,10 +242,7 @@ test.describe('Story E04-S03: Automatic Study Session Logging', () => {
     expect(session.contentItemId).toBe('video-lesson-1')
   })
 
-  test('AC2: records session end timestamp on navigation away', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('AC2: records session end timestamp on navigation away', async ({ page, indexedDB }) => {
     // GIVEN an active study session is in progress
     await seedCourseAndReload(page, indexedDB)
     await goToLessonPlayer(page, 'course-study-tracking', 'video-lesson-1')
@@ -330,10 +318,7 @@ test.describe('Story E04-S03: Automatic Study Session Logging', () => {
     expect(sessionHasDuration).toBe(true)
   })
 
-  test('AC3: auto-pauses session after 5 minutes of inactivity', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('AC3: auto-pauses session after 5 minutes of inactivity', async ({ page, indexedDB }) => {
     // Install clock BEFORE page loads (so React timers are mocked)
     const startTime = Date.now()
     await page.clock.install({ time: startTime })
@@ -426,14 +411,14 @@ test.describe('Story E04-S03: Automatic Study Session Logging', () => {
       const session = sessions[sessions.length - 1]
       return {
         exists: true,
-        isActive: session.endTime === undefined,  // Active if no endTime
+        isActive: session.endTime === undefined, // Active if no endTime
         hasIdleTime: session.idleTime >= 300,
       }
     })
 
     expect(sessionResumed.exists).toBe(true)
-    expect(sessionResumed.isActive).toBe(true)  // Session should still be active after resume
-    expect(sessionResumed.hasIdleTime).toBe(true)  // Idle time should be preserved
+    expect(sessionResumed.isActive).toBe(true) // Session should still be active after resume
+    expect(sessionResumed.hasIdleTime).toBe(true) // Idle time should be preserved
   })
 
   test('AC4: displays aggregate total study time across all courses', async ({
@@ -450,7 +435,7 @@ test.describe('Story E04-S03: Automatic Study Session Logging', () => {
         courseId: 'course-study-tracking',
         contentItemId: 'video-lesson-1',
         startTime: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
-        endTime: new Date(Date.now() - 3600000).toISOString(),   // 1 hour ago
+        endTime: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
         duration: 3600, // 1 hour in seconds
         idleTime: 0,
         videosWatched: ['video-lesson-1'],
@@ -517,13 +502,10 @@ test.describe('Story E04-S03: Automatic Study Session Logging', () => {
     // AND the UI displays the total study time correctly
     const totalStudyTimeDisplay = await page.getByTestId('total-study-time')
     await expect(totalStudyTimeDisplay).toBeVisible()
-    await expect(totalStudyTimeDisplay).toHaveText('1.5h')  // 5400 seconds = 1.5 hours
+    await expect(totalStudyTimeDisplay).toHaveText('1.5h') // 5400 seconds = 1.5 hours
   })
 
-  test('AC5: detects and closes orphaned sessions on app load', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('AC5: detects and closes orphaned sessions on app load', async ({ page, indexedDB }) => {
     // GIVEN orphaned session records exist
     await seedCourseAndReload(page, indexedDB)
 

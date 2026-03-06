@@ -9,9 +9,7 @@
  *   - Deterministic assertions (no hard waits)
  */
 import { test, expect } from '../support/fixtures'
-import {
-  createCourseProgress,
-} from '../support/fixtures/factories/course-factory'
+import { createCourseProgress } from '../support/fixtures/factories/course-factory'
 import { goToOverview } from '../support/helpers/navigation'
 
 test.describe('Overview Page', () => {
@@ -29,10 +27,7 @@ test.describe('Overview Page', () => {
     await expect(page.getByRole('heading', { name: 'All Courses' })).toBeVisible()
   })
 
-  test('should show Continue Studying with seeded progress', async ({
-    page,
-    localStorage,
-  }) => {
+  test('should show Continue Studying with seeded progress', async ({ page, localStorage }) => {
     // Seed progress data BEFORE navigating
     const progress = createCourseProgress({
       courseId: 'ba-101',

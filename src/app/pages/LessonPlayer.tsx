@@ -55,11 +55,7 @@ import {
 } from '@/lib/progress'
 import { addBookmark, getLessonBookmarks, formatBookmarkTimestamp } from '@/lib/bookmarks'
 import { toast } from 'sonner'
-import {
-  captureVideoFrame,
-  saveFrameCapture,
-  type CapturedFrame,
-} from '@/lib/frame-capture'
+import { captureVideoFrame, saveFrameCapture, type CapturedFrame } from '@/lib/frame-capture'
 
 export function LessonPlayer() {
   const { courseId, lessonId } = useParams<{
@@ -73,14 +69,8 @@ export function LessonPlayer() {
   const isMobile = useIsMobile()
 
   // Session tracking
-  const {
-    startSession,
-    updateLastActivity,
-    pauseSession,
-    resumeSession,
-    endSession,
-    heartbeat,
-  } = useSessionStore()
+  const { startSession, updateLastActivity, pauseSession, resumeSession, endSession, heartbeat } =
+    useSessionStore()
 
   const course = allCourses.find(c => c.id === courseId)
 
@@ -289,7 +279,7 @@ export function LessonPlayer() {
   useEffect(() => {
     const interval = setInterval(() => {
       heartbeat()
-    }, 30000)  // 30 seconds
+    }, 30000) // 30 seconds
 
     return () => clearInterval(interval)
   }, [heartbeat])

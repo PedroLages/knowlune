@@ -75,7 +75,7 @@ test.describe('AC1: Chapter markers when chapter data present', () => {
     // THEN: Tooltip shows chapter title and timestamp
     const tooltip = page.getByRole('tooltip')
     await expect(tooltip).toBeVisible()
-    await expect(tooltip).toContainText(/\d+:\d+/)  // timestamp like "0:30"
+    await expect(tooltip).toContainText(/\d+:\d+/) // timestamp like "0:30"
   })
 })
 

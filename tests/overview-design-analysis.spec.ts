@@ -116,7 +116,10 @@ test.describe('Overview Page - Comprehensive Design Analysis', () => {
 
   test.describe('User Interactions', () => {
     test('should navigate to course on card click', async ({ page }) => {
-      const firstCourse = page.getByRole('link').filter({ hasText: /lessons$/ }).first()
+      const firstCourse = page
+        .getByRole('link')
+        .filter({ hasText: /lessons$/ })
+        .first()
       await expect(firstCourse).toBeVisible()
 
       await firstCourse.click()
@@ -127,15 +130,16 @@ test.describe('Overview Page - Comprehensive Design Analysis', () => {
 
     test('should show hover effects on cards', async ({ page }) => {
       // Target a course link (always present in All Courses)
-      const courseLink = page.getByRole('link').filter({ hasText: /lessons$/ }).first()
+      const courseLink = page
+        .getByRole('link')
+        .filter({ hasText: /lessons$/ })
+        .first()
       await expect(courseLink).toBeVisible()
 
       // Hover and check for shadow change
       await courseLink.hover()
 
-      const boxShadow = await courseLink.evaluate((el) =>
-        window.getComputedStyle(el).boxShadow
-      )
+      const boxShadow = await courseLink.evaluate(el => window.getComputedStyle(el).boxShadow)
 
       expect(boxShadow).not.toBe('none')
     })
@@ -189,16 +193,19 @@ test.describe('Overview Page - Comprehensive Design Analysis', () => {
     test('should show progress bars in continue studying', async ({ page }) => {
       // Seed progress data to guarantee Continue Studying shows courses
       await page.evaluate(() => {
-        localStorage.setItem('course-progress', JSON.stringify({
-          'operative-six': {
-            courseId: 'operative-six',
-            completedLessons: ['lesson-1', 'lesson-2'],
-            lastWatchedLesson: 'lesson-3',
-            notes: {},
-            startedAt: new Date().toISOString(),
-            lastAccessedAt: new Date().toISOString()
-          }
-        }))
+        localStorage.setItem(
+          'course-progress',
+          JSON.stringify({
+            'operative-six': {
+              courseId: 'operative-six',
+              completedLessons: ['lesson-1', 'lesson-2'],
+              lastWatchedLesson: 'lesson-3',
+              notes: {},
+              startedAt: new Date().toISOString(),
+              lastAccessedAt: new Date().toISOString(),
+            },
+          })
+        )
       })
       await page.reload()
       await page.waitForLoadState('domcontentloaded')
@@ -231,9 +238,7 @@ test.describe('Overview Page - Comprehensive Design Analysis', () => {
 
       for (let i = 0; i < sectionCount; i++) {
         const section = sections.nth(i)
-        const marginBottom = await section.evaluate((el) =>
-          window.getComputedStyle(el).marginBottom
-        )
+        const marginBottom = await section.evaluate(el => window.getComputedStyle(el).marginBottom)
 
         // Should have margin (mb-8 = 2rem = 32px)
         expect(marginBottom).toBeTruthy()
@@ -254,9 +259,7 @@ test.describe('Overview Page - Comprehensive Design Analysis', () => {
       const card = statsGrid.locator('> *').first()
       await expect(card).toBeVisible()
 
-      const borderRadius = await card.evaluate((el) =>
-        window.getComputedStyle(el).borderRadius
-      )
+      const borderRadius = await card.evaluate(el => window.getComputedStyle(el).borderRadius)
 
       expect(borderRadius).not.toBe('0px')
     })

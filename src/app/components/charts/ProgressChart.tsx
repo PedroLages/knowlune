@@ -5,7 +5,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from '@/app/components/ui/chart'
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts'
+import { Area, AreaChart, XAxis, YAxis } from 'recharts'
 import { format } from 'date-fns'
 
 interface ProgressChartProps {
@@ -13,60 +13,63 @@ interface ProgressChartProps {
 }
 
 export function ProgressChart({ data }: ProgressChartProps) {
-  // Transform data to include formatted dates
   const chartData = data.map(item => ({
     date: format(new Date(item.date), 'MMM dd'),
     activities: item.count,
-    fullDate: item.date, // Keep for tooltip
+    fullDate: item.date,
   }))
 
-  // Chart configuration for shadcn/ui theming
   const chartConfig = {
     activities: {
       label: 'Activities',
-      color: 'var(--chart-1)',
+      color: 'var(--brand)',
     },
   } satisfies ChartConfig
 
-  // Return null if no data
   if (data.length === 0) {
     return null
   }
 
   return (
-    <Card className="mb-8">
+    <Card>
       <CardHeader>
         <CardTitle>Learning Activity</CardTitle>
         <CardDescription>Your study activity over the last {data.length} days</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-64 w-full">
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
+          <AreaChart data={chartData}>
+            <defs>
+              <linearGradient id="activityGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--brand)" stopOpacity={0.15} />
+                <stop offset="100%" stopColor="var(--brand)" stopOpacity={0} />
+              </linearGradient>
+            </defs>
             <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
             <YAxis tickLine={false} axisLine={false} tickMargin={8} />
             <ChartTooltip
               content={
                 <ChartTooltipContent
                   labelFormatter={(value, payload) => {
-                    // Show full date in tooltip
-                    if (payload && payload[0]?.payload?.fullDate) {
-                      return format(new Date(payload[0].payload.fullDate), 'MMMM dd, yyyy')
+                    const fullDate = payload?.[0]?.payload?.fullDate
+                    if (typeof fullDate === 'string' || typeof fullDate === 'number') {
+                      return format(new Date(fullDate), 'MMMM dd, yyyy')
                     }
                     return value
                   }}
                 />
               }
             />
-            <Line
+            <Area
               type="monotone"
               dataKey="activities"
+              fill="url(#activityGradient)"
               stroke="var(--color-activities)"
-              strokeWidth={2}
-              dot={{ r: 4 }}
-              activeDot={{ r: 6 }}
+              strokeWidth={2.5}
+              dot={false}
+              activeDot={{ r: 5, fill: 'var(--brand)', stroke: '#fff', strokeWidth: 2 }}
             />
-          </LineChart>
+          </AreaChart>
         </ChartContainer>
       </CardContent>
     </Card>

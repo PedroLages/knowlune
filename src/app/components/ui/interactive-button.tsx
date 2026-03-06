@@ -20,22 +20,18 @@ interface InteractiveButtonProps extends Omit<ButtonProps, 'size'> {
  */
 const InteractiveButton = React.forwardRef<HTMLButtonElement, InteractiveButtonProps>(
   ({ size = 'default', active, className, ...props }, ref) => {
-    const buttonSize = size === 'icon' ? 'touch-icon' as const : 'touch' as const
+    const buttonSize = size === 'icon' ? ('touch-icon' as const) : ('touch' as const)
 
     return (
       <Button
         ref={ref}
         size={buttonSize}
         aria-pressed={active}
-        className={cn(
-          'min-h-11 min-w-11',
-          active && 'bg-accent text-accent-foreground',
-          className,
-        )}
+        className={cn('min-h-11 min-w-11', active && 'bg-accent text-accent-foreground', className)}
         {...props}
       />
     )
-  },
+  }
 )
 InteractiveButton.displayName = 'InteractiveButton'
 

@@ -19,6 +19,7 @@ const STORAGE_KEYS = [
   'video-bookmarks',
   'study-streak-pause',
   'study-longest-streak',
+  'study-streak-freeze-days',
   'notes-migration-version',
 ] as const
 
@@ -32,11 +33,14 @@ type LocalStorageHelper = {
 }
 
 async function clearAppStorage(page: Page): Promise<void> {
-  await page.evaluate((keys) => {
-    for (const key of keys) {
-      localStorage.removeItem(key)
-    }
-  }, [...STORAGE_KEYS])
+  await page.evaluate(
+    keys => {
+      for (const key of keys) {
+        localStorage.removeItem(key)
+      }
+    },
+    [...STORAGE_KEYS]
+  )
 }
 
 export const test = base.extend<{ localStorage: LocalStorageHelper }>({
@@ -47,7 +51,7 @@ export const test = base.extend<{ localStorage: LocalStorageHelper }>({
           ({ k, v }) => {
             window.localStorage.setItem(k, JSON.stringify(v))
           },
-          { k: key, v: data },
+          { k: key, v: data }
         )
       },
 
@@ -56,7 +60,7 @@ export const test = base.extend<{ localStorage: LocalStorageHelper }>({
       },
 
       get: async <T = unknown>(key: string): Promise<T | null> => {
-        return page.evaluate((k) => {
+        return page.evaluate(k => {
           const raw = window.localStorage.getItem(k)
           return raw ? JSON.parse(raw) : null
         }, key)

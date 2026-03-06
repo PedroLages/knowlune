@@ -88,7 +88,7 @@ test.describe('AC1: Desktop resizable split', () => {
     const panelBox = await firstPanel.boundingBox()
     const groupBox = await page.locator('[data-group]').boundingBox()
     const ratio = panelBox!.width / groupBox!.width
-    expect(ratio).toBeGreaterThanOrEqual(0.30) // ~35% min with tolerance
+    expect(ratio).toBeGreaterThanOrEqual(0.3) // ~35% min with tolerance
   })
 })
 
@@ -179,7 +179,9 @@ test.describe('AC4: Tablet stacked layout', () => {
     await goToLessonPlayer(page)
 
     // WHEN: Click the notes toggle
-    const notesBtn = page.locator('[data-testid="tablet-view-toggle"]').getByRole('button', { name: /notes/i })
+    const notesBtn = page
+      .locator('[data-testid="tablet-view-toggle"]')
+      .getByRole('button', { name: /notes/i })
     await notesBtn.click()
 
     // THEN: Video should be hidden

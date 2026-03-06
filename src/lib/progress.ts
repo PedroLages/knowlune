@@ -397,7 +397,10 @@ export function getCoursesInProgress(
     )
 }
 
-export function getCompletedCourses(courses: Course[], allProgress?: Record<string, CourseProgress>): Course[] {
+export function getCompletedCourses(
+  courses: Course[],
+  allProgress?: Record<string, CourseProgress>
+): Course[] {
   const all = allProgress ?? getAllProgress()
   return courses.filter(c => {
     const p = all[c.id]
@@ -407,7 +410,10 @@ export function getCompletedCourses(courses: Course[], allProgress?: Record<stri
   })
 }
 
-export function getNotStartedCourses(courses: Course[], allProgress?: Record<string, CourseProgress>): Course[] {
+export function getNotStartedCourses(
+  courses: Course[],
+  allProgress?: Record<string, CourseProgress>
+): Course[] {
   const all = allProgress ?? getAllProgress()
   return courses.filter(c => {
     const p = all[c.id]

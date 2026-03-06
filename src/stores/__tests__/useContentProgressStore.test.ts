@@ -48,7 +48,9 @@ describe('getItemStatus', () => {
 describe('setItemStatus', () => {
   it('should update statusMap optimistically', async () => {
     await act(async () => {
-      await useContentProgressStore.getState().setItemStatus('c1', 'les-1', 'completed', mockModules)
+      await useContentProgressStore
+        .getState()
+        .setItemStatus('c1', 'les-1', 'completed', mockModules)
     })
 
     const status = useContentProgressStore.getState().getItemStatus('c1', 'les-1')
@@ -57,7 +59,9 @@ describe('setItemStatus', () => {
 
   it('should persist to IndexedDB', async () => {
     await act(async () => {
-      await useContentProgressStore.getState().setItemStatus('c1', 'les-1', 'in-progress', mockModules)
+      await useContentProgressStore
+        .getState()
+        .setItemStatus('c1', 'les-1', 'in-progress', mockModules)
     })
 
     const records = await db.contentProgress.where({ courseId: 'c1' }).toArray()
@@ -68,10 +72,14 @@ describe('setItemStatus', () => {
 
   it('should cascade to parent module when all children completed', async () => {
     await act(async () => {
-      await useContentProgressStore.getState().setItemStatus('c1', 'les-1', 'completed', mockModules)
+      await useContentProgressStore
+        .getState()
+        .setItemStatus('c1', 'les-1', 'completed', mockModules)
     })
     await act(async () => {
-      await useContentProgressStore.getState().setItemStatus('c1', 'les-2', 'completed', mockModules)
+      await useContentProgressStore
+        .getState()
+        .setItemStatus('c1', 'les-2', 'completed', mockModules)
     })
 
     const moduleStatus = useContentProgressStore.getState().getItemStatus('c1', 'mod-1')
@@ -80,7 +88,9 @@ describe('setItemStatus', () => {
 
   it('should derive in-progress when children have mixed statuses', async () => {
     await act(async () => {
-      await useContentProgressStore.getState().setItemStatus('c1', 'les-1', 'completed', mockModules)
+      await useContentProgressStore
+        .getState()
+        .setItemStatus('c1', 'les-1', 'completed', mockModules)
     })
 
     const moduleStatus = useContentProgressStore.getState().getItemStatus('c1', 'mod-1')
@@ -90,10 +100,14 @@ describe('setItemStatus', () => {
   it('should derive not-started when all children are not-started', async () => {
     // Set one to completed, then back to not-started
     await act(async () => {
-      await useContentProgressStore.getState().setItemStatus('c1', 'les-1', 'completed', mockModules)
+      await useContentProgressStore
+        .getState()
+        .setItemStatus('c1', 'les-1', 'completed', mockModules)
     })
     await act(async () => {
-      await useContentProgressStore.getState().setItemStatus('c1', 'les-1', 'not-started', mockModules)
+      await useContentProgressStore
+        .getState()
+        .setItemStatus('c1', 'les-1', 'not-started', mockModules)
     })
 
     const moduleStatus = useContentProgressStore.getState().getItemStatus('c1', 'mod-1')
@@ -102,10 +116,14 @@ describe('setItemStatus', () => {
 
   it('should persist cascade records to IndexedDB', async () => {
     await act(async () => {
-      await useContentProgressStore.getState().setItemStatus('c1', 'les-1', 'completed', mockModules)
+      await useContentProgressStore
+        .getState()
+        .setItemStatus('c1', 'les-1', 'completed', mockModules)
     })
     await act(async () => {
-      await useContentProgressStore.getState().setItemStatus('c1', 'les-2', 'completed', mockModules)
+      await useContentProgressStore
+        .getState()
+        .setItemStatus('c1', 'les-2', 'completed', mockModules)
     })
 
     const records = await db.contentProgress.where({ courseId: 'c1' }).toArray()
@@ -117,7 +135,9 @@ describe('setItemStatus', () => {
   it('should rollback on persistence failure', async () => {
     // Set initial state
     await act(async () => {
-      await useContentProgressStore.getState().setItemStatus('c1', 'les-1', 'completed', mockModules)
+      await useContentProgressStore
+        .getState()
+        .setItemStatus('c1', 'les-1', 'completed', mockModules)
     })
 
     // Mock db to throw on next put
@@ -125,7 +145,9 @@ describe('setItemStatus', () => {
     vi.spyOn(db.contentProgress, 'put').mockRejectedValue(new Error('DB write failed'))
 
     await act(async () => {
-      await useContentProgressStore.getState().setItemStatus('c1', 'les-1', 'in-progress', mockModules)
+      await useContentProgressStore
+        .getState()
+        .setItemStatus('c1', 'les-1', 'in-progress', mockModules)
     })
 
     // Should rollback Zustand state to previous value
@@ -170,7 +192,9 @@ describe('loadCourseProgress', () => {
   it('should clear stale entries for the course before loading', async () => {
     // Set a status via the store
     await act(async () => {
-      await useContentProgressStore.getState().setItemStatus('c1', 'les-1', 'completed', mockModules)
+      await useContentProgressStore
+        .getState()
+        .setItemStatus('c1', 'les-1', 'completed', mockModules)
     })
 
     // Delete from DB directly (simulating stale data)

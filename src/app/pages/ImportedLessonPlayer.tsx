@@ -17,14 +17,8 @@ export function ImportedLessonPlayer() {
   const course = importedCourses.find(c => c.id === courseId)
 
   // Session tracking (AC1, AC2, AC3)
-  const {
-    startSession,
-    updateLastActivity,
-    pauseSession,
-    resumeSession,
-    endSession,
-    heartbeat,
-  } = useSessionStore()
+  const { startSession, updateLastActivity, pauseSession, resumeSession, endSession, heartbeat } =
+    useSessionStore()
 
   // Idle detection (AC3)
   useIdleDetection({
@@ -82,7 +76,7 @@ export function ImportedLessonPlayer() {
   useEffect(() => {
     const interval = setInterval(() => {
       heartbeat()
-    }, 30000)  // 30 seconds
+    }, 30000) // 30 seconds
 
     return () => clearInterval(interval)
   }, [heartbeat])

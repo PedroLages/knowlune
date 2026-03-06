@@ -90,10 +90,7 @@ const TEST_PDFS: ImportedPdfTestData[] = [
 const DB_NAME = 'ElearningDB'
 
 /** Seed imported videos into IndexedDB via page.evaluate. */
-async function seedImportedVideos(
-  page: Page,
-  videos: ImportedVideoTestData[],
-): Promise<void> {
+async function seedImportedVideos(page: Page, videos: ImportedVideoTestData[]): Promise<void> {
   await page.evaluate(
     async ({ dbName, data }) => {
       return new Promise<void>((resolve, reject) => {
@@ -122,15 +119,12 @@ async function seedImportedVideos(
         request.onerror = () => reject(request.error)
       })
     },
-    { dbName: DB_NAME, data: videos },
+    { dbName: DB_NAME, data: videos }
   )
 }
 
 /** Seed imported PDFs into IndexedDB via page.evaluate. */
-async function seedImportedPdfs(
-  page: Page,
-  pdfs: ImportedPdfTestData[],
-): Promise<void> {
+async function seedImportedPdfs(page: Page, pdfs: ImportedPdfTestData[]): Promise<void> {
   await page.evaluate(
     async ({ dbName, data }) => {
       return new Promise<void>((resolve, reject) => {
@@ -159,7 +153,7 @@ async function seedImportedPdfs(
         request.onerror = () => reject(request.error)
       })
     },
-    { dbName: DB_NAME, data: pdfs },
+    { dbName: DB_NAME, data: pdfs }
   )
 }
 
@@ -167,10 +161,8 @@ async function seedImportedPdfs(
 async function seedCourseAndReload(
   page: Page,
   indexedDB: {
-    seedImportedCourses: (
-      c: ReturnType<typeof createImportedCourse>[],
-    ) => Promise<void>
-  },
+    seedImportedCourses: (c: ReturnType<typeof createImportedCourse>[]) => Promise<void>
+  }
 ) {
   // Navigate first so Dexie creates the database
   await goToCourses(page)
@@ -183,10 +175,7 @@ async function seedCourseAndReload(
 }
 
 /** Navigate to imported course detail page. */
-async function goToImportedCourseDetail(
-  page: Page,
-  courseId: string,
-): Promise<void> {
+async function goToImportedCourseDetail(page: Page, courseId: string): Promise<void> {
   await navigateAndWait(page, `/imported-courses/${courseId}`)
 }
 
@@ -194,7 +183,7 @@ async function goToImportedCourseDetail(
 async function goToImportedLessonPlayer(
   page: Page,
   courseId: string,
-  lessonId: string,
+  lessonId: string
 ): Promise<void> {
   await navigateAndWait(page, `/imported-courses/${courseId}/lessons/${lessonId}`)
 }
@@ -204,10 +193,7 @@ async function goToImportedLessonPlayer(
 // ===========================================================================
 
 test.describe('AC-1: Video Playback from Imported Course', () => {
-  test('should render video player on lesson page', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should render video player on lesson page', async ({ page, indexedDB }) => {
     // GIVEN: Imported course with videos seeded
     await seedCourseAndReload(page, indexedDB)
 
@@ -218,10 +204,7 @@ test.describe('AC-1: Video Playback from Imported Course', () => {
     await expect(page.getByTestId('video-player-container')).toBeVisible()
   })
 
-  test('should display video title in header', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should display video title in header', async ({ page, indexedDB }) => {
     // GIVEN: Imported course with videos seeded
     await seedCourseAndReload(page, indexedDB)
 
@@ -229,15 +212,10 @@ test.describe('AC-1: Video Playback from Imported Course', () => {
     await goToImportedLessonPlayer(page, 'course-react-101', 'video-intro')
 
     // THEN: Video title is displayed in the header
-    await expect(page.getByTestId('lesson-header-title')).toContainText(
-      '01-Introduction.mp4',
-    )
+    await expect(page.getByTestId('lesson-header-title')).toContainText('01-Introduction.mp4')
   })
 
-  test('should display course name in header', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should display course name in header', async ({ page, indexedDB }) => {
     // GIVEN: Imported course with videos seeded
     await seedCourseAndReload(page, indexedDB)
 
@@ -245,15 +223,10 @@ test.describe('AC-1: Video Playback from Imported Course', () => {
     await goToImportedLessonPlayer(page, 'course-react-101', 'video-intro')
 
     // THEN: Course name is displayed in the header
-    await expect(page.getByTestId('lesson-header-course')).toContainText(
-      'React Fundamentals',
-    )
+    await expect(page.getByTestId('lesson-header-course')).toContainText('React Fundamentals')
   })
 
-  test('should have clean distraction-free layout', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should have clean distraction-free layout', async ({ page, indexedDB }) => {
     // GIVEN: Imported course with videos seeded
     await seedCourseAndReload(page, indexedDB)
 
@@ -267,10 +240,7 @@ test.describe('AC-1: Video Playback from Imported Course', () => {
     await expect(page.getByTestId('sidebar-navigation')).not.toBeVisible()
   })
 
-  test('should start video in paused state', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should start video in paused state', async ({ page, indexedDB }) => {
     // GIVEN: Imported course with videos seeded
     await seedCourseAndReload(page, indexedDB)
 
@@ -278,9 +248,7 @@ test.describe('AC-1: Video Playback from Imported Course', () => {
     await goToImportedLessonPlayer(page, 'course-react-101', 'video-intro')
 
     // THEN: Play button is visible (indicating paused state)
-    await expect(
-      page.getByRole('button', { name: /play/i }),
-    ).toBeVisible()
+    await expect(page.getByRole('button', { name: /play/i })).toBeVisible()
   })
 })
 
@@ -289,10 +257,7 @@ test.describe('AC-1: Video Playback from Imported Course', () => {
 // ===========================================================================
 
 test.describe('AC-2: File Access Error Recovery', () => {
-  test('should display error state when video file not accessible', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should display error state when video file not accessible', async ({ page, indexedDB }) => {
     // GIVEN: Course seeded but video has no valid file handle
     await seedCourseAndReload(page, indexedDB)
 
@@ -302,37 +267,25 @@ test.describe('AC-2: File Access Error Recovery', () => {
     // THEN: Error message is displayed
     // (File handles can't be seeded in E2E, so error state should appear)
     await expect(page.getByTestId('lesson-error-state')).toBeVisible()
-    await expect(page.getByTestId('lesson-error-state')).toContainText(
-      /video file not found/i,
-    )
+    await expect(page.getByTestId('lesson-error-state')).toContainText(/video file not found/i)
   })
 
-  test('should provide locate file button in error state', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should provide locate file button in error state', async ({ page, indexedDB }) => {
     // GIVEN: Video file not accessible
     await seedCourseAndReload(page, indexedDB)
     await goToImportedLessonPlayer(page, 'course-react-101', 'video-intro')
 
     // THEN: Locate file button is visible
-    await expect(
-      page.getByRole('button', { name: /locate/i }),
-    ).toBeVisible()
+    await expect(page.getByRole('button', { name: /locate/i })).toBeVisible()
   })
 
-  test('should provide back to course button in error state', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should provide back to course button in error state', async ({ page, indexedDB }) => {
     // GIVEN: Video file not accessible
     await seedCourseAndReload(page, indexedDB)
     await goToImportedLessonPlayer(page, 'course-react-101', 'video-intro')
 
     // THEN: Back to Course button is visible
-    await expect(
-      page.getByRole('link', { name: /back to course/i }),
-    ).toBeVisible()
+    await expect(page.getByRole('link', { name: /back to course/i })).toBeVisible()
   })
 
   test('should navigate back to course detail when back button clicked', async ({
@@ -351,10 +304,7 @@ test.describe('AC-2: File Access Error Recovery', () => {
     await expect(page.getByTestId('imported-course-detail')).toBeVisible()
   })
 
-  test('should not crash or leave page in broken state', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should not crash or leave page in broken state', async ({ page, indexedDB }) => {
     // GIVEN: Video file not accessible
     await seedCourseAndReload(page, indexedDB)
     await goToImportedLessonPlayer(page, 'course-react-101', 'video-intro')
@@ -363,8 +313,14 @@ test.describe('AC-2: File Access Error Recovery', () => {
     await expect(page.locator('body')).not.toContainText(/something went wrong/i)
     // AND: Either video player or error state is shown (not blank)
     const hasContent =
-      (await page.getByTestId('video-player-container').isVisible().catch(() => false)) ||
-      (await page.getByTestId('lesson-error-state').isVisible().catch(() => false))
+      (await page
+        .getByTestId('video-player-container')
+        .isVisible()
+        .catch(() => false)) ||
+      (await page
+        .getByTestId('lesson-error-state')
+        .isVisible()
+        .catch(() => false))
     expect(hasContent).toBe(true)
   })
 })
@@ -390,8 +346,14 @@ test.describe('AC-3: File Permission Re-request', () => {
     // THEN: Either a permission prompt or error state is visible
     // (In E2E without real file handles, error state is expected)
     const hasState =
-      (await page.getByTestId('lesson-permission-prompt').isVisible().catch(() => false)) ||
-      (await page.getByTestId('lesson-error-state').isVisible().catch(() => false))
+      (await page
+        .getByTestId('lesson-permission-prompt')
+        .isVisible()
+        .catch(() => false)) ||
+      (await page
+        .getByTestId('lesson-error-state')
+        .isVisible()
+        .catch(() => false))
     expect(hasState).toBe(true)
   })
 })
@@ -415,10 +377,7 @@ test.describe('AC-4: Course Detail Page', () => {
     await expect(page.getByTestId('imported-course-detail')).toBeVisible()
   })
 
-  test('should display course name on detail page', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should display course name on detail page', async ({ page, indexedDB }) => {
     // GIVEN: Imported course seeded
     await seedCourseAndReload(page, indexedDB)
 
@@ -426,15 +385,10 @@ test.describe('AC-4: Course Detail Page', () => {
     await goToImportedCourseDetail(page, 'course-react-101')
 
     // THEN: Course name is visible
-    await expect(page.getByTestId('course-detail-title')).toHaveText(
-      'React Fundamentals',
-    )
+    await expect(page.getByTestId('course-detail-title')).toHaveText('React Fundamentals')
   })
 
-  test('should list all videos in the course', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should list all videos in the course', async ({ page, indexedDB }) => {
     // GIVEN: Course with 3 videos seeded
     await seedCourseAndReload(page, indexedDB)
 
@@ -446,10 +400,7 @@ test.describe('AC-4: Course Detail Page', () => {
     await expect(videoItems).toHaveCount(3)
   })
 
-  test('should display video filenames in the list', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should display video filenames in the list', async ({ page, indexedDB }) => {
     // GIVEN: Course with known video filenames seeded
     await seedCourseAndReload(page, indexedDB)
 
@@ -462,10 +413,7 @@ test.describe('AC-4: Course Detail Page', () => {
     await expect(page.getByText('03-State-Management.mp4')).toBeVisible()
   })
 
-  test('should display video duration in the list', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should display video duration in the list', async ({ page, indexedDB }) => {
     // GIVEN: Video with 320s duration seeded
     await seedCourseAndReload(page, indexedDB)
 
@@ -476,10 +424,7 @@ test.describe('AC-4: Course Detail Page', () => {
     await expect(page.getByText('5:20')).toBeVisible()
   })
 
-  test('should list PDFs in the course', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should list PDFs in the course', async ({ page, indexedDB }) => {
     // GIVEN: Course with 1 PDF seeded
     await seedCourseAndReload(page, indexedDB)
 
@@ -492,10 +437,7 @@ test.describe('AC-4: Course Detail Page', () => {
     await expect(page.getByText('React-Cheatsheet.pdf')).toBeVisible()
   })
 
-  test('should display PDF page count', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should display PDF page count', async ({ page, indexedDB }) => {
     // GIVEN: PDF with 12 pages seeded
     await seedCourseAndReload(page, indexedDB)
 
@@ -518,23 +460,16 @@ test.describe('AC-4: Course Detail Page', () => {
     await page.getByText('01-Introduction.mp4').click()
 
     // THEN: Navigated to lesson player
-    await page.waitForURL(
-      /\/imported-courses\/course-react-101\/lessons\/video-intro/,
-    )
+    await page.waitForURL(/\/imported-courses\/course-react-101\/lessons\/video-intro/)
   })
 
-  test('should display back to courses link', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should display back to courses link', async ({ page, indexedDB }) => {
     // GIVEN: Course detail page loaded
     await seedCourseAndReload(page, indexedDB)
     await goToImportedCourseDetail(page, 'course-react-101')
 
     // THEN: Back to Courses link is visible
-    await expect(
-      page.getByRole('link', { name: /back to courses/i }),
-    ).toBeVisible()
+    await expect(page.getByRole('link', { name: /back to courses/i })).toBeVisible()
   })
 
   test('should navigate back to courses page when back link clicked', async ({
@@ -552,10 +487,7 @@ test.describe('AC-4: Course Detail Page', () => {
     await page.waitForURL(/\/courses/)
   })
 
-  test('should display type icons for videos and PDFs', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should display type icons for videos and PDFs', async ({ page, indexedDB }) => {
     // GIVEN: Course with videos and PDFs seeded
     await seedCourseAndReload(page, indexedDB)
     await goToImportedCourseDetail(page, 'course-react-101')
@@ -575,10 +507,7 @@ test.describe('AC-4: Course Detail Page', () => {
 // ===========================================================================
 
 test.describe('AC-5: Responsive Layout', () => {
-  test('should render video player full width on mobile', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should render video player full width on mobile', async ({ page, indexedDB }) => {
     // GIVEN: Mobile viewport
     await page.setViewportSize({ width: 375, height: 667 })
     await seedCourseAndReload(page, indexedDB)
@@ -665,7 +594,7 @@ test.describe('AC-6: Blob URL Cleanup', () => {
 
     // THEN: Page should not have any errors (memory leak would eventually cause issues)
     const consoleErrors: string[] = []
-    page.on('console', (msg) => {
+    page.on('console', msg => {
       if (msg.type() === 'error') {
         consoleErrors.push(msg.text())
       }
@@ -676,9 +605,7 @@ test.describe('AC-6: Blob URL Cleanup', () => {
     await page.waitForLoadState('domcontentloaded')
 
     // No error messages related to blob URLs
-    const blobErrors = consoleErrors.filter((e) =>
-      e.toLowerCase().includes('blob'),
-    )
+    const blobErrors = consoleErrors.filter(e => e.toLowerCase().includes('blob'))
     expect(blobErrors).toHaveLength(0)
   })
 })
@@ -688,10 +615,7 @@ test.describe('AC-6: Blob URL Cleanup', () => {
 // ===========================================================================
 
 test.describe('Navigation: Full Flow', () => {
-  test('should navigate from course card to detail to player', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should navigate from course card to detail to player', async ({ page, indexedDB }) => {
     // GIVEN: Imported course with videos seeded, on courses page
     await seedCourseAndReload(page, indexedDB)
 
@@ -707,9 +631,7 @@ test.describe('Navigation: Full Flow', () => {
     await page.getByText('01-Introduction.mp4').click()
 
     // THEN: Navigated to lesson player
-    await page.waitForURL(
-      /\/imported-courses\/course-react-101\/lessons\/video-intro/,
-    )
+    await page.waitForURL(/\/imported-courses\/course-react-101\/lessons\/video-intro/)
   })
 
   test('should have keyboard accessible navigation through course items', async ({

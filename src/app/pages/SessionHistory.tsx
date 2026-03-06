@@ -52,7 +52,7 @@ export function SessionHistory() {
       setIsLoading(true)
       setLoadError(null)
       try {
-        const allSessions = await db.studySessions.toArray() as DisplaySession[]
+        const allSessions = (await db.studySessions.toArray()) as DisplaySession[]
 
         // Only show completed sessions (with endTime)
         const completed = allSessions.filter(s => s.endTime != null)
@@ -61,13 +61,13 @@ export function SessionHistory() {
         const courseIds = [...new Set(completed.map(s => s.courseId))]
 
         // Only fetch courses and videos referenced by sessions
-        const courses = courseIds.length > 0
-          ? await db.importedCourses.where('id').anyOf(courseIds).toArray()
-          : []
+        const courses =
+          courseIds.length > 0
+            ? await db.importedCourses.where('id').anyOf(courseIds).toArray()
+            : []
         const videoIds = completed.flatMap(s => s.videosWatched ?? [])
-        const videos = videoIds.length > 0
-          ? await db.importedVideos.where('id').anyOf(videoIds).toArray()
-          : []
+        const videos =
+          videoIds.length > 0 ? await db.importedVideos.where('id').anyOf(videoIds).toArray() : []
 
         const courseMap = new Map<string, ImportedCourse>(courses.map(c => [c.id, c]))
         const videoMap = new Map<string, ImportedVideo>(videos.map(v => [v.id, v]))
@@ -75,13 +75,11 @@ export function SessionHistory() {
         // Create enriched copies (don't mutate Dexie results)
         const enriched = completed.map(session => {
           const courseTitle = session.courseTitle || courseMap.get(session.courseId)?.name
-          const contentSummary = session.contentSummary || (
-            (session.videosWatched?.length ?? 0) > 0
-              ? session.videosWatched!
-                  .map(vid => videoMap.get(vid)?.filename ?? vid)
-                  .join(', ')
-              : undefined
-          )
+          const contentSummary =
+            session.contentSummary ||
+            ((session.videosWatched?.length ?? 0) > 0
+              ? session.videosWatched!.map(vid => videoMap.get(vid)?.filename ?? vid).join(', ')
+              : undefined)
           return { ...session, courseTitle, contentSummary }
         })
 
@@ -278,9 +276,7 @@ export function SessionHistory() {
 
                   {/* Content summary (hidden when expanded to avoid duplicate text) */}
                   {session.contentSummary && expandedId !== session.id && (
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {session.contentSummary}
-                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">{session.contentSummary}</p>
                   )}
                 </button>
 
@@ -290,7 +286,9 @@ export function SessionHistory() {
                     <div className="flex gap-6 text-sm">
                       <div>
                         <span className="text-muted-foreground">Start: </span>
-                        <span data-testid="session-start-time">{formatTime(session.startTime)}</span>
+                        <span data-testid="session-start-time">
+                          {formatTime(session.startTime)}
+                        </span>
                       </div>
                       {session.endTime && (
                         <div>
@@ -306,10 +304,17 @@ export function SessionHistory() {
                         <h4 className="text-sm font-medium">Content Accessed</h4>
                         <ul className="space-y-1">
                           {session.contentItems.map(item => (
-                            <li key={item.id} className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <li
+                              key={item.id}
+                              className="flex items-center gap-2 text-sm text-muted-foreground"
+                            >
                               <span>{item.title}</span>
                               <span className="text-xs text-muted-foreground/70">
-                                {toDate(item.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                                {toDate(item.timestamp).toLocaleTimeString('en-US', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: false,
+                                })}
                               </span>
                             </li>
                           ))}

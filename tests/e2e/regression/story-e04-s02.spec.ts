@@ -11,9 +11,7 @@ import { test, expect } from '../support/fixtures'
 import { goToCourses } from '../support/helpers/navigation'
 
 test.describe('E04-S02: Course Completion Percentage', () => {
-  test('AC1: Progress bar displays with ARIA attributes and text equivalent', async ({
-    page,
-  }) => {
+  test('AC1: Progress bar displays with ARIA attributes and text equivalent', async ({ page }) => {
     // Navigate to a specific course detail page directly
     await page.goto('/courses/confidence-reboot')
     await page.waitForLoadState('domcontentloaded')
@@ -54,15 +52,14 @@ test.describe('E04-S02: Course Completion Percentage', () => {
     await page.getByTestId('status-selector').getByText('Completed').click()
 
     // Verify progress bar updated without page refresh
-    await expect.poll(
-      async () => await progressBar.getAttribute('aria-valuenow'),
-      { timeout: 5000 },
-    ).not.toBe(initialValue)
+    await expect
+      .poll(async () => await progressBar.getAttribute('aria-valuenow'), { timeout: 5000 })
+      .not.toBe(initialValue)
 
     // Verify smooth animation (progress indicator should have transform transition)
     const progressIndicator = progressBar.locator('[data-slot="progress-indicator"]')
-    const styles = await progressIndicator.evaluate((el) =>
-      window.getComputedStyle(el).getPropertyValue('transition'),
+    const styles = await progressIndicator.evaluate(el =>
+      window.getComputedStyle(el).getPropertyValue('transition')
     )
     expect(styles).toMatch(/transform|all/)
   })
@@ -111,25 +108,40 @@ test.describe('E04-S02: Course Completion Percentage', () => {
   }) => {
     // Seed a 100%-complete course (confidence-reboot has 18 totalLessons)
     const allLessonIds = [
-      'cr-00-welcome', 'cr-01-workspace', 'cr-02-limiting-beliefs',
-      'cr-03-confidence-masterclass', 'cr-04-composure', 'cr-05-nightly-audio',
-      'cr-06-behavior-inventory', 'cr-07-tracker', 'cr-08-limiting-beliefs-deep',
-      'cr-09-alpha-leader', 'cr-10-comfort-vs-anxiety', 'cr-11-phase-three-instructions',
-      'cr-12-imprinting-switch', 'cr-13-entrainment-level-1', 'cr-14-entrainment-level-2',
-      'cr-15-entrainment-level-3', 'cr-16-conference-room', 'cr-17-first-meeting',
+      'cr-00-welcome',
+      'cr-01-workspace',
+      'cr-02-limiting-beliefs',
+      'cr-03-confidence-masterclass',
+      'cr-04-composure',
+      'cr-05-nightly-audio',
+      'cr-06-behavior-inventory',
+      'cr-07-tracker',
+      'cr-08-limiting-beliefs-deep',
+      'cr-09-alpha-leader',
+      'cr-10-comfort-vs-anxiety',
+      'cr-11-phase-three-instructions',
+      'cr-12-imprinting-switch',
+      'cr-13-entrainment-level-1',
+      'cr-14-entrainment-level-2',
+      'cr-15-entrainment-level-3',
+      'cr-16-conference-room',
+      'cr-17-first-meeting',
     ]
 
     await page.goto('/')
     await localStorage.seed('eduvi-sidebar-v1', 'false')
-    await localStorage.seed('course-progress', JSON.stringify({
-      'confidence-reboot': {
-        courseId: 'confidence-reboot',
-        completedLessons: allLessonIds,
-        notes: {},
-        startedAt: '2026-01-01T00:00:00.000Z',
-        lastAccessedAt: '2026-03-01T00:00:00.000Z',
-      },
-    }))
+    await localStorage.seed(
+      'course-progress',
+      JSON.stringify({
+        'confidence-reboot': {
+          courseId: 'confidence-reboot',
+          completedLessons: allLessonIds,
+          notes: {},
+          startedAt: '2026-01-01T00:00:00.000Z',
+          lastAccessedAt: '2026-03-01T00:00:00.000Z',
+        },
+      })
+    )
 
     // Navigate to courses page
     await goToCourses(page)

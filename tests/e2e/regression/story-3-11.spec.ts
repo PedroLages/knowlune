@@ -27,9 +27,7 @@ const LESSON_ID = 'nci-fnl-drones-psyops'
 // ---------------------------------------------------------------------------
 
 /** Navigate to lesson player Notes tab with sidebar closed. */
-async function openNoteEditor(
-  page: import('@playwright/test').Page,
-) {
+async function openNoteEditor(page: import('@playwright/test').Page) {
   await page.addInitScript(() => {
     localStorage.setItem('eduvi-sidebar-v1', 'false')
   })
@@ -51,9 +49,7 @@ async function openNoteEditor(
 // ---------------------------------------------------------------------------
 
 test.describe('AC1: Toolbar organization', () => {
-  test('toolbar buttons are organized in logical groups with separators', async ({
-    page,
-  }) => {
+  test('toolbar buttons are organized in logical groups with separators', async ({ page }) => {
     await openNoteEditor(page)
 
     const toolbar = page.getByTestId('note-editor-toolbar')
@@ -64,9 +60,17 @@ test.describe('AC1: Toolbar organization', () => {
 
     // Verify all expected buttons are present
     const expectedButtons = [
-      'Bold', 'Italic', 'Underline', 'Highlight',
-      'Heading', 'Align left', 'Align center', 'Align right',
-      'Bullet list', 'Ordered list', 'Task list',
+      'Bold',
+      'Italic',
+      'Underline',
+      'Highlight',
+      'Heading',
+      'Align left',
+      'Align center',
+      'Align right',
+      'Bullet list',
+      'Ordered list',
+      'Task list',
       'Code block',
       'Insert link',
     ]
@@ -75,9 +79,7 @@ test.describe('AC1: Toolbar organization', () => {
     }
   })
 
-  test('all toolbar buttons have 44x44px minimum touch targets', async ({
-    page,
-  }) => {
+  test('all toolbar buttons have 44x44px minimum touch targets', async ({ page }) => {
     await openNoteEditor(page)
 
     const toolbar = page.getByTestId('note-editor-toolbar')
@@ -93,9 +95,7 @@ test.describe('AC1: Toolbar organization', () => {
     }
   })
 
-  test('toolbar buttons have visible focus rings via Tab navigation', async ({
-    page,
-  }) => {
+  test('toolbar buttons have visible focus rings via Tab navigation', async ({ page }) => {
     await openNoteEditor(page)
 
     const toolbar = page.getByTestId('note-editor-toolbar')
@@ -106,7 +106,7 @@ test.describe('AC1: Toolbar organization', () => {
     await page.keyboard.press('Tab')
 
     const focused = page.locator(':focus')
-    const outline = await focused.evaluate((el) => {
+    const outline = await focused.evaluate(el => {
       const styles = window.getComputedStyle(el)
       return {
         outlineStyle: styles.outlineStyle,
@@ -116,8 +116,7 @@ test.describe('AC1: Toolbar organization', () => {
 
     // Should have visible focus indicator (ring-2 maps to box-shadow)
     const hasFocusRing =
-      outline.outlineStyle !== 'none' ||
-      (outline.boxShadow !== 'none' && outline.boxShadow !== '')
+      outline.outlineStyle !== 'none' || (outline.boxShadow !== 'none' && outline.boxShadow !== '')
     expect(hasFocusRing).toBe(true)
   })
 })
@@ -127,9 +126,7 @@ test.describe('AC1: Toolbar organization', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('AC2: Highlight', () => {
-  test('apply and remove highlight on selected text', async ({
-    page,
-  }) => {
+  test('apply and remove highlight on selected text', async ({ page }) => {
     await openNoteEditor(page)
 
     const editor = page.locator('.tiptap')
@@ -165,9 +162,7 @@ test.describe('AC2: Highlight', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('AC3: Task list', () => {
-  test('insert task list with interactive checkboxes and strikethrough', async ({
-    page,
-  }) => {
+  test('insert task list with interactive checkboxes and strikethrough', async ({ page }) => {
     await openNoteEditor(page)
 
     const editor = page.locator('.tiptap')
@@ -202,9 +197,7 @@ test.describe('AC3: Task list', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('AC4: Typography auto-correction', () => {
-  test('straight quotes are converted to smart quotes', async ({
-    page,
-  }) => {
+  test('straight quotes are converted to smart quotes', async ({ page }) => {
     await openNoteEditor(page)
 
     const editor = page.locator('.tiptap')
@@ -220,9 +213,7 @@ test.describe('AC4: Typography auto-correction', () => {
     expect(text).toContain('\u201D') // right double quote
   })
 
-  test('double hyphens are converted to em-dashes', async ({
-    page,
-  }) => {
+  test('double hyphens are converted to em-dashes', async ({ page }) => {
     await openNoteEditor(page)
 
     const editor = page.locator('.tiptap')
@@ -242,9 +233,7 @@ test.describe('AC4: Typography auto-correction', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('AC5: Word count', () => {
-  test('word count displays in status bar and updates in real-time', async ({
-    page,
-  }) => {
+  test('word count displays in status bar and updates in real-time', async ({ page }) => {
     await openNoteEditor(page)
 
     const wordCount = page.getByTestId('note-word-count')
@@ -265,9 +254,7 @@ test.describe('AC5: Word count', () => {
     await expect(wordCount).toHaveText('5 words', { timeout: 5000 })
   })
 
-  test('word count shows singular "word" for exactly 1 word', async ({
-    page,
-  }) => {
+  test('word count shows singular "word" for exactly 1 word', async ({ page }) => {
     await openNoteEditor(page)
 
     const editor = page.locator('.tiptap')
@@ -284,16 +271,14 @@ test.describe('AC5: Word count', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('Pre-flight: Link dialog', () => {
-  test('clicking link button opens a dialog instead of window.prompt', async ({
-    page,
-  }) => {
+  test('clicking link button opens a dialog instead of window.prompt', async ({ page }) => {
     await openNoteEditor(page)
 
     // Monitor that window.prompt is NOT called
     await page.evaluate(() => {
-      (window as unknown as { __promptCalled: boolean }).__promptCalled = false
+      ;(window as unknown as { __promptCalled: boolean }).__promptCalled = false
       window.prompt = () => {
-        (window as unknown as { __promptCalled: boolean }).__promptCalled = true
+        ;(window as unknown as { __promptCalled: boolean }).__promptCalled = true
         return null
       }
     })
@@ -308,7 +293,7 @@ test.describe('Pre-flight: Link dialog', () => {
 
     // Verify window.prompt was NOT called
     const promptCalled = await page.evaluate(
-      () => (window as unknown as { __promptCalled: boolean }).__promptCalled,
+      () => (window as unknown as { __promptCalled: boolean }).__promptCalled
     )
     expect(promptCalled).toBe(false)
   })

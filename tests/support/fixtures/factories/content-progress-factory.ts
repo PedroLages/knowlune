@@ -1,8 +1,6 @@
 import type { ContentProgress, CompletionStatus } from '../../../../src/data/types'
 
-export function createContentProgress(
-  overrides: Partial<ContentProgress> = {},
-): ContentProgress {
+export function createContentProgress(overrides: Partial<ContentProgress> = {}): ContentProgress {
   return {
     courseId: 'course-1',
     itemId: 'lesson-1',

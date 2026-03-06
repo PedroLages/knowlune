@@ -64,8 +64,14 @@ async function seedNotes(page: Parameters<typeof navigateAndWait>[0]) {
           store.put(note)
         }
 
-        tx.oncomplete = () => { db.close(); resolve() }
-        tx.onerror = () => { db.close(); reject(tx.error) }
+        tx.oncomplete = () => {
+          db.close()
+          resolve()
+        }
+        tx.onerror = () => {
+          db.close()
+          reject(tx.error)
+        }
       }
       request.onerror = () => reject(request.error)
     })
@@ -86,8 +92,14 @@ async function clearNotes(page: Parameters<typeof navigateAndWait>[0]) {
         }
         const tx = db.transaction('notes', 'readwrite')
         tx.objectStore('notes').clear()
-        tx.oncomplete = () => { db.close(); resolve() }
-        tx.onerror = () => { db.close(); reject(tx.error) }
+        tx.oncomplete = () => {
+          db.close()
+          resolve()
+        }
+        tx.onerror = () => {
+          db.close()
+          reject(tx.error)
+        }
       }
       request.onerror = () => reject(request.error)
     })
@@ -118,9 +130,13 @@ test.describe('AC1: Notes tab with grouped notes', () => {
 
     // Lesson titles as grouping headers
     await expect(notesPanel.getByRole('heading', { name: /introduction/i })).toBeVisible()
-    await expect(notesPanel.getByText('Introduction notes about the operative training program')).toBeVisible()
+    await expect(
+      notesPanel.getByText('Introduction notes about the operative training program')
+    ).toBeVisible()
     await expect(notesPanel.getByRole('heading', { name: /pillars of influence/i })).toBeVisible()
-    await expect(notesPanel.getByText('Key takeaways from the pillars of influence lesson')).toBeVisible()
+    await expect(
+      notesPanel.getByText('Key takeaways from the pillars of influence lesson')
+    ).toBeVisible()
   })
 
   test('shows preview snippet, tags, and last updated date', async ({ page }) => {
@@ -181,7 +197,9 @@ test.describe('AC2: Note detail, inline edit, and delete', () => {
 
     // Full content should render in a Tiptap read-only viewer (ProseMirror)
     await expect(
-      notesPanel.locator('.ProseMirror').filter({ hasText: 'Introduction notes about the operative training program' }),
+      notesPanel
+        .locator('.ProseMirror')
+        .filter({ hasText: 'Introduction notes about the operative training program' })
     ).toBeVisible()
 
     // Edit and delete buttons should be visible in expanded view
@@ -235,11 +253,16 @@ test.describe('AC2: Note detail, inline edit, and delete', () => {
     await notesPanel.getByTestId('delete-note-button').click()
 
     // Cancel in confirmation dialog
-    await page.getByRole('alertdialog').getByRole('button', { name: /cancel/i }).click()
+    await page
+      .getByRole('alertdialog')
+      .getByRole('button', { name: /cancel/i })
+      .click()
 
     // Dialog should close and note should still be visible
     await expect(page.getByRole('alertdialog')).not.toBeVisible()
-    await expect(notesPanel.getByText('Introduction notes about the operative training program').first()).toBeVisible()
+    await expect(
+      notesPanel.getByText('Introduction notes about the operative training program').first()
+    ).toBeVisible()
   })
 
   test('note can be deleted with confirmation dialog', async ({ page }) => {
@@ -261,10 +284,15 @@ test.describe('AC2: Note detail, inline edit, and delete', () => {
     await expect(page.getByText(/delete this note/i)).toBeVisible()
 
     // Confirm deletion
-    await page.getByRole('alertdialog').getByRole('button', { name: /delete/i }).click()
+    await page
+      .getByRole('alertdialog')
+      .getByRole('button', { name: /delete/i })
+      .click()
 
     // Note should be removed from the list
-    await expect(notesPanel.getByText('Introduction notes about the operative training program')).not.toBeVisible()
+    await expect(
+      notesPanel.getByText('Introduction notes about the operative training program')
+    ).not.toBeVisible()
   })
 })
 
@@ -277,7 +305,7 @@ test.describe('AC3: Empty state', () => {
     await page.getByRole('tab', { name: /notes/i }).click()
 
     await expect(
-      page.getByText('No notes yet. Start taking notes while watching videos.'),
+      page.getByText('No notes yet. Start taking notes while watching videos.')
     ).toBeVisible()
   })
 })

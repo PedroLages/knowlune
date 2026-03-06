@@ -66,8 +66,14 @@ async function seedBookmarks(page: Parameters<typeof navigateAndWait>[0]) {
           store.put(bm)
         }
 
-        tx.oncomplete = () => { db.close(); resolve() }
-        tx.onerror = () => { db.close(); reject(tx.error) }
+        tx.oncomplete = () => {
+          db.close()
+          resolve()
+        }
+        tx.onerror = () => {
+          db.close()
+          reject(tx.error)
+        }
       }
       request.onerror = () => reject(request.error)
     })
@@ -88,8 +94,14 @@ async function clearBookmarks(page: Parameters<typeof navigateAndWait>[0]) {
         }
         const tx = db.transaction('bookmarks', 'readwrite')
         tx.objectStore('bookmarks').clear()
-        tx.oncomplete = () => { db.close(); resolve() }
-        tx.onerror = () => { db.close(); reject(tx.error) }
+        tx.oncomplete = () => {
+          db.close()
+          resolve()
+        }
+        tx.onerror = () => {
+          db.close()
+          reject(tx.error)
+        }
       }
       request.onerror = () => reject(request.error)
     })
@@ -107,7 +119,9 @@ test.describe('AC1: Bookmarks page lists all bookmarks', () => {
     await expect(bookmarksTab).toBeVisible()
   })
 
-  test('displays bookmarks with course title, video title, timestamp, and date', async ({ page }) => {
+  test('displays bookmarks with course title, video title, timestamp, and date', async ({
+    page,
+  }) => {
     await goToBookmarks(page)
     await seedBookmarks(page)
     await page.reload()
@@ -122,10 +136,10 @@ test.describe('AC1: Bookmarks page lists all bookmarks', () => {
 
     // Verify first entry (most recent: bm-2, operative-six / op6-pillars-of-influence)
     const firstEntry = bookmarkEntries.first()
-    await expect(firstEntry).toContainText('Operative Six')            // course title
+    await expect(firstEntry).toContainText('Operative Six') // course title
     await expect(firstEntry).toContainText('The Pillars of Influence') // lesson title
-    await expect(firstEntry).toContainText('4:05')                     // timestamp
-    await expect(firstEntry).toContainText('Mar 1, 2026')              // date
+    await expect(firstEntry).toContainText('4:05') // timestamp
+    await expect(firstEntry).toContainText('Mar 1, 2026') // date
   })
 
   test('bookmarks are sorted by most recent first', async ({ page }) => {
@@ -140,8 +154,8 @@ test.describe('AC1: Bookmarks page lists all bookmarks', () => {
     // bm-2 (Mar 1) should appear before bm-1 (Feb 28) which is before bm-3 (Feb 27)
     const firstText = await bookmarkEntries.nth(0).textContent()
     const lastText = await bookmarkEntries.nth(2).textContent()
-    expect(firstText).toContain('4:05')  // bm-2 (most recent)
-    expect(lastText).toContain('0:30')   // bm-3 (oldest)
+    expect(firstText).toContain('4:05') // bm-2 (most recent)
+    expect(lastText).toContain('0:30') // bm-3 (oldest)
   })
 
   test('shows empty state when no bookmarks exist', async ({ page }) => {
@@ -151,14 +165,14 @@ test.describe('AC1: Bookmarks page lists all bookmarks', () => {
 
     await page.getByRole('tab', { name: /bookmarks/i }).click()
 
-    await expect(
-      page.getByText(/no bookmarks/i),
-    ).toBeVisible()
+    await expect(page.getByText(/no bookmarks/i)).toBeVisible()
   })
 })
 
 test.describe('AC2: Click bookmark to navigate to lesson player', () => {
-  test('clicking a bookmark navigates to the lesson player at the bookmarked timestamp', async ({ page }) => {
+  test('clicking a bookmark navigates to the lesson player at the bookmarked timestamp', async ({
+    page,
+  }) => {
     await goToBookmarks(page)
     await seedBookmarks(page)
     await page.reload()
@@ -208,7 +222,10 @@ test.describe('AC4: Delete bookmark with confirmation', () => {
 
     // Click delete on the first bookmark
     const bookmarkEntries = page.getByTestId('bookmark-entry')
-    await bookmarkEntries.first().getByRole('button', { name: /delete/i }).click()
+    await bookmarkEntries
+      .first()
+      .getByRole('button', { name: /delete/i })
+      .click()
 
     // Confirmation dialog should appear
     await expect(page.getByRole('alertdialog')).toBeVisible()
@@ -226,8 +243,14 @@ test.describe('AC4: Delete bookmark with confirmation', () => {
     const initialCount = await bookmarkEntries.count()
 
     // Click delete, then cancel
-    await bookmarkEntries.first().getByRole('button', { name: /delete/i }).click()
-    await page.getByRole('alertdialog').getByRole('button', { name: /cancel/i }).click()
+    await bookmarkEntries
+      .first()
+      .getByRole('button', { name: /delete/i })
+      .click()
+    await page
+      .getByRole('alertdialog')
+      .getByRole('button', { name: /cancel/i })
+      .click()
 
     // Dialog dismissed, bookmark still present
     await expect(page.getByRole('alertdialog')).not.toBeVisible()
@@ -245,8 +268,14 @@ test.describe('AC4: Delete bookmark with confirmation', () => {
     await expect(bookmarkEntries).toHaveCount(3)
 
     // Delete first bookmark
-    await bookmarkEntries.first().getByRole('button', { name: /delete/i }).click()
-    await page.getByRole('alertdialog').getByRole('button', { name: /delete/i }).click()
+    await bookmarkEntries
+      .first()
+      .getByRole('button', { name: /delete/i })
+      .click()
+    await page
+      .getByRole('alertdialog')
+      .getByRole('button', { name: /delete/i })
+      .click()
 
     // One fewer bookmark
     await expect(bookmarkEntries).toHaveCount(2)

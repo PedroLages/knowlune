@@ -113,8 +113,8 @@ test.describe('Study Streak Counter (E05-S01)', () => {
     await rmPage.reload()
     await rmPage.waitForLoadState('domcontentloaded')
 
-    const prefersReducedMotion = await rmPage.evaluate(() =>
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const prefersReducedMotion = await rmPage.evaluate(
+      () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
     )
     expect(prefersReducedMotion).toBe(true)
 

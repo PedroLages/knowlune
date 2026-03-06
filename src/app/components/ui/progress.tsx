@@ -15,7 +15,7 @@ function Progress({
   className,
   value = 0,
   showLabel = false,
-  labelFormat = (v) => `${v}% complete`,
+  labelFormat = v => `${v}% complete`,
   ...props
 }: ProgressProps) {
   // Handle NaN explicitly before normalization

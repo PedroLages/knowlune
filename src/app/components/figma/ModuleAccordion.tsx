@@ -9,11 +9,7 @@ import {
   AccordionTrigger,
 } from '@/app/components/ui/accordion'
 import { Badge } from '@/app/components/ui/badge'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/app/components/ui/popover'
+import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
 import type { CompletionStatus, Module } from '@/data/types'
 import { StatusIndicator } from './StatusIndicator'
 import { StatusSelector } from './StatusSelector'
@@ -84,9 +80,7 @@ export function ModuleAccordion({
     >
       {modules.map(module => {
         const moduleStatus = getStatus(module.id)
-        const completedInModule = module.lessons.filter(
-          l => getStatus(l.id) === 'completed'
-        ).length
+        const completedInModule = module.lessons.filter(l => getStatus(l.id) === 'completed').length
 
         return (
           <AccordionItem
@@ -96,11 +90,7 @@ export function ModuleAccordion({
           >
             <AccordionTrigger className="hover:no-underline">
               <div className="flex items-center gap-2">
-                <StatusIndicator
-                  status={moduleStatus}
-                  itemId={module.id}
-                  mode="display"
-                />
+                <StatusIndicator status={moduleStatus} itemId={module.id} mode="display" />
                 <div className="flex flex-col items-start gap-1">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-sm">{module.title}</span>
@@ -140,15 +130,10 @@ export function ModuleAccordion({
                       >
                         <Popover
                           open={openPopover === lesson.id}
-                          onOpenChange={open =>
-                            setOpenPopover(open ? lesson.id : null)
-                          }
+                          onOpenChange={open => setOpenPopover(open ? lesson.id : null)}
                         >
                           <PopoverTrigger asChild>
-                            <StatusIndicator
-                              status={lessonStatus}
-                              itemId={lesson.id}
-                            />
+                            <StatusIndicator status={lessonStatus} itemId={lesson.id} />
                           </PopoverTrigger>
                           <PopoverContent
                             className="w-auto p-2"
@@ -158,9 +143,7 @@ export function ModuleAccordion({
                           >
                             <StatusSelector
                               currentStatus={lessonStatus}
-                              onSelect={status =>
-                                handleStatusChange(lesson.id, status)
-                              }
+                              onSelect={status => handleStatusChange(lesson.id, status)}
                             />
                           </PopoverContent>
                         </Popover>

@@ -1,6 +1,5 @@
-import { Button } from '@/app/components/ui/button'
 import { Link } from 'react-router'
-import { BookOpen, FileText, Play, TrendingUp } from 'lucide-react'
+import { BookOpen, FileText, Play, TrendingUp, ArrowRight } from 'lucide-react'
 
 interface QuickActionsProps {
   studyNotes: number
@@ -41,26 +40,29 @@ export function QuickActions({
   })
 
   return (
-    <section className="mb-8">
-      <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div>
+      <h2 className="text-xl mb-4">Quick Actions</h2>
+      <div className="space-y-2">
         {actions.map(action => {
           const Icon = action.icon
           return (
-            <Button
+            <Link
               key={action.label}
-              variant="outline"
-              className="h-24 flex-col gap-2 hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:border-blue-300 transition-all group"
-              asChild
+              to={action.href}
+              className="flex items-center gap-3 p-4 rounded-2xl bg-surface-elevated border border-border/50 hover:border-brand-muted hover:bg-brand-soft/30 dark:hover:bg-brand-soft/10 motion-safe:transition-[background-color,border-color] motion-safe:duration-200 group"
             >
-              <Link to={action.href}>
-                <Icon className="w-6 h-6 text-brand group-hover:scale-110 transition-transform" />
-                <span className="text-sm font-medium">{action.label}</span>
-              </Link>
-            </Button>
+              <div className="size-10 rounded-xl bg-brand-soft dark:bg-brand-soft flex items-center justify-center group-hover:bg-brand-muted motion-safe:transition-colors flex-shrink-0">
+                <Icon className="size-5 text-brand" aria-hidden="true" />
+              </div>
+              <span className="flex-1 font-medium text-sm">{action.label}</span>
+              <ArrowRight
+                className="size-4 text-muted-foreground group-hover:text-brand group-hover:translate-x-1 motion-safe:transition-[color,transform] motion-safe:duration-200"
+                aria-hidden="true"
+              />
+            </Link>
           )
         })}
       </div>
-    </section>
+    </div>
   )
 }

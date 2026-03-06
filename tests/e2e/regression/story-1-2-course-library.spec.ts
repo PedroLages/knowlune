@@ -33,68 +33,49 @@ test.describe('AC1: Course Card Grid Display', () => {
     pdfCount: 3,
   })
 
-  test('should display imported courses grid section', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should display imported courses grid section', async ({ page, indexedDB }) => {
     // GIVEN: One imported course exists
     await seedAndReload(page, indexedDB, [course])
 
     // THEN: Imported courses grid section is visible
-    await expect(
-      page.getByTestId('imported-courses-grid'),
-    ).toBeVisible()
+    await expect(page.getByTestId('imported-courses-grid')).toBeVisible()
   })
 
-  test('should render imported course card with data-testid', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should render imported course card with data-testid', async ({ page, indexedDB }) => {
     // GIVEN: One imported course exists
     await seedAndReload(page, indexedDB, [course])
 
     // THEN: An imported course card is rendered
-    await expect(
-      page.getByTestId('imported-course-card').first(),
-    ).toBeVisible()
+    await expect(page.getByTestId('imported-course-card').first()).toBeVisible()
   })
 
-  test('should display course title on imported course card', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should display course title on imported course card', async ({ page, indexedDB }) => {
     // GIVEN: Imported course with known title
     await seedAndReload(page, indexedDB, [course])
 
     // THEN: Course title is visible on the card
     await expect(
-      page.getByTestId('imported-course-card').first().getByTestId('course-card-title'),
+      page.getByTestId('imported-course-card').first().getByTestId('course-card-title')
     ).toHaveText('React Fundamentals')
   })
 
-  test('should display video count on imported course card', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should display video count on imported course card', async ({ page, indexedDB }) => {
     // GIVEN: Course with 12 videos
     await seedAndReload(page, indexedDB, [course])
 
     // THEN: Video count is visible
     await expect(
-      page.getByTestId('imported-course-card').first().getByTestId('course-card-video-count'),
+      page.getByTestId('imported-course-card').first().getByTestId('course-card-video-count')
     ).toContainText('12')
   })
 
-  test('should display PDF count on imported course card', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should display PDF count on imported course card', async ({ page, indexedDB }) => {
     // GIVEN: Course with 3 PDFs
     await seedAndReload(page, indexedDB, [course])
 
     // THEN: PDF count is visible
     await expect(
-      page.getByTestId('imported-course-card').first().getByTestId('course-card-pdf-count'),
+      page.getByTestId('imported-course-card').first().getByTestId('course-card-pdf-count')
     ).toContainText('3')
   })
 
@@ -107,14 +88,11 @@ test.describe('AC1: Course Card Grid Display', () => {
 
     // THEN: Gradient placeholder with FolderOpen icon is visible
     await expect(
-      page.getByTestId('imported-course-card').first().getByTestId('course-card-placeholder'),
+      page.getByTestId('imported-course-card').first().getByTestId('course-card-placeholder')
     ).toBeVisible()
   })
 
-  test('should use 4-column grid layout on desktop', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should use 4-column grid layout on desktop', async ({ page, indexedDB }) => {
     // GIVEN: Multiple imported courses on desktop viewport (1440px)
     await page.setViewportSize({ width: 1440, height: 900 })
     const courses = createImportedCourses(5)
@@ -126,10 +104,7 @@ test.describe('AC1: Course Card Grid Display', () => {
     expect(gridClass).toContain('lg:grid-cols-4')
   })
 
-  test('should use 2-column grid layout on tablet', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should use 2-column grid layout on tablet', async ({ page, indexedDB }) => {
     // GIVEN: Multiple imported courses on tablet viewport (768px)
     await page.setViewportSize({ width: 768, height: 1024 })
     const courses = createImportedCourses(4)
@@ -141,10 +116,7 @@ test.describe('AC1: Course Card Grid Display', () => {
     expect(gridClass).toContain('sm:grid-cols-2')
   })
 
-  test('should use 1-column grid layout on mobile', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should use 1-column grid layout on mobile', async ({ page, indexedDB }) => {
     // GIVEN: Multiple imported courses on mobile viewport (375px)
     await page.setViewportSize({ width: 375, height: 667 })
     const courses = createImportedCourses(3)
@@ -169,10 +141,7 @@ test.describe('AC1: Course Card Grid Display', () => {
     expect(cardClass).toContain('rounded-[24px]')
   })
 
-  test('should use design system background color', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should use design system background color', async ({ page, indexedDB }) => {
     // GIVEN: Courses page rendered with imported courses
     await seedAndReload(page, indexedDB, [course])
 
@@ -198,18 +167,12 @@ test.describe('AC1: Course Card Grid Display', () => {
     await card.hover()
 
     // THEN: Card has scale transform applied (scale-[1.02])
-    const transform = await card.evaluate((el) =>
-      getComputedStyle(el).transform,
-    )
+    const transform = await card.evaluate(el => getComputedStyle(el).transform)
     // scale(1.02) produces a matrix like "matrix(1.02, 0, 0, 1.02, 0, 0)"
     expect(transform).toContain('1.02')
   })
 
-  test('should apply blue-600 title color on hover', async ({
-    page,
-    indexedDB,
-    isMobile,
-  }) => {
+  test('should apply blue-600 title color on hover', async ({ page, indexedDB, isMobile }) => {
     test.skip(isMobile, 'Hover states not supported on touch devices')
     // GIVEN: Imported course card rendered
     await seedAndReload(page, indexedDB, [course])
@@ -220,30 +183,22 @@ test.describe('AC1: Course Card Grid Display', () => {
 
     // THEN: Title text color changes to blue-600
     const title = card.getByTestId('course-card-title')
-    const color = await title.evaluate((el) =>
-      getComputedStyle(el).color,
-    )
+    const color = await title.evaluate(el => getComputedStyle(el).color)
     // blue-600 is approximately rgb(37, 99, 235) in Tailwind default palette
     expect(color).toMatch(/rgb\(37,\s*99,\s*235\)/)
   })
 
-  test('should wrap imported course card in article element', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should wrap imported course card in article element', async ({ page, indexedDB }) => {
     // GIVEN: Imported course card rendered
     await seedAndReload(page, indexedDB, [course])
 
     // THEN: Card uses semantic <article> element
     const card = page.getByTestId('imported-course-card').first()
-    const tagName = await card.evaluate((el) => el.tagName.toLowerCase())
+    const tagName = await card.evaluate(el => el.tagName.toLowerCase())
     expect(tagName).toBe('article')
   })
 
-  test('should have aria-label on imported course card', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should have aria-label on imported course card', async ({ page, indexedDB }) => {
     // GIVEN: Imported course with known title
     await seedAndReload(page, indexedDB, [course])
 
@@ -265,15 +220,10 @@ test.describe('AC1: Course Card Grid Display', () => {
     await card.focus()
 
     // THEN: Focus ring is visible (focus-visible:ring-2)
-    const outlineStyle = await card.evaluate((el) =>
-      getComputedStyle(el).outlineStyle,
-    )
+    const outlineStyle = await card.evaluate(el => getComputedStyle(el).outlineStyle)
     // Tailwind ring utility uses box-shadow, not outline — check either
-    const boxShadow = await card.evaluate((el) =>
-      getComputedStyle(el).boxShadow,
-    )
-    const hasFocusIndicator =
-      outlineStyle !== 'none' || boxShadow !== 'none'
+    const boxShadow = await card.evaluate(el => getComputedStyle(el).boxShadow)
+    const hasFocusIndicator = outlineStyle !== 'none' || boxShadow !== 'none'
     expect(hasFocusIndicator).toBe(true)
   })
 })
@@ -283,33 +233,25 @@ test.describe('AC1: Course Card Grid Display', () => {
 // ===========================================================================
 
 test.describe('AC2: Empty State When No Imported Courses', () => {
-  test('should display empty state section when no imported courses exist', async ({
-    page,
-  }) => {
+  test('should display empty state section when no imported courses exist', async ({ page }) => {
     // GIVEN: No imported courses in IndexedDB
     await goToCourses(page)
 
     // THEN: Empty state container is visible
-    await expect(
-      page.getByTestId('imported-courses-empty-state'),
-    ).toBeVisible()
+    await expect(page.getByTestId('imported-courses-empty-state')).toBeVisible()
   })
 
-  test('should show Import Your First Course CTA text', async ({
-    page,
-  }) => {
+  test('should show Import Your First Course CTA text', async ({ page }) => {
     // GIVEN: No imported courses
     await goToCourses(page)
 
     // THEN: CTA text is visible in empty state
-    await expect(
-      page.getByTestId('imported-courses-empty-state'),
-    ).toContainText('Import Your First Course')
+    await expect(page.getByTestId('imported-courses-empty-state')).toContainText(
+      'Import Your First Course'
+    )
   })
 
-  test('should have CTA button with proper focus indicators', async ({
-    page,
-  }) => {
+  test('should have CTA button with proper focus indicators', async ({ page }) => {
     // GIVEN: No imported courses
     await goToCourses(page)
 
@@ -318,13 +260,11 @@ test.describe('AC2: Empty State When No Imported Courses', () => {
     await expect(cta).toBeVisible()
 
     // THEN: CTA is a button element
-    const tagName = await cta.evaluate((el) => el.tagName.toLowerCase())
+    const tagName = await cta.evaluate(el => el.tagName.toLowerCase())
     expect(tagName).toBe('button')
   })
 
-  test('should have aria-label on empty state section', async ({
-    page,
-  }) => {
+  test('should have aria-label on empty state section', async ({ page }) => {
     // GIVEN: No imported courses
     await goToCourses(page)
 
@@ -340,10 +280,7 @@ test.describe('AC2: Empty State When No Imported Courses', () => {
 // ===========================================================================
 
 test.describe('AC3: Sorting and Performance', () => {
-  test('should display newest imported course first', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should display newest imported course first', async ({ page, indexedDB }) => {
     // GIVEN: Three courses imported at different times
     const oldest = createImportedCourse({
       name: 'Oldest Course',
@@ -368,10 +305,7 @@ test.describe('AC3: Sorting and Performance', () => {
     await expect(firstCardTitle).toHaveText('Newest Course')
   })
 
-  test('should display second-newest course in second position', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should display second-newest course in second position', async ({ page, indexedDB }) => {
     // GIVEN: Three courses with distinct import dates
     const oldest = createImportedCourse({
       name: 'Oldest Course',
@@ -395,12 +329,9 @@ test.describe('AC3: Sorting and Performance', () => {
     await expect(secondCardTitle).toHaveText('Middle Course')
   })
 
-  test('should render 10+ courses without layout shift', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should render 10+ courses without layout shift', async ({ page, indexedDB }) => {
     // GIVEN: 12 imported courses
-    const courses = createImportedCourses(12, (i) => ({
+    const courses = createImportedCourses(12, i => ({
       name: `Course ${String(i + 1).padStart(2, '0')}`,
       importedAt: new Date(2025, 0, i + 1).toISOString(),
     }))
@@ -411,10 +342,7 @@ test.describe('AC3: Sorting and Performance', () => {
     await expect(cards).toHaveCount(12)
   })
 
-  test('should maintain grid gap spacing with many courses', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should maintain grid gap spacing with many courses', async ({ page, indexedDB }) => {
     // GIVEN: Multiple imported courses
     const courses = createImportedCourses(8)
     await seedAndReload(page, indexedDB, courses)

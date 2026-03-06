@@ -12,6 +12,8 @@ import {
   setStreakPause,
   getStreakPauseStatus,
   clearStreakPause,
+  getFreezeDays,
+  setFreezeDays,
   toLocalDateString,
 } from '@/lib/studyLog'
 import type { StudyAction } from '@/lib/studyLog'
@@ -446,6 +448,23 @@ describe('studyLog', () => {
       clearStreakPause()
       expect(getStreakPauseStatus()).toBeNull()
     })
+
+    it('dispatches study-log-updated on setStreakPause', () => {
+      const handler = vi.fn()
+      window.addEventListener('study-log-updated', handler)
+      setStreakPause(7)
+      expect(handler).toHaveBeenCalledOnce()
+      window.removeEventListener('study-log-updated', handler)
+    })
+
+    it('dispatches study-log-updated on clearStreakPause', () => {
+      setStreakPause(7)
+      const handler = vi.fn()
+      window.addEventListener('study-log-updated', handler)
+      clearStreakPause()
+      expect(handler).toHaveBeenCalledOnce()
+      window.removeEventListener('study-log-updated', handler)
+    })
   })
 
   // ── getStreakSnapshot ──
@@ -473,6 +492,150 @@ describe('studyLog', () => {
       const snap2 = getStreakSnapshot(30)
       expect(snap1.currentStreak).toBe(snap2.currentStreak)
       expect(snap1.longestStreak).toBe(snap2.longestStreak)
+    })
+
+    it('includes freezeDays in snapshot', () => {
+      setFreezeDays([0, 6])
+      const snap = getStreakSnapshot(7)
+      expect(snap.freezeDays).toEqual([0, 6])
+    })
+
+    it('annotates activity with isFreezeDay', () => {
+      setFreezeDays([4]) // Thursday (FIXED_NOW is Thursday)
+      const snap = getStreakSnapshot(7)
+      const thursday = snap.activity.find(d => {
+        const date = new Date(d.date + 'T12:00:00')
+        return date.getDay() === 4
+      })
+      expect(thursday?.isFreezeDay).toBe(true)
+    })
+  })
+
+  // ── freeze days ──
+
+  describe('freeze days', () => {
+    it('returns empty array when no freeze days set', () => {
+      expect(getFreezeDays()).toEqual([])
+    })
+
+    it('sets and retrieves freeze days', () => {
+      setFreezeDays([0, 3, 6])
+      expect(getFreezeDays()).toEqual([0, 3, 6])
+    })
+
+    it('enforces max 3 freeze days at data layer (write)', () => {
+      setFreezeDays([0, 1, 2, 3, 4])
+      expect(getFreezeDays()).toHaveLength(3)
+      expect(getFreezeDays()).toEqual([0, 1, 2])
+    })
+
+    it('enforces max 3 freeze days on read (corrupted localStorage with 7 days)', () => {
+      localStorage.setItem(
+        'study-streak-freeze-days',
+        JSON.stringify({ freezeDays: [0, 1, 2, 3, 4, 5, 6] })
+      )
+      const result = getFreezeDays()
+      expect(result).toHaveLength(3)
+      expect(result).toEqual([0, 1, 2])
+    })
+
+    it('filters invalid day indices on write', () => {
+      setFreezeDays([-1, 0, 7, 1.5, NaN, 3])
+      expect(getFreezeDays()).toEqual([0, 3])
+    })
+
+    it('filters invalid day indices on read', () => {
+      localStorage.setItem(
+        'study-streak-freeze-days',
+        JSON.stringify({ freezeDays: [-1, 0, 7, 1.5, 3] })
+      )
+      expect(getFreezeDays()).toEqual([0, 3])
+    })
+
+    it('handles corrupted localStorage gracefully', () => {
+      localStorage.setItem('study-streak-freeze-days', 'corrupt')
+      expect(getFreezeDays()).toEqual([])
+    })
+
+    it('dispatches study-log-updated event', () => {
+      const handler = vi.fn()
+      window.addEventListener('study-log-updated', handler)
+      setFreezeDays([0])
+      expect(handler).toHaveBeenCalledOnce()
+      window.removeEventListener('study-log-updated', handler)
+    })
+  })
+
+  // ── streak with freeze days ──
+
+  describe('streak with freeze days', () => {
+    // FIXED_NOW is 2026-01-15 (Thursday, day index 4)
+    // Day 0 = Thu Jan 15, Day 1 = Wed Jan 14, Day 2 = Tue Jan 13, etc.
+
+    it('preserves streak when today is a freeze day with no activity', () => {
+      // Today (Thu) is freeze day, studied yesterday and day before
+      setFreezeDays([4]) // Thursday
+      seedStudyDays([1, 2])
+      const snap = getStreakSnapshot(7)
+      expect(snap.currentStreak).toBe(2)
+    })
+
+    it('counts study on freeze day as a regular day', () => {
+      // Today (Thu) is freeze day, studied today + yesterday + day before
+      setFreezeDays([4]) // Thursday
+      seedStudyDays([0, 1, 2])
+      const snap = getStreakSnapshot(7)
+      expect(snap.currentStreak).toBe(3)
+    })
+
+    it('skips multiple consecutive freeze days without breaking streak', () => {
+      // Day 0 (Thu) and Day 1 (Wed) are both freeze days with no activity
+      // Studied Day 2 (Tue) and Day 3 (Mon)
+      setFreezeDays([3, 4]) // Wed=3, Thu=4
+      seedStudyDays([2, 3])
+      const snap = getStreakSnapshot(7)
+      expect(snap.currentStreak).toBe(2)
+    })
+
+    it('breaks streak on non-freeze day without activity', () => {
+      // Day 0 (Thu) is freeze, Day 1 (Wed) is NOT freeze and has no activity
+      // Studied Day 2 (Tue)
+      setFreezeDays([4]) // only Thursday
+      seedStudyDays([2])
+      const snap = getStreakSnapshot(7)
+      expect(snap.currentStreak).toBe(0) // Wed breaks the chain
+    })
+
+    it('bridges streak through yesterday when yesterday is a freeze day', () => {
+      // FIXED_NOW is Thu (day 4). Yesterday is Wed (day 3).
+      // Today (Thu): no activity, NOT freeze
+      // Yesterday (Wed): no activity, IS freeze
+      // Day 2 (Tue): studied
+      // Day 3 (Mon): studied
+      // Expected: streak=2 (Tue+Mon, Wed freeze skipped, today has no activity but yesterday-freeze bridges)
+      setFreezeDays([3]) // Wednesday
+      seedStudyDays([2, 3])
+      const snap = getStreakSnapshot(7)
+      expect(snap.currentStreak).toBe(2)
+    })
+
+    it('pause takes precedence over freeze (AC7) — distinguishing test', () => {
+      // FIXED_NOW is Thu (day 4).
+      // Studied today (Thu, day 0) and 2 days ago (Tue, day 2). Wed (day 3) is freeze.
+      // WITHOUT pause: walk from today → Thu(+1) → Wed(freeze, skip) → Tue(+1) → Mon(break) → streak=2
+      // WITH pause (freeze suspended): walk from most recent=Thu → Thu(+1) → Wed(no freeze) → break → streak=1
+      setFreezeDays([3]) // Wednesday
+      seedStudyDays([0, 2]) // Today (Thu) and Tue
+
+      // Without pause: streak should be 2 (freeze bridges Wed)
+      let snap = getStreakSnapshot(7)
+      expect(snap.currentStreak).toBe(2)
+
+      // With pause: freeze suspended, streak should be 1 (Wed breaks chain)
+      setStreakPause(7)
+      snap = getStreakSnapshot(7)
+      expect(snap.currentStreak).toBe(1)
+      expect(snap.pauseStatus?.enabled).toBe(true)
     })
   })
 })

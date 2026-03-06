@@ -24,6 +24,8 @@ All gates must use these exact names in `review_gates_passed`. No variants (e.g.
 |------|-----------|-------------------------------|
 | `build` | Pre-checks pass | Yes |
 | `lint` | Pre-checks pass (or skipped if no script) | Yes (or `lint-skipped`) |
+| `type-check` | Pre-checks pass | Yes |
+| `format-check` | Pre-checks pass | Yes |
 | `unit-tests` | Pre-checks pass (or skipped if no tests) | Yes (or `unit-tests-skipped`) |
 | `e2e-tests` | Pre-checks pass (or skipped if no tests) | Yes (or `e2e-tests-skipped`) |
 | `design-review` | Design review agent completes | Yes (or `design-review-skipped` if no UI changes) |
@@ -55,8 +57,15 @@ The `-skipped` suffix indicates the gate was intentionally skipped (no lint scri
 
    a. `npm run build` — STOP on failure with build errors.
    b. `npm run lint` — STOP on failure with lint errors (if lint script exists, otherwise skip).
-   c. `npm run test:unit -- --run` — STOP on failure. If no unit test script or no test files, note and continue.
-   d. E2E tests — run smoke specs + current story's spec on Chromium only:
+   c. **Type check** — `npx tsc --noEmit`. If errors found:
+      - Auto-fix: attempt to resolve type errors in files changed by the current branch (`git diff --name-only main...HEAD`). Only fix errors in branch-changed files — do not fix pre-existing errors in other files.
+      - Re-run `npx tsc --noEmit`. If errors remain only in files NOT changed by the branch, note them as pre-existing and continue. If errors remain in branch-changed files, STOP with error output.
+   d. **Format check** — `npx prettier --check "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}"`. If formatting issues found:
+      - Auto-fix: run `npx prettier --write "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}"` to format all files.
+      - Re-run the check to verify. If still failing, STOP with error output.
+      - Note in output: "Auto-formatted N files with Prettier."
+   e. `npm run test:unit -- --run` — STOP on failure. If no unit test script or no test files, note and continue.
+   f. E2E tests — run smoke specs + current story's spec on Chromium only:
       ```
       npx playwright test tests/e2e/navigation.spec.ts tests/e2e/overview.spec.ts tests/e2e/courses.spec.ts tests/e2e/story-{id}.spec.ts --project=chromium
       ```
@@ -67,6 +76,8 @@ The `-skipped` suffix indicates the gate was intentionally skipped (no lint scri
    On success: update `review_gates_passed` using canonical gate names:
    - Always add: `build`
    - Add `lint` if lint ran and passed, or `lint-skipped` if no lint script exists
+   - Add `type-check` (always runs — auto-fixes branch-changed files if needed)
+   - Add `format-check` (always runs — auto-formats all files if needed)
    - Add `unit-tests` if tests ran and passed, or `unit-tests-skipped` if no test files
    - Add `e2e-tests` if tests ran and passed, or `e2e-tests-skipped` if no test files
 
@@ -147,6 +158,8 @@ The `-skipped` suffix indicates the gate was intentionally skipped (no lint scri
    ### Pre-checks
    - Build: [pass/fail]
    - Lint: [pass/fail/skipped]
+   - Type check: [pass/auto-fixed/fail]
+   - Format check: [pass/auto-fixed N files/fail]
    - Unit tests: [pass/fail/skipped] ([N] tests)
    - E2E tests: [pass/fail/skipped] ([N] tests)
 
@@ -185,7 +198,7 @@ The `-skipped` suffix indicates the gate was intentionally skipped (no lint scri
 
 9. **Mark reviewed** (with gate validation):
 
-   **Validate all required gates** before marking `reviewed: true`. Check that `review_gates_passed` contains one entry (base or `-skipped` variant) for each of the 7 canonical gates: `build`, `lint`, `unit-tests`, `e2e-tests`, `design-review`, `code-review`, `code-review-testing`.
+   **Validate all required gates** before marking `reviewed: true`. Check that `review_gates_passed` contains one entry (base or `-skipped` variant) for each of the 9 canonical gates: `build`, `lint`, `type-check`, `format-check`, `unit-tests`, `e2e-tests`, `design-review`, `code-review`, `code-review-testing`.
 
    - **All gates present**: Set `reviewed: true`. Set `review_gates_passed` to the full list. Append review summary to `## Design Review Feedback` and `## Code Review Feedback` sections.
    - **Missing gates**: Do NOT set `reviewed: true`. Keep `reviewed: in-progress`. Warn the user:
@@ -208,6 +221,8 @@ The `-skipped` suffix indicates the gate was intentionally skipped (no lint scri
     | --------------------- | ------------------------- |
     | Build                 | [pass/fail]               |
     | Lint                  | [pass/fail/skipped]       |
+    | Type check            | [pass/auto-fixed/fail]    |
+    | Format check          | [pass/auto-fixed N files/fail] |
     | Unit tests            | [pass (N tests)/skipped]  |
     | E2E tests             | [pass (N tests)/skipped]  |
     | Design review         | [pass/N warnings/skipped] |

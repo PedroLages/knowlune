@@ -13,7 +13,7 @@ import { test, expect } from '../support/fixtures'
 /** Reusable helper to seed study sessions into IndexedDB */
 async function seedStudySessions(
   page: import('@playwright/test').Page,
-  sessions: Record<string, unknown>[],
+  sessions: Record<string, unknown>[]
 ) {
   await page.evaluate(
     async ({ dbName, storeName, data }) => {
@@ -38,7 +38,7 @@ async function seedStudySessions(
         request.onerror = () => reject(request.error)
       })
     },
-    { dbName: 'ElearningDB', storeName: 'studySessions', data: sessions },
+    { dbName: 'ElearningDB', storeName: 'studySessions', data: sessions }
   )
 }
 
@@ -61,9 +61,7 @@ test.describe('E04-S04: View Study Session History', () => {
    * Then sessions are displayed in reverse chronological order (most recent first)
    * And each entry shows: date, duration, course title, content summary
    */
-  test('should display study sessions in reverse chronological order', async ({
-    page,
-  }) => {
+  test('should display study sessions in reverse chronological order', async ({ page }) => {
     const sessions = [
       {
         id: 'session-1',
@@ -244,18 +242,12 @@ test.describe('E04-S04: View Study Session History', () => {
    * Then an empty state is displayed with a message encouraging them to start learning
    * And a call-to-action links to the Courses page
    */
-  test('should display empty state when no sessions exist', async ({
-    page,
-  }) => {
+  test('should display empty state when no sessions exist', async ({ page }) => {
     await page.goto('/session-history')
 
     // Verify empty state is displayed
-    await expect(
-      page.getByRole('heading', { name: 'No Study Sessions Yet' }),
-    ).toBeVisible()
-    await expect(
-      page.getByText(/Start learning to see your study history/i),
-    ).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'No Study Sessions Yet' })).toBeVisible()
+    await expect(page.getByText(/Start learning to see your study history/i)).toBeVisible()
 
     // Verify CTA links to Courses page
     const ctaLink = page.getByRole('link', { name: 'Browse Courses' })
@@ -269,9 +261,7 @@ test.describe('E04-S04: View Study Session History', () => {
    * When the session history list exceeds the viewport
    * Then the list is virtualized or paginated to maintain smooth scrolling performance
    */
-  test('should handle large session lists with pagination', async ({
-    page,
-  }) => {
+  test('should handle large session lists with pagination', async ({ page }) => {
     // Seed 50 study sessions (> PAGE_SIZE of 20)
     const sessions = Array.from({ length: 50 }, (_, i) => ({
       id: `session-${i}`,
@@ -319,9 +309,7 @@ test.describe('E04-S04: View Study Session History', () => {
    * Then an expanded view shows additional details: exact start and end times,
    * individual content items with timestamps, and a link to resume that course
    */
-  test('should expand session entry to show detailed information', async ({
-    page,
-  }) => {
+  test('should expand session entry to show detailed information', async ({ page }) => {
     const sessions = [
       {
         id: 'session-1',

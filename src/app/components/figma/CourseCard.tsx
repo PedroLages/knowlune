@@ -218,9 +218,7 @@ export function CourseCard({
         </div>
       )}
 
-      {completionPercent > 0 && (
-        <Progress value={completionPercent} showLabel className="h-1.5" />
-      )}
+      {completionPercent > 0 && <Progress value={completionPercent} showLabel className="h-1.5" />}
 
       <Button
         size="sm"
@@ -266,7 +264,10 @@ export function CourseCard({
         return (
           <>
             {completionPercent === 100 ? (
-              <div className="absolute top-3 right-3 bg-success text-success-foreground rounded-full px-3 py-1 text-xs font-bold shadow-lg flex items-center gap-1" data-testid="completion-badge">
+              <div
+                className="absolute top-3 right-3 bg-success text-success-foreground rounded-full px-3 py-1 text-xs font-bold shadow-lg flex items-center gap-1"
+                data-testid="completion-badge"
+              >
                 <CheckCircle className="size-3" />
                 Complete
               </div>

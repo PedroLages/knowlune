@@ -31,7 +31,7 @@ export interface ImportedCourseTestData {
 }
 
 export function createImportedCourse(
-  overrides: Partial<ImportedCourseTestData> = {},
+  overrides: Partial<ImportedCourseTestData> = {}
 ): ImportedCourseTestData {
   const id = overrides.id ?? uid()
   return {
@@ -49,9 +49,7 @@ export function createImportedCourse(
 
 export function createImportedCourses(
   count: number,
-  overridesFn?: (index: number) => Partial<ImportedCourseTestData>,
+  overridesFn?: (index: number) => Partial<ImportedCourseTestData>
 ): ImportedCourseTestData[] {
-  return Array.from({ length: count }, (_, i) =>
-    createImportedCourse(overridesFn?.(i)),
-  )
+  return Array.from({ length: count }, (_, i) => createImportedCourse(overridesFn?.(i)))
 }

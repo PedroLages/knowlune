@@ -38,10 +38,7 @@ test.beforeEach(async ({ page }) => {
 // ===========================================================================
 
 test.describe('AC1: Position Auto-Save', () => {
-  test('should save video position to storage periodically', async ({
-    page,
-    localStorage,
-  }) => {
+  test('should save video position to storage periodically', async ({ page, localStorage }) => {
     // GIVEN: User navigates to a lesson with video
     await navigateAndWait(page, LESSON_PATH)
 
@@ -60,9 +57,7 @@ test.describe('AC1: Position Auto-Save', () => {
     expect(courseProgress?.lastVideoPosition).toBeDefined()
   })
 
-  test('should not show any UI indication when saving position', async ({
-    page,
-  }) => {
+  test('should not show any UI indication when saving position', async ({ page }) => {
     // GIVEN: User is on a lesson page
     await navigateAndWait(page, LESSON_PATH)
 
@@ -104,10 +99,7 @@ test.describe('AC2: Resume from Last Position', () => {
     await expect(toast).toBeVisible({ timeout: 5000 })
   })
 
-  test('should auto-dismiss resume toast after ~2 seconds', async ({
-    page,
-    localStorage,
-  }) => {
+  test('should auto-dismiss resume toast after ~2 seconds', async ({ page, localStorage }) => {
     // GIVEN: A saved position exists
     await navigateAndWait(page, '/')
     await localStorage.seed('course-progress', {
@@ -131,9 +123,7 @@ test.describe('AC2: Resume from Last Position', () => {
     await expect(toast).not.toBeVisible({ timeout: 5000 })
   })
 
-  test('should not show resume toast when no saved position exists', async ({
-    page,
-  }) => {
+  test('should not show resume toast when no saved position exists', async ({ page }) => {
     // GIVEN: No saved position for this lesson
     // WHEN: User navigates to the lesson
     await navigateAndWait(page, LESSON_PATH)
@@ -150,9 +140,7 @@ test.describe('AC2: Resume from Last Position', () => {
 // ===========================================================================
 
 test.describe('AC3: Bookmark Creation', () => {
-  test('should show bookmark button in video controls', async ({
-    page,
-  }) => {
+  test('should show bookmark button in video controls', async ({ page }) => {
     // GIVEN: User navigates to a lesson with video
     await navigateAndWait(page, LESSON_PATH)
 
@@ -161,9 +149,7 @@ test.describe('AC3: Bookmark Creation', () => {
     await expect(bookmarkButton).toBeVisible()
   })
 
-  test('should create bookmark on button click and show toast', async ({
-    page,
-  }) => {
+  test('should create bookmark on button click and show toast', async ({ page }) => {
     // GIVEN: User is on a lesson with video
     await navigateAndWait(page, LESSON_PATH)
 
@@ -176,9 +162,7 @@ test.describe('AC3: Bookmark Creation', () => {
     await expect(toast).toBeVisible({ timeout: 5000 })
   })
 
-  test('should create bookmark via B keyboard shortcut', async ({
-    page,
-  }) => {
+  test('should create bookmark via B keyboard shortcut', async ({ page }) => {
     // GIVEN: User is on a lesson with video, video player is focused
     await navigateAndWait(page, LESSON_PATH)
 
@@ -194,9 +178,7 @@ test.describe('AC3: Bookmark Creation', () => {
     await expect(toast).toBeVisible({ timeout: 5000 })
   })
 
-  test('should display bookmark markers on the progress bar', async ({
-    page,
-  }) => {
+  test('should display bookmark markers on the progress bar', async ({ page }) => {
     // GIVEN: User is on a lesson and creates a bookmark
     await navigateAndWait(page, LESSON_PATH)
 
@@ -209,9 +191,7 @@ test.describe('AC3: Bookmark Creation', () => {
     await expect(markers).toHaveCount(1)
   })
 
-  test('should persist bookmarks in IndexedDB after page reload', async ({
-    page,
-  }) => {
+  test('should persist bookmarks in IndexedDB after page reload', async ({ page }) => {
     // GIVEN: User creates a bookmark
     await navigateAndWait(page, LESSON_PATH)
     const bookmarkButton = page.getByRole('button', { name: /bookmark/i })
@@ -233,9 +213,7 @@ test.describe('AC3: Bookmark Creation', () => {
 // ===========================================================================
 
 test.describe('AC4: Bookmark Marker Seek', () => {
-  test('should seek video when clicking a bookmark marker', async ({
-    page,
-  }) => {
+  test('should seek video when clicking a bookmark marker', async ({ page }) => {
     // GIVEN: User has a bookmark on the progress bar
     await navigateAndWait(page, LESSON_PATH)
     const bookmarkButton = page.getByRole('button', { name: /bookmark/i })
@@ -253,9 +231,7 @@ test.describe('AC4: Bookmark Marker Seek', () => {
     await expect(marker).toBeVisible()
   })
 
-  test('should show tooltip with time on bookmark marker hover', async ({
-    page,
-  }) => {
+  test('should show tooltip with time on bookmark marker hover', async ({ page }) => {
     // GIVEN: A bookmark marker exists on the progress bar
     await navigateAndWait(page, LESSON_PATH)
     const bookmarkButton = page.getByRole('button', { name: /bookmark/i })

@@ -1,7 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
-import { Search, FileText, ExternalLink, FolderOpen, Trash2, BookmarkIcon, Clock, AlertTriangle } from 'lucide-react'
+import {
+  Search,
+  FileText,
+  ExternalLink,
+  FolderOpen,
+  Trash2,
+  BookmarkIcon,
+  Clock,
+  AlertTriangle,
+} from 'lucide-react'
 import { Card } from '@/app/components/ui/card'
 import { Input } from '@/app/components/ui/input'
 import { Button } from '@/app/components/ui/button'
@@ -56,7 +65,10 @@ function collectLibraryItems(): LibraryItem[] {
   return items
 }
 
-function findCourseAndLesson(courseId: string, lessonId: string): { courseTitle: string; lessonTitle: string } {
+function findCourseAndLesson(
+  courseId: string,
+  lessonId: string
+): { courseTitle: string; lessonTitle: string } {
   const course = allCourses.find(c => c.id === courseId)
   if (!course) return { courseTitle: courseId, lessonTitle: lessonId }
   const lesson = course.modules.flatMap(m => m.lessons).find(l => l.id === lessonId)
@@ -82,8 +94,14 @@ function BookmarksSection() {
 
   useEffect(() => {
     getAllBookmarks()
-      .then(bm => { setBookmarks(bm); setIsLoading(false) })
-      .catch(() => { setError('Failed to load bookmarks'); setIsLoading(false) })
+      .then(bm => {
+        setBookmarks(bm)
+        setIsLoading(false)
+      })
+      .catch(() => {
+        setError('Failed to load bookmarks')
+        setIsLoading(false)
+      })
   }, [])
 
   const handleDelete = async (bookmark: VideoBookmark) => {
@@ -114,9 +132,7 @@ function BookmarksSection() {
       <div className="flex flex-col items-center justify-center py-16 text-destructive">
         <AlertTriangle className="mb-3 size-12 opacity-60" />
         <p>{error}</p>
-        <p className="text-xs mt-1 text-muted-foreground">
-          Try refreshing the page
-        </p>
+        <p className="text-xs mt-1 text-muted-foreground">Try refreshing the page</p>
       </div>
     )
   }
@@ -126,9 +142,7 @@ function BookmarksSection() {
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
         <Clock className="mb-3 size-12 opacity-40" />
         <p>No bookmarks yet</p>
-        <p className="text-xs mt-1">
-          Bookmark important moments in videos to find them later
-        </p>
+        <p className="text-xs mt-1">Bookmark important moments in videos to find them later</p>
       </div>
     )
   }
@@ -137,7 +151,10 @@ function BookmarksSection() {
     <>
       <div className="space-y-2">
         {bookmarks.map(bookmark => {
-          const { courseTitle, lessonTitle } = findCourseAndLesson(bookmark.courseId, bookmark.lessonId)
+          const { courseTitle, lessonTitle } = findCourseAndLesson(
+            bookmark.courseId,
+            bookmark.lessonId
+          )
           return (
             <div
               key={bookmark.id}
@@ -157,7 +174,12 @@ function BookmarksSection() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{lessonTitle}</p>
                   <p className="text-xs text-muted-foreground truncate">
-                    {courseTitle} &middot; {new Date(bookmark.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {courseTitle} &middot;{' '}
+                    {new Date(bookmark.createdAt).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
                   </p>
                 </div>
               </button>
@@ -166,7 +188,7 @@ function BookmarksSection() {
                 variant="ghost"
                 size="icon"
                 className="size-11 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity shrink-0"
-                onClick={(e) => {
+                onClick={e => {
                   e.stopPropagation()
                   deleteTriggerRef.current = e.currentTarget as HTMLButtonElement
                   setDeleteTarget(bookmark)
@@ -193,7 +215,9 @@ function BookmarksSection() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this bookmark?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove the bookmark at {deleteTarget && formatBookmarkTimestamp(deleteTarget.timestamp)}. This action cannot be undone.
+              This will permanently remove the bookmark at{' '}
+              {deleteTarget && formatBookmarkTimestamp(deleteTarget.timestamp)}. This action cannot
+              be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -241,7 +265,9 @@ export function Library() {
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold mb-2">Resource Library</h1>
-        <p className="text-muted-foreground">Browse documents, materials, and bookmarks across courses</p>
+        <p className="text-muted-foreground">
+          Browse documents, materials, and bookmarks across courses
+        </p>
       </div>
 
       {/* Top-level tabs: Documents / Bookmarks */}
@@ -309,7 +335,9 @@ export function Library() {
                             <FileText className="size-5 text-red-500" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <h3 className="font-medium text-sm mb-1 truncate">{item.resource.title}</h3>
+                            <h3 className="font-medium text-sm mb-1 truncate">
+                              {item.resource.title}
+                            </h3>
                             <p className="text-xs text-muted-foreground truncate">
                               {item.courseName} &middot; {item.moduleName}
                             </p>

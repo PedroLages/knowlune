@@ -54,7 +54,7 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
 4b. **If NOT reviewed** (streamlined mode):
    - Set `reviewed: in-progress`, `review_started: YYYY-MM-DD`, `review_gates_passed: []` in story frontmatter.
    - Run the full review pipeline inline — same steps as `/review-story` steps 4-8:
-     a. Pre-checks: build, lint, unit tests, E2E tests (smoke specs + current story spec, Chromium only — see review-story step 4d)
+     a. Pre-checks: build, lint, type check, format check, unit tests, E2E tests (smoke specs + current story spec, Chromium only — see review-story step 4)
      b. Design review (if UI changes)
      c. Code reviews — `code-review` and `code-review-testing` agents in parallel
      d. Consolidated report
@@ -75,8 +75,10 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
    - **5b. Lightweight validation**:
      a. `npm run build` — STOP on failure.
      b. `npm run lint` — STOP on failure (if script exists).
-     c. `npm run test:unit -- --run` — STOP on failure (if tests exist).
-     d. E2E tests — run smoke specs + current story's spec on Chromium only:
+     c. **Type check** — `npx tsc --noEmit`. Auto-fix type errors in branch-changed files (`git diff --name-only main...HEAD`). Ignore pre-existing errors in other files.
+     d. **Format check** — `npx prettier --check "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}"`. Auto-fix with `--write` if needed.
+     e. `npm run test:unit -- --run` — STOP on failure (if tests exist).
+     f. E2E tests — run smoke specs + current story's spec on Chromium only:
         ```
         npx playwright test tests/e2e/navigation.spec.ts tests/e2e/overview.spec.ts tests/e2e/courses.spec.ts tests/e2e/story-{id}.spec.ts --project=chromium
         ```
@@ -116,6 +118,8 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
     ## Verification
     - Build: passed
     - Lint: {passed/skipped}
+    - Type check: {passed/auto-fixed}
+    - Format check: {passed/auto-fixed N files}
     - Unit tests: {passed/skipped} ({N} tests)
     - E2E tests: {passed/skipped} ({N} tests)
     - Design review: {passed/skipped/warnings} ([report link])
@@ -237,6 +241,8 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
     | ---------------------- | --------------------------- |
     | Build                  | passed                      |
     | Lint                   | passed / skipped            |
+    | Type check             | passed / auto-fixed         |
+    | Format check           | passed / auto-fixed N files |
     | Unit tests             | passed (N) / skipped        |
     | E2E tests              | passed (N) / skipped        |
     | Design review          | passed / N warnings         |

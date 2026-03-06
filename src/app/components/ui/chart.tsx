@@ -125,8 +125,17 @@ function ChartTooltipContent({
   active?: boolean
   payload?: ReadonlyArray<ChartPayloadItem>
   label?: string | number
-  labelFormatter?: (label: string | number, payload: ReadonlyArray<ChartPayloadItem>) => React.ReactNode
-  formatter?: (value: string | number, name: string, item: ChartPayloadItem, index: number, payload: ChartPayloadItem[]) => React.ReactNode
+  labelFormatter?: (
+    label: string | number,
+    payload: ReadonlyArray<ChartPayloadItem>
+  ) => React.ReactNode
+  formatter?: (
+    value: string | number,
+    name: string,
+    item: ChartPayloadItem,
+    index: number,
+    payload: ChartPayloadItem[]
+  ) => React.ReactNode
   hideLabel?: boolean
   hideIndicator?: boolean
   indicator?: 'line' | 'dot' | 'dashed'
@@ -152,7 +161,9 @@ function ChartTooltipContent({
 
     if (labelFormatter) {
       return (
-        <div className={cn('font-medium', labelClassName)}>{labelFormatter(String(value ?? ''), payload)}</div>
+        <div className={cn('font-medium', labelClassName)}>
+          {labelFormatter(String(value ?? ''), payload)}
+        </div>
       )
     }
 

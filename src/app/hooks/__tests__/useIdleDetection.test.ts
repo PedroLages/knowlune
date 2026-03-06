@@ -141,9 +141,7 @@ describe('useIdleDetection', () => {
   })
 
   it('should clean up event listeners on unmount', () => {
-    const { unmount } = renderHook(() =>
-      useIdleDetection({ onIdle, onActive, onActivity })
-    )
+    const { unmount } = renderHook(() => useIdleDetection({ onIdle, onActive, onActivity }))
 
     onActivity.mockClear()
 
@@ -156,9 +154,7 @@ describe('useIdleDetection', () => {
   })
 
   it('should clear timeout on unmount', () => {
-    const { unmount } = renderHook(() =>
-      useIdleDetection({ onIdle, onActive, onActivity })
-    )
+    const { unmount } = renderHook(() => useIdleDetection({ onIdle, onActive, onActivity }))
 
     unmount()
 
@@ -198,8 +194,7 @@ describe('useIdleDetection', () => {
 
   it('should handle callback updates without re-registering listeners', () => {
     const { rerender } = renderHook(
-      ({ onIdle, onActive, onActivity }) =>
-        useIdleDetection({ onIdle, onActive, onActivity }),
+      ({ onIdle, onActive, onActivity }) => useIdleDetection({ onIdle, onActive, onActivity }),
       {
         initialProps: { onIdle, onActive, onActivity },
       }

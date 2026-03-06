@@ -593,344 +593,345 @@ export function NoteEditor({
     >
       {/* Toolbar */}
       <TooltipProvider>
-      <div
-        role="toolbar"
-        aria-label="Text formatting"
-        data-testid="note-editor-toolbar"
-        className={cn(
-          'flex items-center gap-1 px-4 py-2 border-b border-border bg-muted/30 flex-wrap',
-          !compact && 'sm:flex-nowrap sm:overflow-x-auto'
-        )}
-      >
-        {/* Inline formatting group */}
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          active={editor.isActive('bold')}
-          aria-label="Bold"
+        <div
+          role="toolbar"
+          aria-label="Text formatting"
+          data-testid="note-editor-toolbar"
+          className={cn(
+            'flex items-center gap-1 px-4 py-2 border-b border-border bg-muted/30 flex-wrap',
+            !compact && 'sm:flex-nowrap sm:overflow-x-auto'
+          )}
         >
-          <Bold className="size-4" />
-        </ToolbarButton>
-
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          active={editor.isActive('italic')}
-          aria-label="Italic"
-        >
-          <Italic className="size-4" />
-        </ToolbarButton>
-
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
-          active={editor.isActive('underline')}
-          aria-label="Underline"
-        >
-          <UnderlineIcon className="size-4" />
-        </ToolbarButton>
-
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleHighlight().run()}
-          active={editor.isActive('highlight')}
-          aria-label="Highlight"
-        >
-          <Highlighter className="size-4" />
-        </ToolbarButton>
-
-        <Separator orientation="vertical" decorative={false} className="h-6 mx-1" />
-
-        {/* Block formatting group — hidden on mobile and compact, in overflow menu */}
-        <div className={cn('items-center gap-1', compact ? 'hidden' : 'hidden sm:flex')}>
+          {/* Inline formatting group */}
           <ToolbarButton
-            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-            active={editor.isActive('heading', { level: 2 })}
-            aria-label="Heading"
+            onClick={() => editor.chain().focus().toggleBold().run()}
+            active={editor.isActive('bold')}
+            aria-label="Bold"
           >
-            <Heading2 className="size-4" />
+            <Bold className="size-4" />
           </ToolbarButton>
 
           <ToolbarButton
-            onClick={() => editor.chain().focus().setTextAlign('left').run()}
-            active={editor.isActive({ textAlign: 'left' })}
-            aria-label="Align left"
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+            active={editor.isActive('italic')}
+            aria-label="Italic"
           >
-            <AlignLeft className="size-4" />
+            <Italic className="size-4" />
           </ToolbarButton>
 
           <ToolbarButton
-            onClick={() => editor.chain().focus().setTextAlign('center').run()}
-            active={editor.isActive({ textAlign: 'center' })}
-            aria-label="Align center"
+            onClick={() => editor.chain().focus().toggleUnderline().run()}
+            active={editor.isActive('underline')}
+            aria-label="Underline"
           >
-            <AlignCenter className="size-4" />
+            <UnderlineIcon className="size-4" />
           </ToolbarButton>
 
           <ToolbarButton
-            onClick={() => editor.chain().focus().setTextAlign('right').run()}
-            active={editor.isActive({ textAlign: 'right' })}
-            aria-label="Align right"
+            onClick={() => editor.chain().focus().toggleHighlight().run()}
+            active={editor.isActive('highlight')}
+            aria-label="Highlight"
           >
-            <AlignRight className="size-4" />
+            <Highlighter className="size-4" />
           </ToolbarButton>
 
           <Separator orientation="vertical" decorative={false} className="h-6 mx-1" />
-        </div>
 
-        {/* List group */}
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-          active={editor.isActive('bulletList')}
-          aria-label="Bullet list"
-        >
-          <List className="size-4" />
-        </ToolbarButton>
-
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          active={editor.isActive('orderedList')}
-          aria-label="Ordered list"
-        >
-          <ListOrdered className="size-4" />
-        </ToolbarButton>
-
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleTaskList().run()}
-          active={editor.isActive('taskList')}
-          aria-label="Task list"
-        >
-          <ListTodo className="size-4" />
-        </ToolbarButton>
-
-        {/* Separator before code & media — always visible when not compact */}
-        {!compact && (
-          <Separator orientation="vertical" decorative={false} className="h-6 mx-1" />
-        )}
-
-        {/* Code & media group — hidden in compact, shown in overflow dropdown */}
-        {!compact && (
-          <>
+          {/* Block formatting group — hidden on mobile and compact, in overflow menu */}
+          <div className={cn('items-center gap-1', compact ? 'hidden' : 'hidden sm:flex')}>
             <ToolbarButton
-              onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-              active={editor.isActive('codeBlock')}
-              aria-label="Code block"
+              onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+              active={editor.isActive('heading', { level: 2 })}
+              aria-label="Heading"
             >
-              <Code className="size-4" />
-            </ToolbarButton>
-
-            <ToolbarButton onClick={() => imageInputRef.current?.click()} aria-label="Insert image">
-              <ImageIcon className="size-4" />
+              <Heading2 className="size-4" />
             </ToolbarButton>
 
             <ToolbarButton
-              onClick={() => {
-                setYoutubeUrl('')
-                setYoutubeDialogOpen(true)
-              }}
-              aria-label="YouTube embed"
+              onClick={() => editor.chain().focus().setTextAlign('left').run()}
+              active={editor.isActive({ textAlign: 'left' })}
+              aria-label="Align left"
             >
-              <YoutubeIcon className="size-4" />
+              <AlignLeft className="size-4" />
             </ToolbarButton>
 
             <ToolbarButton
-              onClick={() => editor.chain().focus().setDetails().run()}
-              aria-label="Toggle block"
+              onClick={() => editor.chain().focus().setTextAlign('center').run()}
+              active={editor.isActive({ textAlign: 'center' })}
+              aria-label="Align center"
             >
-              <ChevronsUpDown className="size-4" />
+              <AlignCenter className="size-4" />
             </ToolbarButton>
 
-            {/* Table */}
-            <Popover open={tablePickerOpen} onOpenChange={setTablePickerOpen}>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className={cn(
-                    'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer',
-                    'hover:bg-accent hover:text-accent-foreground',
-                    'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
-                  )}
-                  aria-label="Insert table"
-                >
-                  <Table2 className="size-4" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <TableGridPicker editor={editor} onClose={() => setTablePickerOpen(false)} />
-              </PopoverContent>
-            </Popover>
+            <ToolbarButton
+              onClick={() => editor.chain().focus().setTextAlign('right').run()}
+              active={editor.isActive({ textAlign: 'right' })}
+              aria-label="Align right"
+            >
+              <AlignRight className="size-4" />
+            </ToolbarButton>
 
             <Separator orientation="vertical" decorative={false} className="h-6 mx-1" />
+          </div>
 
-            {/* Link */}
-            <ToolbarButton
-              onClick={openLinkDialog}
-              active={editor.isActive('link')}
-              aria-label="Insert link"
-            >
-              <Link2 className="size-4" />
-            </ToolbarButton>
+          {/* List group */}
+          <ToolbarButton
+            onClick={() => editor.chain().focus().toggleBulletList().run()}
+            active={editor.isActive('bulletList')}
+            aria-label="Bullet list"
+          >
+            <List className="size-4" />
+          </ToolbarButton>
 
-            {/* Find/Replace */}
-            <ToolbarButton
-              onClick={() => setFindReplaceOpen(prev => !prev)}
-              active={findReplaceOpen}
-              aria-label="Find and replace"
-            >
-              <Search className="size-4" />
-            </ToolbarButton>
+          <ToolbarButton
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}
+            active={editor.isActive('orderedList')}
+            aria-label="Ordered list"
+          >
+            <ListOrdered className="size-4" />
+          </ToolbarButton>
 
-            {/* Table of Contents */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className={cn(
-                    'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer',
-                    'hover:bg-accent hover:text-accent-foreground',
-                    'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
-                  )}
-                  aria-label="Table of contents"
-                >
-                  <ListTree className="size-4" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-64 p-0" align="start">
-                <TableOfContentsPanel editor={editor} />
-              </PopoverContent>
-            </Popover>
-          </>
-        )}
+          <ToolbarButton
+            onClick={() => editor.chain().focus().toggleTaskList().run()}
+            active={editor.isActive('taskList')}
+            aria-label="Task list"
+          >
+            <ListTodo className="size-4" />
+          </ToolbarButton>
 
-        {/* Overflow menu — visible on mobile + compact mode */}
-        <div className={compact ? undefined : 'sm:hidden'}>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className={cn(
-                  'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer',
-                  'hover:bg-accent hover:text-accent-foreground',
-                  'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
-                )}
-                aria-label="More formatting options"
+          {/* Separator before code & media — always visible when not compact */}
+          {!compact && <Separator orientation="vertical" decorative={false} className="h-6 mx-1" />}
+
+          {/* Code & media group — hidden in compact, shown in overflow dropdown */}
+          {!compact && (
+            <>
+              <ToolbarButton
+                onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+                active={editor.isActive('codeBlock')}
+                aria-label="Code block"
               >
-                <ChevronDown className="size-4" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuItem
-                onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+                <Code className="size-4" />
+              </ToolbarButton>
+
+              <ToolbarButton
+                onClick={() => imageInputRef.current?.click()}
+                aria-label="Insert image"
               >
-                <Heading2 className="size-4 mr-2" />
-                Heading
-              </DropdownMenuItem>
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <AlignLeft className="size-4 mr-2" />
-                  Alignment
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  <DropdownMenuItem
-                    onClick={() => editor.chain().focus().setTextAlign('left').run()}
-                  >
-                    <AlignLeft className="size-4 mr-2" />
-                    Left
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => editor.chain().focus().setTextAlign('center').run()}
-                  >
-                    <AlignCenter className="size-4 mr-2" />
-                    Center
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => editor.chain().focus().setTextAlign('right').run()}
-                  >
-                    <AlignRight className="size-4 mr-2" />
-                    Right
-                  </DropdownMenuItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              <DropdownMenuItem onClick={() => imageInputRef.current?.click()}>
-                <ImageIcon className="size-4 mr-2" />
-                Image
-              </DropdownMenuItem>
-              <DropdownMenuItem
+                <ImageIcon className="size-4" />
+              </ToolbarButton>
+
+              <ToolbarButton
                 onClick={() => {
                   setYoutubeUrl('')
                   setYoutubeDialogOpen(true)
                 }}
+                aria-label="YouTube embed"
               >
-                <YoutubeIcon className="size-4 mr-2" />
-                YouTube
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => editor.chain().focus().setDetails().run()}>
-                <ChevronsUpDown className="size-4 mr-2" />
-                Toggle
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() =>
-                  editor
-                    .chain()
-                    .focus()
-                    .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
-                    .run()
-                }
+                <YoutubeIcon className="size-4" />
+              </ToolbarButton>
+
+              <ToolbarButton
+                onClick={() => editor.chain().focus().setDetails().run()}
+                aria-label="Toggle block"
               >
-                <Table2 className="size-4 mr-2" />
-                Table
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setFindReplaceOpen(prev => !prev)}>
-                <Search className="size-4 mr-2" />
-                Find & Replace
-              </DropdownMenuItem>
-              {compact && (
-                <>
-                  <DropdownMenuItem
-                    onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+                <ChevronsUpDown className="size-4" />
+              </ToolbarButton>
+
+              {/* Table */}
+              <Popover open={tablePickerOpen} onOpenChange={setTablePickerOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer',
+                      'hover:bg-accent hover:text-accent-foreground',
+                      'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
+                    )}
+                    aria-label="Insert table"
                   >
-                    <Code className="size-4 mr-2" />
-                    Code Block
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={openLinkDialog}>
-                    <Link2 className="size-4 mr-2" />
-                    Link
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+                    <Table2 className="size-4" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <TableGridPicker editor={editor} onClose={() => setTablePickerOpen(false)} />
+                </PopoverContent>
+              </Popover>
 
-        {/* Capture Frame button */}
-        {onCaptureFrame && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={handleCaptureFrame}
-                className={cn(
-                  'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer ml-auto',
-                  'hover:bg-accent hover:text-accent-foreground',
-                  'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
-                )}
-                aria-label="Capture video frame"
+              <Separator orientation="vertical" decorative={false} className="h-6 mx-1" />
+
+              {/* Link */}
+              <ToolbarButton
+                onClick={openLinkDialog}
+                active={editor.isActive('link')}
+                aria-label="Insert link"
               >
-                <Camera className="size-4" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>Capture video frame</TooltipContent>
-          </Tooltip>
-        )}
+                <Link2 className="size-4" />
+              </ToolbarButton>
 
-        {/* Timestamp button */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={insertTimestamp}
-          className={cn('h-11 px-3 text-xs', !onCaptureFrame && 'ml-auto')}
-          aria-label="Add Timestamp"
-        >
-          <Clock className="size-3.5 mr-1.5" />
-          Add Timestamp
-        </Button>
-      </div>
+              {/* Find/Replace */}
+              <ToolbarButton
+                onClick={() => setFindReplaceOpen(prev => !prev)}
+                active={findReplaceOpen}
+                aria-label="Find and replace"
+              >
+                <Search className="size-4" />
+              </ToolbarButton>
+
+              {/* Table of Contents */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer',
+                      'hover:bg-accent hover:text-accent-foreground',
+                      'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
+                    )}
+                    aria-label="Table of contents"
+                  >
+                    <ListTree className="size-4" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-0" align="start">
+                  <TableOfContentsPanel editor={editor} />
+                </PopoverContent>
+              </Popover>
+            </>
+          )}
+
+          {/* Overflow menu — visible on mobile + compact mode */}
+          <div className={compact ? undefined : 'sm:hidden'}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer',
+                    'hover:bg-accent hover:text-accent-foreground',
+                    'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
+                  )}
+                  aria-label="More formatting options"
+                >
+                  <ChevronDown className="size-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem
+                  onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+                >
+                  <Heading2 className="size-4 mr-2" />
+                  Heading
+                </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <AlignLeft className="size-4 mr-2" />
+                    Alignment
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem
+                      onClick={() => editor.chain().focus().setTextAlign('left').run()}
+                    >
+                      <AlignLeft className="size-4 mr-2" />
+                      Left
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => editor.chain().focus().setTextAlign('center').run()}
+                    >
+                      <AlignCenter className="size-4 mr-2" />
+                      Center
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => editor.chain().focus().setTextAlign('right').run()}
+                    >
+                      <AlignRight className="size-4 mr-2" />
+                      Right
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuItem onClick={() => imageInputRef.current?.click()}>
+                  <ImageIcon className="size-4 mr-2" />
+                  Image
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setYoutubeUrl('')
+                    setYoutubeDialogOpen(true)
+                  }}
+                >
+                  <YoutubeIcon className="size-4 mr-2" />
+                  YouTube
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => editor.chain().focus().setDetails().run()}>
+                  <ChevronsUpDown className="size-4 mr-2" />
+                  Toggle
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    editor
+                      .chain()
+                      .focus()
+                      .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+                      .run()
+                  }
+                >
+                  <Table2 className="size-4 mr-2" />
+                  Table
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setFindReplaceOpen(prev => !prev)}>
+                  <Search className="size-4 mr-2" />
+                  Find & Replace
+                </DropdownMenuItem>
+                {compact && (
+                  <>
+                    <DropdownMenuItem
+                      onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+                    >
+                      <Code className="size-4 mr-2" />
+                      Code Block
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={openLinkDialog}>
+                      <Link2 className="size-4 mr-2" />
+                      Link
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Capture Frame button */}
+          {onCaptureFrame && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={handleCaptureFrame}
+                  className={cn(
+                    'inline-flex items-center justify-center size-11 rounded-md text-sm transition-colors cursor-pointer ml-auto',
+                    'hover:bg-accent hover:text-accent-foreground',
+                    'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
+                  )}
+                  aria-label="Capture video frame"
+                >
+                  <Camera className="size-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Capture video frame</TooltipContent>
+            </Tooltip>
+          )}
+
+          {/* Timestamp button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={insertTimestamp}
+            className={cn('h-11 px-3 text-xs', !onCaptureFrame && 'ml-auto')}
+            aria-label="Add Timestamp"
+          >
+            <Clock className="size-3.5 mr-1.5" />
+            Add Timestamp
+          </Button>
+        </div>
       </TooltipProvider>
 
       {/* Find/Replace panel (between toolbar and editor) */}

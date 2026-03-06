@@ -14,31 +14,29 @@ export function RecentActivity({ activities }: RecentActivityProps) {
   if (activities.length === 0) return null
 
   return (
-    <section className="mb-8">
+    <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Recent Activity</h2>
+        <h2 className="text-xl">Recent Activity</h2>
         <Link
           to="/my-progress"
-          className="text-sm text-brand hover:text-brand-hover flex items-center gap-1"
+          className="text-sm text-brand hover:text-brand-hover flex items-center gap-1 motion-safe:transition-colors"
         >
           View All
-          <ArrowRight className="w-4 h-4" />
+          <ArrowRight className="size-3.5" aria-hidden="true" />
         </Link>
       </div>
 
-      <Card>
+      <Card className="border-border/50">
         <CardContent className="p-0">
           {activities.map((activity, index) => (
             <div
               key={activity.id}
-              className="flex items-center gap-4 p-4 border-b last:border-0 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 transition-colors"
+              className="flex items-center gap-4 p-4 hover:bg-brand-soft/30 dark:hover:bg-brand-soft/10 motion-safe:transition-colors"
             >
               {/* Timeline indicator */}
-              <div className="flex flex-col items-center">
-                <div className="w-3 h-3 rounded-full bg-brand" />
-                {index < activities.length - 1 && (
-                  <div className="w-0.5 h-full bg-blue-200 dark:bg-blue-800 mt-1" />
-                )}
+              <div className="flex flex-col items-center self-stretch">
+                <div className="size-2.5 rounded-full bg-brand flex-shrink-0 mt-1.5" />
+                {index < activities.length - 1 && <div className="w-px flex-1 bg-border mt-1" />}
               </div>
 
               {/* Course thumbnail */}
@@ -46,19 +44,21 @@ export function RecentActivity({ activities }: RecentActivityProps) {
                 <img
                   src={`${activity.coverImage}-320w.webp`}
                   alt={activity.title}
-                  className="w-12 h-12 rounded-lg object-cover"
+                  className="size-10 rounded-lg object-cover flex-shrink-0"
+                  width={40}
+                  height={40}
                 />
               ) : (
-                <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <BookOpen className="w-6 h-6 text-brand" />
+                <div className="size-10 rounded-lg bg-brand-soft flex items-center justify-center flex-shrink-0">
+                  <BookOpen className="size-5 text-brand" aria-hidden="true" />
                 </div>
               )}
 
               {/* Activity info */}
               <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">{activity.title}</p>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                  <Clock className="w-3 h-3" />
+                <p className="font-medium truncate text-sm">{activity.title}</p>
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                  <Clock className="size-3" aria-hidden="true" />
                   <span>
                     {formatDistanceToNow(new Date(activity.progress.lastAccessedAt), {
                       addSuffix: true,
@@ -68,16 +68,16 @@ export function RecentActivity({ activities }: RecentActivityProps) {
               </div>
 
               {/* Resume button */}
-              <Button size="sm" variant="ghost" asChild>
+              <Button size="sm" variant="ghost" asChild className="flex-shrink-0">
                 <Link to={`/courses/${activity.id}`}>
                   Resume
-                  <ArrowRight className="w-4 h-4 ml-1" />
+                  <ArrowRight className="size-3.5 ml-1" aria-hidden="true" />
                 </Link>
               </Button>
             </div>
           ))}
         </CardContent>
       </Card>
-    </section>
+    </div>
   )
 }

@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act } from 'react'
 import Dexie from 'dexie'
+import type { StudySession } from '@/data/types'
 import { createStudySession as makeSession } from '../../../tests/support/fixtures/factories/session-factory'
 
 let useSessionStore: (typeof import('@/stores/useSessionStore'))['useSessionStore']
@@ -67,15 +68,23 @@ describe('startSession', () => {
       await useSessionStore.getState().startSession('course-2', 'lesson-2', 'pdf')
     })
 
-    // Wait for fire-and-forget endSession persistence to complete
-    await new Promise(resolve => setTimeout(resolve, 100))
-
+    // endSession is fire-and-forget (sync for beforeunload), so persistence
+    // races with startSession's persistence. Poll until both records appear
+    // and the first session has been closed.
     const { db } = await import('@/db')
-    const sessions = await db.studySessions.toArray()
+    let sessions: StudySession[] = []
+    for (let attempt = 0; attempt < 40; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 50))
+      sessions = await db.studySessions.orderBy('startTime').toArray()
+      const firstEnded = sessions.length >= 2 && sessions[0]?.endTime
+      if (firstEnded) break
+    }
     expect(sessions).toHaveLength(2)
-    // First session should be ended
+    // First session (course-1) should be ended
+    expect(sessions[0].courseId).toBe('course-1')
     expect(sessions[0].endTime).toBeDefined()
-    // Second session should be active
+    // Second session (course-2) should be active
+    expect(sessions[1].courseId).toBe('course-2')
     expect(sessions[1].endTime).toBeUndefined()
   })
 
@@ -116,8 +125,8 @@ describe('endSession', () => {
       useSessionStore.setState({
         activeSession: {
           ...state.activeSession!,
-          lastActivity: laterTime
-        }
+          lastActivity: laterTime,
+        },
       })
     })
 
@@ -198,8 +207,8 @@ describe('pauseSession', () => {
       useSessionStore.setState({
         activeSession: {
           ...state.activeSession!,
-          lastActivity: laterTime
-        }
+          lastActivity: laterTime,
+        },
       })
     })
 

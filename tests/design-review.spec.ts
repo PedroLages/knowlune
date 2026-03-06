@@ -25,7 +25,9 @@ function addFinding(severity: string, category: string, issue: string) {
 
 test.describe('Design Review - Responsive Testing', () => {
   for (const viewport of VIEWPORTS) {
-    test(`${viewport.name} (${viewport.width}x${viewport.height}) - Layout validation`, async ({ page }) => {
+    test(`${viewport.name} (${viewport.width}x${viewport.height}) - Layout validation`, async ({
+      page,
+    }) => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height })
 
       // Listen for console errors
@@ -40,8 +42,8 @@ test.describe('Design Review - Responsive Testing', () => {
       await page.waitForLoadState('domcontentloaded')
 
       // Check for horizontal scroll
-      const hasHorizontalScroll = await page.evaluate(() =>
-        document.documentElement.scrollWidth > document.documentElement.clientWidth
+      const hasHorizontalScroll = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth
       )
 
       if (hasHorizontalScroll) {
@@ -52,7 +54,7 @@ test.describe('Design Review - Responsive Testing', () => {
       // Capture full page screenshot
       await page.screenshot({
         path: `test-results/design-review-${viewport.name.toLowerCase()}.png`,
-        fullPage: true
+        fullPage: true,
       })
 
       // Check for console errors
@@ -63,7 +65,9 @@ test.describe('Design Review - Responsive Testing', () => {
 
       // Check touch targets on mobile
       if (viewport.name === 'Mobile') {
-        const interactiveElements = page.locator('button, a[href], input, select, textarea, [role="button"]')
+        const interactiveElements = page.locator(
+          'button, a[href], input, select, textarea, [role="button"]'
+        )
         const count = await interactiveElements.count()
         let smallTargetCount = 0
 
@@ -77,7 +81,11 @@ test.describe('Design Review - Responsive Testing', () => {
         }
 
         if (smallTargetCount > 0) {
-          addFinding('medium', 'Touch Targets', `${smallTargetCount} elements smaller than 44x44px on mobile`)
+          addFinding(
+            'medium',
+            'Touch Targets',
+            `${smallTargetCount} elements smaller than 44x44px on mobile`
+          )
         }
       }
     })
@@ -123,7 +131,11 @@ test.describe('Design Review - Accessibility', () => {
     }
 
     if (missingLabels.length > 0) {
-      addFinding('high', 'Accessibility', `${missingLabels.length} icon buttons missing ARIA labels`)
+      addFinding(
+        'high',
+        'Accessibility',
+        `${missingLabels.length} icon buttons missing ARIA labels`
+      )
     }
     expect(missingLabels).toHaveLength(0)
   })
@@ -164,7 +176,7 @@ test.describe('Design Review - Accessibility', () => {
       let hasLabel = false
       if (id) {
         const label = page.locator(`label[for="${id}"]`)
-        hasLabel = await label.count() > 0
+        hasLabel = (await label.count()) > 0
       }
 
       if (!hasLabel && !ariaLabel && !ariaLabelledBy) {
@@ -174,13 +186,19 @@ test.describe('Design Review - Accessibility', () => {
     }
 
     if (unlabeledInputs.length > 0) {
-      addFinding('high', 'Accessibility', `${unlabeledInputs.length} form inputs missing proper labels`)
+      addFinding(
+        'high',
+        'Accessibility',
+        `${unlabeledInputs.length} form inputs missing proper labels`
+      )
     }
     expect(unlabeledInputs).toHaveLength(0)
   })
 
   test('should use semantic HTML', async ({ page }) => {
-    const divButtons = await page.locator('div[onclick], div[role="button"]:not([tabindex])').count()
+    const divButtons = await page
+      .locator('div[onclick], div[role="button"]:not([tabindex])')
+      .count()
 
     if (divButtons > 0) {
       addFinding('medium', 'Accessibility', `${divButtons} div elements used as buttons`)
@@ -208,21 +226,23 @@ test.describe('Design Review - Interaction States', () => {
   })
 
   test('should have visible focus indicators', async ({ page }) => {
-    const focusable = page.locator('a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])')
+    const focusable = page.locator(
+      'a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )
     const count = await focusable.count()
 
     if (count > 0) {
       const firstElement = focusable.first()
       await firstElement.focus()
 
-      const hasOutline = await firstElement.evaluate((el) => {
+      const hasOutline = await firstElement.evaluate(el => {
         const styles = window.getComputedStyle(el)
-        return styles.outline !== 'none' &&
-               styles.outline !== '0px' &&
-               styles.outlineWidth !== '0px'
+        return (
+          styles.outline !== 'none' && styles.outline !== '0px' && styles.outlineWidth !== '0px'
+        )
       })
 
-      const hasRing = await firstElement.evaluate((el) => {
+      const hasRing = await firstElement.evaluate(el => {
         const styles = window.getComputedStyle(el)
         return styles.boxShadow !== 'none' && styles.boxShadow !== ''
       })
@@ -241,7 +261,7 @@ test.describe('Design Review - Interaction States', () => {
     let missingHover = 0
     for (let i = 0; i < count; i++) {
       const button = buttons.nth(i)
-      const className = await button.getAttribute('class') || ''
+      const className = (await button.getAttribute('class')) || ''
 
       if (!className.includes('hover:')) {
         missingHover++
@@ -280,7 +300,7 @@ test.describe('Design Review - Visual Consistency', () => {
     const card = page.locator('[class*="card"], [class*="rounded-"]').first()
     await expect(card).toBeVisible()
 
-    const borderRadius = await card.evaluate((el) => {
+    const borderRadius = await card.evaluate(el => {
       return window.getComputedStyle(el).borderRadius
     })
 

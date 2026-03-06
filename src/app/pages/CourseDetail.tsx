@@ -147,10 +147,7 @@ export function CourseDetail() {
 
         <TabsContent value="content">
           <h2 className="text-lg font-semibold mb-4">Course Content</h2>
-          <ModuleAccordion
-            modules={course.modules}
-            courseId={course.id}
-          />
+          <ModuleAccordion modules={course.modules} courseId={course.id} />
         </TabsContent>
 
         <TabsContent value="notes">

@@ -27,9 +27,7 @@ const LESSON_ID = 'nci-fnl-drones-psyops'
 // ---------------------------------------------------------------------------
 
 /** Navigate to lesson player Notes tab with sidebar closed. */
-async function openNoteEditor(
-  page: import('@playwright/test').Page,
-) {
+async function openNoteEditor(page: import('@playwright/test').Page) {
   await page.addInitScript(() => {
     localStorage.setItem('eduvi-sidebar-v1', 'false')
   })
@@ -58,9 +56,7 @@ async function typeInEditor(page: import('@playwright/test').Page, text: string)
 // ---------------------------------------------------------------------------
 
 test.describe('AC1: Bubble Menu', () => {
-  test('selecting text shows bubble menu with formatting options', async ({
-    page,
-  }) => {
+  test('selecting text shows bubble menu with formatting options', async ({ page }) => {
     await openNoteEditor(page)
 
     // Type some text
@@ -84,9 +80,7 @@ test.describe('AC1: Bubble Menu', () => {
     await expect(bubbleMenu.getByRole('button', { name: /color/i })).toBeVisible()
   })
 
-  test('bubble menu disappears when selection is cleared', async ({
-    page,
-  }) => {
+  test('bubble menu disappears when selection is cleared', async ({ page }) => {
     await openNoteEditor(page)
 
     await typeInEditor(page, 'Some text to select')
@@ -112,9 +106,7 @@ test.describe('AC1: Bubble Menu', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('AC2: Slash Commands', () => {
-  test('typing / on empty line shows command palette', async ({
-    page,
-  }) => {
+  test('typing / on empty line shows command palette', async ({ page }) => {
     await openNoteEditor(page)
 
     const editor = page.locator('.tiptap')
@@ -133,9 +125,7 @@ test.describe('AC2: Slash Commands', () => {
     await expect(palette.getByText(/code block/i)).toBeVisible()
   })
 
-  test('palette filters as user types', async ({
-    page,
-  }) => {
+  test('palette filters as user types', async ({ page }) => {
     await openNoteEditor(page)
 
     const editor = page.locator('.tiptap')
@@ -152,9 +142,7 @@ test.describe('AC2: Slash Commands', () => {
     await expect(palette.getByText(/heading 1/i)).not.toBeVisible()
   })
 
-  test('selecting a command inserts the block', async ({
-    page,
-  }) => {
+  test('selecting a command inserts the block', async ({ page }) => {
     await openNoteEditor(page)
 
     const editor = page.locator('.tiptap')
@@ -179,9 +167,7 @@ test.describe('AC2: Slash Commands', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('AC3: Drag-and-Drop', () => {
-  test('hovering over a block shows drag handle in left gutter', async ({
-    page,
-  }) => {
+  test('hovering over a block shows drag handle in left gutter', async ({ page }) => {
     await openNoteEditor(page)
 
     // Type some content to create a block
@@ -204,9 +190,7 @@ test.describe('AC3: Drag-and-Drop', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('AC4: Emoji', () => {
-  test('typing : followed by search term shows emoji suggestions', async ({
-    page,
-  }) => {
+  test('typing : followed by search term shows emoji suggestions', async ({ page }) => {
     await openNoteEditor(page)
 
     const editor = page.locator('.tiptap')
@@ -220,9 +204,7 @@ test.describe('AC4: Emoji', () => {
     await expect(emojiList).toBeVisible({ timeout: 5000 })
   })
 
-  test('selecting an emoji inserts it inline', async ({
-    page,
-  }) => {
+  test('selecting an emoji inserts it inline', async ({ page }) => {
     await openNoteEditor(page)
 
     const editor = page.locator('.tiptap')
@@ -247,9 +229,7 @@ test.describe('AC4: Emoji', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('AC5: Find/Replace', () => {
-  test('Cmd+F opens find/replace panel', async ({
-    page,
-  }) => {
+  test('Cmd+F opens find/replace panel', async ({ page }) => {
     await openNoteEditor(page)
 
     // Focus the editor first (Cmd+F is scoped to editor container)
@@ -268,9 +248,7 @@ test.describe('AC5: Find/Replace', () => {
     await expect(panel.getByPlaceholder(/replace/i)).toBeVisible()
   })
 
-  test('searching highlights matches in document', async ({
-    page,
-  }) => {
+  test('searching highlights matches in document', async ({ page }) => {
     await openNoteEditor(page)
 
     // Type some content with repeated words
@@ -291,9 +269,7 @@ test.describe('AC5: Find/Replace', () => {
     await expect(highlights).toHaveCount(2, { timeout: 5000 })
   })
 
-  test('replace replaces the current match', async ({
-    page,
-  }) => {
+  test('replace replaces the current match', async ({ page }) => {
     await openNoteEditor(page)
 
     await typeInEditor(page, 'Hello world Hello world')
@@ -324,9 +300,7 @@ test.describe('AC5: Find/Replace', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('AC6: Table of Contents', () => {
-  test('document with headings shows TOC entries', async ({
-    page,
-  }) => {
+  test('document with headings shows TOC entries', async ({ page }) => {
     await openNoteEditor(page)
 
     // Create headings via slash commands or keyboard shortcuts
@@ -353,9 +327,7 @@ test.describe('AC6: Table of Contents', () => {
     await expect(tocPanel.getByText('Methods')).toBeVisible()
   })
 
-  test('clicking TOC entry scrolls to heading', async ({
-    page,
-  }) => {
+  test('clicking TOC entry scrolls to heading', async ({ page }) => {
     await openNoteEditor(page)
 
     const editor = page.locator('.tiptap')

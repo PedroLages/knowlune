@@ -1,11 +1,7 @@
 import { forwardRef } from 'react'
 import { Check, Circle } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/app/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/tooltip'
 import type { CompletionStatus } from '@/data/types'
 
 interface StatusIndicatorProps {
@@ -16,10 +12,7 @@ interface StatusIndicatorProps {
   mode?: 'interactive' | 'display'
 }
 
-const statusConfig: Record<
-  CompletionStatus,
-  { label: string; className: string }
-> = {
+const statusConfig: Record<CompletionStatus, { label: string; className: string }> = {
   'not-started': {
     label: 'Not Started',
     className: 'text-muted-foreground/60',
@@ -39,11 +32,12 @@ export const StatusIndicator = forwardRef<
   StatusIndicatorProps
 >(function StatusIndicator({ status, itemId, onClick, mode = 'interactive', ...rest }, ref) {
   const config = statusConfig[status]
-  const icon = status === 'completed' ? (
-    <Check className="size-4" />
-  ) : (
-    <Circle className={cn('size-4', status === 'in-progress' && 'fill-current')} />
-  )
+  const icon =
+    status === 'completed' ? (
+      <Check className="size-4" />
+    ) : (
+      <Circle className={cn('size-4', status === 'in-progress' && 'fill-current')} />
+    )
 
   if (mode === 'display') {
     return (

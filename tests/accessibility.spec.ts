@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 
 // Configure test data for consistent state
-const setupTestData = async (page) => {
+const setupTestData = async page => {
   await page.evaluate(() => {
     const now = new Date()
     const oneDayAgo = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000)
@@ -19,7 +19,7 @@ const setupTestData = async (page) => {
           'lesson-3': 'Key behavioral patterns',
         },
         startedAt: twoDaysAgo.toISOString(),
-        lastAccessedAt: oneDayAgo.toISOString()
+        lastAccessedAt: oneDayAgo.toISOString(),
       },
       '6mx': {
         courseId: '6mx',
@@ -27,15 +27,30 @@ const setupTestData = async (page) => {
         lastWatchedLesson: 'lesson-3',
         notes: {},
         startedAt: oneDayAgo.toISOString(),
-        lastAccessedAt: now.toISOString()
-      }
+        lastAccessedAt: now.toISOString(),
+      },
     }
 
     // Study log
     const studyLog = [
-      { type: 'lesson_complete', courseId: '6mx', lessonId: 'lesson-2', timestamp: now.toISOString() },
-      { type: 'lesson_complete', courseId: 'operative-six', lessonId: 'lesson-5', timestamp: oneDayAgo.toISOString() },
-      { type: 'lesson_complete', courseId: 'operative-six', lessonId: 'lesson-4', timestamp: twoDaysAgo.toISOString() },
+      {
+        type: 'lesson_complete',
+        courseId: '6mx',
+        lessonId: 'lesson-2',
+        timestamp: now.toISOString(),
+      },
+      {
+        type: 'lesson_complete',
+        courseId: 'operative-six',
+        lessonId: 'lesson-5',
+        timestamp: oneDayAgo.toISOString(),
+      },
+      {
+        type: 'lesson_complete',
+        courseId: 'operative-six',
+        lessonId: 'lesson-4',
+        timestamp: twoDaysAgo.toISOString(),
+      },
     ]
 
     localStorage.setItem('course-progress', JSON.stringify(progress))
@@ -150,7 +165,7 @@ test.describe('Keyboard Navigation', () => {
           tagName: el?.tagName,
           role: el?.getAttribute('role'),
           ariaLabel: el?.getAttribute('aria-label'),
-          text: el?.textContent?.substring(0, 50)
+          text: el?.textContent?.substring(0, 50),
         }
       })
       focusableElements.push(focusedElement)
@@ -173,8 +188,8 @@ test.describe('Keyboard Navigation', () => {
     await firstCourseCard.focus()
 
     // Verify it's focused
-    const isFocused = await firstCourseCard.evaluate(el =>
-      el === document.activeElement || el.contains(document.activeElement)
+    const isFocused = await firstCourseCard.evaluate(
+      el => el === document.activeElement || el.contains(document.activeElement)
     )
     expect(isFocused).toBeTruthy()
 
@@ -223,7 +238,9 @@ test.describe('Keyboard Navigation', () => {
     await videoContainer.focus()
 
     // Test play/pause with Space key
-    const playButton = page.locator('button[aria-label*="Play"], button[aria-label*="Pause"]').first()
+    const playButton = page
+      .locator('button[aria-label*="Play"], button[aria-label*="Pause"]')
+      .first()
     await playButton.focus()
 
     const _initialLabel = await playButton.getAttribute('aria-label')
@@ -254,7 +271,7 @@ test.describe('Keyboard Navigation', () => {
       return {
         tagName: el?.tagName,
         type: el?.getAttribute('type'),
-        role: el?.getAttribute('role')
+        role: el?.getAttribute('role'),
       }
     })
 
@@ -380,7 +397,7 @@ test.describe('Component Accessibility', () => {
 
       if (id) {
         const associatedLabel = page.locator(`label[for="${id}"]`)
-        const labelExists = await associatedLabel.count() > 0
+        const labelExists = (await associatedLabel.count()) > 0
 
         expect(hasAccessibleName || labelExists).toBeTruthy()
       }
@@ -414,7 +431,9 @@ test.describe('Responsive Accessibility', () => {
           if (box.width < minSize || box.height < minSize) {
             const tagName = await button.evaluate(el => el.tagName)
             const className = await button.getAttribute('class')
-            console.log(`Small touch target: ${tagName} (${Math.round(box.width)}x${Math.round(box.height)}) - ${className}`)
+            console.log(
+              `Small touch target: ${tagName} (${Math.round(box.width)}x${Math.round(box.height)}) - ${className}`
+            )
           }
         }
       }

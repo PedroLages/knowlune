@@ -182,14 +182,14 @@ export interface Screenshot {
 }
 
 export interface StudySession {
-  id: string                      // UUID
-  courseId: string                // Parent course
-  contentItemId: string           // Lesson/video/PDF ID
-  startTime: string               // ISO 8601 timestamp
-  endTime?: string                // ISO 8601 (undefined = active/orphaned)
-  duration: number                // Active seconds (excludes idle time)
-  idleTime: number                // Idle seconds detected
-  videosWatched: string[]         // Video IDs watched during session
-  lastActivity: string            // ISO 8601 of last interaction
+  id: string // UUID
+  courseId: string // Parent course
+  contentItemId: string // Lesson/video/PDF ID
+  startTime: string // ISO 8601 timestamp
+  endTime?: string // ISO 8601 (undefined = active/orphaned)
+  duration: number // Active seconds (excludes idle time)
+  idleTime: number // Idle seconds detected
+  videosWatched: string[] // Video IDs watched during session
+  lastActivity: string // ISO 8601 of last interaction
   sessionType: 'video' | 'pdf' | 'mixed'
 }

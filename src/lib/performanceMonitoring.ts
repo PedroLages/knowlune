@@ -53,7 +53,7 @@ function handleMetric(metric: Metric) {
   if (isDev) {
     const unit = metric.name === 'CLS' ? '' : 'ms'
     console.log(
-      `[LevelUp:Perf] ${metric.name}: ${metric.value.toFixed(2)}${unit} (rating: ${metric.rating})`,
+      `[LevelUp:Perf] ${metric.name}: ${metric.value.toFixed(2)}${unit} (rating: ${metric.rating})`
     )
   }
 }
@@ -82,15 +82,14 @@ export function markRouteEnd(routeName: string) {
     const measure = performance.measure(measureName, startMark, endMark)
 
     if (isDev) {
-      console.log(
-        `[LevelUp:Perf] Route transition ${routeName}: ${measure.duration.toFixed(2)}ms`,
-      )
+      console.log(`[LevelUp:Perf] Route transition ${routeName}: ${measure.duration.toFixed(2)}ms`)
     }
 
     pushMetric({
       name: `route:${routeName}`,
       value: measure.duration,
-      rating: measure.duration < 200 ? 'good' : measure.duration < 500 ? 'needs-improvement' : 'poor',
+      rating:
+        measure.duration < 200 ? 'good' : measure.duration < 500 ? 'needs-improvement' : 'poor',
       timestamp: Date.now(),
     })
   } catch {

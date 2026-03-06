@@ -45,12 +45,17 @@ async function openPdfViewer(page: Page, url = LESSON_PLAYER_URL) {
   await page.getByRole('tab', { name: /materials/i }).click()
   // Wait for react-pdf to finish loading the document (totalPages > 0)
   const materialsPanel = page.getByRole('tabpanel', { name: /materials/i })
-  await expect(materialsPanel.getByTestId('pdf-total-pages').first()).not.toHaveText('0', { timeout: 15000 })
+  await expect(materialsPanel.getByTestId('pdf-total-pages').first()).not.toHaveText('0', {
+    timeout: 15000,
+  })
 }
 
 /** Get the first PdfViewer inside the Materials tab panel. */
 function materialsPdfViewer(page: Page) {
-  return page.getByRole('tabpanel', { name: /materials/i }).getByTestId('pdf-viewer').first()
+  return page
+    .getByRole('tabpanel', { name: /materials/i })
+    .getByTestId('pdf-viewer')
+    .first()
 }
 
 // ===========================================================================
@@ -74,9 +79,7 @@ test.describe('AC1: PDF Rendering and Page Navigation', () => {
     await expect(iframes).toHaveCount(0)
   })
 
-  test('should display page navigation showing current page and total pages', async ({
-    page,
-  }) => {
+  test('should display page navigation showing current page and total pages', async ({ page }) => {
     // GIVEN: PDF viewer is rendered and loaded (multi-page for indicator testing)
     await openPdfViewer(page, MULTI_PDF_URL)
 
@@ -227,7 +230,10 @@ test.describe('AC2: Zoom Controls and Text Selection', () => {
 
   test('should have fit-width option in zoom controls', async ({ page }, testInfo) => {
     // Fit-width button uses `hidden sm:inline-flex` — hidden on viewports < 640px
-    test.skip(testInfo.project.name.startsWith('Mobile'), 'Fit-width button hidden on mobile viewports')
+    test.skip(
+      testInfo.project.name.startsWith('Mobile'),
+      'Fit-width button hidden on mobile viewports'
+    )
 
     // GIVEN: PDF viewer rendered
     await navigateAndWait(page, LESSON_PLAYER_URL)
@@ -239,7 +245,10 @@ test.describe('AC2: Zoom Controls and Text Selection', () => {
 
   test('should have fit-page option in zoom controls', async ({ page }, testInfo) => {
     // Fit-page button uses `hidden sm:inline-flex` — hidden on viewports < 640px
-    test.skip(testInfo.project.name.startsWith('Mobile'), 'Fit-page button hidden on mobile viewports')
+    test.skip(
+      testInfo.project.name.startsWith('Mobile'),
+      'Fit-page button hidden on mobile viewports'
+    )
 
     // GIVEN: PDF viewer rendered
     await navigateAndWait(page, LESSON_PLAYER_URL)
@@ -353,10 +362,7 @@ test.describe('AC3: Page Position Persistence', () => {
     expect(courseProgress?.lastPdfPages).toBeTruthy()
   })
 
-  test('should restore page position when returning to PDF', async ({
-    page,
-    localStorage,
-  }) => {
+  test('should restore page position when returning to PDF', async ({ page, localStorage }) => {
     // GIVEN: A saved PDF page position in localStorage
     await navigateAndWait(page, LESSON_PLAYER_URL)
 
@@ -383,10 +389,7 @@ test.describe('AC3: Page Position Persistence', () => {
     await expect(pageInput).toHaveValue('3', { timeout: 1000 })
   })
 
-  test('should restore page position within 1 second', async ({
-    page,
-    localStorage,
-  }) => {
+  test('should restore page position within 1 second', async ({ page, localStorage }) => {
     // GIVEN: Saved page position
     await navigateAndWait(page, LESSON_PLAYER_URL)
 

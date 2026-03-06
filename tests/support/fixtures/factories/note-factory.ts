@@ -5,9 +5,7 @@ import type { Note } from '../../../../src/data/types'
  * Distinct from the legacy `createNote` in course-factory.ts which
  * omits these fields.
  */
-export function createDexieNote(
-  overrides: Partial<Note> = {},
-): Note {
+export function createDexieNote(overrides: Partial<Note> = {}): Note {
   const now = new Date().toISOString()
   return {
     id: crypto.randomUUID(),

@@ -35,9 +35,7 @@ function deriveModuleStatus(
   module: Module,
   statusMap: Record<string, CompletionStatus>
 ): CompletionStatus {
-  const statuses = module.lessons.map(
-    l => statusMap[key(courseId, l.id)] ?? 'not-started'
-  )
+  const statuses = module.lessons.map(l => statusMap[key(courseId, l.id)] ?? 'not-started')
   if (statuses.length === 0) return 'not-started'
   if (statuses.every(s => s === 'completed')) return 'completed'
   if (statuses.every(s => s === 'not-started')) return 'not-started'

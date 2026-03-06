@@ -27,15 +27,16 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
-    const componentName = info.componentStack
-      ?.split('\n')
-      .find((line) => line.trim().startsWith('at '))
-      ?.trim()
-      .replace(/^at /, '')
-      .split(' ')[0] ?? 'Unknown'
+    const componentName =
+      info.componentStack
+        ?.split('\n')
+        .find(line => line.trim().startsWith('at '))
+        ?.trim()
+        .replace(/^at /, '')
+        .split(' ')[0] ?? 'Unknown'
 
     console.error(
-      `[ErrorBoundary] Component: ${componentName}, Error: ${error.message}, Stack: ${info.componentStack}`,
+      `[ErrorBoundary] Component: ${componentName}, Error: ${error.message}, Stack: ${info.componentStack}`
     )
 
     reportError(error, `ErrorBoundary (${componentName})`)
@@ -78,9 +79,7 @@ export class ErrorBoundary extends Component<Props, State> {
           </div>
 
           {/* Heading */}
-          <h1 className="mb-2 text-xl font-semibold text-stone-900">
-            Something went wrong
-          </h1>
+          <h1 className="mb-2 text-xl font-semibold text-stone-900">Something went wrong</h1>
           <p className="mb-6 text-sm text-stone-500">
             An unexpected error occurred. You can try again or reload the app.
           </p>

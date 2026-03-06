@@ -1,8 +1,6 @@
 import type { StudySession } from '../../../../src/data/types'
 
-export function createStudySession(
-  overrides: Partial<StudySession> = {},
-): StudySession {
+export function createStudySession(overrides: Partial<StudySession> = {}): StudySession {
   const now = new Date().toISOString()
   return {
     id: crypto.randomUUID(),

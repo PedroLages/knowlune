@@ -126,7 +126,7 @@ test.describe('Continue Learning Dashboard (E04-S05)', () => {
         startedAt: new Date('2026-03-01').toISOString(),
         lastAccessedAt: new Date('2026-03-02T10:00:00Z').toISOString(),
       },
-      'authority': {
+      authority: {
         courseId: 'authority',
         completedLessons: [],
         lastWatchedLesson: 'authority-lesson-01-communication-laws',
@@ -153,7 +153,10 @@ test.describe('Continue Learning Dashboard (E04-S05)', () => {
     const continueCard = page.getByTestId('continue-learning-card')
     await expect(continueCard).toBeVisible()
     await expect(continueCard.getByRole('heading', { name: /Confidence Reboot/i })).toBeVisible()
-    await expect(continueCard).toHaveAttribute('href', /\/courses\/confidence-reboot\/cr-00-welcome/)
+    await expect(continueCard).toHaveAttribute(
+      'href',
+      /\/courses\/confidence-reboot\/cr-00-welcome/
+    )
 
     // Verify recently accessed row shows other courses
     const recentRow = page.getByTestId('recently-accessed-row')
@@ -234,7 +237,9 @@ test.describe('Continue Learning Dashboard (E04-S05)', () => {
     await expect(unavailableMessage.getByText(/no longer available/i)).toBeVisible()
 
     // Verify "Explore other courses" link is offered
-    await expect(unavailableMessage.getByRole('link', { name: /Explore other courses/i })).toBeVisible()
+    await expect(
+      unavailableMessage.getByRole('link', { name: /Explore other courses/i })
+    ).toBeVisible()
 
     // Falls back to discovery state since no valid sessions remain
     await expect(continueSection.getByText(/Start Your Learning Journey/i)).toBeVisible()

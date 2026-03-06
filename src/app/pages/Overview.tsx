@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
-import { BookOpen, CheckCircle, FileText, Clock } from 'lucide-react'
+import { Link } from 'react-router'
+import { BookOpen, CheckCircle, FileText, Clock, ArrowRight } from 'lucide-react'
+import { motion, MotionConfig } from 'motion/react'
 import { useSessionStore } from '@/stores/useSessionStore'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { AchievementBanner } from '@/app/components/AchievementBanner'
@@ -23,12 +25,19 @@ import {
   getCourseCompletionPercent,
 } from '@/lib/progress'
 import { getActionsPerDay } from '@/lib/studyLog'
+import { staggerContainer, fadeUp } from '@/lib/motion'
+
+function getGreeting(): string {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 17) return 'Good afternoon'
+  return 'Good evening'
+}
 
 export function Overview() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Simulate data loading
     const timer = setTimeout(() => setIsLoading(false), 500)
     return () => clearTimeout(timer)
   }, [])
@@ -43,7 +52,6 @@ export function Overview() {
     getTotalStudyNotes().then(setStudyNotes)
   }, [])
 
-  // Load session stats for Total Study Time
   const { loadSessionStats, getTotalStudyTime } = useSessionStore()
 
   useEffect(() => {
@@ -56,9 +64,8 @@ export function Overview() {
   const recentActivity = getRecentActivity(allCourses, 5)
   const lessonSparkline = getLast7DaysLessonCompletions()
   const lessonsChange = getWeeklyChange('lessons')
-  const chartData = getActionsPerDay(14) // Last 14 days
+  const chartData = getActionsPerDay(14)
 
-  // Get last watched course/lesson for Quick Actions
   const lastWatchedEntry = Object.entries(allProgress)
     .filter(([_, p]) => p.lastWatchedLesson)
     .sort(
@@ -101,42 +108,35 @@ export function Overview() {
 
   if (isLoading) {
     return (
-      <div>
-        <Skeleton className="h-8 w-32 mb-6" />
+      <div className="space-y-12">
+        {/* Hero skeleton */}
+        <div>
+          <Skeleton className="h-5 w-28 mb-2" />
+          <Skeleton className="h-10 w-64 mb-6" />
+          <Skeleton className="h-[260px] w-full rounded-[28px]" />
+        </div>
 
-        {/* Stats Row Skeleton */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {/* Metrics skeleton */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="rounded-2xl border border-border/50 p-4">
+              <Skeleton className="h-3 w-20 mb-2" />
+              <Skeleton className="h-7 w-12" />
+            </div>
+          ))}
+        </div>
+
+        {/* Engagement skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6">
+          <Skeleton className="h-[280px] rounded-2xl" />
+          <Skeleton className="h-[280px] rounded-2xl" />
+        </div>
+
+        {/* Gallery skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="rounded-2xl border p-6">
-              <Skeleton className="h-4 w-24 mb-2" />
-              <Skeleton className="h-8 w-16" />
-            </div>
-          ))}
-        </div>
-
-        {/* Continue Studying Skeleton */}
-        <Skeleton className="h-6 w-40 mb-4" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          {[1, 2].map(i => (
-            <div key={i} className="rounded-2xl border p-4">
-              <div className="flex items-center gap-4">
-                <Skeleton className="w-16 h-16 rounded-lg" />
-                <div className="flex-1">
-                  <Skeleton className="h-5 w-32 mb-2" />
-                  <Skeleton className="h-4 w-24 mb-2" />
-                  <Skeleton className="h-2 w-full" />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* All Courses Skeleton */}
-        <Skeleton className="h-6 w-32 mb-4" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
             <div key={i} className="rounded-2xl border overflow-hidden">
-              <Skeleton className="w-full h-32" />
+              <Skeleton className="w-full h-36" />
               <div className="p-4">
                 <Skeleton className="h-4 w-20 mb-2" />
                 <Skeleton className="h-5 w-full mb-2" />
@@ -150,60 +150,99 @@ export function Overview() {
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">Overview</h1>
-
-      {/* Stats Row */}
-      <div
-        data-testid="stats-grid"
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+    <MotionConfig reducedMotion="user">
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={staggerContainer}
+        className="space-y-12 pb-12"
       >
-        {statsCards.map(stat => (
-          <StatsCard key={stat.label} {...stat} />
-        ))}
-      </div>
+        {/* ── Hero Zone ── */}
+        <motion.section variants={fadeUp} className="space-y-6">
+          <div>
+            <p className="text-sm text-muted-foreground tracking-wide uppercase font-medium">
+              {getGreeting()}
+            </p>
+            <h1 className="text-3xl lg:text-4xl mt-1">Your Learning Studio</h1>
+          </div>
+          <ContinueLearning />
+        </motion.section>
 
-      {/* Achievement Banner */}
-      <div className="mb-8">
-        <AchievementBanner completedLessons={completedLessons} />
-      </div>
+        {/* ── Metrics Strip ── */}
+        <motion.section variants={fadeUp}>
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-6 items-start">
+            <div
+              data-testid="stats-grid"
+              className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3"
+            >
+              {statsCards.map(stat => (
+                <StatsCard key={stat.label} {...stat} />
+              ))}
+            </div>
+            <AchievementBanner completedLessons={completedLessons} />
+          </div>
+        </motion.section>
 
-      {/* Continue Learning — first actionable element on dashboard (AC6) */}
-      <ContinueLearning />
+        {/* ── Engagement Zone ── */}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-50px' }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6"
+        >
+          <div>
+            <h2 className="text-xl mb-4">Study Streak</h2>
+            <StudyStreakCalendar weeks={26} />
+          </div>
+          <RecentActivity activities={recentActivity} />
+        </motion.section>
 
-      {/* Study Streak Calendar */}
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold mb-4">Study Streak</h2>
-        <StudyStreakCalendar days={30} />
-      </div>
+        {/* ── Insight + Action Zone ── */}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-50px' }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6"
+        >
+          <ProgressChart data={chartData} />
+          <QuickActions
+            studyNotes={studyNotes}
+            lastWatchedCourse={lastWatchedCourse}
+            lastWatchedLesson={lastWatchedLesson}
+          />
+        </motion.section>
 
-      {/* Recent Activity */}
-      <RecentActivity activities={recentActivity} />
-
-      {/* Quick Actions */}
-      <QuickActions
-        studyNotes={studyNotes}
-        lastWatchedCourse={lastWatchedCourse}
-        lastWatchedLesson={lastWatchedLesson}
-      />
-
-      {/* Progress Chart */}
-      <ProgressChart data={chartData} />
-
-      {/* All Courses */}
-      <section>
-        <h2 className="text-lg font-semibold mb-4">All Courses</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {allCourses.map(course => (
-            <CourseCard
-              key={course.id}
-              course={course}
-              variant="overview"
-              completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
-            />
-          ))}
-        </div>
-      </section>
-    </div>
+        {/* ── Course Gallery ── */}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-50px' }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <div className="flex items-baseline justify-between mb-6">
+            <h2 className="text-xl">Your Library</h2>
+            <Link
+              to="/courses"
+              className="text-sm text-brand hover:text-brand-hover flex items-center gap-1 motion-safe:transition-colors"
+            >
+              View all
+              <ArrowRight className="size-3.5" aria-hidden="true" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {allCourses.map(course => (
+              <CourseCard
+                key={course.id}
+                course={course}
+                variant="overview"
+                completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
+              />
+            ))}
+          </div>
+        </motion.section>
+      </motion.div>
+    </MotionConfig>
   )
 }

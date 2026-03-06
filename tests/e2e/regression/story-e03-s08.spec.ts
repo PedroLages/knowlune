@@ -85,8 +85,14 @@ async function seedNotes(page: Parameters<typeof navigateAndWait>[0]) {
           for (const note of notes) {
             store.put(note)
           }
-          tx.oncomplete = () => { db.close(); resolve('ok') }
-          tx.onerror = () => { db.close(); reject(tx.error) }
+          tx.oncomplete = () => {
+            db.close()
+            resolve('ok')
+          }
+          tx.onerror = () => {
+            db.close()
+            reject(tx.error)
+          }
         }
         request.onerror = () => reject(request.error)
       })
@@ -111,8 +117,14 @@ async function clearNotes(page: Parameters<typeof navigateAndWait>[0]) {
         }
         const tx = db.transaction('notes', 'readwrite')
         tx.objectStore('notes').clear()
-        tx.oncomplete = () => { db.close(); resolve() }
-        tx.onerror = () => { db.close(); reject(tx.error) }
+        tx.oncomplete = () => {
+          db.close()
+          resolve()
+        }
+        tx.onerror = () => {
+          db.close()
+          reject(tx.error)
+        }
       }
       request.onerror = () => reject(request.error)
     })
@@ -142,7 +154,9 @@ test.describe('AC1: Notes page displays all notes across courses', () => {
     await expect(noteCards.filter({ hasText: 'Operative Six' })).toHaveCount(2)
     await expect(noteCards.filter({ hasText: 'Authority' })).toHaveCount(2)
     await expect(noteCards.filter({ hasText: /introduction notes about/i }).first()).toBeVisible()
-    await expect(noteCards.filter({ hasText: /communication laws and strategies/i }).first()).toBeVisible()
+    await expect(
+      noteCards.filter({ hasText: /communication laws and strategies/i }).first()
+    ).toBeVisible()
   })
 
   test('notes are sorted by most recently updated first', async ({ page }) => {
@@ -340,7 +354,9 @@ test.describe('AC5: Expand note card with navigation', () => {
 
     // Full TipTap content should render
     await expect(
-      page.locator('.ProseMirror').filter({ hasText: /introduction notes about the operative training program/i }),
+      page
+        .locator('.ProseMirror')
+        .filter({ hasText: /introduction notes about the operative training program/i })
     ).toBeVisible()
   })
 

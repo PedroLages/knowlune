@@ -28,7 +28,10 @@ describe('StatusIndicator', () => {
 
     it('should set data-status attribute', () => {
       render(<StatusIndicator status="in-progress" itemId="test-1" />)
-      expect(screen.getByTestId('status-indicator-test-1')).toHaveAttribute('data-status', 'in-progress')
+      expect(screen.getByTestId('status-indicator-test-1')).toHaveAttribute(
+        'data-status',
+        'in-progress'
+      )
     })
   })
 
@@ -41,7 +44,10 @@ describe('StatusIndicator', () => {
 
     it('should set data-status attribute', () => {
       render(<StatusIndicator status="completed" itemId="test-1" mode="display" />)
-      expect(screen.getByTestId('status-indicator-test-1')).toHaveAttribute('data-status', 'completed')
+      expect(screen.getByTestId('status-indicator-test-1')).toHaveAttribute(
+        'data-status',
+        'completed'
+      )
     })
   })
 
@@ -75,17 +81,26 @@ describe('StatusIndicator', () => {
   describe('accessibility', () => {
     it('should have aria-label for not-started', () => {
       render(<StatusIndicator status="not-started" itemId="test-1" />)
-      expect(screen.getByTestId('status-indicator-test-1')).toHaveAttribute('aria-label', 'Not Started')
+      expect(screen.getByTestId('status-indicator-test-1')).toHaveAttribute(
+        'aria-label',
+        'Not Started'
+      )
     })
 
     it('should have aria-label for in-progress', () => {
       render(<StatusIndicator status="in-progress" itemId="test-1" />)
-      expect(screen.getByTestId('status-indicator-test-1')).toHaveAttribute('aria-label', 'In Progress')
+      expect(screen.getByTestId('status-indicator-test-1')).toHaveAttribute(
+        'aria-label',
+        'In Progress'
+      )
     })
 
     it('should have aria-label for completed', () => {
       render(<StatusIndicator status="completed" itemId="test-1" />)
-      expect(screen.getByTestId('status-indicator-test-1')).toHaveAttribute('aria-label', 'Completed')
+      expect(screen.getByTestId('status-indicator-test-1')).toHaveAttribute(
+        'aria-label',
+        'Completed'
+      )
     })
   })
 

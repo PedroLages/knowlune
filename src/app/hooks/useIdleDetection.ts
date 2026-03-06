@@ -5,7 +5,7 @@ const IDLE_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
 interface UseIdleDetectionOptions {
   onIdle: () => void
   onActive: () => void
-  onActivity: () => void  // Every user interaction
+  onActivity: () => void // Every user interaction
 }
 
 export function useIdleDetection({ onIdle, onActive, onActivity }: UseIdleDetectionOptions) {
@@ -70,5 +70,5 @@ export function useIdleDetection({ onIdle, onActive, onActivity }: UseIdleDetect
         window.removeEventListener(event, resetTimer)
       })
     }
-  }, [])  // Empty deps - only run once
+  }, []) // Empty deps - only run once
 }

@@ -36,7 +36,10 @@ async function goToLessonPlayer(page: Parameters<typeof navigateAndWait>[0]) {
 // ===========================================================================
 
 test.describe('AC1: Shift+Arrow ±10s Seeking', () => {
-  test.skip(({ browserName }) => browserName === 'webkit', 'Keyboard events not supported on mobile webkit')
+  test.skip(
+    ({ browserName }) => browserName === 'webkit',
+    'Keyboard events not supported on mobile webkit'
+  )
 
   test('Shift+ArrowRight should seek forward 10 seconds', async ({ page }) => {
     await goToLessonPlayer(page)
@@ -100,10 +103,13 @@ test.describe('AC2: 95% Auto-Completion', () => {
     await expect(completionButton).toBeVisible()
 
     // WHEN: Video reaches 95% completion (simulate by seeking)
-    await page.waitForFunction(() => {
-      const video = document.querySelector('video')
-      return video && video.duration > 0 && !isNaN(video.duration)
-    }, { timeout: 10000 })
+    await page.waitForFunction(
+      () => {
+        const video = document.querySelector('video')
+        return video && video.duration > 0 && !isNaN(video.duration)
+      },
+      { timeout: 10000 }
+    )
     await page.evaluate(() => {
       const video = document.querySelector('video')
       if (video && video.duration) {
@@ -114,17 +120,22 @@ test.describe('AC2: 95% Auto-Completion', () => {
 
     // THEN: Lesson should be marked as completed (button aria-label flips to "incomplete")
     // Use CSS locator — celebration modal sets aria-hidden on background, blocking getByRole
-    await expect(page.locator('button[aria-label="Mark lesson incomplete"]')).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('button[aria-label="Mark lesson incomplete"]')).toBeVisible({
+      timeout: 5000,
+    })
   })
 
   test('should show celebration modal at 95% completion', async ({ page }) => {
     await goToLessonPlayer(page)
 
     // WHEN: Video reaches 95%
-    await page.waitForFunction(() => {
-      const video = document.querySelector('video')
-      return video && video.duration > 0 && !isNaN(video.duration)
-    }, { timeout: 10000 })
+    await page.waitForFunction(
+      () => {
+        const video = document.querySelector('video')
+        return video && video.duration > 0 && !isNaN(video.duration)
+      },
+      { timeout: 10000 }
+    )
     await page.evaluate(() => {
       const video = document.querySelector('video')
       if (video && video.duration) {
@@ -134,17 +145,24 @@ test.describe('AC2: 95% Auto-Completion', () => {
     })
 
     // THEN: Celebration modal should appear
-    await expect(page.getByRole('heading', { name: /lesson completed/i })).toBeVisible({ timeout: 5000 })
+    await expect(page.getByRole('heading', { name: /lesson completed/i })).toBeVisible({
+      timeout: 5000,
+    })
   })
 
-  test('should not re-trigger celebration when video reaches 100% after 95% auto-complete', async ({ page }) => {
+  test('should not re-trigger celebration when video reaches 100% after 95% auto-complete', async ({
+    page,
+  }) => {
     await goToLessonPlayer(page)
 
     // GIVEN: Auto-completed at 95%
-    await page.waitForFunction(() => {
-      const video = document.querySelector('video')
-      return video && video.duration > 0 && !isNaN(video.duration)
-    }, { timeout: 10000 })
+    await page.waitForFunction(
+      () => {
+        const video = document.querySelector('video')
+        return video && video.duration > 0 && !isNaN(video.duration)
+      },
+      { timeout: 10000 }
+    )
     await page.evaluate(() => {
       const video = document.querySelector('video')
       if (video && video.duration) {
@@ -166,7 +184,9 @@ test.describe('AC2: 95% Auto-Completion', () => {
     })
 
     // THEN: No second celebration modal
-    await expect(page.getByRole('heading', { name: /lesson completed/i })).not.toBeVisible({ timeout: 2000 })
+    await expect(page.getByRole('heading', { name: /lesson completed/i })).not.toBeVisible({
+      timeout: 2000,
+    })
   })
 })
 
@@ -175,7 +195,9 @@ test.describe('AC2: 95% Auto-Completion', () => {
 // ===========================================================================
 
 test.describe('AC3: Caption Font Size', () => {
-  test.fixme('should have a caption font size control visible when captions are enabled', async ({ page }) => {
+  test.fixme('should have a caption font size control visible when captions are enabled', async ({
+    page,
+  }) => {
     // FIXME: LessonPlayer does not yet pass captions prop to VideoPlayer, so caption controls never render
     await goToLessonPlayer(page)
 
@@ -211,7 +233,9 @@ test.describe('AC3: Caption Font Size', () => {
 // ===========================================================================
 
 test.describe('AC4: prefers-reduced-motion', () => {
-  test('should use opacity fade instead of scale animation when reduced motion is enabled', async ({ page }) => {
+  test('should use opacity fade instead of scale animation when reduced motion is enabled', async ({
+    page,
+  }) => {
     // GIVEN: User has prefers-reduced-motion enabled
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await goToLessonPlayer(page)
@@ -227,7 +251,7 @@ test.describe('AC4: prefers-reduced-motion', () => {
     await expect(checkIcon).toBeVisible()
 
     // Verify no transform/scale animation is applied
-    const animation = await checkIcon.evaluate((el) => {
+    const animation = await checkIcon.evaluate(el => {
       const computed = window.getComputedStyle(el)
       return {
         animation: computed.animation,
@@ -249,7 +273,9 @@ test.describe('AC4: prefers-reduced-motion', () => {
     await completionButton.click()
 
     // THEN: Modal appears but no canvas confetti
-    await expect(page.getByRole('heading', { name: /lesson completed/i })).toBeVisible({ timeout: 5000 })
+    await expect(page.getByRole('heading', { name: /lesson completed/i })).toBeVisible({
+      timeout: 5000,
+    })
 
     // Verify no confetti canvas was created
     const confettiCanvas = page.locator('canvas')
@@ -277,7 +303,7 @@ test.describe('AC5: WCAG AA+ Compliance', () => {
     await expect(focusedElement).toBeVisible()
 
     // Verify the focus ring has sufficient visibility
-    const ringStyle = await focusedElement.evaluate((el) => {
+    const ringStyle = await focusedElement.evaluate(el => {
       const computed = window.getComputedStyle(el)
       return {
         outline: computed.outline,
@@ -286,8 +312,8 @@ test.describe('AC5: WCAG AA+ Compliance', () => {
     })
 
     // Should have either outline or box-shadow for focus indication
-    const hasFocusRing = ringStyle.outline !== 'none' ||
-      (ringStyle.boxShadow !== 'none' && ringStyle.boxShadow !== '')
+    const hasFocusRing =
+      ringStyle.outline !== 'none' || (ringStyle.boxShadow !== 'none' && ringStyle.boxShadow !== '')
     expect(hasFocusRing).toBe(true)
   })
 
@@ -360,7 +386,7 @@ test.describe('AC5: WCAG AA+ Compliance', () => {
 
     for (let i = 0; i < count; i++) {
       const button = controlButtons.nth(i)
-      const name = await button.getAttribute('aria-label') ?? await button.textContent()
+      const name = (await button.getAttribute('aria-label')) ?? (await button.textContent())
       expect(name?.trim().length).toBeGreaterThan(0)
     }
   })

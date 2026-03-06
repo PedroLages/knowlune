@@ -27,9 +27,7 @@ const LESSON_ID = 'nci-fnl-drones-psyops'
 // ---------------------------------------------------------------------------
 
 /** Navigate to lesson player Notes tab with sidebar closed. */
-async function openNoteEditor(
-  page: import('@playwright/test').Page,
-) {
+async function openNoteEditor(page: import('@playwright/test').Page) {
   await page.addInitScript(() => {
     localStorage.setItem('eduvi-sidebar-v1', 'false')
   })
@@ -51,9 +49,7 @@ async function openNoteEditor(
 // ---------------------------------------------------------------------------
 
 test.describe('AC1: Code blocks with syntax highlighting', () => {
-  test('inserting a code block renders with syntax highlighting', async ({
-    page,
-  }) => {
+  test('inserting a code block renders with syntax highlighting', async ({ page }) => {
     await openNoteEditor(page)
 
     const editor = page.locator('.tiptap')
@@ -71,9 +67,7 @@ test.describe('AC1: Code blocks with syntax highlighting', () => {
     await expect(codeBlock).toBeVisible()
   })
 
-  test('code block has a language selector dropdown', async ({
-    page,
-  }) => {
+  test('code block has a language selector dropdown', async ({ page }) => {
     await openNoteEditor(page)
 
     const editor = page.locator('.tiptap')
@@ -92,13 +86,11 @@ test.describe('AC1: Code blocks with syntax highlighting', () => {
     const options = langSelect.locator('option')
     const optionTexts = await options.allTextContents()
     expect(optionTexts).toEqual(
-      expect.arrayContaining(['JavaScript', 'TypeScript', 'Python', 'CSS', 'HTML', 'Bash']),
+      expect.arrayContaining(['JavaScript', 'TypeScript', 'Python', 'CSS', 'HTML', 'Bash'])
     )
   })
 
-  test('changing language re-highlights code', async ({
-    page,
-  }) => {
+  test('changing language re-highlights code', async ({ page }) => {
     await openNoteEditor(page)
 
     const editor = page.locator('.tiptap')
@@ -124,23 +116,16 @@ test.describe('AC1: Code blocks with syntax highlighting', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('AC2: Inline images', () => {
-  test('toolbar image button triggers file picker', async ({
-    page,
-  }) => {
+  test('toolbar image button triggers file picker', async ({ page }) => {
     await openNoteEditor(page)
 
     // Click image button and verify file chooser event fires
     const imageBtn = page.getByRole('button', { name: /image/i })
-    const [fileChooser] = await Promise.all([
-      page.waitForEvent('filechooser'),
-      imageBtn.click(),
-    ])
+    const [fileChooser] = await Promise.all([page.waitForEvent('filechooser'), imageBtn.click()])
     expect(fileChooser).toBeTruthy()
   })
 
-  test('image uploads via file input and renders inline', async ({
-    page,
-  }) => {
+  test('image uploads via file input and renders inline', async ({ page }) => {
     await openNoteEditor(page)
 
     const editor = page.locator('.tiptap')
@@ -153,7 +138,7 @@ test.describe('AC2: Inline images', () => {
     // Minimal valid PNG: 1x1 red pixel
     const pngBuffer = Buffer.from(
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==',
-      'base64',
+      'base64'
     )
     fs.writeFileSync(tmpFile, pngBuffer)
 
@@ -175,9 +160,7 @@ test.describe('AC2: Inline images', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('AC3: YouTube embeds', () => {
-  test('toolbar YouTube button opens a URL dialog', async ({
-    page,
-  }) => {
+  test('toolbar YouTube button opens a URL dialog', async ({ page }) => {
     await openNoteEditor(page)
 
     // Click YouTube toolbar button
@@ -193,9 +176,7 @@ test.describe('AC3: YouTube embeds', () => {
     await expect(urlInput).toBeVisible()
   })
 
-  test('inserting a YouTube URL creates a responsive embed', async ({
-    page,
-  }) => {
+  test('inserting a YouTube URL creates a responsive embed', async ({ page }) => {
     await openNoteEditor(page)
 
     // Open YouTube dialog
@@ -224,9 +205,7 @@ test.describe('AC3: YouTube embeds', () => {
     }
   })
 
-  test('invalid YouTube URL keeps Insert button disabled', async ({
-    page,
-  }) => {
+  test('invalid YouTube URL keeps Insert button disabled', async ({ page }) => {
     await openNoteEditor(page)
 
     const youtubeBtn = page.getByRole('button', { name: /youtube/i })
@@ -249,9 +228,7 @@ test.describe('AC3: YouTube embeds', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('AC4: Collapsible details blocks', () => {
-  test('toolbar toggle button inserts a details block', async ({
-    page,
-  }) => {
+  test('toolbar toggle button inserts a details block', async ({ page }) => {
     await openNoteEditor(page)
 
     const editor = page.locator('.tiptap')
@@ -271,9 +248,7 @@ test.describe('AC4: Collapsible details blocks', () => {
     await expect(summary).toBeVisible()
   })
 
-  test('clicking toggle button opens/closes content', async ({
-    page,
-  }) => {
+  test('clicking toggle button opens/closes content', async ({ page }) => {
     await openNoteEditor(page)
 
     const editor = page.locator('.tiptap')

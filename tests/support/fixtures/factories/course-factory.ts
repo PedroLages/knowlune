@@ -132,9 +132,7 @@ export interface CourseProgress {
   lastAccessedAt: string
 }
 
-export function createCourseProgress(
-  overrides: Partial<CourseProgress> = {},
-): CourseProgress {
+export function createCourseProgress(overrides: Partial<CourseProgress> = {}): CourseProgress {
   const now = new Date().toISOString()
   return {
     courseId: overrides.courseId ?? uid(),
@@ -148,11 +146,7 @@ export function createCourseProgress(
 
 // --- StudyAction Factory ---
 
-export type StudyActionType =
-  | 'lesson_complete'
-  | 'video_progress'
-  | 'note_saved'
-  | 'course_started'
+export type StudyActionType = 'lesson_complete' | 'video_progress' | 'note_saved' | 'course_started'
 
 export interface StudyAction {
   type: StudyActionType
@@ -162,9 +156,7 @@ export interface StudyAction {
   metadata?: Record<string, unknown>
 }
 
-export function createStudyAction(
-  overrides: Partial<StudyAction> = {},
-): StudyAction {
+export function createStudyAction(overrides: Partial<StudyAction> = {}): StudyAction {
   return {
     type: 'lesson_complete',
     courseId: uid(),
@@ -184,9 +176,7 @@ export interface VideoBookmark {
   createdAt: string
 }
 
-export function createVideoBookmark(
-  overrides: Partial<VideoBookmark> = {},
-): VideoBookmark {
+export function createVideoBookmark(overrides: Partial<VideoBookmark> = {}): VideoBookmark {
   const id = overrides.id ?? uid()
   return {
     id,

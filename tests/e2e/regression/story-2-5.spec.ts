@@ -34,22 +34,16 @@ async function goToFirstLesson(page: Parameters<typeof navigateAndWait>[0]) {
 // ===========================================================================
 
 test.describe('AC1: Collapsible ModuleAccordion in Sidebar', () => {
-  test('should display accordion-based course structure in desktop sidebar', async ({
-    page,
-  }) => {
+  test('should display accordion-based course structure in desktop sidebar', async ({ page }) => {
     // GIVEN: Desktop viewport with lesson player open
     await page.setViewportSize({ width: 1440, height: 900 })
     await goToFirstLesson(page)
 
     // THEN: Module accordion is visible in sidebar
-    await expect(
-      page.getByTestId('course-sidebar-accordion'),
-    ).toBeVisible()
+    await expect(page.getByTestId('course-sidebar-accordion')).toBeVisible()
   })
 
-  test('should show module titles in accordion triggers', async ({
-    page,
-  }) => {
+  test('should show module titles in accordion triggers', async ({ page }) => {
     // GIVEN: Desktop viewport with lesson player
     await page.setViewportSize({ width: 1440, height: 900 })
     await goToFirstLesson(page)
@@ -59,29 +53,31 @@ test.describe('AC1: Collapsible ModuleAccordion in Sidebar', () => {
     await expect(triggers.first()).toBeVisible()
   })
 
-  test('should show completion badge on each module', async ({
-    page,
-  }) => {
+  test('should show completion badge on each module', async ({ page }) => {
     // GIVEN: Desktop viewport with lesson player
     await page.setViewportSize({ width: 1440, height: 900 })
     await goToFirstLesson(page)
 
     // THEN: Completion count badge (e.g., "0/3") visible on module
-    const badge = page.getByTestId('course-sidebar-accordion').locator('.inline-flex, [class*="badge"]').first()
+    const badge = page
+      .getByTestId('course-sidebar-accordion')
+      .locator('.inline-flex, [class*="badge"]')
+      .first()
     await expect(badge).toBeVisible()
   })
 
-  test('should collapse and expand modules', async ({
-    page,
-  }) => {
+  test('should collapse and expand modules', async ({ page }) => {
     // GIVEN: Desktop viewport with lesson player, active module is expanded
     await page.setViewportSize({ width: 1440, height: 900 })
     await goToFirstLesson(page)
 
     // WHEN: User clicks an expanded accordion trigger
     // Use data-slot for a stable locator that doesn't change with state
-    const trigger = page.getByTestId('course-sidebar-accordion').locator('[data-slot="accordion-trigger"]').first()
-    if (await trigger.count() > 0) {
+    const trigger = page
+      .getByTestId('course-sidebar-accordion')
+      .locator('[data-slot="accordion-trigger"]')
+      .first()
+    if ((await trigger.count()) > 0) {
       await expect(trigger).toHaveAttribute('data-state', 'open')
       await trigger.click()
 
@@ -96,9 +92,7 @@ test.describe('AC1: Collapsible ModuleAccordion in Sidebar', () => {
 // ===========================================================================
 
 test.describe('AC2: Lesson Details in Course Structure', () => {
-  test('should display lesson titles within accordion modules', async ({
-    page,
-  }) => {
+  test('should display lesson titles within accordion modules', async ({ page }) => {
     // GIVEN: Desktop viewport with lesson player
     await page.setViewportSize({ width: 1440, height: 900 })
     await goToFirstLesson(page)
@@ -110,22 +104,20 @@ test.describe('AC2: Lesson Details in Course Structure', () => {
     expect(text?.trim().length).toBeGreaterThan(0)
   })
 
-  test('should show video type icon for video lessons', async ({
-    page,
-  }) => {
+  test('should show video type icon for video lessons', async ({ page }) => {
     // GIVEN: Desktop viewport with lesson player
     await page.setViewportSize({ width: 1440, height: 900 })
     await goToFirstLesson(page)
 
     // THEN: Video icon (svg) is visible on lessons with video resources
-    const videoIcons = page.getByTestId('course-sidebar-accordion').locator('svg.lucide-video, [data-testid="lesson-icon-video"]')
+    const videoIcons = page
+      .getByTestId('course-sidebar-accordion')
+      .locator('svg.lucide-video, [data-testid="lesson-icon-video"]')
     // At least one video lesson should exist in sample data
     await expect(videoIcons.first()).toBeVisible()
   })
 
-  test('should show lesson duration when available', async ({
-    page,
-  }) => {
+  test('should show lesson duration when available', async ({ page }) => {
     // GIVEN: Desktop viewport with lesson player
     await page.setViewportSize({ width: 1440, height: 900 })
     await goToFirstLesson(page)
@@ -143,21 +135,19 @@ test.describe('AC2: Lesson Details in Course Structure', () => {
 // ===========================================================================
 
 test.describe('AC3: Lesson Switching and Active Highlight', () => {
-  test('should highlight the active lesson in the sidebar', async ({
-    page,
-  }) => {
+  test('should highlight the active lesson in the sidebar', async ({ page }) => {
     // GIVEN: Desktop viewport with lesson player
     await page.setViewportSize({ width: 1440, height: 900 })
     await goToFirstLesson(page)
 
     // THEN: One lesson link has active highlight styling (blue bg)
-    const activeLesson = page.getByTestId('course-sidebar-accordion').locator('a.bg-blue-50, a[class*="bg-blue"]')
+    const activeLesson = page
+      .getByTestId('course-sidebar-accordion')
+      .locator('a.bg-blue-50, a[class*="bg-blue"]')
     await expect(activeLesson).toHaveCount(1)
   })
 
-  test('should switch to a different lesson when clicked in sidebar', async ({
-    page,
-  }) => {
+  test('should switch to a different lesson when clicked in sidebar', async ({ page }) => {
     // GIVEN: Desktop viewport with first lesson loaded
     await page.setViewportSize({ width: 1440, height: 900 })
     await goToFirstLesson(page)
@@ -178,9 +168,7 @@ test.describe('AC3: Lesson Switching and Active Highlight', () => {
     }
   })
 
-  test('should update active highlight when switching lessons', async ({
-    page,
-  }) => {
+  test('should update active highlight when switching lessons', async ({ page }) => {
     // GIVEN: Desktop viewport with first lesson
     await page.setViewportSize({ width: 1440, height: 900 })
     await goToFirstLesson(page)
@@ -193,7 +181,9 @@ test.describe('AC3: Lesson Switching and Active Highlight', () => {
       await page.waitForLoadState('domcontentloaded')
 
       // THEN: The newly selected lesson has the active highlight
-      const activeLesson = page.getByTestId('course-sidebar-accordion').locator('a.bg-blue-50, a[class*="bg-blue"]')
+      const activeLesson = page
+        .getByTestId('course-sidebar-accordion')
+        .locator('a.bg-blue-50, a[class*="bg-blue"]')
       await expect(activeLesson).toHaveCount(1)
     }
   })
@@ -204,9 +194,7 @@ test.describe('AC3: Lesson Switching and Active Highlight', () => {
 // ===========================================================================
 
 test.describe('AC4: Next Lesson Button', () => {
-  test('should display Next button for non-final lessons', async ({
-    page,
-  }) => {
+  test('should display Next button for non-final lessons', async ({ page }) => {
     // GIVEN: Desktop viewport with a non-final lesson
     await page.setViewportSize({ width: 1440, height: 900 })
     await goToFirstLesson(page)
@@ -216,9 +204,7 @@ test.describe('AC4: Next Lesson Button', () => {
     await expect(nextButton).toBeVisible()
   })
 
-  test('should navigate to next lesson when Next button is clicked', async ({
-    page,
-  }) => {
+  test('should navigate to next lesson when Next button is clicked', async ({ page }) => {
     // GIVEN: First lesson loaded
     await page.setViewportSize({ width: 1440, height: 900 })
     await goToFirstLesson(page)
@@ -257,9 +243,7 @@ test.describe('AC5: Auto-Advance Countdown', () => {
     }
   }
 
-  test('should show auto-advance countdown after video ends', async ({
-    page,
-  }) => {
+  test('should show auto-advance countdown after video ends', async ({ page }) => {
     // GIVEN: Desktop viewport with a video lesson
     await page.setViewportSize({ width: 1440, height: 900 })
     await goToFirstLesson(page)
@@ -272,9 +256,7 @@ test.describe('AC5: Auto-Advance Countdown', () => {
     await expect(countdown).toBeVisible({ timeout: 3000 })
   })
 
-  test('should display countdown seconds and next lesson title', async ({
-    page,
-  }) => {
+  test('should display countdown seconds and next lesson title', async ({ page }) => {
     // GIVEN: Video has ended, countdown is showing
     await page.setViewportSize({ width: 1440, height: 900 })
     await goToFirstLesson(page)
@@ -290,9 +272,7 @@ test.describe('AC5: Auto-Advance Countdown', () => {
     expect(text?.toLowerCase()).toContain('next')
   })
 
-  test('should have a cancel button in the countdown', async ({
-    page,
-  }) => {
+  test('should have a cancel button in the countdown', async ({ page }) => {
     // GIVEN: Video has ended, countdown is showing
     await page.setViewportSize({ width: 1440, height: 900 })
     await goToFirstLesson(page)
@@ -307,9 +287,7 @@ test.describe('AC5: Auto-Advance Countdown', () => {
     await expect(cancelButton).toBeVisible()
   })
 
-  test('should hide countdown when cancel is clicked', async ({
-    page,
-  }) => {
+  test('should hide countdown when cancel is clicked', async ({ page }) => {
     // GIVEN: Countdown is showing
     await page.setViewportSize({ width: 1440, height: 900 })
     await goToFirstLesson(page)
@@ -327,9 +305,7 @@ test.describe('AC5: Auto-Advance Countdown', () => {
     await expect(countdown).toBeHidden()
   })
 
-  test('should have accessible role and aria-live on countdown', async ({
-    page,
-  }) => {
+  test('should have accessible role and aria-live on countdown', async ({ page }) => {
     // GIVEN: Countdown is showing
     await page.setViewportSize({ width: 1440, height: 900 })
     await goToFirstLesson(page)
@@ -350,9 +326,7 @@ test.describe('AC5: Auto-Advance Countdown', () => {
 // ===========================================================================
 
 test.describe('AC6: Mobile Sheet Panel', () => {
-  test('should hide desktop sidebar on mobile viewport', async ({
-    page,
-  }) => {
+  test('should hide desktop sidebar on mobile viewport', async ({ page }) => {
     // GIVEN: Mobile viewport (375px)
     await page.setViewportSize({ width: 375, height: 667 })
     await goToFirstLesson(page)
@@ -363,9 +337,7 @@ test.describe('AC6: Mobile Sheet Panel', () => {
     await expect(sidebar).toBeHidden()
   })
 
-  test('should show menu button to open course structure on mobile', async ({
-    page,
-  }) => {
+  test('should show menu button to open course structure on mobile', async ({ page }) => {
     // GIVEN: Mobile viewport
     await page.setViewportSize({ width: 375, height: 667 })
     await goToFirstLesson(page)
@@ -375,9 +347,7 @@ test.describe('AC6: Mobile Sheet Panel', () => {
     await expect(menuButton).toBeVisible()
   })
 
-  test('should open Sheet with ModuleAccordion when menu button is clicked', async ({
-    page,
-  }) => {
+  test('should open Sheet with ModuleAccordion when menu button is clicked', async ({ page }) => {
     // GIVEN: Mobile viewport
     await page.setViewportSize({ width: 375, height: 667 })
     await goToFirstLesson(page)
@@ -391,9 +361,7 @@ test.describe('AC6: Mobile Sheet Panel', () => {
     await expect(sheetAccordion).toBeVisible({ timeout: 3000 })
   })
 
-  test('should show lesson links in mobile Sheet accordion', async ({
-    page,
-  }) => {
+  test('should show lesson links in mobile Sheet accordion', async ({ page }) => {
     // GIVEN: Mobile viewport with Sheet open
     await page.setViewportSize({ width: 375, height: 667 })
     await goToFirstLesson(page)

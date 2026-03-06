@@ -316,5 +316,12 @@ export type ApiResponse<T> = T | ApiError
 
 // Type guard to check if response is an error
 export function isApiError(response: unknown): response is ApiError {
-  return typeof response === 'object' && response !== null && 'error' in response && typeof (response as ApiError).error === 'string' && 'statusCode' in response && typeof (response as ApiError).statusCode === 'number'
+  return (
+    typeof response === 'object' &&
+    response !== null &&
+    'error' in response &&
+    typeof (response as ApiError).error === 'string' &&
+    'statusCode' in response &&
+    typeof (response as ApiError).statusCode === 'number'
+  )
 }

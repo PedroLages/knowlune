@@ -47,7 +47,7 @@ async function focusPlayer(page: Parameters<typeof navigateAndWait>[0]) {
 async function pressKeyAndExpectAnnouncement(
   page: Parameters<typeof navigateAndWait>[0],
   key: string,
-  pattern: RegExp,
+  pattern: RegExp
 ) {
   await page.keyboard.press(key)
   const announcement = page.locator('[role="status"][aria-live="polite"]')

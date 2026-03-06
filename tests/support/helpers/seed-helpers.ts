@@ -23,7 +23,7 @@ type IndexedDBSeed = {
 export async function seedAndReload(
   page: Page,
   indexedDB: IndexedDBSeed,
-  courses: ImportedCourseTestData[],
+  courses: ImportedCourseTestData[]
 ): Promise<void> {
   // Ensure sidebar is closed on tablet so Sheet overlay doesn't block clicks
   await page.addInitScript(() => {

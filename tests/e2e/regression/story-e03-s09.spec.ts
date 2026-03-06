@@ -34,21 +34,18 @@ async function seekVideoTo(page: Parameters<typeof navigateAndWait>[0], seconds:
       const v = document.querySelector('video')
       return v && v.readyState >= 1
     },
-    { timeout: 15000 },
+    { timeout: 15000 }
   )
   // Seek to target time and wait for the browser to decode the frame
-  await page.locator('video').evaluate(
-    async (el: HTMLVideoElement, t: number) => {
-      el.currentTime = t
-      if (el.readyState < 3) {
-        await new Promise<void>(resolve =>
-          el.addEventListener('seeked', () => resolve(), { once: true }),
-        )
-      }
-      el.dispatchEvent(new Event('timeupdate'))
-    },
-    seconds,
-  )
+  await page.locator('video').evaluate(async (el: HTMLVideoElement, t: number) => {
+    el.currentTime = t
+    if (el.readyState < 3) {
+      await new Promise<void>(resolve =>
+        el.addEventListener('seeked', () => resolve(), { once: true })
+      )
+    }
+    el.dispatchEvent(new Event('timeupdate'))
+  }, seconds)
 }
 
 // ===========================================================================
@@ -219,7 +216,7 @@ test.describe('AC4: IndexedDB frame storage', () => {
       })
       const tx = db.transaction('screenshots', 'readonly')
       const store = tx.objectStore('screenshots')
-      return new Promise<number>((resolve) => {
+      return new Promise<number>(resolve => {
         const req = store.count()
         req.onsuccess = () => resolve(req.result)
       })
@@ -228,9 +225,7 @@ test.describe('AC4: IndexedDB frame storage', () => {
     expect(screenshotCount).toBeGreaterThanOrEqual(1)
 
     // Verify frame uses blob URL from IndexedDB, not inline base64
-    const editorHtml = await page
-      .getByRole('textbox', { name: /lesson notes editor/i })
-      .innerHTML()
+    const editorHtml = await page.getByRole('textbox', { name: /lesson notes editor/i }).innerHTML()
     expect(editorHtml).toContain('node-frameCapture')
     expect(editorHtml).not.toContain('data:image/jpeg')
   })
@@ -250,9 +245,7 @@ test.describe('AC6: CORS-safe video capture', () => {
     await expect(video).toBeVisible()
 
     // THEN: crossOrigin attribute should be set
-    const crossOrigin = await video.evaluate(
-      (el: HTMLVideoElement) => el.crossOrigin,
-    )
+    const crossOrigin = await video.evaluate((el: HTMLVideoElement) => el.crossOrigin)
     expect(crossOrigin).toBe('anonymous')
   })
 })

@@ -29,7 +29,10 @@ test('debug page load with network', async ({ page }) => {
   console.log('Has React root:', html.includes('id="root"'))
 
   // Check if root has content
-  const rootContent = await page.locator('#root').innerHTML().catch(() => 'ERROR')
+  const rootContent = await page
+    .locator('#root')
+    .innerHTML()
+    .catch(() => 'ERROR')
   console.log('Root content length:', rootContent.length)
   console.log('Root has children:', await page.locator('#root > *').count())
 })

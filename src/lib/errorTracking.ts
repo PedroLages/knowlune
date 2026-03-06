@@ -24,10 +24,8 @@ function formatTimestamp(): string {
  * Report and store a structured error.
  */
 export function reportError(error: unknown, context = 'Unknown'): void {
-  const message =
-    error instanceof Error ? error.message : String(error)
-  const stack =
-    error instanceof Error ? error.stack : undefined
+  const message = error instanceof Error ? error.message : String(error)
+  const stack = error instanceof Error ? error.stack : undefined
 
   const entry: ErrorEntry = {
     timestamp: formatTimestamp(),
@@ -43,9 +41,7 @@ export function reportError(error: unknown, context = 'Unknown'): void {
   }
   errorLog.push(entry)
 
-  console.error(
-    `[LevelUp:Error] ${entry.timestamp} | ${context} | ${message}`,
-  )
+  console.error(`[LevelUp:Error] ${entry.timestamp} | ${context} | ${message}`)
 }
 
 /**
@@ -72,12 +68,9 @@ export function initErrorTracking(): void {
     source?: string,
     lineno?: number,
     colno?: number,
-    error?: Error,
+    error?: Error
   ) => {
-    reportError(
-      error ?? message,
-      `GlobalError${source ? ` @ ${source}:${lineno}:${colno}` : ''}`,
-    )
+    reportError(error ?? message, `GlobalError${source ? ` @ ${source}:${lineno}:${colno}` : ''}`)
   }
 
   window.onunhandledrejection = (event: PromiseRejectionEvent) => {

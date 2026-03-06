@@ -26,7 +26,9 @@ async function goToLessonWithNotes(page: Parameters<typeof navigateAndWait>[0]) 
 test.describe('AC1: Timestamp insertion', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
 
-  test('Add Timestamp button inserts [MM:SS](video://lessonId#t=seconds) format', async ({ page }) => {
+  test('Add Timestamp button inserts [MM:SS](video://lessonId#t=seconds) format', async ({
+    page,
+  }) => {
     await goToLessonWithNotes(page)
 
     // Find the note editor textarea in the side panel

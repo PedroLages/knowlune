@@ -15,9 +15,7 @@
  * Reference: TEA knowledge base - test-quality.md, selector-resilience.md
  */
 import { test, expect } from '../support/fixtures'
-import {
-  createImportedCourse,
-} from '../support/fixtures/factories/imported-course-factory'
+import { createImportedCourse } from '../support/fixtures/factories/imported-course-factory'
 import { seedAndReload } from '../support/helpers/seed-helpers'
 
 // ===========================================================================
@@ -35,24 +33,16 @@ test.describe('AC1: Topic Tags on Course Cards', () => {
     tags: [],
   })
 
-  test('should display tag badges on imported course card', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should display tag badges on imported course card', async ({ page, indexedDB }) => {
     // GIVEN: An imported course with tags
     await seedAndReload(page, indexedDB, [courseWithTags])
 
     // THEN: Tag badges container is visible on the card
     const card = page.getByTestId('imported-course-card').first()
-    await expect(
-      card.getByTestId('course-card-tags'),
-    ).toBeVisible()
+    await expect(card.getByTestId('course-card-tags')).toBeVisible()
   })
 
-  test('should render each tag as a badge', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should render each tag as a badge', async ({ page, indexedDB }) => {
     // GIVEN: Course with 3 tags
     await seedAndReload(page, indexedDB, [courseWithTags])
 
@@ -62,10 +52,7 @@ test.describe('AC1: Topic Tags on Course Cards', () => {
     await expect(badges).toHaveCount(3)
   })
 
-  test('should display tag text in badges', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should display tag text in badges', async ({ page, indexedDB }) => {
     // GIVEN: Course with known tags
     await seedAndReload(page, indexedDB, [courseWithTags])
 
@@ -74,24 +61,16 @@ test.describe('AC1: Topic Tags on Course Cards', () => {
     await expect(card.getByTestId('tag-badge').first()).toContainText('react')
   })
 
-  test('should not display tag section when course has no tags', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should not display tag section when course has no tags', async ({ page, indexedDB }) => {
     // GIVEN: An imported course with empty tags array
     await seedAndReload(page, indexedDB, [courseNoTags])
 
     // THEN: Tag container is not visible (no empty badge row)
     const card = page.getByTestId('imported-course-card').first()
-    await expect(
-      card.getByTestId('course-card-tags'),
-    ).not.toBeVisible()
+    await expect(card.getByTestId('course-card-tags')).not.toBeVisible()
   })
 
-  test('should persist tags after page reload', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should persist tags after page reload', async ({ page, indexedDB }) => {
     // GIVEN: Course with tags seeded in IndexedDB
     await seedAndReload(page, indexedDB, [courseWithTags])
 
@@ -104,10 +83,7 @@ test.describe('AC1: Topic Tags on Course Cards', () => {
     await expect(badges).toHaveCount(3)
   })
 
-  test('should truncate with +N badge when tags exceed maxVisible', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should truncate with +N badge when tags exceed maxVisible', async ({ page, indexedDB }) => {
     // GIVEN: Course with 5 tags (exceeds maxVisible=3)
     const manyTags = createImportedCourse({
       name: 'Many Tags Course',
@@ -117,9 +93,7 @@ test.describe('AC1: Topic Tags on Course Cards', () => {
 
     // THEN: Overflow badge shows "+2 more" (or similar)
     const card = page.getByTestId('imported-course-card').first()
-    await expect(
-      card.getByTestId('tag-overflow-badge'),
-    ).toBeVisible()
+    await expect(card.getByTestId('tag-overflow-badge')).toBeVisible()
   })
 })
 
@@ -141,23 +115,15 @@ test.describe('AC2: Topic Filter', () => {
     tags: ['python', 'backend'],
   })
 
-  test('should display topic filter bar when tagged courses exist', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should display topic filter bar when tagged courses exist', async ({ page, indexedDB }) => {
     // GIVEN: Courses with tags
     await seedAndReload(page, indexedDB, [reactCourse, typescriptCourse])
 
     // THEN: Topic filter bar is visible
-    await expect(
-      page.getByTestId('topic-filter-bar'),
-    ).toBeVisible()
+    await expect(page.getByTestId('topic-filter-bar')).toBeVisible()
   })
 
-  test('should show all unique tags in filter bar', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should show all unique tags in filter bar', async ({ page, indexedDB }) => {
     // GIVEN: Courses with overlapping tags
     await seedAndReload(page, indexedDB, [reactCourse, typescriptCourse, pythonCourse])
 
@@ -166,10 +132,7 @@ test.describe('AC2: Topic Filter', () => {
     await expect(filterBar.getByTestId('topic-filter-button')).toHaveCount(5) // react, frontend, typescript, python, backend
   })
 
-  test('should filter courses when topic is selected', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should filter courses when topic is selected', async ({ page, indexedDB }) => {
     // GIVEN: Three courses with different tags
     await seedAndReload(page, indexedDB, [reactCourse, typescriptCourse, pythonCourse])
 
@@ -201,10 +164,7 @@ test.describe('AC2: Topic Filter', () => {
     await expect(cards.first().getByTestId('course-card-title')).toHaveText('React Fundamentals')
   })
 
-  test('should clear filters and show all courses', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should clear filters and show all courses', async ({ page, indexedDB }) => {
     // GIVEN: Filtered to show only react courses
     await seedAndReload(page, indexedDB, [reactCourse, typescriptCourse, pythonCourse])
     const filterBar = page.getByTestId('topic-filter-bar')
@@ -218,33 +178,27 @@ test.describe('AC2: Topic Filter', () => {
     await expect(page.getByTestId('imported-course-card')).toHaveCount(3)
   })
 
-  test('should indicate selected filter state with aria-pressed', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should indicate selected filter state with aria-pressed', async ({ page, indexedDB }) => {
     // GIVEN: Courses with tags
     await seedAndReload(page, indexedDB, [reactCourse])
 
     // WHEN: User selects a topic filter
-    const filterButton = page.getByTestId('topic-filter-bar').getByRole('button', { name: /react/i })
+    const filterButton = page
+      .getByTestId('topic-filter-bar')
+      .getByRole('button', { name: /react/i })
     await filterButton.click()
 
     // THEN: Button has aria-pressed="true"
     await expect(filterButton).toHaveAttribute('aria-pressed', 'true')
   })
 
-  test('should not display filter bar when no courses have tags', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should not display filter bar when no courses have tags', async ({ page, indexedDB }) => {
     // GIVEN: Courses with no tags
     const untagged = createImportedCourse({ name: 'No Tags', tags: [] })
     await seedAndReload(page, indexedDB, [untagged])
 
     // THEN: Topic filter bar is not rendered
-    await expect(
-      page.getByTestId('topic-filter-bar'),
-    ).not.toBeVisible()
+    await expect(page.getByTestId('topic-filter-bar')).not.toBeVisible()
   })
 })
 
@@ -258,24 +212,16 @@ test.describe('AC3: Tag Management', () => {
     tags: ['react', 'typescript'],
   })
 
-  test('should show add-tag button on course card', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should show add-tag button on course card', async ({ page, indexedDB }) => {
     // GIVEN: An imported course
     await seedAndReload(page, indexedDB, [courseWithTags])
 
     // THEN: "+" add tag button is visible on the card
     const card = page.getByTestId('imported-course-card').first()
-    await expect(
-      card.getByTestId('add-tag-button'),
-    ).toBeVisible()
+    await expect(card.getByTestId('add-tag-button')).toBeVisible()
   })
 
-  test('should open tag editor popover on add-tag click', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should open tag editor popover on add-tag click', async ({ page, indexedDB }) => {
     // GIVEN: Course card visible
     await seedAndReload(page, indexedDB, [courseWithTags])
 
@@ -284,15 +230,10 @@ test.describe('AC3: Tag Management', () => {
     await card.getByTestId('add-tag-button').click()
 
     // THEN: Tag editor popover is visible
-    await expect(
-      page.getByTestId('tag-editor-popover'),
-    ).toBeVisible()
+    await expect(page.getByTestId('tag-editor-popover')).toBeVisible()
   })
 
-  test('should show autocomplete suggestions from existing tags', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should show autocomplete suggestions from existing tags', async ({ page, indexedDB }) => {
     // GIVEN: Two courses with different tags (pool of existing tags)
     const course2 = createImportedCourse({
       name: 'Other Course',
@@ -308,15 +249,10 @@ test.describe('AC3: Tag Management', () => {
     await input.fill('py')
 
     // THEN: Autocomplete suggests "python" (from other course)
-    await expect(
-      page.getByTestId('tag-editor-popover').getByText('python'),
-    ).toBeVisible()
+    await expect(page.getByTestId('tag-editor-popover').getByText('python')).toBeVisible()
   })
 
-  test('should add a new tag via autocomplete', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should add a new tag via autocomplete', async ({ page, indexedDB }) => {
     // GIVEN: Course with existing tags, open tag editor
     const course2 = createImportedCourse({
       name: 'Source Course',
@@ -338,10 +274,7 @@ test.describe('AC3: Tag Management', () => {
     await expect(card.getByTestId('tag-badge').filter({ hasText: 'python' })).toBeVisible()
   })
 
-  test('should create a new tag not in autocomplete', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should create a new tag not in autocomplete', async ({ page, indexedDB }) => {
     // GIVEN: Course with tags, open tag editor
     await seedAndReload(page, indexedDB, [courseWithTags])
     const card = page.getByTestId('imported-course-card').first()
@@ -357,10 +290,7 @@ test.describe('AC3: Tag Management', () => {
     await expect(card.getByTestId('tag-badge').filter({ hasText: 'graphql' })).toBeVisible()
   })
 
-  test('should remove a tag via badge remove button', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should remove a tag via badge remove button', async ({ page, indexedDB }) => {
     // GIVEN: Course with tags displayed
     await seedAndReload(page, indexedDB, [courseWithTags])
     const card = page.getByTestId('imported-course-card').first()
@@ -376,10 +306,7 @@ test.describe('AC3: Tag Management', () => {
     await expect(card.getByTestId('tag-badge').first()).toContainText('typescript')
   })
 
-  test('should be keyboard accessible — open with Enter', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('should be keyboard accessible — open with Enter', async ({ page, indexedDB }) => {
     // GIVEN: Course card with add-tag button
     await seedAndReload(page, indexedDB, [courseWithTags])
     const card = page.getByTestId('imported-course-card').first()
@@ -390,8 +317,6 @@ test.describe('AC3: Tag Management', () => {
     await page.keyboard.press('Enter')
 
     // THEN: Tag editor popover opens
-    await expect(
-      page.getByTestId('tag-editor-popover'),
-    ).toBeVisible()
+    await expect(page.getByTestId('tag-editor-popover')).toBeVisible()
   })
 })

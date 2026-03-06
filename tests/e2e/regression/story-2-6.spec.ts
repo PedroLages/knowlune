@@ -31,9 +31,7 @@ async function goToFirstLesson(page: Parameters<typeof navigateAndWait>[0]) {
 // ===========================================================================
 
 test.describe('AC1: Touch Targets & Mobile Controls', () => {
-  test('all bottom-bar buttons have minimum 44x44px touch targets on mobile', async ({
-    page,
-  }) => {
+  test('all bottom-bar buttons have minimum 44x44px touch targets on mobile', async ({ page }) => {
     // GIVEN: Mobile viewport
     await page.setViewportSize({ width: 375, height: 667 })
     await goToFirstLesson(page)
@@ -55,9 +53,7 @@ test.describe('AC1: Touch Targets & Mobile Controls', () => {
     }
   })
 
-  test('tapping mute button on mobile opens volume popover', async ({
-    page,
-  }) => {
+  test('tapping mute button on mobile opens volume popover', async ({ page }) => {
     // GIVEN: Mobile viewport with player open
     await page.setViewportSize({ width: 375, height: 667 })
     await goToFirstLesson(page)
@@ -73,16 +69,17 @@ test.describe('AC1: Touch Targets & Mobile Controls', () => {
     await expect(volumePopover).toBeVisible()
   })
 
-  test('touch on video container shows controls, timeout hides them', async ({
-    page,
-  }) => {
+  test('touch on video container shows controls, timeout hides them', async ({ page }) => {
     // GIVEN: Mobile viewport
     await page.setViewportSize({ width: 375, height: 667 })
     await goToFirstLesson(page)
 
     // WHEN: Touch the player container (tap corner to avoid hitting center play button)
     const playerContainer = page.getByTestId('video-player-container')
-    const tapError = await playerContainer.tap({ position: { x: 10, y: 10 } }).then(() => null, (e: Error) => e)
+    const tapError = await playerContainer.tap({ position: { x: 10, y: 10 } }).then(
+      () => null,
+      (e: Error) => e
+    )
     if (tapError) {
       test.skip(true, 'Touch not supported in this browser config')
       return
@@ -102,9 +99,7 @@ test.describe('AC1: Touch Targets & Mobile Controls', () => {
 // ===========================================================================
 
 test.describe('AC2: Focus Ring & Speed Menu', () => {
-  test('tab to player container shows visible focus ring', async ({
-    page,
-  }) => {
+  test('tab to player container shows visible focus ring', async ({ page }) => {
     // GIVEN: Desktop viewport with lesson player
     await page.setViewportSize({ width: 1440, height: 900 })
     await goToFirstLesson(page)
@@ -114,7 +109,7 @@ test.describe('AC2: Focus Ring & Speed Menu', () => {
     await playerContainer.focus()
 
     // THEN: Focus ring outline is visible (non-zero outline width)
-    const outline = await playerContainer.evaluate((el) => {
+    const outline = await playerContainer.evaluate(el => {
       const style = window.getComputedStyle(el)
       return style.outlineStyle
     })
@@ -145,9 +140,7 @@ test.describe('AC2: Focus Ring & Speed Menu', () => {
     await expect(checkedItem).toHaveCount(1)
   })
 
-  test('speed menu focus trap: Tab wraps from last to first item', async ({
-    page,
-  }) => {
+  test('speed menu focus trap: Tab wraps from last to first item', async ({ page }) => {
     // GIVEN: Desktop viewport with speed menu open
     await page.setViewportSize({ width: 1440, height: 900 })
     await goToFirstLesson(page)
@@ -173,9 +166,7 @@ test.describe('AC2: Focus Ring & Speed Menu', () => {
     await expect(firstItem).toBeFocused()
   })
 
-  test('speed menu: Escape closes and returns focus to trigger', async ({
-    page,
-  }) => {
+  test('speed menu: Escape closes and returns focus to trigger', async ({ page }) => {
     // GIVEN: Desktop viewport with speed menu open
     await page.setViewportSize({ width: 1440, height: 900 })
     await goToFirstLesson(page)
@@ -201,9 +192,7 @@ test.describe('AC2: Focus Ring & Speed Menu', () => {
 // ===========================================================================
 
 test.describe('AC3: Video Element Attributes', () => {
-  test('video element has preload="metadata" and playsInline', async ({
-    page,
-  }) => {
+  test('video element has preload="metadata" and playsInline', async ({ page }) => {
     // GIVEN: Lesson player with a video
     await page.setViewportSize({ width: 1440, height: 900 })
     await goToFirstLesson(page)
@@ -240,16 +229,14 @@ test.describe('AC4: Reduced Motion', () => {
 // ===========================================================================
 
 test.describe('AC5: Single Scrollbar & Themed Scrollbars', () => {
-  test('only one vertical scrollbar on LessonPlayer page', async ({
-    page,
-  }) => {
+  test('only one vertical scrollbar on LessonPlayer page', async ({ page }) => {
     // GIVEN: Desktop viewport
     await page.setViewportSize({ width: 1440, height: 900 })
     await goToFirstLesson(page)
 
     // THEN: The main layout container does not scroll (content fits)
     const mainContent = page.locator('main#main-content')
-    const scrollInfo = await mainContent.evaluate((el) => ({
+    const scrollInfo = await mainContent.evaluate(el => ({
       scrollHeight: el.scrollHeight,
       clientHeight: el.clientHeight,
     }))
@@ -268,7 +255,7 @@ test.describe('AC5: Single Scrollbar & Themed Scrollbars', () => {
     const sidebarScroll = page.getByTestId('course-sidebar-accordion')
     await expect(sidebarScroll).toBeVisible()
 
-    const overflowY = await sidebarScroll.evaluate((el) => {
+    const overflowY = await sidebarScroll.evaluate(el => {
       return window.getComputedStyle(el).overflowY
     })
     expect(overflowY).toBe('auto')

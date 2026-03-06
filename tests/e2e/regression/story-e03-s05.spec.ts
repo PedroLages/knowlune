@@ -23,7 +23,7 @@ async function seedNotes(
     timestamp?: number
     createdAt: string
     updatedAt: string
-  }>,
+  }>
 ) {
   await page.evaluate(
     async ({ dbName, storeName, data }) => {
@@ -39,13 +39,19 @@ async function seedNotes(
           const tx = db.transaction(storeName, 'readwrite')
           const store = tx.objectStore(storeName)
           for (const item of data) store.put(item)
-          tx.oncomplete = () => { db.close(); resolve() }
-          tx.onerror = () => { db.close(); reject(tx.error) }
+          tx.oncomplete = () => {
+            db.close()
+            resolve()
+          }
+          tx.onerror = () => {
+            db.close()
+            reject(tx.error)
+          }
         }
         request.onerror = () => reject(request.error)
       })
     },
-    { dbName: 'ElearningDB', storeName: 'notes', data: notes },
+    { dbName: 'ElearningDB', storeName: 'notes', data: notes }
   )
 }
 
@@ -54,7 +60,8 @@ const TEST_NOTES = [
     id: 'note-search-1',
     courseId: 'operative-six',
     videoId: 'op6-introduction',
-    content: 'Understanding custom hooks in React allows us to extract component logic into reusable functions.',
+    content:
+      'Understanding custom hooks in React allows us to extract component logic into reusable functions.',
     tags: ['react', 'hooks'],
     timestamp: 42,
     createdAt: '2026-02-20T10:00:00Z',
@@ -64,7 +71,8 @@ const TEST_NOTES = [
     id: 'note-search-2',
     courseId: 'operative-six',
     videoId: 'op6-pillars-of-influence',
-    content: 'JavaScript closures capture variables from their enclosing scope, enabling powerful patterns.',
+    content:
+      'JavaScript closures capture variables from their enclosing scope, enabling powerful patterns.',
     tags: ['javascript', 'closures'],
     createdAt: '2026-02-21T10:00:00Z',
     updatedAt: '2026-02-21T10:00:00Z',
@@ -73,7 +81,8 @@ const TEST_NOTES = [
     id: 'note-search-3',
     courseId: 'operative-six',
     videoId: 'op6-introduction',
-    content: 'TypeScript generics provide type safety while maintaining flexibility in function signatures.',
+    content:
+      'TypeScript generics provide type safety while maintaining flexibility in function signatures.',
     tags: ['typescript', 'generics'],
     createdAt: '2026-02-22T10:00:00Z',
     updatedAt: '2026-02-22T10:00:00Z',
@@ -93,15 +102,21 @@ async function setupWithNotes(page: Parameters<typeof navigateAndWait>[0]) {
 /** Clear seeded notes from IndexedDB to prevent test pollution. */
 async function clearSeededNotes(page: Parameters<typeof navigateAndWait>[0]) {
   await page.evaluate(async () => {
-    await new Promise<void>((resolve) => {
+    await new Promise<void>(resolve => {
       const request = indexedDB.open('ElearningDB')
       request.onsuccess = () => {
         const db = request.result
         if (db.objectStoreNames.contains('notes')) {
           const tx = db.transaction('notes', 'readwrite')
           tx.objectStore('notes').clear()
-          tx.oncomplete = () => { db.close(); resolve() }
-          tx.onerror = () => { db.close(); resolve() }
+          tx.oncomplete = () => {
+            db.close()
+            resolve()
+          }
+          tx.onerror = () => {
+            db.close()
+            resolve()
+          }
         } else {
           db.close()
           resolve()
@@ -304,7 +319,7 @@ test.describe('AC4: Empty results show helpful message', () => {
 
     // Should show the exact empty state message from CommandEmpty
     await expect(
-      page.getByText('No results found. Try different keywords or browse by tag.'),
+      page.getByText('No results found. Try different keywords or browse by tag.')
     ).toBeVisible({ timeout: 5000 })
   })
 })

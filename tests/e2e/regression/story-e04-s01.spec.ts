@@ -43,8 +43,14 @@ test.describe('E04-S01: Mark Content Completion Status', () => {
           if (db.objectStoreNames.contains('contentProgress')) {
             const tx = db.transaction('contentProgress', 'readwrite')
             tx.objectStore('contentProgress').clear()
-            tx.oncomplete = () => { db.close(); resolve() }
-            tx.onerror = () => { db.close(); reject(tx.error) }
+            tx.oncomplete = () => {
+              db.close()
+              resolve()
+            }
+            tx.onerror = () => {
+              db.close()
+              reject(tx.error)
+            }
           } else {
             db.close()
             resolve()
@@ -59,9 +65,7 @@ test.describe('E04-S01: Mark Content Completion Status', () => {
   })
 
   // AC1: Status selector with three options
-  test('AC1: clicking a status indicator opens a selector with 3 options', async ({
-    page,
-  }) => {
+  test('AC1: clicking a status indicator opens a selector with 3 options', async ({ page }) => {
     const statusIndicator = page.getByTestId(`status-indicator-${LESSON_1_ID}`)
     await expect(statusIndicator).toBeVisible()
     await statusIndicator.click()
@@ -76,9 +80,7 @@ test.describe('E04-S01: Mark Content Completion Status', () => {
   })
 
   // AC2: Optimistic state update
-  test('AC2: selecting a new status updates the indicator optimistically', async ({
-    page,
-  }) => {
+  test('AC2: selecting a new status updates the indicator optimistically', async ({ page }) => {
     const indicator = page.getByTestId(`status-indicator-${LESSON_1_ID}`)
     await indicator.click()
 
@@ -91,24 +93,37 @@ test.describe('E04-S01: Mark Content Completion Status', () => {
     await expect(indicator).toHaveAttribute('data-status', 'completed')
 
     // Wait for async IndexedDB persistence to complete before reloading
-    await expect.poll(async () => {
-      return page.evaluate(async () => {
-        const request = indexedDB.open('ElearningDB')
-        return new Promise<string | null>((resolve) => {
-          request.onsuccess = () => {
-            const db = request.result
-            if (!db.objectStoreNames.contains('contentProgress')) {
-              db.close(); resolve(null); return
-            }
-            const tx = db.transaction('contentProgress', 'readonly')
-            const store = tx.objectStore('contentProgress')
-            const getReq = store.get(['6mx', '6mx-day1-human-comm'])
-            getReq.onsuccess = () => { db.close(); resolve((getReq.result as { status?: string })?.status ?? null) }
-            getReq.onerror = () => { db.close(); resolve(null) }
-          }
-        })
-      })
-    }, { timeout: 5000 }).toBe('completed')
+    await expect
+      .poll(
+        async () => {
+          return page.evaluate(async () => {
+            const request = indexedDB.open('ElearningDB')
+            return new Promise<string | null>(resolve => {
+              request.onsuccess = () => {
+                const db = request.result
+                if (!db.objectStoreNames.contains('contentProgress')) {
+                  db.close()
+                  resolve(null)
+                  return
+                }
+                const tx = db.transaction('contentProgress', 'readonly')
+                const store = tx.objectStore('contentProgress')
+                const getReq = store.get(['6mx', '6mx-day1-human-comm'])
+                getReq.onsuccess = () => {
+                  db.close()
+                  resolve((getReq.result as { status?: string })?.status ?? null)
+                }
+                getReq.onerror = () => {
+                  db.close()
+                  resolve(null)
+                }
+              }
+            })
+          })
+        },
+        { timeout: 5000 }
+      )
+      .toBe('completed')
 
     // Verify persistence survives page reload
     await page.reload({ waitUntil: 'domcontentloaded' })

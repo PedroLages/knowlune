@@ -61,9 +61,7 @@ test.describe('AC1: Table Grid Picker & Slash Command', () => {
     await expect(gridPicker).toBeVisible({ timeout: 5000 })
   })
 
-  test('clicking grid cell inserts table of correct dimensions', async ({
-    page,
-  }) => {
+  test('clicking grid cell inserts table of correct dimensions', async ({ page }) => {
     await openNoteEditor(page)
 
     // Open grid picker

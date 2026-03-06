@@ -109,9 +109,7 @@ test.describe('AC2: Autosave indicator after typing', () => {
 // ===========================================================================
 
 test.describe('AC3: Note persistence across navigation', () => {
-  test('should preserve note content after navigating away and back', async ({
-    page,
-  }) => {
+  test('should preserve note content after navigating away and back', async ({ page }) => {
     await goToLessonNotes(page)
 
     // WHEN: User types a note
@@ -146,9 +144,7 @@ test.describe('AC4: Add Timestamp inserts link', () => {
 
     // THEN: Add Timestamp button is visible in editor toolbar
     const toolbar = page.getByTestId('note-editor-toolbar')
-    await expect(
-      toolbar.getByRole('button', { name: /add timestamp/i }),
-    ).toBeVisible()
+    await expect(toolbar.getByRole('button', { name: /add timestamp/i })).toBeVisible()
   })
 
   test('should insert timestamp link when clicked', async ({ page }) => {

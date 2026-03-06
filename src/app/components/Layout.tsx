@@ -185,7 +185,7 @@ export function Layout() {
   }, [sidebarCollapsed])
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-background grain-overlay">
       {/* Skip to content link for keyboard/screen-reader users */}
       <a
         href="#main-content"

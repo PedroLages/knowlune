@@ -33,7 +33,7 @@ export function FrameCaptureView({ node, editor }: NodeViewProps) {
           setStatus('error')
         }
       })
-      .catch((error) => {
+      .catch(error => {
         console.error('Failed to load frame thumbnail:', error)
         if (!cancelled) setStatus('error')
       })
@@ -59,12 +59,7 @@ export function FrameCaptureView({ node, editor }: NodeViewProps) {
         className="my-3 rounded-lg overflow-hidden border border-border bg-muted/30 inline-block max-w-[300px]"
       >
         {status === 'loaded' && thumbnailUrl ? (
-          <img
-            src={thumbnailUrl}
-            alt={caption}
-            className="w-full h-auto block"
-            draggable={false}
-          />
+          <img src={thumbnailUrl} alt={caption} className="w-full h-auto block" draggable={false} />
         ) : status === 'error' ? (
           <div className="w-[200px] h-[112px] bg-muted flex items-center justify-center text-muted-foreground">
             <ImageOff className="size-6 mr-2" />

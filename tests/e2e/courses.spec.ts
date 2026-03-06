@@ -14,9 +14,7 @@ test.describe('Courses Page', () => {
   test('should display courses heading', async ({ page }) => {
     await goToCourses(page)
 
-    await expect(
-      page.getByRole('heading', { name: 'All Courses', level: 1 }),
-    ).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'All Courses', level: 1 })).toBeVisible()
   })
 
   test('should display course cards', async ({ page }) => {
@@ -32,7 +30,10 @@ test.describe('Courses Page', () => {
     await goToCourses(page)
 
     // Find a clickable course link
-    const courseLink = page.getByRole('link').filter({ hasText: /lessons/ }).first()
+    const courseLink = page
+      .getByRole('link')
+      .filter({ hasText: /lessons/ })
+      .first()
 
     // Only test if courses exist
     if ((await courseLink.count()) > 0) {

@@ -69,7 +69,7 @@ describe('Progress', () => {
     })
 
     it('updates aria-label with custom labelFormat', () => {
-      render(<Progress value={50} labelFormat={(v) => `${v}% done`} />)
+      render(<Progress value={50} labelFormat={v => `${v}% done`} />)
       const progressBar = screen.getByRole('progressbar')
       expect(progressBar).toHaveAttribute('aria-label', '50% done')
     })
@@ -92,7 +92,7 @@ describe('Progress', () => {
     })
 
     it('uses custom labelFormat when provided', () => {
-      render(<Progress value={80} showLabel labelFormat={(v) => `Progress: ${v}%`} />)
+      render(<Progress value={80} showLabel labelFormat={v => `Progress: ${v}%`} />)
       expect(screen.getByText('Progress: 80%')).toBeInTheDocument()
     })
 

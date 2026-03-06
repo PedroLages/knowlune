@@ -22,7 +22,9 @@ async function goToLessonPlayer(page: Parameters<typeof navigateAndWait>[0]) {
 
 /** Scroll the main scroll container (Layout's <main> — single scroll container after sticky sidebar fix). */
 async function scrollLessonContent(page: Parameters<typeof navigateAndWait>[0], y: number) {
-  await page.getByTestId('main-scroll-container').evaluate((el, scrollY) => el.scrollBy(0, scrollY), y)
+  await page
+    .getByTestId('main-scroll-container')
+    .evaluate((el, scrollY) => el.scrollBy(0, scrollY), y)
 }
 
 /**
@@ -52,7 +54,7 @@ test.describe('AC1: Mini-player on scroll', () => {
     await goToLessonPlayer(page)
 
     const wrapper = page.getByTestId('mini-player')
-    const position = await wrapper.evaluate((el) => window.getComputedStyle(el).position)
+    const position = await wrapper.evaluate(el => window.getComputedStyle(el).position)
 
     // THEN: Should NOT be fixed when the player is in view
     expect(position).not.toBe('fixed')
@@ -119,7 +121,7 @@ test.describe('AC1: Mini-player on scroll', () => {
 
     // THEN: wrapper should remain static (mini-player inactive)
     const wrapper = page.getByTestId('mini-player')
-    const position = await wrapper.evaluate((el) => window.getComputedStyle(el).position)
+    const position = await wrapper.evaluate(el => window.getComputedStyle(el).position)
     expect(position).not.toBe('fixed')
   })
 })
