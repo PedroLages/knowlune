@@ -106,4 +106,18 @@ See [plan](plans/e05-s02-streak-pause-freeze-days.md) for implementation approac
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+### Patterns
+
+- **Feature interaction testing**: AC7 (pause suspends freeze) required a distinguishing test — same seed data must produce different results with/without the feature. `seedStudyDays([0, 2])` + `freezeDays=[3]` yields streak=2 without pause, streak=1 with pause. Without this, the test could pass vacuously.
+- **Defense-in-depth validation**: Freeze days validated on both write (`setFreezeDays` truncates to 3, filters invalid indices) and read (`getFreezeDays` re-validates). Protects against corrupted localStorage or direct manipulation.
+- **Backward walk for streak calculation**: `calculateStreakFromDate` walks backward from a start date, skipping freeze days. Reused by both `currentStreakFromDays` and `longestStreakFromDays`, eliminating logic duplication.
+
+### Pitfalls
+
+- **Multi-day pause loses streak**: Initial implementation started streak walk from today/yesterday. When paused for multiple days, the walk found no recent activity and returned 0. Fix: start from `studyDays[studyDays.length - 1]` (most recent study day) when paused.
+- **getLongestStreak() standalone API**: The standalone function didn't pass freeze days, making it inconsistent with `getStreakSnapshot`. Caught by code review — always check standalone wrappers when adding parameters to internal helpers.
+- **Side effects in getters**: `clearStreakPause()` was called inside `currentStreakFromDays` when pause expired. This mutates localStorage and dispatches events during a calculation, risking re-entrant snapshot refreshes. Flagged as a warning — acceptable for current localStorage-based architecture but would need refactoring for reactive state.
+
+### Review Cycles
+
+- 3 review cycles to resolve all findings. Round 1 fixed 5 issues (multi-day pause, O(n) lookups, hardcoded colors, mobile overflow, dialog focus). Round 2 fixed 5 more (freeze-aware longestStreak, consolidated Date(), getCurrentStreak with freeze days, heatmap semantics, AC7 distinguishing test). Round 3 verified all fixes, surfaced warnings only.
