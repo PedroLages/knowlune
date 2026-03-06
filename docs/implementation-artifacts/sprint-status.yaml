@@ -109,8 +109,8 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 5: Study Streaks & Daily Goals
   # ──────────────────────────────────────────────────
-  epic-5: backlog
-  5-1-daily-study-streak-counter: backlog
+  epic-5: in-progress
+  5-1-daily-study-streak-counter: done
   5-2-streak-pause-and-freeze-days: backlog
   5-3-study-goals-and-weekly-adherence: backlog
   5-4-study-history-calendar: backlog
