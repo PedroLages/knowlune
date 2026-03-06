@@ -179,7 +179,11 @@ export function getStudyActivity(
  * Freeze days with no activity are skipped (don't break the streak).
  * Freeze days with activity count normally toward the streak.
  */
-function calculateStreakFromDate(startDate: string, studyDays: string[] | Set<string>, freezeDayIndices: number[] = []): number {
+function calculateStreakFromDate(
+  startDate: string,
+  studyDays: string[] | Set<string>,
+  freezeDayIndices: number[] = []
+): number {
   let streak = 0
   const currentDate = parseLocalDate(startDate)
   const studySet = studyDays instanceof Set ? studyDays : new Set(studyDays)
@@ -210,7 +214,11 @@ function studyDaysFromLog(log: StudyAction[]): string[] {
   return Array.from(days).sort()
 }
 
-function currentStreakFromDays(studyDays: string[], pauseStatus: StreakPause | null = null, freezeDayIndices: number[] = []): number {
+function currentStreakFromDays(
+  studyDays: string[],
+  pauseStatus: StreakPause | null = null,
+  freezeDayIndices: number[] = []
+): number {
   if (studyDays.length === 0) return 0
 
   const now = new Date()

@@ -530,7 +530,10 @@ describe('studyLog', () => {
     })
 
     it('enforces max 3 freeze days on read (corrupted localStorage with 7 days)', () => {
-      localStorage.setItem('study-streak-freeze-days', JSON.stringify({ freezeDays: [0, 1, 2, 3, 4, 5, 6] }))
+      localStorage.setItem(
+        'study-streak-freeze-days',
+        JSON.stringify({ freezeDays: [0, 1, 2, 3, 4, 5, 6] })
+      )
       const result = getFreezeDays()
       expect(result).toHaveLength(3)
       expect(result).toEqual([0, 1, 2])
@@ -542,7 +545,10 @@ describe('studyLog', () => {
     })
 
     it('filters invalid day indices on read', () => {
-      localStorage.setItem('study-streak-freeze-days', JSON.stringify({ freezeDays: [-1, 0, 7, 1.5, 3] }))
+      localStorage.setItem(
+        'study-streak-freeze-days',
+        JSON.stringify({ freezeDays: [-1, 0, 7, 1.5, 3] })
+      )
       expect(getFreezeDays()).toEqual([0, 3])
     })
 

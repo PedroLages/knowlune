@@ -50,7 +50,10 @@ test.describe('Streak Pause & Freeze Days (E05-S02)', () => {
     await expect(pauseToggle).toBeVisible()
   })
 
-  test('AC1: pausing streak shows paused indicator and preserves count', async ({ page, localStorage }) => {
+  test('AC1: pausing streak shows paused indicator and preserves count', async ({
+    page,
+    localStorage,
+  }) => {
     await page.goto('/')
     await localStorage.seed('study-log', [
       makeStreakEntry(0),
@@ -107,7 +110,10 @@ test.describe('Streak Pause & Freeze Days (E05-S02)', () => {
     await expect(streakValue).toHaveText('2')
   })
 
-  test('AC2: streak does not reset on resume when last study was yesterday', async ({ page, localStorage }) => {
+  test('AC2: streak does not reset on resume when last study was yesterday', async ({
+    page,
+    localStorage,
+  }) => {
     await page.goto('/')
     // Seed: studied yesterday only (no study today)
     await localStorage.seed('study-log', [makeStreakEntry(1)])
@@ -187,7 +193,10 @@ test.describe('Streak Pause & Freeze Days (E05-S02)', () => {
 
   // ── AC4: Freeze days prevent streak reset ──
 
-  test('AC4: streak does not reset on configured freeze day with no activity', async ({ page, localStorage }) => {
+  test('AC4: streak does not reset on configured freeze day with no activity', async ({
+    page,
+    localStorage,
+  }) => {
     // Today is a freeze day, no study today, but studied yesterday
     const todayDayIndex = new Date().getDay() // 0=Sun, 1=Mon, ...
 
@@ -208,7 +217,10 @@ test.describe('Streak Pause & Freeze Days (E05-S02)', () => {
 
   // ── AC5: Study on freeze day counts as regular day ──
 
-  test('AC5: studying on a freeze day increments streak normally', async ({ page, localStorage }) => {
+  test('AC5: studying on a freeze day increments streak normally', async ({
+    page,
+    localStorage,
+  }) => {
     const todayDayIndex = new Date().getDay()
 
     await page.goto('/')

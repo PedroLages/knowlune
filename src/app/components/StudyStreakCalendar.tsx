@@ -46,7 +46,12 @@ interface WeekDay {
 
 /** Organize flat activity data into a weekly grid structure */
 function buildWeekGrid(
-  activity: Array<{ date: string; hasActivity: boolean; lessonCount: number; isFreezeDay: boolean }>,
+  activity: Array<{
+    date: string
+    hasActivity: boolean
+    lessonCount: number
+    isFreezeDay: boolean
+  }>,
   todayStr: string
 ): { grid: WeekDay[][]; monthLabels: { label: string; colStart: number }[] } {
   if (activity.length === 0) return { grid: [], monthLabels: [] }
@@ -68,7 +73,6 @@ function buildWeekGrid(
   })
 
   // Build 7-row grid (rows=days, cols=weeks)
-  const totalWeeks = days.length > 0 ? days[days.length - 1].weekIndex + 1 : 0
   const grid: WeekDay[][] = Array.from({ length: 7 }, () => [])
   for (const day of days) {
     grid[day.dayOfWeek].push(day)
@@ -179,14 +183,20 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
               Current Streak
             </span>
           </div>
-          <div data-testid="current-streak-value" className="text-3xl font-bold tabular-nums text-orange-600 dark:text-orange-400">
+          <div
+            data-testid="current-streak-value"
+            className="text-3xl font-bold tabular-nums text-orange-600 dark:text-orange-400"
+          >
             {currentStreak}
           </div>
           <div className="text-xs text-orange-700 dark:text-orange-300 mt-1">
             {currentStreak === 1 ? 'day' : 'days'} in a row
           </div>
           {isPaused && (
-            <Alert data-testid="streak-paused-indicator" className="mt-2 border-orange-200 bg-orange-50/50 py-2 px-3 text-xs text-orange-600 dark:border-orange-800 dark:bg-orange-900/30 dark:text-orange-400 [&>svg]:size-3">
+            <Alert
+              data-testid="streak-paused-indicator"
+              className="mt-2 border-orange-200 bg-orange-50/50 py-2 px-3 text-xs text-orange-600 dark:border-orange-800 dark:bg-orange-900/30 dark:text-orange-400 [&>svg]:size-3"
+            >
               <Pause className="size-3" aria-hidden="true" />
               <AlertTitle className="text-xs font-normal">Streak paused</AlertTitle>
             </Alert>
@@ -270,14 +280,11 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
                   </div>
                 )
               })}
-
               {/* Day rows */}
               {[0, 1, 2, 3, 4, 5, 6].map(dayIdx => (
                 <Fragment key={`row-${dayIdx}`}>
                   {/* Day label */}
-                  <div
-                    className="text-[10px] text-muted-foreground pr-2 h-[18px] flex items-center justify-end leading-none"
-                  >
+                  <div className="text-[10px] text-muted-foreground pr-2 h-[18px] flex items-center justify-end leading-none">
                     {dayIdx % 2 === 1 ? DAY_LABELS[dayIdx] : ''}
                   </div>
 
@@ -299,7 +306,8 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
                               'aspect-square w-full rounded-[4px] motion-safe:transition-[transform,box-shadow] motion-safe:duration-150',
                               'motion-safe:hover:scale-110 motion-safe:hover:shadow-md',
                               'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring',
-                              day.isToday && 'ring-2 ring-orange-500 dark:ring-orange-400 ring-offset-1 ring-offset-card',
+                              day.isToday &&
+                                'ring-2 ring-orange-500 dark:ring-orange-400 ring-offset-1 ring-offset-card',
                               day.hasActivity
                                 ? day.lessonCount >= 3
                                   ? 'bg-orange-500 dark:bg-orange-400'
@@ -368,15 +376,19 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
       </div>
 
       {/* Freeze Days Settings Dialog */}
-      <Dialog open={freezeDialogOpen} onOpenChange={(open) => {
-        setFreezeDialogOpen(open)
-        if (!open) freezeTriggerRef.current?.focus()
-      }}>
+      <Dialog
+        open={freezeDialogOpen}
+        onOpenChange={open => {
+          setFreezeDialogOpen(open)
+          if (!open) freezeTriggerRef.current?.focus()
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Freeze Days</DialogTitle>
             <DialogDescription>
-              Choose up to 3 rest days per week. Your streak won't reset on these days even if you don't study.
+              Choose up to 3 rest days per week. Your streak won't reset on these days even if you
+              don't study.
             </DialogDescription>
           </DialogHeader>
 
@@ -406,7 +418,11 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
               })}
             </div>
             {freezeValidation && (
-              <p data-testid="freeze-days-validation" role="alert" className="text-sm text-destructive mt-3">
+              <p
+                data-testid="freeze-days-validation"
+                role="alert"
+                className="text-sm text-destructive mt-3"
+              >
                 Maximum 3 freeze days allowed per week.
               </p>
             )}
