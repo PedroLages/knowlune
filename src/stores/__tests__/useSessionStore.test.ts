@@ -68,10 +68,17 @@ describe('startSession', () => {
     })
 
     // Wait for fire-and-forget endSession persistence to complete
-    await new Promise(resolve => setTimeout(resolve, 100))
-
+    // Use polling instead of fixed delay to avoid flakiness in CI
     const { db } = await import('@/db')
-    const sessions = await db.studySessions.toArray()
+    let sessions = await db.studySessions.toArray()
+    for (
+      let attempt = 0;
+      attempt < 20 && (!sessions[0]?.endTime || sessions.length < 2);
+      attempt++
+    ) {
+      await new Promise(resolve => setTimeout(resolve, 50))
+      sessions = await db.studySessions.toArray()
+    }
     expect(sessions).toHaveLength(2)
     // First session should be ended
     expect(sessions[0].endTime).toBeDefined()
