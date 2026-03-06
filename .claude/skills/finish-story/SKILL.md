@@ -76,7 +76,7 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
      a. `npm run build` — STOP on failure.
      b. `npm run lint` — STOP on failure (if script exists).
      c. **Type check** — `npx tsc --noEmit`. Auto-fix type errors in branch-changed files (`git diff --name-only main...HEAD`). Ignore pre-existing errors in other files.
-     d. **Format check** — `npx prettier --check "src/**/*.{ts,tsx}" "tests/**/*.{ts,tsx}"`. Auto-fix with `--write` if needed.
+     d. **Format check** — `npx prettier --check "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}"`. Auto-fix with `--write` if needed.
      e. `npm run test:unit -- --run` — STOP on failure (if tests exist).
      f. E2E tests — run smoke specs + current story's spec on Chromium only:
         ```

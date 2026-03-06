@@ -60,8 +60,8 @@ The `-skipped` suffix indicates the gate was intentionally skipped (no lint scri
    c. **Type check** — `npx tsc --noEmit`. If errors found:
       - Auto-fix: attempt to resolve type errors in files changed by the current branch (`git diff --name-only main...HEAD`). Only fix errors in branch-changed files — do not fix pre-existing errors in other files.
       - Re-run `npx tsc --noEmit`. If errors remain only in files NOT changed by the branch, note them as pre-existing and continue. If errors remain in branch-changed files, STOP with error output.
-   d. **Format check** — `npx prettier --check "src/**/*.{ts,tsx}" "tests/**/*.{ts,tsx}"`. If formatting issues found:
-      - Auto-fix: run `npx prettier --write "src/**/*.{ts,tsx}" "tests/**/*.{ts,tsx}"` to format all files.
+   d. **Format check** — `npx prettier --check "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}"`. If formatting issues found:
+      - Auto-fix: run `npx prettier --write "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}"` to format all files.
       - Re-run the check to verify. If still failing, STOP with error output.
       - Note in output: "Auto-formatted N files with Prettier."
    e. `npm run test:unit -- --run` — STOP on failure. If no unit test script or no test files, note and continue.
