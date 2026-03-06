@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act } from 'react'
 import Dexie from 'dexie'
+import type { StudySession } from '@/data/types'
 import { createStudySession as makeSession } from '../../../tests/support/fixtures/factories/session-factory'
 
 let useSessionStore: (typeof import('@/stores/useSessionStore'))['useSessionStore']
@@ -71,7 +72,7 @@ describe('startSession', () => {
     // races with startSession's persistence. Poll until both records appear
     // and the first session has been closed.
     const { db } = await import('@/db')
-    let sessions: Awaited<ReturnType<typeof db.studySessions.toArray>> = []
+    let sessions: StudySession[] = []
     for (let attempt = 0; attempt < 40; attempt++) {
       await new Promise(resolve => setTimeout(resolve, 50))
       sessions = await db.studySessions.orderBy('startTime').toArray()
