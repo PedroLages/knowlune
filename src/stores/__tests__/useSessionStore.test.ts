@@ -67,22 +67,23 @@ describe('startSession', () => {
       await useSessionStore.getState().startSession('course-2', 'lesson-2', 'pdf')
     })
 
-    // Wait for fire-and-forget endSession persistence to complete
-    // Use polling instead of fixed delay to avoid flakiness in CI
+    // endSession is fire-and-forget (sync for beforeunload), so persistence
+    // races with startSession's persistence. Poll until both records appear
+    // and the first session has been closed.
     const { db } = await import('@/db')
-    let sessions = await db.studySessions.toArray()
-    for (
-      let attempt = 0;
-      attempt < 20 && (!sessions[0]?.endTime || sessions.length < 2);
-      attempt++
-    ) {
+    let sessions: Awaited<ReturnType<typeof db.studySessions.toArray>> = []
+    for (let attempt = 0; attempt < 40; attempt++) {
       await new Promise(resolve => setTimeout(resolve, 50))
-      sessions = await db.studySessions.toArray()
+      sessions = await db.studySessions.orderBy('startTime').toArray()
+      const firstEnded = sessions.length >= 2 && sessions[0]?.endTime
+      if (firstEnded) break
     }
     expect(sessions).toHaveLength(2)
-    // First session should be ended
+    // First session (course-1) should be ended
+    expect(sessions[0].courseId).toBe('course-1')
     expect(sessions[0].endTime).toBeDefined()
-    // Second session should be active
+    // Second session (course-2) should be active
+    expect(sessions[1].courseId).toBe('course-2')
     expect(sessions[1].endTime).toBeUndefined()
   })
 
