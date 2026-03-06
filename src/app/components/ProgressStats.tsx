@@ -8,7 +8,7 @@ import {
   getWeeklyChange,
   getLast7DaysLessonCompletions,
 } from '@/lib/progress'
-import { getStudyStreak } from '@/lib/studyStreak'
+import { getCurrentStreak } from '@/lib/studyLog'
 
 interface ProgressStatsProps {
   courses: Course[]
@@ -16,7 +16,7 @@ interface ProgressStatsProps {
 
 export function ProgressStats({ courses }: ProgressStatsProps) {
   const avgProgress = getAverageProgressPercent(courses)
-  const studyStreakData = getStudyStreak()
+  const studyStreak = getCurrentStreak()
   const totalHours = getTotalEstimatedStudyHours()
   const inProgressCount = getCoursesInProgress(courses).length
   const weeklyChange = getWeeklyChange('lessons')
@@ -33,9 +33,9 @@ export function ProgressStats({ courses }: ProgressStatsProps) {
       />
       <StatsCard
         label="Study Streak"
-        value={`${studyStreakData.current} days`}
+        value={`${studyStreak} days`}
         icon={Target}
-        trend={studyStreakData.current > 0 ? 'up' : undefined}
+        trend={studyStreak > 0 ? 'up' : undefined}
       />
       <StatsCard label="Study Time" value={`${totalHours}h`} icon={Clock} />
       <StatsCard

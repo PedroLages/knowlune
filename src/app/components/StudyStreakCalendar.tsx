@@ -3,7 +3,6 @@ import { Flame, Award, Pause } from 'lucide-react'
 import {
   getStreakSnapshot,
   setStreakPause,
-  getStreakPauseStatus,
   type StreakSnapshot,
 } from '@/lib/studyLog'
 import { cn } from '@/app/components/ui/utils'
@@ -46,8 +45,7 @@ export function StudyStreakCalendar({ days = 30, className }: StudyStreakCalenda
     return () => window.removeEventListener('study-log-updated', refreshSnapshot)
   }, [refreshSnapshot])
 
-  const { currentStreak, longestStreak, activity } = snapshot
-  const pauseStatus = getStreakPauseStatus()
+  const { currentStreak, longestStreak, activity, pauseStatus } = snapshot
 
   const handlePauseStreak = () => {
     const d = parseInt(pauseDays, 10)
@@ -206,7 +204,7 @@ export function StudyStreakCalendar({ days = 30, className }: StudyStreakCalenda
             />
             <p className="text-xs text-muted-foreground mt-2">
               Your streak will be protected for up to {pauseDays}{' '}
-              {parseInt(pauseDays) === 1 ? 'day' : 'days'}.
+              {parseInt(pauseDays, 10) === 1 ? 'day' : 'days'}.
             </p>
           </div>
 

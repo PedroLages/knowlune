@@ -1,4 +1,4 @@
-import { toLocalDateString } from './dateUtils'
+import { toLocalDateString } from '@/lib/dateUtils'
 
 // Re-export for convenience (tests, consumers)
 export { toLocalDateString }
@@ -43,6 +43,7 @@ export function logStudyAction(action: StudyAction) {
     log.splice(0, log.length - 1000)
   }
   saveLog(log)
+  window.dispatchEvent(new CustomEvent('study-log-updated'))
 }
 
 export function getStudyLog(): StudyAction[] {
@@ -115,55 +116,32 @@ export function clearStreakPause() {
 }
 
 /**
- * Get unique study days (days with at least one lesson_complete action)
+ * Calculate current streak (consecutive days).
+ * Delegates to parse-once helper for consistent logic.
  */
-function getStudyDays(): string[] {
-  const log = getLog()
-  const studyDays = new Set<string>()
-
-  for (const action of log) {
-    if (action.type === 'lesson_complete') {
-      const date = toLocalDateString(new Date(action.timestamp))
-      studyDays.add(date)
-    }
-  }
-
-  return Array.from(studyDays).sort()
+export function getCurrentStreak(): number {
+  return currentStreakFromDays(studyDaysFromLog(getLog()))
 }
 
 /**
- * Calculate current streak (consecutive days)
+ * Get longest streak ever achieved.
+ * Delegates to parse-once helper for consistent logic.
  */
-export function getCurrentStreak(): number {
-  const studyDays = getStudyDays()
-  if (studyDays.length === 0) return 0
-
-  const today = toLocalDateString()
-  const yesterday = toLocalDateString(new Date(Date.now() - 86400000))
-
-  // Check if user is in pause mode
-  const pause = getStreakPauseStatus()
-  if (pause && pause.enabled) {
-    const pauseStart = new Date(pause.startDate)
-    const daysSincePause = Math.floor((Date.now() - pauseStart.getTime()) / 86400000)
-    if (daysSincePause < pause.days) {
-      // Still in pause period - treat as if they studied today
-      return calculateStreakFromDate(yesterday, studyDays)
-    } else {
-      // Pause expired
-      clearStreakPause()
-    }
-  }
-
-  // Must have studied today or yesterday to have an active streak
-  if (!studyDays.includes(today) && !studyDays.includes(yesterday)) {
-    return 0
-  }
-
-  // Calculate streak from yesterday (or today if they haven't studied yet today)
-  const startDate = studyDays.includes(today) ? today : yesterday
-  return calculateStreakFromDate(startDate, studyDays)
+export function getLongestStreak(): number {
+  return longestStreakFromDays(studyDaysFromLog(getLog()))
 }
+
+/**
+ * Get study activity for the last N days (for calendar heatmap).
+ * Delegates to parse-once helper for consistent logic.
+ */
+export function getStudyActivity(
+  days = 30
+): Array<{ date: string; hasActivity: boolean; lessonCount: number }> {
+  return activityFromLog(getLog(), days)
+}
+
+// ── Internal helpers for parse-once pattern ──
 
 /**
  * Helper: Calculate streak counting backwards from a start date
@@ -185,75 +163,6 @@ function calculateStreakFromDate(startDate: string, studyDays: string[]): number
   return streak
 }
 
-/**
- * Get longest streak ever achieved
- */
-export function getLongestStreak(): number {
-  const studyDays = getStudyDays()
-  if (studyDays.length === 0) return 0
-
-  let maxStreak = 0
-  let currentStreak = 1
-
-  for (let i = 1; i < studyDays.length; i++) {
-    const prevDate = parseLocalDate(studyDays[i - 1])
-    const currDate = parseLocalDate(studyDays[i])
-    const dayDiff = Math.round((currDate.getTime() - prevDate.getTime()) / 86400000)
-
-    if (dayDiff === 1) {
-      currentStreak++
-    } else {
-      maxStreak = Math.max(maxStreak, currentStreak)
-      currentStreak = 1
-    }
-  }
-
-  maxStreak = Math.max(maxStreak, currentStreak)
-
-  // Update stored longest streak if current is higher
-  const storedLongest = parseInt(localStorage.getItem(LONGEST_STREAK_KEY) || '0')
-  if (maxStreak > storedLongest) {
-    localStorage.setItem(LONGEST_STREAK_KEY, maxStreak.toString())
-  }
-
-  return Math.max(maxStreak, storedLongest)
-}
-
-/**
- * Get study activity for the last N days (for calendar heatmap)
- */
-export function getStudyActivity(
-  days = 30
-): Array<{ date: string; hasActivity: boolean; lessonCount: number }> {
-  const log = getLog()
-  const now = new Date()
-  const activity: Array<{
-    date: string
-    hasActivity: boolean
-    lessonCount: number
-  }> = []
-
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(now)
-    d.setDate(d.getDate() - i)
-    const dateStr = toLocalDateString(d)
-
-    const lessonsCompleted = log.filter(
-      a => a.type === 'lesson_complete' && toLocalDateString(new Date(a.timestamp)) === dateStr
-    ).length
-
-    activity.push({
-      date: dateStr,
-      hasActivity: lessonsCompleted > 0,
-      lessonCount: lessonsCompleted,
-    })
-  }
-
-  return activity
-}
-
-// ── Internal helpers for parse-once pattern ──
-
 function studyDaysFromLog(log: StudyAction[]): string[] {
   const days = new Set<string>()
   for (const a of log) {
@@ -264,16 +173,21 @@ function studyDaysFromLog(log: StudyAction[]): string[] {
   return Array.from(days).sort()
 }
 
-function currentStreakFromDays(studyDays: string[]): number {
+function currentStreakFromDays(studyDays: string[], pauseStatus: StreakPause | null = null): number {
   if (studyDays.length === 0) return 0
 
   const today = toLocalDateString()
-  const yesterday = toLocalDateString(new Date(Date.now() - 86400000))
+  const yesterdayDate = new Date()
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1)
+  const yesterday = toLocalDateString(yesterdayDate)
 
-  const pause = getStreakPauseStatus()
+  const pause = pauseStatus ?? getStreakPauseStatus()
   if (pause && pause.enabled) {
     const pauseStart = new Date(pause.startDate)
-    const daysSincePause = Math.floor((Date.now() - pauseStart.getTime()) / 86400000)
+    const now = new Date()
+    // DST-safe day diff: compare calendar dates, not milliseconds
+    const diffMs = now.getTime() - pauseStart.getTime()
+    const daysSincePause = Math.round(diffMs / 86400000)
     if (daysSincePause < pause.days) {
       return calculateStreakFromDate(yesterday, studyDays)
     } else {
@@ -316,6 +230,16 @@ function activityFromLog(
   log: StudyAction[],
   days: number
 ): Array<{ date: string; hasActivity: boolean; lessonCount: number }> {
+  // O(n): build count map in single pass
+  const countMap = new Map<string, number>()
+  for (const a of log) {
+    if (a.type === 'lesson_complete') {
+      const d = toLocalDateString(new Date(a.timestamp))
+      countMap.set(d, (countMap.get(d) ?? 0) + 1)
+    }
+  }
+
+  // O(days): build result from map lookups
   const now = new Date()
   const result: Array<{ date: string; hasActivity: boolean; lessonCount: number }> = []
 
@@ -323,15 +247,12 @@ function activityFromLog(
     const d = new Date(now)
     d.setDate(d.getDate() - i)
     const dateStr = toLocalDateString(d)
-
-    const lessonsCompleted = log.filter(
-      a => a.type === 'lesson_complete' && toLocalDateString(new Date(a.timestamp)) === dateStr
-    ).length
+    const lessonCount = countMap.get(dateStr) ?? 0
 
     result.push({
       date: dateStr,
-      hasActivity: lessonsCompleted > 0,
-      lessonCount: lessonsCompleted,
+      hasActivity: lessonCount > 0,
+      lessonCount,
     })
   }
 
@@ -346,15 +267,18 @@ export interface StreakSnapshot {
   currentStreak: number
   longestStreak: number
   activity: Array<{ date: string; hasActivity: boolean; lessonCount: number }>
+  pauseStatus: StreakPause | null
 }
 
 export function getStreakSnapshot(activityDays = 30): StreakSnapshot {
   const log = getLog()
   const days = studyDaysFromLog(log)
+  const pauseStatus = getStreakPauseStatus()
 
   return {
-    currentStreak: currentStreakFromDays(days),
+    currentStreak: currentStreakFromDays(days, pauseStatus),
     longestStreak: longestStreakFromDays(days),
     activity: activityFromLog(log, activityDays),
+    pauseStatus,
   }
 }

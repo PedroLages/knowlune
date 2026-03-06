@@ -113,6 +113,14 @@ describe('studyLog', () => {
       const log = getStudyLog()
       expect(log).toHaveLength(1)
     })
+
+    it('dispatches study-log-updated event', () => {
+      const handler = vi.fn()
+      window.addEventListener('study-log-updated', handler)
+      logStudyAction(makeAction())
+      expect(handler).toHaveBeenCalledOnce()
+      window.removeEventListener('study-log-updated', handler)
+    })
   })
 
   describe('getStudyLog', () => {
