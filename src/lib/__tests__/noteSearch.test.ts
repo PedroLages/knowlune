@@ -263,6 +263,7 @@ describe('searchNotesWithContext', () => {
         ],
         isSequential: false,
         basePath: '',
+        instructorId: 'instructor-1',
       },
     ])
 
