@@ -1,23 +1,52 @@
 export function LevelUpLogo() {
   return (
-    <div className="flex items-center gap-2.5">
-      <svg
-        viewBox="0 0 60 60"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className="w-8 h-8"
-        aria-hidden="true"
+    <svg
+      viewBox="0 0 180 50"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="h-7 w-auto"
+      aria-label="LevelUp"
+      role="img"
+    >
+      {/* Wordmark: "Level" */}
+      <text
+        x="0"
+        y="36"
+        fontFamily="Inter, system-ui, -apple-system, sans-serif"
+        fontSize="34"
+        fontWeight="900"
+        fill="currentColor"
+        letterSpacing="-1"
       >
-        {/* Bottom step */}
-        <rect x="0" y="40" width="60" height="20" fill="currentColor" />
-        {/* Middle step */}
-        <rect x="24" y="22" width="36" height="18" fill="currentColor" />
-        {/* Arrow shaft */}
-        <rect x="34" y="6" width="12" height="16" fill="currentColor" />
-        {/* Arrow head */}
-        <polygon points="40,0 22,6 58,6" fill="currentColor" />
-      </svg>
-      <span className="font-bold text-xl">LevelUp</span>
-    </div>
+        Level
+      </text>
+      {/* "U" */}
+      <text
+        x="94"
+        y="36"
+        fontFamily="Inter, system-ui, -apple-system, sans-serif"
+        fontSize="34"
+        fontWeight="900"
+        fill="currentColor"
+        letterSpacing="-1"
+      >
+        U
+      </text>
+      {/* "p" */}
+      <text
+        x="118"
+        y="36"
+        fontFamily="Inter, system-ui, -apple-system, sans-serif"
+        fontSize="34"
+        fontWeight="900"
+        fill="currentColor"
+        letterSpacing="-1"
+      >
+        p
+      </text>
+      {/* Hidden arrow in negative space between U and p */}
+      <polygon points="112,31 118,18 124,31" className="fill-background" />
+      <rect x="116.5" y="30" width="3" height="10" className="fill-background" />
+    </svg>
   )
 }

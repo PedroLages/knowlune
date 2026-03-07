@@ -10,20 +10,20 @@ export function ProgressWidget() {
   const percentage = totalCourses > 0 ? (completedCourses / totalCourses) * 100 : 0
 
   // SVG circle parameters
-  const size = 120
-  const strokeWidth = 8
+  const size = 80
+  const strokeWidth = 6
   const radius = (size - strokeWidth) / 2
   const circumference = 2 * Math.PI * radius
   const offset = circumference - (percentage / 100) * circumference
 
   return (
     <div
-      className="mt-auto bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-4 text-center"
+      className="mt-auto bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-3 text-center"
       role="status"
       aria-label={`Course progress: ${completedCourses} of ${totalCourses} courses completed, ${completedLessons} lessons finished`}
     >
       {/* Circular Progress Ring */}
-      <div className="flex justify-center mb-3">
+      <div className="flex justify-center mb-2">
         <svg width={size} height={size} className="transform -rotate-90" aria-hidden="true">
           {/* Background circle */}
           <circle
@@ -56,7 +56,7 @@ export function ProgressWidget() {
             y={size / 2}
             textAnchor="middle"
             dy="0.3em"
-            className="fill-current text-2xl font-bold transform rotate-90"
+            className="fill-current text-base font-bold transform rotate-90"
             style={{ transformOrigin: 'center' }}
           >
             {Math.round(percentage)}%

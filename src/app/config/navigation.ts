@@ -4,12 +4,11 @@ import {
   GraduationCap,
   Library,
   StickyNote,
-  Notebook,
-  Info,
+  MessageSquare,
+  Users,
   History,
   BarChart3,
   Settings as SettingsIcon,
-  Palette,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -19,19 +18,55 @@ export interface NavigationItem {
   icon: LucideIcon
 }
 
-// All navigation items for the application
+export interface NavigationGroup {
+  label: string
+  items: NavigationItem[]
+}
+
+// Grouped navigation for sidebar
+export const navigationGroups: NavigationGroup[] = [
+  {
+    label: 'Learn',
+    items: [
+      { name: 'Overview', path: '/', icon: LayoutDashboard },
+      { name: 'My Classes', path: '/my-class', icon: BookOpen },
+      { name: 'Courses', path: '/courses', icon: GraduationCap },
+    ],
+  },
+  {
+    label: 'Resources',
+    items: [
+      { name: 'Library', path: '/library', icon: Library },
+      { name: 'Notes', path: '/notes', icon: StickyNote },
+    ],
+  },
+  {
+    label: 'Connect',
+    items: [
+      { name: 'Messages', path: '/messages', icon: MessageSquare },
+      { name: 'Instructors', path: '/instructors', icon: Users },
+    ],
+  },
+  {
+    label: 'Track',
+    items: [
+      { name: 'Session History', path: '/session-history', icon: History },
+      { name: 'Reports', path: '/reports', icon: BarChart3 },
+    ],
+  },
+]
+
+// Settings item (rendered separately at bottom)
+export const settingsItem: NavigationItem = {
+  name: 'Settings',
+  path: '/settings',
+  icon: SettingsIcon,
+}
+
+// Flat list of all navigation items (used by mobile bottom bar and search)
 export const navigationItems: NavigationItem[] = [
-  { name: 'Overview', path: '/', icon: LayoutDashboard },
-  { name: 'My Classes', path: '/my-class', icon: BookOpen },
-  { name: 'Courses', path: '/courses', icon: GraduationCap },
-  { name: 'Library', path: '/library', icon: Library },
-  { name: 'Notes', path: '/notes', icon: StickyNote },
-  { name: 'Messages', path: '/messages', icon: Notebook },
-  { name: 'Instructors', path: '/instructors', icon: Info },
-  { name: 'Session History', path: '/session-history', icon: History },
-  { name: 'Reports', path: '/reports', icon: BarChart3 },
-  { name: 'Settings', path: '/settings', icon: SettingsIcon },
-  { name: 'Design System', path: '/design-system', icon: Palette },
+  ...navigationGroups.flatMap(g => g.items),
+  settingsItem,
 ]
 
 // Paths for primary navigation (shown in mobile bottom bar)

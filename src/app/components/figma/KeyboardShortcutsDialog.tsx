@@ -14,6 +14,7 @@ interface Shortcut {
 
 const shortcuts: Shortcut[] = [
   { keys: ['Cmd', 'K'], description: 'Open search' },
+  { keys: ['Cmd', 'B'], description: 'Toggle sidebar' },
   { keys: ['Cmd', ','], description: 'Go to Settings' },
   { keys: ['?'], description: 'Show keyboard shortcuts' },
   { keys: ['Escape'], description: 'Close dialog / search' },

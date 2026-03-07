@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router'
 import { Search, Bell, ChevronDown, ChevronLeft, ChevronRight, Sun, Moon, Menu } from 'lucide-react'
 import { LevelUpLogo } from './figma/LevelUpLogo'
@@ -10,112 +10,144 @@ import { SearchCommandPalette } from './figma/SearchCommandPalette'
 import { KeyboardShortcutsDialog } from './figma/KeyboardShortcutsDialog'
 import { BottomNav } from './navigation/BottomNav'
 import { useStudyReminders } from '@/app/hooks/useStudyReminders'
-import { ProgressWidget } from './ProgressWidget'
 import { useIsMobile, useIsTablet, useIsDesktop } from '@/app/hooks/useMediaQuery'
 import { Sheet, SheetContent } from './ui/sheet'
-import { navigationItems } from '@/app/config/navigation'
+import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip'
+import { navigationGroups, settingsItem } from '@/app/config/navigation'
+import type { NavigationItem } from '@/app/config/navigation'
+
+// Individual nav link — wraps in Tooltip when collapsed
+function NavLink({
+  item,
+  iconOnly,
+  onNavigate,
+}: {
+  item: NavigationItem
+  iconOnly?: boolean
+  onNavigate?: () => void
+}) {
+  const location = useLocation()
+  const isActive =
+    item.path === '/'
+      ? location.pathname === '/'
+      : location.pathname.startsWith(item.path)
+  const Icon = item.icon
+
+  const link = (
+    <Link
+      to={item.path}
+      onClick={onNavigate}
+      aria-current={isActive ? 'page' : undefined}
+      className={`flex items-center rounded-xl transition-colors duration-150 ${
+        iconOnly ? 'justify-center py-2.5 mx-2' : 'gap-3 px-4 py-2.5'
+      } ${
+        isActive
+          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium'
+          : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+      }`}
+    >
+      <Icon
+        className={`w-5 h-5 shrink-0 ${isActive ? 'stroke-[2.5px]' : ''}`}
+        aria-hidden="true"
+      />
+      {!iconOnly && <span className="text-sm">{item.name}</span>}
+    </Link>
+  )
+
+  if (iconOnly) {
+    return (
+      <li className="relative">
+        <Tooltip>
+          <TooltipTrigger asChild>{link}</TooltipTrigger>
+          <TooltipContent side="right" sideOffset={8}>
+            {item.name}
+          </TooltipContent>
+        </Tooltip>
+      </li>
+    )
+  }
+
+  return (
+    <li className="relative">
+      {!iconOnly && (
+        <span
+          aria-hidden="true"
+          className={`absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full transition-all duration-200 ${
+            isActive ? 'bg-blue-600 dark:bg-blue-400' : 'bg-transparent'
+          }`}
+        />
+      )}
+      {link}
+    </li>
+  )
+}
 
 // Reusable sidebar content component
 function SidebarContent({
   onNavigate,
   iconOnly,
-  onToggleCollapse,
 }: {
   onNavigate?: () => void
   iconOnly?: boolean
-  onToggleCollapse?: () => void
 }) {
-  const location = useLocation()
-
   return (
     <>
       {/* Logo */}
-      <div className={iconOnly ? 'mb-8 flex justify-center' : 'mb-8'}>
+      <div className={iconOnly ? 'mb-6 flex justify-center' : 'mb-6'}>
         {iconOnly ? (
           <svg
-            viewBox="0 0 60 60"
+            viewBox="0 0 40 50"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
-            className="w-8 h-8"
+            className="w-7 h-7"
             aria-label="LevelUp"
           >
-            <rect x="0" y="40" width="60" height="20" fill="currentColor" />
-            <rect x="24" y="22" width="36" height="18" fill="currentColor" />
-            <rect x="34" y="6" width="12" height="16" fill="currentColor" />
-            <polygon points="40,0 22,6 58,6" fill="currentColor" />
+            <text x="0" y="36" fontFamily="Inter, system-ui, sans-serif" fontSize="34" fontWeight="900" fill="currentColor" letterSpacing="-1">U</text>
+            <text x="24" y="36" fontFamily="Inter, system-ui, sans-serif" fontSize="34" fontWeight="900" fill="currentColor" letterSpacing="-1">p</text>
+            <polygon points="18,31 24,18 30,31" className="fill-background" />
+            <rect x="22.5" y="30" width="3" height="10" className="fill-background" />
           </svg>
         ) : (
           <LevelUpLogo />
         )}
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1" aria-label="Main navigation">
-        <ul className="space-y-2">
-          {navigationItems.map(item => {
-            const isActive =
-              item.path === '/'
-                ? location.pathname === '/'
-                : location.pathname.startsWith(item.path)
-            const Icon = item.icon
-
-            return (
-              <li key={item.path} className="relative">
-                {!iconOnly && (
-                  <span
-                    aria-hidden="true"
-                    className={`absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full transition-all duration-200 ${
-                      isActive ? 'bg-blue-600 dark:bg-blue-400' : 'bg-transparent'
-                    }`}
+      {/* Grouped Navigation */}
+      <nav className="flex-1 overflow-y-auto" aria-label="Main navigation">
+        <div className="space-y-5">
+          {navigationGroups.map((group, idx) => (
+            <div key={group.label}>
+              {/* Group label — hidden in collapsed mode, replaced by separator */}
+              {iconOnly ? (
+                idx > 0 && (
+                  <div className="mx-4 mb-2 border-t border-border/50" aria-hidden="true" />
+                )
+              ) : (
+                <div className="px-4 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+                  {group.label}
+                </div>
+              )}
+              <ul className="space-y-0.5">
+                {group.items.map(item => (
+                  <NavLink
+                    key={item.path}
+                    item={item}
+                    iconOnly={iconOnly}
+                    onNavigate={onNavigate}
                   />
-                )}
-                <Link
-                  to={item.path}
-                  onClick={onNavigate}
-                  aria-current={isActive ? 'page' : undefined}
-                  title={iconOnly ? item.name : undefined}
-                  className={`flex items-center rounded-xl transition-colors duration-150 ${
-                    iconOnly ? 'justify-center py-3 mx-2' : 'gap-3 px-4 py-3'
-                  } ${
-                    isActive
-                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium'
-                      : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-                  }`}
-                >
-                  <Icon
-                    className={`w-5 h-5 ${isActive ? 'stroke-[2.5px]' : ''}`}
-                    aria-hidden="true"
-                  />
-                  {!iconOnly && <span className="text-sm">{item.name}</span>}
-                </Link>
-              </li>
-            )
-          })}
-        </ul>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
       </nav>
 
-      {/* Progress Widget — hidden in icon-only mode */}
-      {!iconOnly && <ProgressWidget />}
-
-      {/* Collapse toggle button */}
-      {onToggleCollapse && (
-        <div
-          className={`mt-4 pt-4 border-t border-border ${iconOnly ? 'flex justify-center' : 'flex justify-end'}`}
-        >
-          <button
-            onClick={onToggleCollapse}
-            title={iconOnly ? 'Expand sidebar' : 'Collapse sidebar'}
-            aria-label={iconOnly ? 'Expand sidebar' : 'Collapse sidebar'}
-            className="p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors duration-150"
-          >
-            {iconOnly ? (
-              <ChevronRight className="w-4 h-4" aria-hidden="true" />
-            ) : (
-              <ChevronLeft className="w-4 h-4" aria-hidden="true" />
-            )}
-          </button>
-        </div>
-      )}
+      {/* Bottom section: Settings */}
+      <div className="mt-4 pt-3 border-t border-border">
+        <ul>
+          <NavLink item={settingsItem} iconOnly={iconOnly} onNavigate={onNavigate} />
+        </ul>
+      </div>
     </>
   )
 }
@@ -144,9 +176,46 @@ export function Layout() {
     return saved !== null ? JSON.parse(saved) : false
   })
 
+  // Hover-to-peek state and timers
+  const [isPeeking, setIsPeeking] = useState(false)
+  const [sidebarHovered, setSidebarHovered] = useState(false)
+  const peekEnterTimer = useRef<ReturnType<typeof setTimeout>>(null)
+  const peekLeaveTimer = useRef<ReturnType<typeof setTimeout>>(null)
+
+  const handleSidebarMouseEnter = useCallback(() => {
+    setSidebarHovered(true)
+    if (!sidebarCollapsed) return
+    if (peekLeaveTimer.current) clearTimeout(peekLeaveTimer.current)
+    peekEnterTimer.current = setTimeout(() => setIsPeeking(true), 300)
+  }, [sidebarCollapsed])
+
+  const handleSidebarMouseLeave = useCallback(() => {
+    if (peekEnterTimer.current) clearTimeout(peekEnterTimer.current)
+    setSidebarHovered(false)
+    peekLeaveTimer.current = setTimeout(() => setIsPeeking(false), 200)
+  }, [])
+
+  // Close peek when sidebar is permanently expanded
+  useEffect(() => {
+    if (!sidebarCollapsed) {
+      setIsPeeking(false)
+      setSidebarHovered(false)
+    }
+  }, [sidebarCollapsed])
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarCollapsed((prev: boolean) => !prev)
+  }, [])
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       const isMod = e.metaKey || e.ctrlKey
+
+      if (isMod && e.key === 'b') {
+        e.preventDefault()
+        toggleSidebar()
+        return
+      }
 
       if (isMod && e.key === 'k') {
         e.preventDefault()
@@ -170,7 +239,7 @@ export function Layout() {
         }
       }
     },
-    [navigate]
+    [navigate, toggleSidebar]
   )
 
   useEffect(() => {
@@ -199,16 +268,52 @@ export function Layout() {
 
       {/* Desktop Sidebar - Persistent on desktop (≥1024px), collapsible by user */}
       {isDesktop && (
-        <aside
+        <div
           data-theater-hide
-          className={`${sidebarCollapsed ? 'w-[72px] px-0 py-6' : 'w-[220px] p-6'} bg-card mt-6 mb-6 ml-6 flex flex-col overflow-hidden transition-[width] duration-200`}
-          aria-label="Sidebar"
+          className="relative mt-6 mb-6 ml-6"
+          onMouseEnter={handleSidebarMouseEnter}
+          onMouseLeave={handleSidebarMouseLeave}
         >
-          <SidebarContent
-            iconOnly={sidebarCollapsed}
-            onToggleCollapse={() => setSidebarCollapsed((prev: boolean) => !prev)}
-          />
-        </aside>
+          {/* Sidebar */}
+          <aside
+            className={`${sidebarCollapsed ? 'w-[72px] px-0 py-6' : 'w-[220px] p-6'} bg-card flex flex-col overflow-hidden transition-[width] duration-200 ease-out h-full`}
+            aria-label="Sidebar"
+          >
+            <SidebarContent iconOnly={sidebarCollapsed} />
+          </aside>
+
+          {/* Hover-to-peek overlay (when collapsed) */}
+          {sidebarCollapsed && isPeeking && (
+            <aside
+              className="absolute top-0 left-0 z-40 w-[220px] h-full bg-card p-6 flex flex-col shadow-xl animate-in slide-in-from-left-2 fade-in-0 duration-200"
+              aria-label="Sidebar navigation"
+              onMouseEnter={() => {
+                if (peekLeaveTimer.current) clearTimeout(peekLeaveTimer.current)
+              }}
+              onMouseLeave={handleSidebarMouseLeave}
+            >
+              <SidebarContent
+                onNavigate={() => setIsPeeking(false)}
+              />
+            </aside>
+          )}
+
+          {/* Edge notch toggle */}
+          <button
+            onClick={toggleSidebar}
+            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-keyshortcuts="Meta+B Control+B"
+            className={`absolute top-1/2 -translate-y-1/2 z-50 flex items-center justify-center w-6 h-6 rounded-full bg-card border border-border shadow-sm text-muted-foreground hover:text-foreground hover:scale-110 transition-all duration-150 cursor-pointer ${
+              sidebarHovered || !sidebarCollapsed ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            } ${sidebarCollapsed && isPeeking ? 'right-[-12px]' : '-right-3'}`}
+          >
+            {sidebarCollapsed ? (
+              <ChevronRight className="w-3 h-3" aria-hidden="true" />
+            ) : (
+              <ChevronLeft className="w-3 h-3" aria-hidden="true" />
+            )}
+          </button>
+        </div>
       )}
 
       {/* Tablet Sidebar - Collapsible Sheet on tablet (640-1023px) */}
