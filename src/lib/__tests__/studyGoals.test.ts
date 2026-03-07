@@ -187,13 +187,7 @@ describe('studyGoals', () => {
 
   describe('computeWeeklyAdherence', () => {
     it('counts distinct days with study in last 7 days', () => {
-      const log = [
-        makeEntry(0),
-        makeEntry(1),
-        makeEntry(2),
-        makeEntry(4),
-        makeEntry(6),
-      ]
+      const log = [makeEntry(0), makeEntry(1), makeEntry(2), makeEntry(4), makeEntry(6)]
       const result = computeWeeklyAdherence(log)
       expect(result.daysStudied).toBe(5)
       expect(result.totalDays).toBe(7)

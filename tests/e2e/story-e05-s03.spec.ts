@@ -93,7 +93,7 @@ test.describe('Study Goals & Weekly Adherence (E05-S03)', () => {
 
   // ── AC3: Daily goal progress widget ──
 
-  test('AC3: daily goal progress shows current progress toward today\'s goal', async ({
+  test("AC3: daily goal progress shows current progress toward today's goal", async ({
     page,
     localStorage,
   }) => {
@@ -150,10 +150,7 @@ test.describe('Study Goals & Weekly Adherence (E05-S03)', () => {
 
   // ── AC4: Weekly goal cumulative progress ──
 
-  test('AC4: weekly goal shows cumulative weekly progress', async ({
-    page,
-    localStorage,
-  }) => {
+  test('AC4: weekly goal shows cumulative weekly progress', async ({ page, localStorage }) => {
     await page.goto('/')
 
     // Seed: weekly goal of 300 minutes
@@ -190,10 +187,7 @@ test.describe('Study Goals & Weekly Adherence (E05-S03)', () => {
 
   // ── AC5: Weekly adherence percentage ──
 
-  test('AC5: weekly adherence percentage is displayed', async ({
-    page,
-    localStorage,
-  }) => {
+  test('AC5: weekly adherence percentage is displayed', async ({ page, localStorage }) => {
     await page.goto('/')
 
     // Seed: daily goal configured

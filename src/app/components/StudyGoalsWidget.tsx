@@ -3,11 +3,7 @@ import { Target, CheckCircle2, Settings2 } from 'lucide-react'
 import { ProgressRing } from '@/app/components/figma/ProgressRing'
 import { StudyGoalConfigDialog } from '@/app/components/StudyGoalConfigDialog'
 import { Button } from '@/app/components/ui/button'
-import {
-  getStudyGoal,
-  computeGoalProgress,
-  computeWeeklyAdherence,
-} from '@/lib/studyGoals'
+import { getStudyGoal, computeGoalProgress, computeWeeklyAdherence } from '@/lib/studyGoals'
 import type { StudyGoal, GoalProgress, WeeklyAdherence } from '@/lib/studyGoals'
 
 function getStudyLog(): Array<{ type: string; timestamp: string; durationMs?: number }> {

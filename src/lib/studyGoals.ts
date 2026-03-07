@@ -83,9 +83,7 @@ function buildProgress(current: number, target: number): GoalProgress {
 }
 
 function sumMinutes(entries: StudyLogEntry[]): number {
-  return Math.round(
-    entries.reduce((sum, e) => sum + (e.durationMs ? e.durationMs / 60000 : 0), 0)
-  )
+  return Math.round(entries.reduce((sum, e) => sum + (e.durationMs ? e.durationMs / 60000 : 0), 0))
 }
 
 export function computeDailyProgress(goal: StudyGoal, studyLog: StudyLogEntry[]): GoalProgress {
