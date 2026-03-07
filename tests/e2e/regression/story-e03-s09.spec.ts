@@ -9,8 +9,8 @@
  *   - AC5: Storage quota error is handled gracefully
  *   - AC6: CORS-safe capture (crossOrigin set on video element)
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
 
 // Large video file (149 MB) causes metadata loading contention under parallel workers.
 // Serialize this spec to ensure the dev server can serve the video reliably.

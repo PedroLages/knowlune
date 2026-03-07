@@ -11,7 +11,7 @@
  *   - AC5: Weekly adherence percentage
  *   - AC6: Goal completion visual indicator
  */
-import { test, expect } from '../support/fixtures'
+import { test, expect } from '../../support/fixtures'
 
 test.describe('Study Goals & Weekly Adherence (E05-S03)', () => {
   test.beforeEach(async ({ page }) => {

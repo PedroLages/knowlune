@@ -6,8 +6,8 @@
  *   - AC2: Clicking timestamp link in preview seeks video to exact position
  *   - AC3: Timestamps render as blue-600 links with clock icon and tooltip
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
 
 const LESSON_URL = '/courses/operative-six/op6-introduction'
 

@@ -8,8 +8,8 @@
  *
  * RED phase — these tests are written before implementation and should fail initially.
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
 
 const COURSE_ID = 'operative-six'
 const COURSE_URL = `/courses/${COURSE_ID}`

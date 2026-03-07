@@ -8,9 +8,9 @@
  *   AC4: Display aggregate total study time across courses
  *   AC5: Detect and close orphaned sessions on app load
  */
-import { test, expect } from '../support/fixtures'
-import { createImportedCourse } from '../support/fixtures/factories/imported-course-factory'
-import { goToCourses, navigateAndWait } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { createImportedCourse } from '../../support/fixtures/factories/imported-course-factory'
+import { goToCourses, navigateAndWait } from '../../support/helpers/navigation'
 import type { Page } from '@playwright/test'
 
 // ---------------------------------------------------------------------------

@@ -4,9 +4,9 @@
  * Tests milestone toast notifications, confetti animations, badge persistence,
  * prefers-reduced-motion support, and milestone collection gallery.
  */
-import { test, expect } from '../support/fixtures'
-import { goToOverview } from '../support/helpers/navigation'
-import { buildStreakLog } from '../support/helpers/streak-helpers'
+import { test, expect } from '../../support/fixtures'
+import { goToOverview } from '../../support/helpers/navigation'
+import { buildStreakLog } from '../../support/helpers/streak-helpers'
 
 test.describe('Streak Milestone Celebrations (E05-S06)', () => {
   test.beforeEach(async ({ page }) => {

@@ -14,13 +14,13 @@
  *
  * Reference: TEA knowledge base - test-quality.md, selector-resilience.md
  */
-import { test, expect } from '../support/fixtures'
+import { test, expect } from '../../support/fixtures'
 import {
   createImportedCourse,
   createImportedCourses,
-} from '../support/fixtures/factories/imported-course-factory'
-import { goToCourses } from '../support/helpers/navigation'
-import { seedAndReload } from '../support/helpers/seed-helpers'
+} from '../../support/fixtures/factories/imported-course-factory'
+import { goToCourses } from '../../support/helpers/navigation'
+import { seedAndReload } from '../../support/helpers/seed-helpers'
 
 // ===========================================================================
 // AC1: Course Cards in Responsive Grid

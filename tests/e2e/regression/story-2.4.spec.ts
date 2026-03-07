@@ -14,9 +14,9 @@
  *
  * Reference: TEA knowledge base - test-quality.md, selector-resilience.md
  */
-import { test, expect } from '../support/fixtures'
+import { test, expect } from '../../support/fixtures'
 import type { Page } from '@playwright/test'
-import { navigateAndWait } from '../support/helpers/navigation'
+import { navigateAndWait } from '../../support/helpers/navigation'
 
 // ---------------------------------------------------------------------------
 // Constants — known course/lesson with PDF resources

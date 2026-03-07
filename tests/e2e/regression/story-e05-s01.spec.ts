@@ -7,7 +7,7 @@
  *   - AC3: Calendar heatmap shows activity
  *   - AC4: Keyboard accessibility
  */
-import { test, expect } from '../support/fixtures'
+import { test, expect } from '../../support/fixtures'
 
 function makeStreakEntry(daysAgo: number): {
   type: string

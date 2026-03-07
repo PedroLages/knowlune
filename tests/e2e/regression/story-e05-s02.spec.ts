@@ -12,7 +12,7 @@
  *   - AC6: Max 3 freeze days validation
  *   - AC7: Pause suspends freeze logic
  */
-import { test, expect } from '../support/fixtures'
+import { test, expect } from '../../support/fixtures'
 
 function makeStreakEntry(daysAgo: number): {
   type: string

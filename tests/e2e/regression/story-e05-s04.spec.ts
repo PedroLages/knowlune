@@ -9,8 +9,8 @@
  *   - AC5: Freeze day visual distinction
  *   - AC6: Mobile responsiveness (44×44px touch targets)
  */
-import { test, expect } from '../support/fixtures'
-import { createStudyAction } from '../support/fixtures/factories'
+import { test, expect } from '../../support/fixtures'
+import { createStudyAction } from '../../support/fixtures/factories'
 
 /**
  * Creates a study action pinned to a specific day of the current month.

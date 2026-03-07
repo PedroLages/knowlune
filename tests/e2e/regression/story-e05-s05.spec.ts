@@ -8,8 +8,8 @@
  *   - AC6: Disable reminders cancels all scheduled notifications
  *   - AC7: Streak-at-risk suppressed when streak is paused
  */
-import { test, expect } from '../support/fixtures'
-import { goToSettings } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { goToSettings } from '../../support/helpers/navigation'
 
 test.describe('Study Reminders & Notifications (E05-S05)', () => {
   test.beforeEach(async ({ page }) => {

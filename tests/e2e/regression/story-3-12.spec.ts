@@ -10,8 +10,8 @@
  * Navigation: LessonPlayer → Notes tab → NoteEditor
  * Uses static course data (nci-access) — no IndexedDB seeding needed.
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
 import path from 'node:path'
 import fs from 'node:fs'
 

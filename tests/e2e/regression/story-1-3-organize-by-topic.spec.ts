@@ -14,9 +14,9 @@
  *
  * Reference: TEA knowledge base - test-quality.md, selector-resilience.md
  */
-import { test, expect } from '../support/fixtures'
-import { createImportedCourse } from '../support/fixtures/factories/imported-course-factory'
-import { seedAndReload } from '../support/helpers/seed-helpers'
+import { test, expect } from '../../support/fixtures'
+import { createImportedCourse } from '../../support/fixtures/factories/imported-course-factory'
+import { seedAndReload } from '../../support/helpers/seed-helpers'
 
 // ===========================================================================
 // AC1: Tag Badges Display and Persistence

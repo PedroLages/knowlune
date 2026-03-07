@@ -9,8 +9,8 @@
  *   - AC5: Mobile < 640px — stacked, full-screen note expansion
  *   - AC6: Regression — preserve testids, scroll container, VideoPlayer props
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
 
 const LESSON_URL = '/courses/operative-six/op6-introduction'
 

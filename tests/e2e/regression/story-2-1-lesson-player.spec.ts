@@ -19,9 +19,9 @@
  * Note: FileSystemFileHandle cannot be seeded in E2E tests (browser-only API).
  * Tests focus on navigation, layout, and UI states rather than actual file I/O.
  */
-import { test, expect } from '../support/fixtures'
-import { createImportedCourse } from '../support/fixtures/factories/imported-course-factory'
-import { goToCourses, navigateAndWait } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { createImportedCourse } from '../../support/fixtures/factories/imported-course-factory'
+import { goToCourses, navigateAndWait } from '../../support/helpers/navigation'
 import type { Page } from '@playwright/test'
 
 // ---------------------------------------------------------------------------

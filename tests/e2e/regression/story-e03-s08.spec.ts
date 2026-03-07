@@ -8,8 +8,8 @@
  *   - AC4: Sort controls (Most Recent, Oldest First, By Course)
  *   - AC5: Expand note card with full content and "Open in Lesson" navigation
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
 
 const NOTES_URL = '/notes'
 

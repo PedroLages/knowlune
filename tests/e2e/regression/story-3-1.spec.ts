@@ -15,8 +15,8 @@
  *
  * Reference: TEA knowledge base - test-quality.md, selector-resilience.md
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
 
 // ---------------------------------------------------------------------------
 // Constants & Helpers

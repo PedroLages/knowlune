@@ -19,8 +19,8 @@
  *     added to the test course during implementation (Task 1–5). Until then
  *     these tests remain RED because the data-testids won't exist.
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
 
 // ---------------------------------------------------------------------------
 // Helpers

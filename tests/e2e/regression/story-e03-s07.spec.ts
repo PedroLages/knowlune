@@ -7,8 +7,8 @@
  *   - AC3: Seek bar shows visual indicators at bookmarked positions
  *   - AC4: Delete bookmark with confirmation dialog (NFR23)
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
 
 const BOOKMARKS_URL = '/library'
 

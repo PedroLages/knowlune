@@ -6,8 +6,8 @@
  *   - AC2: Theater mode hides desktop sidebar and expands video (T key + button)
  *   - AC3: Theater mode button hidden on mobile (< 1280px)
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
 
 const LESSON_URL = '/courses/operative-six/op6-introduction'
 

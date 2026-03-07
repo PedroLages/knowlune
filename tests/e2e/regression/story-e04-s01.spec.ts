@@ -11,7 +11,7 @@
  *   Lesson1: 6mx-day1-human-comm
  *   Lesson2: 6mx-day1-laws
  */
-import { test, expect } from '../support/fixtures'
+import { test, expect } from '../../support/fixtures'
 
 const COURSE_ID = '6mx'
 const MODULE_ID = '6mx-day1'

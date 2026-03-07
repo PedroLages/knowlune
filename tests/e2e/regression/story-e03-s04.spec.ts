@@ -7,8 +7,8 @@
  *
  * AC2 (Global Notes page filtering) is deferred to Story 3.8.
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
 
 const LESSON_URL = '/courses/operative-six/op6-introduction'
 const LESSON_URL_2 = '/courses/operative-six/op6-pillars-of-influence'

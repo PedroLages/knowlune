@@ -9,7 +9,7 @@
  *   - AC5: Graceful fallback message for deleted content
  *   - AC6: Mobile responsive with 44x44px touch targets, first actionable element
  */
-import { test, expect } from '../support/fixtures'
+import { test, expect } from '../../support/fixtures'
 
 test.describe('Continue Learning Dashboard (E04-S05)', () => {
   test.beforeEach(async ({ page }) => {

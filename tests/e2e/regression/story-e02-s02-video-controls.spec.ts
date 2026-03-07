@@ -14,8 +14,8 @@
  * ±5s arrows, volume, mute, fullscreen, speed, timestamps). These tests
  * focus only on the GAPS identified in the implementation plan.
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
 
 // Use a known course/lesson with video content
 const LESSON_URL = '/courses/operative-six/op6-introduction'

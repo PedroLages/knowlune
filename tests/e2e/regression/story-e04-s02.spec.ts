@@ -7,8 +7,8 @@
  * - Real-time updates
  * - Accessibility (ARIA attributes)
  */
-import { test, expect } from '../support/fixtures'
-import { goToCourses } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { goToCourses } from '../../support/helpers/navigation'
 
 test.describe('E04-S02: Course Completion Percentage', () => {
   test('AC1: Progress bar displays with ARIA attributes and text equivalent', async ({ page }) => {

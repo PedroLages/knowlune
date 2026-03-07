@@ -8,7 +8,7 @@
  *   - Map directly to acceptance criteria
  *   - Will fail until SessionHistory page is built
  */
-import { test, expect } from '../support/fixtures'
+import { test, expect } from '../../support/fixtures'
 
 /** Reusable helper to seed study sessions into IndexedDB */
 async function seedStudySessions(
