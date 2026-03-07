@@ -10,6 +10,7 @@ import { RecentActivity } from '@/app/components/RecentActivity'
 import { StatsCard } from '@/app/components/StatsCard'
 import { QuickActions } from '@/app/components/QuickActions'
 import { StudyStreakCalendar } from '@/app/components/StudyStreakCalendar'
+import { StudyGoalsWidget } from '@/app/components/StudyGoalsWidget'
 import { CourseCard } from '@/app/components/figma/CourseCard'
 import { ProgressChart } from '@/app/components/charts/ProgressChart'
 import { allCourses } from '@/data/courses'
@@ -195,7 +196,10 @@ export function Overview() {
             <h2 className="text-xl mb-4">Study Streak</h2>
             <StudyStreakCalendar weeks={26} />
           </div>
-          <RecentActivity activities={recentActivity} />
+          <div className="flex flex-col gap-6">
+            <StudyGoalsWidget />
+            <RecentActivity activities={recentActivity} />
+          </div>
         </motion.section>
 
         {/* ── Insight + Action Zone ── */}

@@ -21,6 +21,7 @@ const STORAGE_KEYS = [
   'study-longest-streak',
   'study-streak-freeze-days',
   'notes-migration-version',
+  'study-goals',
 ] as const
 
 type LocalStorageHelper = {
