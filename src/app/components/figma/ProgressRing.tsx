@@ -17,7 +17,7 @@ export function ProgressRing({
 
   return (
     <div className={`relative inline-flex items-center justify-center ${className}`}>
-      <svg width={size} height={size} className="-rotate-90">
+      <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -37,7 +37,7 @@ export function ProgressRing({
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           strokeLinecap="round"
-          className="text-brand transition-all duration-500"
+          className="text-brand transition-all duration-500 motion-reduce:transition-none"
         />
       </svg>
       <span className="absolute text-xs font-semibold text-foreground">{percent}%</span>

@@ -34,7 +34,24 @@ interface StudyLogEntry {
 export function getStudyGoal(): StudyGoal | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : null
+    if (!raw) return null
+    const parsed: unknown = JSON.parse(raw)
+    if (
+      parsed === null ||
+      typeof parsed !== 'object' ||
+      !('frequency' in parsed) ||
+      !('metric' in parsed) ||
+      !('target' in parsed) ||
+      ((parsed as Record<string, unknown>).frequency !== 'daily' &&
+        (parsed as Record<string, unknown>).frequency !== 'weekly') ||
+      ((parsed as Record<string, unknown>).metric !== 'time' &&
+        (parsed as Record<string, unknown>).metric !== 'sessions') ||
+      typeof (parsed as Record<string, unknown>).target !== 'number' ||
+      ((parsed as Record<string, unknown>).target as number) <= 0
+    ) {
+      return null
+    }
+    return parsed as StudyGoal
   } catch {
     return null
   }
@@ -78,6 +95,9 @@ function completedEntries(log: StudyLogEntry[]): StudyLogEntry[] {
 }
 
 function buildProgress(current: number, target: number): GoalProgress {
+  if (target <= 0) {
+    return { current, target, percent: 0, completed: false }
+  }
   const percent = Math.min(100, Math.round((current / target) * 100))
   return { current, target, percent, completed: current >= target }
 }
@@ -113,13 +133,18 @@ export function computeGoalProgress(goal: StudyGoal, studyLog: StudyLogEntry[]):
 
 export function computeWeeklyAdherence(studyLog: StudyLogEntry[]): WeeklyAdherence {
   const now = new Date()
-  const daysWithStudy = new Set<string>()
+  const validDates = new Set<string>()
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now)
+    d.setDate(d.getDate() - i)
+    validDates.add(toLocalDateString(d))
+  }
 
+  const daysWithStudy = new Set<string>()
   for (const entry of completedEntries(studyLog)) {
-    const entryDate = new Date(entry.timestamp)
-    const daysAgo = Math.floor((now.getTime() - entryDate.getTime()) / 86400000)
-    if (daysAgo < 7) {
-      daysWithStudy.add(toLocalDateString(entryDate))
+    const entryDateStr = toLocalDateString(new Date(entry.timestamp))
+    if (validDates.has(entryDateStr)) {
+      daysWithStudy.add(entryDateStr)
     }
   }
 

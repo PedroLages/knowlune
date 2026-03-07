@@ -52,14 +52,14 @@ export function StudyGoalsWidget() {
     <div data-testid="study-goals-widget">
       {!goal ? (
         <EmptyState onSetup={() => setDialogOpen(true)} />
-      ) : (
+      ) : progress && adherence ? (
         <ActiveState
-          progress={progress!}
-          adherence={adherence!}
+          progress={progress}
+          adherence={adherence}
           unit={unit}
           onEdit={() => setDialogOpen(true)}
         />
-      )}
+      ) : null}
 
       <StudyGoalConfigDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </div>
@@ -102,7 +102,7 @@ function ActiveState({
         <button
           type="button"
           onClick={onEdit}
-          className="text-muted-foreground hover:text-foreground transition-colors"
+          className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring rounded-md"
           aria-label="Edit goal"
         >
           <Settings2 className="size-4" />
@@ -117,7 +117,7 @@ function ActiveState({
               data-testid="goal-completed-indicator"
               className="absolute inset-0 flex items-center justify-center"
             >
-              <CheckCircle2 className="size-5 text-green-600" />
+              <CheckCircle2 className="size-5 text-success" />
             </div>
           )}
         </div>

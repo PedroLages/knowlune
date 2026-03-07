@@ -70,6 +70,63 @@ describe('studyGoals', () => {
       expect(handler).toHaveBeenCalledOnce()
       window.removeEventListener('study-goals-updated', handler)
     })
+
+    it('returns null for malformed JSON in localStorage', () => {
+      localStorage.setItem('study-goals', '{not valid json')
+      expect(getStudyGoal()).toBeNull()
+    })
+
+    it('returns null for JSON with invalid frequency', () => {
+      localStorage.setItem(
+        'study-goals',
+        JSON.stringify({
+          frequency: 'monthly',
+          metric: 'time',
+          target: 60,
+          createdAt: '',
+        })
+      )
+      expect(getStudyGoal()).toBeNull()
+    })
+
+    it('returns null for JSON with invalid metric', () => {
+      localStorage.setItem(
+        'study-goals',
+        JSON.stringify({
+          frequency: 'daily',
+          metric: 'pages',
+          target: 60,
+          createdAt: '',
+        })
+      )
+      expect(getStudyGoal()).toBeNull()
+    })
+
+    it('returns null for JSON with zero target', () => {
+      localStorage.setItem(
+        'study-goals',
+        JSON.stringify({
+          frequency: 'daily',
+          metric: 'time',
+          target: 0,
+          createdAt: '',
+        })
+      )
+      expect(getStudyGoal()).toBeNull()
+    })
+
+    it('returns null for JSON with negative target', () => {
+      localStorage.setItem(
+        'study-goals',
+        JSON.stringify({
+          frequency: 'daily',
+          metric: 'time',
+          target: -10,
+          createdAt: '',
+        })
+      )
+      expect(getStudyGoal()).toBeNull()
+    })
   })
 
   // ── Daily progress ──
@@ -130,6 +187,14 @@ describe('studyGoals', () => {
       const log = [{ type: 'note_saved', courseId: 'c', timestamp: new Date().toISOString() }]
       const result = computeDailyProgress(sessionGoal, log)
       expect(result.current).toBe(0)
+    })
+
+    it('handles target of zero without NaN', () => {
+      const zeroGoal: StudyGoal = { frequency: 'daily', metric: 'time', target: 0, createdAt: '' }
+      const result = computeDailyProgress(zeroGoal, [])
+      expect(result.percent).toBe(0)
+      expect(result.completed).toBe(false)
+      expect(Number.isNaN(result.percent)).toBe(false)
     })
   })
 
@@ -208,6 +273,19 @@ describe('studyGoals', () => {
 
     it('excludes entries older than 7 days', () => {
       const log = [makeEntry(0), makeEntry(8)]
+      const result = computeWeeklyAdherence(log)
+      expect(result.daysStudied).toBe(1)
+    })
+
+    it('correctly handles 7-day boundary (entry exactly 7 days ago excluded)', () => {
+      // An entry from exactly 7 days ago should NOT be counted
+      const log = [makeEntry(7)]
+      const result = computeWeeklyAdherence(log)
+      expect(result.daysStudied).toBe(0)
+    })
+
+    it('includes entry from exactly 6 days ago', () => {
+      const log = [makeEntry(6)]
       const result = computeWeeklyAdherence(log)
       expect(result.daysStudied).toBe(1)
     })

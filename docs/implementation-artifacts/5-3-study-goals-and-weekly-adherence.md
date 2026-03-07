@@ -1,12 +1,12 @@
 ---
 story_id: E05-S03
 story_name: "Study Goals & Weekly Adherence"
-status: in-progress
+status: done
 started: 2026-03-06
-completed:
-reviewed: in-progress
+completed: 2026-03-07
+reviewed: true
 review_started: 2026-03-07
-review_gates_passed: []
+review_gates_passed: [build, lint-skipped, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing]
 ---
 
 # Story 5.3: Study Goals & Weekly Adherence
@@ -82,11 +82,22 @@ See [plan](plans/e05-s03-study-goals-weekly-adherence.md) for implementation app
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+See [design-review-2026-03-07-e05-s03.md](../reviews/design/design-review-2026-03-07-e05-s03.md).
+
+**Re-run (post-fixes):** Previous blockers resolved. Remaining:
+- 2 High: CTA button 32px, dialog footer buttons 36px (touch targets)
+- 2 Medium: Custom input 38px, no aria-live on widget wrapper
+- 1 Nit: OptionCard buttons lack aria-pressed
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+See [code-review-2026-03-07-e05-s03.md](../reviews/code/code-review-2026-03-07-e05-s03.md) and [code-review-testing-2026-03-07-e05-s03.md](../reviews/code/code-review-testing-2026-03-07-e05-s03.md).
+
+**Re-run (post-fixes):** Previous blockers (div/zero, touch target, aria-hidden, non-null assertions) all resolved. Remaining:
+- 3 High (code): Inconsistent week definition, handleSave validation, getStudyLog validation
+- 3 Medium (code): ProgressRing cn(), custom input, isToday midnight risk
+- 4 High (testing): Uncommitted state (process), AC5 shallow assertion
+- 3 Medium (testing): Weekly frequency path, sessions-weekly test, preset buttons
 
 ## Challenges and Lessons Learned
 

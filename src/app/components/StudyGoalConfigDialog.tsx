@@ -132,7 +132,7 @@ export function StudyGoalConfigDialog({ open, onOpenChange }: StudyGoalConfigDia
                     type="button"
                     onClick={() => setTarget(String(p))}
                     className={cn(
-                      'px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors',
+                      'px-3 py-2.5 min-h-[44px] rounded-lg border text-sm font-medium transition-colors',
                       'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring',
                       String(p) === target
                         ? 'bg-primary text-primary-foreground border-primary'
@@ -155,7 +155,7 @@ export function StudyGoalConfigDialog({ open, onOpenChange }: StudyGoalConfigDia
                   value={target}
                   onChange={e => setTarget(e.target.value)}
                   placeholder={`e.g. ${presets[1]}`}
-                  className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm focus:outline-2 focus:outline-ring"
+                  className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-ring"
                 />
               </div>
             </>

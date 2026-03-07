@@ -15,8 +15,12 @@ import { test, expect } from '../support/fixtures'
 
 test.describe('Study Goals & Weekly Adherence (E05-S03)', () => {
   test.beforeEach(async ({ page }) => {
-    // Prevent sidebar overlay on narrow viewports
+    // Clear localStorage once per test (not on every reload) and prevent sidebar overlay
     await page.addInitScript(() => {
+      if (!sessionStorage.getItem('__test_cleaned')) {
+        localStorage.clear()
+        sessionStorage.setItem('__test_cleaned', '1')
+      }
       localStorage.setItem('eduvi-sidebar-v1', 'false')
     })
   })
@@ -91,6 +95,26 @@ test.describe('Study Goals & Weekly Adherence (E05-S03)', () => {
     await expect(targetInput).toHaveValue('60')
   })
 
+  test('AC2: full happy-path: configure and save a goal', async ({ page }) => {
+    await page.goto('/')
+    await page.waitForLoadState('domcontentloaded')
+
+    // Start from empty state
+    await expect(page.getByTestId('goals-empty-state')).toBeVisible()
+
+    // Open dialog and complete the flow
+    await page.getByTestId('goals-setup-cta').click()
+    await page.getByTestId('goal-frequency-daily').click()
+    await page.getByTestId('goal-metric-time').click()
+    await page.getByTestId('goal-target-input').fill('60')
+    await page.getByTestId('goal-save-button').click()
+
+    // Widget should now show active state (not empty)
+    await expect(page.getByTestId('goals-empty-state')).not.toBeVisible()
+    await expect(page.getByTestId('goal-progress-text')).toBeVisible()
+    await expect(page.getByTestId('goal-progress-text')).toContainText('60')
+  })
+
   // ── AC3: Daily goal progress widget ──
 
   test("AC3: daily goal progress shows current progress toward today's goal", async ({
@@ -104,6 +128,7 @@ test.describe('Study Goals & Weekly Adherence (E05-S03)', () => {
       frequency: 'daily',
       metric: 'time',
       target: 60,
+      createdAt: new Date().toISOString(),
     })
 
     // Seed: 45 minutes of study today
@@ -138,6 +163,7 @@ test.describe('Study Goals & Weekly Adherence (E05-S03)', () => {
       frequency: 'daily',
       metric: 'time',
       target: 60,
+      createdAt: new Date().toISOString(),
     })
 
     await page.reload()
@@ -158,6 +184,7 @@ test.describe('Study Goals & Weekly Adherence (E05-S03)', () => {
       frequency: 'weekly',
       metric: 'time',
       target: 300,
+      createdAt: new Date().toISOString(),
     })
 
     // Seed: sessions across the current week
@@ -195,6 +222,7 @@ test.describe('Study Goals & Weekly Adherence (E05-S03)', () => {
       frequency: 'daily',
       metric: 'time',
       target: 30,
+      createdAt: new Date().toISOString(),
     })
 
     // Seed: studied on 5 of the last 7 days
@@ -235,6 +263,7 @@ test.describe('Study Goals & Weekly Adherence (E05-S03)', () => {
       frequency: 'daily',
       metric: 'time',
       target: 30,
+      createdAt: new Date().toISOString(),
     })
 
     // Seed: 45 minutes studied today (exceeds goal)
