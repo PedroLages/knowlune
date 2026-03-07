@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { DayPicker } from 'react-day-picker'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { DayPicker, type DayButtonProps } from 'react-day-picker'
 import { ChevronLeft, ChevronRight, Snowflake, BookOpen } from 'lucide-react'
 import { Popover, PopoverContent, PopoverAnchor } from '@/app/components/ui/popover'
 import { buttonVariants } from '@/app/components/ui/button'
@@ -8,7 +8,9 @@ import { getMonthStudyData, type DayStudyData } from '@/lib/studyCalendar'
 import { toLocalDateString } from '@/lib/dateUtils'
 import { allCourses } from '@/data/courses'
 
-const courseNameMap = new Map(allCourses.map(c => [c.id, c.title]))
+function getCourseNameMap() {
+  return new Map(allCourses.map(c => [c.id, c.title]))
+}
 
 function formatTime(timestamp: string): string {
   return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -31,12 +33,47 @@ function actionLabel(type: string): string {
   }
 }
 
+/** Stable DayButton — extracted outside render to prevent remounts */
+function createDayButton(studyData: Map<string, DayStudyData>) {
+  return function DayButton({ day, modifiers: _modifiers, className, ...props }: DayButtonProps) {
+    const dateStr = toLocalDateString(day.date)
+    const dayData = studyData.get(dateStr)
+    const hasActivity = (dayData?.sessions.length ?? 0) > 0
+    const isFreezeDay = !!(dayData?.isFreezeDay && !hasActivity)
+
+    return (
+      <button
+        {...props}
+        className={cn(
+          className,
+          hasActivity && 'bg-success/10 text-study-day-text hover:bg-success/20',
+          isFreezeDay && 'bg-info/10 text-freeze-day-text hover:bg-info/20'
+        )}
+        data-has-activity={String(hasActivity)}
+        data-freeze-day={isFreezeDay ? 'true' : undefined}
+      >
+        <span className="relative flex flex-col items-center justify-center gap-0.5">
+          {day.date.getDate()}
+          {hasActivity && (
+            <>
+              <span className="block size-1.5 rounded-full bg-success" aria-hidden="true" />
+              <span className="sr-only">, has study activity</span>
+            </>
+          )}
+          {isFreezeDay && <Snowflake className="size-3 text-info" aria-label="Freeze day" />}
+        </span>
+      </button>
+    )
+  }
+}
+
 export function StudyHistoryCalendar() {
   const [month, setMonth] = useState(() => new Date())
   const [studyData, setStudyData] = useState<Map<string, DayStudyData>>(new Map())
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
   const [popoverOpen, setPopoverOpen] = useState(false)
   const anchorRef = useRef<HTMLDivElement>(null)
+  const courseNameMap = useMemo(() => getCourseNameMap(), [])
 
   const refreshData = useCallback(() => {
     const data = getMonthStudyData(month.getFullYear(), month.getMonth() + 1)
@@ -54,11 +91,12 @@ export function StudyHistoryCalendar() {
     return () => window.removeEventListener('study-log-updated', handler)
   }, [refreshData])
 
-  const handleDayClick = (day: Date, _modifiers: unknown, e: React.MouseEvent) => {
-    // Position the popover anchor at the clicked day cell
+  const handleDayClick = useCallback((day: Date, _modifiers: unknown, e: React.MouseEvent) => {
     const btn = (e.target as HTMLElement).closest('button')
     if (btn && anchorRef.current) {
-      const calRect = anchorRef.current.parentElement!.getBoundingClientRect()
+      const parent = anchorRef.current.parentElement
+      if (!parent) return
+      const calRect = parent.getBoundingClientRect()
       const btnRect = btn.getBoundingClientRect()
       anchorRef.current.style.position = 'absolute'
       anchorRef.current.style.left = `${btnRect.left - calRect.left + btnRect.width / 2}px`
@@ -66,9 +104,40 @@ export function StudyHistoryCalendar() {
     }
     setSelectedDay(day)
     setPopoverOpen(true)
-  }
+  }, [])
+
+  // Memoize to keep a stable component identity when studyData hasn't changed
+  const DayButtonComponent = useMemo(() => createDayButton(studyData), [studyData])
+
+  // Memoize components object to prevent DayPicker full re-renders
+  const dayPickerComponents = useMemo(
+    () => ({
+      Chevron: ({
+        orientation,
+        ...chevronProps
+      }: {
+        orientation?: 'left' | 'right' | 'up' | 'down'
+        className?: string
+        size?: number
+        disabled?: boolean
+      }) => {
+        const Icon = orientation === 'left' ? ChevronLeft : ChevronRight
+        return <Icon className="size-4" {...chevronProps} />
+      },
+      DayButton: DayButtonComponent,
+    }),
+    [DayButtonComponent]
+  )
 
   const selectedDayData = selectedDay ? studyData.get(toLocalDateString(selectedDay)) : null
+
+  const dateHeading = selectedDay
+    ? selectedDay.toLocaleDateString(undefined, {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+      })
+    : null
 
   return (
     <div data-testid="study-history-calendar" className="relative">
@@ -90,11 +159,11 @@ export function StudyHistoryCalendar() {
             nav: 'flex items-center gap-1',
             button_previous: cn(
               buttonVariants({ variant: 'outline' }),
-              'absolute left-1 size-7 bg-transparent p-0 opacity-50 hover:opacity-100'
+              'absolute left-1 size-11 bg-transparent p-0 opacity-50 hover:opacity-100'
             ),
             button_next: cn(
               buttonVariants({ variant: 'outline' }),
-              'absolute right-1 size-7 bg-transparent p-0 opacity-50 hover:opacity-100'
+              'absolute right-1 size-11 bg-transparent p-0 opacity-50 hover:opacity-100'
             ),
             month_grid: 'w-full border-collapse',
             weekdays: 'flex',
@@ -113,41 +182,7 @@ export function StudyHistoryCalendar() {
             disabled: 'text-muted-foreground opacity-50',
             hidden: 'invisible',
           }}
-          components={{
-            Chevron: ({ orientation, ...chevronProps }) => {
-              const Icon = orientation === 'left' ? ChevronLeft : ChevronRight
-              return <Icon className="size-4" {...chevronProps} />
-            },
-            DayButton: ({ day, modifiers, className, ...props }) => {
-              const dateStr = toLocalDateString(day.date)
-              const dayData = studyData.get(dateStr)
-              const hasActivity = (dayData?.sessions.length ?? 0) > 0
-              const isFreezeDay = !!(dayData?.isFreezeDay && !hasActivity)
-
-              return (
-                <button
-                  {...props}
-                  className={cn(
-                    className,
-                    hasActivity && 'bg-green-100 text-green-900 hover:bg-green-200',
-                    isFreezeDay && 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-                  )}
-                  data-has-activity={String(hasActivity)}
-                  data-freeze-day={isFreezeDay ? 'true' : undefined}
-                >
-                  <span className="relative flex flex-col items-center justify-center gap-0.5">
-                    {day.date.getDate()}
-                    {hasActivity && (
-                      <span className="block size-1.5 rounded-full bg-green-600" aria-hidden="true" />
-                    )}
-                    {isFreezeDay && (
-                      <Snowflake className="size-3 text-blue-500" aria-label="Freeze day" />
-                    )}
-                  </span>
-                </button>
-              )
-            },
-          }}
+          components={dayPickerComponents}
         />
 
         <PopoverContent
@@ -156,35 +191,30 @@ export function StudyHistoryCalendar() {
           align="start"
           side="bottom"
         >
-          {selectedDayData ? (
-            selectedDayData.sessions.length > 0 ? (
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium">
-                  {selectedDay?.toLocaleDateString(undefined, {
-                    weekday: 'long',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
-                </h4>
-                <ul className="space-y-2">
-                  {selectedDayData.sessions.map((session, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm">
-                      <BookOpen className="size-4 mt-0.5 shrink-0 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">
-                          {courseNameMap.get(session.courseId) ?? session.courseId}
-                        </p>
-                        <p className="text-muted-foreground text-xs">
-                          {actionLabel(session.type)} &middot; {formatTime(session.timestamp)}
-                        </p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No study sessions on this day</p>
-            )
+          {dateHeading && (
+            <h4 className="text-sm font-medium mb-3" data-testid="popover-date-heading">
+              {dateHeading}
+            </h4>
+          )}
+          {selectedDayData && selectedDayData.sessions.length > 0 ? (
+            <ul className="max-h-60 overflow-y-auto space-y-2">
+              {selectedDayData.sessions.map(session => (
+                <li
+                  key={`${session.courseId}-${session.timestamp}`}
+                  className="flex items-start gap-2 text-sm"
+                >
+                  <BookOpen className="size-4 mt-0.5 shrink-0 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">
+                      {courseNameMap.get(session.courseId) ?? session.courseId}
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      {actionLabel(session.type)} &middot; {formatTime(session.timestamp)}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
           ) : (
             <p className="text-sm text-muted-foreground">No study sessions on this day</p>
           )}

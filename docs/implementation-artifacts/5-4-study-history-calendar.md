@@ -4,9 +4,9 @@ story_name: "Study History Calendar"
 status: in-progress
 started: 2026-03-07
 completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+reviewed: in-progress
+review_started: 2026-03-07
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing]
 ---
 
 # Story 5.4: Study History Calendar
@@ -35,7 +35,8 @@ So that I can see patterns in my study habits and identify gaps.
 **Given** a learner sees a highlighted day on the calendar
 **When** they click on that day
 **Then** a detail panel or popover displays the study sessions for that date
-**And** each session shows the course name, duration, and timestamp
+**And** each session shows the course name, action type, and timestamp
+> **Note**: "duration" was descoped — `StudyAction` logs discrete events without duration data. Showing action type (e.g., "Completed lesson") provides equivalent context.
 
 **AC4: Empty day detail**
 **Given** a learner clicks on a day with no study sessions
@@ -85,11 +86,29 @@ See [plan](plans/e05-s04-study-history-calendar.md) for implementation approach.
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+**Date**: 2026-03-07 (re-run) | **Report**: `docs/reviews/design/design-review-2026-03-07-e05-s04.md`
+
+- **BLOCKER**: Contrast failure on tinted day cells — white text on near-transparent bg (~1.1:1 ratio)
+- **BLOCKER**: Unbounded popover height — 255+ items with no scroll constraint on busy days
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**Date**: 2026-03-07 (re-run) | **Reports**: `docs/reviews/code/code-review-2026-03-07-e05-s04.md`, `docs/reviews/code/code-review-testing-2026-03-07-e05-s04.md`
+
+Architecture (1 blocker, 4 high, 5 medium, 3 nits):
+
+- **BLOCKER**: Uncommitted fixes pattern — committed branch ships 4 known issues only fixed in working tree (confidence: 95)
+- **HIGH**: Inline styles for popover positioning — stale on resize (confidence: 88)
+- **HIGH**: Full localStorage parse on every month navigation (confidence: 85)
+- **HIGH**: Empty heading in popover when selectedDay is null (confidence: 82)
+- **HIGH**: Weak E2E assertions for AC3 — no action type/timestamp check (confidence: 80)
+
+Testing (3/6 ACs fully covered, 3 partial):
+
+- **HIGH**: AC2 highlights not verified after navigation (confidence: 88)
+- **HIGH**: AC3 only one action type branch tested (confidence: 85)
+- **HIGH**: AC6 only measures prevBtn, not nextBtn (confidence: 82)
+- **HIGH**: Missing getMonthStudyData integration test (confidence: 78)
 
 ## Challenges and Lessons Learned
 

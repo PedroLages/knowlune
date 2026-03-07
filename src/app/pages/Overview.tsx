@@ -211,7 +211,7 @@ export function Overview() {
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           className="rounded-[24px] border border-border/50 bg-card p-6"
         >
-          <h2 className="text-xl mb-4">Study History</h2>
+          <h2 className="text-xl font-semibold mb-4">Study History</h2>
           <StudyHistoryCalendar />
         </motion.section>
 

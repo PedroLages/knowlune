@@ -42,10 +42,11 @@ export function buildMonthData(
     })
   }
 
-  // Bin actions into their day
+  // Bin actions into their day — use ISO prefix to skip Date construction for non-matching months
+  const monthPrefix = `${year}-${String(month).padStart(2, '0')}`
   for (const action of log) {
+    if (!action.timestamp.startsWith(monthPrefix)) continue
     const actionDate = new Date(action.timestamp)
-    if (actionDate.getFullYear() !== year || actionDate.getMonth() + 1 !== month) continue
     const key = toLocalDateString(actionDate)
     const day = result.get(key)
     if (day) {

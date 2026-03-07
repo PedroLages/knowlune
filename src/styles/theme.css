@@ -67,6 +67,8 @@
   --gold: #f59e0b;
   --gold-foreground: #ffffff;
   --gold-muted: #fef3c7;
+  --study-day-text: #166534;
+  --freeze-day-text: #1e40af;
   --accent-violet: #7c3aed;
   --accent-violet-foreground: #ffffff;
   --accent-violet-muted: #ede9fe;
@@ -134,6 +136,8 @@
   --gold: #fbbf24;
   --gold-foreground: #000000;
   --gold-muted: #451a03;
+  --study-day-text: #86efac;
+  --freeze-day-text: #93c5fd;
   --accent-violet: #a78bfa;
   --accent-violet-foreground: #000000;
   --accent-violet-muted: #2e1065;
@@ -195,6 +199,8 @@
   --color-accent-violet-foreground: var(--accent-violet-foreground);
   --color-accent-violet-muted: var(--accent-violet-muted);
   --color-table-selected: var(--table-selected);
+  --color-study-day-text: var(--study-day-text);
+  --color-freeze-day-text: var(--freeze-day-text);
   --color-brand-soft: var(--brand-soft);
   --color-brand-muted: var(--brand-muted);
   --color-surface-elevated: var(--surface-elevated);
