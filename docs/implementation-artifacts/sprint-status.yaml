@@ -124,7 +124,7 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-6: in-progress
   6-1-create-learning-challenges: done
-  6-2-track-challenge-progress: in-progress
+  6-2-track-challenge-progress: done
   6-3-challenge-milestone-celebrations: backlog
   epic-6-retrospective: optional
 
