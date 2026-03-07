@@ -193,3 +193,12 @@ export interface StudySession {
   lastActivity: string // ISO 8601 of last interaction
   sessionType: 'video' | 'pdf' | 'mixed'
 }
+
+// --- Streak Milestones (Story 5.6) ---
+
+export interface StreakMilestone {
+  id: string // UUID
+  milestoneValue: number // 7, 30, 60, 100
+  earnedAt: string // ISO 8601
+  streakStartDate: string // ISO 8601 date string — identifies which streak instance
+}

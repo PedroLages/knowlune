@@ -1,6 +1,7 @@
 import { Fragment, useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
-import { Flame, Award, Pause, Play, Snowflake } from 'lucide-react'
+import { Flame, Award, Pause, Play, Snowflake, Trophy } from 'lucide-react'
+import { toast } from 'sonner'
 import {
   getStreakSnapshot,
   setStreakPause,
@@ -9,6 +10,10 @@ import {
   INDEFINITE_PAUSE_DAYS,
   type StreakSnapshot,
 } from '@/lib/studyLog'
+import { detectAndRecordMilestones } from '@/lib/streakMilestones'
+import { StreakMilestoneToast } from '@/app/components/celebrations/StreakMilestoneToast'
+import { MilestoneGallery } from '@/app/components/MilestoneGallery'
+import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
 import { cn } from '@/app/components/ui/utils'
 import {
   Dialog,
@@ -112,10 +117,37 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
     setSnapshot(getStreakSnapshot(totalDays))
   }, [totalDays])
 
+  const celebrateMilestones = useCallback((currentStreak: number) => {
+    const sessionKey = `milestones-checked-${currentStreak}`
+    if (sessionStorage.getItem(sessionKey)) return
+    sessionStorage.setItem(sessionKey, '1')
+
+    try {
+      const newMilestones = detectAndRecordMilestones(currentStreak)
+      for (const milestone of newMilestones) {
+        toast.custom(() => <StreakMilestoneToast milestone={milestone} />, {
+          duration: 8000,
+        })
+      }
+    } catch (err) {
+      console.warn('Failed to detect/record milestones:', err)
+    }
+  }, [])
+
+  // Check milestones on mount
   useEffect(() => {
-    window.addEventListener('study-log-updated', refreshSnapshot)
-    return () => window.removeEventListener('study-log-updated', refreshSnapshot)
-  }, [refreshSnapshot])
+    celebrateMilestones(snapshot.currentStreak)
+  }, [celebrateMilestones])
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      const next = getStreakSnapshot(totalDays)
+      setSnapshot(next)
+      celebrateMilestones(next.currentStreak)
+    }
+    window.addEventListener('study-log-updated', handleUpdate)
+    return () => window.removeEventListener('study-log-updated', handleUpdate)
+  }, [totalDays, celebrateMilestones])
 
   const { currentStreak, longestStreak, activity, pauseStatus, freezeDays } = snapshot
 
@@ -214,6 +246,34 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
           <div className="text-3xl font-bold tabular-nums text-brand">{longestStreak}</div>
           <div className="text-xs text-blue-700 dark:text-blue-300 mt-1">personal best</div>
         </div>
+      </div>
+
+      {/* Milestone Collection Trigger */}
+      <div className="flex justify-end mb-3">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              data-testid="milestone-collection-trigger"
+              variant="outline"
+              size="sm"
+              className="text-xs min-h-[44px]"
+            >
+              <Trophy className="size-3 mr-1" aria-hidden="true" />
+              Milestones
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80" aria-labelledby="milestone-gallery-heading">
+            <div className="mb-3">
+              <h4 id="milestone-gallery-heading" className="text-sm font-semibold">
+                Streak Milestones
+              </h4>
+              <p className="text-xs text-muted-foreground mt-1">
+                Your streak achievement collection
+              </p>
+            </div>
+            <MilestoneGallery />
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Calendar Heatmap */}

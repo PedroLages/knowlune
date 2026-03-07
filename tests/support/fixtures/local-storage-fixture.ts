@@ -25,6 +25,7 @@ const STORAGE_KEYS = [
   'study-reminders',
   'study-reminders-last-daily',
   'study-reminders-last-risk',
+  'streak-milestones',
 ] as const
 
 type LocalStorageHelper = {
@@ -61,6 +62,7 @@ export const test = base.extend<{ localStorage: LocalStorageHelper }>({
 
       clearAll: async () => {
         await clearAppStorage(page)
+        await page.evaluate(() => sessionStorage.clear())
       },
 
       get: async <T = unknown>(key: string): Promise<T | null> => {

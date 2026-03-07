@@ -110,13 +110,13 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 5: Study Streaks & Daily Goals
   # ──────────────────────────────────────────────────
-  epic-5: in-progress
+  epic-5: done
   5-1-daily-study-streak-counter: done
   5-2-streak-pause-and-freeze-days: done
   5-3-study-goals-and-weekly-adherence: done
   5-4-study-history-calendar: done
   5-5-study-reminders-and-notifications: done
-  5-6-streak-milestone-celebrations: backlog
+  5-6-streak-milestone-celebrations: done
   epic-5-retrospective: optional
 
   # ──────────────────────────────────────────────────
