@@ -1,9 +1,9 @@
 ---
 story_id: E06-S01
 story_name: "Create Learning Challenges"
-status: in-progress
+status: done
 started: 2026-03-07
-completed:
+completed: 2026-03-07
 reviewed: true
 review_started: 2026-03-07
 review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing]
