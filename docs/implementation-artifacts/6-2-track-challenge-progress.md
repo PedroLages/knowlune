@@ -4,9 +4,9 @@ story_name: "Track Challenge Progress"
 status: in-progress
 started: 2026-03-07
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-07
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing]
 ---
 
 # Story 6.2: Track Challenge Progress
@@ -81,11 +81,31 @@ See [plan](plans/e06-s02-track-challenge-progress.md) for implementation approac
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+**2026-03-07** — 2 high, 2 medium, 3 nits. No blockers.
+- H1: Heading level skips H2 (WCAG 1.3.1) — add sr-only H2 before active grid
+- H2: CollapsibleTrigger missing focus-visible ring
+- M1: Progress bar aria-label is generic (doesn't identify challenge)
+- M2: Loading state needs `role="status"` / `aria-live="polite"`
+Report: `docs/reviews/design/design-review-2026-03-07-e06-s02.md`
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**2026-03-07** — 0 blockers, 3 high, 4 medium, 3 nits.
+- HIGH: String date comparison in `calculateCompletionProgress` — use `new Date()` parsing
+- HIGH: useEffect missing cleanup (stale updates on unmount)
+- HIGH: Optimistic UI update before DB write in `refreshAllProgress`
+- MEDIUM: Streak progress not scoped to challenge creation date (contradicts AC4)
+- MEDIUM: Full table scan for completion progress (no `updatedAt` index)
+- MEDIUM: CollapsibleTrigger icon missing `aria-hidden`
+- MEDIUM: E2E afterEach IDB cleanup swallows errors
+Report: `docs/reviews/code/code-review-2026-03-07-e06-s02.md`
+
+**Test Coverage (2026-03-07)** — 2/6 ACs fully covered, 3 partial, 1 code-path-only.
+- HIGH: `refreshAllProgress` has zero unit tests (confidence 95)
+- HIGH: 100% cap untested at every layer (confidence 92)
+- HIGH: Streak unit test is a no-op (confidence 90)
+- HIGH: AC5 never asserts muted style (confidence 88)
+Report: `docs/reviews/code/code-review-testing-2026-03-07-e06-s02.md`
 
 ## Challenges and Lessons Learned
 
