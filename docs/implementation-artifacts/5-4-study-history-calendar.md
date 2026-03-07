@@ -112,4 +112,8 @@ Testing (3/6 ACs fully covered, 3 partial):
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Theme token naming matters for tinted backgrounds**: `-foreground` tokens (e.g., `--success-foreground: #fff`) are meant for text ON solid backgrounds. Tinted backgrounds like `bg-success/10` need dedicated dark text tokens (`--study-day-text: #166534`) to meet WCAG 4.5:1 contrast. Created `--study-day-text` and `--freeze-day-text` tokens with light/dark mode values.
+- **DayPicker components object must be memoized**: Passing an inline `components={{ DayButton, Chevron }}` object causes DayPicker to unmount/remount all day buttons every render. Extract the factory outside the component (`createDayButton`) and wrap the components object in `useMemo`.
+- **ISO prefix optimization for date filtering**: Instead of constructing `new Date()` for every action to check month membership, compare `action.timestamp.startsWith('2026-03')` first. Only construct Date objects for matching entries.
+- **Popover scroll constraints are essential**: `video_progress` events fire per-second, creating 255+ entries for a single day. Always add `max-h-60 overflow-y-auto` to popover content lists.
+- **E2E tests need exhaustive AC coverage**: Initial tests only covered happy paths (one action type, one nav button measurement). Review agents correctly identified gaps — all action type branches, both nav buttons, and highlight count assertions after navigation needed explicit coverage.
