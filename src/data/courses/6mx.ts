@@ -17,6 +17,7 @@ export const sixMinuteXRay: Course = {
   isSequential: true,
   basePath: BASE,
   coverImage: '/images/6mx',
+  instructorId: 'chase-hughes',
   tags: [
     'behavioral-analysis',
     'deception-detection',

@@ -26,6 +26,7 @@ export const studyMaterialsCourse: Course = {
   isSequential: false,
   basePath,
   coverImage: '/images/study-materials',
+  instructorId: 'marcus-chen',
   modules: [
     {
       id: 'sm-authority-foundations',

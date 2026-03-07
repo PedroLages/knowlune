@@ -17,6 +17,7 @@ export const confidenceReboot: Course = {
   isSequential: true,
   basePath: BASE,
   coverImage: '/images/confidence-reboot',
+  instructorId: 'sarah-thornton',
   tags: [
     'confidence',
     'composure',

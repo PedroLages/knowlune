@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
 import { Progress } from '@/app/components/ui/progress'
+import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog'
 import { ProgressRing } from './ProgressRing'
@@ -12,6 +13,7 @@ import { getProgress } from '@/lib/progress'
 import { getResourceUrl } from '@/lib/media'
 import { cn } from '@/app/components/ui/utils'
 import { useCourseCardPreview } from '@/hooks/useCourseCardPreview'
+import { getInstructorById } from '@/data/instructors'
 import type { Course, CourseCategory } from '@/data/types'
 
 // ── Shared constants ────────────────────────────────────────────────
@@ -116,6 +118,10 @@ export function CourseCard({
     setInfoOpen,
     guardNavigation,
   } = useCourseCardPreview()
+
+  // ── Instructor data ──────────────────────────────────────────────
+
+  const instructor = getInstructorById(course.instructorId)
 
   // ── Shared derived state ──────────────────────────────────────────
 
@@ -456,9 +462,24 @@ export function CourseCard({
       case 'library':
         return (
           <div className="p-5 flex flex-col flex-1">
-            <h3 className="font-semibold text-base mb-3 group-hover:text-brand transition-colors line-clamp-2">
+            <h3 className="font-semibold text-base mb-2 group-hover:text-brand transition-colors line-clamp-2">
               {course.title}
             </h3>
+            {instructor && (
+              <Link
+                to={`/instructors/${instructor.id}`}
+                onClick={e => e.stopPropagation()}
+                className="flex items-center gap-1.5 mb-3 text-xs text-muted-foreground hover:text-brand transition-colors w-fit"
+              >
+                <Avatar className="size-5">
+                  <AvatarImage src={instructor.avatar} alt={instructor.name} />
+                  <AvatarFallback className="text-[8px]">
+                    {instructor.name.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                <span>{instructor.name}</span>
+              </Link>
+            )}
             <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-auto mb-3">
               <span className="flex items-center gap-1">
                 <Video className="h-3.5 w-3.5" aria-hidden="true" />
@@ -486,9 +507,24 @@ export function CourseCard({
             >
               {formatCategory(course.category)}
             </Badge>
-            <h3 className="font-semibold text-base line-clamp-2 mb-2 group-hover:text-brand transition-colors">
+            <h3 className="font-semibold text-base line-clamp-2 mb-1 group-hover:text-brand transition-colors">
               {course.title}
             </h3>
+            {instructor && (
+              <Link
+                to={`/instructors/${instructor.id}`}
+                onClick={e => { e.preventDefault(); e.stopPropagation(); navigate(`/instructors/${instructor.id}`) }}
+                className="flex items-center gap-1.5 mb-2 text-xs text-muted-foreground hover:text-brand transition-colors w-fit"
+              >
+                <Avatar className="size-5">
+                  <AvatarImage src={instructor.avatar} alt={instructor.name} />
+                  <AvatarFallback className="text-[8px]">
+                    {instructor.name.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                <span>{instructor.name}</span>
+              </Link>
+            )}
             <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto">
               <span className="flex items-center gap-1">
                 <Video className="h-3.5 w-3.5" aria-hidden="true" />
@@ -545,6 +581,22 @@ export function CourseCard({
             >
               {course.title}
             </h3>
+
+            {instructor && (
+              <Link
+                to={`/instructors/${instructor.id}`}
+                onClick={e => e.stopPropagation()}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-brand transition-colors w-fit"
+              >
+                <Avatar className="size-5">
+                  <AvatarImage src={instructor.avatar} alt={instructor.name} />
+                  <AvatarFallback className="text-[8px]">
+                    {instructor.name.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                <span>{instructor.name}</span>
+              </Link>
+            )}
 
             <div className="flex flex-col gap-3 mt-auto">
               <div className="flex items-center gap-3 text-xs text-muted-foreground">

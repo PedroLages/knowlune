@@ -2,6 +2,7 @@ import { useParams, Link } from 'react-router'
 import { Clock, Video, FileText, BookOpen, Play, CheckCircle } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
+import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -17,6 +18,7 @@ import { ModuleAccordion } from '@/app/components/figma/ModuleAccordion'
 import { CourseNotesTab } from '@/app/components/notes/CourseNotesTab'
 import { categoryLabels, categoryColors } from '@/app/components/figma/CourseCard'
 import { allCourses } from '@/data/courses'
+import { getInstructorById } from '@/data/instructors'
 import { getProgress, getCourseCompletionPercent } from '@/lib/progress'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 
@@ -77,7 +79,30 @@ export function CourseDetail() {
             </div>
 
             <h1 className="text-2xl font-bold mb-2">{course.title}</h1>
-            <p className="text-muted-foreground mb-5">{course.description}</p>
+            <p className="text-muted-foreground mb-4">{course.description}</p>
+
+            {/* Instructor */}
+            {(() => {
+              const instructor = getInstructorById(course.instructorId)
+              if (!instructor) return null
+              return (
+                <Link
+                  to={`/instructors/${instructor.id}`}
+                  className="inline-flex items-center gap-2.5 mb-5 px-3 py-2 rounded-xl bg-muted/50 hover:bg-muted transition-colors w-fit"
+                >
+                  <Avatar className="size-8">
+                    <AvatarImage src={instructor.avatar} alt={instructor.name} />
+                    <AvatarFallback className="text-xs">
+                      {instructor.name.split(' ').map(n => n[0]).join('')}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="text-left">
+                    <p className="text-sm font-medium leading-tight">{instructor.name}</p>
+                    <p className="text-xs text-muted-foreground leading-tight">{instructor.title}</p>
+                  </div>
+                </Link>
+              )
+            })()}
 
             <div className="flex flex-wrap items-center gap-5 text-sm text-muted-foreground mb-6">
               <span className="flex items-center gap-1.5">

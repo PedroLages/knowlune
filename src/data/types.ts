@@ -58,6 +58,28 @@ export interface Module {
   lessons: Lesson[]
 }
 
+// --- Instructor Types ---
+
+export interface InstructorSocialLinks {
+  website?: string
+  linkedin?: string
+  twitter?: string
+}
+
+export interface Instructor {
+  id: string
+  name: string
+  avatar: string
+  title: string
+  bio: string
+  shortBio: string
+  specialties: string[]
+  yearsExperience: number
+  education?: string
+  socialLinks: InstructorSocialLinks
+  featuredQuote?: string
+}
+
 export interface Course {
   id: string
   title: string
@@ -74,6 +96,7 @@ export interface Course {
   modules: Module[]
   isSequential: boolean
   basePath: string
+  instructorId: string
 }
 
 export interface Note {
