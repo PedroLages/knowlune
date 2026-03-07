@@ -118,7 +118,7 @@ describe('errorTracking', () => {
       initErrorTracking()
 
       const error = new Error('global boom')
-      ;(window.onerror as Function)('msg', 'script.js', 10, 5, error)
+      ;(window.onerror as (...args: unknown[]) => void)('msg', 'script.js', 10, 5, error)
 
       const log = getErrorLog()
       expect(log).toHaveLength(1)
@@ -130,7 +130,13 @@ describe('errorTracking', () => {
     it('window.onerror handler falls back to message when no error object', () => {
       vi.spyOn(console, 'error').mockImplementation(() => {})
       initErrorTracking()
-      ;(window.onerror as Function)('Script error', undefined, undefined, undefined, undefined)
+      ;(window.onerror as (...args: unknown[]) => void)(
+        'Script error',
+        undefined,
+        undefined,
+        undefined,
+        undefined
+      )
 
       const log = getErrorLog()
       expect(log).toHaveLength(1)
@@ -144,7 +150,7 @@ describe('errorTracking', () => {
 
       const event = new Event('unhandledrejection') as PromiseRejectionEvent
       Object.defineProperty(event, 'reason', { value: new Error('rejected!') })
-      ;(window.onunhandledrejection as Function)(event)
+      ;(window.onunhandledrejection as (...args: unknown[]) => void)(event)
 
       const log = getErrorLog()
       expect(log).toHaveLength(1)
