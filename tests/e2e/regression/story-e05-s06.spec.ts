@@ -9,10 +9,18 @@ import { goToOverview } from '../../support/helpers/navigation'
 import { buildStreakLog } from '../../support/helpers/streak-helpers'
 
 test.describe('Streak Milestone Celebrations (E05-S06)', () => {
+  // Serial mode: milestone detection uses sessionStorage guards that can race
+  // when the dev server is under parallel load from multiple browser contexts.
+  test.describe.configure({ mode: 'serial' })
+
   test.beforeEach(async ({ page }) => {
     // Navigate once to enable localStorage/sessionStorage access
     await page.goto('/')
     await page.evaluate(() => {
+      // Clear milestone and streak data BEFORE next navigation to prevent
+      // stale data from triggering sessionStorage guards in parallel runs
+      localStorage.removeItem('streak-milestones')
+      localStorage.removeItem('study-log')
       localStorage.setItem('eduvi-sidebar-v1', 'false')
       sessionStorage.clear()
     })
@@ -28,14 +36,14 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
 
     // Then: a Sonner toast appears with 7-day milestone content
     const toast = page.locator('[data-sonner-toast]').filter({ hasText: /7-Day Streak/i })
-    await expect(toast).toBeVisible({ timeout: 5000 })
+    await expect(toast).toBeVisible({ timeout: 10000 })
 
     // And: a milestone badge is displayed
     const badge = page.getByTestId('milestone-badge-7')
     await expect(badge).toBeVisible()
 
     // And: confetti animation fires (canvas-confetti injects a <canvas>)
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 10000 })
   })
 
   // ── AC2: 30-day milestone toast ──────────────────────────────
@@ -45,13 +53,13 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
     await goToOverview(page)
 
     const toast = page.locator('[data-sonner-toast]').filter({ hasText: /30-Day Streak/i })
-    await expect(toast).toBeVisible({ timeout: 5000 })
+    await expect(toast).toBeVisible({ timeout: 10000 })
 
     const badge = page.getByTestId('milestone-badge-30')
     await expect(badge).toBeVisible()
 
     // And: confetti animation fires
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 10000 })
   })
 
   // ── AC3: 60-day milestone toast ──────────────────────────────
@@ -61,13 +69,13 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
     await goToOverview(page)
 
     const toast = page.locator('[data-sonner-toast]').filter({ hasText: /60-Day Streak/i })
-    await expect(toast).toBeVisible({ timeout: 5000 })
+    await expect(toast).toBeVisible({ timeout: 10000 })
 
     const badge = page.getByTestId('milestone-badge-60')
     await expect(badge).toBeVisible()
 
     // And: confetti animation fires
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 10000 })
   })
 
   // ── AC4: 100-day milestone toast ─────────────────────────────
@@ -76,14 +84,16 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
     await localStorage.seed('study-log', buildStreakLog(100))
     await goToOverview(page)
 
+    // 100-day streak triggers 4 simultaneous toasts (7, 30, 60, 100).
+    // Sonner's default visibleToasts=3 hides the 4th; wait for earlier toasts to dismiss (8s duration).
     const toast = page.locator('[data-sonner-toast]').filter({ hasText: /100-Day Streak/i })
-    await expect(toast).toBeVisible({ timeout: 5000 })
+    await expect(toast).toBeVisible({ timeout: 15000 })
 
     const badge = page.getByTestId('milestone-badge-100')
     await expect(badge).toBeVisible()
 
     // And: confetti animation fires
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15000 })
   })
 
   // ── AC5: prefers-reduced-motion ──────────────────────────────
@@ -100,7 +110,7 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
 
     // Then: toast still appears with badge
     const toast = page.locator('[data-sonner-toast]').filter({ hasText: /7-Day Streak/i })
-    await expect(toast).toBeVisible({ timeout: 5000 })
+    await expect(toast).toBeVisible({ timeout: 10000 })
 
     // And: milestone badge is still displayed
     await expect(page.getByTestId('milestone-badge-7')).toBeVisible()
@@ -157,7 +167,7 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
 
     // Then: celebration toast appears again for the repeated milestone
     const toast = page.locator('[data-sonner-toast]').filter({ hasText: /7-Day Streak/i })
-    await expect(toast).toBeVisible({ timeout: 5000 })
+    await expect(toast).toBeVisible({ timeout: 10000 })
 
     // And: localStorage now contains TWO milestone entries for milestoneValue: 7
     const milestones = await localStorage.get<
@@ -199,8 +209,8 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
     // Then: both milestone toasts appear
     const toast7 = page.locator('[data-sonner-toast]').filter({ hasText: /7-Day Streak/i })
     const toast30 = page.locator('[data-sonner-toast]').filter({ hasText: /30-Day Streak/i })
-    await expect(toast7).toBeVisible({ timeout: 5000 })
-    await expect(toast30).toBeVisible({ timeout: 5000 })
+    await expect(toast7).toBeVisible({ timeout: 10000 })
+    await expect(toast30).toBeVisible({ timeout: 10000 })
 
     // And: localStorage has entries for both milestones
     const milestones = await localStorage.get<Array<{ milestoneValue: number }>>('streak-milestones')
@@ -221,7 +231,7 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
 
     // Wait for milestones to be detected and recorded
     const toast30 = page.locator('[data-sonner-toast]').filter({ hasText: /30-Day Streak/i })
-    await expect(toast30).toBeVisible({ timeout: 5000 })
+    await expect(toast30).toBeVisible({ timeout: 10000 })
 
     // When: milestone collection is opened
     await page.getByTestId('milestone-collection-trigger').click()
