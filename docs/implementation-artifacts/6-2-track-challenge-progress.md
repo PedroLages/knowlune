@@ -4,8 +4,8 @@ story_name: "Track Challenge Progress"
 status: in-progress
 started: 2026-03-07
 completed:
-reviewed: false
-review_started:
+reviewed: in-progress
+review_started: 2026-03-07
 review_gates_passed: []
 ---
 

@@ -155,19 +155,14 @@ describe('calculateStreakProgress', () => {
 describe('calculateProgress', () => {
   it('routes completion type to completion calculator', async () => {
     const challenge = makeChallenge({ type: 'completion' })
-    await db.contentProgress.bulkPut([
-      makeContentProgress(),
-      makeContentProgress(),
-    ])
+    await db.contentProgress.bulkPut([makeContentProgress(), makeContentProgress()])
 
     expect(await calculateProgress(challenge)).toBe(2)
   })
 
   it('routes time type to time calculator', async () => {
     const challenge = makeChallenge({ type: 'time' })
-    await db.studySessions.bulkPut([
-      makeSession({ duration: 7200 }),
-    ])
+    await db.studySessions.bulkPut([makeSession({ duration: 7200 })])
 
     expect(await calculateProgress(challenge)).toBe(2) // 7200s = 2h
   })
