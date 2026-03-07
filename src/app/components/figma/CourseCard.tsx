@@ -475,7 +475,10 @@ export function CourseCard({
                 <Avatar className="size-5">
                   <AvatarImage {...getAvatarSrc(instructor.avatar, 20)} alt="" />
                   <AvatarFallback className="text-[8px]">
-                    {instructor.name.split(' ').map(n => n[0]).join('')}
+                    {instructor.name
+                      .split(' ')
+                      .map(n => n[0])
+                      .join('')}
                   </AvatarFallback>
                 </Avatar>
                 <span>{instructor.name}</span>
@@ -514,13 +517,20 @@ export function CourseCard({
             {instructor && (
               <Link
                 to={`/instructors/${instructor.id}`}
-                onClick={e => { e.preventDefault(); e.stopPropagation(); navigate(`/instructors/${instructor.id}`) }}
+                onClick={e => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  navigate(`/instructors/${instructor.id}`)
+                }}
                 className="flex items-center gap-1.5 mb-2 text-xs text-muted-foreground hover:text-brand transition-colors w-fit"
               >
                 <Avatar className="size-5">
                   <AvatarImage {...getAvatarSrc(instructor.avatar, 20)} alt="" />
                   <AvatarFallback className="text-[8px]">
-                    {instructor.name.split(' ').map(n => n[0]).join('')}
+                    {instructor.name
+                      .split(' ')
+                      .map(n => n[0])
+                      .join('')}
                   </AvatarFallback>
                 </Avatar>
                 <span>{instructor.name}</span>
@@ -592,7 +602,10 @@ export function CourseCard({
                 <Avatar className="size-5">
                   <AvatarImage {...getAvatarSrc(instructor.avatar, 20)} alt="" />
                   <AvatarFallback className="text-[8px]">
-                    {instructor.name.split(' ').map(n => n[0]).join('')}
+                    {instructor.name
+                      .split(' ')
+                      .map(n => n[0])
+                      .join('')}
                   </AvatarFallback>
                 </Avatar>
                 <span>{instructor.name}</span>

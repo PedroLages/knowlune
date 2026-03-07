@@ -170,9 +170,10 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
     await expect(toast).toBeVisible({ timeout: 10000 })
 
     // And: localStorage now contains TWO milestone entries for milestoneValue: 7
-    const milestones = await localStorage.get<
-      Array<{ milestoneValue: number; streakStartDate: string }>
-    >('streak-milestones')
+    const milestones =
+      await localStorage.get<Array<{ milestoneValue: number; streakStartDate: string }>>(
+        'streak-milestones'
+      )
     expect(milestones).not.toBeNull()
     const sevenDayEntries = milestones!.filter(m => m.milestoneValue === 7)
     expect(sevenDayEntries).toHaveLength(2)
@@ -213,7 +214,8 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
     await expect(toast30).toBeVisible({ timeout: 10000 })
 
     // And: localStorage has entries for both milestones
-    const milestones = await localStorage.get<Array<{ milestoneValue: number }>>('streak-milestones')
+    const milestones =
+      await localStorage.get<Array<{ milestoneValue: number }>>('streak-milestones')
     expect(milestones).not.toBeNull()
     const values = milestones!.map(m => m.milestoneValue).sort((a, b) => a - b)
     expect(values).toEqual([7, 30])

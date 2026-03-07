@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import Dexie from 'dexie'
+import { createChallenge } from '../../../tests/support/fixtures/factories/challenge-factory'
 
 // Must import after fake-indexeddb/auto polyfill is active
 let db: Awaited<typeof import('@/db/schema')>['db']
@@ -47,6 +48,7 @@ describe('ElearningDB schema', () => {
     expect(db.name).toBe('ElearningDB')
     expect(db.tables.map(t => t.name).sort()).toEqual([
       'bookmarks',
+      'challenges',
       'contentProgress',
       'importedCourses',
       'importedPdfs',
@@ -58,8 +60,8 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 7', () => {
-    expect(db.verno).toBe(7)
+  it('should be at version 8', () => {
+    expect(db.verno).toBe(8)
   })
 })
 
@@ -194,6 +196,62 @@ describe('bulk operations', () => {
     await db.importedVideos.bulkAdd(videos)
     const count = await db.importedVideos.where('courseId').equals(courseId).count()
     expect(count).toBe(50)
+  })
+})
+
+describe('challenges table (v8)', () => {
+  it('should add and retrieve a challenge', async () => {
+    const challenge = createChallenge({ name: 'Watch 5 videos' })
+    await db.challenges.add(challenge)
+
+    const retrieved = await db.challenges.get(challenge.id)
+    expect(retrieved).toBeDefined()
+    expect(retrieved!.name).toBe('Watch 5 videos')
+    expect(retrieved!.currentProgress).toBe(0)
+  })
+
+  it('should query challenges by type index', async () => {
+    await db.challenges.bulkAdd([
+      createChallenge({ type: 'completion' }),
+      createChallenge({ type: 'time' }),
+      createChallenge({ type: 'completion' }),
+    ])
+
+    const completionChallenges = await db.challenges.where('type').equals('completion').toArray()
+    expect(completionChallenges).toHaveLength(2)
+  })
+
+  it('should query challenges by deadline index', async () => {
+    await db.challenges.bulkAdd([
+      createChallenge({ deadline: '2030-06-01' }),
+      createChallenge({ deadline: '2030-12-31' }),
+    ])
+
+    const results = await db.challenges.where('deadline').equals('2030-06-01').toArray()
+    expect(results).toHaveLength(1)
+    expect(results[0].deadline).toBe('2030-06-01')
+  })
+
+  it('should query challenges by createdAt index', async () => {
+    const ts1 = '2026-01-01T00:00:00.000Z'
+    const ts2 = '2026-06-01T00:00:00.000Z'
+    await db.challenges.bulkAdd([
+      createChallenge({ createdAt: ts1 }),
+      createChallenge({ createdAt: ts2 }),
+    ])
+
+    const results = await db.challenges.where('createdAt').above(ts1).toArray()
+    expect(results).toHaveLength(1)
+    expect(results[0].createdAt).toBe(ts2)
+  })
+
+  it('should delete a challenge by id', async () => {
+    const challenge = createChallenge()
+    await db.challenges.add(challenge)
+
+    await db.challenges.delete(challenge.id)
+    const result = await db.challenges.get(challenge.id)
+    expect(result).toBeUndefined()
   })
 })
 

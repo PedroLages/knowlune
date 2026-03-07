@@ -21,10 +21,10 @@ test.describe('Overview Page', () => {
     await expect(page.getByText('Lessons Completed', { exact: true })).toBeVisible()
   })
 
-  test('should display All Courses section', async ({ page }) => {
+  test('should display library section', async ({ page }) => {
     await goToOverview(page)
 
-    await expect(page.getByRole('heading', { name: 'All Courses' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Your Library' })).toBeVisible()
   })
 
   test('should show Continue Studying with seeded progress', async ({ page, localStorage }) => {

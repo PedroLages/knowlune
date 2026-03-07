@@ -217,6 +217,22 @@ export interface StudySession {
   sessionType: 'video' | 'pdf' | 'mixed'
 }
 
+// --- Learning Challenges (Story 6.1) ---
+
+export type ChallengeType = 'completion' | 'time' | 'streak'
+
+export interface Challenge {
+  id: string
+  name: string // 1-60 chars
+  type: ChallengeType
+  targetValue: number // > 0
+  deadline: string // ISO 8601 date
+  createdAt: string // ISO 8601 timestamp
+  currentProgress: number // starts at 0 (updated by E06-S02)
+  celebratedMilestones: number[] // [25, 50, 75, 100] (used by E06-S03)
+  completedAt?: string // ISO 8601 (set when 100% reached)
+}
+
 // --- Streak Milestones (Story 5.6) ---
 
 export interface StreakMilestone {

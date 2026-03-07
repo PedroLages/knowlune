@@ -36,3 +36,11 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - MilestoneGallery reads milestones only on mount (stale data when popover opens after earning)
 - getStreakStartDate() called twice in detectAndRecordMilestones (midnight race)
 - confetti useEffect deps should be [milestone.id] not [milestone.milestoneValue]
+
+## E06-S01: Create Learning Challenges (Round 3)
+- Round 2 items largely fixed: parseLocalDate, error state, cn(), deleteChallenge throw, integer validation, ignore flag
+- REMAINING: E2E afterEach cleanup is fire-and-forget (callback-based IDB API not awaited)
+- REMAINING: useEffect ignore flag is a no-op (loadChallenges state update happens in store, not in .then())
+- REMAINING: Validation errors don't clear on input change (persist until next submit)
+- REMAINING: `type as ChallengeType` cast when type is '' produces "Target undefined must be a whole number"
+- REMAINING: E2E afterEach IDB cleanup doesn't await transaction completion -- test isolation risk

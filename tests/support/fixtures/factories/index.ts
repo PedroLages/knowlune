@@ -12,3 +12,4 @@ export { createImportedCourse, createImportedCourses } from './imported-course-f
 export { createStudySession } from './session-factory'
 export { createContentProgress } from './content-progress-factory'
 export { createDexieNote } from './note-factory'
+export { createChallenge } from './challenge-factory'

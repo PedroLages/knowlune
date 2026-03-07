@@ -1,0 +1,295 @@
+Peak JS Heap: 15.35 MB
+Target: < 150 MB
+Status: PASS
+
+Snapshots:
+[
+  {
+    "round": 0,
+    "url": "/",
+    "heapMB": "15.35",
+    "cdpMetricName": "JSHeapUsedSize",
+    "cdpValue": 13398096,
+    "browserMemory": {
+      "usedJSHeapSize": 16100000,
+      "totalJSHeapSize": 18200000
+    },
+    "timestamp": 1772914609396
+  },
+  {
+    "round": 0,
+    "url": "/courses",
+    "heapMB": "15.35",
+    "cdpMetricName": "JSHeapUsedSize",
+    "cdpValue": 5316464,
+    "browserMemory": {
+      "usedJSHeapSize": 16100000,
+      "totalJSHeapSize": 18200000
+    },
+    "timestamp": 1772914610784
+  },
+  {
+    "round": 0,
+    "url": "/my-class",
+    "heapMB": "15.35",
+    "cdpMetricName": "JSHeapUsedSize",
+    "cdpValue": 5579808,
+    "browserMemory": {
+      "usedJSHeapSize": 16100000,
+      "totalJSHeapSize": 18200000
+    },
+    "timestamp": 1772914612196
+  },
+  {
+    "round": 0,
+    "url": "/courses/1",
+    "heapMB": "15.35",
+    "cdpMetricName": "JSHeapUsedSize",
+    "cdpValue": 6039548,
+    "browserMemory": {
+      "usedJSHeapSize": 16100000,
+      "totalJSHeapSize": 18200000
+    },
+    "timestamp": 1772914613673
+  },
+  {
+    "round": 0,
+    "url": "/courses/1/1",
+    "heapMB": "15.35",
+    "cdpMetricName": "JSHeapUsedSize",
+    "cdpValue": 6817196,
+    "browserMemory": {
+      "usedJSHeapSize": 16100000,
+      "totalJSHeapSize": 18200000
+    },
+    "timestamp": 1772914615053
+  },
+  {
+    "round": 0,
+    "url": "/library",
+    "heapMB": "15.35",
+    "cdpMetricName": "JSHeapUsedSize",
+    "cdpValue": 6809368,
+    "browserMemory": {
+      "usedJSHeapSize": 16100000,
+      "totalJSHeapSize": 18200000
+    },
+    "timestamp": 1772914616436
+  },
+  {
+    "round": 0,
+    "url": "/reports",
+    "heapMB": "15.35",
+    "cdpMetricName": "JSHeapUsedSize",
+    "cdpValue": 8724584,
+    "browserMemory": {
+      "usedJSHeapSize": 16100000,
+      "totalJSHeapSize": 18200000
+    },
+    "timestamp": 1772914617845
+  },
+  {
+    "round": 0,
+    "url": "/settings",
+    "heapMB": "15.35",
+    "cdpMetricName": "JSHeapUsedSize",
+    "cdpValue": 4561672,
+    "browserMemory": {
+      "usedJSHeapSize": 16100000,
+      "totalJSHeapSize": 18200000
+    },
+    "timestamp": 1772914619316
+  },
+  {
+    "round": 1,
+    "url": "/",
+    "heapMB": "15.35",
+    "cdpMetricName": "JSHeapUsedSize",
+    "cdpValue": 13454852,
+    "browserMemory": {
+      "usedJSHeapSize": 16100000,
+      "totalJSHeapSize": 18200000
+    },
+    "timestamp": 1772914620999
+  },
+  {
+    "round": 1,
+    "url": "/courses",
+    "heapMB": "15.35",
+    "cdpMetricName": "JSHeapUsedSize",
+    "cdpValue": 5365604,
+    "browserMemory": {
+      "usedJSHeapSize": 16100000,
+      "totalJSHeapSize": 18200000
+    },
+    "timestamp": 1772914622582
+  },
+  {
+    "round": 1,
+    "url": "/my-class",
+    "heapMB": "15.35",
+    "cdpMetricName": "JSHeapUsedSize",
+    "cdpValue": 5611160,
+    "browserMemory": {
+      "usedJSHeapSize": 16100000,
+      "totalJSHeapSize": 18200000
+    },
+    "timestamp": 1772914624039
+  },
+  {
+    "round": 1,
+    "url": "/courses/1",
+    "heapMB": "15.35",
+    "cdpMetricName": "JSHeapUsedSize",
+    "cdpValue": 6055164,
+    "browserMemory": {
+      "usedJSHeapSize": 16100000,
+      "totalJSHeapSize": 18200000
+    },
+    "timestamp": 1772914625436
+  },
+  {
+    "round": 1,
+    "url": "/courses/1/1",
+    "heapMB": "15.35",
+    "cdpMetricName": "JSHeapUsedSize",
+    "cdpValue": 6823944,
+    "browserMemory": {
+      "usedJSHeapSize": 16100000,
+      "totalJSHeapSize": 18200000
+    },
+    "timestamp": 1772914626959
+  },
+  {
+    "round": 1,
+    "url": "/library",
+    "heapMB": "15.35",
+    "cdpMetricName": "JSHeapUsedSize",
+    "cdpValue": 6884368,
+    "browserMemory": {
+      "usedJSHeapSize": 16100000,
+      "totalJSHeapSize": 18200000
+    },
+    "timestamp": 1772914628427
+  },
+  {
+    "round": 1,
+    "url": "/reports",
+    "heapMB": "15.35",
+    "cdpMetricName": "JSHeapUsedSize",
+    "cdpValue": 8963292,
+    "browserMemory": {
+      "usedJSHeapSize": 16100000,
+      "totalJSHeapSize": 18200000
+    },
+    "timestamp": 1772914629916
+  },
+  {
+    "round": 1,
+    "url": "/settings",
+    "heapMB": "15.35",
+    "cdpMetricName": "JSHeapUsedSize",
+    "cdpValue": 4562928,
+    "browserMemory": {
+      "usedJSHeapSize": 16100000,
+      "totalJSHeapSize": 18200000
+    },
+    "timestamp": 1772914631373
+  },
+  {
+    "round": 2,
+    "url": "/",
+    "heapMB": "15.35",
+    "cdpMetricName": "JSHeapUsedSize",
+    "cdpValue": 13606704,
+    "browserMemory": {
+      "usedJSHeapSize": 16100000,
+      "totalJSHeapSize": 18200000
+    },
+    "timestamp": 1772914632606
+  },
+  {
+    "round": 2,
+    "url": "/courses",
+    "heapMB": "15.35",
+    "cdpMetricName": "JSHeapUsedSize",
+    "cdpValue": 5365436,
+    "browserMemory": {
+      "usedJSHeapSize": 16100000,
+      "totalJSHeapSize": 18200000
+    },
+    "timestamp": 1772914634068
+  },
+  {
+    "round": 2,
+    "url": "/my-class",
+    "heapMB": "15.35",
+    "cdpMetricName": "JSHeapUsedSize",
+    "cdpValue": 5598792,
+    "browserMemory": {
+      "usedJSHeapSize": 16100000,
+      "totalJSHeapSize": 18200000
+    },
+    "timestamp": 1772914635473
+  },
+  {
+    "round": 2,
+    "url": "/courses/1",
+    "heapMB": "15.35",
+    "cdpMetricName": "JSHeapUsedSize",
+    "cdpValue": 6056140,
+    "browserMemory": {
+      "usedJSHeapSize": 16100000,
+      "totalJSHeapSize": 18200000
+    },
+    "timestamp": 1772914636840
+  },
+  {
+    "round": 2,
+    "url": "/courses/1/1",
+    "heapMB": "15.35",
+    "cdpMetricName": "JSHeapUsedSize",
+    "cdpValue": 6765788,
+    "browserMemory": {
+      "usedJSHeapSize": 16100000,
+      "totalJSHeapSize": 18200000
+    },
+    "timestamp": 1772914638212
+  },
+  {
+    "round": 2,
+    "url": "/library",
+    "heapMB": "15.35",
+    "cdpMetricName": "JSHeapUsedSize",
+    "cdpValue": 6820324,
+    "browserMemory": {
+      "usedJSHeapSize": 16100000,
+      "totalJSHeapSize": 18200000
+    },
+    "timestamp": 1772914640058
+  },
+  {
+    "round": 2,
+    "url": "/reports",
+    "heapMB": "15.35",
+    "cdpMetricName": "JSHeapUsedSize",
+    "cdpValue": 8751528,
+    "browserMemory": {
+      "usedJSHeapSize": 16100000,
+      "totalJSHeapSize": 18200000
+    },
+    "timestamp": 1772914641490
+  },
+  {
+    "round": 2,
+    "url": "/settings",
+    "heapMB": "15.35",
+    "cdpMetricName": "JSHeapUsedSize",
+    "cdpValue": 4559392,
+    "browserMemory": {
+      "usedJSHeapSize": 16100000,
+      "totalJSHeapSize": 18200000
+    },
+    "timestamp": 1772914642873
+  }
+]

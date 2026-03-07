@@ -101,7 +101,7 @@ export default defineConfig({
       provider: 'v8',
       reportOnFailure: true,
       thresholds: {
-        lines: 42,
+        lines: 70,
       },
     },
     projects: [{

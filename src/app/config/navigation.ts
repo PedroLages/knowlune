@@ -6,6 +6,7 @@ import {
   StickyNote,
   MessageSquare,
   Users,
+  Target,
   History,
   BarChart3,
   Settings as SettingsIcon,
@@ -50,6 +51,7 @@ export const navigationGroups: NavigationGroup[] = [
   {
     label: 'Track',
     items: [
+      { name: 'Challenges', path: '/challenges', icon: Target },
       { name: 'Session History', path: '/session-history', icon: History },
       { name: 'Reports', path: '/reports', icon: BarChart3 },
     ],

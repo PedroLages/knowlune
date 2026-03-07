@@ -29,6 +29,9 @@ const InstructorProfile = React.lazy(() =>
 const SessionHistory = React.lazy(() =>
   import('./pages/SessionHistory').then(m => ({ default: m.SessionHistory }))
 )
+const Challenges = React.lazy(() =>
+  import('./pages/Challenges').then(m => ({ default: m.Challenges }))
+)
 
 // Default exports work directly with React.lazy
 const MyClass = React.lazy(() => import('./pages/MyClass'))
@@ -146,6 +149,14 @@ export const router = createBrowserRouter([
         element: (
           <SuspensePage>
             <InstructorProfile />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'challenges',
+        element: (
+          <SuspensePage>
+            <Challenges />
           </SuspensePage>
         ),
       },

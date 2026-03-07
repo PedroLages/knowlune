@@ -1,12 +1,5 @@
 import { useParams, Link } from 'react-router'
-import {
-  BookOpen,
-  Clock,
-  ExternalLink,
-  GraduationCap,
-  Award,
-  Users,
-} from 'lucide-react'
+import { BookOpen, Clock, ExternalLink, GraduationCap, Award, Users } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Card, CardContent } from '@/app/components/ui/card'
@@ -53,9 +46,7 @@ export function InstructorProfile() {
   }
 
   const stats = getInstructorStats(instructor)
-  const socialEntries = Object.entries(instructor.socialLinks).filter(
-    ([, url]) => url
-  )
+  const socialEntries = Object.entries(instructor.socialLinks).filter(([, url]) => url)
 
   return (
     <div>
@@ -136,21 +127,9 @@ export function InstructorProfile() {
           value={stats.courseCount}
           label={stats.courseCount === 1 ? 'Course' : 'Courses'}
         />
-        <StatCard
-          icon={Clock}
-          value={`${Math.round(stats.totalHours)}h`}
-          label="Content"
-        />
-        <StatCard
-          icon={GraduationCap}
-          value={stats.totalLessons}
-          label="Lessons"
-        />
-        <StatCard
-          icon={Award}
-          value={`${instructor.yearsExperience}y`}
-          label="Experience"
-        />
+        <StatCard icon={Clock} value={`${Math.round(stats.totalHours)}h`} label="Content" />
+        <StatCard icon={GraduationCap} value={stats.totalLessons} label="Lessons" />
+        <StatCard icon={Award} value={`${instructor.yearsExperience}y`} label="Experience" />
       </div>
 
       {/* Bio Section */}
@@ -168,9 +147,7 @@ export function InstructorProfile() {
               <div className="flex items-center gap-2 text-sm">
                 <Award className="size-4 text-brand" aria-hidden="true" />
                 <span className="font-medium">Education:</span>
-                <span className="text-muted-foreground">
-                  {instructor.education}
-                </span>
+                <span className="text-muted-foreground">{instructor.education}</span>
               </div>
             </>
           )}
@@ -179,19 +156,14 @@ export function InstructorProfile() {
 
       {/* Courses Section */}
       <div>
-        <h2 className="text-lg font-semibold mb-4">
-          Courses by {instructor.name}
-        </h2>
+        <h2 className="text-lg font-semibold mb-4">Courses by {instructor.name}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {stats.courses.map(course => (
             <CourseCard
               key={course.id}
               course={course}
               variant="library"
-              completionPercent={getCourseCompletionPercent(
-                course.id,
-                course.totalLessons
-              )}
+              completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
             />
           ))}
         </div>

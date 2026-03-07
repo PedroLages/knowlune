@@ -9,6 +9,7 @@ import type {
   Screenshot,
   StudySession,
   ContentProgress,
+  Challenge,
 } from '@/data/types'
 
 const db = new Dexie('ElearningDB') as Dexie & {
@@ -21,6 +22,7 @@ const db = new Dexie('ElearningDB') as Dexie & {
   screenshots: EntityTable<Screenshot, 'id'>
   studySessions: EntityTable<StudySession, 'id'>
   contentProgress: Table<ContentProgress> // compound PK: [courseId+itemId]
+  challenges: EntityTable<Challenge, 'id'>
 }
 
 db.version(1).stores({
@@ -159,6 +161,19 @@ db.version(7).stores({
   screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
   studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
   contentProgress: '[courseId+itemId], courseId, itemId, status',
+})
+
+db.version(8).stores({
+  importedCourses: 'id, name, importedAt, status, *tags',
+  importedVideos: 'id, courseId, filename',
+  importedPdfs: 'id, courseId, filename',
+  progress: '[courseId+videoId], courseId, videoId',
+  bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+  screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+  contentProgress: '[courseId+itemId], courseId, itemId, status',
+  challenges: 'id, type, deadline, createdAt',
 })
 
 export { db }

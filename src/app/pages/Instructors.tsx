@@ -41,10 +41,7 @@ export function Instructors() {
                 <CardContent className="flex flex-col items-center text-center p-6 pt-8">
                   {/* Avatar */}
                   <Avatar className="size-24 mb-4 ring-2 ring-border/50 group-hover:ring-brand/30 transition-all">
-                    <AvatarImage
-                      {...getAvatarSrc(instructor.avatar, 96)}
-                      alt={instructor.name}
-                    />
+                    <AvatarImage {...getAvatarSrc(instructor.avatar, 96)} alt={instructor.name} />
                     <AvatarFallback className="text-lg font-semibold bg-blue-100 text-blue-700">
                       {getInitials(instructor.name)}
                     </AvatarFallback>
@@ -54,18 +51,12 @@ export function Instructors() {
                   <h2 className="text-lg font-semibold group-hover:text-brand transition-colors">
                     {instructor.name}
                   </h2>
-                  <p className="text-sm text-muted-foreground mt-1 mb-4">
-                    {instructor.title}
-                  </p>
+                  <p className="text-sm text-muted-foreground mt-1 mb-4">{instructor.title}</p>
 
                   {/* Specialty Badges */}
                   <div className="flex flex-wrap justify-center gap-1.5 mb-5">
                     {instructor.specialties.slice(0, 3).map(specialty => (
-                      <Badge
-                        key={specialty}
-                        variant="secondary"
-                        className="text-xs"
-                      >
+                      <Badge key={specialty} variant="secondary" className="text-xs">
                         {specialty}
                       </Badge>
                     ))}
@@ -80,9 +71,7 @@ export function Instructors() {
                   <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1.5">
                       <BookOpen className="size-4 text-brand" aria-hidden="true" />
-                      <span className="tabular-nums font-medium">
-                        {stats.courseCount}
-                      </span>
+                      <span className="tabular-nums font-medium">{stats.courseCount}</span>
                       <span className="hidden sm:inline">
                         {stats.courseCount === 1 ? 'course' : 'courses'}
                       </span>
@@ -94,13 +83,8 @@ export function Instructors() {
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <GraduationCap
-                        className="size-4 text-brand"
-                        aria-hidden="true"
-                      />
-                      <span className="tabular-nums font-medium">
-                        {stats.totalLessons}
-                      </span>
+                      <GraduationCap className="size-4 text-brand" aria-hidden="true" />
+                      <span className="tabular-nums font-medium">{stats.totalLessons}</span>
                       <span className="hidden sm:inline">lessons</span>
                     </div>
                   </div>

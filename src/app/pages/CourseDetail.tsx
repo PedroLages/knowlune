@@ -94,12 +94,17 @@ export function CourseDetail() {
                   <Avatar className="size-8">
                     <AvatarImage {...getAvatarSrc(instructor.avatar, 32)} alt={instructor.name} />
                     <AvatarFallback className="text-xs">
-                      {instructor.name.split(' ').map(n => n[0]).join('')}
+                      {instructor.name
+                        .split(' ')
+                        .map(n => n[0])
+                        .join('')}
                     </AvatarFallback>
                   </Avatar>
                   <div className="text-left">
                     <p className="text-sm font-medium leading-tight">{instructor.name}</p>
-                    <p className="text-xs text-muted-foreground leading-tight">{instructor.title}</p>
+                    <p className="text-xs text-muted-foreground leading-tight">
+                      {instructor.title}
+                    </p>
                   </div>
                 </Link>
               )

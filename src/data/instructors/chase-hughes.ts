@@ -21,6 +21,5 @@ export const chaseHughes: Instructor = {
     website: 'https://www.chasehughes.com',
     twitter: 'https://twitter.com/taborplace',
   },
-  featuredQuote:
-    'Understanding people is the most powerful skill you can develop.',
+  featuredQuote: 'Understanding people is the most powerful skill you can develop.',
 }

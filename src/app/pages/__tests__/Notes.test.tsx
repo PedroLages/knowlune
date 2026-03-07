@@ -1,0 +1,97 @@
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router'
+
+vi.mock('@/data/courses', () => ({
+  allCourses: [
+    {
+      id: 'c1',
+      title: 'Test Course',
+      shortTitle: 'Test',
+      description: 'desc',
+      category: 'general',
+      difficulty: 'Beginner',
+      totalLessons: 2,
+      totalVideos: 2,
+      totalPDFs: 0,
+      estimatedHours: 1,
+      tags: [],
+      modules: [
+        {
+          id: 'm1',
+          title: 'Module 1',
+          lessons: [{ id: 'l1', title: 'Lesson 1', type: 'video' }],
+        },
+      ],
+      isSequential: false,
+      basePath: '/test',
+      instructorId: 'i1',
+    },
+  ],
+}))
+
+vi.mock('@/stores/useNoteStore', () => ({
+  useNoteStore: (selector: (state: Record<string, unknown>) => unknown) =>
+    selector({
+      notes: [],
+      isLoading: false,
+      loadNotes: vi.fn(),
+    }),
+}))
+
+vi.mock('@/lib/noteSearch', () => ({
+  searchNotesWithContext: () => [],
+}))
+
+vi.mock('@/lib/progress', () => ({
+  getAllNoteTags: () => Promise.resolve([]),
+}))
+
+vi.mock('@/lib/searchUtils', () => ({
+  highlightMatches: (text: string) => text,
+  buildHighlightPatterns: () => [],
+}))
+
+vi.mock('@/lib/format', () => ({
+  formatTimestamp: (ts: number) => `${ts}s`,
+}))
+
+vi.mock('@/lib/textUtils', () => ({
+  stripHtml: (html: string) => html,
+}))
+
+vi.mock('@/app/components/notes/ReadOnlyContent', () => ({
+  ReadOnlyContent: () => <div data-testid="readonly-content" />,
+}))
+
+import { Notes } from '../Notes'
+
+function renderNotes() {
+  return render(
+    <MemoryRouter>
+      <Notes />
+    </MemoryRouter>
+  )
+}
+
+describe('Notes page', () => {
+  it('renders without crashing', () => {
+    const { container } = renderNotes()
+    expect(container).toBeTruthy()
+  })
+
+  it('displays the page heading "My Notes"', () => {
+    renderNotes()
+    expect(screen.getByText(/My Notes/)).toBeInTheDocument()
+  })
+
+  it('shows empty state when no notes exist', () => {
+    renderNotes()
+    expect(screen.getByText('No notes yet')).toBeInTheDocument()
+  })
+
+  it('renders the search input', () => {
+    renderNotes()
+    expect(screen.getByLabelText('Search notes')).toBeInTheDocument()
+  })
+})
