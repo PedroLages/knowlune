@@ -104,4 +104,8 @@ See [plan](plans/e05-s06-streak-milestone-celebrations.md) for implementation ap
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Test seed data must mirror runtime shape exactly.** The AC7 blocker arose because the E2E seed omitted `streakStartDate`, so `getUncelebratedMilestones()` never matched — the test passed for the wrong reason. Always copy the full type shape when seeding test data.
+- **Commit all working changes before requesting code review.** R1 flagged uncommitted fixes as blockers because the review ran against the committed snapshot. Stage and commit iterative fixes before triggering review.
+- **Use `cn()` consistently for conditional classNames.** String interpolation with template literals works but breaks the project convention and makes Tailwind class merging unreliable. `cn()` from `@/app/components/ui/utils` is the standard.
+- **Canvas-confetti colors bypass the theme system.** Confetti hex colors can't use CSS variables — this is an acceptable deviation for third-party canvas libraries. Document in code comments.
+- **`prefers-reduced-motion` testing in Playwright.** Use `page.emulateMedia({ reducedMotion: 'reduce' })` before navigation. Assert both animation suppression AND continued badge/toast display.
