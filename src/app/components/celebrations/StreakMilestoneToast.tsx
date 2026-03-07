@@ -90,7 +90,9 @@ export function StreakMilestoneToast({ milestone }: StreakMilestoneToastProps) {
       data-testid={`milestone-badge-${milestone.milestoneValue}`}
       className={`flex items-center gap-3 rounded-xl border bg-gradient-to-r ${tier.gradient} ${tier.borderColor} p-4 shadow-lg min-w-[280px]`}
     >
-      <div className={`flex size-10 shrink-0 items-center justify-center rounded-full bg-white/60 dark:bg-white/10 ${tier.textColor}`}>
+      <div
+        className={`flex size-10 shrink-0 items-center justify-center rounded-full bg-white/60 dark:bg-white/10 ${tier.textColor}`}
+      >
         <Icon className="size-5" aria-hidden="true" />
       </div>
       <div className="min-w-0">

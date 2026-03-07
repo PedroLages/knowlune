@@ -43,10 +43,7 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
     })
   })
 
-  test('AC1: should display 7-day milestone toast with badge', async ({
-    page,
-    localStorage,
-  }) => {
+  test('AC1: should display 7-day milestone toast with badge', async ({ page, localStorage }) => {
     // Given: streak reaches exactly 7 days
     await localStorage.seed('study-log', buildStreakLog(7))
     await page.reload({ waitUntil: 'domcontentloaded' })
@@ -63,10 +60,7 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
 
   // ── AC2: 30-day milestone toast ──────────────────────────
 
-  test('AC2: should display 30-day milestone toast with badge', async ({
-    page,
-    localStorage,
-  }) => {
+  test('AC2: should display 30-day milestone toast with badge', async ({ page, localStorage }) => {
     await localStorage.seed('study-log', buildStreakLog(30))
     await page.reload({ waitUntil: 'domcontentloaded' })
     await goToOverview(page)
@@ -80,10 +74,7 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
 
   // ── AC3: 60-day milestone toast ──────────────────────────
 
-  test('AC3: should display 60-day milestone toast with badge', async ({
-    page,
-    localStorage,
-  }) => {
+  test('AC3: should display 60-day milestone toast with badge', async ({ page, localStorage }) => {
     await localStorage.seed('study-log', buildStreakLog(60))
     await page.reload({ waitUntil: 'domcontentloaded' })
     await goToOverview(page)
@@ -97,10 +88,7 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
 
   // ── AC4: 100-day milestone toast ─────────────────────────
 
-  test('AC4: should display 100-day milestone toast with badge', async ({
-    page,
-    localStorage,
-  }) => {
+  test('AC4: should display 100-day milestone toast with badge', async ({ page, localStorage }) => {
     await localStorage.seed('study-log', buildStreakLog(100))
     await page.reload({ waitUntil: 'domcontentloaded' })
     await goToOverview(page)

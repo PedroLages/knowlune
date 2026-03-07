@@ -51,13 +51,16 @@ export function MilestoneGallery() {
             data-testid={`gallery-milestone-badge-${value}`}
             className={`flex flex-col items-center gap-2 rounded-xl border bg-gradient-to-br ${tier.gradient} ${tier.borderColor} p-4`}
           >
-            <div className={`flex size-10 items-center justify-center rounded-full bg-white/60 dark:bg-white/10 ${tier.textColor}`}>
+            <div
+              className={`flex size-10 items-center justify-center rounded-full bg-white/60 dark:bg-white/10 ${tier.textColor}`}
+            >
               <Icon className="size-5" aria-hidden="true" />
             </div>
             <p className={`text-xs font-bold ${tier.textColor}`}>{value}-Day Streak</p>
             {achievements.map((a, i) => (
               <p key={a.id} className="text-[10px] text-muted-foreground">
-                {achievements.length > 1 ? `#${i + 1}: ` : ''}{formatDate(a.earnedAt)}
+                {achievements.length > 1 ? `#${i + 1}: ` : ''}
+                {formatDate(a.earnedAt)}
               </p>
             ))}
           </div>

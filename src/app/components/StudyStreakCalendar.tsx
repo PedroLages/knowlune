@@ -13,11 +13,7 @@ import {
 import { detectAndRecordMilestones } from '@/lib/streakMilestones'
 import { StreakMilestoneToast } from '@/app/components/celebrations/StreakMilestoneToast'
 import { MilestoneGallery } from '@/app/components/MilestoneGallery'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/app/components/ui/popover'
+import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
 import { cn } from '@/app/components/ui/utils'
 import {
   Dialog,
