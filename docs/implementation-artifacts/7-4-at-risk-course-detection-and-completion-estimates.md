@@ -4,9 +4,9 @@ story_name: "At-Risk Course Detection & Completion Estimates"
 status: in-progress
 started: 2026-03-08
 completed:
-reviewed: in-progress    # false | in-progress | true
+reviewed: true           # false | in-progress | true
 review_started: 2026-03-08  # YYYY-MM-DD — set when /review-story begins
-review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]  # tracks completed gates: [build, lint, unit-tests, e2e-tests, design-review, code-review]
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing]  # tracks completed gates: [build, lint, unit-tests, e2e-tests, design-review, code-review]
 ---
 
 # Story 7.4: At-Risk Course Detection & Completion Estimates
@@ -91,11 +91,48 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+**Date:** 2026-03-08
+**Report:** [docs/reviews/design/design-review-2026-03-08-e07-s04.md](../reviews/design/design-review-2026-03-08-e07-s04.md)
+**Score:** 8.5/10
+
+**Summary:** Excellent responsive design, accessibility, and visual distinction between At-Risk badges and momentum indicators. One high-priority UX issue and one medium polish item.
+
+**High Priority:**
+- "Infinity days" display on At-Risk badges for never-started courses (confusing UX) — `src/lib/atRisk.ts:28`
+
+**Medium:**
+- Badge border radius inconsistency (`rounded-sm` vs `rounded-lg`)
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**Architecture Review Date:** 2026-03-08
+**Architecture Report:** [docs/reviews/code/code-review-2026-03-08-e07-s04.md](../reviews/code/code-review-2026-03-08-e07-s04.md)
+**Testing Review Date:** 2026-03-08
+**Testing Report:** [docs/reviews/code/code-review-testing-2026-03-08-e07-s04.md](../reviews/code/code-review-testing-2026-03-08-e07-s04.md)
+
+**Summary:** Clean architecture with proper separation of concerns. 10 high-priority issues identified across code quality, test coverage, and edge case handling. No blockers.
+
+**High Priority Issues (10):**
+
+**Code Quality (5):**
+1. Hardcoded `text-gray-500` instead of theme token — `CompletionEstimate.tsx:29`
+2. Division by zero when all sessions have `duration: 0` — `completionEstimate.ts:40,44`
+3. No clamp on negative `remainingContentMinutes` — `completionEstimate.ts:44`
+4. Hardcoded orange colors instead of theme tokens — `AtRiskBadge.tsx:26`
+5. Missing sidebar state seed in E2E `beforeEach` — `story-e07-s04.spec.ts:12-15`
+
+**Test Coverage (5):**
+6. Boundary conditions untested (exactly 14 days, momentum exactly 20)
+7. Missing unit tests for business logic functions (`calculateAtRiskStatus`, `calculateCompletionEstimate`)
+8. Hard wait `page.waitForTimeout(500)` in AC6 test — `story-e07-s04.spec.ts:195`
+9. Weak assertions in AC3 test (regex pattern doesn't verify calculation)
+10. Non-deterministic `.first()` locator in AC4 test — `story-e07-s04.spec.ts:116`
+
+**Medium (4):**
+- JSX whitespace bug ("session s") — `CompletionEstimate.tsx:32-33`
+- Date.now() makes functions impure (testability)
+- Magic number 15 for minutes-per-lesson
+- AC2 test reload lacks explicit wait
 
 ## Implementation Plan
 

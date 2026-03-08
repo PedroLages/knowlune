@@ -14,17 +14,26 @@ interface AtRiskBadgeProps {
  * Uses orange warning colors to visually distinguish from momentum badges.
  */
 export function AtRiskBadge({ daysSinceLastSession, className }: AtRiskBadgeProps) {
+  // Handle never-started courses (Infinity days)
+  const isNeverStarted = !isFinite(daysSinceLastSession)
+  const displayDays = isNeverStarted ? 'Never started' : daysSinceLastSession
   const daysText = daysSinceLastSession === 1 ? 'day' : 'days'
+  const ariaLabel = isNeverStarted
+    ? 'At Risk: Never started'
+    : `At Risk: No activity for ${daysSinceLastSession} days`
+  const tooltipText = isNeverStarted
+    ? 'Never started'
+    : `No activity for ${daysSinceLastSession} ${daysText}`
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <span
           data-testid="at-risk-badge"
-          aria-label={`At Risk: No activity for ${daysSinceLastSession} days`}
+          aria-label={ariaLabel}
           className={cn(
             'inline-flex items-center gap-1 text-xs font-medium cursor-default rounded-sm px-1.5 py-0.5',
-            'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
+            'text-at-risk bg-at-risk-bg',
             className
           )}
         >
@@ -32,9 +41,7 @@ export function AtRiskBadge({ daysSinceLastSession, className }: AtRiskBadgeProp
           At Risk
         </span>
       </TooltipTrigger>
-      <TooltipContent side="top">
-        No activity for {daysSinceLastSession} {daysText}
-      </TooltipContent>
+      <TooltipContent side="top">{tooltipText}</TooltipContent>
     </Tooltip>
   )
 }

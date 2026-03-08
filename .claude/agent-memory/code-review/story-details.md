@@ -72,6 +72,18 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - E2E afterEach IDB cleanup fire-and-forget (recurring from E06-S01)
 - ChallengeMilestoneToast missing `role="status"` for screen reader announcements
 
+## E07-S04: At-Risk Course Detection & Completion Estimates (Round 1)
+- No uncommitted changes (pattern broken -- positive)
+- H1 (RECURRING): `text-gray-500` hardcoded in CompletionEstimate.tsx instead of `text-muted-foreground`
+- H2: Division by zero in completionEstimate.ts when all sessions have duration:0 (renders "Infinity sessions")
+- H3: No clamp on negative remainingContentMinutes (stale progress can produce negative values)
+- H4 (RECURRING): Hardcoded orange-* Tailwind classes in AtRiskBadge instead of theme tokens (--warning exists)
+- H5: E2E beforeEach missing sidebar localStorage seed -- will fail on tablet viewport in CI
+- M1: Hard wait `waitForTimeout(500)` in AC6 sort test
+- M2: Date.now() in pure calculation functions blocks deterministic unit testing
+- M3: JSX whitespace bug renders "session s" instead of "sessions" in CompletionEstimate
+- M4: Magic number 15 (minutes per lesson) not extracted as constant
+
 ## E07-S05: Smart Study Schedule Suggestion
 - `allocateTimeAcrossCourses` over-allocates when courses > dailyMinutes (Math.max(1) floor inflates sum)
 - `bg-blue-600` hardcoded on Progress indicators instead of theme token `bg-brand`

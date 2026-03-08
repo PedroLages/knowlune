@@ -1,11 +1,14 @@
 ---
-stepsCompleted: ['step-01-load-context', 'step-02-discover-tests', 'step-03-map-criteria']
-lastStep: 'step-03-map-criteria'
+stepsCompleted: ['step-01-load-context', 'step-02-discover-tests', 'step-03-map-criteria', 'step-04-analyze-gaps', 'step-05-gate-decision']
+lastStep: 'step-05-gate-decision'
 lastSaved: '2026-03-08'
 workflowType: 'testarch-trace'
+workflowStatus: 'COMPLETE'
 inputDocuments:
   - 'docs/implementation-artifacts/plans/e07-s04-at-risk-course-detection-completion-estimates.md'
   - 'tests/e2e/story-e07-s04.spec.ts'
+coverageMatrixFile: '/tmp/tea-trace-coverage-matrix-2026-03-08.json'
+gateDecision: 'FAIL'
 ---
 
 # Traceability Matrix & Gate Decision - Story E07-S04
@@ -313,4 +316,261 @@ Note: Coverage is currently E2E-ONLY. While functional tests exist, unit tests a
 
 ---
 
-*Ready to proceed to Step 4: Analyze Gaps*
+### Step 4: Phase 1 Complete - Gap Analysis & Coverage Matrix
+
+✅ **Phase 1 Complete: Coverage Matrix Generated**
+
+**Coverage matrix saved to:** `/tmp/tea-trace-coverage-matrix-2026-03-08.json`
+
+---
+
+#### 📊 Coverage Statistics
+
+| Metric                  | Count | Percentage |
+| ----------------------- | ----- | ---------- |
+| **Total Requirements**  | 6     | 100%       |
+| **Fully Covered**       | 0     | 0%         |
+| **Partially Covered**   | 6     | 100%       |
+| **Uncovered**           | 0     | 0%         |
+
+---
+
+#### 🎯 Priority Coverage Breakdown
+
+| Priority | Total | FULL Coverage | Coverage % | Status      |
+| -------- | ----- | ------------- | ---------- | ----------- |
+| **P0**   | 2     | 0             | 0%         | ❌ FAIL     |
+| **P1**   | 3     | 0             | 0%         | ❌ FAIL     |
+| **P2**   | 1     | 0             | 0%         | ⚠️ WARN    |
+| **P3**   | 0     | 0             | N/A        | N/A         |
+
+**Critical Finding:** All acceptance criteria have E2E-ONLY coverage (PARTIAL), not FULL coverage per test-levels framework.
+
+---
+
+#### ⚠️ Gaps Identified
+
+**By Priority:**
+- **Critical (P0):** 0 uncovered requirements (but 2 with E2E-ONLY coverage)
+- **High (P1):** 0 uncovered requirements (but 3 with E2E-ONLY coverage)
+- **Medium (P2):** 0 uncovered requirements (but 1 with E2E-ONLY coverage)
+- **Low (P3):** 0 requirements
+
+**Partial Coverage Items:** 6 requirements have E2E-ONLY coverage
+- AC1 (P0): Missing unit tests for `calculateAtRiskStatus()` logic
+- AC2 (P0): Missing unit tests for momentum threshold logic
+- AC3 (P1): Missing unit tests for `calculateCompletionEstimate()` logic
+- AC4 (P1): Missing unit tests for default pace fallback logic
+- AC5 (P1): Missing component tests for layout constraints
+- AC6 (P2): Missing unit tests for sort comparator logic
+
+---
+
+#### 🔍 Coverage Heuristics Analysis
+
+| Heuristic                       | Gaps Found | Impact       |
+| ------------------------------- | ---------- | ------------ |
+| **Endpoints without tests**     | 0          | N/A          |
+| **Auth negative-path gaps**     | 0          | N/A          |
+| **Happy-path-only criteria**    | 6          | ⚠️ MODERATE  |
+
+**Happy-Path-Only Details:**
+- ✅ E2E tests cover successful user journeys
+- ❌ Missing edge case coverage:
+  - Sessions with duration = 0
+  - Sessions with negative duration
+  - Courses with no modules/lessons (division by zero)
+  - localStorage failures
+  - Corrupt session data
+  - Invalid timestamps
+  - Boundary conditions (14 days, momentum score 20)
+
+---
+
+#### 📝 Recommendations (Prioritized)
+
+**1. URGENT: Add Unit Tests for P0 Calculation Logic**
+- **Action:** Create unit tests for `src/lib/atRisk.ts` - `calculateAtRiskStatus()`
+- **Rationale:** P0 criteria (AC1, AC2) lack unit-level coverage for critical business logic
+- **Requirements:** AC1, AC2
+- **Test Cases:**
+  - Boundary: exactly 14 days inactivity
+  - Boundary: momentum score exactly 20
+  - Edge: sessions with invalid timestamps
+  - Edge: negative durations
+  - Happy path: 15+ days, momentum < 20
+
+**2. HIGH: Add Unit Tests for P1 Calculation Logic**
+- **Action:** Create unit tests for `src/lib/completionEstimate.ts` - `calculateCompletionEstimate()`
+- **Rationale:** P1 criteria (AC3, AC4) rely on calculation logic without unit-level validation
+- **Requirements:** AC3, AC4
+- **Test Cases:**
+  - Default: 0 sessions returns 30min average
+  - Edge: 0 remaining lessons
+  - Edge: very short sessions (< 5 min)
+  - Edge: very long content (>100 sessions)
+  - Format: < 10 sessions shows 'sessions', >= 10 shows 'days'
+
+**3. MEDIUM: Add Edge Case Tests for Error Paths**
+- **Action:** Expand test coverage to include error scenarios
+- **Rationale:** All E2E tests verify success scenarios only; missing error handling validation
+- **Requirements:** AC1, AC2, AC3, AC4, AC5, AC6
+- **Test Cases:**
+  - Sessions with duration = 0
+  - Sessions with negative duration
+  - Courses with no modules/lessons
+  - localStorage failures
+  - Corrupt session data
+
+**4. LOW: Run Test Quality Review**
+- **Action:** Execute `/bmad-tea-testarch-test-review`
+- **Rationale:** Validate E2E test quality against best practices (no hard waits, no conditionals, etc.)
+- **Requirements:** N/A
+
+---
+
+**Phase 1 Status:** ✅ **COMPLETE**
+
+**Next Phase:** Step 5 - Gate Decision (PASS/FAIL/CONCERNS/WAIVED)
+
+
+---
+
+## PHASE 2: GATE DECISION
+
+### Step 5: Gate Decision Applied
+
+🚨 **GATE DECISION: FAIL**
+
+**Decision Date:** 2026-03-08
+
+---
+
+#### 📊 Coverage Analysis
+
+| Criterion                    | Required | Actual | Status      |
+| ---------------------------- | -------- | ------ | ----------- |
+| **P0 Coverage**              | 100%     | 0%     | ❌ NOT MET  |
+| **P1 Coverage** (PASS)       | 90%      | 0%     | ❌ NOT MET  |
+| **P1 Coverage** (minimum)    | 80%      | 0%     | ❌ NOT MET  |
+| **Overall Coverage**         | 80%      | 0%     | ❌ NOT MET  |
+
+---
+
+#### ✅ Decision Rationale
+
+**P0 coverage is 0% (required: 100%).** All 2 P0 requirements have E2E-ONLY coverage (not FULL coverage per test-levels framework).
+
+Per test-levels framework:
+- **FULL coverage** requires multiple test levels (E2E + Unit/Component)
+- **E2E-ONLY** is categorized as PARTIAL coverage
+- P0 requirements MUST have FULL coverage (100% threshold)
+
+**Critical findings:**
+- 2 P0 requirements with E2E-ONLY coverage (AC1, AC2)
+- 3 P1 requirements with E2E-ONLY coverage (AC3, AC4, AC5)
+- 1 P2 requirement with E2E-ONLY coverage (AC6)
+- Zero unit test coverage for calculation logic (`atRisk.ts`, `completionEstimate.ts`)
+- All 6 requirements are happy-path-only (missing edge case and error path tests)
+
+---
+
+#### ⚠️ Critical Gaps
+
+**P0 Partial Coverage Items:**
+1. **AC1** - At-risk badge displays when 14+ days inactivity AND momentum < 20
+   - Coverage: E2E-ONLY ⚠️
+   - Missing: Unit tests for `calculateAtRiskStatus()` logic
+   - Missing: Boundary conditions (14 days exactly, momentum score 20 exactly)
+   - Missing: Error handling (invalid timestamps, corrupt session data)
+
+2. **AC2** - Badge removes when momentum score increases to 20+
+   - Coverage: E2E-ONLY ⚠️
+   - Missing: Unit tests for momentum threshold logic
+   - Missing: Boundary testing (score 19→20 vs 19→21)
+   - Missing: Edge case (partial momentum increase, badge stays)
+
+**P1 Partial Coverage Items:**
+3. **AC3** - Completion estimate based on remaining content and average pace
+   - Coverage: E2E-ONLY ⚠️
+   - Missing: Unit tests for `calculateCompletionEstimate()` logic
+   - Missing: Edge cases (0 remaining, extreme durations)
+
+4. **AC4** - Default 30-minute pace for new users with no sessions
+   - Coverage: E2E-ONLY ⚠️
+   - Missing: Unit tests for default pace fallback logic
+   - Missing: Exact 30-minute default verification
+
+5. **AC5** - Both indicators visible without visual overlap
+   - Coverage: E2E-ONLY ⚠️
+   - Missing: Component tests for layout constraints
+   - Missing: Cross-viewport testing
+
+---
+
+#### 📝 Recommended Actions (Prioritized)
+
+**1. URGENT: Add Unit Tests for P0 Calculation Logic**
+- **Action:** Create `src/lib/__tests__/atRisk.test.ts`
+- **Rationale:** P0 criteria (AC1, AC2) lack unit-level coverage for critical business logic
+- **Requirements:** AC1, AC2
+- **Test Cases:**
+  - Boundary: exactly 14 days inactivity
+  - Boundary: momentum score exactly 20
+  - Edge: sessions with invalid timestamps
+  - Edge: negative durations
+  - Happy path: 15+ days, momentum < 20
+
+**2. HIGH: Add Unit Tests for P1 Calculation Logic**
+- **Action:** Create `src/lib/__tests__/completionEstimate.test.ts`
+- **Rationale:** P1 criteria (AC3, AC4) rely on calculation logic without unit-level validation
+- **Requirements:** AC3, AC4
+- **Test Cases:**
+  - Default: 0 sessions returns 30min average
+  - Edge: 0 remaining lessons
+  - Edge: very short sessions (< 5 min)
+  - Edge: very long content (>100 sessions)
+  - Format: < 10 sessions shows 'sessions', >= 10 shows 'days'
+
+**3. MEDIUM: Add Edge Case Tests for Error Paths**
+- **Action:** Expand E2E test coverage to include error scenarios
+- **Rationale:** All E2E tests verify success scenarios only; missing error handling validation
+- **Requirements:** AC1, AC2, AC3, AC4, AC5, AC6
+- **Test Cases:**
+  - Sessions with duration = 0
+  - Sessions with negative duration
+  - Courses with no modules/lessons
+  - localStorage failures
+  - Corrupt session data
+
+**4. LOW: Run Test Quality Review**
+- **Action:** Execute `/bmad-tea-testarch-test-review`
+- **Rationale:** Validate E2E test quality against best practices
+- **Requirements:** N/A
+
+---
+
+#### 🚫 Gate Status: **FAIL - Release BLOCKED**
+
+**Release Status:** ❌ **BLOCKED** until coverage improves
+
+**Minimum Requirements to Proceed:**
+- ✅ Add unit tests for `src/lib/atRisk.ts` (P0)
+- ✅ Add unit tests for `src/lib/completionEstimate.ts` (P1)
+- ✅ Re-run traceability workflow to verify FULL coverage ≥ 80% (P0 = 100%)
+
+**Recommended Next Steps:**
+1. Implement URGENT recommendations (P0 unit tests)
+2. Implement HIGH recommendations (P1 unit tests)
+3. Re-run `/bmad-tea-testarch-trace` to validate gate criteria met
+4. Optionally: Add MEDIUM priority edge case tests for comprehensive coverage
+
+---
+
+**Workflow Status:** ✅ **COMPLETE**
+
+**Report Generated:** 2026-03-08
+
+**Full Coverage Matrix:** `/tmp/tea-trace-coverage-matrix-2026-03-08.json`
+
+---

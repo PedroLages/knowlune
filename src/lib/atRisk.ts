@@ -16,13 +16,14 @@ export interface AtRiskStatus {
  *
  * @param sessions - Array of study sessions for the course
  * @param momentumScore - Pre-calculated momentum score for the course
+ * @param now - Optional timestamp for deterministic testing (defaults to Date.now())
  * @returns AtRiskStatus with isAtRisk flag and diagnostic metrics
  */
 export function calculateAtRiskStatus(
   sessions: StudySession[],
-  momentumScore: MomentumScore
+  momentumScore: MomentumScore,
+  now = Date.now()
 ): AtRiskStatus {
-  const now = Date.now()
 
   // Calculate days since last session
   let daysSinceLastSession = Infinity

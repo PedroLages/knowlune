@@ -28,6 +28,8 @@ import type { MomentumScore } from '@/lib/momentum'
 import type { AtRiskStatus } from '@/lib/atRisk'
 import type { CompletionEstimate } from '@/lib/completionEstimate'
 
+const ESTIMATED_MINUTES_PER_LESSON = 15
+
 const tabs: { value: string; label: string; category?: CourseCategory }[] = [
   { value: 'all', label: 'All Courses' },
   { value: 'behavioral-analysis', label: 'Behavioral Analysis', category: 'behavioral-analysis' },
@@ -95,7 +97,7 @@ export function Courses() {
           // Calculate completion estimate
           const progress = getProgress(course.id)
           const remainingLessons = course.totalLessons - progress.completedLessons.length
-          const remainingMinutes = remainingLessons * 15 // 15 min per lesson estimate
+          const remainingMinutes = remainingLessons * ESTIMATED_MINUTES_PER_LESSON
 
           const estimate = calculateCompletionEstimate(courseSessions, remainingMinutes)
           estimateMap.set(course.id, estimate)

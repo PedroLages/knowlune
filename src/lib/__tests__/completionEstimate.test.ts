@@ -175,9 +175,31 @@ describe('calculateCompletionEstimate — edge cases', () => {
     ]
     const result = calculateCompletionEstimate(sessions, 60)
 
-    // Average = 0, but should this fallback to default? Let's test actual behavior
-    expect(result.averageSessionMinutes).toBe(0)
-    // This might cause division issues, but testing actual implementation
+    // Average = 0, should fallback to default 30 min pace
+    expect(result.averageSessionMinutes).toBe(30)
+    expect(result.sessionsNeeded).toBe(2) // 60 / 30 = 2
+  })
+
+  it('handles negative session durations (data corruption)', () => {
+    const sessions = [
+      makeSession(5, -1800), // -30 min (corrupted data)
+      makeSession(10, 1800), // 30 min
+    ]
+    const result = calculateCompletionEstimate(sessions, 60)
+
+    // Average = (-30 + 30) / 2 = 0 → should fallback to default
+    expect(result.averageSessionMinutes).toBe(30)
+    expect(result.sessionsNeeded).toBe(2) // 60 / 30 = 2
+  })
+
+  it('handles negative remaining minutes (clamps to 0)', () => {
+    const sessions = [makeSession(5, 1800)]
+    const result = calculateCompletionEstimate(sessions, -50)
+
+    // Negative remaining should be clamped to 0
+    expect(result.remainingMinutes).toBe(0)
+    expect(result.sessionsNeeded).toBe(0)
+    expect(result.estimatedDays).toBe(0)
   })
 })
 

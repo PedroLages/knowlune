@@ -170,6 +170,16 @@ describe('calculateAtRiskStatus — edge cases', () => {
     expect(result.isAtRisk).toBe(true) // 14.8 >= 14
   })
 
+  it('handles sessions with future timestamps (clock skew)', () => {
+    // Session 1 day in the future (negative daysSinceLastSession)
+    const futureTime = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+    const session = createStudySession({ startTime: futureTime, duration: 1800 })
+
+    const result = calculateAtRiskStatus([session], makeMomentumScore(10))
+    expect(result.daysSinceLastSession).toBe(-1) // Floored negative value
+    expect(result.isAtRisk).toBe(false) // -1 < 14
+  })
+
   it('returns score from momentum parameter in result', () => {
     const result = calculateAtRiskStatus([makeSession(20)], makeMomentumScore(42))
     expect(result.momentumScore).toBe(42)

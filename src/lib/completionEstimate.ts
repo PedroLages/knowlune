@@ -15,15 +15,19 @@ export interface CompletionEstimate {
  *
  * @param sessions - Array of study sessions for the course
  * @param remainingContentMinutes - Minutes of uncompleted content
+ * @param now - Optional timestamp for deterministic testing (defaults to Date.now())
  * @returns CompletionEstimate with sessions needed, estimated days, and diagnostic metrics
  */
 export function calculateCompletionEstimate(
   sessions: StudySession[],
-  remainingContentMinutes: number
+  remainingContentMinutes: number,
+  now = Date.now()
 ): CompletionEstimate {
   const DEFAULT_SESSION_MINUTES = 30 // AC4: Default pace for new users
-  const now = Date.now()
   const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000
+
+  // Clamp negative remainingContentMinutes to 0
+  const clampedRemainingMinutes = Math.max(0, remainingContentMinutes)
 
   // Filter sessions to last 30 days
   const recentSessions = sessions.filter(s => new Date(s.startTime).getTime() >= thirtyDaysAgo)
@@ -38,10 +42,15 @@ export function calculateCompletionEstimate(
     // Calculate average from recent sessions
     const totalMinutes = recentSessions.reduce((sum, s) => sum + s.duration / 60, 0)
     averageSessionMinutes = totalMinutes / recentSessions.length
+
+    // Guard against division by zero when all sessions have duration: 0
+    if (averageSessionMinutes <= 0) {
+      averageSessionMinutes = DEFAULT_SESSION_MINUTES
+    }
   }
 
   // Calculate sessions needed
-  const sessionsNeeded = Math.ceil(remainingContentMinutes / averageSessionMinutes)
+  const sessionsNeeded = Math.ceil(clampedRemainingMinutes / averageSessionMinutes)
 
   // Estimate days (assuming 1 session per day)
   const estimatedDays = sessionsNeeded
@@ -50,6 +59,6 @@ export function calculateCompletionEstimate(
     sessionsNeeded,
     estimatedDays,
     averageSessionMinutes: Math.round(averageSessionMinutes),
-    remainingMinutes: remainingContentMinutes,
+    remainingMinutes: clampedRemainingMinutes,
   }
 }

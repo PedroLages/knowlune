@@ -26,11 +26,10 @@ export function CompletionEstimate({
   return (
     <span
       data-testid="completion-estimate"
-      className={cn('inline-flex items-center gap-1.5 text-sm text-gray-500', className)}
+      className={cn('inline-flex items-center gap-1.5 text-sm text-muted-foreground', className)}
     >
       <Clock className="size-4 shrink-0" aria-hidden="true" />
-      Est. ~{displayValue} {displayUnit}
-      {pluralSuffix}
+      Est. ~{displayValue} {displayUnit}{pluralSuffix}
     </span>
   )
 }
