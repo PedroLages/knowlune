@@ -175,10 +175,15 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     // If this fails, orphan recovery will handle it on next load
     persistWithRetry(async () => {
       await db.studySessions.put(closedSession)
-    }).catch(error => {
-      console.error('[SessionStore] Failed to end session:', error)
-      // Don't rollback - let orphan recovery handle incomplete writes
     })
+      .then(() => {
+        // Notify listeners (e.g., momentum scores) that session data changed
+        window.dispatchEvent(new CustomEvent('study-log-updated'))
+      })
+      .catch(error => {
+        console.error('[SessionStore] Failed to end session:', error)
+        // Don't rollback - let orphan recovery handle incomplete writes
+      })
   },
 
   loadSessionStats: async (courseId?: string) => {

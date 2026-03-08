@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Plus, Target, Clock, Flame, Trophy, RefreshCcw, ChevronDown } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Plus, Target, Clock, Flame, Trophy, RefreshCcw, ChevronDown, Check } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { Button } from '@/app/components/ui/button'
 import { Card, CardContent } from '@/app/components/ui/card'
@@ -12,6 +12,7 @@ import {
 } from '@/app/components/ui/collapsible'
 import { useChallengeStore } from '@/stores/useChallengeStore'
 import { CreateChallengeDialog } from '@/app/components/challenges/CreateChallengeDialog'
+import { fireMilestoneToasts } from '@/lib/fireMilestoneToasts'
 import type { Challenge, ChallengeType } from '@/data/types'
 
 const typeConfig: Record<ChallengeType, { label: string; unit: string; icon: typeof Target }> = {
@@ -45,6 +46,7 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
   const Icon = config.icon
   const remaining = daysRemaining(challenge.deadline)
   const isExpired = remaining < 0
+  const isCompleted = !!challenge.completedAt
   const progressPercent = Math.min(
     100,
     challenge.targetValue > 0
@@ -53,12 +55,22 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
   )
 
   return (
-    <Card className={cn(isExpired && 'opacity-60')}>
+    <Card
+      className={cn(
+        isExpired && !isCompleted && 'opacity-60',
+        isCompleted && 'border-amber-400 bg-amber-50/30 dark:border-amber-600 dark:bg-amber-900/10'
+      )}
+    >
       <CardContent className="flex flex-col gap-3 p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-blue-600/10 text-blue-600">
-              <Icon className="size-4.5" />
+            <div
+              className={cn(
+                'flex size-10 items-center justify-center rounded-lg',
+                isCompleted ? 'bg-amber-600/10 text-amber-600' : 'bg-blue-600/10 text-blue-600'
+              )}
+            >
+              {isCompleted ? <Check className="size-4.5" /> : <Icon className="size-4.5" />}
             </div>
             <div>
               <h3 className="text-sm font-semibold leading-tight">{challenge.name}</h3>
@@ -67,8 +79,11 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
               </p>
             </div>
           </div>
-          <Badge variant={isExpired ? 'secondary' : 'outline'} className="shrink-0 text-xs">
-            {config.label}
+          <Badge
+            variant={isCompleted ? 'default' : isExpired ? 'secondary' : 'outline'}
+            className={cn('shrink-0 text-xs', isCompleted && 'bg-amber-600 hover:bg-amber-700')}
+          >
+            {isCompleted ? 'Completed' : config.label}
           </Badge>
         </div>
 
@@ -81,17 +96,19 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
           </div>
           <Progress
             value={progressPercent}
-            className="h-2.5"
+            className={cn('h-2.5', isCompleted && '[&>div]:bg-amber-500')}
             aria-label={`${challenge.name}: ${progressPercent}% complete`}
           />
         </div>
 
         <p className="text-muted-foreground text-xs">
-          {isExpired
-            ? 'Expired'
-            : remaining === 0
-              ? 'Deadline is today'
-              : `${remaining} day${remaining !== 1 ? 's' : ''} remaining`}{' '}
+          {isCompleted
+            ? 'Completed'
+            : isExpired
+              ? 'Expired'
+              : remaining === 0
+                ? 'Deadline is today'
+                : `${remaining} day${remaining !== 1 ? 's' : ''} remaining`}{' '}
           &middot; Due {formatDeadline(challenge.deadline)}
         </p>
       </CardContent>
@@ -102,35 +119,56 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
 export function Challenges() {
   const { challenges, isLoading, error, loadChallenges, refreshAllProgress } = useChallengeStore()
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [completedOpen, setCompletedOpen] = useState(true)
   const [expiredOpen, setExpiredOpen] = useState(false)
+  const timerIdsRef = useRef<number[]>([])
 
   useEffect(() => {
     let ignore = false
-    loadChallenges().then(() => {
-      if (!ignore) refreshAllProgress()
-    })
+    loadChallenges()
+      .then(() => {
+        if (!ignore) {
+          return refreshAllProgress()
+        }
+      })
+      .then(milestoneMap => {
+        if (!ignore && milestoneMap && milestoneMap.size > 0) {
+          const current = useChallengeStore.getState().challenges
+          timerIdsRef.current = fireMilestoneToasts(milestoneMap, current)
+        }
+      })
+      .catch(err => console.error('[Challenges] milestone detection failed:', err))
     return () => {
       ignore = true
+      timerIdsRef.current.forEach(id => clearTimeout(id))
+      timerIdsRef.current = []
     }
   }, [loadChallenges, refreshAllProgress])
 
-  const { active, expired } = useMemo(() => {
+  const { active, completed, expired } = useMemo(() => {
     const now = new Date()
     now.setHours(0, 0, 0, 0)
-    return challenges.reduce<{ active: Challenge[]; expired: Challenge[] }>(
+    return challenges.reduce<{ active: Challenge[]; completed: Challenge[]; expired: Challenge[] }>(
       (groups, c) => {
         const deadlinePassed = parseLocalDate(c.deadline).getTime() < now.getTime()
         const isCompleted = !!c.completedAt
-        if (deadlinePassed && !isCompleted) {
+        if (isCompleted) {
+          groups.completed.push(c)
+        } else if (deadlinePassed) {
           groups.expired.push(c)
         } else {
           groups.active.push(c)
         }
         return groups
       },
-      { active: [], expired: [] }
+      { active: [], completed: [], expired: [] }
     )
   }, [challenges])
+
+  const sectionTriggerClass = cn(
+    'flex w-full items-center gap-2 rounded-sm py-3 text-sm font-medium text-muted-foreground',
+    'transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2'
+  )
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6 p-6">
@@ -160,7 +198,7 @@ export function Challenges() {
         >
           Loading challenges...
         </div>
-      ) : active.length === 0 && expired.length === 0 ? (
+      ) : active.length === 0 && completed.length === 0 && expired.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-4 py-16">
             <div className="bg-muted flex size-14 items-center justify-center rounded-full">
@@ -191,12 +229,41 @@ export function Challenges() {
             </div>
           )}
 
-          {expired.length > 0 && (
-            <Collapsible open={expiredOpen} onOpenChange={setExpiredOpen}>
-              <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-sm py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">
+          {completed.length > 0 && (
+            <Collapsible
+              data-testid="completed-section"
+              open={completedOpen}
+              onOpenChange={setCompletedOpen}
+            >
+              <CollapsibleTrigger className={sectionTriggerClass}>
                 <ChevronDown
                   aria-hidden="true"
-                  className={cn('size-4 transition-transform', expiredOpen && 'rotate-180')}
+                  className={cn(
+                    'size-4 transition-transform motion-reduce:transition-none',
+                    completedOpen && 'rotate-180'
+                  )}
+                />
+                Completed ({completed.length})
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="grid gap-4 pt-2 sm:grid-cols-2">
+                  {completed.map(challenge => (
+                    <ChallengeCard key={challenge.id} challenge={challenge} />
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
+          {expired.length > 0 && (
+            <Collapsible open={expiredOpen} onOpenChange={setExpiredOpen}>
+              <CollapsibleTrigger className={sectionTriggerClass}>
+                <ChevronDown
+                  aria-hidden="true"
+                  className={cn(
+                    'size-4 transition-transform motion-reduce:transition-none',
+                    expiredOpen && 'rotate-180'
+                  )}
                 />
                 Expired ({expired.length})
               </CollapsibleTrigger>

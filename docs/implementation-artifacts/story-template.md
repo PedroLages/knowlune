@@ -34,6 +34,19 @@ so that [benefit].
 
 [Test strategy, edge cases discovered, coverage notes]
 
+## Pre-Review Checklist
+
+Before requesting `/review-story`, verify:
+
+- [ ] All changes committed (`git status` clean)
+- [ ] No error swallowing — catch blocks log AND surface errors
+- [ ] useEffect hooks have cleanup functions (ignore flags for async, event listener removal)
+- [ ] No optimistic UI updates before persistence — state updates after DB write succeeds
+- [ ] Type guards on all dynamic lookups (e.g., `LABELS[type]` when type can be empty)
+- [ ] E2E afterEach cleanup uses `await` (not fire-and-forget)
+- [ ] Date handling uses `toLocaleDateString('sv-SE')` pattern (not `toISOString().split('T')[0]`)
+- [ ] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
+
 ## Design Review Feedback
 
 [Populated by /review-story — Playwright MCP findings]

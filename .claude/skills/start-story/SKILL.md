@@ -16,9 +16,40 @@ Automates story setup: feature branch, sprint tracking, ATDD test suggestion, co
 /start-story          # picks next backlog story
 ```
 
+## Orchestrator Discipline
+
+The orchestrator (main session) should:
+- **Read state**: story file, sprint status, git status
+- **Make decisions**: resumed? reviewed? UI changes?
+- **Dispatch agents**: via Task tool (parallel when independent)
+- **Collect results**: extract key data from agent returns
+- **Update state**: frontmatter, sprint status, TodoWrite
+- **Run git ops**: branch, commit, push, PR
+- **Communicate**: completion output, AskUserQuestion
+
+The orchestrator should NOT:
+- Do deep code analysis (delegate to agents)
+- Retain raw file contents beyond what's needed for decisions
+- Read large files for exploration (dispatch Explore agents instead)
+
 ## Steps
 
 When invoked with a story ID (e.g., `E01-S03`):
+
+**Immediately create TodoWrite** to give the user full visibility of what will happen:
+
+```
+[ ] Look up story and validate sprint status
+[ ] Set up branch and story file
+[ ] Suggest ATDD tests
+[ ] Research: story context (Agent)
+[ ] Research: code patterns (Agent)
+[ ] Research: test + UX patterns (Agent)
+[ ] Enter plan mode
+[ ] Link plan, commit, and output
+```
+
+Mark the first todo as `in_progress` and proceed:
 
 0. **Git worktree setup** (optional): Offer the user a choice to create an isolated git worktree for this story.
 
@@ -72,6 +103,8 @@ When invoked with a story ID (e.g., `E01-S03`):
    - **ID normalization**: `E01-S03` → strip leading zeros → key `1-3-organize-courses-by-topic`.
    - If status is already `in-progress`: this is a **resumed start**. Inform the user and skip to the resumption check in step 3.
 
+   **TodoWrite**: Mark "Look up story and validate sprint status" → `completed`.
+
 3. **Derive branch name**: `feature/` + lowercase story ID + slugified name. Strip `& ( ) , .` and filler words (and, the, a, with, for, of). Lowercase. Hyphens between words.
    - Example: `E01-S03` "Organize Courses by Topic" → `feature/e01-s03-organize-courses-by-topic`
 
@@ -89,10 +122,14 @@ When invoked with a story ID (e.g., `E01-S03`):
    - **File exists**: Skip creation. Inform user: "Story file already exists, keeping it."
    - **File does not exist**: Create using the template at `docs/implementation-artifacts/story-template.md`. Populate frontmatter (`story_id`, `story_name`, `status: in-progress`, `started: YYYY-MM-DD`, `reviewed: false`, `review_started:`, `review_gates_passed: []`) and fill in Story, Acceptance Criteria, and Tasks from the epic.
 
+   **TodoWrite**: Mark "Set up branch and story file" → `in_progress`.
+
 7. **Update sprint status** (idempotent):
    - Check current status in `docs/implementation-artifacts/sprint-status.yaml`.
    - **Already `in-progress`**: Skip update. Inform user: "Sprint status already in-progress."
    - **Not `in-progress`**: Set story → `in-progress`. If this is the first story in the epic, set epic → `in-progress`.
+
+   **TodoWrite**: Mark "Set up branch and story file" → `completed`. Mark "Suggest ATDD tests" → `in_progress`.
 
 8. **ATDD test suggestion** (idempotent):
    - Check if `tests/e2e/story-{id}.spec.ts` already exists.
@@ -104,10 +141,16 @@ When invoked with a story ID (e.g., `E01-S03`):
      - If user accepts: Generate failing acceptance tests in `tests/e2e/story-{id}.spec.ts` using existing Playwright fixture patterns from `tests/support/`. Tests should follow RED-GREEN-REFACTOR: write minimal failing tests that map to acceptance criteria.
      - If user declines: Continue without tests.
 
-9. **Launch 3 parallel Explore agents** via Task tool:
+   **TodoWrite**: Mark "Suggest ATDD tests" → `completed`. Mark all 3 research agent todos → `in_progress` simultaneously.
+
+9. **Launch 3 parallel Explore agents** via Task tool (dispatch all in a single message):
    - **Agent 1 — Story context**: Read story ACs, dependencies, related stories in `docs/planning-artifacts/epics.md`. Check if dependent stories are `done` in sprint-status.
    - **Agent 2 — Existing code patterns**: Search affected source directories (`src/app/pages/`, `src/app/components/`, `src/stores/`, `src/db/`, `src/lib/`) for relevant patterns, types, and utilities.
    - **Agent 3 — Test patterns + UX specs**: Read test patterns from `tests/` and `tests/support/`, plus UX design specs from `docs/planning-artifacts/ux-design-specification.md` for relevant sections.
+
+   As each agent returns, mark its corresponding todo → `completed`. Wait for all 3 to complete before proceeding.
+
+   **TodoWrite**: Mark all 3 research todos → `completed`. Mark "Enter plan mode" → `in_progress`.
 
 10. **Enter plan mode** with gathered context. Combine research from all 3 agents into a plan. Include:
     - Story overview and ACs
@@ -116,6 +159,8 @@ When invoked with a story ID (e.g., `E01-S03`):
     - Suggested implementation approach
     - UX design references (if applicable)
     - Note: during implementation, make granular commits after each small task as save points
+
+   **TodoWrite**: Mark "Enter plan mode" → `completed`. Mark "Link plan, commit, and output" → `in_progress`.
 
 11. **Link plan to story file**: After `ExitPlanMode` returns (plan approved), save the plan to `docs/implementation-artifacts/plans/{plan-filename}.md`, then append an `## Implementation Plan` section to the story file so the developer can find the plan in a later session. If the section already exists, skip.
 

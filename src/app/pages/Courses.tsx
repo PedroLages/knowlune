@@ -1,7 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Card } from '@/app/components/ui/card'
 import { Input } from '@/app/components/ui/input'
 import { Button } from '@/app/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/app/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs'
 import { CourseCard } from '@/app/components/figma/CourseCard'
 import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
@@ -12,7 +19,10 @@ import { allCourses } from '@/data/courses'
 import { getCourseCompletionPercent } from '@/lib/progress'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { importCourseFromFolder } from '@/lib/courseImport'
+import { db } from '@/db'
+import { calculateMomentumScore } from '@/lib/momentum'
 import type { CourseCategory, LearnerCourseStatus } from '@/data/types'
+import type { MomentumScore } from '@/lib/momentum'
 
 const tabs: { value: string; label: string; category?: CourseCategory }[] = [
   { value: 'all', label: 'All Courses' },
@@ -23,11 +33,15 @@ const tabs: { value: string; label: string; category?: CourseCategory }[] = [
   { value: 'research-library', label: 'Research Library', category: 'research-library' },
 ]
 
+type SortMode = 'recent' | 'momentum'
+
 export function Courses() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState('all')
   const [selectedTopics, setSelectedTopics] = useState<string[]>([])
   const [selectedStatuses, setSelectedStatuses] = useState<LearnerCourseStatus[]>([])
+  const [sortMode, setSortMode] = useState<SortMode>('recent')
+  const [momentumMap, setMomentumMap] = useState<Map<string, MomentumScore>>(new Map())
 
   const importedCourses = useCourseImportStore(state => state.importedCourses)
   const isImporting = useCourseImportStore(state => state.isImporting)
@@ -37,6 +51,47 @@ export function Courses() {
   useEffect(() => {
     loadImportedCourses()
   }, [loadImportedCourses])
+
+  useEffect(() => {
+    let ignore = false
+
+    async function loadMomentumScores() {
+      try {
+        const sessions = await db.studySessions.toArray()
+        if (ignore) return
+        const sessionsByCourse = new Map<string, typeof sessions>()
+        for (const s of sessions) {
+          const arr = sessionsByCourse.get(s.courseId) ?? []
+          arr.push(s)
+          sessionsByCourse.set(s.courseId, arr)
+        }
+        const map = new Map<string, MomentumScore>()
+        for (const course of allCourses) {
+          map.set(
+            course.id,
+            calculateMomentumScore({
+              courseId: course.id,
+              totalLessons: course.totalLessons,
+              completionPercent: getCourseCompletionPercent(course.id, course.totalLessons),
+              sessions: sessionsByCourse.get(course.id) ?? [],
+            })
+          )
+        }
+        setMomentumMap(map)
+      } catch (err) {
+        console.error('[Courses] Failed to load momentum scores:', err)
+      }
+    }
+
+    loadMomentumScores()
+
+    const handleStudyLogUpdated = () => loadMomentumScores()
+    window.addEventListener('study-log-updated', handleStudyLogUpdated)
+    return () => {
+      ignore = true
+      window.removeEventListener('study-log-updated', handleStudyLogUpdated)
+    }
+  }, [])
 
   const filtered = (() => {
     let courses = allCourses
@@ -58,6 +113,13 @@ export function Courses() {
 
     return courses
   })()
+
+  const sortedCourses = useMemo(() => {
+    if (sortMode !== 'momentum') return filtered
+    return [...filtered].sort(
+      (a, b) => (momentumMap.get(b.id)?.score ?? 0) - (momentumMap.get(a.id)?.score ?? 0)
+    )
+  }, [filtered, sortMode, momentumMap])
 
   const allTags = getAllTags()
 
@@ -111,12 +173,12 @@ export function Courses() {
         >
           {isImporting ? (
             <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="size-4 mr-2 animate-spin" />
               Scanning...
             </>
           ) : (
             <>
-              <FolderOpen className="h-4 w-4 mr-2" />
+              <FolderOpen className="size-4 mr-2" />
               Import Course
             </>
           )}
@@ -172,7 +234,7 @@ export function Courses() {
               aria-label="Import courses"
             >
               <FolderOpen
-                className="h-12 w-12 text-muted-foreground mx-auto mb-3"
+                className="size-12 text-muted-foreground mx-auto mb-3"
                 aria-hidden="true"
               />
               <p className="text-muted-foreground mb-4">Import your first course to get started</p>
@@ -184,12 +246,12 @@ export function Courses() {
               >
                 {isImporting ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="size-4 mr-2 animate-spin" />
                     Scanning...
                   </>
                 ) : (
                   <>
-                    <FolderOpen className="h-4 w-4 mr-2" />
+                    <FolderOpen className="size-4 mr-2" />
                     Import Your First Course
                   </>
                 )}
@@ -214,27 +276,43 @@ export function Courses() {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-        <TabsList className="flex-wrap">
-          {tabs.map(tab => (
-            <TabsTrigger key={tab.value} value={tab.value}>
-              {tab.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        <div className="flex items-center gap-4 mb-4 flex-wrap">
+          <TabsList className="flex-wrap flex-1">
+            {tabs.map(tab => (
+              <TabsTrigger key={tab.value} value={tab.value}>
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
+            <SelectTrigger
+              data-testid="sort-select"
+              aria-label="Sort courses"
+              className="w-[180px] rounded-xl"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recent">Most Recent</SelectItem>
+              <SelectItem value="momentum">Sort by Momentum</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
         {tabs.map(tab => (
-          <TabsContent key={tab.value} value={tab.value} className="mt-6">
-            {filtered.length === 0 ? (
+          <TabsContent key={tab.value} value={tab.value} className="mt-0">
+            {sortedCourses.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 No courses match your search
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                {filtered.map(course => (
+                {sortedCourses.map(course => (
                   <CourseCard
                     key={course.id}
                     course={course}
                     completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
+                    momentumScore={momentumMap.get(course.id)}
                   />
                 ))}
               </div>
