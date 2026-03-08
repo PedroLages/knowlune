@@ -143,67 +143,62 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
     const section = page.getByTestId('recommended-next-section')
     await expect(section).toBeVisible()
 
-    // Click the first link in the section and verify navigation to a course page
-    const firstLink = section.locator('a').first()
-    await expect(firstLink).toBeVisible()
+    // Click the course card link (not instructor link) and verify navigation
+    const courseLink = section.locator('a[href*="/courses/6mx"]').first()
+    await expect(courseLink).toBeVisible()
 
-    await firstLink.click()
-    await expect(page).toHaveURL(/\/courses\//)
+    await courseLink.click()
+    await expect(page).toHaveURL(/\/courses\/6mx/)
   })
 
-  test('AC5 — rankings reflect updated progress after progress changes', async ({
+  test('AC5 — rankings refresh when returning to dashboard after progress changes', async ({
     page,
     localStorage,
   }) => {
-    // Seed course-A with high completion (90%), course-B with low completion (10%).
-    // course-A should rank first (completion proximity advantage).
-    // Then update course-B's progress to have higher completion and verify it rises.
-    //
-    // Note: sessions are stored in IndexedDB (Dexie) so frequency-based re-ranking
-    // requires IndexedDB seeding. This test validates the progress-based pathway
-    // (recency + completion proximity) which uses localStorage and is detectable
-    // by the storage event listener added to fix B1.
+    // AC5: "When they return to the dashboard, rankings recalculate"
+    // Seed 1 active course, verify 1 card, update localStorage with a 2nd
+    // course (simulating lesson completion on another page), then reload
+    // (simulating return to dashboard). Verify count increases to 2.
 
-    // Initial seed: course-A at high completion, course-B low
-    const highProgress = createCourseProgress({
+    const progress1 = createCourseProgress({
       courseId: COURSE_1,
-      // 6mx has many lessons — use just a couple to keep it "in progress"
       completedLessons: ['6mx-welcome-intro', '6mx-day1-human-comm'],
       lastWatchedLesson: '6mx-day1-laws',
     })
-    const lowProgress = createCourseProgress({
-      courseId: COURSE_3,
-      completedLessons: ['authority-lesson-01-communication-laws'],
-      lastWatchedLesson: 'authority-lesson-02-composure-confidence',
-    })
 
     await localStorage.seed('course-progress', {
-      [COURSE_1]: highProgress,
-      [COURSE_3]: lowProgress,
+      [COURSE_1]: progress1,
     })
 
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
     await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 10000 })
 
-    // Verify recommendations section is present with 2 courses
-    const section = page.getByTestId('recommended-next-section')
-    await expect(section).toBeVisible()
+    // Verify 1 card initially
     const cardsContainer = page.getByTestId('recommended-next-cards')
     await expect(cardsContainer).toBeVisible()
     const cards = cardsContainer.locator('a[href*="/courses/"]')
-    await expect(cards).toHaveCount(2)
+    await expect(cards).toHaveCount(1)
 
-    // After a page reload (simulating return from a study session), rankings
-    // should reflect the current localStorage state without requiring a full
-    // session store update — verifying the useMemo re-runs on mount.
+    // Simulate progress change (as if user completed a lesson on another page)
+    await page.evaluate(() => {
+      const raw = localStorage.getItem('course-progress')
+      const data = raw ? JSON.parse(raw) : {}
+      data['authority'] = {
+        courseId: 'authority',
+        completedLessons: ['authority-lesson-01-communication-laws'],
+        lastAccessedAt: new Date().toISOString(),
+        startedAt: new Date().toISOString(),
+      }
+      localStorage.setItem('course-progress', JSON.stringify(data))
+    })
+
+    // Simulate returning to dashboard — component remounts, reads fresh data
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
     await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 10000 })
 
-    // Recommendations section must still render (rankings didn't break after reload)
-    await expect(page.getByTestId('recommended-next-section')).toBeVisible()
-    const cardsAfter = page.getByTestId('recommended-next-cards').locator('a[href*="/courses/"]')
-    await expect(cardsAfter).toHaveCount(2)
+    // Now 2 active courses → 2 recommendation cards
+    await expect(cardsContainer.locator('a[href*="/courses/"]')).toHaveCount(2)
   })
 })

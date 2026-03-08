@@ -5,7 +5,7 @@ import { Skeleton } from '@/app/components/ui/skeleton'
 import { Button } from '@/app/components/ui/button'
 import { CourseCard } from '@/app/components/figma/CourseCard'
 import { useSessionStore } from '@/stores/useSessionStore'
-import { getAllProgress } from '@/lib/progress'
+import { getAllProgress, invalidateProgressCache, PROGRESS_UPDATED_EVENT } from '@/lib/progress'
 import { getRecommendedCourses } from '@/lib/recommendations'
 import { allCourses } from '@/data/courses'
 
@@ -14,7 +14,7 @@ function RecommendedNextSkeleton() {
     <div aria-hidden="true">
       <Skeleton className="h-6 w-44 mb-1" />
       <Skeleton className="h-4 w-64 mb-4" />
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {[1, 2, 3].map(i => (
           <div key={i} className="rounded-2xl border overflow-hidden">
             <Skeleton className="w-full h-36" />
@@ -64,11 +64,21 @@ export function RecommendedNext() {
   }, [loadSessionStats])
 
   useEffect(() => {
+    const bump = () => {
+      invalidateProgressCache()
+      setProgressTick(t => t + 1)
+    }
+    // Same-tab: custom event dispatched by saveAllProgress()
+    window.addEventListener(PROGRESS_UPDATED_EVENT, bump)
+    // Cross-tab: standard StorageEvent for multi-tab sync
     const onStorage = (e: StorageEvent) => {
-      if (e.key === 'course-progress') setProgressTick(t => t + 1)
+      if (e.key === 'course-progress') bump()
     }
     window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
+    return () => {
+      window.removeEventListener(PROGRESS_UPDATED_EVENT, bump)
+      window.removeEventListener('storage', onStorage)
+    }
   }, [])
 
   const recommendations = useMemo(() => {
@@ -109,7 +119,10 @@ export function RecommendedNext() {
       {recommendations.length === 0 ? (
         <EmptyState />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" data-testid="recommended-next-cards">
+        <div
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+          data-testid="recommended-next-cards"
+        >
           {recommendations.map(({ course, completionPercent }) => (
             <CourseCard
               key={course.id}

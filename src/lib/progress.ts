@@ -129,9 +129,13 @@ export function invalidateProgressCache() {
   _progressCache = null
 }
 
+/** Custom event name dispatched after progress is saved (same-tab). */
+export const PROGRESS_UPDATED_EVENT = 'course-progress-updated'
+
 function saveAllProgress(data: Record<string, CourseProgress>) {
   _progressCache = null
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+  window.dispatchEvent(new Event(PROGRESS_UPDATED_EVENT))
 }
 
 function ensureProgress(courseId: string): CourseProgress {

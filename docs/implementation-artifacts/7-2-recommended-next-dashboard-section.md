@@ -6,7 +6,16 @@ started: 2026-03-08
 completed:
 reviewed: in-progress
 review_started: 2026-03-08
-review_gates_passed: []
+review_gates_passed:
+  - build
+  - lint
+  - type-check
+  - format-check
+  - unit-tests
+  - e2e-tests
+  - design-review
+  - code-review
+  - code-review-testing
 ---
 
 # Story 7.2: Recommended Next Dashboard Section
@@ -104,18 +113,25 @@ Note: When E07-S01 (Momentum Score) is implemented, replace the frequency proxy 
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+Report: `docs/reviews/design/design-review-2026-03-08-E07-S02.md`
+
+- **H1**: Cramped 3-column grid at 640-767px — use `sm:grid-cols-2 lg:grid-cols-3`
+- **M1**: Hardcoded `bg-blue-100` instead of theme token (recurring)
+- Pre-existing CourseCard issues (nested `<a>`, cursor, aria-label) — not introduced by this story
 
 ## Code Review Feedback
 
 See full reports in `docs/reviews/code/`:
-- `code-review-2026-03-08-E07-S02.md` — adversarial code review (2 blockers, 3 high, 3 medium)
-- `code-review-testing-2026-03-08-E07-S02.md` — test coverage review (1 blocker, 3 high, 4 medium)
+- `code-review-2026-03-08-E07-S02.md` — adversarial code review (Round 2: 1 blocker, 2 high, 3 medium)
+- `code-review-testing-2026-03-08-E07-S02.md` — test coverage review (Round 2: 0 blockers, 2 high, 3 medium)
 
-**Key blockers to fix before shipping:**
-1. Stale progress bug: `useMemo` doesn't re-run when lessons are marked complete (only when sessions change) → AC5 partially broken
-2. Mutable cache reference passed to recommendation algorithm → data integrity risk
-3. AC5 has zero test coverage at any level
+**Round 1 blockers (FIXED):**
+1. ~~Stale progress bug: `useMemo` only depended on `[sessions]`~~ → Added `progressTick` state + storage event listener
+2. ~~Mutable cache reference from `getAllProgress()`~~ → Returns shallow copy `{ ..._progressCache }`
+3. ~~AC5 has zero test coverage~~ → New E2E test added
+
+**Round 2 blocker (NEW):**
+1. `StorageEvent` only fires cross-tab, not same-tab — AC5 primary flow (same-tab navigation) still broken. Fix: dispatch custom event from `saveAllProgress()`
 
 ## Challenges and Lessons Learned
 
