@@ -12,7 +12,10 @@ import { allCourses } from '@/data/courses'
 import { getCourseCompletionPercent } from '@/lib/progress'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { importCourseFromFolder } from '@/lib/courseImport'
+import { db } from '@/db'
+import { calculateMomentumScore } from '@/lib/momentum'
 import type { CourseCategory, LearnerCourseStatus } from '@/data/types'
+import type { MomentumScore } from '@/lib/momentum'
 
 const tabs: { value: string; label: string; category?: CourseCategory }[] = [
   { value: 'all', label: 'All Courses' },
@@ -23,11 +26,15 @@ const tabs: { value: string; label: string; category?: CourseCategory }[] = [
   { value: 'research-library', label: 'Research Library', category: 'research-library' },
 ]
 
+type SortMode = 'recent' | 'momentum'
+
 export function Courses() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState('all')
   const [selectedTopics, setSelectedTopics] = useState<string[]>([])
   const [selectedStatuses, setSelectedStatuses] = useState<LearnerCourseStatus[]>([])
+  const [sortMode, setSortMode] = useState<SortMode>('recent')
+  const [momentumMap, setMomentumMap] = useState<Map<string, MomentumScore>>(new Map())
 
   const importedCourses = useCourseImportStore(state => state.importedCourses)
   const isImporting = useCourseImportStore(state => state.isImporting)
@@ -37,6 +44,31 @@ export function Courses() {
   useEffect(() => {
     loadImportedCourses()
   }, [loadImportedCourses])
+
+  useEffect(() => {
+    async function loadMomentumScores() {
+      const sessions = await db.studySessions.toArray()
+      const map = new Map<string, MomentumScore>()
+      for (const course of allCourses) {
+        const courseSessions = sessions.filter(s => s.courseId === course.id)
+        map.set(
+          course.id,
+          calculateMomentumScore({
+            courseId: course.id,
+            totalLessons: course.totalLessons,
+            sessions: courseSessions,
+          })
+        )
+      }
+      setMomentumMap(map)
+    }
+
+    loadMomentumScores()
+
+    const handleSessionEnded = () => loadMomentumScores()
+    window.addEventListener('study-session-ended', handleSessionEnded)
+    return () => window.removeEventListener('study-session-ended', handleSessionEnded)
+  }, [])
 
   const filtered = (() => {
     let courses = allCourses
@@ -58,6 +90,13 @@ export function Courses() {
 
     return courses
   })()
+
+  const sortedCourses =
+    sortMode === 'momentum'
+      ? [...filtered].sort(
+          (a, b) => (momentumMap.get(b.id)?.score ?? 0) - (momentumMap.get(a.id)?.score ?? 0)
+        )
+      : filtered
 
   const allTags = getAllTags()
 
@@ -214,27 +253,40 @@ export function Courses() {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-        <TabsList className="flex-wrap">
-          {tabs.map(tab => (
-            <TabsTrigger key={tab.value} value={tab.value}>
-              {tab.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        <div className="flex items-center gap-4 mb-4 flex-wrap">
+          <TabsList className="flex-wrap flex-1">
+            {tabs.map(tab => (
+              <TabsTrigger key={tab.value} value={tab.value}>
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          <select
+            data-testid="sort-select"
+            aria-label="Sort courses"
+            value={sortMode}
+            onChange={e => setSortMode(e.target.value as SortMode)}
+            className="text-sm border border-input bg-background rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
+          >
+            <option value="recent">Most Recent</option>
+            <option value="momentum">Sort by Momentum</option>
+          </select>
+        </div>
 
         {tabs.map(tab => (
-          <TabsContent key={tab.value} value={tab.value} className="mt-6">
-            {filtered.length === 0 ? (
+          <TabsContent key={tab.value} value={tab.value} className="mt-0">
+            {sortedCourses.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 No courses match your search
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                {filtered.map(course => (
+                {sortedCourses.map(course => (
                   <CourseCard
                     key={course.id}
                     course={course}
                     completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
+                    momentumScore={momentumMap.get(course.id)}
                   />
                 ))}
               </div>
