@@ -64,10 +64,7 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
             ...challenge,
             currentProgress,
             completedAt,
-            celebratedMilestones: [
-              ...challenge.celebratedMilestones,
-              ...newMilestones,
-            ],
+            celebratedMilestones: [...challenge.celebratedMilestones, ...newMilestones],
           }
         })
       )

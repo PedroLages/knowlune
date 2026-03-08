@@ -69,16 +69,10 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
             <div
               className={cn(
                 'flex size-10 items-center justify-center rounded-lg',
-                isCompleted
-                  ? 'bg-amber-600/10 text-amber-600'
-                  : 'bg-blue-600/10 text-blue-600'
+                isCompleted ? 'bg-amber-600/10 text-amber-600' : 'bg-blue-600/10 text-blue-600'
               )}
             >
-              {isCompleted ? (
-                <Check className="size-4.5" />
-              ) : (
-                <Icon className="size-4.5" />
-              )}
+              {isCompleted ? <Check className="size-4.5" /> : <Icon className="size-4.5" />}
             </div>
             <div>
               <h3 className="text-sm font-semibold leading-tight">{challenge.name}</h3>
@@ -89,10 +83,7 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
           </div>
           <Badge
             variant={isCompleted ? 'default' : isExpired ? 'secondary' : 'outline'}
-            className={cn(
-              'shrink-0 text-xs',
-              isCompleted && 'bg-amber-600 hover:bg-amber-600'
-            )}
+            className={cn('shrink-0 text-xs', isCompleted && 'bg-amber-600 hover:bg-amber-600')}
           >
             {isCompleted ? 'Completed' : config.label}
           </Badge>
@@ -127,10 +118,7 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
   )
 }
 
-function fireMilestoneToasts(
-  milestoneMap: Map<string, number[]>,
-  challenges: Challenge[]
-) {
+function fireMilestoneToasts(milestoneMap: Map<string, number[]>, challenges: Challenge[]) {
   const entries: Array<{ challengeName: string; milestone: number }> = []
 
   for (const [challengeId, milestones] of milestoneMap) {

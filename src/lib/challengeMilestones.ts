@@ -76,10 +76,7 @@ export function getChallengeTierConfig(percent: number): ChallengeTierConfig {
  * Detect which milestone thresholds the challenge has crossed
  * that haven't been celebrated yet.
  */
-export function detectChallengeMilestones(
-  challenge: Challenge,
-  newProgress: number
-): number[] {
+export function detectChallengeMilestones(challenge: Challenge, newProgress: number): number[] {
   if (challenge.targetValue <= 0) return []
 
   const percent = (newProgress / challenge.targetValue) * 100
