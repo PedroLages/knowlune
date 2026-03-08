@@ -185,4 +185,51 @@ Strong implementation with excellent accessibility practices. **0 blockers** —
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+### Round 1 Blockers and Fixes
+
+**Async useEffect cleanup pattern** — Initial implementation lacked cleanup for async data fetching. Added `let ignore = false` with cleanup function returning `ignore = true`. Both state setters (`setSessions`, `setLoading`) now guard with `!ignore` to prevent updates on unmounted components.
+
+**Derived state architecture** — Originally computed `chartData`, `weeklyAdherence`, and `chartAltText` in separate `useEffect` hooks, causing extra render cycles and stale-state frames. Refactored to `useMemo` with correct dependency arrays, eliminating race conditions.
+
+**Test data consistency** — Test session pairs had inconsistent `startTime`/`endTime` values (e.g., both using `FIXED_DATE`). Fixed by using `getRelativeDateWithMinutes()` helper for coherent durations.
+
+### Patterns Discovered
+
+**Recharts integration for accessibility** — Chart library selection prioritized WCAG compliance. Recharts provides SVG-based visualizations with customizable `aria-label` and integrates with shadcn/ui chart components. Chart/table duality pattern ensures non-visual access to data.
+
+**Pure helper functions for testability** — Extracted `aggregateSessionsByPeriod()`, `calculateWeeklyAdherence()`, and `generateChartAltText()` as pure functions outside component. Enables isolated testing and prevents closures over component state.
+
+**Date aggregation with locale keys** — Used `toLocaleDateString('sv-SE')` for deterministic ISO-format date keys (YYYY-MM-DD). Avoids timezone drift when grouping sessions by day/week/month.
+
+### Pitfalls Avoided (and some remaining)
+
+**Sidebar seed ordering** — E2E test pattern continues to place `localStorage.setItem('eduvi-sidebar-v1', 'false')` AFTER `page.goto()`. This is a recurring pattern since E02-S07 that risks flaky failures at tablet viewports (640-1023px) where sidebar Sheet renders as fullscreen overlay. Must seed BEFORE navigation.
+
+**Conditional test assertions** — AC3.3 test used `if (count > 0) { ... }` pattern allowing silent pass when no elements found. Recharts SVG bars don't emit expected ARIA roles, making assertion a no-op. Fixed approach: Assert on container `role="img"` and Y-axis labels instead.
+
+**Hard waits in E2E tests** — Test included `await page.waitForTimeout(100)` after keyboard navigation. Violates NFR from `test-quality.md`. Playwright auto-retry assertions are sufficient.
+
+### Decisions Made and Trade-offs
+
+**Weekly adherence calculation** — Implemented sliding 7-day window anchored to most recent session date. AC wording says "this week" (current calendar week). Current implementation shows stale 100% adherence for learner who studied 3 weeks ago instead of 0% for current week. Trade-off: Sliding window more forgiving but misleading. Logged as high-priority follow-up.
+
+**Real-time reactivity gap** — AC2.2 requires "updates in real time as new sessions recorded." Component loads data once in `useEffect` with no IndexedDB subscription or event listener. Test validates page-refresh behavior via `page.reload()`. Options: (1) Add custom event listener, (2) Use Zustand store, (3) Clarify AC that reload is acceptable. Logged as high-priority follow-up.
+
+**Chart library warnings** — Recharts emits 5 console warnings during initialization ("width/height -1"). Known timing issue that resolves post-mount. Trade-off: Suppressing warnings vs. potential CLS impact. Left as-is (low impact).
+
+### What Worked Well
+
+- Chart/table toggle genuine accessibility win (not checkbox compliance)
+- Theme token integration (`var(--chart-1)`, `var(--color-studyTime)`)
+- Empty state guidance reduces confusion
+- Period toggle keyboard navigation (Tab + Enter)
+- Responsive design (375px mobile, 768px tablet, 1440px desktop)
+
+### Follow-up Items
+
+1. Fix sidebar seed ordering in archived E2E spec
+2. Anchor weekly adherence to current date (not most recent session)
+3. Implement real-time reactivity OR clarify AC wording
+4. Replace `Math.max(...array)` with reduce pattern (>100k session safety)
+5. Fix touch target height (size="sm" → size="default")
+6. Fix heading hierarchy (`<div>` → `<CardTitle>`)
