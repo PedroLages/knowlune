@@ -1,9 +1,9 @@
 ---
 story_id: E07-S02
 story_name: "Recommended Next Dashboard Section"
-status: in-progress
+status: done
 started: 2026-03-08
-completed:
+completed: 2026-03-08
 reviewed: true
 review_started: 2026-03-08
 review_gates_passed:
