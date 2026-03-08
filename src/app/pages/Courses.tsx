@@ -16,13 +16,17 @@ import { TopicFilter } from '@/app/components/figma/TopicFilter'
 import { StatusFilter } from '@/app/components/figma/StatusFilter'
 import { Search, FolderOpen, Loader2 } from 'lucide-react'
 import { allCourses } from '@/data/courses'
-import { getCourseCompletionPercent } from '@/lib/progress'
+import { getCourseCompletionPercent, getProgress } from '@/lib/progress'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { importCourseFromFolder } from '@/lib/courseImport'
 import { db } from '@/db'
 import { calculateMomentumScore } from '@/lib/momentum'
+import { calculateAtRiskStatus } from '@/lib/atRisk'
+import { calculateCompletionEstimate } from '@/lib/completionEstimate'
 import type { CourseCategory, LearnerCourseStatus } from '@/data/types'
 import type { MomentumScore } from '@/lib/momentum'
+import type { AtRiskStatus } from '@/lib/atRisk'
+import type { CompletionEstimate } from '@/lib/completionEstimate'
 
 const tabs: { value: string; label: string; category?: CourseCategory }[] = [
   { value: 'all', label: 'All Courses' },
@@ -42,6 +46,8 @@ export function Courses() {
   const [selectedStatuses, setSelectedStatuses] = useState<LearnerCourseStatus[]>([])
   const [sortMode, setSortMode] = useState<SortMode>('recent')
   const [momentumMap, setMomentumMap] = useState<Map<string, MomentumScore>>(new Map())
+  const [atRiskMap, setAtRiskMap] = useState<Map<string, AtRiskStatus>>(new Map())
+  const [estimateMap, setEstimateMap] = useState<Map<string, CompletionEstimate>>(new Map())
 
   const importedCourses = useCourseImportStore(state => state.importedCourses)
   const isImporting = useCourseImportStore(state => state.isImporting)
@@ -55,7 +61,7 @@ export function Courses() {
   useEffect(() => {
     let ignore = false
 
-    async function loadMomentumScores() {
+    async function loadCourseMetrics() {
       try {
         const sessions = await db.studySessions.toArray()
         if (ignore) return
@@ -65,27 +71,47 @@ export function Courses() {
           arr.push(s)
           sessionsByCourse.set(s.courseId, arr)
         }
-        const map = new Map<string, MomentumScore>()
+        const momentumMap = new Map<string, MomentumScore>()
+        const atRiskMap = new Map<string, AtRiskStatus>()
+        const estimateMap = new Map<string, CompletionEstimate>()
+
         for (const course of allCourses) {
-          map.set(
-            course.id,
-            calculateMomentumScore({
-              courseId: course.id,
-              totalLessons: course.totalLessons,
-              completionPercent: getCourseCompletionPercent(course.id, course.totalLessons),
-              sessions: sessionsByCourse.get(course.id) ?? [],
-            })
-          )
+          const courseSessions = sessionsByCourse.get(course.id) ?? []
+          const completionPercent = getCourseCompletionPercent(course.id, course.totalLessons)
+
+          // Calculate momentum
+          const momentum = calculateMomentumScore({
+            courseId: course.id,
+            totalLessons: course.totalLessons,
+            completionPercent,
+            sessions: courseSessions,
+          })
+          momentumMap.set(course.id, momentum)
+
+          // Calculate at-risk status
+          const atRisk = calculateAtRiskStatus(courseSessions, momentum)
+          atRiskMap.set(course.id, atRisk)
+
+          // Calculate completion estimate
+          const progress = getProgress(course.id)
+          const remainingLessons = course.totalLessons - progress.completedLessons.length
+          const remainingMinutes = remainingLessons * 15 // 15 min per lesson estimate
+
+          const estimate = calculateCompletionEstimate(courseSessions, remainingMinutes)
+          estimateMap.set(course.id, estimate)
         }
-        setMomentumMap(map)
+
+        setMomentumMap(momentumMap)
+        setAtRiskMap(atRiskMap)
+        setEstimateMap(estimateMap)
       } catch (err) {
-        console.error('[Courses] Failed to load momentum scores:', err)
+        console.error('[Courses] Failed to load course metrics:', err)
       }
     }
 
-    loadMomentumScores()
+    loadCourseMetrics()
 
-    const handleStudyLogUpdated = () => loadMomentumScores()
+    const handleStudyLogUpdated = () => loadCourseMetrics()
     window.addEventListener('study-log-updated', handleStudyLogUpdated)
     return () => {
       ignore = true
@@ -313,6 +339,8 @@ export function Courses() {
                     course={course}
                     completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
                     momentumScore={momentumMap.get(course.id)}
+                    atRiskStatus={atRiskMap.get(course.id)}
+                    completionEstimate={estimateMap.get(course.id)}
                   />
                 ))}
               </div>
