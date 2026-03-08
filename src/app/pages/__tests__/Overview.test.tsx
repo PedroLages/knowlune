@@ -96,6 +96,10 @@ vi.mock('@/app/components/charts/ProgressChart', () => ({
   ProgressChart: () => <div data-testid="progress-chart" />,
 }))
 
+vi.mock('@/app/components/RecommendedNext', () => ({
+  RecommendedNext: () => <div data-testid="recommended-next" />,
+}))
+
 // Mock motion/react to render children synchronously
 vi.mock('motion/react', () => ({
   motion: new Proxy(
