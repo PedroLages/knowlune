@@ -7,15 +7,14 @@ import type { CourseProgress } from './progress'
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeLesson(id: string) {
+function makeLesson(id: string, order = 1) {
   return {
     id,
     title: id,
     description: '',
     keyTopics: [],
     resources: [],
-    duration: 0,
-    isPreview: false,
+    order,
   }
 }
 
@@ -25,7 +24,7 @@ function makeCourse(id: string, tags: string[], lessonCount = 3): Course {
     title: id,
     shortTitle: id,
     description: '',
-    category: 'behavior' as const,
+    category: 'behavioral-analysis' as const,
     difficulty: 'beginner' as const,
     totalLessons: lessonCount,
     totalVideos: 0,
@@ -37,7 +36,10 @@ function makeCourse(id: string, tags: string[], lessonCount = 3): Course {
         id: `${id}-m1`,
         title: 'Module 1',
         description: '',
-        lessons: Array.from({ length: lessonCount }, (_, i) => makeLesson(`${id}-l${i + 1}`)),
+        order: 1,
+        lessons: Array.from({ length: lessonCount }, (_, i) =>
+          makeLesson(`${id}-l${i + 1}`, i + 1)
+        ),
       },
     ],
     isSequential: false,
@@ -49,7 +51,7 @@ function makeCourse(id: string, tags: string[], lessonCount = 3): Course {
 function makeProgress(
   courseId: string,
   completedCount: number,
-  totalLessons: number,
+  _totalLessons: number,
   daysAgo = 1
 ): CourseProgress {
   const lessonIds = Array.from({ length: completedCount }, (_, i) => `${courseId}-l${i + 1}`)
@@ -105,7 +107,7 @@ describe('computeNextCourseSuggestion', () => {
   it('prefers course with more shared tags', () => {
     const completed = makeCourse('c1', ['a', 'b', 'c'], 3)
     const highOverlap = makeCourse('c2', ['a', 'b', 'c'], 3) // 3 shared
-    const lowOverlap = makeCourse('c3', ['a'], 3)             // 1 shared
+    const lowOverlap = makeCourse('c3', ['a'], 3) // 1 shared
 
     const progress = {
       c1: makeProgress('c1', 3, 3),
@@ -119,16 +121,20 @@ describe('computeNextCourseSuggestion', () => {
 
   it('uses momentum as tiebreaker when tag overlap is equal', () => {
     const completed = makeCourse('c1', ['a', 'b'], 3)
-    const slowMomentum = makeCourse('c2', ['a', 'b'], 3)  // same tags, studied 10 days ago
-    const highMomentum = makeCourse('c3', ['a', 'b'], 3)  // same tags, studied yesterday
+    const slowMomentum = makeCourse('c2', ['a', 'b'], 3) // same tags, studied 10 days ago
+    const highMomentum = makeCourse('c3', ['a', 'b'], 3) // same tags, studied yesterday
 
     const progress = {
       c1: makeProgress('c1', 3, 3),
       c2: makeProgress('c2', 1, 3, 10), // studied 10 days ago → lower recency
-      c3: makeProgress('c3', 1, 3, 1),  // studied 1 day ago → higher recency
+      c3: makeProgress('c3', 1, 3, 1), // studied 1 day ago → higher recency
     }
 
-    const result = computeNextCourseSuggestion('c1', [completed, slowMomentum, highMomentum], progress)
+    const result = computeNextCourseSuggestion(
+      'c1',
+      [completed, slowMomentum, highMomentum],
+      progress
+    )
     expect(result?.course.id).toBe('c3')
   })
 
@@ -143,7 +149,11 @@ describe('computeNextCourseSuggestion', () => {
       c3: makeProgress('c3', 0, 4, 1), // 0% done, recent → lower momentum
     }
 
-    const result = computeNextCourseSuggestion('c1', [completed, highProgress, lowProgress], progress)
+    const result = computeNextCourseSuggestion(
+      'c1',
+      [completed, highProgress, lowProgress],
+      progress
+    )
     expect(result?.course.id).toBe('c2')
   })
 
@@ -155,7 +165,7 @@ describe('computeNextCourseSuggestion', () => {
     const progress = {
       c1: makeProgress('c1', 3, 3),
       c2: makeProgress('c2', 0, 3, 20), // 20 days → recency = 0
-      c3: makeProgress('c3', 0, 3, 1),  // 1 day → recency high
+      c3: makeProgress('c3', 0, 3, 1), // 1 day → recency high
     }
 
     const result = computeNextCourseSuggestion('c1', [completed, stale, fresh], progress)

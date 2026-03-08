@@ -62,12 +62,7 @@ export function NextCourseSuggestion({ completedCourseId, onDismiss }: NextCours
           >
             Browse course library →
           </Link>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-1"
-            onClick={handleDismiss}
-          >
+          <Button variant="outline" size="sm" className="mt-1" onClick={handleDismiss}>
             Close
           </Button>
         </div>
@@ -111,9 +106,7 @@ export function NextCourseSuggestion({ completedCourseId, onDismiss }: NextCours
 
       {/* Description — truncated to 2 lines */}
       {course.description && (
-        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-          {course.description}
-        </p>
+        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{course.description}</p>
       )}
 
       {/* Meta row */}

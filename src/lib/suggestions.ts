@@ -81,8 +81,7 @@ export function computeNextCourseSuggestion(
  */
 function computeRecencyScore(lastAccessedAt?: string): number {
   if (!lastAccessedAt) return 0
-  const daysSince =
-    (Date.now() - new Date(lastAccessedAt).getTime()) / (1000 * 60 * 60 * 24)
+  const daysSince = (Date.now() - new Date(lastAccessedAt).getTime()) / (1000 * 60 * 60 * 24)
   return Math.max(0, Math.min(1, 1 - daysSince / 14))
 }
 

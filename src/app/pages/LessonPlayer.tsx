@@ -370,8 +370,7 @@ export function LessonPlayer() {
       markLessonComplete(courseId, lessonId)
       setCompleted(true)
 
-      const isCourseComplete =
-        getCourseCompletionPercent(courseId, allLessons.length) >= 100
+      const isCourseComplete = getCourseCompletionPercent(courseId, allLessons.length) >= 100
       if (isCourseComplete) {
         setCelebrationType('course')
         setCelebrationTitle(course?.title || 'Course')
@@ -418,8 +417,7 @@ export function LessonPlayer() {
     } else {
       markLessonComplete(courseId, lessonId)
       setCompleted(true)
-      const isCourseComplete =
-        getCourseCompletionPercent(courseId, allLessons.length) >= 100
+      const isCourseComplete = getCourseCompletionPercent(courseId, allLessons.length) >= 100
       if (isCourseComplete) {
         setCelebrationType('course')
         setCelebrationTitle(course?.title || 'Course')
