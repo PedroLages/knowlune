@@ -145,4 +145,9 @@ See full reports in `docs/reviews/code/`:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **StorageEvent doesn't fire same-tab.** `window.dispatchEvent(new StorageEvent('storage', ...))` only fires in other tabs. Same-tab reactivity needs a custom event (`course-progress-updated`) dispatched alongside `localStorage.setItem`.
+- **Mutable cache = stale UI.** `getAllProgress()` returned the internal `_progressCache` object directly. React's shallow comparison saw the same reference and skipped re-renders. Fix: return `{ ...cache }` so each call produces a new reference.
+- **Composite scoring needs clear weight rationale.** The recommendation algorithm weights momentum (40%), recency (35%), and completion proximity (25%). Document why — reviewers questioned whether weights were arbitrary.
+- **Responsive grid breakpoints matter.** Initial `grid-cols-1 md:grid-cols-3` cramped 3 cards at 640-767px. Using `sm:grid-cols-2 lg:grid-cols-3` gives a 2-col breathing room step before 3-col.
+- **Design tokens prevent review churn.** Hardcoding `bg-blue-100` triggered a design review blocker. Using `bg-brand-soft` (a semantic token) passed immediately and adapts to theme changes.
+- **3 review rounds is normal for a new component.** Round 1 caught stale data bugs, Round 2 caught cross-tab assumptions, Round 3 confirmed fixes and surfaced polish items. Each round found genuinely different issues.
