@@ -96,6 +96,11 @@ vi.mock('@/app/components/charts/ProgressChart', () => ({
   ProgressChart: () => <div data-testid="progress-chart" />,
 }))
 
+vi.mock('@/app/components/RecommendedNext', () => ({
+  RecommendedNext: () => <div data-testid="recommended-next" />,
+  RecommendedNextSkeleton: () => <div data-testid="recommended-next-skeleton" />,
+}))
+
 // Mock motion/react to render children synchronously
 vi.mock('motion/react', () => ({
   motion: new Proxy(
@@ -135,9 +140,9 @@ function renderOverview() {
 }
 
 describe('Overview page', () => {
-  it('renders without crashing', () => {
-    const { container } = renderOverview()
-    expect(container).toBeTruthy()
+  it('renders without crashing and includes RecommendedNext', async () => {
+    renderOverview()
+    expect(await screen.findByTestId('recommended-next')).toBeInTheDocument()
   })
 
   it('displays the page heading', async () => {

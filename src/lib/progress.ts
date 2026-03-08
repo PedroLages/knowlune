@@ -98,7 +98,7 @@ function extractTagsFromContent(content: string): string[] {
 }
 
 export function getAllProgress(): Record<string, CourseProgress> {
-  if (_progressCache) return _progressCache
+  if (_progressCache) return { ..._progressCache }
 
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -118,7 +118,7 @@ export function getAllProgress(): Record<string, CourseProgress> {
     }
 
     _progressCache = data
-    return data
+    return { ..._progressCache }
   } catch (error) {
     console.error('[Progress] Error loading progress:', error)
     return {}
@@ -129,9 +129,13 @@ export function invalidateProgressCache() {
   _progressCache = null
 }
 
+/** Custom event name dispatched after progress is saved (same-tab). */
+export const PROGRESS_UPDATED_EVENT = 'course-progress-updated'
+
 function saveAllProgress(data: Record<string, CourseProgress>) {
   _progressCache = null
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+  window.dispatchEvent(new Event(PROGRESS_UPDATED_EVENT))
 }
 
 function ensureProgress(courseId: string): CourseProgress {

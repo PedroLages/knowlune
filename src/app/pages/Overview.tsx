@@ -12,6 +12,7 @@ import { QuickActions } from '@/app/components/QuickActions'
 import { StudyStreakCalendar } from '@/app/components/StudyStreakCalendar'
 import { StudyGoalsWidget } from '@/app/components/StudyGoalsWidget'
 import { StudyHistoryCalendar } from '@/app/components/StudyHistoryCalendar'
+import { RecommendedNext, RecommendedNextSkeleton } from '@/app/components/RecommendedNext'
 import { CourseCard } from '@/app/components/figma/CourseCard'
 import { ProgressChart } from '@/app/components/charts/ProgressChart'
 import { allCourses } from '@/data/courses'
@@ -118,6 +119,9 @@ export function Overview() {
           <Skeleton className="h-[260px] w-full rounded-[28px]" />
         </div>
 
+        {/* Recommended Next skeleton */}
+        <RecommendedNextSkeleton />
+
         {/* Metrics skeleton */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {[1, 2, 3, 4, 5].map(i => (
@@ -168,6 +172,11 @@ export function Overview() {
             <h1 className="text-3xl lg:text-4xl mt-1">Your Learning Studio</h1>
           </div>
           <ContinueLearning />
+        </motion.section>
+
+        {/* ── Recommended Next ── */}
+        <motion.section variants={fadeUp}>
+          <RecommendedNext />
         </motion.section>
 
         {/* ── Metrics Strip ── */}
