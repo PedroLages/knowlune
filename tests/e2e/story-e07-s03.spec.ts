@@ -189,17 +189,15 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
     // Seed authority with N-1 lessons complete, all other courses with fake 100% progress
     const progress: Record<string, unknown> = {}
 
-    // Use 200 fake lesson IDs per course — well above the max (ops-manual=64)
+    // Use 1000 fake lesson IDs per course — well above any real course's lesson count.
     // The algorithm checks completedLessons.length >= module-derived total,
-    // so we need IDs that match the actual lesson IDs in each module.
-    // Since we can't enumerate all real IDs here, we seed a very large number
-    // to ensure completedLessons.length exceeds any real totalLessons count.
+    // so we need a count that exceeds the largest real course (nci-access ~275 lessons).
     // NOTE: The algorithm uses course.modules.reduce(sum + m.lessons.length),
     // so completedLessons.length comparison works regardless of actual IDs.
     for (const courseId of ALL_COURSE_IDS.filter(id => id !== 'authority')) {
       progress[courseId] = {
         courseId,
-        completedLessons: Array.from({ length: 200 }, (_, i) => `${courseId}-lesson-${i + 1}`),
+        completedLessons: Array.from({ length: 1000 }, (_, i) => `${courseId}-lesson-${i + 1}`),
         lastAccessedAt: new Date().toISOString(),
         startedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
         notes: {},
