@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { FIXED_DATE } from './utils/test-time'
 
 test.describe('Overview Page - Comprehensive Design Analysis', () => {
   test.skip(
@@ -151,10 +152,10 @@ test.describe('Overview Page - Comprehensive Design Analysis', () => {
 
   test.describe('Performance & Loading', () => {
     test('should load within acceptable time', async ({ page }) => {
-      const startTime = Date.now()
+      const startTime = performance.now()
       await page.goto('/')
       await page.waitForLoadState('domcontentloaded')
-      const loadTime = Date.now() - startTime
+      const loadTime = performance.now() - startTime
 
       expect(loadTime).toBeLessThan(3000) // Should load in under 3 seconds
     })
@@ -196,7 +197,7 @@ test.describe('Overview Page - Comprehensive Design Analysis', () => {
 
     test('should show progress bars in continue studying', async ({ page }) => {
       // Seed progress data to guarantee Continue Studying shows courses
-      await page.evaluate(() => {
+      await page.evaluate((fixedDate) => {
         localStorage.setItem(
           'course-progress',
           JSON.stringify({
@@ -205,12 +206,12 @@ test.describe('Overview Page - Comprehensive Design Analysis', () => {
               completedLessons: ['lesson-1', 'lesson-2'],
               lastWatchedLesson: 'lesson-3',
               notes: {},
-              startedAt: new Date().toISOString(),
-              lastAccessedAt: new Date().toISOString(),
+              startedAt: new Date(fixedDate).toISOString(),
+              lastAccessedAt: new Date(fixedDate).toISOString(),
             },
           })
         )
-      })
+      }, FIXED_DATE)
       await page.reload()
       await page.waitForLoadState('domcontentloaded')
 

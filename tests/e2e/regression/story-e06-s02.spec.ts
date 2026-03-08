@@ -1,3 +1,5 @@
+import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
+import { RETRY_CONFIG } from '../../utils/constants'
 /**
  * ATDD tests for E06-S02: Track Challenge Progress
  *
@@ -48,11 +50,22 @@ async function seedStore(page: Page, storeName: string, records: unknown[]) {
           request.onerror = () => reject(request.error)
         })
         if (result === 'ok') return
-        await new Promise(r => setTimeout(r, retryDelay))
+        // Use requestAnimationFrame polling instead of hard timeout
+        await new Promise(resolve => {
+          const startTime = performance.now()
+          const check = () => {
+            if (performance.now() - startTime >= retryDelay) {
+              resolve(undefined)
+            } else {
+              requestAnimationFrame(check)
+            }
+          }
+          requestAnimationFrame(check)
+        })
       }
       throw new Error(`Store "${store}" not found after ${maxRetries} retries`)
     },
-    { dbName: DB_NAME, store: storeName, data: records, maxRetries: 10, retryDelay: 200 }
+    { dbName: DB_NAME, store: storeName, data: records, maxRetries: RETRY_CONFIG.MAX_ATTEMPTS, retryDelay: RETRY_CONFIG.POLL_INTERVAL }
   )
 }
 
@@ -226,9 +239,9 @@ test.describe('AC4: Streak-based challenge progress', () => {
     await seedStore(page, 'challenges', [challenge])
 
     // Seed a 7-day streak ending today so getCurrentStreak() returns 7
-    const today = new Date()
+    const today = new Date(FIXED_DATE)
     const studyLog = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(today)
+      const date = new Date(FIXED_DATE)
       date.setDate(date.getDate() - (6 - i)) // 6 days ago through today
       return {
         type: 'lesson_complete',
@@ -252,8 +265,7 @@ test.describe('AC4: Streak-based challenge progress', () => {
 
 test.describe('AC5: Expired challenges', () => {
   test('shows expired challenge in collapsed section, separated from active', async ({ page }) => {
-    const yesterday = new Date()
-    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterday = new Date(getRelativeDate(-1))
     const expiredDeadline = yesterday.toISOString().split('T')[0]
 
     const expiredChallenge = createChallenge({

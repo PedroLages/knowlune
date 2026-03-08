@@ -7,7 +7,9 @@
  */
 import { test, expect } from '../support/fixtures'
 import { createChallenge } from '../support/fixtures/factories/challenge-factory'
+import { RETRY_CONFIG } from '../../utils/constants'
 import type { Page } from '@playwright/test'
+import { FIXED_DATE } from './../../utils/test-time'
 
 const DB_NAME = 'ElearningDB'
 
@@ -49,11 +51,22 @@ async function seedStore(page: Page, storeName: string, records: unknown[]) {
           request.onerror = () => reject(request.error)
         })
         if (result === 'ok') return
-        await new Promise(r => setTimeout(r, retryDelay))
+        // Use requestAnimationFrame polling instead of hard timeout
+        await new Promise(resolve => {
+          const startTime = performance.now()
+          const check = () => {
+            if (performance.now() - startTime >= retryDelay) {
+              resolve(undefined)
+            } else {
+              requestAnimationFrame(check)
+            }
+          }
+          requestAnimationFrame(check)
+        })
       }
       throw new Error(`Store "${store}" not found after ${maxRetries} retries`)
     },
-    { dbName: DB_NAME, store: storeName, data: records, maxRetries: 10, retryDelay: 200 }
+    { dbName: DB_NAME, store: storeName, data: records, maxRetries: RETRY_CONFIG.MAX_ATTEMPTS, retryDelay: RETRY_CONFIG.POLL_INTERVAL }
   )
 }
 
@@ -91,7 +104,7 @@ test.describe('AC1: 25% milestone celebration', () => {
 
     // Seed 1 completed item → 1/4 = 25%
     await seedStore(page, 'contentProgress', [
-      { courseId: 'c1', itemId: 'l1', status: 'completed', updatedAt: new Date().toISOString() },
+      { courseId: 'c1', itemId: 'l1', status: 'completed', updatedAt: FIXED_DATE },
     ])
     await page.reload()
 
@@ -140,7 +153,7 @@ test.describe('AC1: 25% milestone celebration', () => {
 
     // Seed 1 completed item → 25% but already celebrated
     await seedStore(page, 'contentProgress', [
-      { courseId: 'c1', itemId: 'l1', status: 'completed', updatedAt: new Date().toISOString() },
+      { courseId: 'c1', itemId: 'l1', status: 'completed', updatedAt: FIXED_DATE },
     ])
     await page.reload()
 
@@ -170,8 +183,8 @@ test.describe('AC2: 50% milestone celebration', () => {
 
     // Seed 2 completed items → 2/4 = 50%
     await seedStore(page, 'contentProgress', [
-      { courseId: 'c1', itemId: 'l1', status: 'completed', updatedAt: new Date().toISOString() },
-      { courseId: 'c1', itemId: 'l2', status: 'completed', updatedAt: new Date().toISOString() },
+      { courseId: 'c1', itemId: 'l1', status: 'completed', updatedAt: FIXED_DATE },
+      { courseId: 'c1', itemId: 'l2', status: 'completed', updatedAt: FIXED_DATE },
     ])
     await page.reload()
 
@@ -200,9 +213,9 @@ test.describe('AC3: 75% milestone celebration', () => {
 
     // Seed 3 completed items → 3/4 = 75%
     await seedStore(page, 'contentProgress', [
-      { courseId: 'c1', itemId: 'l1', status: 'completed', updatedAt: new Date().toISOString() },
-      { courseId: 'c1', itemId: 'l2', status: 'completed', updatedAt: new Date().toISOString() },
-      { courseId: 'c1', itemId: 'l3', status: 'completed', updatedAt: new Date().toISOString() },
+      { courseId: 'c1', itemId: 'l1', status: 'completed', updatedAt: FIXED_DATE },
+      { courseId: 'c1', itemId: 'l2', status: 'completed', updatedAt: FIXED_DATE },
+      { courseId: 'c1', itemId: 'l3', status: 'completed', updatedAt: FIXED_DATE },
     ])
     await page.reload()
 
@@ -233,10 +246,10 @@ test.describe('AC4: 100% completion celebration', () => {
 
     // Seed 4 completed items → 4/4 = 100%
     await seedStore(page, 'contentProgress', [
-      { courseId: 'c1', itemId: 'l1', status: 'completed', updatedAt: new Date().toISOString() },
-      { courseId: 'c1', itemId: 'l2', status: 'completed', updatedAt: new Date().toISOString() },
-      { courseId: 'c1', itemId: 'l3', status: 'completed', updatedAt: new Date().toISOString() },
-      { courseId: 'c1', itemId: 'l4', status: 'completed', updatedAt: new Date().toISOString() },
+      { courseId: 'c1', itemId: 'l1', status: 'completed', updatedAt: FIXED_DATE },
+      { courseId: 'c1', itemId: 'l2', status: 'completed', updatedAt: FIXED_DATE },
+      { courseId: 'c1', itemId: 'l3', status: 'completed', updatedAt: FIXED_DATE },
+      { courseId: 'c1', itemId: 'l4', status: 'completed', updatedAt: FIXED_DATE },
     ])
     await page.reload()
 
@@ -282,7 +295,7 @@ test.describe('AC5: prefers-reduced-motion support', () => {
 
     // Seed 1 completed item → 25%
     await seedStore(page, 'contentProgress', [
-      { courseId: 'c1', itemId: 'l1', status: 'completed', updatedAt: new Date().toISOString() },
+      { courseId: 'c1', itemId: 'l1', status: 'completed', updatedAt: FIXED_DATE },
     ])
     await page.reload()
 
@@ -316,9 +329,9 @@ test.describe('AC6: Simultaneous milestone crossing', () => {
 
     // Seed 3 completed items → 3/4 = 75% — crosses 25%, 50%, 75% simultaneously
     await seedStore(page, 'contentProgress', [
-      { courseId: 'c1', itemId: 'l1', status: 'completed', updatedAt: new Date().toISOString() },
-      { courseId: 'c1', itemId: 'l2', status: 'completed', updatedAt: new Date().toISOString() },
-      { courseId: 'c1', itemId: 'l3', status: 'completed', updatedAt: new Date().toISOString() },
+      { courseId: 'c1', itemId: 'l1', status: 'completed', updatedAt: FIXED_DATE },
+      { courseId: 'c1', itemId: 'l2', status: 'completed', updatedAt: FIXED_DATE },
+      { courseId: 'c1', itemId: 'l3', status: 'completed', updatedAt: FIXED_DATE },
     ])
     await page.reload()
 

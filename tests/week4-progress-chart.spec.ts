@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { FIXED_DATE } from './utils/test-time'
 
 test.skip('Week 4 - Progress Chart visualization', async ({ page }) => {
   // FIXME: Pre-existing failure - progress chart visualization failing
@@ -6,8 +7,8 @@ test.skip('Week 4 - Progress Chart visualization', async ({ page }) => {
   await page.goto('/')
 
   // Add comprehensive test data with varied activity across 14 days
-  await page.evaluate(() => {
-    const now = new Date()
+  await page.evaluate((fixedDate) => {
+    const now = new Date(fixedDate)
 
     // Helper to create date N days ago
     const daysAgo = (n: number) => new Date(now.getTime() - n * 24 * 60 * 60 * 1000)
@@ -164,7 +165,7 @@ test.skip('Week 4 - Progress Chart visualization', async ({ page }) => {
 
     localStorage.setItem('course-progress', JSON.stringify(progress))
     localStorage.setItem('study-log', JSON.stringify(studyLog))
-  })
+  }, FIXED_DATE)
 
   await page.reload()
 

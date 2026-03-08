@@ -10,6 +10,7 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
+import { RETRY_CONFIG } from '../../utils/constants'
 
 const NOTES_URL = '/notes'
 
@@ -67,8 +68,8 @@ async function seedNotes(page: Parameters<typeof navigateAndWait>[0]) {
       },
     ]
 
-    const maxRetries = 10
-    const retryDelay = 200
+    const maxRetries = 10 // RETRY_CONFIG.MAX_ATTEMPTS
+    const retryDelay = 200 // RETRY_CONFIG.POLL_INTERVAL
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       const result = await new Promise<'ok' | 'store-missing'>((resolve, reject) => {
@@ -97,7 +98,18 @@ async function seedNotes(page: Parameters<typeof navigateAndWait>[0]) {
         request.onerror = () => reject(request.error)
       })
       if (result === 'ok') return
-      await new Promise(r => setTimeout(r, retryDelay))
+      // Use requestAnimationFrame polling instead of hard timeout
+      await new Promise(resolve => {
+        const startTime = performance.now()
+        const check = () => {
+          if (performance.now() - startTime >= retryDelay) {
+            resolve(undefined)
+          } else {
+            requestAnimationFrame(check)
+          }
+        }
+        requestAnimationFrame(check)
+      })
     }
     throw new Error('notes store not found in ElearningDB after 10 retries')
   })
