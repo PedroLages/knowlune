@@ -41,7 +41,7 @@ from claude_agent_sdk import (
     ClaudeSDKClient,
     ResultMessage,
 )
-from claude_agent_sdk.types import AgentDefinition, TextBlock
+from claude_agent_sdk.types import AgentDefinition, McpStdioServerConfig, TextBlock
 
 # ─────────────────────────────────────────────────
 # Section A: CLI & Config
@@ -53,10 +53,11 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent
 SPRINT_STATUS = PROJECT_DIR / "docs" / "implementation-artifacts" / "sprint-status.yaml"
 AGENTS_DIR = PROJECT_DIR / ".claude" / "agents"
 
-BUDGET_SESSION_START = 1.50
-BUDGET_SESSION_IMPLEMENT = 5.00
-BUDGET_SESSION_REVIEW = 5.00
-BUDGET_PER_STORY = BUDGET_SESSION_START + BUDGET_SESSION_IMPLEMENT + BUDGET_SESSION_REVIEW
+# No budget caps — let sessions run to completion
+BUDGET_SESSION_START = 0  # 0 = unlimited
+BUDGET_SESSION_IMPLEMENT = 0
+BUDGET_SESSION_REVIEW = 0
+BUDGET_PER_STORY = 25.00  # estimate for dry-run display only
 
 
 @dataclass
@@ -301,20 +302,22 @@ PRE-CHECKS:
 AGENT REVIEWS:
 9. Run the code-review agent: dispatch it via the Agent tool with subagent_type="code-review". It should review git diff main...HEAD.
 10. Run the code-review-testing agent: dispatch via Agent tool with subagent_type="code-review-testing". It should verify AC coverage.
+11. Run the design-review agent: dispatch via Agent tool with subagent_type="design-review". It tests the live app at http://localhost:5173 using Playwright MCP at mobile (375px), tablet (768px), and desktop (1440px) viewports. Only run this if the story has UI changes (check git diff for .tsx or .css files).
 
-IMPORTANT: Run agents 9 and 10 in PARALLEL for efficiency.
+IMPORTANT: Run agents 9, 10, and 11 in PARALLEL for efficiency.
 
-11. Save review reports to:
+12. Save review reports to:
     - docs/reviews/code/code-review-{today}-{story_id}.md
     - docs/reviews/code/code-review-testing-{today}-{story_id}.md
+    - docs/reviews/design/design-review-{today}-{story_id}.md (if design review ran)
 
-12. Generate a CONSOLIDATED report with severity-triaged findings:
+13. Generate a CONSOLIDATED report with severity-triaged findings:
     - [Blocker]: must fix before shipping (confidence >= 70)
     - [High]: should fix (confidence >= 70)
     - [Medium]: fix when possible
     - [Nit]: optional
 
-13. Update story file frontmatter: review_gates_passed list, reviewed status
+14. Update story file frontmatter: review_gates_passed list, reviewed status
 
 End with exactly one of:
 - VERDICT: PASS — if no blockers
@@ -324,7 +327,7 @@ End with exactly one of:
 FIX_PROMPT = """
 The review found issues that must be fixed before shipping story {story_id}.
 
-Read the review reports you just generated at docs/reviews/code/.
+Read the review reports you just generated at docs/reviews/code/ and docs/reviews/design/ (if design review ran).
 
 Fix ALL [Blocker] findings — these are mandatory.
 Fix ALL [High] findings — these should be fixed.
@@ -368,6 +371,16 @@ Finish story {story_id}:
 Output the PR URL on its own line as: PR_URL: <url>
 """
 
+FINISH_RETRY_PROMPT = """
+The FINISH phase for story {story_id} did not complete all tasks.
+
+Missing:
+{missing_items}
+
+Complete ONLY the missing tasks listed above. Do not repeat already-completed tasks.
+When done, output: FINISH_COMPLETE
+"""
+
 
 # ─────────────────────────────────────────────────
 # Section D: Phase Runners
@@ -397,12 +410,28 @@ def make_options(
             model="sonnet",
         )
 
+    dr_path = AGENTS_DIR / "design-review.md"
+    if dr_path.exists():
+        agents["design-review"] = AgentDefinition(
+            description="Elite UI/UX design reviewer using Playwright MCP to test the live app at multiple viewports.",
+            prompt=dr_path.read_text(),
+            model="sonnet",
+        )
+
     allowed = [
         "Read", "Write", "Edit", "Glob", "Grep", "Bash",
-        "Agent", "Skill", "TodoWrite", "WebSearch",
+        "Agent", "Skill", "TodoWrite", "WebSearch", "ToolSearch",
     ]
 
-    return ClaudeAgentOptions(
+    # Headless Playwright MCP for design review (no browser window pops up)
+    mcp_servers: dict[str, McpStdioServerConfig] = {
+        "playwright": McpStdioServerConfig(
+            command="npx",
+            args=["@playwright/mcp@latest", "--headless"],
+        ),
+    }
+
+    opts: dict[str, Any] = dict(
         setting_sources=["user", "project", "local"],
         agents=agents if agents else None,
         allowed_tools=allowed,
@@ -410,9 +439,13 @@ def make_options(
         permission_mode="bypassPermissions" if autonomous else "acceptEdits",
         system_prompt={"type": "preset", "preset": "claude_code"},
         max_turns=max_turns,
-        max_budget_usd=max_budget,
         cwd=str(PROJECT_DIR),
+        mcp_servers=mcp_servers,
     )
+    if max_budget > 0:
+        opts["max_budget_usd"] = max_budget
+
+    return ClaudeAgentOptions(**opts)
 
 
 def format_prompt(template: str, story: StoryInfo) -> str:
@@ -589,6 +622,31 @@ async def run_review_fix_session(
         total_cost += finish_cost
         all_text += "\n" + finish_text
 
+        # Verify FINISH completed its tasks
+        missing = verify_finish(story)
+        if missing:
+            write_progress(
+                story.key, "FINISH_RETRY",
+                f"missing: {', '.join(missing)}",
+            )
+            retry_prompt = FINISH_RETRY_PROMPT.format(
+                story_id=story.key,
+                missing_items="\n".join(f"- {m}" for m in missing),
+            )
+            await client.query(retry_prompt)
+            retry_text, _, retry_cost = await collect_response(
+                client, story_key=story.key
+            )
+            total_cost += retry_cost
+            all_text += "\n" + retry_text
+
+            # Check again
+            still_missing = verify_finish(story)
+            if still_missing:
+                raise StoryError(
+                    f"FINISH incomplete after retry: {', '.join(still_missing)}"
+                )
+
     return result, all_text, total_cost
 
 
@@ -652,7 +710,7 @@ async def run_story(story: StoryInfo, config: RunConfig) -> StoryResult:
         result.phase_reached = "finish"
 
         # Extract PR URL
-        result.pr_url = extract_pr_url(text)
+        result.pr_url = extract_pr_url(text, story)
         result.success = True
 
     except StoryError as e:
@@ -686,6 +744,16 @@ async def main() -> None:
 
     if not stories:
         log.error("No stories found to process")
+        sys.exit(1)
+
+    # Preflight: ensure script exists on main (prevents "file not found" after checkout)
+    check = subprocess.run(
+        ["git", "show", "main:scripts/auto-story.py"],
+        capture_output=True, cwd=PROJECT_DIR,
+    )
+    if check.returncode != 0:
+        log.error("scripts/auto-story.py not found on main branch!")
+        log.error("Run: git checkout main && git add scripts/auto-story.py && git commit")
         sys.exit(1)
 
     # Dry run
@@ -789,13 +857,70 @@ def parse_verdict(text: str) -> Verdict:
     )
 
 
-def extract_pr_url(text: str) -> str | None:
-    """Extract PR URL from finish output."""
+def verify_finish(story: StoryInfo) -> list[str]:
+    """Check that FINISH actually completed its tasks. Returns list of failures."""
+    failures: list[str] = []
+
+    # 1. Check story file status
+    story_files = list(
+        (PROJECT_DIR / "docs" / "implementation-artifacts").glob(f"{story.yaml_key}*")
+    )
+    if story_files:
+        content = story_files[0].read_text()
+        if "status: done" not in content and "status: \"done\"" not in content:
+            failures.append("Story file not marked done")
+    else:
+        failures.append(f"Story file not found for {story.yaml_key}")
+
+    # 2. Check sprint-status.yaml
+    data = load_sprint_status()
+    dev_status = data.get("development_status", {})
+    if str(dev_status.get(story.yaml_key, "")).strip() != "done":
+        failures.append("Sprint status not updated to done")
+
+    # 3. Check no uncommitted changes
+    result = subprocess.run(
+        ["git", "status", "--porcelain"],
+        capture_output=True, text=True, cwd=PROJECT_DIR,
+    )
+    if result.stdout.strip():
+        failures.append(f"Uncommitted files: {result.stdout.strip()[:200]}")
+
+    # 4. Check branch was pushed
+    result = subprocess.run(
+        ["git", "log", "@{u}..HEAD", "--oneline"],
+        capture_output=True, text=True, cwd=PROJECT_DIR,
+    )
+    if result.returncode != 0 or result.stdout.strip():
+        failures.append("Branch not pushed to remote")
+
+    return failures
+
+
+def extract_pr_url(text: str, story: StoryInfo | None = None) -> str | None:
+    """Extract PR URL from finish output, with gh CLI fallback."""
     m = re.search(r"PR_URL:\s*(https://\S+)", text)
     if m:
         return m.group(1)
     m = re.search(r"https://github\.com/\S+/pull/\d+", text)
-    return m.group(0) if m else None
+    if m:
+        return m.group(0)
+
+    # Fallback: check GitHub for open PRs from this branch
+    if story:
+        branch_slug = (
+            f"e{int(story.epic_num):02d}-s{int(story.story_num):02d}"
+        )
+        result = subprocess.run(
+            ["gh", "pr", "list", "--head", f"feature/{branch_slug}",
+             "--json", "url", "--limit", "1"],
+            capture_output=True, text=True, cwd=PROJECT_DIR,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            prs = json.loads(result.stdout)
+            if prs:
+                return prs[0]["url"]
+    return None
 
 
 def print_progress(results: list[StoryResult], total: int) -> None:

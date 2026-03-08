@@ -125,7 +125,7 @@ development_status:
   epic-6: in-progress
   6-1-create-learning-challenges: done
   6-2-track-challenge-progress: done
-  6-3-challenge-milestone-celebrations: backlog
+  6-3-challenge-milestone-celebrations: done
   epic-6-retrospective: optional
 
   # ──────────────────────────────────────────────────
@@ -190,3 +190,84 @@ development_status:
   11-5-interleaved-review-mode: backlog
   11-6-per-course-study-reminders: backlog
   epic-11-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 12: Take Basic Quizzes (Quiz & Assessment System)
+  # ──────────────────────────────────────────────────
+  epic-12: backlog
+  12-1-create-quiz-type-definitions: backlog
+  12-2-set-up-dexie-schema-v3-migration: backlog
+  12-3-create-usequizstore-with-zustand: backlog
+  12-4-create-quiz-route-and-basic-quizplayer-component: backlog
+  12-5-display-multiple-choice-questions: backlog
+  12-6-calculate-and-display-quiz-score: backlog
+  epic-12-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 13: Navigate and Control Quiz Flow
+  # ──────────────────────────────────────────────────
+  epic-13: backlog
+  13-1-navigate-between-questions: backlog
+  13-2-mark-questions-for-review: backlog
+  13-3-pause-and-resume-quiz: backlog
+  13-4-unlimited-quiz-retakes: backlog
+  13-5-randomize-question-order-with-fisher-yates-shuffle: backlog
+  13-6-handle-localstorage-quota-exceeded-gracefully: backlog
+  epic-13-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 14: Practice with Diverse Question Types
+  # ──────────────────────────────────────────────────
+  epic-14: backlog
+  14-1-display-truefalse-questions: backlog
+  14-2-display-multiple-select-questions-with-partial-credit: backlog
+  14-3-display-fill-in-blank-questions: backlog
+  14-4-support-rich-text-formatting-in-questions: backlog
+  epic-14-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 15: Timed Quizzes with Enhanced Feedback
+  # ──────────────────────────────────────────────────
+  epic-15: backlog
+  15-1-display-countdown-timer-with-accuracy: backlog
+  15-2-configure-timer-duration-and-accommodations: backlog
+  15-3-display-timer-warnings-at-key-thresholds: backlog
+  15-4-provide-immediate-explanatory-feedback-per-question: backlog
+  15-5-display-performance-summary-after-quiz: backlog
+  15-6-track-time-to-completion-for-each-attempt: backlog
+  epic-15-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 16: Review Performance and Track Improvement
+  # ──────────────────────────────────────────────────
+  epic-16: backlog
+  16-1-review-all-questions-and-answers-after-completion: backlog
+  16-2-display-score-history-across-all-attempts: backlog
+  16-3-calculate-and-display-score-improvement: backlog
+  16-4-calculate-normalized-gain-hakes-formula: backlog
+  epic-16-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 17: Analyze Quiz Data and Patterns
+  # ──────────────────────────────────────────────────
+  epic-17: backlog
+  17-1-track-and-display-quiz-completion-rate: backlog
+  17-2-track-average-retake-frequency: backlog
+  17-3-calculate-item-difficulty-p-values: backlog
+  17-4-calculate-discrimination-indices: backlog
+  17-5-identify-learning-trajectory-patterns: backlog
+  epic-17-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 18: Accessible and Integrated Quiz Experience
+  # ──────────────────────────────────────────────────
+  epic-18: backlog
+  18-1-implement-complete-keyboard-navigation: backlog
+  18-2-implement-aria-live-regions-for-dynamic-content: backlog
+  18-3-ensure-semantic-html-and-proper-aria-attributes: backlog
+  18-4-verify-contrast-ratios-and-touch-targets: backlog
+  18-5-integrate-quiz-completion-with-study-streaks: backlog
+  18-6-display-quiz-performance-in-overview-dashboard: backlog
+  18-7-surface-quiz-analytics-in-reports-section: backlog
+  18-8-display-quiz-availability-badges-on-courses-page: backlog
+  epic-18-retrospective: optional

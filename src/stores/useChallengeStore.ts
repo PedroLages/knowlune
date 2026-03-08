@@ -4,6 +4,7 @@ import { db } from '@/db'
 import type { Challenge, ChallengeType } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { calculateProgress } from '@/lib/challengeProgress'
+import { detectChallengeMilestones } from '@/lib/challengeMilestones'
 
 interface NewChallengeData {
   name: string
@@ -15,10 +16,11 @@ interface NewChallengeData {
 interface ChallengeState {
   challenges: Challenge[]
   isLoading: boolean
+  isRefreshing: boolean
   error: string | null
 
   loadChallenges: () => Promise<void>
-  refreshAllProgress: () => Promise<void>
+  refreshAllProgress: () => Promise<Map<string, number[]>>
   addChallenge: (data: NewChallengeData) => Promise<void>
   deleteChallenge: (id: string) => Promise<void>
 }
@@ -26,6 +28,7 @@ interface ChallengeState {
 export const useChallengeStore = create<ChallengeState>((set, get) => ({
   challenges: [],
   isLoading: false,
+  isRefreshing: false,
   error: null,
 
   loadChallenges: async () => {
@@ -40,10 +43,11 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
   },
 
   refreshAllProgress: async () => {
-    const { challenges } = get()
-    if (challenges.length === 0) return
-    const snapshot = [...challenges]
+    const { challenges, isRefreshing } = get()
+    const milestoneMap = new Map<string, number[]>()
+    if (isRefreshing || challenges.length === 0) return milestoneMap
 
+    set({ isRefreshing: true })
     try {
       const updated = await Promise.all(
         challenges.map(async challenge => {
@@ -53,7 +57,18 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
             currentProgress >= challenge.targetValue && !challenge.completedAt
               ? new Date().toISOString()
               : challenge.completedAt
-          return { ...challenge, currentProgress, completedAt }
+
+          const newMilestones = detectChallengeMilestones(challenge, currentProgress)
+          if (newMilestones.length > 0) {
+            milestoneMap.set(challenge.id, newMilestones)
+          }
+
+          return {
+            ...challenge,
+            currentProgress,
+            completedAt,
+            celebratedMilestones: [...(challenge.celebratedMilestones ?? []), ...newMilestones],
+          }
         })
       )
 
@@ -61,9 +76,13 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
       set({ challenges: updated })
     } catch (error) {
       console.error('[ChallengeStore] Failed to refresh progress:', error)
-      set({ challenges: snapshot })
       toast.error('Progress update may not have saved')
+      milestoneMap.clear()
+    } finally {
+      set({ isRefreshing: false })
     }
+
+    return milestoneMap
   },
 
   addChallenge: async (data: NewChallengeData) => {
