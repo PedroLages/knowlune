@@ -16,7 +16,6 @@ interface AtRiskBadgeProps {
 export function AtRiskBadge({ daysSinceLastSession, className }: AtRiskBadgeProps) {
   // Handle never-started courses (Infinity days)
   const isNeverStarted = !isFinite(daysSinceLastSession)
-  const displayDays = isNeverStarted ? 'Never started' : daysSinceLastSession
   const daysText = daysSinceLastSession === 1 ? 'day' : 'days'
   const ariaLabel = isNeverStarted
     ? 'At Risk: Never started'
