@@ -74,6 +74,7 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
     } catch (error) {
       console.error('[ChallengeStore] Failed to refresh progress:', error)
       toast.error('Progress update may not have saved')
+      milestoneMap.clear()
     }
 
     return milestoneMap

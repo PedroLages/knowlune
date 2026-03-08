@@ -361,6 +361,103 @@ describe('refreshAllProgress', () => {
     expect(state.challenges[0].currentProgress).toBe(0)
   })
 
+  it('should return milestoneMap with detected milestones', async () => {
+    const { calculateProgress } = await import('@/lib/challengeProgress')
+    vi.mocked(calculateProgress).mockResolvedValue(3) // 3/4 = 75%
+
+    const { db } = await import('@/db')
+    const challenge = createChallenge({
+      name: 'Milestone test',
+      type: 'completion',
+      targetValue: 4,
+      currentProgress: 0,
+      celebratedMilestones: [],
+    })
+    await db.challenges.add(challenge)
+    useChallengeStore.setState({ challenges: [challenge] })
+
+    let result: Map<string, number[]> = new Map()
+    await act(async () => {
+      result = await useChallengeStore.getState().refreshAllProgress()
+    })
+
+    expect(result.get(challenge.id)).toEqual([25, 50, 75])
+  })
+
+  it('should append new milestones to celebratedMilestones', async () => {
+    const { calculateProgress } = await import('@/lib/challengeProgress')
+    vi.mocked(calculateProgress).mockResolvedValue(2) // 2/4 = 50%
+
+    const { db } = await import('@/db')
+    const challenge = createChallenge({
+      name: 'Append test',
+      type: 'completion',
+      targetValue: 4,
+      currentProgress: 0,
+      celebratedMilestones: [25],
+    })
+    await db.challenges.add(challenge)
+    useChallengeStore.setState({ challenges: [challenge] })
+
+    await act(async () => {
+      await useChallengeStore.getState().refreshAllProgress()
+    })
+
+    const state = useChallengeStore.getState()
+    expect(state.challenges[0].celebratedMilestones).toEqual([25, 50])
+
+    const dbRecord = await db.challenges.get(challenge.id)
+    expect(dbRecord?.celebratedMilestones).toEqual([25, 50])
+  })
+
+  it('should return empty milestoneMap when no new milestones crossed', async () => {
+    const { calculateProgress } = await import('@/lib/challengeProgress')
+    vi.mocked(calculateProgress).mockResolvedValue(0)
+
+    const { db } = await import('@/db')
+    const challenge = createChallenge({
+      name: 'No milestones',
+      type: 'completion',
+      targetValue: 10,
+      currentProgress: 0,
+    })
+    await db.challenges.add(challenge)
+    useChallengeStore.setState({ challenges: [challenge] })
+
+    let result: Map<string, number[]> = new Map()
+    await act(async () => {
+      result = await useChallengeStore.getState().refreshAllProgress()
+    })
+
+    expect(result.size).toBe(0)
+  })
+
+  it('should return empty milestoneMap on DB write failure', async () => {
+    const { calculateProgress } = await import('@/lib/challengeProgress')
+    vi.mocked(calculateProgress).mockResolvedValue(3)
+
+    const { db } = await import('@/db')
+    const challenge = createChallenge({
+      name: 'Fail milestone',
+      type: 'completion',
+      targetValue: 4,
+      currentProgress: 0,
+      celebratedMilestones: [],
+    })
+    await db.challenges.add(challenge)
+    useChallengeStore.setState({ challenges: [challenge] })
+
+    vi.spyOn(db.challenges, 'bulkPut').mockRejectedValue(new Error('DB write failed'))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    let result: Map<string, number[]> = new Map()
+    await act(async () => {
+      result = await useChallengeStore.getState().refreshAllProgress()
+    })
+
+    expect(result.size).toBe(0)
+  })
+
   it('should be a no-op when challenges array is empty', async () => {
     const { calculateProgress } = await import('@/lib/challengeProgress')
     vi.mocked(calculateProgress).mockClear()

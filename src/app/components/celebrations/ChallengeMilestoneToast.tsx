@@ -26,10 +26,11 @@ export function ChallengeMilestoneToast({
         colors: tierConfig.confettiColors,
       })
     }
-  }, [milestone, tierConfig.particleCount, tierConfig.spread, tierConfig.confettiColors])
+  }, [milestone])
 
   return (
     <div
+      role="status"
       aria-label={`${tierConfig.label} milestone achieved`}
       data-testid={`challenge-milestone-badge-${milestone}`}
       className={cn(

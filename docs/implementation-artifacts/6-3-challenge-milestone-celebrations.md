@@ -4,9 +4,9 @@ story_name: "Challenge Milestone Celebrations"
 status: in-progress
 started: 2026-03-08
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-08
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing]
 ---
 
 # Story 6.3: Challenge Milestone Celebrations
@@ -77,11 +77,11 @@ So that I feel recognized and motivated as I make progress toward my goals.
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+No blockers. Two findings (setTimeout cleanup, aria role) — both overlap with code review. See `docs/reviews/design/design-review-2026-03-08-e06-s03.md`.
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+1 blocker (setTimeout leak), 4 high (confetti deps, milestoneMap on error, hasFiredRef, missing .catch), 3 medium. Testing: 0/6 ACs fully covered (all partial — missing unit tests for core logic). See `docs/reviews/code/code-review-2026-03-08-e06-s03.md` and `docs/reviews/code/code-review-testing-2026-03-08-e06-s03.md`.
 
 ## Implementation Plan
 

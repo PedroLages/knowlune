@@ -52,3 +52,12 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Streak progress not scoped to challenge creation date (contradicts AC4 wording)
 - No `updatedAt` index on contentProgress -- full table scan for completion progress
 - E2E afterEach IDB cleanup fire-and-forget (recurring from E06-S01)
+
+## E06-S03: Challenge Milestone Celebrations
+- `fireMilestoneToasts` setTimeout timers never cleaned up on unmount -- leaked toasts after navigation
+- `refreshAllProgress` returns milestoneMap outside try/catch -- returns stale empty map on error
+- `confettiColors` array reference in useEffect deps causes re-fire (referential inequality)
+- Hardcoded hex colors in confettiColors (acceptable for canvas-confetti, not Tailwind classes)
+- `hasFiredRef` prevents milestone toasts after first load -- new milestones from manual refresh never celebrated
+- E2E afterEach IDB cleanup fire-and-forget (recurring from E06-S01)
+- ChallengeMilestoneToast missing `role="status"` for screen reader announcements

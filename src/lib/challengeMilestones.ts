@@ -67,7 +67,11 @@ export const CHALLENGE_TIER_CONFIG: Record<number, ChallengeTierConfig> = {
 }
 
 export function getChallengeTierConfig(percent: number): ChallengeTierConfig {
-  return CHALLENGE_TIER_CONFIG[percent] ?? CHALLENGE_TIER_CONFIG[25]
+  const config = CHALLENGE_TIER_CONFIG[percent]
+  if (!config) {
+    console.warn(`[challengeMilestones] Unknown threshold ${percent}, falling back to 25%`)
+  }
+  return config ?? CHALLENGE_TIER_CONFIG[25]
 }
 
 // ── Detection ───────────────────────────────────────────────

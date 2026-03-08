@@ -121,8 +121,10 @@ test.describe('AC1: 25% milestone celebration', () => {
     ])
     await page.reload()
 
-    // Then: no milestone toast should appear
-    await page.waitForTimeout(3000)
+    // Then: no milestone toast should appear — wait for page to settle, then assert absence
+    await page.waitForSelector('[data-testid="header-create-challenge"]', { state: 'visible' })
+    // Give stagger delay time to fire if it would (500ms per toast + buffer)
+    await page.waitForTimeout(1500)
     const toast = page.locator('[data-sonner-toast]').filter({ hasText: /25%.*Complete/i })
     await expect(toast).toHaveCount(0)
   })
@@ -152,6 +154,9 @@ test.describe('AC2: 50% milestone celebration', () => {
 
     const toast = page.locator('[data-sonner-toast]').filter({ hasText: /Halfway There/i })
     await expect(toast).toBeVisible({ timeout: 10000 })
+
+    // And: supportive message is shown
+    await expect(toast).toContainText("Keep it up — you're doing great!")
   })
 })
 
@@ -180,6 +185,9 @@ test.describe('AC3: 75% milestone celebration', () => {
 
     const toast = page.locator('[data-sonner-toast]').filter({ hasText: /Almost There/i })
     await expect(toast).toBeVisible({ timeout: 10000 })
+
+    // And: encouraging message is shown
+    await expect(toast).toContainText('The finish line is in sight!')
   })
 })
 
@@ -216,9 +224,17 @@ test.describe('AC4: 100% completion celebration', () => {
     // And: confetti animation fires (canvas-confetti injects a <canvas>)
     await expect(page.locator('canvas')).toBeVisible({ timeout: 10000 })
 
-    // And: challenge card transitions to completed state
-    const completedSection = page.getByText(/completed/i)
-    await expect(completedSection).toBeVisible()
+    // And: challenge card transitions to completed state in Completed section
+    const completedSection = page.locator('[data-testid="completed-section"]')
+    await expect(completedSection).toBeVisible({ timeout: 10000 })
+
+    // And: Completed section trigger shows count
+    const completedTrigger = completedSection.getByRole('button', { name: /Completed \(\d+\)/i })
+    await expect(completedTrigger).toBeVisible()
+
+    // And: challenge name appears within completed section
+    await completedTrigger.click()
+    await expect(completedSection.getByText('Watch 4 Videos')).toBeVisible()
   })
 })
 
@@ -251,6 +267,10 @@ test.describe('AC5: prefers-reduced-motion support', () => {
 
     // And: no confetti canvas should be rendered
     await expect(page.locator('canvas')).toHaveCount(0)
+
+    // And: badge content remains accessible
+    await expect(toast.locator('[role="status"]')).toBeVisible()
+    await expect(toast.locator('[aria-hidden="true"]')).toHaveCount(1) // icon hidden from SR
   })
 })
 
@@ -285,5 +305,28 @@ test.describe('AC6: Simultaneous milestone crossing', () => {
     await expect(toast25).toBeVisible({ timeout: 15000 })
     await expect(toast50).toBeVisible({ timeout: 15000 })
     await expect(toast75).toBeVisible({ timeout: 15000 })
+
+    // And: each milestone is individually recorded in IndexedDB
+    const celebrated = await page.evaluate(async dbName => {
+      return new Promise<number[]>((resolve, reject) => {
+        const req = indexedDB.open(dbName)
+        req.onsuccess = () => {
+          const db = req.result
+          const tx = db.transaction('challenges', 'readonly')
+          const store = tx.objectStore('challenges')
+          const all = store.getAll()
+          all.onsuccess = () => {
+            db.close()
+            resolve(all.result[0]?.celebratedMilestones ?? [])
+          }
+          all.onerror = () => {
+            db.close()
+            reject(all.error)
+          }
+        }
+        req.onerror = () => reject(req.error)
+      })
+    }, DB_NAME)
+    expect(celebrated).toEqual(expect.arrayContaining([25, 50, 75]))
   })
 })

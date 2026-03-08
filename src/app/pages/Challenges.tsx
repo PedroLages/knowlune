@@ -83,7 +83,7 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
           </div>
           <Badge
             variant={isCompleted ? 'default' : isExpired ? 'secondary' : 'outline'}
-            className={cn('shrink-0 text-xs', isCompleted && 'bg-amber-600 hover:bg-amber-600')}
+            className={cn('shrink-0 text-xs', isCompleted && 'bg-amber-600 hover:bg-amber-700')}
           >
             {isCompleted ? 'Completed' : config.label}
           </Badge>
@@ -118,7 +118,10 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
   )
 }
 
-function fireMilestoneToasts(milestoneMap: Map<string, number[]>, challenges: Challenge[]) {
+function fireMilestoneToasts(
+  milestoneMap: Map<string, number[]>,
+  challenges: Challenge[]
+): number[] {
   const entries: Array<{ challengeName: string; milestone: number }> = []
 
   for (const [challengeId, milestones] of milestoneMap) {
@@ -129,8 +132,8 @@ function fireMilestoneToasts(milestoneMap: Map<string, number[]>, challenges: Ch
     }
   }
 
-  entries.forEach((entry, index) => {
-    setTimeout(() => {
+  return entries.map((entry, index) =>
+    window.setTimeout(() => {
       const tierConfig = getChallengeTierConfig(entry.milestone)
       toast.custom(
         () => (
@@ -143,7 +146,7 @@ function fireMilestoneToasts(milestoneMap: Map<string, number[]>, challenges: Ch
         { duration: 8000 }
       )
     }, index * 500)
-  })
+  )
 }
 
 export function Challenges() {
@@ -151,23 +154,27 @@ export function Challenges() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [completedOpen, setCompletedOpen] = useState(false)
   const [expiredOpen, setExpiredOpen] = useState(false)
-  const hasFiredRef = useRef(false)
+  const timerIdsRef = useRef<number[]>([])
 
   useEffect(() => {
     let ignore = false
-    loadChallenges().then(() => {
-      if (!ignore) {
-        refreshAllProgress().then(milestoneMap => {
-          if (!ignore && !hasFiredRef.current && milestoneMap.size > 0) {
-            hasFiredRef.current = true
-            const current = useChallengeStore.getState().challenges
-            fireMilestoneToasts(milestoneMap, current)
-          }
-        })
-      }
-    })
+    loadChallenges()
+      .then(() => {
+        if (!ignore) {
+          return refreshAllProgress()
+        }
+      })
+      .then(milestoneMap => {
+        if (!ignore && milestoneMap && milestoneMap.size > 0) {
+          const current = useChallengeStore.getState().challenges
+          timerIdsRef.current = fireMilestoneToasts(milestoneMap, current)
+        }
+      })
+      .catch(err => console.error('[Challenges] milestone detection failed:', err))
     return () => {
       ignore = true
+      timerIdsRef.current.forEach(id => clearTimeout(id))
+      timerIdsRef.current = []
     }
   }, [loadChallenges, refreshAllProgress])
 
@@ -190,6 +197,9 @@ export function Challenges() {
       { active: [], completed: [], expired: [] }
     )
   }, [challenges])
+
+  const sectionTriggerClass =
+    'flex w-full items-center gap-2 rounded-sm py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2'
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6 p-6">
@@ -251,8 +261,12 @@ export function Challenges() {
           )}
 
           {completed.length > 0 && (
-            <Collapsible open={completedOpen} onOpenChange={setCompletedOpen}>
-              <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-sm py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">
+            <Collapsible
+              data-testid="completed-section"
+              open={completedOpen}
+              onOpenChange={setCompletedOpen}
+            >
+              <CollapsibleTrigger className={sectionTriggerClass}>
                 <ChevronDown
                   aria-hidden="true"
                   className={cn('size-4 transition-transform', completedOpen && 'rotate-180')}
@@ -271,7 +285,7 @@ export function Challenges() {
 
           {expired.length > 0 && (
             <Collapsible open={expiredOpen} onOpenChange={setExpiredOpen}>
-              <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-sm py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">
+              <CollapsibleTrigger className={sectionTriggerClass}>
                 <ChevronDown
                   aria-hidden="true"
                   className={cn('size-4 transition-transform', expiredOpen && 'rotate-180')}
