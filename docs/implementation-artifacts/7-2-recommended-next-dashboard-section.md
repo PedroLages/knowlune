@@ -4,7 +4,7 @@ story_name: "Recommended Next Dashboard Section"
 status: in-progress
 started: 2026-03-08
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-08
 review_gates_passed:
   - build

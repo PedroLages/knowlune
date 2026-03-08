@@ -9,7 +9,7 @@ import { getAllProgress, invalidateProgressCache, PROGRESS_UPDATED_EVENT } from 
 import { getRecommendedCourses } from '@/lib/recommendations'
 import { allCourses } from '@/data/courses'
 
-function RecommendedNextSkeleton() {
+export function RecommendedNextSkeleton() {
   return (
     <div aria-hidden="true">
       <Skeleton className="h-6 w-44 mb-1" />
@@ -36,7 +36,7 @@ function EmptyState() {
       className="flex flex-col items-center justify-center py-10 text-center"
       data-testid="recommended-next-empty"
     >
-      <div className="size-14 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-4">
+      <div className="size-14 rounded-full bg-brand-soft flex items-center justify-center mb-4">
         <BookOpen aria-hidden="true" className="size-7 text-brand" />
       </div>
       <p className="text-sm font-medium mb-1">No courses in progress</p>
