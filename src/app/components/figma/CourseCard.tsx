@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog'
 import { ProgressRing } from './ProgressRing'
+import { MomentumBadge } from './MomentumBadge'
 import { VideoPlayer } from './VideoPlayer'
 import { getProgress } from '@/lib/progress'
 import { getResourceUrl } from '@/lib/media'
@@ -16,6 +17,7 @@ import { useCourseCardPreview } from '@/hooks/useCourseCardPreview'
 import { getInstructorById } from '@/data/instructors'
 import { getAvatarSrc } from '@/lib/instructors'
 import type { Course, CourseCategory } from '@/data/types'
+import type { MomentumScore } from '@/lib/momentum'
 
 // ── Shared constants ────────────────────────────────────────────────
 
@@ -96,6 +98,7 @@ interface CourseCardProps {
   completionPercent?: number
   status?: 'in-progress' | 'completed' | 'not-started'
   lastAccessedAt?: string
+  momentumScore?: MomentumScore
 }
 
 // ── Component ───────────────────────────────────────────────────────
@@ -106,6 +109,7 @@ export function CourseCard({
   completionPercent = 0,
   status,
   lastAccessedAt,
+  momentumScore,
 }: CourseCardProps) {
   const navigate = useNavigate()
   const {
@@ -499,6 +503,11 @@ export function CourseCard({
               </span>
             </div>
             <Progress value={completionPercent} showLabel className="h-1.5" />
+            {momentumScore && momentumScore.score > 0 && (
+              <div className="mt-2">
+                <MomentumBadge score={momentumScore.score} tier={momentumScore.tier} />
+              </div>
+            )}
           </div>
         )
 
@@ -517,11 +526,7 @@ export function CourseCard({
             {instructor && (
               <Link
                 to={`/instructors/${instructor.id}`}
-                onClick={e => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  navigate(`/instructors/${instructor.id}`)
-                }}
+                onClick={e => e.stopPropagation()}
                 className="flex items-center gap-1.5 mb-2 text-xs text-muted-foreground hover:text-brand transition-colors w-fit"
               >
                 <Avatar className="size-5">
@@ -710,17 +715,29 @@ export function CourseCard({
     )
   }
 
-  // library + overview: <Link> wraps entire card
+  // library + overview: div onClick + navigate (avoids nested <a> from instructor link)
   return (
     <>
-      <Link
-        to={lessonLink}
-        onClick={guardNavigation}
+      <div
+        role="link"
+        tabIndex={0}
+        aria-label={course.title}
+        data-href={lessonLink}
+        onClick={e => {
+          guardNavigation(e)
+          if (!e.defaultPrevented) navigate(lessonLink)
+        }}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            navigate(lessonLink)
+          }
+        }}
         {...previewHandlers}
-        className="rounded-[24px] focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none block h-full cursor-default"
+        className="rounded-[24px] focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none block h-full cursor-pointer"
       >
         {cardShell}
-      </Link>
+      </div>
       {previewDialog}
     </>
   )

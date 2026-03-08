@@ -14,6 +14,8 @@ export function StreakMilestoneToast({ milestone }: StreakMilestoneToastProps) {
   const tier = getTierConfig(milestone.milestoneValue)
   const Icon = tier.icon
 
+  // Key on milestone.id (unique per achievement), NOT milestoneValue —
+  // the same milestone value can be earned multiple times after streak resets.
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     if (!prefersReducedMotion) {

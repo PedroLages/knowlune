@@ -34,7 +34,42 @@ All gates must use these exact names in `review_gates_passed`. No variants (e.g.
 
 The `-skipped` suffix indicates the gate was intentionally skipped (no lint script, no test files, no UI changes). Both the base name and `-skipped` variant satisfy the requirement.
 
+## Orchestrator Discipline
+
+The orchestrator (main session) should:
+- **Read state**: story file, sprint status, git status
+- **Make decisions**: resumed? reviewed? UI changes?
+- **Dispatch agents**: via Task tool (parallel when independent)
+- **Collect results**: extract key data from agent returns
+- **Update state**: frontmatter, sprint status, TodoWrite
+- **Run git ops**: branch, commit, push, PR
+- **Communicate**: completion output, AskUserQuestion
+
+The orchestrator should NOT:
+- Do deep code analysis (delegate to agents)
+- Retain raw build/lint/test output beyond error messages
+- Read large files for exploration (dispatch Explore agents instead)
+- Perform review reasoning (agents handle this)
+
 ## Steps
+
+**Immediately create TodoWrite** to give the user full visibility:
+
+```
+[ ] Identify story and detect resumption
+[ ] Pre-checks: build
+[ ] Pre-checks: lint
+[ ] Pre-checks: type-check
+[ ] Pre-checks: format-check
+[ ] Pre-checks: unit tests
+[ ] Pre-checks: E2E tests
+[ ] Design review (Agent)
+[ ] Code review — architecture (Agent)
+[ ] Code review — testing (Agent)
+[ ] Consolidate findings and verdict
+```
+
+Mark the first todo as `in_progress` and proceed:
 
 1. **Identify story**: Parse ID from `$ARGUMENTS` or from branch name (`git branch --show-current` → `feature/e01-s03-...` → `E01-S03`).
 
@@ -50,6 +85,8 @@ The `-skipped` suffix indicates the gate was intentionally skipped (no lint scri
      - Reset: set `reviewed: in-progress`, clear `review_gates_passed`, update `review_started`.
    - If `reviewed: false` (fresh review):
      - Set `reviewed: in-progress`, `review_started: YYYY-MM-DD`, `review_gates_passed: []` in story frontmatter.
+
+   **TodoWrite**: Mark "Identify story and detect resumption" → `completed`. Mark "Pre-checks: build" → `in_progress`.
 
 4. **Pre-checks** (always run — fast, validates current state):
 
@@ -87,46 +124,37 @@ The `-skipped` suffix indicates the gate was intentionally skipped (no lint scri
    - Add `unit-tests` if tests ran and passed, or `unit-tests-skipped` if no test files
    - Add `e2e-tests` if tests ran and passed, or `e2e-tests-skipped` if no test files
 
-5. **Design review** (conditional, skippable on resume):
+   **TodoWrite**: Mark all pre-check todos → `completed`. Update each pre-check todo individually as it passes during execution.
 
-   **Skip condition**: If resuming AND `design-review` is already in `review_gates_passed` AND the report file `docs/reviews/design/design-review-*-{story-id}.md` exists — skip with message: "Design review already completed. Report: [path]".
+5. **Review agent swarm** (parallel dispatch — design + code + testing):
 
-   **No UI changes**: If `git diff --name-only main...HEAD` shows NO changes in `src/app/` (pages, components, styles):
-   - Add `design-review-skipped` to `review_gates_passed`.
-   - Note in consolidated report: "Skipped — no UI changes."
+   After pre-checks pass, dispatch ALL applicable review agents **in a single message** for maximum parallelism. Design review, code review, and test coverage review are fully independent — they use different tools (Playwright MCP vs git diff) and analyze different aspects.
 
-   **UI changes detected**: Run the design review:
+   **Pre-dispatch checks** (determine which agents to dispatch):
 
-   a. Check dev server: `curl -s -o /dev/null -w "%{http_code}" http://localhost:5173`.
-      - Not reachable → start `npm run dev` in background via Bash (`npm run dev &`), wait up to 30s.
-      - Still unreachable → **do NOT skip silently**. Warn the user: "Dev server unreachable. Design review cannot run." Do NOT add `design-review` to gates. The review stays incomplete — this blocks `reviewed: true`.
-   b. Dispatch to `design-review` agent via Task tool:
-      ```
-      Task({
-        subagent_type: "design-review",
-        prompt: "Review story E##-S## changes. Affected routes: [mapped from files]. Focus on: [ACs that involve UI]. Git diff summary: [key changes].",
-        description: "Design review E##-S##"
-      })
-      ```
-   c. **Validate agent result**: If the agent returns an error, empty report, or the report lacks the expected severity sections:
-      - Warn the user: "Design review agent failed. Likely cause: Playwright MCP tools unavailable."
-      - Do NOT add `design-review` to `review_gates_passed`.
-      - Note in consolidated report: "**FAILED** — agent error. Re-run after fixing MCP configuration."
-      - Continue to code reviews (design review failure does not block other gates).
-   d. On success: save report to `docs/reviews/design/design-review-{YYYY-MM-DD}-{story-id}.md`
-   e. Parse severity from returned report.
-   f. Update `review_gates_passed` to include `design-review`.
+   For each agent, check skip conditions:
+   - **Design review**: Skip if (a) resuming AND `design-review` in `review_gates_passed` AND report file exists, OR (b) no UI changes in `git diff --name-only main...HEAD` (no changes in `src/app/`). If skipping for no UI changes, add `design-review-skipped` to gates.
+   - **Code review**: Skip if resuming AND `code-review` in `review_gates_passed` AND report file exists.
+   - **Code review testing**: Skip if resuming AND `code-review-testing` in `review_gates_passed` AND report file exists.
 
-6. **Code reviews** (parallel, skippable on resume):
+   **Design review pre-requisite** (only if design review will run):
+   - Check dev server: `curl -s -o /dev/null -w "%{http_code}" http://localhost:5173`.
+   - Not reachable → start `npm run dev` in background via Bash (`npm run dev &`), wait up to 30s.
+   - Still unreachable → warn the user, do NOT add `design-review` to gates, but continue dispatching other agents.
 
-   Two agents run in parallel: `code-review` (architecture/security/correctness) and `code-review-testing` (AC coverage/test quality).
+   **TodoWrite**: Mark all non-skipped agent todos → `in_progress` simultaneously.
 
-   **Skip conditions** (checked independently):
-   - Skip `code-review` if: resuming AND `code-review` in `review_gates_passed` AND report file `docs/reviews/code/code-review-*-{story-id}.md` exists.
-   - Skip `code-review-testing` if: resuming AND `code-review-testing` in `review_gates_passed` AND report file `docs/reviews/code/code-review-testing-*-{story-id}.md` exists.
+   **Dispatch all non-skipped agents in a single message**:
 
-   For each agent not skipped, dispatch via Task tool **in parallel** (both in the same message):
    ```
+   // All dispatched together — they run concurrently:
+
+   Task({
+     subagent_type: "design-review",
+     prompt: "Review story E##-S## changes. Affected routes: [mapped from files]. Focus on: [ACs that involve UI]. Git diff summary: [key changes].",
+     description: "Design review E##-S##"
+   })
+
    Task({
      subagent_type: "code-review",
      prompt: "Review story E##-S## at docs/implementation-artifacts/{key}.md. Run git diff main...HEAD for changes. Focus on architecture, security, correctness, silent failures, and LevelUp stack patterns. Score each finding with confidence (0-100).",
@@ -140,21 +168,26 @@ The `-skipped` suffix indicates the gate was intentionally skipped (no lint scri
    })
    ```
 
-   Save reports:
+   **As each agent returns**:
+   - Mark its todo → `completed`
+   - Validate the result (check for errors, empty reports, missing severity sections)
+   - If an agent fails: warn the user, do NOT add its gate to `review_gates_passed`, note in consolidated report
+   - If successful: save report, parse severity, update `review_gates_passed`
+
+   **Report locations**:
+   - `docs/reviews/design/design-review-{YYYY-MM-DD}-{story-id}.md`
    - `docs/reviews/code/code-review-{YYYY-MM-DD}-{story-id}.md`
    - `docs/reviews/code/code-review-testing-{YYYY-MM-DD}-{story-id}.md`
 
-   Parse severity from both reports.
+   **Deduplicate**: If code-review and code-review-testing flag the same file:line, keep the finding with the higher confidence score. Prefix deduplicated findings with their source agent.
 
-   **Deduplicate**: If both agents flag the same file:line, keep the finding with the higher confidence score. Prefix deduplicated findings with their source agent.
-
-   Update `review_gates_passed` to include `code-review` and `code-review-testing` as each completes.
-
-7. **Merge test quality findings**:
+6. **Merge test quality findings**:
 
    The `code-review-testing` agent replaces the previous inline test quality checks. Extract its AC Coverage Table and test quality findings for the consolidated report. No additional inline checks needed — the agent handles test isolation, selector quality, factory usage, and AC coverage.
 
-8. **Consolidated report**:
+   **TodoWrite**: Mark "Consolidate findings and verdict" → `in_progress`.
+
+7. **Consolidated report**:
 
    Combine all findings into a single severity-triaged view:
 
@@ -202,7 +235,7 @@ The `-skipped` suffix indicates the gate was intentionally skipped (no lint scri
    - **Blocker/Critical findings** → STOP with specific fix instructions and file:line references.
    - **Non-blocking findings** → listed as warnings. Story can proceed to `/finish-story`.
 
-9. **Mark reviewed** (with gate validation):
+8. **Mark reviewed** (with gate validation):
 
    **Validate all required gates** before marking `reviewed: true`. Check that `review_gates_passed` contains one entry (base or `-skipped` variant) for each of the 9 canonical gates: `build`, `lint`, `type-check`, `format-check`, `unit-tests`, `e2e-tests`, `design-review`, `code-review`, `code-review-testing`.
 
@@ -214,7 +247,9 @@ The `-skipped` suffix indicates the gate was intentionally skipped (no lint scri
      Re-run /review-story after fixing.
      ```
 
-10. **Completion output**: Display the following summary to the user:
+   **TodoWrite**: Mark "Consolidate findings and verdict" → `completed`.
+
+9. **Completion output**: Display the following summary to the user:
 
     **If PASS (no blockers)**:
 
@@ -297,7 +332,6 @@ Apply `receiving-code-review` principles when processing review feedback:
 ## Recovery
 
 - **Pre-checks fail**: Fix errors, re-run `/review-story`. Agent reviews already completed are preserved.
-- **Design review agent fails**: Check dev server, check Playwright MCP tools available, re-run. Only the failed gate re-runs.
-- **Code review agent(s) fail**: Check git diff is accessible, re-run. Only the failed gate(s) re-run — `code-review` and `code-review-testing` are tracked independently.
+- **Review agent(s) fail**: Check dev server (design review) or git diff (code reviews). Re-run `/review-story`. Only the failed gate(s) re-run — `design-review`, `code-review`, and `code-review-testing` are tracked independently in `review_gates_passed`.
 - **Interrupted mid-review**: Story stays `reviewed: in-progress` with `review_gates_passed` tracking progress. Re-run resumes from where it left off — pre-checks always re-run (fast), completed agent reviews are skipped.
 - **Stale review after code changes**: If you fix blockers and re-run, pre-checks validate the new code. Agent reviews from the previous run are reused unless you want a fresh review — in that case, manually set `reviewed: false` and clear `review_gates_passed: []` in the story frontmatter.
