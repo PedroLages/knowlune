@@ -11,6 +11,7 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { createStudyAction } from '../../support/fixtures/factories'
+import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
 
 /**
  * Creates a study action pinned to a specific day of the current month.
@@ -21,7 +22,7 @@ function makeEntryForDay(
   courseId = 'ba-101',
   type = 'lesson_complete' as string
 ) {
-  const now = new Date()
+  const now = new Date(FIXED_DATE)
   const date = new Date(now.getFullYear(), now.getMonth(), dayOfMonth, 12, 0, 0, 0)
   return createStudyAction({
     courseId,
@@ -32,7 +33,7 @@ function makeEntryForDay(
 
 /** Creates a study action pinned to a specific day of the previous month. */
 function makeEntryForPrevMonth(dayOfMonth: number, courseId = 'ba-101') {
-  const now = new Date()
+  const now = new Date(FIXED_DATE)
   const date = new Date(now.getFullYear(), now.getMonth() - 1, dayOfMonth, 12, 0, 0, 0)
   return createStudyAction({
     courseId,
@@ -62,7 +63,7 @@ test.describe('Study History Calendar (E05-S04)', () => {
     await expect(calendar).toBeVisible()
 
     // Should display current month name and year
-    const now = new Date()
+    const now = new Date(FIXED_DATE)
     const monthYear = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     await expect(calendar.getByText(monthYear)).toBeVisible()
   })
@@ -109,7 +110,7 @@ test.describe('Study History Calendar (E05-S04)', () => {
 
     // Navigate to previous month
     await prevBtn.click()
-    const prevMonth = new Date()
+    const prevMonth = new Date(FIXED_DATE)
     prevMonth.setMonth(prevMonth.getMonth() - 1)
     const prevMonthYear = prevMonth.toLocaleDateString('en-US', {
       month: 'long',
@@ -122,7 +123,7 @@ test.describe('Study History Calendar (E05-S04)', () => {
 
     // Navigate back to current month
     await nextBtn.click()
-    const now = new Date()
+    const now = new Date(FIXED_DATE)
     const currentMonthYear = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     await expect(calendar.getByText(currentMonthYear)).toBeVisible()
 
@@ -226,7 +227,7 @@ test.describe('Study History Calendar (E05-S04)', () => {
     localStorage,
   }) => {
     // Find a Monday in the current month to use as our test day
-    const now = new Date()
+    const now = new Date(FIXED_DATE)
     let mondayDate = 1
     for (let d = 1; d <= 28; d++) {
       if (new Date(now.getFullYear(), now.getMonth(), d).getDay() === 1) {

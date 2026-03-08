@@ -6,8 +6,8 @@ import { RETRY_CONFIG } from '../../utils/constants'
  * Tests verify that challenge progress is calculated from source data
  * (contentProgress, studySessions, study-log) and displayed correctly.
  */
-import { test, expect } from '../support/fixtures'
-import { createChallenge } from '../support/fixtures/factories/challenge-factory'
+import { test, expect } from '../../support/fixtures'
+import { createChallenge } from '../../support/fixtures/factories/challenge-factory'
 import type { Page } from '@playwright/test'
 
 const DB_NAME = 'ElearningDB'

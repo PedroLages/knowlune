@@ -1,3 +1,4 @@
+import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
 /**
  * Story 3.6: View Course Notes Collection — ATDD Acceptance Tests
  *
@@ -45,7 +46,7 @@ async function seedNotes(page: Parameters<typeof navigateAndWait>[0]) {
             content: '<p>Introduction notes about the operative training program.</p>',
             timestamp: 30,
             createdAt: '2026-02-20T10:00:00.000Z',
-            updatedAt: new Date().toISOString(),
+            updatedAt: FIXED_DATE,
             tags: ['overview', 'training'],
           },
           {

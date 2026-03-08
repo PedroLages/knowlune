@@ -9,10 +9,12 @@
  * Reference: TEA knowledge base - data-factories.md
  */
 
+import { FIXED_DATE, FIXED_TIMESTAMP } from './../../../utils/test-time'
+
 let counter = 0
 function uid(): string {
   counter++
-  return `imported-${Date.now()}-${counter}-${Math.random().toString(36).slice(2, 8)}`
+  return `imported-${FIXED_TIMESTAMP}-${counter}-${Math.random().toString(36).slice(2, 8)}`
 }
 
 /**
@@ -37,7 +39,7 @@ export function createImportedCourse(
   return {
     id,
     name: `Imported Course ${id.slice(-6)}`,
-    importedAt: new Date().toISOString(),
+    importedAt: FIXED_DATE,
     category: 'Development',
     tags: ['test', 'imported'],
     status: 'active',

@@ -12,6 +12,7 @@
  *   - AC6: Goal completion visual indicator
  */
 import { test, expect } from '../../support/fixtures'
+import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
 
 test.describe('Study Goals & Weekly Adherence (E05-S03)', () => {
   test.beforeEach(async ({ page }) => {
@@ -128,11 +129,11 @@ test.describe('Study Goals & Weekly Adherence (E05-S03)', () => {
       frequency: 'daily',
       metric: 'time',
       target: 60,
-      createdAt: new Date().toISOString(),
+      createdAt: FIXED_DATE,
     })
 
     // Seed: 45 minutes of study today
-    const today = new Date()
+    const today = new Date(FIXED_DATE)
     today.setHours(10, 0, 0, 0)
     await localStorage.seed('study-log', [
       {
@@ -163,7 +164,7 @@ test.describe('Study Goals & Weekly Adherence (E05-S03)', () => {
       frequency: 'daily',
       metric: 'time',
       target: 60,
-      createdAt: new Date().toISOString(),
+      createdAt: FIXED_DATE,
     })
 
     await page.reload()
@@ -184,14 +185,13 @@ test.describe('Study Goals & Weekly Adherence (E05-S03)', () => {
       frequency: 'weekly',
       metric: 'time',
       target: 300,
-      createdAt: new Date().toISOString(),
+      createdAt: FIXED_DATE,
     })
 
     // Seed: sessions across the current week
     const sessions = []
     for (let i = 0; i < 3; i++) {
-      const d = new Date()
-      d.setDate(d.getDate() - i)
+      const d = new Date(getRelativeDate(-i))
       d.setHours(10, 0, 0, 0)
       sessions.push({
         type: 'lesson_complete',
@@ -222,14 +222,13 @@ test.describe('Study Goals & Weekly Adherence (E05-S03)', () => {
       frequency: 'daily',
       metric: 'time',
       target: 30,
-      createdAt: new Date().toISOString(),
+      createdAt: FIXED_DATE,
     })
 
     // Seed: studied on 5 of the last 7 days
     const sessions = []
     for (const daysAgo of [0, 1, 2, 4, 6]) {
-      const d = new Date()
-      d.setDate(d.getDate() - daysAgo)
+      const d = new Date(getRelativeDate(-daysAgo))
       d.setHours(10, 0, 0, 0)
       sessions.push({
         type: 'lesson_complete',
@@ -263,11 +262,11 @@ test.describe('Study Goals & Weekly Adherence (E05-S03)', () => {
       frequency: 'daily',
       metric: 'time',
       target: 30,
-      createdAt: new Date().toISOString(),
+      createdAt: FIXED_DATE,
     })
 
     // Seed: 45 minutes studied today (exceeds goal)
-    const today = new Date()
+    const today = new Date(FIXED_DATE)
     today.setHours(10, 0, 0, 0)
     await localStorage.seed('study-log', [
       {

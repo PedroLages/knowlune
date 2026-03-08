@@ -4,61 +4,28 @@
  * Tests the momentum badge indicator on course cards and the "Sort by Momentum"
  * option in the courses library.
  */
-import { test, expect } from '../support/fixtures'
-import { goToCourses } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { goToCourses } from '../../support/helpers/navigation'
+import { seedStudySessions } from '../../support/helpers/indexeddb-seed'
+import { FIXED_DATE, addMinutes, getRelativeDateWithMinutes } from '../../utils/test-time'
 
 // Seed sidebar state to prevent fullscreen Sheet overlay at tablet viewports
 async function seedSidebar(page: import('@playwright/test').Page) {
   await page.addInitScript(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
 }
 
-const DB_NAME = 'ElearningDB'
-const STORE_NAME = 'studySessions'
-
-/**
- * Seeds study sessions into IndexedDB via page.evaluate with retry logic
- * for waiting on Dexie to create the object store.
- */
-async function seedStudySessions(
-  page: import('@playwright/test').Page,
-  sessions: Record<string, unknown>[]
-) {
-  await page.evaluate(
-    async ({ dbName, storeName, data }) => {
-      for (let attempt = 0; attempt < 10; attempt++) {
-        const result = await new Promise<'ok' | 'store-missing'>((resolve, reject) => {
-          const request = indexedDB.open(dbName)
-          request.onsuccess = () => {
-            const db = request.result
-            if (!db.objectStoreNames.contains(storeName)) {
-              db.close()
-              resolve('store-missing')
-              return
-            }
-            const tx = db.transaction(storeName, 'readwrite')
-            const store = tx.objectStore(storeName)
-            for (const item of data) {
-              store.put(item)
-            }
-            tx.oncomplete = () => {
-              db.close()
-              resolve('ok')
-            }
-            tx.onerror = () => {
-              db.close()
-              reject(tx.error)
-            }
-          }
-          request.onerror = () => reject(request.error)
-        })
-        if (result === 'ok') return
-        await new Promise(r => setTimeout(r, 200))
-      }
-      throw new Error(`Store "${storeName}" not found after retries`)
-    },
-    { dbName: DB_NAME, storeName: STORE_NAME, data: sessions }
-  )
+// Mock Date.now() to return FIXED_TIMESTAMP for deterministic momentum calculations
+async function mockDateNow(page: import('@playwright/test').Page) {
+  await page.addInitScript(({ fixedTimestamp }) => {
+    const originalNow = Date.now
+    Date.now = () => fixedTimestamp
+    // Preserve original for debugging
+    // @ts-expect-error - Store original
+    Date._originalNow = originalNow
+  }, { fixedTimestamp: new Date(FIXED_DATE).getTime() })
 }
+
+const STORE_NAME = 'studySessions'
 
 /** Helper to select a value from a shadcn/Radix Select by data-testid */
 async function selectSortOption(page: import('@playwright/test').Page, value: string) {
@@ -71,22 +38,22 @@ async function selectSortOption(page: import('@playwright/test').Page, value: st
 test.describe('E07-S01: Momentum Score Display', () => {
   test('momentum badges appear on courses with study sessions', async ({ page, indexedDB }) => {
     await seedSidebar(page)
+    await mockDateNow(page)
     // Navigate first so Dexie creates the DB
     await goToCourses(page)
 
     // Seed a study session so at least one course has score > 0
-    const now = Date.now()
     await seedStudySessions(page, [
       {
         id: 'test-badge-vis-0',
         courseId: 'nci-access',
         contentItemId: 'lesson-0',
-        startTime: new Date(now).toISOString(),
-        endTime: new Date(now + 30 * 60 * 1000).toISOString(),
+        startTime: FIXED_DATE,
+        endTime: addMinutes(30),
         duration: 1800,
         idleTime: 0,
         videosWatched: ['video-0'],
-        lastActivity: new Date(now + 30 * 60 * 1000).toISOString(),
+        lastActivity: addMinutes(30),
         sessionType: 'video',
       },
     ])
@@ -103,21 +70,21 @@ test.describe('E07-S01: Momentum Score Display', () => {
 
   test('momentum badge has correct tier label text', async ({ page, indexedDB }) => {
     await seedSidebar(page)
+    await mockDateNow(page)
     await goToCourses(page)
 
     // Seed session for badge to appear
-    const now = Date.now()
     await seedStudySessions(page, [
       {
         id: 'test-tier-0',
         courseId: 'nci-access',
         contentItemId: 'lesson-0',
-        startTime: new Date(now).toISOString(),
-        endTime: new Date(now + 30 * 60 * 1000).toISOString(),
+        startTime: FIXED_DATE,
+        endTime: addMinutes(30),
         duration: 1800,
         idleTime: 0,
         videosWatched: [],
-        lastActivity: new Date(now + 30 * 60 * 1000).toISOString(),
+        lastActivity: addMinutes(30),
         sessionType: 'video',
       },
     ])
@@ -135,20 +102,20 @@ test.describe('E07-S01: Momentum Score Display', () => {
 
   test('momentum badge has accessible aria-label', async ({ page, indexedDB }) => {
     await seedSidebar(page)
+    await mockDateNow(page)
     await goToCourses(page)
 
-    const now = Date.now()
     await seedStudySessions(page, [
       {
         id: 'test-aria-0',
         courseId: 'nci-access',
         contentItemId: 'lesson-0',
-        startTime: new Date(now).toISOString(),
-        endTime: new Date(now + 30 * 60 * 1000).toISOString(),
+        startTime: FIXED_DATE,
+        endTime: addMinutes(30),
         duration: 1800,
         idleTime: 0,
         videosWatched: [],
-        lastActivity: new Date(now + 30 * 60 * 1000).toISOString(),
+        lastActivity: addMinutes(30),
         sessionType: 'video',
       },
     ])
@@ -166,6 +133,7 @@ test.describe('E07-S01: Momentum Score Display', () => {
 
   test('sort by momentum option is present in courses page', async ({ page }) => {
     await seedSidebar(page)
+    await mockDateNow(page)
     await goToCourses(page)
 
     const trigger = page.getByTestId('sort-select')
@@ -185,8 +153,7 @@ test.describe('E07-S01: Momentum Score Display', () => {
 
   test('selecting sort by momentum reorders the course list', async ({ page, indexedDB }) => {
     await seedSidebar(page)
-
-    const now = Date.now()
+    await mockDateNow(page)
 
     // Navigate first so Dexie creates the DB and stores
     await goToCourses(page)
@@ -196,12 +163,12 @@ test.describe('E07-S01: Momentum Score Display', () => {
       id: `test-high-${i}`,
       courseId: 'nci-access',
       contentItemId: `lesson-${i}`,
-      startTime: new Date(now - i * 24 * 60 * 60 * 1000).toISOString(),
-      endTime: new Date(now - i * 24 * 60 * 60 * 1000 + 30 * 60 * 1000).toISOString(),
+      startTime: getRelativeDateWithMinutes(-i, 0),
+      endTime: getRelativeDateWithMinutes(-i, 30),
       duration: 1800,
       idleTime: 0,
       videosWatched: [`video-${i}`],
-      lastActivity: new Date(now - i * 24 * 60 * 60 * 1000 + 30 * 60 * 1000).toISOString(),
+      lastActivity: getRelativeDateWithMinutes(-i, 30),
       sessionType: 'video' as const,
     }))
 
@@ -210,12 +177,12 @@ test.describe('E07-S01: Momentum Score Display', () => {
         id: 'test-low-0',
         courseId: 'authority',
         contentItemId: 'lesson-0',
-        startTime: new Date(now - 12 * 24 * 60 * 60 * 1000).toISOString(),
-        endTime: new Date(now - 12 * 24 * 60 * 60 * 1000 + 10 * 60 * 1000).toISOString(),
+        startTime: getRelativeDateWithMinutes(-6, 0),
+        endTime: getRelativeDateWithMinutes(-6, 10),
         duration: 600,
         idleTime: 0,
         videosWatched: ['video-0'],
-        lastActivity: new Date(now - 12 * 24 * 60 * 60 * 1000 + 10 * 60 * 1000).toISOString(),
+        lastActivity: getRelativeDateWithMinutes(-6, 10),
         sessionType: 'video' as const,
       },
     ]
@@ -259,22 +226,22 @@ test.describe('E07-S01: Momentum Score Display', () => {
     indexedDB,
   }) => {
     await seedSidebar(page)
+    await mockDateNow(page)
 
     // Navigate to create DB, then seed one session
     await goToCourses(page)
 
-    const now = Date.now()
     await seedStudySessions(page, [
       {
         id: 'test-reactive-0',
         courseId: 'nci-access',
         contentItemId: 'lesson-0',
-        startTime: new Date(now - 10 * 24 * 60 * 60 * 1000).toISOString(),
-        endTime: new Date(now - 10 * 24 * 60 * 60 * 1000 + 10 * 60 * 1000).toISOString(),
+        startTime: getRelativeDateWithMinutes(-3, 0),
+        endTime: getRelativeDateWithMinutes(-3, 10),
         duration: 600,
         idleTime: 0,
         videosWatched: [],
-        lastActivity: new Date(now - 10 * 24 * 60 * 60 * 1000 + 10 * 60 * 1000).toISOString(),
+        lastActivity: getRelativeDateWithMinutes(-3, 10),
         sessionType: 'video',
       },
     ])
@@ -294,12 +261,12 @@ test.describe('E07-S01: Momentum Score Display', () => {
         id: 'test-reactive-1',
         courseId: 'nci-access',
         contentItemId: 'lesson-1',
-        startTime: new Date(now).toISOString(),
-        endTime: new Date(now + 30 * 60 * 1000).toISOString(),
+        startTime: FIXED_DATE,
+        endTime: addMinutes(30),
         duration: 1800,
         idleTime: 0,
         videosWatched: ['video-1'],
-        lastActivity: new Date(now + 30 * 60 * 1000).toISOString(),
+        lastActivity: addMinutes(30),
         sessionType: 'video',
       },
     ])

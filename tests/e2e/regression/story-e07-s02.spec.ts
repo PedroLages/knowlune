@@ -1,3 +1,4 @@
+import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
 /**
  * E2E tests for Story E07-S02: Recommended Next Dashboard Section
  *
@@ -8,8 +9,8 @@
  * Uses real course IDs from allCourses (static data) so the app can
  * resolve course metadata when computing recommendations.
  */
-import { test, expect } from '../support/fixtures'
-import { createCourseProgress } from '../support/fixtures/factories/course-factory'
+import { test, expect } from '../../support/fixtures'
+import { createCourseProgress } from '../../support/fixtures/factories/course-factory'
 
 // Real course IDs from src/data/courses — must match allCourses
 const COURSE_1 = '6mx'
@@ -164,8 +165,7 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
     // Phase 2: Update authority to accessed NOW, set 6mx to 25 days ago.
     //   → authority should rank first after reload.
 
-    const now = new Date()
-    const twentyFiveDaysAgo = new Date(now.getTime() - 25 * 86_400_000).toISOString()
+    const twentyFiveDaysAgo = getRelativeDate(-25)
 
     const progress1 = createCourseProgress({
       courseId: COURSE_1,
@@ -206,7 +206,7 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
         const raw = window.localStorage.getItem('course-progress')
         const data = raw ? JSON.parse(raw) : {}
         // Make authority recent
-        data['authority'].lastAccessedAt = new Date().toISOString()
+        data['authority'].lastAccessedAt = FIXED_DATE
         // Make 6mx stale
         data['6mx'].lastAccessedAt = staleDate
         window.localStorage.setItem('course-progress', JSON.stringify(data))

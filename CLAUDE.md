@@ -167,6 +167,251 @@ For detailed patterns, see:
 - [data-factories.md](_bmad/tea/testarch/knowledge/data-factories.md) - Factory patterns
 - [overview.md](_bmad/tea/testarch/knowledge/overview.md) - Playwright fixture patterns
 
+### E2E Test Patterns & Best Practices
+
+LevelUp E2E tests follow strict determinism and maintainability patterns to ensure reliable, fast test execution.
+
+#### Deterministic Time Handling
+
+**ALWAYS** use test time utilities from `tests/utils/test-time.ts`:
+
+```typescript
+import { FIXED_DATE, FIXED_TIMESTAMP, getRelativeDate, addMinutes } from '@/tests/utils/test-time'
+
+// ✅ CORRECT - Deterministic dates
+const session = {
+  startTime: FIXED_DATE,                    // 2025-01-15T10:00:00.000Z
+  endTime: addMinutes(30),                  // +30 minutes from FIXED_DATE
+  studyDate: getRelativeDate(-7)            // 7 days before FIXED_DATE
+}
+
+// ❌ WRONG - Non-deterministic (will cause test failures)
+const session = {
+  startTime: new Date().toISOString(),
+  endTime: new Date(Date.now() + 1800000).toISOString()
+}
+```
+
+**Available Utilities**:
+- `FIXED_DATE` - Fixed ISO timestamp for consistent test data
+- `FIXED_TIMESTAMP` - Unix timestamp version of FIXED_DATE
+- `getRelativeDate(days)` - Get date N days relative to FIXED_DATE
+- `addMinutes(minutes)` - Add minutes to FIXED_DATE
+- `getRelativeDateWithMinutes(days, minutes)` - Combined offset
+
+**Browser Context Date Mocking**:
+
+For tests that depend on Date.now() in application code (e.g., momentum calculations):
+
+```typescript
+async function mockDateNow(page: Page) {
+  await page.addInitScript(({ fixedTimestamp }) => {
+    Date.now = () => fixedTimestamp
+  }, { fixedTimestamp: new Date(FIXED_DATE).getTime() })
+}
+
+test('momentum badge displays', async ({ page }) => {
+  await mockDateNow(page)  // Critical for momentum calculations
+  await seedStudySessions(page, [{ startTime: FIXED_DATE, ... }])
+  // ... test continues
+})
+```
+
+#### IndexedDB Seeding Best Practices
+
+**ALWAYS** use shared seeding helpers from `tests/support/helpers/indexeddb-seed.ts`:
+
+```typescript
+import { seedStudySessions, seedImportedVideos } from '../../support/helpers/indexeddb-seed'
+
+// ✅ CORRECT - Shared helper with frame-accurate waits
+await seedStudySessions(page, [{
+  id: 'test-session-1',
+  courseId: 'course-123',
+  startTime: FIXED_DATE,
+  endTime: addMinutes(30),
+  duration: 1800
+}])
+
+// ❌ WRONG - Duplicating retry logic
+await page.evaluate(async (data) => {
+  const request = indexedDB.open('ElearningDB')
+  // ... duplicated implementation
+})
+```
+
+**Why Use Shared Helpers**:
+- Frame-accurate waits (no Date.now() polling)
+- Automatic retry logic for race conditions
+- Consistent error handling
+- No code duplication
+
+#### Waiting & Polling Patterns
+
+**PREFER** Playwright's built-in waits over manual polling:
+
+```typescript
+// ✅ BEST - Playwright auto-retry
+await expect(page.getByTestId('momentum-badge')).toBeVisible()
+
+// ✅ GOOD - Conditional wait for complex scenarios
+await page.waitForFunction(() => {
+  return window.myApp?.isReady === true
+})
+
+// ❌ WRONG - Hard wait (non-deterministic)
+await page.waitForTimeout(1000)
+
+// ❌ WRONG - Date.now() polling (already solved by shared helpers)
+while (Date.now() - start < 5000) {
+  await new Promise(resolve => requestAnimationFrame(resolve))
+}
+```
+
+**For Complex Polling**: Use `waitForCondition()` utility (if created) or Playwright's `expect.toPass()`:
+
+```typescript
+await expect(async () => {
+  const count = await page.getByTestId('badge').count()
+  expect(count).toBeGreaterThan(0)
+}).toPass({ timeout: 10000 })
+```
+
+#### NFR Violations to Avoid
+
+**Critical Rules** (enforced by test architecture):
+
+1. **Time Dependencies**
+   - ❌ NEVER use `Date.now()` or `new Date()` directly in test code
+   - ✅ ALWAYS import from `tests/utils/test-time.ts`
+   - Exception: Browser context mocking via `page.addInitScript()`
+
+2. **Hard Waits**
+   - ❌ NEVER use `page.waitForTimeout()` or `setTimeout()` without justification
+   - ✅ ALWAYS prefer `expect().toBeVisible()`, `waitForSelector()`, or `waitForFunction()`
+   - Document any unavoidable hard waits with comments
+
+3. **Magic Numbers**
+   - ❌ AVOID hardcoded timeouts, delays, durations
+   - ✅ DEFINE constants for reusable values
+   - Example: `const SESSION_DURATION = 1800` vs `duration: 1800`
+
+4. **Code Duplication**
+   - ❌ NEVER copy-paste seeding logic, retry patterns, or wait functions
+   - ✅ EXTRACT shared helpers to `tests/support/helpers/`
+   - ✅ USE factory functions from `tests/support/fixtures/factories/`
+
+#### File Organization
+
+**Test File Size Limits**:
+- Target: ≤300 lines per file
+- Maximum: 400 lines (split if exceeded)
+- Rationale: Maintainability and test discovery
+
+**When to Split Large Files**:
+- Group by acceptance criteria (1 AC = 1 file)
+- Extract shared helpers to dedicated helper files
+- Keep original file until splits verified
+- Update imports after successful split
+
+**Naming Conventions**:
+```
+story-{epic}-s{story}.spec.ts              # Single story tests
+story-{epic}-s{story}-part{N}.spec.ts      # Split story tests
+{feature}-{aspect}.spec.ts                 # Feature-focused tests
+```
+
+#### Test Data Management
+
+**Factory Pattern** (see `tests/support/fixtures/factories/`):
+
+```typescript
+import { createCourse, createSession } from '@/tests/support/fixtures/factories'
+
+// ✅ CORRECT - Factory with overrides
+const course = createCourse({
+  title: 'Custom Title',
+  duration: 3600
+})
+
+// ❌ WRONG - Manual object creation (duplicates defaults)
+const course = {
+  id: 'test-id',
+  title: 'Custom Title',
+  duration: 3600,
+  category: 'Programming',  // Should come from factory
+  // ... 20 more fields
+}
+```
+
+**Factory Benefits**:
+- Consistent defaults across tests
+- Override only what changes
+- Single source of truth for test data structure
+- Easier to maintain when data shape changes
+
+#### Sidebar Test Gotcha
+
+**Mobile/Tablet Sidebar Overlay**:
+
+At 640-1023px viewports, the sidebar Sheet component defaults to `open: true` when localStorage is empty. This creates a fullscreen overlay blocking all pointer events.
+
+```typescript
+// ✅ CORRECT - Seed sidebar state before navigation
+await page.evaluate(() => {
+  localStorage.setItem('eduvi-sidebar-v1', 'false')
+})
+await page.goto('/courses')
+
+// ❌ WRONG - Navigation before seeding (test will timeout on mobile/tablet)
+await page.goto('/courses')
+await page.click('[data-testid="course-card"]')  // Blocked by overlay!
+```
+
+#### Browser-Specific Test Handling
+
+**WebKit (Safari) Limitations**:
+
+```typescript
+import { test } from '@playwright/test'
+
+test('video picture-in-picture', async ({ page, browserName }) => {
+  test.skip(browserName === 'webkit', 'WebKit does not support PiP API')
+
+  // Test PiP functionality (Chrome/Firefox only)
+})
+```
+
+#### Test Execution Scopes
+
+**Local Development** (Chromium only):
+```bash
+npx playwright test                          # Runs Chromium only
+npx playwright test --project=chromium      # Explicit Chromium
+```
+
+**CI/CD** (Full browser matrix):
+```bash
+CI=1 npx playwright test                    # 6-project matrix
+```
+
+**Active vs Archived Tests**:
+- Active: `tests/e2e/*.spec.ts` (3 smoke tests) + current story spec
+- Archived: `tests/e2e/regression/*.spec.ts` (manual execution only)
+- Full regression: Opt-in at end-of-epic
+
+#### References
+
+**Test Utilities**:
+- [tests/utils/test-time.ts](tests/utils/test-time.ts) - Deterministic time functions
+- [tests/support/helpers/indexeddb-seed.ts](tests/support/helpers/indexeddb-seed.ts) - IndexedDB seeding
+- [tests/support/fixtures/factories/](tests/support/fixtures/factories/) - Data factories
+
+**Knowledge Base**:
+- [_bmad/tea/testarch/knowledge/test-quality.md](_bmad/tea/testarch/knowledge/test-quality.md) - Quality criteria
+- [_bmad/tea/testarch/knowledge/data-factories.md](_bmad/tea/testarch/knowledge/data-factories.md) - Factory patterns
+- [_bmad/tea/testarch/knowledge/timing-debugging.md](_bmad/tea/testarch/knowledge/timing-debugging.md) - Wait strategies
+
 ## Design Review Workflow
 
 ### Automated Design Quality Assurance
