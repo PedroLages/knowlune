@@ -74,18 +74,20 @@ test.describe('E07-S01: Momentum Score Display', () => {
       sessionType: 'video' as const,
     }))
 
-    const lowMomentumSessions = [{
-      id: 'test-low-0',
-      courseId: 'authority',
-      contentItemId: 'lesson-0',
-      startTime: new Date(now - 12 * 24 * 60 * 60 * 1000).toISOString(), // 12 days ago
-      endTime: new Date(now - 12 * 24 * 60 * 60 * 1000 + 10 * 60 * 1000).toISOString(),
-      duration: 600,
-      idleTime: 0,
-      videosWatched: ['video-0'],
-      lastActivity: new Date(now - 12 * 24 * 60 * 60 * 1000 + 10 * 60 * 1000).toISOString(),
-      sessionType: 'video' as const,
-    }]
+    const lowMomentumSessions = [
+      {
+        id: 'test-low-0',
+        courseId: 'authority',
+        contentItemId: 'lesson-0',
+        startTime: new Date(now - 12 * 24 * 60 * 60 * 1000).toISOString(), // 12 days ago
+        endTime: new Date(now - 12 * 24 * 60 * 60 * 1000 + 10 * 60 * 1000).toISOString(),
+        duration: 600,
+        idleTime: 0,
+        videosWatched: ['video-0'],
+        lastActivity: new Date(now - 12 * 24 * 60 * 60 * 1000 + 10 * 60 * 1000).toISOString(),
+        sessionType: 'video' as const,
+      },
+    ]
 
     const allSessions = [...highMomentumSessions, ...lowMomentumSessions]
 
