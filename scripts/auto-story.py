@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import html
 import json
 import logging
 import re
@@ -59,12 +60,19 @@ BUDGET_SESSION_IMPLEMENT = 0
 BUDGET_SESSION_REVIEW = 0
 BUDGET_PER_STORY = 25.00  # estimate for dry-run display only
 
+# Timing and display constants
+SERVER_STARTUP_WAIT_SECS = 5
+SERVER_SHUTDOWN_TIMEOUT_SECS = 5
+PROGRESS_DOT_INTERVAL_CHARS = 2000
+PLAN_PREVIEW_CHARS = 3000
+
 
 @dataclass
 class RunConfig:
     stories: list[str]
     mode: str  # "supervised" | "autonomous"
     dry_run: bool
+    resume: bool
     max_review_rounds: int
     max_turns: int
     log_file: Path
@@ -102,6 +110,9 @@ class StoryResult:
     success: bool = False
     duration_secs: float = 0.0
     total_cost_usd: float = 0.0
+    cost_start: float = 0.0
+    cost_implement: float = 0.0
+    cost_review: float = 0.0
     review_rounds: int = 0
     blockers_found: int = 0
     blockers_fixed: int = 0
@@ -135,6 +146,10 @@ def parse_args() -> RunConfig:
         help="Auto-approve plans and fixes",
     )
     parser.add_argument("--dry-run", action="store_true", help="Show what would run")
+    parser.add_argument(
+        "--resume", action="store_true",
+        help="Skip stories already completed in log file",
+    )
     parser.add_argument("--max-review-rounds", type=int, default=3)
     parser.add_argument("--max-turns", type=int, default=100)
     parser.add_argument(
@@ -156,6 +171,7 @@ def parse_args() -> RunConfig:
         stories=stories_raw,
         mode=mode,
         dry_run=args.dry_run,
+        resume=args.resume,
         max_review_rounds=args.max_review_rounds,
         max_turns=args.max_turns,
         log_file=args.log_file,
@@ -418,9 +434,14 @@ def make_options(
             model="sonnet",
         )
 
+    # Core tools needed for story development
     allowed = [
-        "Read", "Write", "Edit", "Glob", "Grep", "Bash",
-        "Agent", "Skill", "TodoWrite", "WebSearch", "ToolSearch",
+        "Read", "Write", "Edit",          # File operations
+        "Glob", "Grep",                   # Search
+        "Bash",                           # Git, npm, build commands
+        "Agent",                          # Spawn review agents
+        "TodoWrite",                      # Track implementation progress
+        "ToolSearch",                     # Discover MCP tools
     ]
 
     # Headless Playwright MCP for design review (no browser window pops up)
@@ -449,7 +470,7 @@ def make_options(
 
 
 def format_prompt(template: str, story: StoryInfo) -> str:
-    """Fill prompt template with story details."""
+    """Fill prompt template with story details. Sanitizes story name to prevent injection."""
     epic_n = int(story.epic_num)
     story_n = int(story.story_num)
     branch_slug = f"e{epic_n:02d}-s{story_n:02d}-{'-'.join(story.name.lower().split())}"
@@ -458,7 +479,7 @@ def format_prompt(template: str, story: StoryInfo) -> str:
 
     return template.format(
         story_id=story.key,
-        story_name=story.name,
+        story_name=html.escape(story.name),  # Prevent prompt injection
         yaml_key=story.yaml_key,
         branch_slug=branch_slug,
         story_id_lower=story_id_lower,
@@ -500,8 +521,8 @@ async def collect_response(
                     parts.append(block.text)
                     char_count += len(block.text)
                     if stream:
-                        # Print a dot every ~2000 chars to show progress
-                        if char_count % 2000 < len(block.text):
+                        # Print a dot periodically to show progress
+                        if char_count % PROGRESS_DOT_INTERVAL_CHARS < len(block.text):
                             print(".", end="", flush=True)
                     # Detect key markers in streaming text
                     for marker in [
@@ -669,6 +690,7 @@ async def run_story(story: StoryInfo, config: RunConfig) -> StoryResult:
             start_prompt, config.max_turns, BUDGET_SESSION_START, autonomous,
             story_key=story.key,
         )
+        result.cost_start = cost
         result.total_cost_usd += cost
         if sid:
             result.session_ids.append(sid)
@@ -682,8 +704,8 @@ async def run_story(story: StoryInfo, config: RunConfig) -> StoryResult:
             print(f"\n{'=' * 60}")
             print(f"PLAN FOR {story.key}")
             print(f"{'=' * 60}")
-            # Show last ~3000 chars (the plan is usually at the end)
-            print(text[-3000:])
+            # Show end of output (the plan is usually at the end)
+            print(text[-PLAN_PREVIEW_CHARS:])
             approval = input("\nApprove plan? [y/n]: ").strip().lower()
             if approval != "y":
                 raise StoryError("Plan rejected by user")
@@ -695,6 +717,7 @@ async def run_story(story: StoryInfo, config: RunConfig) -> StoryResult:
             impl_prompt, config.max_turns, BUDGET_SESSION_IMPLEMENT, autonomous,
             story_key=story.key,
         )
+        result.cost_implement = cost
         result.total_cost_usd += cost
         if sid:
             result.session_ids.append(sid)
@@ -703,14 +726,28 @@ async def run_story(story: StoryInfo, config: RunConfig) -> StoryResult:
         # ── Session 3: REVIEW + FIX + FINISH ──
         write_progress(story.key, "SESSION 3: REVIEW+FIX+FINISH", "quality gates...")
         review_result, text, cost = await run_review_fix_session(story, config)
+        result.cost_review = cost
         result.total_cost_usd += cost
         result.review_rounds = review_result.rounds
         result.blockers_found = review_result.blockers_found
         result.blockers_fixed = review_result.blockers_fixed
         result.phase_reached = "finish"
 
-        # Extract PR URL
+        # Extract and verify PR URL
         result.pr_url = extract_pr_url(text, story)
+        if not result.pr_url:
+            raise StoryError("FINISH phase did not create a PR (no URL found)")
+
+        # Verify PR actually exists
+        pr_number = result.pr_url.split('/')[-1]
+        verify_pr = subprocess.run(
+            ["gh", "pr", "view", pr_number],
+            capture_output=True, text=True, cwd=PROJECT_DIR,
+        )
+        if verify_pr.returncode != 0:
+            raise StoryError(f"PR {pr_number} does not exist: {verify_pr.stderr}")
+
+        write_progress(story.key, "PR_VERIFIED", f"PR #{pr_number} created successfully")
         result.success = True
 
     except StoryError as e:
@@ -746,6 +783,30 @@ async def main() -> None:
         log.error("No stories found to process")
         sys.exit(1)
 
+    # Resume: skip already completed stories
+    if config.resume and config.log_file.exists():
+        completed_keys = set()
+        with open(config.log_file) as f:
+            for line in f:
+                try:
+                    entry = json.loads(line.strip())
+                    if entry.get("success"):
+                        completed_keys.add(entry["story"])
+                except (json.JSONDecodeError, KeyError):
+                    continue
+
+        if completed_keys:
+            original_count = len(stories)
+            stories = [s for s in stories if s.key not in completed_keys]
+            skipped = original_count - len(stories)
+            if skipped > 0:
+                log.info(f"Resume mode: skipping {skipped} completed story(ies)")
+                log.info(f"Completed: {', '.join(sorted(completed_keys))}")
+
+        if not stories:
+            log.info("All stories already completed!")
+            return
+
     # Preflight: ensure script exists on main (prevents "file not found" after checkout)
     check = subprocess.run(
         ["git", "show", "main:scripts/auto-story.py"],
@@ -778,16 +839,31 @@ async def main() -> None:
 
     # Start dev server for design review
     log.info("Starting dev server (npm run dev)...")
+    dev_server_log = PROJECT_DIR / "scripts" / "dev-server.log"
+    dev_server_log_file = open(dev_server_log, "w")
     dev_server = subprocess.Popen(
         ["npm", "run", "dev"],
         cwd=PROJECT_DIR,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stdout=dev_server_log_file,
+        stderr=subprocess.STDOUT,
     )
 
     try:
-        # Wait briefly for server startup
-        await asyncio.sleep(3)
+        # Wait for server to be ready (use existing wait script)
+        log.info("Waiting for dev server to be ready...")
+        wait_result = subprocess.run(
+            ["./scripts/wait-for-server.sh", "http://localhost:5173", "30"],
+            cwd=PROJECT_DIR,
+            capture_output=True,
+            text=True,
+        )
+        if wait_result.returncode != 0:
+            log.error(f"Dev server failed to start: {wait_result.stderr}")
+            log.error(f"Check {dev_server_log} for details")
+            dev_server.terminate()
+            dev_server.wait(timeout=5)
+            sys.exit(1)
+        log.info("Dev server ready at http://localhost:5173")
 
         results: list[StoryResult] = []
         for i, story in enumerate(stories):
@@ -819,7 +895,13 @@ async def main() -> None:
     finally:
         log.info("Stopping dev server...")
         dev_server.terminate()
-        dev_server.wait(timeout=5)
+        try:
+            dev_server.wait(timeout=SERVER_SHUTDOWN_TIMEOUT_SECS)
+        except subprocess.TimeoutExpired:
+            log.warning("Dev server didn't stop cleanly, killing...")
+            dev_server.kill()
+            dev_server.wait()
+        dev_server_log_file.close()
 
 
 # ─────────────────────────────────────────────────
@@ -830,7 +912,8 @@ async def main() -> None:
 def parse_verdict(text: str) -> Verdict:
     """Extract VERDICT and severity counts from review output."""
     is_pass = False
-    m = re.search(r"VERDICT[:\s]*(PASS|BLOCKED)", text, re.IGNORECASE)
+    # Accept colon, dash, or whitespace between VERDICT and status
+    m = re.search(r"VERDICT[:\s\-]*(PASS|BLOCKED)", text, re.IGNORECASE)
     if m:
         is_pass = m.group(1).upper() == "PASS"
 
@@ -887,12 +970,21 @@ def verify_finish(story: StoryInfo) -> list[str]:
         failures.append(f"Uncommitted files: {result.stdout.strip()[:200]}")
 
     # 4. Check branch was pushed
-    result = subprocess.run(
-        ["git", "log", "@{u}..HEAD", "--oneline"],
+    # First verify upstream is set
+    upstream_check = subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "@{u}"],
         capture_output=True, text=True, cwd=PROJECT_DIR,
     )
-    if result.returncode != 0 or result.stdout.strip():
-        failures.append("Branch not pushed to remote")
+    if upstream_check.returncode != 0:
+        failures.append("Branch has no upstream (not pushed with -u)")
+    else:
+        # Check if local is ahead of remote
+        result = subprocess.run(
+            ["git", "log", "@{u}..HEAD", "--oneline"],
+            capture_output=True, text=True, cwd=PROJECT_DIR,
+        )
+        if result.stdout.strip():
+            failures.append("Branch has unpushed commits")
 
     return failures
 
