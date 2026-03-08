@@ -1,10 +1,11 @@
+import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
 /**
  * ATDD — E06-S01: Create Learning Challenges
  *
  * Acceptance tests mapped to each AC.
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
 
 /** Navigate to the Challenges page. */
 async function goToChallenges(page: import('@playwright/test').Page) {
@@ -113,8 +114,7 @@ test.describe('Create Learning Challenges (E06-S01)', () => {
     await page.getByLabel(/target/i).fill('5')
 
     // Set deadline to 7 days from now
-    const futureDate = new Date()
-    futureDate.setDate(futureDate.getDate() + 7)
+    const futureDate = new Date(getRelativeDate(7))
     await page
       .getByLabel(/deadline/i)
       .fill(
@@ -171,8 +171,7 @@ test.describe('Create Learning Challenges (E06-S01)', () => {
     await selectType(page, /completion/i)
     await page.getByLabel(/target/i).fill('5')
 
-    const futureDate = new Date()
-    futureDate.setDate(futureDate.getDate() + 7)
+    const futureDate = new Date(getRelativeDate(7))
     await page
       .getByLabel(/deadline/i)
       .fill(
@@ -196,8 +195,7 @@ test.describe('Create Learning Challenges (E06-S01)', () => {
     await selectType(page, /completion/i)
     await page.getByLabel(/target/i).fill('0')
 
-    const futureDate = new Date()
-    futureDate.setDate(futureDate.getDate() + 7)
+    const futureDate = new Date(getRelativeDate(7))
     await page
       .getByLabel(/deadline/i)
       .fill(
@@ -221,8 +219,7 @@ test.describe('Create Learning Challenges (E06-S01)', () => {
     await selectType(page, /completion/i)
     await page.getByLabel(/target/i).fill('-5')
 
-    const futureDate = new Date()
-    futureDate.setDate(futureDate.getDate() + 7)
+    const futureDate = new Date(getRelativeDate(7))
     await page
       .getByLabel(/deadline/i)
       .fill(

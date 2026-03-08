@@ -30,72 +30,73 @@ test.describe('Design Review - Responsive Testing', () => {
   )
   for (const viewport of VIEWPORTS) {
     const testFn = viewport.name === 'Tablet' ? test.skip : test
-    testFn(`${viewport.name} (${viewport.width}x${viewport.height}) - Layout validation`, async ({
-      page,
-    }) => {
-      // FIXME: Pre-existing failure on Tablet viewport
-      // See: https://github.com/PedroLages/Elearningplatformwireframes/issues/XXX
-      await page.setViewportSize({ width: viewport.width, height: viewport.height })
+    testFn(
+      `${viewport.name} (${viewport.width}x${viewport.height}) - Layout validation`,
+      async ({ page }) => {
+        // FIXME: Pre-existing failure on Tablet viewport
+        // See: https://github.com/PedroLages/Elearningplatformwireframes/issues/XXX
+        await page.setViewportSize({ width: viewport.width, height: viewport.height })
 
-      // Listen for console errors
-      const consoleErrors: string[] = []
-      page.on('console', msg => {
-        if (msg.type() === 'error') {
-          consoleErrors.push(msg.text())
-        }
-      })
+        // Listen for console errors
+        const consoleErrors: string[] = []
+        page.on('console', msg => {
+          if (msg.type() === 'error') {
+            consoleErrors.push(msg.text())
+          }
+        })
 
-      await page.goto(TEST_ROUTE)
-      await page.waitForLoadState('domcontentloaded')
+        await page.goto(TEST_ROUTE)
+        await page.waitForLoadState('domcontentloaded')
 
-      // Check for horizontal scroll
-      const hasHorizontalScroll = await page.evaluate(
-        () => document.documentElement.scrollWidth > document.documentElement.clientWidth
-      )
-
-      if (hasHorizontalScroll) {
-        addFinding('high', 'Responsive Design', `Horizontal scroll detected on ${viewport.name}`)
-      }
-      expect(hasHorizontalScroll).toBe(false)
-
-      // Capture full page screenshot
-      await page.screenshot({
-        path: `test-results/design-review-${viewport.name.toLowerCase()}.png`,
-        fullPage: true,
-      })
-
-      // Check for console errors
-      if (consoleErrors.length > 0) {
-        addFinding('high', 'JavaScript Errors', `${consoleErrors.length} console errors detected`)
-      }
-      expect(consoleErrors.length).toBe(0)
-
-      // Check touch targets on mobile
-      if (viewport.name === 'Mobile') {
-        const interactiveElements = page.locator(
-          'button, a[href], input, select, textarea, [role="button"]'
+        // Check for horizontal scroll
+        const hasHorizontalScroll = await page.evaluate(
+          () => document.documentElement.scrollWidth > document.documentElement.clientWidth
         )
-        const count = await interactiveElements.count()
-        let smallTargetCount = 0
 
-        for (let i = 0; i < Math.min(count, 50); i++) {
-          const element = interactiveElements.nth(i)
-          const box = await element.boundingBox()
+        if (hasHorizontalScroll) {
+          addFinding('high', 'Responsive Design', `Horizontal scroll detected on ${viewport.name}`)
+        }
+        expect(hasHorizontalScroll).toBe(false)
 
-          if (box && (box.width < 44 || box.height < 44)) {
-            smallTargetCount++
+        // Capture full page screenshot
+        await page.screenshot({
+          path: `test-results/design-review-${viewport.name.toLowerCase()}.png`,
+          fullPage: true,
+        })
+
+        // Check for console errors
+        if (consoleErrors.length > 0) {
+          addFinding('high', 'JavaScript Errors', `${consoleErrors.length} console errors detected`)
+        }
+        expect(consoleErrors.length).toBe(0)
+
+        // Check touch targets on mobile
+        if (viewport.name === 'Mobile') {
+          const interactiveElements = page.locator(
+            'button, a[href], input, select, textarea, [role="button"]'
+          )
+          const count = await interactiveElements.count()
+          let smallTargetCount = 0
+
+          for (let i = 0; i < Math.min(count, 50); i++) {
+            const element = interactiveElements.nth(i)
+            const box = await element.boundingBox()
+
+            if (box && (box.width < 44 || box.height < 44)) {
+              smallTargetCount++
+            }
+          }
+
+          if (smallTargetCount > 0) {
+            addFinding(
+              'medium',
+              'Touch Targets',
+              `${smallTargetCount} elements smaller than 44x44px on mobile`
+            )
           }
         }
-
-        if (smallTargetCount > 0) {
-          addFinding(
-            'medium',
-            'Touch Targets',
-            `${smallTargetCount} elements smaller than 44x44px on mobile`
-          )
-        }
       }
-    })
+    )
   }
 })
 

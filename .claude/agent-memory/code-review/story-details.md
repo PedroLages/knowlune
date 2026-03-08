@@ -78,3 +78,13 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - `buildActiveCoursesWithMomentum` iterates `allCourses` twice (two `.map()` passes), minor perf
 - No test coverage for allocation sum-to-budget invariant
 - E2E tests don't cover AC6 (rolling window updates) -- only static state snapshots
+
+## E08-S01: Study Time Analytics (Revalidation)
+- Round 1 fixes verified: ignore flag, useMemo, loading state, ARIA cleanup, .catch() on Reports.tsx
+- REMAINING: Sidebar seed in test beforeEach runs AFTER page.goto (should be before)
+- REMAINING: Weekly adherence uses sliding window from most recent session, not current calendar week (contradicts AC2 "this week")
+- REMAINING: AC2.2 "real-time update" unimplemented -- component loads sessions once in useEffect([]), no subscription
+- REMAINING: AC2.2 test uses page.reload() to simulate real-time, masking the gap
+- REMAINING: AC3.3 test conditional assertion `if (count > 0)` silently passes when no elements found
+- REMAINING: Hard wait `waitForTimeout(100)` in keyboard navigation test
+- Math.max(...sessions.map(...)) stack overflow risk with large arrays

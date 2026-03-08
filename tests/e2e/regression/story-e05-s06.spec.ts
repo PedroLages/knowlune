@@ -7,6 +7,7 @@
 import { test, expect } from '../../support/fixtures'
 import { goToOverview } from '../../support/helpers/navigation'
 import { buildStreakLog } from '../../support/helpers/streak-helpers'
+import { getRelativeTimestamp } from './../../utils/test-time'
 
 test.describe('Streak Milestone Celebrations (E05-S06)', () => {
   // Serial mode: milestone detection uses sessionStorage guards that can race
@@ -158,7 +159,7 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
       {
         id: 'milestone-7-1',
         milestoneValue: 7,
-        earnedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        earnedAt: new Date(getRelativeTimestamp(-30)).toISOString(),
         streakStartDate: '2026-02-01',
       },
     ])
@@ -191,9 +192,8 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
 
     // Then: no milestone toast should appear
     const toast = page.locator('[data-sonner-toast]').filter({ hasText: /Streak/i })
-    // Wait briefly then assert absence
-    await page.waitForTimeout(2000)
-    await expect(toast).toHaveCount(0)
+    // Wait for potential toast to appear, then verify absence
+    await expect(toast).toHaveCount(0, { timeout: 2000 })
   })
 
   // ── Simultaneous milestones: 30-day triggers 7 + 30 ──────────

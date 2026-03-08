@@ -3,11 +3,8 @@ stepsCompleted:
   [
     'step-01-load-context',
     'step-02-define-thresholds',
-    'step-03-gather-evidence',
-    'step-04-assess-nfrs',
-    'step-05-generate-report',
   ]
-lastStep: 'step-05-generate-report'
+lastStep: 'step-02-define-thresholds'
 lastSaved: '2026-03-08'
 workflowType: 'testarch-nfr-assess'
 inputDocuments:

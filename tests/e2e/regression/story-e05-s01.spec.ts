@@ -8,14 +8,14 @@
  *   - AC4: Keyboard accessibility
  */
 import { test, expect } from '../../support/fixtures'
+import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
 
 function makeStreakEntry(daysAgo: number): {
   type: string
   courseId: string
   timestamp: string
 } {
-  const d = new Date()
-  d.setDate(d.getDate() - daysAgo)
+  const d = new Date(getRelativeDate(-daysAgo))
   d.setHours(12, 0, 0, 0)
   return {
     type: 'lesson_complete',
@@ -64,15 +64,14 @@ test.describe('Study Streak Counter (E05-S01)', () => {
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
 
-    // Wait for any HMR reconnections to settle
-    await page.waitForTimeout(1000)
-
+    // Wait for streak value to be rendered
     const streakValue = page.getByTestId('current-streak-value')
+    await expect(streakValue).toBeVisible({ timeout: 5000 })
     await expect(streakValue).toHaveText('0')
 
     // Inject a study entry + dispatch event (no reload)
-    await page.evaluate(() => {
-      const now = new Date()
+    await page.evaluate(fixedDate => {
+      const now = new Date(fixedDate)
       now.setHours(12, 0, 0, 0)
       const entry = {
         type: 'lesson_complete',
@@ -83,7 +82,7 @@ test.describe('Study Streak Counter (E05-S01)', () => {
       log.push(entry)
       window.localStorage.setItem('study-log', JSON.stringify(log))
       window.dispatchEvent(new CustomEvent('study-log-updated'))
-    })
+    }, FIXED_DATE)
 
     // Streak should now be 1 without reload
     await expect(streakValue).toHaveText('1', { timeout: 10000 })
@@ -100,8 +99,8 @@ test.describe('Study Streak Counter (E05-S01)', () => {
     })
     await rmPage.goto('/')
 
-    await rmPage.evaluate(() => {
-      const now = new Date()
+    await rmPage.evaluate(fixedDate => {
+      const now = new Date(fixedDate)
       now.setHours(12, 0, 0, 0)
       const entry = {
         type: 'lesson_complete',
@@ -109,7 +108,7 @@ test.describe('Study Streak Counter (E05-S01)', () => {
         timestamp: now.toISOString(),
       }
       window.localStorage.setItem('study-log', JSON.stringify([entry]))
-    })
+    }, FIXED_DATE)
     await rmPage.reload()
     await rmPage.waitForLoadState('domcontentloaded')
 

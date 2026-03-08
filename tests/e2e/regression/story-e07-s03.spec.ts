@@ -6,7 +6,8 @@
  *
  * Course used: 'authority' (7 lessons)
  */
-import { test, expect } from '../support/fixtures'
+import { test, expect } from '../../support/fixtures'
+import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
 
 // All 7 lesson IDs for the 'authority' course
 const AUTHORITY_LESSONS = [
@@ -47,8 +48,8 @@ async function seedAuthorityAlmostComplete(
       courseId: 'authority',
       completedLessons: AUTHORITY_LESSONS.slice(0, 6), // all but last
       lastWatchedLesson: AUTHORITY_LESSONS[5],
-      lastAccessedAt: new Date().toISOString(),
-      startedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+      lastAccessedAt: FIXED_DATE,
+      startedAt: getRelativeDate(-7),
       notes: {},
     },
   }
@@ -200,8 +201,8 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
       progress[courseId] = {
         courseId,
         completedLessons: Array.from({ length: 1000 }, (_, i) => `${courseId}-lesson-${i + 1}`),
-        lastAccessedAt: new Date().toISOString(),
-        startedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        lastAccessedAt: FIXED_DATE,
+        startedAt: getRelativeDate(-30),
         notes: {},
       }
     }
@@ -210,8 +211,8 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
       courseId: 'authority',
       completedLessons: AUTHORITY_LESSONS.slice(0, 6),
       lastWatchedLesson: AUTHORITY_LESSONS[5],
-      lastAccessedAt: new Date().toISOString(),
-      startedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+      lastAccessedAt: FIXED_DATE,
+      startedAt: getRelativeDate(-7),
       notes: {},
     }
 

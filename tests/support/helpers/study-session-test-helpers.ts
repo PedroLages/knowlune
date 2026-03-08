@@ -1,29 +1,23 @@
 /**
- * E2E tests for Story E04-S03: Automatic Study Session Logging - Active Sessions
- *
- * Acceptance criteria:
- *   AC1: Create session on content mount with course/content metadata
- *   AC2: Record session end on navigation/visibility change
- *   AC3: Auto-pause after 5min idle, resume on activity
+ * Shared helpers for study session E2E tests
  */
-import { test, expect } from '../../support/fixtures'
-import { createImportedCourse } from '../../support/fixtures/factories/imported-course-factory'
-import { goToCourses, navigateAndWait } from '../../support/helpers/navigation'
-import { RETRY_CONFIG } from '../../utils/constants'
 import type { Page } from '@playwright/test'
+import { createImportedCourse } from '../fixtures/factories/imported-course-factory'
+import { goToCourses, navigateAndWait } from './navigation'
+import { RETRY_CONFIG } from '../../utils/constants'
 
 // ---------------------------------------------------------------------------
 // Test Data
 // ---------------------------------------------------------------------------
 
-const TEST_COURSE = createImportedCourse({
+export const TEST_COURSE = createImportedCourse({
   id: 'course-study-tracking',
   name: 'Study Tracking Test Course',
   videoCount: 2,
   pdfCount: 0,
 })
 
-interface ImportedVideoTestData {
+export interface ImportedVideoTestData {
   id: string
   courseId: string
   filename: string
@@ -31,7 +25,7 @@ interface ImportedVideoTestData {
   duration?: number
 }
 
-const TEST_VIDEOS: ImportedVideoTestData[] = [
+export const TEST_VIDEOS: ImportedVideoTestData[] = [
   {
     id: 'video-lesson-1',
     courseId: 'course-study-tracking',
@@ -49,13 +43,16 @@ const TEST_VIDEOS: ImportedVideoTestData[] = [
 ]
 
 // ---------------------------------------------------------------------------
-// Helpers
+// IndexedDB Helpers
 // ---------------------------------------------------------------------------
 
 const DB_NAME = 'ElearningDB'
 
 /** Seed imported videos into IndexedDB with retry logic for Dexie initialization. */
-async function seedImportedVideos(page: Page, videos: ImportedVideoTestData[]): Promise<void> {
+export async function seedImportedVideos(
+  page: Page,
+  videos: ImportedVideoTestData[]
+): Promise<void> {
   await page.evaluate(
     async ({ dbName, data, maxRetries, retryDelay }) => {
       for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -110,12 +107,12 @@ async function seedImportedVideos(page: Page, videos: ImportedVideoTestData[]): 
 }
 
 /** Navigate to Courses page, seed course + videos, reload. */
-async function seedCourseAndReload(
+export async function seedCourseAndReload(
   page: Page,
   indexedDB: {
-    seedImportedCourses: (c: ReturnType<typeof createImportedCourse>[]) => Promise<void>
+    seedImportedCourses: (courses: ReturnType<typeof createImportedCourse>[]) => Promise<void>
   }
-) {
+): Promise<void> {
   await goToCourses(page)
   await indexedDB.seedImportedCourses([TEST_COURSE])
   await seedImportedVideos(page, TEST_VIDEOS)
@@ -123,38 +120,39 @@ async function seedCourseAndReload(
 }
 
 /** Navigate to imported lesson player. */
-async function goToLessonPlayer(page: Page, courseId: string, lessonId: string): Promise<void> {
+export async function goToLessonPlayer(
+  page: Page,
+  courseId: string,
+  lessonId: string
+): Promise<void> {
   await navigateAndWait(page, `/imported-courses/${courseId}/lessons/${lessonId}`)
 }
 
-// ===========================================================================
-// Tests
-// ===========================================================================
+// ---------------------------------------------------------------------------
+// Session Verification Helpers
+// ---------------------------------------------------------------------------
 
-test.describe('Story E04-S03: Active Study Session Logging', () => {
-  test.beforeEach(async ({ page, localStorage }) => {
-    // Seed localStorage to prevent sidebar overlay
-    await page.goto('/')
-    await localStorage.seed({ 'eduvi-sidebar-v1': 'false' })
-    await page.reload()
-  })
+export interface StudySession {
+  id?: string
+  startTime: number
+  endTime?: number
+  duration?: number
+  idleTime?: number
+  courseId: string
+  contentItemId: string
+}
 
-  test('AC1: creates session record when user enters lesson player', async ({
-    page,
-    indexedDB,
-  }) => {
-    // GIVEN a user has imported courses available
-    await seedCourseAndReload(page, indexedDB)
-
-    // WHEN the user navigates to the lesson player
-    await goToLessonPlayer(page, 'course-study-tracking', 'video-lesson-1')
-
-    // THEN a new study session record is created with metadata
-    // Wait with retry for database to be ready
-    const sessionExists = await page.evaluate(async () => {
-      const maxRetries = 10 // RETRY_CONFIG.MAX_ATTEMPTS
-      const retryDelay = 200 // RETRY_CONFIG.POLL_INTERVAL
-
+/**
+ * Wait for a study session to exist in IndexedDB with retry logic.
+ * Returns true if session found within timeout.
+ */
+export async function waitForSessionExists(
+  page: Page,
+  maxRetries = 10,
+  retryDelay = 200
+): Promise<boolean> {
+  return await page.evaluate(
+    async ({ maxRetries, retryDelay }) => {
       for (let attempt = 0; attempt < maxRetries; attempt++) {
         const db = await new Promise<IDBDatabase>((resolve, reject) => {
           const request = indexedDB.open('ElearningDB')
@@ -189,6 +187,7 @@ test.describe('Story E04-S03: Active Study Session Logging', () => {
 
         db.close()
         if (count > 0) return true
+
         // Session might not be created yet - retry
         await new Promise(resolve => {
           const startTime = performance.now()
@@ -203,52 +202,46 @@ test.describe('Story E04-S03: Active Study Session Logging', () => {
         })
       }
       return false
+    },
+    { maxRetries, retryDelay }
+  )
+}
+
+/**
+ * Get the latest study session from IndexedDB.
+ */
+export async function getLatestSession(page: Page): Promise<StudySession | null> {
+  return await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open('ElearningDB')
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
     })
 
-    expect(sessionExists).toBe(true)
+    const tx = db.transaction('studySessions', 'readonly')
+    const store = tx.objectStore('studySessions')
+    const getAllReq = store.getAll()
 
-    // AND session has required fields
-    const session = await page.evaluate(async () => {
-      const db = await new Promise<IDBDatabase>((resolve, reject) => {
-        const request = indexedDB.open('ElearningDB')
-        request.onsuccess = () => resolve(request.result)
-        request.onerror = () => reject(request.error)
-      })
-
-      const tx = db.transaction('studySessions', 'readonly')
-      const store = tx.objectStore('studySessions')
-      const getAllReq = store.getAll()
-
-      const sessions = await new Promise<any[]>((resolve, reject) => {
-        getAllReq.onsuccess = () => resolve(getAllReq.result)
-        getAllReq.onerror = () => reject(getAllReq.error)
-      })
-
-      db.close()
-      return sessions[0]
+    const sessions = await new Promise<any[]>((resolve, reject) => {
+      getAllReq.onsuccess = () => resolve(getAllReq.result)
+      getAllReq.onerror = () => reject(getAllReq.error)
     })
 
-    expect(session).toBeDefined()
-    expect(session).toHaveProperty('startTime')
-    expect(session).toHaveProperty('courseId')
-    expect(session).toHaveProperty('contentItemId')
-    expect(session.courseId).toBe('course-study-tracking')
-    expect(session.contentItemId).toBe('video-lesson-1')
+    db.close()
+    return sessions.length > 0 ? sessions[sessions.length - 1] : null
   })
+}
 
-  test('AC2: records session end timestamp on navigation away', async ({ page, indexedDB }) => {
-    // GIVEN an active study session is in progress
-    await seedCourseAndReload(page, indexedDB)
-    await goToLessonPlayer(page, 'course-study-tracking', 'video-lesson-1')
-
-    // WHEN the user navigates away
-    await navigateAndWait(page, '/courses')
-
-    // THEN session end timestamp is recorded (wait with retry for async persistence)
-    const sessionHasEndTime = await page.evaluate(async () => {
-      const maxRetries = 20 // Longer wait for async endSession
-      const retryDelay = 200
-
+/**
+ * Wait for session endTime to be recorded with retry logic.
+ */
+export async function waitForSessionEnd(
+  page: Page,
+  maxRetries = 20,
+  retryDelay = 200
+): Promise<boolean> {
+  return await page.evaluate(
+    async ({ maxRetries, retryDelay }) => {
       for (let attempt = 0; attempt < maxRetries; attempt++) {
         const db = await new Promise<IDBDatabase>((resolve, reject) => {
           const request = indexedDB.open('ElearningDB')
@@ -315,56 +308,23 @@ test.describe('Story E04-S03: Active Study Session Logging', () => {
         })
       }
       return false
-    })
+    },
+    { maxRetries, retryDelay }
+  )
+}
 
-    expect(sessionHasEndTime).toBe(true)
-
-    // AND duration is calculated
-    const sessionHasDuration = await page.evaluate(async () => {
-      const db = await new Promise<IDBDatabase>((resolve, reject) => {
-        const request = indexedDB.open('ElearningDB')
-        request.onsuccess = () => resolve(request.result)
-        request.onerror = () => reject(request.error)
-      })
-
-      const tx = db.transaction('studySessions', 'readonly')
-      const sessions = await new Promise<any[]>((resolve, reject) => {
-        const req = tx.objectStore('studySessions').getAll()
-        req.onsuccess = () => resolve(req.result)
-        req.onerror = () => reject(req.error)
-      })
-
-      db.close()
-      const lastSession = sessions[sessions.length - 1]
-      return typeof lastSession.duration === 'number' && lastSession.duration >= 0
-    })
-
-    expect(sessionHasDuration).toBe(true)
-  })
-
-  test('AC3: auto-pauses session after 5 minutes of inactivity', async ({ page, indexedDB }) => {
-    // Install clock BEFORE page loads (so React timers are mocked)
-    const startTime = performance.now()
-    await page.clock.install({ time: startTime })
-
-    // GIVEN an active study session is in progress
-    await seedCourseAndReload(page, indexedDB)
-    await goToLessonPlayer(page, 'course-study-tracking', 'video-lesson-1')
-
-    // Use real timeout for page load, then fast-forward for idle detection
-    await page.clock.runFor(500)
-
-    // WHEN the user is idle for more than 5 minutes
-    await page.clock.fastForward(5 * 60 * 1000 + 1000) // 5 minutes 1 second in milliseconds
-
-    // Wait for idle detection to trigger pauseSession (using clock time)
-    await page.clock.runFor(2000)
-
-    // THEN idle time should be recorded in the session
-    const idleTimeRecorded = await page.evaluate(async () => {
-      const maxRetries = 20
-      const retryDelay = 200
-
+/**
+ * Wait for idle time to be recorded in session with retry logic.
+ * Returns session data with success status.
+ */
+export async function waitForIdleTimeRecorded(
+  page: Page,
+  minIdleSeconds = 300,
+  maxRetries = 20,
+  retryDelay = 200
+): Promise<{ success: boolean; idleTime: number; duration: number }> {
+  return await page.evaluate(
+    async ({ minIdleSeconds, maxRetries, retryDelay }) => {
       for (let attempt = 0; attempt < maxRetries; attempt++) {
         const db = await new Promise<IDBDatabase>((resolve, reject) => {
           const request = indexedDB.open('ElearningDB')
@@ -413,12 +373,11 @@ test.describe('Story E04-S03: Active Study Session Logging', () => {
         }
 
         const session = sessions[sessions.length - 1]
-        // Verify idleTime >= 300 seconds (5 minutes) and is persisted
-        if (session.idleTime !== undefined && session.idleTime >= 300) {
+        if (session.idleTime !== undefined && session.idleTime >= minIdleSeconds) {
           return {
             success: true,
             idleTime: session.idleTime,
-            duration: session.duration,
+            duration: session.duration || 0,
           }
         }
 
@@ -435,43 +394,7 @@ test.describe('Story E04-S03: Active Study Session Logging', () => {
         })
       }
       return { success: false, idleTime: 0, duration: 0 }
-    })
-
-    expect(idleTimeRecorded.success).toBe(true)
-    expect(idleTimeRecorded.idleTime).toBeGreaterThanOrEqual(300) // 5 minutes
-
-    // Simulate activity to resume
-    await page.mouse.move(100, 100)
-
-    // AND session resumes correctly (still exists, endTime is undefined = still active)
-    const sessionResumed = await page.evaluate(async () => {
-      const db = await new Promise<IDBDatabase>((resolve, reject) => {
-        const request = indexedDB.open('ElearningDB')
-        request.onsuccess = () => resolve(request.result)
-        request.onerror = () => reject(request.error)
-      })
-
-      const tx = db.transaction('studySessions', 'readonly')
-      const sessions = await new Promise<any[]>((resolve, reject) => {
-        const req = tx.objectStore('studySessions').getAll()
-        req.onsuccess = () => resolve(req.result)
-        req.onerror = () => reject(req.error)
-      })
-
-      db.close()
-
-      if (sessions.length === 0) return { exists: false, isActive: false }
-
-      const session = sessions[sessions.length - 1]
-      return {
-        exists: true,
-        isActive: session.endTime === undefined, // Active if no endTime
-        hasIdleTime: session.idleTime >= 300,
-      }
-    })
-
-    expect(sessionResumed.exists).toBe(true)
-    expect(sessionResumed.isActive).toBe(true) // Session should still be active after resume
-    expect(sessionResumed.hasIdleTime).toBe(true) // Idle time should be preserved
-  })
-})
+    },
+    { minIdleSeconds, maxRetries, retryDelay }
+  )
+}

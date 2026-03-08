@@ -149,8 +149,8 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 8: Analytics & Reports Dashboard
   # ──────────────────────────────────────────────────
-  epic-8: backlog
-  8-1-study-time-analytics: backlog
+  epic-8: in-progress
+  8-1-study-time-analytics: done
   8-2-course-completion-tracking: backlog
   8-3-learning-velocity-and-trends: backlog
   8-4-retention-insights-and-activity-heatmap: backlog

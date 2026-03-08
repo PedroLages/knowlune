@@ -1,3 +1,4 @@
+import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
 /**
  * Story 2.3: Video Bookmarking and Resume — ATDD Acceptance Tests
  *
@@ -46,7 +47,14 @@ test.describe('AC1: Position Auto-Save', () => {
     const video = page.locator('video')
     await expect(video).toBeAttached()
     await video.dispatchEvent('timeupdate')
-    await page.waitForTimeout(500)
+    // Wait for debounced save operation (no timeout needed - use conditional wait)
+    await page.waitForFunction(
+      () => {
+        const progress = localStorage.getItem('course-progress')
+        return progress !== null
+      },
+      { timeout: 5000 }
+    )
 
     // THEN: course-progress in localStorage has a lastVideoPosition value
     const progress = await localStorage.get<Record<string, unknown>>('course-progress')
@@ -86,8 +94,8 @@ test.describe('AC2: Resume from Last Position', () => {
         lastWatchedLesson: LESSON_ID,
         lastVideoPosition: 125, // 2:05
         notes: {},
-        startedAt: new Date().toISOString(),
-        lastAccessedAt: new Date().toISOString(),
+        startedAt: FIXED_DATE,
+        lastAccessedAt: FIXED_DATE,
       },
     })
 
@@ -109,8 +117,8 @@ test.describe('AC2: Resume from Last Position', () => {
         lastWatchedLesson: LESSON_ID,
         lastVideoPosition: 60,
         notes: {},
-        startedAt: new Date().toISOString(),
-        lastAccessedAt: new Date().toISOString(),
+        startedAt: FIXED_DATE,
+        lastAccessedAt: FIXED_DATE,
       },
     })
 
@@ -129,9 +137,9 @@ test.describe('AC2: Resume from Last Position', () => {
     await navigateAndWait(page, LESSON_PATH)
 
     // THEN: No "Resuming from" toast appears
-    await page.waitForTimeout(2000)
+    // Wait for any potential toast to appear, then verify absence
     const toast = page.locator('[data-sonner-toaster]').getByText(/resuming from/i)
-    await expect(toast).toHaveCount(0)
+    await expect(toast).toHaveCount(0, { timeout: 2000 })
   })
 })
 

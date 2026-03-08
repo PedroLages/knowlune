@@ -5,8 +5,8 @@
  * completion state visual treatment, prefers-reduced-motion support,
  * and sequential staggering of simultaneous milestones.
  */
-import { test, expect } from '../support/fixtures'
-import { createChallenge } from '../support/fixtures/factories/challenge-factory'
+import { test, expect } from '../../support/fixtures'
+import { createChallenge } from '../../support/fixtures/factories/challenge-factory'
 import { RETRY_CONFIG } from '../../utils/constants'
 import type { Page } from '@playwright/test'
 import { FIXED_DATE } from './../../utils/test-time'
@@ -66,7 +66,13 @@ async function seedStore(page: Page, storeName: string, records: unknown[]) {
       }
       throw new Error(`Store "${store}" not found after ${maxRetries} retries`)
     },
-    { dbName: DB_NAME, store: storeName, data: records, maxRetries: RETRY_CONFIG.MAX_ATTEMPTS, retryDelay: RETRY_CONFIG.POLL_INTERVAL }
+    {
+      dbName: DB_NAME,
+      store: storeName,
+      data: records,
+      maxRetries: RETRY_CONFIG.MAX_ATTEMPTS,
+      retryDelay: RETRY_CONFIG.POLL_INTERVAL,
+    }
   )
 }
 

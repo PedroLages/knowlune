@@ -1,3 +1,4 @@
+import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
 /**
  * E04-S05: Continue Learning Dashboard Action E2E Tests
  *
@@ -33,8 +34,8 @@ test.describe('Continue Learning Dashboard (E04-S05)', () => {
         lastWatchedLesson: 'nci-fnl-drones-psyops',
         lastVideoPosition: 120,
         notes: {},
-        startedAt: new Date('2026-03-01').toISOString(),
-        lastAccessedAt: new Date().toISOString(),
+        startedAt: getRelativeDate(-15),
+        lastAccessedAt: FIXED_DATE,
       },
     })
 
@@ -81,8 +82,8 @@ test.describe('Continue Learning Dashboard (E04-S05)', () => {
         lastWatchedLesson: 'nci-intro-start-here',
         lastVideoPosition: 60,
         notes: {},
-        startedAt: new Date().toISOString(),
-        lastAccessedAt: new Date().toISOString(),
+        startedAt: FIXED_DATE,
+        lastAccessedAt: FIXED_DATE,
       },
     })
 
@@ -123,7 +124,7 @@ test.describe('Continue Learning Dashboard (E04-S05)', () => {
         lastWatchedLesson: 'nci-fnl-drones-psyops',
         lastVideoPosition: 120,
         notes: {},
-        startedAt: new Date('2026-03-01').toISOString(),
+        startedAt: getRelativeDate(-15),
         lastAccessedAt: new Date('2026-03-02T10:00:00Z').toISOString(),
       },
       authority: {
@@ -142,7 +143,7 @@ test.describe('Continue Learning Dashboard (E04-S05)', () => {
         lastVideoPosition: 45,
         notes: {},
         startedAt: new Date('2026-03-03').toISOString(),
-        lastAccessedAt: new Date().toISOString(), // Most recent
+        lastAccessedAt: FIXED_DATE, // Most recent
       },
     })
 
@@ -219,8 +220,8 @@ test.describe('Continue Learning Dashboard (E04-S05)', () => {
         lastWatchedLesson: 'deleted-lesson',
         lastVideoPosition: 30,
         notes: {},
-        startedAt: new Date().toISOString(),
-        lastAccessedAt: new Date().toISOString(),
+        startedAt: FIXED_DATE,
+        lastAccessedAt: FIXED_DATE,
       },
     })
 
@@ -266,8 +267,8 @@ test.describe('Continue Learning Dashboard (E04-S05)', () => {
         lastWatchedLesson: 'nci-intro-start-here',
         lastVideoPosition: 15,
         notes: {},
-        startedAt: new Date().toISOString(),
-        lastAccessedAt: new Date().toISOString(),
+        startedAt: FIXED_DATE,
+        lastAccessedAt: FIXED_DATE,
       },
     })
 

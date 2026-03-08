@@ -28,6 +28,7 @@ import {
   getCourseCompletionPercent,
 } from '@/lib/progress'
 import { getActionsPerDay, getRecentActions } from '@/lib/studyLog'
+import StudyTimeAnalytics from '@/app/components/StudyTimeAnalytics'
 
 /* ------------------------------------------------------------------ */
 /*  Chart configs                                                      */
@@ -62,7 +63,9 @@ const pieChartConfig = {
 export default function Reports() {
   const [studyNotes, setStudyNotes] = useState(0)
   useEffect(() => {
-    getTotalStudyNotes().then(setStudyNotes)
+    getTotalStudyNotes()
+      .then(setStudyNotes)
+      .catch(err => console.error('Failed to load study notes:', err))
   }, [])
 
   const stats = [
@@ -125,6 +128,11 @@ export default function Reports() {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">Reports</h1>
+
+      {/* Study Time Analytics */}
+      <div className="mb-6">
+        <StudyTimeAnalytics />
+      </div>
 
       {/* Stats row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

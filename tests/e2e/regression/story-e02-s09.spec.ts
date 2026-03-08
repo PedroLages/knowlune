@@ -35,7 +35,18 @@ async function scrollLessonContent(page: Parameters<typeof navigateAndWait>[0], 
 async function activatePlayState(page: Parameters<typeof navigateAndWait>[0]) {
   // Click the video element — VideoPlayer has onClick={togglePlayPause} on <video>
   await page.locator('video').click({ force: true })
-  await page.waitForTimeout(100)
+  // Wait for play state to be reflected in the DOM
+  await page
+    .waitForFunction(
+      () => {
+        const video = document.querySelector('video')
+        return video && !video.paused
+      },
+      { timeout: 1000 }
+    )
+    .catch(() => {
+      // Video may not have a source, state is tracked by React component regardless
+    })
 }
 
 // ===========================================================================
@@ -105,7 +116,6 @@ test.describe('AC1: Mini-player on scroll', () => {
 
     // WHEN: Click the mini-player to scroll back
     await wrapper.click({ force: true })
-    await page.waitForTimeout(500)
 
     // THEN: Should scroll back — mini-player position returns to absolute (in-flow)
     await expect(wrapper).not.toHaveCSS('position', 'fixed', { timeout: 5000 })
@@ -117,12 +127,11 @@ test.describe('AC1: Mini-player on scroll', () => {
 
     // Ensure video is paused (default state), then scroll
     await scrollLessonContent(page, 1000)
-    await page.waitForTimeout(300)
 
     // THEN: wrapper should remain static (mini-player inactive)
     const wrapper = page.getByTestId('mini-player')
-    const position = await wrapper.evaluate(el => window.getComputedStyle(el).position)
-    expect(position).not.toBe('fixed')
+    // Wait for any potential transition, then verify position is not fixed
+    await expect(wrapper).not.toHaveCSS('position', 'fixed', { timeout: 1000 })
   })
 })
 
@@ -167,8 +176,7 @@ test.describe('AC2: Theater mode', () => {
     await page.keyboard.press('t')
 
     // THEN: Desktop sidebar should be hidden (theater mode active)
-    await page.waitForTimeout(200)
-    await expect(page.getByTestId('desktop-sidebar')).not.toBeVisible()
+    await expect(page.getByTestId('desktop-sidebar')).not.toBeVisible({ timeout: 2000 })
   })
 
   test('pressing T again toggles theater mode off', async ({ page }) => {
@@ -179,14 +187,13 @@ test.describe('AC2: Theater mode', () => {
     await page.locator('video').hover({ force: true })
     await page.locator('[data-testid="mini-player"]').focus()
     await page.keyboard.press('t')
-    await page.waitForTimeout(200)
+    await expect(page.getByTestId('desktop-sidebar')).not.toBeVisible({ timeout: 2000 })
 
     // WHEN: Press T again
     await page.keyboard.press('t')
-    await page.waitForTimeout(200)
 
     // THEN: Desktop sidebar should be visible again
-    await expect(page.getByTestId('desktop-sidebar')).toBeVisible()
+    await expect(page.getByTestId('desktop-sidebar')).toBeVisible({ timeout: 2000 })
   })
 })
 

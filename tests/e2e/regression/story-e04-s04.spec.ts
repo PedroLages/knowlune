@@ -9,6 +9,7 @@
  *   - Will fail until SessionHistory page is built
  */
 import { test, expect } from '../../support/fixtures'
+import { getRelativeDate, getRelativeTimestamp } from '../../utils/test-time'
 
 /** Reusable helper to seed study sessions into IndexedDB */
 async function seedStudySessions(
@@ -67,8 +68,8 @@ test.describe('E04-S04: View Study Session History', () => {
         id: 'session-1',
         courseId: 'course-a',
         courseTitle: 'React Fundamentals',
-        startTime: new Date('2026-03-01T10:00:00').getTime(),
-        endTime: new Date('2026-03-01T11:30:00').getTime(),
+        startTime: new Date(getRelativeDate(-7)).setHours(10, 0, 0, 0),
+        endTime: new Date(getRelativeDate(-7)).setHours(11, 30, 0, 0),
         duration: 5400, // 90 minutes in seconds
         contentSummary: 'Introduction to Hooks, useState Basics',
       },
@@ -76,8 +77,8 @@ test.describe('E04-S04: View Study Session History', () => {
         id: 'session-2',
         courseId: 'course-b',
         courseTitle: 'TypeScript Deep Dive',
-        startTime: new Date('2026-03-02T14:00:00').getTime(),
-        endTime: new Date('2026-03-02T15:15:00').getTime(),
+        startTime: new Date(getRelativeDate(-6)).setHours(14, 0, 0, 0),
+        endTime: new Date(getRelativeDate(-6)).setHours(15, 15, 0, 0),
         duration: 4500, // 75 minutes in seconds
         contentSummary: 'Advanced Types, Generics',
       },
@@ -85,8 +86,8 @@ test.describe('E04-S04: View Study Session History', () => {
         id: 'session-3',
         courseId: 'course-a',
         courseTitle: 'React Fundamentals',
-        startTime: new Date('2026-03-03T09:00:00').getTime(),
-        endTime: new Date('2026-03-03T10:00:00').getTime(),
+        startTime: new Date(getRelativeDate(-5)).setHours(9, 0, 0, 0),
+        endTime: new Date(getRelativeDate(-5)).setHours(10, 0, 0, 0),
         duration: 3600, // 60 minutes in seconds
         contentSummary: 'useEffect, Custom Hooks',
       },
@@ -104,20 +105,32 @@ test.describe('E04-S04: View Study Session History', () => {
     const sessionEntries = page.locator('[data-testid="session-entry"]')
     await expect(sessionEntries).toHaveCount(3)
 
-    // First entry should be the most recent (March 3)
+    // First entry should be the most recent (5 days ago)
     const firstEntry = sessionEntries.first()
     await expect(firstEntry).toContainText('React Fundamentals')
     await expect(firstEntry).toContainText('1h 0m') // 60 minutes
     await expect(firstEntry).toContainText('useEffect, Custom Hooks')
     // Verify date is displayed (AC1 requires date on each entry)
-    await expect(firstEntry.locator('[data-testid="session-date"]')).toContainText('Mar 3, 2026')
+    const expectedRecentDate = new Date(getRelativeDate(-5)).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
+    await expect(firstEntry.locator('[data-testid="session-date"]')).toContainText(
+      expectedRecentDate
+    )
 
-    // Last entry should be oldest (March 1)
+    // Last entry should be oldest (7 days ago)
     const lastEntry = sessionEntries.last()
     await expect(lastEntry).toContainText('React Fundamentals')
     await expect(lastEntry).toContainText('1h 30m') // 90 minutes
     await expect(lastEntry).toContainText('Introduction to Hooks, useState Basics')
-    await expect(lastEntry.locator('[data-testid="session-date"]')).toContainText('Mar 1, 2026')
+    const expectedOldDate = new Date(getRelativeDate(-7)).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
+    await expect(lastEntry.locator('[data-testid="session-date"]')).toContainText(expectedOldDate)
   })
 
   /**
@@ -133,8 +146,8 @@ test.describe('E04-S04: View Study Session History', () => {
         id: 'session-1',
         courseId: 'course-a',
         courseTitle: 'React Fundamentals',
-        startTime: new Date('2026-03-01T10:00:00').getTime(),
-        endTime: new Date('2026-03-01T11:30:00').getTime(),
+        startTime: new Date(getRelativeDate(-7)).setHours(10, 0, 0, 0),
+        endTime: new Date(getRelativeDate(-7)).setHours(11, 30, 0, 0),
         duration: 5400,
         contentSummary: 'Introduction to Hooks',
       },
@@ -142,8 +155,8 @@ test.describe('E04-S04: View Study Session History', () => {
         id: 'session-2',
         courseId: 'course-b',
         courseTitle: 'TypeScript Deep Dive',
-        startTime: new Date('2026-03-02T14:00:00').getTime(),
-        endTime: new Date('2026-03-02T15:15:00').getTime(),
+        startTime: new Date(getRelativeDate(-6)).setHours(14, 0, 0, 0),
+        endTime: new Date(getRelativeDate(-6)).setHours(15, 15, 0, 0),
         duration: 4500,
         contentSummary: 'Advanced Types',
       },
@@ -184,8 +197,8 @@ test.describe('E04-S04: View Study Session History', () => {
         id: 'session-1',
         courseId: 'course-a',
         courseTitle: 'React Fundamentals',
-        startTime: new Date('2026-02-28T10:00:00').getTime(),
-        endTime: new Date('2026-02-28T11:00:00').getTime(),
+        startTime: new Date(getRelativeDate(-8)).setHours(10, 0, 0, 0),
+        endTime: new Date(getRelativeDate(-8)).setHours(11, 0, 0, 0),
         duration: 3600,
         contentSummary: 'Old session',
       },
@@ -193,8 +206,8 @@ test.describe('E04-S04: View Study Session History', () => {
         id: 'session-2',
         courseId: 'course-a',
         courseTitle: 'React Fundamentals',
-        startTime: new Date('2026-03-02T14:00:00').getTime(),
-        endTime: new Date('2026-03-02T15:00:00').getTime(),
+        startTime: new Date(getRelativeDate(-6)).setHours(14, 0, 0, 0),
+        endTime: new Date(getRelativeDate(-6)).setHours(15, 0, 0, 0),
         duration: 3600,
         contentSummary: 'Recent session',
       },
@@ -202,8 +215,8 @@ test.describe('E04-S04: View Study Session History', () => {
         id: 'session-3',
         courseId: 'course-b',
         courseTitle: 'TypeScript Deep Dive',
-        startTime: new Date('2026-03-03T09:00:00').getTime(),
-        endTime: new Date('2026-03-03T10:00:00').getTime(),
+        startTime: new Date(getRelativeDate(-5)).setHours(9, 0, 0, 0),
+        endTime: new Date(getRelativeDate(-5)).setHours(10, 0, 0, 0),
         duration: 3600,
         contentSummary: 'Latest session',
       },
@@ -216,9 +229,11 @@ test.describe('E04-S04: View Study Session History', () => {
     // Verify all sessions are visible initially
     await expect(page.locator('[data-testid="session-entry"]')).toHaveCount(3)
 
-    // Select date range: March 2-3
-    await page.getByLabel('Start date').fill('2026-03-02')
-    await page.getByLabel('End date').fill('2026-03-03')
+    // Select date range: 6 days ago to 5 days ago
+    const startDate = getRelativeDate(-6).split('T')[0]
+    const endDate = getRelativeDate(-5).split('T')[0]
+    await page.getByLabel('Start date').fill(startDate)
+    await page.getByLabel('End date').fill(endDate)
 
     // Verify only sessions within date range are visible
     const sessionEntries = page.locator('[data-testid="session-entry"]')
@@ -263,15 +278,18 @@ test.describe('E04-S04: View Study Session History', () => {
    */
   test('should handle large session lists with pagination', async ({ page }) => {
     // Seed 50 study sessions (> PAGE_SIZE of 20)
-    const sessions = Array.from({ length: 50 }, (_, i) => ({
-      id: `session-${i}`,
-      courseId: 'course-a',
-      courseTitle: 'React Fundamentals',
-      startTime: new Date('2026-03-01T10:00:00').getTime() + i * 86400000, // each day later
-      endTime: new Date('2026-03-01T11:00:00').getTime() + i * 86400000,
-      duration: 3600,
-      contentSummary: `Session ${i}`,
-    }))
+    const sessions = Array.from({ length: 50 }, (_, i) => {
+      const dayOffset = -50 + i // Start from 50 days ago, increment each day
+      return {
+        id: `session-${i}`,
+        courseId: 'course-a',
+        courseTitle: 'React Fundamentals',
+        startTime: new Date(getRelativeDate(dayOffset)).setHours(10, 0, 0, 0),
+        endTime: new Date(getRelativeDate(dayOffset)).setHours(11, 0, 0, 0),
+        duration: 3600,
+        contentSummary: `Session ${i}`,
+      }
+    })
 
     await seedStudySessions(page, sessions)
 
@@ -310,25 +328,26 @@ test.describe('E04-S04: View Study Session History', () => {
    * individual content items with timestamps, and a link to resume that course
    */
   test('should expand session entry to show detailed information', async ({ page }) => {
+    const sessionDate = getRelativeDate(-5)
     const sessions = [
       {
         id: 'session-1',
         courseId: 'course-a',
         courseTitle: 'React Fundamentals',
-        startTime: new Date('2026-03-03T10:00:00').getTime(),
-        endTime: new Date('2026-03-03T11:30:00').getTime(),
+        startTime: new Date(sessionDate).setHours(10, 0, 0, 0),
+        endTime: new Date(sessionDate).setHours(11, 30, 0, 0),
         duration: 5400,
         contentSummary: 'Introduction to Hooks, useState Basics',
         contentItems: [
           {
             id: 'lesson-1',
             title: 'Introduction to Hooks',
-            timestamp: new Date('2026-03-03T10:00:00').getTime(),
+            timestamp: new Date(sessionDate).setHours(10, 0, 0, 0),
           },
           {
             id: 'lesson-2',
             title: 'useState Basics',
-            timestamp: new Date('2026-03-03T10:45:00').getTime(),
+            timestamp: new Date(sessionDate).setHours(10, 45, 0, 0),
           },
         ],
       },

@@ -18,11 +18,12 @@ import type {
   ResourceType,
   Note,
 } from '../../../../src/data/types'
+import { FIXED_TIMESTAMP } from '../../../utils/test-time'
 
 let counter = 0
 function uid(): string {
   counter++
-  return `test-${Date.now()}-${counter}-${Math.random().toString(36).slice(2, 8)}`
+  return `test-${FIXED_TIMESTAMP}-${counter}-${Math.random().toString(36).slice(2, 8)}`
 }
 
 // --- Resource Factory ---

@@ -1,3 +1,4 @@
+import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
 /**
  * E05-S05: Study Reminders & Notifications — ATDD Tests
  *
@@ -216,7 +217,7 @@ test.describe('Study Reminders & Notifications (E05-S05)', () => {
         'study-streak-pause',
         JSON.stringify({
           enabled: true,
-          startDate: new Date().toISOString(),
+          startDate: FIXED_DATE,
           days: 2,
         })
       )

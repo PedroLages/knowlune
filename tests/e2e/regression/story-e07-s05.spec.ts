@@ -1,3 +1,4 @@
+import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
 /**
  * E07-S05: Smart Study Schedule Suggestion
  *
@@ -6,13 +7,13 @@
  *   2. no-goal            — 7+ days but no time-based study goal
  *   3. ready              — 7+ days AND a time-based study goal
  */
-import { test, expect } from '../support/fixtures'
+import { test, expect } from '../../support/fixtures'
 
 /** Build a study-log array with `count` lesson_complete entries spread across `daySpread`
  *  distinct days, all at the specified hour. Uses explicit date construction so the hour
  *  of each entry is exactly `hour` regardless of the current wall clock time. */
 function makeStudyLog(count: number, daySpread: number, hour = 9) {
-  const now = new Date()
+  const now = new Date(FIXED_DATE)
   return Array.from({ length: count }, (_, i) => {
     const daysAgo = i % daySpread
     const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysAgo, hour, 0, 0)
@@ -30,7 +31,7 @@ const WEEKLY_TIME_GOAL = {
   frequency: 'weekly',
   metric: 'time',
   target: 300,
-  createdAt: new Date().toISOString(),
+  createdAt: FIXED_DATE,
 }
 
 /** Minimal in-progress course-progress entries (courses with 1 lesson done, not 100%) */

@@ -13,14 +13,14 @@
  *   - AC7: Pause suspends freeze logic
  */
 import { test, expect } from '../../support/fixtures'
+import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
 
 function makeStreakEntry(daysAgo: number): {
   type: string
   courseId: string
   timestamp: string
 } {
-  const d = new Date()
-  d.setDate(d.getDate() - daysAgo)
+  const d = new Date(getRelativeDate(-daysAgo))
   d.setHours(12, 0, 0, 0)
   return {
     type: 'lesson_complete',
@@ -88,7 +88,7 @@ test.describe('Streak Pause & Freeze Days (E05-S02)', () => {
     // Seed paused state
     await localStorage.seed('study-streak-pause', {
       enabled: true,
-      startDate: new Date().toISOString(),
+      startDate: FIXED_DATE,
       days: 7,
     })
     await page.reload()
@@ -120,7 +120,7 @@ test.describe('Streak Pause & Freeze Days (E05-S02)', () => {
     // Seed active pause
     await localStorage.seed('study-streak-pause', {
       enabled: true,
-      startDate: new Date().toISOString(),
+      startDate: FIXED_DATE,
       days: 99999,
     })
     await page.reload()
@@ -198,7 +198,7 @@ test.describe('Streak Pause & Freeze Days (E05-S02)', () => {
     localStorage,
   }) => {
     // Today is a freeze day, no study today, but studied yesterday
-    const todayDayIndex = new Date().getDay() // 0=Sun, 1=Mon, ...
+    const todayDayIndex = new Date(FIXED_DATE).getDay() // 0=Sun, 1=Mon, ...
 
     await page.goto('/')
     // Seed: studied yesterday and day before, but NOT today
@@ -221,7 +221,7 @@ test.describe('Streak Pause & Freeze Days (E05-S02)', () => {
     page,
     localStorage,
   }) => {
-    const todayDayIndex = new Date().getDay()
+    const todayDayIndex = new Date(FIXED_DATE).getDay()
 
     await page.goto('/')
     // Seed: studied today, yesterday, day before — today is also a freeze day
@@ -273,7 +273,7 @@ test.describe('Streak Pause & Freeze Days (E05-S02)', () => {
   // ── AC7: Pause suspends freeze logic ──
 
   test('AC7: freeze logic is suspended while streak is paused', async ({ page, localStorage }) => {
-    const todayDayIndex = new Date().getDay()
+    const todayDayIndex = new Date(FIXED_DATE).getDay()
 
     await page.goto('/')
     await localStorage.seed('study-log', [makeStreakEntry(1), makeStreakEntry(2)])
@@ -284,7 +284,7 @@ test.describe('Streak Pause & Freeze Days (E05-S02)', () => {
     })
     await localStorage.seed('study-streak-pause', {
       enabled: true,
-      startDate: new Date().toISOString(),
+      startDate: FIXED_DATE,
       days: 7,
     })
     await page.reload()
