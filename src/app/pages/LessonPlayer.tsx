@@ -52,7 +52,9 @@ import {
   saveNote,
   getNote,
   isLessonComplete,
+  getCourseCompletionPercent,
 } from '@/lib/progress'
+import { NextCourseSuggestion } from '../components/NextCourseSuggestion'
 import { addBookmark, getLessonBookmarks, formatBookmarkTimestamp } from '@/lib/bookmarks'
 import { toast } from 'sonner'
 import { captureVideoFrame, saveFrameCapture, type CapturedFrame } from '@/lib/frame-capture'
@@ -120,6 +122,9 @@ export function LessonPlayer() {
 
   // Auto-advance countdown state
   const [showAutoAdvance, setShowAutoAdvance] = useState(false)
+
+  // Course suggestion state — shown after course-completion celebration closes
+  const [showCourseSuggestion, setShowCourseSuggestion] = useState(false)
 
   // Mini-player + theater mode state
   const [isTheaterMode, setIsTheaterMode] = useState(false)
@@ -364,10 +369,17 @@ export function LessonPlayer() {
     if (courseId && lessonId && !completed) {
       markLessonComplete(courseId, lessonId)
       setCompleted(true)
-      // Trigger celebration
-      setCelebrationType('lesson')
-      setCelebrationTitle(lesson?.title || 'Lesson')
-      setCelebrationModal(true)
+
+      const isCourseComplete = getCourseCompletionPercent(courseId, allLessons.length) >= 100
+      if (isCourseComplete) {
+        setCelebrationType('course')
+        setCelebrationTitle(course?.title || 'Course')
+        setCelebrationModal(true)
+      } else {
+        setCelebrationType('lesson')
+        setCelebrationTitle(lesson?.title || 'Lesson')
+        setCelebrationModal(true)
+      }
     }
     // Show auto-advance countdown if there's a next lesson
     if (nextLesson) {
@@ -405,10 +417,17 @@ export function LessonPlayer() {
     } else {
       markLessonComplete(courseId, lessonId)
       setCompleted(true)
-      // Trigger celebration when manually marking complete
-      setCelebrationType('lesson')
-      setCelebrationTitle(lesson?.title || 'Lesson')
-      setCelebrationModal(true)
+      const isCourseComplete = getCourseCompletionPercent(courseId, allLessons.length) >= 100
+      if (isCourseComplete) {
+        setCelebrationType('course')
+        setCelebrationTitle(course?.title || 'Course')
+        setCelebrationModal(true)
+      } else {
+        // Trigger celebration when manually marking complete
+        setCelebrationType('lesson')
+        setCelebrationTitle(lesson?.title || 'Lesson')
+        setCelebrationModal(true)
+      }
     }
   }
 
@@ -951,11 +970,17 @@ export function LessonPlayer() {
       {/* Completion Celebration Modal */}
       <CompletionModal
         open={celebrationModal}
-        onOpenChange={setCelebrationModal}
+        onOpenChange={open => {
+          setCelebrationModal(open)
+          // When course-level modal closes, reveal the suggestion card
+          if (!open && celebrationType === 'course' && courseId) {
+            setShowCourseSuggestion(true)
+          }
+        }}
         type={celebrationType}
         title={celebrationTitle}
         onContinue={
-          nextLesson
+          nextLesson && celebrationType !== 'course'
             ? () => {
                 setCelebrationModal(false)
                 navigate(`/courses/${courseId}/${nextLesson.id}`)
@@ -963,6 +988,14 @@ export function LessonPlayer() {
             : undefined
         }
       />
+
+      {/* Next Course Suggestion — shown after course-level celebration */}
+      {showCourseSuggestion && courseId && (
+        <NextCourseSuggestion
+          completedCourseId={courseId}
+          onDismiss={() => setShowCourseSuggestion(false)}
+        />
+      )}
     </div>
   )
 }
