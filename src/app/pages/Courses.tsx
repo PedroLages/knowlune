@@ -46,28 +46,43 @@ export function Courses() {
   }, [loadImportedCourses])
 
   useEffect(() => {
+    let ignore = false
+
     async function loadMomentumScores() {
-      const sessions = await db.studySessions.toArray()
-      const map = new Map<string, MomentumScore>()
-      for (const course of allCourses) {
-        const courseSessions = sessions.filter(s => s.courseId === course.id)
-        map.set(
-          course.id,
-          calculateMomentumScore({
-            courseId: course.id,
-            totalLessons: course.totalLessons,
-            sessions: courseSessions,
-          })
-        )
+      try {
+        const sessions = await db.studySessions.toArray()
+        if (ignore) return
+        const sessionsByCourse = new Map<string, typeof sessions>()
+        for (const s of sessions) {
+          const arr = sessionsByCourse.get(s.courseId) ?? []
+          arr.push(s)
+          sessionsByCourse.set(s.courseId, arr)
+        }
+        const map = new Map<string, MomentumScore>()
+        for (const course of allCourses) {
+          map.set(
+            course.id,
+            calculateMomentumScore({
+              courseId: course.id,
+              totalLessons: course.totalLessons,
+              sessions: sessionsByCourse.get(course.id) ?? [],
+            })
+          )
+        }
+        setMomentumMap(map)
+      } catch (err) {
+        console.error('[Courses] Failed to load momentum scores:', err)
       }
-      setMomentumMap(map)
     }
 
     loadMomentumScores()
 
-    const handleSessionEnded = () => loadMomentumScores()
-    window.addEventListener('study-session-ended', handleSessionEnded)
-    return () => window.removeEventListener('study-session-ended', handleSessionEnded)
+    const handleStudyLogUpdated = () => loadMomentumScores()
+    window.addEventListener('study-log-updated', handleStudyLogUpdated)
+    return () => {
+      ignore = true
+      window.removeEventListener('study-log-updated', handleStudyLogUpdated)
+    }
   }, [])
 
   const filtered = (() => {

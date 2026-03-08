@@ -4,9 +4,9 @@ story_name: "Momentum Score Calculation And Display"
 status: in-progress
 started: 2026-03-08
 completed:
-reviewed: false          # false | in-progress | true
-review_started:          # YYYY-MM-DD — set when /review-story begins
-review_gates_passed: []  # tracks completed gates: [build, lint, unit-tests, e2e-tests, design-review, code-review]
+reviewed: in-progress    # false | in-progress | true
+review_started: 2026-03-08  # YYYY-MM-DD — set when /review-story begins
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing]
 plan: docs/implementation-artifacts/plans/e07-s01-momentum-score-calculation-and-display.md
 ---
 
@@ -100,11 +100,23 @@ so that I can instantly identify which courses have strong engagement momentum a
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+**Reviewed**: 2026-03-08 | Report: `docs/reviews/design/design-review-2026-03-08-e07-s01.md`
+
+- **Blocker**: MomentumBadge hardcoded colors need dark mode variants for WCAG AA contrast
+- **High**: Badge `<span>` needs `tabIndex={0}` for keyboard tooltip access
+- **Medium**: ImportedCourseCard momentum prop not wired up — document scope boundary
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**Reviewed**: 2026-03-08 | Reports: `docs/reviews/code/code-review-2026-03-08-e07-s01.md`, `docs/reviews/code/code-review-testing-2026-03-08-e07-s01.md`
+
+- **Blocker**: AC5 broken — `study-session-ended` event never dispatched anywhere in codebase
+- **Blocker**: `@ts-nocheck` file (`fireMilestoneToasts.tsx`) should not ship
+- **High**: No `.catch()` on `loadMomentumScores()` — silent failure
+- **High**: No cleanup guard on async effect — unmount race condition
+- **High**: ImportedCourseCard momentum never computed
+- **Testing Blocker**: AC5 has zero test coverage
+- **Testing High**: Sort E2E test doesn't verify actual ordering (all scores are 0)
 
 ## Challenges and Lessons Learned
 

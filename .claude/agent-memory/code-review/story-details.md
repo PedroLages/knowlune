@@ -44,3 +44,12 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - REMAINING: Validation errors don't clear on input change (persist until next submit)
 - REMAINING: `type as ChallengeType` cast when type is '' produces "Target undefined must be a whole number"
 - REMAINING: E2E afterEach IDB cleanup doesn't await transaction completion -- test isolation risk
+
+## E07-S01: Momentum Score Calculation & Display
+- AC5 broken: `study-session-ended` event listened for but never dispatched anywhere in codebase
+- `@ts-nocheck` file (fireMilestoneToasts.tsx) shipped in diff -- bypasses type safety
+- `loadMomentumScores()` fire-and-forget without `.catch()` -- recurring silent failure pattern
+- No useEffect cleanup (ignore flag) for async `loadMomentumScores` -- stale setState on unmount
+- `Math.max(...sessions.map(...))` will throw RangeError on very large session arrays (stack overflow)
+- Hardcoded Tailwind color classes (text-orange-500, text-amber-500, text-blue-400) instead of theme tokens
+- Momentum not calculated for imported courses despite MomentumBadge prop on ImportedCourseCard

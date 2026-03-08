@@ -50,29 +50,113 @@ test.describe('E07-S01: Momentum Score Display', () => {
     await expect(sortSelect.locator('option[value="momentum"]')).toHaveText('Sort by Momentum')
   })
 
-  test('selecting sort by momentum reorders the course list', async ({ page }) => {
+  test('selecting sort by momentum reorders the course list', async ({ page, indexedDB }) => {
+    // Seed study sessions so two courses have differentiated momentum scores.
+    // 'nci-access' gets many recent sessions (high score) while 'authority' gets one old session (low score).
+    const now = Date.now()
+    const DB_NAME = 'ElearningDB'
+    const STORE_NAME = 'studySessions'
+
+    // Navigate first so Dexie creates the DB and stores
     await goToCourses(page)
 
-    // Get course card order before sort
-    const badgesBefore = await page.getByTestId('momentum-badge').allTextContents()
+    // Build study session records
+    const highMomentumSessions = Array.from({ length: 8 }, (_, i) => ({
+      id: `test-high-${i}`,
+      courseId: 'nci-access',
+      contentItemId: `lesson-${i}`,
+      startTime: new Date(now - i * 24 * 60 * 60 * 1000).toISOString(), // daily for last 8 days
+      endTime: new Date(now - i * 24 * 60 * 60 * 1000 + 30 * 60 * 1000).toISOString(),
+      duration: 1800,
+      idleTime: 0,
+      videosWatched: [`video-${i}`],
+      lastActivity: new Date(now - i * 24 * 60 * 60 * 1000 + 30 * 60 * 1000).toISOString(),
+      sessionType: 'video' as const,
+    }))
+
+    const lowMomentumSessions = [{
+      id: 'test-low-0',
+      courseId: 'authority',
+      contentItemId: 'lesson-0',
+      startTime: new Date(now - 12 * 24 * 60 * 60 * 1000).toISOString(), // 12 days ago
+      endTime: new Date(now - 12 * 24 * 60 * 60 * 1000 + 10 * 60 * 1000).toISOString(),
+      duration: 600,
+      idleTime: 0,
+      videosWatched: ['video-0'],
+      lastActivity: new Date(now - 12 * 24 * 60 * 60 * 1000 + 10 * 60 * 1000).toISOString(),
+      sessionType: 'video' as const,
+    }]
+
+    const allSessions = [...highMomentumSessions, ...lowMomentumSessions]
+
+    // Seed study sessions into IndexedDB
+    await page.evaluate(
+      async ({ dbName, storeName, data }) => {
+        for (let attempt = 0; attempt < 10; attempt++) {
+          const result = await new Promise<'ok' | 'store-missing'>((resolve, reject) => {
+            const request = indexedDB.open(dbName)
+            request.onsuccess = () => {
+              const db = request.result
+              if (!db.objectStoreNames.contains(storeName)) {
+                db.close()
+                resolve('store-missing')
+                return
+              }
+              const tx = db.transaction(storeName, 'readwrite')
+              const store = tx.objectStore(storeName)
+              for (const item of data) {
+                store.put(item)
+              }
+              tx.oncomplete = () => {
+                db.close()
+                resolve('ok')
+              }
+              tx.onerror = () => {
+                db.close()
+                reject(tx.error)
+              }
+            }
+            request.onerror = () => reject(request.error)
+          })
+          if (result === 'ok') return
+          await new Promise(r => setTimeout(r, 200))
+        }
+        throw new Error(`Store "${storeName}" not found after retries`)
+      },
+      { dbName: DB_NAME, storeName: STORE_NAME, data: allSessions }
+    )
+
+    // Reload so the Courses page re-reads studySessions from IndexedDB
+    await goToCourses(page)
 
     // Switch to momentum sort
     const sortSelect = page.getByTestId('sort-select')
     await sortSelect.selectOption('momentum')
-
-    // After sorting, the badges should still all be visible
-    const badgesAfter = page.getByTestId('momentum-badge')
-    const countAfter = await badgesAfter.count()
-    expect(countAfter).toBeGreaterThan(0)
-
-    // The sort select value is now "momentum"
     await expect(sortSelect).toHaveValue('momentum')
 
-    // Switch back to recent sort
-    await sortSelect.selectOption('recent')
-    await expect(sortSelect).toHaveValue('recent')
+    // Wait for badges to re-render after sort
+    const badges = page.getByTestId('momentum-badge')
+    await expect(badges.first()).toBeVisible()
 
-    const badgesRecent = await page.getByTestId('momentum-badge').allTextContents()
-    expect(badgesRecent.length).toBe(badgesBefore.length)
+    // Extract momentum scores from aria-labels: "Momentum: Hot|Warm|Cold (N)"
+    const ariaLabels = await badges.evaluateAll(els =>
+      els.map(el => el.getAttribute('aria-label') ?? '')
+    )
+    const scores = ariaLabels.map(label => {
+      const match = label.match(/\((\d+)\)$/)
+      return match ? Number(match[1]) : 0
+    })
+
+    // There should be at least two scores and they should be in descending order
+    expect(scores.length).toBeGreaterThanOrEqual(2)
+    const firstScore = scores[0]
+    const lastScore = scores[scores.length - 1]
+    expect(firstScore).toBeGreaterThan(lastScore)
+
+    // The highest-scored course should be nci-access (seeded with 8 recent sessions)
+    expect(firstScore).toBeGreaterThan(0)
+
+    // Clean up seeded study sessions
+    await indexedDB.clearStore(STORE_NAME)
   })
 })

@@ -23,7 +23,6 @@ import {
 } from '@/app/components/ui/dropdown-menu'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog'
-import { MomentumBadge } from '@/app/components/figma/MomentumBadge'
 import { TagBadgeList } from '@/app/components/figma/TagBadgeList'
 import { TagEditor } from '@/app/components/figma/TagEditor'
 import { VideoPlayer } from '@/app/components/figma/VideoPlayer'
@@ -32,7 +31,6 @@ import { useCourseCardPreview } from '@/hooks/useCourseCardPreview'
 import { useVideoFromHandle } from '@/hooks/useVideoFromHandle'
 import { db } from '@/db/schema'
 import type { ImportedCourse, ImportedVideo, LearnerCourseStatus } from '@/data/types'
-import type { MomentumScore } from '@/lib/momentum'
 
 const statusConfig: Record<
   LearnerCourseStatus,
@@ -58,10 +56,9 @@ const statusConfig: Record<
 interface ImportedCourseCardProps {
   course: ImportedCourse
   allTags: string[]
-  momentumScore?: MomentumScore
 }
 
-export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedCourseCardProps) {
+export function ImportedCourseCard({ course, allTags }: ImportedCourseCardProps) {
   const updateCourseTags = useCourseImportStore(state => state.updateCourseTags)
   const updateCourseStatus = useCourseImportStore(state => state.updateCourseStatus)
   const navigate = useNavigate()
@@ -339,11 +336,6 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
                 </span>
               </span>
             </div>
-            {momentumScore && (
-              <div className="mt-2">
-                <MomentumBadge score={momentumScore.score} tier={momentumScore.tier} />
-              </div>
-            )}
           </div>
         </Card>
       </article>

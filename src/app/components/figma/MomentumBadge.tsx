@@ -13,17 +13,17 @@ const tierConfig: Record<MomentumTier, { label: string; icon: typeof Flame; clas
   hot: {
     label: 'Hot',
     icon: Flame,
-    className: 'text-orange-500',
+    className: 'text-orange-700 dark:text-orange-500',
   },
   warm: {
     label: 'Warm',
     icon: Sun,
-    className: 'text-amber-500',
+    className: 'text-amber-700 dark:text-amber-500',
   },
   cold: {
     label: 'Cold',
     icon: Snowflake,
-    className: 'text-blue-400',
+    className: 'text-blue-700 dark:text-blue-400',
   },
 }
 
@@ -37,9 +37,10 @@ export function MomentumBadge({ score, tier, size = 'sm' }: MomentumBadgeProps) 
       <TooltipTrigger asChild>
         <span
           data-testid="momentum-badge"
+          tabIndex={0}
           aria-label={`Momentum: ${label} (${score})`}
           className={cn(
-            'inline-flex items-center gap-1 font-medium cursor-default',
+            'inline-flex items-center gap-1 font-medium cursor-default rounded-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-current',
             className,
             textSize
           )}
