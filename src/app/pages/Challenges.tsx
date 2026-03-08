@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Plus, Target, Clock, Flame, Trophy, RefreshCcw, ChevronDown, Check } from 'lucide-react'
-import { toast } from 'sonner'
 import { cn } from '@/app/components/ui/utils'
 import { Button } from '@/app/components/ui/button'
 import { Card, CardContent } from '@/app/components/ui/card'
@@ -13,8 +12,7 @@ import {
 } from '@/app/components/ui/collapsible'
 import { useChallengeStore } from '@/stores/useChallengeStore'
 import { CreateChallengeDialog } from '@/app/components/challenges/CreateChallengeDialog'
-import { ChallengeMilestoneToast } from '@/app/components/celebrations/ChallengeMilestoneToast'
-import { getChallengeTierConfig } from '@/lib/challengeMilestones'
+import { fireMilestoneToasts } from '@/lib/fireMilestoneToasts'
 import type { Challenge, ChallengeType } from '@/data/types'
 
 const typeConfig: Record<ChallengeType, { label: string; unit: string; icon: typeof Target }> = {
@@ -115,37 +113,6 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
         </p>
       </CardContent>
     </Card>
-  )
-}
-
-function fireMilestoneToasts(
-  milestoneMap: Map<string, number[]>,
-  challenges: Challenge[]
-): number[] {
-  const entries: Array<{ challengeName: string; milestone: number }> = []
-
-  for (const [challengeId, milestones] of milestoneMap) {
-    const challenge = challenges.find(c => c.id === challengeId)
-    if (!challenge) continue
-    for (const milestone of milestones) {
-      entries.push({ challengeName: challenge.name, milestone })
-    }
-  }
-
-  return entries.map((entry, index) =>
-    window.setTimeout(() => {
-      const tierConfig = getChallengeTierConfig(entry.milestone)
-      toast.custom(
-        () => (
-          <ChallengeMilestoneToast
-            challengeName={entry.challengeName}
-            milestone={entry.milestone}
-            tierConfig={tierConfig}
-          />
-        ),
-        { duration: 8000, closeButton: true }
-      )
-    }, index * 500)
   )
 }
 

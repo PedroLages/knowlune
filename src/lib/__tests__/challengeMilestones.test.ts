@@ -72,6 +72,17 @@ describe('detectChallengeMilestones', () => {
     // Progress > target — should still return 100
     expect(detectChallengeMilestones(c, 10)).toEqual([100])
   })
+
+  it('treats non-array celebratedMilestones as empty (corrupted data)', () => {
+    const c = makeChallenge({ celebratedMilestones: 'corrupted' as unknown as number[] })
+    // With corrupted data, all crossed thresholds should be returned
+    expect(detectChallengeMilestones(c, 1)).toEqual([25])
+  })
+
+  it('treats null celebratedMilestones as empty', () => {
+    const c = makeChallenge({ celebratedMilestones: null as unknown as number[] })
+    expect(detectChallengeMilestones(c, 2)).toEqual([25, 50])
+  })
 })
 
 describe('getChallengeTierConfig', () => {

@@ -85,7 +85,9 @@ export function detectChallengeMilestones(challenge: Challenge, newProgress: num
 
   const percent = (newProgress / challenge.targetValue) * 100
 
-  const celebrated = challenge.celebratedMilestones ?? []
+  const celebrated = Array.isArray(challenge.celebratedMilestones)
+    ? challenge.celebratedMilestones
+    : []
 
   return CHALLENGE_MILESTONES.filter(threshold => {
     if (percent < threshold) return false
