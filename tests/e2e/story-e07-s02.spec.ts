@@ -123,7 +123,7 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
     await expect(cardsContainer).toBeVisible()
 
     // Must show exactly 2 cards — all available active courses, no padding
-    const cards = cardsContainer.locator('a').filter({ hasText: /.+/ })
+    const cards = cardsContainer.locator('a[href*="/courses/"]')
     await expect(cards).toHaveCount(2)
   })
 
@@ -191,7 +191,7 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
     await expect(section).toBeVisible()
     const cardsContainer = page.getByTestId('recommended-next-cards')
     await expect(cardsContainer).toBeVisible()
-    const cards = cardsContainer.locator('a').filter({ hasText: /.+/ })
+    const cards = cardsContainer.locator('a[href*="/courses/"]')
     await expect(cards).toHaveCount(2)
 
     // After a page reload (simulating return from a study session), rankings
@@ -203,10 +203,7 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
 
     // Recommendations section must still render (rankings didn't break after reload)
     await expect(page.getByTestId('recommended-next-section')).toBeVisible()
-    const cardsAfter = page
-      .getByTestId('recommended-next-cards')
-      .locator('a')
-      .filter({ hasText: /.+/ })
+    const cardsAfter = page.getByTestId('recommended-next-cards').locator('a[href*="/courses/"]')
     await expect(cardsAfter).toHaveCount(2)
   })
 })
