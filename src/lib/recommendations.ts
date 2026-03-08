@@ -28,8 +28,7 @@ export function computeCompositeScore(
   if (totalLessons === 0) return 0
 
   // Recency score: 0 days ago = 1.0, 30+ days ago = 0.0
-  const daysSinceAccess =
-    (Date.now() - new Date(progress.lastAccessedAt).getTime()) / 86_400_000
+  const daysSinceAccess = (Date.now() - new Date(progress.lastAccessedAt).getTime()) / 86_400_000
   const recencyScore = Math.max(0, 1 - daysSinceAccess / 30)
 
   // Completion proximity: higher % = higher score (prioritize almost-done courses)

@@ -89,10 +89,7 @@ export function RecommendedNext() {
   }
 
   return (
-    <section
-      aria-labelledby="recommended-next-heading"
-      data-testid="recommended-next-section"
-    >
+    <section aria-labelledby="recommended-next-heading" data-testid="recommended-next-section">
       <h2 id="recommended-next-heading" className="text-xl mb-1">
         Recommended Next
       </h2>
@@ -101,10 +98,7 @@ export function RecommendedNext() {
       {recommendations.length === 0 ? (
         <EmptyState />
       ) : (
-        <div
-          className="grid grid-cols-1 sm:grid-cols-3 gap-4"
-          data-testid="recommended-next-cards"
-        >
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" data-testid="recommended-next-cards">
           {recommendations.map(({ course, completionPercent }) => (
             <CourseCard
               key={course.id}

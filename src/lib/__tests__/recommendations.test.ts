@@ -44,11 +44,7 @@ function makeCourse(overrides: Partial<Course> = {}): Course {
   }
 }
 
-function makeProgress(
-  courseId: string,
-  completedCount: number,
-  daysAgo: number
-): CourseProgress {
+function makeProgress(courseId: string, completedCount: number, daysAgo: number): CourseProgress {
   const date = new Date(FIXED_NOW)
   date.setDate(date.getDate() - daysAgo)
   return {
@@ -81,8 +77,8 @@ describe('computeCompositeScore', () => {
 
   it('scores higher for more recent access', () => {
     const course = makeCourse({ totalLessons: 10 })
-    const recentProgress = makeProgress('course-1', 5, 1)   // 1 day ago
-    const oldProgress = makeProgress('course-1', 5, 20)     // 20 days ago
+    const recentProgress = makeProgress('course-1', 5, 1) // 1 day ago
+    const oldProgress = makeProgress('course-1', 5, 20) // 20 days ago
 
     const recentScore = computeCompositeScore(course, recentProgress, 0)
     const oldScore = computeCompositeScore(course, oldProgress, 0)
@@ -92,8 +88,8 @@ describe('computeCompositeScore', () => {
 
   it('scores higher for higher completion percentage', () => {
     const course = makeCourse({ totalLessons: 10 })
-    const highProgress = makeProgress('course-1', 9, 5)  // 90% complete
-    const lowProgress = makeProgress('course-1', 2, 5)   // 20% complete
+    const highProgress = makeProgress('course-1', 9, 5) // 90% complete
+    const lowProgress = makeProgress('course-1', 2, 5) // 20% complete
 
     const highScore = computeCompositeScore(course, highProgress, 0)
     const lowScore = computeCompositeScore(course, lowProgress, 0)
