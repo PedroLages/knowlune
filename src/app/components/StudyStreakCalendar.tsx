@@ -251,7 +251,11 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
 
       {/* Milestone Collection Trigger */}
       <div className="flex justify-end mb-3">
-        <Popover onOpenChange={open => { if (open) setMilestoneKey(k => k + 1) }}>
+        <Popover
+          onOpenChange={open => {
+            if (open) setMilestoneKey(k => k + 1)
+          }}
+        >
           <PopoverTrigger asChild>
             <Button
               data-testid="milestone-collection-trigger"

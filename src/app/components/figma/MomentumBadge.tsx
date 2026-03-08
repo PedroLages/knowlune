@@ -9,10 +9,7 @@ interface MomentumBadgeProps {
   size?: 'sm' | 'md'
 }
 
-const tierConfig: Record<
-  MomentumTier,
-  { label: string; icon: typeof Flame; className: string }
-> = {
+const tierConfig: Record<MomentumTier, { label: string; icon: typeof Flame; className: string }> = {
   hot: {
     label: 'Hot',
     icon: Flame,
@@ -51,9 +48,7 @@ export function MomentumBadge({ score, tier, size = 'sm' }: MomentumBadgeProps) 
           {label}
         </span>
       </TooltipTrigger>
-      <TooltipContent side="top">
-        Momentum score: {score}/100
-      </TooltipContent>
+      <TooltipContent side="top">Momentum score: {score}/100</TooltipContent>
     </Tooltip>
   )
 }
