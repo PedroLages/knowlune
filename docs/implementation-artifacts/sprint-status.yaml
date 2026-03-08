@@ -131,9 +131,9 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 7: Course Momentum & Learning Intelligence
   # ──────────────────────────────────────────────────
-  epic-7: backlog
+  epic-7: in-progress
   7-1-momentum-score-calculation-and-display: backlog
-  7-2-recommended-next-dashboard-section: backlog
+  7-2-recommended-next-dashboard-section: in-progress
   7-3-next-course-suggestion-after-completion: backlog
   7-4-at-risk-course-detection-and-completion-estimates: backlog
   7-5-smart-study-schedule-suggestion: backlog
