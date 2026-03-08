@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
-import { FIXED_DATE, getRelativeDate, addMinutes } from '../utils/test-time'
-import { seedStudySessions } from '../support/helpers/indexeddb-seed'
-import { createStudySession } from '../support/fixtures/factories/session-factory'
+import { FIXED_DATE, getRelativeDate, addMinutes } from '../../utils/test-time'
+import { seedStudySessions } from '../../support/helpers/indexeddb-seed'
+import { createStudySession } from '../../support/fixtures/factories/session-factory'
 
 // Use existing course IDs from the static course data
 const COURSE_ID_1 = 'nci-access'

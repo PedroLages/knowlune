@@ -563,6 +563,68 @@ Per-story development loop with integrated quality gates. Three slash commands o
                                        (dedicated)        loop    (lightweight)
 ```
 
+### Burn-In Testing (Optional Stability Validation)
+
+During `/review-story`, after E2E tests pass, the skill **intelligently suggests burn-in testing** when timing-sensitive patterns are detected. Burn-in runs the same test suite 10 times to validate stability and catch flakiness.
+
+**When Recommended** (automatic detection):
+
+🔴 **HIGH Confidence** — Anti-patterns detected (burn-in recommended):
+- Uses `Date.now()` or `new Date()` directly in test code
+- Contains `waitForTimeout()` without justification
+- Manual IndexedDB seeding (not using shared helpers)
+- Missing imports from `tests/utils/test-time.ts`
+
+🟡 **MEDIUM Confidence** — Timing-sensitive features (burn-in offered):
+- Imports from `test-time.ts` (date/time calculations)
+- Uses `page.addInitScript()` for Date mocking
+- Story involves animations, polling, or async patterns
+- First story in epic (E##-S01)
+
+✅ **LOW Risk** — Burn-in not suggested:
+- Simple UI-only tests (clicks, navigation)
+- Tests follow deterministic patterns
+- Already validated (`burn_in_validated: true` in story frontmatter)
+
+**User Experience**:
+```
+E2E tests passed (8 tests) ✓
+
+⚠️  Anti-pattern detected: Test uses Date.now() directly
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Burn-in test
+E2E tests passed but anti-patterns detected. Run burn-in validation?
+
+◯ Run burn-in — 10 iterations (Recommended)
+  Anti-pattern detected: Date.now() in test code. Burn-in
+  validates stability despite timing risks.
+
+◯ Skip — proceed to reviews
+  Tests may have flakiness risk. Consider fixing anti-patterns first.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**If Burn-In Passes** (80/80 tests):
+- Sets `burn_in_validated: true` in story frontmatter
+- Continues to design/code review
+- Story won't be prompted again
+
+**If Burn-In Fails** (flakiness detected):
+- Blocks review with specific failure report
+- Identifies non-deterministic tests
+- Suggests fixes (use FIXED_DATE, shared helpers, proper waits)
+- User must fix anti-patterns and re-run `/review-story`
+
+**Manual Burn-In** (outside `/review-story`):
+```bash
+# Run burn-in on specific spec
+npx playwright test tests/e2e/story-e07-s04.spec.ts --repeat-each=10 --project=chromium
+
+# Run burn-in on archived regression spec
+RUN_REGRESSION=true npx playwright test tests/e2e/regression/story-e07-s04.spec.ts --repeat-each=10 --project=chromium
+```
+
 ### After Epic Completion
 
 When all stories in an epic are done, run:

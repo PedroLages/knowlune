@@ -7,6 +7,7 @@ completed:
 reviewed: false          # false | in-progress | true
 review_started:          # YYYY-MM-DD — set when /review-story begins
 review_gates_passed: []  # tracks completed gates: [build, lint, unit-tests, e2e-tests, design-review, code-review]
+burn_in_validated: false # true if burn-in testing (10 iterations) passed
 ---
 
 # Story ##.##: [Story Name]

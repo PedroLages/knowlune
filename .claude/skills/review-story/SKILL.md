@@ -63,6 +63,7 @@ The orchestrator should NOT:
 [ ] Pre-checks: format-check
 [ ] Pre-checks: unit tests
 [ ] Pre-checks: E2E tests
+[ ] Optional: burn-in validation (if applicable)
 [ ] Design review (Agent)
 [ ] Code review — architecture (Agent)
 [ ] Code review — testing (Agent)
@@ -73,7 +74,7 @@ Mark the first todo as `in_progress` and proceed:
 
 1. **Identify story**: Parse ID from `$ARGUMENTS` or from branch name (`git branch --show-current` → `feature/e01-s03-...` → `E01-S03`).
 
-2. **Read story file** from `docs/implementation-artifacts/`. Extract acceptance criteria, tasks, current status, and **review tracking fields** (`reviewed`, `review_started`, `review_gates_passed`).
+2. **Read story file** from `docs/implementation-artifacts/`. Extract acceptance criteria, tasks, current status, and **review tracking fields** (`reviewed`, `review_started`, `review_gates_passed`, `burn_in_validated`).
 
 3. **Detect resumption**: Check if this is a resumed review:
 
@@ -113,6 +114,74 @@ Mark the first todo as `in_progress` and proceed:
       npx playwright test tests/e2e/navigation.spec.ts tests/e2e/overview.spec.ts tests/e2e/courses.spec.ts tests/e2e/story-{id}.spec.ts --project=chromium
       ```
       If the current story has no spec file in `tests/e2e/`, run smoke specs only. STOP on failure. Do NOT run `tests/design-review.spec.ts` or `tests/e2e/regression/` specs here — those are separate.
+
+   g. **Burn-in test suggestion** (after E2E tests pass):
+
+      If the story has an E2E spec file AND E2E tests passed AND `burn_in_validated` is NOT already `true` in story frontmatter, analyze whether burn-in testing would be valuable:
+
+      **Detection heuristics** (read the story's E2E spec file):
+      - 🔴 **Anti-patterns found** (HIGH confidence — recommend burn-in):
+        - Contains `Date.now()` or `new Date()` outside of `mockDateNow()` or `page.addInitScript()`
+        - Contains `waitForTimeout()` without explanation comment
+        - Contains `setTimeout()` or `setInterval()`
+        - Missing imports from `tests/utils/test-time.ts` but has date/time logic
+        - Manual IndexedDB seeding (not using shared helpers from `tests/support/helpers/`)
+
+      - 🟡 **Timing-sensitive features** (MEDIUM confidence — offer burn-in):
+        - Imports from `test-time.ts` (indicates date/time calculations)
+        - Uses `page.addInitScript()` for Date mocking (e.g., momentum calculations)
+        - Contains `requestAnimationFrame` or animation-related waits
+        - Story acceptance criteria mention "real-time", "polling", "debounce", "throttle"
+        - This is the first story in the epic (E##-S01)
+
+      - ✅ **Low-risk patterns** (do NOT suggest burn-in):
+        - Simple UI-only tests (clicks, form fills, navigation)
+        - Tests use standard Playwright waits (`expect().toBeVisible()`)
+        - No timing logic detected
+        - Story already marked `burn_in_validated: true`
+
+      **If HIGH confidence** (anti-patterns found):
+      - Use `AskUserQuestion` with burn-in as **first option** marked "(Recommended)":
+        ```
+        Question: "E2E tests passed but anti-patterns detected. Run burn-in validation?"
+        Header: "Burn-in test"
+        Options:
+          1. "Run burn-in — 10 iterations (Recommended)"
+             Description: "Anti-pattern detected: [specific issue]. Burn-in validates stability despite timing risks."
+          2. "Skip — proceed to reviews"
+             Description: "Tests may have flakiness risk. Consider fixing anti-patterns first."
+        ```
+
+      **If MEDIUM confidence** (timing-sensitive):
+      - Use `AskUserQuestion` with skip as **first option**:
+        ```
+        Question: "E2E tests passed. Run optional burn-in validation?"
+        Header: "Burn-in test"
+        Options:
+          1. "Skip — proceed to reviews"
+             Description: "Tests follow deterministic patterns. Standard validation sufficient."
+          2. "Run burn-in — 10 iterations"
+             Description: "Validates stability for timing-sensitive logic (adds ~2 min)."
+        ```
+
+      **If burn-in selected**:
+      - Run: `npx playwright test tests/e2e/story-{id}.spec.ts --repeat-each=10 --project=chromium`
+      - If **all iterations pass**: set `burn_in_validated: true` in story frontmatter, continue to reviews
+      - If **any iteration fails**: STOP with flakiness report:
+        ```
+        Burn-in FAILED: X/80 tests failed (flakiness detected)
+
+        Failed tests:
+        - [Test name]: Failed on iterations [N, M, ...]
+
+        This indicates non-deterministic behavior. Review:
+        1. Time dependencies (use FIXED_DATE, not Date.now())
+        2. Hard waits (use expect().toBeVisible(), not waitForTimeout())
+        3. Race conditions (use shared helpers with retry logic)
+
+        Fix anti-patterns and re-run /review-story.
+        ```
+        Keep `reviewed: in-progress`, do NOT add `e2e-tests` to gates (burn-in is part of E2E validation).
 
    If any pre-check fails: show the error output, suggest fixes, and STOP. Do not proceed to reviews. Keep `reviewed: in-progress` so next run resumes.
 
