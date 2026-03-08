@@ -127,10 +127,7 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
     await expect(cards).toHaveCount(2)
   })
 
-  test('AC3 — clicking a course card navigates to course page', async ({
-    page,
-    localStorage,
-  }) => {
+  test('AC3 — clicking a course card navigates to course page', async ({ page, localStorage }) => {
     const progress = createCourseProgress({
       courseId: COURSE_1,
       completedLessons: ['6mx-welcome-intro', '6mx-day1-human-comm'],
@@ -206,7 +203,10 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
 
     // Recommendations section must still render (rankings didn't break after reload)
     await expect(page.getByTestId('recommended-next-section')).toBeVisible()
-    const cardsAfter = page.getByTestId('recommended-next-cards').locator('a').filter({ hasText: /.+/ })
+    const cardsAfter = page
+      .getByTestId('recommended-next-cards')
+      .locator('a')
+      .filter({ hasText: /.+/ })
     await expect(cardsAfter).toHaveCount(2)
   })
 })
