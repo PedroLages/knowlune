@@ -28,6 +28,23 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
 /start-story → implement → /finish-story (auto-runs reviews)
 ```
 
+## Orchestrator Discipline
+
+The orchestrator (main session) should:
+- **Read state**: story file, sprint status, git status
+- **Make decisions**: resumed? reviewed? UI changes?
+- **Dispatch agents**: via Task tool (parallel when independent)
+- **Collect results**: extract key data from agent returns
+- **Update state**: frontmatter, sprint status, TodoWrite
+- **Run git ops**: branch, commit, push, PR
+- **Communicate**: completion output, AskUserQuestion
+
+The orchestrator should NOT:
+- Do deep code analysis (delegate to agents)
+- Retain raw build/lint/test output beyond error messages
+- Read large files for exploration (dispatch Explore agents instead)
+- Perform review reasoning (agents handle this)
+
 ## Steps
 
 1. **Identify story**: Parse ID from `$ARGUMENTS` or from branch name (`git branch --show-current` → `feature/e01-s03-...` → `E01-S03`).
@@ -40,6 +57,33 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
    - **`reviewed: in-progress`** → interrupted review mode (step 4a)
    - **`reviewed: false`** → streamlined mode (step 4b)
 
+   **Dynamic TodoWrite** — create the appropriate todo list based on review status:
+
+   **If already reviewed (comprehensive mode):**
+   ```
+   [ ] Identify story and check status
+   [ ] Validate: build + lint + type-check + tests
+   [ ] Cross-check unresolved blockers
+   [ ] Update story file and sprint status
+   [ ] Commit, push, create PR
+   [ ] Post-merge cleanup
+   ```
+
+   **If NOT reviewed (streamlined mode) — expanded:**
+   ```
+   [ ] Identify story and check status
+   [ ] Pre-checks: build, lint, type-check, format, tests
+   [ ] Design review (Agent)
+   [ ] Code review — architecture (Agent)
+   [ ] Code review — testing (Agent)
+   [ ] Consolidate review findings
+   [ ] Update story file and sprint status
+   [ ] Commit, push, create PR
+   [ ] Post-merge cleanup
+   ```
+
+   Mark "Identify story and check status" → `completed` (already done).
+
 4a. **If `reviewed: in-progress`** (interrupted review):
    - Inform the user: "Previous `/review-story` was interrupted. Checking what completed."
    - Read `review_gates_passed` from frontmatter. Check for existing report files.
@@ -47,17 +91,16 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
      - Treat as comprehensive mode — run blocker cross-check + lightweight validation (step 5).
    - **If agent reviews incomplete**:
      - Inform the user: "Review was interrupted before completion. Running full review inline."
-     - Run the full review pipeline with resumption — same as `/review-story` steps 3-8 (respecting `review_gates_passed` to skip completed agent reviews). Both `code-review` and `code-review-testing` agents dispatch in parallel.
+     - Run the full review pipeline with resumption — same as `/review-story` steps 3-7 (respecting `review_gates_passed` to skip completed agent reviews). Dispatch all non-skipped review agents (design-review, code-review, code-review-testing) **in a single message** for maximum parallelism.
      - If **Blockers** found → STOP with fix instructions.
      - If no blockers → continue to step 6.
 
 4b. **If NOT reviewed** (streamlined mode):
    - Set `reviewed: in-progress`, `review_started: YYYY-MM-DD`, `review_gates_passed: []` in story frontmatter.
-   - Run the full review pipeline inline — same steps as `/review-story` steps 4-8:
+   - Run the full review pipeline inline — same steps as `/review-story` steps 4-7:
      a. Pre-checks: build, lint, type check, format check, unit tests, E2E tests (smoke specs + current story spec, Chromium only — see review-story step 4)
-     b. Design review (if UI changes)
-     c. Code reviews — `code-review` and `code-review-testing` agents in parallel
-     d. Consolidated report
+     b. Review agent swarm: dispatch all applicable agents (design-review, code-review, code-review-testing) **in a single message** for maximum parallelism. Mark all dispatched agent todos as `in_progress` simultaneously.
+     c. Consolidated report
    - Update `review_gates_passed` after each gate completes.
    - If **Blockers** found → STOP with fix instructions. Developer fixes and re-runs `/finish-story`. Completed gates are preserved.
    - If no blockers → continue to step 6.
