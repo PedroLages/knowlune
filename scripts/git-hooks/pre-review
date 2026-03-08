@@ -1,0 +1,101 @@
+#!/bin/bash
+# Pre-review hook: Enforce clean working tree before /review-story
+# Epic 7 Retrospective Action Item #1
+#
+# Usage:
+#   - Automatically runs before /review-story workflow (if integrated)
+#   - Manually run: .git/hooks/pre-review
+#   - Bypass (NOT recommended): SKIP_PRE_REVIEW=1 /review-story
+
+# Colors for output
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Allow bypass via environment variable (for emergency use only)
+if [ "$SKIP_PRE_REVIEW" = "1" ]; then
+    echo -e "${YELLOW}⚠️  WARNING: Pre-review checks skipped (SKIP_PRE_REVIEW=1)${NC}"
+    exit 0
+fi
+
+echo -e "${BLUE}🔍 Pre-review enforcement: Checking working tree cleanliness...${NC}"
+echo ""
+
+# Initialize error tracking
+ERRORS=0
+
+# Check 1: Uncommitted changes (staged or unstaged)
+if ! git diff-index --quiet HEAD --; then
+    echo -e "${RED}❌ BLOCKER: Uncommitted changes detected${NC}"
+    echo ""
+    echo -e "${YELLOW}Modified files:${NC}"
+    git status --short | grep -E '^\s*M|^\s*A|^\s*D' || echo "  (none)"
+    echo ""
+    ERRORS=$((ERRORS + 1))
+fi
+
+# Check 2: Untracked files (excluding common patterns)
+UNTRACKED=$(git ls-files --others --exclude-standard | grep -v -E '\.DS_Store|node_modules|dist|coverage|playwright-report|test-results')
+if [ -n "$UNTRACKED" ]; then
+    echo -e "${RED}❌ BLOCKER: Untracked files detected${NC}"
+    echo ""
+    echo -e "${YELLOW}Untracked files:${NC}"
+    echo "$UNTRACKED" | sed 's/^/  /'
+    echo ""
+    ERRORS=$((ERRORS + 1))
+fi
+
+# Check 3: Staged but uncommitted changes
+STAGED=$(git diff --name-only --cached)
+if [ -n "$STAGED" ]; then
+    echo -e "${RED}❌ BLOCKER: Staged but uncommitted changes${NC}"
+    echo ""
+    echo -e "${YELLOW}Staged files:${NC}"
+    echo "$STAGED" | sed 's/^/  /'
+    echo ""
+    ERRORS=$((ERRORS + 1))
+fi
+
+# If any errors found, provide remediation guidance
+if [ $ERRORS -gt 0 ]; then
+    echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${RED}PRE-REVIEW BLOCKED: Working tree is not clean${NC}"
+    echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo -e "${YELLOW}Why this matters:${NC}"
+    echo "  Code review must examine ALL code changes. Uncommitted files"
+    echo "  can contain critical bugs or design issues that won't be caught"
+    echo "  in review if they're not part of the commit history."
+    echo ""
+    echo -e "${YELLOW}Required actions:${NC}"
+    echo "  1. Review all modified files: ${BLUE}git status${NC}"
+    echo "  2. Stage changes you want to commit: ${BLUE}git add <file>${NC}"
+    echo "  3. Commit staged changes: ${BLUE}git commit -m \"<message>\"${NC}"
+    echo "  4. Handle untracked files:"
+    echo "     - Add to commit: ${BLUE}git add <file>${NC}"
+    echo "     - Add to .gitignore if build artifacts/temp files"
+    echo "     - Delete if no longer needed: ${BLUE}rm <file>${NC}"
+    echo ""
+    echo -e "${YELLOW}After fixing:${NC}"
+    echo "  Re-run this check: ${BLUE}.git/hooks/pre-review${NC}"
+    echo "  Or proceed with review: ${BLUE}/review-story${NC}"
+    echo ""
+    echo -e "${RED}Emergency bypass (NOT recommended):${NC}"
+    echo "  ${BLUE}SKIP_PRE_REVIEW=1 /review-story${NC}"
+    echo "  (Only use if uncommitted files are intentionally excluded)"
+    echo ""
+    exit 1
+fi
+
+# Success - working tree is clean
+echo -e "${GREEN}✅ Working tree is clean${NC}"
+echo -e "${GREEN}✅ No uncommitted changes${NC}"
+echo -e "${GREEN}✅ No untracked files${NC}"
+echo ""
+echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${GREEN}PRE-REVIEW CHECK PASSED: Ready for code review${NC}"
+echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+exit 0
