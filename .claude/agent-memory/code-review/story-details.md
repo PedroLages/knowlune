@@ -37,13 +37,15 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - getStreakStartDate() called twice in detectAndRecordMilestones (midnight race)
 - confetti useEffect deps should be [milestone.id] not [milestone.milestoneValue]
 
-## E07-S02: Recommended Next Dashboard Section (Round 2)
-- Round 1 blockers addressed: shallow copy in getAllProgress(), progressTick + storage listener, AC5 E2E added
-- REMAINING: StorageEvent only fires cross-tab, not same-tab -- progressTick never increments for primary use case
-- REMAINING: AC5 E2E test never actually changes progress between reloads -- only verifies section survives reload
-- Hardcoded `bg-blue-100` in EmptyState instead of theme tokens (recurring)
-- Skeleton duplication between Overview.tsx and RecommendedNext.tsx (from round 1, still present)
-- `totalLessons` computed via `modules.reduce` in two places -- could diverge from `course.totalLessons` field
+## E07-S02: Recommended Next Dashboard Section (Round 3)
+- Round 2 blocker addressed: custom event dispatched from saveAllProgress(), listened in RecommendedNext
+- Round 2 H2 addressed: responsive grid now uses sm:grid-cols-2 lg:grid-cols-3
+- Round 2 M1 addressed: bg-blue-100 replaced with bg-brand-soft theme token
+- Skeleton duplication fixed: RecommendedNextSkeleton exported and reused in Overview.tsx
+- AC5 E2E test improved: now seeds 1 course, verifies 1 card, adds 2nd course via page.evaluate, reloads, asserts 2 cards
+- REMAINING: AC5 test uses reload (remount) not same-tab custom event reactivity -- tests "return to dashboard" not live update
+- REMAINING: loadSessionStats() fire-and-forget in useEffect (no .catch())
+- REMAINING: `totalLessons` from modules.reduce may diverge from course.totalLessons field
 
 ## E06-S01: Create Learning Challenges (Round 3)
 - Round 2 items largely fixed: parseLocalDate, error state, cn(), deleteChallenge throw, integer validation, ignore flag

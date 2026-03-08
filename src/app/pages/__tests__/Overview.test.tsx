@@ -140,9 +140,9 @@ function renderOverview() {
 }
 
 describe('Overview page', () => {
-  it('renders without crashing', () => {
-    const { container } = renderOverview()
-    expect(container).toBeTruthy()
+  it('renders without crashing and includes RecommendedNext', async () => {
+    renderOverview()
+    expect(await screen.findByTestId('recommended-next')).toBeInTheDocument()
   })
 
   it('displays the page heading', async () => {

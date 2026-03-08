@@ -120,11 +120,7 @@ export function Overview() {
         </div>
 
         {/* Recommended Next skeleton */}
-        <div>
-          <Skeleton className="h-6 w-44 mb-1" />
-          <Skeleton className="h-4 w-64 mb-4" />
-          <RecommendedNextSkeleton />
-        </div>
+        <RecommendedNextSkeleton />
 
         {/* Metrics skeleton */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">

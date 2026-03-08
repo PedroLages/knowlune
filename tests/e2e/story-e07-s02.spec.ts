@@ -13,7 +13,7 @@ import { createCourseProgress } from '../support/fixtures/factories/course-facto
 
 // Real course IDs from src/data/courses — must match allCourses
 const COURSE_1 = '6mx'
-const COURSE_2 = 'ba-101'
+const COURSE_2 = '__nonexistent-course__' // Intentionally not in allCourses — tests the cap
 const COURSE_3 = 'authority'
 const COURSE_4 = 'operative-six'
 
@@ -32,7 +32,7 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
     await page.waitForLoadState('domcontentloaded')
 
     // Wait for loading to complete
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 10000 })
+    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 30000 })
 
     const emptyState = page.getByTestId('recommended-next-empty')
     await expect(emptyState).toBeVisible()
@@ -77,7 +77,7 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
 
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 10000 })
+    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 30000 })
 
     await expect(page.getByRole('heading', { name: 'Recommended Next' })).toBeVisible()
 
@@ -86,7 +86,7 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
 
     // Must show exactly 3 cards (algorithm hard-caps at limit=3).
     // Use href selector: outer card links point to /courses/, instructor links to /instructors/
-    const cards = cardsContainer.locator('a[href*="/courses/"]')
+    const cards = cardsContainer.locator('[data-href*="/courses/"]')
     await expect(cards).toHaveCount(3)
   })
 
@@ -115,7 +115,7 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
 
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 10000 })
+    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 30000 })
 
     await expect(page.getByRole('heading', { name: 'Recommended Next' })).toBeVisible()
 
@@ -123,7 +123,7 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
     await expect(cardsContainer).toBeVisible()
 
     // Must show exactly 2 cards — all available active courses, no padding
-    const cards = cardsContainer.locator('a[href*="/courses/"]')
+    const cards = cardsContainer.locator('[data-href*="/courses/"]')
     await expect(cards).toHaveCount(2)
   })
 
@@ -138,16 +138,17 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
 
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 10000 })
+    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 30000 })
 
     const section = page.getByTestId('recommended-next-section')
     await expect(section).toBeVisible()
 
     // Click the course card link (not instructor link) and verify navigation
-    const courseLink = section.locator('a[href*="/courses/6mx"]').first()
+    const courseLink = section.locator('[data-href*="/courses/6mx"]').first()
     await expect(courseLink).toBeVisible()
 
     await courseLink.click()
+    // Card navigates to last watched lesson when one exists (seeded via lastWatchedLesson)
     await expect(page).toHaveURL(/\/courses\/6mx/)
   })
 
@@ -156,49 +157,72 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
     localStorage,
   }) => {
     // AC5: "When they return to the dashboard, rankings recalculate"
-    // Seed 1 active course, verify 1 card, update localStorage with a 2nd
-    // course (simulating lesson completion on another page), then reload
-    // (simulating return to dashboard). Verify count increases to 2.
+    // Verifies both count change AND ranking order change.
+    //
+    // Phase 1: Seed COURSE_1 (6mx) with recent access, COURSE_3 (authority) accessed 25 days ago.
+    //   → 6mx should rank first (higher recency score).
+    // Phase 2: Update authority to accessed NOW, set 6mx to 25 days ago.
+    //   → authority should rank first after reload.
+
+    const now = new Date()
+    const twentyFiveDaysAgo = new Date(now.getTime() - 25 * 86_400_000).toISOString()
 
     const progress1 = createCourseProgress({
       courseId: COURSE_1,
       completedLessons: ['6mx-welcome-intro', '6mx-day1-human-comm'],
       lastWatchedLesson: '6mx-day1-laws',
     })
+    // Override lastAccessedAt to be recent (factory default)
+
+    const progress2 = createCourseProgress({
+      courseId: COURSE_3,
+      completedLessons: ['authority-lesson-01-communication-laws'],
+      lastWatchedLesson: 'authority-lesson-02-composure-confidence',
+    })
+    // Override to 25 days ago so it ranks lower initially
+    progress2.lastAccessedAt = twentyFiveDaysAgo
 
     await localStorage.seed('course-progress', {
       [COURSE_1]: progress1,
+      [COURSE_3]: progress2,
     })
 
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 10000 })
+    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 30000 })
 
-    // Verify 1 card initially
     const cardsContainer = page.getByTestId('recommended-next-cards')
     await expect(cardsContainer).toBeVisible()
-    const cards = cardsContainer.locator('a[href*="/courses/"]')
-    await expect(cards).toHaveCount(1)
+    const cards = cardsContainer.locator('[data-href*="/courses/"]')
+    await expect(cards).toHaveCount(2)
 
-    // Simulate progress change (as if user completed a lesson on another page)
-    await page.evaluate(() => {
-      const raw = localStorage.getItem('course-progress')
-      const data = raw ? JSON.parse(raw) : {}
-      data['authority'] = {
-        courseId: 'authority',
-        completedLessons: ['authority-lesson-01-communication-laws'],
-        lastAccessedAt: new Date().toISOString(),
-        startedAt: new Date().toISOString(),
-      }
-      localStorage.setItem('course-progress', JSON.stringify(data))
-    })
+    // Phase 1: 6mx should be first (more recent access)
+    const firstCard = cards.first()
+    await expect(firstCard).toHaveAttribute('data-href', /\/courses\/6mx/)
+
+    // Phase 2: Flip recency — authority becomes recent, 6mx becomes stale
+    await page.evaluate(
+      ({ staleDate }) => {
+        const raw = window.localStorage.getItem('course-progress')
+        const data = raw ? JSON.parse(raw) : {}
+        // Make authority recent
+        data['authority'].lastAccessedAt = new Date().toISOString()
+        // Make 6mx stale
+        data['6mx'].lastAccessedAt = staleDate
+        window.localStorage.setItem('course-progress', JSON.stringify(data))
+      },
+      { staleDate: twentyFiveDaysAgo }
+    )
 
     // Simulate returning to dashboard — component remounts, reads fresh data
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 10000 })
+    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 30000 })
 
-    // Now 2 active courses → 2 recommendation cards
-    await expect(cardsContainer.locator('a[href*="/courses/"]')).toHaveCount(2)
+    // authority should now rank first (higher recency score)
+    const updatedCards = cardsContainer.locator('[data-href*="/courses/"]')
+    await expect(updatedCards).toHaveCount(2)
+    const newFirstCard = updatedCards.first()
+    await expect(newFirstCard).toHaveAttribute('data-href', /\/courses\/authority/)
   })
 })

@@ -517,11 +517,7 @@ export function CourseCard({
             {instructor && (
               <Link
                 to={`/instructors/${instructor.id}`}
-                onClick={e => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  navigate(`/instructors/${instructor.id}`)
-                }}
+                onClick={e => e.stopPropagation()}
                 className="flex items-center gap-1.5 mb-2 text-xs text-muted-foreground hover:text-brand transition-colors w-fit"
               >
                 <Avatar className="size-5">
@@ -710,17 +706,29 @@ export function CourseCard({
     )
   }
 
-  // library + overview: <Link> wraps entire card
+  // library + overview: div onClick + navigate (avoids nested <a> from instructor link)
   return (
     <>
-      <Link
-        to={lessonLink}
-        onClick={guardNavigation}
+      <div
+        role="link"
+        tabIndex={0}
+        aria-label={course.title}
+        data-href={lessonLink}
+        onClick={e => {
+          guardNavigation(e)
+          if (!e.defaultPrevented) navigate(lessonLink)
+        }}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            navigate(lessonLink)
+          }
+        }}
         {...previewHandlers}
-        className="rounded-[24px] focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none block h-full cursor-default"
+        className="rounded-[24px] focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none block h-full cursor-pointer"
       >
         {cardShell}
-      </Link>
+      </div>
       {previewDialog}
     </>
   )

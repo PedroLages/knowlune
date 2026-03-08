@@ -113,25 +113,35 @@ Note: When E07-S01 (Momentum Score) is implemented, replace the frequency proxy 
 
 ## Design Review Feedback
 
-Report: `docs/reviews/design/design-review-2026-03-08-E07-S02.md`
+**Round 3** report: `docs/reviews/design/design-review-2026-03-08-E07-S02-r3.md`
 
-- **H1**: Cramped 3-column grid at 640-767px — use `sm:grid-cols-2 lg:grid-cols-3`
-- **M1**: Hardcoded `bg-blue-100` instead of theme token (recurring)
-- Pre-existing CourseCard issues (nested `<a>`, cursor, aria-label) — not introduced by this story
+Previous rounds fixed: cramped 3-col grid → `sm:grid-cols-2 lg:grid-cols-3`, hardcoded `bg-blue-100` → `bg-brand-soft`.
+
+Round 3 findings (no new blockers from this story):
+
+- **B1 (pre-existing)**: Nested `<a>` in CourseCard overview variant — not introduced by E07-S02
+- **H1**: Double heading skeletons during loading — remove Overview.tsx lines 124-125
+- **H2**: Empty-state CTA 32px touch target — remove `size="sm"`
+- **N1**: H2 font-weight inconsistency across Overview sections
 
 ## Code Review Feedback
 
 See full reports in `docs/reviews/code/`:
-- `code-review-2026-03-08-E07-S02.md` — adversarial code review (Round 2: 1 blocker, 2 high, 3 medium)
-- `code-review-testing-2026-03-08-E07-S02.md` — test coverage review (Round 2: 0 blockers, 2 high, 3 medium)
+
+- `code-review-2026-03-08-E07-S02-r3.md` — adversarial code review (Round 3: 0 blockers, 3 high, 3 medium)
+- `code-review-testing-2026-03-08-E07-S02-r3.md` — test coverage review (Round 3: 0 blockers, 2 high, 4 medium)
 
 **Round 1 blockers (FIXED):**
+
 1. ~~Stale progress bug: `useMemo` only depended on `[sessions]`~~ → Added `progressTick` state + storage event listener
 2. ~~Mutable cache reference from `getAllProgress()`~~ → Returns shallow copy `{ ..._progressCache }`
 3. ~~AC5 has zero test coverage~~ → New E2E test added
 
-**Round 2 blocker (NEW):**
-1. `StorageEvent` only fires cross-tab, not same-tab — AC5 primary flow (same-tab navigation) still broken. Fix: dispatch custom event from `saveAllProgress()`
+**Round 2 blocker (FIXED):**
+
+1. ~~`StorageEvent` only fires cross-tab, not same-tab~~ → Dispatch custom event from `saveAllProgress()`
+
+**Round 3 (no blockers):** Remaining high-priority items are test improvements (AC5 ranking verification, `.catch()` on Dexie query) and non-blocking design tweaks (skeleton dedup, CTA touch target).
 
 ## Challenges and Lessons Learned
 

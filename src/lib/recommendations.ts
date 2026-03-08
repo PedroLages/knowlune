@@ -7,10 +7,6 @@ export interface CourseScore {
   completionPercent: number
 }
 
-function getTotalLessons(course: Course): number {
-  return course.modules.reduce((sum, m) => sum + m.lessons.length, 0)
-}
-
 /**
  * Compute composite recommendation score for a single course.
  *
@@ -28,7 +24,7 @@ export function computeCompositeScore(
   progress: CourseProgress,
   sessionCountLast30Days: number
 ): number {
-  const totalLessons = getTotalLessons(course)
+  const totalLessons = course.totalLessons
   if (totalLessons === 0) return 0
 
   // Recency score: 0 days ago = 1.0, 30+ days ago = 0.0
@@ -65,7 +61,7 @@ export function getRecommendedCourses(
     const progress = allProgress[course.id]
     if (!progress) continue
 
-    const totalLessons = getTotalLessons(course)
+    const totalLessons = course.totalLessons
     if (totalLessons === 0) continue
 
     const completedCount = progress.completedLessons.length

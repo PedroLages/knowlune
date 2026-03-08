@@ -43,7 +43,7 @@ function EmptyState() {
       <p className="text-sm text-muted-foreground mb-4 max-w-xs">
         Start a course to see personalised recommendations here.
       </p>
-      <Button asChild variant="outline" size="sm" className="rounded-xl">
+      <Button asChild variant="outline" className="rounded-xl h-11">
         <Link to="/courses">
           Explore courses
           <ArrowRight aria-hidden="true" className="size-3.5 ml-1.5" />
@@ -60,7 +60,9 @@ export function RecommendedNext() {
   const [progressTick, setProgressTick] = useState(0)
 
   useEffect(() => {
-    loadSessionStats()
+    loadSessionStats().catch((err: unknown) => {
+      console.error('[RecommendedNext] Failed to load sessions:', err)
+    })
   }, [loadSessionStats])
 
   useEffect(() => {
