@@ -41,7 +41,7 @@ from claude_agent_sdk import (
     ClaudeSDKClient,
     ResultMessage,
 )
-from claude_agent_sdk.types import AgentDefinition, TextBlock
+from claude_agent_sdk.types import AgentDefinition, McpStdioServerConfig, TextBlock
 
 # ─────────────────────────────────────────────────
 # Section A: CLI & Config
@@ -302,20 +302,22 @@ PRE-CHECKS:
 AGENT REVIEWS:
 9. Run the code-review agent: dispatch it via the Agent tool with subagent_type="code-review". It should review git diff main...HEAD.
 10. Run the code-review-testing agent: dispatch via Agent tool with subagent_type="code-review-testing". It should verify AC coverage.
+11. Run the design-review agent: dispatch via Agent tool with subagent_type="design-review". It tests the live app at http://localhost:5173 using Playwright MCP at mobile (375px), tablet (768px), and desktop (1440px) viewports. Only run this if the story has UI changes (check git diff for .tsx or .css files).
 
-IMPORTANT: Run agents 9 and 10 in PARALLEL for efficiency.
+IMPORTANT: Run agents 9, 10, and 11 in PARALLEL for efficiency.
 
-11. Save review reports to:
+12. Save review reports to:
     - docs/reviews/code/code-review-{today}-{story_id}.md
     - docs/reviews/code/code-review-testing-{today}-{story_id}.md
+    - docs/reviews/design/design-review-{today}-{story_id}.md (if design review ran)
 
-12. Generate a CONSOLIDATED report with severity-triaged findings:
+13. Generate a CONSOLIDATED report with severity-triaged findings:
     - [Blocker]: must fix before shipping (confidence >= 70)
     - [High]: should fix (confidence >= 70)
     - [Medium]: fix when possible
     - [Nit]: optional
 
-13. Update story file frontmatter: review_gates_passed list, reviewed status
+14. Update story file frontmatter: review_gates_passed list, reviewed status
 
 End with exactly one of:
 - VERDICT: PASS — if no blockers
@@ -325,7 +327,7 @@ End with exactly one of:
 FIX_PROMPT = """
 The review found issues that must be fixed before shipping story {story_id}.
 
-Read the review reports you just generated at docs/reviews/code/.
+Read the review reports you just generated at docs/reviews/code/ and docs/reviews/design/ (if design review ran).
 
 Fix ALL [Blocker] findings — these are mandatory.
 Fix ALL [High] findings — these should be fixed.
@@ -398,10 +400,26 @@ def make_options(
             model="sonnet",
         )
 
+    dr_path = AGENTS_DIR / "design-review.md"
+    if dr_path.exists():
+        agents["design-review"] = AgentDefinition(
+            description="Elite UI/UX design reviewer using Playwright MCP to test the live app at multiple viewports.",
+            prompt=dr_path.read_text(),
+            model="sonnet",
+        )
+
     allowed = [
         "Read", "Write", "Edit", "Glob", "Grep", "Bash",
-        "Agent", "Skill", "TodoWrite", "WebSearch",
+        "Agent", "Skill", "TodoWrite", "WebSearch", "ToolSearch",
     ]
+
+    # Headless Playwright MCP for design review (no browser window pops up)
+    mcp_servers: dict[str, McpStdioServerConfig] = {
+        "playwright": McpStdioServerConfig(
+            command="npx",
+            args=["@playwright/mcp@latest", "--headless"],
+        ),
+    }
 
     opts: dict[str, Any] = dict(
         setting_sources=["user", "project", "local"],
@@ -412,6 +430,7 @@ def make_options(
         system_prompt={"type": "preset", "preset": "claude_code"},
         max_turns=max_turns,
         cwd=str(PROJECT_DIR),
+        mcp_servers=mcp_servers,
     )
     if max_budget > 0:
         opts["max_budget_usd"] = max_budget
