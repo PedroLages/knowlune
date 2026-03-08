@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog'
 import { ProgressRing } from './ProgressRing'
+import { MomentumBadge } from './MomentumBadge'
 import { VideoPlayer } from './VideoPlayer'
 import { getProgress } from '@/lib/progress'
 import { getResourceUrl } from '@/lib/media'
@@ -16,6 +17,7 @@ import { useCourseCardPreview } from '@/hooks/useCourseCardPreview'
 import { getInstructorById } from '@/data/instructors'
 import { getAvatarSrc } from '@/lib/instructors'
 import type { Course, CourseCategory } from '@/data/types'
+import type { MomentumScore } from '@/lib/momentum'
 
 // ── Shared constants ────────────────────────────────────────────────
 
@@ -96,6 +98,7 @@ interface CourseCardProps {
   completionPercent?: number
   status?: 'in-progress' | 'completed' | 'not-started'
   lastAccessedAt?: string
+  momentumScore?: MomentumScore
 }
 
 // ── Component ───────────────────────────────────────────────────────
@@ -106,6 +109,7 @@ export function CourseCard({
   completionPercent = 0,
   status,
   lastAccessedAt,
+  momentumScore,
 }: CourseCardProps) {
   const navigate = useNavigate()
   const {
@@ -499,6 +503,11 @@ export function CourseCard({
               </span>
             </div>
             <Progress value={completionPercent} showLabel className="h-1.5" />
+            {momentumScore && momentumScore.score > 0 && (
+              <div className="mt-2">
+                <MomentumBadge score={momentumScore.score} tier={momentumScore.tier} />
+              </div>
+            )}
           </div>
         )
 
