@@ -2532,3 +2532,4359 @@ So that I can maintain a consistent study schedule tailored to each course indep
 **When** they view their reminder settings overview
 **Then** all per-course reminders are listed with their schedules, organized by course
 **And** each reminder shows its enabled or disabled status
+
+
+---
+
+# Quiz & Assessment System
+
+
+# Quiz & Assessment System - Epic Breakdown
+
+## Overview
+
+This document provides the complete epic and story breakdown for the **Quiz & Assessment System**, decomposing the requirements from the PRD, UX Design Specification, and Architecture requirements into implementable stories following the LevelUp story development workflow.
+
+This is a brownfield integration extending the existing LevelUp learning platform with comprehensive formative assessment capabilities.
+
+## Requirements Inventory
+
+### Functional Requirements
+
+**Quiz Taking & Navigation (FR1-FR8)**
+
+- FR1: Learners can start a quiz from a course lesson
+- FR2: Learners can navigate between questions in any order during quiz
+- FR3: Learners can mark questions for review before submitting
+- FR4: Learners can pause a quiz and resume later without losing progress
+- FR5: Learners can submit completed quiz for scoring
+- FR6: Learners can retake any quiz unlimited times with no cooldown period
+- FR7: Learners can review all questions and answers after quiz completion
+- FR8: Learners can exit quiz without submitting (progress auto-saved)
+
+**Question Management & Presentation (FR9-FR15)**
+
+- FR9: System can present Multiple Choice questions with 2-6 answer options
+- FR10: System can present True/False questions
+- FR11: System can present Multiple Select questions (select all that apply)
+- FR12: System can present Fill-in-Blank questions with text input
+- FR13: System can randomize question order for each quiz attempt
+- FR14: System can display question progress indicator (e.g., "Question 5 of 12")
+- FR15: System can display question text with rich formatting (code blocks, lists, emphasis)
+
+**Scoring & Feedback (FR16-FR23)**
+
+- FR16: System can calculate partial credit for each question (0-100% granular scoring)
+- FR17: System can calculate total quiz score as percentage of possible points
+- FR18: System can provide immediate explanatory feedback per question upon answer selection
+- FR19: System can display correct answer explanation for incorrect responses
+- FR20: System can provide performance summary after quiz completion
+- FR21: System can highlight learner's strongest topic areas in performance summary
+- FR22: System can identify growth opportunity topics in performance summary
+- FR23: System can display encouraging, non-judgmental messaging regardless of score
+
+**Timer & Pacing (FR24-FR30)**
+
+- FR24: System can display countdown timer during quiz
+- FR25: Learners can configure timer duration before starting quiz
+- FR26: Learners can enable timer accommodations (150-200% time extensions)
+- FR27: System can provide timer warnings at configurable thresholds (default: 75%, 90%)
+- FR28: System can announce timer warnings for screen reader users
+- FR29: Learners can disable timer for untimed practice mode
+- FR30: System can track time-to-completion for each quiz attempt
+
+**Performance Analytics & Tracking (FR31-FR40)**
+
+- FR31: System can store score history for all quiz attempts
+- FR32: System can calculate score improvement between first and most recent attempt
+- FR33: System can display improvement trajectory graph (score vs. attempt number)
+- FR34: System can calculate normalized gain using Hake's formula
+- FR35: System can track quiz completion rate (completed / started)
+- FR36: System can track average retake frequency per quiz
+- FR37: System can display time-on-task metrics per quiz attempt
+- FR38: System can identify learning trajectory patterns (exponential, linear, logarithmic)
+- FR39: System can calculate item difficulty (P-values) for each question
+- FR40: System can calculate discrimination indices (point-biserial correlation) for questions
+
+**Accessibility & Accommodations (FR41-FR48)**
+
+- FR41: Learners can navigate entire quiz interface using keyboard only (Tab, Enter, Space, Arrow keys)
+- FR42: System can announce dynamic content updates via ARIA live regions for screen readers
+- FR43: Learners can configure accessibility settings before quiz starts
+- FR44: System can provide focus indicators with 4.5:1 contrast ratio on all interactive elements
+- FR45: System can maintain semantic HTML structure for assistive technology compatibility
+- FR46: System can support screen readers (NVDA, JAWS, VoiceOver)
+- FR47: Learners can export quiz results for external review
+- FR48: System can ensure 4.5:1 minimum contrast ratio for text, 3:1 for UI components
+
+**Data Persistence & Recovery (FR49-FR54)**
+
+- FR49: System can auto-save quiz progress to localStorage every answer selection
+- FR50: System can recover incomplete quiz from localStorage after browser crash
+- FR51: System can store quiz history in IndexedDB for analytics queries
+- FR52: System can persist quiz state across browser sessions
+- FR53: System can handle localStorage quota exceeded errors gracefully
+- FR54: System can prevent data loss during quiz submission
+
+**Platform Integration (FR55-FR61)**
+
+- FR55: System can trigger study streak update upon quiz completion
+- FR56: System can display quiz performance data in Overview progress dashboard
+- FR57: System can surface quiz analytics in Reports section
+- FR58: Courses page can display quiz availability badges per lesson
+- FR59: Settings page can provide quiz preference configuration (timer defaults, accessibility options)
+- FR60: System can integrate quiz completion events with existing progress tracking
+- FR61: System can associate quizzes with specific course lessons in navigation
+
+### NonFunctional Requirements
+
+**NFR1: Accessibility Compliance**
+- WCAG 2.1 AA+ compliance required for all quiz components
+- Keyboard navigation (Tab, Enter, Space, Arrow keys) for all functionality
+- ARIA live regions for dynamic content updates (timer, score, feedback)
+- Screen reader support for NVDA, JAWS, VoiceOver
+- 4.5:1 minimum contrast ratio for text, 3:1 for UI components
+- Timer accommodations (150-200% time extensions)
+- ≥44px touch targets on mobile
+- Support for `prefers-reduced-motion`
+
+**NFR2: Performance Requirements**
+- Quiz loading ≤500ms (from localStorage retrieval to initial render)
+- Score calculation ≤50ms per question (real-time feedback requirement)
+- Real-time feedback display with no perceived lag
+- Debounced auto-save to prevent excessive writes
+- Optimized rendering with React memoization where appropriate
+
+**NFR3: Privacy & Data Locality**
+- All data stored locally (localStorage + IndexedDB)
+- No backend server or API calls
+- No user accounts or authentication
+- No data transmission to external services
+- Browser-only storage architecture
+
+**NFR4: Psychometric Validity**
+- Fisher-Yates shuffle for unbiased question/answer randomization
+- Item difficulty tracking (P-values: proportion correct)
+- Discrimination indices (point-biserial correlation)
+- Unbiased randomization (every permutation equally likely)
+- Foundation for future IRT calibration (PCM/GPCM models)
+
+**NFR5: Scoring Accuracy**
+- Partial credit scoring (0-100% granular per question)
+- Immediate score calculation (no async delays)
+- Support for Partial Credit Model (PCM) for multiple-select questions
+- Foundation for Generalized Partial Credit Model (GPCM)
+- Future compatibility with IRT-based scoring
+
+**NFR6: Timer Accuracy**
+- Prevent JavaScript setInterval drift using Date.now() pattern
+- Handle background tab throttling via Page Visibility API
+- Recalculate timer on tab focus to correct for throttling
+- Accurate countdown even during browser sleep/wake
+- Timer state recovery after browser crash
+
+**NFR7: Data Integrity**
+- Zero data loss guarantee for quiz attempts
+- Schema-versioned Dexie migrations (v2 → v3+)
+- Auto-save every answer selection (debounced)
+- Optimistic update pattern with rollback on failure
+- Robust crash recovery from localStorage
+
+**NFR8: Brownfield Integration**
+- Seamless integration with existing LevelUp architecture
+- Follow Zustand patterns (individual selectors, never destructure)
+- Follow Dexie patterns (optimistic updates, schema migrations)
+- Use existing shadcn/ui components and design tokens
+- Extend existing component library (#FAF5EE background, blue-600 primary, rounded-[24px] cards)
+
+**NFR9: Responsive Design**
+- Mobile (375px), Tablet (768px), Desktop (1440px) support
+- ≥44px touch targets on mobile and tablet
+- Sidebar behavior: persistent on desktop, collapsible Sheet on tablet/mobile
+- Mobile-first Tailwind utilities
+- Single-column layout on mobile, multi-column where appropriate on desktop
+
+### Additional Requirements
+
+**From Architecture - Technical Implementation:**
+
+**Data Model Requirements:**
+- TypeScript interfaces with Zod validation for runtime safety
+- Quiz, Question, QuizAttempt, Answer, QuizProgress types
+- Polymorphic question type support (multiple-choice, true-false, multiple-select, fill-in-blank)
+- Support for future question types (extensible design)
+- IMS QTI compatibility for potential future import/export
+
+**Dexie Schema v3 Migration:**
+- Add `quizzes` table with indexes: id (primary), lessonId, title, createdAt
+- Add `quizAttempts` table with indexes: id (primary), quizId, completedAt, passed
+- Add `quizProgress` table with quizId as primary key (single active quiz state)
+- No backfill needed (new feature, no existing data)
+- On-demand analytics computation (no pre-computed cache table)
+
+**Zustand Store Requirements:**
+- New `useQuizStore` in `src/stores/useQuizStore.ts`
+- Follow individual selector pattern (never destructure full store)
+- Optimistic update pattern (Zustand first → Dexie persist → rollback on failure)
+- Dual-layer persistence: localStorage for current quiz state, IndexedDB for history
+- Cross-store communication via `getState()` for platform integration
+- Zustand persist middleware for auto-debounced localStorage writes
+
+**Component Architecture:**
+- Route-level pages: `/courses/:courseId/lessons/:lessonId/quiz` and `/quiz/results`
+- QuizContainer page component orchestrating quiz lifecycle
+- Polymorphic QuestionDisplay component with type-specific renderers
+- Controlled component pattern for all form inputs
+- Feature-specific components in `src/app/components/quiz/`
+- Extend existing shadcn/ui components (Button, Card, Progress, etc.)
+
+**Algorithm Requirements:**
+- Fisher-Yates shuffle implementation in `src/lib/shuffle.ts` (O(n) time, immutable)
+- Partial Credit Model (PCM) scoring in `src/lib/scoring.ts`
+- All-or-nothing scoring for single-answer questions
+- Date.now() accuracy pattern in `src/hooks/useQuizTimer.ts`
+- Analytics service in `src/lib/analytics.ts` (P-values, discrimination indices, normalized gain)
+
+**Testing Requirements:**
+- Unit tests for services (shuffle, scoring, analytics) co-located with source files
+- Store tests in `src/stores/__tests__/useQuizStore.test.ts`
+- E2E tests in `tests/e2e/` (one spec per story, Chromium local + full matrix in CI)
+- Test factories in `tests/support/factories/` (makeQuiz, makeQuestion, makeAttempt)
+- Playwright + axe-core integration for automated accessibility testing
+
+**File Structure:**
+```
+src/
+├── app/
+│   ├── pages/
+│   │   ├── Quiz.tsx                    # Main quiz container page
+│   │   └── QuizResults.tsx             # Results/review page
+│   └── components/
+│       └── quiz/
+│           ├── QuizHeader.tsx          # Title, timer, progress
+│           ├── QuizNavigation.tsx      # Question pagination
+│           ├── QuestionDisplay.tsx     # Polymorphic renderer
+│           ├── questions/
+│           │   ├── MultipleChoiceQuestion.tsx
+│           │   ├── TrueFalseQuestion.tsx
+│           │   ├── MultipleSelectQuestion.tsx
+│           │   └── FillInBlankQuestion.tsx
+│           ├── AnswerFeedback.tsx      # Immediate feedback
+│           ├── QuizActions.tsx         # Submit/next/prev buttons
+│           ├── ScoreSummary.tsx        # Score display
+│           ├── PerformanceInsights.tsx # Strengths/growth areas
+│           ├── ImprovementChart.tsx    # Score trajectory viz
+│           └── QuizReview.tsx          # Review all Q&A pairs
+├── stores/
+│   └── useQuizStore.ts                 # Quiz state management
+├── types/
+│   └── quiz.ts                         # Quiz TypeScript types + Zod schemas
+├── lib/
+│   ├── shuffle.ts                      # Fisher-Yates algorithm
+│   ├── scoring.ts                      # Partial credit calculation
+│   └── analytics.ts                    # Analytics computations
+└── hooks/
+    └── useQuizTimer.ts                 # Timer with Date.now() accuracy
+```
+
+**From UX Design - Design System:**
+
+**Component Styling:**
+- Extend existing shadcn/ui + Tailwind v4 foundation
+- Use established design tokens: #FAF5EE background, blue-600 primary, rounded-[24px] cards
+- Warm color palette, system font stack
+- 8px base spacing grid (multiples of 0.5rem)
+- CSS custom properties in `src/styles/theme.css`
+
+**Interaction Patterns:**
+- Resume-where-left-off pattern (quiz state persists across sessions)
+- Progressive disclosure (show quiz interface, hide other UI during quiz)
+- Immediate feedback on answer selection
+- Encouraging, non-judgmental tone in all UI copy (FR23)
+- Clean session closure with performance summary
+
+**Animation Philosophy:**
+- Micro-interactions: 150-200ms ease-out (button hover, toggle)
+- State transitions: 200-350ms ease-in-out (question navigation, feedback appear)
+- No celebration animations for quiz (maintain focus)
+- Respect `prefers-reduced-motion: reduce` (0ms all animations)
+- Smooth progress bar updates
+
+**Accessibility Patterns (WCAG 2.1 AA+):**
+- Semantic HTML structure (fieldset/legend for radio groups)
+- ARIA live regions (`aria-live="polite"` for timer, `"assertive"` for critical warnings)
+- Keyboard navigation: Tab, Enter, Space, Arrow keys
+- Focus indicators with 4.5:1 contrast ratio
+- Screen reader announcements for dynamic content
+- Timer warnings at 75%, 90% announced to screen readers
+- Error identification with `aria-invalid` and text (not color alone)
+
+### FR Coverage Map
+
+| FR | Epic | Description |
+|----|------|-------------|
+| FR1 | Epic 12 | Start quiz from lesson |
+| FR2 | Epic 13 | Navigate between questions |
+| FR3 | Epic 13 | Mark questions for review |
+| FR4 | Epic 13 | Pause and resume quiz |
+| FR5 | Epic 12 | Submit quiz for scoring |
+| FR6 | Epic 13 | Unlimited retakes |
+| FR7 | Epic 13 | Review Q&A after completion |
+| FR8 | Epic 13 | Exit without submitting (auto-save) |
+| FR9 | Epic 12 | Multiple Choice questions |
+| FR10 | Epic 14 | True/False questions |
+| FR11 | Epic 14 | Multiple Select questions |
+| FR12 | Epic 14 | Fill-in-Blank questions |
+| FR13 | Epic 13 | Randomize question order |
+| FR14 | Epic 12 | Question progress indicator |
+| FR15 | Epic 14 | Rich text formatting |
+| FR16 | Epic 12 | Partial credit calculation |
+| FR17 | Epic 12 | Total score percentage |
+| FR18 | Epic 15 | Immediate explanatory feedback |
+| FR19 | Epic 15 | Correct answer explanation |
+| FR20 | Epic 15 | Performance summary |
+| FR21 | Epic 15 | Highlight strongest topics |
+| FR22 | Epic 15 | Identify growth opportunities |
+| FR23 | Epic 15 | Encouraging messaging |
+| FR24 | Epic 15 | Countdown timer display |
+| FR25 | Epic 15 | Configure timer duration |
+| FR26 | Epic 15 | Timer accommodations |
+| FR27 | Epic 15 | Timer warnings |
+| FR28 | Epic 15 | Timer announcements (screen reader) |
+| FR29 | Epic 15 | Disable timer (untimed mode) |
+| FR30 | Epic 15 | Time-to-completion tracking |
+| FR31 | Epic 16 | Store score history |
+| FR32 | Epic 16 | Calculate score improvement |
+| FR33 | Epic 16 | Improvement trajectory graph |
+| FR34 | Epic 16 | Normalized gain (Hake's formula) |
+| FR35 | Epic 17 | Quiz completion rate |
+| FR36 | Epic 17 | Average retake frequency |
+| FR37 | Epic 17 | Time-on-task metrics |
+| FR38 | Epic 17 | Learning trajectory patterns |
+| FR39 | Epic 17 | Item difficulty (P-values) |
+| FR40 | Epic 17 | Discrimination indices |
+| FR41 | Epic 18 | Keyboard-only navigation |
+| FR42 | Epic 18 | ARIA live regions |
+| FR43 | Epic 18 | Accessibility settings |
+| FR44 | Epic 18 | Focus indicators (4.5:1 contrast) |
+| FR45 | Epic 18 | Semantic HTML |
+| FR46 | Epic 18 | Screen reader support |
+| FR47 | Epic 18 | Export quiz results |
+| FR48 | Epic 18 | Contrast ratios (4.5:1 text, 3:1 UI) |
+| FR49 | Epic 12 | Auto-save to localStorage |
+| FR50 | Epic 12 | Crash recovery |
+| FR51 | Epic 12 | Store history in IndexedDB |
+| FR52 | Epic 12 | Persist across sessions |
+| FR53 | Epic 13 | Handle quota exceeded |
+| FR54 | Epic 12 | Prevent data loss on submit |
+| FR55 | Epic 18 | Study streak update |
+| FR56 | Epic 18 | Dashboard integration |
+| FR57 | Epic 18 | Reports section integration |
+| FR58 | Epic 18 | Courses page badges |
+| FR59 | Epic 18 | Settings preferences |
+| FR60 | Epic 18 | Progress tracking integration |
+| FR61 | Epic 18 | Lesson navigation links |
+
+## Epic List
+
+### Epic 12: Take Basic Quizzes
+Learners can start a quiz from a lesson, answer multiple-choice questions, submit for scoring, and see their results.
+**FRs covered:** FR1, FR5, FR9, FR14, FR16, FR17, FR49, FR50, FR51, FR52, FR54
+
+### Epic 13: Navigate and Control Quiz Flow
+Learners can navigate between questions in any order, pause and resume quizzes, mark questions for review, and safely exit without losing progress.
+**FRs covered:** FR2, FR3, FR4, FR6, FR7, FR8, FR13, FR53
+
+### Epic 14: Practice with Diverse Question Types
+Learners can practice with True/False, Multiple Select, and Fill-in-Blank questions in addition to Multiple Choice.
+**FRs covered:** FR10, FR11, FR12, FR15
+
+### Epic 15: Timed Quizzes with Enhanced Feedback
+Learners can take timed quizzes with countdown timers, configurable accommodations, warnings, and receive immediate explanatory feedback.
+**FRs covered:** FR18, FR19, FR20, FR21, FR22, FR23, FR24, FR25, FR26, FR27, FR28, FR29, FR30
+
+### Epic 16: Review Performance and Track Improvement
+Learners can review quiz results, see detailed performance summaries, track score improvement across attempts, and visualize learning trajectories.
+**FRs covered:** FR31, FR32, FR33, FR34
+
+### Epic 17: Analyze Quiz Data and Patterns
+Learners can see detailed analytics including completion rates, retake frequency, time metrics, learning patterns, item difficulty, and discrimination indices.
+**FRs covered:** FR35, FR36, FR37, FR38, FR39, FR40
+
+### Epic 18: Accessible and Integrated Quiz Experience
+All learners can access quiz features via keyboard and screen readers (WCAG 2.1 AA+). Quiz data integrates across the LevelUp platform.
+**FRs covered:** FR41, FR42, FR43, FR44, FR45, FR46, FR47, FR48, FR55, FR56, FR57, FR58, FR59, FR60, FR61
+
+---
+
+## Epic 12: Take Basic Quizzes
+
+**Goal:** Learners can start a quiz from a lesson, answer multiple-choice questions, submit for scoring, and see their results.
+
+**Technical Foundation:** This epic establishes the complete quiz infrastructure needed for all future epics - type definitions, Dexie schema, Zustand store, routing, and a minimal working quiz experience.
+
+### Story 12.1: Create Quiz Type Definitions
+
+As a developer,
+I want Quiz, Question, and QuizAttempt TypeScript interfaces with Zod validation,
+So that I have type safety and runtime validation for quiz data throughout the application.
+
+**Acceptance Criteria:**
+
+**Given** quiz data requirements from PRD and Architecture
+**When** I create `src/types/quiz.ts`
+**Then** it exports all required TypeScript interfaces (Quiz, Question, QuizAttempt, Answer, QuizProgress)
+**And** all properties match the architecture specification exactly
+**And** Zod schemas are defined for runtime validation
+**And** QuestionType enum includes all 4 types (multiple-choice, true-false, multiple-select, fill-in-blank)
+**And** JSDoc comments document each interface and property
+**And** types are importable from other modules using `@/types/quiz`
+
+**Given** the Question interface
+**When** defining the `correctAnswer` property
+**Then** it supports both `string` and `string[]` types for polymorphic question handling
+**And** the `options` property is optional (not needed for fill-in-blank)
+**And** the `media` property supports image, video, and audio types
+
+**Technical Details:**
+
+Files to create:
+- `src/types/quiz.ts`
+
+Type interfaces to define:
+- `QuestionType` enum: 'multiple-choice' | 'true-false' | 'multiple-select' | 'fill-in-blank'
+- `Question` interface: id, order, type, text, options, correctAnswer, explanation, points, media
+- `Quiz` interface: id, lessonId, title, description, questions, timeLimit, passingScore, allowRetakes, shuffleQuestions, shuffleAnswers, createdAt, updatedAt
+- `Answer` interface: questionId, userAnswer, isCorrect, pointsEarned, pointsPossible
+- `QuizAttempt` interface: id, quizId, answers, score, percentage, passed, timeSpent, completedAt, startedAt
+- `QuizProgress` interface: quizId, currentQuestionIndex, answers, startTime, timeRemaining, isPaused
+
+Zod schemas to create:
+- `QuestionSchema` with type-specific validation (MC/MS require options array)
+- `QuizSchema` with nested QuestionSchema validation
+- Type inference: `export type Quiz = z.infer<typeof QuizSchema>`
+
+**Testing Requirements:**
+
+Unit tests:
+- TypeScript compilation verification
+- Zod schema validation for valid quiz data
+- Zod schema rejection for invalid data (missing required fields, wrong types)
+- Type inference correctness
+
+**Dependencies:** None (foundation story)
+
+**Complexity:** Small (1-2 hours)
+
+**Design Review Focus:** N/A (types only, no UI)
+
+---
+
+### Story 12.2: Set Up Dexie Schema v3 Migration
+
+As a developer,
+I want to migrate Dexie schema from v2 to v3 with quiz tables,
+So that quiz data persists reliably in IndexedDB with proper indexes for efficient queries.
+
+**Acceptance Criteria:**
+
+**Given** the existing Dexie schema at v2
+**When** I run the schema migration
+**Then** version 3 is created with three new tables: `quizzes`, `quizAttempts`, `quizProgress`
+**And** the `quizzes` table has indexes on: id (primary), lessonId, title, createdAt
+**And** the `quizAttempts` table has indexes on: id (primary), quizId, completedAt, passed
+**And** the `quizProgress` table has quizId as primary key (only one active quiz at a time)
+**And** no data migration/backfill is needed (new feature, no existing data)
+**And** existing v2 tables remain unchanged
+
+**Given** a quiz being stored
+**When** querying quizzes by lessonId
+**Then** the query uses the lessonId index for efficient retrieval
+**And** compound queries (e.g., "all passed attempts for quiz X") use the appropriate indexes
+
+**Technical Details:**
+
+Files to modify:
+- `src/db/schema.ts`
+
+Migration code:
+```typescript
+db.version(3)
+  .stores({
+    // Existing v2 tables (unchanged)
+    courses: 'id, name, category',
+    progress: 'id, courseId, lessonId, completedAt',
+    bookmarks: 'id, lessonId, timestamp',
+    notes: 'id, lessonId, createdAt',
+    sessions: 'id, startTime, endTime',
+    
+    // NEW: Quiz tables
+    quizzes: 'id, lessonId, title, createdAt',
+    quizAttempts: 'id, quizId, completedAt, passed',
+    quizProgress: 'quizId'
+  })
+  .upgrade(tx => {
+    // No backfill needed - new feature
+    return Promise.resolve()
+  })
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- Schema migration runs successfully
+- Tables created with correct indexes
+- Existing v2 data remains intact
+- Can write and read quiz data from new tables
+
+Integration tests:
+- Query performance using indexes (measure with large dataset)
+- Dexie upgrade callback executes without errors
+
+**Dependencies:** Story 12.1 (needs Quiz types for TypeScript)
+
+**Complexity:** Small (1-2 hours)
+
+**Design Review Focus:** N/A (database only)
+
+---
+
+### Story 12.3: Create useQuizStore with Zustand
+
+As a developer,
+I want a Zustand store for quiz state management following LevelUp patterns,
+So that quiz state is managed consistently with individual selectors and optimistic updates.
+
+**Acceptance Criteria:**
+
+**Given** the LevelUp Zustand patterns (individual selectors, optimistic updates)
+**When** I create `src/stores/useQuizStore.ts`
+**Then** it follows the `create<State>()(persist(...))` TypeScript pattern
+**And** it exports individual selectors (never destructure full store)
+**And** it implements optimistic update pattern (Zustand → Dexie → rollback on failure)
+**And** persist middleware auto-saves `currentProgress` to localStorage with key `levelup-quiz-store`
+**And** it includes actions: startQuiz, submitAnswer, submitQuiz, retakeQuiz, loadAttempts, resumeQuiz, clearQuiz
+
+**Given** the startQuiz action
+**When** a learner starts a quiz
+**Then** it loads the quiz from Dexie by quizId
+**And** applies Fisher-Yates shuffle if quiz.shuffleQuestions is true
+**And** initializes QuizProgress state (currentQuestionIndex=0, empty answers, start time)
+**And** sets timeRemaining if quiz has a timeLimit
+
+**Given** the submitAnswer action
+**When** a learner selects an answer
+**Then** it calculates partial credit immediately (≤50ms)
+**And** updates Zustand state optimistically (instant UI feedback)
+**And** localStorage auto-saves via persist middleware (debounced)
+**And** does NOT write to Dexie (wait until quiz submission to avoid write amplification)
+
+**Given** the submitQuiz action
+**When** a learner submits the completed quiz
+**Then** it calculates total score and percentage
+**And** creates QuizAttempt record with all answers and metrics
+**And** writes attempt to Dexie `quizAttempts` table
+**And** clears `currentProgress` from localStorage
+**And** triggers cross-store updates (useProgressStore.markLessonComplete, useSessionStore.recordStudyActivity)
+**And** rolls back on Dexie write failure
+
+**Technical Details:**
+
+Files to create:
+- `src/stores/useQuizStore.ts`
+
+Store structure:
+```typescript
+interface QuizState {
+  currentQuiz: Quiz | null
+  currentProgress: QuizProgress | null
+  attempts: QuizAttempt[]
+  isLoading: boolean
+  error: string | null
+  startQuiz: (quizId: string) => Promise<void>
+  submitAnswer: (questionId: string, answer: string | string[]) => void
+  submitQuiz: () => Promise<void>
+  retakeQuiz: (quizId: string) => void
+  loadAttempts: (quizId: string) => Promise<void>
+  resumeQuiz: (quizId: string) => void
+  clearQuiz: () => void
+}
+```
+
+Zustand persist configuration:
+- name: 'levelup-quiz-store'
+- partialize: only persist `currentProgress` (not full quiz or attempts)
+
+Cross-store communication:
+- useProgressStore.getState().markLessonComplete(lessonId)
+- useSessionStore.getState().recordStudyActivity('quiz', timeSpent)
+
+**Testing Requirements:**
+
+Unit tests:
+- startQuiz loads quiz and initializes state
+- submitAnswer updates state optimistically
+- submitQuiz creates attempt and persists to Dexie
+- Fisher-Yates shuffle applied when enabled
+- persist middleware saves only currentProgress
+- Rollback on Dexie failure
+
+Integration tests:
+- localStorage persistence across page reloads
+- Cross-store communication triggers correctly
+- Error handling for missing quiz
+
+**Dependencies:** 
+- Story 12.1 (needs Quiz types)
+- Story 12.2 (needs Dexie schema)
+
+**Complexity:** Medium (3-4 hours)
+
+**Design Review Focus:** N/A (store only, no UI)
+
+---
+
+### Story 12.4: Create Quiz Route and Basic QuizPlayer Component
+
+As a learner,
+I want to navigate to a quiz from a lesson and see the quiz start screen,
+So that I can begin taking a quiz when I'm ready.
+
+**Acceptance Criteria:**
+
+**Given** a course lesson with an associated quiz
+**When** I click "Take Quiz" from the lesson page
+**Then** I navigate to `/courses/:courseId/lessons/:lessonId/quiz`
+**And** I see the quiz title and description
+**And** I see the number of questions (e.g., "12 questions")
+**And** I see the time limit if configured (e.g., "15 minutes") or "Untimed" if no limit
+**And** I see a "Start Quiz" button prominently displayed
+**And** I do NOT see any questions yet (start screen only)
+
+**Given** the quiz start screen
+**When** I click "Start Quiz"
+**Then** useQuizStore.startQuiz() is called
+**And** the first question loads and displays
+**And** the quiz header shows progress (e.g., "Question 1 of 12")
+**And** the timer starts counting down if quiz is timed
+
+**Given** I am on a different page
+**When** I navigate directly to a quiz URL
+**Then** the quiz loads from the quizId route parameter
+**And** if I have an incomplete quiz in progress, I see a "Resume Quiz" option
+**And** if no progress exists, I see the normal start screen
+
+**Technical Details:**
+
+Files to create:
+- `src/app/pages/Quiz.tsx` (route-level page component)
+- `src/app/components/quiz/QuizHeader.tsx` (title, progress indicator)
+- `src/app/components/quiz/QuizStartScreen.tsx` (pre-quiz info and start button)
+
+Files to modify:
+- `src/app/routes.tsx` (add quiz route)
+
+Route configuration:
+```typescript
+{
+  path: '/courses/:courseId/lessons/:lessonId/quiz',
+  element: <Quiz />
+}
+```
+
+QuizPlayer component structure:
+```tsx
+<QuizContainer>
+  <QuizHeader quiz={currentQuiz} currentIndex={0} />
+  {!quizStarted && <QuizStartScreen quiz={currentQuiz} onStart={handleStart} />}
+  {quizStarted && <QuestionDisplay ... />}
+</QuizContainer>
+```
+
+Components:
+- QuizHeader: displays title, question progress (1 of 12), timer (if applicable)
+- QuizStartScreen: quiz metadata, start button, resume button if progress exists
+
+**Testing Requirements:**
+
+Unit tests:
+- QuizPlayer renders start screen correctly
+- Start button triggers useQuizStore.startQuiz()
+- Resume button appears when currentProgress exists
+
+E2E tests:
+- Navigate to quiz URL → see start screen
+- Click "Start Quiz" → first question displays
+- Refresh page mid-quiz → can resume
+- Browser back button returns to lesson (quiz state preserved)
+
+Accessibility tests:
+- Keyboard navigation (Tab to Start button, Enter to activate)
+- Screen reader announces quiz title, question count, time limit
+- Focus moves to first question after starting
+
+**Dependencies:**
+- Story 12.1 (needs Quiz types)
+- Story 12.2 (needs Dexie for quiz loading)
+- Story 12.3 (needs useQuizStore)
+
+**Complexity:** Medium (4-5 hours)
+
+**Design Review Focus:**
+- Quiz start screen layout at 375px, 768px, 1440px
+- "Start Quiz" button prominence and touch target size (≥44px)
+- Warm color scheme (#FAF5EE background, blue-600 CTA)
+- Typography hierarchy (quiz title, metadata, button text)
+
+---
+
+### Story 12.5: Display Multiple Choice Questions
+
+As a learner,
+I want to see multiple choice questions with selectable answer options,
+So that I can answer quiz questions by selecting the correct option.
+
+**Acceptance Criteria:**
+
+**Given** a quiz with multiple choice questions
+**When** I start the quiz
+**Then** I see the question text displayed clearly with proper typography
+**And** I see 2-6 answer options as radio buttons below the question
+**And** each option has a visible label with the answer text
+**And** all options are unselected initially (no default selection)
+**And** I can select exactly one option at a time (radio group behavior)
+
+**Given** a question with rich formatting
+**When** the question text contains code blocks, lists, or emphasis
+**Then** the formatting renders correctly using Markdown
+**And** code blocks have syntax highlighting (if applicable)
+**And** lists display with proper indentation
+
+**Given** I select an answer option
+**When** I click or tap on a radio button or its label
+**Then** the option becomes visually selected (filled radio button)
+**And** any previously selected option becomes unselected
+**And** the selection state persists if I navigate away and return to this question
+
+**Given** the question display component
+**When** rendering on mobile (375px)
+**Then** answer options stack vertically with full-width labels
+**And** touch targets are ≥44px tall for easy selection
+**When** rendering on desktop (1440px)
+**Then** answer options may display in a single column or two columns based on content length
+
+**Technical Details:**
+
+Files to create:
+- `src/app/components/quiz/QuestionDisplay.tsx` (polymorphic renderer)
+- `src/app/components/quiz/questions/MultipleChoiceQuestion.tsx`
+
+MultipleChoiceQuestion component:
+```tsx
+<fieldset className="space-y-3">
+  <legend className="text-lg font-semibold mb-4">
+    <ReactMarkdown>{question.text}</ReactMarkdown>
+  </legend>
+  <RadioGroup value={selectedAnswer} onValueChange={handleAnswerChange}>
+    {question.options.map((option, index) => (
+      <RadioGroupItem key={index} value={option} label={option} />
+    ))}
+  </RadioGroup>
+</fieldset>
+```
+
+QuestionDisplay polymorphic rendering:
+```tsx
+switch (question.type) {
+  case 'multiple-choice':
+    return <MultipleChoiceQuestion question={question} value={userAnswer} onChange={onAnswerChange} />
+  // Future question types...
+}
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- MultipleChoiceQuestion renders all options correctly
+- Selecting an option calls onChange callback
+- Only one option can be selected at a time
+- Markdown rendering for question text
+
+E2E tests:
+- Click each answer option → selection updates
+- Navigate away and back → selection persists
+- Keyboard navigation (Tab to options, Space/Enter to select)
+
+Accessibility tests:
+- fieldset/legend semantic structure
+- Radio group has proper ARIA attributes
+- Screen reader announces question text and all options
+- Focus indicators visible on all options (4.5:1 contrast)
+- Touch targets ≥44px on mobile
+
+**Dependencies:**
+- Story 12.1 (needs Question type)
+- Story 12.3 (needs useQuizStore for answer submission)
+- Story 12.4 (needs QuizPlayer to render questions)
+
+**Complexity:** Medium (3-4 hours)
+
+**Design Review Focus:**
+- Question text typography and spacing
+- Radio button styling and selection state
+- Responsive layout (stacked on mobile, potentially multi-column on desktop)
+- Touch target sizes on mobile (≥44px)
+- Markdown rendering quality (code blocks, lists)
+- Focus states on radio buttons
+
+---
+
+### Story 12.6: Calculate and Display Quiz Score
+
+As a learner,
+I want to submit my quiz and immediately see my score,
+So that I know how well I performed.
+
+**Acceptance Criteria:**
+
+**Given** I have answered all required questions in a quiz
+**When** I click "Submit Quiz"
+**Then** the quiz is submitted to useQuizStore.submitQuiz()
+**And** my score is calculated as a percentage of total possible points
+**And** I am redirected to `/courses/:courseId/lessons/:lessonId/quiz/results`
+**And** I see my score displayed prominently (e.g., "85%")
+**And** I see the number of questions I answered correctly (e.g., "10 of 12 correct")
+**And** I see whether I passed or failed based on the quiz's passing score
+**And** I see the total time I spent on the quiz (e.g., "Completed in 8m 32s")
+
+**Given** I have NOT answered all questions
+**When** I attempt to submit the quiz
+**Then** I see a warning message: "You have N unanswered questions. Submit anyway?"
+**And** I can choose to continue reviewing or submit with unanswered questions
+**And** unanswered questions are scored as 0 points
+
+**Given** the quiz has partial credit scoring enabled
+**When** my score is calculated
+**Then** each question receives 0-100% of possible points based on correctness
+**And** the total score is the sum of all question scores
+**And** the percentage is calculated as (total score / total possible points) * 100
+
+**Given** the quiz results screen
+**When** I view my score
+**Then** I see a "Retake Quiz" button to start over
+**And** I see a "Review Answers" button to see all questions and correct answers
+**And** I see an encouraging message regardless of score (e.g., "Great effort!" or "You're making progress!")
+
+**Technical Details:**
+
+Files to create:
+- `src/app/pages/QuizResults.tsx` (results page)
+- `src/app/components/quiz/ScoreSummary.tsx` (score display component)
+- `src/lib/scoring.ts` (scoring utility functions)
+
+Files to modify:
+- `src/app/routes.tsx` (add results route)
+
+Scoring algorithm (src/lib/scoring.ts):
+```typescript
+export function calculatePartialCredit(
+  question: Question,
+  userAnswer: string | string[]
+): { pointsEarned: number; isCorrect: boolean } {
+  switch (question.type) {
+    case 'multiple-choice':
+    case 'true-false':
+    case 'fill-in-blank':
+      // All-or-nothing
+      const isCorrect = userAnswer === question.correctAnswer
+      return { pointsEarned: isCorrect ? question.points : 0, isCorrect }
+    
+    case 'multiple-select':
+      // Partial Credit Model (PCM)
+      // (correct selections - incorrect selections) / total correct
+      // Implementation in Story 14.2
+  }
+}
+
+export function calculateQuizScore(answers: Answer[]): {
+  score: number
+  percentage: number
+  totalPoints: number
+} {
+  const score = answers.reduce((sum, a) => sum + a.pointsEarned, 0)
+  const totalPoints = answers.reduce((sum, a) => sum + a.pointsPossible, 0)
+  const percentage = totalPoints > 0 ? Math.round((score / totalPoints) * 100) : 0
+  return { score, percentage, totalPoints }
+}
+```
+
+Results route:
+```typescript
+{
+  path: '/courses/:courseId/lessons/:lessonId/quiz/results',
+  element: <QuizResults />
+}
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- calculatePartialCredit for multiple-choice (all-or-nothing)
+- calculateQuizScore with various answer combinations
+- Percentage calculation accuracy
+- Passed/failed determination
+
+E2E tests:
+- Submit quiz with all questions answered → see results
+- Submit quiz with unanswered questions → see warning, can submit anyway
+- Results page displays score, percentage, time, pass/fail status
+- "Retake Quiz" button navigates to quiz start screen
+- "Review Answers" button shows question review mode
+
+Accessibility tests:
+- Screen reader announces score and pass/fail status
+- Keyboard navigation to Retake and Review buttons
+- Focus moves to score on results page load (aria-live region)
+
+**Dependencies:**
+- Story 12.1 (needs Answer, QuizAttempt types)
+- Story 12.3 (needs useQuizStore.submitQuiz)
+- Story 12.4 (needs QuizPlayer for submit flow)
+- Story 12.5 (needs question answering to have data to score)
+
+**Complexity:** Medium (4-5 hours)
+
+**Design Review Focus:**
+- Score display prominence and typography (large, bold percentage)
+- Pass/fail visual indicator (green checkmark vs. orange neutral icon)
+- Encouraging message tone (non-judgmental language)
+- Button spacing and touch targets (Retake, Review)
+- Responsive layout at 375px, 768px, 1440px
+- Time display formatting (8m 32s, not 512 seconds)
+
+---
+
+## Epic 13: Navigate and Control Quiz Flow
+
+**Goal:** Learners can navigate between questions in any order, pause and resume quizzes, mark questions for review, and safely exit without losing progress.
+
+**Technical Focus:** This epic extends Epic 1 with flexible navigation controls, robust state management, and Fisher-Yates randomization.
+
+### Story 13.1: Navigate Between Questions
+
+As a learner,
+I want to navigate between quiz questions in any order,
+So that I can skip difficult questions and return to them later.
+
+**Acceptance Criteria:**
+
+**Given** I am taking a quiz with multiple questions
+**When** I am viewing any question
+**Then** I see "Previous" and "Next" buttons (or "Start Over" on Q1, "Submit Quiz" on last Q)
+**And** I can click "Next" to advance to the next question
+**And** I can click "Previous" to return to the previous question
+**And** my answer to the current question is auto-saved before navigating
+**And** previously answered questions display my selected answer when I return
+
+**Given** I am on the first question
+**When** viewing the navigation controls
+**Then** the "Previous" button is disabled or hidden
+**And** I see only "Next" button (or "Submit Quiz" if single-question quiz)
+
+**Given** I am on the last question
+**When** viewing the navigation controls
+**Then** the "Next" button changes to "Submit Quiz"
+**And** I can still use "Previous" to review earlier questions
+
+**Given** I want to jump to a specific question
+**When** I view the quiz navigation component
+**Then** I see a question list/grid showing all question numbers (1, 2, 3, ... 12)
+**And** answered questions are visually indicated (e.g., blue dot)
+**And** unanswered questions are visually indicated (e.g., gray outline)
+**And** the current question is highlighted (e.g., blue filled circle)
+**And** I can click any question number to jump directly to that question
+
+**Technical Details:**
+
+Files to create:
+- `src/app/components/quiz/QuizNavigation.tsx` (pagination + question grid)
+- `src/app/components/quiz/QuizActions.tsx` (Previous/Next/Submit buttons)
+
+Files to modify:
+- `src/app/pages/Quiz.tsx` (integrate navigation)
+- `src/stores/useQuizStore.ts` (add navigateToQuestion action)
+
+QuizNavigation component:
+```tsx
+<nav className="flex items-center justify-between">
+  <QuizActions 
+    onPrevious={handlePrevious} 
+    onNext={handleNext} 
+    onSubmit={handleSubmit}
+    isFirst={currentIndex === 0}
+    isLast={currentIndex === totalQuestions - 1}
+  />
+  <QuestionGrid 
+    questions={quiz.questions}
+    answers={currentProgress.answers}
+    currentIndex={currentIndex}
+    onQuestionClick={handleQuestionClick}
+  />
+</nav>
+```
+
+useQuizStore navigation actions:
+```typescript
+navigateToQuestion: (index: number) => {
+  set({ currentProgress: { ...currentProgress, currentQuestionIndex: index } })
+}
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- QuizNavigation renders correct buttons based on current question
+- navigateToQuestion updates currentQuestionIndex
+- Question grid displays answered/unanswered states correctly
+
+E2E tests:
+- Click "Next" → advances to next question
+- Click "Previous" → returns to previous question
+- Click question number in grid → jumps to that question
+- Navigate away and back → current question restored
+- Answer persists when navigating away and returning
+
+Accessibility tests:
+- Keyboard navigation (Tab to buttons, Enter to activate)
+- Arrow keys to navigate questions (optional enhancement)
+- Screen reader announces "Question 3 of 12" when navigating
+- Focus moves to question text after navigation
+
+**Dependencies:**
+- Story 12.1 (needs QuizProgress type)
+- Story 12.3 (needs useQuizStore)
+- Story 12.4 (needs QuizPlayer)
+- Story 12.5 (needs question display to navigate between)
+
+**Complexity:** Medium (3-4 hours)
+
+**Design Review Focus:**
+- Previous/Next button placement and size (≥44px touch targets)
+- Question grid layout (responsive: single row on mobile, grid on desktop)
+- Visual indicators for answered/unanswered/current questions
+- Button states (disabled Previous on Q1, "Submit" on last Q)
+- Spacing and alignment of navigation controls
+
+---
+
+### Story 13.2: Mark Questions for Review
+
+As a learner,
+I want to mark questions for later review,
+So that I can quickly find questions I'm uncertain about before submitting.
+
+**Acceptance Criteria:**
+
+**Given** I am viewing any question
+**When** I see the question interface
+**Then** I see a "Mark for Review" checkbox or toggle
+**And** the control is clearly labeled and easy to find
+**And** I can toggle it on/off by clicking or tapping
+
+**Given** I mark a question for review
+**When** I toggle the "Mark for Review" control
+**Then** the question is marked in the quiz state
+**And** the question number in the navigation grid displays a visual indicator (e.g., yellow star or flag icon)
+**And** the mark persists if I navigate away and return
+
+**Given** I have marked multiple questions for review
+**When** I view the question navigation grid
+**Then** all marked questions display the review indicator
+**And** I can quickly identify which questions need attention
+**And** I can jump to any marked question by clicking its number
+
+**Given** I want to clear a review mark
+**When** I toggle the "Mark for Review" control off
+**Then** the question is unmarked
+**And** the review indicator disappears from the navigation grid
+
+**Given** I am on the quiz final review screen (before submit)
+**When** I view the "Questions Marked for Review" section
+**Then** I see a list of all marked question numbers
+**And** I can click each to jump back to that question
+**And** I see the total count (e.g., "3 questions marked for review")
+
+**Technical Details:**
+
+Files to create:
+- `src/app/components/quiz/MarkForReview.tsx` (checkbox/toggle component)
+- `src/app/components/quiz/ReviewSummary.tsx` (pre-submit review list)
+
+Files to modify:
+- `src/stores/useQuizStore.ts` (add markForReview action)
+- `src/types/quiz.ts` (add markedForReview to QuizProgress)
+- `src/app/components/quiz/QuizNavigation.tsx` (display review indicators)
+
+QuizProgress type extension:
+```typescript
+interface QuizProgress {
+  // ... existing fields
+  markedForReview: string[]  // array of question IDs
+}
+```
+
+useQuizStore action:
+```typescript
+toggleMarkForReview: (questionId: string) => {
+  set(state => {
+    const marked = state.currentProgress?.markedForReview || []
+    const newMarked = marked.includes(questionId)
+      ? marked.filter(id => id !== questionId)
+      : [...marked, questionId]
+    return {
+      currentProgress: {
+        ...state.currentProgress!,
+        markedForReview: newMarked
+      }
+    }
+  })
+}
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- toggleMarkForReview adds/removes question ID from array
+- MarkForReview component toggles state correctly
+- Navigation grid displays review indicator for marked questions
+
+E2E tests:
+- Click "Mark for Review" → question marked, indicator appears in grid
+- Click again → question unmarked, indicator disappears
+- Mark multiple questions → all show indicators
+- Navigate away and back → marks persist
+- Submit warning shows marked questions count
+
+Accessibility tests:
+- Keyboard toggle (Space to check/uncheck)
+- Screen reader announces "Marked for review" / "Unmarked" on toggle
+- Review indicator visible with 3:1 contrast
+- Focus on toggle control has visible indicator
+
+**Dependencies:**
+- Story 12.3 (needs useQuizStore)
+- Story 13.1 (needs question navigation to see marked questions)
+
+**Complexity:** Small (2-3 hours)
+
+**Design Review Focus:**
+- "Mark for Review" control placement (near question, not obtrusive)
+- Visual indicator design (star, flag, or colored dot)
+- Indicator visibility in navigation grid
+- Toggle interaction feel (immediate visual feedback)
+
+---
+
+### Story 13.3: Pause and Resume Quiz
+
+As a learner,
+I want to pause a quiz and resume later without losing my progress,
+So that I can handle interruptions without starting over.
+
+**Acceptance Criteria:**
+
+**Given** I am taking a quiz
+**When** I close the browser tab or navigate away
+**Then** my quiz progress auto-saves to localStorage
+**And** my current question index, all answers, and timer state are preserved
+**And** no data is lost even if the browser crashes
+
+**Given** I return to the quiz after closing the browser
+**When** I navigate to the quiz URL
+**Then** I see a "Resume Quiz" button on the start screen
+**And** the button shows how many questions I've answered (e.g., "Resume Quiz (5 of 12 answered)")
+**And** clicking "Resume Quiz" loads me to the exact question I was on
+**And** all my previous answers are restored
+
+**Given** I intentionally want to pause
+**When** I see the quiz interface
+**Then** I can click the browser back button to exit safely
+**Or** I can close the tab/window
+**And** my progress auto-saves via Zustand persist middleware (no explicit "Pause" button needed)
+
+**Given** the quiz has a timer
+**When** I pause and resume
+**Then** the timer state is restored correctly
+**And** time spent paused does NOT count toward quiz time
+**And** the timer resumes counting down from where it left off
+
+**Given** I have completed a quiz
+**When** I navigate back to the quiz URL
+**Then** I do NOT see a "Resume Quiz" button
+**And** I see only "Start New Attempt" (retake functionality from Story 13.4)
+
+**Technical Details:**
+
+Files to modify:
+- `src/app/pages/Quiz.tsx` (detect and display resume option)
+- `src/app/components/quiz/QuizStartScreen.tsx` (add Resume button)
+- `src/stores/useQuizStore.ts` (ensure persist middleware configured correctly)
+
+QuizStartScreen component:
+```tsx
+{currentProgress && (
+  <Button onClick={handleResume} variant="primary">
+    Resume Quiz ({answeredCount} of {totalQuestions} answered)
+  </Button>
+)}
+{!currentProgress && (
+  <Button onClick={handleStart} variant="primary">
+    Start Quiz
+  </Button>
+)}
+```
+
+Zustand persist middleware (already in Story 12.3):
+- Persists `currentProgress` to localStorage
+- Auto-saves on every answer selection (debounced)
+- Key: 'levelup-quiz-store'
+
+**Testing Requirements:**
+
+Unit tests:
+- currentProgress persists to localStorage
+- Resume button appears when currentProgress exists
+- Resume loads correct question index and answers
+
+E2E tests:
+- Answer 5 questions → close tab → reopen → see "Resume" button
+- Click "Resume" → land on question 6 with previous answers intact
+- Complete quiz → return → no "Resume" button
+- Browser crash simulation → reopen → progress intact
+
+Accessibility tests:
+- "Resume Quiz" button has focus on page load if present
+- Screen reader announces button with answer count
+
+**Dependencies:**
+- Story 12.3 (needs useQuizStore with persist middleware)
+- Story 12.4 (needs QuizPlayer and start screen)
+- Story 13.1 (needs navigation to resume at correct question)
+
+**Complexity:** Small (2-3 hours)
+
+**Design Review Focus:**
+- "Resume Quiz" button prominence (primary action if progress exists)
+- Answer count display ("5 of 12 answered")
+- Start screen layout with Resume vs. Start button
+
+---
+
+### Story 13.4: Unlimited Quiz Retakes
+
+As a learner,
+I want to retake quizzes as many times as needed without cooldown or limits,
+So that I can practice until I achieve mastery.
+
+**Acceptance Criteria:**
+
+**Given** I have completed a quiz
+**When** I view the quiz results screen
+**Then** I see a "Retake Quiz" button prominently displayed
+**And** there is no message about attempt limits or cooldowns
+**And** clicking "Retake Quiz" immediately starts a new attempt
+
+**Given** I start a quiz retake
+**When** the quiz loads
+**Then** all my previous answers are cleared (fresh attempt)
+**And** the questions are re-randomized if shuffleQuestions is enabled
+**And** the timer resets to the original time limit
+**And** my previous attempt scores remain stored in Dexie for history tracking
+
+**Given** I have taken a quiz multiple times
+**When** I view the results screen after any attempt
+**Then** I see my current attempt score
+**And** I see a summary of improvement (e.g., "Previous best: 75%, Current: 85% (+10%)")
+**And** I can click "View All Attempts" to see full history (Story 16.1)
+
+**Given** I want to retake from the lesson page
+**When** I navigate to a lesson with a quiz I've already completed
+**Then** I see "Retake Quiz" instead of "Take Quiz"
+**And** clicking it starts a new attempt immediately (no confirmation dialog needed)
+
+**Technical Details:**
+
+Files to modify:
+- `src/app/pages/QuizResults.tsx` (add Retake button)
+- `src/app/components/quiz/ScoreSummary.tsx` (show improvement vs. previous best)
+- `src/stores/useQuizStore.ts` (implement retakeQuiz action)
+
+useQuizStore.retakeQuiz action:
+```typescript
+retakeQuiz: (quizId: string) => {
+  // Clear current progress
+  set({ currentProgress: null, currentQuiz: null })
+  
+  // Start fresh attempt (reuses startQuiz logic)
+  get().startQuiz(quizId)
+}
+```
+
+ScoreSummary improvement display:
+```tsx
+{previousBestScore && (
+  <div className="text-sm text-gray-600">
+    Previous best: {previousBestScore}%
+    {currentScore > previousBestScore && (
+      <span className="text-green-600 font-semibold">
+        (+{currentScore - previousBestScore}%)
+      </span>
+    )}
+  </div>
+)}
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- retakeQuiz clears currentProgress and starts new attempt
+- Previous attempts remain in Dexie
+- Improvement calculation (current vs. previous best)
+
+E2E tests:
+- Complete quiz → click "Retake Quiz" → quiz restarts with cleared answers
+- Complete quiz 3 times → see improvement on each attempt
+- Questions re-randomize on retake if shuffle enabled
+- All attempts stored in history
+
+Accessibility tests:
+- "Retake Quiz" button keyboard accessible
+- Screen reader announces improvement message
+- Focus on "Retake Quiz" button after results load
+
+**Dependencies:**
+- Story 12.3 (needs useQuizStore.startQuiz)
+- Story 12.6 (needs QuizResults page)
+- Story 13.1 (needs navigation for retake flow)
+
+**Complexity:** Small (2-3 hours)
+
+**Design Review Focus:**
+- "Retake Quiz" button prominence on results screen
+- Improvement message styling (+10% in green, visually positive)
+- No discouraging language about limits or cooldowns
+
+---
+
+### Story 13.5: Randomize Question Order with Fisher-Yates Shuffle
+
+As a learner,
+I want quiz questions to appear in random order on each attempt,
+So that I cannot rely on memorizing question positions.
+
+**Acceptance Criteria:**
+
+**Given** a quiz with `shuffleQuestions: true`
+**When** I start the quiz
+**Then** the questions are randomized using Fisher-Yates shuffle algorithm
+**And** every permutation of question order has equal probability (1/n!)
+**And** the randomization is unbiased (no position bias)
+
+**Given** I retake the same quiz
+**When** starting a new attempt
+**Then** the questions are shuffled again in a different order
+**And** the shuffle is independent of previous attempts (new random seed each time)
+
+**Given** a quiz with `shuffleQuestions: false`
+**When** I start the quiz
+**Then** questions appear in their original `order` property sequence
+**And** no shuffling is applied
+
+**Given** the shuffling algorithm
+**When** implemented in `src/lib/shuffle.ts`
+**Then** it uses Fisher-Yates shuffle with O(n) time complexity
+**And** it creates a new array (does not mutate the original)
+**And** it works with any array type (generic implementation)
+
+**Technical Details:**
+
+Files to create:
+- `src/lib/shuffle.ts` (Fisher-Yates implementation)
+
+Files to modify:
+- `src/stores/useQuizStore.ts` (apply shuffle in startQuiz)
+
+Fisher-Yates shuffle implementation:
+```typescript
+export function fisherYatesShuffle<T>(array: T[]): T[] {
+  const shuffled = [...array]  // Immutability
+  
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  
+  return shuffled
+}
+```
+
+Usage in useQuizStore.startQuiz:
+```typescript
+if (quiz.shuffleQuestions) {
+  quiz.questions = fisherYatesShuffle(quiz.questions)
+}
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- fisherYatesShuffle produces valid permutations
+- All elements present after shuffle (no loss/duplication)
+- Original array not mutated (immutability)
+- Distribution test (run 10,000 times, verify uniform distribution)
+
+E2E tests:
+- Start quiz with shuffle enabled → questions in random order
+- Retake quiz → different order on each attempt
+- Start quiz with shuffle disabled → original order preserved
+
+**Dependencies:**
+- Story 12.1 (needs Quiz type with shuffleQuestions property)
+- Story 12.3 (needs useQuizStore.startQuiz to apply shuffle)
+
+**Complexity:** Small (1-2 hours)
+
+**Design Review Focus:** N/A (algorithm only, no UI)
+
+---
+
+### Story 13.6: Handle localStorage Quota Exceeded Gracefully
+
+As a learner,
+I want the quiz to continue working even if localStorage is full,
+So that I don't lose progress due to storage limitations.
+
+**Acceptance Criteria:**
+
+**Given** localStorage is near or at quota limit
+**When** the quiz attempts to save progress
+**Then** it catches `QuotaExceededError` exceptions
+**And** it attempts to free space by clearing old data (if possible)
+**Or** it falls back to sessionStorage (temporary, page-session only)
+**And** it displays a non-blocking warning toast: "Storage limit reached. Quiz progress will be saved for this session only."
+
+**Given** localStorage quota is exceeded
+**When** I complete and submit the quiz
+**Then** the attempt is still saved to IndexedDB (Dexie)
+**And** only the `currentProgress` state is affected (attempt history intact)
+**And** I can still complete the quiz successfully
+
+**Given** I am using sessionStorage fallback
+**When** I close the browser tab
+**Then** I lose in-progress state (expected behavior for sessionStorage)
+**And** submitted attempts remain in IndexedDB (permanent storage)
+
+**Given** the quota exceeded warning
+**When** displayed to the user
+**Then** it suggests clearing browser data or using a different browser
+**And** it does NOT block quiz functionality (non-modal toast)
+
+**Technical Details:**
+
+Files to modify:
+- `src/stores/useQuizStore.ts` (add quota handling to persist middleware)
+
+Quota handling in Zustand persist:
+```typescript
+persist(
+  (set, get) => ({ ...state }),
+  {
+    name: 'levelup-quiz-store',
+    storage: {
+      getItem: (name) => {
+        try {
+          return localStorage.getItem(name)
+        } catch {
+          return sessionStorage.getItem(name)
+        }
+      },
+      setItem: (name, value) => {
+        try {
+          localStorage.setItem(name, value)
+        } catch (e) {
+          if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+            // Fallback to sessionStorage
+            sessionStorage.setItem(name, value)
+            
+            // Show warning toast
+            toast.warning(
+              'Storage limit reached. Quiz progress will be saved for this session only.',
+              { duration: 5000 }
+            )
+          }
+        }
+      },
+      removeItem: (name) => {
+        localStorage.removeItem(name)
+        sessionStorage.removeItem(name)
+      }
+    }
+  }
+)
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- QuotaExceededError caught and handled
+- Falls back to sessionStorage
+- Toast warning displayed
+
+E2E tests:
+- Simulate quota exceeded → quiz continues working
+- Submit quiz with fallback storage → attempt saved to Dexie
+- Close tab after fallback → progress lost (expected)
+
+**Dependencies:**
+- Story 12.3 (needs useQuizStore with persist middleware)
+- Story 13.3 (affects pause/resume behavior)
+
+**Complexity:** Small (2-3 hours)
+
+**Design Review Focus:**
+- Toast warning message clarity and tone
+- Non-blocking notification (doesn't interrupt quiz taking)
+
+---
+
+## Epic 14: Practice with Diverse Question Types
+
+**Goal:** Learners can practice with True/False, Multiple Select, and Fill-in-Blank questions in addition to Multiple Choice.
+
+**Technical Focus:** This epic adds polymorphic question renderers with type-specific scoring logic and rich text formatting support.
+
+### Story 14.1: Display True/False Questions
+
+As a learner,
+I want to answer True/False questions,
+So that I can practice with binary choice assessments.
+
+**Acceptance Criteria:**
+
+**Given** a quiz with True/False questions
+**When** I view a True/False question
+**Then** I see the question text clearly displayed
+**And** I see exactly two options: "True" and "False"
+**And** the options are displayed as radio buttons (only one selectable)
+**And** I can select either "True" or "False" by clicking or tapping
+
+**Given** I select an answer
+**When** I choose "True" or "False"
+**Then** my selection is visually indicated (filled radio button)
+**And** the selection is saved to quiz state immediately
+**And** I can change my answer by selecting the other option
+
+**Given** True/False question scoring
+**When** the quiz is submitted
+**Then** True/False questions are scored all-or-nothing (0% or 100%)
+**And** the correct answer is compared to my selection
+**And** points are awarded only if my answer matches the correct answer exactly
+
+**Technical Details:**
+
+Files to create:
+- `src/app/components/quiz/questions/TrueFalseQuestion.tsx`
+
+Files to modify:
+- `src/app/components/quiz/QuestionDisplay.tsx` (add case for 'true-false')
+
+TrueFalseQuestion component:
+```tsx
+<fieldset>
+  <legend className="text-lg font-semibold mb-4">
+    <ReactMarkdown>{question.text}</ReactMarkdown>
+  </legend>
+  <RadioGroup value={selectedAnswer} onValueChange={handleAnswerChange}>
+    <RadioGroupItem value="true" label="True" />
+    <RadioGroupItem value="false" label="False" />
+  </RadioGroup>
+</fieldset>
+```
+
+QuestionDisplay update:
+```tsx
+case 'true-false':
+  return <TrueFalseQuestion question={question} value={userAnswer} onChange={onAnswerChange} />
+```
+
+Scoring (src/lib/scoring.ts, already in Story 12.6):
+```typescript
+case 'true-false':
+  const isCorrect = userAnswer === question.correctAnswer
+  return { pointsEarned: isCorrect ? question.points : 0, isCorrect }
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- TrueFalseQuestion renders "True" and "False" options
+- Selection triggers onChange callback
+- Scoring calculates correctly (all-or-nothing)
+
+E2E tests:
+- Click "True" → selection updates
+- Click "False" → selection changes
+- Submit quiz → True/False questions scored correctly
+
+Accessibility tests:
+- fieldset/legend semantic structure
+- Radio group keyboard navigation (Tab, Arrow keys, Space/Enter)
+- Screen reader announces question and two options
+- Focus indicators visible (4.5:1 contrast)
+
+**Dependencies:**
+- Story 12.1 (needs Question type with 'true-false')
+- Story 12.3 (needs useQuizStore)
+- Story 12.5 (extends QuestionDisplay polymorphic pattern)
+
+**Complexity:** Small (1-2 hours)
+
+**Design Review Focus:**
+- True/False option layout (stacked or side-by-side)
+- Radio button styling consistent with Multiple Choice
+- Touch targets ≥44px on mobile
+
+---
+
+### Story 14.2: Display Multiple Select Questions with Partial Credit
+
+As a learner,
+I want to answer Multiple Select ("select all that apply") questions,
+So that I can demonstrate knowledge of multiple correct answers.
+
+**Acceptance Criteria:**
+
+**Given** a quiz with Multiple Select questions
+**When** I view a Multiple Select question
+**Then** I see the question text with an indicator: "Select all that apply"
+**And** I see multiple answer options displayed as checkboxes (not radio buttons)
+**And** I can select zero, one, or multiple options by clicking or tapping
+**And** all selected options are visually indicated (checked checkboxes)
+
+**Given** I select multiple answers
+**When** I check and uncheck options
+**Then** each selection toggles independently
+**And** I can have any combination of selected/unselected options
+**And** my selections are saved to quiz state immediately
+
+**Given** Multiple Select scoring with partial credit
+**When** the quiz is submitted
+**Then** my score is calculated using Partial Credit Model (PCM)
+**And** the formula is: (correct selections - incorrect selections) / total correct answers
+**And** incorrect selections reduce my score (penalize guessing)
+**And** the score is clamped to minimum 0 (no negative points)
+
+**Given** a question with 3 correct answers
+**When** I select 2 correct and 1 incorrect
+**Then** my raw score is (2 - 1) / 3 = 0.33 (33% of points)
+**When** I select all 3 correct and 0 incorrect
+**Then** my score is (3 - 0) / 3 = 1.0 (100% of points)
+**When** I select 1 correct and 2 incorrect
+**Then** my raw score is (1 - 2) / 3 = -0.33, clamped to 0 (0% of points)
+
+**Technical Details:**
+
+Files to create:
+- `src/app/components/quiz/questions/MultipleSelectQuestion.tsx`
+
+Files to modify:
+- `src/app/components/quiz/QuestionDisplay.tsx` (add case for 'multiple-select')
+- `src/lib/scoring.ts` (add PCM scoring logic)
+
+MultipleSelectQuestion component:
+```tsx
+<fieldset>
+  <legend className="text-lg font-semibold mb-4">
+    <ReactMarkdown>{question.text}</ReactMarkdown>
+    <span className="text-sm text-gray-600 block mt-1">Select all that apply</span>
+  </legend>
+  <div className="space-y-2">
+    {question.options.map((option, index) => (
+      <Checkbox
+        key={index}
+        checked={selectedAnswers.includes(option)}
+        onCheckedChange={() => handleToggle(option)}
+        label={option}
+      />
+    ))}
+  </div>
+</fieldset>
+```
+
+PCM scoring in src/lib/scoring.ts:
+```typescript
+case 'multiple-select':
+  const correctSet = new Set(question.correctAnswer as string[])
+  const userSet = new Set(userAnswer as string[])
+  
+  const correctSelections = [...userSet].filter(a => correctSet.has(a)).length
+  const incorrectSelections = [...userSet].filter(a => !correctSet.has(a)).length
+  
+  const rawScore = (correctSelections - incorrectSelections) / correctSet.size
+  const pointsEarned = Math.max(0, Math.round(rawScore * question.points * 100) / 100)
+  
+  return {
+    pointsEarned,
+    isCorrect: correctSelections === correctSet.size && incorrectSelections === 0
+  }
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- MultipleSelectQuestion renders all options as checkboxes
+- Multiple options can be selected simultaneously
+- PCM scoring formula calculates correctly
+- Edge cases: 0 selections, all correct, all incorrect, mixed
+
+E2E tests:
+- Check multiple options → all remain checked
+- Uncheck option → checkbox unchecks
+- Submit quiz → partial credit awarded correctly
+
+Accessibility tests:
+- Checkboxes have proper labels
+- "Select all that apply" instruction announced by screen reader
+- Keyboard navigation (Tab to each checkbox, Space to toggle)
+- Focus indicators visible on all checkboxes
+
+**Dependencies:**
+- Story 12.1 (needs Question type with 'multiple-select' and correctAnswer as string[])
+- Story 12.3 (needs useQuizStore)
+- Story 12.5 (extends QuestionDisplay)
+- Story 12.6 (extends scoring.ts)
+
+**Complexity:** Medium (3-4 hours)
+
+**Design Review Focus:**
+- "Select all that apply" instruction prominence
+- Checkbox layout (stacked vertically for clarity)
+- Checkbox styling consistent with overall quiz theme
+- Touch targets ≥44px on mobile
+- Visual distinction from radio buttons (Multiple Choice)
+
+---
+
+### Story 14.3: Display Fill-in-Blank Questions
+
+As a learner,
+I want to answer Fill-in-Blank questions by typing text,
+So that I can demonstrate recall without multiple choice hints.
+
+**Acceptance Criteria:**
+
+**Given** a quiz with Fill-in-Blank questions
+**When** I view a Fill-in-Blank question
+**Then** I see the question text clearly displayed
+**And** I see a text input field with a placeholder (e.g., "Type your answer here")
+**And** the input field is appropriately sized (not too small)
+**And** I can type my answer freely
+
+**Given** I type an answer
+**When** I enter text into the input field
+**Then** my input is saved to quiz state immediately (on blur or debounced)
+**And** my answer persists if I navigate away and return
+**And** there is no character limit (or a generous limit like 500 characters)
+
+**Given** Fill-in-Blank scoring
+**When** the quiz is submitted
+**Then** my answer is compared to the correct answer
+**And** the comparison is case-insensitive by default (e.g., "React" = "react" = "REACT")
+**And** leading/trailing whitespace is trimmed before comparison
+**And** the score is all-or-nothing (0% or 100%)
+
+**Given** case-sensitive questions (optional enhancement)
+**When** the question is configured as case-sensitive
+**Then** "React" ≠ "react" (exact match required)
+**And** this is clearly indicated to the learner (e.g., "Case-sensitive answer")
+
+**Technical Details:**
+
+Files to create:
+- `src/app/components/quiz/questions/FillInBlankQuestion.tsx`
+
+Files to modify:
+- `src/app/components/quiz/QuestionDisplay.tsx` (add case for 'fill-in-blank')
+- `src/lib/scoring.ts` (add fill-in-blank scoring logic)
+
+FillInBlankQuestion component:
+```tsx
+<fieldset>
+  <legend className="text-lg font-semibold mb-4">
+    <ReactMarkdown>{question.text}</ReactMarkdown>
+  </legend>
+  <Input
+    type="text"
+    value={userAnswer || ''}
+    onChange={(e) => handleAnswerChange(e.target.value)}
+    onBlur={() => /* trigger save */}
+    placeholder="Type your answer here"
+    className="w-full max-w-md"
+    maxLength={500}
+  />
+</fieldset>
+```
+
+Scoring in src/lib/scoring.ts:
+```typescript
+case 'fill-in-blank':
+  const userAnswerNormalized = (userAnswer as string).trim().toLowerCase()
+  const correctAnswerNormalized = (question.correctAnswer as string).trim().toLowerCase()
+  
+  const isCorrect = userAnswerNormalized === correctAnswerNormalized
+  return { pointsEarned: isCorrect ? question.points : 0, isCorrect }
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- FillInBlankQuestion renders text input
+- Typing updates state
+- Scoring compares case-insensitively with trimming
+- Edge cases: empty string, whitespace only, exact match
+
+E2E tests:
+- Type answer → input updates
+- Navigate away and back → answer persists
+- Submit quiz → fill-in-blank scored correctly
+- Case variations ("React" vs "react") treated as correct
+
+Accessibility tests:
+- Input field has associated label (fieldset/legend)
+- Keyboard focus visible on input (4.5:1 contrast outline)
+- Screen reader announces question and input purpose
+- Placeholder text not relied upon for instructions
+
+**Dependencies:**
+- Story 12.1 (needs Question type with 'fill-in-blank')
+- Story 12.3 (needs useQuizStore)
+- Story 12.5 (extends QuestionDisplay)
+- Story 12.6 (extends scoring.ts)
+
+**Complexity:** Small (2-3 hours)
+
+**Design Review Focus:**
+- Input field sizing (not too narrow, not too wide)
+- Placeholder text clarity
+- Input border and focus states
+- Responsive width on mobile vs. desktop
+
+---
+
+### Story 14.4: Support Rich Text Formatting in Questions
+
+As a learner,
+I want to see questions with code blocks, lists, and emphasis,
+So that technical content is clearly formatted and readable.
+
+**Acceptance Criteria:**
+
+**Given** a question with Markdown formatting
+**When** I view the question
+**Then** code blocks are displayed with monospace font and background highlighting
+**And** inline code is distinguished from regular text (e.g., `variable`)
+**And** ordered and unordered lists display with proper indentation
+**And** bold and italic text render correctly
+**And** all formatting is responsive and readable on mobile
+
+**Given** a question with a code block
+**When** rendering the code
+**Then** it uses syntax highlighting (if language specified, e.g., ```javascript)
+**And** the code block scrolls horizontally if too wide (no line wrapping)
+**And** the background color contrasts well with code text (≥4.5:1)
+
+**Given** long question text
+**When** rendering on mobile (375px)
+**Then** text wraps naturally without horizontal scroll
+**And** code blocks scroll independently
+**And** all content remains readable
+
+**Technical Details:**
+
+Files to modify:
+- All question components (MultipleChoiceQuestion, TrueFalseQuestion, etc.)
+- Install and configure `react-markdown` with `remark-gfm` for GitHub Flavored Markdown
+
+Package installation:
+```bash
+npm install react-markdown remark-gfm
+```
+
+Question text rendering (all question components):
+```tsx
+<ReactMarkdown remarkPlugins={[remarkGfm]}>
+  {question.text}
+</ReactMarkdown>
+```
+
+Custom Markdown styles (in Tailwind or theme.css):
+```css
+.markdown-content code {
+  background-color: #f5f5f5;
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+}
+
+.markdown-content pre {
+  background-color: #f5f5f5;
+  padding: 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin-left: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- react-markdown renders code blocks correctly
+- Inline code styling applied
+- Lists render with indentation
+
+E2E tests:
+- View question with code block → syntax highlighting visible
+- View question with list → proper indentation
+- Mobile view → text wraps, code scrolls
+
+Accessibility tests:
+- Code block contrast ≥4.5:1
+- Screen reader announces lists correctly (<ul>/<ol> semantic HTML)
+- Emphasis (bold/italic) conveyed via screen reader
+
+**Dependencies:**
+- Story 12.5 (modifies MultipleChoiceQuestion)
+- Story 14.1 (modifies TrueFalseQuestion)
+- Story 14.2 (modifies MultipleSelectQuestion)
+- Story 14.3 (modifies FillInBlankQuestion)
+
+**Complexity:** Small (2-3 hours)
+
+**Design Review Focus:**
+- Code block background color and contrast
+- Inline code styling (distinct but not distracting)
+- List indentation and spacing
+- Mobile responsiveness (text wrapping, code scrolling)
+- Syntax highlighting readability
+
+---
+
+
+## Epic 15: Timed Quizzes with Enhanced Feedback
+
+**Goal:** Learners can take timed quizzes with countdown timers, configurable accommodations, warnings, and receive immediate explanatory feedback on each answer.
+
+**Technical Focus:** This epic implements the useQuizTimer hook with Date.now() accuracy pattern, immediate feedback components, and performance summary generation.
+
+### Story 15.1: Display Countdown Timer with Accuracy
+
+As a learner,
+I want to see an accurate countdown timer during timed quizzes,
+So that I know exactly how much time remains.
+
+**Acceptance Criteria:**
+
+**Given** a quiz with a time limit configured
+**When** I start the quiz
+**Then** I see a countdown timer in the quiz header
+**And** the timer displays time in MM:SS format (e.g., "14:32")
+**And** the timer counts down accurately without drift
+**And** the timer updates every second
+
+**Given** the timer is running
+**When** I switch browser tabs or minimize the window
+**Then** the timer continues counting down accurately
+**And** when I return to the tab, the time reflects actual elapsed time (no drift from `setInterval` throttling)
+
+**Given** the timer reaches specific thresholds
+**When** 25% time remains (e.g., 3:45 of 15:00)
+**Then** the timer text color changes to amber (warning state)
+**When** 10% time remains (e.g., 1:30 of 15:00)
+**Then** the timer text color changes to red (urgent state)
+
+**Given** the timer reaches zero
+**When** time expires
+**Then** the quiz auto-submits immediately
+**And** I see a message: "Time's up! Your quiz has been submitted."
+**And** my current answers are scored (unanswered questions = 0 points)
+
+**Technical Details:**
+
+Files to create:
+- `src/hooks/useQuizTimer.ts` (Date.now() accuracy pattern)
+- `src/app/components/quiz/QuizTimer.tsx` (timer display component)
+
+Files to modify:
+- `src/app/components/quiz/QuizHeader.tsx` (integrate timer)
+- `src/stores/useQuizStore.ts` (add timer state management)
+
+useQuizTimer hook implementation:
+```typescript
+export function useQuizTimer(initialSeconds: number, onExpire: () => void) {
+  const [timeRemaining, setTimeRemaining] = useState(initialSeconds)
+  
+  useEffect(() => {
+    const startTime = Date.now()
+    const endTime = startTime + (initialSeconds * 1000)
+    
+    const interval = setInterval(() => {
+      const now = Date.now()
+      const remaining = Math.max(0, Math.floor((endTime - now) / 1000))
+      setTimeRemaining(remaining)
+      
+      if (remaining === 0) {
+        clearInterval(interval)
+        onExpire()
+      }
+    }, 1000)
+    
+    // Handle tab visibility changes
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        const now = Date.now()
+        const remaining = Math.max(0, Math.floor((endTime - now) / 1000))
+        setTimeRemaining(remaining)
+      }
+    }
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [initialSeconds, onExpire])
+  
+  return timeRemaining
+}
+```
+
+QuizTimer component:
+```tsx
+<div className={cn(
+  "font-mono text-lg font-semibold",
+  timeRemaining < totalTime * 0.1 && "text-red-600",
+  timeRemaining < totalTime * 0.25 && timeRemaining >= totalTime * 0.1 && "text-amber-600"
+)}>
+  {formatTime(timeRemaining)}
+</div>
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- useQuizTimer counts down accurately
+- formatTime converts seconds to MM:SS correctly
+- onExpire callback fires when time reaches 0
+
+E2E tests:
+- Start timed quiz → timer counts down
+- Switch tabs for 10 seconds → return → time accurate (no drift)
+- Timer reaches 0 → quiz auto-submits
+
+**Dependencies:**
+- Story 12.3 (needs useQuizStore to track timer state)
+- Story 12.4 (needs QuizHeader to display timer)
+
+**Complexity:** Medium (3-4 hours)
+
+**Design Review Focus:**
+- Timer visibility and placement (top-right of header)
+- Color transitions (green → amber → red)
+- Font size and readability
+- MM:SS format clarity
+
+---
+
+### Story 15.2: Configure Timer Duration and Accommodations
+
+As a learner,
+I want to configure the quiz timer duration before starting,
+So that I can adjust time limits to my needs (including accessibility accommodations).
+
+**Acceptance Criteria:**
+
+**Given** a quiz with a configurable time limit
+**When** I view the quiz start screen
+**Then** I see the default time limit (e.g., "15 minutes")
+**And** I see an "Accessibility Accommodations" link or button
+**And** I can click it to open a settings modal
+
+**Given** the accessibility accommodations modal
+**When** I open it
+**Then** I see options to extend time:
+  - Standard time (e.g., 15 minutes)
+  - 150% extended time (e.g., 22 minutes 30 seconds)
+  - 200% extended time (e.g., 30 minutes)
+  - Untimed (no time limit)
+**And** I can select one option via radio buttons
+**And** I see an explanation: "Extended time is available for learners who need additional time due to disabilities or other needs."
+
+**Given** I select an accommodation
+**When** I choose "150% extended time" and start the quiz
+**Then** the timer is initialized to 150% of the default time
+**And** the timer header indicates the accommodation (e.g., "22:30 (Extended Time)")
+
+**Given** I select "Untimed"
+**When** I start the quiz
+**Then** no timer is displayed
+**And** I can take as long as needed to complete the quiz
+
+**Given** I have set an accommodation preference
+**When** I retake the quiz later
+**Then** my preference persists (saved to Settings or localStorage)
+**And** I don't need to re-configure on every attempt
+
+**Technical Details:**
+
+Files to create:
+- `src/app/components/quiz/TimerAccommodationsModal.tsx`
+
+Files to modify:
+- `src/app/components/quiz/QuizStartScreen.tsx` (add accommodations button)
+- `src/stores/useQuizStore.ts` (apply accommodation multiplier)
+- `src/stores/useSettingsStore.ts` (persist timer preferences) (if not created yet, defer to Story 18.6)
+
+TimerAccommodationsModal:
+```tsx
+<Dialog>
+  <DialogTrigger asChild>
+    <Button variant="link">Accessibility Accommodations</Button>
+  </DialogTrigger>
+  <DialogContent>
+    <DialogTitle>Timer Accommodations</DialogTitle>
+    <RadioGroup value={accommodation} onValueChange={setAccommodation}>
+      <RadioGroupItem value="1.0" label="Standard time (15 minutes)" />
+      <RadioGroupItem value="1.5" label="150% extended time (22 minutes 30 seconds)" />
+      <RadioGroupItem value="2.0" label="200% extended time (30 minutes)" />
+      <RadioGroupItem value="untimed" label="Untimed (no time limit)" />
+    </RadioGroup>
+    <p className="text-sm text-gray-600">
+      Extended time is available for learners who need additional time.
+    </p>
+  </DialogContent>
+</Dialog>
+```
+
+Apply accommodation in useQuizStore.startQuiz:
+```typescript
+const accommodation = useSettingsStore.getState().timerAccommodation || 1.0
+const timeLimit = quiz.timeLimit
+const adjustedTime = accommodation === 'untimed' ? null : timeLimit * accommodation
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- Accommodation modal renders options correctly
+- Time calculation applies multiplier accurately
+- Preference persists to settings
+
+E2E tests:
+- Click "Accessibility Accommodations" → modal opens
+- Select "150%" → start quiz → timer shows extended time
+- Select "Untimed" → start quiz → no timer displayed
+- Retake quiz → previous accommodation pre-selected
+
+Accessibility tests:
+- Modal keyboard accessible (Esc to close, Tab to navigate)
+- Screen reader announces all accommodation options
+- Focus traps in modal while open
+
+**Dependencies:**
+- Story 12.4 (needs QuizStartScreen)
+- Story 15.1 (needs timer to apply accommodations to)
+
+**Complexity:** Medium (3-4 hours)
+
+**Design Review Focus:**
+- "Accessibility Accommodations" button placement and discoverability
+- Modal layout and radio button styling
+- Explanation text clarity and tone (supportive, not clinical)
+- Extended time indicator in timer header
+
+---
+
+### Story 15.3: Display Timer Warnings at Key Thresholds
+
+As a learner,
+I want to receive warnings when time is running low,
+So that I can manage my pacing and avoid running out of time unexpectedly.
+
+**Acceptance Criteria:**
+
+**Given** a timed quiz is in progress
+**When** the timer reaches 75% of original time remaining (e.g., 11:15 of 15:00)
+**Then** a subtle toast notification appears: "11 minutes remaining"
+**And** the toast auto-dismisses after 3 seconds
+**And** the warning does NOT disrupt my quiz-taking flow
+
+**When** the timer reaches 10% of original time remaining (e.g., 1:30 of 15:00)
+**Then** a more prominent toast appears: "Only 1 minute 30 seconds remaining!"
+**And** the toast auto-dismisses after 5 seconds
+
+**When** the timer reaches 1 minute remaining
+**Then** a persistent warning appears: "1 minute remaining"
+**And** this warning remains visible until time expires
+
+**Given** I am using a screen reader
+**When** each warning threshold is reached
+**Then** the warning is announced via ARIA live region (`aria-live="polite"` for 75%, `aria-live="assertive"` for 10% and 1 min)
+**And** the announcement does NOT interrupt my current question reading
+
+**Given** I have configured timer accommodations
+**When** warnings are triggered
+**Then** they are based on the adjusted time, not the original time
+**And** 75% of 22:30 (extended time) = 16:52, not based on original 15:00
+
+**Technical Details:**
+
+Files to create:
+- `src/app/components/quiz/TimerWarnings.tsx` (warning display logic)
+
+Files to modify:
+- `src/hooks/useQuizTimer.ts` (emit warning events at thresholds)
+- `src/app/pages/Quiz.tsx` (integrate warnings)
+
+useQuizTimer with warnings:
+```typescript
+const [warnings, setWarnings] = useState({
+  seventyFivePercent: false,
+  tenPercent: false,
+  oneMinute: false
+})
+
+useEffect(() => {
+  // ... existing timer logic
+  
+  // Check thresholds
+  const percentRemaining = remaining / initialSeconds
+  
+  if (percentRemaining <= 0.75 && !warnings.seventyFivePercent) {
+    setWarnings(prev => ({ ...prev, seventyFivePercent: true }))
+    onWarning?.('75%', remaining)
+  }
+  
+  if (percentRemaining <= 0.10 && !warnings.tenPercent) {
+    setWarnings(prev => ({ ...prev, tenPercent: true }))
+    onWarning?.('10%', remaining)
+  }
+  
+  if (remaining === 60 && !warnings.oneMinute) {
+    setWarnings(prev => ({ ...prev, oneMinute: true }))
+    onWarning?.('1min', remaining)
+  }
+}, [remaining])
+```
+
+TimerWarnings component:
+```tsx
+<div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+  {warning75 && `${formatTime(timeRemaining)} remaining`}
+</div>
+<div role="alert" aria-live="assertive" aria-atomic="true" className="sr-only">
+  {warning10 && `Only ${formatTime(timeRemaining)} remaining!`}
+</div>
+```
+
+Toast notifications using Sonner:
+```tsx
+toast.info(formatTime(timeRemaining) + ' remaining', { duration: 3000 })  // 75%
+toast.warning('Only ' + formatTime(timeRemaining) + ' remaining!', { duration: 5000 })  // 10%
+toast.error(formatTime(timeRemaining) + ' remaining', { duration: Infinity })  // 1 min (persistent)
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- Warning thresholds trigger at correct times
+- ARIA live regions update correctly
+- Warnings triggered only once per threshold
+
+E2E tests:
+- Start quiz → wait for 75% threshold → toast appears
+- Continue → 10% threshold → different toast appears
+- Continue → 1 min → persistent warning appears
+- Screen reader test → warnings announced
+
+Accessibility tests:
+- ARIA live regions have correct politeness levels
+- Screen reader announces at thresholds without interrupting question
+- Warnings visible to sighted users (toast) and announced to screen reader users
+
+**Dependencies:**
+- Story 15.1 (needs useQuizTimer)
+- Story 15.2 (warnings based on adjusted time)
+
+**Complexity:** Medium (3-4 hours)
+
+**Design Review Focus:**
+- Toast notification styling (subtle for 75%, prominent for 10%, urgent for 1 min)
+- Toast auto-dismiss timing (3s, 5s, persistent)
+- ARIA live region announcements (not disruptive)
+
+---
+
+### Story 15.4: Provide Immediate Explanatory Feedback per Question
+
+As a learner,
+I want to see immediate feedback after answering each question,
+So that I can learn from my mistakes right away.
+
+**Acceptance Criteria:**
+
+**Given** I answer a question correctly
+**When** I select the correct answer
+**Then** I see a green checkmark icon with "Correct!" message
+**And** I see the explanation for why this answer is correct
+**And** the explanation helps reinforce my understanding
+
+**Given** I answer a question incorrectly
+**When** I select an incorrect answer
+**Then** I see an orange "Not quite" icon (not a red X - non-judgmental)
+**And** I see an explanation of why my answer is incorrect
+**And** I see an explanation of why the correct answer is right
+**And** the correct answer is highlighted or indicated
+
+**Given** I receive partial credit (Multiple Select)
+**When** I submit a partially correct answer
+**Then** I see how many I got correct (e.g., "2 of 3 correct")
+**And** I see which selections were correct and which were incorrect
+**And** I see an explanation for the overall question
+
+**Given** feedback is displayed
+**When** viewing the feedback component
+**Then** it appears immediately after I answer (no loading delay)
+**And** it does NOT block me from continuing to the next question
+**And** I can dismiss it by clicking "Next Question" or navigating away
+
+**Technical Details:**
+
+Files to create:
+- `src/app/components/quiz/AnswerFeedback.tsx`
+
+Files to modify:
+- `src/app/pages/Quiz.tsx` (display feedback after answer submission)
+- `src/stores/useQuizStore.ts` (calculate feedback data)
+
+AnswerFeedback component:
+```tsx
+<Card className={cn(
+  "mt-4 p-4 border-l-4",
+  isCorrect ? "border-l-green-500 bg-green-50" : "border-l-orange-500 bg-orange-50"
+)}>
+  <div className="flex items-start gap-3">
+    {isCorrect ? (
+      <CheckCircle className="h-6 w-6 text-green-600" />
+    ) : (
+      <AlertCircle className="h-6 w-6 text-orange-600" />
+    )}
+    <div className="flex-1">
+      <h4 className="font-semibold text-lg">
+        {isCorrect ? 'Correct!' : 'Not quite'}
+      </h4>
+      <p className="text-sm text-gray-700 mt-2">
+        <ReactMarkdown>{explanation}</ReactMarkdown>
+      </p>
+      {!isCorrect && (
+        <p className="text-sm text-gray-700 mt-2">
+          <strong>Correct answer:</strong> {correctAnswer}
+        </p>
+      )}
+      {pointsEarned < pointsPossible && (
+        <p className="text-sm text-gray-600 mt-2">
+          You earned {pointsEarned} of {pointsPossible} points.
+        </p>
+      )}
+    </div>
+  </div>
+</Card>
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- AnswerFeedback renders correct/incorrect states
+- Explanation text displays from question data
+- Partial credit points displayed correctly
+
+E2E tests:
+- Answer correctly → green feedback with explanation
+- Answer incorrectly → orange feedback with correct answer
+- Answer partially correct (MS) → points earned shown
+
+Accessibility tests:
+- Feedback announced via ARIA live region
+- Color not sole indicator (icon + text)
+- Keyboard can dismiss or navigate to next question
+
+**Dependencies:**
+- Story 12.5 (needs question answering flow)
+- Story 12.6 (needs scoring for feedback data)
+- Story 14.2 (needs partial credit for MS questions)
+
+**Complexity:** Medium (3-4 hours)
+
+**Design Review Focus:**
+- Feedback card styling (green for correct, orange for incorrect)
+- Border and background color contrast
+- Icon choice (checkmark, alert circle)
+- Explanation text readability
+- Non-judgmental tone ("Not quite" vs "Wrong" or "Incorrect")
+
+---
+
+### Story 15.5: Display Performance Summary After Quiz
+
+As a learner,
+I want to see a detailed performance summary after completing a quiz,
+So that I understand my strengths and areas for improvement.
+
+**Acceptance Criteria:**
+
+**Given** I complete a quiz
+**When** I view the results screen
+**Then** I see my overall score prominently (percentage and points)
+**And** I see a breakdown of questions by correctness: "10 correct, 2 incorrect, 0 skipped"
+**And** I see my strongest topic areas highlighted (e.g., "Arrays & Loops: 100%")
+**And** I see growth opportunity topics highlighted (e.g., "Functions: 50%")
+
+**Given** the performance summary identifies topics
+**When** questions are tagged with topics (e.g., "arrays", "functions", "objects")
+**Then** the summary groups my performance by topic
+**And** shows percentage correct per topic
+**And** ranks topics from strongest to weakest
+
+**Given** I want to understand my performance
+**When** viewing the summary
+**Then** I see an encouraging message based on my score:
+  - ≥90%: "Excellent work! You've mastered this material."
+  - 70-89%: "Great job! You're on the right track."
+  - 50-69%: "Good effort! Review the growth areas below."
+  - <50%: "Keep practicing! Focus on the topics below."
+
+**Given** the summary displays growth areas
+**When** I see "Growth Opportunities"
+**Then** it lists 1-3 specific topics where I scored <70%
+**And** it suggests actions: "Review questions 3, 7, 11 on Functions"
+
+**Technical Details:**
+
+Files to create:
+- `src/app/components/quiz/PerformanceInsights.tsx`
+
+Files to modify:
+- `src/app/pages/QuizResults.tsx` (integrate insights)
+- `src/lib/analytics.ts` (add topic analysis function)
+
+PerformanceInsights component:
+```tsx
+<div className="space-y-6">
+  <div>
+    <h3 className="text-lg font-semibold text-green-700">Your Strengths</h3>
+    <ul className="mt-2 space-y-1">
+      {strengths.map(topic => (
+        <li key={topic.name} className="flex items-center gap-2">
+          <CheckCircle className="h-5 w-5 text-green-600" />
+          <span>{topic.name}: {topic.percentage}%</span>
+        </li>
+      ))}
+    </ul>
+  </div>
+  
+  {growthAreas.length > 0 && (
+    <div>
+      <h3 className="text-lg font-semibold text-orange-700">Growth Opportunities</h3>
+      <ul className="mt-2 space-y-2">
+        {growthAreas.map(topic => (
+          <li key={topic.name}>
+            <span className="font-medium">{topic.name}: {topic.percentage}%</span>
+            <p className="text-sm text-gray-600">Review questions {topic.questionNumbers.join(', ')}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )}
+</div>
+```
+
+Topic analysis (src/lib/analytics.ts):
+```typescript
+export function analyzeTopicPerformance(
+  questions: Question[],
+  answers: Answer[]
+): { strengths: Topic[], growthAreas: Topic[] } {
+  // Group questions by topic (assume questions have a 'topic' or 'tags' property)
+  const topicScores = new Map<string, { correct: number, total: number, questionNumbers: number[] }>()
+  
+  questions.forEach((q, index) => {
+    const topic = q.topic || 'General'
+    const answer = answers.find(a => a.questionId === q.id)
+    const isCorrect = answer?.isCorrect || false
+    
+    if (!topicScores.has(topic)) {
+      topicScores.set(topic, { correct: 0, total: 0, questionNumbers: [] })
+    }
+    
+    const score = topicScores.get(topic)!
+    score.total++
+    if (isCorrect) score.correct++
+    score.questionNumbers.push(index + 1)
+  })
+  
+  // Calculate percentages and categorize
+  const topics = Array.from(topicScores.entries()).map(([name, score]) => ({
+    name,
+    percentage: Math.round((score.correct / score.total) * 100),
+    questionNumbers: score.questionNumbers
+  }))
+  
+  const strengths = topics.filter(t => t.percentage >= 70).sort((a, b) => b.percentage - a.percentage)
+  const growthAreas = topics.filter(t => t.percentage < 70).sort((a, b) => a.percentage - b.percentage)
+  
+  return { strengths, growthAreas }
+}
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- analyzeTopicPerformance groups questions correctly
+- Strengths and growth areas categorized correctly
+- Encouraging messages based on score ranges
+
+E2E tests:
+- Complete quiz with mixed performance → see strengths and growth areas
+- Complete quiz with perfect score → see all strengths, no growth areas
+- Complete quiz with low score → see growth areas with question numbers
+
+Accessibility tests:
+- Headings have proper hierarchy (h3 for sections)
+- List semantics for topics
+- Color not sole indicator (icons + text)
+
+**Dependencies:**
+- Story 12.6 (needs QuizResults page)
+- Story 15.4 (needs per-question correctness data)
+
+**Complexity:** Medium (4-5 hours)
+
+**Design Review Focus:**
+- Section headings (Strengths vs Growth Opportunities)
+- Encouraging message tone and placement
+- Topic list styling and icons
+- Question number references (clickable to review?)
+
+---
+
+### Story 15.6: Track Time-to-Completion for Each Attempt
+
+As a learner,
+I want to see how long I spent on each quiz attempt,
+So that I can understand my pacing and efficiency improvements.
+
+**Acceptance Criteria:**
+
+**Given** I start a quiz
+**When** the quiz initializes
+**Then** the start time is recorded (ISO 8601 timestamp)
+
+**Given** I complete a quiz
+**When** I submit the quiz
+**Then** the completion time is recorded
+**And** the time spent is calculated as (completion time - start time)
+**And** the time spent is stored in the QuizAttempt record in seconds
+
+**Given** I view the quiz results screen
+**When** the results load
+**Then** I see my time-to-completion displayed in a human-readable format (e.g., "8m 32s" or "1h 15m 45s")
+**And** the time display is prominent but not overwhelming
+
+**Given** I have multiple attempts on the same quiz
+**When** I view my attempt history
+**Then** I see the time spent for each attempt
+**And** I can compare my speed across attempts (e.g., "Previous: 10m 15s, Current: 8m 32s")
+
+**Given** I paused the quiz or switched tabs
+**When** calculating time-to-completion
+**Then** only active time is counted (based on timer state if timed)
+**Or** total elapsed time is counted if untimed (including pauses)
+
+**Technical Details:**
+
+Files to modify:
+- `src/stores/useQuizStore.ts` (track start/completion times)
+- `src/app/components/quiz/ScoreSummary.tsx` (display time)
+- `src/types/quiz.ts` (ensure QuizAttempt has startedAt and timeSpent)
+
+Time tracking in useQuizStore:
+```typescript
+startQuiz: async (quizId) => {
+  // ... existing logic
+  const progress: QuizProgress = {
+    quizId,
+    currentQuestionIndex: 0,
+    answers: [],
+    startTime: new Date().toISOString(),  // Record start
+    timeRemaining: quiz.timeLimit ? quiz.timeLimit * 60 : undefined,
+    isPaused: false
+  }
+  set({ currentProgress: progress })
+},
+
+submitQuiz: async () => {
+  const { currentProgress } = get()
+  const timeSpent = Math.floor(
+    (Date.now() - new Date(currentProgress!.startTime).getTime()) / 1000
+  )
+  
+  const attempt: QuizAttempt = {
+    // ... existing fields
+    timeSpent,
+    startedAt: currentProgress!.startTime,
+    completedAt: new Date().toISOString()
+  }
+  // ... persist to Dexie
+}
+```
+
+Time display formatting:
+```typescript
+function formatDuration(seconds: number): string {
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  const secs = seconds % 60
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${secs}s`
+  } else if (minutes > 0) {
+    return `${minutes}m ${secs}s`
+  } else {
+    return `${secs}s`
+  }
+}
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- Time calculation accuracy (start to completion)
+- formatDuration handles various time ranges correctly
+
+E2E tests:
+- Complete quiz → see time-to-completion on results
+- Wait 2 minutes during quiz → time accurately reflects delay
+
+**Dependencies:**
+- Story 12.3 (needs useQuizStore)
+- Story 12.6 (needs QuizResults page)
+
+**Complexity:** Small (2-3 hours)
+
+**Design Review Focus:**
+- Time display formatting and placement
+- Comparison to previous attempts (if applicable)
+- Typography for time value (consider monospace for consistency)
+
+---
+
+## Epic 16: Review Performance and Track Improvement
+
+**Goal:** Learners can review quiz results, see detailed performance summaries, track score improvement across attempts, and visualize learning trajectories.
+
+**Technical Focus:** This epic implements attempt history retrieval, score improvement calculations, normalized gain (Hake's formula), and trajectory visualization.
+
+### Story 16.1: Review All Questions and Answers After Completion
+
+As a learner,
+I want to review all quiz questions with correct answers after completion,
+So that I can learn from my mistakes and understand the material better.
+
+**Acceptance Criteria:**
+
+**Given** I complete a quiz
+**When** I click "Review Answers" on the results screen
+**Then** I navigate to a review mode showing all questions sequentially
+**And** each question displays my answer and the correct answer
+**And** I see whether I got each question right or wrong (color-coded)
+
+**Given** I am in review mode
+**When** viewing a question
+**Then** I see the full question text and all answer options
+**And** my selected answer is highlighted in blue
+**And** the correct answer is highlighted in green (if I was incorrect)
+**And** I see the explanation for the correct answer
+
+**Given** I want to navigate through reviewed questions
+**When** in review mode
+**Then** I can use "Previous" and "Next" buttons to navigate
+**And** I can jump to any question via the question grid
+**And** the grid shows correct (green checkmark) and incorrect (orange dot) indicators
+
+**Given** I finish reviewing all questions
+**When** I reach the end
+**Then** I see a "Back to Results" button
+**And** clicking it returns me to the results summary page
+
+**Technical Details:**
+
+Files to create:
+- `src/app/pages/QuizReview.tsx` (review mode page)
+- `src/app/components/quiz/QuizReview.tsx` (reviewed question display)
+
+Files to modify:
+- `src/app/routes.tsx` (add review route)
+- `src/app/pages/QuizResults.tsx` (add "Review Answers" button)
+
+Review route:
+```typescript
+{
+  path: '/courses/:courseId/lessons/:lessonId/quiz/review/:attemptId',
+  element: <QuizReview />
+}
+```
+
+QuizReview component structure:
+```tsx
+<div className="space-y-6">
+  <QuizHeader quiz={quiz} currentIndex={currentIndex} showTimer={false} />
+  
+  <Card>
+    <QuestionDisplay question={currentQuestion} value={userAnswer} readOnly />
+    
+    <div className="mt-4 space-y-2">
+      <div className={cn(
+        "p-3 rounded-lg",
+        isCorrect ? "bg-green-100" : "bg-orange-100"
+      )}>
+        <strong>Your answer:</strong> {userAnswer}
+        {!isCorrect && (
+          <div className="mt-2">
+            <strong>Correct answer:</strong> {correctAnswer}
+          </div>
+        )}
+      </div>
+      
+      <div className="p-3 bg-gray-50 rounded-lg">
+        <strong>Explanation:</strong>
+        <ReactMarkdown>{currentQuestion.explanation}</ReactMarkdown>
+      </div>
+    </div>
+  </Card>
+  
+  <QuizActions onPrevious={handlePrevious} onNext={handleNext} />
+</div>
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- QuizReview loads attempt data correctly
+- Correct/incorrect highlighting applied correctly
+
+E2E tests:
+- Click "Review Answers" → navigate to review mode
+- Navigate through questions → see answers and explanations
+- Click "Back to Results" → return to results page
+
+Accessibility tests:
+- Review mode keyboard navigable
+- Color coding supplemented with icons/text
+- Screen reader announces correct/incorrect status
+
+**Dependencies:**
+- Story 12.6 (needs QuizResults page)
+- Story 15.4 (needs explanations)
+
+**Complexity:** Medium (4-5 hours)
+
+**Design Review Focus:**
+- Answer highlighting (user answer vs correct answer)
+- Explanation display clarity
+- Navigation between reviewed questions
+- Read-only question display (no interaction needed)
+
+---
+
+### Story 16.2: Display Score History Across All Attempts
+
+As a learner,
+I want to see my score history for all quiz attempts,
+So that I can track my improvement over time.
+
+**Acceptance Criteria:**
+
+**Given** I have completed a quiz multiple times
+**When** I view the quiz results screen
+**Then** I see a "View Attempt History" link or button
+**And** clicking it expands a section showing all my past attempts
+
+**Given** the attempt history is displayed
+**When** viewing the list
+**Then** I see each attempt with: attempt number, date/time, score percentage, time spent, passed/failed status
+**And** attempts are sorted by date (most recent first)
+**And** the current attempt is highlighted or marked as "Current"
+
+**Given** I want to review a past attempt
+**When** I click on any attempt in the history
+**Then** I navigate to the review mode for that specific attempt
+**And** I see the questions/answers from that attempt (not current)
+
+**Technical Details:**
+
+Files to create:
+- `src/app/components/quiz/AttemptHistory.tsx`
+
+Files to modify:
+- `src/app/pages/QuizResults.tsx` (integrate attempt history)
+- `src/stores/useQuizStore.ts` (add loadAttempts action if not present)
+
+AttemptHistory component:
+```tsx
+<Collapsible>
+  <CollapsibleTrigger asChild>
+    <Button variant="link">View Attempt History ({attempts.length} attempts)</Button>
+  </CollapsibleTrigger>
+  <CollapsibleContent>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Attempt</TableHead>
+          <TableHead>Date</TableHead>
+          <TableHead>Score</TableHead>
+          <TableHead>Time</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead></TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {attempts.map((attempt, index) => (
+          <TableRow key={attempt.id} className={attempt.id === currentAttemptId ? 'bg-blue-50' : ''}>
+            <TableCell>#{attempts.length - index}</TableCell>
+            <TableCell>{formatDate(attempt.completedAt)}</TableCell>
+            <TableCell>{attempt.percentage}%</TableCell>
+            <TableCell>{formatDuration(attempt.timeSpent)}</TableCell>
+            <TableCell>
+              {attempt.passed ? (
+                <Badge variant="success">Passed</Badge>
+              ) : (
+                <Badge variant="secondary">Not Passed</Badge>
+              )}
+            </TableCell>
+            <TableCell>
+              <Button variant="ghost" size="sm" onClick={() => reviewAttempt(attempt.id)}>
+                Review
+              </Button>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  </CollapsibleContent>
+</Collapsible>
+```
+
+useQuizStore.loadAttempts:
+```typescript
+loadAttempts: async (quizId: string) => {
+  const attempts = await db.quizAttempts
+    .where('quizId').equals(quizId)
+    .reverse()  // Most recent first
+    .sortBy('completedAt')
+  
+  set({ attempts })
+}
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- loadAttempts retrieves attempts sorted correctly
+- Attempt table renders all attempt data
+
+E2E tests:
+- Complete quiz 3 times → click "View Attempt History" → see 3 attempts
+- Click "Review" on past attempt → see that attempt's Q&A
+
+Accessibility tests:
+- Table has proper headers
+- Collapsible toggle keyboard accessible
+- Screen reader announces table structure
+
+**Dependencies:**
+- Story 12.2 (needs quizAttempts table)
+- Story 12.6 (needs QuizResults page)
+- Story 16.1 (review past attempts)
+
+**Complexity:** Medium (3-4 hours)
+
+**Design Review Focus:**
+- Table layout and responsive design
+- Collapsible expand/collapse interaction
+- Current attempt highlighting
+- Badge styling for passed/not passed
+
+---
+
+### Story 16.3: Calculate and Display Score Improvement
+
+As a learner,
+I want to see how much my score improved between attempts,
+So that I can measure my learning progress.
+
+**Acceptance Criteria:**
+
+**Given** I have taken a quiz multiple times
+**When** I view my current attempt results
+**Then** I see a comparison to my first attempt:
+  - "First attempt: 60%"
+  - "Current attempt: 85%"
+  - "Improvement: +25%"
+
+**Given** my current score is higher than my previous best
+**When** viewing the improvement
+**Then** the improvement is displayed in green with a positive indicator (+25%)
+**And** I see an encouraging message: "New personal best!"
+
+**Given** my current score is lower than my previous best
+**When** viewing the comparison
+**Then** I see my best score: "Your best: 90% (attempt #3)"
+**And** I see the current score: "Current: 75%"
+**And** there is NO negative messaging (no "You did worse" or red colors)
+**And** I see neutral encouragement: "Keep practicing to beat your best!"
+
+**Given** this is my first attempt
+**When** viewing the results
+**Then** no comparison is shown (nothing to compare against)
+**And** I see a message: "First attempt complete! Retake to track improvement."
+
+**Technical Details:**
+
+Files to modify:
+- `src/app/components/quiz/ScoreSummary.tsx` (add improvement display)
+- `src/lib/analytics.ts` (add improvement calculation function)
+
+Improvement calculation:
+```typescript
+export function calculateImprovement(attempts: QuizAttempt[]): {
+  firstScore: number | null
+  bestScore: number | null
+  currentScore: number
+  improvement: number | null
+  isNewBest: boolean
+} {
+  if (attempts.length === 0) return { firstScore: null, bestScore: null, currentScore: 0, improvement: null, isNewBest: false }
+  
+  const sortedByDate = [...attempts].sort((a, b) => 
+    new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime()
+  )
+  
+  const firstAttempt = sortedByDate[0]
+  const currentAttempt = sortedByDate[sortedByDate.length - 1]
+  const bestAttempt = attempts.reduce((best, current) => 
+    current.percentage > best.percentage ? current : best
+  )
+  
+  const improvement = currentAttempt.percentage - firstAttempt.percentage
+  const isNewBest = currentAttempt.percentage >= bestAttempt.percentage
+  
+  return {
+    firstScore: firstAttempt.percentage,
+    bestScore: bestAttempt.percentage,
+    currentScore: currentAttempt.percentage,
+    improvement,
+    isNewBest
+  }
+}
+```
+
+ScoreSummary improvement display:
+```tsx
+{attempts.length > 1 && (
+  <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+    <h4 className="font-semibold text-sm text-gray-700">Progress</h4>
+    <div className="mt-2 space-y-1 text-sm">
+      <div>First attempt: {improvement.firstScore}%</div>
+      <div>Current attempt: {improvement.currentScore}%</div>
+      <div className={improvement.improvement > 0 ? "text-green-600 font-semibold" : "text-gray-600"}>
+        {improvement.improvement > 0 && '+'}{improvement.improvement}%
+      </div>
+      {improvement.isNewBest && (
+        <div className="text-green-600 font-semibold">🎉 New personal best!</div>
+      )}
+    </div>
+  </div>
+)}
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- calculateImprovement with various attempt histories
+- Handles first attempt (no comparison)
+- Correctly identifies new personal best
+
+E2E tests:
+- First attempt → no improvement shown
+- Second attempt with improvement → see +X%
+- Third attempt as new best → see "New personal best!"
+- Attempt lower than best → see neutral message
+
+**Dependencies:**
+- Story 16.2 (needs attempt history)
+
+**Complexity:** Medium (3-4 hours)
+
+**Design Review Focus:**
+- Improvement percentage styling (green for positive, neutral for negative)
+- "New personal best" celebration (not over-the-top)
+- Layout within results summary
+- Encouraging, non-judgmental tone
+
+---
+
+### Story 16.4: Calculate Normalized Gain (Hake's Formula)
+
+As a learner,
+I want to see my normalized learning gain,
+So that I understand my learning efficiency beyond just raw score improvement.
+
+**Acceptance Criteria:**
+
+**Given** I have multiple quiz attempts
+**When** viewing my improvement metrics
+**Then** I see my normalized gain calculated using Hake's formula:
+  - Formula: (final score - initial score) / (100 - initial score)
+  - Example: (85 - 60) / (100 - 60) = 25 / 40 = 0.625 (62.5% gain)
+
+**Given** my normalized gain is calculated
+**When** displayed to the learner
+**Then** I see it as a percentage with interpretation:
+  - <0.3 (30%): "Low gain" (neutral tone)
+  - 0.3-0.7 (30-70%): "Medium gain" (positive tone)
+  - >0.7 (70%): "High gain" (very positive tone)
+
+**Given** my initial score was very high (e.g., 95%)
+**When** calculating normalized gain
+**Then** the denominator is small (100 - 95 = 5)
+**And** even small improvements result in high normalized gain (correct behavior - little room for improvement)
+
+**Given** this is my first attempt or only one attempt
+**When** viewing normalized gain
+**Then** it is not displayed (requires at least 2 attempts)
+
+**Technical Details:**
+
+Files to modify:
+- `src/lib/analytics.ts` (add normalizedGain calculation)
+- `src/app/components/quiz/ScoreSummary.tsx` (display normalized gain)
+
+Normalized gain calculation:
+```typescript
+export function calculateNormalizedGain(
+  initialScore: number,
+  finalScore: number
+): number | null {
+  if (initialScore >= 100) return null  // Already perfect, no room for improvement
+  
+  const actualGain = finalScore - initialScore
+  const possibleGain = 100 - initialScore
+  
+  return actualGain / possibleGain
+}
+
+export function interpretNormalizedGain(gain: number): {
+  level: 'low' | 'medium' | 'high'
+  message: string
+  color: string
+} {
+  if (gain < 0.3) {
+    return {
+      level: 'low',
+      message: 'You\'re making progress. Keep practicing!',
+      color: 'text-gray-700'
+    }
+  } else if (gain < 0.7) {
+    return {
+      level: 'medium',
+      message: 'Good learning progress!',
+      color: 'text-blue-700'
+    }
+  } else {
+    return {
+      level: 'high',
+      message: 'Excellent learning efficiency!',
+      color: 'text-green-700'
+    }
+  }
+}
+```
+
+Display in ScoreSummary:
+```tsx
+{normalizedGain !== null && (
+  <div className="mt-2">
+    <span className="text-sm text-gray-600">Normalized Gain: </span>
+    <span className={cn("font-semibold", interpretation.color)}>
+      {Math.round(normalizedGain * 100)}%
+    </span>
+    <p className="text-sm text-gray-600 mt-1">{interpretation.message}</p>
+  </div>
+)}
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- calculateNormalizedGain with various score pairs
+- Edge cases: initial=100, final < initial (negative gain)
+- interpretNormalizedGain categories correct
+
+E2E tests:
+- Complete quiz twice → see normalized gain displayed
+- High initial score → correct gain calculation
+
+**Dependencies:**
+- Story 16.2 (needs attempt history)
+- Story 16.3 (extends improvement calculations)
+
+**Complexity:** Small (2-3 hours)
+
+**Design Review Focus:**
+- Normalized gain percentage display
+- Interpretation message tone (educational, encouraging)
+- Tooltip explaining Hake's formula (optional)
+
+---
+
+## Epic 17: Analyze Quiz Data and Patterns
+
+**Goal:** Learners can see detailed analytics including completion rates, retake frequency, time metrics, learning patterns, item difficulty, and discrimination indices.
+
+**Technical Focus:** This epic implements psychometric calculations (P-values, discrimination indices), trajectory pattern detection, and analytics visualization.
+
+### Story 17.1: Track and Display Quiz Completion Rate
+
+As a learner,
+I want to see my quiz completion rate,
+So that I can understand how often I finish quizzes I start.
+
+**Acceptance Criteria:**
+
+**Given** I have started and completed multiple quizzes
+**When** I view the analytics or reports section
+**Then** I see my overall quiz completion rate as a percentage
+**And** the calculation is: (completed quizzes / started quizzes) * 100
+
+**Given** I have started a quiz but not completed it
+**When** that quiz is still in progress (currentProgress exists in localStorage)
+**Then** it counts as "started" but not "completed"
+
+**Given** I have completed a quiz multiple times
+**When** calculating completion rate
+**Then** each attempt counts separately (3 attempts = 3 completions)
+
+**Given** the completion rate is displayed
+**When** viewing the metric
+**Then** I see a visual indicator (progress bar or circular progress)
+**And** I see the raw numbers (e.g., "12 of 15 started quizzes completed")
+
+**Technical Details:**
+
+Files to create:
+- `src/lib/analytics.ts` (add completion rate function)
+
+Files to modify:
+- `src/app/pages/Reports.tsx` (display completion rate)
+
+Completion rate calculation:
+```typescript
+export async function calculateCompletionRate(): Promise<{
+  completionRate: number
+  completedCount: number
+  startedCount: number
+}> {
+  // Get all quizzes that have at least one attempt
+  const allAttempts = await db.quizAttempts.toArray()
+  const completedCount = allAttempts.length
+  
+  // Estimate started count: completed + in-progress (from localStorage)
+  const inProgressCount = localStorage.getItem('levelup-quiz-store') ? 1 : 0
+  const startedCount = completedCount + inProgressCount
+  
+  const completionRate = startedCount > 0 ? (completedCount / startedCount) * 100 : 0
+  
+  return { completionRate, completedCount, startedCount }
+}
+```
+
+Display in Reports page:
+```tsx
+<Card>
+  <CardHeader>
+    <CardTitle>Quiz Completion Rate</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div className="flex items-center gap-4">
+      <Progress value={completionRate} className="flex-1" />
+      <span className="text-2xl font-bold">{Math.round(completionRate)}%</span>
+    </div>
+    <p className="text-sm text-gray-600 mt-2">
+      {completedCount} of {startedCount} started quizzes completed
+    </p>
+  </CardContent>
+</Card>
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- calculateCompletionRate with various attempt counts
+- Handles zero attempts (0%)
+- In-progress quiz counted in started
+
+E2E tests:
+- Complete 3 quizzes, start 1 → completion rate 75%
+- View in Reports section → see metric displayed
+
+**Dependencies:**
+- Story 12.2 (needs quizAttempts table)
+- Story 12.3 (needs localStorage quiz state)
+
+**Complexity:** Small (2-3 hours)
+
+**Design Review Focus:**
+- Progress bar styling
+- Percentage display size and emphasis
+- Raw numbers clarity
+
+---
+
+### Story 17.2: Track Average Retake Frequency
+
+As a learner,
+I want to see how often I retake quizzes on average,
+So that I can understand my learning persistence.
+
+**Acceptance Criteria:**
+
+**Given** I have completed multiple quizzes
+**When** I view the analytics section
+**Then** I see my average retake frequency per quiz
+**And** the calculation is: total attempts / unique quizzes
+
+**Given** I completed Quiz A 3 times and Quiz B 2 times
+**When** calculating average retake frequency
+**Then** the result is (3 + 2) / 2 = 2.5 attempts per quiz
+
+**Given** the retake frequency is displayed
+**When** viewing the metric
+**Then** I see it rounded to 1 decimal place (e.g., "2.5 attempts per quiz")
+**And** I see an interpretation: "You retake quizzes 2-3 times on average for mastery."
+
+**Technical Details:**
+
+Files to modify:
+- `src/lib/analytics.ts` (add retake frequency function)
+- `src/app/pages/Reports.tsx` (display retake frequency)
+
+Retake frequency calculation:
+```typescript
+export async function calculateRetakeFrequency(): Promise<{
+  averageRetakes: number
+  totalAttempts: number
+  uniqueQuizzes: number
+}> {
+  const allAttempts = await db.quizAttempts.toArray()
+  const uniqueQuizIds = new Set(allAttempts.map(a => a.quizId))
+  
+  const totalAttempts = allAttempts.length
+  const uniqueQuizzes = uniqueQuizIds.size
+  const averageRetakes = uniqueQuizzes > 0 ? totalAttempts / uniqueQuizzes : 0
+  
+  return { averageRetakes, totalAttempts, uniqueQuizzes }
+}
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- calculateRetakeFrequency with various attempt distributions
+- Handles single quiz with multiple attempts
+- Zero attempts returns 0
+
+E2E tests:
+- Complete same quiz 3 times → retake frequency = 3.0
+- Complete 2 different quizzes → retake frequency = 1.0
+
+**Dependencies:**
+- Story 12.2 (needs quizAttempts table)
+
+**Complexity:** Small (2-3 hours)
+
+**Design Review Focus:**
+- Metric display (number + interpretation)
+- Encouraging tone for retakes (persistence is good!)
+
+---
+
+### Story 17.3: Calculate Item Difficulty (P-Values)
+
+As a learner,
+I want to see which quiz questions are easiest and hardest based on my performance,
+So that I can understand which concepts need more practice.
+
+**Acceptance Criteria:**
+
+**Given** I have completed a quiz multiple times
+**When** viewing the quiz analytics
+**Then** I see a list of questions ranked by difficulty (easiest to hardest)
+**And** each question shows its P-value (proportion of attempts where I answered correctly)
+
+**Given** a question's P-value is calculated
+**When** I answered it correctly 3 out of 4 times
+**Then** the P-value is 0.75 (75% - relatively easy for me)
+
+**Given** the questions are categorized by difficulty
+**When** viewing the list
+**Then** I see difficulty labels:
+  - P > 0.8: "Easy"
+  - 0.5 ≤ P ≤ 0.8: "Medium"
+  - P < 0.5: "Difficult"
+
+**Given** I view difficult questions (P < 0.5)
+**When** the analytics display
+**Then** I see suggestions: "Review questions 3, 7 on [topic] - you answer correctly only 40% of the time."
+
+**Technical Details:**
+
+Files to create:
+- `src/app/components/quiz/ItemDifficultyAnalysis.tsx`
+
+Files to modify:
+- `src/lib/analytics.ts` (add item difficulty function)
+- `src/app/pages/QuizResults.tsx` or Reports page (display analysis)
+
+Item difficulty calculation:
+```typescript
+export function calculateItemDifficulty(
+  quiz: Quiz,
+  attempts: QuizAttempt[]
+): Array<{ questionId: string, questionText: string, pValue: number, difficulty: string }> {
+  const questionStats = new Map<string, { correct: number, total: number }>()
+  
+  // Aggregate across all attempts
+  attempts.forEach(attempt => {
+    attempt.answers.forEach(answer => {
+      if (!questionStats.has(answer.questionId)) {
+        questionStats.set(answer.questionId, { correct: 0, total: 0 })
+      }
+      const stats = questionStats.get(answer.questionId)!
+      stats.total++
+      if (answer.isCorrect) stats.correct++
+    })
+  })
+  
+  // Calculate P-values
+  return quiz.questions.map(q => {
+    const stats = questionStats.get(q.id) || { correct: 0, total: 0 }
+    const pValue = stats.total > 0 ? stats.correct / stats.total : 0
+    
+    let difficulty = 'Medium'
+    if (pValue > 0.8) difficulty = 'Easy'
+    else if (pValue < 0.5) difficulty = 'Difficult'
+    
+    return {
+      questionId: q.id,
+      questionText: q.text,
+      pValue,
+      difficulty
+    }
+  }).sort((a, b) => b.pValue - a.pValue)  // Easiest first
+}
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- calculateItemDifficulty with various attempt patterns
+- P-value calculation accuracy
+- Difficulty categorization correct
+
+E2E tests:
+- Complete quiz 3 times with varied performance → see item difficulty analysis
+
+**Dependencies:**
+- Story 16.2 (needs attempt history)
+
+**Complexity:** Medium (3-4 hours)
+
+**Design Review Focus:**
+- Question list layout (truncate long question text)
+- P-value display (percentage or decimal?)
+- Difficulty label styling (color-coded?)
+
+---
+
+### Story 17.4: Calculate Discrimination Indices
+
+As a learner,
+I want to see which questions effectively distinguish between my strong and weak attempts,
+So that I can understand which questions are most indicative of my knowledge.
+
+**Acceptance Criteria:**
+
+**Given** I have multiple attempts on a quiz
+**When** calculating discrimination for each question
+**Then** the system uses point-biserial correlation between question correctness and total score
+
+**Given** a question is highly discriminating
+**When** viewing its discrimination index
+**Then** I see a high value (>0.3)
+**And** this indicates: "You tend to get this question right on high-scoring attempts and wrong on low-scoring attempts."
+
+**Given** a question has low discrimination (<0.2)
+**When** viewing the metric
+**Then** I see an indicator: "This question doesn't correlate well with overall performance - might be ambiguous or overly easy/hard."
+
+**Technical Details:**
+
+Files to modify:
+- `src/lib/analytics.ts` (add discrimination calculation)
+
+Discrimination calculation (point-biserial correlation):
+```typescript
+export function calculateDiscriminationIndices(
+  quiz: Quiz,
+  attempts: QuizAttempt[]
+): Array<{ questionId: string, discriminationIndex: number }> {
+  // For each question, calculate correlation between:
+  // X = question correctness (0 or 1)
+  // Y = total quiz score
+  
+  return quiz.questions.map(q => {
+    const dataPoints = attempts.map(attempt => {
+      const answer = attempt.answers.find(a => a.questionId === q.id)
+      const questionCorrect = answer?.isCorrect ? 1 : 0
+      const totalScore = attempt.score
+      
+      return { x: questionCorrect, y: totalScore }
+    })
+    
+    // Point-biserial correlation formula
+    const n = dataPoints.length
+    if (n < 2) return { questionId: q.id, discriminationIndex: 0 }
+    
+    const group1 = dataPoints.filter(d => d.x === 1).map(d => d.y)  // Correct
+    const group0 = dataPoints.filter(d => d.x === 0).map(d => d.y)  // Incorrect
+    
+    if (group1.length === 0 || group0.length === 0) {
+      return { questionId: q.id, discriminationIndex: 0 }
+    }
+    
+    const mean1 = group1.reduce((sum, val) => sum + val, 0) / group1.length
+    const mean0 = group0.reduce((sum, val) => sum + val, 0) / group0.length
+    
+    // Standard deviation of all scores
+    const allScores = dataPoints.map(d => d.y)
+    const meanAll = allScores.reduce((sum, val) => sum + val, 0) / allScores.length
+    const variance = allScores.reduce((sum, val) => sum + Math.pow(val - meanAll, 2), 0) / n
+    const sd = Math.sqrt(variance)
+    
+    // Point-biserial formula
+    const p = group1.length / n
+    const q = 1 - p
+    const rpb = ((mean1 - mean0) / sd) * Math.sqrt(p * q)
+    
+    return { questionId: q.id, discriminationIndex: rpb }
+  })
+}
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- calculateDiscriminationIndices with known data
+- Handles edge cases (all correct, all incorrect)
+
+**Dependencies:**
+- Story 16.2 (needs attempt history)
+- Story 17.3 (extends item analysis)
+
+**Complexity:** Medium (3-4 hours)
+
+**Design Review Focus:**
+- Discrimination index display (rounded to 2 decimals)
+- Interpretation text (high/medium/low discrimination)
+
+---
+
+### Story 17.5: Identify Learning Trajectory Patterns
+
+As a learner,
+I want to see if my scores follow a linear, exponential, or logarithmic improvement pattern,
+So that I can understand my learning curve.
+
+**Acceptance Criteria:**
+
+**Given** I have 3+ attempts on a quiz
+**When** viewing the improvement visualization
+**Then** I see a line chart with attempt number (x-axis) vs. score (y-axis)
+**And** I see a detected pattern label: "Linear growth", "Exponential growth", or "Logarithmic growth"
+
+**Given** my scores improve rapidly at first then plateau (e.g., 50%, 70%, 80%, 82%)
+**When** the pattern is detected
+**Then** it is labeled "Logarithmic - Strong early gains, then plateauing"
+
+**Given** my scores improve steadily (e.g., 60%, 70%, 80%, 90%)
+**When** the pattern is detected
+**Then** it is labeled "Linear - Consistent improvement"
+
+**Given** my scores improve slowly then rapidly (e.g., 60%, 62%, 68%, 85%)
+**When** the pattern is detected
+**Then** it is labeled "Exponential - Accelerating mastery"
+
+**Technical Details:**
+
+Files to create:
+- `src/app/components/quiz/ImprovementChart.tsx` (visualization)
+
+Files to modify:
+- `src/lib/analytics.ts` (add pattern detection)
+
+Pattern detection:
+```typescript
+export function detectLearningTrajectory(
+  attempts: QuizAttempt[]
+): { pattern: 'linear' | 'exponential' | 'logarithmic', confidence: number } {
+  if (attempts.length < 3) return { pattern: 'linear', confidence: 0 }
+  
+  const sortedAttempts = [...attempts].sort((a, b) => 
+    new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime()
+  )
+  
+  const scores = sortedAttempts.map(a => a.percentage)
+  const n = scores.length
+  
+  // Fit three models and calculate R² for each
+  // Linear: y = mx + b
+  // Exponential: y = a * e^(bx)
+  // Logarithmic: y = a + b * ln(x)
+  
+  // Simplified: calculate rate of change between consecutive attempts
+  const changes = []
+  for (let i = 1; i < n; i++) {
+    changes.push(scores[i] - scores[i-1])
+  }
+  
+  // If changes are relatively constant: Linear
+  // If changes are increasing: Exponential
+  // If changes are decreasing: Logarithmic
+  
+  const avgChange = changes.reduce((sum, c) => sum + c, 0) / changes.length
+  const variance = changes.reduce((sum, c) => sum + Math.pow(c - avgChange, 2), 0) / changes.length
+  
+  if (variance < 5) {
+    return { pattern: 'linear', confidence: 0.8 }
+  }
+  
+  // Check if changes are trending up or down
+  const firstHalfAvg = changes.slice(0, Math.floor(changes.length / 2)).reduce((sum, c) => sum + c, 0) / Math.floor(changes.length / 2)
+  const secondHalfAvg = changes.slice(Math.floor(changes.length / 2)).reduce((sum, c) => sum + c, 0) / Math.ceil(changes.length / 2)
+  
+  if (secondHalfAvg > firstHalfAvg) {
+    return { pattern: 'exponential', confidence: 0.7 }
+  } else {
+    return { pattern: 'logarithmic', confidence: 0.7 }
+  }
+}
+```
+
+Chart visualization (using recharts):
+```tsx
+<ResponsiveContainer width="100%" height={300}>
+  <LineChart data={chartData}>
+    <XAxis dataKey="attempt" label={{ value: 'Attempt', position: 'insideBottom' }} />
+    <YAxis label={{ value: 'Score (%)', angle: -90, position: 'insideLeft' }} />
+    <Tooltip />
+    <Line type="monotone" dataKey="score" stroke="#2563eb" strokeWidth={2} />
+  </LineChart>
+</ResponsiveContainer>
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- detectLearningTrajectory with known patterns
+- Pattern classification accuracy
+
+E2E tests:
+- Complete quiz 5 times with improving scores → see trajectory chart and pattern label
+
+**Dependencies:**
+- Story 16.2 (needs attempt history)
+- Story 16.3 (improvement calculations)
+
+**Complexity:** Medium (4-5 hours)
+
+**Design Review Focus:**
+- Chart styling and responsiveness
+- Pattern label placement and clarity
+- Axis labels and legend
+
+---
+
+## Epic 18: Accessible and Integrated Quiz Experience
+
+**Goal:** All learners can access quiz features via keyboard and screen readers (WCAG 2.1 AA+). Quiz data integrates across the LevelUp platform.
+
+**Technical Focus:** This epic implements comprehensive accessibility compliance and cross-platform integration points.
+
+### Story 18.1: Implement Complete Keyboard Navigation
+
+As a learner using only a keyboard,
+I want to navigate and complete quizzes without using a mouse,
+So that I can access quiz features independently.
+
+**Acceptance Criteria:**
+
+**Given** I am navigating the quiz using only keyboard
+**When** I press Tab
+**Then** focus moves sequentially through all interactive elements in logical order:
+  - Question text (focusable with tabindex="-1" for screen reader navigation)
+  - Answer options (radio buttons or checkboxes)
+  - "Mark for Review" toggle
+  - Navigation buttons (Previous, Next, Submit)
+  - Question grid
+
+**Given** I am answering a multiple choice question
+**When** using keyboard controls
+**Then** I can Tab to the first radio button
+**And** I can use Arrow keys (Up/Down) to select different options
+**And** I can press Space to select the focused option
+
+**Given** I am answering a multiple select question
+**When** using keyboard controls
+**Then** I can Tab to each checkbox independently
+**And** I can press Space to toggle each checkbox
+
+**Given** I want to navigate to a specific question
+**When** the question grid has focus
+**Then** I can Tab to each question number
+**And** I can press Enter to jump to that question
+
+**Given** I press Escape anywhere in the quiz
+**When** a modal or dialog is open
+**Then** it closes and focus returns to the trigger element
+
+**Technical Details:**
+
+Files to modify:
+- All quiz components (ensure proper tab order and keyboard handlers)
+- `src/app/components/quiz/questions/*.tsx` (implement keyboard patterns)
+
+Keyboard patterns to implement:
+- Radio groups: Arrow key navigation, Space to select
+- Checkboxes: Space to toggle
+- Buttons: Enter or Space to activate
+- Question grid: Tab + Enter
+- Modal dialogs: Esc to close, focus trap while open
+
+Focus management:
+```tsx
+// Focus first question on quiz start
+useEffect(() => {
+  if (quizStarted) {
+    questionRef.current?.focus()
+  }
+}, [quizStarted])
+
+// Restore focus after navigation
+const handleNext = () => {
+  navigateToNextQuestion()
+  setTimeout(() => questionRef.current?.focus(), 0)
+}
+```
+
+**Testing Requirements:**
+
+E2E tests (keyboard only):
+- Tab through entire quiz without mouse → all elements reachable
+- Answer all questions using only keyboard
+- Navigate with Arrow keys in radio groups
+- Submit quiz using Enter key
+
+Accessibility tests:
+- Focus visible on all interactive elements (4.5:1 contrast)
+- Tab order is logical (top to bottom, left to right)
+- No keyboard traps (can always Tab out)
+
+**Dependencies:**
+- All previous stories (touches all quiz components)
+
+**Complexity:** Medium (4-5 hours)
+
+**Design Review Focus:**
+- Focus indicator visibility and styling
+- Tab order logic
+- Keyboard shortcuts documented (optional)
+
+---
+
+### Story 18.2: Implement ARIA Live Regions for Dynamic Content
+
+As a screen reader user,
+I want dynamic content updates announced automatically,
+So that I'm aware of timer warnings, score calculations, and feedback without visual cues.
+
+**Acceptance Criteria:**
+
+**Given** I am using a screen reader
+**When** I answer a question
+**Then** the feedback (Correct/Incorrect) is announced immediately
+**And** the announcement uses `aria-live="polite"` (doesn't interrupt current reading)
+
+**Given** the quiz timer reaches a warning threshold
+**When** the warning triggers
+**Then** the time remaining is announced via `aria-live="assertive"`
+**And** the announcement interrupts less important content (urgent warning)
+
+**Given** I submit the quiz
+**When** my score is calculated
+**Then** the score and pass/fail status are announced
+**And** the announcement uses `aria-live="polite"`
+
+**Given** I navigate to a new question
+**When** the question changes
+**Then** the question number is announced (e.g., "Question 3 of 12")
+**And** the question text is read by screen reader focus
+
+**Technical Details:**
+
+Files to modify:
+- `src/app/components/quiz/AnswerFeedback.tsx` (add ARIA live for feedback)
+- `src/app/components/quiz/QuizTimer.tsx` (add ARIA live for warnings)
+- `src/app/components/quiz/ScoreSummary.tsx` (add ARIA live for score)
+- `src/app/components/quiz/QuizHeader.tsx` (add ARIA live for navigation)
+
+ARIA live region implementation:
+```tsx
+// Feedback (polite)
+<div role="status" aria-live="polite" aria-atomic="true">
+  {answerFeedback && `${isCorrect ? 'Correct' : 'Incorrect'}. ${explanation}`}
+</div>
+
+// Timer warnings (assertive)
+<div role="alert" aria-live="assertive" aria-atomic="true" className="sr-only">
+  {timerWarning && `${formatTime(timeRemaining)} remaining`}
+</div>
+
+// Score announcement (polite)
+<div role="status" aria-live="polite" aria-atomic="true">
+  {scoreCalculated && `Quiz complete. Your score is ${percentage} percent. ${passed ? 'Passed' : 'Not passed'}.`}
+</div>
+
+// Question navigation (polite)
+<div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+  {`Question ${currentIndex + 1} of ${totalQuestions}`}
+</div>
+```
+
+**Testing Requirements:**
+
+Accessibility tests (NVDA, JAWS, VoiceOver):
+- Answer question → feedback announced
+- Timer warning → announcement interrupts
+- Submit quiz → score announced
+- Navigate questions → question number announced
+
+**Dependencies:**
+- Story 15.3 (timer warnings)
+- Story 15.4 (answer feedback)
+- Story 12.6 (score calculation)
+
+**Complexity:** Medium (3-4 hours)
+
+**Design Review Focus:**
+- ARIA live announcements not verbose (concise)
+- Politeness levels appropriate (polite vs assertive)
+- Screen reader only content (sr-only class)
+
+---
+
+### Story 18.3: Ensure Semantic HTML and Proper ARIA Attributes
+
+As a screen reader user,
+I want quiz components to use proper semantic HTML,
+So that I can understand the structure and navigate efficiently.
+
+**Acceptance Criteria:**
+
+**Given** quiz components use form controls
+**When** rendering questions
+**Then** radio button groups use `<fieldset>` and `<legend>`
+**And** all inputs have associated `<label>` elements
+**And** related controls are grouped logically
+
+**Given** quiz displays dynamic content
+**When** content changes (feedback, score, warnings)
+**Then** appropriate ARIA roles are used (`role="status"`, `role="alert"`)
+**And** `aria-atomic="true"` ensures full message is read
+
+**Given** quiz has navigation controls
+**When** rendering buttons and links
+**Then** all have descriptive accessible names
+**And** icon-only buttons have `aria-label` (e.g., aria-label="Next question")
+
+**Given** quiz displays timer or progress
+**When** showing countdown or progress bar
+**Then** `role="timer"` or `role="progressbar"` is used
+**And** `aria-valuenow`, `aria-valuemin`, `aria-valuemax` are set correctly
+
+**Technical Details:**
+
+Files to modify:
+- All question components (ensure semantic HTML)
+- All quiz UI components (add proper ARIA attributes)
+
+Semantic HTML patterns:
+```tsx
+// Question with radio group
+<fieldset>
+  <legend>{question.text}</legend>
+  <div role="radiogroup" aria-labelledby="question-text">
+    {options.map(option => (
+      <label key={option}>
+        <input type="radio" name="answer" value={option} />
+        {option}
+      </label>
+    ))}
+  </div>
+</fieldset>
+
+// Progress indicator
+<div role="progressbar" aria-valuenow={currentIndex + 1} aria-valuemin={1} aria-valuemax={totalQuestions} aria-label="Quiz progress">
+  Question {currentIndex + 1} of {totalQuestions}
+</div>
+
+// Timer
+<div role="timer" aria-live="off" aria-label="Time remaining">
+  {formatTime(timeRemaining)}
+</div>
+
+// Icon button
+<button aria-label="Next question">
+  <ArrowRight aria-hidden="true" />
+</button>
+```
+
+**Testing Requirements:**
+
+Accessibility tests:
+- Automated axe-core scan → zero violations
+- Manual screen reader test → all controls announced correctly
+- Landmark navigation → proper structure
+
+**Dependencies:**
+- All previous stories (applies to all components)
+
+**Complexity:** Medium (4-5 hours)
+
+**Design Review Focus:**
+- Semantic HTML structure
+- ARIA attributes correctness
+- Screen reader announcement quality
+
+---
+
+### Story 18.4: Verify Contrast Ratios and Touch Targets
+
+As a learner with visual impairments or using a mobile device,
+I want sufficient color contrast and large touch targets,
+So that I can see and interact with quiz elements easily.
+
+**Acceptance Criteria:**
+
+**Given** any text in the quiz interface
+**When** measuring contrast against background
+**Then** normal text has ≥4.5:1 contrast ratio
+**And** large text (≥18pt or ≥14pt bold) has ≥3:1 contrast ratio
+
+**Given** UI components (buttons, inputs, focus indicators)
+**When** measuring contrast
+**Then** non-text elements have ≥3:1 contrast ratio against adjacent colors
+
+**Given** interactive elements on mobile
+**When** measuring touch target size
+**Then** all buttons, links, and form controls are ≥44px tall
+**And** ≥44px wide (or full width on mobile)
+
+**Given** focus indicators on interactive elements
+**When** an element receives keyboard focus
+**Then** the focus indicator has ≥3:1 contrast against the background
+**And** the indicator is at least 2px thick
+
+**Technical Details:**
+
+Manual testing and fixes:
+- Use WebAIM Contrast Checker or browser DevTools
+- Measure all text/background combinations
+- Ensure focus indicators meet contrast requirements
+- Test touch target sizes on mobile (375px viewport)
+
+Common fixes:
+```css
+/* Insufficient contrast fix */
+.quiz-button {
+  /* Before: #999 on #fff (2.85:1) */
+  /* After: #666 on #fff (5.74:1) */
+  color: #666;
+}
+
+/* Focus indicator */
+.quiz-button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  /* 2563eb (blue-600) on #fff has 8.6:1 contrast */
+}
+
+/* Touch targets */
+@media (max-width: 768px) {
+  .quiz-answer-option {
+    min-height: 44px;
+    padding: 12px 16px;
+  }
+}
+```
+
+**Testing Requirements:**
+
+Accessibility tests:
+- Run axe-core contrast audit → zero violations
+- Manual spot checks with contrast checker
+- Mobile testing (375px) → all targets ≥44px
+
+**Dependencies:**
+- All previous stories (applies to all UI components)
+
+**Complexity:** Medium (3-4 hours)
+
+**Design Review Focus:**
+- Text contrast (especially on colored backgrounds)
+- Button/link contrast
+- Focus indicator visibility
+- Mobile touch target sizes
+
+---
+
+### Story 18.5: Integrate Quiz Completion with Study Streaks
+
+As a learner,
+I want quiz completions to count toward my study streak,
+So that taking quizzes contributes to my daily learning activity.
+
+**Acceptance Criteria:**
+
+**Given** I complete a quiz
+**When** I submit the quiz
+**Then** useStreakStore is updated with today's activity
+**And** my current streak continues or increments
+**And** if I hadn't studied today yet, today's date is marked as active
+
+**Given** I complete multiple quizzes in one day
+**When** submitting each quiz
+**Then** the streak is updated only once per day (idempotent)
+**And** additional quizzes don't create duplicate streak entries
+
+**Given** I view my streak calendar after completing a quiz
+**When** the calendar displays
+**Then** today's date shows as active (filled dot or color)
+**And** the streak counter reflects the quiz completion
+
+**Technical Details:**
+
+Files to modify:
+- `src/stores/useQuizStore.ts` (trigger streak update on submit)
+- `src/stores/useStreakStore.ts` (ensure quiz activity counts)
+
+Cross-store integration in useQuizStore.submitQuiz:
+```typescript
+submitQuiz: async () => {
+  // ... existing quiz submission logic
+  
+  try {
+    await db.quizAttempts.add(attempt)
+    
+    // Trigger study streak update (FR55)
+    useStreakStore.getState().recordActivity('quiz', attempt.timeSpent)
+    
+    // ... rest of submission logic
+  } catch (error) {
+    // ... error handling
+  }
+}
+```
+
+useStreakStore.recordActivity (if not already implemented):
+```typescript
+recordActivity: (activityType: string, duration: number) => {
+  const today = new Date().toISOString().split('T')[0]  // YYYY-MM-DD
+  
+  // Check if today already has activity
+  const existingActivity = get().activeDays.includes(today)
+  if (existingActivity) return  // Idempotent
+  
+  // Add today to active days
+  set(state => ({
+    activeDays: [...state.activeDays, today],
+    currentStreak: calculateCurrentStreak([...state.activeDays, today]),
+    longestStreak: Math.max(state.longestStreak, calculateCurrentStreak([...state.activeDays, today]))
+  }))
+  
+  // Persist to Dexie
+  db.streaks.put({ date: today, activityType, duration })
+}
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- submitQuiz calls useStreakStore.recordActivity
+- recordActivity is idempotent (multiple calls same day = one entry)
+
+Integration tests:
+- Complete quiz → streak updated
+- Complete 2 quizzes same day → streak updated once
+
+E2E tests:
+- Complete quiz → view streak calendar → today marked active
+
+**Dependencies:**
+- Story 12.3 (needs useQuizStore.submitQuiz)
+- Epic 1 from main LevelUp (needs useStreakStore) - assume exists
+
+**Complexity:** Small (2-3 hours)
+
+**Design Review Focus:**
+- N/A (integration logic only)
+
+---
+
+### Story 18.6: Display Quiz Performance in Overview Dashboard
+
+As a learner,
+I want to see my quiz performance summary on the Overview dashboard,
+So that I can quickly see my quiz activity alongside other learning metrics.
+
+**Acceptance Criteria:**
+
+**Given** I have completed quizzes
+**When** I view the Overview dashboard
+**Then** I see a "Quiz Performance" card or section
+**And** it displays my total quizzes completed
+**And** it displays my average quiz score across all attempts
+**And** it displays my quiz completion rate
+
+**Given** I click on the Quiz Performance card
+**When** interacting with it
+**Then** I navigate to a detailed quiz analytics page (Reports section)
+**Or** it expands to show more detail (recent quizzes, improvement trends)
+
+**Given** I have NOT completed any quizzes
+**When** viewing the Overview dashboard
+**Then** I see an empty state: "No quizzes completed yet. Start a quiz to track your progress!"
+**And** I see a CTA: "Find Quizzes"
+
+**Technical Details:**
+
+Files to modify:
+- `src/app/pages/Overview.tsx` (add Quiz Performance card)
+
+Files to create (if needed):
+- `src/app/components/dashboard/QuizPerformanceCard.tsx`
+
+QuizPerformanceCard component:
+```tsx
+<Card>
+  <CardHeader>
+    <CardTitle>Quiz Performance</CardTitle>
+  </CardHeader>
+  <CardContent>
+    {totalQuizzes > 0 ? (
+      <div className="space-y-2">
+        <div className="flex justify-between">
+          <span className="text-sm text-gray-600">Quizzes Completed</span>
+          <span className="font-semibold">{totalQuizzes}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-sm text-gray-600">Average Score</span>
+          <span className="font-semibold">{Math.round(averageScore)}%</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-sm text-gray-600">Completion Rate</span>
+          <span className="font-semibold">{Math.round(completionRate)}%</span>
+        </div>
+      </div>
+    ) : (
+      <div className="text-center py-4">
+        <p className="text-gray-600 mb-2">No quizzes completed yet.</p>
+        <Button variant="link">Find Quizzes</Button>
+      </div>
+    )}
+  </CardContent>
+  <CardFooter>
+    <Link to="/reports" className="text-sm text-blue-600 hover:underline">
+      View Detailed Analytics →
+    </Link>
+  </CardFooter>
+</Card>
+```
+
+Calculate metrics:
+```typescript
+const calculateQuizMetrics = async () => {
+  const allAttempts = await db.quizAttempts.toArray()
+  const totalQuizzes = allAttempts.length
+  const averageScore = totalQuizzes > 0
+    ? allAttempts.reduce((sum, a) => sum + a.percentage, 0) / totalQuizzes
+    : 0
+  const completionRate = await calculateCompletionRate()
+  
+  return { totalQuizzes, averageScore, completionRate: completionRate.completionRate }
+}
+```
+
+**Testing Requirements:**
+
+Unit tests:
+- calculateQuizMetrics with various attempt counts
+
+E2E tests:
+- Complete quiz → view Overview → see Quiz Performance card
+- Click card → navigate to Reports (or expand details)
+
+**Dependencies:**
+- Story 12.2 (needs quizAttempts table)
+- Story 17.1 (uses completion rate calculation)
+- Epic from main LevelUp (needs Overview page) - assume exists
+
+**Complexity:** Small (2-3 hours)
+
+**Design Review Focus:**
+- Card layout and metrics display
+- Empty state messaging and CTA
+- Link to detailed analytics
+
+---
+
+### Story 18.7: Surface Quiz Analytics in Reports Section
+
+As a learner,
+I want to see detailed quiz analytics in the Reports section,
+So that I can understand my quiz performance alongside other learning metrics.
+
+**Acceptance Criteria:**
+
+**Given** I navigate to the Reports section
+**When** the page loads
+**Then** I see a "Quiz Analytics" tab or section
+**And** it displays all quiz-related metrics:
+  - Total quizzes completed
+  - Average score
+  - Completion rate
+  - Average retake frequency
+  - Recent quiz attempts (last 5)
+  - Top performing quizzes (highest average scores)
+  - Quizzes needing improvement (lowest scores)
+
+**Given** I want to see details for a specific quiz
+**When** I click on a quiz in the list
+**Then** I navigate to that quiz's detailed analytics:
+  - All attempt history
+  - Score improvement trajectory
+  - Item difficulty analysis
+  - Discrimination indices
+  - Normalized gain
+
+**Technical Details:**
+
+Files to modify:
+- `src/app/pages/Reports.tsx` (add Quiz Analytics section)
+
+Files to create (if needed):
+- `src/app/components/reports/QuizAnalyticsDashboard.tsx`
+- `src/app/pages/QuizDetailAnalytics.tsx` (detailed view per quiz)
+
+Reports page structure:
+```tsx
+<Tabs defaultValue="overview">
+  <TabsList>
+    <TabsTrigger value="overview">Overview</TabsTrigger>
+    <TabsTrigger value="quizzes">Quiz Analytics</TabsTrigger>
+    {/* Other tabs */}
+  </TabsList>
+  
+  <TabsContent value="quizzes">
+    <QuizAnalyticsDashboard />
+  </TabsContent>
+</Tabs>
+```
+
+QuizAnalyticsDashboard component:
+```tsx
+<div className="space-y-6">
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <MetricCard title="Total Quizzes" value={totalQuizzes} />
+    <MetricCard title="Average Score" value={`${avgScore}%`} />
+    <MetricCard title="Completion Rate" value={`${completionRate}%`} />
+  </div>
+  
+  <Card>
+    <CardHeader><CardTitle>Recent Quizzes</CardTitle></CardHeader>
+    <CardContent>
+      <Table>
+        {/* Recent attempts list */}
+      </Table>
+    </CardContent>
+  </Card>
+  
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <Card>
+      <CardHeader><CardTitle>Top Performing Quizzes</CardTitle></CardHeader>
+      {/* Quizzes with highest avg scores */}
+    </Card>
+    
+    <Card>
+      <CardHeader><CardTitle>Quizzes Needing Practice</CardTitle></CardHeader>
+      {/* Quizzes with lowest scores */}
+    </Card>
+  </div>
+</div>
+```
+
+**Testing Requirements:**
+
+E2E tests:
+- Complete multiple quizzes → navigate to Reports → see Quiz Analytics
+- Click quiz in list → see detailed analytics
+
+**Dependencies:**
+- Stories 6.1-6.5 (analytics calculations)
+- Epic from main LevelUp (needs Reports page) - assume exists
+
+**Complexity:** Medium (4-5 hours)
+
+**Design Review Focus:**
+- Tab integration in Reports page
+- Metric card styling
+- Table/list layouts for quiz data
+- Navigation to detailed view
+
+---
+
+### Story 18.8: Display Quiz Availability Badges on Courses Page
+
+As a learner,
+I want to see which lessons have quizzes available,
+So that I can easily find and take quizzes while browsing courses.
+
+**Acceptance Criteria:**
+
+**Given** I view the Courses page or Course Detail page
+**When** browsing lessons
+**Then** I see a "Quiz" badge or icon on lessons that have quizzes
+**And** the badge is visually distinct (e.g., blue quiz icon or "Quiz Available" label)
+
+**Given** I have NOT completed a quiz for a lesson
+**When** viewing the quiz badge
+**Then** it displays as "Take Quiz" or shows as available (not completed)
+
+**Given** I HAVE completed a quiz for a lesson
+**When** viewing the quiz badge
+**Then** it displays my best score (e.g., "Quiz: 85%")
+**And** I can click it to retake or review
+
+**Given** I click on a quiz badge
+**When** interacting with it
+**Then** I navigate directly to the quiz start screen for that lesson
+
+**Technical Details:**
+
+Files to modify:
+- `src/app/pages/Courses.tsx` (add quiz badges to lesson list)
+- `src/app/pages/CourseDetail.tsx` (add quiz badges to lesson detail)
+
+Files to create (if needed):
+- `src/app/components/courses/QuizBadge.tsx`
+
+QuizBadge component:
+```tsx
+<Button
+  variant="outline"
+  size="sm"
+  onClick={() => navigate(`/courses/${courseId}/lessons/${lessonId}/quiz`)}
+  className="flex items-center gap-2"
+>
+  <GraduationCap className="h-4 w-4" />
+  {bestScore ? (
+    <span>Quiz: {bestScore}%</span>
+  ) : (
+    <span>Take Quiz</span>
+  )}
+</Button>
+```
+
+Fetch best score:
+```typescript
+const getBestQuizScore = async (lessonId: string) => {
+  const quiz = await db.quizzes.where('lessonId').equals(lessonId).first()
+  if (!quiz) return null
+  
+  const attempts = await db.quizAttempts.where('quizId').equals(quiz.id).toArray()
+  if (attempts.length === 0) return null
+  
+  const bestAttempt = attempts.reduce((best, current) => 
+    current.percentage > best.percentage ? current : best
+  )
+  
+  return bestAttempt.percentage
+}
+```
+
+**Testing Requirements:**
+
+E2E tests:
+- Navigate to Courses page → see quiz badges on lessons with quizzes
+- Click quiz badge → navigate to quiz
+- Complete quiz → return to Courses → see updated score on badge
+
+**Dependencies:**
+- Story 12.2 (needs quizzes table with lessonId)
+- Epic from main LevelUp (needs Courses page) - assume exists
+
+**Complexity:** Small (2-3 hours)
+
+**Design Review Focus:**
+- Quiz badge styling and placement
+- Icon choice (graduation cap, document with checkmark, etc.)
+- Badge interaction (button, link, or card)
+- Score display formatting
+
+---
+
