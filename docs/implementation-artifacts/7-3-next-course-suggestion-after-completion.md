@@ -1,12 +1,12 @@
 ---
 story_id: E07-S03
 story_name: "Next Course Suggestion After Completion"
-status: in-progress
+status: done
 started: 2026-03-08
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-03-08
+reviewed: true
+review_started: 2026-03-08
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, code-review, code-review-testing]
 ---
 
 # Story 7.3: Next Course Suggestion After Completion
