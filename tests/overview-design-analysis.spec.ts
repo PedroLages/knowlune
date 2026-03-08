@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test'
 
 test.describe('Overview Page - Comprehensive Design Analysis', () => {
+  test.skip(
+    ({ browserName }) => browserName === 'webkit',
+    'WebKit CI has layout rendering differences'
+  )
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
   })

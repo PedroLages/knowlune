@@ -101,6 +101,10 @@ vi.mock('@/app/components/RecommendedNext', () => ({
   RecommendedNextSkeleton: () => <div data-testid="recommended-next-skeleton" />,
 }))
 
+vi.mock('@/app/components/StudyScheduleWidget', () => ({
+  StudyScheduleWidget: () => <div data-testid="study-schedule-widget" />,
+}))
+
 // Mock motion/react to render children synchronously
 vi.mock('motion/react', () => ({
   motion: new Proxy(

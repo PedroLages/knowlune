@@ -12,6 +12,7 @@ import { QuickActions } from '@/app/components/QuickActions'
 import { StudyStreakCalendar } from '@/app/components/StudyStreakCalendar'
 import { StudyGoalsWidget } from '@/app/components/StudyGoalsWidget'
 import { StudyHistoryCalendar } from '@/app/components/StudyHistoryCalendar'
+import { StudyScheduleWidget } from '@/app/components/StudyScheduleWidget'
 import { RecommendedNext, RecommendedNextSkeleton } from '@/app/components/RecommendedNext'
 import { CourseCard } from '@/app/components/figma/CourseCard'
 import { ProgressChart } from '@/app/components/charts/ProgressChart'
@@ -222,6 +223,18 @@ export function Overview() {
         >
           <h2 className="text-xl font-semibold mb-4">Study History</h2>
           <StudyHistoryCalendar />
+        </motion.section>
+
+        {/* ── Study Schedule Widget ── */}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-50px' }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="rounded-[24px] border border-border/50 bg-card p-6"
+        >
+          <h2 className="text-xl font-semibold mb-4">Suggested Study Time</h2>
+          <StudyScheduleWidget />
         </motion.section>
 
         {/* ── Insight + Action Zone ── */}

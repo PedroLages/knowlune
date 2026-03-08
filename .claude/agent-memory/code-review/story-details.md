@@ -71,3 +71,10 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - `hasFiredRef` prevents milestone toasts after first load -- new milestones from manual refresh never celebrated
 - E2E afterEach IDB cleanup fire-and-forget (recurring from E06-S01)
 - ChallengeMilestoneToast missing `role="status"` for screen reader announcements
+
+## E07-S05: Smart Study Schedule Suggestion
+- `allocateTimeAcrossCourses` over-allocates when courses > dailyMinutes (Math.max(1) floor inflates sum)
+- `bg-blue-600` hardcoded on Progress indicators instead of theme token `bg-brand`
+- `buildActiveCoursesWithMomentum` iterates `allCourses` twice (two `.map()` passes), minor perf
+- No test coverage for allocation sum-to-budget invariant
+- E2E tests don't cover AC6 (rolling window updates) -- only static state snapshots

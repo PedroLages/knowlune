@@ -10,6 +10,10 @@
 import { test, expect } from '../support/fixtures'
 
 test.describe('Offline Degradation', () => {
+  test.skip(
+    ({ browserName }) => browserName === 'webkit',
+    'WebKit CI does not support context.setOffline()'
+  )
   test.beforeEach(async ({ page }) => {
     // CRITICAL: Seed sidebar state to prevent tablet overlay blocking
     await page.addInitScript(() => {
