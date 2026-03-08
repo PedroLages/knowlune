@@ -37,6 +37,16 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - getStreakStartDate() called twice in detectAndRecordMilestones (midnight race)
 - confetti useEffect deps should be [milestone.id] not [milestone.milestoneValue]
 
+## E07-S02: Recommended Next Dashboard Section
+- No uncommitted changes (first story to ship clean since E03-S02!)
+- `useMemo` depends only on `[sessions]` but calls `getAllProgress()` inside -- stale progress if lesson completed without session change
+- `getAllProgress()` returns mutable `_progressCache` reference -- mutations could corrupt cached data
+- Hardcoded `bg-blue-100` in EmptyState instead of theme tokens (recurring)
+- Dead code: `thirtyDaysAgo` + `void thirtyDaysAgo` in `getRecommendedCourses`
+- E2E AC3 test only checks `href` contains `/courses/` -- doesn't actually click and verify navigation
+- AC5 (dynamic refresh) has no E2E test coverage
+- `totalLessons` computed via `modules.reduce` in two places -- could diverge from `course.totalLessons` field
+
 ## E06-S01: Create Learning Challenges (Round 3)
 - Round 2 items largely fixed: parseLocalDate, error state, cn(), deleteChallenge throw, integer validation, ignore flag
 - REMAINING: E2E afterEach cleanup is fire-and-forget (callback-based IDB API not awaited)

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { BookOpen, ArrowRight } from 'lucide-react'
 import { Skeleton } from '@/app/components/ui/skeleton'
@@ -55,10 +55,21 @@ function EmptyState() {
 
 export function RecommendedNext() {
   const { loadSessionStats, sessions, isLoading } = useSessionStore()
+  // Bump when course-progress changes in localStorage so rankings stay fresh
+  // after lesson completions even without a new study session.
+  const [progressTick, setProgressTick] = useState(0)
 
   useEffect(() => {
     loadSessionStats()
   }, [loadSessionStats])
+
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'course-progress') setProgressTick(t => t + 1)
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
 
   const recommendations = useMemo(() => {
     const allProgress = getAllProgress()
@@ -74,7 +85,7 @@ export function RecommendedNext() {
     }
 
     return getRecommendedCourses(allCourses, allProgress, sessionCountsPerCourse, 3)
-  }, [sessions])
+  }, [sessions, progressTick])
 
   if (isLoading) {
     return (

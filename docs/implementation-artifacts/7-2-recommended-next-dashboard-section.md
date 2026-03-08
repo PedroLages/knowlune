@@ -4,18 +4,9 @@ story_name: "Recommended Next Dashboard Section"
 status: in-progress
 started: 2026-03-08
 completed:
-reviewed: true
+reviewed: in-progress
 review_started: 2026-03-08
-review_gates_passed:
-  - build
-  - lint
-  - typecheck
-  - prettier
-  - unit-tests
-  - e2e-smoke
-  - e2e-story
-  - code-review
-  - code-review-testing
+review_gates_passed: []
 ---
 
 # Story 7.2: Recommended Next Dashboard Section

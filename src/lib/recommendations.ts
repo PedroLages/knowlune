@@ -55,9 +55,6 @@ export function getRecommendedCourses(
   sessionCountsPerCourse: Record<string, number>,
   limit = 3
 ): CourseScore[] {
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 86_400_000)
-  void thirtyDaysAgo // available for future use when E07-S01 provides momentum
-
   const scored: CourseScore[] = []
 
   for (const course of courses) {

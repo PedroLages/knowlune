@@ -98,7 +98,7 @@ function extractTagsFromContent(content: string): string[] {
 }
 
 export function getAllProgress(): Record<string, CourseProgress> {
-  if (_progressCache) return _progressCache
+  if (_progressCache) return { ..._progressCache }
 
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -118,7 +118,7 @@ export function getAllProgress(): Record<string, CourseProgress> {
     }
 
     _progressCache = data
-    return data
+    return { ..._progressCache }
   } catch (error) {
     console.error('[Progress] Error loading progress:', error)
     return {}

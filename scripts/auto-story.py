@@ -53,10 +53,11 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent
 SPRINT_STATUS = PROJECT_DIR / "docs" / "implementation-artifacts" / "sprint-status.yaml"
 AGENTS_DIR = PROJECT_DIR / ".claude" / "agents"
 
-BUDGET_SESSION_START = 1.50
-BUDGET_SESSION_IMPLEMENT = 5.00
-BUDGET_SESSION_REVIEW = 5.00
-BUDGET_PER_STORY = BUDGET_SESSION_START + BUDGET_SESSION_IMPLEMENT + BUDGET_SESSION_REVIEW
+# No budget caps — let sessions run to completion
+BUDGET_SESSION_START = 0  # 0 = unlimited
+BUDGET_SESSION_IMPLEMENT = 0
+BUDGET_SESSION_REVIEW = 0
+BUDGET_PER_STORY = 25.00  # estimate for dry-run display only
 
 
 @dataclass
@@ -402,7 +403,7 @@ def make_options(
         "Agent", "Skill", "TodoWrite", "WebSearch",
     ]
 
-    return ClaudeAgentOptions(
+    opts: dict[str, Any] = dict(
         setting_sources=["user", "project", "local"],
         agents=agents if agents else None,
         allowed_tools=allowed,
@@ -410,9 +411,12 @@ def make_options(
         permission_mode="bypassPermissions" if autonomous else "acceptEdits",
         system_prompt={"type": "preset", "preset": "claude_code"},
         max_turns=max_turns,
-        max_budget_usd=max_budget,
         cwd=str(PROJECT_DIR),
     )
+    if max_budget > 0:
+        opts["max_budget_usd"] = max_budget
+
+    return ClaudeAgentOptions(**opts)
 
 
 def format_prompt(template: str, story: StoryInfo) -> str:
