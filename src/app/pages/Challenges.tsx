@@ -100,19 +100,20 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
 }
 
 export function Challenges() {
-  const { challenges, isLoading, error, loadChallenges, refreshAllProgress } = useChallengeStore()
+  const { challenges, isLoading, error } = useChallengeStore()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [expiredOpen, setExpiredOpen] = useState(false)
 
   useEffect(() => {
     let ignore = false
+    const { loadChallenges, refreshAllProgress } = useChallengeStore.getState()
     loadChallenges().then(() => {
-      if (!ignore) refreshAllProgress()
+      if (!ignore) return refreshAllProgress()
     })
     return () => {
       ignore = true
     }
-  }, [loadChallenges, refreshAllProgress])
+  }, [])
 
   const { active, expired } = useMemo(() => {
     const now = new Date()
@@ -146,7 +147,7 @@ export function Challenges() {
         <Card>
           <CardContent className="flex flex-col items-center gap-4 py-16">
             <p className="text-destructive text-sm">{error}</p>
-            <Button variant="outline" onClick={() => loadChallenges()}>
+            <Button variant="outline" onClick={() => useChallengeStore.getState().loadChallenges()}>
               <RefreshCcw className="mr-2 size-4" />
               Retry
             </Button>

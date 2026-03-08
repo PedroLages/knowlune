@@ -7,7 +7,6 @@ import {
   calculateStreakProgress,
   calculateProgress,
 } from '@/lib/challengeProgress'
-import * as studyLog from '@/lib/studyLog'
 import type { Challenge, ContentProgress, StudySession } from '@/data/types'
 
 function makeChallenge(overrides: Partial<Challenge> = {}): Challenge {
@@ -54,6 +53,7 @@ beforeEach(async () => {
   await db.contentProgress.clear()
   await db.studySessions.clear()
   await db.challenges.clear()
+  localStorage.clear()
 })
 
 // ── Completion Progress ──────────────────────────────
@@ -145,14 +145,36 @@ describe('calculateTimeProgress', () => {
 // ── Streak Progress ──────────────────────────────────
 
 describe('calculateStreakProgress', () => {
-  it('returns 0 when no streak data exists', () => {
-    expect(calculateStreakProgress()).toBe(0)
+  it('returns 0 when no study log exists', () => {
+    const challenge = makeChallenge({ type: 'streak', createdAt: '2026-03-01T00:00:00.000Z' })
+    expect(calculateStreakProgress(challenge)).toBe(0)
   })
 
-  it('delegates to getCurrentStreak and returns its value', () => {
-    const spy = vi.spyOn(studyLog, 'getCurrentStreak').mockReturnValue(14)
-    expect(calculateStreakProgress()).toBe(14)
-    spy.mockRestore()
+  it('counts distinct study days since challenge creation', () => {
+    const challenge = makeChallenge({ type: 'streak', createdAt: '2026-03-03T00:00:00.000Z' })
+    localStorage.setItem(
+      'study-log',
+      JSON.stringify([
+        { type: 'lesson_complete', courseId: 'c1', timestamp: '2026-03-01T10:00:00.000Z' }, // before
+        { type: 'lesson_complete', courseId: 'c1', timestamp: '2026-03-04T10:00:00.000Z' }, // after
+        { type: 'lesson_complete', courseId: 'c1', timestamp: '2026-03-04T14:00:00.000Z' }, // same day
+        { type: 'lesson_complete', courseId: 'c1', timestamp: '2026-03-05T10:00:00.000Z' }, // after
+      ])
+    )
+    // 2 distinct days after creation (Mar 4 and Mar 5), Mar 1 excluded
+    expect(calculateStreakProgress(challenge)).toBe(2)
+  })
+
+  it('excludes non-lesson_complete entries', () => {
+    const challenge = makeChallenge({ type: 'streak', createdAt: '2026-03-01T00:00:00.000Z' })
+    localStorage.setItem(
+      'study-log',
+      JSON.stringify([
+        { type: 'lesson_complete', courseId: 'c1', timestamp: '2026-03-02T10:00:00.000Z' },
+        { type: 'video_progress', courseId: 'c1', timestamp: '2026-03-03T10:00:00.000Z' },
+      ])
+    )
+    expect(calculateStreakProgress(challenge)).toBe(1)
   })
 })
 

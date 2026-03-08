@@ -105,6 +105,7 @@ const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalendarProps) {
   const freezeTriggerRef = useRef<HTMLButtonElement>(null)
+  const [milestoneKey, setMilestoneKey] = useState(0)
   const [freezeDialogOpen, setFreezeDialogOpen] = useState(false)
   const [selectedFreezeDays, setSelectedFreezeDays] = useState<number[]>([])
   const [freezeValidation, setFreezeValidation] = useState(false)
@@ -134,10 +135,10 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
     }
   }, [])
 
-  // Check milestones on mount
+  // Check milestones on mount and when streak changes
   useEffect(() => {
     celebrateMilestones(snapshot.currentStreak)
-  }, [celebrateMilestones])
+  }, [celebrateMilestones, snapshot.currentStreak])
 
   useEffect(() => {
     const handleUpdate = () => {
@@ -250,7 +251,7 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
 
       {/* Milestone Collection Trigger */}
       <div className="flex justify-end mb-3">
-        <Popover>
+        <Popover onOpenChange={open => { if (open) setMilestoneKey(k => k + 1) }}>
           <PopoverTrigger asChild>
             <Button
               data-testid="milestone-collection-trigger"
@@ -271,7 +272,7 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
                 Your streak achievement collection
               </p>
             </div>
-            <MilestoneGallery />
+            <MilestoneGallery key={milestoneKey} />
           </PopoverContent>
         </Popover>
       </div>

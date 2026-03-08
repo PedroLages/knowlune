@@ -42,6 +42,7 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
   refreshAllProgress: async () => {
     const { challenges } = get()
     if (challenges.length === 0) return
+    const snapshot = [...challenges]
 
     try {
       const updated = await Promise.all(
@@ -60,6 +61,7 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
       set({ challenges: updated })
     } catch (error) {
       console.error('[ChallengeStore] Failed to refresh progress:', error)
+      set({ challenges: snapshot })
       toast.error('Progress update may not have saved')
     }
   },

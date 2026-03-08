@@ -1,5 +1,5 @@
 import { db } from '@/db'
-import { getCurrentStreak } from '@/lib/studyLog'
+import { getStudyLog, toLocalDateString } from '@/lib/studyLog'
 import type { Challenge } from '@/data/types'
 
 /**
@@ -7,10 +7,11 @@ import type { Challenge } from '@/data/types'
  * Uses the `status` index on contentProgress for efficient querying.
  */
 export async function calculateCompletionProgress(challenge: Challenge): Promise<number> {
+  const createdAtMs = new Date(challenge.createdAt).getTime()
   return db.contentProgress
     .where('status')
     .equals('completed')
-    .filter(p => new Date(p.updatedAt).getTime() >= new Date(challenge.createdAt).getTime())
+    .filter(p => new Date(p.updatedAt).getTime() >= createdAtMs)
     .count()
 }
 
@@ -30,11 +31,19 @@ export async function calculateTimeProgress(challenge: Challenge): Promise<numbe
 }
 
 /**
- * Read current streak from study-log localStorage.
- * Streak is global (not scoped to challenge creation date).
+ * Count distinct study days since challenge creation date.
+ * Scoped to the challenge lifetime per AC4.
  */
-export function calculateStreakProgress(): number {
-  return getCurrentStreak()
+export function calculateStreakProgress(challenge: Challenge): number {
+  const log = getStudyLog()
+  const createdAt = challenge.createdAt
+  const studyDays = new Set<string>()
+  for (const entry of log) {
+    if (entry.type === 'lesson_complete' && entry.timestamp >= createdAt) {
+      studyDays.add(toLocalDateString(new Date(entry.timestamp)))
+    }
+  }
+  return studyDays.size
 }
 
 /** Dispatch to the appropriate calculator based on challenge type. */
@@ -45,6 +54,6 @@ export async function calculateProgress(challenge: Challenge): Promise<number> {
     case 'time':
       return calculateTimeProgress(challenge)
     case 'streak':
-      return calculateStreakProgress()
+      return calculateStreakProgress(challenge)
   }
 }
