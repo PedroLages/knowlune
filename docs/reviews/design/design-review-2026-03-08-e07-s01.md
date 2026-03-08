@@ -2,35 +2,25 @@
 
 **Date**: 2026-03-08
 **Reviewer**: Design Review Agent (Playwright MCP)
-
-## Summary
-
-Tested MomentumBadge component, CourseCard integration, and Courses page sort at desktop (1440px), tablet (768px), and mobile (375px) viewports.
+**Routes tested**: /courses
 
 ## Findings
 
-### Blockers
+### Blocker
 
-1. **MomentumBadge color contrast in dark mode** — `MomentumBadge.tsx:13-28`
-   - Hardcoded `text-orange-500`, `text-amber-500`, `text-blue-400` do not meet WCAG AA contrast on dark backgrounds
-   - Fix: Use `text-orange-700 dark:text-orange-500`, `text-amber-700 dark:text-amber-500`, `text-blue-700 dark:text-blue-400`
+- **Remove `tabIndex={0}` from MomentumBadge** (`src/app/components/figma/MomentumBadge.tsx:40`): The badge is a static annotation, not an interactive element. Adding it to the tab order creates a confusing keyboard experience where users tab through dozens of non-interactive badges. Remove `tabIndex` — tooltip on hover only.
 
 ### High Priority
 
-2. **Keyboard tooltip access** — `MomentumBadge.tsx:39`
-   - Badge `<span>` is not focusable — keyboard users cannot access the tooltip showing numeric score
-   - Fix: Add `tabIndex={0}` and `focus-visible:ring-1 focus-visible:ring-current rounded-sm`
+- **Suppress zero-score badges on unstarted courses** (`src/app/components/figma/CourseCard.tsx:506-510`): Cold badges with score 0 display on courses the user has never started. This creates visual noise and is misleading. Add `momentumScore.score > 0` guard.
 
 ### Medium
 
-3. **Imported courses momentum gap** — `Courses.tsx:248`
-   - `ImportedCourseCard` accepts `momentumScore` prop but Courses page never passes it
-   - Either wire up momentum for imported courses or add `// TODO` documenting the intentional scope boundary
+- **Add background tint and padding to badge** (`src/app/components/figma/MomentumBadge.tsx` `tierConfig`): Badges are text-only with no background container, making them hard to distinguish from surrounding content. Add subtle background tint (`bg-orange-50`, `bg-amber-50`, `bg-blue-50`) with `px-1.5 py-0.5 rounded-sm`.
 
-### Passed
+## Summary
 
-- Badge positioning on course card thumbnails correct at all viewports
-- Sort select functional and accessible
-- ARIA labels on badges properly formatted
-- Responsive layout: badges visible and properly sized at mobile
-- No horizontal scroll issues
+- Blockers: 1
+- High Priority: 1
+- Medium: 1
+- Nits: 0

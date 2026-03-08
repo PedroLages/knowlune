@@ -1,9 +1,9 @@
-import { getCourseCompletionPercent } from '@/lib/progress'
 import type { StudySession } from '@/data/types'
 
 export interface MomentumInput {
   courseId: string
   totalLessons: number
+  completionPercent: number // caller provides — keeps this function pure
   sessions: StudySession[] // pre-loaded — avoids per-card DB calls
 }
 
@@ -21,19 +21,22 @@ export function getMomentumTier(score: number): MomentumTier {
 }
 
 export function calculateMomentumScore(input: MomentumInput): MomentumScore {
-  const { courseId, totalLessons, sessions } = input
+  const { completionPercent, sessions } = input
   const now = Date.now()
 
   // Recency score: 0 days = 100, 14+ days = 0
   let recencyScore = 0
   if (sessions.length > 0) {
-    const latestMs = Math.max(...sessions.map(s => new Date(s.startTime).getTime()))
+    const latestMs = sessions.reduce((max, s) => {
+      const t = new Date(s.startTime).getTime()
+      return t > max ? t : max
+    }, 0)
     const daysSinceLast = (now - latestMs) / (1000 * 60 * 60 * 24)
     recencyScore = Math.max(0, 100 - daysSinceLast * (100 / 14))
   }
 
-  // Completion score: directly from localStorage progress
-  const completionScore = getCourseCompletionPercent(courseId, totalLessons)
+  // Completion score: passed in by caller (pure)
+  const completionScore = completionPercent
 
   // Frequency score: sessions in last 30 days (10/month = max)
   const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000

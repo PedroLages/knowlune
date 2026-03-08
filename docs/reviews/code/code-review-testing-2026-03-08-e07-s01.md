@@ -7,55 +7,42 @@
 
 | AC# | Description | Unit Test | E2E Test | Verdict |
 |-----|-------------|-----------|----------|---------|
-| 1 | Score = weighted recency (40%) + completion (30%) + frequency (30%), range 0-100 | `momentum.test.ts:55-168` | None | Partial |
-| 2 | Visual indicator: hot/warm/cold with colors, icons, ARIA | None | `story-e07-s01.spec.ts:21-50` | Partial |
-| 3 | No sessions → score 0, tier cold | `momentum.test.ts:56-69` | None | Partial |
-| 4 | "Sort by Momentum" orders highest to lowest, indicators visible | None | `story-e07-s01.spec.ts:53-77` | Partial |
-| 5 | Score recalculates within page session after study session | None | None | **Gap** |
+| 1 | Score = weighted function (recency 40%, completion 30%, frequency 30%), 0–100 | `momentum.test.ts:55–168` | None | Partial |
+| 2 | Visual indicator hot/warm/cold on course cards | None | `story-e07-s01.spec.ts:21–50` | Partial |
+| 3 | No sessions → score 0, cold | `momentum.test.ts:56–69` | None | Partial |
+| 4 | Sort by Momentum, badges visible | None | `story-e07-s01.spec.ts:53–163` | Partial |
+| 5 | Recalculates within page session | None | None | **Gap** |
 
-**Coverage**: 0/5 fully covered | 1 gap (AC5) | 4 partial
+**Coverage**: 0/5 fully covered | 1 gap | 4 partial
 
 ## Findings
 
-### Blockers
+### Blocker
 
-1. **AC5 has zero test coverage** (confidence: 95)
-   - No test fires `study-session-ended` event and verifies score update
-   - Suggested: E2E test using `page.evaluate(() => window.dispatchEvent(new CustomEvent('study-session-ended')))`
+- **(confidence: 97)** AC5 has zero test coverage. No test exercises real-time recalculation after study session.
 
 ### High Priority
 
-2. **Sort test doesn't verify ordering** — `story-e07-s01.spec.ts:53-77` (confidence: 85)
-   - Only checks badge count and select value, not actual course order
-   - All courses have score 0 (no seeded sessions) — sort is a no-op
-   - Fix: Seed differentiated study sessions, assert first card has higher score than last
-
-3. **Badge visibility assertion fragile** — `story-e07-s01.spec.ts:11-19` (confidence: 80)
-   - Uses `count > 0` without waiting for async `loadMomentumScores` to resolve
-   - Fix: Use `await expect(page.getByTestId('momentum-badge').first()).toBeVisible()`
-
-4. **Select option selectors fragile** — `story-e07-s01.spec.ts:42-51` (confidence: 80)
-   - CSS `option[value="..."]` selectors break if refactored to shadcn Select
-   - Fix: Assert `toHaveValue('momentum')` instead of querying option elements
-
-5. **Inline `makeSession` factory duplicates shared factory** — `momentum.test.ts:96-111` (confidence: 75)
-   - Inconsistent with `tests/support/fixtures/factories/session-factory.ts`
-   - Fix: Import and use `createStudySession` from shared factories
+- **(confidence: 92)** Sort assertion structurally weak — only checks first vs last, not monotonic ordering.
+- **(confidence: 88)** Badge visibility test has race condition — doesn't wait for async `loadMomentumScores()`.
+- **(confidence: 82)** No deterministic weight-isolation test — weights could be swapped undetected.
+- **(confidence: 78)** Badge only tested via aria-label text, not icon/color (AC2 requires distinct iconography).
+- **(confidence: 76)** Sort option test uses brittle CSS selectors.
 
 ### Medium
 
-6. **No sidebar localStorage seeding** — `story-e07-s01.spec.ts` (confidence: 78)
-   - Tests don't seed `eduvi-sidebar-v1` — fragile at tablet viewports per project patterns
-
-7. **No boundary test for 14-day recency cliff** — `momentum.test.ts` (confidence: 72)
-   - No explicit test for session exactly 14 days old → recency = 0
-
-8. **Weight verification test missing** — `momentum.test.ts` (confidence: 70)
-   - No test controls all three components to known values and asserts exact score
-   - Weights could be swapped without test failure
+- **(confidence: 85)** Missing sidebar localStorage seed — tests fail at 768px CI viewport.
+- **(confidence: 80)** No test for 14-day recency cliff boundary.
+- **(confidence: 77)** `fake-indexeddb/auto` import unnecessary in pure function tests.
+- **(confidence: 73)** No E2E test for cold badge on unstarted courses.
+- **(confidence: 72)** Local `makeSession` factory diverges from shared factory shape.
 
 ### Nits
 
-9. `fake-indexeddb/auto` import unnecessary in pure function test
-10. Inline factory `endTime: startTime` vs shared factory `endTime: undefined` inconsistency
-11. `badgesBefore` variable name misleading — never used for ordering comparison
+- Pinned assertion pattern should be applied consistently
+- Missing auto-cleanup for seeded sessions
+- Inline IndexedDB seeding duplicates fixture logic
+
+## Summary
+
+ACs: 0/5 fully covered | Findings: 15 | Blockers: 1 | High: 5 | Medium: 5 | Nits: 3

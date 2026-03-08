@@ -73,6 +73,14 @@
   --accent-violet-foreground: #ffffff;
   --accent-violet-muted: #ede9fe;
   --table-selected: oklch(0.92 0.05 250);
+
+  /* Momentum tier tokens */
+  --momentum-hot: #c2410c;
+  --momentum-hot-bg: #fff7ed;
+  --momentum-warm: #b45309;
+  --momentum-warm-bg: #fffbeb;
+  --momentum-cold: #1d4ed8;
+  --momentum-cold-bg: #eff6ff;
 }
 
 .dark {
@@ -142,6 +150,14 @@
   --accent-violet-foreground: #000000;
   --accent-violet-muted: #2e1065;
   --table-selected: oklch(0.25 0.05 250);
+
+  /* Momentum tier tokens (dark) */
+  --momentum-hot: #fb923c;
+  --momentum-hot-bg: oklch(0.2 0.05 50);
+  --momentum-warm: #fbbf24;
+  --momentum-warm-bg: oklch(0.2 0.05 85);
+  --momentum-cold: #60a5fa;
+  --momentum-cold-bg: oklch(0.2 0.05 250);
 }
 
 @theme inline {
@@ -205,6 +221,12 @@
   --color-brand-muted: var(--brand-muted);
   --color-surface-elevated: var(--surface-elevated);
   --color-surface-sunken: var(--surface-sunken);
+  --color-momentum-hot: var(--momentum-hot);
+  --color-momentum-hot-bg: var(--momentum-hot-bg);
+  --color-momentum-warm: var(--momentum-warm);
+  --color-momentum-warm-bg: var(--momentum-warm-bg);
+  --color-momentum-cold: var(--momentum-cold);
+  --color-momentum-cold-bg: var(--momentum-cold-bg);
   --font-sans: var(--font-body);
   --font-display: var(--font-heading);
 }

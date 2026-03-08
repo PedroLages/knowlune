@@ -1,10 +1,10 @@
 ---
 story_id: E07-S01
 story_name: "Momentum Score Calculation And Display"
-status: in-progress
+status: done
 started: 2026-03-08
-completed:
-reviewed: in-progress    # false | in-progress | true
+completed: 2026-03-08
+reviewed: true    # false | in-progress | true
 review_started: 2026-03-08  # YYYY-MM-DD — set when /review-story begins
 review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing]
 plan: docs/implementation-artifacts/plans/e07-s01-momentum-score-calculation-and-display.md

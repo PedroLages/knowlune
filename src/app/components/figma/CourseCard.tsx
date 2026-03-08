@@ -503,7 +503,7 @@ export function CourseCard({
               </span>
             </div>
             <Progress value={completionPercent} showLabel className="h-1.5" />
-            {momentumScore && (
+            {momentumScore && momentumScore.score > 0 && (
               <div className="mt-2">
                 <MomentumBadge score={momentumScore.score} tier={momentumScore.tier} />
               </div>

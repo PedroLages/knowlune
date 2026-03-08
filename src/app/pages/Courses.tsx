@@ -1,7 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Card } from '@/app/components/ui/card'
 import { Input } from '@/app/components/ui/input'
 import { Button } from '@/app/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/app/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs'
 import { CourseCard } from '@/app/components/figma/CourseCard'
 import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
@@ -65,6 +72,7 @@ export function Courses() {
             calculateMomentumScore({
               courseId: course.id,
               totalLessons: course.totalLessons,
+              completionPercent: getCourseCompletionPercent(course.id, course.totalLessons),
               sessions: sessionsByCourse.get(course.id) ?? [],
             })
           )
@@ -106,12 +114,12 @@ export function Courses() {
     return courses
   })()
 
-  const sortedCourses =
-    sortMode === 'momentum'
-      ? [...filtered].sort(
-          (a, b) => (momentumMap.get(b.id)?.score ?? 0) - (momentumMap.get(a.id)?.score ?? 0)
-        )
-      : filtered
+  const sortedCourses = useMemo(() => {
+    if (sortMode !== 'momentum') return filtered
+    return [...filtered].sort(
+      (a, b) => (momentumMap.get(b.id)?.score ?? 0) - (momentumMap.get(a.id)?.score ?? 0)
+    )
+  }, [filtered, sortMode, momentumMap])
 
   const allTags = getAllTags()
 
@@ -165,12 +173,12 @@ export function Courses() {
         >
           {isImporting ? (
             <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="size-4 mr-2 animate-spin" />
               Scanning...
             </>
           ) : (
             <>
-              <FolderOpen className="h-4 w-4 mr-2" />
+              <FolderOpen className="size-4 mr-2" />
               Import Course
             </>
           )}
@@ -226,7 +234,7 @@ export function Courses() {
               aria-label="Import courses"
             >
               <FolderOpen
-                className="h-12 w-12 text-muted-foreground mx-auto mb-3"
+                className="size-12 text-muted-foreground mx-auto mb-3"
                 aria-hidden="true"
               />
               <p className="text-muted-foreground mb-4">Import your first course to get started</p>
@@ -238,12 +246,12 @@ export function Courses() {
               >
                 {isImporting ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="size-4 mr-2 animate-spin" />
                     Scanning...
                   </>
                 ) : (
                   <>
-                    <FolderOpen className="h-4 w-4 mr-2" />
+                    <FolderOpen className="size-4 mr-2" />
                     Import Your First Course
                   </>
                 )}
@@ -276,16 +284,19 @@ export function Courses() {
               </TabsTrigger>
             ))}
           </TabsList>
-          <select
-            data-testid="sort-select"
-            aria-label="Sort courses"
-            value={sortMode}
-            onChange={e => setSortMode(e.target.value as SortMode)}
-            className="text-sm border border-input bg-background rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
-          >
-            <option value="recent">Most Recent</option>
-            <option value="momentum">Sort by Momentum</option>
-          </select>
+          <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
+            <SelectTrigger
+              data-testid="sort-select"
+              aria-label="Sort courses"
+              className="w-[180px] rounded-xl"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recent">Most Recent</SelectItem>
+              <SelectItem value="momentum">Sort by Momentum</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {tabs.map(tab => (

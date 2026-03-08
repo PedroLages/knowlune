@@ -45,11 +45,13 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - REMAINING: `type as ChallengeType` cast when type is '' produces "Target undefined must be a whole number"
 - REMAINING: E2E afterEach IDB cleanup doesn't await transaction completion -- test isolation risk
 
-## E07-S01: Momentum Score Calculation & Display
-- AC5 broken: `study-session-ended` event listened for but never dispatched anywhere in codebase
-- `@ts-nocheck` file (fireMilestoneToasts.tsx) shipped in diff -- bypasses type safety
-- `loadMomentumScores()` fire-and-forget without `.catch()` -- recurring silent failure pattern
-- No useEffect cleanup (ignore flag) for async `loadMomentumScores` -- stale setState on unmount
-- `Math.max(...sessions.map(...))` will throw RangeError on very large session arrays (stack overflow)
-- Hardcoded Tailwind color classes (text-orange-500, text-amber-500, text-blue-400) instead of theme tokens
-- Momentum not calculated for imported courses despite MomentumBadge prop on ImportedCourseCard
+## E07-S01: Momentum Score Calculation & Display (Round 2)
+- Round 1 blockers addressed: `.catch()` added, `ignore` flag added, `@ts-nocheck` removed
+- AC5 partially fixed: now listens for `study-log-updated` (which fires on localStorage writes)
+  but `useSessionStore.endSession()` writes to IndexedDB without dispatching any event
+  -- momentum won't recalculate when a study session ends via the session store
+- `calculateMomentumScore` marketed as pure but calls `getCourseCompletionPercent` (reads localStorage)
+- `Math.max(...sessions.map(...))` still present -- stack overflow risk on large arrays
+- Hardcoded Tailwind color classes still used in MomentumBadge (text-orange-700, text-amber-700, etc.)
+- `h-* w-*` still used instead of `size-*` in Courses.tsx icons (pre-existing, not introduced)
+- Native `<select>` used instead of shadcn Select component
