@@ -140,4 +140,34 @@ See [plan](plans/wise-brewing-wall.md) for implementation approach.
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+### Test Determinism
+- **Pattern**: Time-dependent calculations (at-risk detection, completion estimates) require deterministic time injection for reliable testing. Added optional `now` parameter to business logic functions, defaulting to `Date.now()` for production use.
+- **Impact**: Enabled comprehensive boundary condition testing (exactly 14 days, momentum exactly 20) without flaky tests.
+- **Reference**: [src/lib/atRisk.ts](../../src/lib/atRisk.ts), [src/lib/completionEstimate.ts](../../src/lib/completionEstimate.ts)
+
+### Type System Enforcement
+- **Challenge**: Unit tests initially failed typecheck due to `MomentumScore` interface mismatch — test helper added non-existent properties (`recencyScore`, `completionScore`, `frequencyScore`).
+- **Solution**: Simplified test helper to match actual interface (`score` and `tier` only). Type errors caught during validation auto-fix step.
+- **Lesson**: TypeScript catches contract violations early. Trust the compiler.
+
+### Review Findings Prioritization
+- **Architecture review**: 0 blockers, 5 high-priority issues (hardcoded colors, division-by-zero edge cases, missing E2E sidebar seeding).
+- **Testing review**: 0 blockers, 5 high-priority gaps (boundary conditions untested, missing unit tests for business logic, hard waits in E2E).
+- **Action**: All high-priority issues addressed in post-review commit (`fa800ce`). Blockers would have halted shipping; high-priority issues were fixed before PR creation.
+- **Pattern**: `/review-story` → fix high-priority → `/finish-story` workflow caught issues that would have been PR review comments.
+
+### Division-by-Zero Edge Cases
+- **Issue**: Completion estimate calculation didn't guard against `averageSessionMinutes === 0` (all sessions have `duration: 0`), causing `Math.ceil(X / 0)` → `Infinity sessions` in UI.
+- **Solution**: Added fallback to default 30-minute pace when average is zero or negative.
+- **Lesson**: Always validate divisors in calculation functions, even if "impossible" in normal use. Orphaned sessions and data corruption scenarios exist.
+
+### Component Testing Strategy
+- **Approach**: Comprehensive unit tests for business logic (`calculateAtRiskStatus`, `calculateCompletionEstimate`) + targeted component tests for edge cases (never-started courses, infinity days handling) + E2E tests for integration.
+- **Coverage**: 6/6 ACs covered via E2E, 100% boundary conditions via unit tests, UI edge cases via component tests.
+- **Lesson**: Three-layer testing (unit → component → E2E) catches different failure modes. Unit tests are fast and cover math edge cases; E2E tests verify integration.
+
+### Prettier Pre-Commit Discipline
+- **Issue**: Format check failed during validation — 4 files needed auto-formatting (test files and business logic).
+- **Root Cause**: Code written without running Prettier during development.
+- **Fix**: `npm run format:check` → `npx prettier --write` auto-fixed all formatting.
+- **Lesson**: Run `npm run format` before committing to avoid validation failures. Prettier is non-negotiable in this project.

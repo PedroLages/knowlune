@@ -144,7 +144,7 @@ development_status:
   7-9-error-path-zustand-persist-failure: backlog  # E07-S03-AC4
   7-10-error-path-malformed-study-log-data: backlog  # E07-S05
   7-11-error-path-invalid-study-goal-values: backlog  # E07-S05
-  epic-7-retrospective: optional
+  epic-7-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 8: Analytics & Reports Dashboard
