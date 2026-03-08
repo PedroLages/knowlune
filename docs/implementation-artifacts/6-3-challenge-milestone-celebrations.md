@@ -1,9 +1,9 @@
 ---
 story_id: E06-S03
 story_name: "Challenge Milestone Celebrations"
-status: in-progress
+status: done
 started: 2026-03-08
-completed:
+completed: 2026-03-08
 reviewed: true
 review_started: 2026-03-08
 review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing]
@@ -77,11 +77,11 @@ So that I feel recognized and motivated as I make progress toward my goals.
 
 ## Design Review Feedback
 
-No blockers. Two findings (setTimeout cleanup, aria role) — both overlap with code review. See `docs/reviews/design/design-review-2026-03-08-e06-s03.md`.
+Round 2: 1 blocker (toast message contrast WCAG AA failure), 3 medium (touch target, chevron motion-reduce, close button), 2 nits. See `docs/reviews/design/design-review-2026-03-08-e06-s03.md`.
 
 ## Code Review Feedback
 
-1 blocker (setTimeout leak), 4 high (confetti deps, milestoneMap on error, hasFiredRef, missing .catch), 3 medium. Testing: 0/6 ACs fully covered (all partial — missing unit tests for core logic). See `docs/reviews/code/code-review-2026-03-08-e06-s03.md` and `docs/reviews/code/code-review-testing-2026-03-08-e06-s03.md`.
+Round 2: 0 blockers, 3 high (celebratedMilestones undefined defense, refreshAllProgress race, confetti double-fire), 3 medium. Testing: 3/6 ACs fully covered, 3 partial. See `docs/reviews/code/code-review-2026-03-08-e06-s03.md` and `docs/reviews/code/code-review-testing-2026-03-08-e06-s03.md`.
 
 ## Implementation Plan
 

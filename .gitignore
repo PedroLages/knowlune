@@ -27,3 +27,6 @@ supabase/
 
 # Git worktrees
 .worktrees/
+
+# Python venv
+scripts/.venv/

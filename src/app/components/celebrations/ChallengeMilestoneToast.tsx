@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import confetti from 'canvas-confetti'
 import type { ChallengeTierConfig } from '@/lib/challengeMilestones'
 import { cn } from '@/app/components/ui/utils'
@@ -16,7 +16,11 @@ export function ChallengeMilestoneToast({
 }: ChallengeMilestoneToastProps) {
   const Icon = tierConfig.icon
 
+  const hasFiredRef = useRef(false)
+
   useEffect(() => {
+    if (hasFiredRef.current) return
+    hasFiredRef.current = true
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     if (!prefersReducedMotion) {
       confetti({
@@ -31,6 +35,7 @@ export function ChallengeMilestoneToast({
   return (
     <div
       role="status"
+      aria-atomic="true"
       aria-label={`${tierConfig.label} milestone achieved`}
       data-testid={`challenge-milestone-badge-${milestone}`}
       className={cn(
@@ -50,7 +55,7 @@ export function ChallengeMilestoneToast({
       <div className="min-w-0">
         <p className={cn('text-sm font-bold', tierConfig.textColor)}>{tierConfig.label}</p>
         <p className="text-xs text-muted-foreground mt-0.5">{challengeName}</p>
-        <p className="text-xs text-muted-foreground/80 mt-0.5">{tierConfig.message}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{tierConfig.message}</p>
       </div>
     </div>
   )

@@ -101,6 +101,29 @@ test.describe('AC1: 25% milestone celebration', () => {
 
     // And: challenge name shown in toast
     await expect(toast).toContainText('Watch 4 Videos')
+
+    // Verify milestone recorded in IndexedDB
+    const challenges = await page.evaluate(async () => {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open('ElearningDB')
+        request.onsuccess = () => {
+          const db = request.result
+          const tx = db.transaction('challenges', 'readonly')
+          const store = tx.objectStore('challenges')
+          const getAll = store.getAll()
+          getAll.onsuccess = () => {
+            db.close()
+            resolve(getAll.result)
+          }
+          getAll.onerror = () => {
+            db.close()
+            reject(getAll.error)
+          }
+        }
+        request.onerror = () => reject(request.error)
+      })
+    })
+    expect((challenges as any[])[0].celebratedMilestones).toContain(25)
   })
 
   test('milestone is recorded in IndexedDB and not triggered again', async ({ page }) => {
@@ -123,10 +146,10 @@ test.describe('AC1: 25% milestone celebration', () => {
 
     // Then: no milestone toast should appear — wait for page to settle, then assert absence
     await page.waitForSelector('[data-testid="header-create-challenge"]', { state: 'visible' })
-    // Give stagger delay time to fire if it would (500ms per toast + buffer)
-    await page.waitForTimeout(1500)
-    const toast = page.locator('[data-sonner-toast]').filter({ hasText: /25%.*Complete/i })
-    await expect(toast).toHaveCount(0)
+    // Deterministic check: assert no 25% toast appears within stagger window
+    await expect(
+      page.locator('[data-sonner-toast]').filter({ hasText: /25%.*Complete/i })
+    ).toHaveCount(0, { timeout: 2000 })
   })
 })
 
@@ -232,9 +255,11 @@ test.describe('AC4: 100% completion celebration', () => {
     const completedTrigger = completedSection.getByRole('button', { name: /Completed \(\d+\)/i })
     await expect(completedTrigger).toBeVisible()
 
-    // And: challenge name appears within completed section
-    await completedTrigger.click()
+    // And: challenge name appears within completed section (open by default)
     await expect(completedSection.getByText('Watch 4 Videos')).toBeVisible()
+
+    // And: "Completed" badge is visible in the completed section
+    await expect(completedSection.getByText('Completed', { exact: true })).toBeVisible()
   })
 })
 

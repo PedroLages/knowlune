@@ -9,6 +9,15 @@ vi.mock('@/lib/persistWithRetry', () => ({
   persistWithRetry: async (op: () => Promise<void>) => op(),
 }))
 
+// Mock sonner toast for error assertions
+vi.mock('sonner', () => ({
+  toast: {
+    error: vi.fn(),
+    success: vi.fn(),
+    custom: vi.fn(),
+  },
+}))
+
 // Mock challengeProgress so refreshAllProgress tests are isolated
 vi.mock('@/lib/challengeProgress', () => ({
   calculateProgress: vi.fn().mockResolvedValue(0),
@@ -359,6 +368,10 @@ describe('refreshAllProgress', () => {
     // State should not be updated since DB write failed
     const state = useChallengeStore.getState()
     expect(state.challenges[0].currentProgress).toBe(0)
+
+    // toast.error should notify the user
+    const { toast } = await import('sonner')
+    expect(toast.error).toHaveBeenCalledWith('Progress update may not have saved')
   })
 
   it('should return milestoneMap with detected milestones', async () => {

@@ -143,7 +143,7 @@ function fireMilestoneToasts(
             tierConfig={tierConfig}
           />
         ),
-        { duration: 8000 }
+        { duration: 8000, closeButton: true }
       )
     }, index * 500)
   )
@@ -152,7 +152,7 @@ function fireMilestoneToasts(
 export function Challenges() {
   const { challenges, isLoading, error, loadChallenges, refreshAllProgress } = useChallengeStore()
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [completedOpen, setCompletedOpen] = useState(false)
+  const [completedOpen, setCompletedOpen] = useState(true)
   const [expiredOpen, setExpiredOpen] = useState(false)
   const timerIdsRef = useRef<number[]>([])
 
@@ -198,8 +198,10 @@ export function Challenges() {
     )
   }, [challenges])
 
-  const sectionTriggerClass =
-    'flex w-full items-center gap-2 rounded-sm py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2'
+  const sectionTriggerClass = cn(
+    'flex w-full items-center gap-2 rounded-sm py-3 text-sm font-medium text-muted-foreground',
+    'transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2'
+  )
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6 p-6">
@@ -269,7 +271,10 @@ export function Challenges() {
               <CollapsibleTrigger className={sectionTriggerClass}>
                 <ChevronDown
                   aria-hidden="true"
-                  className={cn('size-4 transition-transform', completedOpen && 'rotate-180')}
+                  className={cn(
+                    'size-4 transition-transform motion-reduce:transition-none',
+                    completedOpen && 'rotate-180'
+                  )}
                 />
                 Completed ({completed.length})
               </CollapsibleTrigger>
@@ -288,7 +293,10 @@ export function Challenges() {
               <CollapsibleTrigger className={sectionTriggerClass}>
                 <ChevronDown
                   aria-hidden="true"
-                  className={cn('size-4 transition-transform', expiredOpen && 'rotate-180')}
+                  className={cn(
+                    'size-4 transition-transform motion-reduce:transition-none',
+                    expiredOpen && 'rotate-180'
+                  )}
                 />
                 Expired ({expired.length})
               </CollapsibleTrigger>

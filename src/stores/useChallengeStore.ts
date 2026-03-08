@@ -16,6 +16,7 @@ interface NewChallengeData {
 interface ChallengeState {
   challenges: Challenge[]
   isLoading: boolean
+  isRefreshing: boolean
   error: string | null
 
   loadChallenges: () => Promise<void>
@@ -27,6 +28,7 @@ interface ChallengeState {
 export const useChallengeStore = create<ChallengeState>((set, get) => ({
   challenges: [],
   isLoading: false,
+  isRefreshing: false,
   error: null,
 
   loadChallenges: async () => {
@@ -41,10 +43,11 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
   },
 
   refreshAllProgress: async () => {
-    const { challenges } = get()
+    const { challenges, isRefreshing } = get()
     const milestoneMap = new Map<string, number[]>()
-    if (challenges.length === 0) return milestoneMap
+    if (isRefreshing || challenges.length === 0) return milestoneMap
 
+    set({ isRefreshing: true })
     try {
       const updated = await Promise.all(
         challenges.map(async challenge => {
@@ -64,7 +67,7 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
             ...challenge,
             currentProgress,
             completedAt,
-            celebratedMilestones: [...challenge.celebratedMilestones, ...newMilestones],
+            celebratedMilestones: [...(challenge.celebratedMilestones ?? []), ...newMilestones],
           }
         })
       )
@@ -75,6 +78,8 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
       console.error('[ChallengeStore] Failed to refresh progress:', error)
       toast.error('Progress update may not have saved')
       milestoneMap.clear()
+    } finally {
+      set({ isRefreshing: false })
     }
 
     return milestoneMap
