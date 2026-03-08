@@ -30,7 +30,9 @@ import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useCourseCardPreview } from '@/hooks/useCourseCardPreview'
 import { useVideoFromHandle } from '@/hooks/useVideoFromHandle'
 import { db } from '@/db/schema'
+import { MomentumBadge } from './MomentumBadge'
 import type { ImportedCourse, ImportedVideo, LearnerCourseStatus } from '@/data/types'
+import type { MomentumScore } from '@/lib/momentum'
 
 const statusConfig: Record<
   LearnerCourseStatus,
@@ -56,9 +58,10 @@ const statusConfig: Record<
 interface ImportedCourseCardProps {
   course: ImportedCourse
   allTags: string[]
+  momentumScore?: MomentumScore
 }
 
-export function ImportedCourseCard({ course, allTags }: ImportedCourseCardProps) {
+export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedCourseCardProps) {
   const updateCourseTags = useCourseImportStore(state => state.updateCourseTags)
   const updateCourseStatus = useCourseImportStore(state => state.updateCourseStatus)
   const navigate = useNavigate()
@@ -336,6 +339,11 @@ export function ImportedCourseCard({ course, allTags }: ImportedCourseCardProps)
                 </span>
               </span>
             </div>
+            {momentumScore && momentumScore.score > 0 && (
+              <div className="mt-2">
+                <MomentumBadge score={momentumScore.score} tier={momentumScore.tier} />
+              </div>
+            )}
           </div>
         </Card>
       </article>

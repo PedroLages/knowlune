@@ -103,6 +103,21 @@ export function Courses() {
           estimateMap.set(course.id, estimate)
         }
 
+        // Calculate momentum for imported courses (AC: E07-S01)
+        for (const course of importedCourses) {
+          const courseSessions = sessionsByCourse.get(course.id) ?? []
+
+          // For imported courses: use videoCount as totalLessons, default completion to 0
+          // Momentum driven primarily by study sessions (recency + frequency)
+          const momentum = calculateMomentumScore({
+            courseId: course.id,
+            totalLessons: course.videoCount,
+            completionPercent: 0, // TODO: Calculate from contentProgress when implemented
+            sessions: courseSessions,
+          })
+          momentumMap.set(course.id, momentum)
+        }
+
         setMomentumMap(momentumMap)
         setAtRiskMap(atRiskMap)
         setEstimateMap(estimateMap)
@@ -296,7 +311,12 @@ export function Courses() {
               className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
             >
               {sortedImportedCourses.map(course => (
-                <ImportedCourseCard key={course.id} course={course} allTags={allTags} />
+                <ImportedCourseCard
+                  key={course.id}
+                  course={course}
+                  allTags={allTags}
+                  momentumScore={momentumMap.get(course.id)}
+                />
               ))}
             </div>
           )}
