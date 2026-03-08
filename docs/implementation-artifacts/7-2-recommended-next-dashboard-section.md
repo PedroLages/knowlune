@@ -4,9 +4,18 @@ story_name: "Recommended Next Dashboard Section"
 status: in-progress
 started: 2026-03-08
 completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+reviewed: true
+review_started: 2026-03-08
+review_gates_passed:
+  - build
+  - lint
+  - typecheck
+  - prettier
+  - unit-tests
+  - e2e-smoke
+  - e2e-story
+  - code-review
+  - code-review-testing
 ---
 
 # Story 7.2: Recommended Next Dashboard Section
@@ -46,26 +55,26 @@ Then the "Recommended Next" rankings recalculate to reflect the updated momentum
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create recommendations computation module (AC: 1, 2, 5)
-  - [ ] 1.1 Create `src/lib/recommendations.ts` with `computeCompositeScore()` and `getRecommendedCourses()`
-  - [ ] 1.2 Define "active course" predicate: progress > 0% and < 100% completion
-  - [ ] 1.3 Write unit tests in `src/lib/__tests__/recommendations.test.ts`
+- [x] Task 1: Create recommendations computation module (AC: 1, 2, 5)
+  - [x] 1.1 Create `src/lib/recommendations.ts` with `computeCompositeScore()` and `getRecommendedCourses()`
+  - [x] 1.2 Define "active course" predicate: progress > 0% and < 100% completion
+  - [x] 1.3 Write unit tests in `src/lib/__tests__/recommendations.test.ts`
 
-- [ ] Task 2: Create RecommendedNext dashboard component (AC: 1, 2, 3, 4)
-  - [ ] 2.1 Create `src/app/components/RecommendedNext.tsx`
-  - [ ] 2.2 Implement three states: 3+ courses, 1-2 courses, no courses (empty state)
-  - [ ] 2.3 Add loading skeleton matching the existing Overview page skeleton pattern
-  - [ ] 2.4 Use existing `CourseCard` or inline compact card with course click navigation
+- [x] Task 2: Create RecommendedNext dashboard component (AC: 1, 2, 3, 4)
+  - [x] 2.1 Create `src/app/components/RecommendedNext.tsx`
+  - [x] 2.2 Implement three states: 3+ courses, 1-2 courses, no courses (empty state)
+  - [x] 2.3 Add loading skeleton matching the existing Overview page skeleton pattern
+  - [x] 2.4 Use existing `CourseCard` or inline compact card with course click navigation
 
-- [ ] Task 3: Integrate RecommendedNext into Overview page (AC: 1, 2, 3, 4, 5)
-  - [ ] 3.1 Import and add `<RecommendedNext />` section to `src/app/pages/Overview.tsx`
-  - [ ] 3.2 Add section to loading skeleton in Overview
-  - [ ] 3.3 Verify section appears between "Continue Learning" and the Metrics Strip
+- [x] Task 3: Integrate RecommendedNext into Overview page (AC: 1, 2, 3, 4, 5)
+  - [x] 3.1 Import and add `<RecommendedNext />` section to `src/app/pages/Overview.tsx`
+  - [x] 3.2 Add section to loading skeleton in Overview
+  - [x] 3.3 Verify section appears between "Continue Learning" and the Metrics Strip
 
-- [ ] Task 4: Write E2E tests (AC: 1, 2, 3, 4)
-  - [ ] 4.1 Create `tests/e2e/story-e07-s02.spec.ts`
-  - [ ] 4.2 Test: section renders with seeded active course progress
-  - [ ] 4.3 Test: empty state renders when no course progress
+- [x] Task 4: Write E2E tests (AC: 1, 2, 3, 4)
+  - [x] 4.1 Create `tests/e2e/story-e07-s02.spec.ts`
+  - [x] 4.2 Test: section renders with seeded active course progress
+  - [x] 4.3 Test: empty state renders when no course progress
 
 ## Implementation Notes
 
@@ -108,7 +117,14 @@ Note: When E07-S01 (Momentum Score) is implemented, replace the frequency proxy 
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+See full reports in `docs/reviews/code/`:
+- `code-review-2026-03-08-E07-S02.md` — adversarial code review (2 blockers, 3 high, 3 medium)
+- `code-review-testing-2026-03-08-E07-S02.md` — test coverage review (1 blocker, 3 high, 4 medium)
+
+**Key blockers to fix before shipping:**
+1. Stale progress bug: `useMemo` doesn't re-run when lessons are marked complete (only when sessions change) → AC5 partially broken
+2. Mutable cache reference passed to recommendation algorithm → data integrity risk
+3. AC5 has zero test coverage at any level
 
 ## Challenges and Lessons Learned
 
