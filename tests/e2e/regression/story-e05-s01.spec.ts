@@ -10,7 +10,7 @@
 import { test, expect } from '../../support/fixtures'
 import { TIMEOUTS } from '../../utils/constants'
 import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
-import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 function makeStreakEntry(daysAgo: number): {
   type: string

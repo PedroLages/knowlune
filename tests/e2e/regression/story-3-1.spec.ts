@@ -18,7 +18,7 @@
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
 import { TIMEOUTS } from '../../utils/constants'
-import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 // ---------------------------------------------------------------------------
 // Constants & Helpers

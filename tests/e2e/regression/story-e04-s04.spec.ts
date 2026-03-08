@@ -10,7 +10,7 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { getRelativeDate, getRelativeTimestamp } from '../../utils/test-time'
-import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 /** Reusable helper to seed study sessions into IndexedDB */
 async function seedStudySessions(

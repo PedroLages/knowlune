@@ -15,7 +15,7 @@ import { navigateAndWait } from '../../support/helpers/navigation'
 import { TIMEOUTS } from '../../utils/constants'
 import path from 'node:path'
 import fs from 'node:fs'
-import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 // ---------------------------------------------------------------------------
 // Test Data — use a static course/lesson that has video (renders Notes tab)

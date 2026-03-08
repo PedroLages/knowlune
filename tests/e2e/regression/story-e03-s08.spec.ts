@@ -11,7 +11,7 @@
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
 import { RETRY_CONFIG } from '../../utils/constants'
-import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 const NOTES_URL = '/notes'
 

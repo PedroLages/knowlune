@@ -8,7 +8,7 @@ import { test, expect } from '../../support/fixtures'
 import { goToCourses } from '../../support/helpers/navigation'
 import { seedStudySessions } from '../../support/helpers/indexeddb-seed'
 import { FIXED_DATE, addMinutes, getRelativeDateWithMinutes } from '../../utils/test-time'
-import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 // Seed sidebar state to prevent fullscreen Sheet overlay at tablet viewports
 async function seedSidebar(page: import('@playwright/test').Page) {

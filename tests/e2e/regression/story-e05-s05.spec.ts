@@ -11,7 +11,7 @@ import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
  */
 import { test, expect } from '../../support/fixtures'
 import { goToSettings } from '../../support/helpers/navigation'
-import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 test.describe('Study Reminders & Notifications (E05-S05)', () => {
   test.beforeEach(async ({ page }) => {

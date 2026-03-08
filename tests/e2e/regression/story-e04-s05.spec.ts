@@ -11,7 +11,7 @@ import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
  *   - AC6: Mobile responsive with 44x44px touch targets, first actionable element
  */
 import { test, expect } from '../../support/fixtures'
-import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 test.describe('Continue Learning Dashboard (E04-S05)', () => {
   test.beforeEach(async ({ page }) => {

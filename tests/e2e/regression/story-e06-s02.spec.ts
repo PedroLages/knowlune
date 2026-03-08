@@ -9,7 +9,7 @@ import { RETRY_CONFIG } from '../../utils/constants'
 import { test, expect } from '../../support/fixtures'
 import { createChallenge } from '../../support/fixtures/factories/challenge-factory'
 import type { Page } from '@playwright/test'
-import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 const DB_NAME = 'ElearningDB'
 

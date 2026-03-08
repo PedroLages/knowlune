@@ -10,7 +10,7 @@ import { createChallenge } from '../../support/fixtures/factories/challenge-fact
 import { RETRY_CONFIG, TIMEOUTS } from '../../utils/constants'
 import type { Page } from '@playwright/test'
 import { FIXED_DATE } from './../../utils/test-time'
-import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 const DB_NAME = 'ElearningDB'
 

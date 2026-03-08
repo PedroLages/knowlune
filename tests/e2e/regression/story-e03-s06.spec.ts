@@ -11,7 +11,7 @@ import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
  */
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
-import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 const COURSE_ID = 'operative-six'
 const COURSE_URL = `/courses/${COURSE_ID}`

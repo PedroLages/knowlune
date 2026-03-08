@@ -7,7 +7,7 @@ import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
 import { TIMEOUTS } from '../../utils/constants'
-import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 /** Navigate to the Challenges page. */
 async function goToChallenges(page: import('@playwright/test').Page) {

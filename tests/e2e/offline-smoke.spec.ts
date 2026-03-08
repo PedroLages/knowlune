@@ -8,7 +8,7 @@
  *   - IndexedDB remains accessible offline
  */
 import { test, expect } from '../support/fixtures'
-import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
+import { closeSidebar } from '../support/fixtures/constants/sidebar-constants'
 
 test.describe('Offline Degradation', () => {
   test.skip(

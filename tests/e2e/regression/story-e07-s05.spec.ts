@@ -9,7 +9,7 @@ import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
  */
 import { test, expect } from '../../support/fixtures'
 import { TIMEOUTS } from '../../utils/constants'
-import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 /** Build a study-log array with `count` lesson_complete entries spread across `daySpread`
  *  distinct days, all at the specified hour. Uses explicit date construction so the hour

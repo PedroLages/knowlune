@@ -17,7 +17,7 @@
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
 import { TIMEOUTS } from '../../utils/constants'
-import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 // Use a known course/lesson with video content
 const LESSON_URL = '/courses/operative-six/op6-introduction'

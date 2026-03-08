@@ -14,7 +14,7 @@
 import { test, expect } from '../../support/fixtures'
 import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
 import { TIMEOUTS } from '../../utils/constants'
-import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 test.describe('Study Goals & Weekly Adherence (E05-S03)', () => {
   test.beforeEach(async ({ page }) => {

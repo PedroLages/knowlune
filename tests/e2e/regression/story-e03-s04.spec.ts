@@ -10,7 +10,7 @@
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
 import { TIMEOUTS } from '../../utils/constants'
-import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 const LESSON_URL = '/courses/operative-six/op6-introduction'
 const LESSON_URL_2 = '/courses/operative-six/op6-pillars-of-influence'

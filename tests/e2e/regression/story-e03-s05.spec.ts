@@ -10,7 +10,7 @@
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
 import { TIMEOUTS } from '../../utils/constants'
-import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 /** Seed notes directly into IndexedDB for search tests.
  *  Must be called after navigateAndWait so the DB and stores exist. */

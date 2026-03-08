@@ -9,7 +9,7 @@
 import type { Page } from '@playwright/test'
 import type { ImportedCourseTestData } from '../fixtures/factories/imported-course-factory'
 import { goToCourses } from './navigation'
-import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
+import { closeSidebar } from '../fixtures/constants/sidebar-constants'
 
 type IndexedDBSeed = {
   seedImportedCourses: (courses: ImportedCourseTestData[]) => Promise<void>

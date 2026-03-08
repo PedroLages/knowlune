@@ -12,7 +12,7 @@ import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
 import { test, expect } from '../../support/fixtures'
 import { createCourseProgress } from '../../support/fixtures/factories/course-factory'
 import { TIMEOUTS } from '../../utils/constants'
-import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 // Real course IDs from src/data/courses — must match allCourses
 const COURSE_1 = '6mx'

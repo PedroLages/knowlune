@@ -12,7 +12,7 @@
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
 import { TIMEOUTS } from '../../utils/constants'
-import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 // Large video file (149 MB) causes metadata loading contention under parallel workers.
 // Serialize this spec to ensure the dev server can serve the video reliably.

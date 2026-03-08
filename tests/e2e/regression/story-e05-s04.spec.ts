@@ -13,7 +13,7 @@ import { test, expect } from '../../support/fixtures'
 import { createStudyAction } from '../../support/fixtures/factories'
 import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
 import { TIMEOUTS } from '../../utils/constants'
-import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 /**
  * Creates a study action pinned to a specific day of the current month.

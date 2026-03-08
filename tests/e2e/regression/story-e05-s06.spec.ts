@@ -9,7 +9,7 @@ import { goToOverview } from '../../support/helpers/navigation'
 import { buildStreakLog } from '../../support/helpers/streak-helpers'
 import { getRelativeTimestamp } from './../../utils/test-time'
 import { TIMEOUTS } from '../../utils/constants'
-import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 test.describe('Streak Milestone Celebrations (E05-S06)', () => {
   // Serial mode: milestone detection uses sessionStorage guards that can race

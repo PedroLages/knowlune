@@ -13,7 +13,7 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { TIMEOUTS } from '../../utils/constants'
-import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 const COURSE_ID = '6mx'
 const MODULE_ID = '6mx-day1'
