@@ -135,7 +135,7 @@ development_status:
   7-1-momentum-score-calculation-and-display: done
   7-2-recommended-next-dashboard-section: done
   7-3-next-course-suggestion-after-completion: done
-  7-4-at-risk-course-detection-and-completion-estimates: backlog
+  7-4-at-risk-course-detection-and-completion-estimates: in-progress
   7-5-smart-study-schedule-suggestion: done
   # Gap Coverage Enhancements (from traceability analysis 2026-03-08)
   7-6-e2e-test-for-course-suggestion-tiebreaker: backlog  # E07-S03-AC2
