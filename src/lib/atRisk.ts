@@ -24,7 +24,6 @@ export function calculateAtRiskStatus(
   momentumScore: MomentumScore,
   now = Date.now()
 ): AtRiskStatus {
-
   // Calculate days since last session
   let daysSinceLastSession = Infinity
 

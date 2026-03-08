@@ -19,9 +19,6 @@ function makeMomentumScore(score: number): MomentumScore {
   return {
     score,
     tier: score >= 70 ? 'hot' : score >= 30 ? 'warm' : 'cold',
-    recencyScore: 0,
-    completionScore: 0,
-    frequencyScore: 0,
   }
 }
 
@@ -87,13 +84,19 @@ describe('calculateAtRiskStatus — boundary: momentum score 20', () => {
 describe('calculateAtRiskStatus — combined conditions', () => {
   it('requires BOTH conditions: 14+ days AND momentum < 20', () => {
     // Only 14+ days, momentum high → not at risk
-    expect(calculateAtRiskStatus([makeSession(20)], makeMomentumScore(50), FIXED_TIMESTAMP).isAtRisk).toBe(false)
+    expect(
+      calculateAtRiskStatus([makeSession(20)], makeMomentumScore(50), FIXED_TIMESTAMP).isAtRisk
+    ).toBe(false)
 
     // Only momentum < 20, recent session → not at risk
-    expect(calculateAtRiskStatus([makeSession(5)], makeMomentumScore(10), FIXED_TIMESTAMP).isAtRisk).toBe(false)
+    expect(
+      calculateAtRiskStatus([makeSession(5)], makeMomentumScore(10), FIXED_TIMESTAMP).isAtRisk
+    ).toBe(false)
 
     // Both conditions met → at risk
-    expect(calculateAtRiskStatus([makeSession(20)], makeMomentumScore(10), FIXED_TIMESTAMP).isAtRisk).toBe(true)
+    expect(
+      calculateAtRiskStatus([makeSession(20)], makeMomentumScore(10), FIXED_TIMESTAMP).isAtRisk
+    ).toBe(true)
   })
 })
 
@@ -128,7 +131,7 @@ describe('calculateAtRiskStatus — most recent session selection', () => {
   it('uses most recent session when multiple sessions exist', () => {
     const sessions = [
       makeSession(20), // 20 days ago
-      makeSession(5),  // 5 days ago (most recent)
+      makeSession(5), // 5 days ago (most recent)
       makeSession(10), // 10 days ago
     ]
     const result = calculateAtRiskStatus(sessions, makeMomentumScore(10), FIXED_TIMESTAMP)
