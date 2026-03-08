@@ -27,3 +27,10 @@ supabase/
 
 # Git worktrees
 .worktrees/
+
+# Python venv
+scripts/.venv/
+
+# Auto-story runtime logs
+scripts/auto-story.log
+scripts/auto-story-progress.log
