@@ -32,7 +32,7 @@ const DAY1_LESSON_IDS = [
 test.describe('E04-S01: Mark Content Completion Status', () => {
   test.beforeEach(async ({ page }) => {
     // Seed sidebar closed to prevent overlay on tablet viewports
-    await page.evaluate((sidebarState) => {
+    await page.evaluate(sidebarState => {
       Object.entries(sidebarState).forEach(([key, value]) => {
         localStorage.setItem(key, value)
       })

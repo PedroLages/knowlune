@@ -35,7 +35,7 @@ async function selectType(page: import('@playwright/test').Page, type: RegExp) {
 test.describe('Create Learning Challenges (E06-S01)', () => {
   test.beforeEach(async ({ page }) => {
     // Close tablet sidebar overlay
-    await page.evaluate((sidebarState) => {
+    await page.evaluate(sidebarState => {
       Object.entries(sidebarState).forEach(([key, value]) => {
         localStorage.setItem(key, value)
       })

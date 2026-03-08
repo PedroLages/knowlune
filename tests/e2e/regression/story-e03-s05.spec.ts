@@ -93,7 +93,7 @@ const TEST_NOTES = [
 
 /** Navigate to overview, suppress sidebar, seed notes, reload to pick up data. */
 async function setupWithNotes(page: Parameters<typeof navigateAndWait>[0]) {
-  await page.evaluate((sidebarState) => {
+  await page.evaluate(sidebarState => {
     Object.entries(sidebarState).forEach(([key, value]) => {
       localStorage.setItem(key, value)
     })

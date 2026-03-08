@@ -4,8 +4,8 @@ story_name: "At-Risk Course Detection & Completion Estimates"
 status: in-progress
 started: 2026-03-08
 completed:
-reviewed: false          # false | in-progress | true
-review_started:          # YYYY-MM-DD — set when /review-story begins
+reviewed: in-progress    # false | in-progress | true
+review_started: 2026-03-08  # YYYY-MM-DD — set when /review-story begins
 review_gates_passed: []  # tracks completed gates: [build, lint, unit-tests, e2e-tests, design-review, code-review]
 ---
 

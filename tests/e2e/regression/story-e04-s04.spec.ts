@@ -47,11 +47,11 @@ async function seedStudySessions(
 test.describe('E04-S04: View Study Session History', () => {
   test.beforeEach(async ({ page, indexedDB }) => {
     // Seed sidebar state to prevent tablet overlay blocking interactions
-    await page.evaluate((sidebarState) => {
-    Object.entries(sidebarState).forEach(([key, value]) => {
-      localStorage.setItem(key, value)
-    })
-  }, closeSidebar())
+    await page.evaluate(sidebarState => {
+      Object.entries(sidebarState).forEach(([key, value]) => {
+        localStorage.setItem(key, value)
+      })
+    }, closeSidebar())
     // Clear study sessions before each test for isolation
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
@@ -114,15 +114,25 @@ test.describe('E04-S04: View Study Session History', () => {
     await expect(firstEntry).toContainText('1h 0m') // 60 minutes
     await expect(firstEntry).toContainText('useEffect, Custom Hooks')
     // Verify date is displayed (AC1 requires date on each entry)
-    const expectedRecentDate = new Date(getRelativeDate(-5)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    await expect(firstEntry.locator('[data-testid="session-date"]')).toContainText(expectedRecentDate)
+    const expectedRecentDate = new Date(getRelativeDate(-5)).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
+    await expect(firstEntry.locator('[data-testid="session-date"]')).toContainText(
+      expectedRecentDate
+    )
 
     // Last entry should be oldest (7 days ago)
     const lastEntry = sessionEntries.last()
     await expect(lastEntry).toContainText('React Fundamentals')
     await expect(lastEntry).toContainText('1h 30m') // 90 minutes
     await expect(lastEntry).toContainText('Introduction to Hooks, useState Basics')
-    const expectedOldDate = new Date(getRelativeDate(-7)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    const expectedOldDate = new Date(getRelativeDate(-7)).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
     await expect(lastEntry.locator('[data-testid="session-date"]')).toContainText(expectedOldDate)
   })
 

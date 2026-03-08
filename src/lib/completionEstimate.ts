@@ -26,9 +26,7 @@ export function calculateCompletionEstimate(
   const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000
 
   // Filter sessions to last 30 days
-  const recentSessions = sessions.filter(
-    s => new Date(s.startTime).getTime() >= thirtyDaysAgo
-  )
+  const recentSessions = sessions.filter(s => new Date(s.startTime).getTime() >= thirtyDaysAgo)
 
   // Calculate average session duration
   let averageSessionMinutes: number
@@ -38,7 +36,7 @@ export function calculateCompletionEstimate(
     averageSessionMinutes = DEFAULT_SESSION_MINUTES
   } else {
     // Calculate average from recent sessions
-    const totalMinutes = recentSessions.reduce((sum, s) => sum + (s.duration / 60), 0)
+    const totalMinutes = recentSessions.reduce((sum, s) => sum + s.duration / 60, 0)
     averageSessionMinutes = totalMinutes / recentSessions.length
   }
 

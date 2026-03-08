@@ -34,7 +34,7 @@ const LESSON_URL = '/courses/operative-six/op6-introduction'
 const LESSON_URL_NO_EXTRAS = '/courses/operative-six/op6-pillars-of-influence'
 
 async function goToLesson(page: Parameters<typeof navigateAndWait>[0]) {
-  await page.evaluate((sidebarState) => {
+  await page.evaluate(sidebarState => {
     Object.entries(sidebarState).forEach(([key, value]) => {
       localStorage.setItem(key, value)
     })
@@ -44,7 +44,7 @@ async function goToLesson(page: Parameters<typeof navigateAndWait>[0]) {
 }
 
 async function goToLessonNoExtras(page: Parameters<typeof navigateAndWait>[0]) {
-  await page.evaluate((sidebarState) => {
+  await page.evaluate(sidebarState => {
     Object.entries(sidebarState).forEach(([key, value]) => {
       localStorage.setItem(key, value)
     })

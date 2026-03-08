@@ -36,7 +36,7 @@ const MULTI_PDF_URL = `/courses/${COURSE_ID}/${LESSON_MULTI_PAGE_PDF}`
 // On tablet (768px), the sidebar Sheet opens by default on fresh visits,
 // covering main content. Dismiss it before tests interact with page elements.
 test.beforeEach(async ({ page }) => {
-  await page.evaluate((sidebarState) => {
+  await page.evaluate(sidebarState => {
     Object.entries(sidebarState).forEach(([key, value]) => {
       localStorage.setItem(key, value)
     })

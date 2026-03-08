@@ -37,7 +37,7 @@ const MULTI_PDF_URL = `/courses/${COURSE_ID}/${LESSON_MULTI_PAGE_PDF}`
 // On tablet (768px), the sidebar Sheet opens by default on fresh visits,
 // covering main content. Dismiss it before tests interact with page elements.
 test.beforeEach(async ({ page }) => {
-  await page.evaluate((sidebarState) => {
+  await page.evaluate(sidebarState => {
     Object.entries(sidebarState).forEach(([key, value]) => {
       localStorage.setItem(key, value)
     })
@@ -358,12 +358,15 @@ test.describe('AC3: Page Position Persistence', () => {
     await pdfViewer.getByTestId('pdf-next-page').click()
 
     // Wait for debounced save using conditional check
-    await page.waitForFunction(() => {
-      const progress = localStorage.getItem('course-progress')
-      if (!progress) return false
-      const parsed = JSON.parse(progress)
-      return parsed && Object.keys(parsed).length > 0
-    }, { timeout: TIMEOUTS.MEDIUM })
+    await page.waitForFunction(
+      () => {
+        const progress = localStorage.getItem('course-progress')
+        if (!progress) return false
+        const parsed = JSON.parse(progress)
+        return parsed && Object.keys(parsed).length > 0
+      },
+      { timeout: TIMEOUTS.MEDIUM }
+    )
 
     // THEN: Page position is persisted in localStorage
     const progress = await localStorage.get<Record<string, unknown>>('course-progress')

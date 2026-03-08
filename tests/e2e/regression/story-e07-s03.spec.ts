@@ -69,7 +69,7 @@ async function closeCompletionModal(page: import('@playwright/test').Page) {
 test.describe('E07-S03: Next Course Suggestion After Completion', () => {
   test.beforeEach(async ({ page, localStorage }) => {
     // Prevent sidebar overlay at tablet viewports; clear any persisted dismissals
-    await page.addInitScript((sidebarState) => {
+    await page.addInitScript(sidebarState => {
       Object.entries(sidebarState).forEach(([key, value]) => {
         window.localStorage.setItem(key, value)
       })
@@ -233,7 +233,9 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
     await closeCompletionModal(page)
 
     // Congratulatory message should appear (not a suggestion card)
-    await expect(page.getByTestId('next-course-congratulations')).toBeVisible({ timeout: TIMEOUTS.LONG })
+    await expect(page.getByTestId('next-course-congratulations')).toBeVisible({
+      timeout: TIMEOUTS.LONG,
+    })
     await expect(page.getByText("You've completed all active courses!")).toBeVisible()
     await expect(page.getByTestId('next-course-suggestion')).not.toBeVisible()
   })

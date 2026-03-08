@@ -16,11 +16,11 @@ import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants
 test.describe('Continue Learning Dashboard (E04-S05)', () => {
   test.beforeEach(async ({ page }) => {
     // Seed sidebar state to prevent overlay blocking on tablet viewports
-    await page.evaluate((sidebarState) => {
-    Object.entries(sidebarState).forEach(([key, value]) => {
-      localStorage.setItem(key, value)
-    })
-  }, closeSidebar())
+    await page.evaluate(sidebarState => {
+      Object.entries(sidebarState).forEach(([key, value]) => {
+        localStorage.setItem(key, value)
+      })
+    }, closeSidebar())
   })
 
   test('AC1: should display Continue Learning card with course and lesson info', async ({

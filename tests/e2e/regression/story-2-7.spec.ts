@@ -26,7 +26,7 @@ async function goToFirstLesson(page: Parameters<typeof navigateAndWait>[0]) {
   // Without this, the sidebar defaults to open at 640-1023px viewports, creating a
   // fullscreen overlay that blocks all pointer events.
   await page.goto('/')
-  await page.evaluate((sidebarState) => {
+  await page.evaluate(sidebarState => {
     Object.entries(sidebarState).forEach(([key, value]) => {
       localStorage.setItem(key, value)
     })

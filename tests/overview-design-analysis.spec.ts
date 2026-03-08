@@ -197,7 +197,7 @@ test.describe('Overview Page - Comprehensive Design Analysis', () => {
 
     test('should show progress bars in continue studying', async ({ page }) => {
       // Seed progress data to guarantee Continue Studying shows courses
-      await page.evaluate((fixedDate) => {
+      await page.evaluate(fixedDate => {
         localStorage.setItem(
           'course-progress',
           JSON.stringify({

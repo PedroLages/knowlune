@@ -17,7 +17,7 @@ const LESSON_URL_2 = '/courses/operative-six/op6-pillars-of-influence'
 
 /** Navigate to lesson player with notes panel open, suppressing mobile sidebar. */
 async function goToLessonWithNotes(page: Parameters<typeof navigateAndWait>[0], url = LESSON_URL) {
-  await page.evaluate((sidebarState) => {
+  await page.evaluate(sidebarState => {
     Object.entries(sidebarState).forEach(([key, value]) => {
       localStorage.setItem(key, value)
     })

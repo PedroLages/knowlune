@@ -17,7 +17,7 @@ test.describe('Offline Degradation', () => {
   )
   test.beforeEach(async ({ page }) => {
     // CRITICAL: Seed sidebar state to prevent tablet overlay blocking
-    await page.evaluate((sidebarState) => {
+    await page.evaluate(sidebarState => {
       Object.entries(sidebarState).forEach(([key, value]) => {
         localStorage.setItem(key, value)
       })

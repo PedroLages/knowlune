@@ -19,7 +19,7 @@ import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants
 test.describe('Study Goals & Weekly Adherence (E05-S03)', () => {
   test.beforeEach(async ({ page }) => {
     // Clear localStorage once per test (not on every reload) and prevent sidebar overlay
-    await page.addInitScript((sidebarState) => {
+    await page.addInitScript(sidebarState => {
       if (!sessionStorage.getItem('__test_cleaned')) {
         localStorage.clear()
         sessionStorage.setItem('__test_cleaned', '1')

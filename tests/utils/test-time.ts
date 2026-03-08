@@ -22,12 +22,12 @@
  * Fixed reference date for all tests: January 15, 2025 at 12:00 PM UTC
  * This provides a stable baseline for time-dependent test scenarios.
  */
-export const FIXED_DATE = '2025-01-15T12:00:00.000Z';
+export const FIXED_DATE = '2025-01-15T12:00:00.000Z'
 
 /**
  * Fixed reference timestamp (milliseconds since epoch)
  */
-export const FIXED_TIMESTAMP = new Date(FIXED_DATE).getTime();
+export const FIXED_TIMESTAMP = new Date(FIXED_DATE).getTime()
 
 /**
  * Get a date relative to FIXED_DATE
@@ -35,9 +35,9 @@ export const FIXED_TIMESTAMP = new Date(FIXED_DATE).getTime();
  * @returns ISO string for the calculated date
  */
 export function getRelativeDate(days: number): string {
-  const date = new Date(FIXED_DATE);
-  date.setDate(date.getDate() + days);
-  return date.toISOString();
+  const date = new Date(FIXED_DATE)
+  date.setDate(date.getDate() + days)
+  return date.toISOString()
 }
 
 /**
@@ -46,7 +46,7 @@ export function getRelativeDate(days: number): string {
  * @returns Timestamp in milliseconds
  */
 export function getRelativeTimestamp(days: number): number {
-  return FIXED_TIMESTAMP + (days * 24 * 60 * 60 * 1000);
+  return FIXED_TIMESTAMP + days * 24 * 60 * 60 * 1000
 }
 
 /**
@@ -55,9 +55,9 @@ export function getRelativeTimestamp(days: number): number {
  * @returns ISO string for the calculated date
  */
 export function addMinutes(minutes: number): string {
-  const date = new Date(FIXED_DATE);
-  date.setMinutes(date.getMinutes() + minutes);
-  return date.toISOString();
+  const date = new Date(FIXED_DATE)
+  date.setMinutes(date.getMinutes() + minutes)
+  return date.toISOString()
 }
 
 /**
@@ -66,9 +66,9 @@ export function addMinutes(minutes: number): string {
  * @returns ISO string for the calculated date
  */
 export function addHours(hours: number): string {
-  const date = new Date(FIXED_DATE);
-  date.setHours(date.getHours() + hours);
-  return date.toISOString();
+  const date = new Date(FIXED_DATE)
+  date.setHours(date.getHours() + hours)
+  return date.toISOString()
 }
 
 /**
@@ -78,33 +78,36 @@ export function addHours(hours: number): string {
  * @returns ISO string for the calculated date
  */
 export function getRelativeDateWithMinutes(days: number, minutes: number): string {
-  const date = new Date(FIXED_DATE);
-  date.setDate(date.getDate() + days);
-  date.setMinutes(date.getMinutes() + minutes);
-  return date.toISOString();
+  const date = new Date(FIXED_DATE)
+  date.setDate(date.getDate() + days)
+  date.setMinutes(date.getMinutes() + minutes)
+  return date.toISOString()
 }
 
 /**
  * Format a date string for display
  * Supports common date format patterns
  */
-export function formatDate(dateString: string, format: 'MMM DD, YYYY' | 'YYYY-MM-DD' | 'MM/DD/YYYY' = 'MMM DD, YYYY'): string {
-  const date = new Date(dateString);
+export function formatDate(
+  dateString: string,
+  format: 'MMM DD, YYYY' | 'YYYY-MM-DD' | 'MM/DD/YYYY' = 'MMM DD, YYYY'
+): string {
+  const date = new Date(dateString)
 
-  const month = date.toLocaleString('en-US', { month: 'short' });
-  const monthNum = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const year = date.getFullYear();
+  const month = date.toLocaleString('en-US', { month: 'short' })
+  const monthNum = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const year = date.getFullYear()
 
   switch (format) {
     case 'MMM DD, YYYY':
-      return `${month} ${day}, ${year}`;
+      return `${month} ${day}, ${year}`
     case 'YYYY-MM-DD':
-      return `${year}-${monthNum}-${day}`;
+      return `${year}-${monthNum}-${day}`
     case 'MM/DD/YYYY':
-      return `${monthNum}/${day}/${year}`;
+      return `${monthNum}/${day}/${year}`
     default:
-      return date.toISOString();
+      return date.toISOString()
   }
 }
 
@@ -122,7 +125,7 @@ export const TEST_DATES = {
   threeMonthsAgo: getRelativeDate(-90),
   sixMonthsAgo: getRelativeDate(-180),
   oneYearAgo: getRelativeDate(-365),
-} as const;
+} as const
 
 /**
  * Common timestamps for testing
@@ -135,4 +138,4 @@ export const TEST_TIMESTAMPS = {
   nextWeek: getRelativeTimestamp(7),
   lastMonth: getRelativeTimestamp(-30),
   nextMonth: getRelativeTimestamp(30),
-} as const;
+} as const

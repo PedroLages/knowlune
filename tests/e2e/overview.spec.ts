@@ -73,7 +73,9 @@ test.describe('Overview Page', () => {
       const courseIds = Object.keys(progress as Record<string, unknown>)
       // All entries should have empty completedLessons (fresh initialization)
       for (const courseId of courseIds) {
-        const courseProgress = (progress as Record<string, {completedLessons: string[]}>)[courseId]
+        const courseProgress = (progress as Record<string, { completedLessons: string[] }>)[
+          courseId
+        ]
         expect(courseProgress.completedLessons).toEqual([])
       }
     }

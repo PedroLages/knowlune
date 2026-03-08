@@ -27,7 +27,7 @@ export async function seedAndReload(
   courses: ImportedCourseTestData[]
 ): Promise<void> {
   // Ensure sidebar is closed on tablet so Sheet overlay doesn't block clicks
-  await page.evaluate((sidebarState) => {
+  await page.evaluate(sidebarState => {
     Object.entries(sidebarState).forEach(([key, value]) => {
       localStorage.setItem(key, value)
     })

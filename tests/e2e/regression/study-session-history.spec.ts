@@ -11,7 +11,13 @@ import { goToCourses, navigateAndWait } from '../../support/helpers/navigation'
 import { seedStudySessions, seedImportedVideos } from '../../support/helpers/indexeddb-seed'
 import { RETRY_CONFIG } from '../../utils/constants'
 import type { Page } from '@playwright/test'
-import { FIXED_DATE, FIXED_TIMESTAMP, getRelativeDate, TEST_DATES, getRelativeTimestamp } from '../../utils/test-time'
+import {
+  FIXED_DATE,
+  FIXED_TIMESTAMP,
+  getRelativeDate,
+  TEST_DATES,
+  getRelativeTimestamp,
+} from '../../utils/test-time'
 
 // ---------------------------------------------------------------------------
 // Test Data

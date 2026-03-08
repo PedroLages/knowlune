@@ -19,7 +19,7 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate once to enable localStorage/sessionStorage access
     await page.goto('/')
-    await page.evaluate((sidebarState) => {
+    await page.evaluate(sidebarState => {
       // Clear milestone and streak data BEFORE next navigation to prevent
       // stale data from triggering sessionStorage guards in parallel runs
       localStorage.removeItem('streak-milestones')

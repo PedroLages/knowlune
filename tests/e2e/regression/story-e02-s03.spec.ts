@@ -31,7 +31,7 @@ const LESSON_PATH = `/courses/${COURSE_ID}/${LESSON_ID}`
 
 // Ensure sidebar starts closed on tablet viewport (Layout defaults to open)
 test.beforeEach(async ({ page }) => {
-  await page.evaluate((sidebarState) => {
+  await page.evaluate(sidebarState => {
     Object.entries(sidebarState).forEach(([key, value]) => {
       localStorage.setItem(key, value)
     })
@@ -52,10 +52,13 @@ test.describe('AC1: Position Auto-Save', () => {
     await expect(video).toBeAttached()
     await video.dispatchEvent('timeupdate')
     // Wait for debounced save operation (no timeout needed - use conditional wait)
-    await page.waitForFunction(() => {
-      const progress = localStorage.getItem('course-progress')
-      return progress !== null
-    }, { timeout: TIMEOUTS.LONG })
+    await page.waitForFunction(
+      () => {
+        const progress = localStorage.getItem('course-progress')
+        return progress !== null
+      },
+      { timeout: TIMEOUTS.LONG }
+    )
 
     // THEN: course-progress in localStorage has a lastVideoPosition value
     const progress = await localStorage.get<Record<string, unknown>>('course-progress')

@@ -18,7 +18,7 @@ const COURSE_URL = `/courses/${COURSE_ID}`
 
 /** Suppress sidebar overlay and navigate to course detail. */
 async function goToCourseDetail(page: Parameters<typeof navigateAndWait>[0]) {
-  await page.evaluate((sidebarState) => {
+  await page.evaluate(sidebarState => {
     Object.entries(sidebarState).forEach(([key, value]) => {
       localStorage.setItem(key, value)
     })

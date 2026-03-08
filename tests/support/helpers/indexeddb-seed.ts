@@ -63,7 +63,9 @@ export async function seedIndexedDBStore(
           requestAnimationFrame(tick)
         })
       }
-      throw new Error(`Store "${storeName}" not found in database "${dbName}" after ${maxRetries} retries`)
+      throw new Error(
+        `Store "${storeName}" not found in database "${dbName}" after ${maxRetries} retries`
+      )
     },
     { dbName, storeName, data, retryDelay: RETRY_DELAY_MS, maxRetries: MAX_RETRIES }
   )

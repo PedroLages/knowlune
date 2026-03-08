@@ -17,7 +17,7 @@ const LESSON_URL = '/courses/operative-six/op6-introduction'
 
 /** Navigate to lesson player and suppress mobile sidebar Sheet. */
 async function goToLessonPlayer(page: Parameters<typeof navigateAndWait>[0], extraParams = '') {
-  await page.evaluate((sidebarState) => {
+  await page.evaluate(sidebarState => {
     Object.entries(sidebarState).forEach(([key, value]) => {
       localStorage.setItem(key, value)
     })

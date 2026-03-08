@@ -17,7 +17,7 @@ const NOTES_URL = '/notes'
 
 /** Suppress sidebar overlay and navigate to Notes page. */
 async function goToNotes(page: Parameters<typeof navigateAndWait>[0]) {
-  await page.evaluate((sidebarState) => {
+  await page.evaluate(sidebarState => {
     Object.entries(sidebarState).forEach(([key, value]) => {
       localStorage.setItem(key, value)
     })

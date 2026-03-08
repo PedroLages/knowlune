@@ -7,7 +7,7 @@ test.skip('Week 4 - Progress Chart visualization', async ({ page }) => {
   await page.goto('/')
 
   // Add comprehensive test data with varied activity across 14 days
-  await page.evaluate((fixedDate) => {
+  await page.evaluate(fixedDate => {
     const now = new Date(fixedDate)
 
     // Helper to create date N days ago

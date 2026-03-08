@@ -49,7 +49,10 @@ export const TEST_VIDEOS: ImportedVideoTestData[] = [
 const DB_NAME = 'ElearningDB'
 
 /** Seed imported videos into IndexedDB with retry logic for Dexie initialization. */
-export async function seedImportedVideos(page: Page, videos: ImportedVideoTestData[]): Promise<void> {
+export async function seedImportedVideos(
+  page: Page,
+  videos: ImportedVideoTestData[]
+): Promise<void> {
   await page.evaluate(
     async ({ dbName, data, maxRetries, retryDelay }) => {
       for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -93,7 +96,12 @@ export async function seedImportedVideos(page: Page, videos: ImportedVideoTestDa
       }
       throw new Error(`Store "importedVideos" not found in "${dbName}" after ${maxRetries} retries`)
     },
-    { dbName: DB_NAME, data: videos, maxRetries: RETRY_CONFIG.MAX_ATTEMPTS, retryDelay: RETRY_CONFIG.POLL_INTERVAL }
+    {
+      dbName: DB_NAME,
+      data: videos,
+      maxRetries: RETRY_CONFIG.MAX_ATTEMPTS,
+      retryDelay: RETRY_CONFIG.POLL_INTERVAL,
+    }
   )
 }
 
@@ -111,7 +119,11 @@ export async function seedCourseAndReload(
 }
 
 /** Navigate to imported lesson player. */
-export async function goToLessonPlayer(page: Page, courseId: string, lessonId: string): Promise<void> {
+export async function goToLessonPlayer(
+  page: Page,
+  courseId: string,
+  lessonId: string
+): Promise<void> {
   await navigateAndWait(page, `/imported-courses/${courseId}/lessons/${lessonId}`)
 }
 
@@ -133,7 +145,11 @@ export interface StudySession {
  * Wait for a study session to exist in IndexedDB with retry logic.
  * Returns true if session found within timeout.
  */
-export async function waitForSessionExists(page: Page, maxRetries = 10, retryDelay = 200): Promise<boolean> {
+export async function waitForSessionExists(
+  page: Page,
+  maxRetries = 10,
+  retryDelay = 200
+): Promise<boolean> {
   return await page.evaluate(
     async ({ maxRetries, retryDelay }) => {
       for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -216,7 +232,11 @@ export async function getLatestSession(page: Page): Promise<StudySession | null>
 /**
  * Wait for session endTime to be recorded with retry logic.
  */
-export async function waitForSessionEnd(page: Page, maxRetries = 20, retryDelay = 200): Promise<boolean> {
+export async function waitForSessionEnd(
+  page: Page,
+  maxRetries = 20,
+  retryDelay = 200
+): Promise<boolean> {
   return await page.evaluate(
     async ({ maxRetries, retryDelay }) => {
       for (let attempt = 0; attempt < maxRetries; attempt++) {

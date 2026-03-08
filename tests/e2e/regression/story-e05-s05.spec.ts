@@ -17,7 +17,7 @@ test.describe('Study Reminders & Notifications (E05-S05)', () => {
   test.beforeEach(async ({ page }) => {
     // Seed sidebar closed to prevent overlay at smaller viewports
     await page.goto('/')
-    await page.evaluate((sidebarState) => {
+    await page.evaluate(sidebarState => {
       Object.entries(sidebarState).forEach(([key, value]) => {
         localStorage.setItem(key, value)
       })
@@ -28,7 +28,7 @@ test.describe('Study Reminders & Notifications (E05-S05)', () => {
     page,
   }) => {
     // Mock Notification.permission as 'default' → requestPermission resolves 'granted'
-    await page.addInitScript((sidebarState) => {
+    await page.addInitScript(sidebarState => {
       Object.defineProperty(window, 'Notification', {
         value: {
           permission: 'default',
@@ -57,7 +57,7 @@ test.describe('Study Reminders & Notifications (E05-S05)', () => {
 
   test('AC1: should show guidance when notification permission is denied', async ({ page }) => {
     // Mock Notification.permission as 'denied'
-    await page.addInitScript((sidebarState) => {
+    await page.addInitScript(sidebarState => {
       Object.defineProperty(window, 'Notification', {
         value: {
           permission: 'denied',
@@ -81,7 +81,7 @@ test.describe('Study Reminders & Notifications (E05-S05)', () => {
 
   test('AC2: should allow selecting daily reminder time and persist it', async ({ page }) => {
     // Mock Notification.permission as 'granted'
-    await page.addInitScript((sidebarState) => {
+    await page.addInitScript(sidebarState => {
       Object.defineProperty(window, 'Notification', {
         value: {
           permission: 'granted',
@@ -123,7 +123,7 @@ test.describe('Study Reminders & Notifications (E05-S05)', () => {
   })
 
   test('AC3: should allow enabling streak-at-risk reminder', async ({ page }) => {
-    await page.addInitScript((sidebarState) => {
+    await page.addInitScript(sidebarState => {
       Object.defineProperty(window, 'Notification', {
         value: {
           permission: 'granted',
@@ -152,7 +152,7 @@ test.describe('Study Reminders & Notifications (E05-S05)', () => {
   })
 
   test('AC6: should cancel all reminders when toggling off', async ({ page }) => {
-    await page.addInitScript((sidebarState) => {
+    await page.addInitScript(sidebarState => {
       Object.defineProperty(window, 'Notification', {
         value: {
           permission: 'granted',
@@ -202,7 +202,7 @@ test.describe('Study Reminders & Notifications (E05-S05)', () => {
 
   test('AC7: should suppress streak-at-risk when streak is paused', async ({ page }) => {
     // Seed Notification mock via addInitScript (runs before page load)
-    await page.addInitScript((sidebarState) => {
+    await page.addInitScript(sidebarState => {
       Object.defineProperty(window, 'Notification', {
         value: {
           permission: 'granted',

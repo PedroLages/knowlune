@@ -25,7 +25,7 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
     // Clear any residual progress data from prior tests, then seed sidebar state
     await page.goto('/')
     await localStorage.clearAll()
-    await page.evaluate((sidebarState) => {
+    await page.evaluate(sidebarState => {
       Object.entries(sidebarState).forEach(([key, value]) => {
         localStorage.setItem(key, value)
       })
@@ -37,7 +37,10 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
     await page.waitForLoadState('domcontentloaded')
 
     // Wait for loading to complete
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: TIMEOUTS.PAGE_LOAD })
+    await page.waitForSelector('[data-testid="stats-grid"]', {
+      state: 'visible',
+      timeout: TIMEOUTS.PAGE_LOAD,
+    })
 
     const emptyState = page.getByTestId('recommended-next-empty')
     await expect(emptyState).toBeVisible()
@@ -82,7 +85,10 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
 
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: TIMEOUTS.PAGE_LOAD })
+    await page.waitForSelector('[data-testid="stats-grid"]', {
+      state: 'visible',
+      timeout: TIMEOUTS.PAGE_LOAD,
+    })
 
     await expect(page.getByRole('heading', { name: 'Recommended Next' })).toBeVisible()
 
@@ -120,7 +126,10 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
 
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: TIMEOUTS.PAGE_LOAD })
+    await page.waitForSelector('[data-testid="stats-grid"]', {
+      state: 'visible',
+      timeout: TIMEOUTS.PAGE_LOAD,
+    })
 
     await expect(page.getByRole('heading', { name: 'Recommended Next' })).toBeVisible()
 
@@ -143,7 +152,10 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
 
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: TIMEOUTS.PAGE_LOAD })
+    await page.waitForSelector('[data-testid="stats-grid"]', {
+      state: 'visible',
+      timeout: TIMEOUTS.PAGE_LOAD,
+    })
 
     const section = page.getByTestId('recommended-next-section')
     await expect(section).toBeVisible()
@@ -193,7 +205,10 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
 
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: TIMEOUTS.PAGE_LOAD })
+    await page.waitForSelector('[data-testid="stats-grid"]', {
+      state: 'visible',
+      timeout: TIMEOUTS.PAGE_LOAD,
+    })
 
     const cardsContainer = page.getByTestId('recommended-next-cards')
     await expect(cardsContainer).toBeVisible()
@@ -221,7 +236,10 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
     // Simulate returning to dashboard — component remounts, reads fresh data
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: TIMEOUTS.PAGE_LOAD })
+    await page.waitForSelector('[data-testid="stats-grid"]', {
+      state: 'visible',
+      timeout: TIMEOUTS.PAGE_LOAD,
+    })
 
     // authority should now rank first (higher recency score)
     const updatedCards = cardsContainer.locator('[data-href*="/courses/"]')

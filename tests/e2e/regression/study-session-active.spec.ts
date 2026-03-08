@@ -99,7 +99,12 @@ async function seedImportedVideos(page: Page, videos: ImportedVideoTestData[]): 
       }
       throw new Error(`Store "importedVideos" not found in "${dbName}" after ${maxRetries} retries`)
     },
-    { dbName: DB_NAME, data: videos, maxRetries: RETRY_CONFIG.MAX_ATTEMPTS, retryDelay: RETRY_CONFIG.POLL_INTERVAL }
+    {
+      dbName: DB_NAME,
+      data: videos,
+      maxRetries: RETRY_CONFIG.MAX_ATTEMPTS,
+      retryDelay: RETRY_CONFIG.POLL_INTERVAL,
+    }
   )
 }
 

@@ -25,7 +25,7 @@ const LESSON_URL = '/courses/operative-six/op6-introduction'
 /** Navigate to the lesson player page. */
 async function goToLessonPlayer(page: Parameters<typeof navigateAndWait>[0]) {
   // Close tablet sidebar before load — Radix Sheet sets aria-hidden on main content when open
-  await page.evaluate((sidebarState) => {
+  await page.evaluate(sidebarState => {
     Object.entries(sidebarState).forEach(([key, value]) => {
       localStorage.setItem(key, value)
     })

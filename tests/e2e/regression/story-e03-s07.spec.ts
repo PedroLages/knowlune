@@ -15,7 +15,7 @@ const BOOKMARKS_URL = '/library'
 
 /** Suppress sidebar overlay and navigate to bookmarks page. */
 async function goToBookmarks(page: Parameters<typeof navigateAndWait>[0]) {
-  await page.evaluate((sidebarState) => {
+  await page.evaluate(sidebarState => {
     Object.entries(sidebarState).forEach(([key, value]) => {
       localStorage.setItem(key, value)
     })
@@ -194,11 +194,11 @@ test.describe('AC2: Click bookmark to navigate to lesson player', () => {
 
 test.describe('AC3: Seek bar bookmark indicators', () => {
   test('video seek bar shows markers at bookmarked positions', async ({ page }) => {
-    await page.evaluate((sidebarState) => {
-    Object.entries(sidebarState).forEach(([key, value]) => {
-      localStorage.setItem(key, value)
-    })
-  }, closeSidebar())
+    await page.evaluate(sidebarState => {
+      Object.entries(sidebarState).forEach(([key, value]) => {
+        localStorage.setItem(key, value)
+      })
+    }, closeSidebar())
 
     // Navigate to a lesson that has bookmarks (seedBookmarks includes bm-1 for op6-introduction)
     await navigateAndWait(page, '/courses/operative-six/op6-introduction')

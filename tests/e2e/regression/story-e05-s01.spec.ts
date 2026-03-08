@@ -29,11 +29,11 @@ function makeStreakEntry(daysAgo: number): {
 test.describe('Study Streak Counter (E05-S01)', () => {
   test.beforeEach(async ({ page }) => {
     // Prevent sidebar overlay on narrow viewports
-    await page.evaluate((sidebarState) => {
-    Object.entries(sidebarState).forEach(([key, value]) => {
-      localStorage.setItem(key, value)
-    })
-  }, closeSidebar())
+    await page.evaluate(sidebarState => {
+      Object.entries(sidebarState).forEach(([key, value]) => {
+        localStorage.setItem(key, value)
+      })
+    }, closeSidebar())
   })
 
   test('AC1: streak counter is visible on overview', async ({ page }) => {
@@ -74,7 +74,7 @@ test.describe('Study Streak Counter (E05-S01)', () => {
     await expect(streakValue).toHaveText('0')
 
     // Inject a study entry + dispatch event (no reload)
-    await page.evaluate((fixedDate) => {
+    await page.evaluate(fixedDate => {
       const now = new Date(fixedDate)
       now.setHours(12, 0, 0, 0)
       const entry = {
@@ -98,14 +98,14 @@ test.describe('Study Streak Counter (E05-S01)', () => {
     })
     const rmPage = await context.newPage()
 
-    await rmPage.evaluate((sidebarState) => {
+    await rmPage.evaluate(sidebarState => {
       Object.entries(sidebarState).forEach(([key, value]) => {
         localStorage.setItem(key, value)
       })
     }, closeSidebar())
     await rmPage.goto('/')
 
-    await rmPage.evaluate((fixedDate) => {
+    await rmPage.evaluate(fixedDate => {
       const now = new Date(fixedDate)
       now.setHours(12, 0, 0, 0)
       const entry = {

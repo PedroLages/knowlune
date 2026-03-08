@@ -23,7 +23,10 @@ test.describe('Story E04-S03: Study Session Recording', () => {
     await page.reload()
   })
 
-  test('AC1: creates session record when user enters lesson player', async ({ page, indexedDB }) => {
+  test('AC1: creates session record when user enters lesson player', async ({
+    page,
+    indexedDB,
+  }) => {
     // GIVEN a user has imported courses available
     await seedCourseAndReload(page, indexedDB)
 

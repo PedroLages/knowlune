@@ -30,7 +30,7 @@ const LESSON_ID = 'nci-fnl-drones-psyops'
 
 /** Navigate to lesson player Notes tab with sidebar closed. */
 async function openNoteEditor(page: import('@playwright/test').Page) {
-  await page.evaluate((sidebarState) => {
+  await page.evaluate(sidebarState => {
     Object.entries(sidebarState).forEach(([key, value]) => {
       localStorage.setItem(key, value)
     })

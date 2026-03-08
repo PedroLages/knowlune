@@ -12,7 +12,7 @@ import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants
 
 // Seed sidebar state to prevent fullscreen Sheet overlay at tablet viewports
 async function seedSidebar(page: import('@playwright/test').Page) {
-  await page.evaluate((sidebarState) => {
+  await page.evaluate(sidebarState => {
     Object.entries(sidebarState).forEach(([key, value]) => {
       localStorage.setItem(key, value)
     })
@@ -21,13 +21,16 @@ async function seedSidebar(page: import('@playwright/test').Page) {
 
 // Mock Date.now() to return FIXED_TIMESTAMP for deterministic momentum calculations
 async function mockDateNow(page: import('@playwright/test').Page) {
-  await page.addInitScript(({ fixedTimestamp }) => {
-    const originalNow = Date.now
-    Date.now = () => fixedTimestamp
-    // Preserve original for debugging
-    // @ts-expect-error - Store original
-    Date._originalNow = originalNow
-  }, { fixedTimestamp: new Date(FIXED_DATE).getTime() })
+  await page.addInitScript(
+    ({ fixedTimestamp }) => {
+      const originalNow = Date.now
+      Date.now = () => fixedTimestamp
+      // Preserve original for debugging
+      // @ts-expect-error - Store original
+      Date._originalNow = originalNow
+    },
+    { fixedTimestamp: new Date(FIXED_DATE).getTime() }
+  )
 }
 
 const STORE_NAME = 'studySessions'

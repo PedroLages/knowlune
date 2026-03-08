@@ -57,7 +57,7 @@ const ACTIVE_COURSE_PROGRESS = {
 test.describe('E07-S05: Smart Study Schedule Suggestion', () => {
   test.beforeEach(async ({ page }) => {
     // Prevent sidebar overlay at tablet viewports
-    await page.evaluate((sidebarState) => {
+    await page.evaluate(sidebarState => {
       Object.entries(sidebarState).forEach(([key, value]) => {
         localStorage.setItem(key, value)
       })

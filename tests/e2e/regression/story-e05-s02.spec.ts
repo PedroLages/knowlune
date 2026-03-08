@@ -33,11 +33,11 @@ function makeStreakEntry(daysAgo: number): {
 test.describe('Streak Pause & Freeze Days (E05-S02)', () => {
   test.beforeEach(async ({ page }) => {
     // Prevent sidebar overlay on narrow viewports
-    await page.evaluate((sidebarState) => {
-    Object.entries(sidebarState).forEach(([key, value]) => {
-      localStorage.setItem(key, value)
-    })
-  }, closeSidebar())
+    await page.evaluate(sidebarState => {
+      Object.entries(sidebarState).forEach(([key, value]) => {
+        localStorage.setItem(key, value)
+      })
+    }, closeSidebar())
   })
 
   // ── AC1: Pause toggle ──

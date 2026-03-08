@@ -15,7 +15,7 @@ const LESSON_URL = '/courses/operative-six/op6-introduction'
 
 /** Navigate to lesson player and suppress mobile sidebar Sheet. */
 async function goToLessonPlayer(page: Parameters<typeof navigateAndWait>[0]) {
-  await page.evaluate((sidebarState) => {
+  await page.evaluate(sidebarState => {
     Object.entries(sidebarState).forEach(([key, value]) => {
       localStorage.setItem(key, value)
     })
@@ -40,12 +40,17 @@ async function activatePlayState(page: Parameters<typeof navigateAndWait>[0]) {
   // Click the video element — VideoPlayer has onClick={togglePlayPause} on <video>
   await page.locator('video').click({ force: true })
   // Wait for play state to be reflected in the DOM
-  await page.waitForFunction(() => {
-    const video = document.querySelector('video')
-    return video && !video.paused
-  }, { timeout: TIMEOUTS.SHORT }).catch(() => {
-    // Video may not have a source, state is tracked by React component regardless
-  })
+  await page
+    .waitForFunction(
+      () => {
+        const video = document.querySelector('video')
+        return video && !video.paused
+      },
+      { timeout: TIMEOUTS.SHORT }
+    )
+    .catch(() => {
+      // Video may not have a source, state is tracked by React component regardless
+    })
 }
 
 // ===========================================================================
@@ -81,7 +86,9 @@ test.describe('AC1: Mini-player on scroll', () => {
     await scrollLessonContent(page, TIMEOUTS.SHORT)
 
     // THEN: wrapper should become position: fixed (waits up to 5s for IntersectionObserver)
-    await expect(page.getByTestId('mini-player')).toHaveCSS('position', 'fixed', { timeout: TIMEOUTS.LONG })
+    await expect(page.getByTestId('mini-player')).toHaveCSS('position', 'fixed', {
+      timeout: TIMEOUTS.LONG,
+    })
   })
 
   test('layout anchor preserves space when mini-player is active', async ({ page }) => {
@@ -97,7 +104,9 @@ test.describe('AC1: Mini-player on scroll', () => {
     await scrollLessonContent(page, TIMEOUTS.SHORT)
 
     // THEN: anchor div stays visible (preserving layout space) while mini-player is fixed
-    await expect(page.getByTestId('mini-player')).toHaveCSS('position', 'fixed', { timeout: TIMEOUTS.LONG })
+    await expect(page.getByTestId('mini-player')).toHaveCSS('position', 'fixed', {
+      timeout: TIMEOUTS.LONG,
+    })
     await expect(anchor).toBeVisible()
   })
 

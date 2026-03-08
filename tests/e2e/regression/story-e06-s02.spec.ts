@@ -66,7 +66,13 @@ async function seedStore(page: Page, storeName: string, records: unknown[]) {
       }
       throw new Error(`Store "${store}" not found after ${maxRetries} retries`)
     },
-    { dbName: DB_NAME, store: storeName, data: records, maxRetries: RETRY_CONFIG.MAX_ATTEMPTS, retryDelay: RETRY_CONFIG.POLL_INTERVAL }
+    {
+      dbName: DB_NAME,
+      store: storeName,
+      data: records,
+      maxRetries: RETRY_CONFIG.MAX_ATTEMPTS,
+      retryDelay: RETRY_CONFIG.POLL_INTERVAL,
+    }
   )
 }
 
@@ -74,7 +80,7 @@ async function seedStore(page: Page, storeName: string, records: unknown[]) {
 
 test.beforeEach(async ({ page }) => {
   // Prevent tablet sidebar overlay from blocking interactions
-  await page.evaluate((sidebarState) => {
+  await page.evaluate(sidebarState => {
     Object.entries(sidebarState).forEach(([key, value]) => {
       localStorage.setItem(key, value)
     })
