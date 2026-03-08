@@ -16,6 +16,8 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
+import { TIMEOUTS } from '../../utils/constants'
+import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
 
 // Use a known course/lesson with video content
 const LESSON_URL = '/courses/operative-six/op6-introduction'
@@ -23,12 +25,14 @@ const LESSON_URL = '/courses/operative-six/op6-introduction'
 /** Navigate to the lesson player page. */
 async function goToLessonPlayer(page: Parameters<typeof navigateAndWait>[0]) {
   // Close tablet sidebar before load — Radix Sheet sets aria-hidden on main content when open
-  await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
-  })
+  await page.evaluate((sidebarState) => {
+    Object.entries(sidebarState).forEach(([key, value]) => {
+      localStorage.setItem(key, value)
+    })
+  }, closeSidebar())
   await navigateAndWait(page, LESSON_URL)
   // Wait for video player to be visible
-  await page.locator('video').waitFor({ state: 'visible', timeout: 10000 })
+  await page.locator('video').waitFor({ state: 'visible', timeout: TIMEOUTS.NETWORK })
 }
 
 // ===========================================================================
@@ -108,7 +112,7 @@ test.describe('AC2: 95% Auto-Completion', () => {
         const video = document.querySelector('video')
         return video && video.duration > 0 && !isNaN(video.duration)
       },
-      { timeout: 10000 }
+      { timeout: TIMEOUTS.NETWORK }
     )
     await page.evaluate(() => {
       const video = document.querySelector('video')
@@ -121,7 +125,7 @@ test.describe('AC2: 95% Auto-Completion', () => {
     // THEN: Lesson should be marked as completed (button aria-label flips to "incomplete")
     // Use CSS locator — celebration modal sets aria-hidden on background, blocking getByRole
     await expect(page.locator('button[aria-label="Mark lesson incomplete"]')).toBeVisible({
-      timeout: 5000,
+      timeout: TIMEOUTS.LONG,
     })
   })
 
@@ -134,7 +138,7 @@ test.describe('AC2: 95% Auto-Completion', () => {
         const video = document.querySelector('video')
         return video && video.duration > 0 && !isNaN(video.duration)
       },
-      { timeout: 10000 }
+      { timeout: TIMEOUTS.NETWORK }
     )
     await page.evaluate(() => {
       const video = document.querySelector('video')
@@ -146,7 +150,7 @@ test.describe('AC2: 95% Auto-Completion', () => {
 
     // THEN: Celebration modal should appear
     await expect(page.getByRole('heading', { name: /lesson completed/i })).toBeVisible({
-      timeout: 5000,
+      timeout: TIMEOUTS.LONG,
     })
   })
 
@@ -161,7 +165,7 @@ test.describe('AC2: 95% Auto-Completion', () => {
         const video = document.querySelector('video')
         return video && video.duration > 0 && !isNaN(video.duration)
       },
-      { timeout: 10000 }
+      { timeout: TIMEOUTS.NETWORK }
     )
     await page.evaluate(() => {
       const video = document.querySelector('video')
@@ -185,7 +189,7 @@ test.describe('AC2: 95% Auto-Completion', () => {
 
     // THEN: No second celebration modal
     await expect(page.getByRole('heading', { name: /lesson completed/i })).not.toBeVisible({
-      timeout: 2000,
+      timeout: TIMEOUTS.MEDIUM,
     })
   })
 })
@@ -274,7 +278,7 @@ test.describe('AC4: prefers-reduced-motion', () => {
 
     // THEN: Modal appears but no canvas confetti
     await expect(page.getByRole('heading', { name: /lesson completed/i })).toBeVisible({
-      timeout: 5000,
+      timeout: TIMEOUTS.LONG,
     })
 
     // Verify no confetti canvas was created

@@ -21,6 +21,8 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
+import { TIMEOUTS } from '../../utils/constants'
+import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -32,19 +34,23 @@ const LESSON_URL = '/courses/operative-six/op6-introduction'
 const LESSON_URL_NO_EXTRAS = '/courses/operative-six/op6-pillars-of-influence'
 
 async function goToLesson(page: Parameters<typeof navigateAndWait>[0]) {
-  await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
-  })
+  await page.evaluate((sidebarState) => {
+    Object.entries(sidebarState).forEach(([key, value]) => {
+      localStorage.setItem(key, value)
+    })
+  }, closeSidebar())
   await navigateAndWait(page, LESSON_URL)
-  await page.locator('video').waitFor({ state: 'visible', timeout: 10000 })
+  await page.locator('video').waitFor({ state: 'visible', timeout: TIMEOUTS.NETWORK })
 }
 
 async function goToLessonNoExtras(page: Parameters<typeof navigateAndWait>[0]) {
-  await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
-  })
+  await page.evaluate((sidebarState) => {
+    Object.entries(sidebarState).forEach(([key, value]) => {
+      localStorage.setItem(key, value)
+    })
+  }, closeSidebar())
   await navigateAndWait(page, LESSON_URL_NO_EXTRAS)
-  await page.locator('video').waitFor({ state: 'visible', timeout: 10000 })
+  await page.locator('video').waitFor({ state: 'visible', timeout: TIMEOUTS.NETWORK })
 }
 
 // ===========================================================================

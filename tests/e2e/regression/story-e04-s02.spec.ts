@@ -9,6 +9,7 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { goToCourses } from '../../support/helpers/navigation'
+import { TIMEOUTS } from '../../utils/constants'
 
 test.describe('E04-S02: Course Completion Percentage', () => {
   test('AC1: Progress bar displays with ARIA attributes and text equivalent', async ({ page }) => {
@@ -53,7 +54,7 @@ test.describe('E04-S02: Course Completion Percentage', () => {
 
     // Verify progress bar updated without page refresh
     await expect
-      .poll(async () => await progressBar.getAttribute('aria-valuenow'), { timeout: 5000 })
+      .poll(async () => await progressBar.getAttribute('aria-valuenow'), { timeout: TIMEOUTS.LONG })
       .not.toBe(initialValue)
 
     // Verify smooth animation (progress indicator should have transform transition)

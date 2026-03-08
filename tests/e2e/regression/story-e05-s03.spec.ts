@@ -13,17 +13,21 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
+import { TIMEOUTS } from '../../utils/constants'
+import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
 
 test.describe('Study Goals & Weekly Adherence (E05-S03)', () => {
   test.beforeEach(async ({ page }) => {
     // Clear localStorage once per test (not on every reload) and prevent sidebar overlay
-    await page.addInitScript(() => {
+    await page.addInitScript((sidebarState) => {
       if (!sessionStorage.getItem('__test_cleaned')) {
         localStorage.clear()
         sessionStorage.setItem('__test_cleaned', '1')
       }
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
-    })
+      Object.entries(sidebarState).forEach(([key, value]) => {
+        localStorage.setItem(key, value)
+      })
+    }, closeSidebar())
   })
 
   // ── AC1: Empty state with CTA ──
@@ -149,7 +153,7 @@ test.describe('Study Goals & Weekly Adherence (E05-S03)', () => {
 
     // Progress text should show "45 / 60 min" or similar
     const progressText = page.getByTestId('goal-progress-text')
-    await expect(progressText).toBeVisible()
+    await expect(progressText).toBeVisible({ timeout: TIMEOUTS.LONG })
     await expect(progressText).toContainText('45')
     await expect(progressText).toContainText('60')
   })
@@ -207,7 +211,7 @@ test.describe('Study Goals & Weekly Adherence (E05-S03)', () => {
 
     // Should show weekly progress (180 / 300 min or similar)
     const progressText = page.getByTestId('goal-progress-text')
-    await expect(progressText).toBeVisible()
+    await expect(progressText).toBeVisible({ timeout: TIMEOUTS.LONG })
     await expect(progressText).toContainText('180')
     await expect(progressText).toContainText('300')
   })
@@ -244,7 +248,7 @@ test.describe('Study Goals & Weekly Adherence (E05-S03)', () => {
 
     // Adherence percentage should be visible
     const adherence = page.getByTestId('goal-adherence-percentage')
-    await expect(adherence).toBeVisible()
+    await expect(adherence).toBeVisible({ timeout: TIMEOUTS.LONG })
     // 5 out of 7 days = ~71%
     await expect(adherence).toContainText('%')
   })

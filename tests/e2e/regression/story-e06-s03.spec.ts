@@ -7,9 +7,10 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { createChallenge } from '../../support/fixtures/factories/challenge-factory'
-import { RETRY_CONFIG } from '../../utils/constants'
+import { RETRY_CONFIG, TIMEOUTS } from '../../utils/constants'
 import type { Page } from '@playwright/test'
 import { FIXED_DATE } from './../../utils/test-time'
+import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
 
 const DB_NAME = 'ElearningDB'
 
@@ -51,17 +52,17 @@ async function seedStore(page: Page, storeName: string, records: unknown[]) {
           request.onerror = () => reject(request.error)
         })
         if (result === 'ok') return
-        // Use requestAnimationFrame polling instead of hard timeout
-        await new Promise(resolve => {
-          const startTime = performance.now()
-          const check = () => {
-            if (performance.now() - startTime >= retryDelay) {
-              resolve(undefined)
-            } else {
-              requestAnimationFrame(check)
-            }
+        // Frame-accurate wait using requestAnimationFrame tick counting
+        // Assumes 60fps (~16.67ms per frame)
+        await new Promise<void>(resolve => {
+          let ticks = 0
+          const targetTicks = Math.ceil(retryDelay / 16.67)
+          const tick = () => {
+            ticks++
+            if (ticks >= targetTicks) resolve()
+            else requestAnimationFrame(tick)
           }
-          requestAnimationFrame(check)
+          requestAnimationFrame(tick)
         })
       }
       throw new Error(`Store "${store}" not found after ${maxRetries} retries`)
@@ -73,9 +74,11 @@ async function seedStore(page: Page, storeName: string, records: unknown[]) {
 // ── Setup ───────────────────────────────────────────────
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
-  })
+  await page.evaluate((sidebarState) => {
+    Object.entries(sidebarState).forEach(([key, value]) => {
+      localStorage.setItem(key, value)
+    })
+  }, closeSidebar())
 })
 
 test.afterEach(async ({ page, indexedDB }) => {
@@ -110,7 +113,7 @@ test.describe('AC1: 25% milestone celebration', () => {
 
     // Then: toast with 25% milestone badge appears
     const toast = page.locator('[data-sonner-toast]').filter({ hasText: /25%.*Complete/i })
-    await expect(toast).toBeVisible({ timeout: 10000 })
+    await expect(toast).toBeVisible({ timeout: TIMEOUTS.NETWORK })
 
     // And: challenge name shown in toast
     await expect(toast).toContainText('Watch 4 Videos')
@@ -162,7 +165,7 @@ test.describe('AC1: 25% milestone celebration', () => {
     // Deterministic check: assert no 25% toast appears within stagger window
     await expect(
       page.locator('[data-sonner-toast]').filter({ hasText: /25%.*Complete/i })
-    ).toHaveCount(0, { timeout: 2000 })
+    ).toHaveCount(0, { timeout: TIMEOUTS.MEDIUM })
   })
 })
 
@@ -189,7 +192,7 @@ test.describe('AC2: 50% milestone celebration', () => {
     await page.reload()
 
     const toast = page.locator('[data-sonner-toast]').filter({ hasText: /Halfway There/i })
-    await expect(toast).toBeVisible({ timeout: 10000 })
+    await expect(toast).toBeVisible({ timeout: TIMEOUTS.NETWORK })
 
     // And: supportive message is shown
     await expect(toast).toContainText("Keep it up — you're doing great!")
@@ -220,7 +223,7 @@ test.describe('AC3: 75% milestone celebration', () => {
     await page.reload()
 
     const toast = page.locator('[data-sonner-toast]').filter({ hasText: /Almost There/i })
-    await expect(toast).toBeVisible({ timeout: 10000 })
+    await expect(toast).toBeVisible({ timeout: TIMEOUTS.NETWORK })
 
     // And: encouraging message is shown
     await expect(toast).toContainText('The finish line is in sight!')
@@ -255,14 +258,14 @@ test.describe('AC4: 100% completion celebration', () => {
 
     // Then: "Challenge Complete" toast appears
     const toast = page.locator('[data-sonner-toast]').filter({ hasText: /Challenge Complete/i })
-    await expect(toast).toBeVisible({ timeout: 10000 })
+    await expect(toast).toBeVisible({ timeout: TIMEOUTS.NETWORK })
 
     // And: confetti animation fires (canvas-confetti injects a <canvas>)
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('canvas')).toBeVisible({ timeout: TIMEOUTS.NETWORK })
 
     // And: challenge card transitions to completed state in Completed section
     const completedSection = page.locator('[data-testid="completed-section"]')
-    await expect(completedSection).toBeVisible({ timeout: 10000 })
+    await expect(completedSection).toBeVisible({ timeout: TIMEOUTS.NETWORK })
 
     // And: Completed section trigger shows count
     const completedTrigger = completedSection.getByRole('button', { name: /Completed \(\d+\)/i })
@@ -301,7 +304,7 @@ test.describe('AC5: prefers-reduced-motion support', () => {
 
     // Then: toast still appears
     const toast = page.locator('[data-sonner-toast]').filter({ hasText: /25%.*Complete/i })
-    await expect(toast).toBeVisible({ timeout: 10000 })
+    await expect(toast).toBeVisible({ timeout: TIMEOUTS.NETWORK })
 
     // And: no confetti canvas should be rendered
     await expect(page.locator('canvas')).toHaveCount(0)
@@ -340,9 +343,9 @@ test.describe('AC6: Simultaneous milestone crossing', () => {
     const toast50 = page.locator('[data-sonner-toast]').filter({ hasText: /Halfway There/i })
     const toast75 = page.locator('[data-sonner-toast]').filter({ hasText: /Almost There/i })
 
-    await expect(toast25).toBeVisible({ timeout: 15000 })
-    await expect(toast50).toBeVisible({ timeout: 15000 })
-    await expect(toast75).toBeVisible({ timeout: 15000 })
+    await expect(toast25).toBeVisible({ timeout: TIMEOUTS.MEDIA })
+    await expect(toast50).toBeVisible({ timeout: TIMEOUTS.MEDIA })
+    await expect(toast75).toBeVisible({ timeout: TIMEOUTS.MEDIA })
 
     // And: each milestone is individually recorded in IndexedDB
     const celebrated = await page.evaluate(async dbName => {

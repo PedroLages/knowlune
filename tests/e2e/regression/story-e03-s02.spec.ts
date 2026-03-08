@@ -11,14 +11,17 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
+import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
 
 const LESSON_URL = '/courses/operative-six/op6-introduction'
 
 /** Navigate to lesson player and suppress mobile sidebar Sheet. */
 async function goToLessonPlayer(page: Parameters<typeof navigateAndWait>[0], extraParams = '') {
-  await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
-  })
+  await page.evaluate((sidebarState) => {
+    Object.entries(sidebarState).forEach(([key, value]) => {
+      localStorage.setItem(key, value)
+    })
+  }, closeSidebar())
   await navigateAndWait(page, LESSON_URL + extraParams)
 }
 

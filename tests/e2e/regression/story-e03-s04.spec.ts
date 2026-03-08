@@ -9,18 +9,22 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
+import { TIMEOUTS } from '../../utils/constants'
+import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
 
 const LESSON_URL = '/courses/operative-six/op6-introduction'
 const LESSON_URL_2 = '/courses/operative-six/op6-pillars-of-influence'
 
 /** Navigate to lesson player with notes panel open, suppressing mobile sidebar. */
 async function goToLessonWithNotes(page: Parameters<typeof navigateAndWait>[0], url = LESSON_URL) {
-  await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
-  })
+  await page.evaluate((sidebarState) => {
+    Object.entries(sidebarState).forEach(([key, value]) => {
+      localStorage.setItem(key, value)
+    })
+  }, closeSidebar())
   await navigateAndWait(page, url + '?panel=notes')
   // Wait for NoteEditor to be fully rendered (handles slow dev server under parallel load)
-  await page.getByTestId('note-editor').waitFor({ state: 'visible', timeout: 30000 })
+  await page.getByTestId('note-editor').waitFor({ state: 'visible', timeout: TIMEOUTS.PAGE_LOAD })
 }
 
 /** Add a tag via the TagEditor popover. */
@@ -66,7 +70,7 @@ async function waitForTagInDB(page: Parameters<typeof navigateAndWait>[0], tagNa
       })
     },
     tagName,
-    { timeout: 5000 }
+    { timeout: TIMEOUTS.LONG }
   )
 }
 
@@ -82,7 +86,7 @@ test.describe('AC1: Tag Management UI', () => {
     await goToLessonWithNotes(page)
     await indexedDB.clearStore('notes')
     await page.reload({ waitUntil: 'domcontentloaded' })
-    await page.getByTestId('note-editor').waitFor({ state: 'visible', timeout: 30000 })
+    await page.getByTestId('note-editor').waitFor({ state: 'visible', timeout: TIMEOUTS.PAGE_LOAD })
   })
 
   test('tag add button is visible in note editor', async ({ page }) => {
@@ -190,7 +194,7 @@ test.describe('AC3: Persistence & Indexing', () => {
     await goToLessonWithNotes(page)
     await indexedDB.clearStore('notes')
     await page.reload({ waitUntil: 'domcontentloaded' })
-    await page.getByTestId('note-editor').waitFor({ state: 'visible', timeout: 30000 })
+    await page.getByTestId('note-editor').waitFor({ state: 'visible', timeout: TIMEOUTS.PAGE_LOAD })
   })
 
   test('tags persist across page reload', async ({ page }) => {
@@ -210,7 +214,7 @@ test.describe('AC3: Persistence & Indexing', () => {
       .getByTestId('note-editor')
       .getByTestId('tag-badge')
       .filter({ hasText: 'persistent' })
-    await expect(persistedBadge).toBeVisible({ timeout: 15000 })
+    await expect(persistedBadge).toBeVisible({ timeout: TIMEOUTS.MEDIA })
   })
 
   test('tags persist after navigating to another lesson and back', async ({ page }) => {
@@ -231,6 +235,6 @@ test.describe('AC3: Persistence & Indexing', () => {
       .getByTestId('note-editor')
       .getByTestId('tag-badge')
       .filter({ hasText: 'navigation-test' })
-    await expect(persistedBadge).toBeVisible({ timeout: 15000 })
+    await expect(persistedBadge).toBeVisible({ timeout: TIMEOUTS.MEDIA })
   })
 })

@@ -80,16 +80,15 @@ export async function seedImportedVideos(page: Page, videos: ImportedVideoTestDa
         })
         if (result === 'ok') return
         // Store not yet created by Dexie — wait and retry
-        await new Promise(resolve => {
-          const startTime = performance.now()
-          const check = () => {
-            if (performance.now() - startTime >= retryDelay) {
-              resolve(undefined)
-            } else {
-              requestAnimationFrame(check)
-            }
+        await new Promise<void>(resolve => {
+          let ticks = 0
+          const targetTicks = Math.ceil(retryDelay / 16.67)
+          const tick = () => {
+            ticks++
+            if (ticks >= targetTicks) resolve()
+            else requestAnimationFrame(tick)
           }
-          requestAnimationFrame(check)
+          requestAnimationFrame(tick)
         })
       }
       throw new Error(`Store "importedVideos" not found in "${dbName}" after ${maxRetries} retries`)
@@ -146,16 +145,15 @@ export async function waitForSessionExists(page: Page, maxRetries = 10, retryDel
 
         if (!db.objectStoreNames.contains('studySessions')) {
           db.close()
-          await new Promise(resolve => {
-            const startTime = performance.now()
-            const check = () => {
-              if (performance.now() - startTime >= retryDelay) {
-                resolve(undefined)
-              } else {
-                requestAnimationFrame(check)
-              }
+          await new Promise<void>(resolve => {
+            let ticks = 0
+            const targetTicks = Math.ceil(retryDelay / 16.67)
+            const tick = () => {
+              ticks++
+              if (ticks >= targetTicks) resolve()
+              else requestAnimationFrame(tick)
             }
-            requestAnimationFrame(check)
+            requestAnimationFrame(tick)
           })
           continue
         }
@@ -173,16 +171,15 @@ export async function waitForSessionExists(page: Page, maxRetries = 10, retryDel
         if (count > 0) return true
 
         // Session might not be created yet - retry
-        await new Promise(resolve => {
-          const startTime = performance.now()
-          const check = () => {
-            if (performance.now() - startTime >= retryDelay) {
-              resolve(undefined)
-            } else {
-              requestAnimationFrame(check)
-            }
+        await new Promise<void>(resolve => {
+          let ticks = 0
+          const targetTicks = Math.ceil(retryDelay / 16.67)
+          const tick = () => {
+            ticks++
+            if (ticks >= targetTicks) resolve()
+            else requestAnimationFrame(tick)
           }
-          requestAnimationFrame(check)
+          requestAnimationFrame(tick)
         })
       }
       return false
@@ -231,16 +228,15 @@ export async function waitForSessionEnd(page: Page, maxRetries = 20, retryDelay 
 
         if (!db.objectStoreNames.contains('studySessions')) {
           db.close()
-          await new Promise(resolve => {
-            const startTime = performance.now()
-            const check = () => {
-              if (performance.now() - startTime >= retryDelay) {
-                resolve(undefined)
-              } else {
-                requestAnimationFrame(check)
-              }
+          await new Promise<void>(resolve => {
+            let ticks = 0
+            const targetTicks = Math.ceil(retryDelay / 16.67)
+            const tick = () => {
+              ticks++
+              if (ticks >= targetTicks) resolve()
+              else requestAnimationFrame(tick)
             }
-            requestAnimationFrame(check)
+            requestAnimationFrame(tick)
           })
           continue
         }
@@ -255,16 +251,15 @@ export async function waitForSessionEnd(page: Page, maxRetries = 20, retryDelay 
         db.close()
 
         if (sessions.length === 0) {
-          await new Promise(resolve => {
-            const startTime = performance.now()
-            const check = () => {
-              if (performance.now() - startTime >= retryDelay) {
-                resolve(undefined)
-              } else {
-                requestAnimationFrame(check)
-              }
+          await new Promise<void>(resolve => {
+            let ticks = 0
+            const targetTicks = Math.ceil(retryDelay / 16.67)
+            const tick = () => {
+              ticks++
+              if (ticks >= targetTicks) resolve()
+              else requestAnimationFrame(tick)
             }
-            requestAnimationFrame(check)
+            requestAnimationFrame(tick)
           })
           continue
         }
@@ -275,16 +270,15 @@ export async function waitForSessionEnd(page: Page, maxRetries = 20, retryDelay 
         }
 
         // endTime not set yet - retry
-        await new Promise(resolve => {
-          const startTime = performance.now()
-          const check = () => {
-            if (performance.now() - startTime >= retryDelay) {
-              resolve(undefined)
-            } else {
-              requestAnimationFrame(check)
-            }
+        await new Promise<void>(resolve => {
+          let ticks = 0
+          const targetTicks = Math.ceil(retryDelay / 16.67)
+          const tick = () => {
+            ticks++
+            if (ticks >= targetTicks) resolve()
+            else requestAnimationFrame(tick)
           }
-          requestAnimationFrame(check)
+          requestAnimationFrame(tick)
         })
       }
       return false
@@ -314,16 +308,15 @@ export async function waitForIdleTimeRecorded(
 
         if (!db.objectStoreNames.contains('studySessions')) {
           db.close()
-          await new Promise(resolve => {
-            const startTime = performance.now()
-            const check = () => {
-              if (performance.now() - startTime >= retryDelay) {
-                resolve(undefined)
-              } else {
-                requestAnimationFrame(check)
-              }
+          await new Promise<void>(resolve => {
+            let ticks = 0
+            const targetTicks = Math.ceil(retryDelay / 16.67)
+            const tick = () => {
+              ticks++
+              if (ticks >= targetTicks) resolve()
+              else requestAnimationFrame(tick)
             }
-            requestAnimationFrame(check)
+            requestAnimationFrame(tick)
           })
           continue
         }
@@ -338,16 +331,15 @@ export async function waitForIdleTimeRecorded(
         db.close()
 
         if (sessions.length === 0) {
-          await new Promise(resolve => {
-            const startTime = performance.now()
-            const check = () => {
-              if (performance.now() - startTime >= retryDelay) {
-                resolve(undefined)
-              } else {
-                requestAnimationFrame(check)
-              }
+          await new Promise<void>(resolve => {
+            let ticks = 0
+            const targetTicks = Math.ceil(retryDelay / 16.67)
+            const tick = () => {
+              ticks++
+              if (ticks >= targetTicks) resolve()
+              else requestAnimationFrame(tick)
             }
-            requestAnimationFrame(check)
+            requestAnimationFrame(tick)
           })
           continue
         }
@@ -361,16 +353,15 @@ export async function waitForIdleTimeRecorded(
           }
         }
 
-        await new Promise(resolve => {
-          const startTime = performance.now()
-          const check = () => {
-            if (performance.now() - startTime >= retryDelay) {
-              resolve(undefined)
-            } else {
-              requestAnimationFrame(check)
-            }
+        await new Promise<void>(resolve => {
+          let ticks = 0
+          const targetTicks = Math.ceil(retryDelay / 16.67)
+          const tick = () => {
+            ticks++
+            if (ticks >= targetTicks) resolve()
+            else requestAnimationFrame(tick)
           }
-          requestAnimationFrame(check)
+          requestAnimationFrame(tick)
         })
       }
       return { success: false, idleTime: 0, duration: 0 }

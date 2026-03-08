@@ -11,6 +11,8 @@ import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
  */
 import { test, expect } from '../../support/fixtures'
 import { createCourseProgress } from '../../support/fixtures/factories/course-factory'
+import { TIMEOUTS } from '../../utils/constants'
+import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
 
 // Real course IDs from src/data/courses — must match allCourses
 const COURSE_1 = '6mx'
@@ -23,9 +25,11 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
     // Clear any residual progress data from prior tests, then seed sidebar state
     await page.goto('/')
     await localStorage.clearAll()
-    await page.evaluate(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
-    })
+    await page.evaluate((sidebarState) => {
+      Object.entries(sidebarState).forEach(([key, value]) => {
+        localStorage.setItem(key, value)
+      })
+    }, closeSidebar())
   })
 
   test('AC4 — shows empty state when no courses are in progress', async ({ page }) => {
@@ -33,7 +37,7 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
     await page.waitForLoadState('domcontentloaded')
 
     // Wait for loading to complete
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 30000 })
+    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: TIMEOUTS.PAGE_LOAD })
 
     const emptyState = page.getByTestId('recommended-next-empty')
     await expect(emptyState).toBeVisible()
@@ -78,7 +82,7 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
 
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 30000 })
+    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: TIMEOUTS.PAGE_LOAD })
 
     await expect(page.getByRole('heading', { name: 'Recommended Next' })).toBeVisible()
 
@@ -116,7 +120,7 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
 
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 30000 })
+    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: TIMEOUTS.PAGE_LOAD })
 
     await expect(page.getByRole('heading', { name: 'Recommended Next' })).toBeVisible()
 
@@ -139,7 +143,7 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
 
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 30000 })
+    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: TIMEOUTS.PAGE_LOAD })
 
     const section = page.getByTestId('recommended-next-section')
     await expect(section).toBeVisible()
@@ -189,7 +193,7 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
 
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 30000 })
+    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: TIMEOUTS.PAGE_LOAD })
 
     const cardsContainer = page.getByTestId('recommended-next-cards')
     await expect(cardsContainer).toBeVisible()
@@ -217,7 +221,7 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
     // Simulate returning to dashboard — component remounts, reads fresh data
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 30000 })
+    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: TIMEOUTS.PAGE_LOAD })
 
     // authority should now rank first (higher recency score)
     const updatedCards = cardsContainer.locator('[data-href*="/courses/"]')

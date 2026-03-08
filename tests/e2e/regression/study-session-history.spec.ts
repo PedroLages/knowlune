@@ -135,17 +135,16 @@ test.describe('Story E04-S03: Study Session History & Reporting', () => {
 
         if (!db.objectStoreNames.contains('studySessions')) {
           db.close()
-          await new Promise(resolve => {
-          const startTime = performance.now()
-          const check = () => {
-            if (performance.now() - startTime >= retryDelay) {
-              resolve(undefined)
-            } else {
-              requestAnimationFrame(check)
+          await new Promise<void>(resolve => {
+            let ticks = 0
+            const targetTicks = Math.ceil(retryDelay / 16.67)
+            const tick = () => {
+              ticks++
+              if (ticks >= targetTicks) resolve()
+              else requestAnimationFrame(tick)
             }
-          }
-          requestAnimationFrame(check)
-        })
+            requestAnimationFrame(tick)
+          })
           continue
         }
 
@@ -161,16 +160,15 @@ test.describe('Story E04-S03: Study Session History & Reporting', () => {
         if (sessions.length > 0) {
           return sessions.reduce((total, s) => total + (s.duration || 0), 0)
         }
-        await new Promise(resolve => {
-          const startTime = performance.now()
-          const check = () => {
-            if (performance.now() - startTime >= retryDelay) {
-              resolve(undefined)
-            } else {
-              requestAnimationFrame(check)
-            }
+        await new Promise<void>(resolve => {
+          let ticks = 0
+          const targetTicks = Math.ceil(retryDelay / 16.67)
+          const tick = () => {
+            ticks++
+            if (ticks >= targetTicks) resolve()
+            else requestAnimationFrame(tick)
           }
-          requestAnimationFrame(check)
+          requestAnimationFrame(tick)
         })
       }
       return 0
@@ -220,17 +218,16 @@ test.describe('Story E04-S03: Study Session History & Reporting', () => {
 
         if (!db.objectStoreNames.contains('studySessions')) {
           db.close()
-          await new Promise(resolve => {
-          const startTime = performance.now()
-          const check = () => {
-            if (performance.now() - startTime >= retryDelay) {
-              resolve(undefined)
-            } else {
-              requestAnimationFrame(check)
+          await new Promise<void>(resolve => {
+            let ticks = 0
+            const targetTicks = Math.ceil(retryDelay / 16.67)
+            const tick = () => {
+              ticks++
+              if (ticks >= targetTicks) resolve()
+              else requestAnimationFrame(tick)
             }
-          }
-          requestAnimationFrame(check)
-        })
+            requestAnimationFrame(tick)
+          })
           continue
         }
 
@@ -244,17 +241,16 @@ test.describe('Story E04-S03: Study Session History & Reporting', () => {
         db.close()
 
         if (!session) {
-          await new Promise(resolve => {
-          const startTime = performance.now()
-          const check = () => {
-            if (performance.now() - startTime >= retryDelay) {
-              resolve(undefined)
-            } else {
-              requestAnimationFrame(check)
+          await new Promise<void>(resolve => {
+            let ticks = 0
+            const targetTicks = Math.ceil(retryDelay / 16.67)
+            const tick = () => {
+              ticks++
+              if (ticks >= targetTicks) resolve()
+              else requestAnimationFrame(tick)
             }
-          }
-          requestAnimationFrame(check)
-        })
+            requestAnimationFrame(tick)
+          })
           continue
         }
 
@@ -262,16 +258,15 @@ test.describe('Story E04-S03: Study Session History & Reporting', () => {
           return true
         }
 
-        await new Promise(resolve => {
-          const startTime = performance.now()
-          const check = () => {
-            if (performance.now() - startTime >= retryDelay) {
-              resolve(undefined)
-            } else {
-              requestAnimationFrame(check)
-            }
+        await new Promise<void>(resolve => {
+          let ticks = 0
+          const targetTicks = Math.ceil(retryDelay / 16.67)
+          const tick = () => {
+            ticks++
+            if (ticks >= targetTicks) resolve()
+            else requestAnimationFrame(tick)
           }
-          requestAnimationFrame(check)
+          requestAnimationFrame(tick)
         })
       }
       return false

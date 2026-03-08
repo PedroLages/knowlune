@@ -12,8 +12,10 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
+import { TIMEOUTS } from '../../utils/constants'
 import path from 'node:path'
 import fs from 'node:fs'
+import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
 
 // ---------------------------------------------------------------------------
 // Test Data — use a static course/lesson that has video (renders Notes tab)
@@ -28,20 +30,22 @@ const LESSON_ID = 'nci-fnl-drones-psyops'
 
 /** Navigate to lesson player Notes tab with sidebar closed. */
 async function openNoteEditor(page: import('@playwright/test').Page) {
-  await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
-  })
+  await page.evaluate((sidebarState) => {
+    Object.entries(sidebarState).forEach(([key, value]) => {
+      localStorage.setItem(key, value)
+    })
+  }, closeSidebar())
 
   // Navigate to lesson player
   await navigateAndWait(page, `/courses/${COURSE_ID}/${LESSON_ID}`)
 
   // Wait for Notes tab to appear, then click it
   const notesTab = page.getByRole('tab', { name: 'Notes' })
-  await notesTab.waitFor({ state: 'visible', timeout: 30000 })
+  await notesTab.waitFor({ state: 'visible', timeout: TIMEOUTS.PAGE_LOAD })
   await notesTab.click()
 
   // Wait for editor to render
-  await page.waitForSelector('[data-testid="note-editor"]', { timeout: 15000 })
+  await page.waitForSelector('[data-testid="note-editor"]', { timeout: TIMEOUTS.MEDIA })
 }
 
 // ---------------------------------------------------------------------------
@@ -148,7 +152,7 @@ test.describe('AC2: Inline images', () => {
 
     // Verify image was inserted
     const img = editor.locator('img')
-    await expect(img).toBeVisible({ timeout: 10000 })
+    await expect(img).toBeVisible({ timeout: TIMEOUTS.NETWORK })
 
     // Cleanup
     fs.unlinkSync(tmpFile)
@@ -195,7 +199,7 @@ test.describe('AC3: YouTube embeds', () => {
 
     // Verify YouTube embed container exists (Tiptap wraps in div[data-youtube-video])
     const embed = page.locator('.tiptap div[data-youtube-video]')
-    await expect(embed).toBeVisible({ timeout: 10000 })
+    await expect(embed).toBeVisible({ timeout: TIMEOUTS.NETWORK })
 
     // Verify 16:9 aspect ratio via CSS
     const box = await embed.boundingBox()

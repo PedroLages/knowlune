@@ -12,6 +12,8 @@
  *   Lesson2: 6mx-day1-laws
  */
 import { test, expect } from '../../support/fixtures'
+import { TIMEOUTS } from '../../utils/constants'
+import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
 
 const COURSE_ID = '6mx'
 const MODULE_ID = '6mx-day1'
@@ -30,9 +32,11 @@ const DAY1_LESSON_IDS = [
 test.describe('E04-S01: Mark Content Completion Status', () => {
   test.beforeEach(async ({ page }) => {
     // Seed sidebar closed to prevent overlay on tablet viewports
-    await page.addInitScript(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
-    })
+    await page.evaluate((sidebarState) => {
+      Object.entries(sidebarState).forEach(([key, value]) => {
+        localStorage.setItem(key, value)
+      })
+    }, closeSidebar())
     // Clear any previous contentProgress data
     await page.goto(`/courses/${COURSE_ID}`)
     await page.evaluate(async () => {
@@ -121,7 +125,7 @@ test.describe('E04-S01: Mark Content Completion Status', () => {
             })
           })
         },
-        { timeout: 5000 }
+        { timeout: TIMEOUTS.LONG }
       )
       .toBe('completed')
 

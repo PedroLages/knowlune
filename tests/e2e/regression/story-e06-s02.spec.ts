@@ -9,6 +9,7 @@ import { RETRY_CONFIG } from '../../utils/constants'
 import { test, expect } from '../../support/fixtures'
 import { createChallenge } from '../../support/fixtures/factories/challenge-factory'
 import type { Page } from '@playwright/test'
+import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
 
 const DB_NAME = 'ElearningDB'
 
@@ -50,17 +51,17 @@ async function seedStore(page: Page, storeName: string, records: unknown[]) {
           request.onerror = () => reject(request.error)
         })
         if (result === 'ok') return
-        // Use requestAnimationFrame polling instead of hard timeout
-        await new Promise(resolve => {
-          const startTime = performance.now()
-          const check = () => {
-            if (performance.now() - startTime >= retryDelay) {
-              resolve(undefined)
-            } else {
-              requestAnimationFrame(check)
-            }
+        // Frame-accurate wait using requestAnimationFrame tick counting
+        // Assumes 60fps (~16.67ms per frame)
+        await new Promise<void>(resolve => {
+          let ticks = 0
+          const targetTicks = Math.ceil(retryDelay / 16.67)
+          const tick = () => {
+            ticks++
+            if (ticks >= targetTicks) resolve()
+            else requestAnimationFrame(tick)
           }
-          requestAnimationFrame(check)
+          requestAnimationFrame(tick)
         })
       }
       throw new Error(`Store "${store}" not found after ${maxRetries} retries`)
@@ -73,9 +74,11 @@ async function seedStore(page: Page, storeName: string, records: unknown[]) {
 
 test.beforeEach(async ({ page }) => {
   // Prevent tablet sidebar overlay from blocking interactions
-  await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
-  })
+  await page.evaluate((sidebarState) => {
+    Object.entries(sidebarState).forEach(([key, value]) => {
+      localStorage.setItem(key, value)
+    })
+  }, closeSidebar())
 })
 
 test.afterEach(async ({ page, indexedDB }) => {

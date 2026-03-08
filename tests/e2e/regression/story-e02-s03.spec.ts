@@ -19,6 +19,8 @@ import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
  */
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
+import { TIMEOUTS } from '../../utils/constants'
+import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
 
 // ---------------------------------------------------------------------------
 // Constants — use the first lesson of the 6MX course (has video resource)
@@ -29,9 +31,11 @@ const LESSON_PATH = `/courses/${COURSE_ID}/${LESSON_ID}`
 
 // Ensure sidebar starts closed on tablet viewport (Layout defaults to open)
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', JSON.stringify(false))
-  })
+  await page.evaluate((sidebarState) => {
+    Object.entries(sidebarState).forEach(([key, value]) => {
+      localStorage.setItem(key, value)
+    })
+  }, closeSidebar())
 })
 
 // ===========================================================================
@@ -51,7 +55,7 @@ test.describe('AC1: Position Auto-Save', () => {
     await page.waitForFunction(() => {
       const progress = localStorage.getItem('course-progress')
       return progress !== null
-    }, { timeout: 5000 })
+    }, { timeout: TIMEOUTS.LONG })
 
     // THEN: course-progress in localStorage has a lastVideoPosition value
     const progress = await localStorage.get<Record<string, unknown>>('course-progress')
@@ -101,7 +105,7 @@ test.describe('AC2: Resume from Last Position', () => {
 
     // THEN: A "Resuming from 2:05" toast appears
     const toast = page.locator('[data-sonner-toaster]').getByText(/resuming from/i)
-    await expect(toast).toBeVisible({ timeout: 5000 })
+    await expect(toast).toBeVisible({ timeout: TIMEOUTS.LONG })
   })
 
   test('should auto-dismiss resume toast after ~2 seconds', async ({ page, localStorage }) => {
@@ -122,10 +126,10 @@ test.describe('AC2: Resume from Last Position', () => {
     // WHEN: User navigates to the lesson and toast appears
     await navigateAndWait(page, LESSON_PATH)
     const toast = page.locator('[data-sonner-toaster]').getByText(/resuming from/i)
-    await expect(toast).toBeVisible({ timeout: 5000 })
+    await expect(toast).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     // THEN: Toast disappears after ~2 seconds
-    await expect(toast).not.toBeVisible({ timeout: 5000 })
+    await expect(toast).not.toBeVisible({ timeout: TIMEOUTS.LONG })
   })
 
   test('should not show resume toast when no saved position exists', async ({ page }) => {
@@ -136,7 +140,7 @@ test.describe('AC2: Resume from Last Position', () => {
     // THEN: No "Resuming from" toast appears
     // Wait for any potential toast to appear, then verify absence
     const toast = page.locator('[data-sonner-toaster]').getByText(/resuming from/i)
-    await expect(toast).toHaveCount(0, { timeout: 2000 })
+    await expect(toast).toHaveCount(0, { timeout: TIMEOUTS.MEDIUM })
   })
 })
 
@@ -164,7 +168,7 @@ test.describe('AC3: Bookmark Creation', () => {
 
     // THEN: A toast confirms bookmark creation
     const toast = page.locator('[data-sonner-toaster]').getByText(/bookmarked at/i)
-    await expect(toast).toBeVisible({ timeout: 5000 })
+    await expect(toast).toBeVisible({ timeout: TIMEOUTS.LONG })
   })
 
   test('should create bookmark via B keyboard shortcut', async ({ page }) => {
@@ -180,7 +184,7 @@ test.describe('AC3: Bookmark Creation', () => {
 
     // THEN: A toast confirms bookmark creation
     const toast = page.locator('[data-sonner-toaster]').getByText(/bookmarked at/i)
-    await expect(toast).toBeVisible({ timeout: 5000 })
+    await expect(toast).toBeVisible({ timeout: TIMEOUTS.LONG })
   })
 
   test('should display bookmark markers on the progress bar', async ({ page }) => {

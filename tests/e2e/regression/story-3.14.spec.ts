@@ -10,6 +10,8 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
+import { TIMEOUTS } from '../../utils/constants'
+import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
 
 // ---------------------------------------------------------------------------
 // Test Data — use a static course/lesson that has video (renders Notes tab)
@@ -24,17 +26,19 @@ const LESSON_ID = 'nci-fnl-drones-psyops'
 
 /** Navigate to lesson player Notes tab with sidebar closed. */
 async function openNoteEditor(page: import('@playwright/test').Page) {
-  await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
-  })
+  await page.evaluate((sidebarState) => {
+    Object.entries(sidebarState).forEach(([key, value]) => {
+      localStorage.setItem(key, value)
+    })
+  }, closeSidebar())
 
   await navigateAndWait(page, `/courses/${COURSE_ID}/${LESSON_ID}`)
 
   const notesTab = page.getByRole('tab', { name: 'Notes' })
-  await notesTab.waitFor({ state: 'visible', timeout: 30000 })
+  await notesTab.waitFor({ state: 'visible', timeout: TIMEOUTS.PAGE_LOAD })
   await notesTab.click()
 
-  await page.waitForSelector('[data-testid="note-editor"]', { timeout: 15000 })
+  await page.waitForSelector('[data-testid="note-editor"]', { timeout: TIMEOUTS.MEDIA })
 }
 
 /** Type text into the Tiptap editor */
@@ -58,7 +62,7 @@ test.describe('AC1: Table Grid Picker & Slash Command', () => {
 
     // Grid picker should appear
     const gridPicker = page.locator('[data-testid="table-grid-picker"]')
-    await expect(gridPicker).toBeVisible({ timeout: 5000 })
+    await expect(gridPicker).toBeVisible({ timeout: TIMEOUTS.LONG })
   })
 
   test('clicking grid cell inserts table of correct dimensions', async ({ page }) => {
@@ -69,7 +73,7 @@ test.describe('AC1: Table Grid Picker & Slash Command', () => {
     await tableButton.click()
 
     const gridPicker = page.locator('[data-testid="table-grid-picker"]')
-    await expect(gridPicker).toBeVisible({ timeout: 5000 })
+    await expect(gridPicker).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     // Hover and click on cell at position (2, 4) — should create 2 cols x 4 rows
     // Grid cells are identified by data attributes
@@ -77,12 +81,12 @@ test.describe('AC1: Table Grid Picker & Slash Command', () => {
     await targetCell.click()
 
     // Grid picker should close
-    await expect(gridPicker).not.toBeVisible({ timeout: 3000 })
+    await expect(gridPicker).not.toBeVisible({ timeout: TIMEOUTS.DEFAULT })
 
     // Table should be inserted in the editor
     const editor = page.locator('.tiptap')
     const table = editor.locator('table')
-    await expect(table).toBeVisible({ timeout: 5000 })
+    await expect(table).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     // Verify dimensions: 4 rows (1 header + 3 body), 2 columns
     const rows = table.locator('tr')
@@ -100,20 +104,20 @@ test.describe('AC1: Table Grid Picker & Slash Command', () => {
 
     // Wait for slash command palette
     const commandList = page.locator('[data-testid="slash-command-list"]')
-    await expect(commandList).toBeVisible({ timeout: 5000 })
+    await expect(commandList).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     // Type "table" to filter
     await page.keyboard.type('table')
 
     // Select the Table command
     const tableCommand = commandList.getByText('Table', { exact: true })
-    await expect(tableCommand).toBeVisible({ timeout: 3000 })
+    await expect(tableCommand).toBeVisible({ timeout: TIMEOUTS.DEFAULT })
     await page.keyboard.press('Enter')
 
     // Table should be inserted with default 3x3 dimensions
     const editor = page.locator('.tiptap')
     const table = editor.locator('table')
-    await expect(table).toBeVisible({ timeout: 5000 })
+    await expect(table).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     // 3 rows (1 header + 2 body), 3 columns
     const rows = table.locator('tr')
@@ -133,11 +137,11 @@ test.describe('AC2: Table Context Menu & Navigation', () => {
   async function insertTable(page: import('@playwright/test').Page) {
     await typeInEditor(page, '/')
     const commandList = page.locator('[data-testid="slash-command-list"]')
-    await expect(commandList).toBeVisible({ timeout: 5000 })
+    await expect(commandList).toBeVisible({ timeout: TIMEOUTS.LONG })
     await page.keyboard.type('table')
     await page.keyboard.press('Enter')
     const table = page.locator('.tiptap table')
-    await expect(table).toBeVisible({ timeout: 5000 })
+    await expect(table).toBeVisible({ timeout: TIMEOUTS.LONG })
   }
 
   test('right-click in table cell shows context menu', async ({ page }) => {
@@ -150,7 +154,7 @@ test.describe('AC2: Table Context Menu & Navigation', () => {
 
     // Context menu should appear
     const contextMenu = page.locator('[data-testid="table-context-menu"]')
-    await expect(contextMenu).toBeVisible({ timeout: 5000 })
+    await expect(contextMenu).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     // Should contain all operations
     await expect(contextMenu.getByText('Add Row Above')).toBeVisible()
@@ -193,7 +197,7 @@ test.describe('AC2: Table Context Menu & Navigation', () => {
     await bodyCell.click({ button: 'right' })
 
     const contextMenu = page.locator('[data-testid="table-context-menu"]')
-    await expect(contextMenu).toBeVisible({ timeout: 5000 })
+    await expect(contextMenu).toBeVisible({ timeout: TIMEOUTS.LONG })
     await contextMenu.getByText('Add Row Below').click()
 
     // Row count should increase by 1
@@ -213,11 +217,11 @@ test.describe('AC2: Table Context Menu & Navigation', () => {
     await cell.click({ button: 'right' })
 
     const contextMenu = page.locator('[data-testid="table-context-menu"]')
-    await expect(contextMenu).toBeVisible({ timeout: 5000 })
+    await expect(contextMenu).toBeVisible({ timeout: TIMEOUTS.LONG })
     await contextMenu.getByText('Delete Table').click()
 
     // Table should be removed
-    await expect(table).not.toBeVisible({ timeout: 5000 })
+    await expect(table).not.toBeVisible({ timeout: TIMEOUTS.LONG })
   })
 
   test('Tab at end of table creates new row', async ({ page }) => {
@@ -249,12 +253,12 @@ test.describe('AC2: Table Context Menu & Navigation', () => {
     await cell.click({ button: 'right' })
 
     const contextMenu = page.locator('[data-testid="table-context-menu"]')
-    await expect(contextMenu).toBeVisible({ timeout: 5000 })
+    await expect(contextMenu).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     // Press Escape
     await page.keyboard.press('Escape')
 
     // Context menu should close
-    await expect(contextMenu).not.toBeVisible({ timeout: 3000 })
+    await expect(contextMenu).not.toBeVisible({ timeout: TIMEOUTS.DEFAULT })
   })
 })

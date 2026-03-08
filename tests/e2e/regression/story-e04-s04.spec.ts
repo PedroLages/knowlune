@@ -10,6 +10,7 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { getRelativeDate, getRelativeTimestamp } from '../../utils/test-time'
+import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
 
 /** Reusable helper to seed study sessions into IndexedDB */
 async function seedStudySessions(
@@ -46,9 +47,11 @@ async function seedStudySessions(
 test.describe('E04-S04: View Study Session History', () => {
   test.beforeEach(async ({ page, indexedDB }) => {
     // Seed sidebar state to prevent tablet overlay blocking interactions
-    await page.addInitScript(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
+    await page.evaluate((sidebarState) => {
+    Object.entries(sidebarState).forEach(([key, value]) => {
+      localStorage.setItem(key, value)
     })
+  }, closeSidebar())
     // Clear study sessions before each test for isolation
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')

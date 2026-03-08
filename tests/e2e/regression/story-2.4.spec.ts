@@ -18,6 +18,8 @@ import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
 import { test, expect } from '../../support/fixtures'
 import type { Page } from '@playwright/test'
 import { navigateAndWait } from '../../support/helpers/navigation'
+import { TIMEOUTS } from '../../utils/constants'
+import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
 
 // ---------------------------------------------------------------------------
 // Constants — known course/lesson with PDF resources
@@ -35,9 +37,11 @@ const MULTI_PDF_URL = `/courses/${COURSE_ID}/${LESSON_MULTI_PAGE_PDF}`
 // On tablet (768px), the sidebar Sheet opens by default on fresh visits,
 // covering main content. Dismiss it before tests interact with page elements.
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
-  })
+  await page.evaluate((sidebarState) => {
+    Object.entries(sidebarState).forEach(([key, value]) => {
+      localStorage.setItem(key, value)
+    })
+  }, closeSidebar())
 })
 
 /** Navigate to lesson, click Materials tab, and wait for first PDF to fully load. */
@@ -47,7 +51,7 @@ async function openPdfViewer(page: Page, url = LESSON_PLAYER_URL) {
   // Wait for react-pdf to finish loading the document (totalPages > 0)
   const materialsPanel = page.getByRole('tabpanel', { name: /materials/i })
   await expect(materialsPanel.getByTestId('pdf-total-pages').first()).not.toHaveText('0', {
-    timeout: 15000,
+    timeout: TIMEOUTS.MEDIA,
   })
 }
 
@@ -359,7 +363,7 @@ test.describe('AC3: Page Position Persistence', () => {
       if (!progress) return false
       const parsed = JSON.parse(progress)
       return parsed && Object.keys(parsed).length > 0
-    }, { timeout: 2000 })
+    }, { timeout: TIMEOUTS.MEDIUM })
 
     // THEN: Page position is persisted in localStorage
     const progress = await localStorage.get<Record<string, unknown>>('course-progress')
@@ -392,7 +396,7 @@ test.describe('AC3: Page Position Persistence', () => {
 
     // THEN: PDF viewer restores to page 3
     const pageInput = page.getByTestId('pdf-page-input')
-    await expect(pageInput).toHaveValue('3', { timeout: 1000 })
+    await expect(pageInput).toHaveValue('3', { timeout: TIMEOUTS.SHORT })
   })
 
   test('should restore page position within 1 second', async ({ page, localStorage }) => {
@@ -419,9 +423,9 @@ test.describe('AC3: Page Position Persistence', () => {
 
     // THEN: Page is restored within 1 second
     const pageInput = page.getByTestId('pdf-page-input')
-    await expect(pageInput).toHaveValue('5', { timeout: 1000 })
+    await expect(pageInput).toHaveValue('5', { timeout: TIMEOUTS.SHORT })
     const elapsed = performance.now() - startTime
-    expect(elapsed).toBeLessThan(2000) // generous for CI
+    expect(elapsed).toBeLessThan(TIMEOUTS.MEDIUM) // generous for CI
   })
 })
 

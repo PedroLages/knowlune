@@ -8,6 +8,7 @@
  *   - IndexedDB remains accessible offline
  */
 import { test, expect } from '../support/fixtures'
+import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
 
 test.describe('Offline Degradation', () => {
   test.skip(
@@ -16,9 +17,11 @@ test.describe('Offline Degradation', () => {
   )
   test.beforeEach(async ({ page }) => {
     // CRITICAL: Seed sidebar state to prevent tablet overlay blocking
-    await page.addInitScript(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
-    })
+    await page.evaluate((sidebarState) => {
+      Object.entries(sidebarState).forEach(([key, value]) => {
+        localStorage.setItem(key, value)
+      })
+    }, closeSidebar())
   })
 
   test.skip('app remains functional when network goes offline', async ({ page, context }) => {

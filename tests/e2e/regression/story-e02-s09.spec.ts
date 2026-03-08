@@ -8,16 +8,20 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
+import { TIMEOUTS } from '../../utils/constants'
+import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
 
 const LESSON_URL = '/courses/operative-six/op6-introduction'
 
 /** Navigate to lesson player and suppress mobile sidebar Sheet. */
 async function goToLessonPlayer(page: Parameters<typeof navigateAndWait>[0]) {
-  await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
-  })
+  await page.evaluate((sidebarState) => {
+    Object.entries(sidebarState).forEach(([key, value]) => {
+      localStorage.setItem(key, value)
+    })
+  }, closeSidebar())
   await navigateAndWait(page, LESSON_URL)
-  await page.locator('video').waitFor({ state: 'visible', timeout: 10000 })
+  await page.locator('video').waitFor({ state: 'visible', timeout: TIMEOUTS.NETWORK })
 }
 
 /** Scroll the main scroll container (Layout's <main> — single scroll container after sticky sidebar fix). */
@@ -39,7 +43,7 @@ async function activatePlayState(page: Parameters<typeof navigateAndWait>[0]) {
   await page.waitForFunction(() => {
     const video = document.querySelector('video')
     return video && !video.paused
-  }, { timeout: 1000 }).catch(() => {
+  }, { timeout: TIMEOUTS.SHORT }).catch(() => {
     // Video may not have a source, state is tracked by React component regardless
   })
 }
@@ -74,10 +78,10 @@ test.describe('AC1: Mini-player on scroll', () => {
     await activatePlayState(page)
 
     // Scroll the lesson content container past the video
-    await scrollLessonContent(page, 1000)
+    await scrollLessonContent(page, TIMEOUTS.SHORT)
 
     // THEN: wrapper should become position: fixed (waits up to 5s for IntersectionObserver)
-    await expect(page.getByTestId('mini-player')).toHaveCSS('position', 'fixed', { timeout: 5000 })
+    await expect(page.getByTestId('mini-player')).toHaveCSS('position', 'fixed', { timeout: TIMEOUTS.LONG })
   })
 
   test('layout anchor preserves space when mini-player is active', async ({ page }) => {
@@ -90,10 +94,10 @@ test.describe('AC1: Mini-player on scroll', () => {
 
     // Activate play state and scroll
     await activatePlayState(page)
-    await scrollLessonContent(page, 1000)
+    await scrollLessonContent(page, TIMEOUTS.SHORT)
 
     // THEN: anchor div stays visible (preserving layout space) while mini-player is fixed
-    await expect(page.getByTestId('mini-player')).toHaveCSS('position', 'fixed', { timeout: 5000 })
+    await expect(page.getByTestId('mini-player')).toHaveCSS('position', 'fixed', { timeout: TIMEOUTS.LONG })
     await expect(anchor).toBeVisible()
   })
 
@@ -103,17 +107,17 @@ test.describe('AC1: Mini-player on scroll', () => {
 
     // Activate play state and scroll to activate mini-player
     await activatePlayState(page)
-    await scrollLessonContent(page, 1000)
+    await scrollLessonContent(page, TIMEOUTS.SHORT)
 
     // Wait for mini-player to become active
     const wrapper = page.getByTestId('mini-player')
-    await expect(wrapper).toHaveCSS('position', 'fixed', { timeout: 5000 })
+    await expect(wrapper).toHaveCSS('position', 'fixed', { timeout: TIMEOUTS.LONG })
 
     // WHEN: Click the mini-player to scroll back
     await wrapper.click({ force: true })
 
     // THEN: Should scroll back — mini-player position returns to absolute (in-flow)
-    await expect(wrapper).not.toHaveCSS('position', 'fixed', { timeout: 5000 })
+    await expect(wrapper).not.toHaveCSS('position', 'fixed', { timeout: TIMEOUTS.LONG })
   })
 
   test('mini-player does NOT appear when video is paused and scrolled past', async ({ page }) => {
@@ -121,12 +125,12 @@ test.describe('AC1: Mini-player on scroll', () => {
     await goToLessonPlayer(page)
 
     // Ensure video is paused (default state), then scroll
-    await scrollLessonContent(page, 1000)
+    await scrollLessonContent(page, TIMEOUTS.SHORT)
 
     // THEN: wrapper should remain static (mini-player inactive)
     const wrapper = page.getByTestId('mini-player')
     // Wait for any potential transition, then verify position is not fixed
-    await expect(wrapper).not.toHaveCSS('position', 'fixed', { timeout: 1000 })
+    await expect(wrapper).not.toHaveCSS('position', 'fixed', { timeout: TIMEOUTS.SHORT })
   })
 })
 
@@ -171,7 +175,7 @@ test.describe('AC2: Theater mode', () => {
     await page.keyboard.press('t')
 
     // THEN: Desktop sidebar should be hidden (theater mode active)
-    await expect(page.getByTestId('desktop-sidebar')).not.toBeVisible({ timeout: 2000 })
+    await expect(page.getByTestId('desktop-sidebar')).not.toBeVisible({ timeout: TIMEOUTS.MEDIUM })
   })
 
   test('pressing T again toggles theater mode off', async ({ page }) => {
@@ -182,13 +186,13 @@ test.describe('AC2: Theater mode', () => {
     await page.locator('video').hover({ force: true })
     await page.locator('[data-testid="mini-player"]').focus()
     await page.keyboard.press('t')
-    await expect(page.getByTestId('desktop-sidebar')).not.toBeVisible({ timeout: 2000 })
+    await expect(page.getByTestId('desktop-sidebar')).not.toBeVisible({ timeout: TIMEOUTS.MEDIUM })
 
     // WHEN: Press T again
     await page.keyboard.press('t')
 
     // THEN: Desktop sidebar should be visible again
-    await expect(page.getByTestId('desktop-sidebar')).toBeVisible({ timeout: 2000 })
+    await expect(page.getByTestId('desktop-sidebar')).toBeVisible({ timeout: TIMEOUTS.MEDIUM })
   })
 })
 

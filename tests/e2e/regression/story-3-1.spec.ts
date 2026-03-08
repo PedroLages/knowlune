@@ -17,6 +17,8 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
+import { TIMEOUTS } from '../../utils/constants'
+import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
 
 // ---------------------------------------------------------------------------
 // Constants & Helpers
@@ -26,9 +28,11 @@ const LESSON_URL = '/courses/operative-six/op6-introduction'
 
 /** Navigate to lesson and open Notes tab, with sidebar closed. */
 async function goToLessonNotes(page: Parameters<typeof navigateAndWait>[0]) {
-  await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
-  })
+  await page.evaluate((sidebarState) => {
+    Object.entries(sidebarState).forEach(([key, value]) => {
+      localStorage.setItem(key, value)
+    })
+  }, closeSidebar())
   await navigateAndWait(page, LESSON_URL)
   await page.getByRole('tab', { name: 'Notes' }).click()
 }
@@ -84,7 +88,7 @@ test.describe('AC2: Autosave indicator after typing', () => {
 
     // THEN: After ~3.5s, autosave indicator shows "Saved"
     const indicator = page.getByTestId('note-autosave-indicator')
-    await expect(indicator).toContainText('Saved', { timeout: 5000 })
+    await expect(indicator).toContainText('Saved', { timeout: TIMEOUTS.LONG })
   })
 
   test('should fade out autosave indicator after 2s', async ({ page }) => {
@@ -97,10 +101,10 @@ test.describe('AC2: Autosave indicator after typing', () => {
 
     // Wait for "Saved" to appear
     const indicator = page.getByTestId('note-autosave-indicator')
-    await expect(indicator).toContainText('Saved', { timeout: 5000 })
+    await expect(indicator).toContainText('Saved', { timeout: TIMEOUTS.LONG })
 
     // THEN: After ~2s more, indicator should become hidden
-    await expect(indicator).toBeHidden({ timeout: 4000 })
+    await expect(indicator).toBeHidden({ timeout: TIMEOUTS.DEFAULT })
   })
 })
 
@@ -119,7 +123,7 @@ test.describe('AC3: Note persistence across navigation', () => {
 
     // Wait for autosave
     const indicator = page.getByTestId('note-autosave-indicator')
-    await expect(indicator).toContainText('Saved', { timeout: 5000 })
+    await expect(indicator).toContainText('Saved', { timeout: TIMEOUTS.LONG })
 
     // Navigate away
     await navigateAndWait(page, '/courses')

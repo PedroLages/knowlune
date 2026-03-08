@@ -14,6 +14,8 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
+import { TIMEOUTS } from '../../utils/constants'
+import { closeSidebar } from '@/tests/support/fixtures/constants/sidebar-constants'
 
 // ---------------------------------------------------------------------------
 // Test Data — use a static course/lesson that has video (renders Notes tab)
@@ -28,20 +30,22 @@ const LESSON_ID = 'nci-fnl-drones-psyops'
 
 /** Navigate to lesson player Notes tab with sidebar closed. */
 async function openNoteEditor(page: import('@playwright/test').Page) {
-  await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
-  })
+  await page.evaluate((sidebarState) => {
+    Object.entries(sidebarState).forEach(([key, value]) => {
+      localStorage.setItem(key, value)
+    })
+  }, closeSidebar())
 
   // Navigate to lesson player
   await navigateAndWait(page, `/courses/${COURSE_ID}/${LESSON_ID}`)
 
   // Wait for Notes tab to appear, then click it
   const notesTab = page.getByRole('tab', { name: 'Notes' })
-  await notesTab.waitFor({ state: 'visible', timeout: 30000 })
+  await notesTab.waitFor({ state: 'visible', timeout: TIMEOUTS.PAGE_LOAD })
   await notesTab.click()
 
   // Wait for editor to render
-  await page.waitForSelector('[data-testid="note-editor"]', { timeout: 15000 })
+  await page.waitForSelector('[data-testid="note-editor"]', { timeout: TIMEOUTS.MEDIA })
 }
 
 // ---------------------------------------------------------------------------
@@ -247,11 +251,11 @@ test.describe('AC5: Word count', () => {
     await page.keyboard.type('The quick brown fox')
 
     // Verify word count updated
-    await expect(wordCount).toHaveText('4 words', { timeout: 5000 })
+    await expect(wordCount).toHaveText('4 words', { timeout: TIMEOUTS.LONG })
 
     // Type one more word
     await page.keyboard.type(' jumps')
-    await expect(wordCount).toHaveText('5 words', { timeout: 5000 })
+    await expect(wordCount).toHaveText('5 words', { timeout: TIMEOUTS.LONG })
   })
 
   test('word count shows singular "word" for exactly 1 word', async ({ page }) => {
@@ -262,7 +266,7 @@ test.describe('AC5: Word count', () => {
     await page.keyboard.type('hello')
 
     const wordCount = page.getByTestId('note-word-count')
-    await expect(wordCount).toHaveText('1 word', { timeout: 5000 })
+    await expect(wordCount).toHaveText('1 word', { timeout: TIMEOUTS.LONG })
   })
 })
 

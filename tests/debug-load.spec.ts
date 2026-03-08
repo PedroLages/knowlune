@@ -1,5 +1,5 @@
 import { test } from '@playwright/test'
-import { DELAYS } from './utils/constants'
+import { DELAYS, TIMEOUTS } from './utils/constants'
 
 test('debug page load with network', async ({ page }) => {
   // Listen for failed requests
@@ -22,7 +22,7 @@ test('debug page load with network', async ({ page }) => {
 
   // Navigate and wait
   await page.goto('http://localhost:5173')
-  await page.waitForLoadState('networkidle', { timeout: 3000 })
+  await page.waitForLoadState('networkidle', { timeout: TIMEOUTS.DEFAULT })
 
   // Get HTML content
   const html = await page.content()
