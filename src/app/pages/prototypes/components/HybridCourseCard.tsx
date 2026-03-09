@@ -26,7 +26,7 @@ export function HybridCourseCard({ course, completionPercent }: HybridCourseCard
   return (
     <Link
       to={lessonLink}
-      className="rounded-xl focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 outline-none block h-full"
+      className="rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 outline-none block h-full"
     >
       <div className="bg-white rounded-xl border border-neutral-100 shadow-xs hover:shadow-md transition-shadow duration-200 overflow-hidden h-full flex flex-col group">
         {/* Cover image */}
@@ -51,7 +51,7 @@ export function HybridCourseCard({ course, completionPercent }: HybridCourseCard
 
         {/* Content */}
         <div className="p-5 flex flex-col flex-1">
-          <h3 className="font-semibold text-base text-neutral-900 group-hover:text-blue-600 transition-colors mb-1 line-clamp-2">
+          <h3 className="font-semibold text-base text-neutral-900 group-hover:text-brand transition-colors mb-1 line-clamp-2">
             {course.title}
           </h3>
           <p className="text-sm text-neutral-500 mb-3 line-clamp-2">{course.description}</p>
@@ -77,7 +77,7 @@ export function HybridCourseCard({ course, completionPercent }: HybridCourseCard
             <div className="mt-3">
               <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-blue-600 rounded-full transition-all duration-300"
+                  className="h-full bg-brand rounded-full transition-all duration-300"
                   style={{ width: `${completionPercent}%` }}
                 />
               </div>

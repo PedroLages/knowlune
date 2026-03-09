@@ -331,8 +331,8 @@ export function Library() {
                         onClick={() => setSelectedItem(item)}
                       >
                         <div className="flex items-start gap-3">
-                          <div className="rounded-xl bg-red-50 dark:bg-red-900/30 p-2.5 shrink-0">
-                            <FileText className="size-5 text-red-500" />
+                          <div className="rounded-xl bg-destructive/10 p-2.5 shrink-0">
+                            <FileText className="size-5 text-destructive" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <h3 className="font-medium text-sm mb-1 truncate">
@@ -366,7 +366,7 @@ export function Library() {
         <DialogContent className="max-w-4xl h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <FileText className="size-5 text-red-500" />
+              <FileText className="size-5 text-destructive" />
               {selectedItem?.resource.title}
             </DialogTitle>
           </DialogHeader>

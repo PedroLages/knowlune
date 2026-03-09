@@ -101,6 +101,34 @@ All routes defined in [src/app/routes.tsx](src/app/routes.tsx).
 
 **Critical Note**: React and Tailwind plugins are both required in vite.config.ts even if Tailwind isn't actively being modified - do not remove them.
 
+### Design Token System
+
+**CRITICAL:** Never use hardcoded Tailwind colors. Always use design tokens from [src/styles/theme.css](src/styles/theme.css).
+
+#### Quick Reference
+
+| Use Case | ❌ Wrong | ✅ Correct |
+|----------|---------|-----------|
+| Primary brand color | `bg-blue-600` | `bg-brand` |
+| Hover state | `hover:bg-blue-700` | `hover:bg-brand-hover` |
+| Soft background | `bg-blue-100` | `bg-brand-soft` |
+| Success states | `text-green-600` | `text-success` |
+| Error states | `text-red-500` | `text-destructive` |
+| Muted text | `text-gray-500` | `text-muted-foreground` |
+| Warning states | `text-orange-500` | `text-warning` |
+
+**Why?** Design tokens:
+- Support automatic light/dark mode switching
+- Enable theme consistency across the app
+- Allow global color changes from a single location
+- Prevent tech debt accumulation
+
+**Enforcement:**
+- ESLint rule `design-tokens/no-hardcoded-colors` blocks hardcoded colors
+- Pre-commit script checks for violations
+- See [design-token-cheat-sheet.md](docs/implementation-artifacts/design-token-cheat-sheet.md) for complete reference
+- See [design-token-enforcement-strategy.md](docs/implementation-artifacts/design-token-enforcement-strategy.md) for prevention measures
+
 ### UI Component Library
 
 50+ shadcn/ui components in [src/app/components/ui/](src/app/components/ui/) including:
@@ -129,6 +157,34 @@ Primary colors and spacing:
 - All styling uses Tailwind utility classes
 - Icons from lucide-react
 - Images primarily from Unsplash (see ATTRIBUTIONS.md)
+
+## Git Hooks (Automated Enforcement)
+
+LevelUp uses git hooks to enforce process compliance. Hooks are NOT version-controlled and must be installed manually after cloning.
+
+**Install all hooks:**
+```bash
+# Pre-review hook (enforces clean working tree before /review-story)
+cp scripts/git-hooks/pre-review .git/hooks/pre-review
+chmod +x .git/hooks/pre-review
+
+# Verify installation
+.git/hooks/pre-review
+```
+
+**Available Hooks:**
+- `pre-review` — Blocks `/review-story` if working tree has uncommitted changes or untracked files
+- `pre-push` — Blocks git push if working tree is dirty
+
+**Emergency Bypass:**
+```bash
+SKIP_PRE_REVIEW=1 /review-story
+```
+Only use if uncommitted files are intentionally excluded from review. Document reason in review report.
+
+**References:**
+- Hook source: `scripts/git-hooks/pre-review`
+- Automation docs: `docs/implementation-artifacts/automation-infrastructure.md`
 
 ## Test Cleanup Strategy
 

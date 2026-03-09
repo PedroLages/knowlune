@@ -43,7 +43,7 @@ export function CoursesExample() {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-brand" />
         <span className="ml-2">Loading courses...</span>
       </div>
     )
@@ -51,7 +51,7 @@ export function CoursesExample() {
 
   if (error) {
     return (
-      <div className="flex items-center gap-2 p-4 bg-red-50 text-red-600 rounded-lg">
+      <div className="flex items-center gap-2 p-4 bg-destructive/10 text-destructive rounded-lg">
         <AlertCircle className="h-5 w-5" />
         <span>{error}</span>
       </div>
@@ -70,13 +70,13 @@ export function CoursesExample() {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Badge variant={course.enrolled ? 'default' : 'outline'}>{course.level}</Badge>
-                <span className="text-sm text-gray-500">{course.duration}</span>
+                <span className="text-sm text-muted-foreground">{course.duration}</span>
               </div>
               {course.enrolled && (
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 bg-gray-200 rounded-full h-2">
+                  <div className="flex-1 bg-muted rounded-full h-2">
                     <div
-                      className="bg-blue-600 h-2 rounded-full"
+                      className="bg-brand h-2 rounded-full"
                       style={{ width: `${course.progress}%` }}
                     />
                   </div>
@@ -135,7 +135,7 @@ export function CourseDetailExample({ courseId }: { courseId: string }) {
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 p-3 bg-red-50 text-red-600 rounded-lg">
+          <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-lg">
             <AlertCircle className="h-5 w-5 flex-shrink-0" />
             <span className="text-sm">{error}</span>
           </div>
@@ -143,13 +143,13 @@ export function CourseDetailExample({ courseId }: { courseId: string }) {
 
         {course && (
           <div className="space-y-3">
-            <div className="flex items-center gap-2 p-3 bg-green-50 text-green-600 rounded-lg">
+            <div className="flex items-center gap-2 p-3 bg-success/10 text-success rounded-lg">
               <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
               <span className="text-sm">Course loaded successfully!</span>
             </div>
-            <div className="p-4 bg-gray-50 rounded-lg">
+            <div className="p-4 bg-muted rounded-lg">
               <h3 className="font-semibold text-lg">{course.title}</h3>
-              <p className="text-sm text-gray-600 mt-1">{course.description}</p>
+              <p className="text-sm text-muted-foreground mt-1">{course.description}</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {course.tags?.map((tag: string) => (
                   <Badge key={tag} variant="secondary">
@@ -157,7 +157,7 @@ export function CourseDetailExample({ courseId }: { courseId: string }) {
                   </Badge>
                 ))}
               </div>
-              <div className="mt-3 text-sm text-gray-500">
+              <div className="mt-3 text-sm text-muted-foreground">
                 {course.totalModules} modules • {course.totalLessons} lessons
               </div>
             </div>
@@ -221,7 +221,7 @@ export function ProgressUpdateExample({ lessonId = 'lesson-1', courseId = '1' })
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 p-3 bg-red-50 text-red-600 rounded-lg">
+          <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-lg">
             <AlertCircle className="h-5 w-5 flex-shrink-0" />
             <span className="text-sm">{error}</span>
           </div>
@@ -229,11 +229,11 @@ export function ProgressUpdateExample({ lessonId = 'lesson-1', courseId = '1' })
 
         {result && (
           <div className="space-y-3">
-            <div className="flex items-center gap-2 p-3 bg-green-50 text-green-600 rounded-lg">
+            <div className="flex items-center gap-2 p-3 bg-success/10 text-success rounded-lg">
               <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
               <span className="text-sm">{result.message}</span>
             </div>
-            <div className="p-4 bg-gray-50 rounded-lg">
+            <div className="p-4 bg-muted rounded-lg">
               <pre className="text-xs overflow-auto">{JSON.stringify(result.data, null, 2)}</pre>
             </div>
           </div>
@@ -284,32 +284,32 @@ export function UserProfileExample() {
               />
               <div>
                 <h3 className="font-semibold">{profile.name}</h3>
-                <p className="text-sm text-gray-500">{profile.email}</p>
+                <p className="text-sm text-muted-foreground">{profile.email}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">
+              <div className="p-3 bg-brand-soft rounded-lg">
+                <div className="text-2xl font-bold text-brand">
                   {profile.stats.currentStreak}
                 </div>
-                <div className="text-xs text-gray-600">Day Streak</div>
+                <div className="text-xs text-muted-foreground">Day Streak</div>
               </div>
-              <div className="p-3 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">
+              <div className="p-3 bg-success/10 rounded-lg">
+                <div className="text-2xl font-bold text-success">
                   {profile.stats.coursesEnrolled}
                 </div>
-                <div className="text-xs text-gray-600">Courses Enrolled</div>
+                <div className="text-xs text-muted-foreground">Courses Enrolled</div>
               </div>
               <div className="p-3 bg-purple-50 rounded-lg">
                 <div className="text-2xl font-bold text-purple-600">
                   {Math.floor(profile.stats.totalLearningTime / 60)}h
                 </div>
-                <div className="text-xs text-gray-600">Learning Time</div>
+                <div className="text-xs text-muted-foreground">Learning Time</div>
               </div>
-              <div className="p-3 bg-orange-50 rounded-lg">
-                <div className="text-2xl font-bold text-orange-600">{profile.badges.length}</div>
-                <div className="text-xs text-gray-600">Badges Earned</div>
+              <div className="p-3 bg-warning/10 rounded-lg">
+                <div className="text-2xl font-bold text-warning">{profile.badges.length}</div>
+                <div className="text-xs text-muted-foreground">Badges Earned</div>
               </div>
             </div>
 
@@ -336,7 +336,7 @@ export function ApiExamplesPage() {
     <div className="container mx-auto p-6 space-y-8">
       <div>
         <h1 className="text-3xl font-bold mb-2">API Client Examples</h1>
-        <p className="text-gray-600">
+        <p className="text-muted-foreground">
           Interactive examples demonstrating the API client library usage
         </p>
       </div>

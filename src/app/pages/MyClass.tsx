@@ -119,7 +119,7 @@ export default function MyClass() {
           <p className="text-muted-foreground mb-6 max-w-md">
             Browse our course catalog to find the perfect course to kickstart your learning journey.
           </p>
-          <Button asChild className="bg-blue-600 hover:bg-blue-700">
+          <Button asChild className="bg-brand hover:bg-brand-hover">
             <Link to="/courses">
               Browse All Courses
               <ArrowRight className="w-4 h-4 ml-2" />
@@ -167,7 +167,7 @@ export default function MyClass() {
             <TabsContent value="by-status">
               {inProgress.length > 0 && (
                 <section className="mb-8">
-                  <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-xl mb-4">
+                  <div className="bg-brand/10 p-4 rounded-xl mb-4">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
                       <Clock className="w-6 h-6 text-brand" />
                       In Progress
@@ -194,9 +194,9 @@ export default function MyClass() {
 
               {completed.length > 0 && (
                 <section className="mb-8">
-                  <div className="bg-green-50 dark:bg-green-900/10 p-4 rounded-xl mb-4">
+                  <div className="bg-success/10 p-4 rounded-xl mb-4">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
-                      <CheckCircle className="w-6 h-6 text-green-600" />
+                      <CheckCircle className="w-6 h-6 text-success" />
                       Completed
                     </h2>
                   </div>
@@ -215,7 +215,7 @@ export default function MyClass() {
 
               {notStarted.length > 0 && (
                 <section>
-                  <div className="bg-gray-50 dark:bg-gray-900/10 p-4 rounded-xl mb-4">
+                  <div className="bg-muted p-4 rounded-xl mb-4">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
                       <PlayCircle className="w-6 h-6 text-muted-foreground" />
                       Not Started
@@ -241,7 +241,7 @@ export default function MyClass() {
                   <p className="text-muted-foreground mb-6 max-w-md">
                     Start a new course from your library to begin learning!
                   </p>
-                  <Button asChild className="bg-blue-600 hover:bg-blue-700">
+                  <Button asChild className="bg-brand hover:bg-brand-hover">
                     <Link to="/library">
                       Go to Library
                       <ArrowRight className="w-4 h-4 ml-2" />

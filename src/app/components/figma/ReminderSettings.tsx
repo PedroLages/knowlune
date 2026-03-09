@@ -91,7 +91,7 @@ export function ReminderSettings() {
           {settings.enabled && permission === 'granted' && (
             <div
               data-testid="notification-permission-status"
-              className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400"
+              className="flex items-center gap-2 text-sm text-success"
             >
               <CheckCircle2 className="size-4" aria-hidden="true" />
               Notifications enabled
@@ -102,7 +102,7 @@ export function ReminderSettings() {
           {showDenied && (
             <div
               data-testid="permission-denied-guidance"
-              className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400"
+              className="flex items-center gap-2 text-sm text-warning"
             >
               <AlertTriangle className="size-4" aria-hidden="true" />
               Notifications are blocked. Please enable them in your browser settings.

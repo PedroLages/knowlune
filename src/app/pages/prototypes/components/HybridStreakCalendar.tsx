@@ -16,25 +16,25 @@ export function HybridStreakCalendar({ days = 30, className }: HybridStreakCalen
       {/* Streak Stats */}
       <div className="grid grid-cols-2 gap-4 mb-6">
         {/* Current Streak */}
-        <div className="bg-orange-50 rounded-xl p-4 border border-orange-100">
+        <div className="bg-warning/10 rounded-xl p-4 border border-warning/20">
           <div className="flex items-center gap-2 mb-2">
-            <Flame className="h-5 w-5 text-orange-500" aria-hidden="true" />
-            <span className="text-sm font-medium text-orange-900">Current Streak</span>
+            <Flame className="h-5 w-5 text-warning" aria-hidden="true" />
+            <span className="text-sm font-medium text-foreground">Current Streak</span>
           </div>
-          <div className="text-3xl font-bold text-orange-600">{currentStreak}</div>
-          <div className="text-xs text-orange-700 mt-1">
+          <div className="text-3xl font-bold text-warning">{currentStreak}</div>
+          <div className="text-xs text-warning mt-1">
             {currentStreak === 1 ? 'day' : 'days'} in a row
           </div>
         </div>
 
         {/* Longest Streak */}
-        <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+        <div className="bg-brand-soft rounded-xl p-4 border border-brand/20">
           <div className="flex items-center gap-2 mb-2">
-            <Award className="h-5 w-5 text-blue-500" aria-hidden="true" />
-            <span className="text-sm font-medium text-blue-900">Longest Streak</span>
+            <Award className="h-5 w-5 text-brand" aria-hidden="true" />
+            <span className="text-sm font-medium text-foreground">Longest Streak</span>
           </div>
-          <div className="text-3xl font-bold text-blue-600">{longestStreak}</div>
-          <div className="text-xs text-blue-700 mt-1">personal best</div>
+          <div className="text-3xl font-bold text-brand">{longestStreak}</div>
+          <div className="text-xs text-brand mt-1">personal best</div>
         </div>
       </div>
 
@@ -53,11 +53,11 @@ export function HybridStreakCalendar({ days = 30, className }: HybridStreakCalen
 
             let colorClass = 'bg-neutral-100'
             if (day.lessonCount >= 3) {
-              colorClass = 'bg-green-500'
+              colorClass = 'bg-success'
             } else if (day.lessonCount >= 2) {
-              colorClass = 'bg-green-400'
+              colorClass = 'bg-success/70'
             } else if (day.lessonCount >= 1) {
-              colorClass = 'bg-green-300'
+              colorClass = 'bg-success/40'
             }
 
             return (
@@ -84,9 +84,9 @@ export function HybridStreakCalendar({ days = 30, className }: HybridStreakCalen
           <span>Less</span>
           <div className="flex gap-1">
             <div className="w-3.5 h-3.5 rounded-sm bg-neutral-100" />
-            <div className="w-3.5 h-3.5 rounded-sm bg-green-300" />
-            <div className="w-3.5 h-3.5 rounded-sm bg-green-400" />
-            <div className="w-3.5 h-3.5 rounded-sm bg-green-500" />
+            <div className="w-3.5 h-3.5 rounded-sm bg-success/40" />
+            <div className="w-3.5 h-3.5 rounded-sm bg-success/70" />
+            <div className="w-3.5 h-3.5 rounded-sm bg-success" />
           </div>
           <span>More</span>
         </div>

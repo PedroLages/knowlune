@@ -238,7 +238,7 @@ function RecentlyAccessedRow({ sessions }: { sessions: ResolvedSession[] }) {
                     />
                   </picture>
                 ) : (
-                  <div className="size-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                  <div className="size-12 rounded-lg bg-brand-soft flex items-center justify-center">
                     <BookOpen aria-hidden="true" className="size-6 text-brand" />
                   </div>
                 )}
@@ -266,19 +266,19 @@ function DeletedContentBanner({ count }: { count: number }) {
   return (
     <div
       data-testid="content-unavailable-message"
-      className="flex items-center gap-3 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-4 mb-4"
+      className="flex items-center gap-3 rounded-2xl border border-gold bg-gold-muted p-4 mb-4"
     >
       <AlertCircle
         aria-hidden="true"
-        className="size-5 text-amber-600 dark:text-amber-400 flex-shrink-0"
+        className="size-5 text-warning flex-shrink-0"
       />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+        <p className="text-sm font-medium text-warning">
           {count === 1
             ? 'A course you were studying is no longer available.'
             : `${count} courses you were studying are no longer available.`}
         </p>
-        <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+        <p className="text-xs text-warning mt-0.5">
           <Link to="/courses" className="underline hover:no-underline">
             Explore other courses
           </Link>{' '}
@@ -294,7 +294,7 @@ function DiscoveryState() {
 
   return (
     <div className="text-center py-8">
-      <div className="size-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mx-auto mb-4">
+      <div className="size-16 rounded-full bg-brand-soft flex items-center justify-center mx-auto mb-4">
         <BookOpen aria-hidden="true" className="size-8 text-brand" />
       </div>
       <h3 className="text-lg font-semibold mb-2">Start Your Learning Journey</h3>
@@ -332,7 +332,7 @@ function DiscoveryState() {
                       />
                     </picture>
                   ) : (
-                    <div className="size-16 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-3">
+                    <div className="size-16 rounded-xl bg-brand-soft flex items-center justify-center mb-3">
                       <BookOpen aria-hidden="true" className="size-8 text-brand" />
                     </div>
                   )}

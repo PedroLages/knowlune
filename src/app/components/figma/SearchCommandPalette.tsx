@@ -250,7 +250,7 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
                 value={`note:${result.id}`}
                 onSelect={() => handleNoteSelect(result)}
               >
-                <StickyNote className="mr-2 h-4 w-4 shrink-0 text-amber-500" />
+                <StickyNote className="mr-2 h-4 w-4 shrink-0 text-gold" />
                 <div className="flex flex-col gap-0.5 min-w-0">
                   <span className="text-sm truncate">
                     {highlightMatches(truncateSnippet(result.content), highlightPatterns)}

@@ -42,8 +42,8 @@ export function BookmarksList({ bookmarks, onSeek, onBookmarksChange }: Bookmark
             onClick={() => handleSeek(bookmark.timestamp)}
             className="flex-1 flex items-center gap-3 text-left min-w-0"
           >
-            <div className="shrink-0 w-12 h-8 rounded bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-              <span className="text-xs font-mono font-semibold text-blue-700 dark:text-blue-300">
+            <div className="shrink-0 w-12 h-8 rounded bg-brand-soft flex items-center justify-center">
+              <span className="text-xs font-mono font-semibold text-brand">
                 {formatBookmarkTimestamp(bookmark.timestamp)}
               </span>
             </div>

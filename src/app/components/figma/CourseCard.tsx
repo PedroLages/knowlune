@@ -35,11 +35,11 @@ const categoryLabels: Record<CourseCategory, string> = {
 
 const categoryColors: Record<CourseCategory, string> = {
   'behavioral-analysis':
-    'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
-  'influence-authority': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-  'confidence-mastery': 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-  'operative-training': 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
-  'research-library': 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+    'bg-emerald-100 text-emerald-700',
+  'influence-authority': 'bg-brand-soft text-brand',
+  'confidence-mastery': 'bg-amber-100 text-amber-700',
+  'operative-training': 'bg-red-100 text-red-700',
+  'research-library': 'bg-purple-100 text-purple-700',
 }
 
 // ── Helper functions ────────────────────────────────────────────────
@@ -185,7 +185,7 @@ export function CourseCard({
         ) : variant === 'overview' ? (
           <Badge
             variant="secondary"
-            className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+            className="bg-brand-soft text-brand"
           >
             {formatCategory(course.category)}
           </Badge>
@@ -196,9 +196,9 @@ export function CourseCard({
               variant={getDifficultyBadgeVariant(course.difficulty)}
               className={
                 course.difficulty.toLowerCase() === 'beginner'
-                  ? 'bg-green-100 text-green-900 dark:bg-green-900 dark:text-green-100'
+                  ? 'bg-success-soft text-success'
                   : course.difficulty.toLowerCase() === 'intermediate'
-                    ? 'bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100'
+                    ? 'bg-warning-soft text-warning'
                     : ''
               }
             >
@@ -485,7 +485,7 @@ export function CourseCard({
             </picture>
           )
         ) : (
-          <BookOpen className="h-16 w-16 text-blue-300 dark:text-blue-600" />
+          <BookOpen className="h-16 w-16 text-brand" />
         )}
         {inlineVideoPreview}
         {renderThumbnailOverlays()}
@@ -558,7 +558,7 @@ export function CourseCard({
           <div className="p-5 flex-1 flex flex-col">
             <Badge
               variant="secondary"
-              className="mb-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 w-fit"
+              className="mb-2 bg-brand-soft text-brand w-fit"
             >
               {formatCategory(course.category)}
             </Badge>
@@ -682,7 +682,7 @@ export function CourseCard({
                       {formatRelativeTime(lastAccessedAt)}
                     </span>
                   )}
-                  <Button asChild className="button-press w-full bg-blue-600 hover:bg-blue-700">
+                  <Button asChild className="button-press w-full bg-brand">
                     <Link to={lessonLink} onClick={e => e.stopPropagation()}>
                       Resume Learning
                     </Link>
@@ -692,7 +692,7 @@ export function CourseCard({
 
               {status === 'completed' && (
                 <>
-                  <p className="text-sm text-green-600 dark:text-green-400 font-medium">
+                  <p className="text-sm text-success font-medium">
                     Completed · {totalLessons} lessons
                   </p>
                   <Button asChild variant="outline" className="button-press w-full">

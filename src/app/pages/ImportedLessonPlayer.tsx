@@ -125,7 +125,7 @@ export function ImportedLessonPlayer() {
         <p>Video not found.</p>
         <Link
           to={`/imported-courses/${courseId}`}
-          className="text-sm text-blue-600 hover:underline"
+          className="text-sm text-brand hover:underline"
         >
           Back to Course
         </Link>

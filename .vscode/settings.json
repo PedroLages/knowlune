@@ -1,23 +1,26 @@
 {
-  "github-actions.workflows.pinned.workflows": [],
-  "files.watcherExclude": {
-    "**/.claude/**": true,
-    "**/.claude/worktrees/**": true,
-    "**/.playwright-mcp/**": true,
-    "**/.lighthouseci/**": true,
-    "**/coverage/**": true,
-    "**/test-results.json/**": true
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+  "eslint.run": "onType",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
   },
-  "files.exclude": {
-    "**/.claude/worktrees": true
+  "eslint.format.enable": true,
+  "eslint.lintTask.enable": true,
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "dbaeumer.vscode-eslint",
+  "[typescript]": {
+    "editor.defaultFormatter": "dbaeumer.vscode-eslint"
   },
-  "search.exclude": {
-    "**/.claude/worktrees": true,
-    "**/.playwright-mcp": true,
-    "**/test-results.json": true
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "dbaeumer.vscode-eslint"
   },
-  "files.watcherOptions": {
-    "usePolling": false,
-    "followSymlinks": false
-  }
+  "tailwindCSS.validate": true,
+  "tailwindCSS.experimental.classRegex": [
+    ["cn\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"]
+  ]
 }

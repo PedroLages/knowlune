@@ -61,9 +61,9 @@ export class ErrorBoundary extends Component<Props, State> {
       <div className="flex min-h-screen items-center justify-center bg-[#FAF5EE] p-6">
         <div className="mx-auto w-full max-w-md rounded-[24px] border border-stone-200 bg-white p-8 text-center shadow-lg">
           {/* Icon */}
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
             <svg
-              className="h-8 w-8 text-red-500"
+              className="h-8 w-8 text-destructive"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -86,7 +86,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
           {/* Dev-only error details */}
           {isDev && this.state.error && (
-            <pre className="mb-6 max-h-40 overflow-auto rounded-xl bg-stone-100 p-4 text-left text-xs text-red-700">
+            <pre className="mb-6 max-h-40 overflow-auto rounded-xl bg-stone-100 p-4 text-left text-xs text-destructive">
               {this.state.error.message}
             </pre>
           )}
@@ -96,14 +96,14 @@ export class ErrorBoundary extends Component<Props, State> {
             <button
               type="button"
               onClick={this.handleRetry}
-              className="flex-1 rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="flex-1 rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2"
             >
               Try Again
             </button>
             <button
               type="button"
               onClick={this.handleReload}
-              className="flex-1 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="flex-1 rounded-xl bg-brand px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2"
             >
               Reload App
             </button>

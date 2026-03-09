@@ -110,7 +110,7 @@ export function HybridOverview() {
               className="flex items-start gap-3 py-3 border-b border-neutral-100 last:border-0"
             >
               {/* Blue dot indicator */}
-              <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-2 flex-shrink-0" />
+              <div className="w-1.5 h-1.5 rounded-full bg-brand mt-2 flex-shrink-0" />
 
               {/* Content */}
               <div className="flex-1 min-w-0">
@@ -163,8 +163,8 @@ export function HybridOverview() {
                   className="w-14 h-14 rounded-lg object-cover"
                 />
               ) : (
-                <div className="w-14 h-14 rounded-lg bg-blue-50 flex items-center justify-center">
-                  <BookOpen className="w-6 h-6 text-blue-400" />
+                <div className="w-14 h-14 rounded-lg bg-brand-soft flex items-center justify-center">
+                  <BookOpen className="w-6 h-6 text-brand" />
                 </div>
               )}
 
@@ -178,7 +178,7 @@ export function HybridOverview() {
               <div className="flex items-center gap-2 flex-1">
                 <div className="h-1.5 bg-neutral-100 rounded-full flex-1">
                   <div
-                    className="h-full bg-blue-600 rounded-full transition-all"
+                    className="h-full bg-brand rounded-full transition-all"
                     style={{ width: `${course.completionPercent}%` }}
                   />
                 </div>

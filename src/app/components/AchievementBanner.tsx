@@ -73,9 +73,9 @@ export function AchievementBanner({ completedLessons }: AchievementBannerProps) 
   const offset = circumference - (Math.min(100, progress) / 100) * circumference
 
   return (
-    <Card className="rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-200/50 dark:border-amber-800/30 shadow-studio-gold overflow-hidden min-w-[200px]">
+    <Card className="rounded-2xl bg-gradient-to-br from-gold/10 to-warning/10 border-gold/30 shadow-studio-gold overflow-hidden min-w-[200px]">
       {/* Gold accent line */}
-      <div className="h-1 bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400" />
+      <div className="h-1 bg-gradient-to-r from-gold via-gold to-warning" />
 
       <CardContent className="p-4">
         <div className="flex items-center gap-4">
@@ -89,7 +89,7 @@ export function AchievementBanner({ completedLessons }: AchievementBannerProps) 
                 fill="none"
                 stroke="currentColor"
                 strokeWidth={strokeWidth}
-                className="text-amber-200 dark:text-amber-800/40"
+                className="text-gold"
               />
               <circle
                 cx={size / 2}
@@ -101,20 +101,20 @@ export function AchievementBanner({ completedLessons }: AchievementBannerProps) 
                 strokeDasharray={circumference}
                 strokeDashoffset={offset}
                 strokeLinecap="round"
-                className="text-amber-500 motion-safe:transition-[stroke-dashoffset] motion-safe:duration-700"
+                className="text-gold motion-safe:transition-[stroke-dashoffset] motion-safe:duration-700"
               />
             </svg>
             <Trophy
-              className="absolute inset-0 m-auto size-5 text-amber-600 dark:text-amber-400"
+              className="absolute inset-0 m-auto size-5 text-warning"
               aria-hidden="true"
             />
           </div>
 
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+            <p className="text-sm font-semibold text-warning">
               {completedLessons} {completedLessons === 1 ? 'lesson' : 'lessons'}
             </p>
-            <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">{milestone.message}</p>
+            <p className="text-xs text-warning mt-0.5">{milestone.message}</p>
           </div>
         </div>
       </CardContent>

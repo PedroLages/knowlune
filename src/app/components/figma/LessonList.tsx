@@ -37,19 +37,19 @@ export function LessonList({
                       to={`/courses/${courseId}/${lesson.id}`}
                       className={`flex items-center gap-2 rounded-lg px-2 py-2 text-sm transition-colors ${
                         isActive
-                          ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium'
+                          ? 'bg-brand-soft text-brand font-medium'
                           : 'hover:bg-accent text-foreground'
                       }`}
                     >
                       {isComplete ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                        <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
                       ) : (
                         <Circle className="h-4 w-4 text-muted-foreground/40 shrink-0" />
                       )}
                       <span className="flex-1 truncate">{lesson.title}</span>
                       <div className="flex items-center gap-1 shrink-0">
-                        {hasVideo && <Video className="h-3.5 w-3.5 text-blue-400" />}
-                        {hasPdf && <FileText className="h-3.5 w-3.5 text-red-400" />}
+                        {hasVideo && <Video className="h-3.5 w-3.5 text-brand" />}
+                        {hasPdf && <FileText className="h-3.5 w-3.5 text-destructive" />}
                       </div>
                     </Link>
                   </li>

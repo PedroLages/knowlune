@@ -164,7 +164,7 @@ export default function Messages() {
                       size="icon"
                       onClick={() => handleDelete(selected.id)}
                       aria-label="Delete journal entry"
-                      className="text-muted-foreground hover:text-red-600"
+                      className="text-muted-foreground hover:text-destructive"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>

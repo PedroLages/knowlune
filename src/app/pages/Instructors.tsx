@@ -42,7 +42,7 @@ export function Instructors() {
                   {/* Avatar */}
                   <Avatar className="size-24 mb-4 ring-2 ring-border/50 group-hover:ring-brand/30 transition-all">
                     <AvatarImage {...getAvatarSrc(instructor.avatar, 96)} alt={instructor.name} />
-                    <AvatarFallback className="text-lg font-semibold bg-blue-100 text-blue-700">
+                    <AvatarFallback className="text-lg font-semibold bg-brand/10 text-brand">
                       {getInitials(instructor.name)}
                     </AvatarFallback>
                   </Avatar>

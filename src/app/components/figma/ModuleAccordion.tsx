@@ -124,7 +124,7 @@ export function ModuleAccordion({
                         className={cn(
                           'flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors',
                           isActive
-                            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium'
+                            ? 'bg-brand-soft text-brand font-medium'
                             : 'hover:bg-accent'
                         )}
                       >
@@ -159,8 +159,8 @@ export function ModuleAccordion({
                             )}
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
-                            {hasVideo && <Video className="size-4 text-blue-400" />}
-                            {hasPdf && <FileText className="size-4 text-red-400" />}
+                            {hasVideo && <Video className="size-4 text-brand" />}
+                            {hasPdf && <FileText className="size-4 text-destructive" />}
                           </div>
                         </Link>
                       </div>

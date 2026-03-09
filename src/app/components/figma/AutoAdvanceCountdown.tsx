@@ -44,9 +44,9 @@ export function AutoAdvanceCountdown({
       data-testid="auto-advance-countdown"
       role="status"
       aria-live="polite"
-      className="flex items-center justify-between gap-4 rounded-xl bg-blue-50 dark:bg-blue-900/30 px-4 py-3"
+      className="flex items-center justify-between gap-4 rounded-xl bg-brand-soft px-4 py-3"
     >
-      <p className="text-sm text-blue-700 dark:text-blue-300">
+      <p className="text-sm text-brand">
         Next: <span className="font-medium">{nextLessonTitle}</span> in{' '}
         <span className="font-bold tabular-nums">{remaining}s</span>
       </p>

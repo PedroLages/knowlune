@@ -30,7 +30,7 @@ export function ImportedCourseDetail() {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
         <p>Course not found.</p>
-        <Link to="/courses" className="text-sm text-blue-600 hover:underline">
+        <Link to="/courses" className="text-sm text-brand hover:underline">
           Back to Courses
         </Link>
       </div>
@@ -65,10 +65,10 @@ export function ImportedCourseDetail() {
             >
               <Video
                 data-testid="content-type-icon"
-                className="size-5 text-blue-600 shrink-0"
+                className="size-5 text-brand shrink-0"
                 aria-hidden="true"
               />
-              <span className="flex-1 font-medium text-sm group-hover:text-blue-600 transition-colors">
+              <span className="flex-1 font-medium text-sm group-hover:text-brand transition-colors">
                 {video.filename}
               </span>
               {video.duration > 0 && (
@@ -85,7 +85,7 @@ export function ImportedCourseDetail() {
             <div className="flex items-center gap-3 p-4 rounded-xl border bg-card opacity-75 cursor-not-allowed">
               <FileText
                 data-testid="content-type-icon"
-                className="size-5 text-orange-500 shrink-0"
+                className="size-5 text-warning shrink-0"
                 aria-hidden="true"
               />
               <span className="flex-1 font-medium text-sm">{pdf.filename}</span>

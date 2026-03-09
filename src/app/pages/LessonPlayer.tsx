@@ -647,7 +647,7 @@ export function LessonPlayer() {
                 <span className="relative">
                   <PencilLine className="h-4 w-4" />
                   {hasNotes && !notesOpen && (
-                    <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-blue-500" />
+                    <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-brand" />
                   )}
                 </span>
                 Notes
@@ -660,11 +660,11 @@ export function LessonPlayer() {
               className="flex items-center gap-1.5 text-sm shrink-0 cursor-pointer"
             >
               {completed ? (
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <CheckCircle2 className="h-5 w-5 text-success" />
               ) : (
                 <Circle className="h-5 w-5 text-muted-foreground/40" />
               )}
-              <span className={completed ? 'text-green-600' : 'text-muted-foreground'}>
+              <span className={completed ? 'text-success' : 'text-muted-foreground'}>
                 {completed ? 'Completed' : 'Mark Complete'}
               </span>
             </button>
@@ -680,7 +680,7 @@ export function LessonPlayer() {
             {lesson.keyTopics.map(topic => (
               <span
                 key={topic}
-                className="rounded-full bg-blue-50 dark:bg-blue-900/30 px-2.5 py-0.5 text-xs text-blue-700 dark:text-blue-300"
+                className="rounded-full bg-brand/10 px-2.5 py-0.5 text-xs text-brand"
               >
                 {topic}
               </span>

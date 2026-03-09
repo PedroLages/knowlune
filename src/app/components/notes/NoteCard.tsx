@@ -113,7 +113,7 @@ export function NoteCard({ note, courseId, onDelete }: NoteCardProps) {
             {note.timestamp != null && (
               <Link
                 to={`/courses/${courseId}/${note.videoId}?t=${note.timestamp}&panel=notes`}
-                className="relative z-10 inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                className="relative z-10 inline-flex items-center gap-1 text-xs text-brand hover:underline"
               >
                 <Clock className="size-3" />
                 {formatTimestamp(note.timestamp)}

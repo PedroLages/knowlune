@@ -40,8 +40,8 @@ export function HybridStatsCard({
           )}
         </div>
 
-        <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0">
-          <Icon className="w-5 h-5 text-blue-600" aria-hidden="true" />
+        <div className="w-10 h-10 bg-brand-soft rounded-lg flex items-center justify-center flex-shrink-0">
+          <Icon className="w-5 h-5 text-brand" aria-hidden="true" />
         </div>
       </div>
 
@@ -57,7 +57,7 @@ export function HybridStatsCard({
             return (
               <div
                 key={i}
-                className="flex-1 bg-blue-100 hover:bg-blue-300 rounded-t-sm transition-colors"
+                className="flex-1 bg-brand-soft hover:bg-brand/30 rounded-t-sm transition-colors"
                 style={{ height: `${height}%`, minHeight: '4px' }}
                 aria-hidden="true"
               />

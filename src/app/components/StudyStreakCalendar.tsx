@@ -204,31 +204,31 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
       {/* Streak Stats */}
       <div className="grid grid-cols-2 gap-4 mb-6">
         {/* Current Streak */}
-        <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-[24px] p-4 border border-orange-200 dark:border-orange-800">
+        <div className="bg-momentum-warm-bg rounded-[24px] p-4 border border-warning">
           <div className="flex items-center gap-2 mb-2">
             <motion.div
               animate={prefersReducedMotion ? {} : { scale: [1, 1.15, 1] }}
               transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
             >
-              <Flame className="size-5 text-orange-500" aria-hidden="true" />
+              <Flame className="size-5 text-warning" aria-hidden="true" />
             </motion.div>
-            <span className="text-sm font-medium text-orange-900 dark:text-orange-100">
+            <span className="text-sm font-medium text-warning">
               Current Streak
             </span>
           </div>
           <div
             data-testid="current-streak-value"
-            className="text-3xl font-bold tabular-nums text-orange-600 dark:text-orange-400"
+            className="text-3xl font-bold tabular-nums text-warning"
           >
             {currentStreak}
           </div>
-          <div className="text-xs text-orange-700 dark:text-orange-300 mt-1">
+          <div className="text-xs text-warning mt-1">
             {currentStreak === 1 ? 'day' : 'days'} in a row
           </div>
           {isPaused && (
             <Alert
               data-testid="streak-paused-indicator"
-              className="mt-2 border-orange-200 bg-orange-50/50 py-2 px-3 text-xs text-orange-600 dark:border-orange-800 dark:bg-orange-900/30 dark:text-orange-400 [&>svg]:size-3"
+              className="mt-2 border-warning bg-momentum-warm-bg py-2 px-3 text-xs text-warning [&>svg]:size-3"
             >
               <Pause className="size-3" aria-hidden="true" />
               <AlertTitle className="text-xs font-normal">Streak paused</AlertTitle>
@@ -237,15 +237,15 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
         </div>
 
         {/* Longest Streak */}
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-[24px] p-4 border border-blue-200 dark:border-blue-800">
+        <div className="bg-brand-soft rounded-[24px] p-4 border border-brand">
           <div className="flex items-center gap-2 mb-2">
-            <Award className="size-5 text-blue-500" aria-hidden="true" />
-            <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+            <Award className="size-5 text-brand" aria-hidden="true" />
+            <span className="text-sm font-medium text-brand">
               Longest Streak
             </span>
           </div>
           <div className="text-3xl font-bold tabular-nums text-brand">{longestStreak}</div>
-          <div className="text-xs text-blue-700 dark:text-blue-300 mt-1">personal best</div>
+          <div className="text-xs text-brand mt-1">personal best</div>
         </div>
       </div>
 
@@ -372,16 +372,16 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
                               'motion-safe:hover:scale-110 motion-safe:hover:shadow-md',
                               'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring',
                               day.isToday &&
-                                'ring-2 ring-orange-500 dark:ring-orange-400 ring-offset-1 ring-offset-card',
+                                'ring-2 ring-warning ring-offset-1 ring-offset-card',
                               day.hasActivity
                                 ? day.lessonCount >= 3
-                                  ? 'bg-orange-500 dark:bg-orange-400'
+                                  ? 'bg-warning'
                                   : day.lessonCount >= 2
-                                    ? 'bg-amber-400 dark:bg-amber-300'
-                                    : 'bg-amber-200 dark:bg-amber-200/70'
+                                    ? 'bg-gold'
+                                    : 'bg-gold'
                                 : day.isFreezeDay
-                                  ? 'bg-accent dark:bg-accent/30'
-                                  : 'bg-orange-50 dark:bg-muted/30'
+                                  ? 'bg-accent'
+                                  : 'bg-momentum-warm-bg'
                             )}
                             aria-label={
                               day.hasActivity
@@ -419,22 +419,22 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
         <div className="flex items-center gap-3 mt-4 text-[10px] text-muted-foreground">
           <span>Less</span>
           <div className="flex gap-1">
-            <div className="size-3 rounded-[3px] bg-orange-50 dark:bg-muted/30" />
-            <div className="size-3 rounded-[3px] bg-amber-200 dark:bg-amber-200/70" />
-            <div className="size-3 rounded-[3px] bg-amber-400 dark:bg-amber-300" />
-            <div className="size-3 rounded-[3px] bg-orange-500 dark:bg-orange-400" />
+            <div className="size-3 rounded-[3px] bg-momentum-warm-bg" />
+            <div className="size-3 rounded-[3px] bg-gold" />
+            <div className="size-3 rounded-[3px] bg-gold" />
+            <div className="size-3 rounded-[3px] bg-warning" />
           </div>
           <span>More</span>
           {/* Freeze day indicator */}
           {freezeDays.length > 0 && (
             <span className="flex items-center gap-1.5">
-              <div className="size-3 rounded-[3px] bg-accent dark:bg-accent/30" />
+              <div className="size-3 rounded-[3px] bg-accent" />
               Rest
             </span>
           )}
           {/* Today indicator */}
           <span className="ml-auto flex items-center gap-1.5">
-            <div className="size-3 rounded-[3px] ring-2 ring-orange-500 dark:ring-orange-400 ring-offset-1 ring-offset-card" />
+            <div className="size-3 rounded-[3px] ring-2 ring-warning ring-offset-1 ring-offset-card" />
             Today
           </span>
         </div>
