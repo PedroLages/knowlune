@@ -17,6 +17,8 @@ import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
 import { test, expect } from '../../support/fixtures'
 import type { Page } from '@playwright/test'
 import { navigateAndWait } from '../../support/helpers/navigation'
+import { TIMEOUTS } from '../../utils/constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 // ---------------------------------------------------------------------------
 // Constants — known course/lesson with PDF resources
@@ -34,9 +36,11 @@ const MULTI_PDF_URL = `/courses/${COURSE_ID}/${LESSON_MULTI_PAGE_PDF}`
 // On tablet (768px), the sidebar Sheet opens by default on fresh visits,
 // covering main content. Dismiss it before tests interact with page elements.
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
-  })
+  await page.evaluate(sidebarState => {
+    Object.entries(sidebarState).forEach(([key, value]) => {
+      localStorage.setItem(key, value)
+    })
+  }, closeSidebar())
 })
 
 /** Navigate to lesson, click Materials tab, and wait for first PDF to fully load. */
@@ -46,7 +50,7 @@ async function openPdfViewer(page: Page, url = LESSON_PLAYER_URL) {
   // Wait for react-pdf to finish loading the document (totalPages > 0)
   const materialsPanel = page.getByRole('tabpanel', { name: /materials/i })
   await expect(materialsPanel.getByTestId('pdf-total-pages').first()).not.toHaveText('0', {
-    timeout: 15000,
+    timeout: TIMEOUTS.MEDIA,
   })
 }
 

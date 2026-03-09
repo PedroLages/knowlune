@@ -9,6 +9,8 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
+import { TIMEOUTS } from '../../utils/constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 /** Seed notes directly into IndexedDB for search tests.
  *  Must be called after navigateAndWait so the DB and stores exist. */
@@ -91,9 +93,11 @@ const TEST_NOTES = [
 
 /** Navigate to overview, suppress sidebar, seed notes, reload to pick up data. */
 async function setupWithNotes(page: Parameters<typeof navigateAndWait>[0]) {
-  await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
-  })
+  await page.evaluate(sidebarState => {
+    Object.entries(sidebarState).forEach(([key, value]) => {
+      localStorage.setItem(key, value)
+    })
+  }, closeSidebar())
   await navigateAndWait(page, '/')
   await seedNotes(page, TEST_NOTES)
   await page.reload({ waitUntil: 'domcontentloaded' })
@@ -130,7 +134,7 @@ async function clearSeededNotes(page: Parameters<typeof navigateAndWait>[0]) {
 /** Open the command palette via keyboard shortcut. */
 async function openCommandPalette(page: Parameters<typeof navigateAndWait>[0]) {
   await page.keyboard.press('Meta+k')
-  await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 })
+  await expect(page.getByRole('dialog')).toBeVisible({ timeout: TIMEOUTS.LONG })
 }
 
 // ---------------------------------------------------------------------------
@@ -155,7 +159,7 @@ test.describe('AC1: Search results via Cmd+K command palette', () => {
 
     // Notes group should appear with matching results
     const notesGroup = page.getByRole('group', { name: /notes/i })
-    await expect(notesGroup).toBeVisible({ timeout: 5000 })
+    await expect(notesGroup).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     // Result should show snippet with matching content
     const noteResult = notesGroup.getByRole('option').first()
@@ -168,7 +172,7 @@ test.describe('AC1: Search results via Cmd+K command palette', () => {
     await page.keyboard.type('react')
 
     const notesGroup = page.getByRole('group', { name: /notes/i })
-    await expect(notesGroup).toBeVisible({ timeout: 5000 })
+    await expect(notesGroup).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     const noteResult = notesGroup.getByRole('option').first()
     // Result should contain tag badge
@@ -184,7 +188,7 @@ test.describe('AC1: Search results via Cmd+K command palette', () => {
     await page.keyboard.type('react')
 
     const notesGroup = page.getByRole('group', { name: /notes/i })
-    await expect(notesGroup).toBeVisible({ timeout: 5000 })
+    await expect(notesGroup).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     // Matching keywords should be wrapped in <mark> elements
     const marks = notesGroup.locator('mark')
@@ -199,7 +203,7 @@ test.describe('AC1: Search results via Cmd+K command palette', () => {
     await page.keyboard.type('react')
 
     const notesGroup = page.getByRole('group', { name: /notes/i })
-    await expect(notesGroup).toBeVisible({ timeout: 5000 })
+    await expect(notesGroup).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     const results = notesGroup.getByRole('option')
     const firstResult = results.first()
@@ -229,7 +233,7 @@ test.describe('AC2: Fuzzy matching and prefix search', () => {
     await page.keyboard.type('custm hooks')
 
     const notesGroup = page.getByRole('group', { name: /notes/i })
-    await expect(notesGroup).toBeVisible({ timeout: 5000 })
+    await expect(notesGroup).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     const results = notesGroup.getByRole('option')
     await expect(results.first()).toBeVisible()
@@ -242,7 +246,7 @@ test.describe('AC2: Fuzzy matching and prefix search', () => {
     await page.keyboard.type('java')
 
     const notesGroup = page.getByRole('group', { name: /notes/i })
-    await expect(notesGroup).toBeVisible({ timeout: 5000 })
+    await expect(notesGroup).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     const results = notesGroup.getByRole('option')
     await expect(results.first()).toContainText(/javascript/i)
@@ -268,18 +272,18 @@ test.describe('AC3: Result navigation to Lesson Player', () => {
     await page.keyboard.type('custom hooks')
 
     const notesGroup = page.getByRole('group', { name: /notes/i })
-    await expect(notesGroup).toBeVisible({ timeout: 5000 })
+    await expect(notesGroup).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     // Click the first note result
     await notesGroup.getByRole('option').first().click()
 
     // Should navigate to Lesson Player with ?panel=notes
-    await page.waitForURL(/\/courses\/.*\?panel=notes/, { timeout: 10000 })
+    await page.waitForURL(/\/courses\/.*\?panel=notes/, { timeout: TIMEOUTS.NETWORK })
     expect(page.url()).toContain('panel=notes')
 
     // Verify notes panel is actually open in the DOM
     const notesToggle = page.getByRole('button', { name: 'Notes', exact: true })
-    await expect(notesToggle).toHaveAttribute('aria-expanded', 'true', { timeout: 5000 })
+    await expect(notesToggle).toHaveAttribute('aria-expanded', 'true', { timeout: TIMEOUTS.LONG })
   })
 
   test('note with timestamp seeks video to that position', async ({ page }) => {
@@ -287,12 +291,12 @@ test.describe('AC3: Result navigation to Lesson Player', () => {
     await page.keyboard.type('custom hooks')
 
     const notesGroup = page.getByRole('group', { name: /notes/i })
-    await expect(notesGroup).toBeVisible({ timeout: 5000 })
+    await expect(notesGroup).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     await notesGroup.getByRole('option').first().click()
 
     // URL should include the timestamp parameter (note has timestamp: 42)
-    await page.waitForURL(/\/courses\/.*t=42/, { timeout: 10000 })
+    await page.waitForURL(/\/courses\/.*t=42/, { timeout: TIMEOUTS.NETWORK })
     expect(page.url()).toContain('t=42')
   })
 })
@@ -320,6 +324,6 @@ test.describe('AC4: Empty results show helpful message', () => {
     // Should show the exact empty state message from CommandEmpty
     await expect(
       page.getByText('No results found. Try different keywords or browse by tag.')
-    ).toBeVisible({ timeout: 5000 })
+    ).toBeVisible({ timeout: TIMEOUTS.LONG })
   })
 })

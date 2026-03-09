@@ -3,8 +3,12 @@ stepsCompleted:
   [
     'step-01-load-context',
     'step-02-define-thresholds',
+    'step-03-gather-evidence',
+    'step-04-evaluate-and-score',
+    'step-04e-aggregate-nfr',
+    'step-05-generate-report',
   ]
-lastStep: 'step-02-define-thresholds'
+lastStep: 'step-05-generate-report'
 lastSaved: '2026-03-08'
 workflowType: 'testarch-nfr-assess'
 inputDocuments:
@@ -41,7 +45,7 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
 
 **High Priority Issues:** 0
 
-**Recommendation:** All 29/29 ADR criteria continue to be met after Epic 6 (Learning Challenges + Challenge Progress Tracking). Coverage stable at 73.3% lines (707 tests, 41 files) with CI threshold at 70%. Production Lighthouse audit confirms TBT 142ms, CLS 0.000. CPU profiling shows smooth rendering (only 1 long task at 122ms on initial Overview load). Memory peak 15.35MB with stable growth across 3 navigation rounds (no leaks). All CI gates green. Zero production vulnerabilities.
+**Recommendation:** All 29/29 ADR criteria continue to be met after Epic 6 (Learning Challenges + Challenge Progress Tracking). Coverage stable at 73.3% lines (707 tests, 41 files) with CI threshold at 70%. Production Lighthouse audit confirms TBT 142ms, CLS 0.000. CPU profiling shows smooth rendering (only 1 long task at 122ms on initial Overview load). Memory peak 15.35MB with stable growth across 3 navigation rounds (no leaks). All CI gates green. Zero production vulnerabilities. Dev vulnerabilities reduced from 7 to 4 (all critical/high fixed via npm audit fix).
 
 ---
 
@@ -121,8 +125,8 @@ Note: This assessment summarizes existing evidence; it does not run tests or CI 
 
 - **Status:** PASS ✅
 - **Threshold:** 0 critical/high in production dependencies
-- **Actual:** 0 vulnerabilities (production and dev)
-- **Evidence:** `npm audit` output (2026-03-08): 0 vulnerabilities found. Improved from 7 dev-only vulnerabilities in previous assessment.
+- **Actual:** 0 production vulnerabilities; 4 dev vulnerabilities (0 critical, 0 high, 4 low - all in dev dependencies)
+- **Evidence:** `npm audit` output (2026-03-08 - updated after fixes): 4 total vulnerabilities, **all in dev dependencies**: tmp (4 low - via @lhci/cli, requires breaking change to fix). **Fixed (2026-03-08):** basic-ftp 5.1.0→5.2.0 (critical), minimatch 10.2.2→10.2.4 (2 high), tar 7.5.9→7.5.10 (high). Production dependencies: 0 vulnerabilities.
 
 ### Privacy (NFR53-NFR55)
 
@@ -262,6 +266,13 @@ No new quick wins identified. All previous quick wins remain resolved.
 ### Immediate - None
 
 All high-priority items resolved. No immediate actions required.
+
+**Completed (2026-03-08):**
+1. ✅ **Fixed critical/high dev vulnerabilities** - Resolved via `npm audit fix`
+   - basic-ftp 5.1.0→5.2.0 (critical fixed)
+   - minimatch 10.2.2→10.2.4 (2 high fixed)
+   - tar 7.5.9→7.5.10 (high fixed)
+   - Remaining: 4 low severity in tmp (requires breaking change)
 
 ### Medium-term
 
@@ -412,7 +423,8 @@ nfr_assessment:
     error_tracking: 'ErrorBoundary + errorTracking.ts (unit tested, 100% coverage)'
     axe_violations: '0 critical, 0 serious'
     lighthouse_ci: 'Integrated in .github/workflows/ci.yml'
-    npm_audit: '0 vulnerabilities'
+    npm_audit_prod: '0 vulnerabilities'
+    npm_audit_dev: '4 vulnerabilities (4 low - critical/high fixed 2026-03-08)'
     unit_tests: '707/707 passed (100%)'
     typescript: '0 errors'
     eslint: '0 errors, 16 warnings'
@@ -434,7 +446,7 @@ nfr_assessment:
 | ESLint Errors | 0 | 0 | Clean |
 | ESLint Warnings | 15 | 16 | +1 (negligible) |
 | npm audit (prod) | 0 | 0 | Clean |
-| npm audit (dev) | 7 | **0** | Resolved! |
+| npm audit (dev) | 7 | **4** | Fixed critical+high, 4 low remain |
 | Memory Peak | 12.98MB | 15.35MB | +2.37MB (healthy) |
 | Evidence Gaps | 0 | 1 (RUM, non-critical) | Documented |
 | CONCERNS | 0 | 0 | Clean |
@@ -453,7 +465,8 @@ nfr_assessment:
   - Build: `npm run build` (SUCCESS, 12.62s, no chunk warnings)
   - TypeScript: `npx tsc --noEmit` (0 errors)
   - ESLint: `npm run lint` (0 errors, 16 warnings)
-  - npm audit: 0 vulnerabilities
+  - npm audit (prod): 0 vulnerabilities
+  - npm audit (dev): 4 vulnerabilities (4 low - critical/high fixed via npm audit fix on 2026-03-08)
   - Lighthouse (prod): Performance 67%, Accessibility 100%, Best Practices 100%, SEO 83%
   - CPU profiling: `_bmad-output/test-artifacts/nfr/cpu-profile.json`
   - Memory profiling: `_bmad-output/test-artifacts/nfr/memory-profile.json`

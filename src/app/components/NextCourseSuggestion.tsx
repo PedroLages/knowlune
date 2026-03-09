@@ -57,7 +57,7 @@ export function NextCourseSuggestion({ completedCourseId, onDismiss }: NextCours
           </p>
           <Link
             to="/courses"
-            className="text-sm font-medium text-blue-600 hover:underline"
+            className="text-sm font-medium text-brand hover:underline"
             onClick={handleDismiss}
           >
             Browse course library →
@@ -91,7 +91,7 @@ export function NextCourseSuggestion({ completedCourseId, onDismiss }: NextCours
       <button
         onClick={handleDismiss}
         aria-label="Dismiss course suggestion"
-        className="absolute top-3 right-3 rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus-visible:outline-2 focus-visible:outline-blue-500"
+        className="absolute top-3 right-3 rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus-visible:outline-2 focus-visible:outline-brand"
       >
         <X className="h-4 w-4" aria-hidden="true" />
       </button>
@@ -112,7 +112,7 @@ export function NextCourseSuggestion({ completedCourseId, onDismiss }: NextCours
       {/* Meta row */}
       <div className="flex items-center gap-3 mb-3 flex-wrap">
         {/* Category badge */}
-        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-900/30 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300 capitalize">
+        <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-medium text-brand capitalize">
           <BookOpen className="h-3 w-3" aria-hidden="true" />
           {course.category.replace(/-/g, ' ')}
         </span>

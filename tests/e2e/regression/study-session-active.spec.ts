@@ -86,16 +86,15 @@ async function seedImportedVideos(page: Page, videos: ImportedVideoTestData[]): 
         })
         if (result === 'ok') return
         // Store not yet created by Dexie — wait and retry
-        await new Promise(resolve => {
-          const startTime = performance.now()
-          const check = () => {
-            if (performance.now() - startTime >= retryDelay) {
-              resolve(undefined)
-            } else {
-              requestAnimationFrame(check)
-            }
+        await new Promise<void>(resolve => {
+          let ticks = 0
+          const targetTicks = Math.ceil(retryDelay / 16.67)
+          const tick = () => {
+            ticks++
+            if (ticks >= targetTicks) resolve()
+            else requestAnimationFrame(tick)
           }
-          requestAnimationFrame(check)
+          requestAnimationFrame(tick)
         })
       }
       throw new Error(`Store "importedVideos" not found in "${dbName}" after ${maxRetries} retries`)
@@ -164,16 +163,15 @@ test.describe('Story E04-S03: Active Study Session Logging', () => {
 
         if (!db.objectStoreNames.contains('studySessions')) {
           db.close()
-          await new Promise(resolve => {
-            const startTime = performance.now()
-            const check = () => {
-              if (performance.now() - startTime >= retryDelay) {
-                resolve(undefined)
-              } else {
-                requestAnimationFrame(check)
-              }
+          await new Promise<void>(resolve => {
+            let ticks = 0
+            const targetTicks = Math.ceil(retryDelay / 16.67)
+            const tick = () => {
+              ticks++
+              if (ticks >= targetTicks) resolve()
+              else requestAnimationFrame(tick)
             }
-            requestAnimationFrame(check)
+            requestAnimationFrame(tick)
           })
           continue
         }
@@ -190,16 +188,15 @@ test.describe('Story E04-S03: Active Study Session Logging', () => {
         db.close()
         if (count > 0) return true
         // Session might not be created yet - retry
-        await new Promise(resolve => {
-          const startTime = performance.now()
-          const check = () => {
-            if (performance.now() - startTime >= retryDelay) {
-              resolve(undefined)
-            } else {
-              requestAnimationFrame(check)
-            }
+        await new Promise<void>(resolve => {
+          let ticks = 0
+          const targetTicks = Math.ceil(retryDelay / 16.67)
+          const tick = () => {
+            ticks++
+            if (ticks >= targetTicks) resolve()
+            else requestAnimationFrame(tick)
           }
-          requestAnimationFrame(check)
+          requestAnimationFrame(tick)
         })
       }
       return false
@@ -258,16 +255,15 @@ test.describe('Story E04-S03: Active Study Session Logging', () => {
 
         if (!db.objectStoreNames.contains('studySessions')) {
           db.close()
-          await new Promise(resolve => {
-            const startTime = performance.now()
-            const check = () => {
-              if (performance.now() - startTime >= retryDelay) {
-                resolve(undefined)
-              } else {
-                requestAnimationFrame(check)
-              }
+          await new Promise<void>(resolve => {
+            let ticks = 0
+            const targetTicks = Math.ceil(retryDelay / 16.67)
+            const tick = () => {
+              ticks++
+              if (ticks >= targetTicks) resolve()
+              else requestAnimationFrame(tick)
             }
-            requestAnimationFrame(check)
+            requestAnimationFrame(tick)
           })
           continue
         }
@@ -282,16 +278,15 @@ test.describe('Story E04-S03: Active Study Session Logging', () => {
         db.close()
 
         if (sessions.length === 0) {
-          await new Promise(resolve => {
-            const startTime = performance.now()
-            const check = () => {
-              if (performance.now() - startTime >= retryDelay) {
-                resolve(undefined)
-              } else {
-                requestAnimationFrame(check)
-              }
+          await new Promise<void>(resolve => {
+            let ticks = 0
+            const targetTicks = Math.ceil(retryDelay / 16.67)
+            const tick = () => {
+              ticks++
+              if (ticks >= targetTicks) resolve()
+              else requestAnimationFrame(tick)
             }
-            requestAnimationFrame(check)
+            requestAnimationFrame(tick)
           })
           continue
         }
@@ -302,16 +297,15 @@ test.describe('Story E04-S03: Active Study Session Logging', () => {
         }
 
         // endTime not set yet - retry
-        await new Promise(resolve => {
-          const startTime = performance.now()
-          const check = () => {
-            if (performance.now() - startTime >= retryDelay) {
-              resolve(undefined)
-            } else {
-              requestAnimationFrame(check)
-            }
+        await new Promise<void>(resolve => {
+          let ticks = 0
+          const targetTicks = Math.ceil(retryDelay / 16.67)
+          const tick = () => {
+            ticks++
+            if (ticks >= targetTicks) resolve()
+            else requestAnimationFrame(tick)
           }
-          requestAnimationFrame(check)
+          requestAnimationFrame(tick)
         })
       }
       return false
@@ -374,16 +368,15 @@ test.describe('Story E04-S03: Active Study Session Logging', () => {
 
         if (!db.objectStoreNames.contains('studySessions')) {
           db.close()
-          await new Promise(resolve => {
-            const startTime = performance.now()
-            const check = () => {
-              if (performance.now() - startTime >= retryDelay) {
-                resolve(undefined)
-              } else {
-                requestAnimationFrame(check)
-              }
+          await new Promise<void>(resolve => {
+            let ticks = 0
+            const targetTicks = Math.ceil(retryDelay / 16.67)
+            const tick = () => {
+              ticks++
+              if (ticks >= targetTicks) resolve()
+              else requestAnimationFrame(tick)
             }
-            requestAnimationFrame(check)
+            requestAnimationFrame(tick)
           })
           continue
         }
@@ -398,16 +391,15 @@ test.describe('Story E04-S03: Active Study Session Logging', () => {
         db.close()
 
         if (sessions.length === 0) {
-          await new Promise(resolve => {
-            const startTime = performance.now()
-            const check = () => {
-              if (performance.now() - startTime >= retryDelay) {
-                resolve(undefined)
-              } else {
-                requestAnimationFrame(check)
-              }
+          await new Promise<void>(resolve => {
+            let ticks = 0
+            const targetTicks = Math.ceil(retryDelay / 16.67)
+            const tick = () => {
+              ticks++
+              if (ticks >= targetTicks) resolve()
+              else requestAnimationFrame(tick)
             }
-            requestAnimationFrame(check)
+            requestAnimationFrame(tick)
           })
           continue
         }
@@ -422,16 +414,15 @@ test.describe('Story E04-S03: Active Study Session Logging', () => {
           }
         }
 
-        await new Promise(resolve => {
-          const startTime = performance.now()
-          const check = () => {
-            if (performance.now() - startTime >= retryDelay) {
-              resolve(undefined)
-            } else {
-              requestAnimationFrame(check)
-            }
+        await new Promise<void>(resolve => {
+          let ticks = 0
+          const targetTicks = Math.ceil(retryDelay / 16.67)
+          const tick = () => {
+            ticks++
+            if (ticks >= targetTicks) resolve()
+            else requestAnimationFrame(tick)
           }
-          requestAnimationFrame(check)
+          requestAnimationFrame(tick)
         })
       }
       return { success: false, idleTime: 0, duration: 0 }

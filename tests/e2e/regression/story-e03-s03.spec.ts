@@ -8,14 +8,18 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
+import { TIMEOUTS } from '../../utils/constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 const LESSON_URL = '/courses/operative-six/op6-introduction'
 
 /** Navigate to lesson player with notes panel open, suppress sidebar. */
 async function goToLessonWithNotes(page: Parameters<typeof navigateAndWait>[0]) {
-  await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
-  })
+  await page.evaluate(sidebarState => {
+    Object.entries(sidebarState).forEach(([key, value]) => {
+      localStorage.setItem(key, value)
+    })
+  }, closeSidebar())
   await navigateAndWait(page, LESSON_URL + '?panel=notes')
 }
 
@@ -110,7 +114,7 @@ test.describe('AC2: Click timestamp to seek video', () => {
       const currentTime = await video.evaluate((el: HTMLVideoElement) => el.currentTime)
       expect(currentTime).toBeGreaterThanOrEqual(89) // within 1 second of 90
       expect(currentTime).toBeLessThanOrEqual(91)
-    }).toPass({ timeout: 3000 })
+    }).toPass({ timeout: TIMEOUTS.DEFAULT })
   })
 })
 

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
+import { TIMEOUTS } from '../utils/constants'
 
 // Configure test data for consistent state
 const setupTestData = async page => {
@@ -183,7 +184,7 @@ test.describe('Accessibility - Courses Pages', () => {
     await page.waitForLoadState('domcontentloaded')
 
     // Wait for video player to load
-    await page.waitForSelector('video', { timeout: 5000 })
+    await page.waitForSelector('video', { timeout: TIMEOUTS.LONG })
 
     // Focus the video player container
     const videoContainer = page.locator('[role="region"][aria-label*="Video"]').first()
@@ -251,7 +252,7 @@ test.describe('Accessibility - Courses Pages', () => {
     await page.waitForLoadState('domcontentloaded')
 
     // Wait for video player
-    await page.waitForSelector('video', { timeout: 5000 })
+    await page.waitForSelector('video', { timeout: TIMEOUTS.LONG })
 
     // Check for ARIA labels on controls
     const playButton = page.locator('button[aria-label*="Play"], button[aria-label*="Pause"]')

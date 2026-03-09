@@ -8,6 +8,8 @@ import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
  *   3. ready              — 7+ days AND a time-based study goal
  */
 import { test, expect } from '../../support/fixtures'
+import { TIMEOUTS } from '../../utils/constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 /** Build a study-log array with `count` lesson_complete entries spread across `daySpread`
  *  distinct days, all at the specified hour. Uses explicit date construction so the hour
@@ -55,9 +57,11 @@ const ACTIVE_COURSE_PROGRESS = {
 test.describe('E07-S05: Smart Study Schedule Suggestion', () => {
   test.beforeEach(async ({ page }) => {
     // Prevent sidebar overlay at tablet viewports
-    await page.addInitScript(() => {
-      window.localStorage.setItem('eduvi-sidebar-v1', 'false')
-    })
+    await page.evaluate(sidebarState => {
+      Object.entries(sidebarState).forEach(([key, value]) => {
+        localStorage.setItem(key, value)
+      })
+    }, closeSidebar())
   })
 
   test('AC2: shows insufficient-data state when fewer than 7 study days', async ({
@@ -77,7 +81,7 @@ test.describe('E07-S05: Smart Study Schedule Suggestion', () => {
 
     const widget = page.getByTestId('schedule-insufficient-data')
     await widget.scrollIntoViewIfNeeded()
-    await expect(widget).toBeVisible({ timeout: 8000 })
+    await expect(widget).toBeVisible({ timeout: TIMEOUTS.EXTENDED })
     await expect(widget).toContainText('Build Your Study Pattern')
     await expect(widget).toContainText('7 days')
   })
@@ -100,7 +104,7 @@ test.describe('E07-S05: Smart Study Schedule Suggestion', () => {
 
     const widget = page.getByTestId('schedule-no-goal')
     await widget.scrollIntoViewIfNeeded()
-    await expect(widget).toBeVisible({ timeout: 8000 })
+    await expect(widget).toBeVisible({ timeout: TIMEOUTS.EXTENDED })
     // Optimal hour should also be displayed in the no-goal state
     await expect(widget.getByTestId('schedule-optimal-hour')).toBeVisible()
   })
@@ -122,7 +126,7 @@ test.describe('E07-S05: Smart Study Schedule Suggestion', () => {
 
     const widget = page.getByTestId('schedule-ready')
     await widget.scrollIntoViewIfNeeded()
-    await expect(widget).toBeVisible({ timeout: 8000 })
+    await expect(widget).toBeVisible({ timeout: TIMEOUTS.EXTENDED })
 
     // AC1: Optimal hour should be visible and contain "9" (the seeded peak hour)
     const hourDisplay = widget.getByTestId('schedule-optimal-hour')
@@ -159,7 +163,7 @@ test.describe('E07-S05: Smart Study Schedule Suggestion', () => {
 
     const widget = page.getByTestId('schedule-ready')
     await widget.scrollIntoViewIfNeeded()
-    await expect(widget).toBeVisible({ timeout: 8000 })
+    await expect(widget).toBeVisible({ timeout: TIMEOUTS.EXTENDED })
 
     // Course time allocation section heading should appear
     await expect(widget.getByText('Course Time Allocation')).toBeVisible()
@@ -186,11 +190,11 @@ test.describe('E07-S05: Smart Study Schedule Suggestion', () => {
 
     const widget = page.getByTestId('schedule-no-goal')
     await widget.scrollIntoViewIfNeeded()
-    await expect(widget).toBeVisible({ timeout: 8000 })
+    await expect(widget).toBeVisible({ timeout: TIMEOUTS.EXTENDED })
 
     const settingsLink = page.getByTestId('schedule-settings-link')
     await settingsLink.click()
 
-    await expect(page).toHaveURL('/settings', { timeout: 5000 })
+    await expect(page).toHaveURL('/settings', { timeout: TIMEOUTS.LONG })
   })
 })

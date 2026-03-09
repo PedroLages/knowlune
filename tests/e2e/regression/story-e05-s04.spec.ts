@@ -12,6 +12,8 @@
 import { test, expect } from '../../support/fixtures'
 import { createStudyAction } from '../../support/fixtures/factories'
 import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
+import { TIMEOUTS } from '../../utils/constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 /**
  * Creates a study action pinned to a specific day of the current month.
@@ -44,9 +46,11 @@ function makeEntryForPrevMonth(dayOfMonth: number, courseId = 'ba-101') {
 test.describe('Study History Calendar (E05-S04)', () => {
   test.beforeEach(async ({ page }) => {
     // Prevent sidebar overlay on narrow viewports
-    await page.addInitScript(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
-    })
+    await page.evaluate(sidebarState => {
+      Object.entries(sidebarState).forEach(([key, value]) => {
+        localStorage.setItem(key, value)
+      })
+    }, closeSidebar())
   })
 
   test('AC1: month-view calendar renders for current month', async ({ page, localStorage }) => {
@@ -57,7 +61,10 @@ test.describe('Study History Calendar (E05-S04)', () => {
       makeEntryForDay(15),
     ])
     await page.reload()
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 10000 })
+    await page.waitForSelector('[data-testid="stats-grid"]', {
+      state: 'visible',
+      timeout: TIMEOUTS.NETWORK,
+    })
 
     const calendar = page.getByTestId('study-history-calendar')
     await expect(calendar).toBeVisible()
@@ -76,7 +83,10 @@ test.describe('Study History Calendar (E05-S04)', () => {
       makeEntryForDay(15),
     ])
     await page.reload()
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 10000 })
+    await page.waitForSelector('[data-testid="stats-grid"]', {
+      state: 'visible',
+      timeout: TIMEOUTS.NETWORK,
+    })
 
     const calendar = page.getByTestId('study-history-calendar')
     const highlightedDays = calendar.locator('[data-has-activity="true"]')
@@ -97,7 +107,7 @@ test.describe('Study History Calendar (E05-S04)', () => {
     await page.reload()
     await page.waitForSelector('[data-testid="study-history-calendar"]', {
       state: 'visible',
-      timeout: 10000,
+      timeout: TIMEOUTS.NETWORK,
     })
 
     const calendar = page.getByTestId('study-history-calendar')
@@ -135,7 +145,10 @@ test.describe('Study History Calendar (E05-S04)', () => {
     await page.goto('/')
     await localStorage.seed('study-log', [makeEntryForDay(10, 'ba-101')])
     await page.reload()
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 10000 })
+    await page.waitForSelector('[data-testid="stats-grid"]', {
+      state: 'visible',
+      timeout: TIMEOUTS.NETWORK,
+    })
 
     const calendar = page.getByTestId('study-history-calendar')
 
@@ -168,7 +181,10 @@ test.describe('Study History Calendar (E05-S04)', () => {
       makeEntryForDay(10, 'ba-101', 'note_saved'),
     ])
     await page.reload()
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 10000 })
+    await page.waitForSelector('[data-testid="stats-grid"]', {
+      state: 'visible',
+      timeout: TIMEOUTS.NETWORK,
+    })
 
     const calendar = page.getByTestId('study-history-calendar')
     const activeCell = calendar.locator('[data-has-activity="true"]').first()
@@ -185,7 +201,10 @@ test.describe('Study History Calendar (E05-S04)', () => {
 
   test('AC4: clicking a day with no sessions shows empty state', async ({ page }) => {
     await page.goto('/')
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 10000 })
+    await page.waitForSelector('[data-testid="stats-grid"]', {
+      state: 'visible',
+      timeout: TIMEOUTS.NETWORK,
+    })
 
     const calendar = page.getByTestId('study-history-calendar')
 
@@ -208,7 +227,10 @@ test.describe('Study History Calendar (E05-S04)', () => {
     await localStorage.seed('study-streak-freeze-days', { freezeDays: [1, 3] })
     await localStorage.seed('study-log', [])
     await page.reload()
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 10000 })
+    await page.waitForSelector('[data-testid="stats-grid"]', {
+      state: 'visible',
+      timeout: TIMEOUTS.NETWORK,
+    })
 
     const calendar = page.getByTestId('study-history-calendar')
     const freezeDayCells = calendar.locator('[data-freeze-day="true"]')
@@ -240,7 +262,10 @@ test.describe('Study History Calendar (E05-S04)', () => {
     await localStorage.seed('study-streak-freeze-days', { freezeDays: [1] }) // Monday = freeze
     await localStorage.seed('study-log', [makeEntryForDay(mondayDate)])
     await page.reload()
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 10000 })
+    await page.waitForSelector('[data-testid="stats-grid"]', {
+      state: 'visible',
+      timeout: TIMEOUTS.NETWORK,
+    })
 
     const calendar = page.getByTestId('study-history-calendar')
 
@@ -264,7 +289,10 @@ test.describe('Study History Calendar (E05-S04)', () => {
     // Set mobile viewport and reload to pick up seeded data
     await page.setViewportSize({ width: 375, height: 667 })
     await page.reload()
-    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 10000 })
+    await page.waitForSelector('[data-testid="stats-grid"]', {
+      state: 'visible',
+      timeout: TIMEOUTS.NETWORK,
+    })
 
     // Verify sidebar is not blocking the view
     const sidebar = page.locator('[data-testid="sidebar"]')

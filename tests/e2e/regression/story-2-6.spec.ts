@@ -17,6 +17,7 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
+import { TIMEOUTS } from '../../utils/constants'
 
 // ---------------------------------------------------------------------------
 // Constants — navigate to a known video lesson
@@ -90,7 +91,7 @@ test.describe('AC1: Touch Targets & Mobile Controls', () => {
     await expect(controls).toBeVisible()
 
     // AND: After timeout, controls hide (wait up to 5 seconds)
-    await expect(controls).toBeHidden({ timeout: 6000 })
+    await expect(controls).toBeHidden({ timeout: TIMEOUTS.LONG + 1000 })
   })
 })
 

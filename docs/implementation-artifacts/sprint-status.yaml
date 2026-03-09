@@ -122,7 +122,7 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 6: Learning Challenges & Gamification
   # ──────────────────────────────────────────────────
-  epic-6: in-progress
+  epic-6: done
   6-1-create-learning-challenges: done
   6-2-track-challenge-progress: done
   6-3-challenge-milestone-celebrations: done
@@ -131,11 +131,11 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 7: Course Momentum & Learning Intelligence
   # ──────────────────────────────────────────────────
-  epic-7: in-progress
+  epic-7: done
   7-1-momentum-score-calculation-and-display: done
   7-2-recommended-next-dashboard-section: done
   7-3-next-course-suggestion-after-completion: done
-  7-4-at-risk-course-detection-and-completion-estimates: backlog
+  7-4-at-risk-course-detection-and-completion-estimates: done
   7-5-smart-study-schedule-suggestion: done
   # Gap Coverage Enhancements (from traceability analysis 2026-03-08)
   7-6-e2e-test-for-course-suggestion-tiebreaker: backlog  # E07-S03-AC2
@@ -144,7 +144,7 @@ development_status:
   7-9-error-path-zustand-persist-failure: backlog  # E07-S03-AC4
   7-10-error-path-malformed-study-log-data: backlog  # E07-S05
   7-11-error-path-invalid-study-goal-values: backlog  # E07-S05
-  epic-7-retrospective: optional
+  epic-7-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 8: Analytics & Reports Dashboard

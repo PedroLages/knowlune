@@ -87,9 +87,26 @@ Every finding gets a confidence score (0-100):
 
 Only findings with confidence >= 70 appear in Blockers or High Priority.
 
+## Coverage Gate Enforcement
+
+**MANDATORY MINIMUM:** ≥80% AC coverage per story
+
+**Coverage Calculation:**
+```
+AC Coverage = (Tested ACs / Total ACs) × 100%
+```
+
+**Gate Thresholds:**
+- **<60%**: BLOCKER — Critical coverage gap, must fix before approval
+- **60-79%**: BLOCKER — Must add tests to reach 80% minimum
+- **80-89%**: HIGH — Recommend additional coverage for production confidence
+- **≥90%**: PASS — Meets standard, excellent coverage
+
+**Enforcement:** Stories with <80% AC coverage MUST be blocked in the report with clear guidance on required tests.
+
 ## Severity Triage
 
-- **[Blocker]**: Acceptance criterion has ZERO test coverage. Confidence >= 90.
+- **[Blocker]**: Acceptance criterion has ZERO test coverage OR AC coverage <80%. Confidence >= 90.
 - **[High]**: Test exists but doesn't verify the actual AC behavior, or critical edge case untested. Confidence >= 70.
 - **[Medium]**: Test quality issue (isolation, selectors, factories). Confidence >= 50.
 - **[Nit]**: Minor improvements (naming, organization, assertion style).
@@ -98,6 +115,12 @@ Only findings with confidence >= 70 appear in Blockers or High Priority.
 
 ```markdown
 ## Test Coverage Review: E##-S## — [Story Name]
+
+### AC Coverage Summary
+
+**Acceptance Criteria Coverage:** [N]/[Total] ACs tested (**[XX]%**)
+
+**🚨 COVERAGE GATE:** [✅ PASS (≥80%) | 🔴 BLOCKER (<80%)]
 
 ### AC Coverage Table
 

@@ -19,6 +19,7 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
+import { TIMEOUTS } from '../../utils/constants'
 
 // ---------------------------------------------------------------------------
 // Constants — use a course with video lessons (operative-six)
@@ -230,7 +231,7 @@ test.describe('AC4: Next Lesson Button', () => {
 test.describe('AC5: Auto-Advance Countdown', () => {
   /** Simulate video end: wait for video, dispatch ended, dismiss celebration modal. */
   async function triggerVideoEnd(page: Parameters<typeof navigateAndWait>[0]) {
-    await page.locator('video').waitFor({ timeout: 5000 })
+    await page.locator('video').waitFor({ timeout: TIMEOUTS.LONG })
     await page.evaluate(() => {
       const video = document.querySelector('video')
       if (video) video.dispatchEvent(new Event('ended'))
@@ -239,7 +240,7 @@ test.describe('AC5: Auto-Advance Countdown', () => {
     const dialog = page.locator('[role="dialog"]')
     if (await dialog.isVisible().catch(() => false)) {
       await page.keyboard.press('Escape')
-      await dialog.waitFor({ state: 'hidden', timeout: 2000 }).catch(() => {})
+      await dialog.waitFor({ state: 'hidden', timeout: TIMEOUTS.MEDIUM }).catch(() => {})
     }
   }
 
@@ -253,7 +254,7 @@ test.describe('AC5: Auto-Advance Countdown', () => {
 
     // THEN: Auto-advance countdown is visible
     const countdown = page.getByTestId('auto-advance-countdown')
-    await expect(countdown).toBeVisible({ timeout: 3000 })
+    await expect(countdown).toBeVisible({ timeout: TIMEOUTS.DEFAULT })
   })
 
   test('should display countdown seconds and next lesson title', async ({ page }) => {
@@ -264,7 +265,7 @@ test.describe('AC5: Auto-Advance Countdown', () => {
     await triggerVideoEnd(page)
 
     const countdown = page.getByTestId('auto-advance-countdown')
-    await expect(countdown).toBeVisible({ timeout: 3000 })
+    await expect(countdown).toBeVisible({ timeout: TIMEOUTS.DEFAULT })
 
     // THEN: Countdown text contains seconds and "Next" reference
     const text = await countdown.textContent()
@@ -280,7 +281,7 @@ test.describe('AC5: Auto-Advance Countdown', () => {
     await triggerVideoEnd(page)
 
     const countdown = page.getByTestId('auto-advance-countdown')
-    await expect(countdown).toBeVisible({ timeout: 3000 })
+    await expect(countdown).toBeVisible({ timeout: TIMEOUTS.DEFAULT })
 
     // THEN: Cancel button is visible within the countdown
     const cancelButton = countdown.getByRole('button', { name: /cancel/i })
@@ -295,7 +296,7 @@ test.describe('AC5: Auto-Advance Countdown', () => {
     await triggerVideoEnd(page)
 
     const countdown = page.getByTestId('auto-advance-countdown')
-    await expect(countdown).toBeVisible({ timeout: 3000 })
+    await expect(countdown).toBeVisible({ timeout: TIMEOUTS.DEFAULT })
 
     // WHEN: User clicks Cancel
     const cancelButton = countdown.getByRole('button', { name: /cancel/i })
@@ -313,7 +314,7 @@ test.describe('AC5: Auto-Advance Countdown', () => {
     await triggerVideoEnd(page)
 
     const countdown = page.getByTestId('auto-advance-countdown')
-    await expect(countdown).toBeVisible({ timeout: 3000 })
+    await expect(countdown).toBeVisible({ timeout: TIMEOUTS.DEFAULT })
 
     // THEN: Countdown has role="status" and aria-live="polite"
     await expect(countdown).toHaveAttribute('role', 'status')
@@ -358,7 +359,7 @@ test.describe('AC6: Mobile Sheet Panel', () => {
 
     // THEN: Sheet panel opens with accordion-based course structure
     const sheetAccordion = page.getByTestId('mobile-course-accordion')
-    await expect(sheetAccordion).toBeVisible({ timeout: 3000 })
+    await expect(sheetAccordion).toBeVisible({ timeout: TIMEOUTS.DEFAULT })
   })
 
   test('should show lesson links in mobile Sheet accordion', async ({ page }) => {
@@ -371,7 +372,7 @@ test.describe('AC6: Mobile Sheet Panel', () => {
 
     // THEN: Lesson links are visible in the mobile accordion
     const sheetAccordion = page.getByTestId('mobile-course-accordion')
-    await expect(sheetAccordion).toBeVisible({ timeout: 3000 })
+    await expect(sheetAccordion).toBeVisible({ timeout: TIMEOUTS.DEFAULT })
 
     const lessonLinks = sheetAccordion.locator('a[href*="/courses/"]')
     const count = await lessonLinks.count()

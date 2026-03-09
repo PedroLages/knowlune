@@ -136,4 +136,38 @@ Remember to seed `localStorage.setItem('eduvi-sidebar-v1', 'false')` at tablet v
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+### Tag-Based Ranking Algorithm
+
+- **Pattern**: Composite scoring (tag overlap 60% + momentum 40%) provides better suggestions than momentum alone. Tag similarity captures topical relevance that momentum scoring misses.
+- **Implementation**: Normalized tag score as `sharedTagCount / max(completedCourse.tags.length, 1)` prevents division by zero and handles untagged courses gracefully.
+- **Lesson**: When courses have no tags, algorithm falls back to 100% momentum weighting automatically. This graceful degradation makes the feature robust.
+
+### Dismissal Persistence
+
+- **Pattern**: Zustand store with localStorage persistence (`useSuggestionStore`) ensures dismissed suggestions never reappear for that course.
+- **Edge case handled**: Dismissed set must use `courseId` as key, not suggestion index, to persist correctly across page reloads.
+- **Lesson**: Dismissal UX requires two states: (1) immediate UI hide on dismiss click, (2) persistent check on mount using `isDismissed(completedCourseId)` before rendering.
+
+### Momentum Proxy Strategy
+
+- **Decision**: Story 7.3 shipped before Story 7.1 (Momentum Score), so used local momentum proxy: `(recencyScore * 0.5) + (progressScore * 0.5)`.
+- **Benefit**: No dependency blocking. When E07-S01 ships, swap proxy for real momentum score without changing algorithm interface.
+- **Lesson**: Proxy pattern enables parallel story development. Define clear interface (`getMomentumScore(courseId)`) and implement stub/proxy first.
+
+### Course Completion Detection
+
+- **Integration point**: Extended `CompletionModal` component to handle `type: 'course'` in addition to existing `type: 'lesson'`.
+- **Trigger**: After marking last lesson complete, check `getCourseCompletionPercent() === 100`, then show course-level celebration before suggestion.
+- **Lesson**: Multi-type celebration modals with different content/actions for different completion types (lesson vs course) scale better than separate modal components.
+
+### E2E Test Seeding Complexity
+
+- **Challenge**: Testing course completion requires seeding ALL lessons as complete for a specific course.
+- **Solution**: Created reusable seed pattern: `createCourseProgress({ courseId, completedLessons: allLessonIds })` for 100% completion state.
+- **Lesson**: Complex E2E seeds (full course completion) should be abstracted into helper functions, not inline in test files.
+
+### Empty State Congratulations
+
+- **UX decision**: When user completes last course in library, show congratulatory message instead of suggestion card ("You've completed all courses!").
+- **Implementation**: `computeNextCourseSuggestion()` returns `null` when no eligible courses remain → triggers empty state component.
+- **Lesson**: Celebrating milestones (all courses done) is as important as providing next actions. Don't show broken/empty suggestions.

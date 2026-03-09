@@ -14,6 +14,7 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 function makeStreakEntry(daysAgo: number): {
   type: string
@@ -32,9 +33,11 @@ function makeStreakEntry(daysAgo: number): {
 test.describe('Streak Pause & Freeze Days (E05-S02)', () => {
   test.beforeEach(async ({ page }) => {
     // Prevent sidebar overlay on narrow viewports
-    await page.addInitScript(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
-    })
+    await page.evaluate(sidebarState => {
+      Object.entries(sidebarState).forEach(([key, value]) => {
+        localStorage.setItem(key, value)
+      })
+    }, closeSidebar())
   })
 
   // ── AC1: Pause toggle ──

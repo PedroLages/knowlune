@@ -9,6 +9,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/pop
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog'
 import { ProgressRing } from './ProgressRing'
 import { MomentumBadge } from './MomentumBadge'
+import { AtRiskBadge } from './AtRiskBadge'
+import { CompletionEstimate } from './CompletionEstimate'
 import { VideoPlayer } from './VideoPlayer'
 import { getProgress } from '@/lib/progress'
 import { getResourceUrl } from '@/lib/media'
@@ -18,6 +20,8 @@ import { getInstructorById } from '@/data/instructors'
 import { getAvatarSrc } from '@/lib/instructors'
 import type { Course, CourseCategory } from '@/data/types'
 import type { MomentumScore } from '@/lib/momentum'
+import type { AtRiskStatus } from '@/lib/atRisk'
+import type { CompletionEstimate as CompletionEstimateType } from '@/lib/completionEstimate'
 
 // ── Shared constants ────────────────────────────────────────────────
 
@@ -99,6 +103,8 @@ interface CourseCardProps {
   status?: 'in-progress' | 'completed' | 'not-started'
   lastAccessedAt?: string
   momentumScore?: MomentumScore
+  atRiskStatus?: AtRiskStatus
+  completionEstimate?: CompletionEstimateType
 }
 
 // ── Component ───────────────────────────────────────────────────────
@@ -110,6 +116,8 @@ export function CourseCard({
   status,
   lastAccessedAt,
   momentumScore,
+  atRiskStatus,
+  completionEstimate,
 }: CourseCardProps) {
   const navigate = useNavigate()
   const {
@@ -292,6 +300,11 @@ export function CourseCard({
             >
               {categoryLabels[course.category]}
             </Badge>
+            {atRiskStatus?.isAtRisk && (
+              <div className="absolute bottom-2 left-2">
+                <AtRiskBadge daysSinceLastSession={atRiskStatus.daysSinceLastSession} />
+              </div>
+            )}
           </>
         )
       case 'overview':
@@ -502,6 +515,14 @@ export function CourseCard({
                 {course.estimatedHours}h
               </span>
             </div>
+            {completionEstimate && completionEstimate.remainingMinutes > 0 && (
+              <div className="mb-2">
+                <CompletionEstimate
+                  sessionsNeeded={completionEstimate.sessionsNeeded}
+                  estimatedDays={completionEstimate.estimatedDays}
+                />
+              </div>
+            )}
             <Progress value={completionPercent} showLabel className="h-1.5" />
             {momentumScore && momentumScore.score > 0 && (
               <div className="mt-2">
@@ -670,6 +691,7 @@ export function CourseCard({
 
   const cardShell = (
     <Card
+      data-testid={`course-card-${course.id}`}
       data-preview={showPreview && videoReady ? '' : undefined}
       className={cn(
         'group bg-card border-0 shadow-sm overflow-hidden hover:shadow-xl hover:scale-[1.02] transition-all duration-300 motion-reduce:hover:scale-100 cursor-default h-full flex flex-col',

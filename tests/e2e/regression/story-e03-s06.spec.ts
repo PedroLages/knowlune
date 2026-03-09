@@ -11,15 +11,18 @@ import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
  */
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 const COURSE_ID = 'operative-six'
 const COURSE_URL = `/courses/${COURSE_ID}`
 
 /** Suppress sidebar overlay and navigate to course detail. */
 async function goToCourseDetail(page: Parameters<typeof navigateAndWait>[0]) {
-  await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
-  })
+  await page.evaluate(sidebarState => {
+    Object.entries(sidebarState).forEach(([key, value]) => {
+      localStorage.setItem(key, value)
+    })
+  }, closeSidebar())
   await navigateAndWait(page, COURSE_URL)
 }
 

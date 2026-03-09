@@ -16,7 +16,7 @@
  *   await rafPoll(500) // Wait 500ms using rAF
  */
 
-import { expect } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 import { RETRY_CONFIG } from './constants'
 
 /**
@@ -92,6 +92,50 @@ export function rafPoll(delayMs: number): Promise<void> {
 }
 
 /**
+ * Wait for a condition to be met with configurable polling
+ *
+ * @param checkFn - Function that returns truthy value when condition is met
+ * @param options - Configuration options
+ * @returns Result from successful check
+ * @throws Error if condition not met within timeout
+ *
+ * @example
+ * ```ts
+ * await waitForCondition(
+ *   () => document.querySelector('.loaded'),
+ *   { timeout: 5000, interval: 100 }
+ * )
+ * ```
+ */
+export async function waitForCondition<T>(
+  checkFn: () => Promise<T> | T,
+  options: {
+    timeout?: number
+    interval?: number
+    timeoutMessage?: string
+  } = {}
+): Promise<T> {
+  const { timeout = 5000, interval = 100, timeoutMessage } = options
+  const startTime = performance.now()
+
+  while (true) {
+    try {
+      const result = await checkFn()
+      if (result) return result
+    } catch {
+      // Continue polling
+    }
+
+    if (performance.now() - startTime >= timeout) {
+      throw new Error(timeoutMessage || `Condition not met within ${timeout}ms`)
+    }
+
+    // Use Playwright's built-in wait instead of rAF
+    await new Promise(resolve => setTimeout(resolve, interval))
+  }
+}
+
+/**
  * Retry an operation with exponential backoff
  *
  * @param operation - Async function to retry
@@ -114,6 +158,7 @@ export async function retryWithBackoff<T>(
     initialDelay?: number
     maxDelay?: number
     backoffFactor?: number
+    page?: Page
   } = {}
 ): Promise<T> {
   const {
@@ -121,6 +166,7 @@ export async function retryWithBackoff<T>(
     initialDelay = RETRY_CONFIG.POLL_INTERVAL,
     maxDelay = 5000,
     backoffFactor = 2,
+    page,
   } = options
 
   let lastError: Error | undefined
@@ -136,8 +182,12 @@ export async function retryWithBackoff<T>(
         break
       }
 
-      // Wait before next retry
-      await new Promise(resolve => setTimeout(resolve, delay))
+      // Wait before next retry using Playwright's wait if page is available
+      if (page) {
+        await page.waitForFunction(() => true, { timeout: delay })
+      } else {
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
 
       // Exponential backoff with cap
       delay = Math.min(delay * backoffFactor, maxDelay)

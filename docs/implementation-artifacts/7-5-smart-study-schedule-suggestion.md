@@ -178,4 +178,53 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+### Hamilton Largest-Remainder Allocation Algorithm
+
+- **Challenge**: Allocating daily study minutes across courses proportionally by momentum while ensuring sum equals daily target (no over/under allocation).
+- **Solution**: Hamilton method (largest-remainder) gives each course `floor(share)` minutes, then distributes remainder minutes to courses with largest fractional parts.
+- **Edge case**: When `courses > dailyMinutes`, algorithm over-allocated. Fixed by clamping allocations and recalculating remainders.
+- **Lesson**: Proportional allocation is a solved problem (Hamilton, Huntington-Hill, etc.). Don't reinvent the wheel—research and implement proven algorithms.
+
+### Reactivity Via Custom Events
+
+- **Pattern**: Widget listens to `study-log-updated` and `study-goals-updated` custom events to reactively recalculate schedule without page reload.
+- **Implementation**: `useEffect` adds event listeners on mount, cleanup on unmount. Events dispatched from `addStudyAction()` and `setStudyGoal()` functions.
+- **Lesson**: Custom events (`window.dispatchEvent(new CustomEvent(...))`) provide decoupled reactivity better than prop drilling or Zustand subscriptions for cross-component updates.
+
+### Three-State Progressive Disclosure Design
+
+- **UX pattern**: Widget shows different states based on data availability:
+  1. **Insufficient data** (<7 days): Encouragement to keep studying
+  2. **No time goal** (7+ days, no weekly goal): Prompt to set goal in Settings
+  3. **Full schedule** (7+ days + time goal): Optimal hour + daily duration + course allocation
+- **Benefit**: User never sees broken state. Each state is helpful and actionable.
+- **Lesson**: Progressive disclosure prevents "empty state" confusion. Show what's available, explain what's needed for more.
+
+### Hardcoded Colors Recurrence (bg-blue-600)
+
+- **Failure**: Despite Epic 6 commitment to design tokens, used `bg-blue-600` in two places (lines 115, 210).
+- **Root cause**: No automated enforcement. Manual compliance failed.
+- **Impact**: Design review blocker—breaks dark mode.
+- **Resolution (in this retro)**: ESLint design token rule now catches this automatically. Won't happen in Epic 8.
+- **Lesson**: Manual process improvements fail. This story PROVES automation is mandatory.
+
+### Over-Allocation Bug in Proportional Algorithm
+
+- **Bug**: When `courses.length > dailyMinutes`, algorithm allocated more minutes than daily budget (e.g., 20 courses with 15-min budget allocated 20 minutes total).
+- **Root cause**: Allocation gave each course `Math.max(1, calculatedShare)` without checking if sum exceeds budget.
+- **Fix**: Clamp allocations to budget: `Math.min(allocatedSoFar + 1, dailyMinutes)`, recalculate remaining budget after each allocation.
+- **Lesson**: Proportional algorithms need sum-invariant assertions in tests: `allocated.reduce((a,b) => a+b, 0) === dailyMinutes`.
+
+### Performance: Repeated localStorage Reads
+
+- **Issue**: Every `study-log-updated` event re-read entire localStorage `study-log` key.
+- **Impact**: Not currently a bottleneck (log is small), but doesn't scale to 1000+ sessions.
+- **Future optimization**: Cache study log in memory, invalidate on update event.
+- **Lesson**: Event-driven reactivity is elegant, but watch for N² reads on every update. Measure before optimizing.
+
+### Border Radius Inconsistency (rounded-2xl vs rounded-[24px])
+
+- **Design review finding**: Cards used `rounded-2xl` (16px) instead of project standard `rounded-[24px]` (24px).
+- **Root cause**: Forgot to check design system. Assumed Tailwind default was correct.
+- **Fix**: Replace `rounded-2xl` → `rounded-[24px]` in two places.
+- **Lesson**: Project conventions override Tailwind defaults. Always check design system before choosing class.

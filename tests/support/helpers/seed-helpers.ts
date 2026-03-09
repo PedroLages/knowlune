@@ -9,6 +9,7 @@
 import type { Page } from '@playwright/test'
 import type { ImportedCourseTestData } from '../fixtures/factories/imported-course-factory'
 import { goToCourses } from './navigation'
+import { closeSidebar } from '../fixtures/constants/sidebar-constants'
 
 type IndexedDBSeed = {
   seedImportedCourses: (courses: ImportedCourseTestData[]) => Promise<void>
@@ -26,9 +27,11 @@ export async function seedAndReload(
   courses: ImportedCourseTestData[]
 ): Promise<void> {
   // Ensure sidebar is closed on tablet so Sheet overlay doesn't block clicks
-  await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
-  })
+  await page.evaluate(sidebarState => {
+    Object.entries(sidebarState).forEach(([key, value]) => {
+      localStorage.setItem(key, value)
+    })
+  }, closeSidebar())
   await goToCourses(page)
   await indexedDB.seedImportedCourses(courses)
   await page.reload({ waitUntil: 'domcontentloaded' })

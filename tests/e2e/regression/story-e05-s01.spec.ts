@@ -8,7 +8,9 @@
  *   - AC4: Keyboard accessibility
  */
 import { test, expect } from '../../support/fixtures'
+import { TIMEOUTS } from '../../utils/constants'
 import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 function makeStreakEntry(daysAgo: number): {
   type: string
@@ -27,9 +29,11 @@ function makeStreakEntry(daysAgo: number): {
 test.describe('Study Streak Counter (E05-S01)', () => {
   test.beforeEach(async ({ page }) => {
     // Prevent sidebar overlay on narrow viewports
-    await page.addInitScript(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
-    })
+    await page.evaluate(sidebarState => {
+      Object.entries(sidebarState).forEach(([key, value]) => {
+        localStorage.setItem(key, value)
+      })
+    }, closeSidebar())
   })
 
   test('AC1: streak counter is visible on overview', async ({ page }) => {
@@ -66,7 +70,7 @@ test.describe('Study Streak Counter (E05-S01)', () => {
 
     // Wait for streak value to be rendered
     const streakValue = page.getByTestId('current-streak-value')
-    await expect(streakValue).toBeVisible({ timeout: 5000 })
+    await expect(streakValue).toBeVisible({ timeout: TIMEOUTS.LONG })
     await expect(streakValue).toHaveText('0')
 
     // Inject a study entry + dispatch event (no reload)
@@ -85,7 +89,7 @@ test.describe('Study Streak Counter (E05-S01)', () => {
     }, FIXED_DATE)
 
     // Streak should now be 1 without reload
-    await expect(streakValue).toHaveText('1', { timeout: 10000 })
+    await expect(streakValue).toHaveText('1', { timeout: TIMEOUTS.NETWORK })
   })
 
   test('AC2: reduced motion respected', async ({ browser }) => {
@@ -94,9 +98,11 @@ test.describe('Study Streak Counter (E05-S01)', () => {
     })
     const rmPage = await context.newPage()
 
-    await rmPage.addInitScript(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
-    })
+    await rmPage.evaluate(sidebarState => {
+      Object.entries(sidebarState).forEach(([key, value]) => {
+        localStorage.setItem(key, value)
+      })
+    }, closeSidebar())
     await rmPage.goto('/')
 
     await rmPage.evaluate(fixedDate => {

@@ -81,6 +81,17 @@
   --momentum-warm-bg: #fffbeb;
   --momentum-cold: #1d4ed8;
   --momentum-cold-bg: #eff6ff;
+
+  /* At-risk course indicator */
+  --at-risk: #c2410c;
+  --at-risk-bg: #fff7ed;
+
+  /* Progress heatmap activity levels */
+  --heatmap-empty: hsl(var(--muted) / 0.3);
+  --heatmap-level-1: hsl(var(--success) / 0.3);
+  --heatmap-level-2: hsl(var(--success) / 0.5);
+  --heatmap-level-3: hsl(var(--success) / 0.7);
+  --heatmap-level-4: hsl(var(--success) / 1.0);
 }
 
 .dark {
@@ -158,6 +169,17 @@
   --momentum-warm-bg: oklch(0.2 0.05 85);
   --momentum-cold: #60a5fa;
   --momentum-cold-bg: oklch(0.2 0.05 250);
+
+  /* At-risk course indicator (dark) */
+  --at-risk: #fdba74;
+  --at-risk-bg: oklch(0.2 0.05 50);
+
+  /* Progress heatmap activity levels (dark) */
+  --heatmap-empty: hsl(var(--muted) / 0.3);
+  --heatmap-level-1: hsl(var(--success) / 0.3);
+  --heatmap-level-2: hsl(var(--success) / 0.5);
+  --heatmap-level-3: hsl(var(--success) / 0.7);
+  --heatmap-level-4: hsl(var(--success) / 1.0);
 }
 
 @theme inline {
@@ -227,6 +249,8 @@
   --color-momentum-warm-bg: var(--momentum-warm-bg);
   --color-momentum-cold: var(--momentum-cold);
   --color-momentum-cold-bg: var(--momentum-cold-bg);
+  --color-at-risk: var(--at-risk);
+  --color-at-risk-bg: var(--at-risk-bg);
   --font-sans: var(--font-body);
   --font-display: var(--font-heading);
 }

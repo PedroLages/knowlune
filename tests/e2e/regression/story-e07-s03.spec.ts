@@ -8,6 +8,8 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
+import { TIMEOUTS } from '../../utils/constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 // All 7 lesson IDs for the 'authority' course
 const AUTHORITY_LESSONS = [
@@ -67,10 +69,12 @@ async function closeCompletionModal(page: import('@playwright/test').Page) {
 test.describe('E07-S03: Next Course Suggestion After Completion', () => {
   test.beforeEach(async ({ page, localStorage }) => {
     // Prevent sidebar overlay at tablet viewports; clear any persisted dismissals
-    await page.addInitScript(() => {
-      window.localStorage.setItem('eduvi-sidebar-v1', 'false')
+    await page.addInitScript(sidebarState => {
+      Object.entries(sidebarState).forEach(([key, value]) => {
+        window.localStorage.setItem(key, value)
+      })
       window.localStorage.removeItem('levelup-dismissed-suggestions')
-    })
+    }, closeSidebar())
     // Also clear after navigating to ensure any leftover state is gone
     await page.goto('/')
     await page.evaluate(() => {
@@ -93,17 +97,17 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
 
     // Click "Mark Complete" to complete the last lesson
     const markCompleteBtn = page.locator('button[aria-label="Mark lesson complete"]')
-    await markCompleteBtn.waitFor({ state: 'visible', timeout: 8000 })
+    await markCompleteBtn.waitFor({ state: 'visible', timeout: TIMEOUTS.EXTENDED })
     await markCompleteBtn.click()
 
     // Course-level celebration modal should appear
-    await expect(page.getByText('🎉 Course Completed!')).toBeVisible({ timeout: 8000 })
+    await expect(page.getByText('🎉 Course Completed!')).toBeVisible({ timeout: TIMEOUTS.EXTENDED })
 
     // Close the modal using the explicit "Close" button
     await closeCompletionModal(page)
 
     // Next course suggestion card should now be visible
-    await expect(page.getByTestId('next-course-suggestion')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByTestId('next-course-suggestion')).toBeVisible({ timeout: TIMEOUTS.LONG })
   })
 
   test('AC3: clicking "Start Course" navigates to the suggested course', async ({
@@ -117,20 +121,20 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
     await page.waitForLoadState('domcontentloaded')
 
     const markCompleteBtn = page.locator('button[aria-label="Mark lesson complete"]')
-    await markCompleteBtn.waitFor({ state: 'visible', timeout: 8000 })
+    await markCompleteBtn.waitFor({ state: 'visible', timeout: TIMEOUTS.EXTENDED })
     await markCompleteBtn.click()
 
-    await expect(page.getByText('🎉 Course Completed!')).toBeVisible({ timeout: 8000 })
+    await expect(page.getByText('🎉 Course Completed!')).toBeVisible({ timeout: TIMEOUTS.EXTENDED })
     await closeCompletionModal(page)
 
     // Suggestion card should be visible
-    await expect(page.getByTestId('next-course-suggestion')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByTestId('next-course-suggestion')).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     // Click "Start Course"
     await page.getByRole('button', { name: /start course/i }).click()
 
     // Should navigate to some course page (not authority — that's already done)
-    await expect(page).toHaveURL(/\/courses\/(?!authority)/, { timeout: 5000 })
+    await expect(page).toHaveURL(/\/courses\/(?!authority)/, { timeout: TIMEOUTS.LONG })
   })
 
   test('AC4: dismiss hides the suggestion card', async ({ page, localStorage }) => {
@@ -141,12 +145,12 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
     await page.waitForLoadState('domcontentloaded')
 
     const markCompleteBtn = page.locator('button[aria-label="Mark lesson complete"]')
-    await markCompleteBtn.waitFor({ state: 'visible', timeout: 8000 })
+    await markCompleteBtn.waitFor({ state: 'visible', timeout: TIMEOUTS.EXTENDED })
     await markCompleteBtn.click()
 
-    await expect(page.getByText('🎉 Course Completed!')).toBeVisible({ timeout: 8000 })
+    await expect(page.getByText('🎉 Course Completed!')).toBeVisible({ timeout: TIMEOUTS.EXTENDED })
     await closeCompletionModal(page)
-    await expect(page.getByTestId('next-course-suggestion')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByTestId('next-course-suggestion')).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     // Click dismiss (×) button
     await page.getByRole('button', { name: /dismiss course suggestion/i }).click()
@@ -163,12 +167,12 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
     await page.waitForLoadState('domcontentloaded')
 
     const markCompleteBtn = page.locator('button[aria-label="Mark lesson complete"]')
-    await markCompleteBtn.waitFor({ state: 'visible', timeout: 8000 })
+    await markCompleteBtn.waitFor({ state: 'visible', timeout: TIMEOUTS.EXTENDED })
     await markCompleteBtn.click()
 
-    await expect(page.getByText('🎉 Course Completed!')).toBeVisible({ timeout: 8000 })
+    await expect(page.getByText('🎉 Course Completed!')).toBeVisible({ timeout: TIMEOUTS.EXTENDED })
     await closeCompletionModal(page)
-    await expect(page.getByTestId('next-course-suggestion')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByTestId('next-course-suggestion')).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     // Dismiss the suggestion
     await page.getByRole('button', { name: /dismiss course suggestion/i }).click()
@@ -222,14 +226,16 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
     await page.waitForLoadState('domcontentloaded')
 
     const markCompleteBtn = page.locator('button[aria-label="Mark lesson complete"]')
-    await markCompleteBtn.waitFor({ state: 'visible', timeout: 8000 })
+    await markCompleteBtn.waitFor({ state: 'visible', timeout: TIMEOUTS.EXTENDED })
     await markCompleteBtn.click()
 
-    await expect(page.getByText('🎉 Course Completed!')).toBeVisible({ timeout: 8000 })
+    await expect(page.getByText('🎉 Course Completed!')).toBeVisible({ timeout: TIMEOUTS.EXTENDED })
     await closeCompletionModal(page)
 
     // Congratulatory message should appear (not a suggestion card)
-    await expect(page.getByTestId('next-course-congratulations')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByTestId('next-course-congratulations')).toBeVisible({
+      timeout: TIMEOUTS.LONG,
+    })
     await expect(page.getByText("You've completed all active courses!")).toBeVisible()
     await expect(page.getByTestId('next-course-suggestion')).not.toBeVisible()
   })

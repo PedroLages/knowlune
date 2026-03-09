@@ -6,13 +6,15 @@ import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
  */
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
+import { TIMEOUTS } from '../../utils/constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 /** Navigate to the Challenges page. */
 async function goToChallenges(page: import('@playwright/test').Page) {
   await navigateAndWait(page, '/challenges')
   await page.waitForSelector('[data-testid="header-create-challenge"]', {
     state: 'visible',
-    timeout: 10000,
+    timeout: TIMEOUTS.NETWORK,
   })
 }
 
@@ -33,9 +35,11 @@ async function selectType(page: import('@playwright/test').Page, type: RegExp) {
 test.describe('Create Learning Challenges (E06-S01)', () => {
   test.beforeEach(async ({ page }) => {
     // Close tablet sidebar overlay
-    await page.addInitScript(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
-    })
+    await page.evaluate(sidebarState => {
+      Object.entries(sidebarState).forEach(([key, value]) => {
+        localStorage.setItem(key, value)
+      })
+    }, closeSidebar())
   })
 
   test.afterEach(async ({ page }) => {
@@ -131,7 +135,7 @@ test.describe('Create Learning Challenges (E06-S01)', () => {
     const toastEl = page
       .locator('[data-sonner-toast]')
       .filter({ hasText: /challenge.*created|created.*challenge/i })
-    await expect(toastEl).toBeVisible({ timeout: 10000 })
+    await expect(toastEl).toBeVisible({ timeout: TIMEOUTS.NETWORK })
 
     // Verify challenge appears in the list
     await expect(page.getByText('Complete 5 Videos')).toBeVisible()

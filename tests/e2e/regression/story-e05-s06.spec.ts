@@ -8,6 +8,8 @@ import { test, expect } from '../../support/fixtures'
 import { goToOverview } from '../../support/helpers/navigation'
 import { buildStreakLog } from '../../support/helpers/streak-helpers'
 import { getRelativeTimestamp } from './../../utils/test-time'
+import { TIMEOUTS } from '../../utils/constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 test.describe('Streak Milestone Celebrations (E05-S06)', () => {
   // Serial mode: milestone detection uses sessionStorage guards that can race
@@ -17,14 +19,16 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate once to enable localStorage/sessionStorage access
     await page.goto('/')
-    await page.evaluate(() => {
+    await page.evaluate(sidebarState => {
       // Clear milestone and streak data BEFORE next navigation to prevent
       // stale data from triggering sessionStorage guards in parallel runs
       localStorage.removeItem('streak-milestones')
       localStorage.removeItem('study-log')
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
+      Object.entries(sidebarState).forEach(([key, value]) => {
+        localStorage.setItem(key, value)
+      })
       sessionStorage.clear()
-    })
+    }, closeSidebar())
   })
 
   // ── AC1: 7-day milestone toast ───────────────────────────────
@@ -37,14 +41,14 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
 
     // Then: a Sonner toast appears with 7-day milestone content
     const toast = page.locator('[data-sonner-toast]').filter({ hasText: /7-Day Streak/i })
-    await expect(toast).toBeVisible({ timeout: 10000 })
+    await expect(toast).toBeVisible({ timeout: TIMEOUTS.NETWORK })
 
     // And: a milestone badge is displayed
     const badge = page.getByTestId('milestone-badge-7')
     await expect(badge).toBeVisible()
 
     // And: confetti animation fires (canvas-confetti injects a <canvas>)
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('canvas')).toBeVisible({ timeout: TIMEOUTS.NETWORK })
   })
 
   // ── AC2: 30-day milestone toast ──────────────────────────────
@@ -54,13 +58,13 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
     await goToOverview(page)
 
     const toast = page.locator('[data-sonner-toast]').filter({ hasText: /30-Day Streak/i })
-    await expect(toast).toBeVisible({ timeout: 10000 })
+    await expect(toast).toBeVisible({ timeout: TIMEOUTS.NETWORK })
 
     const badge = page.getByTestId('milestone-badge-30')
     await expect(badge).toBeVisible()
 
     // And: confetti animation fires
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('canvas')).toBeVisible({ timeout: TIMEOUTS.NETWORK })
   })
 
   // ── AC3: 60-day milestone toast ──────────────────────────────
@@ -70,13 +74,13 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
     await goToOverview(page)
 
     const toast = page.locator('[data-sonner-toast]').filter({ hasText: /60-Day Streak/i })
-    await expect(toast).toBeVisible({ timeout: 10000 })
+    await expect(toast).toBeVisible({ timeout: TIMEOUTS.NETWORK })
 
     const badge = page.getByTestId('milestone-badge-60')
     await expect(badge).toBeVisible()
 
     // And: confetti animation fires
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('canvas')).toBeVisible({ timeout: TIMEOUTS.NETWORK })
   })
 
   // ── AC4: 100-day milestone toast ─────────────────────────────
@@ -88,13 +92,13 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
     // 100-day streak triggers 4 simultaneous toasts (7, 30, 60, 100).
     // Sonner's default visibleToasts=3 hides the 4th; wait for earlier toasts to dismiss (8s duration).
     const toast = page.locator('[data-sonner-toast]').filter({ hasText: /100-Day Streak/i })
-    await expect(toast).toBeVisible({ timeout: 15000 })
+    await expect(toast).toBeVisible({ timeout: TIMEOUTS.MEDIA })
 
     const badge = page.getByTestId('milestone-badge-100')
     await expect(badge).toBeVisible()
 
     // And: confetti animation fires
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('canvas')).toBeVisible({ timeout: TIMEOUTS.MEDIA })
   })
 
   // ── AC5: prefers-reduced-motion ──────────────────────────────
@@ -111,7 +115,7 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
 
     // Then: toast still appears with badge
     const toast = page.locator('[data-sonner-toast]').filter({ hasText: /7-Day Streak/i })
-    await expect(toast).toBeVisible({ timeout: 10000 })
+    await expect(toast).toBeVisible({ timeout: TIMEOUTS.NETWORK })
 
     // And: milestone badge is still displayed
     await expect(page.getByTestId('milestone-badge-7')).toBeVisible()
@@ -168,7 +172,7 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
 
     // Then: celebration toast appears again for the repeated milestone
     const toast = page.locator('[data-sonner-toast]').filter({ hasText: /7-Day Streak/i })
-    await expect(toast).toBeVisible({ timeout: 10000 })
+    await expect(toast).toBeVisible({ timeout: TIMEOUTS.NETWORK })
 
     // And: localStorage now contains TWO milestone entries for milestoneValue: 7
     const milestones =
@@ -193,7 +197,7 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
     // Then: no milestone toast should appear
     const toast = page.locator('[data-sonner-toast]').filter({ hasText: /Streak/i })
     // Wait for potential toast to appear, then verify absence
-    await expect(toast).toHaveCount(0, { timeout: 2000 })
+    await expect(toast).toHaveCount(0, { timeout: TIMEOUTS.MEDIUM })
   })
 
   // ── Simultaneous milestones: 30-day triggers 7 + 30 ──────────
@@ -210,8 +214,8 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
     // Then: both milestone toasts appear
     const toast7 = page.locator('[data-sonner-toast]').filter({ hasText: /7-Day Streak/i })
     const toast30 = page.locator('[data-sonner-toast]').filter({ hasText: /30-Day Streak/i })
-    await expect(toast7).toBeVisible({ timeout: 10000 })
-    await expect(toast30).toBeVisible({ timeout: 10000 })
+    await expect(toast7).toBeVisible({ timeout: TIMEOUTS.NETWORK })
+    await expect(toast30).toBeVisible({ timeout: TIMEOUTS.NETWORK })
 
     // And: localStorage has entries for both milestones
     const milestones =
@@ -233,7 +237,7 @@ test.describe('Streak Milestone Celebrations (E05-S06)', () => {
 
     // Wait for milestones to be detected and recorded
     const toast30 = page.locator('[data-sonner-toast]').filter({ hasText: /30-Day Streak/i })
-    await expect(toast30).toBeVisible({ timeout: 10000 })
+    await expect(toast30).toBeVisible({ timeout: TIMEOUTS.NETWORK })
 
     // When: milestone collection is opened
     await page.getByTestId('milestone-collection-trigger').click()

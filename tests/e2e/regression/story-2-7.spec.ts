@@ -15,6 +15,7 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 // ---------------------------------------------------------------------------
 // Constants — navigate to a known video lesson
@@ -25,7 +26,11 @@ async function goToFirstLesson(page: Parameters<typeof navigateAndWait>[0]) {
   // Without this, the sidebar defaults to open at 640-1023px viewports, creating a
   // fullscreen overlay that blocks all pointer events.
   await page.goto('/')
-  await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+  await page.evaluate(sidebarState => {
+    Object.entries(sidebarState).forEach(([key, value]) => {
+      localStorage.setItem(key, value)
+    })
+  }, closeSidebar())
   await navigateAndWait(page, '/courses/operative-six/op6-introduction')
 }
 

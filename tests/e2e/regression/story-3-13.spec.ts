@@ -14,6 +14,8 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
+import { TIMEOUTS } from '../../utils/constants'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 // ---------------------------------------------------------------------------
 // Test Data — use a static course/lesson that has video (renders Notes tab)
@@ -28,20 +30,22 @@ const LESSON_ID = 'nci-fnl-drones-psyops'
 
 /** Navigate to lesson player Notes tab with sidebar closed. */
 async function openNoteEditor(page: import('@playwright/test').Page) {
-  await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
-  })
+  await page.evaluate(sidebarState => {
+    Object.entries(sidebarState).forEach(([key, value]) => {
+      localStorage.setItem(key, value)
+    })
+  }, closeSidebar())
 
   // Navigate to lesson player
   await navigateAndWait(page, `/courses/${COURSE_ID}/${LESSON_ID}`)
 
   // Wait for Notes tab to appear, then click it
   const notesTab = page.getByRole('tab', { name: 'Notes' })
-  await notesTab.waitFor({ state: 'visible', timeout: 30000 })
+  await notesTab.waitFor({ state: 'visible', timeout: TIMEOUTS.PAGE_LOAD })
   await notesTab.click()
 
   // Wait for editor to render
-  await page.waitForSelector('[data-testid="note-editor"]', { timeout: 15000 })
+  await page.waitForSelector('[data-testid="note-editor"]', { timeout: TIMEOUTS.MEDIA })
 }
 
 /** Type text into the Tiptap editor */
@@ -69,7 +73,7 @@ test.describe('AC1: Bubble Menu', () => {
 
     // Bubble menu should appear
     const bubbleMenu = page.locator('[data-testid="bubble-menu"]')
-    await expect(bubbleMenu).toBeVisible({ timeout: 5000 })
+    await expect(bubbleMenu).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     // Should contain formatting buttons
     await expect(bubbleMenu.getByRole('button', { name: /bold/i })).toBeVisible()
@@ -91,13 +95,13 @@ test.describe('AC1: Bubble Menu', () => {
     await page.keyboard.up('Shift')
 
     const bubbleMenu = page.locator('[data-testid="bubble-menu"]')
-    await expect(bubbleMenu).toBeVisible({ timeout: 5000 })
+    await expect(bubbleMenu).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     // Click elsewhere to clear selection
     const editor = page.locator('.tiptap')
     await editor.click({ position: { x: 5, y: 5 } })
 
-    await expect(bubbleMenu).not.toBeVisible({ timeout: 3000 })
+    await expect(bubbleMenu).not.toBeVisible({ timeout: TIMEOUTS.DEFAULT })
   })
 })
 
@@ -117,7 +121,7 @@ test.describe('AC2: Slash Commands', () => {
 
     // Command palette should appear
     const palette = page.locator('[data-testid="slash-command-list"]')
-    await expect(palette).toBeVisible({ timeout: 5000 })
+    await expect(palette).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     // Should show block options
     await expect(palette.getByText(/heading 1/i)).toBeVisible()
@@ -135,7 +139,7 @@ test.describe('AC2: Slash Commands', () => {
     await page.keyboard.type('/code')
 
     const palette = page.locator('[data-testid="slash-command-list"]')
-    await expect(palette).toBeVisible({ timeout: 5000 })
+    await expect(palette).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     // Should show Code Block, not Heading
     await expect(palette.getByText(/code block/i)).toBeVisible()
@@ -152,7 +156,7 @@ test.describe('AC2: Slash Commands', () => {
     await page.keyboard.type('/')
 
     const palette = page.locator('[data-testid="slash-command-list"]')
-    await expect(palette).toBeVisible({ timeout: 5000 })
+    await expect(palette).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     // Click Heading 1 option
     await palette.getByText(/heading 1/i).click()
@@ -181,7 +185,7 @@ test.describe('AC3: Drag-and-Drop', () => {
 
     // Drag handle should appear
     const dragHandle = page.locator('[data-testid="drag-handle"]')
-    await expect(dragHandle).toBeVisible({ timeout: 5000 })
+    await expect(dragHandle).toBeVisible({ timeout: TIMEOUTS.LONG })
   })
 })
 
@@ -201,7 +205,7 @@ test.describe('AC4: Emoji', () => {
 
     // Emoji suggestion popup should appear
     const emojiList = page.locator('[data-testid="emoji-list"]')
-    await expect(emojiList).toBeVisible({ timeout: 5000 })
+    await expect(emojiList).toBeVisible({ timeout: TIMEOUTS.LONG })
   })
 
   test('selecting an emoji inserts it inline', async ({ page }) => {
@@ -214,7 +218,7 @@ test.describe('AC4: Emoji', () => {
     await page.keyboard.type(':smile')
 
     const emojiList = page.locator('[data-testid="emoji-list"]')
-    await expect(emojiList).toBeVisible({ timeout: 5000 })
+    await expect(emojiList).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     // Select the first emoji suggestion
     await page.keyboard.press('Enter')
@@ -241,7 +245,7 @@ test.describe('AC5: Find/Replace', () => {
 
     // Find/replace panel should appear
     const panel = page.locator('[data-testid="find-replace-panel"]')
-    await expect(panel).toBeVisible({ timeout: 5000 })
+    await expect(panel).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     // Should have find and replace inputs
     await expect(panel.getByPlaceholder(/find/i)).toBeVisible()
@@ -258,7 +262,7 @@ test.describe('AC5: Find/Replace', () => {
     await page.keyboard.press('Meta+f')
 
     const panel = page.locator('[data-testid="find-replace-panel"]')
-    await expect(panel).toBeVisible({ timeout: 5000 })
+    await expect(panel).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     // Search for "fox"
     const findInput = panel.getByPlaceholder(/find/i)
@@ -266,7 +270,7 @@ test.describe('AC5: Find/Replace', () => {
 
     // Matches should be highlighted
     const highlights = page.locator('.search-match')
-    await expect(highlights).toHaveCount(2, { timeout: 5000 })
+    await expect(highlights).toHaveCount(2, { timeout: TIMEOUTS.LONG })
   })
 
   test('replace replaces the current match', async ({ page }) => {
@@ -278,7 +282,7 @@ test.describe('AC5: Find/Replace', () => {
     await page.keyboard.press('Meta+f')
 
     const panel = page.locator('[data-testid="find-replace-panel"]')
-    await expect(panel).toBeVisible({ timeout: 5000 })
+    await expect(panel).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     // Find "Hello"
     await panel.getByPlaceholder(/find/i).fill('Hello')
@@ -322,7 +326,7 @@ test.describe('AC6: Table of Contents', () => {
 
     // TOC should show the headings
     const tocPanel = page.locator('[data-testid="toc-panel"]')
-    await expect(tocPanel).toBeVisible({ timeout: 5000 })
+    await expect(tocPanel).toBeVisible({ timeout: TIMEOUTS.LONG })
     await expect(tocPanel.getByText('Introduction')).toBeVisible()
     await expect(tocPanel.getByText('Methods')).toBeVisible()
   })
@@ -349,13 +353,13 @@ test.describe('AC6: Table of Contents', () => {
     await tocButton.click()
 
     const tocPanel = page.locator('[data-testid="toc-panel"]')
-    await expect(tocPanel).toBeVisible({ timeout: 5000 })
+    await expect(tocPanel).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     // Click the "Bottom Section" entry
     await tocPanel.getByText('Bottom Section').click()
 
     // The heading should be scrolled into view
     const bottomHeading = editor.locator('h2', { hasText: 'Bottom Section' })
-    await expect(bottomHeading).toBeInViewport({ timeout: 5000 })
+    await expect(bottomHeading).toBeInViewport({ timeout: TIMEOUTS.LONG })
   })
 })
