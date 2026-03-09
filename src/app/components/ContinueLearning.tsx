@@ -219,14 +219,24 @@ function RecentlyAccessedRow({ sessions }: { sessions: ResolvedSession[] }) {
             <Card className="group motion-safe:hover:shadow-lg motion-safe:hover:scale-[1.01] motion-safe:transition-[box-shadow,transform] motion-safe:duration-200 cursor-pointer rounded-2xl">
               <CardContent className="p-4 flex items-center gap-4">
                 {course.coverImage ? (
-                  <img
-                    src={`${course.coverImage}-320w.webp`}
-                    alt={course.title}
-                    className="size-12 rounded-lg object-cover"
-                    width={48}
-                    height={48}
-                    loading="lazy"
-                  />
+                  <picture>
+                    <source
+                      type="image/webp"
+                      srcSet={`
+                        ${course.coverImage}-320w.webp 320w,
+                        ${course.coverImage}-640w.webp 640w
+                      `}
+                      sizes="48px"
+                    />
+                    <img
+                      src={`${course.coverImage}-320w.webp`}
+                      alt={course.title}
+                      className="size-12 rounded-lg object-cover"
+                      width={48}
+                      height={48}
+                      loading="lazy"
+                    />
+                  </picture>
                 ) : (
                   <div className="size-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
                     <BookOpen aria-hidden="true" className="size-6 text-brand" />
@@ -303,14 +313,24 @@ function DiscoveryState() {
               <Card className="motion-safe:hover:shadow-lg motion-safe:hover:scale-[1.01] motion-safe:transition-[box-shadow,transform] motion-safe:duration-200 cursor-pointer rounded-2xl h-full">
                 <CardContent className="p-4 flex flex-col items-center text-center">
                   {course.coverImage ? (
-                    <img
-                      src={`${course.coverImage}-320w.webp`}
-                      alt={course.title}
-                      className="size-16 rounded-xl object-cover mb-3"
-                      width={64}
-                      height={64}
-                      loading="lazy"
-                    />
+                    <picture>
+                      <source
+                        type="image/webp"
+                        srcSet={`
+                          ${course.coverImage}-320w.webp 320w,
+                          ${course.coverImage}-640w.webp 640w
+                        `}
+                        sizes="64px"
+                      />
+                      <img
+                        src={`${course.coverImage}-320w.webp`}
+                        alt={course.title}
+                        className="size-16 rounded-xl object-cover mb-3"
+                        width={64}
+                        height={64}
+                        loading="lazy"
+                      />
+                    </picture>
                   ) : (
                     <div className="size-16 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-3">
                       <BookOpen aria-hidden="true" className="size-8 text-brand" />

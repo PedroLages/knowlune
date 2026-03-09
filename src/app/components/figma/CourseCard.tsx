@@ -407,8 +407,14 @@ export function CourseCard({
           <picture>
             <source
               type="image/webp"
-              srcSet={`${course.coverImage}-320w.webp 320w, ${course.coverImage}-640w.webp 640w`}
-              sizes="(max-width: 640px) 320px, 640px"
+              srcSet={`
+                ${course.coverImage}-320w.webp 320w,
+                ${course.coverImage}-640w.webp 640w,
+                ${course.coverImage}-768w.webp 768w,
+                ${course.coverImage}-1024w.webp 1024w,
+                ${course.coverImage}-1280w.webp 1280w
+              `}
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             />
             <img
               src={`${course.coverImage}-640w.webp`}
@@ -438,9 +444,10 @@ export function CourseCard({
                   ${course.coverImage}-320w.webp 320w,
                   ${course.coverImage}-640w.webp 640w,
                   ${course.coverImage}-768w.webp 768w,
-                  ${course.coverImage}-1024w.webp 1024w
+                  ${course.coverImage}-1024w.webp 1024w,
+                  ${course.coverImage}-1280w.webp 1280w
                 `}
-                sizes="(max-width: 640px) 320px, (max-width: 1024px) 640px, 768px"
+                sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
               />
               <img
                 src={`${course.coverImage}-768w.png`}
@@ -448,20 +455,34 @@ export function CourseCard({
                   ${course.coverImage}-320w.png 320w,
                   ${course.coverImage}-640w.png 640w,
                   ${course.coverImage}-768w.png 768w,
-                  ${course.coverImage}-1024w.png 1024w
+                  ${course.coverImage}-1024w.png 1024w,
+                  ${course.coverImage}-1280w.png 1280w
                 `}
-                sizes="(max-width: 640px) 320px, (max-width: 1024px) 640px, 768px"
+                sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
                 alt={course.title}
                 className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
               />
             </picture>
           ) : (
-            <img
-              src={`${course.coverImage}-640w.webp`}
-              alt={course.title}
-              className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105 absolute inset-0"
-              loading="lazy"
-            />
+            <picture className="absolute inset-0">
+              <source
+                type="image/webp"
+                srcSet={`
+                  ${course.coverImage}-320w.webp 320w,
+                  ${course.coverImage}-640w.webp 640w,
+                  ${course.coverImage}-768w.webp 768w,
+                  ${course.coverImage}-1024w.webp 1024w,
+                  ${course.coverImage}-1280w.webp 1280w
+                `}
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+              />
+              <img
+                src={`${course.coverImage}-640w.webp`}
+                alt={course.title}
+                className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                loading="lazy"
+              />
+            </picture>
           )
         ) : (
           <BookOpen className="h-16 w-16 text-blue-300 dark:text-blue-600" />

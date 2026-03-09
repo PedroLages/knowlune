@@ -41,13 +41,24 @@ export function RecentActivity({ activities }: RecentActivityProps) {
 
               {/* Course thumbnail */}
               {activity.coverImage ? (
-                <img
-                  src={`${activity.coverImage}-320w.webp`}
-                  alt={activity.title}
-                  className="size-10 rounded-lg object-cover flex-shrink-0"
-                  width={40}
-                  height={40}
-                />
+                <picture>
+                  <source
+                    type="image/webp"
+                    srcSet={`
+                      ${activity.coverImage}-320w.webp 320w,
+                      ${activity.coverImage}-640w.webp 640w
+                    `}
+                    sizes="40px"
+                  />
+                  <img
+                    src={`${activity.coverImage}-320w.webp`}
+                    alt={activity.title}
+                    className="size-10 rounded-lg object-cover flex-shrink-0"
+                    width={40}
+                    height={40}
+                    loading="lazy"
+                  />
+                </picture>
               ) : (
                 <div className="size-10 rounded-lg bg-brand-soft flex items-center justify-center flex-shrink-0">
                   <BookOpen className="size-5 text-brand" aria-hidden="true" />
