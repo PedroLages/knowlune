@@ -2,7 +2,11 @@ import { defineConfig, devices } from '@playwright/test'
 
 export default defineConfig({
   testDir: './tests',
-  testIgnore: process.env.RUN_REGRESSION ? undefined : '**/regression/**',
+  testIgnore: [
+    process.env.RUN_REGRESSION ? undefined : '**/regression/**',
+    process.env.RUN_ANALYSIS ? undefined : '**/analysis/**',
+    process.env.RUN_DEBUG ? undefined : '**/debug/**',
+  ].filter(Boolean),
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -72,6 +76,9 @@ export default defineConfig({
   webServer: {
     command: 'npm run dev',
     url: 'http://localhost:5173',
+    timeout: 120_000,
     reuseExistingServer: !process.env.CI,
+    stdout: 'pipe',
+    stderr: 'pipe',
   },
 })

@@ -55,11 +55,11 @@ jobs:
 
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium webkit
+        run: npx playwright install --with-deps chromium
 
       - name: Install Playwright system deps
         if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium webkit
+        run: npx playwright install-deps chromium
 
       - name: Run E2E tests (shard ${{ matrix.shard }}/4)
         uses: nick-invision/retry@v3
@@ -126,11 +126,7 @@ jobs:
         run: npx playwright install-deps chromium
 
       - name: Run burn-in loop (10 iterations)
-        run: |
-          for i in {1..10}; do
-            echo "=== Burn-in iteration $i/10 ==="
-            npx playwright test --project=chromium || exit 1
-          done
+        run: npx playwright test --project=chromium --repeat-each=10
 
       - name: Upload burn-in failure artifacts
         if: failure()

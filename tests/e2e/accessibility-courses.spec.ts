@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { TIMEOUTS } from '../utils/constants'
+import { FIXED_DATE } from '../utils/test-time'
 
 // Configure test data for consistent state
 const setupTestData = async page => {
-  await page.evaluate(() => {
-    const now = new Date(FIXED_DATE)
+  await page.evaluate((fixedDate) => {
+    const now = new Date(fixedDate)
     const oneDayAgo = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000)
     const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000)
 
@@ -56,7 +57,7 @@ const setupTestData = async page => {
 
     localStorage.setItem('course-progress', JSON.stringify(progress))
     localStorage.setItem('study-log', JSON.stringify(studyLog))
-  })
+  }, FIXED_DATE)
 }
 
 test.describe('Accessibility - Courses Pages', () => {

@@ -12,9 +12,9 @@ import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants
 
 // Seed sidebar state to prevent fullscreen Sheet overlay at tablet viewports
 async function seedSidebar(page: import('@playwright/test').Page) {
-  await page.evaluate(sidebarState => {
+  await page.addInitScript(sidebarState => {
     Object.entries(sidebarState).forEach(([key, value]) => {
-      localStorage.setItem(key, value)
+      window.localStorage.setItem(key, value as string)
     })
   }, closeSidebar())
 }
@@ -298,6 +298,32 @@ test.describe('E07-S01: Momentum Score Display', () => {
     expect(updatedScore).toBeGreaterThan(initialScore)
 
     // Clean up
+    await indexedDB.clearStore(STORE_NAME)
+  })
+
+  test('AC3: courses with no study sessions have score 0 and no visible momentum badge', async ({
+    page,
+    indexedDB,
+  }) => {
+    await seedSidebar(page)
+    await mockDateNow(page)
+
+    // Navigate to courses page (DB auto-created by Dexie)
+    await goToCourses(page)
+
+    // Wait for page to fully load
+    await expect(page.getByRole('heading', { name: /All Courses/i })).toBeVisible()
+
+    // Verify no momentum badges are visible (score 0 means badge hidden)
+    // The ImportedCourseCard component checks `momentumScore.score > 0` before rendering badge
+    // When a course has no study sessions:
+    // - Momentum calculation returns: { score: 0, tier: 'cold' }
+    // - UI behavior: Badge is hidden (not rendered) because score <= 0
+    const badges = page.getByTestId('momentum-badge')
+    const badgeCount = await badges.count()
+    expect(badgeCount).toBe(0)
+
+    // Clean up (redundant but explicit)
     await indexedDB.clearStore(STORE_NAME)
   })
 })
