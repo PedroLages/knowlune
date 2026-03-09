@@ -98,3 +98,31 @@ export async function seedImportedVideos(
 ): Promise<void> {
   await seedIndexedDBStore(page, 'ElearningDB', 'importedVideos', videos)
 }
+
+/**
+ * Seeds the importedCourses object store in ElearningDB.
+ * Convenience wrapper around seedIndexedDBStore.
+ *
+ * @param page - Playwright Page instance
+ * @param courses - Array of imported course records
+ */
+export async function seedImportedCourses(
+  page: Page,
+  courses: Record<string, unknown>[]
+): Promise<void> {
+  await seedIndexedDBStore(page, 'ElearningDB', 'importedCourses', courses)
+}
+
+/**
+ * Seeds the contentProgress object store in ElearningDB.
+ * Convenience wrapper around seedIndexedDBStore.
+ *
+ * @param page - Playwright Page instance
+ * @param progress - Array of content progress records
+ */
+export async function seedContentProgress(
+  page: Page,
+  progress: Record<string, unknown>[]
+): Promise<void> {
+  await seedIndexedDBStore(page, 'ElearningDB', 'contentProgress', progress)
+}
