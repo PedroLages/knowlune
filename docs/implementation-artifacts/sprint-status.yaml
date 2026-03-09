@@ -151,7 +151,7 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-8: in-progress
   8-1-study-time-analytics: done
-  8-2-course-completion-tracking: in-progress
+  8-2-course-completion-tracking: done
   8-3-learning-velocity-and-trends: backlog
   8-4-retention-insights-and-activity-heatmap: backlog
   8-5-actionable-study-insights: backlog

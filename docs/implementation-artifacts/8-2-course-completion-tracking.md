@@ -1,12 +1,12 @@
 ---
 story_id: E08-S02
 story_name: "Course Completion Tracking"
-status: in-progress
+status: done
 started: 2026-03-09
-completed:
-reviewed: false          # false | in-progress | true
-review_started:          # YYYY-MM-DD — set when /review-story begins
-review_gates_passed: []  # tracks completed gates: [build, lint, unit-tests, e2e-tests, design-review, code-review]
+completed: 2026-03-09
+reviewed: true
+review_started: 2026-03-09
+review_gates_passed: [build, lint, unit-tests, e2e-smoke, e2e-story, prettier, code-review, code-review-testing, design-review]
 ---
 
 # Story 8.2: Course Completion Tracking
