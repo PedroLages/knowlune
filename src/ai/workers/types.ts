@@ -47,6 +47,7 @@ export interface WorkerStreamChunk {
 }
 
 export interface WorkerProgressUpdate {
+  requestId: string
   type: 'download-progress'
   progress: number // 0-100
 }

@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { RouterProvider } from 'react-router'
 import { ThemeProvider } from 'next-themes'
 import { Toaster } from '@/app/components/ui/sonner'
+import { Agentation } from 'agentation'
 import { router } from './routes'
 import { useSessionStore } from '@/stores/useSessionStore'
 import { ErrorBoundary } from '@/app/components/ErrorBoundary'
@@ -23,6 +24,7 @@ export default function App() {
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <RouterProvider router={router} />
         <Toaster />
+        {process.env.NODE_ENV === 'development' && <Agentation />}
       </ThemeProvider>
     </ErrorBoundary>
   )

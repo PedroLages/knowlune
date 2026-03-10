@@ -62,6 +62,12 @@ const setupTestData = async page => {
 
 test.describe('Accessibility - Courses Pages', () => {
   test.beforeEach(async ({ page }) => {
+    // Seed sidebar state to prevent overlay blocking on tablet/mobile viewports
+    // (eduvi-sidebar-v1 defaults to open=true at 640-1023px, creating fullscreen Sheet overlay)
+    await page.addInitScript(() => {
+      localStorage.setItem('eduvi-sidebar-v1', 'false')
+    })
+
     // Suppress console errors from missing media files
     page.on('console', msg => {
       if (msg.type() === 'error') {

@@ -93,6 +93,9 @@ describe('WorkerCoordinator', () => {
   })
 
   it('should timeout after specified duration', async () => {
+    // Save original Worker implementation
+    const OriginalWorker = global.Worker
+
     // Create a worker that never responds
     global.Worker = class SlowWorker extends EventTarget {
       postMessage(): void {
@@ -104,6 +107,9 @@ describe('WorkerCoordinator', () => {
     await expect(
       coordinator.executeTask('embed', { texts: ['slow'] }, { timeout: 100 })
     ).rejects.toThrow('AI request timed out')
+
+    // Restore original Worker
+    global.Worker = OriginalWorker
   })
 
   it('should report pool status', async () => {

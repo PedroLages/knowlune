@@ -310,6 +310,8 @@ export interface ApiError {
   error: string
   message: string
   statusCode: number
+  code?: string // Optional error code (e.g., 'NOT_FOUND', 'VALIDATION_ERROR')
+  details?: unknown // Optional additional error details (e.g., validation errors)
 }
 
 export type ApiResponse<T> = T | ApiError

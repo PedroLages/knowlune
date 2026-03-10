@@ -33,6 +33,7 @@ const Challenges = React.lazy(() =>
   import('./pages/Challenges').then(m => ({ default: m.Challenges }))
 )
 const WebLLMTest = React.lazy(() => import('../experiments/WebLLMTest'))
+const WebLLMPerformanceTest = React.lazy(() => import('../experiments/WebLLMPerformanceTest'))
 
 // Default exports work directly with React.lazy
 const MyClass = React.lazy(() => import('./pages/MyClass'))
@@ -190,6 +191,14 @@ export const router = createBrowserRouter([
         element: (
           <SuspensePage>
             <WebLLMTest />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'webllm-perf',
+        element: (
+          <SuspensePage>
+            <WebLLMPerformanceTest />
           </SuspensePage>
         ),
       },

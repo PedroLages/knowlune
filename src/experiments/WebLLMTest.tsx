@@ -11,6 +11,19 @@ interface PerformanceMetrics {
   memoryUsage: number
 }
 
+// Chrome-specific performance.memory API (non-standard)
+interface PerformanceMemory {
+  usedJSHeapSize: number
+  totalJSHeapSize: number
+  jsHeapSizeLimit: number
+}
+
+declare global {
+  interface Performance {
+    memory?: PerformanceMemory
+  }
+}
+
 export default function WebLLMTest() {
   const [engine, setEngine] = useState<webllm.MLCEngineInterface | null>(null)
   const [loading, setLoading] = useState(false)
@@ -59,7 +72,7 @@ export default function WebLLMTest() {
 
       // Get memory usage estimate
       if (performance.memory) {
-        const memoryMB = Math.round((performance.memory as any).usedJSHeapSize / 1024 / 1024)
+        const memoryMB = Math.round(performance.memory.usedJSHeapSize / 1024 / 1024)
         setMetrics(prev => ({ ...prev!, memoryUsage: memoryMB }))
       }
 
@@ -157,7 +170,7 @@ export default function WebLLMTest() {
           {performance.memory && (
             <div>
               <strong>JS Heap Size:</strong>{' '}
-              {Math.round((performance.memory as any).usedJSHeapSize / 1024 / 1024)} MB
+              {Math.round(performance.memory.usedJSHeapSize / 1024 / 1024)} MB
             </div>
           )}
         </div>

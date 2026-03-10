@@ -8,6 +8,11 @@ import type { Page } from '@playwright/test'
 
 /** Navigate to a page and wait for the main content area to be visible. */
 export async function navigateAndWait(page: Page, path: string): Promise<void> {
+  // Seed sidebar state BEFORE navigation to prevent overlay blocking on tablet/mobile viewports
+  // (eduvi-sidebar-v1 defaults to open=true at 640-1023px, creating fullscreen Sheet overlay)
+  await page.evaluate(() => {
+    localStorage.setItem('eduvi-sidebar-v1', 'false')
+  })
   await page.goto(path)
   await page.waitForLoadState('load')
 }

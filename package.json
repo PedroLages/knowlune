@@ -61,6 +61,7 @@
     "@types/canvas-confetti": "^1.9.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "agentation": "^2.3.1",
     "ai": "^6.0.97",
     "caniuse-lite": "^1.0.30001774",
     "canvas-confetti": "^1.9.4",
