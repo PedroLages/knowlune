@@ -605,6 +605,42 @@ Per-story development loop with integrated quality gates. Three slash commands o
 | `/finish-story E##-S##` | Validate, create PR. Auto-runs reviews if not already done       |
 | `/design-review`        | Standalone design review via Playwright MCP (also used by `/review-story`) |
 
+### Git Working Tree Requirements
+
+Story workflow skills have git working tree requirements to ensure reviews analyze committed code and maintain clean history.
+
+| Skill | Requires Clean Tree? | Rationale |
+|-------|---------------------|-----------|
+| `/start-story` | ✅ Yes (for new stories) | Ensures clean branch creation and avoids mixing work |
+| `/start-story` (resume) | ❌ No | Allows continuing work on in-progress story |
+| `/review-story` | ✅ Yes | Reviews run `git diff main...HEAD` (committed changes only) |
+| `/finish-story` (streamlined) | ✅ Yes | Inline reviews need committed changes |
+| `/finish-story` (comprehensive) | ⚠️ Validates | Checks committed code; warns if additional uncommitted changes |
+
+**Why commits are required:**
+- Code review agents analyze `git diff` (committed changes)
+- Uncommitted changes are not reviewed
+- Reviews would pass but analyze nothing
+
+**If blocked by uncommitted changes:**
+```bash
+# Option 1: Commit your work
+git add -A
+git commit -m "feat(E##-S##): descriptive message"
+
+# Option 2: Stash your work (not recommended)
+git stash push -u -m "WIP before E##-S##"
+```
+
+**Git hooks (optional):**
+Pre-review hooks in `scripts/git-hooks/` enforce clean tree requirements. Install manually:
+```bash
+cp scripts/git-hooks/pre-review .git/hooks/pre-review
+chmod +x .git/hooks/pre-review
+```
+
+See "Git Hooks (Automated Enforcement)" section for more details.
+
 ### Workflow Modes
 
 **Streamlined** (2 commands):

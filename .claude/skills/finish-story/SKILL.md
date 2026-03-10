@@ -49,7 +49,44 @@ The orchestrator should NOT:
 
 1. **Identify story**: Parse ID from `$ARGUMENTS` or from branch name (`git branch --show-current` → `feature/e01-s03-...` → `E01-S03`).
 
-2. **Verify story file**: Check `docs/implementation-artifacts/{key}.md` exists. Missing → STOP with error.
+1.5. **Detect worktree and resolve base path**: Before reading story files, detect if the current branch belongs to a git worktree and resolve the correct base path for file operations.
+
+   ```bash
+   # Get current git context
+   CURRENT_BRANCH=$(git branch --show-current)
+   CURRENT_ROOT=$(git rev-parse --show-toplevel)
+
+   # Check if current branch belongs to a worktree
+   WORKTREE_PATH=$(git worktree list --porcelain 2>/dev/null | awk '
+     /^worktree / { path=$2 }
+     /^branch / {
+       if ($2 == "refs/heads/'"$CURRENT_BRANCH"'") {
+         print path
+         exit
+       }
+     }
+   ')
+
+   # Determine base path for file operations
+   if [ -n "$WORKTREE_PATH" ] && [ "$WORKTREE_PATH" != "$CURRENT_ROOT" ]; then
+     # Branch has a worktree, but we're in the main workspace
+     BASE_PATH="$WORKTREE_PATH"
+
+     echo "⚠️  Worktree detected" >&2
+     echo "This story was started in a git worktree." >&2
+     echo "📍 Worktree: $WORKTREE_PATH" >&2
+     echo "📂 Current:  $CURRENT_ROOT" >&2
+     echo "Using worktree path for file operations." >&2
+     echo "" >&2
+   else
+     # Either no worktree, or we're already in it
+     BASE_PATH="$CURRENT_ROOT"
+   fi
+   ```
+
+   All file path references in subsequent steps must use `${BASE_PATH}/` prefix.
+
+2. **Verify story file**: Check `${BASE_PATH}/docs/implementation-artifacts/{key}.md` exists. Missing → STOP with error.
 
 3. **Check reviewed status**: Read story file frontmatter `reviewed` field. Three possible states:
 
@@ -84,6 +121,31 @@ The orchestrator should NOT:
 
    Mark "Identify story and check status" → `completed` (already done).
 
+3a. **Pre-finish commit gate** (if reviews will run inline):
+
+   If `reviewed: false` (streamlined mode — reviews will run inline):
+
+   ```bash
+   git status --porcelain
+   ```
+
+   If uncommitted changes found, STOP and inform:
+   ```
+   ❌ Uncommitted changes detected.
+
+   /finish-story in streamlined mode runs reviews inline, which analyze
+   committed changes via `git diff main...HEAD`. Uncommitted changes will
+   NOT be reviewed.
+
+   Commit your changes first:
+     git add -A && git commit -m "feat(E##-S##): ..."
+
+   Then re-run /finish-story.
+   ```
+
+   If `reviewed: in-progress` or `reviewed: true`:
+   Skip this check (reviews already done or resuming — validation in Step 5 handles it).
+
 4a. **If `reviewed: in-progress`** (interrupted review):
    - Inform the user: "Previous `/review-story` was interrupted. Checking what completed."
    - Read `review_gates_passed` from frontmatter. Check for existing report files.
@@ -106,7 +168,7 @@ The orchestrator should NOT:
    - If no blockers → continue to step 6.
 
 5. **If already reviewed** (comprehensive mode):
-   - **5a. Blocker cross-check**: Read the latest code review report at `docs/reviews/code/code-review-*-{story-id}.md`. Parse the `#### Blockers` section. If blockers exist:
+   - **5a. Blocker cross-check**: Read the latest code review report at `${BASE_PATH}/docs/reviews/code/code-review-*-{story-id}.md`. Parse the `#### Blockers` section. If blockers exist:
      - Check each blocker's file:line against the current code (`git show HEAD:path/to/file`). If the code at that location still matches the blocker description (issue not fixed), STOP:
        ```
        Cannot ship — [N] unresolved blocker(s) from code review:
@@ -123,16 +185,16 @@ The orchestrator should NOT:
      e. `npm run test:unit -- --run` — STOP on failure (if tests exist).
      f. E2E tests — run smoke specs + current story's spec on Chromium only:
         ```
-        npx playwright test tests/e2e/navigation.spec.ts tests/e2e/overview.spec.ts tests/e2e/courses.spec.ts tests/e2e/story-{id}.spec.ts --project=chromium
+        npx playwright test ${BASE_PATH}/tests/e2e/navigation.spec.ts ${BASE_PATH}/tests/e2e/overview.spec.ts ${BASE_PATH}/tests/e2e/courses.spec.ts ${BASE_PATH}/tests/e2e/story-{id}.spec.ts --project=chromium
         ```
-        If the current story has no spec file in `tests/e2e/`, run smoke specs only. STOP on failure.
+        If the current story has no spec file in `${BASE_PATH}/tests/e2e/`, run smoke specs only. STOP on failure.
    - If any fail → STOP. Developer fixes and re-runs.
 
 6. **Update story file**:
    - Set `status: done` and `completed: YYYY-MM-DD` in frontmatter.
    - Set `reviewed: true` if not already.
 
-7. **Update sprint status**: In `docs/implementation-artifacts/sprint-status.yaml`, set story → `done`.
+7. **Update sprint status**: In `${BASE_PATH}/docs/implementation-artifacts/sprint-status.yaml`, set story → `done`.
 
 8. **Commit**: Stage story file, sprint-status.yaml, and any review reports.
    Apply `writing-clearly-and-concisely` rules to the commit message — active voice, omit needless words:
@@ -140,12 +202,12 @@ The orchestrator should NOT:
    git commit -m "feat(E##-S##): [concise description of what the story delivers]"
    ```
 
-9. **Archive story spec**: If `tests/e2e/story-*.spec.ts` exists for this story, move it to `tests/e2e/regression/`:
+9. **Archive story spec**: If `${BASE_PATH}/tests/e2e/story-*.spec.ts` exists for this story, move it to `${BASE_PATH}/tests/e2e/regression/`:
    ```
-   git mv tests/e2e/story-{id}.spec.ts tests/e2e/regression/
+   git mv ${BASE_PATH}/tests/e2e/story-{id}.spec.ts ${BASE_PATH}/tests/e2e/regression/
    git commit -m "chore: archive E##-S## spec to regression"
    ```
-   If no story spec exists in `tests/e2e/`, skip this step.
+   If no story spec exists in `${BASE_PATH}/tests/e2e/`, skip this step.
 
 10. **Push branch**: `git push -u origin feature/e##-s##-slug`.
 
@@ -295,7 +357,7 @@ The orchestrator should NOT:
     - Mode: Comprehensive / Streamlined
     - Branch: `feature/e##-s##-slug`
     - Worktree: [Cleaned up / Main workspace]
-    - Reports: `docs/reviews/design/` + `docs/reviews/code/`
+    - Reports: `${BASE_PATH}/docs/reviews/design/` + `${BASE_PATH}/docs/reviews/code/`
 
     </details>
 

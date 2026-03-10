@@ -108,7 +108,36 @@ Mark the first todo as `in_progress` and proceed:
 3. **Derive branch name**: `feature/` + lowercase story ID + slugified name. Strip `& ( ) , .` and filler words (and, the, a, with, for, of). Lowercase. Hyphens between words.
    - Example: `E01-S03` "Organize Courses by Topic" → `feature/e01-s03-organize-courses-by-topic`
 
-4. **Check working tree**: `git status`. Warn if uncommitted changes. Suggest commit or stash.
+4. **Enforce clean working tree** (unless resuming):
+
+   First, check if this is a resumed start:
+   - If story status in sprint-status.yaml is already `in-progress` AND branch exists: **ALLOW** dirty tree (user is continuing work on this story)
+   - Otherwise (new story): **REQUIRE** clean tree
+
+   For new stories:
+   ```bash
+   git status --porcelain
+   ```
+
+   If uncommitted changes found:
+   ```
+   ❌ Uncommitted changes detected.
+
+   Starting a new story requires a clean working tree to:
+   - Ensure proper branch switching
+   - Avoid mixing old and new work
+   - Enable clean git history
+
+   Options:
+   1. Commit changes:  git add -A && git commit -m "..."
+   2. Stash changes:   git stash push -u -m "WIP before E##-S##"
+
+   Cannot proceed with dirty working tree.
+   ```
+   STOP — do NOT create branch or story file.
+
+   For resumed stories (status already `in-progress`):
+   Allow uncommitted changes — user is continuing work on this story.
 
 5. **Create branch** (idempotent):
    - **If worktree was created in Step 0**: Skip this step entirely. The branch was already created by `worktree-story`. Inform user: "Branch created by worktree setup, skipping."

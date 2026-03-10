@@ -75,9 +75,48 @@ Mark the first todo as `in_progress` and proceed:
 
 1. **Identify story**: Parse ID from `$ARGUMENTS` or from branch name (`git branch --show-current` → `feature/e01-s03-...` → `E01-S03`).
 
-2. **Read story file** from `docs/implementation-artifacts/`. Extract acceptance criteria, tasks, current status, and **review tracking fields** (`reviewed`, `review_started`, `review_gates_passed`, `burn_in_validated`).
+2. **Detect worktree and resolve base path**:
 
-3. **Detect resumption**: Check if this is a resumed review:
+   Before reading story files, detect if the current branch belongs to a git worktree and resolve the correct base path for file operations.
+
+   ```bash
+   # Get current git context
+   CURRENT_BRANCH=$(git branch --show-current)
+   CURRENT_ROOT=$(git rev-parse --show-toplevel)
+
+   # Check if current branch belongs to a worktree
+   WORKTREE_PATH=$(git worktree list --porcelain 2>/dev/null | awk '
+     /^worktree / { path=$2 }
+     /^branch / {
+       if ($2 == "refs/heads/'"$CURRENT_BRANCH"'") {
+         print path
+         exit
+       }
+     }
+   ')
+
+   # Determine base path for file operations
+   if [ -n "$WORKTREE_PATH" ] && [ "$WORKTREE_PATH" != "$CURRENT_ROOT" ]; then
+     # Branch has a worktree, but we're in the main workspace
+     BASE_PATH="$WORKTREE_PATH"
+
+     echo "⚠️  Worktree detected" >&2
+     echo "This story was started in a git worktree." >&2
+     echo "📍 Worktree: $WORKTREE_PATH" >&2
+     echo "📂 Current:  $CURRENT_ROOT" >&2
+     echo "Using worktree path for file operations." >&2
+     echo "" >&2
+   else
+     # Either no worktree, or we're already in it
+     BASE_PATH="$CURRENT_ROOT"
+   fi
+   ```
+
+   **All file path references in subsequent steps must use `${BASE_PATH}/` prefix.**
+
+3. **Read story file** from `${BASE_PATH}/docs/implementation-artifacts/`. Extract acceptance criteria, tasks, current status, and **review tracking fields** (`reviewed`, `review_started`, `review_gates_passed`, `burn_in_validated`).
+
+4. **Detect resumption**: Check if this is a resumed review:
 
    - If `reviewed: in-progress` and `review_gates_passed` is non-empty:
      - Inform the user: "Resuming interrupted review. Previously passed gates: [list]. Re-running pre-checks (code may have changed), then skipping already-completed agent reviews."
@@ -90,7 +129,7 @@ Mark the first todo as `in_progress` and proceed:
 
    **TodoWrite**: Mark "Identify story and detect resumption" → `completed`. Mark "Pre-checks: build" → `in_progress`.
 
-4. **Pre-checks** (always run — fast, validates current state):
+5. **Pre-checks** (always run — fast, validates current state):
 
    **Pre-review commit gate:** Before running any checks, verify working tree is clean:
    ```
@@ -115,9 +154,9 @@ Mark the first todo as `in_progress` and proceed:
    e. `npm run test:unit -- --run` — STOP on failure. If no unit test script or no test files, note and continue.
    f. E2E tests — run smoke specs + current story's spec on Chromium only:
       ```
-      npx playwright test tests/e2e/navigation.spec.ts tests/e2e/overview.spec.ts tests/e2e/courses.spec.ts tests/e2e/story-{id}.spec.ts --project=chromium
+      npx playwright test ${BASE_PATH}/tests/e2e/navigation.spec.ts ${BASE_PATH}/tests/e2e/overview.spec.ts ${BASE_PATH}/tests/e2e/courses.spec.ts ${BASE_PATH}/tests/e2e/story-{id}.spec.ts --project=chromium
       ```
-      If the current story has no spec file in `tests/e2e/`, run smoke specs only. STOP on failure. Do NOT run `tests/design-review.spec.ts` or `tests/e2e/regression/` specs here — those are separate.
+      If the current story has no spec file in `${BASE_PATH}/tests/e2e/`, run smoke specs only. STOP on failure. Do NOT run `tests/design-review.spec.ts` or `${BASE_PATH}/tests/e2e/regression/` specs here — those are separate.
 
    g. **Burn-in test suggestion** (after E2E tests pass):
 
@@ -169,7 +208,7 @@ Mark the first todo as `in_progress` and proceed:
         ```
 
       **If burn-in selected**:
-      - Run: `npx playwright test tests/e2e/story-{id}.spec.ts --repeat-each=10 --project=chromium`
+      - Run: `npx playwright test ${BASE_PATH}/tests/e2e/story-{id}.spec.ts --repeat-each=10 --project=chromium`
       - If **all iterations pass**: set `burn_in_validated: true` in story frontmatter, continue to reviews
       - If **any iteration fails**: STOP with flakiness report:
         ```
@@ -199,7 +238,7 @@ Mark the first todo as `in_progress` and proceed:
 
    **TodoWrite**: Mark all pre-check todos → `completed`. Update each pre-check todo individually as it passes during execution.
 
-5. **Lessons Learned Gate** (automated documentation quality check):
+6. **Lessons Learned Gate** (automated documentation quality check):
 
    After pre-checks pass, validate that the story's "Challenges and Lessons Learned" section is properly documented before dispatching expensive review agents.
 
@@ -228,7 +267,7 @@ Mark the first todo as `in_progress` and proceed:
         - This gate enforces the 100% compliance that manual reminders failed to achieve
 
         What to do:
-        1. Open docs/implementation-artifacts/{story-id}.md
+        1. Open ${BASE_PATH}/docs/implementation-artifacts/{story-id}.md
         2. Replace placeholder text with actual lessons learned:
            - Implementation challenges you faced
            - Solutions you discovered
@@ -243,12 +282,12 @@ Mark the first todo as `in_progress` and proceed:
       - Do NOT add any review gates to `review_gates_passed` (pre-checks passed but review didn't start)
 
    d. If no placeholders (lessons learned properly filled):
-      - Continue to step 6 (review agent swarm)
+      - Continue to step 7 (review agent swarm)
       - Note in output: "✅ Lessons Learned Gate passed — documentation complete"
 
    **Rationale**: This automated gate addresses Epic 8 retrospective finding that only 2/5 stories documented lessons learned despite manual reminders. Automated enforcement achieves 100% compliance where manual processes achieved 40%.
 
-6. **Review agent swarm** (parallel dispatch — design + code + testing):
+7. **Review agent swarm** (parallel dispatch — design + code + testing):
 
    After pre-checks pass, dispatch ALL applicable review agents **in a single message** for maximum parallelism. Design review, code review, and test coverage review are fully independent — they use different tools (Playwright MCP vs git diff) and analyze different aspects.
 
@@ -279,13 +318,13 @@ Mark the first todo as `in_progress` and proceed:
 
    Task({
      subagent_type: "code-review",
-     prompt: "Review story E##-S## at docs/implementation-artifacts/{key}.md. Run git diff main...HEAD for changes. Focus on architecture, security, correctness, silent failures, and LevelUp stack patterns. Score each finding with confidence (0-100).",
+     prompt: "Review story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run git diff main...HEAD for changes. Focus on architecture, security, correctness, silent failures, and LevelUp stack patterns. Score each finding with confidence (0-100).",
      description: "Code review E##-S##"
    })
 
    Task({
      subagent_type: "code-review-testing",
-     prompt: "Review test coverage for story E##-S## at docs/implementation-artifacts/{key}.md. Run git diff main...HEAD for changes. Map every acceptance criterion to its tests. Review test quality, isolation, and edge case coverage. Score each finding with confidence (0-100).",
+     prompt: "Review test coverage for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run git diff main...HEAD for changes. Map every acceptance criterion to its tests. Review test quality, isolation, and edge case coverage. Score each finding with confidence (0-100).",
      description: "Test coverage review E##-S##"
    })
    ```
@@ -297,19 +336,19 @@ Mark the first todo as `in_progress` and proceed:
    - If successful: save report, parse severity, update `review_gates_passed`
 
    **Report locations**:
-   - `docs/reviews/design/design-review-{YYYY-MM-DD}-{story-id}.md`
-   - `docs/reviews/code/code-review-{YYYY-MM-DD}-{story-id}.md`
-   - `docs/reviews/code/code-review-testing-{YYYY-MM-DD}-{story-id}.md`
+   - `${BASE_PATH}/docs/reviews/design/design-review-{YYYY-MM-DD}-{story-id}.md`
+   - `${BASE_PATH}/docs/reviews/code/code-review-{YYYY-MM-DD}-{story-id}.md`
+   - `${BASE_PATH}/docs/reviews/code/code-review-testing-{YYYY-MM-DD}-{story-id}.md`
 
    **Deduplicate**: If code-review and code-review-testing flag the same file:line, keep the finding with the higher confidence score. Prefix deduplicated findings with their source agent.
 
-6. **Merge test quality findings**:
+8. **Merge test quality findings**:
 
    The `code-review-testing` agent replaces the previous inline test quality checks. Extract its AC Coverage Table and test quality findings for the consolidated report. No additional inline checks needed — the agent handles test isolation, selector quality, factory usage, and AC coverage.
 
    **TodoWrite**: Mark "Consolidate findings and verdict" → `in_progress`.
 
-7. **Consolidated report**:
+9. **Consolidated report**:
 
    Combine all findings into a single severity-triaged view:
 
@@ -326,15 +365,15 @@ Mark the first todo as `in_progress` and proceed:
 
    ### Design Review
    [Summary or "Skipped — no UI changes" or "Reused from previous run — [path]"]
-   Report: docs/reviews/design/design-review-{date}-{id}.md
+   Report: ${BASE_PATH}/docs/reviews/design/design-review-{date}-{id}.md
 
    ### Code Review (Architecture)
    [Summary with finding counts by severity or "Reused from previous run — [path]"]
-   Report: docs/reviews/code/code-review-{date}-{id}.md
+   Report: ${BASE_PATH}/docs/reviews/code/code-review-{date}-{id}.md
 
    ### Code Review (Testing)
    [AC coverage summary: N/N ACs covered, N gaps. Finding counts by severity or "Reused from previous run — [path]"]
-   Report: docs/reviews/code/code-review-testing-{date}-{id}.md
+   Report: ${BASE_PATH}/docs/reviews/code/code-review-testing-{date}-{id}.md
 
    ### Consolidated Findings
 
@@ -357,7 +396,7 @@ Mark the first todo as `in_progress` and proceed:
    - **Blocker/Critical findings** → STOP with specific fix instructions and file:line references.
    - **Non-blocking findings** → listed as warnings. Story can proceed to `/finish-story`.
 
-8. **Mark reviewed** (with gate validation):
+10. **Mark reviewed** (with gate validation):
 
    **Validate all required gates** before marking `reviewed: true`. Check that `review_gates_passed` contains one entry (base or `-skipped` variant) for each of the 9 canonical gates: `build`, `lint`, `type-check`, `format-check`, `unit-tests`, `e2e-tests`, `design-review`, `code-review`, `code-review-testing`.
 
@@ -371,7 +410,7 @@ Mark the first todo as `in_progress` and proceed:
 
    **TodoWrite**: Mark "Consolidate findings and verdict" → `completed`.
 
-9. **Completion output**: Display the following summary to the user:
+11. **Completion output**: Display the following summary to the user:
 
     **If PASS (no blockers)**:
 
@@ -399,9 +438,9 @@ Mark the first todo as `in_progress` and proceed:
     Run `/finish-story` to create the PR (lightweight — reviews already done).
 
     Reports saved:
-    - `docs/reviews/design/design-review-{date}-{id}.md`
-    - `docs/reviews/code/code-review-{date}-{id}.md`
-    - `docs/reviews/code/code-review-testing-{date}-{id}.md`
+    - `${BASE_PATH}/docs/reviews/design/design-review-{date}-{id}.md`
+    - `${BASE_PATH}/docs/reviews/code/code-review-{date}-{id}.md`
+    - `${BASE_PATH}/docs/reviews/code/code-review-testing-{date}-{id}.md`
 
     ---
     ```
