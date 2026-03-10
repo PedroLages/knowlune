@@ -4,7 +4,17 @@ import designTokens from './eslint-plugin-design-tokens.js'
 import reactHooksAsync from './eslint-plugin-react-hooks-async.js'
 
 export default tseslint.config(eslint.configs.recommended, ...tseslint.configs.recommended, {
-  ignores: ['dist/', 'node_modules/', 'playwright-report/', 'storybook-static/', 'coverage/', 'test-results/', '.claude/'],
+  ignores: [
+    'dist/',
+    'node_modules/',
+    'playwright-report/',
+    'storybook-static/',
+    'coverage/',
+    'test-results/',
+    '.claude/',
+    'experiments/', // Experimental code - not production quality
+    'docs/', // Documentation files
+  ],
 }, {
   plugins: {
     'design-tokens': designTokens,

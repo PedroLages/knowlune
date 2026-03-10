@@ -101,7 +101,10 @@ Mark the first todo as `in_progress` and proceed:
    Run these sequentially — stop on first failure:
 
    a. `npm run build` — STOP on failure with build errors.
-   b. `npm run lint` — STOP on failure with lint errors (if lint script exists, otherwise skip).
+   b. **Lint** — `npm run lint`. If lint errors found (if lint script exists, otherwise skip):
+      - Auto-fix: run `npx eslint . --fix` to fix auto-fixable issues (unused vars, import order, etc.).
+      - Re-run `npm run lint` to verify. If errors remain, STOP with error output and suggest manual fixes.
+      - Note in output: "Auto-fixed N ESLint issues."
    c. **Type check** — `npx tsc --noEmit`. If errors found:
       - Auto-fix: attempt to resolve type errors in files changed by the current branch (`git diff --name-only main...HEAD`). Only fix errors in branch-changed files — do not fix pre-existing errors in other files.
       - Re-run `npx tsc --noEmit`. If errors remain only in files NOT changed by the branch, note them as pre-existing and continue. If errors remain in branch-changed files, STOP with error output.
