@@ -182,10 +182,7 @@ export default function Settings() {
                 {/* Avatar with Elevated Surface */}
                 <div className="relative group">
                   {/* Elevated Avatar Container */}
-                  <div
-                    className="relative rounded-full p-1 bg-surface-elevated transition-all duration-500 ease-out"
-                    style={{ boxShadow: 'var(--shadow-warm) 0px 8px 24px' }}
-                  >
+                  <div className="relative rounded-full p-1 bg-surface-elevated transition-all duration-500 ease-out shadow-warm-lg">
                     <Avatar className="size-32 ring-2 ring-border/30 transition-all duration-500 ease-out group-hover:scale-105 group-hover:ring-brand/50 group-hover:shadow-2xl group-hover:shadow-brand/20">
                       {settings.profilePhotoDataUrl ? (
                         <AvatarImage

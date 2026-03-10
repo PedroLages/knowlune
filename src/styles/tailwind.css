@@ -18,3 +18,9 @@
     opacity: 0;
   }
 }
+
+@layer utilities {
+  .shadow-warm-lg {
+    box-shadow: var(--shadow-warm) 0px 8px 24px;
+  }
+}
