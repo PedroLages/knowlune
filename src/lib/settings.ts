@@ -4,12 +4,20 @@ export interface AppSettings {
   displayName: string
   bio: string
   theme: 'light' | 'dark' | 'system'
+  /**
+   * Base64-encoded data URL or object URL of the user's profile photo.
+   * Stored as a data URL (e.g., "data:image/png;base64,...") for persistence,
+   * or as an object URL for temporary session storage.
+   * @optional - undefined if no profile photo has been set
+   */
+  profilePhotoDataUrl?: string
 }
 
 const defaults: AppSettings = {
   displayName: 'Student',
   bio: '',
   theme: 'system',
+  profilePhotoDataUrl: undefined,
 }
 
 export function getSettings(): AppSettings {

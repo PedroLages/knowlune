@@ -4,7 +4,7 @@ import { Search, Bell, ChevronDown, ChevronLeft, ChevronRight, Sun, Moon, Menu }
 import { LevelUpLogo } from './figma/LevelUpLogo'
 import { Button } from './ui/button'
 import { Kbd } from './ui/kbd'
-import { Avatar, AvatarFallback } from './ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
 import { useTheme } from 'next-themes'
 import { SearchCommandPalette } from './figma/SearchCommandPalette'
 import { KeyboardShortcutsDialog } from './figma/KeyboardShortcutsDialog'
@@ -15,6 +15,8 @@ import { Sheet, SheetContent } from './ui/sheet'
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip'
 import { navigationGroups, settingsItem } from '@/app/config/navigation'
 import type { NavigationItem } from '@/app/config/navigation'
+import { getSettings } from '@/lib/settings'
+import { getInitials } from '@/lib/avatarUpload'
 
 // Individual nav link — wraps in Tooltip when collapsed
 function NavLink({
@@ -172,6 +174,21 @@ export function Layout() {
 
   const [searchOpen, setSearchOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [settings, setSettings] = useState(getSettings())
+
+  // Sync settings when storage changes (e.g., updated in Settings page)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setSettings(getSettings())
+    }
+    window.addEventListener('storage', handleStorageChange)
+    // Also listen for custom event from same tab
+    window.addEventListener('settingsUpdated', handleStorageChange)
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('settingsUpdated', handleStorageChange)
+    }
+  }, [])
 
   // Tablet sidebar sheet state with localStorage persistence
   const [sidebarOpen, setSidebarOpen] = useState(() => {
@@ -382,11 +399,21 @@ export function Layout() {
               role="group"
               aria-label="User profile"
             >
-              <Avatar className="w-10 h-10">
-                <AvatarFallback>S</AvatarFallback>
+              <Avatar className="w-10 h-10 ring-2 ring-transparent transition-all duration-200 hover:ring-brand/30 hover:shadow-md">
+                {settings.profilePhotoDataUrl ? (
+                  <AvatarImage
+                    src={settings.profilePhotoDataUrl}
+                    alt={settings.displayName}
+                    className="object-cover"
+                  />
+                ) : (
+                  <AvatarFallback className="bg-brand-soft text-brand font-semibold transition-colors duration-200 hover:bg-brand hover:text-white">
+                    {getInitials(settings.displayName)}
+                  </AvatarFallback>
+                )}
               </Avatar>
               <div className="text-left hidden sm:block">
-                <div className="font-semibold text-sm">Student</div>
+                <div className="font-semibold text-sm">{settings.displayName}</div>
               </div>
               <ChevronDown
                 className="w-4 h-4 text-muted-foreground hidden sm:block"
