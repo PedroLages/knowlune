@@ -1,4 +1,4 @@
-import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
+import { FIXED_DATE } from './../../utils/test-time'
 /**
  * Story 3.6: View Course Notes Collection — ATDD Acceptance Tests
  *

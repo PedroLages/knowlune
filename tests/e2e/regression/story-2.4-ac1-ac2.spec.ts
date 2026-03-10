@@ -1,4 +1,3 @@
-import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
 /**
  * Story 2.4: PDF Viewer with Page Navigation — ATDD Acceptance Tests (AC1-AC2)
  *

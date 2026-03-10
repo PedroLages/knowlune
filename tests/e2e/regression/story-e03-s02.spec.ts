@@ -171,9 +171,6 @@ test.describe('AC4: Tablet stacked layout', () => {
     await goToLessonPlayer(page)
 
     // THEN: A toggle to switch between video and notes should exist
-    const videoToggle = page.getByRole('button', { name: /video/i })
-    const notesToggle = page.getByRole('button', { name: /notes/i })
-    // At least one toggle mechanism should be present
     const toggleGroup = page.locator('[data-testid="tablet-view-toggle"]')
     await expect(toggleGroup).toBeVisible()
   })

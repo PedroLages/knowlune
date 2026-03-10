@@ -87,7 +87,7 @@ test.beforeEach(async ({ page }) => {
   }, closeSidebar())
 })
 
-test.afterEach(async ({ page, indexedDB }) => {
+test.afterEach(async ({ indexedDB }) => {
   try {
     await indexedDB.clearStore('challenges')
     await indexedDB.clearStore('studySessions')
@@ -248,7 +248,6 @@ test.describe('AC4: Streak-based challenge progress', () => {
     await seedStore(page, 'challenges', [challenge])
 
     // Seed a 7-day streak ending today so getCurrentStreak() returns 7
-    const today = new Date(FIXED_DATE)
     const studyLog = Array.from({ length: 7 }, (_, i) => {
       const date = new Date(FIXED_DATE)
       date.setDate(date.getDate() - (6 - i)) // 6 days ago through today

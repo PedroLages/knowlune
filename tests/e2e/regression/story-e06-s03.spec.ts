@@ -87,7 +87,7 @@ test.beforeEach(async ({ page }) => {
   }, closeSidebar())
 })
 
-test.afterEach(async ({ page, indexedDB }) => {
+test.afterEach(async ({ indexedDB }) => {
   try {
     await indexedDB.clearStore('challenges')
     await indexedDB.clearStore('contentProgress')

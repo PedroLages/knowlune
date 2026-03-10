@@ -18,7 +18,6 @@ import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants
 const COURSE_ID = '6mx'
 const MODULE_ID = '6mx-day1'
 const LESSON_1_ID = '6mx-day1-human-comm'
-const LESSON_2_ID = '6mx-day1-laws'
 
 // All lessons in the Day One module
 const DAY1_LESSON_IDS = [

@@ -1,4 +1,4 @@
-import { FIXED_DATE, getRelativeDate } from './../../utils/test-time'
+import { FIXED_DATE } from './../../utils/test-time'
 /**
  * E07-S05: Smart Study Schedule Suggestion
  *
@@ -66,7 +66,6 @@ test.describe('E07-S05: Smart Study Schedule Suggestion', () => {
 
   test('AC2: shows insufficient-data state when fewer than 7 study days', async ({
     page,
-    localStorage,
   }) => {
     // Seed only 3 distinct days
     await page.addInitScript(
@@ -88,7 +87,6 @@ test.describe('E07-S05: Smart Study Schedule Suggestion', () => {
 
   test('AC5: shows no-goal state when 7+ days but no time-based goal set', async ({
     page,
-    localStorage,
   }) => {
     // Seed 10 distinct study days, no goal
     await page.addInitScript(
@@ -111,7 +109,6 @@ test.describe('E07-S05: Smart Study Schedule Suggestion', () => {
 
   test('AC1 + AC3: shows full schedule with optimal hour and daily duration when ready', async ({
     page,
-    localStorage,
   }) => {
     await page.addInitScript(
       ({ log, goal }) => {
@@ -141,7 +138,6 @@ test.describe('E07-S05: Smart Study Schedule Suggestion', () => {
 
   test('AC4: shows per-course time allocation rows in ready state', async ({
     page,
-    localStorage,
   }) => {
     await page.addInitScript(
       ({ log, goal, progress }) => {
@@ -175,7 +171,6 @@ test.describe('E07-S05: Smart Study Schedule Suggestion', () => {
 
   test('AC5: settings link navigates to /settings from no-goal state', async ({
     page,
-    localStorage,
   }) => {
     await page.addInitScript(
       ({ log }) => {

@@ -9,14 +9,10 @@ import { test, expect } from '../../support/fixtures'
 import { createImportedCourse } from '../../support/fixtures/factories/imported-course-factory'
 import { goToCourses, navigateAndWait } from '../../support/helpers/navigation'
 import { seedStudySessions, seedImportedVideos } from '../../support/helpers/indexeddb-seed'
-import { RETRY_CONFIG } from '../../utils/constants'
 import type { Page } from '@playwright/test'
 import {
   FIXED_DATE,
-  FIXED_TIMESTAMP,
   getRelativeDate,
-  TEST_DATES,
-  getRelativeTimestamp,
 } from '../../utils/test-time'
 
 // ---------------------------------------------------------------------------
@@ -58,8 +54,6 @@ const TEST_VIDEOS: ImportedVideoTestData[] = [
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-const DB_NAME = 'ElearningDB'
 
 /** Navigate to Courses page, seed course + videos, reload. */
 async function seedCourseAndReload(
