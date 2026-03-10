@@ -33,7 +33,8 @@ const Challenges = React.lazy(() =>
   import('./pages/Challenges').then(m => ({ default: m.Challenges }))
 )
 const WebLLMTest = React.lazy(() => import('../experiments/WebLLMTest'))
-const WebLLMPerformanceTest = React.lazy(() => import('../experiments/WebLLMPerformanceTest'))
+// Temporarily commented out - causing Mobile Safari module loading failures in CI
+// const WebLLMPerformanceTest = React.lazy(() => import('../experiments/WebLLMPerformanceTest'))
 
 // Default exports work directly with React.lazy
 const MyClass = React.lazy(() => import('./pages/MyClass'))
@@ -194,14 +195,15 @@ export const router = createBrowserRouter([
           </SuspensePage>
         ),
       },
-      {
-        path: 'webllm-perf',
-        element: (
-          <SuspensePage>
-            <WebLLMPerformanceTest />
-          </SuspensePage>
-        ),
-      },
+      // Temporarily commented out - WebLLMPerformanceTest causing Mobile Safari failures
+      // {
+      //   path: 'webllm-perf',
+      //   element: (
+      //     <SuspensePage>
+      //       <WebLLMPerformanceTest />
+      //     </SuspensePage>
+      //   ),
+      // },
     ],
   },
 ])
