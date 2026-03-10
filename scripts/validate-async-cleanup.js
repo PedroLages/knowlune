@@ -12,7 +12,6 @@
  */
 
 import { ESLint } from 'eslint'
-import { readFileSync } from 'fs'
 import { join } from 'path'
 
 const projectRoot = process.cwd()

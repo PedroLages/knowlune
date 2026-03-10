@@ -16,4 +16,17 @@ export default tseslint.config(eslint.configs.recommended, ...tseslint.configs.r
     'design-tokens/no-hardcoded-colors': 'error',
     'react-hooks-async/async-cleanup': 'error',
   },
+}, {
+  // Node.js script environment configuration
+  files: ['scripts/**/*.mjs', 'scripts/**/*.js'],
+  languageOptions: {
+    globals: {
+      console: 'readonly',
+      process: 'readonly',
+      navigator: 'readonly',
+      performance: 'readonly',
+      document: 'readonly',
+      Promise: 'readonly',
+    },
+  },
 });

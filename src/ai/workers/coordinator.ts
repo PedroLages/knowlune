@@ -19,7 +19,6 @@ import type {
   TaskOptions,
   EmbedResult,
   SearchResult,
-  InferResult,
 } from './types'
 import { isSuccessResponse, isErrorResponse } from './types'
 

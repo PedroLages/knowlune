@@ -30,6 +30,7 @@
   /* Surface depth tokens */
   --brand-soft: #eff6ff;
   --brand-muted: #bfdbfe;
+  --success-soft: #f0fdf4;
   --surface-elevated: #ffffff;
   --surface-sunken: oklch(0.97 0.005 80);
 
@@ -122,6 +123,7 @@
   /* Surface depth tokens (dark) */
   --brand-soft: oklch(0.2 0.05 250);
   --brand-muted: oklch(0.3 0.08 250);
+  --success-soft: oklch(0.2 0.05 145);
   --surface-elevated: oklch(0.2 0 0);
   --surface-sunken: oklch(0.16 0 0);
   --shadow-brand: oklch(0.3 0.15 250 / 0.2);
@@ -241,6 +243,7 @@
   --color-freeze-day-text: var(--freeze-day-text);
   --color-brand-soft: var(--brand-soft);
   --color-brand-muted: var(--brand-muted);
+  --color-success-soft: var(--success-soft);
   --color-surface-elevated: var(--surface-elevated);
   --color-surface-sunken: var(--surface-sunken);
   --color-momentum-hot: var(--momentum-hot);

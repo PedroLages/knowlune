@@ -167,7 +167,7 @@ export default function MyClass() {
             <TabsContent value="by-status">
               {inProgress.length > 0 && (
                 <section className="mb-8">
-                  <div className="bg-brand/10 p-4 rounded-xl mb-4">
+                  <div className="bg-brand-soft p-4 rounded-xl mb-4">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
                       <Clock className="w-6 h-6 text-brand" />
                       In Progress
@@ -194,7 +194,7 @@ export default function MyClass() {
 
               {completed.length > 0 && (
                 <section className="mb-8">
-                  <div className="bg-success/10 p-4 rounded-xl mb-4">
+                  <div className="bg-success-soft p-4 rounded-xl mb-4">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
                       <CheckCircle className="w-6 h-6 text-success" />
                       Completed

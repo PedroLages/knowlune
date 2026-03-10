@@ -1,5 +1,5 @@
 import { test } from '@playwright/test'
-import { DELAYS, TIMEOUTS } from './utils/constants'
+import { TIMEOUTS } from './utils/constants'
 
 test('debug page load with network', async ({ page }) => {
   // Listen for failed requests
