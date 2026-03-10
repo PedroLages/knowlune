@@ -51,22 +51,26 @@ Open your browser to: **http://localhost:5173/webllm-test**
 ### 5. What to Test
 
 **Basic Functionality:**
+
 - [ ] Model loads without errors
 - [ ] Inference completes successfully
 - [ ] Streaming responses work
 - [ ] Metrics display correctly
 
 **Error Handling:**
+
 - [ ] Unsupported browser shows clear error
 - [ ] Network failures are caught and displayed
 - [ ] Multiple inferences work (no memory leaks)
 
 **Performance:**
+
 - [ ] First token latency <1000ms
 - [ ] Tokens/second >30
 - [ ] No browser tab crashes
 
 **Browser Compatibility:**
+
 - [ ] Chrome 113+ works
 - [ ] Safari 17+ works (if available)
 - [ ] Edge works
@@ -84,15 +88,18 @@ If you need to re-download the model (e.g., testing different model):
 ### 7. Known Issues
 
 **Headless Testing:**
+
 - Playwright/Puppeteer won't work reliably (WebGPU limitation)
 - Use headed browser for all testing
 
 **Memory:**
+
 - Model uses 2-3GB RAM
 - May crash on low-memory devices (<4GB total RAM)
 - Close other tabs if experiencing issues
 
 **First Load:**
+
 - Takes 30-40s total (download + compilation)
 - Be patient, it's a one-time cost
 - Subsequent loads are much faster (15-20s)
@@ -100,20 +107,24 @@ If you need to re-download the model (e.g., testing different model):
 ### 8. Troubleshooting
 
 **"WebGPU not supported":**
+
 - Update to Chrome 113+, Edge 113+, or Safari 17+
 - Check browser flags: chrome://flags/#enable-unsafe-webgpu
 
 **Model download fails:**
+
 - Check network connection
 - Check browser DevTools Console for CSP errors
 - Verify CSP allows HuggingFace domains
 
 **Shader compilation errors (f16 not allowed):**
+
 - Model uses f16 (half precision)
 - Try f32 variant if available
 - This is browser/GPU limitation
 
 **Browser tab crashes:**
+
 - Likely out of memory
 - Try on device with more RAM (8GB+)
 - Close other tabs
@@ -121,6 +132,7 @@ If you need to re-download the model (e.g., testing different model):
 ### 9. Next Steps
 
 After successful testing:
+
 1. Document findings in feasibility report
 2. Plan Epic 9 implementation
 3. Design UX for model loading

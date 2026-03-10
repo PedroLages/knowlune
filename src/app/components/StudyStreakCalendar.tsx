@@ -212,9 +212,7 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
             >
               <Flame className="size-5 text-warning" aria-hidden="true" />
             </motion.div>
-            <span className="text-sm font-medium text-warning">
-              Current Streak
-            </span>
+            <span className="text-sm font-medium text-warning">Current Streak</span>
           </div>
           <div
             data-testid="current-streak-value"
@@ -240,9 +238,7 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
         <div className="bg-brand-soft rounded-[24px] p-4 border border-brand">
           <div className="flex items-center gap-2 mb-2">
             <Award className="size-5 text-brand" aria-hidden="true" />
-            <span className="text-sm font-medium text-brand">
-              Longest Streak
-            </span>
+            <span className="text-sm font-medium text-brand">Longest Streak</span>
           </div>
           <div className="text-3xl font-bold tabular-nums text-brand">{longestStreak}</div>
           <div className="text-xs text-brand mt-1">personal best</div>
@@ -371,8 +367,7 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
                               'aspect-square w-full rounded-[4px] motion-safe:transition-[transform,box-shadow] motion-safe:duration-150',
                               'motion-safe:hover:scale-110 motion-safe:hover:shadow-md',
                               'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring',
-                              day.isToday &&
-                                'ring-2 ring-warning ring-offset-1 ring-offset-card',
+                              day.isToday && 'ring-2 ring-warning ring-offset-1 ring-offset-card',
                               day.hasActivity
                                 ? day.lessonCount >= 3
                                   ? 'bg-warning'

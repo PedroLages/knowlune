@@ -187,7 +187,7 @@ class WorkerCoordinator {
       })
 
       // Global error handler
-      worker.addEventListener('error', (event) => {
+      worker.addEventListener('error', event => {
         console.error('[Coordinator] Worker error:', event)
         this.handleWorkerError(type, event.error)
       })
@@ -226,7 +226,10 @@ class WorkerCoordinator {
       if (!entry) return
 
       // Only terminate if truly idle
-      if (entry.activeRequests === 0 && Date.now() - entry.lastUsed >= WORKER_POOL_CONFIG.idleTimeout) {
+      if (
+        entry.activeRequests === 0 &&
+        Date.now() - entry.lastUsed >= WORKER_POOL_CONFIG.idleTimeout
+      ) {
         entry.worker.terminate()
         this.pool.delete(workerId)
         console.log(`[Coordinator] Terminated idle worker: ${workerId}`)
@@ -353,9 +356,7 @@ if (typeof window !== 'undefined') {
 // Type-Safe API Exports
 // ============================================================================
 
-export async function generateEmbeddings(
-  texts: string[]
-): Promise<Float32Array[]> {
+export async function generateEmbeddings(texts: string[]): Promise<Float32Array[]> {
   const result = await coordinator.executeTask<EmbedResult>('embed', { texts })
   return result.embeddings
 }
@@ -371,8 +372,6 @@ export async function searchSimilarNotes(
   return result.results
 }
 
-export async function loadVectorIndex(
-  vectors: Record<string, Float32Array>
-): Promise<void> {
+export async function loadVectorIndex(vectors: Record<string, Float32Array>): Promise<void> {
   await coordinator.executeTask('load-index', { vectors })
 }

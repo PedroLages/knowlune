@@ -35,7 +35,9 @@ export default function WebLLMTest() {
 
       // Check WebGPU support
       if (!navigator.gpu) {
-        throw new Error('WebGPU is not supported in this browser. Please use Chrome/Edge 113+ or Safari 17+')
+        throw new Error(
+          'WebGPU is not supported in this browser. Please use Chrome/Edge 113+ or Safari 17+'
+        )
       }
 
       // Create engine with progress callback
@@ -43,7 +45,7 @@ export default function WebLLMTest() {
       const selectedModel = 'Llama-3.2-1B-Instruct-q4f32_1-MLC'
 
       const newEngine = await webllm.CreateMLCEngine(selectedModel, {
-        initProgressCallback: (progress) => {
+        initProgressCallback: progress => {
           setLoadProgress(progress.text)
           console.log('Load progress:', progress)
         },
@@ -81,9 +83,7 @@ export default function WebLLMTest() {
       firstTokenTime.current = 0
       tokenCount.current = 0
 
-      const messages: webllm.ChatCompletionMessageParam[] = [
-        { role: 'user', content: prompt }
-      ]
+      const messages: webllm.ChatCompletionMessageParam[] = [{ role: 'user', content: prompt }]
 
       const completion = await engine.chat.completions.create({
         messages,
@@ -170,17 +170,11 @@ export default function WebLLMTest() {
           <div>
             <strong>Model:</strong> Llama-3.2-1B-Instruct (quantized 4-bit)
           </div>
-          <Button
-            onClick={initializeEngine}
-            disabled={loading || !!engine}
-            className="w-full"
-          >
+          <Button onClick={initializeEngine} disabled={loading || !!engine} className="w-full">
             {loading ? 'Loading Model...' : engine ? 'Model Loaded' : 'Load Model'}
           </Button>
           {loadProgress && (
-            <div className="text-sm text-muted-foreground whitespace-pre-wrap">
-              {loadProgress}
-            </div>
+            <div className="text-sm text-muted-foreground whitespace-pre-wrap">{loadProgress}</div>
           )}
         </div>
       </Card>
@@ -194,7 +188,7 @@ export default function WebLLMTest() {
               <label className="block text-sm font-medium mb-2">Prompt</label>
               <Textarea
                 value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
+                onChange={e => setPrompt(e.target.value)}
                 rows={3}
                 disabled={generating}
                 className="w-full"
@@ -247,9 +241,7 @@ export default function WebLLMTest() {
             {metrics.memoryUsage > 0 && (
               <div>
                 <strong>Memory Usage:</strong>
-                <div className="text-2xl font-bold text-brand">
-                  {metrics.memoryUsage} MB
-                </div>
+                <div className="text-2xl font-bold text-brand">{metrics.memoryUsage} MB</div>
               </div>
             )}
           </div>

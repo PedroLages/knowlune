@@ -114,14 +114,10 @@ export function isSuccessResponse<T>(
   return response.type === 'success'
 }
 
-export function isErrorResponse(
-  response: WorkerResponse
-): response is WorkerErrorResponse {
+export function isErrorResponse(response: WorkerResponse): response is WorkerErrorResponse {
   return response.type === 'error'
 }
 
-export function isStreamChunk(
-  response: WorkerResponse
-): response is WorkerStreamChunk {
+export function isStreamChunk(response: WorkerResponse): response is WorkerStreamChunk {
   return response.type === 'stream-chunk' || response.type === 'stream-end'
 }

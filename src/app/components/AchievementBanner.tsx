@@ -104,10 +104,7 @@ export function AchievementBanner({ completedLessons }: AchievementBannerProps) 
                 className="text-gold motion-safe:transition-[stroke-dashoffset] motion-safe:duration-700"
               />
             </svg>
-            <Trophy
-              className="absolute inset-0 m-auto size-5 text-warning"
-              aria-hidden="true"
-            />
+            <Trophy className="absolute inset-0 m-auto size-5 text-warning" aria-hidden="true" />
           </div>
 
           <div className="min-w-0">

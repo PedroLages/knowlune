@@ -132,7 +132,7 @@ self.onmessage = async (e: MessageEvent) => {
 // Error Handler
 // ============================================================================
 
-self.addEventListener('error', (event) => {
+self.addEventListener('error', event => {
   console.error('[EmbeddingWorker] Unhandled error:', event)
 
   // Notify coordinator of crash

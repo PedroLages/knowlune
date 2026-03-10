@@ -123,9 +123,7 @@ export function ModuleAccordion({
                       <div
                         className={cn(
                           'flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors',
-                          isActive
-                            ? 'bg-brand-soft text-brand font-medium'
-                            : 'hover:bg-accent'
+                          isActive ? 'bg-brand-soft text-brand font-medium' : 'hover:bg-accent'
                         )}
                       >
                         <Popover

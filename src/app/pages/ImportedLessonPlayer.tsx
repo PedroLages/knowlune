@@ -123,10 +123,7 @@ export function ImportedLessonPlayer() {
         className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground"
       >
         <p>Video not found.</p>
-        <Link
-          to={`/imported-courses/${courseId}`}
-          className="text-sm text-brand hover:underline"
-        >
+        <Link to={`/imported-courses/${courseId}`} className="text-sm text-brand hover:underline">
           Back to Course
         </Link>
       </div>

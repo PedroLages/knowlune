@@ -34,8 +34,7 @@ const categoryLabels: Record<CourseCategory, string> = {
 }
 
 const categoryColors: Record<CourseCategory, string> = {
-  'behavioral-analysis':
-    'bg-emerald-100 text-emerald-700',
+  'behavioral-analysis': 'bg-emerald-100 text-emerald-700',
   'influence-authority': 'bg-brand-soft text-brand',
   'confidence-mastery': 'bg-amber-100 text-amber-700',
   'operative-training': 'bg-red-100 text-red-700',
@@ -183,10 +182,7 @@ export function CourseCard({
             {categoryLabels[course.category]}
           </Badge>
         ) : variant === 'overview' ? (
-          <Badge
-            variant="secondary"
-            className="bg-brand-soft text-brand"
-          >
+          <Badge variant="secondary" className="bg-brand-soft text-brand">
             {formatCategory(course.category)}
           </Badge>
         ) : (
@@ -556,10 +552,7 @@ export function CourseCard({
       case 'overview':
         return (
           <div className="p-5 flex-1 flex flex-col">
-            <Badge
-              variant="secondary"
-              className="mb-2 bg-brand-soft text-brand w-fit"
-            >
+            <Badge variant="secondary" className="mb-2 bg-brand-soft text-brand w-fit">
               {formatCategory(course.category)}
             </Badge>
             <h3 className="font-semibold text-base line-clamp-2 mb-1 group-hover:text-brand transition-colors">

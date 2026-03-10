@@ -12,7 +12,10 @@ global.Worker = class MockWorker extends EventTarget {
   onmessage: ((event: MessageEvent) => void) | null = null
   onerror: ((event: ErrorEvent) => void) | null = null
 
-  constructor(public url: string | URL, public options?: WorkerOptions) {
+  constructor(
+    public url: string | URL,
+    public options?: WorkerOptions
+  ) {
     super()
   }
 

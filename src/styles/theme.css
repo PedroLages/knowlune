@@ -91,7 +91,7 @@
   --heatmap-level-1: hsl(var(--success) / 0.3);
   --heatmap-level-2: hsl(var(--success) / 0.5);
   --heatmap-level-3: hsl(var(--success) / 0.7);
-  --heatmap-level-4: hsl(var(--success) / 1.0);
+  --heatmap-level-4: hsl(var(--success) / 1);
 }
 
 .dark {
@@ -179,7 +179,7 @@
   --heatmap-level-1: hsl(var(--success) / 0.3);
   --heatmap-level-2: hsl(var(--success) / 0.5);
   --heatmap-level-3: hsl(var(--success) / 0.7);
-  --heatmap-level-4: hsl(var(--success) / 1.0);
+  --heatmap-level-4: hsl(var(--success) / 1);
 }
 
 @theme inline {

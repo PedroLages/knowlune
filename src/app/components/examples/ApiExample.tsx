@@ -290,9 +290,7 @@ export function UserProfileExample() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3 bg-brand-soft rounded-lg">
-                <div className="text-2xl font-bold text-brand">
-                  {profile.stats.currentStreak}
-                </div>
+                <div className="text-2xl font-bold text-brand">{profile.stats.currentStreak}</div>
                 <div className="text-xs text-muted-foreground">Day Streak</div>
               </div>
               <div className="p-3 bg-success/10 rounded-lg">

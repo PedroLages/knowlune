@@ -268,10 +268,7 @@ function DeletedContentBanner({ count }: { count: number }) {
       data-testid="content-unavailable-message"
       className="flex items-center gap-3 rounded-2xl border border-gold bg-gold-muted p-4 mb-4"
     >
-      <AlertCircle
-        aria-hidden="true"
-        className="size-5 text-warning flex-shrink-0"
-      />
+      <AlertCircle aria-hidden="true" className="size-5 text-warning flex-shrink-0" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-warning">
           {count === 1
