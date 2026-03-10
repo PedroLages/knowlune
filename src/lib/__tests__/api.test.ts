@@ -14,7 +14,9 @@ describe('ApiClientError', () => {
 
     it('creates error with message, status code, and API response', () => {
       const apiResponse: ApiError = {
+        error: 'Not Found',
         message: 'Resource not found',
+        statusCode: 404,
         code: 'NOT_FOUND',
         details: { resourceId: '123' },
       }
@@ -79,7 +81,9 @@ describe('ApiClientError', () => {
   describe('API response details', () => {
     it('preserves API error code', () => {
       const apiResponse: ApiError = {
+        error: 'Bad Request',
         message: 'Validation failed',
+        statusCode: 400,
         code: 'VALIDATION_ERROR',
       }
       const error = new ApiClientError('Validation error', 400, apiResponse)
@@ -89,7 +93,9 @@ describe('ApiClientError', () => {
 
     it('preserves API error details', () => {
       const apiResponse: ApiError = {
+        error: 'Bad Request',
         message: 'Invalid input',
+        statusCode: 400,
         code: 'VALIDATION_ERROR',
         details: { field: 'email', reason: 'Invalid format' },
       }
@@ -100,7 +106,9 @@ describe('ApiClientError', () => {
 
     it('handles API response without details', () => {
       const apiResponse: ApiError = {
+        error: 'Internal Server Error',
         message: 'Something went wrong',
+        statusCode: 500,
         code: 'UNKNOWN_ERROR',
       }
       const error = new ApiClientError('Unknown error', 500, apiResponse)

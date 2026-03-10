@@ -12,7 +12,7 @@
  * Output: docs/research/epic-9-webllm-streaming-validation.md
  */
 
-import { chromium, Browser, Page } from '@playwright/test'
+import { chromium, Page } from '@playwright/test'
 import * as fs from 'fs'
 import * as path from 'path'
 

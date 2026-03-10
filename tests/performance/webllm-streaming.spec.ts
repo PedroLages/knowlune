@@ -29,8 +29,8 @@ interface TestResult {
 test.describe.configure({ mode: 'serial' })
 
 test.describe('WebLLM Streaming Performance', () => {
-  let results: TestResult[] = []
-  let testPage: any // Shared page instance across all tests
+  const results: TestResult[] = []
+  let testPage: Page | undefined // Shared page instance across all tests
 
   test.beforeAll(async ({ browser, browserName }) => {
     test.skip(browserName !== 'chromium', 'WebGPU only available in Chromium')
