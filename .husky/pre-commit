@@ -1,0 +1,74 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Validate lessons learned sections in story files before commit
+# Epic 8 Retrospective Action Item #1 - prevent documentation debt
+
+echo "🔍 Validating lessons learned sections..."
+
+# Get all staged story files matching pattern: docs/implementation-artifacts/*-*.md
+# Excludes: epic retros, story-template.md, and other non-story files
+STAGED_STORY_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^docs/implementation-artifacts/[0-9]+-[0-9]+.*\.md$' || true)
+
+if [ -z "$STAGED_STORY_FILES" ]; then
+  echo "✅ No story files staged - skipping validation"
+  exit 0
+fi
+
+# Placeholder patterns to detect
+PLACEHOLDER_PATTERNS=(
+  '\[Document issues, solutions'
+  '\[Populated by /review-story'
+)
+
+FILES_WITH_PLACEHOLDERS=""
+
+# Check each staged story file for placeholder text in Lessons Learned section
+for FILE in $STAGED_STORY_FILES; do
+  if [ -f "$FILE" ]; then
+    # Extract "Challenges and Lessons Learned" section
+    # Look for the section header and check content until next ## header or EOF
+    LESSONS_SECTION=$(sed -n '/^## Challenges and Lessons Learned/,/^##[^#]/p' "$FILE" || true)
+
+    if [ -z "$LESSONS_SECTION" ]; then
+      # Section might not exist (older story files) - warn but don't block
+      echo "⚠️  Warning: No 'Challenges and Lessons Learned' section found in $FILE"
+      continue
+    fi
+
+    # Check for placeholder patterns
+    for PATTERN in "${PLACEHOLDER_PATTERNS[@]}"; do
+      if echo "$LESSONS_SECTION" | grep -q "$PATTERN"; then
+        FILES_WITH_PLACEHOLDERS="$FILES_WITH_PLACEHOLDERS\n  - $FILE"
+        break
+      fi
+    done
+  fi
+done
+
+# Fail commit if placeholders found
+if [ -n "$FILES_WITH_PLACEHOLDERS" ]; then
+  echo ""
+  echo "❌ Commit blocked: Placeholder text found in 'Challenges and Lessons Learned' sections"
+  echo ""
+  echo "The following story files have incomplete lessons learned documentation:"
+  echo -e "$FILES_WITH_PLACEHOLDERS"
+  echo ""
+  echo "Placeholder patterns detected:"
+  echo "  - [Document issues, solutions...]"
+  echo "  - [Populated by /review-story]"
+  echo ""
+  echo "📝 Action required:"
+  echo "  1. Fill in meaningful lessons learned based on your implementation experience"
+  echo "  2. Document challenges encountered, solutions applied, and patterns discovered"
+  echo "  3. Stage the updated files: git add <file>"
+  echo "  4. Retry commit"
+  echo ""
+  echo "💡 Tip: Run '/review-story' to auto-populate review feedback sections, but"
+  echo "    YOU must write the lessons learned section manually before committing."
+  echo ""
+  exit 1
+fi
+
+echo "✅ All story files have documented lessons learned"
+exit 0

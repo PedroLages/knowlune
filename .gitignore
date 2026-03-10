@@ -34,3 +34,6 @@ scripts/.venv/
 # Auto-story runtime logs
 scripts/auto-story.log
 scripts/auto-story-progress.log
+
+# Experiments
+experiments/
