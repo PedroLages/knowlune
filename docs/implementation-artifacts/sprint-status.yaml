@@ -149,7 +149,7 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 8: Analytics & Reports Dashboard
   # ──────────────────────────────────────────────────
-  epic-8: in-progress
+  epic-8: done
   8-1-study-time-analytics: done
   8-2-course-completion-tracking: done
   8-3-learning-velocity-and-trends: done

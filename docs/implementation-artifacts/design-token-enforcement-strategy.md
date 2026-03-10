@@ -25,7 +25,53 @@ After migrating 186 hardcoded color violations to design tokens, this document o
 
 ## Multi-Layer Prevention Strategy
 
-### Layer 1: Real-Time Developer Feedback (Editor Integration)
+**Important:** This strategy addresses **two types of code authors**:
+1. **Human Developers** - Write code in editors (VSCode, etc.)
+2. **AI Assistants** - Write code via tools (Claude Code, Copilot, etc.)
+
+Each layer prevents violations for different audiences:
+
+| Layer | Human Developers | AI Assistants |
+|-------|-----------------|---------------|
+| **Layer 1: Editor Integration** | ✅ Real-time feedback | ❌ No editor access |
+| **Layer 2: Pre-Commit Hook** | ✅ Blocks commits | ✅ Blocks commits |
+| **Layer 3: CI/CD** | ✅ Blocks PR merges | ✅ Blocks PR merges |
+| **Layer 4: Documentation** | ✅ Reference material | ✅ **Primary prevention** |
+| **Layer 5: Post-Write Validation** | ⚠️ Backup check | ✅ **Primary detection** |
+
+### How AI Assistants Are Prevented
+
+**AI assistants (like Claude Code) don't use editors**, so prevention works differently:
+
+**Before Writing Code:**
+1. **CLAUDE.md** - Loaded at session start, contains design token quick reference
+2. **Cheat sheet** - Searchable documentation with token mappings
+3. **Agent prompts** - Explicit token mappings in task instructions
+
+**After Writing Code:**
+1. **ESLint validation** - AI runs `npm run lint` to check for errors
+2. **Pre-commit hook** - Blocks commits with hardcoded colors
+3. **CI/CD checks** - Final safety net before merge
+
+**Example AI Prevention Flow:**
+```
+1. AI reads CLAUDE.md → Sees "Never use bg-blue-600, use bg-brand"
+2. AI writes code using bg-brand
+3. AI runs lint → No errors
+4. AI commits → Pre-commit hook validates → Success
+```
+
+**If AI makes a mistake:**
+```
+1. AI writes code using bg-blue-600 (wrong)
+2. AI runs lint → Error: "Hardcoded color detected"
+3. AI sees error → Fixes to bg-brand → Lint passes
+4. AI commits → Pre-commit hook validates → Success
+```
+
+---
+
+### Layer 1: Real-Time Developer Feedback (Editor Integration - Human Developers Only)
 
 **Implementation:**
 

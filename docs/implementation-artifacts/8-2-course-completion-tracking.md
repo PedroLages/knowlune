@@ -120,4 +120,26 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+### formatDuration Edge Case: Minutes Overflow Boundary
+
+The initial implementation of `formatDuration()` had a critical boundary bug: `7199` seconds (1h 59m 59s) correctly yielded "1h 59m", but `7200` seconds (exactly 2 hours) yielded "1h 60m" instead of "2h 0m". The issue was calculating `mins = Math.floor(seconds / 60) % 60` which computes total minutes first, then modulo — for 7200s this gives `120 % 60 = 0` correctly, but the display logic didn't handle the edge case when minutes equals 60.
+
+**Solution**: Extracted `formatDuration()` to `src/lib/format.ts` as a shared utility and fixed the calculation to use `Math.floor((seconds % 3600) / 60)` which correctly isolates the minute component within the current hour. Added comprehensive unit tests covering boundary cases (3599s, 3600s, 7199s, 7200s).
+
+**Lesson**: Always unit test boundary conditions for time formatting — edge cases at hour boundaries (3600, 7200, etc.) expose modulo arithmetic bugs that don't surface with typical test data.
+
+### Recharts ResponsiveContainer Nesting Anti-Pattern
+
+Initial implementation nested `<ResponsiveContainer>` inside shadcn's `<ChartContainer>` component, causing React warnings and layout thrashing. `ChartContainer` already wraps its own `ResponsiveContainer` internally — nesting creates duplicate resize observers competing for the same DOM element.
+
+**Solution**: Removed the explicit `<ResponsiveContainer>` wrapper and passed chart components directly as children to `<ChartContainer>`. This is the correct pattern for all shadcn chart components.
+
+**Lesson**: When using abstraction libraries like shadcn/ui, check component internals before adding "helpful" wrappers. Many shadcn components already include ResponsiveContainer, aspect ratio handling, or other layout utilities.
+
+### Non-Interactive Timeline Elements with Interactive Styling
+
+The visual timeline milestones initially used `role="button"` with `cursor-pointer` and `onKeyDown` handlers despite being purely informational (no actions on click/keypress). This violated WCAG 2.1 SC 4.1.2 (Name, Role, Value) by advertising interactivity where none existed.
+
+**Solution**: Changed timeline milestones from `role="button"` to `role="listitem"` within an ordered list (`<ol>`), removed cursor-pointer and keyboard handlers, but kept `tabIndex={0}` for keyboard focus navigation (focus-visible ring still applies). Each milestone remains keyboard-navigable for screen reader users to explore chronologically, but no longer implies an action.
+
+**Lesson**: "Keyboard navigable" ≠ "interactive button". Use `tabIndex={0}` + `role="listitem"` for focusable informational content, reserve `role="button"` only for elements that trigger actions. This pattern applies to timelines, progress indicators, and read-only data visualizations.

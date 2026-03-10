@@ -133,4 +133,34 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+### CSS Flex Margin Compounding Bug: 5008px Horizontal Scroll Bloat
+
+The ActivityHeatmap month labels initially used `marginLeft` within a flex container to position labels above their corresponding week columns. However, flex layout computes margins **additively** across all children — 52 weeks × 96px spacing = ~5008px of cumulative left margin, causing massive horizontal scroll even though only 12 months were visible.
+
+**Solution**: Replaced flex-based layout with `position: absolute` for month labels. Each label calculates its `left` position as `DAY_LABEL_OFFSET + weekIndex * CELL_STEP` where weekIndex comes from the first cell of each month. Introduced named constants (`DAY_LABEL_OFFSET = 48px`, `CELL_STEP = 16px`) for future-proof alignment adjustments.
+
+**Lesson**: Flex margins compound across all siblings. For sparse labels over a grid (month headers, year markers, etc.), use absolute positioning with calculated offsets instead of relying on flex gap/margin. This pattern applies to any calendar-style visualization with infrequent labels.
+
+### Sidebar Race Condition in Tablet Viewport E2E Tests
+
+E2E tests initially seeded sidebar state with `page.evaluate(() => localStorage.setItem(...))` **after** `page.goto('/reports')`. At 640-1023px viewports, the Layout component's Sheet sidebar defaults to `open: true` when localStorage is empty, creating a fullscreen overlay that blocks all pointer events. The race condition: Sheet component mounts and reads localStorage before the test's `evaluate()` call completes, locking tests at tablet breakpoints.
+
+**Solution**: Use `page.addInitScript()` for sidebar localStorage seeding instead of `page.evaluate()` after navigation. `addInitScript()` runs **before** any page scripts execute, ensuring localStorage is populated before the Sheet component's `useState(() => localStorage.getItem())` initialization reads it.
+
+**Lesson**: When seeding application state that affects component mount behavior (localStorage, cookies, IndexedDB for instant reads), always use `page.addInitScript()` before `page.goto()`. Never seed after navigation if the state impacts initial render. This is the canonical pattern for E2E test setup — see sidebar seeding across all Epic 8 tests.
+
+### Date.now() Captured in useMemo: Stale Classification Logic
+
+Both ActivityHeatmap and RetentionInsights initially called `Date.now()` directly inside `useMemo` dependency arrays to derive "abandoned" course classifications. However, `useMemo` dependencies are compared by reference — `Date.now()` returns a primitive number, so it's compared by value, but the closure captured the timestamp at **first render**, not at each data reload. Result: classifications became stale after IndexedDB change events triggered new data loads but didn't invalidate the memo.
+
+**Solution**: Capture `nowMs = Date.now()` as **state** (updated on each data reload), then include `nowMs` as an explicit `useMemo` dependency. This ensures derived classifications stay synchronized with the data they depend on.
+
+**Lesson**: Never call `Date.now()` or `new Date()` directly inside `useMemo` or `useCallback` closures. Capture timestamps as state or props so React's dependency tracking works correctly. This pattern mirrors the `at-risk.ts` and `momentum.ts` pure functions which accept `now` as a parameter for testability and determinism.
+
+### Touch Target Expansion Without Layout Shift
+
+Heatmap cells (12×12px) failed WCAG 2.5.5 (Target Size: Enhanced) which requires ≥44×44px touch targets. Naive solution of increasing cell size would break the 365-day grid layout (52 weeks × 7 days requires tight spacing to fit in viewport).
+
+**Solution**: Added `::before` pseudo-element with `before:-inset-1` (Tailwind shorthand for `inset: -0.25rem`) which expands the tappable area to ~20×20px without changing the visual cell size or layout. The pseudo-element is `absolute` positioned and captures pointer events while the visible cell maintains 12×12px dimensions.
+
+**Lesson**: Use `::before` or `::after` pseudo-elements with negative inset to expand touch targets without layout changes. This technique works for any dense grid or small interactive elements (calendar cells, data visualizations, icon buttons) where increasing visible size would break the design.

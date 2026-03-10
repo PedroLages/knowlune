@@ -89,6 +89,16 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src')
     }
   },
+  server: {
+    headers: {
+      // Required for WebLLM/WebGPU (SharedArrayBuffer)
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+      'Cross-Origin-Opener-Policy': 'same-origin',
+    },
+  },
+  optimizeDeps: {
+    exclude: ['@mlc-ai/web-llm'],
+  },
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
   test: {
@@ -117,6 +127,10 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          // WebLLM (large ML inference engine - only loaded on demand)
+          if (id.includes('@mlc-ai/web-llm')) {
+            return 'webllm'
+          }
           // ProseMirror core (TipTap's editing engine)
           if (id.includes('prosemirror')) {
             return 'prosemirror'

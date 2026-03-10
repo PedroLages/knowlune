@@ -32,6 +32,7 @@ const SessionHistory = React.lazy(() =>
 const Challenges = React.lazy(() =>
   import('./pages/Challenges').then(m => ({ default: m.Challenges }))
 )
+const WebLLMTest = React.lazy(() => import('../experiments/WebLLMTest'))
 
 // Default exports work directly with React.lazy
 const MyClass = React.lazy(() => import('./pages/MyClass'))
@@ -181,6 +182,14 @@ export const router = createBrowserRouter([
         element: (
           <SuspensePage>
             <Settings />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'webllm-test',
+        element: (
+          <SuspensePage>
+            <WebLLMTest />
           </SuspensePage>
         ),
       },

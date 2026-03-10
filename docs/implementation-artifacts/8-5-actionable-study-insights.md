@@ -130,4 +130,42 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+### Timezone-Dependent Date Bucketing: toLocaleDateString vs toISOString
+
+The initial `countDistinctStudyDays()` implementation used `toLocaleDateString('sv-SE')` to extract YYYY-MM-DD date strings for Set-based deduplication. However, this converts timestamps to the **user's local timezone** before formatting — a session at `2026-03-09T01:30:00Z` becomes "2026-03-09" in UTC+0 but "2026-03-08" in UTC-5 (EST). Result: distinct day counts varied based on machine timezone, causing non-deterministic E2E test failures.
+
+**Solution**: Replaced `toLocaleDateString('sv-SE')` with `toISOString().slice(0, 10)` which always operates in UTC and deterministically extracts the date portion. This ensures `countDistinctStudyDays()` returns the same count regardless of runtime timezone.
+
+**Lesson**: For date bucketing in analytics (distinct days, weekly aggregations, etc.), **always** use UTC-based extraction (`toISOString().slice(0, 10)`) not locale-based formatting. This pattern applies across all date-grouping logic in the Reports page (StudyTimeAnalytics, LearningVelocityTrends, etc.). Only use `toLocaleDateString()` for **display** formatting shown to users.
+
+### Regex-Parsing Display Text for Sorting: Decoupled Data Pattern
+
+The `findMomentumAlertInsights()` generator initially embedded "daysSince" values in the observation string (e.g., "Course X has had no activity for 15 days") then used regex `/(\d+) days/` to extract and sort by inactivity duration. This violated the principle of separating data from presentation and made sorting brittle (fails if wording changes, doesn't handle pluralization edge cases).
+
+**Solution**: Store `daysSince` as a **numeric field** on the insight object (added `metadata: { daysSince: number }` to InsightCategory type). Sort by `metadata.daysSince` directly, then format the observation string for display. This decouples data processing from presentation.
+
+**Lesson**: Never regex-parse display strings to recover data for business logic (sorting, filtering, thresholds). Always store structured metadata alongside human-readable text. This pattern mirrors how RecentActivity stores `type` (enum) and `formattedTime` (display string) separately.
+
+### Insight Count Guarantees: Fallback Generator Pattern
+
+Initial implementation generated insights opportunistically (optimal day, momentum alerts, note correlation) but provided no guarantees about minimum count. Story acceptance criteria requires "3 to 5 insights" — a user with only completed courses (no momentum alerts) and no notes (no correlation) might see only 1 insight (optimal day), failing AC1.
+
+**Solution**: Implemented **fallback generators** (`findStudyFrequencyInsight`, `findStudyConsistencyInsight`) that analyze session distribution patterns and always produce insights when 2+ weeks of data exist. The `generateInsights()` orchestrator now guarantees ≥3 insights by combining primary generators (high signal) with fallbacks (always available).
+
+**Lesson**: When product requirements specify exact counts ("3 to 5"), implement fallback/default generators that activate when primary heuristics don't apply. This pattern ensures graceful degradation — users always see value even with atypical data patterns (all completed courses, no notes, sparse sessions, etc.).
+
+### localStorage Cache Invalidation: Session Day Deltas vs Timestamp Comparison
+
+Initial cache invalidation logic compared `cachedGeneratedAt` timestamp with current time to detect staleness. However, this approach doesn't account for **sparse study patterns** — 30 days elapsed time with only 2 new study days shouldn't trigger refresh (user hasn't accumulated 7+ days of new data). Conversely, a user studying daily could accumulate 7 new days in just 1 week of elapsed time.
+
+**Solution**: Store `sessionDays` (distinct study day count at generation time) in cache. Invalidate when `countDistinctStudyDays(currentSessions) - cachedSessionDays >= 7`. This measures **data accumulation** (7+ new distinct study days) rather than elapsed time, matching how insights actually derive signal from study patterns.
+
+**Lesson**: Cache invalidation for analytics should key on **data accumulation** (new events, distinct days, etc.) not elapsed time. This pattern applies to any derived metric that depends on event density rather than staleness (momentum calculations, streak tracking, completion trends).
+
+### Focus Ring Contrast Failure: ring-ring Default vs WCAG 1.4.11
+
+Initial focus indicators used Tailwind's `ring-ring` token (maps to `--color-ring` CSS variable) which has 2.30:1 contrast against `--color-card` background. WCAG 2.1 SC 1.4.11 (Non-text Contrast) requires ≥3:1 for focus indicators. Code review flagged this as a blocker.
+
+**Solution**: Changed all focus rings from `ring-ring` to `ring-brand` (5.17:1 contrast) to meet AA+ compliance. This pattern now applies across all new interactive elements — `ring-brand` is the project standard for focus indicators, not `ring-ring`.
+
+**Lesson**: The default `ring-ring` token in theme.css is **not** WCAG-compliant for focus indicators. Always use `ring-brand` for focus states on light backgrounds, `ring-primary-foreground` on dark. This finding applies retroactively to all Epic 7/8 components and should be validated in future design reviews.
