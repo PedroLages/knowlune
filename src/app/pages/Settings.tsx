@@ -206,7 +206,7 @@ export default function Settings() {
                       size="sm"
                       onClick={() => photoInputRef.current?.click()}
                       disabled={isUploading}
-                      className="gap-2 transition-all duration-200 hover:scale-105 hover:shadow-md"
+                      className="gap-2 transition-all duration-200 hover:scale-105 hover:shadow-md min-h-[44px] min-w-[44px]"
                     >
                       {isUploading ? (
                         <>
@@ -226,7 +226,7 @@ export default function Settings() {
                         variant="ghost"
                         size="sm"
                         onClick={handleRemovePhoto}
-                        className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
+                        className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 transition-all duration-200 min-h-[44px]"
                       >
                         <X className="w-4 h-4" />
                         Remove
