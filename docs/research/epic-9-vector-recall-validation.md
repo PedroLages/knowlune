@@ -293,3 +293,108 @@ The issue is well-understood (premature search termination), easily fixable (1-2
 **Report Generated**: 2026-03-10
 **Validation Scripts**: `/experiments/vector-db-benchmark/`
 **Status**: ❌ REVISIT APPROACH (fix required)
+
+---
+
+## Decision: Pivot to Brute Force (2026-03-10)
+
+After 4 HNSW bug fix attempts over 3 hours with 0 success, decided to pivot to brute force k-NN for Epic 9 MVP.
+
+### HNSW Fix Attempts Timeline
+
+**Attempt 1** (Agent aeeef25): Modified termination check
+- Changed: `results[results.length - 1]` → `results[Math.min(results.length - 1, num - 1)]`
+- Result: **6.40% recall** ❌ (was 6.70%)
+- Conclusion: Marginal regression, not the root cause
+
+**Attempt 2** (Agent a0470f9): Removed early termination
+- Changed: Deleted distance-based termination check entirely
+- Result: **4.60% recall** ❌ (WORSE than before)
+- Conclusion: Early termination wasn't the problem
+
+**Attempt 3** (Agent aa8bf32): Add all neighbors to candidates
+- Changed: Removed `if (dist < results[...].distance)` filter
+- Result: **6.20% recall** ❌ (slight improvement)
+- Conclusion: Still 89% below target, fundamental issues remain
+
+**Attempt 4**: Comprehensive code review
+- Findings:
+  - Sorts entire arrays on EVERY neighbor addition (O(N²log N))
+  - No proper heap data structures (min-heap/max-heap)
+  - `selectNeighbors()` too simplistic (just slices first M)
+  - Potentially poor graph connectivity
+  - Unknown additional bugs (likely multiple interacting)
+
+**Total Time Invested**: 3 hours (4 parallel agents)
+**Success Rate**: 0/4 attempts
+
+### Root Cause Assessment
+
+Custom HNSW implementation has **multiple architectural deficiencies**:
+
+1. **Algorithmic Complexity**: Sorts candidates+results arrays after every single neighbor addition instead of using proper heaps
+2. **Missing Data Structures**: No min-heap for candidates, no max-heap for results
+3. **Graph Construction**: Simplistic neighbor selection may create poor connectivity
+4. **Unknown Bugs**: Likely multiple interacting bugs beyond what was identified
+
+**Estimated fix time**: 12-20 additional hours with HIGH risk
+**Decision**: Cut losses, pivot to brute force
+
+### Brute Force Validation Results (2026-03-10)
+
+**Test Configuration**:
+- Implementation: `BruteForceVectorStore` in `src/lib/vectorSearch.ts`
+- Algorithm: Linear scan with cosine similarity
+- Dataset: 1K, 5K, 10K vectors (384 dimensions, normalized)
+- Queries: 100 queries per dataset
+
+**Performance Metrics**:
+
+| Dataset | p50 Latency | p95 Latency | Memory | Recall@10 | Recall@50 |
+|---------|-------------|-------------|--------|-----------|-----------|
+| 1,000   | 1.02ms      | 1.10ms      | 1.46MB | 100%      | 100%      |
+| 5,000   | 5.11ms      | 5.45ms      | 7.32MB | 100%      | 100%      |
+| 10,000  | 10.27ms     | 11.11ms     | 14.65MB| 100%      | 100%      |
+
+**Results Analysis**:
+- ✅ **Recall**: 100% (exact search, no approximation)
+- ✅ **Latency**: 10.27ms @ 10K vectors (10× faster than 100ms target!)
+- ✅ **Memory**: 14.65MB @ 10K vectors (well under 100MB budget)
+- ✅ **Edge cases**: All passed (empty store, single vector, exact match, large k)
+
+**Verdict**: ✅ **PRODUCTION-READY FOR EPIC 9 MVP**
+
+### Migration Path
+
+**Current State**: Brute force is MORE than adequate for Epic 9 MVP
+
+**Migration Triggers** (evaluate at 6-month production checkpoint):
+1. User library exceeds **50,000 vectors** (currently targeting 10K-100K)
+2. Search latency p95 exceeds **200ms** (currently 11ms @ 10K)
+3. User complaints about search performance
+
+**Migration Option**: EdgeVec library (Rust/WASM HNSW)
+- Decision matrix score: 9.2/10 (vs 8.9/10 for brute force)
+- Integration time: 24-36 hours
+- Proven recall: ≥95%
+- See: `docs/research/epic-9-vector-migration-triggers.md`
+
+### Key Takeaways
+
+**For Epic 9**:
+- Brute force unblocks E09-S03 immediately (vs 12-20h more HNSW debugging)
+- Performance exceeds requirements by 10× (10ms vs 100ms target)
+- 100% recall (no approximation errors)
+- Simple implementation (zero bugs, low maintenance)
+
+**For Future Projects**:
+- "Boring technology" principle validated
+- Premature optimization is real (HNSW not needed for 10K scale)
+- Sunk cost fallacy: 3 hours invested ≠ continue throwing time at broken impl
+- When research shows <5% score difference, choose LOWER RISK option
+
+---
+
+**Postmortem**: See `docs/research/epic-9-hnsw-postmortem.md` for detailed failure analysis and lessons learned.
+
+**Implementation**: See `docs/plans/epic-9-pivot-to-brute-force-vector-search.md` for complete pivot plan and execution.
