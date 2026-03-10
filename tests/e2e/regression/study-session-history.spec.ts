@@ -10,10 +10,7 @@ import { createImportedCourse } from '../../support/fixtures/factories/imported-
 import { goToCourses, navigateAndWait } from '../../support/helpers/navigation'
 import { seedStudySessions, seedImportedVideos } from '../../support/helpers/indexeddb-seed'
 import type { Page } from '@playwright/test'
-import {
-  FIXED_DATE,
-  getRelativeDate,
-} from '../../utils/test-time'
+import { FIXED_DATE, getRelativeDate } from '../../utils/test-time'
 
 // ---------------------------------------------------------------------------
 // Test Data

@@ -64,9 +64,7 @@ test.describe('E07-S05: Smart Study Schedule Suggestion', () => {
     }, closeSidebar())
   })
 
-  test('AC2: shows insufficient-data state when fewer than 7 study days', async ({
-    page,
-  }) => {
+  test('AC2: shows insufficient-data state when fewer than 7 study days', async ({ page }) => {
     // Seed only 3 distinct days
     await page.addInitScript(
       ({ log }) => {
@@ -85,9 +83,7 @@ test.describe('E07-S05: Smart Study Schedule Suggestion', () => {
     await expect(widget).toContainText('7 days')
   })
 
-  test('AC5: shows no-goal state when 7+ days but no time-based goal set', async ({
-    page,
-  }) => {
+  test('AC5: shows no-goal state when 7+ days but no time-based goal set', async ({ page }) => {
     // Seed 10 distinct study days, no goal
     await page.addInitScript(
       ({ log }) => {
@@ -136,9 +132,7 @@ test.describe('E07-S05: Smart Study Schedule Suggestion', () => {
     await expect(durationDisplay).toContainText(/\d+\s*(min|h)/)
   })
 
-  test('AC4: shows per-course time allocation rows in ready state', async ({
-    page,
-  }) => {
+  test('AC4: shows per-course time allocation rows in ready state', async ({ page }) => {
     await page.addInitScript(
       ({ log, goal, progress }) => {
         window.localStorage.setItem('study-log', JSON.stringify(log))
@@ -169,9 +163,7 @@ test.describe('E07-S05: Smart Study Schedule Suggestion', () => {
     await expect(minuteLabels.first()).toBeVisible()
   })
 
-  test('AC5: settings link navigates to /settings from no-goal state', async ({
-    page,
-  }) => {
+  test('AC5: settings link navigates to /settings from no-goal state', async ({ page }) => {
     await page.addInitScript(
       ({ log }) => {
         window.localStorage.setItem('study-log', JSON.stringify(log))

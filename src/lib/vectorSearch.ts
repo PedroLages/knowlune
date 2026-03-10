@@ -32,9 +32,7 @@ export class BruteForceVectorStore {
    */
   insert(id: string, vector: number[]): void {
     if (vector.length !== this.dimensions) {
-      throw new Error(
-        `Vector must have ${this.dimensions} dimensions, got ${vector.length}`
-      )
+      throw new Error(`Vector must have ${this.dimensions} dimensions, got ${vector.length}`)
     }
     this.vectors.set(id, new Float32Array(vector))
   }
@@ -61,9 +59,7 @@ export class BruteForceVectorStore {
     }
 
     if (query.length !== this.dimensions) {
-      throw new Error(
-        `Query vector must have ${this.dimensions} dimensions, got ${query.length}`
-      )
+      throw new Error(`Query vector must have ${this.dimensions} dimensions, got ${query.length}`)
     }
 
     const queryVector = new Float32Array(query)
@@ -75,7 +71,7 @@ export class BruteForceVectorStore {
       results.push({
         id,
         distance,
-        similarity: 1 - distance
+        similarity: 1 - distance,
       })
     }
 
@@ -135,7 +131,7 @@ export class BruteForceVectorStore {
     return {
       count,
       dimensions: this.dimensions,
-      memoryMB: parseFloat(memoryMB.toFixed(2))
+      memoryMB: parseFloat(memoryMB.toFixed(2)),
     }
   }
 

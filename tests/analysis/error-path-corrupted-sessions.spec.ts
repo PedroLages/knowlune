@@ -41,10 +41,7 @@ async function mockDateNow(page: import('@playwright/test').Page) {
  * Seed corrupted sessions directly into IndexedDB
  * This bypasses factory validation to test error resilience
  */
-async function seedCorruptedSessions(
-  page: import('@playwright/test').Page,
-  sessions: unknown[]
-) {
+async function seedCorruptedSessions(page: import('@playwright/test').Page, sessions: unknown[]) {
   await page.evaluate(
     async ({ corruptedSessions }) => {
       const DB_NAME = 'ElearningDB'
@@ -199,10 +196,7 @@ test.describe('Error Path: Corrupted IndexedDB Sessions', () => {
     await indexedDB.clearStore(STORE_NAME)
   })
 
-  test('app handles sessions with negative or NaN duration values', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('app handles sessions with negative or NaN duration values', async ({ page, indexedDB }) => {
     await seedSidebar(page)
     await mockDateNow(page)
     await goToCourses(page)
@@ -337,10 +331,7 @@ test.describe('Error Path: Corrupted IndexedDB Sessions', () => {
     await indexedDB.clearStore(STORE_NAME)
   })
 
-  test('app navigates correctly even with corrupted session data', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('app navigates correctly even with corrupted session data', async ({ page, indexedDB }) => {
     await seedSidebar(page)
     await mockDateNow(page)
     await goToCourses(page)

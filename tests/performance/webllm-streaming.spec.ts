@@ -116,9 +116,7 @@ test.describe('WebLLM Streaming Performance', () => {
     await page.click('button:has-text("Generate Response")')
 
     // Wait for generation to complete
-    await expect(
-      page.locator('button:has-text("Generate Response"):not([disabled])')
-    ).toBeVisible({
+    await expect(page.locator('button:has-text("Generate Response"):not([disabled])')).toBeVisible({
       timeout: 60000,
     })
 
@@ -240,7 +238,8 @@ function generateReport(results: TestResult[]): string {
 
   if (latencyPass && jitterPass && memoryPass) {
     report += '**Status**: ✅ **PRODUCTION-READY**\n\n'
-    report += 'All performance metrics meet or exceed target thresholds. The WebLLM streaming implementation provides a smooth, responsive user experience suitable for production deployment in Epic 9.\n\n'
+    report +=
+      'All performance metrics meet or exceed target thresholds. The WebLLM streaming implementation provides a smooth, responsive user experience suitable for production deployment in Epic 9.\n\n'
     report +=
       '**Key Findings**:\n' +
       `- First-token latency (P90: ${overallP90.toFixed(0)}ms) provides instant feedback\n` +
@@ -386,8 +385,7 @@ function generateReport(results: TestResult[]): string {
     report += '**The WebLLM streaming implementation is production-ready for Epic 9.**\n\n'
     report += '**Next Steps**:\n'
     report += '1. Proceed with E09-S04 (AI Q&A from Notes) implementation\n'
-    report +=
-      '2. Integrate streaming UI patterns from prototype into production components\n'
+    report += '2. Integrate streaming UI patterns from prototype into production components\n'
     report += '3. Add loading states and progress indicators for first-token wait\n'
     report += '4. Implement chat history management (limit to last 10 messages)\n'
     report += '5. Add manual testing checklist from UI Responsiveness section\n\n'
@@ -455,9 +453,13 @@ function printSummary(results: TestResult[]): void {
   const allTps = results.map(r => r.metrics.tokensPerSecond)
   const avgTps = allTps.reduce((s, v) => s + v, 0) / allTps.length
 
-  console.log(`First-token latency (P90): ${overallP90.toFixed(0)}ms ${overallP90 < 500 ? '✅' : '⚠️'}`)
+  console.log(
+    `First-token latency (P90): ${overallP90.toFixed(0)}ms ${overallP90 < 500 ? '✅' : '⚠️'}`
+  )
   console.log(`Token jitter (avg): ${avgJitter.toFixed(1)}ms ${avgJitter < 50 ? '✅' : '⚠️'}`)
-  console.log(`Memory delta (avg): +${avgMemoryDelta.toFixed(1)}MB ${avgMemoryDelta < 20 ? '✅' : '⚠️'}`)
+  console.log(
+    `Memory delta (avg): +${avgMemoryDelta.toFixed(1)}MB ${avgMemoryDelta < 20 ? '✅' : '⚠️'}`
+  )
   console.log(`Tokens per second: ${avgTps.toFixed(1)} tokens/s`)
 
   const latencyPass = overallP90 < 500

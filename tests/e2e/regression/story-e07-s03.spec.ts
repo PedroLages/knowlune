@@ -302,7 +302,10 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
       },
       '6mx': {
         courseId: '6mx',
-        completedLessons: Array.from({ length: 16 }, (_, i) => `6mx-lesson-${String(i + 1).padStart(2, '0')}`), // 16/31 = 51.6%
+        completedLessons: Array.from(
+          { length: 16 },
+          (_, i) => `6mx-lesson-${String(i + 1).padStart(2, '0')}`
+        ), // 16/31 = 51.6%
         lastAccessedAt: getRelativeDate(-2), // Same recency
         startedAt: getRelativeDate(-45),
         notes: {},
@@ -374,21 +377,30 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
       },
       'confidence-reboot': {
         courseId: 'confidence-reboot',
-        completedLessons: Array.from({ length: 9 }, (_, i) => `confidence-reboot-lesson-${String(i + 1).padStart(2, '0')}`), // 9/18 = 50%
+        completedLessons: Array.from(
+          { length: 9 },
+          (_, i) => `confidence-reboot-lesson-${String(i + 1).padStart(2, '0')}`
+        ), // 9/18 = 50%
         lastAccessedAt: getRelativeDate(-7), // 7 days ago → recency = 0.5
         startedAt: getRelativeDate(-30),
         notes: {},
       },
       'operative-six': {
         courseId: 'operative-six',
-        completedLessons: Array.from({ length: 15 }, (_, i) => `operative-six-lesson-${String(i + 1).padStart(2, '0')}`), // ~60% progress
+        completedLessons: Array.from(
+          { length: 15 },
+          (_, i) => `operative-six-lesson-${String(i + 1).padStart(2, '0')}`
+        ), // ~60% progress
         lastAccessedAt: getRelativeDate(-3), // 3 days ago → recency ≈ 0.785
         startedAt: getRelativeDate(-30),
         notes: {},
       },
       '6mx': {
         courseId: '6mx',
-        completedLessons: Array.from({ length: 10 }, (_, i) => `6mx-lesson-${String(i + 1).padStart(2, '0')}`), // ~30% progress
+        completedLessons: Array.from(
+          { length: 10 },
+          (_, i) => `6mx-lesson-${String(i + 1).padStart(2, '0')}`
+        ), // ~30% progress
         lastAccessedAt: getRelativeDate(-1), // 1 day ago → recency ≈ 0.928
         startedAt: getRelativeDate(-30),
         notes: {},

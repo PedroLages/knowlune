@@ -145,7 +145,9 @@ test.describe('AC1: 25% milestone celebration', () => {
         request.onerror = () => reject(request.error)
       })
     })
-    expect((challenges as Array<{ celebratedMilestones?: number[] }>)[0].celebratedMilestones).toContain(25)
+    expect(
+      (challenges as Array<{ celebratedMilestones?: number[] }>)[0].celebratedMilestones
+    ).toContain(25)
   })
 
   test('milestone is recorded in IndexedDB and not triggered again', async ({ page }) => {

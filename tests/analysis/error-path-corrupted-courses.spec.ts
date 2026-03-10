@@ -119,9 +119,7 @@ test.describe('Error Path: Empty/Corrupted allCourses', () => {
     await expect(page.getByRole('heading', { name: 'All Courses', level: 1 })).toBeVisible()
 
     // Should show empty state message
-    await expect(
-      page.getByText(/no courses/i).or(page.getByText(/get started/i))
-    ).toBeVisible()
+    await expect(page.getByText(/no courses/i).or(page.getByText(/get started/i))).toBeVisible()
 
     // Course cards should not render
     await expect(page.getByTestId('course-card')).not.toBeVisible()

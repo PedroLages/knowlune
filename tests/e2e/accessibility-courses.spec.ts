@@ -5,7 +5,7 @@ import { FIXED_DATE } from '../utils/test-time'
 
 // Configure test data for consistent state
 const setupTestData = async page => {
-  await page.evaluate((fixedDate) => {
+  await page.evaluate(fixedDate => {
     const now = new Date(fixedDate)
     const oneDayAgo = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000)
     const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000)

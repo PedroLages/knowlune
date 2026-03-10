@@ -34,6 +34,7 @@ import {
   resetAllData,
 } from '@/lib/settings'
 import { ReminderSettings } from '@/app/components/figma/ReminderSettings'
+import { AIConfigurationSettings } from '@/app/components/figma/AIConfigurationSettings'
 import {
   validateImageFile,
   compressAvatar,
@@ -437,6 +438,9 @@ export default function Settings() {
 
         {/* Reminders */}
         <ReminderSettings />
+
+        {/* AI Configuration */}
+        <AIConfigurationSettings />
 
         {/* Data Management */}
         <Card>
