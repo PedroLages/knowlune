@@ -64,6 +64,7 @@ The orchestrator should NOT:
 [ ] Pre-checks: unit tests
 [ ] Pre-checks: E2E tests
 [ ] Optional: burn-in validation (if applicable)
+[ ] Lessons learned gate
 [ ] Design review (Agent)
 [ ] Code review — architecture (Agent)
 [ ] Code review — testing (Agent)
@@ -195,7 +196,56 @@ Mark the first todo as `in_progress` and proceed:
 
    **TodoWrite**: Mark all pre-check todos → `completed`. Update each pre-check todo individually as it passes during execution.
 
-5. **Review agent swarm** (parallel dispatch — design + code + testing):
+5. **Lessons Learned Gate** (automated documentation quality check):
+
+   After pre-checks pass, validate that the story's "Challenges and Lessons Learned" section is properly documented before dispatching expensive review agents.
+
+   a. Read the story file's "Challenges and Lessons Learned" section (typically at the end of the file).
+
+   b. Check for placeholder text indicating incomplete documentation:
+      - `[Document issues, solutions, and patterns worth remembering]`
+      - `[Populated by /review-story — Playwright MCP findings]`
+      - `[Populated by /review-story — adversarial code review findings]`
+      - `[Architecture decisions, patterns used, dependencies added]`
+      - Any other bracketed placeholder text in this section
+
+   c. If placeholders found:
+      - STOP the review and display clear error:
+        ```
+        ❌ Lessons Learned Gate FAILED
+
+        The "Challenges and Lessons Learned" section in your story file has placeholder text.
+
+        Placeholder text found:
+        - [Document issues, solutions, and patterns worth remembering]
+
+        Why this matters:
+        - Epic 8 retrospective showed only 2/5 stories documented lessons learned
+        - Undocumented lessons lead to repeated mistakes across stories
+        - This gate enforces the 100% compliance that manual reminders failed to achieve
+
+        What to do:
+        1. Open docs/implementation-artifacts/{story-id}.md
+        2. Replace placeholder text with actual lessons learned:
+           - Implementation challenges you faced
+           - Solutions you discovered
+           - Patterns worth remembering for future stories
+        3. Commit your changes
+        4. Re-run /review-story
+
+        See story 8-1-study-time-analytics.md for excellent examples of lessons learned documentation.
+        ```
+      - Do NOT proceed to review agents
+      - Keep `reviewed: in-progress`
+      - Do NOT add any review gates to `review_gates_passed` (pre-checks passed but review didn't start)
+
+   d. If no placeholders (lessons learned properly filled):
+      - Continue to step 6 (review agent swarm)
+      - Note in output: "✅ Lessons Learned Gate passed — documentation complete"
+
+   **Rationale**: This automated gate addresses Epic 8 retrospective finding that only 2/5 stories documented lessons learned despite manual reminders. Automated enforcement achieves 100% compliance where manual processes achieved 40%.
+
+6. **Review agent swarm** (parallel dispatch — design + code + testing):
 
    After pre-checks pass, dispatch ALL applicable review agents **in a single message** for maximum parallelism. Design review, code review, and test coverage review are fully independent — they use different tools (Playwright MCP vs git diff) and analyze different aspects.
 
