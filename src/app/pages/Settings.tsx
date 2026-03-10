@@ -1,12 +1,13 @@
 import { useState, useRef } from 'react'
 import { useTheme } from 'next-themes'
-import { Download, Upload, Trash2, Save, X, Camera } from 'lucide-react'
+import { Download, Upload, Trash2, Save, X, Camera, User } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '@/app/components/ui/card'
 import { Input } from '@/app/components/ui/input'
 import { Button } from '@/app/components/ui/button'
 import { Textarea } from '@/app/components/ui/textarea'
 import { Label } from '@/app/components/ui/label'
 import { Avatar, AvatarImage, AvatarFallback } from '@/app/components/ui/avatar'
+import { Progress } from '@/app/components/ui/progress'
 import {
   Select,
   SelectContent,
@@ -46,8 +47,24 @@ export default function Settings() {
   const [saved, setSaved] = useState(false)
   const [uploadError, setUploadError] = useState<string>('')
   const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
+
+  // Character limits
+  const DISPLAY_NAME_LIMIT = 50
+  const BIO_LIMIT = 200
+
+  // Character count helpers
+  const displayNameCount = settings.displayName.length
+  const bioCount = settings.bio.length
+
+  const getCounterColor = (count: number, limit: number) => {
+    const percentage = (count / limit) * 100
+    if (percentage >= 95) return 'text-destructive'
+    if (percentage >= 80) return 'text-warning'
+    return 'text-muted-foreground'
+  }
 
   function handleSave() {
     saveSettings(settings)
@@ -91,37 +108,48 @@ export default function Settings() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Clear previous errors
+    // Clear previous errors and reset progress
     setUploadError('')
     setIsUploading(true)
+    setUploadProgress(0)
 
     try {
-      // Validate file
+      // Validate file (20% progress)
       const validation = validateImageFile(file)
+      setUploadProgress(20)
       if (!validation.valid) {
         setUploadError(validation.error || 'Invalid file')
         setIsUploading(false)
+        setUploadProgress(0)
         return
       }
 
-      // Compress and convert to WebP
+      // Compress and convert to WebP (40% progress)
+      setUploadProgress(40)
       const compressedBlob = await compressAvatar(file)
 
-      // Convert to data URL for storage
+      // Convert to data URL for storage (70% progress)
+      setUploadProgress(70)
       const dataUrl = await fileToDataUrl(compressedBlob)
 
-      // Update settings
+      // Update settings (90% progress)
+      setUploadProgress(90)
       setSettings({ ...settings, profilePhotoDataUrl: dataUrl })
 
-      // Auto-save after successful upload
+      // Auto-save after successful upload (100% progress)
       saveSettings({ ...settings, profilePhotoDataUrl: dataUrl })
+      setUploadProgress(100)
       setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
+      setTimeout(() => {
+        setSaved(false)
+        setUploadProgress(0)
+      }, 2000)
       // Notify other components (like Layout) that settings changed
       window.dispatchEvent(new Event('settingsUpdated'))
     } catch (error) {
       console.error('Photo upload error:', error)
       setUploadError('Failed to process image. Please try again.')
+      setUploadProgress(0)
     } finally {
       setIsUploading(false)
       // Reset input so same file can be selected again
@@ -140,73 +168,65 @@ export default function Settings() {
 
       <div className="max-w-2xl space-y-6">
         {/* Profile */}
-        <Card>
-          <CardHeader>
-            <h2 className="text-base leading-none">Profile</h2>
+        <Card className="overflow-hidden">
+          <CardHeader className="border-b border-border/50 bg-surface-sunken/30">
+            <h2 className="text-lg font-display">Your Profile</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Personalize your learning identity and profile information
+            </p>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="name">Display Name</Label>
-              <Input
-                id="name"
-                value={settings.displayName}
-                onChange={e => setSettings({ ...settings, displayName: e.target.value })}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="bio">Bio</Label>
-              <Textarea
-                id="bio"
-                value={settings.bio}
-                onChange={e => setSettings({ ...settings, bio: e.target.value })}
-                placeholder="Tell something about yourself..."
-                className="mt-1"
-                rows={3}
-              />
-            </div>
-
-            {/* Profile Photo Upload */}
-            <div>
-              <Label>Profile Photo</Label>
-              <div className="mt-1 flex items-start gap-4">
-                {/* Avatar Display with Hover Effect */}
+          <CardContent className="p-6 lg:p-8">
+            <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-8 lg:gap-12">
+              {/* Avatar Section - Left Column on Desktop */}
+              <div className="flex flex-col items-center lg:items-start">
+                {/* Avatar with Elevated Surface */}
                 <div className="relative group">
-                  <Avatar className="size-20 ring-2 ring-border/50 transition-all duration-300 group-hover:ring-brand/30 group-hover:shadow-lg group-hover:shadow-brand/10">
-                    {settings.profilePhotoDataUrl ? (
-                      <AvatarImage
-                        src={settings.profilePhotoDataUrl}
-                        alt={settings.displayName}
-                        className="object-cover"
-                      />
-                    ) : (
-                      <AvatarFallback className="text-lg font-semibold bg-brand-soft text-brand transition-colors duration-300 group-hover:bg-brand group-hover:text-white">
-                        {getInitials(settings.displayName)}
-                      </AvatarFallback>
-                    )}
-                  </Avatar>
+                  {/* Elevated Avatar Container */}
+                  <div
+                    className="relative rounded-full p-1 bg-surface-elevated transition-all duration-500 ease-out"
+                    style={{ boxShadow: 'var(--shadow-warm) 0px 8px 24px' }}
+                  >
+                    <Avatar className="size-32 ring-2 ring-border/30 transition-all duration-500 ease-out group-hover:scale-105 group-hover:ring-brand/50 group-hover:shadow-2xl group-hover:shadow-brand/20">
+                      {settings.profilePhotoDataUrl ? (
+                        <AvatarImage
+                          src={settings.profilePhotoDataUrl}
+                          alt={settings.displayName}
+                          className="object-cover"
+                        />
+                      ) : (
+                        <AvatarFallback className="text-2xl font-semibold bg-brand-soft text-brand transition-all duration-500 ease-out group-hover:bg-brand group-hover:text-white group-hover:scale-110">
+                          {getInitials(settings.displayName)}
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
 
-                  {/* Hover Overlay for Change Photo */}
-                  {settings.profilePhotoDataUrl && (
-                    <button
-                      onClick={() => photoInputRef.current?.click()}
-                      className="absolute inset-0 bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center"
-                      aria-label="Change profile photo"
-                    >
-                      <Camera className="w-6 h-6 text-white" />
-                    </button>
-                  )}
+                    {/* Hover Overlay for Change Photo */}
+                    {settings.profilePhotoDataUrl && (
+                      <button
+                        onClick={() => photoInputRef.current?.click()}
+                        className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 ease-out flex items-center justify-center backdrop-blur-sm"
+                        aria-label="Change profile photo"
+                      >
+                        <div className="flex flex-col items-center gap-1 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                          <Camera className="w-7 h-7 text-white drop-shadow-lg" />
+                          <span className="text-xs font-medium text-white drop-shadow-md">
+                            Change
+                          </span>
+                        </div>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Upload Controls */}
-                <div className="flex-1 space-y-2">
-                  <div className="flex flex-wrap gap-2">
+                <div className="mt-6 w-full max-w-xs space-y-3">
+                  <div className="flex flex-col gap-2">
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="default"
                       onClick={() => photoInputRef.current?.click()}
                       disabled={isUploading}
-                      className="gap-2 transition-all duration-200 hover:scale-105 hover:shadow-md min-h-[44px] min-w-[44px]"
+                      className="w-full gap-2 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-brand/10 hover:border-brand/50 min-h-[44px] group/btn"
                     >
                       {isUploading ? (
                         <>
@@ -215,7 +235,11 @@ export default function Settings() {
                         </>
                       ) : (
                         <>
-                          <Upload className="w-4 h-4" />
+                          {settings.profilePhotoDataUrl ? (
+                            <Camera className="w-4 h-4 transition-transform duration-300 group-hover/btn:scale-110" />
+                          ) : (
+                            <Upload className="w-4 h-4 transition-transform duration-300 group-hover/btn:scale-110" />
+                          )}
                           {settings.profilePhotoDataUrl ? 'Change Photo' : 'Upload Photo'}
                         </>
                       )}
@@ -224,39 +248,72 @@ export default function Settings() {
                     {settings.profilePhotoDataUrl && !isUploading && (
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="default"
                         onClick={handleRemovePhoto}
-                        className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 transition-all duration-200 min-h-[44px]"
+                        className="w-full gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 transition-all duration-300 hover:scale-[1.02] min-h-[44px]"
                       >
                         <X className="w-4 h-4" />
-                        Remove
+                        Remove Photo
                       </Button>
                     )}
                   </div>
 
-                  {/* Helper Text */}
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    JPEG, PNG, or WebP • Max 5 MB • Recommended 256×256px
-                  </p>
+                  {/* Upload Progress */}
+                  {isUploading && uploadProgress > 0 && (
+                    <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-300">
+                      <Progress
+                        value={uploadProgress}
+                        className="h-1.5 bg-brand-soft"
+                        aria-label="Upload progress"
+                      />
+                      <p className="text-xs text-muted-foreground text-center">
+                        {uploadProgress < 100 ? 'Compressing image...' : 'Complete!'}
+                      </p>
+                    </div>
+                  )}
 
-                  {/* Error Message with Fade-in Animation */}
+                  {/* Helper Text */}
+                  <div className="text-xs text-muted-foreground leading-relaxed bg-surface-sunken/40 rounded-lg px-3 py-2 border border-border/30">
+                    <p className="font-medium mb-0.5">Photo Requirements:</p>
+                    <ul className="space-y-0.5 ml-0 list-none">
+                      <li>• JPEG, PNG, or WebP format</li>
+                      <li>• Maximum 5 MB file size</li>
+                      <li>• Square images work best</li>
+                    </ul>
+                  </div>
+
+                  {/* Error Message */}
                   {uploadError && (
                     <div
                       role="alert"
-                      className="text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded-lg px-3 py-2 animate-in fade-in slide-in-from-top-1 duration-300"
+                      className="text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded-lg px-3 py-2.5 animate-in fade-in slide-in-from-top-1 duration-300 flex items-start gap-2"
                       aria-live="polite"
                     >
-                      {uploadError}
+                      <X className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      <span>{uploadError}</span>
                     </div>
                   )}
 
                   {/* Success Indicator */}
-                  {saved && settings.profilePhotoDataUrl && (
+                  {saved && settings.profilePhotoDataUrl && uploadProgress === 100 && (
                     <div
-                      className="text-xs text-success bg-success-soft border border-success/20 rounded-lg px-3 py-2 animate-in fade-in slide-in-from-top-1 duration-300"
+                      className="text-xs text-success bg-success-soft border border-success/20 rounded-lg px-3 py-2.5 animate-in fade-in slide-in-from-top-1 duration-300 flex items-center gap-2"
                       aria-live="polite"
                     >
-                      ✓ Photo updated successfully
+                      <div className="w-4 h-4 rounded-full bg-success flex items-center justify-center flex-shrink-0">
+                        <svg
+                          className="w-3 h-3 text-white"
+                          fill="none"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2.5"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <span>Photo updated successfully</span>
                     </div>
                   )}
                 </div>
@@ -271,12 +328,91 @@ export default function Settings() {
                   aria-label="Upload profile photo"
                 />
               </div>
-            </div>
 
-            <Button onClick={handleSave} className="gap-2">
-              <Save className="w-4 h-4" />
-              {saved ? 'Saved!' : 'Save Profile'}
-            </Button>
+              {/* Form Fields - Right Column on Desktop */}
+              <div className="space-y-6">
+                {/* Display Name */}
+                <div className="space-y-2">
+                  <div className="flex items-baseline justify-between">
+                    <Label htmlFor="name" className="text-sm font-medium">
+                      Display Name
+                    </Label>
+                    <span
+                      className={`text-xs tabular-nums transition-colors duration-200 ${getCounterColor(
+                        displayNameCount,
+                        DISPLAY_NAME_LIMIT
+                      )}`}
+                    >
+                      {displayNameCount}/{DISPLAY_NAME_LIMIT}
+                    </span>
+                  </div>
+                  <Input
+                    id="name"
+                    value={settings.displayName}
+                    onChange={e =>
+                      e.target.value.length <= DISPLAY_NAME_LIMIT &&
+                      setSettings({ ...settings, displayName: e.target.value })
+                    }
+                    className="transition-all duration-200 focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                    placeholder="Enter your display name"
+                    maxLength={DISPLAY_NAME_LIMIT}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This is how others will see your name across the platform
+                  </p>
+                </div>
+
+                {/* Bio */}
+                <div className="space-y-2">
+                  <div className="flex items-baseline justify-between">
+                    <Label htmlFor="bio" className="text-sm font-medium">
+                      Bio
+                    </Label>
+                    <span
+                      className={`text-xs tabular-nums transition-colors duration-200 ${getCounterColor(
+                        bioCount,
+                        BIO_LIMIT
+                      )}`}
+                    >
+                      {bioCount}/{BIO_LIMIT}
+                    </span>
+                  </div>
+                  <Textarea
+                    id="bio"
+                    value={settings.bio}
+                    onChange={e =>
+                      e.target.value.length <= BIO_LIMIT &&
+                      setSettings({ ...settings, bio: e.target.value })
+                    }
+                    placeholder="Tell something about yourself... your learning goals, interests, or background"
+                    className="min-h-[120px] resize-none transition-all duration-200 focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                    rows={5}
+                    maxLength={BIO_LIMIT}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    A brief description that appears on your profile
+                  </p>
+                </div>
+
+                {/* Save Button */}
+                <div className="pt-4 border-t border-border/50">
+                  <Button
+                    onClick={handleSave}
+                    className="gap-2 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-brand/20 min-h-[44px]"
+                    size="lg"
+                  >
+                    <Save className="w-4 h-4" />
+                    {saved ? 'Saved Successfully!' : 'Save Profile Changes'}
+                  </Button>
+                  {saved && !settings.profilePhotoDataUrl && (
+                    <p className="text-xs text-success mt-2 flex items-center gap-1.5 animate-in fade-in slide-in-from-left-1 duration-300">
+                      <div className="w-1.5 h-1.5 rounded-full bg-success" />
+                      Profile updated successfully
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
