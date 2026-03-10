@@ -2,6 +2,7 @@
  * Shared helpers for study session E2E tests
  */
 import type { Page } from '@playwright/test'
+import type { StudySession } from '@/data/types'
 import { createImportedCourse } from '../fixtures/factories/imported-course-factory'
 import { goToCourses, navigateAndWait } from './navigation'
 import { RETRY_CONFIG } from '../../utils/constants'
@@ -219,7 +220,7 @@ export async function getLatestSession(page: Page): Promise<StudySession | null>
     const store = tx.objectStore('studySessions')
     const getAllReq = store.getAll()
 
-    const sessions = await new Promise<any[]>((resolve, reject) => {
+    const sessions = await new Promise<StudySession[]>((resolve, reject) => {
       getAllReq.onsuccess = () => resolve(getAllReq.result)
       getAllReq.onerror = () => reject(getAllReq.error)
     })
@@ -262,7 +263,7 @@ export async function waitForSessionEnd(
         }
 
         const tx = db.transaction('studySessions', 'readonly')
-        const sessions = await new Promise<any[]>((resolve, reject) => {
+        const sessions = await new Promise<StudySession[]>((resolve, reject) => {
           const req = tx.objectStore('studySessions').getAll()
           req.onsuccess = () => resolve(req.result)
           req.onerror = () => reject(req.error)
@@ -342,7 +343,7 @@ export async function waitForIdleTimeRecorded(
         }
 
         const tx = db.transaction('studySessions', 'readonly')
-        const sessions = await new Promise<any[]>((resolve, reject) => {
+        const sessions = await new Promise<StudySession[]>((resolve, reject) => {
           const req = tx.objectStore('studySessions').getAll()
           req.onsuccess = () => resolve(req.result)
           req.onerror = () => reject(req.error)

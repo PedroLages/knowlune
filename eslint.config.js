@@ -12,7 +12,7 @@ export default tseslint.config(eslint.configs.recommended, ...tseslint.configs.r
     'coverage/',
     'test-results/',
     '.claude/',
-    'experiments/', // Experimental code - not production quality
+    '**/experiments/', // Experimental code - not production quality
     'docs/', // Documentation files
   ],
 }, {

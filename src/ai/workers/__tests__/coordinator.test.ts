@@ -52,7 +52,7 @@ global.Worker = class MockWorker extends EventTarget {
   removeEventListener(type: string, listener: EventListener): void {
     super.removeEventListener(type, listener)
   }
-} as any
+} as unknown as typeof Worker
 
 describe('WorkerCoordinator', () => {
   beforeEach(() => {
@@ -99,7 +99,7 @@ describe('WorkerCoordinator', () => {
         // Never send response
       }
       terminate(): void {}
-    } as any
+    } as unknown as typeof Worker
 
     await expect(
       coordinator.executeTask('embed', { texts: ['slow'] }, { timeout: 100 })

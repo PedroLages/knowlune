@@ -216,7 +216,7 @@ test.describe('Story E04-S03: Active Study Session Logging', () => {
       const store = tx.objectStore('studySessions')
       const getAllReq = store.getAll()
 
-      const sessions = await new Promise<any[]>((resolve, reject) => {
+      const sessions = await new Promise<SessionRecord[]>((resolve, reject) => {
         getAllReq.onsuccess = () => resolve(getAllReq.result)
         getAllReq.onerror = () => reject(getAllReq.error)
       })
@@ -269,7 +269,7 @@ test.describe('Story E04-S03: Active Study Session Logging', () => {
         }
 
         const tx = db.transaction('studySessions', 'readonly')
-        const sessions = await new Promise<any[]>((resolve, reject) => {
+        const sessions = await new Promise<SessionRecord[]>((resolve, reject) => {
           const req = tx.objectStore('studySessions').getAll()
           req.onsuccess = () => resolve(req.result)
           req.onerror = () => reject(req.error)
@@ -322,7 +322,7 @@ test.describe('Story E04-S03: Active Study Session Logging', () => {
       })
 
       const tx = db.transaction('studySessions', 'readonly')
-      const sessions = await new Promise<any[]>((resolve, reject) => {
+      const sessions = await new Promise<SessionRecord[]>((resolve, reject) => {
         const req = tx.objectStore('studySessions').getAll()
         req.onsuccess = () => resolve(req.result)
         req.onerror = () => reject(req.error)
@@ -382,7 +382,7 @@ test.describe('Story E04-S03: Active Study Session Logging', () => {
         }
 
         const tx = db.transaction('studySessions', 'readonly')
-        const sessions = await new Promise<any[]>((resolve, reject) => {
+        const sessions = await new Promise<SessionRecord[]>((resolve, reject) => {
           const req = tx.objectStore('studySessions').getAll()
           req.onsuccess = () => resolve(req.result)
           req.onerror = () => reject(req.error)
@@ -443,7 +443,7 @@ test.describe('Story E04-S03: Active Study Session Logging', () => {
       })
 
       const tx = db.transaction('studySessions', 'readonly')
-      const sessions = await new Promise<any[]>((resolve, reject) => {
+      const sessions = await new Promise<SessionRecord[]>((resolve, reject) => {
         const req = tx.objectStore('studySessions').getAll()
         req.onsuccess = () => resolve(req.result)
         req.onerror = () => reject(req.error)

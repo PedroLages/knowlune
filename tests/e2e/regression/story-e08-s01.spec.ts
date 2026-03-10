@@ -33,7 +33,7 @@ async function mockDateNow(page: Page) {
       // Override Date constructor to return FIXED_DATE when called without arguments
       // @ts-expect-error - overriding global Date
       globalThis.Date = class extends OriginalDate {
-        constructor(...args: any[]) {
+        constructor(...args: unknown[]) {
           if (args.length === 0) {
             super(fixedDate)
           } else {

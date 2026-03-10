@@ -149,7 +149,7 @@ test.describe('Story E04-S03: Study Session History & Reporting', () => {
         }
 
         const tx = db.transaction('studySessions', 'readonly')
-        const sessions = await new Promise<any[]>((resolve, reject) => {
+        const sessions = await new Promise<SessionRecord[]>((resolve, reject) => {
           const req = tx.objectStore('studySessions').getAll()
           req.onsuccess = () => resolve(req.result)
           req.onerror = () => reject(req.error)
@@ -232,7 +232,7 @@ test.describe('Story E04-S03: Study Session History & Reporting', () => {
         }
 
         const tx = db.transaction('studySessions', 'readonly')
-        const session = await new Promise<any>((resolve, reject) => {
+        const session = await new Promise<SessionRecord | undefined>((resolve, reject) => {
           const req = tx.objectStore('studySessions').get('orphaned-session-1')
           req.onsuccess = () => resolve(req.result)
           req.onerror = () => reject(req.error)
