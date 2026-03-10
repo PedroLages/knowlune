@@ -34,7 +34,15 @@ export function ImportedLessonPlayer() {
       setVideo(null)
       return
     }
-    db.importedVideos.get(lessonId).then(v => setVideo(v ?? null))
+    let ignore = false
+
+    db.importedVideos.get(lessonId).then(v => {
+      if (!ignore) setVideo(v ?? null)
+    })
+
+    return () => {
+      ignore = true
+    }
   }, [lessonId])
 
   const { blobUrl, error, loading } = useVideoFromHandle(video?.fileHandle)

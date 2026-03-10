@@ -63,9 +63,17 @@ const pieChartConfig = {
 export default function Reports() {
   const [studyNotes, setStudyNotes] = useState(0)
   useEffect(() => {
+    let ignore = false
+
     getTotalStudyNotes()
-      .then(setStudyNotes)
+      .then(notes => {
+        if (!ignore) setStudyNotes(notes)
+      })
       .catch(err => console.error('Failed to load study notes:', err))
+
+    return () => {
+      ignore = true
+    }
   }, [])
 
   const stats = [

@@ -53,7 +53,15 @@ export function Overview() {
   const [studyNotes, setStudyNotes] = useState(0)
 
   useEffect(() => {
-    getTotalStudyNotes().then(setStudyNotes)
+    let ignore = false
+
+    getTotalStudyNotes().then(notes => {
+      if (!ignore) setStudyNotes(notes)
+    })
+
+    return () => {
+      ignore = true
+    }
   }, [])
 
   const { loadSessionStats, getTotalStudyTime } = useSessionStore()

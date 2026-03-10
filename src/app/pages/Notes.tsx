@@ -105,9 +105,17 @@ export function Notes() {
 
   // Load available tags when notes change
   useEffect(() => {
+    let ignore = false
+
     getAllNoteTags()
-      .then(setAvailableTags)
+      .then(tags => {
+        if (!ignore) setAvailableTags(tags)
+      })
       .catch(err => console.error('[Notes] Failed to load tags:', err))
+
+    return () => {
+      ignore = true
+    }
   }, [notes])
 
   // Debounce search input (150ms)

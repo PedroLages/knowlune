@@ -93,15 +93,25 @@ function BookmarksSection() {
   const deleteTriggerRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
+    let ignore = false
+
     getAllBookmarks()
       .then(bm => {
-        setBookmarks(bm)
-        setIsLoading(false)
+        if (!ignore) {
+          setBookmarks(bm)
+          setIsLoading(false)
+        }
       })
       .catch(() => {
-        setError('Failed to load bookmarks')
-        setIsLoading(false)
+        if (!ignore) {
+          setError('Failed to load bookmarks')
+          setIsLoading(false)
+        }
       })
+
+    return () => {
+      ignore = true
+    }
   }, [])
 
   const handleDelete = async (bookmark: VideoBookmark) => {

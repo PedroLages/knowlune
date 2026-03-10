@@ -48,6 +48,8 @@ export function SessionHistory() {
 
   // Load sessions and resolve display names
   useEffect(() => {
+    let ignore = false
+
     async function load() {
       setIsLoading(true)
       setLoadError(null)
@@ -86,16 +88,26 @@ export function SessionHistory() {
         // Sort reverse chronological
         enriched.sort((a, b) => toDate(b.startTime).getTime() - toDate(a.startTime).getTime())
 
-        setSessions(enriched)
+        if (!ignore) {
+          setSessions(enriched)
+        }
       } catch (error) {
         console.error('[SessionHistory] Failed to load sessions:', error)
-        setLoadError('Failed to load study sessions. Please try refreshing the page.')
+        if (!ignore) {
+          setLoadError('Failed to load study sessions. Please try refreshing the page.')
+        }
       } finally {
-        setIsLoading(false)
+        if (!ignore) {
+          setIsLoading(false)
+        }
       }
     }
 
     load()
+
+    return () => {
+      ignore = true
+    }
   }, [])
 
   // Unique courses for filter dropdown

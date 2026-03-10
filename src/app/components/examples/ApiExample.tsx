@@ -20,24 +20,36 @@ export function CoursesExample() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    let ignore = false
+
     async function fetchCourses() {
       try {
         setLoading(true)
         setError(null)
         const data = await api.courses.getAll()
-        setCourses(data.courses)
+        if (!ignore) {
+          setCourses(data.courses)
+        }
       } catch (err) {
-        if (err instanceof ApiClientError) {
-          setError(`API Error: ${err.message}`)
-        } else {
-          setError('Failed to load courses')
+        if (!ignore) {
+          if (err instanceof ApiClientError) {
+            setError(`API Error: ${err.message}`)
+          } else {
+            setError('Failed to load courses')
+          }
         }
       } finally {
-        setLoading(false)
+        if (!ignore) {
+          setLoading(false)
+        }
       }
     }
 
     fetchCourses()
+
+    return () => {
+      ignore = true
+    }
   }, [])
 
   if (loading) {

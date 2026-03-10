@@ -22,8 +22,26 @@ export function ImportedCourseDetail() {
 
   useEffect(() => {
     if (!courseId) return
-    db.importedVideos.where('courseId').equals(courseId).sortBy('order').then(setVideos)
-    db.importedPdfs.where('courseId').equals(courseId).toArray().then(setPdfs)
+    let ignore = false
+
+    db.importedVideos
+      .where('courseId')
+      .equals(courseId)
+      .sortBy('order')
+      .then(videos => {
+        if (!ignore) setVideos(videos)
+      })
+    db.importedPdfs
+      .where('courseId')
+      .equals(courseId)
+      .toArray()
+      .then(pdfs => {
+        if (!ignore) setPdfs(pdfs)
+      })
+
+    return () => {
+      ignore = true
+    }
   }, [courseId])
 
   if (!course) {
