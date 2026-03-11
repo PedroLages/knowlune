@@ -233,6 +233,15 @@ export interface Challenge {
   completedAt?: string // ISO 8601 (set when 100% reached)
 }
 
+// --- AI / Vector Embeddings (Epic 9) ---
+
+export interface NoteEmbedding {
+  noteId: string // Primary key (references notes.id)
+  embedding: Float32Array // 384-dim vector (all-MiniLM-L6-v2)
+  model: string // e.g., 'all-MiniLM-L6-v2'
+  createdAt: string // ISO timestamp
+}
+
 // --- Streak Milestones (Story 5.6) ---
 
 export interface StreakMilestone {

@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { useTheme } from 'next-themes'
-import { Download, Upload, Trash2, Save, X, Camera, User } from 'lucide-react'
+import { Download, Upload, Trash2, Save, X, Camera } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '@/app/components/ui/card'
 import { Input } from '@/app/components/ui/input'
 import { Button } from '@/app/components/ui/button'
@@ -35,12 +35,7 @@ import {
 } from '@/lib/settings'
 import { ReminderSettings } from '@/app/components/figma/ReminderSettings'
 import { AIConfigurationSettings } from '@/app/components/figma/AIConfigurationSettings'
-import {
-  validateImageFile,
-  compressAvatar,
-  fileToDataUrl,
-  getInitials,
-} from '@/lib/avatarUpload'
+import { validateImageFile, compressAvatar, fileToDataUrl, getInitials } from '@/lib/avatarUpload'
 
 export default function Settings() {
   const { theme, setTheme } = useTheme()

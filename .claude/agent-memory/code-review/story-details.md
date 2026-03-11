@@ -100,3 +100,11 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - REMAINING: AC3.3 test conditional assertion `if (count > 0)` silently passes when no elements found
 - REMAINING: Hard wait `waitForTimeout(100)` in keyboard navigation test
 - Math.max(...sessions.map(...)) stack overflow risk with large arrays
+
+## E09-S02: Web Worker Architecture & Memory Management
+- H1: `terminate()` clears pendingRequests without rejecting -- promises hang forever (also on visibilitychange)
+- H2: search.worker.ts global error handler posts response without `requestId` -- coordinator can't route it
+- H3: Per-request `addEventListener('message', handleMessage)` leaks if worker crashes before responding
+- H4: E2E tests only cover AC1, AC6, AC7 -- missing AC2 (idle termination), AC3 (visibility), AC4 (crash recovery), AC5 (no-worker fallback), AC8 (Vite config verified at runtime), AC9 (useWorkerCoordinator unmount)
+- M1: `bulkSaveEmbeddings` in vector-store.ts has no error handling -- partial writes with no rollback
+- M2: `supportsModuleWorkers()` returns same value as `supportsWorkers()` -- misleading (Firefox <114 supports workers but not module workers)

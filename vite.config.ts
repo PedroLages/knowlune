@@ -83,6 +83,9 @@ export default defineConfig({
       ],
     },
   }), tailwindcss(), serveLocalMedia()],
+  worker: {
+    format: 'es', // ES module workers — enables `import` in worker scope
+  },
   resolve: {
     alias: {
       // Alias @ to the src directory

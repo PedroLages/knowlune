@@ -21,6 +21,7 @@ import type {
   SearchResult,
 } from './types'
 import { isSuccessResponse, isErrorResponse } from './types'
+import { supportsWorkers } from '@/ai/lib/workerCapabilities'
 
 // ============================================================================
 // Configuration
@@ -48,6 +49,7 @@ interface PendingRequest {
   resolve: (value: unknown) => void
   reject: (error: Error) => void
   timeout: NodeJS.Timeout
+  workerId: string // tracks which worker owns this request for activeRequests decrement
 }
 
 // ============================================================================
@@ -81,6 +83,8 @@ class WorkerCoordinator {
 
   /**
    * Send message to worker and await response.
+   * The worker's message router (set up in spawnWorker) dispatches the response
+   * to the correct pending request via requestId lookup.
    */
   private async sendMessage<T>(
     type: WorkerRequestType,
@@ -89,45 +93,46 @@ class WorkerCoordinator {
     timeout: number
   ): Promise<T> {
     const worker = this.getOrCreateWorker(type)
+    const workerId = this.getWorkerId(type)
 
     return new Promise<T>((resolve, reject) => {
       // Set timeout
       const timeoutId = setTimeout(() => {
         this.pendingRequests.delete(requestId)
+        this.decrementActiveRequests(workerId)
         reject(new Error('AI request timed out. Please try again.'))
       }, timeout)
 
-      // Store pending request
+      // Store pending request (with workerId for activeRequests tracking)
       this.pendingRequests.set(requestId, {
         resolve: resolve as (value: unknown) => void,
         reject,
         timeout: timeoutId,
+        workerId,
       })
 
-      // Setup response handler
-      const handleMessage = (event: MessageEvent) => {
-        const response: WorkerResponse<T> = event.data
-
-        if (response.requestId !== requestId) return // Not for this request
-
-        if (isSuccessResponse(response)) {
-          this.resolvePendingRequest(requestId, response.result)
-          worker.removeEventListener('message', handleMessage)
-        } else if (isErrorResponse(response)) {
-          this.rejectPendingRequest(requestId, new Error(response.error))
-          worker.removeEventListener('message', handleMessage)
-        }
-      }
-
-      worker.addEventListener('message', handleMessage)
-
-      // Send request
+      // Send request — the persistent onmessage router in spawnWorker handles the response
       const request: WorkerRequest = { requestId, type, payload }
       worker.postMessage(request)
 
       // Update pool entry
-      this.updateWorkerActivity(this.getWorkerId(type))
+      this.updateWorkerActivity(workerId)
     })
+  }
+
+  /**
+   * Route incoming worker message to the correct pending request by requestId.
+   * Set once per worker in spawnWorker — replaces per-request event listeners.
+   */
+  private routeWorkerMessage(event: MessageEvent): void {
+    const response = event.data as WorkerResponse<unknown>
+    if (!response?.requestId) return
+
+    if (isSuccessResponse(response)) {
+      this.resolvePendingRequest(response.requestId, response.result)
+    } else if (isErrorResponse(response)) {
+      this.rejectPendingRequest(response.requestId, new Error(response.error))
+    }
   }
 
   /**
@@ -135,6 +140,10 @@ class WorkerCoordinator {
    * Implements lazy loading and connection pooling.
    */
   private getOrCreateWorker(type: WorkerRequestType): Worker {
+    if (!supportsWorkers()) {
+      throw new Error('Web Workers are not supported in this browser. AI features are unavailable.')
+    }
+
     const workerId = this.getWorkerId(type)
     const entry = this.pool.get(workerId)
 
@@ -185,10 +194,18 @@ class WorkerCoordinator {
         type: 'module',
       })
 
-      // Global error handler
+      // Persistent message router — single listener routes all responses by requestId
+      worker.addEventListener('message', (event: MessageEvent) => {
+        this.routeWorkerMessage(event)
+      })
+
+      // Global error handler — event.error can be null in cross-origin/security errors
       worker.addEventListener('error', event => {
         console.error('[Coordinator] Worker error:', event)
-        this.handleWorkerError(type, event.error)
+        this.handleWorkerError(
+          type,
+          event.error ?? new Error(event.message ?? 'Unknown worker error')
+        )
       })
 
       return worker
@@ -199,7 +216,8 @@ class WorkerCoordinator {
   }
 
   /**
-   * Update worker activity timestamp and schedule idle termination.
+   * Update worker activity timestamp and increment active request count.
+   * Idle termination is scheduled by decrementActiveRequests when count reaches 0.
    */
   private updateWorkerActivity(workerId: string): void {
     const entry = this.pool.get(workerId)
@@ -207,9 +225,6 @@ class WorkerCoordinator {
 
     entry.lastUsed = Date.now()
     entry.activeRequests++
-
-    // Schedule idle termination
-    this.scheduleIdleTermination(workerId)
   }
 
   /**
@@ -250,7 +265,7 @@ class WorkerCoordinator {
   }
 
   /**
-   * Resolve pending request.
+   * Resolve pending request and decrement worker's active request count.
    */
   private resolvePendingRequest(requestId: string, result: unknown): void {
     const pending = this.pendingRequests.get(requestId)
@@ -259,10 +274,11 @@ class WorkerCoordinator {
     clearTimeout(pending.timeout)
     pending.resolve(result)
     this.pendingRequests.delete(requestId)
+    this.decrementActiveRequests(pending.workerId)
   }
 
   /**
-   * Reject pending request.
+   * Reject pending request and decrement worker's active request count.
    */
   private rejectPendingRequest(requestId: string, error: Error): void {
     const pending = this.pendingRequests.get(requestId)
@@ -271,10 +287,23 @@ class WorkerCoordinator {
     clearTimeout(pending.timeout)
     pending.reject(error)
     this.pendingRequests.delete(requestId)
+    this.decrementActiveRequests(pending.workerId)
+  }
+
+  /**
+   * Decrement activeRequests counter and reschedule idle termination.
+   */
+  private decrementActiveRequests(workerId: string): void {
+    const entry = this.pool.get(workerId)
+    if (!entry) return
+
+    entry.activeRequests = Math.max(0, entry.activeRequests - 1)
+    this.scheduleIdleTermination(workerId)
   }
 
   /**
    * Handle worker error (crash, OOM, etc).
+   * Dispatches 'worker-crash' custom event for app-level handlers (e.g., cloud fallback).
    */
   private handleWorkerError(type: WorkerRequestType, error: Error): void {
     const workerId = this.getWorkerId(type)
@@ -284,14 +313,40 @@ class WorkerCoordinator {
     // Terminate crashed worker
     entry.worker.terminate()
     this.pool.delete(workerId)
+    this.clearIdleTimer(workerId)
 
     console.error(`[Coordinator] Worker ${workerId} crashed:`, error)
 
+    // Dispatch custom event so other parts of the app can respond (e.g., switch to cloud fallback)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('worker-crash', {
+          detail: { workerId, error: error?.message ?? 'Unknown error' },
+        })
+      )
+    }
+
     // Reject all pending requests for this worker
     this.pendingRequests.forEach((pending, requestId) => {
-      pending.reject(new Error('Worker crashed. Please try again.'))
-      this.pendingRequests.delete(requestId)
+      if (pending.workerId === workerId) {
+        pending.reject(new Error('Worker crashed. Please try again.'))
+        this.pendingRequests.delete(requestId)
+      }
     })
+  }
+
+  /**
+   * Terminate a specific worker type (useful for component unmount cleanup).
+   */
+  terminateWorkerType(type: WorkerRequestType): void {
+    const workerId = this.getWorkerId(type)
+    const entry = this.pool.get(workerId)
+    if (entry) {
+      entry.worker.terminate()
+      this.pool.delete(workerId)
+      this.clearIdleTimer(workerId)
+      console.log(`[Coordinator] Manually terminated worker: ${workerId}`)
+    }
   }
 
   /**
@@ -302,16 +357,23 @@ class WorkerCoordinator {
   }
 
   /**
-   * Terminate all workers (cleanup on app unmount).
+   * Terminate all workers (cleanup on app unmount or tab hide).
+   * Rejects all pending requests so callers don't hang indefinitely.
    */
   terminate(): void {
     this.pool.forEach((entry, workerId) => {
       entry.worker.terminate()
       console.log(`[Coordinator] Terminated worker: ${workerId}`)
     })
-
     this.pool.clear()
+
+    // Reject all in-flight requests — callers must not hang after terminate()
+    this.pendingRequests.forEach(pending => {
+      clearTimeout(pending.timeout)
+      pending.reject(new Error('Worker terminated'))
+    })
     this.pendingRequests.clear()
+
     this.idleTimers.forEach(timer => clearTimeout(timer))
     this.idleTimers.clear()
   }
@@ -348,6 +410,16 @@ export const coordinator = new WorkerCoordinator()
 if (typeof window !== 'undefined') {
   window.addEventListener('beforeunload', () => {
     coordinator.terminate()
+  })
+}
+
+// Free memory when tab is hidden (tab switch, minimize, etc.)
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      console.log('[Coordinator] Tab hidden — terminating workers to free memory')
+      coordinator.terminate()
+    }
   })
 }
 

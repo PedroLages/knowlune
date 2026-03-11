@@ -162,7 +162,7 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-9: in-progress
   9-1-ai-provider-configuration-security: done
-  9-2-web-worker-architecture-and-memory-management: backlog
+  9-2-web-worker-architecture-and-memory-management: done
   9-3-embedding-pipeline-and-vector-store: backlog
   epic-9-retrospective: optional
 
