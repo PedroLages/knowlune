@@ -38,6 +38,8 @@ import {
 } from '@/lib/settings'
 import { ReminderSettings } from '@/app/components/figma/ReminderSettings'
 import { AIConfigurationSettings } from '@/app/components/figma/AIConfigurationSettings'
+import { AvatarCropDialog } from '@/app/components/ui/avatar-crop-dialog'
+import { AvatarUploadZone } from '@/app/components/settings/avatar-upload-zone'
 import { validateImageFile, compressAvatar, fileToDataUrl, getInitials } from '@/lib/avatarUpload'
 
 export default function Settings() {
@@ -47,8 +49,9 @@ export default function Settings() {
   const [uploadError, setUploadError] = useState<string>('')
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [isCropDialogOpen, setIsCropDialogOpen] = useState(false)
+  const [tempPhotoDataUrl, setTempPhotoDataUrl] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const photoInputRef = useRef<HTMLInputElement>(null)
 
   // Character limits
   const DISPLAY_NAME_LIMIT = 50
@@ -103,31 +106,39 @@ export default function Settings() {
     window.location.reload()
   }
 
-  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    // Clear previous errors and reset progress
+  async function handleFileSelect(file: File) {
+    // Clear previous errors
     setUploadError('')
+
+    try {
+      // Validate file
+      const validation = validateImageFile(file)
+      if (!validation.valid) {
+        setUploadError(validation.error || 'Invalid file')
+        return
+      }
+
+      // Convert to data URL and open crop dialog
+      const dataUrl = await fileToDataUrl(file)
+      setTempPhotoDataUrl(dataUrl)
+      setIsCropDialogOpen(true)
+    } catch (error) {
+      console.error('File selection error:', error)
+      setUploadError('Failed to load image. Please try again.')
+    }
+  }
+
+  async function handleCropConfirm(croppedBlob: Blob) {
+    setIsCropDialogOpen(false)
     setIsUploading(true)
     setUploadProgress(0)
 
     try {
-      // Validate file (20% progress)
-      const validation = validateImageFile(file)
+      // Compress cropped image (20% progress)
       setUploadProgress(20)
-      if (!validation.valid) {
-        setUploadError(validation.error || 'Invalid file')
-        setIsUploading(false)
-        setUploadProgress(0)
-        return
-      }
+      const compressedBlob = await compressAvatar(croppedBlob)
 
-      // Compress and convert to WebP (40% progress)
-      setUploadProgress(40)
-      const compressedBlob = await compressAvatar(file)
-
-      // Convert to data URL for storage (70% progress)
+      // Convert to data URL (70% progress)
       setUploadProgress(70)
       const dataUrl = await fileToDataUrl(compressedBlob)
 
@@ -135,7 +146,7 @@ export default function Settings() {
       setUploadProgress(90)
       setSettings({ ...settings, profilePhotoDataUrl: dataUrl })
 
-      // Auto-save after successful upload (100% progress)
+      // Auto-save (100% progress)
       saveSettings({ ...settings, profilePhotoDataUrl: dataUrl })
       setUploadProgress(100)
       setSaved(true)
@@ -143,7 +154,8 @@ export default function Settings() {
         setSaved(false)
         setUploadProgress(0)
       }, 2000)
-      // Notify other components (like Layout) that settings changed
+
+      // Notify other components
       window.dispatchEvent(new Event('settingsUpdated'))
     } catch (error) {
       console.error('Photo upload error:', error)
@@ -151,14 +163,20 @@ export default function Settings() {
       setUploadProgress(0)
     } finally {
       setIsUploading(false)
-      // Reset input so same file can be selected again
-      e.target.value = ''
+      setTempPhotoDataUrl(null)
     }
+  }
+
+  function handleCropCancel() {
+    setIsCropDialogOpen(false)
+    setTempPhotoDataUrl(null)
   }
 
   function handleRemovePhoto() {
     setSettings({ ...settings, profilePhotoDataUrl: undefined })
     setUploadError('')
+    saveSettings({ ...settings, profilePhotoDataUrl: undefined })
+    window.dispatchEvent(new Event('settingsUpdated'))
   }
 
   return (
@@ -175,155 +193,65 @@ export default function Settings() {
             </p>
           </CardHeader>
           <CardContent className="p-6 lg:p-8">
-            <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-8 lg:gap-12">
-              {/* Avatar Section - Left Column on Desktop */}
-              <div className="flex flex-col items-center lg:items-start">
-                {/* Avatar with Elevated Surface */}
-                <div className="relative group">
-                  {/* Elevated Avatar Container */}
-                  <div className="relative rounded-full p-1 bg-surface-elevated transition-all duration-500 ease-out shadow-warm-lg">
-                    <Avatar className="size-32 ring-2 ring-border/30 transition-all duration-500 ease-out group-hover:scale-105 group-hover:ring-brand/50 group-hover:shadow-2xl group-hover:shadow-brand/20">
-                      {settings.profilePhotoDataUrl ? (
-                        <AvatarImage
-                          src={settings.profilePhotoDataUrl}
-                          alt={settings.displayName}
-                          className="object-cover"
-                        />
-                      ) : (
-                        <AvatarFallback className="text-2xl font-semibold bg-brand-soft text-brand transition-all duration-500 ease-out group-hover:bg-brand group-hover:text-white group-hover:scale-110">
-                          {getInitials(settings.displayName)}
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
+            <div className="space-y-6">
+              {/* Avatar Upload Zone */}
+              <AvatarUploadZone
+                currentAvatar={settings.profilePhotoDataUrl || null}
+                onFileSelect={handleFileSelect}
+                onRemove={handleRemovePhoto}
+                isLoading={isUploading}
+              />
 
-                    {/* Hover Overlay for Change Photo */}
-                    {settings.profilePhotoDataUrl && (
-                      <button
-                        onClick={() => photoInputRef.current?.click()}
-                        className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 ease-out flex items-center justify-center backdrop-blur-sm"
-                        aria-label="Change profile photo"
-                      >
-                        <div className="flex flex-col items-center gap-1 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-                          <Camera className="w-7 h-7 text-white drop-shadow-lg" />
-                          <span className="text-xs font-medium text-white drop-shadow-md">
-                            Change
-                          </span>
-                        </div>
-                      </button>
-                    )}
-                  </div>
+              {/* Upload Progress */}
+              {isUploading && uploadProgress > 0 && (
+                <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-300">
+                  <Progress
+                    value={uploadProgress}
+                    className="h-1.5 bg-brand-soft"
+                    aria-label="Upload progress"
+                  />
+                  <p className="text-xs text-muted-foreground text-center">
+                    {uploadProgress < 100 ? 'Compressing image...' : 'Complete!'}
+                  </p>
                 </div>
+              )}
 
-                {/* Upload Controls */}
-                <div className="mt-6 w-full max-w-xs space-y-3">
-                  <div className="flex flex-col gap-2">
-                    <Button
-                      variant="outline"
-                      size="default"
-                      onClick={() => photoInputRef.current?.click()}
-                      disabled={isUploading}
-                      className="w-full gap-2 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-brand/10 hover:border-brand/50 min-h-[44px] group/btn"
-                    >
-                      {isUploading ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          {settings.profilePhotoDataUrl ? (
-                            <Camera className="w-4 h-4 transition-transform duration-300 group-hover/btn:scale-110" />
-                          ) : (
-                            <Upload className="w-4 h-4 transition-transform duration-300 group-hover/btn:scale-110" />
-                          )}
-                          {settings.profilePhotoDataUrl ? 'Change Photo' : 'Upload Photo'}
-                        </>
-                      )}
-                    </Button>
-
-                    {settings.profilePhotoDataUrl && !isUploading && (
-                      <Button
-                        variant="ghost"
-                        size="default"
-                        onClick={handleRemovePhoto}
-                        className="w-full gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 transition-all duration-300 hover:scale-[1.02] min-h-[44px]"
-                      >
-                        <X className="w-4 h-4" />
-                        Remove Photo
-                      </Button>
-                    )}
-                  </div>
-
-                  {/* Upload Progress */}
-                  {isUploading && uploadProgress > 0 && (
-                    <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-300">
-                      <Progress
-                        value={uploadProgress}
-                        className="h-1.5 bg-brand-soft"
-                        aria-label="Upload progress"
-                      />
-                      <p className="text-xs text-muted-foreground text-center">
-                        {uploadProgress < 100 ? 'Compressing image...' : 'Complete!'}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Helper Text */}
-                  <div className="text-xs text-muted-foreground leading-relaxed bg-surface-sunken/40 rounded-lg px-3 py-2 border border-border/30">
-                    <p className="font-medium mb-0.5">Photo Requirements:</p>
-                    <ul className="space-y-0.5 ml-0 list-none">
-                      <li>• JPEG, PNG, or WebP format</li>
-                      <li>• Maximum 5 MB file size</li>
-                      <li>• Square images work best</li>
-                    </ul>
-                  </div>
-
-                  {/* Error Message */}
-                  {uploadError && (
-                    <div
-                      role="alert"
-                      className="text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded-lg px-3 py-2.5 animate-in fade-in slide-in-from-top-1 duration-300 flex items-start gap-2"
-                      aria-live="polite"
-                    >
-                      <X className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                      <span>{uploadError}</span>
-                    </div>
-                  )}
-
-                  {/* Success Indicator */}
-                  {saved && settings.profilePhotoDataUrl && uploadProgress === 100 && (
-                    <div
-                      className="text-xs text-success bg-success-soft border border-success/20 rounded-lg px-3 py-2.5 animate-in fade-in slide-in-from-top-1 duration-300 flex items-center gap-2"
-                      aria-live="polite"
-                    >
-                      <div className="w-4 h-4 rounded-full bg-success flex items-center justify-center flex-shrink-0">
-                        <svg
-                          className="w-3 h-3 text-white"
-                          fill="none"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2.5"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <span>Photo updated successfully</span>
-                    </div>
-                  )}
+              {/* Error Message */}
+              {uploadError && (
+                <div
+                  role="alert"
+                  className="text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded-lg px-3 py-2.5 animate-in fade-in slide-in-from-top-1 duration-300 flex items-start gap-2"
+                  aria-live="polite"
+                >
+                  <X className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <span>{uploadError}</span>
                 </div>
+              )}
 
-                {/* Hidden File Input */}
-                <input
-                  ref={photoInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={handlePhotoUpload}
-                  className="hidden"
-                  aria-label="Upload profile photo"
-                />
-              </div>
+              {/* Success Indicator */}
+              {saved && settings.profilePhotoDataUrl && uploadProgress === 100 && (
+                <div
+                  className="text-xs text-success bg-success-soft border border-success/20 rounded-lg px-3 py-2.5 animate-in fade-in slide-in-from-top-1 duration-300 flex items-center gap-2"
+                  aria-live="polite"
+                >
+                  <div className="w-4 h-4 rounded-full bg-success flex items-center justify-center flex-shrink-0">
+                    <svg
+                      className="w-3 h-3 text-white"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2.5"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <span>Photo updated successfully</span>
+                </div>
+              )}
+
+              <Separator className="my-6" />
 
               {/* Form Fields - Right Column on Desktop */}
               <div className="space-y-6">
@@ -623,6 +551,15 @@ export default function Settings() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Avatar Crop Dialog */}
+      <AvatarCropDialog
+        open={isCropDialogOpen}
+        onOpenChange={setIsCropDialogOpen}
+        imageDataUrl={tempPhotoDataUrl || ''}
+        onCropConfirm={handleCropConfirm}
+        onCropCancel={handleCropCancel}
+      />
     </div>
   )
 }
