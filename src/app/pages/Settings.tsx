@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react'
 import { useTheme } from 'next-themes'
-import { Download, Upload, Trash2, Save, X, Camera } from 'lucide-react'
-import { Card, CardContent, CardHeader } from '@/app/components/ui/card'
+import { Download, Upload, Trash2, Save, X, Camera, Monitor, Sun, Moon, HardDrive, Shield } from 'lucide-react'
+import { cn } from '@/app/components/ui/utils'
+import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import { Input } from '@/app/components/ui/input'
 import { Button } from '@/app/components/ui/button'
 import { Textarea } from '@/app/components/ui/textarea'
@@ -15,6 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/app/components/ui/select'
+import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group'
+import { Separator } from '@/app/components/ui/separator'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -417,16 +420,66 @@ export default function Settings() {
           <CardContent>
             <div>
               <Label>Theme</Label>
-              <Select value={theme} onValueChange={setTheme}>
-                <SelectTrigger className="mt-1 w-48" aria-label="Theme">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="system">System</SelectItem>
-                  <SelectItem value="light">Light</SelectItem>
-                  <SelectItem value="dark">Dark</SelectItem>
-                </SelectContent>
-              </Select>
+              <RadioGroup value={theme} onValueChange={setTheme} className="mt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* System Theme Card */}
+                  <label className={cn(
+                    "relative flex flex-col gap-3 p-4 border-2 rounded-xl cursor-pointer",
+                    "transition-all duration-200 hover:shadow-sm",
+                    theme === 'system'
+                      ? 'border-brand bg-brand-soft shadow-sm'
+                      : 'border-border bg-background hover:border-brand/50'
+                  )}>
+                    <RadioGroupItem value="system" className="sr-only" />
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Monitor className="w-5 h-5 text-muted-foreground" />
+                        <span className="text-sm font-medium">System</span>
+                      </div>
+                      {theme === 'system' && <div className="w-2 h-2 bg-brand rounded-full" />}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Matches your device settings</p>
+                  </label>
+
+                  {/* Light Theme Card */}
+                  <label className={cn(
+                    "relative flex flex-col gap-3 p-4 border-2 rounded-xl cursor-pointer",
+                    "transition-all duration-200 hover:shadow-sm",
+                    theme === 'light'
+                      ? 'border-brand bg-brand-soft shadow-sm'
+                      : 'border-border bg-background hover:border-brand/50'
+                  )}>
+                    <RadioGroupItem value="light" className="sr-only" />
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Sun className="w-5 h-5 text-muted-foreground" />
+                        <span className="text-sm font-medium">Light</span>
+                      </div>
+                      {theme === 'light' && <div className="w-2 h-2 bg-brand rounded-full" />}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Bright and clean interface</p>
+                  </label>
+
+                  {/* Dark Theme Card */}
+                  <label className={cn(
+                    "relative flex flex-col gap-3 p-4 border-2 rounded-xl cursor-pointer",
+                    "transition-all duration-200 hover:shadow-sm",
+                    theme === 'dark'
+                      ? 'border-brand bg-brand-soft shadow-sm'
+                      : 'border-border bg-background hover:border-brand/50'
+                  )}>
+                    <RadioGroupItem value="dark" className="sr-only" />
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Moon className="w-5 h-5 text-muted-foreground" />
+                        <span className="text-sm font-medium">Dark</span>
+                      </div>
+                      {theme === 'dark' && <div className="w-2 h-2 bg-brand rounded-full" />}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Easy on the eyes in low light</p>
+                  </label>
+                </div>
+              </RadioGroup>
             </div>
           </CardContent>
         </Card>
@@ -439,23 +492,71 @@ export default function Settings() {
 
         {/* Data Management */}
         <Card>
-          <CardHeader>
-            <h2 className="text-base leading-none">Data Management</h2>
+          <CardHeader className="border-b border-border/50 bg-surface-sunken/30">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-brand-soft p-2">
+                <HardDrive className="w-5 h-5 text-brand" aria-hidden="true" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-display">Data Management</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Export, import, or reset your learning data
+                </p>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={handleExport} className="gap-2">
-                <Download className="w-4 h-4" />
-                Export Data
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                className="gap-2"
-              >
-                <Upload className="w-4 h-4" />
-                Import Data
-              </Button>
+          <CardContent className="space-y-6 pt-6">
+            {/* Backup & Restore Section */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium">Backup & Restore</h3>
+
+              {/* Export Card */}
+              <div className="rounded-xl border border-border bg-surface-elevated p-4 hover:bg-surface-elevated/80 transition-colors">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-lg bg-success-soft p-2 mt-0.5">
+                      <Download className="w-4 h-4 text-success" aria-hidden="true" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium">Export Data</h4>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Download all your courses, progress, and settings as JSON
+                      </p>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
+                    <Download className="w-4 h-4" />
+                    Export
+                  </Button>
+                </div>
+              </div>
+
+              {/* Import Card */}
+              <div className="rounded-xl border border-border bg-surface-elevated p-4 hover:bg-surface-elevated/80 transition-colors">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-lg bg-brand-soft p-2 mt-0.5">
+                      <Upload className="w-4 h-4 text-brand" aria-hidden="true" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium">Import Data</h4>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Restore your data from a previously exported JSON file
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="gap-2"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Import
+                  </Button>
+                </div>
+              </div>
+
               <input
                 ref={fileInputRef}
                 type="file"
@@ -465,33 +566,59 @@ export default function Settings() {
               />
             </div>
 
-            <div className="pt-4 border-t border-border">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="gap-2">
-                    <Trash2 className="w-4 h-4" />
-                    Reset All Data
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will permanently delete all your progress, journal entries, and settings.
-                      This action cannot be undone. Consider exporting your data first.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleReset}
-                      className="bg-destructive hover:bg-destructive/90"
-                    >
-                      Reset Everything
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+            <Separator />
+
+            {/* Danger Zone Section */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-destructive" aria-hidden="true" />
+                <h3 className="text-sm font-medium text-destructive">Danger Zone</h3>
+              </div>
+
+              <div className="rounded-xl border-2 border-destructive/20 bg-destructive/5 p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-lg bg-destructive/10 p-2 mt-0.5">
+                      <Trash2 className="w-4 h-4 text-destructive" aria-hidden="true" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-destructive">Reset All Data</h4>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Permanently delete all your progress, journal entries, and settings
+                      </p>
+                      <p className="text-xs text-warning mt-2 font-medium">
+                        ⚠️ This action cannot be undone
+                      </p>
+                    </div>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm" className="gap-2">
+                        <Trash2 className="w-4 h-4" />
+                        Reset
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="rounded-[24px]">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete all your progress, journal entries, and settings.
+                          This action cannot be undone. Consider exporting your data first.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleReset}
+                          className="bg-destructive hover:bg-destructive/90"
+                        >
+                          Reset Everything
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
