@@ -179,21 +179,11 @@ export function AvatarCropDialog({
 
     handles.forEach(handle => {
       ctx.fillStyle = 'rgb(59 130 246)' // brand color
-      ctx.fillRect(
-        handle.x - handleSize / 2,
-        handle.y - handleSize / 2,
-        handleSize,
-        handleSize
-      )
+      ctx.fillRect(handle.x - handleSize / 2, handle.y - handleSize / 2, handleSize, handleSize)
       // Ring effect
       ctx.strokeStyle = 'rgb(250 245 238)' // background color
       ctx.lineWidth = 2
-      ctx.strokeRect(
-        handle.x - handleSize / 2,
-        handle.y - handleSize / 2,
-        handleSize,
-        handleSize
-      )
+      ctx.strokeRect(handle.x - handleSize / 2, handle.y - handleSize / 2, handleSize, handleSize)
     })
   }, [cropRegion, scaleFactor, isMobile])
 
@@ -259,7 +249,7 @@ export function AvatarCropDialog({
     const dx = x - dragStart.x
     const dy = y - dragStart.y
 
-    let newCrop = { ...initialCrop }
+    const newCrop = { ...initialCrop }
 
     if (dragMode === 'move') {
       // Move crop region
@@ -305,7 +295,7 @@ export function AvatarCropDialog({
     const canvas = previewCanvasRef.current
     if (!canvas) return
 
-    let newCrop = { ...cropRegion }
+    const newCrop = { ...cropRegion }
     let handled = false
 
     // Arrow keys - move

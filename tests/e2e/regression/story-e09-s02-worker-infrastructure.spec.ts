@@ -10,9 +10,9 @@ test.describe('E09-S02: Web Worker Infrastructure', () => {
     await page.goto('/')
 
     const hasTable = await page.evaluate(async () => {
-      return new Promise<boolean>((resolve) => {
+      return new Promise<boolean>(resolve => {
         const request = indexedDB.open('ElearningDB')
-        request.onsuccess = (event) => {
+        request.onsuccess = event => {
           const db = (event.target as IDBOpenDBRequest).result
           resolve(db.objectStoreNames.contains('embeddings'))
           db.close()
@@ -46,10 +46,9 @@ test.describe('E09-S02: Web Worker Infrastructure', () => {
       await coordinator.executeTask('load-index', {
         vectors: { 'note-1': new Float32Array(384), 'note-2': new Float32Array(384) },
       })
-      const searchResult = await coordinator.executeTask<{ results: Array<{ noteId: string; score: number }> }>(
-        'search',
-        { queryVector: new Float32Array(384), topK: 2 }
-      )
+      const searchResult = await coordinator.executeTask<{
+        results: Array<{ noteId: string; score: number }>
+      }>('search', { queryVector: new Float32Array(384), topK: 2 })
       return searchResult.results
     })
 

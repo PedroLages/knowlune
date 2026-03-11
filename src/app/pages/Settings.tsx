@@ -1,6 +1,18 @@
 import { useState, useRef } from 'react'
 import { useTheme } from 'next-themes'
-import { Download, Upload, Trash2, Save, X, Camera, Monitor, Sun, Moon, HardDrive, Shield } from 'lucide-react'
+import {
+  Download,
+  Upload,
+  Trash2,
+  Save,
+  X,
+  Camera,
+  Monitor,
+  Sun,
+  Moon,
+  HardDrive,
+  Shield,
+} from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import { Input } from '@/app/components/ui/input'
@@ -351,13 +363,15 @@ export default function Settings() {
               <RadioGroup value={theme} onValueChange={setTheme} className="mt-4">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {/* System Theme Card */}
-                  <label className={cn(
-                    "relative flex flex-col gap-3 p-4 border-2 rounded-xl cursor-pointer",
-                    "transition-all duration-200 hover:shadow-sm",
-                    theme === 'system'
-                      ? 'border-brand bg-brand-soft shadow-sm'
-                      : 'border-border bg-background hover:border-brand/50'
-                  )}>
+                  <label
+                    className={cn(
+                      'relative flex flex-col gap-3 p-4 border-2 rounded-xl cursor-pointer',
+                      'transition-all duration-200 hover:shadow-sm',
+                      theme === 'system'
+                        ? 'border-brand bg-brand-soft shadow-sm'
+                        : 'border-border bg-background hover:border-brand/50'
+                    )}
+                  >
                     <RadioGroupItem value="system" className="sr-only" />
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -370,13 +384,15 @@ export default function Settings() {
                   </label>
 
                   {/* Light Theme Card */}
-                  <label className={cn(
-                    "relative flex flex-col gap-3 p-4 border-2 rounded-xl cursor-pointer",
-                    "transition-all duration-200 hover:shadow-sm",
-                    theme === 'light'
-                      ? 'border-brand bg-brand-soft shadow-sm'
-                      : 'border-border bg-background hover:border-brand/50'
-                  )}>
+                  <label
+                    className={cn(
+                      'relative flex flex-col gap-3 p-4 border-2 rounded-xl cursor-pointer',
+                      'transition-all duration-200 hover:shadow-sm',
+                      theme === 'light'
+                        ? 'border-brand bg-brand-soft shadow-sm'
+                        : 'border-border bg-background hover:border-brand/50'
+                    )}
+                  >
                     <RadioGroupItem value="light" className="sr-only" />
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -389,13 +405,15 @@ export default function Settings() {
                   </label>
 
                   {/* Dark Theme Card */}
-                  <label className={cn(
-                    "relative flex flex-col gap-3 p-4 border-2 rounded-xl cursor-pointer",
-                    "transition-all duration-200 hover:shadow-sm",
-                    theme === 'dark'
-                      ? 'border-brand bg-brand-soft shadow-sm'
-                      : 'border-border bg-background hover:border-brand/50'
-                  )}>
+                  <label
+                    className={cn(
+                      'relative flex flex-col gap-3 p-4 border-2 rounded-xl cursor-pointer',
+                      'transition-all duration-200 hover:shadow-sm',
+                      theme === 'dark'
+                        ? 'border-brand bg-brand-soft shadow-sm'
+                        : 'border-border bg-background hover:border-brand/50'
+                    )}
+                  >
                     <RadioGroupItem value="dark" className="sr-only" />
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -530,8 +548,9 @@ export default function Settings() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will permanently delete all your progress, journal entries, and settings.
-                          This action cannot be undone. Consider exporting your data first.
+                          This will permanently delete all your progress, journal entries, and
+                          settings. This action cannot be undone. Consider exporting your data
+                          first.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>

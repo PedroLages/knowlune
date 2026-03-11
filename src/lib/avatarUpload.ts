@@ -388,10 +388,7 @@ async function loadImage(dataUrl: string): Promise<HTMLImageElement> {
  * @param cropRegion - The region to crop
  * @returns Promise resolving to a WebP Blob
  */
-export async function cropImage(
-  imageDataUrl: string,
-  cropRegion: CropRegion
-): Promise<Blob> {
+export async function cropImage(imageDataUrl: string, cropRegion: CropRegion): Promise<Blob> {
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')
   if (!ctx) {

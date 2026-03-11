@@ -19,11 +19,11 @@ export function AvatarUploadZone({
   currentAvatar,
   onFileSelect,
   onRemove,
-  isLoading = false
+  isLoading = false,
 }: AvatarUploadZoneProps) {
   const [dragState, setDragState] = useState({
     isDragOver: false,
-    dragDepth: 0
+    dragDepth: 0,
   })
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -55,7 +55,7 @@ export function AvatarUploadZone({
     e.stopPropagation()
     setDragState(prev => ({
       isDragOver: true,
-      dragDepth: prev.dragDepth + 1
+      dragDepth: prev.dragDepth + 1,
     }))
   }
 
@@ -71,7 +71,7 @@ export function AvatarUploadZone({
       const newDepth = prev.dragDepth - 1
       return {
         isDragOver: newDepth > 0,
-        dragDepth: newDepth
+        dragDepth: newDepth,
       }
     })
   }
@@ -131,9 +131,7 @@ export function AvatarUploadZone({
           className={cn(
             'border-2 border-dashed rounded-[24px] p-4 md:p-6',
             'transition-all duration-200 min-h-[120px] md:min-h-[160px]',
-            isLoading
-              ? 'opacity-50 cursor-not-allowed'
-              : 'cursor-pointer',
+            isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
             dragState.isDragOver
               ? 'border-brand bg-brand-soft scale-[1.02]'
               : 'border-border bg-background hover:border-brand-hover hover:shadow-sm'
@@ -152,9 +150,7 @@ export function AvatarUploadZone({
             <p className="text-xs text-muted-foreground">
               {isLoading ? 'Please wait' : 'or click to browse'}
             </p>
-            <p className="text-xs text-muted-foreground mt-2">
-              Max 5MB • JPEG, PNG, or WebP
-            </p>
+            <p className="text-xs text-muted-foreground mt-2">Max 5MB • JPEG, PNG, or WebP</p>
           </div>
         </div>
 
@@ -171,12 +167,7 @@ export function AvatarUploadZone({
 
         {/* Remove button */}
         {currentAvatar && !isLoading && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onRemove}
-            className="mt-3 w-full md:w-auto"
-          >
+          <Button variant="outline" size="sm" onClick={onRemove} className="mt-3 w-full md:w-auto">
             <Trash2 className="w-4 h-4" />
             Remove Photo
           </Button>

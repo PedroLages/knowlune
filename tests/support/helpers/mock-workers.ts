@@ -15,7 +15,10 @@ import type { Page } from '@playwright/test'
 export async function mockEmbeddingWorker(page: Page): Promise<void> {
   await page.addInitScript(() => {
     class MockWorker extends EventTarget {
-      constructor(public url: string | URL, public options?: WorkerOptions) {
+      constructor(
+        public url: string | URL,
+        public options?: WorkerOptions
+      ) {
         super()
       }
 
@@ -57,7 +60,9 @@ export async function mockEmbeddingWorker(page: Page): Promise<void> {
         }, 10)
       }
 
-      terminate(): void { /* no-op */ }
+      terminate(): void {
+        /* no-op */
+      }
     }
 
     ;(window as unknown as Record<string, unknown>)['Worker'] = MockWorker
