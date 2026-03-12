@@ -17,6 +17,8 @@ interface NoteState {
   saveNote: (note: Note) => Promise<void>
   addNote: (note: Note) => Promise<void>
   deleteNote: (noteId: string) => Promise<void>
+  softDelete: (noteId: string) => void
+  restoreNote: (noteId: string) => void
   getNoteForLesson: (courseId: string, videoId: string) => Note | undefined
 }
 
@@ -150,6 +152,28 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       }
       console.error('[NoteStore] Failed to delete note:', error)
     }
+  },
+
+  softDelete: (noteId: string) => {
+    const { notes } = get()
+    set({
+      notes: notes.map(n =>
+        n.id === noteId
+          ? { ...n, deleted: true, deletedAt: new Date().toISOString() }
+          : n
+      ),
+      error: null,
+    })
+  },
+
+  restoreNote: (noteId: string) => {
+    const { notes } = get()
+    set({
+      notes: notes.map(n =>
+        n.id === noteId ? { ...n, deleted: false, deletedAt: undefined } : n
+      ),
+      error: null,
+    })
   },
 
   getNoteForLesson: (courseId: string, videoId: string) => {

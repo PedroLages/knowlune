@@ -108,6 +108,8 @@ export interface Note {
   createdAt: string // ISO 8601 timestamp
   updatedAt: string // ISO 8601 timestamp
   tags: string[] // Managed via explicit tag UI (normalized: lowercase, trimmed, sorted)
+  deleted?: boolean // Soft delete flag (NFR24)
+  deletedAt?: string // ISO 8601 timestamp of soft deletion (NFR24)
 }
 
 // --- Imported Course Types (Story 1.1) ---

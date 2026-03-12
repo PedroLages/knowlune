@@ -184,3 +184,82 @@ describe('getNoteForLesson', () => {
     expect(result).toBeUndefined()
   })
 })
+
+describe('softDelete', () => {
+  it('should mark note as soft deleted', async () => {
+    const note = makeNote({ content: 'To be soft deleted' })
+    await act(async () => {
+      await useNoteStore.getState().addNote(note)
+    })
+
+    act(() => {
+      useNoteStore.getState().softDelete(note.id)
+    })
+
+    const state = useNoteStore.getState()
+    const deletedNote = state.notes.find(n => n.id === note.id)
+    expect(deletedNote).toBeDefined()
+    expect(deletedNote!.deleted).toBe(true)
+    expect(deletedNote!.deletedAt).toBeDefined()
+  })
+
+  it('should not remove note from state', async () => {
+    const note = makeNote()
+    await act(async () => {
+      await useNoteStore.getState().addNote(note)
+    })
+    expect(useNoteStore.getState().notes).toHaveLength(1)
+
+    act(() => {
+      useNoteStore.getState().softDelete(note.id)
+    })
+
+    expect(useNoteStore.getState().notes).toHaveLength(1)
+  })
+})
+
+describe('restoreNote', () => {
+  it('should restore soft deleted note', async () => {
+    const note = makeNote({ content: 'Restore me' })
+    await act(async () => {
+      await useNoteStore.getState().addNote(note)
+    })
+
+    act(() => {
+      useNoteStore.getState().softDelete(note.id)
+    })
+
+    let deletedNote = useNoteStore.getState().notes.find(n => n.id === note.id)
+    expect(deletedNote!.deleted).toBe(true)
+
+    act(() => {
+      useNoteStore.getState().restoreNote(note.id)
+    })
+
+    const restoredNote = useNoteStore.getState().notes.find(n => n.id === note.id)
+    expect(restoredNote).toBeDefined()
+    expect(restoredNote!.deleted).toBe(false)
+    expect(restoredNote!.deletedAt).toBeUndefined()
+  })
+
+  it('should clear deletion timestamp', async () => {
+    const note = makeNote()
+    await act(async () => {
+      await useNoteStore.getState().addNote(note)
+    })
+
+    act(() => {
+      useNoteStore.getState().softDelete(note.id)
+    })
+
+    const deletedNote = useNoteStore.getState().notes.find(n => n.id === note.id)
+    expect(deletedNote!.deletedAt).toBeDefined()
+
+    act(() => {
+      useNoteStore.getState().restoreNote(note.id)
+    })
+
+    const restoredNote = useNoteStore.getState().notes.find(n => n.id === note.id)
+    expect(restoredNote!.deletedAt).toBeUndefined()
+  })
+})

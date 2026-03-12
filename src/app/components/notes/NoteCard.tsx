@@ -48,7 +48,10 @@ type ViewState = 'collapsed' | 'expanded' | 'editing'
 export function NoteCard({ note, courseId, onDelete }: NoteCardProps) {
   const [viewState, setViewState] = useState<ViewState>('collapsed')
   const saveNote = useNoteStore(s => s.saveNote)
+  const softDelete = useNoteStore(s => s.softDelete)
+  const restoreNote = useNoteStore(s => s.restoreNote)
   const cancelRef = useRef(false)
+  const deleteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const preview = stripHtml(note.content)
   const snippet = preview.length > 120 ? preview.slice(0, 120) + '...' : preview
@@ -77,12 +80,35 @@ export function NoteCard({ note, courseId, onDelete }: NoteCardProps) {
   }
 
   const handleDelete = async () => {
-    try {
-      await onDelete(note.id)
-      toast.success('Note deleted')
-    } catch {
-      toast.error('Failed to delete note')
-    }
+    // Soft delete immediately
+    softDelete(note.id)
+
+    // Show toast with undo action
+    toast.success('Note deleted', {
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          // Cancel scheduled permanent deletion
+          if (deleteTimeoutRef.current) {
+            clearTimeout(deleteTimeoutRef.current)
+            deleteTimeoutRef.current = null
+          }
+          // Restore the note
+          restoreNote(note.id)
+        },
+      },
+    })
+
+    // Schedule permanent deletion after 10 seconds
+    deleteTimeoutRef.current = setTimeout(async () => {
+      try {
+        await onDelete(note.id)
+      } catch {
+        // Restore note on failure
+        restoreNote(note.id)
+        toast.error('Failed to delete note')
+      }
+    }, 10000)
   }
 
   const handleCancel = () => {
