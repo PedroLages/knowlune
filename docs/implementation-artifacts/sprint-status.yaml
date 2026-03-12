@@ -169,9 +169,9 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 9B: AI-Powered Learning Features
   # ──────────────────────────────────────────────────
-  epic-9b: backlog
+  epic-9b: in-progress
   9b-1-ai-video-summary: backlog
-  9b-2-chat-style-qa-from-notes-rag: backlog
+  9b-2-chat-style-qa-from-notes-rag: done
   9b-3-ai-learning-path-generation: backlog
   9b-4-knowledge-gap-detection: backlog
   9b-5-ai-note-organization-and-cross-course-links: backlog
