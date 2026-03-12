@@ -29,11 +29,33 @@ function stripTipTapAttributes(html: string): string {
 
 /**
  * Extracts plain text from HTML using DOMParser (safe from XSS).
+ * Preserves newlines between block-level elements.
  */
 function extractTextFromHtml(html: string): string {
   const parser = new DOMParser()
   const doc = parser.parseFromString(html, 'text/html')
-  return doc.body.textContent || ''
+
+  // Get all text nodes, adding newlines after block elements
+  const blockElements = ['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'BLOCKQUOTE']
+  const parts: string[] = []
+
+  const walk = (node: Node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent?.trim()
+      if (text) parts.push(text)
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      for (const child of Array.from(node.childNodes)) {
+        walk(child)
+      }
+      // Add newline after block elements
+      if (blockElements.includes((node as Element).tagName)) {
+        parts.push('\n')
+      }
+    }
+  }
+
+  walk(doc.body)
+  return parts.join(' ').replace(/\s*\n\s*/g, '\n').trim()
 }
 
 /**

@@ -95,15 +95,15 @@ test.describe('NFR35: Note export as Markdown', () => {
     await page.waitForLoadState('networkidle')
 
     // Wait for note card to appear
-    const noteCard = page.locator('.bg-card').first()
+    const noteCard = page.getByTestId('note-card').first()
     await expect(noteCard).toBeVisible()
 
     // Export button should initially be hidden (collapsed view)
     const exportButton = page.locator('[data-testid="export-note-button"]').first()
     await expect(exportButton).toBeHidden()
 
-    // Expand the note card by clicking anywhere on it
-    await noteCard.click()
+    // Expand the note card by clicking the preview text (inside clickable area)
+    await noteCard.locator('p').click()
 
     // Export button should now be visible
     await expect(exportButton).toBeVisible()
@@ -117,7 +117,7 @@ test.describe('NFR35: Note export as Markdown', () => {
     await page.waitForLoadState('networkidle')
 
     // Wait for note card to appear and expand it
-    await page.locator('.bg-card').first().click()
+    await page.getByTestId('note-card').first().locator('p').click()
 
     // Set up download listener before clicking
     const downloadPromise = page.waitForEvent('download')
@@ -142,7 +142,10 @@ test.describe('NFR35: Note export as Markdown', () => {
     await page.waitForLoadState('networkidle')
 
     // Wait for note card to appear and expand it
-    await page.locator('.bg-card').first().click()
+    await page.getByTestId('note-card').first().locator('p').click()
+
+    // Wait for export button to appear
+    await page.waitForSelector('[data-testid="export-note-button"]', { state: 'visible' })
 
     // Set up download listener and get content
     const downloadPromise = page.waitForEvent('download')
@@ -163,8 +166,8 @@ test.describe('NFR35: Note export as Markdown', () => {
       expect(content).toContain('---')
       expect(content).toContain('title: "Test Note"')
       expect(content).toContain('tags: ["test", "export"]')
-      expect(content).toContain('course: "Test Course for Export"')
-      expect(content).toContain('lesson: "Test Lesson"')
+      expect(content).toContain('course: "test-course-export"') // Falls back to ID for test-seeded courses
+      expect(content).toContain('lesson: "test-lesson"') // Falls back to ID for test-seeded lessons
       expect(content).toContain('created: "2025-01-15T10:00:00.000Z"')
       expect(content).toContain('updated: "2025-01-15T12:00:00.000Z"')
 
@@ -217,15 +220,17 @@ test.describe('NFR35: Note export as Markdown', () => {
     await page.waitForLoadState('networkidle')
 
     // Find the second note card (special chars) and expand it
-    const noteCards = page.locator('.bg-card')
-    await noteCards.nth(1).click()
+    const noteCards = page.getByTestId('note-card')
+    await noteCards.nth(1).locator('p').click()
+
+    // Wait for the second note's export button to appear
+    await page.waitForSelector('[data-testid="export-note-button"]', { state: 'visible' })
 
     // Set up download listener
     const downloadPromise = page.waitForEvent('download')
 
-    // Click the export button (get the second one)
-    const exportButtons = page.getByTestId('export-note-button')
-    await exportButtons.nth(1).click()
+    // Click the export button (should be the only visible one now)
+    await page.getByTestId('export-note-button').click()
 
     // Wait for download
     const download = await downloadPromise
@@ -243,7 +248,7 @@ test.describe('NFR35: Note export as Markdown', () => {
     await page.waitForLoadState('networkidle')
 
     // Wait for note card to appear and expand it
-    await page.locator('.bg-card').first().click()
+    await page.getByTestId('note-card').first().locator('p').click()
 
     // Set up download listener (to prevent download dialog)
     page.on('download', () => {})
