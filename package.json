@@ -6,7 +6,7 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite",
-    "lint": "eslint .",
+    "lint": "eslint . --cache",
     "lint:async-cleanup": "node scripts/validate-async-cleanup.js",
     "test": "vitest",
     "test:eslint-rules": "node eslint-plugin-react-hooks-async.test.js",
