@@ -46,6 +46,24 @@ else
 fi
 echo ""
 
+# 4. Code quality validation scripts (staged files only)
+echo -e "${YELLOW}⚙️  Running code quality validations...${NC}"
+
+# 4a. Import path consistency
+if ! ./scripts/validate-import-paths.sh; then
+    FAILED=1
+fi
+
+# 4b. Component structure
+if ! ./scripts/validate-component-structure.sh; then
+    FAILED=1
+fi
+
+# 4c. Inline styles (warning only - doesn't block)
+./scripts/validate-inline-styles.sh || true
+
+echo ""
+
 # If any check failed, block the commit
 if [ $FAILED -eq 1 ]; then
     echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
