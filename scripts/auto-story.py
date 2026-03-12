@@ -184,11 +184,22 @@ def parse_args() -> RunConfig:
 
 
 def normalize_story_id(sid: str) -> tuple[str, str]:
-    """E07-S01 -> ("7", "1"), stripping leading zeros."""
-    m = re.match(r"E(\d+)-S(\d+)", sid, re.IGNORECASE)
+    """E07-S01 -> ("7", "1"), E09B-S01 -> ("9b", "1"), stripping leading zeros."""
+    m = re.match(r"E(\d+)([A-Z]?)-S(\d+)", sid, re.IGNORECASE)
     if not m:
-        raise ValueError(f"Invalid story ID format: {sid!r}. Expected E##-S##")
-    return str(int(m.group(1))), str(int(m.group(2)))
+        raise ValueError(f"Invalid story ID format: {sid!r}. Expected E##-S## or E##X-S##")
+    epic_num = str(int(m.group(1)))
+    suffix = m.group(2).lower() if m.group(2) else ""
+    story_num = str(int(m.group(3)))
+    return epic_num + suffix, story_num
+
+
+def parse_epic_num(epic_num: str) -> tuple[int, str]:
+    """Parse epic_num like '9b' into (9, 'b') or '7' into (7, '')."""
+    m = re.match(r"(\d+)([a-z]?)", epic_num)
+    if not m:
+        raise ValueError(f"Invalid epic_num format: {epic_num!r}")
+    return int(m.group(1)), m.group(2)
 
 
 def load_sprint_status() -> dict[str, Any]:
@@ -471,10 +482,10 @@ def make_options(
 
 def format_prompt(template: str, story: StoryInfo) -> str:
     """Fill prompt template with story details. Sanitizes story name to prevent injection."""
-    epic_n = int(story.epic_num)
+    epic_n, epic_suffix = parse_epic_num(story.epic_num)
     story_n = int(story.story_num)
-    branch_slug = f"e{epic_n:02d}-s{story_n:02d}-{'-'.join(story.name.lower().split())}"
-    story_id_lower = f"e{epic_n:02d}-s{story_n:02d}"
+    branch_slug = f"e{epic_n:02d}{epic_suffix}-s{story_n:02d}-{'-'.join(story.name.lower().split())}"
+    story_id_lower = f"e{epic_n:02d}{epic_suffix}-s{story_n:02d}"
     today = date.today().isoformat()
 
     return template.format(
@@ -1000,9 +1011,9 @@ def extract_pr_url(text: str, story: StoryInfo | None = None) -> str | None:
 
     # Fallback: check GitHub for open PRs from this branch
     if story:
-        branch_slug = (
-            f"e{int(story.epic_num):02d}-s{int(story.story_num):02d}"
-        )
+        epic_n, epic_suffix = parse_epic_num(story.epic_num)
+        story_n = int(story.story_num)
+        branch_slug = f"e{epic_n:02d}{epic_suffix}-s{story_n:02d}"
         result = subprocess.run(
             ["gh", "pr", "list", "--head", f"feature/{branch_slug}",
              "--json", "url", "--limit", "1"],
