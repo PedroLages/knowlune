@@ -158,17 +158,35 @@ Mark the first todo as `in_progress` and proceed:
       ```
       If the current story has no spec file in `${BASE_PATH}/tests/e2e/`, run smoke specs only. STOP on failure. Do NOT run `tests/design-review.spec.ts` or `${BASE_PATH}/tests/e2e/regression/` specs here — those are separate.
 
-   g. **Burn-in test suggestion** (after E2E tests pass):
+   g. **Test pattern validation** (after E2E tests pass):
+
+      If the story has an E2E spec file, run the test pattern validator:
+      ```
+      node scripts/validate-test-patterns.js ${BASE_PATH}/tests/e2e/story-{id}.spec.ts
+      ```
+
+      **Exit code handling:**
+      - Exit 1 (HIGH/MEDIUM anti-patterns) → STOP review with findings:
+        ```
+        Test anti-patterns detected — must fix before review:
+
+        [Show validator output with severity and specific line numbers]
+
+        These patterns cause flakiness. Fix them, then re-run /review-story.
+        ```
+        Keep `reviewed: in-progress`. Do NOT proceed to burn-in or agent reviews.
+
+      - Exit 0 (clean or LOW-only) → Continue to burn-in suggestion. Store findings in memory for code review agent context.
+
+   h. **Burn-in test suggestion** (after E2E tests and pattern validation pass):
 
       If the story has an E2E spec file AND E2E tests passed AND `burn_in_validated` is NOT already `true` in story frontmatter, analyze whether burn-in testing would be valuable:
 
-      **Detection heuristics** (read the story's E2E spec file):
-      - 🔴 **Anti-patterns found** (HIGH confidence — recommend burn-in):
-        - Contains `Date.now()` or `new Date()` outside of `mockDateNow()` or `page.addInitScript()`
-        - Contains `waitForTimeout()` without explanation comment
-        - Contains `setTimeout()` or `setInterval()`
-        - Missing imports from `tests/utils/test-time.ts` but has date/time logic
-        - Manual IndexedDB seeding (not using shared helpers from `tests/support/helpers/`)
+      **Use validator findings from step g to determine confidence level:**
+
+      - 🔴 **HIGH confidence** (LOW severity findings detected) — recommend burn-in:
+        - Validator reported LOW severity issues (testFileSize, missingTestTimeImport, todoComments, debugConsole)
+        - These suggest complexity or timing-sensitive patterns worth validating
 
       - 🟡 **Timing-sensitive features** (MEDIUM confidence — offer burn-in):
         - Imports from `test-time.ts` (indicates date/time calculations)
@@ -318,7 +336,12 @@ Mark the first todo as `in_progress` and proceed:
 
    Task({
      subagent_type: "code-review",
-     prompt: "Review story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run git diff main...HEAD for changes. Focus on architecture, security, correctness, silent failures, and LevelUp stack patterns. Score each finding with confidence (0-100).",
+     prompt: "Review story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run git diff main...HEAD for changes.
+
+Test anti-patterns detected (step g validation):
+[Insert validation findings if any LOW severity issues were found, or 'No anti-patterns detected' if clean]
+
+Focus on architecture, security, correctness, silent failures, test anti-patterns (section 5.5), and LevelUp stack patterns. Score each finding with confidence (0-100).",
      description: "Code review E##-S##"
    })
 
