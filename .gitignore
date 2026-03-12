@@ -37,3 +37,6 @@ scripts/auto-story-progress.log
 
 # Experiments
 experiments/
+
+# ESLint cache
+.eslintcache
