@@ -182,7 +182,7 @@ export function CourseDetail() {
         </TabsContent>
 
         <TabsContent value="notes">
-          <CourseNotesTab courseId={course.id} modules={course.modules} />
+          <CourseNotesTab courseId={course.id} courseName={course.title} modules={course.modules} />
         </TabsContent>
       </Tabs>
     </div>

@@ -9,6 +9,7 @@ import type { Module, Note } from '@/data/types'
 
 interface CourseNotesTabProps {
   courseId: string
+  courseName: string
   modules: Module[]
 }
 
@@ -21,7 +22,7 @@ interface LessonInfo {
   lessonOrder: number
 }
 
-export function CourseNotesTab({ courseId, modules }: CourseNotesTabProps) {
+export function CourseNotesTab({ courseId, courseName, modules }: CourseNotesTabProps) {
   const notes = useNoteStore(s => s.notes)
   const isLoading = useNoteStore(s => s.isLoading)
   const loadNotesByCourse = useNoteStore(s => s.loadNotesByCourse)
@@ -181,6 +182,7 @@ export function CourseNotesTab({ courseId, modules }: CourseNotesTabProps) {
                         note={note}
                         lessonTitle={lesson.lessonTitle}
                         courseId={courseId}
+                        courseName={courseName}
                         onDelete={handleDelete}
                       />
                     ))}

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { ChevronDown, ChevronUp, Pencil, Trash2, X, Clock } from 'lucide-react'
+import { ChevronDown, ChevronUp, Pencil, Trash2, X, Clock, Download } from 'lucide-react'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
 import {
@@ -20,12 +20,14 @@ import { useNoteStore } from '@/stores/useNoteStore'
 import { formatTimestamp } from '@/lib/format'
 import { stripHtml } from '@/lib/textUtils'
 import { toast } from 'sonner'
+import { exportNoteAsMarkdown } from '@/lib/noteExport'
 import type { Note } from '@/data/types'
 
 interface NoteCardProps {
   note: Note
   lessonTitle: string
   courseId: string
+  courseName: string
   onDelete: (noteId: string) => Promise<void>
 }
 
@@ -45,7 +47,13 @@ function formatRelativeDate(isoDate: string): string {
 
 type ViewState = 'collapsed' | 'expanded' | 'editing'
 
-export function NoteCard({ note, courseId, onDelete }: NoteCardProps) {
+export function NoteCard({
+  note,
+  courseId,
+  courseName,
+  lessonTitle,
+  onDelete,
+}: NoteCardProps) {
   const [viewState, setViewState] = useState<ViewState>('collapsed')
   const saveNote = useNoteStore(s => s.saveNote)
   const softDelete = useNoteStore(s => s.softDelete)
@@ -116,6 +124,15 @@ export function NoteCard({ note, courseId, onDelete }: NoteCardProps) {
     setViewState('expanded')
   }
 
+  const handleExport = () => {
+    try {
+      exportNoteAsMarkdown(note, courseName, lessonTitle)
+      toast.success('Note exported successfully')
+    } catch {
+      toast.error('Failed to export note')
+    }
+  }
+
   return (
     <div className="relative bg-card rounded-[24px] border p-4 transition-shadow hover:shadow-sm">
       {/* Card header */}
@@ -174,6 +191,15 @@ export function NoteCard({ note, courseId, onDelete }: NoteCardProps) {
             <Button variant="outline" size="sm" onClick={() => setViewState('editing')}>
               <Pencil className="size-3.5 mr-1.5" />
               Edit
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              data-testid="export-note-button"
+            >
+              <Download className="size-3.5 mr-1.5" />
+              Export
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>

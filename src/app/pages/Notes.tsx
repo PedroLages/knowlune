@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { Search, StickyNote, ArrowUpDown, BookOpen, Clock, Info } from 'lucide-react'
+import { Search, StickyNote, ArrowUpDown, BookOpen, Clock, Info, Download } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/app/components/ui/utils'
 import { Input } from '@/app/components/ui/input'
@@ -26,6 +26,8 @@ import { useNoteStore } from '@/stores/useNoteStore'
 import { searchNotesWithContext } from '@/lib/noteSearch'
 import { getAllNoteTags } from '@/lib/progress'
 import { highlightMatches, buildHighlightPatterns } from '@/lib/searchUtils'
+import { exportNoteAsMarkdown } from '@/lib/noteExport'
+import { toast } from 'sonner'
 import { allCourses } from '@/data/courses'
 import { formatTimestamp } from '@/lib/format'
 import { stripHtml } from '@/lib/textUtils'
@@ -355,6 +357,24 @@ export function Notes() {
               >
                 <BookOpen className="size-3.5 mr-1.5" />
                 Open in Lesson
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  try {
+                    exportNoteAsMarkdown(item.note, item.courseName, item.lessonTitle)
+                    toast.success('Note exported successfully')
+                  } catch {
+                    toast.error('Failed to export note')
+                  }
+                }}
+                data-testid="export-note-button"
+              >
+                <Download className="size-3.5 mr-1.5" />
+                Export
               </Button>
 
               {item.note.timestamp != null && (
