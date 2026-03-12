@@ -21,7 +21,7 @@ export interface WorkerRequest<T = unknown> {
   requestId: string // UUID for tracking async requests
   type: WorkerRequestType
   payload: T
-  timeout?: number // Override default 30s timeout
+  timeout?: number // Override default 5s timeout
 }
 
 // ============================================================================
@@ -101,7 +101,8 @@ export interface InferResult {
 
 export interface TaskOptions {
   priority?: 'high' | 'normal' | 'low'
-  timeout?: number // Milliseconds (default: 30000)
+  timeout?: number // Milliseconds (default: 5000)
+  modelLoadTimeout?: number // Model loading timeout (default: 10000)
   signal?: AbortSignal // For cancellation
 }
 
