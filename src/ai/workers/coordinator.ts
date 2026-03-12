@@ -9,7 +9,7 @@
  * - Lazy spawning (workers created on-demand)
  * - Idle termination (workers killed after 60s idle)
  * - Message passing (structured protocol with requestId)
- * - Timeout handling (30s default, per NFR26)
+ * - Timeout handling (5s default, per NFR26)
  */
 
 import type {
@@ -31,7 +31,8 @@ const WORKER_POOL_CONFIG = {
   maxWorkers: 3,
   idleTimeout: 60_000, // Terminate idle workers after 60s
   maxRetries: 2,
-  defaultTimeout: 30_000, // 30s per NFR26
+  defaultTimeout: 5_000, // 5s per NFR26
+  modelLoadTimeout: 10_000, // 10s for model loading (NFR26)
 } as const
 
 // ============================================================================
