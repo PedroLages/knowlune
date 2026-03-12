@@ -6,7 +6,6 @@ import {
   Trash2,
   Save,
   X,
-  Camera,
   Monitor,
   Sun,
   Moon,
@@ -19,15 +18,7 @@ import { Input } from '@/app/components/ui/input'
 import { Button } from '@/app/components/ui/button'
 import { Textarea } from '@/app/components/ui/textarea'
 import { Label } from '@/app/components/ui/label'
-import { Avatar, AvatarImage, AvatarFallback } from '@/app/components/ui/avatar'
 import { Progress } from '@/app/components/ui/progress'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/app/components/ui/select'
 import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group'
 import { Separator } from '@/app/components/ui/separator'
 import {
@@ -52,7 +43,8 @@ import { ReminderSettings } from '@/app/components/figma/ReminderSettings'
 import { AIConfigurationSettings } from '@/app/components/figma/AIConfigurationSettings'
 import { AvatarCropDialog } from '@/app/components/ui/avatar-crop-dialog'
 import { AvatarUploadZone } from '@/app/components/settings/avatar-upload-zone'
-import { validateImageFile, compressAvatar, fileToDataUrl, getInitials } from '@/lib/avatarUpload'
+import { validateImageFile, compressAvatar, fileToDataUrl } from '@/lib/avatarUpload'
+import { toastSuccess, toastError } from '@/lib/toastHelpers'
 
 export default function Settings() {
   const { theme, setTheme } = useTheme()
@@ -86,6 +78,7 @@ export default function Settings() {
     setTimeout(() => setSaved(false), 2000)
     // Notify other components (like Layout) that settings changed
     window.dispatchEvent(new Event('settingsUpdated'))
+    toastSuccess.saved('Profile settings')
   }
 
   function handleExport() {
@@ -97,25 +90,51 @@ export default function Settings() {
     a.download = 'levelup-backup.json'
     a.click()
     URL.revokeObjectURL(url)
+    toastSuccess.exported('Data')
   }
 
   function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+
+    // Validate file type
+    if (!file.name.endsWith('.json')) {
+      toastError.invalidFile('JSON')
+      return
+    }
+
     const reader = new FileReader()
     reader.onload = () => {
-      const success = importAllData(reader.result as string)
-      if (success) {
-        setSettings(getSettings())
-        window.location.reload()
+      try {
+        const success = importAllData(reader.result as string)
+        if (success) {
+          toastSuccess.saved('Data imported successfully')
+          // Delay reload to show toast
+          setTimeout(() => {
+            setSettings(getSettings())
+            window.location.reload()
+          }, 1500)
+        } else {
+          toastError.importFailed()
+        }
+      } catch (error) {
+        console.error('Import error:', error)
+        toastError.importFailed(error instanceof Error ? error.message : 'Unknown error')
       }
+    }
+    reader.onerror = () => {
+      toastError.importFailed('Failed to read file')
     }
     reader.readAsText(file)
   }
 
   function handleReset() {
     resetAllData()
-    window.location.reload()
+    toastSuccess.reset('All data')
+    // Delay reload to show toast
+    setTimeout(() => {
+      window.location.reload()
+    }, 1000)
   }
 
   async function handleFileSelect(file: File) {
@@ -146,9 +165,12 @@ export default function Settings() {
     setUploadProgress(0)
 
     try {
+      // Convert Blob to File for compression
+      const croppedFile = new File([croppedBlob], 'avatar.jpg', { type: croppedBlob.type })
+
       // Compress cropped image (20% progress)
       setUploadProgress(20)
-      const compressedBlob = await compressAvatar(croppedBlob)
+      const compressedBlob = await compressAvatar(croppedFile)
 
       // Convert to data URL (70% progress)
       setUploadProgress(70)
@@ -169,10 +191,14 @@ export default function Settings() {
 
       // Notify other components
       window.dispatchEvent(new Event('settingsUpdated'))
+
+      // Show success toast
+      toastSuccess.saved('Profile photo updated')
     } catch (error) {
       console.error('Photo upload error:', error)
       setUploadError('Failed to process image. Please try again.')
       setUploadProgress(0)
+      toastError.saveFailed(error instanceof Error ? error.message : 'Unknown error')
     } finally {
       setIsUploading(false)
       setTempPhotoDataUrl(null)
