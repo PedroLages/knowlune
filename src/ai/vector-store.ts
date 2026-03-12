@@ -1,86 +1,62 @@
-/**
- * Vector Store Proxy
- *
- * Main-thread IndexedDB interface for note embeddings.
- * Workers cannot access IndexedDB directly — this module provides a clean
- * API to load embeddings for worker transfer and persist results from workers.
- */
-
 import { db } from '@/db'
-import type { NoteEmbedding } from '@/data/types'
+import { BruteForceVectorStore } from '@/lib/vectorSearch'
+import type { Embedding } from '@/data/types'
 
-/**
- * Load all note embeddings from IndexedDB into a plain object for worker transfer.
- * Called on main thread before sending to search worker via load-index.
- */
-export async function loadVectorIndex(): Promise<Record<string, Float32Array>> {
-  const embeddings = await db.embeddings.toArray()
-  const index: Record<string, Float32Array> = {}
-  for (const entry of embeddings) {
-    index[entry.noteId] = entry.embedding
+export class VectorStorePersistence {
+  private store: BruteForceVectorStore
+
+  constructor(dimensions = 384) {
+    this.store = new BruteForceVectorStore(dimensions)
   }
-  return index
-}
 
-/**
- * Persist a single embedding to IndexedDB.
- */
-export async function saveEmbedding(
-  noteId: string,
-  embedding: Float32Array,
-  model = 'all-MiniLM-L6-v2'
-): Promise<void> {
-  await db.embeddings.put({
-    noteId,
-    embedding,
-    model,
-    createdAt: new Date().toISOString(),
-  })
-}
-
-/**
- * Persist a batch of embeddings. Yields to the main thread every 10 items
- * to keep the UI responsive during large batch operations (NFR33).
- */
-export async function bulkSaveEmbeddings(
-  items: Array<{ noteId: string; embedding: Float32Array }>,
-  model = 'all-MiniLM-L6-v2'
-): Promise<void> {
-  const BATCH_SIZE = 10
-  const createdAt = new Date().toISOString()
-
-  try {
-    for (let i = 0; i < items.length; i += BATCH_SIZE) {
-      const batch = items.slice(i, i + BATCH_SIZE)
-      await db.embeddings.bulkPut(
-        batch.map(({ noteId, embedding }) => ({
-          noteId,
-          embedding,
-          model,
-          createdAt,
-        }))
-      )
-      // Yield to main thread between batches to avoid blocking UI (NFR33)
-      if (i + BATCH_SIZE < items.length) {
-        await new Promise(resolve => setTimeout(resolve, 0))
+  /** Load all embeddings from IndexedDB into in-memory store (call on app startup). */
+  async loadAll(): Promise<void> {
+    try {
+      const embeddings = await db.embeddings.toArray()
+      for (const emb of embeddings) {
+        this.store.insert(emb.noteId, emb.embedding)
       }
+    } catch (error) {
+      console.error('[VectorStore] Failed to load embeddings:', error)
+      // Graceful degradation: empty store is valid
     }
-  } catch (error) {
-    console.error('[VectorStore] bulkSaveEmbeddings failed:', error)
-    throw error
+    // Notify any UI listening for store readiness (e.g. semantic search toggle)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('vector-store-ready'))
+    }
+  }
+
+  /** Persist embedding for a note (create/update). Updates both IndexedDB and in-memory store. */
+  async saveEmbedding(noteId: string, embedding: number[]): Promise<void> {
+    // Insert to memory first — throws immediately on dimension mismatch,
+    // preventing a stale IndexedDB record with no in-memory counterpart.
+    this.store.insert(noteId, embedding)
+    try {
+      const record: Embedding = { noteId, embedding, createdAt: new Date().toISOString() }
+      await db.embeddings.put(record)
+    } catch (error) {
+      // Rollback in-memory insert if DB write fails
+      this.store.remove(noteId)
+      throw error
+    }
+  }
+
+  /** Remove embedding for a deleted note. Removes from both IndexedDB and in-memory store. */
+  async removeEmbedding(noteId: string): Promise<void> {
+    await db.embeddings.delete(noteId)
+    this.store.remove(noteId)
+  }
+
+  /** Get the in-memory store for searches. */
+  getStore(): BruteForceVectorStore {
+    return this.store
+  }
+
+  /** Get count of loaded embeddings. */
+  get size(): number {
+    return this.store.size
   }
 }
 
-/**
- * Delete embedding when note content changes (cache invalidation).
- */
-export async function deleteEmbedding(noteId: string): Promise<void> {
-  await db.embeddings.delete(noteId)
-}
-
-/**
- * Get embedding for a single note (for incremental updates).
- */
-export async function getEmbedding(noteId: string): Promise<NoteEmbedding | undefined> {
-  return db.embeddings.get(noteId)
-}
+// Singleton — shared across the app
+export const vectorStorePersistence = new VectorStorePersistence()

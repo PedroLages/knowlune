@@ -250,3 +250,11 @@ export interface StreakMilestone {
   earnedAt: string // ISO 8601
   streakStartDate: string // ISO 8601 date string — identifies which streak instance
 }
+
+// --- Vector Embeddings (Story 9.3) ---
+
+export interface Embedding {
+  noteId: string // Primary key: note UUID
+  embedding: number[] // 384-dimensional vector
+  createdAt: string // ISO timestamp
+}

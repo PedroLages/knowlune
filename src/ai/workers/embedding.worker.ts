@@ -26,6 +26,9 @@ import type {
 /**
  * MOCK: Generate fake embeddings for testing.
  * Replace with actual Transformers.js pipeline in production.
+ *
+ * Generates deterministic, normalized non-zero vectors via a simple LCG hash
+ * so that different texts produce distinguishable similarity scores.
  */
 async function generateMockEmbeddings(texts: string[]): Promise<Float32Array[]> {
   console.log('[EmbeddingWorker] MOCK: Generating embeddings for', texts.length, 'texts')
@@ -33,8 +36,27 @@ async function generateMockEmbeddings(texts: string[]): Promise<Float32Array[]> 
   // Simulate embedding generation (50ms per text)
   await new Promise(resolve => setTimeout(resolve, texts.length * 50))
 
-  // Return fake 384-dim vectors (all zeros)
-  return texts.map(() => new Float32Array(384))
+  return texts.map(text => {
+    const v = new Float32Array(384)
+
+    // Seed an LCG from the text content for deterministic, text-dependent vectors
+    let seed = 0
+    for (let i = 0; i < text.length; i++) {
+      seed = (seed * 31 + text.charCodeAt(i)) | 0
+    }
+
+    for (let i = 0; i < 384; i++) {
+      // LCG step (Numerical Recipes constants)
+      seed = (seed * 1664525 + 1013904223) | 0
+      v[i] = (seed & 0x7fffffff) / 0x7fffffff // [0, 1]
+    }
+
+    // Normalize to unit vector so cosine similarity is well-defined
+    const magnitude = Math.sqrt(v.reduce((acc, x) => acc + x * x, 0))
+    for (let i = 0; i < 384; i++) v[i] /= magnitude
+
+    return v
+  })
 }
 
 // ============================================================================

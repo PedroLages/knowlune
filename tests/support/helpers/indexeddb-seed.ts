@@ -126,3 +126,17 @@ export async function seedContentProgress(
 ): Promise<void> {
   await seedIndexedDBStore(page, 'ElearningDB', 'contentProgress', progress)
 }
+
+/**
+ * Seeds the embeddings object store in ElearningDB.
+ * Convenience wrapper around seedIndexedDBStore.
+ *
+ * @param page - Playwright Page instance
+ * @param embeddings - Array of embedding records ({ noteId, embedding, createdAt })
+ */
+export async function seedVectorEmbeddings(
+  page: Page,
+  embeddings: Record<string, unknown>[]
+): Promise<void> {
+  await seedIndexedDBStore(page, 'ElearningDB', 'embeddings', embeddings)
+}

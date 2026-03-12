@@ -7,6 +7,8 @@ import { router } from './routes'
 import { useSessionStore } from '@/stores/useSessionStore'
 import { ErrorBoundary } from '@/app/components/ErrorBoundary'
 import { initErrorTracking } from '@/lib/errorTracking'
+import { vectorStorePersistence } from '@/ai/vector-store'
+import { supportsWorkers } from '@/ai/lib/workerCapabilities'
 
 // Register global error handlers (window.onerror, unhandledrejection)
 initErrorTracking()
@@ -18,6 +20,15 @@ export default function App() {
   useEffect(() => {
     recoverOrphanedSessions()
   }, [recoverOrphanedSessions])
+
+  // Load vector embeddings from IndexedDB on startup
+  useEffect(() => {
+    if (supportsWorkers()) {
+      vectorStorePersistence
+        .loadAll()
+        .catch(err => console.error('[App] Vector store init failed:', err))
+    }
+  }, [])
 
   return (
     <ErrorBoundary>

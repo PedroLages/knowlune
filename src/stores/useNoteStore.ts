@@ -3,6 +3,8 @@ import { db } from '@/db'
 import type { Note } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { addToIndex, updateInIndex, removeFromIndex } from '@/lib/noteSearch'
+import { embeddingPipeline } from '@/ai/embeddingPipeline'
+import { supportsWorkers } from '@/ai/lib/workerCapabilities'
 
 interface NoteState {
   notes: Note[]
@@ -80,6 +82,11 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       } else {
         addToIndex(note)
       }
+      if (supportsWorkers()) {
+        embeddingPipeline
+          .indexNote(note)
+          .catch(err => console.error('[NoteStore] Embedding failed:', err))
+      }
     } catch (error) {
       // Rollback on failure
       set({ notes: oldNotes, error: 'Failed to save note' })
@@ -98,6 +105,11 @@ export const useNoteStore = create<NoteState>((set, get) => ({
         await db.notes.add(note)
       })
       addToIndex(note)
+      if (supportsWorkers()) {
+        embeddingPipeline
+          .indexNote(note)
+          .catch(err => console.error('[NoteStore] Embedding failed:', err))
+      }
     } catch (error) {
       // Rollback on failure
       set({
@@ -123,6 +135,11 @@ export const useNoteStore = create<NoteState>((set, get) => ({
         await db.notes.delete(noteId)
       })
       removeFromIndex(noteId)
+      if (supportsWorkers()) {
+        embeddingPipeline
+          .removeNote(noteId)
+          .catch(err => console.error('[NoteStore] Embedding removal failed:', err))
+      }
     } catch (error) {
       // Rollback on failure
       if (noteToDelete) {
