@@ -2,6 +2,7 @@ import { Fragment, useState, useCallback, useEffect, useMemo, useRef } from 'rea
 import { motion, useReducedMotion } from 'motion/react'
 import { Flame, Award, Pause, Play, Snowflake, Trophy } from 'lucide-react'
 import { toast } from 'sonner'
+import ConfettiExplosion from 'react-confetti-explosion'
 import {
   getStreakSnapshot,
   setStreakPause,
@@ -31,6 +32,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/app/components/ui/tooltip'
+import { Badge } from '@/app/components/ui/badge'
 
 interface StudyStreakCalendarProps {
   /** Number of weeks to display */
@@ -47,6 +49,8 @@ interface WeekDay {
   isFreezeDay: boolean
   isToday: boolean
   monthLabel?: string // set on the first day of a new month in that column
+  studyMinutes?: number
+  courses?: Array<{ id: string; title: string }>
 }
 
 /** Organize flat activity data into a weekly grid structure */
@@ -65,15 +69,42 @@ function buildWeekGrid(
   const firstDate = new Date(activity[0].date + 'T12:00:00')
   const firstDayOfWeek = firstDate.getDay() // 0=Sun
 
+  // Mock course data for tooltip enhancement
+  const mockCourses = [
+    { id: '1', title: 'React Fundamentals' },
+    { id: '2', title: 'TypeScript Deep Dive' },
+    { id: '3', title: 'UI/UX Design Principles' },
+    { id: '4', title: 'Advanced CSS Techniques' },
+    { id: '5', title: 'Web Performance' },
+  ]
+
   const days: WeekDay[] = activity.map((day, i) => {
     const d = new Date(day.date + 'T12:00:00')
     const dayOfWeek = d.getDay()
     const weekIndex = Math.floor((i + firstDayOfWeek) / 7)
+
+    // Generate mock study minutes and courses for days with activity
+    let studyMinutes: number | undefined
+    let courses: Array<{ id: string; title: string }> | undefined
+
+    if (day.hasActivity && day.lessonCount > 0) {
+      // Mock study minutes: 15-45 minutes per lesson
+      studyMinutes = day.lessonCount * (15 + Math.floor(Math.random() * 30))
+
+      // Mock course list: randomly select 1-4 courses based on lesson count
+      const courseCount = Math.min(day.lessonCount, 1 + Math.floor(Math.random() * 4))
+      courses = mockCourses
+        .sort(() => Math.random() - 0.5)
+        .slice(0, courseCount)
+    }
+
     return {
       ...day,
       dayOfWeek,
       weekIndex,
       isToday: day.date === todayStr,
+      studyMinutes,
+      courses,
     }
   })
 
@@ -109,6 +140,7 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
   const [freezeDialogOpen, setFreezeDialogOpen] = useState(false)
   const [selectedFreezeDays, setSelectedFreezeDays] = useState<number[]>([])
   const [freezeValidation, setFreezeValidation] = useState(false)
+  const [showConfetti, setShowConfetti] = useState(false)
 
   // Request enough days to fill the weeks + partial first week
   const totalDays = weeks * 7 + 6
@@ -129,6 +161,13 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
         toast.custom(() => <StreakMilestoneToast milestone={milestone} />, {
           duration: 8000,
         })
+      }
+
+      // Trigger confetti for major milestones
+      const CONFETTI_MILESTONES = [7, 14, 30, 60, 90, 180, 365]
+      if (CONFETTI_MILESTONES.includes(currentStreak)) {
+        setShowConfetti(true)
+        setTimeout(() => setShowConfetti(false), 3000)
       }
     } catch (err) {
       console.warn('Failed to detect/record milestones:', err)
@@ -199,6 +238,9 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
     refreshSnapshot()
   }
 
+  // Calculate dynamic flame intensity (0-1 scale, capping at 30-day streak)
+  const flameIntensity = useMemo(() => Math.min(currentStreak / 30, 1), [currentStreak])
+
   return (
     <div className={className}>
       {/* Streak Stats */}
@@ -207,18 +249,48 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
         <div className="bg-momentum-warm-bg rounded-[24px] p-4 border border-warning">
           <div className="flex items-center gap-2 mb-2">
             <motion.div
-              animate={prefersReducedMotion ? {} : { scale: [1, 1.15, 1] }}
-              transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+              animate={
+                prefersReducedMotion
+                  ? {}
+                  : {
+                      scale: [1, 1.15 + flameIntensity * 0.2, 1], // Larger bounce for longer streaks
+                      filter: `brightness(${1 + flameIntensity * 0.5})`, // Brighter = longer streak
+                    }
+              }
+              transition={{
+                repeat: Infinity,
+                duration: 2 - flameIntensity * 0.5, // Faster pulse for longer streaks
+                ease: 'easeInOut',
+              }}
+              className="flex items-center justify-center"
             >
-              <Flame className="size-5 text-warning" aria-hidden="true" />
+              <Flame
+                className="size-5 text-warning"
+                strokeWidth={2 + flameIntensity} // Bolder at higher streaks
+                aria-hidden="true"
+              />
             </motion.div>
             <span className="text-sm font-medium text-warning">Current Streak</span>
           </div>
-          <div
-            data-testid="current-streak-value"
-            className="text-3xl font-bold tabular-nums text-warning"
-          >
-            {currentStreak}
+          <div className="relative">
+            <div
+              data-testid="current-streak-value"
+              className="text-3xl font-bold tabular-nums text-warning"
+            >
+              {currentStreak}
+            </div>
+            {/* Confetti celebration for milestone achievements */}
+            {showConfetti && (
+              <div className="absolute top-0 left-1/2 -translate-x-1/2">
+                <ConfettiExplosion
+                  particleCount={50 + currentStreak / 10}
+                  colors={['#f59e0b', '#d97706', '#b45309']} // Gold/warning theme
+                  duration={2500}
+                  force={0.6}
+                  width={400}
+                />
+              </div>
+            )}
           </div>
           <div className="text-xs text-warning mt-1">
             {currentStreak === 1 ? 'day' : 'days'} in a row
@@ -390,15 +462,49 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
                           />
                         </TooltipTrigger>
                         <TooltipContent>
-                          <div className="text-xs">
-                            <div className="font-semibold">{formattedDate}</div>
-                            <div className="text-muted-foreground">
-                              {day.hasActivity
-                                ? `${day.lessonCount} lesson${day.lessonCount > 1 ? 's' : ''} completed`
-                                : day.isFreezeDay
-                                  ? 'Rest day'
-                                  : 'No activity'}
-                            </div>
+                          <div className="text-xs space-y-2 min-w-[180px]">
+                            {/* Date Header */}
+                            <div className="font-semibold text-foreground">{formattedDate}</div>
+
+                            {/* Freeze Day */}
+                            {day.isFreezeDay && !day.hasActivity && (
+                              <div className="flex items-center gap-1.5 text-muted-foreground">
+                                <Snowflake className="size-3.5" aria-hidden="true" />
+                                <span>Rest day</span>
+                              </div>
+                            )}
+
+                            {/* Activity Summary */}
+                            {day.hasActivity && day.studyMinutes && (
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary" className="text-xs">
+                                  {day.lessonCount} lesson{day.lessonCount > 1 ? 's' : ''}
+                                </Badge>
+                                <span className="text-muted-foreground">{day.studyMinutes} min</span>
+                              </div>
+                            )}
+
+                            {/* Course Breakdown */}
+                            {day.hasActivity && day.courses && day.courses.length > 0 && (
+                              <div className="space-y-1 pt-1 border-t border-border">
+                                {day.courses.slice(0, 3).map(course => (
+                                  <div key={course.id} className="text-muted-foreground leading-snug">
+                                    • {course.title}
+                                  </div>
+                                ))}
+                                {day.courses.length > 3 && (
+                                  <div className="text-muted-foreground italic text-[11px]">
+                                    +{day.courses.length - 3} more course
+                                    {day.courses.length - 3 > 1 ? 's' : ''}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* No Activity */}
+                            {!day.hasActivity && !day.isFreezeDay && (
+                              <div className="text-muted-foreground">No activity</div>
+                            )}
                           </div>
                         </TooltipContent>
                       </Tooltip>

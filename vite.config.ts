@@ -101,6 +101,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     exclude: ['@mlc-ai/web-llm'],
+    include: ['@number-flow/react'], // React wrapper for NumberFlow animations
   },
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],

@@ -1,7 +1,8 @@
 import { LucideIcon, TrendingUp, TrendingDown, Download, Activity } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
-import { AnimatedCounter } from './AnimatedCounter'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet'
+import NumberFlow from '@number-flow/react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/app/components/ui/tooltip'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet'
 import { Button } from '@/app/components/ui/button'
 import { StatsCardComparison } from './StatsCardComparison'
 
@@ -15,8 +16,16 @@ interface StatsCardProps {
   testId?: string
 }
 
-/** SVG sparkline — smooth curve instead of bar chart */
-function Sparkline({ data, className }: { data: number[]; className?: string }) {
+/** SVG sparkline — smooth curve with interactive tooltips */
+function Sparkline({
+  data,
+  label,
+  className,
+}: {
+  data: number[]
+  label: string
+  className?: string
+}) {
   const max = Math.max(...data, 1)
   const width = 80
   const height = 24
@@ -34,29 +43,55 @@ function Sparkline({ data, className }: { data: number[]; className?: string }) 
   }, '')
 
   return (
-    <svg
-      viewBox={`0 0 ${width} ${height}`}
-      className={cn('overflow-visible', className)}
-      role="img"
-      aria-label={`Last 7 days activity: ${data.join(', ')} completions`}
-    >
-      <path
-        d={d}
-        fill="none"
-        stroke="var(--brand)"
-        strokeWidth={1.5}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        opacity={0.6}
-      />
-      {/* End dot */}
-      <circle
-        cx={points[points.length - 1]?.x}
-        cy={points[points.length - 1]?.y}
-        r={2}
-        fill="var(--brand)"
-      />
-    </svg>
+    <TooltipProvider delayDuration={0}>
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className={cn('overflow-visible', className)}
+        role="img"
+        aria-label={`Last 7 days activity: ${data.join(', ')} ${label.toLowerCase()}`}
+      >
+        {/* Sparkline path */}
+        <path
+          d={d}
+          fill="none"
+          stroke="var(--brand)"
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          opacity={0.6}
+        />
+
+        {/* Interactive circles with tooltips at each data point */}
+        {points.map((point, i) => (
+          <Tooltip key={i}>
+            <TooltipTrigger asChild>
+              <circle
+                cx={point.x}
+                cy={point.y}
+                r={4}
+                fill="var(--brand)"
+                className="opacity-0 hover:opacity-100 transition-opacity cursor-pointer motion-safe:transition-all motion-safe:duration-200"
+                aria-label={`Day ${i + 1}: ${data[i]} ${label.toLowerCase()}`}
+              />
+            </TooltipTrigger>
+            <TooltipContent side="top" className="bg-popover border-border">
+              <div className="text-xs">
+                <span className="font-medium">{data[i]}</span> {label.toLowerCase()}
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        ))}
+
+        {/* End dot (always visible) */}
+        <circle
+          cx={points[points.length - 1]?.x}
+          cy={points[points.length - 1]?.y}
+          r={2}
+          fill="var(--brand)"
+          className="pointer-events-none"
+        />
+      </svg>
+    </TooltipProvider>
   )
 }
 
@@ -69,14 +104,17 @@ export function StatsCard({
   sparkline,
   testId,
 }: StatsCardProps) {
-  // Convert value to number for comparison component
-  const numericValue = typeof value === 'string' ? parseFloat(value) || 0 : value
+  // Extract numeric value and suffix (e.g., "12.5h" → 12.5, "h")
+  const stringValue = String(value)
+  const numericMatch = stringValue.match(/^([\d.]+)(.*)$/)
+  const numericValue = numericMatch ? parseFloat(numericMatch[1]) : NaN
+  const suffix = numericMatch ? numericMatch[2] : ''
 
   return (
     <Sheet>
       <SheetTrigger asChild>
         <button
-          className="group relative p-4 rounded-2xl bg-surface-elevated border border-border/50 hover:border-brand-muted motion-safe:hover:shadow-studio-hover motion-safe:transition-[box-shadow,border-color] motion-safe:duration-300 overflow-hidden w-full text-left cursor-pointer"
+          className="group relative p-4 rounded-2xl bg-surface-elevated border border-border/50 hover:border-brand-muted motion-safe:hover:shadow-studio-hover motion-safe:transition-[box-shadow,border-color] motion-safe:duration-300 overflow-hidden w-full text-left cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           aria-label={`View details for ${label}`}
         >
           {/* Subtle gradient on hover */}
@@ -91,11 +129,15 @@ export function StatsCard({
               />
             </div>
 
-            <AnimatedCounter
-              value={value}
-              className="text-2xl font-bold tabular-nums block"
-              testId={testId || 'stat-value'}
-            />
+            <div className="text-2xl font-bold tabular-nums block" data-testid={testId || 'stat-value'}>
+              <NumberFlow
+                value={isNaN(numericValue) ? 0 : numericValue}
+                format={{ notation: 'standard', maximumFractionDigits: stringValue.includes('.') ? 1 : 0 }}
+                locales="en-US"
+                aria-live="polite"
+              />
+              {suffix && <span className="ml-0.5">{suffix}</span>}
+            </div>
 
             {/* Trend indicator */}
             {trend && (
@@ -103,8 +145,8 @@ export function StatsCard({
                 className={cn(
                   'flex items-center gap-1 text-xs font-medium mt-1',
                   trend === 'up'
-                    ? 'text-green-600 dark:text-green-400'
-                    : 'text-red-600 dark:text-red-400'
+                    ? 'text-success'
+                    : 'text-destructive'
                 )}
               >
                 {trend === 'up' ? (
@@ -116,9 +158,9 @@ export function StatsCard({
               </div>
             )}
 
-            {/* SVG sparkline */}
+            {/* SVG sparkline with interactive tooltips */}
             {sparkline && sparkline.length > 0 && (
-              <Sparkline data={sparkline} className="h-6 w-full mt-2" />
+              <Sparkline data={sparkline} label={label} className="h-6 w-full mt-2" />
             )}
           </div>
         </button>
@@ -130,6 +172,9 @@ export function StatsCard({
             <Icon className="size-5 text-brand" aria-hidden="true" />
             {label}
           </SheetTitle>
+          <SheetDescription>
+            Detailed view and comparison for {label.toLowerCase()}
+          </SheetDescription>
         </SheetHeader>
 
         <div className="mt-6 space-y-6">

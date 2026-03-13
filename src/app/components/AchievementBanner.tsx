@@ -72,6 +72,17 @@ export function AchievementBanner({ completedLessons }: AchievementBannerProps) 
   const circumference = 2 * Math.PI * radius
   const offset = circumference - (Math.min(100, progress) / 100) * circumference
 
+  // Calculate milestone positions
+  const maxMilestone = milestones[milestones.length - 1]
+  const getMilestoneAngle = (milestone: number) => (milestone / maxMilestone) * 360
+  const getMilestonePosition = (angle: number) => {
+    const radian = (angle - 90) * (Math.PI / 180) // -90 to start from top
+    return {
+      x: size / 2 + radius * Math.cos(radian),
+      y: size / 2 + radius * Math.sin(radian),
+    }
+  }
+
   return (
     <Card className="rounded-2xl bg-gradient-to-br from-gold/10 to-warning/10 border-gold/30 shadow-studio-gold overflow-hidden min-w-[200px]">
       {/* Gold accent line */}
@@ -82,6 +93,7 @@ export function AchievementBanner({ completedLessons }: AchievementBannerProps) 
           {/* Circular progress ring */}
           <div className="relative flex-shrink-0">
             <svg width={size} height={size} className="rotate-[-90deg]" aria-hidden="true">
+              {/* Background ring */}
               <circle
                 cx={size / 2}
                 cy={size / 2}
@@ -91,6 +103,7 @@ export function AchievementBanner({ completedLessons }: AchievementBannerProps) 
                 strokeWidth={strokeWidth}
                 className="text-gold"
               />
+              {/* Progress ring */}
               <circle
                 cx={size / 2}
                 cy={size / 2}
@@ -103,6 +116,29 @@ export function AchievementBanner({ completedLessons }: AchievementBannerProps) 
                 strokeLinecap="round"
                 className="text-gold motion-safe:transition-[stroke-dashoffset] motion-safe:duration-700"
               />
+              {/* Milestone markers */}
+              {milestones.map(m => {
+                const angle = getMilestoneAngle(m)
+                const pos = getMilestonePosition(angle)
+                const isCompleted = completedLessons >= m
+                const isCurrent = milestone.next === m
+                const markerRadius = isCurrent ? 5 : 3
+
+                return (
+                  <circle
+                    key={m}
+                    cx={pos.x}
+                    cy={pos.y}
+                    r={markerRadius}
+                    fill="currentColor"
+                    className={`motion-safe:transition-all motion-safe:duration-500 ${
+                      isCompleted
+                        ? 'text-gold'
+                        : 'text-muted'
+                    } ${isCurrent ? 'drop-shadow-[0_0_4px_var(--gold)]' : ''}`}
+                  />
+                )
+              })}
             </svg>
             <Trophy className="absolute inset-0 m-auto size-5 text-warning" aria-hidden="true" />
           </div>
