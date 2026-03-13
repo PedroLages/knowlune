@@ -109,11 +109,20 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M1: `bulkSaveEmbeddings` in vector-store.ts has no error handling -- partial writes with no rollback
 - M2: `supportsModuleWorkers()` returns same value as `supportsWorkers()` -- misleading (Firefox <114 supports workers but not module workers)
 
-## E09B-S01: AI Video Summary
-- BLOCKER: `_testApiKey` escape hatch in production code (`as any` cast) -- security risk, bypasses encryption
-- H1: No AbortController/cleanup for streaming generation on unmount -- React state updates after unmount
-- H2: `handleGenerate` is fire-and-forget async in event handler -- no cancellation on rapid re-clicks (regenerate)
-- H3 (RECURRING): `as any` cast in `getDecryptedApiKey` bypasses type safety for test-only field
-- M1: Comment says "Validate word count (100-300 words per AC)" but no actual validation/warning displayed
-- M2: AC3 timeout test takes 35s real time -- slow CI feedback loop
-- M3: Missing sidebar localStorage seed in E2E tests (recurring from E07-S04)
+## E09B-S01: AI Video Summary (Round 2)
+**Round 1 fixes verified:**
+- BLOCKER fixed: `_testApiKey` now typed on interface, `import.meta.env.DEV` gating added
+- H1 fixed: AbortController ref with useEffect cleanup on unmount
+- H2 fixed: Existing controller aborted before new one created (re-invocation safe)
+- H3 fixed: `as any` cast removed, `_testApiKey` on typed interface
+- M2 fixed: Timeout override via `window.__AI_SUMMARY_TIMEOUT__`, test uses 3s
+- M3 fixed: Sidebar localStorage seed added to beforeEach
+
+**Round 2 findings:**
+- H1: CSP connect-src missing entries for 3 new providers (Groq, GLM, Gemini) -- API calls will be silently blocked
+- H2: VTT parser duplicated between aiSummary.ts and TranscriptPanel.tsx (identical parseVTT/parseTime functions)
+- H3: Word count computed per-chunk in streaming loop is O(n^2) over accumulated text
+- H4: Test `mockOpenAIStreaming` checks abort BEFORE delay, so abort mid-stream races with yield
+- M1: Still no word count validation/warning displayed to user (comment says "prompt-enforced only")
+- M2 (RECURRING): `(window as any)` casts for test hooks -- typed window interface extension preferred
+- Nit: `handleGenerate` abort-cancelled state leaves component in `generating` -- no visual reset
