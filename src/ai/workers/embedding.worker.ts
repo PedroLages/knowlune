@@ -20,16 +20,17 @@ import type {
 } from './types'
 
 // ============================================================================
-// PLACEHOLDER: Mock Embedding Generation
+// PLACEHOLDER: Mock Embedding Generation (DISABLED - using real Transformers.js)
 // ============================================================================
 
-/**
+/*
  * MOCK: Generate fake embeddings for testing.
  * Replace with actual Transformers.js pipeline in production.
  *
  * Generates deterministic, normalized non-zero vectors via a simple LCG hash
  * so that different texts produce distinguishable similarity scores.
  */
+/*
 async function generateMockEmbeddings(texts: string[]): Promise<Float32Array[]> {
   console.log('[EmbeddingWorker] MOCK: Generating embeddings for', texts.length, 'texts')
 
@@ -58,12 +59,12 @@ async function generateMockEmbeddings(texts: string[]): Promise<Float32Array[]> 
     return v
   })
 }
+*/
 
 // ============================================================================
-// PRODUCTION: Transformers.js Integration (commented out until testing)
+// PRODUCTION: Transformers.js Integration
 // ============================================================================
 
-/*
 import { pipeline, env } from '@xenova/transformers'
 
 // Disable local model cache (IndexedDB only)
@@ -79,8 +80,7 @@ async function initializePipeline() {
     try {
       embeddingPipeline = await pipeline(
         'feature-extraction',
-        'Xenova/all-MiniLM-L6-v2',  // 384-dim, 23MB model
-        { device: 'wasm' }            // WebAssembly backend (CPU)
+        'Xenova/all-MiniLM-L6-v2'  // 384-dim, 23MB model (defaults to WASM/CPU)
       )
 
       console.log('[EmbeddingWorker] Model loaded successfully')
@@ -100,7 +100,6 @@ async function generateEmbeddings(texts: string[]): Promise<Float32Array[]> {
   const result = await pipeline(texts, { pooling: 'mean', normalize: true })
   return result.data  // 384-dim vectors
 }
-*/
 
 // ============================================================================
 // Message Handler
@@ -127,8 +126,8 @@ self.onmessage = async (e: MessageEvent) => {
       throw new Error('Invalid payload: texts must be non-empty array')
     }
 
-    // Generate embeddings (MOCK for now)
-    const embeddings = await generateMockEmbeddings(texts)
+    // Generate embeddings (Real Transformers.js)
+    const embeddings = await generateEmbeddings(texts)
 
     const successResponse: WorkerSuccessResponse<EmbedResult> = {
       requestId,
