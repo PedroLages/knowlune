@@ -109,7 +109,7 @@ export function AISummaryPanel({ transcriptSrc }: AISummaryPanelProps) {
       for await (const chunk of generator) {
         fullText += chunk
         setSummaryText(fullText)
-        setWordCount(fullText.split(/\s+/).filter(w => w.length > 0).length)
+        // Word count calculated once after streaming completes (avoid O(n*k) recalculation on every chunk)
       }
 
       // Display final word count (AC1 target: 100-300 words, prompt-enforced only)
@@ -283,7 +283,7 @@ export function AISummaryPanel({ transcriptSrc }: AISummaryPanelProps) {
 
         {/* Collapsed minimal bar */}
         {isCollapsed && (
-          <div className="text-xs text-muted-foreground">
+          <div className="text-xs text-muted-foreground" data-testid="summary-collapsed-message">
             Summary collapsed — click Expand to view
           </div>
         )}
