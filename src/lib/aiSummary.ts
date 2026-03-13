@@ -186,6 +186,115 @@ const PROVIDER_CONFIGS: Record<AIProviderId, ProviderConfig> = {
       }
     },
   },
+  groq: {
+    endpoint: 'https://api.groq.com/openai/v1/chat/completions',
+    headers: (apiKey: string) => ({
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    }),
+    buildPayload: (transcript: string) => {
+      const sanitized = sanitizeAIRequestPayload(transcript)
+      return {
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You are a helpful assistant that summarizes educational video content. Provide concise, informative summaries that capture key concepts and main takeaways.',
+          },
+          {
+            role: 'user',
+            content: `Summarize the following video transcript in 100-300 words. Focus on key concepts and main takeaways:\n\n${sanitized.content}`,
+          },
+        ],
+        stream: true,
+        max_tokens: 500,
+      }
+    },
+    parseStreamChunk: (line: string): string | null => {
+      if (!line.startsWith('data: ')) return null
+      const data = line.slice(6).trim()
+      if (data === '[DONE]') return null
+
+      try {
+        const parsed = JSON.parse(data)
+        return parsed.choices?.[0]?.delta?.content || null
+      } catch {
+        return null
+      }
+    },
+  },
+  glm: {
+    endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+    headers: (apiKey: string) => ({
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    }),
+    buildPayload: (transcript: string) => {
+      const sanitized = sanitizeAIRequestPayload(transcript)
+      return {
+        model: 'glm-4-flash',
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You are a helpful assistant that summarizes educational video content. Provide concise, informative summaries that capture key concepts and main takeaways.',
+          },
+          {
+            role: 'user',
+            content: `Summarize the following video transcript in 100-300 words. Focus on key concepts and main takeaways:\n\n${sanitized.content}`,
+          },
+        ],
+        stream: true,
+        max_tokens: 500,
+      }
+    },
+    parseStreamChunk: (line: string): string | null => {
+      if (!line.startsWith('data: ')) return null
+      const data = line.slice(6).trim()
+      if (data === '[DONE]') return null
+
+      try {
+        const parsed = JSON.parse(data)
+        return parsed.choices?.[0]?.delta?.content || null
+      } catch {
+        return null
+      }
+    },
+  },
+  gemini: {
+    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent',
+    headers: () => ({
+      'Content-Type': 'application/json',
+    }),
+    buildPayload: (transcript: string) => {
+      const sanitized = sanitizeAIRequestPayload(transcript)
+      return {
+        contents: [
+          {
+            parts: [
+              {
+                text: `You are a helpful assistant that summarizes educational video content. Provide concise, informative summaries that capture key concepts and main takeaways.\n\nSummarize the following video transcript in 100-300 words. Focus on key concepts and main takeaways:\n\n${sanitized.content}`,
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          maxOutputTokens: 500,
+        },
+      }
+    },
+    parseStreamChunk: (line: string): string | null => {
+      // Gemini uses a different streaming format - not SSE
+      try {
+        const parsed = JSON.parse(line)
+        const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text
+        return text || null
+      } catch {
+        return null
+      }
+    },
+  },
 }
 
 // ---------------------------------------------------------------------------
@@ -230,7 +339,11 @@ export async function* generateVideoSummary(
   }
 
   try {
-    const response = await fetch(config.endpoint, {
+    // Gemini uses query parameter for API key, others use headers
+    const endpoint =
+      provider === 'gemini' ? `${config.endpoint}?key=${apiKey}` : config.endpoint
+
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: config.headers(apiKey),
       body: JSON.stringify(config.buildPayload(transcript)),

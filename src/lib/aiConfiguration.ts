@@ -13,7 +13,7 @@
 import { encryptData, decryptData, type EncryptedData } from './crypto'
 
 /** Supported AI provider IDs */
-export type AIProviderId = 'openai' | 'anthropic'
+export type AIProviderId = 'openai' | 'anthropic' | 'groq' | 'glm' | 'gemini'
 
 /** AI provider configuration and validation */
 export interface AIProvider {
@@ -93,6 +93,9 @@ export const DEFAULTS: AIConfigurationSettings = {
  * Provider validation patterns:
  * - OpenAI: `sk-[32+ alphanumeric characters]`
  * - Anthropic: `sk-ant-[32+ alphanumeric/dash/underscore]`
+ * - Groq: `gsk_[32+ alphanumeric characters]`
+ * - GLM (Z.ai): `[32+ alphanumeric characters]`
+ * - Gemini: `AIza[32+ alphanumeric characters]`
  */
 export const AI_PROVIDERS: Record<AIProviderId, AIProvider> = {
   openai: {
@@ -113,6 +116,36 @@ export const AI_PROVIDERS: Record<AIProviderId, AIProvider> = {
       // Stub: Real Anthropic API call implemented in future stories (S02-S07)
       // For now, validate format only
       return Promise.resolve(key.startsWith('sk-ant-'))
+    },
+  },
+  groq: {
+    id: 'groq',
+    name: 'Groq (FREE)',
+    validateApiKey: key => /^gsk_[A-Za-z0-9-_]{8,}$/.test(key),
+    testConnection: async key => {
+      // Stub: Real Groq API call implemented in future stories (S02-S07)
+      // For now, validate format only
+      return Promise.resolve(key.startsWith('gsk_'))
+    },
+  },
+  glm: {
+    id: 'glm',
+    name: 'GLM / Z.ai (FREE)',
+    validateApiKey: key => /^[A-Za-z0-9-_.]{16,}$/.test(key),
+    testConnection: async key => {
+      // Stub: Real GLM API call implemented in future stories (S02-S07)
+      // For now, validate format only (GLM keys are alphanumeric)
+      return Promise.resolve(key.length >= 16)
+    },
+  },
+  gemini: {
+    id: 'gemini',
+    name: 'Google Gemini (FREE)',
+    validateApiKey: key => /^AIza[A-Za-z0-9-_]{32,}$/.test(key),
+    testConnection: async key => {
+      // Stub: Real Gemini API call implemented in future stories (S02-S07)
+      // For now, validate format only
+      return Promise.resolve(key.startsWith('AIza'))
     },
   },
 }
