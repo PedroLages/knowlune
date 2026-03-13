@@ -69,6 +69,16 @@ export interface CompressionOptions {
   format?: string
 }
 
+/**
+ * Crop region coordinates
+ */
+export interface CropRegion {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 // ============================================================================
 // Validation
 // ============================================================================
@@ -352,6 +362,78 @@ export function getAvatarColor(name: string): string {
   }
 
   return colors[Math.abs(hash) % colors.length]
+}
+
+// ============================================================================
+// Cropping Utilities
+// ============================================================================
+
+/**
+ * Helper to load image from data URL
+ * @param dataUrl - The data URL to load
+ * @returns Promise resolving to an HTMLImageElement
+ */
+async function loadImage(dataUrl: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = () => reject(new Error('Failed to load image'))
+    img.src = dataUrl
+  })
+}
+
+/**
+ * Crops an image from a data URL using specified crop region
+ * @param imageDataUrl - The source image as data URL
+ * @param cropRegion - The region to crop
+ * @returns Promise resolving to a WebP Blob
+ */
+export async function cropImage(imageDataUrl: string, cropRegion: CropRegion): Promise<Blob> {
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')
+  if (!ctx) {
+    throw new Error('Failed to get canvas 2D context')
+  }
+
+  // Load source image
+  const img = await loadImage(imageDataUrl)
+
+  // Set canvas to crop size
+  canvas.width = cropRegion.width
+  canvas.height = cropRegion.height
+
+  // Draw cropped region
+  ctx.drawImage(
+    img,
+    cropRegion.x,
+    cropRegion.y,
+    cropRegion.width,
+    cropRegion.height, // Source
+    0,
+    0,
+    cropRegion.width,
+    cropRegion.height // Destination
+  )
+
+  // Convert to WebP blob
+  return canvasToBlob(canvas, 'image/webp', 0.95)
+}
+
+/**
+ * Calculates a default crop region centered on the image
+ * Creates a square crop of the largest possible size
+ * @param imageWidth - Width of the source image
+ * @param imageHeight - Height of the source image
+ * @returns A centered square crop region
+ */
+export function getDefaultCropRegion(imageWidth: number, imageHeight: number): CropRegion {
+  const size = Math.min(imageWidth, imageHeight)
+  return {
+    x: (imageWidth - size) / 2,
+    y: (imageHeight - size) / 2,
+    width: size,
+    height: size,
+  }
 }
 
 // ============================================================================

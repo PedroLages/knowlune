@@ -3,17 +3,6 @@ import { Link } from 'react-router'
 import { ChevronDown, ChevronUp, Pencil, Trash2, X, Clock, Download } from 'lucide-react'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/app/components/ui/alert-dialog'
 import { NoteEditor } from './NoteEditor'
 import { ReadOnlyContent } from './ReadOnlyContent'
 import { useNoteStore } from '@/stores/useNoteStore'
@@ -21,6 +10,7 @@ import { formatTimestamp } from '@/lib/format'
 import { stripHtml } from '@/lib/textUtils'
 import { toast } from 'sonner'
 import { exportNoteAsMarkdown } from '@/lib/noteExport'
+import { toastWithUndo } from '@/lib/toastHelpers'
 import type { Note } from '@/data/types'
 
 interface NoteCardProps {
@@ -50,10 +40,7 @@ type ViewState = 'collapsed' | 'expanded' | 'editing'
 export function NoteCard({ note, courseId, courseName, lessonTitle, onDelete }: NoteCardProps) {
   const [viewState, setViewState] = useState<ViewState>('collapsed')
   const saveNote = useNoteStore(s => s.saveNote)
-  const softDelete = useNoteStore(s => s.softDelete)
-  const restoreNote = useNoteStore(s => s.restoreNote)
   const cancelRef = useRef(false)
-  const deleteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const preview = stripHtml(note.content)
   const snippet = preview.length > 120 ? preview.slice(0, 120) + '...' : preview
@@ -82,35 +69,22 @@ export function NoteCard({ note, courseId, courseName, lessonTitle, onDelete }: 
   }
 
   const handleDelete = async () => {
-    // Soft delete immediately
-    softDelete(note.id)
+    const noteBackup = { ...note }
 
-    // Show toast with undo action
-    toast.success('Note deleted', {
-      action: {
-        label: 'Undo',
-        onClick: () => {
-          // Cancel scheduled permanent deletion
-          if (deleteTimeoutRef.current) {
-            clearTimeout(deleteTimeoutRef.current)
-            deleteTimeoutRef.current = null
-          }
-          // Restore the note
-          restoreNote(note.id)
+    try {
+      await onDelete(note.id)
+
+      toastWithUndo({
+        message: 'Note deleted',
+        onUndo: async () => {
+          await saveNote(noteBackup)
+          toast.success('Note restored', { duration: 3000 })
         },
-      },
-    })
-
-    // Schedule permanent deletion after 10 seconds
-    deleteTimeoutRef.current = setTimeout(async () => {
-      try {
-        await onDelete(note.id)
-      } catch {
-        // Restore note on failure
-        restoreNote(note.id)
-        toast.error('Failed to delete note')
-      }
-    }, 10000)
+        duration: 5000,
+      })
+    } catch {
+      toast.error('Failed to delete note')
+    }
   }
 
   const handleCancel = () => {
@@ -195,37 +169,16 @@ export function NoteCard({ note, courseId, courseName, lessonTitle, onDelete }: 
               <Download className="size-3.5 mr-1.5" />
               Export
             </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-destructive hover:text-destructive"
-                  data-testid="delete-note-button"
-                >
-                  <Trash2 className="size-3.5 mr-1.5" />
-                  Delete
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete this note?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. The note and its search index entry will be
-                    permanently removed.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleDelete}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive hover:text-destructive"
+              data-testid="delete-note-button"
+              onClick={handleDelete}
+            >
+              <Trash2 className="size-3.5 mr-1.5" />
+              Delete
+            </Button>
           </div>
         </div>
       )}

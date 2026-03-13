@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import {
@@ -17,20 +17,16 @@ import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/app/components/ui/alert-dialog'
 import { PdfViewer } from '@/app/components/figma/PdfViewer'
 import { allCourses } from '@/data/courses'
 import { getResourceUrl } from '@/lib/media'
-import { getAllBookmarks, deleteBookmark, formatBookmarkTimestamp } from '@/lib/bookmarks'
+import {
+  getAllBookmarks,
+  deleteBookmark,
+  addBookmark,
+  formatBookmarkTimestamp,
+} from '@/lib/bookmarks'
+import { toastWithUndo, toastError } from '@/lib/toastHelpers'
 import type { Resource, VideoBookmark } from '@/data/types'
 
 interface LibraryItem {
@@ -89,8 +85,6 @@ function BookmarksSection() {
   const [bookmarks, setBookmarks] = useState<VideoBookmark[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<VideoBookmark | null>(null)
-  const deleteTriggerRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     let ignore = false
@@ -115,13 +109,29 @@ function BookmarksSection() {
   }, [])
 
   const handleDelete = async (bookmark: VideoBookmark) => {
+    const bookmarkBackup = { ...bookmark }
+
     try {
-      await deleteBookmark(bookmark.id)
       setBookmarks(prev => prev.filter(b => b.id !== bookmark.id))
+      await deleteBookmark(bookmark.id)
+
+      toastWithUndo({
+        message: `Bookmark at ${formatBookmarkTimestamp(bookmark.timestamp)} deleted`,
+        onUndo: async () => {
+          await addBookmark(
+            bookmarkBackup.courseId,
+            bookmarkBackup.lessonId,
+            bookmarkBackup.timestamp,
+            bookmarkBackup.label
+          )
+          setBookmarks(prev => [...prev, bookmarkBackup])
+          toast.success('Bookmark restored')
+        },
+        duration: 5000,
+      })
     } catch {
-      toast.error('Failed to delete bookmark')
-    } finally {
-      setDeleteTarget(null)
+      setBookmarks(prev => [...prev, bookmarkBackup])
+      toastError.deleteFailed('bookmark')
     }
   }
 
@@ -158,90 +168,57 @@ function BookmarksSection() {
   }
 
   return (
-    <>
-      <div className="space-y-2">
-        {bookmarks.map(bookmark => {
-          const { courseTitle, lessonTitle } = findCourseAndLesson(
-            bookmark.courseId,
-            bookmark.lessonId
-          )
-          return (
-            <div
-              key={bookmark.id}
-              data-testid="bookmark-entry"
-              className="group flex items-center gap-3 p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
+    <div className="space-y-2">
+      {bookmarks.map(bookmark => {
+        const { courseTitle, lessonTitle } = findCourseAndLesson(
+          bookmark.courseId,
+          bookmark.lessonId
+        )
+        return (
+          <div
+            key={bookmark.id}
+            data-testid="bookmark-entry"
+            className="group flex items-center gap-3 p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
+          >
+            <button
+              type="button"
+              className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
+              onClick={() => handleBookmarkClick(bookmark)}
             >
-              <button
-                type="button"
-                className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
-                onClick={() => handleBookmarkClick(bookmark)}
-              >
-                <div className="shrink-0 w-14 h-9 rounded-lg bg-warning/10 flex items-center justify-center">
-                  <span className="text-xs font-mono font-semibold text-warning">
-                    {formatBookmarkTimestamp(bookmark.timestamp)}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{lessonTitle}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {courseTitle} &middot;{' '}
-                    {new Date(bookmark.createdAt).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })}
-                  </p>
-                </div>
-              </button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-11 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity shrink-0"
-                onClick={e => {
-                  e.stopPropagation()
-                  deleteTriggerRef.current = e.currentTarget as HTMLButtonElement
-                  setDeleteTarget(bookmark)
-                }}
-                aria-label="Delete bookmark"
-              >
-                <Trash2 className="size-4 text-muted-foreground hover:text-destructive" />
-              </Button>
-            </div>
-          )
-        })}
-      </div>
-
-      <AlertDialog
-        open={deleteTarget !== null}
-        onOpenChange={open => {
-          if (!open) {
-            setDeleteTarget(null)
-            deleteTriggerRef.current?.focus()
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this bookmark?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently remove the bookmark at{' '}
-              {deleteTarget && formatBookmarkTimestamp(deleteTarget.timestamp)}. This action cannot
-              be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => deleteTarget && handleDelete(deleteTarget)}
+              <div className="shrink-0 w-14 h-9 rounded-lg bg-warning/10 flex items-center justify-center">
+                <span className="text-xs font-mono font-semibold text-warning">
+                  {formatBookmarkTimestamp(bookmark.timestamp)}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{lessonTitle}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {courseTitle} &middot;{' '}
+                  {new Date(bookmark.createdAt).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })}
+                </p>
+              </div>
+            </button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-11 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity shrink-0"
+              onClick={e => {
+                e.stopPropagation()
+                handleDelete(bookmark)
+              }}
+              aria-label="Delete bookmark"
             >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+              <Trash2 className="size-4 text-muted-foreground hover:text-destructive" />
+            </Button>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 

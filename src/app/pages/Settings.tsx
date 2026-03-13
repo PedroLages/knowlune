@@ -1,20 +1,26 @@
 import { useState, useRef } from 'react'
 import { useTheme } from 'next-themes'
-import { Download, Upload, Trash2, Save, X, Camera } from 'lucide-react'
-import { Card, CardContent, CardHeader } from '@/app/components/ui/card'
+import {
+  Download,
+  Upload,
+  Trash2,
+  Save,
+  X,
+  Monitor,
+  Sun,
+  Moon,
+  HardDrive,
+  Shield,
+} from 'lucide-react'
+import { cn } from '@/app/components/ui/utils'
+import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import { Input } from '@/app/components/ui/input'
 import { Button } from '@/app/components/ui/button'
 import { Textarea } from '@/app/components/ui/textarea'
 import { Label } from '@/app/components/ui/label'
-import { Avatar, AvatarImage, AvatarFallback } from '@/app/components/ui/avatar'
 import { Progress } from '@/app/components/ui/progress'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/app/components/ui/select'
+import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group'
+import { Separator } from '@/app/components/ui/separator'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,7 +41,10 @@ import {
 } from '@/lib/settings'
 import { ReminderSettings } from '@/app/components/figma/ReminderSettings'
 import { AIConfigurationSettings } from '@/app/components/figma/AIConfigurationSettings'
-import { validateImageFile, compressAvatar, fileToDataUrl, getInitials } from '@/lib/avatarUpload'
+import { AvatarCropDialog } from '@/app/components/ui/avatar-crop-dialog'
+import { AvatarUploadZone } from '@/app/components/settings/avatar-upload-zone'
+import { validateImageFile, compressAvatar, fileToDataUrl } from '@/lib/avatarUpload'
+import { toastSuccess, toastError } from '@/lib/toastHelpers'
 
 export default function Settings() {
   const { theme, setTheme } = useTheme()
@@ -44,8 +53,9 @@ export default function Settings() {
   const [uploadError, setUploadError] = useState<string>('')
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [isCropDialogOpen, setIsCropDialogOpen] = useState(false)
+  const [tempPhotoDataUrl, setTempPhotoDataUrl] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const photoInputRef = useRef<HTMLInputElement>(null)
 
   // Character limits
   const DISPLAY_NAME_LIMIT = 50
@@ -68,6 +78,7 @@ export default function Settings() {
     setTimeout(() => setSaved(false), 2000)
     // Notify other components (like Layout) that settings changed
     window.dispatchEvent(new Event('settingsUpdated'))
+    toastSuccess.saved('Profile settings')
   }
 
   function handleExport() {
@@ -79,52 +90,89 @@ export default function Settings() {
     a.download = 'levelup-backup.json'
     a.click()
     URL.revokeObjectURL(url)
+    toastSuccess.exported('Data')
   }
 
   function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+
+    // Validate file type
+    if (!file.name.endsWith('.json')) {
+      toastError.invalidFile('JSON')
+      return
+    }
+
     const reader = new FileReader()
     reader.onload = () => {
-      const success = importAllData(reader.result as string)
-      if (success) {
-        setSettings(getSettings())
-        window.location.reload()
+      try {
+        const success = importAllData(reader.result as string)
+        if (success) {
+          toastSuccess.saved('Data imported successfully')
+          // Delay reload to show toast
+          setTimeout(() => {
+            setSettings(getSettings())
+            window.location.reload()
+          }, 1500)
+        } else {
+          toastError.importFailed()
+        }
+      } catch (error) {
+        console.error('Import error:', error)
+        toastError.importFailed(error instanceof Error ? error.message : 'Unknown error')
       }
+    }
+    reader.onerror = () => {
+      toastError.importFailed('Failed to read file')
     }
     reader.readAsText(file)
   }
 
   function handleReset() {
     resetAllData()
-    window.location.reload()
+    toastSuccess.reset('All data')
+    // Delay reload to show toast
+    setTimeout(() => {
+      window.location.reload()
+    }, 1000)
   }
 
-  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    // Clear previous errors and reset progress
+  async function handleFileSelect(file: File) {
+    // Clear previous errors
     setUploadError('')
+
+    try {
+      // Validate file
+      const validation = validateImageFile(file)
+      if (!validation.valid) {
+        setUploadError(validation.error || 'Invalid file')
+        return
+      }
+
+      // Convert to data URL and open crop dialog
+      const dataUrl = await fileToDataUrl(file)
+      setTempPhotoDataUrl(dataUrl)
+      setIsCropDialogOpen(true)
+    } catch (error) {
+      console.error('File selection error:', error)
+      setUploadError('Failed to load image. Please try again.')
+    }
+  }
+
+  async function handleCropConfirm(croppedBlob: Blob) {
+    setIsCropDialogOpen(false)
     setIsUploading(true)
     setUploadProgress(0)
 
     try {
-      // Validate file (20% progress)
-      const validation = validateImageFile(file)
+      // Convert Blob to File for compression
+      const croppedFile = new File([croppedBlob], 'avatar.jpg', { type: croppedBlob.type })
+
+      // Compress cropped image (20% progress)
       setUploadProgress(20)
-      if (!validation.valid) {
-        setUploadError(validation.error || 'Invalid file')
-        setIsUploading(false)
-        setUploadProgress(0)
-        return
-      }
+      const compressedBlob = await compressAvatar(croppedFile)
 
-      // Compress and convert to WebP (40% progress)
-      setUploadProgress(40)
-      const compressedBlob = await compressAvatar(file)
-
-      // Convert to data URL for storage (70% progress)
+      // Convert to data URL (70% progress)
       setUploadProgress(70)
       const dataUrl = await fileToDataUrl(compressedBlob)
 
@@ -132,7 +180,7 @@ export default function Settings() {
       setUploadProgress(90)
       setSettings({ ...settings, profilePhotoDataUrl: dataUrl })
 
-      // Auto-save after successful upload (100% progress)
+      // Auto-save (100% progress)
       saveSettings({ ...settings, profilePhotoDataUrl: dataUrl })
       setUploadProgress(100)
       setSaved(true)
@@ -140,22 +188,33 @@ export default function Settings() {
         setSaved(false)
         setUploadProgress(0)
       }, 2000)
-      // Notify other components (like Layout) that settings changed
+
+      // Notify other components
       window.dispatchEvent(new Event('settingsUpdated'))
+
+      // Show success toast
+      toastSuccess.saved('Profile photo updated')
     } catch (error) {
       console.error('Photo upload error:', error)
       setUploadError('Failed to process image. Please try again.')
       setUploadProgress(0)
+      toastError.saveFailed(error instanceof Error ? error.message : 'Unknown error')
     } finally {
       setIsUploading(false)
-      // Reset input so same file can be selected again
-      e.target.value = ''
+      setTempPhotoDataUrl(null)
     }
+  }
+
+  function handleCropCancel() {
+    setIsCropDialogOpen(false)
+    setTempPhotoDataUrl(null)
   }
 
   function handleRemovePhoto() {
     setSettings({ ...settings, profilePhotoDataUrl: undefined })
     setUploadError('')
+    saveSettings({ ...settings, profilePhotoDataUrl: undefined })
+    window.dispatchEvent(new Event('settingsUpdated'))
   }
 
   return (
@@ -172,155 +231,65 @@ export default function Settings() {
             </p>
           </CardHeader>
           <CardContent className="p-6 lg:p-8">
-            <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-8 lg:gap-12">
-              {/* Avatar Section - Left Column on Desktop */}
-              <div className="flex flex-col items-center lg:items-start">
-                {/* Avatar with Elevated Surface */}
-                <div className="relative group">
-                  {/* Elevated Avatar Container */}
-                  <div className="relative rounded-full p-1 bg-surface-elevated transition-all duration-500 ease-out shadow-warm-lg">
-                    <Avatar className="size-32 ring-2 ring-border/30 transition-all duration-500 ease-out group-hover:scale-105 group-hover:ring-brand/50 group-hover:shadow-2xl group-hover:shadow-brand/20">
-                      {settings.profilePhotoDataUrl ? (
-                        <AvatarImage
-                          src={settings.profilePhotoDataUrl}
-                          alt={settings.displayName}
-                          className="object-cover"
-                        />
-                      ) : (
-                        <AvatarFallback className="text-2xl font-semibold bg-brand-soft text-brand transition-all duration-500 ease-out group-hover:bg-brand group-hover:text-white group-hover:scale-110">
-                          {getInitials(settings.displayName)}
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
+            <div className="space-y-6">
+              {/* Avatar Upload Zone */}
+              <AvatarUploadZone
+                currentAvatar={settings.profilePhotoDataUrl || null}
+                onFileSelect={handleFileSelect}
+                onRemove={handleRemovePhoto}
+                isLoading={isUploading}
+              />
 
-                    {/* Hover Overlay for Change Photo */}
-                    {settings.profilePhotoDataUrl && (
-                      <button
-                        onClick={() => photoInputRef.current?.click()}
-                        className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 ease-out flex items-center justify-center backdrop-blur-sm"
-                        aria-label="Change profile photo"
-                      >
-                        <div className="flex flex-col items-center gap-1 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-                          <Camera className="w-7 h-7 text-white drop-shadow-lg" />
-                          <span className="text-xs font-medium text-white drop-shadow-md">
-                            Change
-                          </span>
-                        </div>
-                      </button>
-                    )}
-                  </div>
+              {/* Upload Progress */}
+              {isUploading && uploadProgress > 0 && (
+                <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-300">
+                  <Progress
+                    value={uploadProgress}
+                    className="h-1.5 bg-brand-soft"
+                    aria-label="Upload progress"
+                  />
+                  <p className="text-xs text-muted-foreground text-center">
+                    {uploadProgress < 100 ? 'Compressing image...' : 'Complete!'}
+                  </p>
                 </div>
+              )}
 
-                {/* Upload Controls */}
-                <div className="mt-6 w-full max-w-xs space-y-3">
-                  <div className="flex flex-col gap-2">
-                    <Button
-                      variant="outline"
-                      size="default"
-                      onClick={() => photoInputRef.current?.click()}
-                      disabled={isUploading}
-                      className="w-full gap-2 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-brand/10 hover:border-brand/50 min-h-[44px] group/btn"
-                    >
-                      {isUploading ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          {settings.profilePhotoDataUrl ? (
-                            <Camera className="w-4 h-4 transition-transform duration-300 group-hover/btn:scale-110" />
-                          ) : (
-                            <Upload className="w-4 h-4 transition-transform duration-300 group-hover/btn:scale-110" />
-                          )}
-                          {settings.profilePhotoDataUrl ? 'Change Photo' : 'Upload Photo'}
-                        </>
-                      )}
-                    </Button>
-
-                    {settings.profilePhotoDataUrl && !isUploading && (
-                      <Button
-                        variant="ghost"
-                        size="default"
-                        onClick={handleRemovePhoto}
-                        className="w-full gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 transition-all duration-300 hover:scale-[1.02] min-h-[44px]"
-                      >
-                        <X className="w-4 h-4" />
-                        Remove Photo
-                      </Button>
-                    )}
-                  </div>
-
-                  {/* Upload Progress */}
-                  {isUploading && uploadProgress > 0 && (
-                    <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-300">
-                      <Progress
-                        value={uploadProgress}
-                        className="h-1.5 bg-brand-soft"
-                        aria-label="Upload progress"
-                      />
-                      <p className="text-xs text-muted-foreground text-center">
-                        {uploadProgress < 100 ? 'Compressing image...' : 'Complete!'}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Helper Text */}
-                  <div className="text-xs text-muted-foreground leading-relaxed bg-surface-sunken/40 rounded-lg px-3 py-2 border border-border/30">
-                    <p className="font-medium mb-0.5">Photo Requirements:</p>
-                    <ul className="space-y-0.5 ml-0 list-none">
-                      <li>• JPEG, PNG, or WebP format</li>
-                      <li>• Maximum 5 MB file size</li>
-                      <li>• Square images work best</li>
-                    </ul>
-                  </div>
-
-                  {/* Error Message */}
-                  {uploadError && (
-                    <div
-                      role="alert"
-                      className="text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded-lg px-3 py-2.5 animate-in fade-in slide-in-from-top-1 duration-300 flex items-start gap-2"
-                      aria-live="polite"
-                    >
-                      <X className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                      <span>{uploadError}</span>
-                    </div>
-                  )}
-
-                  {/* Success Indicator */}
-                  {saved && settings.profilePhotoDataUrl && uploadProgress === 100 && (
-                    <div
-                      className="text-xs text-success bg-success-soft border border-success/20 rounded-lg px-3 py-2.5 animate-in fade-in slide-in-from-top-1 duration-300 flex items-center gap-2"
-                      aria-live="polite"
-                    >
-                      <div className="w-4 h-4 rounded-full bg-success flex items-center justify-center flex-shrink-0">
-                        <svg
-                          className="w-3 h-3 text-white"
-                          fill="none"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2.5"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <span>Photo updated successfully</span>
-                    </div>
-                  )}
+              {/* Error Message */}
+              {uploadError && (
+                <div
+                  role="alert"
+                  className="text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded-lg px-3 py-2.5 animate-in fade-in slide-in-from-top-1 duration-300 flex items-start gap-2"
+                  aria-live="polite"
+                >
+                  <X className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <span>{uploadError}</span>
                 </div>
+              )}
 
-                {/* Hidden File Input */}
-                <input
-                  ref={photoInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={handlePhotoUpload}
-                  className="hidden"
-                  aria-label="Upload profile photo"
-                />
-              </div>
+              {/* Success Indicator */}
+              {saved && settings.profilePhotoDataUrl && uploadProgress === 100 && (
+                <div
+                  className="text-xs text-success bg-success-soft border border-success/20 rounded-lg px-3 py-2.5 animate-in fade-in slide-in-from-top-1 duration-300 flex items-center gap-2"
+                  aria-live="polite"
+                >
+                  <div className="w-4 h-4 rounded-full bg-success flex items-center justify-center flex-shrink-0">
+                    <svg
+                      className="w-3 h-3 text-white"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2.5"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <span>Photo updated successfully</span>
+                </div>
+              )}
+
+              <Separator className="my-6" />
 
               {/* Form Fields - Right Column on Desktop */}
               <div className="space-y-6">
@@ -417,16 +386,72 @@ export default function Settings() {
           <CardContent>
             <div>
               <Label>Theme</Label>
-              <Select value={theme} onValueChange={setTheme}>
-                <SelectTrigger className="mt-1 w-48" aria-label="Theme">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="system">System</SelectItem>
-                  <SelectItem value="light">Light</SelectItem>
-                  <SelectItem value="dark">Dark</SelectItem>
-                </SelectContent>
-              </Select>
+              <RadioGroup value={theme} onValueChange={setTheme} className="mt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* System Theme Card */}
+                  <label
+                    className={cn(
+                      'relative flex flex-col gap-3 p-4 border-2 rounded-xl cursor-pointer',
+                      'transition-all duration-200 hover:shadow-sm',
+                      theme === 'system'
+                        ? 'border-brand bg-brand-soft shadow-sm'
+                        : 'border-border bg-background hover:border-brand/50'
+                    )}
+                  >
+                    <RadioGroupItem value="system" className="sr-only" />
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Monitor className="w-5 h-5 text-muted-foreground" />
+                        <span className="text-sm font-medium">System</span>
+                      </div>
+                      {theme === 'system' && <div className="w-2 h-2 bg-brand rounded-full" />}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Matches your device settings</p>
+                  </label>
+
+                  {/* Light Theme Card */}
+                  <label
+                    className={cn(
+                      'relative flex flex-col gap-3 p-4 border-2 rounded-xl cursor-pointer',
+                      'transition-all duration-200 hover:shadow-sm',
+                      theme === 'light'
+                        ? 'border-brand bg-brand-soft shadow-sm'
+                        : 'border-border bg-background hover:border-brand/50'
+                    )}
+                  >
+                    <RadioGroupItem value="light" className="sr-only" />
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Sun className="w-5 h-5 text-muted-foreground" />
+                        <span className="text-sm font-medium">Light</span>
+                      </div>
+                      {theme === 'light' && <div className="w-2 h-2 bg-brand rounded-full" />}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Bright and clean interface</p>
+                  </label>
+
+                  {/* Dark Theme Card */}
+                  <label
+                    className={cn(
+                      'relative flex flex-col gap-3 p-4 border-2 rounded-xl cursor-pointer',
+                      'transition-all duration-200 hover:shadow-sm',
+                      theme === 'dark'
+                        ? 'border-brand bg-brand-soft shadow-sm'
+                        : 'border-border bg-background hover:border-brand/50'
+                    )}
+                  >
+                    <RadioGroupItem value="dark" className="sr-only" />
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Moon className="w-5 h-5 text-muted-foreground" />
+                        <span className="text-sm font-medium">Dark</span>
+                      </div>
+                      {theme === 'dark' && <div className="w-2 h-2 bg-brand rounded-full" />}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Easy on the eyes in low light</p>
+                  </label>
+                </div>
+              </RadioGroup>
             </div>
           </CardContent>
         </Card>
@@ -439,23 +464,71 @@ export default function Settings() {
 
         {/* Data Management */}
         <Card>
-          <CardHeader>
-            <h2 className="text-base leading-none">Data Management</h2>
+          <CardHeader className="border-b border-border/50 bg-surface-sunken/30">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-brand-soft p-2">
+                <HardDrive className="w-5 h-5 text-brand" aria-hidden="true" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-display">Data Management</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Export, import, or reset your learning data
+                </p>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={handleExport} className="gap-2">
-                <Download className="w-4 h-4" />
-                Export Data
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                className="gap-2"
-              >
-                <Upload className="w-4 h-4" />
-                Import Data
-              </Button>
+          <CardContent className="space-y-6 pt-6">
+            {/* Backup & Restore Section */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium">Backup & Restore</h3>
+
+              {/* Export Card */}
+              <div className="rounded-xl border border-border bg-surface-elevated p-4 hover:bg-surface-elevated/80 transition-colors">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-lg bg-success-soft p-2 mt-0.5">
+                      <Download className="w-4 h-4 text-success" aria-hidden="true" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium">Export Data</h4>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Download all your courses, progress, and settings as JSON
+                      </p>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
+                    <Download className="w-4 h-4" />
+                    Export
+                  </Button>
+                </div>
+              </div>
+
+              {/* Import Card */}
+              <div className="rounded-xl border border-border bg-surface-elevated p-4 hover:bg-surface-elevated/80 transition-colors">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-lg bg-brand-soft p-2 mt-0.5">
+                      <Upload className="w-4 h-4 text-brand" aria-hidden="true" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium">Import Data</h4>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Restore your data from a previously exported JSON file
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="gap-2"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Import
+                  </Button>
+                </div>
+              </div>
+
               <input
                 ref={fileInputRef}
                 type="file"
@@ -465,37 +538,73 @@ export default function Settings() {
               />
             </div>
 
-            <div className="pt-4 border-t border-border">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="gap-2">
-                    <Trash2 className="w-4 h-4" />
-                    Reset All Data
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will permanently delete all your progress, journal entries, and settings.
-                      This action cannot be undone. Consider exporting your data first.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleReset}
-                      className="bg-destructive hover:bg-destructive/90"
-                    >
-                      Reset Everything
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+            <Separator />
+
+            {/* Danger Zone Section */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-destructive" aria-hidden="true" />
+                <h3 className="text-sm font-medium text-destructive">Danger Zone</h3>
+              </div>
+
+              <div className="rounded-xl border-2 border-destructive/20 bg-destructive/5 p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-lg bg-destructive/10 p-2 mt-0.5">
+                      <Trash2 className="w-4 h-4 text-destructive" aria-hidden="true" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-destructive">Reset All Data</h4>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Permanently delete all your progress, journal entries, and settings
+                      </p>
+                      <p className="text-xs text-warning mt-2 font-medium">
+                        ⚠️ This action cannot be undone
+                      </p>
+                    </div>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm" className="gap-2">
+                        <Trash2 className="w-4 h-4" />
+                        Reset
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="rounded-[24px]">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete all your progress, journal entries, and
+                          settings. This action cannot be undone. Consider exporting your data
+                          first.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleReset}
+                          className="bg-destructive hover:bg-destructive/90"
+                        >
+                          Reset Everything
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Avatar Crop Dialog */}
+      <AvatarCropDialog
+        open={isCropDialogOpen}
+        onOpenChange={setIsCropDialogOpen}
+        imageDataUrl={tempPhotoDataUrl || ''}
+        onCropConfirm={handleCropConfirm}
+        onCropCancel={handleCropCancel}
+      />
     </div>
   )
 }

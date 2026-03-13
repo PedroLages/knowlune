@@ -5,6 +5,7 @@ import type { Challenge, ChallengeType } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { calculateProgress } from '@/lib/challengeProgress'
 import { detectChallengeMilestones } from '@/lib/challengeMilestones'
+import { toastWithUndo, toastError } from '@/lib/toastHelpers'
 
 interface NewChallengeData {
   name: string
@@ -122,7 +123,10 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
 
   deleteChallenge: async (id: string) => {
     const { challenges } = get()
+    const deletedChallenge = challenges.find(c => c.id === id)
+    if (!deletedChallenge) return
 
+    // Optimistic update
     set({
       challenges: challenges.filter(c => c.id !== id),
       error: null,
@@ -132,14 +136,23 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
       await persistWithRetry(async () => {
         await db.challenges.delete(id)
       })
+
+      toastWithUndo({
+        message: `Challenge "${deletedChallenge.name}" deleted`,
+        onUndo: async () => {
+          await db.challenges.add(deletedChallenge)
+          set({ challenges: [...get().challenges, deletedChallenge] })
+          toast.success('Challenge restored')
+        },
+        duration: 5000,
+      })
     } catch (error) {
       // Rollback to full snapshot preserving original order
       set({
         challenges,
         error: 'Failed to delete challenge',
       })
-      console.error('[ChallengeStore] Failed to delete challenge:', error)
-      toast.error('Failed to delete challenge')
+      toastError.deleteFailed('challenge')
       throw error
     }
   },
