@@ -2,7 +2,7 @@ import { LucideIcon, TrendingUp, TrendingDown, Download, Activity } from 'lucide
 import { cn } from '@/app/components/ui/utils'
 import NumberFlow from '@number-flow/react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/app/components/ui/tooltip'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet'
 import { Button } from '@/app/components/ui/button'
 import { StatsCardComparison } from './StatsCardComparison'
 
@@ -145,8 +145,8 @@ export function StatsCard({
                 className={cn(
                   'flex items-center gap-1 text-xs font-medium mt-1',
                   trend === 'up'
-                    ? 'text-green-600 dark:text-green-400'
-                    : 'text-red-600 dark:text-red-400'
+                    ? 'text-success'
+                    : 'text-destructive'
                 )}
               >
                 {trend === 'up' ? (
@@ -172,6 +172,9 @@ export function StatsCard({
             <Icon className="size-5 text-brand" aria-hidden="true" />
             {label}
           </SheetTitle>
+          <SheetDescription>
+            Detailed view and comparison for {label.toLowerCase()}
+          </SheetDescription>
         </SheetHeader>
 
         <div className="mt-6 space-y-6">
