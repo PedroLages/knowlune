@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router'
 import { BookOpen, CheckCircle, FileText, Clock, ArrowRight } from 'lucide-react'
 import { motion, MotionConfig } from 'motion/react'
@@ -46,10 +46,20 @@ export function Overview() {
     return () => clearTimeout(timer)
   }, [])
 
-  const allProgress = getAllProgress()
-  const inProgress = getCoursesInProgress(allCourses, allProgress)
-  const completed = getCompletedCourses(allCourses, allProgress)
-  const completedLessons = getTotalCompletedLessons(allProgress)
+  // Memoize progress calculations to prevent recalculation on every render
+  const allProgress = useMemo(() => getAllProgress(), [])
+  const inProgress = useMemo(
+    () => getCoursesInProgress(allCourses, allProgress),
+    [allProgress]
+  )
+  const completed = useMemo(
+    () => getCompletedCourses(allCourses, allProgress),
+    [allProgress]
+  )
+  const completedLessons = useMemo(
+    () => getTotalCompletedLessons(allProgress),
+    [allProgress]
+  )
   const [studyNotes, setStudyNotes] = useState(0)
 
   useEffect(() => {
@@ -73,50 +83,61 @@ export function Overview() {
   const totalStudyTimeSeconds = getTotalStudyTime()
   const totalStudyTimeHours = Math.round((totalStudyTimeSeconds / 3600) * 10) / 10
 
-  const recentActivity = getRecentActivity(allCourses, 5)
-  const lessonSparkline = getLast7DaysLessonCompletions()
-  const lessonsChange = getWeeklyChange('lessons')
-  const chartData = getActionsPerDay(14)
+  // Memoize activity metrics to prevent recalculation on every render
+  const recentActivity = useMemo(() => getRecentActivity(allCourses, 5), [])
+  const lessonSparkline = useMemo(() => getLast7DaysLessonCompletions(), [])
+  const lessonsChange = useMemo(() => getWeeklyChange('lessons'), [])
+  const chartData = useMemo(() => getActionsPerDay(14), [])
 
-  const lastWatchedEntry = Object.entries(allProgress)
-    .filter(([_, p]) => p.lastWatchedLesson)
-    .sort(
-      (a, b) => new Date(b[1].lastAccessedAt).getTime() - new Date(a[1].lastAccessedAt).getTime()
-    )[0]
+  // Memoize last watched calculation to prevent sorting on every render
+  const lastWatchedEntry = useMemo(
+    () =>
+      Object.entries(allProgress)
+        .filter(([_, p]) => p.lastWatchedLesson)
+        .sort(
+          (a, b) =>
+            new Date(b[1].lastAccessedAt).getTime() - new Date(a[1].lastAccessedAt).getTime()
+        )[0],
+    [allProgress]
+  )
   const lastWatchedCourse = lastWatchedEntry?.[0]
   const lastWatchedLesson = lastWatchedEntry?.[1].lastWatchedLesson
 
-  const statsCards = [
-    {
-      label: 'Courses Started',
-      value: inProgress.length + completed.length,
-      icon: BookOpen,
-    },
-    {
-      label: 'Lessons Completed',
-      value: completedLessons,
-      icon: CheckCircle,
-      trend: lessonsChange >= 0 ? ('up' as const) : ('down' as const),
-      trendValue: `${Math.abs(lessonsChange)} this week`,
-      sparkline: lessonSparkline,
-    },
-    {
-      label: 'Total Study Time',
-      value: `${totalStudyTimeHours}h`,
-      icon: Clock,
-      testId: 'total-study-time',
-    },
-    {
-      label: 'Study Notes',
-      value: studyNotes,
-      icon: FileText,
-    },
-    {
-      label: 'Courses Completed',
-      value: completed.length,
-      icon: CheckCircle,
-    },
-  ]
+  // Memoize stats cards array to prevent recreation on every render
+  const statsCards = useMemo(
+    () => [
+      {
+        label: 'Courses Started',
+        value: inProgress.length + completed.length,
+        icon: BookOpen,
+      },
+      {
+        label: 'Lessons Completed',
+        value: completedLessons,
+        icon: CheckCircle,
+        trend: lessonsChange >= 0 ? ('up' as const) : ('down' as const),
+        trendValue: `${Math.abs(lessonsChange)} this week`,
+        sparkline: lessonSparkline,
+      },
+      {
+        label: 'Total Study Time',
+        value: `${totalStudyTimeHours}h`,
+        icon: Clock,
+        testId: 'total-study-time',
+      },
+      {
+        label: 'Study Notes',
+        value: studyNotes,
+        icon: FileText,
+      },
+      {
+        label: 'Courses Completed',
+        value: completed.length,
+        icon: CheckCircle,
+      },
+    ],
+    [inProgress.length, completed.length, completedLessons, lessonsChange, lessonSparkline, totalStudyTimeHours, studyNotes]
+  )
 
   if (isLoading) {
     return (
