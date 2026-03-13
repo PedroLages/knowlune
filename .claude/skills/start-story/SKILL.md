@@ -71,26 +71,15 @@ Mark the first todo as `in_progress` and proceed:
    **If user selects YES**:
    - Extract story key from `$ARGUMENTS` (e.g., `E01-S04`)
    - Extract story name from epic lookup (slugified, lowercase)
-   - Detect project root: `PROJECT_ROOT=$(git rev-parse --show-toplevel)`
-   - Detect project name: `PROJECT_NAME=$(basename "$PROJECT_ROOT")`
-   - Calculate worktree base: `WORKTREE_BASE=$(dirname "$PROJECT_ROOT")/${PROJECT_NAME}-worktrees`
-   - Run: `worktree-story ${STORY_KEY} "${STORY_TITLE}"`
-     - This creates:
-       - Worktree at: `${WORKTREE_BASE}/${STORY_KEY_LOWER}/`
-       - Branch: `feature/${STORY_KEY_LOWER}-${STORY_SLUG}`
-   - Change working directory: `cd "${WORKTREE_BASE}/${STORY_KEY_LOWER}"`
-   - Inform user:
+   - Invoke the superpowers worktree skill:
      ```
-     ✨ Worktree created successfully!
-
-     📍 Location: ${WORKTREE_BASE}/${STORY_KEY_LOWER}
-     🌿 Branch: feature/${STORY_KEY_LOWER}-${STORY_SLUG}
-
-     📝 All story files will be created here.
-     🧑‍💻 You can develop in isolation without affecting your main workspace.
-
-     🧹 When done: worktree-cleanup ${STORY_KEY_LOWER}
+     Skill tool: skill="superpowers:using-git-worktrees", args="E##-S## story-title"
      ```
+   - The superpowers skill will:
+     - Create worktree with proper isolation
+     - Set up branch: `feature/${STORY_KEY_LOWER}-${STORY_SLUG}`
+     - Provide directory path and cleanup instructions
+   - After skill completes, change working directory to the worktree path (provided in skill output)
    - **Important**: All subsequent steps (1-14) will execute in the worktree directory
 
    **If user selects NO**:
@@ -140,7 +129,7 @@ Mark the first todo as `in_progress` and proceed:
    Allow uncommitted changes — user is continuing work on this story.
 
 5. **Create branch** (idempotent):
-   - **If worktree was created in Step 0**: Skip this step entirely. The branch was already created by `worktree-story`. Inform user: "Branch created by worktree setup, skipping."
+   - **If worktree was created in Step 0**: Skip this step entirely. The branch was already created by the superpowers worktree skill. Inform user: "Branch created by worktree setup, skipping."
    - **Otherwise**:
      - Check if branch already exists: `git branch --list feature/e##-s##-slug`.
      - **Branch exists**: Switch to it (`git checkout feature/e##-s##-slug`). Inform user: "Branch already exists, switching to it."
