@@ -1,6 +1,6 @@
 import { LucideIcon, TrendingUp, TrendingDown, Download, Activity } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
-import NumberFlow from 'number-flow'
+import NumberFlow from '@number-flow/react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/app/components/ui/tooltip'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet'
 import { Button } from '@/app/components/ui/button'
