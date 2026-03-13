@@ -33,6 +33,7 @@ import { useIdleDetection } from '@/app/hooks/useIdleDetection'
 import { usePanelRef } from 'react-resizable-panels'
 import { useSessionStore } from '@/stores/useSessionStore'
 import { TranscriptPanel } from '../components/figma/TranscriptPanel'
+import { AISummaryPanel } from '../components/figma/AISummaryPanel'
 import { PdfViewer } from '../components/figma/PdfViewer'
 import { ModuleAccordion } from '../components/figma/ModuleAccordion'
 import { AutoAdvanceCountdown } from '../components/figma/AutoAdvanceCountdown'
@@ -708,6 +709,7 @@ export function LessonPlayer() {
             <TabsTrigger value="bookmarks">Bookmarks ({bookmarks.length})</TabsTrigger>
           )}
           {captionSrc && <TabsTrigger value="transcript">Transcript</TabsTrigger>}
+          {captionSrc && <TabsTrigger value="summary">Summary</TabsTrigger>}
         </TabsList>
 
         {pdfResources.length > 0 && (
@@ -771,6 +773,14 @@ export function LessonPlayer() {
                 currentTime={videoCurrentTime}
                 onSeek={handleVideoSeek}
               />
+            </div>
+          </TabsContent>
+        )}
+
+        {captionSrc && (
+          <TabsContent value="summary" className="mt-4">
+            <div className="bg-card rounded-2xl shadow-sm">
+              <AISummaryPanel transcriptSrc={captionSrc} />
             </div>
           </TabsContent>
         )}

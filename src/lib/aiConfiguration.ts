@@ -62,6 +62,12 @@ export interface AIConfigurationSettings {
   errorMessage?: string
   /** Per-feature consent toggles */
   consentSettings: ConsentSettings
+  /**
+   * E2E test-only plaintext API key bypass (DEV mode only)
+   * @internal Only works when import.meta.env.DEV = true
+   * Production builds ignore this field for security
+   */
+  _testApiKey?: string
 }
 
 /** localStorage key for AI configuration */
@@ -189,6 +195,13 @@ export async function saveAIConfiguration(
  */
 export async function getDecryptedApiKey(): Promise<string | null> {
   const config = getAIConfiguration()
+
+  // E2E test escape hatch (DEV mode only) - bypasses encryption for tests
+  // Tests mock API endpoints so keys never reach real servers
+  if (import.meta.env.DEV && config._testApiKey) {
+    return config._testApiKey
+  }
+
   if (!config.apiKeyEncrypted) return null
 
   try {

@@ -15,6 +15,7 @@ export default tseslint.config(eslint.configs.recommended, ...tseslint.configs.r
     'coverage/',
     'test-results/',
     '.claude/',
+    '.worktrees/', // Git worktree directories with build artifacts
     '**/experiments/', // Experimental code - not production quality
     'docs/', // Documentation files
   ],

@@ -47,13 +47,7 @@ function formatRelativeDate(isoDate: string): string {
 
 type ViewState = 'collapsed' | 'expanded' | 'editing'
 
-export function NoteCard({
-  note,
-  courseId,
-  courseName,
-  lessonTitle,
-  onDelete,
-}: NoteCardProps) {
+export function NoteCard({ note, courseId, courseName, lessonTitle, onDelete }: NoteCardProps) {
   const [viewState, setViewState] = useState<ViewState>('collapsed')
   const saveNote = useNoteStore(s => s.saveNote)
   const softDelete = useNoteStore(s => s.softDelete)

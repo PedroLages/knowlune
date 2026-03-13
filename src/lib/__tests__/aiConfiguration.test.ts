@@ -134,7 +134,7 @@ describe('aiConfiguration.ts', () => {
       const stored = localStorage.getItem('ai-configuration')
       expect(stored).toBeTruthy()
       const parsed = JSON.parse(stored!)
-      expect(parsed.encryptedApiKey).toBe(`encrypted:${apiKey}`)
+      expect(parsed.apiKeyEncrypted).toBe(`encrypted:${apiKey}`)
     })
 
     it('dispatches ai-configuration-updated event', async () => {

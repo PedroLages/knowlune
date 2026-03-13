@@ -108,3 +108,12 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - H4: E2E tests only cover AC1, AC6, AC7 -- missing AC2 (idle termination), AC3 (visibility), AC4 (crash recovery), AC5 (no-worker fallback), AC8 (Vite config verified at runtime), AC9 (useWorkerCoordinator unmount)
 - M1: `bulkSaveEmbeddings` in vector-store.ts has no error handling -- partial writes with no rollback
 - M2: `supportsModuleWorkers()` returns same value as `supportsWorkers()` -- misleading (Firefox <114 supports workers but not module workers)
+
+## E09B-S01: AI Video Summary
+- BLOCKER: `_testApiKey` escape hatch in production code (`as any` cast) -- security risk, bypasses encryption
+- H1: No AbortController/cleanup for streaming generation on unmount -- React state updates after unmount
+- H2: `handleGenerate` is fire-and-forget async in event handler -- no cancellation on rapid re-clicks (regenerate)
+- H3 (RECURRING): `as any` cast in `getDecryptedApiKey` bypasses type safety for test-only field
+- M1: Comment says "Validate word count (100-300 words per AC)" but no actual validation/warning displayed
+- M2: AC3 timeout test takes 35s real time -- slow CI feedback loop
+- M3: Missing sidebar localStorage seed in E2E tests (recurring from E07-S04)

@@ -9,7 +9,7 @@ import type { Note } from '@/data/types'
  */
 function sanitizeFilename(filename: string): string {
   return filename
-    .replace(/[\/\\:*?"<>|]/g, '-') // Replace filesystem-unsafe chars
+    .replace(/[/\\:*?"<>|]/g, '-') // Replace filesystem-unsafe chars
     .replace(/\s+/g, '-') // Replace spaces with hyphens
     .replace(/-+/g, '-') // Collapse multiple hyphens
     .replace(/^-|-$/g, '') // Trim hyphens from start/end
@@ -55,7 +55,10 @@ function extractTextFromHtml(html: string): string {
   }
 
   walk(doc.body)
-  return parts.join(' ').replace(/\s*\n\s*/g, '\n').trim()
+  return parts
+    .join(' ')
+    .replace(/\s*\n\s*/g, '\n')
+    .trim()
 }
 
 /**
@@ -77,11 +80,7 @@ function htmlToMarkdown(html: string): string {
 /**
  * Generates YAML frontmatter for a note.
  */
-function generateFrontmatter(
-  note: Note,
-  courseName: string,
-  lessonName: string
-): string {
+function generateFrontmatter(note: Note, courseName: string, lessonName: string): string {
   // Extract title from first line of content (plain text) or use fallback
   const plainText = extractTextFromHtml(note.content)
   const firstLine = plainText.split('\n')[0]?.trim() || 'Untitled Note'
@@ -106,11 +105,7 @@ function generateFrontmatter(
  * Exports a note as a Markdown file with YAML frontmatter.
  * Triggers a browser download.
  */
-export function exportNoteAsMarkdown(
-  note: Note,
-  courseName: string,
-  lessonName: string
-): void {
+export function exportNoteAsMarkdown(note: Note, courseName: string, lessonName: string): void {
   // Generate frontmatter and convert content to Markdown
   const frontmatter = generateFrontmatter(note, courseName, lessonName)
   const markdown = htmlToMarkdown(note.content)

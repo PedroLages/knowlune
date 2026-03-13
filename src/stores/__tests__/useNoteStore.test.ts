@@ -229,7 +229,7 @@ describe('restoreNote', () => {
       useNoteStore.getState().softDelete(note.id)
     })
 
-    let deletedNote = useNoteStore.getState().notes.find(n => n.id === note.id)
+    const deletedNote = useNoteStore.getState().notes.find(n => n.id === note.id)
     expect(deletedNote!.deleted).toBe(true)
 
     act(() => {

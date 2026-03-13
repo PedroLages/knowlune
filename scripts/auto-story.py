@@ -473,9 +473,14 @@ def make_options(
         max_turns=max_turns,
         cwd=str(PROJECT_DIR),
         mcp_servers=mcp_servers,
+        max_buffer_size=10 * 1024 * 1024,  # 10MB buffer (Epic 9B AI features exceed 1MB default)
     )
     if max_budget > 0:
         opts["max_budget_usd"] = max_budget
+
+    # Log buffer size for visibility (helpful for debugging overflow issues)
+    buffer_mb = opts["max_buffer_size"] / (1024 * 1024)
+    log.debug(f"ClaudeAgentOptions configured with {buffer_mb:.0f}MB message buffer")
 
     return ClaudeAgentOptions(**opts)
 

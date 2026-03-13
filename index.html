@@ -17,7 +17,7 @@
         img-src     'self' data: blob: https://images.unsplash.com https://*.unsplash.com;
         media-src   'self' blob:;
         font-src    'self';
-        connect-src 'self' ws: wss: https://huggingface.co https://*.huggingface.co https://*.hf.co https://raw.githubusercontent.com;
+        connect-src 'self' ws: wss: https://huggingface.co https://*.huggingface.co https://*.hf.co https://raw.githubusercontent.com https://api.openai.com/v1/chat/completions https://api.anthropic.com/v1/messages;
         frame-src   'self' https://www.youtube.com https://www.youtube-nocookie.com;
         worker-src  'self' blob:;
         object-src  'none';

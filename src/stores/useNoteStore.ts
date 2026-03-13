@@ -158,9 +158,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     const { notes } = get()
     set({
       notes: notes.map(n =>
-        n.id === noteId
-          ? { ...n, deleted: true, deletedAt: new Date().toISOString() }
-          : n
+        n.id === noteId ? { ...n, deleted: true, deletedAt: new Date().toISOString() } : n
       ),
       error: null,
     })
@@ -169,9 +167,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   restoreNote: (noteId: string) => {
     const { notes } = get()
     set({
-      notes: notes.map(n =>
-        n.id === noteId ? { ...n, deleted: false, deletedAt: undefined } : n
-      ),
+      notes: notes.map(n => (n.id === noteId ? { ...n, deleted: false, deletedAt: undefined } : n)),
       error: null,
     })
   },
