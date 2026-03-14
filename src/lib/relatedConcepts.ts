@@ -105,25 +105,24 @@ function findTagMatches(
   const sourceTagSet = new Set(note.tags)
   const sourceTerms = extractKeyTerms(note.content)
 
-  return candidates
-    .map(candidate => {
-      const sharedTags = candidate.tags.filter(t => sourceTagSet.has(t))
-      if (sharedTags.length === 0) return null
+  const matches: RelatedNote[] = []
+  for (const candidate of candidates) {
+    const sharedTags = candidate.tags.filter(t => sourceTagSet.has(t))
+    if (sharedTags.length === 0) continue
 
-      const candidateTerms = extractKeyTerms(candidate.content)
-      const sharedTerms = [...sourceTerms].filter((t: string) => candidateTerms.has(t))
+    const candidateTerms = extractKeyTerms(candidate.content)
+    const sharedTerms = [...sourceTerms].filter((t: string) => candidateTerms.has(t))
 
-      return {
-        noteId: candidate.id,
-        title: extractTitle(candidate.content),
-        courseName: courseNames.get(candidate.courseId) ?? candidate.courseId,
-        sharedTags,
-        sharedTerms,
-        tagOnly: true,
-      } satisfies RelatedNote
+    matches.push({
+      noteId: candidate.id,
+      title: extractTitle(candidate.content),
+      courseName: courseNames.get(candidate.courseId) ?? candidate.courseId,
+      sharedTags,
+      sharedTerms,
+      tagOnly: true,
     })
-    .filter((r): r is RelatedNote => r != null)
-    .sort((a, b) => b.sharedTags.length - a.sharedTags.length)
+  }
+  return matches.sort((a, b) => b.sharedTags.length - a.sharedTags.length)
 }
 
 /**
@@ -148,28 +147,29 @@ async function findVectorMatches(
   const sourceTerms = extractKeyTerms(note.content)
   const sourceTagSet = new Set(note.tags)
 
-  return results
-    .filter(r => r.id !== note.id && candidateIds.has(r.id) && r.similarity > 0.3)
-    .slice(0, MAX_RESULTS)
-    .map(result => {
-      const candidate = candidates.find(c => c.id === result.id)
-      if (!candidate) return null
+  const matches: RelatedNote[] = []
+  for (const result of results) {
+    if (result.id === note.id || !candidateIds.has(result.id) || result.similarity <= 0.3) continue
+    if (matches.length >= MAX_RESULTS) break
 
-      const sharedTags = candidate.tags.filter(t => sourceTagSet.has(t))
-      const candidateTerms = extractKeyTerms(candidate.content)
-      const sharedTerms = [...sourceTerms].filter((t: string) => candidateTerms.has(t))
+    const candidate = candidates.find(c => c.id === result.id)
+    if (!candidate) continue
 
-      return {
-        noteId: candidate.id,
-        title: extractTitle(candidate.content),
-        courseName: courseNames.get(candidate.courseId) ?? candidate.courseId,
-        sharedTags,
-        sharedTerms,
-        similarityScore: result.similarity,
-        tagOnly: false,
-      } satisfies RelatedNote
+    const sharedTags = candidate.tags.filter(t => sourceTagSet.has(t))
+    const candidateTerms = extractKeyTerms(candidate.content)
+    const sharedTerms = [...sourceTerms].filter((t: string) => candidateTerms.has(t))
+
+    matches.push({
+      noteId: candidate.id,
+      title: extractTitle(candidate.content),
+      courseName: courseNames.get(candidate.courseId) ?? candidate.courseId,
+      sharedTags,
+      sharedTerms,
+      similarityScore: result.similarity,
+      tagOnly: false,
     })
-    .filter((r): r is RelatedNote => r != null)
+  }
+  return matches
 }
 
 /**
