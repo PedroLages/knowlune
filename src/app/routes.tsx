@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react'
-import { createBrowserRouter } from 'react-router'
+import { createBrowserRouter, Navigate } from 'react-router'
 import { Layout } from './components/Layout'
 
 // Lazy-loaded page components (code-splitting)
@@ -18,7 +18,6 @@ const ImportedCourseDetail = React.lazy(() =>
 const ImportedLessonPlayer = React.lazy(() =>
   import('./pages/ImportedLessonPlayer').then(m => ({ default: m.ImportedLessonPlayer }))
 )
-const Library = React.lazy(() => import('./pages/Library').then(m => ({ default: m.Library })))
 const Notes = React.lazy(() => import('./pages/Notes').then(m => ({ default: m.Notes })))
 const ChatQA = React.lazy(() => import('./pages/ChatQA').then(m => ({ default: m.ChatQA })))
 const Instructors = React.lazy(() =>
@@ -124,11 +123,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'library',
-        element: (
-          <SuspensePage>
-            <Library />
-          </SuspensePage>
-        ),
+        element: <Navigate to="/notes?tab=bookmarks" replace />,
       },
       {
         path: 'notes',

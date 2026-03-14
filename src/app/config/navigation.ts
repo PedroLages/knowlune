@@ -2,7 +2,6 @@ import {
   LayoutDashboard,
   BookOpen,
   GraduationCap,
-  Library,
   StickyNote,
   MessageSquare,
   Users,
@@ -36,12 +35,6 @@ export const navigationGroups: NavigationGroup[] = [
       { name: 'Courses', path: '/courses', icon: GraduationCap },
       { name: 'Learning Path', path: '/ai-learning-path', icon: Sparkles },
       { name: 'Knowledge Gaps', path: '/knowledge-gaps', icon: Brain },
-    ],
-  },
-  {
-    label: 'Resources',
-    items: [
-      { name: 'Library', path: '/library', icon: Library },
       { name: 'Notes', path: '/notes', icon: StickyNote },
     ],
   },
@@ -76,7 +69,7 @@ export const navigationItems: NavigationItem[] = [
 ]
 
 // Paths for primary navigation (shown in mobile bottom bar)
-const primaryNavPaths = ['/', '/my-class', '/courses', '/library']
+const primaryNavPaths = ['/', '/my-class', '/courses', '/notes']
 
 // Get primary navigation items (for mobile bottom bar)
 export function getPrimaryNav(): NavigationItem[] {

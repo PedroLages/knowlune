@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router'
-import { Search, StickyNote, ArrowUpDown, BookOpen, Clock, Info, Download } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router'
+import {
+  Search,
+  StickyNote,
+  ArrowUpDown,
+  BookOpen,
+  Clock,
+  Info,
+  Download,
+  BookmarkIcon,
+} from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/app/components/ui/utils'
 import { Input } from '@/app/components/ui/input'
@@ -22,6 +31,8 @@ import {
   SelectValue,
 } from '@/app/components/ui/select'
 import { Skeleton } from '@/app/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs'
+import { BookmarksSection } from '@/app/components/figma/BookmarksSection'
 import { useNoteStore } from '@/stores/useNoteStore'
 import { searchNotesWithContext } from '@/lib/noteSearch'
 import { getAllNoteTags } from '@/lib/progress'
@@ -104,6 +115,8 @@ export function Notes() {
   const isLoading = useNoteStore(s => s.isLoading)
   const loadNotes = useNoteStore(s => s.loadNotes)
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const defaultTab = searchParams.get('tab') === 'bookmarks' ? 'bookmarks' : 'notes'
 
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -416,20 +429,32 @@ export function Notes() {
     )
   }
 
-  // Skeleton loading state
+  // Skeleton loading state — still show tabs so user can switch to bookmarks
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-8 w-32" />
-        </div>
-        <Skeleton className="h-10 w-full" />
-        <div className="space-y-4">
-          {Array.from({ length: 4 }, (_, i) => (
-            <Skeleton key={i} className="h-28 w-full rounded-[24px]" />
-          ))}
-        </div>
+        <h1 className="text-2xl font-semibold tracking-tight">My Notes</h1>
+        <Tabs defaultValue={defaultTab}>
+          <TabsList>
+            <TabsTrigger value="notes">
+              <StickyNote className="size-4 mr-1.5" />
+              Notes
+            </TabsTrigger>
+            <TabsTrigger value="bookmarks">
+              <BookmarkIcon className="size-4 mr-1.5" />
+              Bookmarks
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="notes" className="mt-6 space-y-4">
+            <Skeleton className="h-10 w-full" />
+            {Array.from({ length: 4 }, (_, i) => (
+              <Skeleton key={i} className="h-28 w-full rounded-[24px]" />
+            ))}
+          </TabsContent>
+          <TabsContent value="bookmarks" className="mt-6">
+            <BookmarksSection />
+          </TabsContent>
+        </Tabs>
       </div>
     )
   }
@@ -438,153 +463,175 @@ export function Notes() {
     <TooltipProvider>
       <div className="space-y-6">
         {/* Page header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            My Notes <span className="text-muted-foreground font-normal">({notes.length})</span>
-          </h1>
-          <div className="flex items-center gap-3">
-            <QAChatPanel />
-            <Select value={sortOption} onValueChange={v => setSortOption(v as SortOption)}>
-              <SelectTrigger className="w-[160px]">
-                <ArrowUpDown className="size-3.5 mr-1.5" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="most-recent">Most Recent</SelectItem>
-                <SelectItem value="oldest-first">Oldest First</SelectItem>
-                <SelectItem value="by-course">By Course</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        <h1 className="text-2xl font-semibold tracking-tight">My Notes</h1>
 
-        {/* Search input + semantic toggle */}
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search notes..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="pl-10"
-              aria-label="Search notes"
-            />
-          </div>
-          {supportsWorkers() && (
-            <div className="flex items-center gap-2 shrink-0">
-              <Switch
-                id="semantic-search"
-                data-testid="semantic-toggle"
-                checked={useSemanticSearch}
-                onCheckedChange={setUseSemanticSearch}
-                disabled={!semanticSearchAvailable}
-              />
-              <Label
-                htmlFor="semantic-search"
-                className={cn(
-                  'text-sm cursor-pointer',
-                  semanticSearchAvailable ? 'text-muted-foreground' : 'text-muted-foreground/50'
-                )}
-              >
-                Semantic
-              </Label>
-              {!semanticSearchAvailable && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="inline-flex items-center justify-center size-6 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      aria-label="Semantic search unavailable: no embeddings indexed yet"
-                      data-testid="semantic-tooltip-trigger"
-                    >
-                      <Info className="size-3.5 text-muted-foreground" aria-hidden="true" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>No embeddings available</TooltipContent>
-                </Tooltip>
+        <Tabs defaultValue={defaultTab}>
+          <TabsList>
+            <TabsTrigger value="notes">
+              <StickyNote className="size-4 mr-1.5" />
+              Notes
+              <span className="text-muted-foreground ml-1">({notes.length})</span>
+            </TabsTrigger>
+            <TabsTrigger value="bookmarks">
+              <BookmarkIcon className="size-4 mr-1.5" />
+              Bookmarks
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Notes Tab */}
+          <TabsContent value="notes" className="mt-6 space-y-6">
+            {/* Sort + QA controls */}
+            <div className="flex items-center justify-end gap-3">
+              <QAChatPanel />
+              <Select value={sortOption} onValueChange={v => setSortOption(v as SortOption)}>
+                <SelectTrigger className="w-[160px]">
+                  <ArrowUpDown className="size-3.5 mr-1.5" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="most-recent">Most Recent</SelectItem>
+                  <SelectItem value="oldest-first">Oldest First</SelectItem>
+                  <SelectItem value="by-course">By Course</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Search input + semantic toggle */}
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search notes..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                  aria-label="Search notes"
+                />
+              </div>
+              {supportsWorkers() && (
+                <div className="flex items-center gap-2 shrink-0">
+                  <Switch
+                    id="semantic-search"
+                    data-testid="semantic-toggle"
+                    checked={useSemanticSearch}
+                    onCheckedChange={setUseSemanticSearch}
+                    disabled={!semanticSearchAvailable}
+                  />
+                  <Label
+                    htmlFor="semantic-search"
+                    className={cn(
+                      'text-sm cursor-pointer',
+                      semanticSearchAvailable
+                        ? 'text-muted-foreground'
+                        : 'text-muted-foreground/50'
+                    )}
+                  >
+                    Semantic
+                  </Label>
+                  {!semanticSearchAvailable && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="inline-flex items-center justify-center size-6 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          aria-label="Semantic search unavailable: no embeddings indexed yet"
+                          data-testid="semantic-tooltip-trigger"
+                        >
+                          <Info className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>No embeddings available</TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
               )}
             </div>
-          )}
-        </div>
 
-        {/* Tag filter bar */}
-        {availableTags.length > 0 && (
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by tag">
-            {availableTags.map(tag => (
-              <button
-                key={tag}
-                type="button"
-                onClick={() => handleTagClick(tag)}
-                className="inline-flex focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-md"
-              >
-                <Badge
-                  variant={activeTag === tag ? 'default' : 'outline'}
-                  className={cn(
-                    'cursor-pointer text-xs',
-                    activeTag === tag
-                      ? 'bg-brand text-brand-foreground hover:bg-brand-hover'
-                      : 'hover:bg-accent'
-                  )}
-                  data-active={activeTag === tag ? 'true' : undefined}
-                >
-                  {tag}
-                </Badge>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Empty state — no notes at all */}
-        {notes.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <StickyNote className="size-12 text-muted-foreground/50 mb-4" />
-            <h2 className="text-lg font-medium mb-2">No notes yet</h2>
-            <p className="text-sm text-muted-foreground max-w-md">
-              Start taking notes while watching lessons. Open any course, play a video, and use the
-              notes panel to capture your thoughts.
-            </p>
-          </div>
-        )}
-
-        {/* No search results */}
-        {notes.length > 0 && displayedNotes.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Search className="size-12 text-muted-foreground/50 mb-4" />
-            <h2 className="text-lg font-medium mb-2">No results found</h2>
-            <p className="text-sm text-muted-foreground">
-              No notes match{' '}
-              {debouncedQuery && (
-                <>
-                  &ldquo;<span className="font-medium">{debouncedQuery}</span>
-                  &rdquo;
-                </>
-              )}
-              {debouncedQuery && activeTag && ' with '}
-              {activeTag && (
-                <>
-                  tag &ldquo;<span className="font-medium">{activeTag}</span>
-                  &rdquo;
-                </>
-              )}
-              . Try a different search term or clear your filters.
-            </p>
-          </div>
-        )}
-
-        {/* Note list — grouped by course or flat */}
-        {courseGroups ? (
-          <div className="space-y-8">
-            {Array.from(courseGroups.entries()).map(([courseName, items]) => (
-              <div key={courseName}>
-                <h2 className="text-lg font-semibold mb-3">{courseName}</h2>
-                <div className="space-y-3">{items.map(renderNoteCard)}</div>
+            {/* Tag filter bar */}
+            {availableTags.length > 0 && (
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by tag">
+                {availableTags.map(tag => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => handleTagClick(tag)}
+                    className="inline-flex focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-md"
+                  >
+                    <Badge
+                      variant={activeTag === tag ? 'default' : 'outline'}
+                      className={cn(
+                        'cursor-pointer text-xs',
+                        activeTag === tag
+                          ? 'bg-brand text-brand-foreground hover:bg-brand-hover'
+                          : 'hover:bg-accent'
+                      )}
+                      data-active={activeTag === tag ? 'true' : undefined}
+                    >
+                      {tag}
+                    </Badge>
+                  </button>
+                ))}
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-3">{displayedNotes.map(renderNoteCard)}</div>
-        )}
+            )}
+
+            {/* Empty state — no notes at all */}
+            {notes.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <StickyNote className="size-12 text-muted-foreground/50 mb-4" />
+                <h2 className="text-lg font-medium mb-2">No notes yet</h2>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  Start taking notes while watching lessons. Open any course, play a video, and use
+                  the notes panel to capture your thoughts.
+                </p>
+              </div>
+            )}
+
+            {/* No search results */}
+            {notes.length > 0 && displayedNotes.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <Search className="size-12 text-muted-foreground/50 mb-4" />
+                <h2 className="text-lg font-medium mb-2">No results found</h2>
+                <p className="text-sm text-muted-foreground">
+                  No notes match{' '}
+                  {debouncedQuery && (
+                    <>
+                      &ldquo;<span className="font-medium">{debouncedQuery}</span>
+                      &rdquo;
+                    </>
+                  )}
+                  {debouncedQuery && activeTag && ' with '}
+                  {activeTag && (
+                    <>
+                      tag &ldquo;<span className="font-medium">{activeTag}</span>
+                      &rdquo;
+                    </>
+                  )}
+                  . Try a different search term or clear your filters.
+                </p>
+              </div>
+            )}
+
+            {/* Note list — grouped by course or flat */}
+            {courseGroups ? (
+              <div className="space-y-8">
+                {Array.from(courseGroups.entries()).map(([courseName, items]) => (
+                  <div key={courseName}>
+                    <h2 className="text-lg font-semibold mb-3">{courseName}</h2>
+                    <div className="space-y-3">{items.map(renderNoteCard)}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3">{displayedNotes.map(renderNoteCard)}</div>
+            )}
+          </TabsContent>
+
+          {/* Bookmarks Tab */}
+          <TabsContent value="bookmarks" className="mt-6">
+            <BookmarksSection />
+          </TabsContent>
+        </Tabs>
       </div>
     </TooltipProvider>
   )

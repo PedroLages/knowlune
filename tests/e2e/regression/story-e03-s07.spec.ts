@@ -11,7 +11,7 @@ import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
 import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
-const BOOKMARKS_URL = '/library'
+const BOOKMARKS_URL = '/notes?tab=bookmarks'
 
 /** Suppress sidebar overlay and navigate to bookmarks page. */
 async function goToBookmarks(page: Parameters<typeof navigateAndWait>[0]) {
