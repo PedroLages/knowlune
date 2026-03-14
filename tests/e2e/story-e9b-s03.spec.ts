@@ -268,6 +268,11 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
     await page.reload()
     await page.waitForLoadState('networkidle')
 
+    // Re-inject mock after reload (page reload clears window object)
+    await page.evaluate(mock => {
+      ;(window as any).__mockLearningPathResponse = mock
+    }, mockResponse)
+
     // Click Regenerate button
     const regenerateButton = page.getByTestId('regenerate-learning-path-button')
     await expect(regenerateButton).toBeVisible()
@@ -511,7 +516,7 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
     // Verify empty state message is displayed
     const emptyStateMessage = page.getByTestId('learning-path-empty-state')
     await expect(emptyStateMessage).toBeVisible()
-    await expect(emptyStateMessage).toContainText('at least 2 courses are needed')
+    await expect(emptyStateMessage).toContainText('At least 2 courses are needed')
 
     // Verify Generate Learning Path button is disabled
     const generateButton = page.getByTestId('generate-learning-path-button')
