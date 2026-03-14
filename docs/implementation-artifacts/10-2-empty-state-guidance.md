@@ -196,3 +196,8 @@ Pending — will be populated by /review-story.
 - Story setup: all dependency epics (1, 3, 4, 6) are done — no blockers
 - Codebase already has 3 different empty state patterns (inline HTML, EmptyState component, Empty composables) — standardizing on `EmptyState.tsx` to reduce inconsistency
 - Dashboard uses static `allCourses` (always populated) vs. imported courses from Dexie (starts empty) — empty state targets imported courses via `useCourseImportStore`
+- **Fire-and-forget async calls remain a recurring pattern** — `importCourseFromFolder()` lacked `.catch()`, caught in code review. Apply `.catch()` or try/catch to all async callbacks passed to UI event handlers
+- **`w-* h-*` vs `size-*` shorthand** — Tailwind v4 `size-*` utility is the project standard; `w-N h-N` pairs still slip through. Worth adding an ESLint rule
+- **Hardcoded colors still surface in pre-existing code** — Challenges.tsx had `bg-blue-600/10` and `text-amber-600` from before design token enforcement. Touching a file for new features should include a sweep of existing token violations
+- **Design spec adherence** — Review caught `font-display` and `text-brand-muted` deviations from design guidance. Read the design section carefully before implementing, not just the AC text
+- **E2E test count grew from 12 (ATDD) to 16** after review expanded coverage for AC5 (navigation timing) and AC7 (completion flow)
