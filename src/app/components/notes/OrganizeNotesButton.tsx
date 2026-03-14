@@ -4,6 +4,7 @@ import { Button } from '@/app/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/tooltip'
 import { toast } from 'sonner'
 import { isAIAvailable, isFeatureEnabled } from '@/lib/aiConfiguration'
+import { trackAIUsage } from '@/lib/aiEventTracking'
 import { organizeNotes, type NoteOrganizationProposal } from '@/ai/noteOrganizer'
 import { OrganizePreviewDialog } from './OrganizePreviewDialog'
 import type { Note } from '@/data/types'
@@ -25,12 +26,22 @@ export function OrganizeNotesButton({ notes, courseNames }: OrganizeNotesButtonP
 
   async function handleOrganize() {
     setIsProcessing(true)
+    const startTime = Date.now()
     try {
       const result = await organizeNotes(notes, courseNames)
       setProposals(result)
       setDialogOpen(true)
+      trackAIUsage('note_organization', {
+        durationMs: Date.now() - startTime,
+        metadata: { noteCount: notes.length, proposalCount: result.length },
+      })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to organize notes'
+      trackAIUsage('note_organization', {
+        status: 'error',
+        durationMs: Date.now() - startTime,
+        metadata: { error: message },
+      })
       toast.error(message, {
         action: {
           label: 'Retry',
