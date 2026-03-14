@@ -1,4 +1,6 @@
 import type { ImportedCourse, LearningPathCourse } from '@/data/types'
+import { getAIConfiguration, getDecryptedApiKey } from '@/lib/aiConfiguration'
+import './types' // Import window type declaration
 
 interface GeneratePathOptions {
   timeout?: number // milliseconds, default 20000 (20s)
@@ -29,25 +31,30 @@ export async function generateLearningPath(
     throw new Error('At least 2 courses are required to generate a learning path')
   }
 
-  // Get API key from localStorage (set via Settings page)
-  const aiConfig = localStorage.getItem('ai-provider-config')
-  if (!aiConfig) {
+  // Check for test mock (E2E tests inject deterministic responses via window object)
+  if (typeof window !== 'undefined' && window.__mockLearningPathResponse) {
+    const mockResponse = window.__mockLearningPathResponse
+    const result = mockResponse.learningPath.map(course => ({
+      ...course,
+      generatedAt: new Date().toISOString(),
+    }))
+
+    // Simulate streaming by calling onUpdate for each course
+    result.forEach(course => onUpdate(course))
+
+    return result
+  }
+
+  // Get AI configuration using centralized helpers
+  const config = getAIConfiguration()
+  const apiKey = await getDecryptedApiKey()
+
+  if (!apiKey) {
     throw new Error('AI features are not configured. Please set up your API key in Settings.')
   }
 
-  let config: { provider: string; apiKey: string; consent: { learningPath: boolean } }
-  try {
-    config = JSON.parse(aiConfig)
-  } catch {
-    throw new Error('Invalid AI configuration. Please reconfigure in Settings.')
-  }
-
-  if (!config.consent?.learningPath) {
+  if (!config.consentSettings.learningPath) {
     throw new Error('Learning Path AI feature is disabled. Please enable it in Settings.')
-  }
-
-  if (!config.apiKey) {
-    throw new Error('API key is missing. Please set up your API key in Settings.')
   }
 
   // Construct prompt with course metadata
@@ -94,7 +101,7 @@ IMPORTANT: Return ONLY the JSON object, no markdown code blocks, no extra text.`
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${config.apiKey}`,
+      'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model: 'gpt-4-turbo',

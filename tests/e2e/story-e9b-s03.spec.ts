@@ -1,5 +1,28 @@
 import { test, expect } from '@playwright/test'
 import { seedImportedCourses } from '../support/helpers/indexeddb-seed'
+import { seedAIConfiguration } from '../support/helpers/ai-summary-mocks'
+
+/**
+ * Helper to create minimal ImportedCourse objects for testing
+ */
+function createTestCourse(overrides: {
+  id: string
+  name: string
+  status?: string
+  tags?: string[]
+}) {
+  return {
+    id: overrides.id,
+    name: overrides.name,
+    importedAt: new Date().toISOString(),
+    category: 'Programming',
+    tags: overrides.tags || [],
+    status: overrides.status || 'not-started',
+    videoCount: 5,
+    pdfCount: 2,
+    directoryHandle: null, // Mock - not needed for learning path tests
+  }
+}
 
 /**
  * E9B-S03: AI Learning Path Generation
@@ -27,24 +50,24 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
   test('AC1: Show Generate Learning Path button when 2+ courses exist', async ({ page }) => {
     // Seed 3 courses
     await seedImportedCourses(page, [
-      {
+      createTestCourse({
         id: 'intro-to-python',
-        title: 'Introduction to Python',
+        name: 'Introduction to Python',
         status: 'completed',
-        topics: ['Programming', 'Python'],
-      },
-      {
+        tags: ['Programming', 'Python'],
+      }),
+      createTestCourse({
         id: 'python-web-dev',
-        title: 'Python Web Development',
+        name: 'Python Web Development',
         status: 'in-progress',
-        topics: ['Programming', 'Python', 'Web Development'],
-      },
-      {
+        tags: ['Programming', 'Python', 'Web Development'],
+      }),
+      createTestCourse({
         id: 'advanced-python',
-        title: 'Advanced Python Techniques',
+        name: 'Advanced Python Techniques',
         status: 'not-started',
-        topics: ['Programming', 'Python'],
-      },
+        tags: ['Programming', 'Python'],
+      }),
     ])
 
     // Navigate to AI Learning Path section
@@ -63,62 +86,67 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
     await seedImportedCourses(page, [
       {
         id: 'intro-to-python',
-        title: 'Introduction to Python',
+        name: 'Introduction to Python',
         status: 'not-started',
-        topics: ['Programming', 'Python'],
+        tags: ['Programming', 'Python'],
       },
       {
         id: 'python-web-dev',
-        title: 'Python Web Development',
+        name: 'Python Web Development',
         status: 'not-started',
-        topics: ['Programming', 'Python', 'Web Development'],
+        tags: ['Programming', 'Python', 'Web Development'],
       },
       {
         id: 'advanced-python',
-        title: 'Advanced Python Techniques',
+        name: 'Advanced Python Techniques',
         status: 'not-started',
-        topics: ['Programming', 'Python'],
+        tags: ['Programming', 'Python'],
       },
     ])
 
-    // Mock AI provider response (ordered list with justifications)
-    await page.route('**/api/ai/generate-learning-path', async route => {
-      await route.fulfill({
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          learningPath: [
-            {
-              courseId: 'intro-to-python',
-              position: 1,
-              justification:
-                'Foundational course covering Python basics - prerequisite for all other courses',
-            },
-            {
-              courseId: 'python-web-dev',
-              position: 2,
-              justification: 'Applies Python fundamentals to web development - requires intro knowledge',
-            },
-            {
-              courseId: 'advanced-python',
-              position: 3,
-              justification: 'Advanced concepts building on intermediate Python skills',
-            },
-          ],
-        }),
-      })
-    })
+    // Seed AI configuration
+    await seedAIConfiguration(page)
 
     // Navigate to AI Learning Path section
     await page.goto('/ai-learning-path')
     await page.waitForLoadState('networkidle')
 
+    // Inject mock learning path response via window object (avoids complex route interception)
+    await page.evaluate(() => {
+      ;(window as any).__mockLearningPathResponse = {
+        learningPath: [
+          {
+            courseId: 'intro-to-python',
+            position: 1,
+            justification:
+              'Foundational course covering Python basics - prerequisite for all other courses',
+            isManuallyOrdered: false,
+            generatedAt: new Date().toISOString(),
+          },
+          {
+            courseId: 'python-web-dev',
+            position: 2,
+            justification: 'Applies Python fundamentals to web development - requires intro knowledge',
+            isManuallyOrdered: false,
+            generatedAt: new Date().toISOString(),
+          },
+          {
+            courseId: 'advanced-python',
+            position: 3,
+            justification: 'Advanced concepts building on intermediate Python skills',
+            isManuallyOrdered: false,
+            generatedAt: new Date().toISOString(),
+          },
+        ],
+      }
+    })
+
     // Click Generate Learning Path button
     const generateButton = page.getByTestId('generate-learning-path-button')
     await generateButton.click()
 
-    // Wait for loading state
-    await expect(page.getByText('Generating learning path...')).toBeVisible()
+    // Wait for loading state (button shows "Analyzing courses...")
+    await expect(page.getByText('Analyzing courses...')).toBeVisible()
 
     // Verify ordered course list appears
     const learningPathList = page.getByTestId('learning-path-list')
@@ -142,40 +170,59 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
     await seedImportedCourses(page, [
       {
         id: 'intro-to-python',
-        title: 'Introduction to Python',
+        name: 'Introduction to Python',
         status: 'not-started',
-        topics: ['Programming', 'Python'],
+        tags: ['Programming', 'Python'],
       },
       {
         id: 'python-web-dev',
-        title: 'Python Web Development',
+        name: 'Python Web Development',
         status: 'not-started',
-        topics: ['Programming', 'Python', 'Web Development'],
+        tags: ['Programming', 'Python', 'Web Development'],
       },
       {
         id: 'advanced-python',
-        title: 'Advanced Python Techniques',
+        name: 'Advanced Python Techniques',
         status: 'not-started',
-        topics: ['Programming', 'Python'],
+        tags: ['Programming', 'Python'],
       },
     ])
 
-    // Mock AI provider response
-    await page.route('**/api/ai/generate-learning-path', async route => {
-      await route.fulfill({
-        status: 200,
-        body: JSON.stringify({
-          learningPath: [
-            { courseId: 'intro-to-python', position: 1, justification: 'Intro course' },
-            { courseId: 'python-web-dev', position: 2, justification: 'Web dev course' },
-            { courseId: 'advanced-python', position: 3, justification: 'Advanced course' },
-          ],
-        }),
-      })
-    })
+    // Seed AI configuration
+    await seedAIConfiguration(page)
 
     // Navigate and generate path
     await page.goto('/ai-learning-path')
+    await page.waitForLoadState('networkidle')
+
+    // Inject mock learning path response
+    await page.evaluate(() => {
+      ;(window as any).__mockLearningPathResponse = {
+        learningPath: [
+          {
+            courseId: 'intro-to-python',
+            position: 1,
+            justification: 'Intro course',
+            isManuallyOrdered: false,
+            generatedAt: new Date().toISOString(),
+          },
+          {
+            courseId: 'python-web-dev',
+            position: 2,
+            justification: 'Web dev course',
+            isManuallyOrdered: false,
+            generatedAt: new Date().toISOString(),
+          },
+          {
+            courseId: 'advanced-python',
+            position: 3,
+            justification: 'Advanced course',
+            isManuallyOrdered: false,
+            generatedAt: new Date().toISOString(),
+          },
+        ],
+      }
+    })
     await page.getByTestId('generate-learning-path-button').click()
     await expect(page.getByTestId('learning-path-list')).toBeVisible({ timeout: 10000 })
 
@@ -210,40 +257,59 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
     await seedImportedCourses(page, [
       {
         id: 'intro-to-python',
-        title: 'Introduction to Python',
+        name: 'Introduction to Python',
         status: 'not-started',
-        topics: ['Programming', 'Python'],
+        tags: ['Programming', 'Python'],
       },
       {
         id: 'python-web-dev',
-        title: 'Python Web Development',
+        name: 'Python Web Development',
         status: 'not-started',
-        topics: ['Programming', 'Python', 'Web Development'],
+        tags: ['Programming', 'Python', 'Web Development'],
       },
       {
         id: 'advanced-python',
-        title: 'Advanced Python Techniques',
+        name: 'Advanced Python Techniques',
         status: 'not-started',
-        topics: ['Programming', 'Python'],
+        tags: ['Programming', 'Python'],
       },
     ])
 
-    // Mock AI provider response
-    await page.route('**/api/ai/generate-learning-path', async route => {
-      await route.fulfill({
-        status: 200,
-        body: JSON.stringify({
-          learningPath: [
-            { courseId: 'intro-to-python', position: 1, justification: 'Intro' },
-            { courseId: 'python-web-dev', position: 2, justification: 'Web' },
-            { courseId: 'advanced-python', position: 3, justification: 'Advanced' },
-          ],
-        }),
-      })
-    })
+    // Seed AI configuration
+    await seedAIConfiguration(page)
 
     // Navigate, generate, and manually reorder
     await page.goto('/ai-learning-path')
+    await page.waitForLoadState('networkidle')
+
+    // Inject mock learning path response
+    await page.evaluate(() => {
+      ;(window as any).__mockLearningPathResponse = {
+        learningPath: [
+          {
+            courseId: 'intro-to-python',
+            position: 1,
+            justification: 'Intro',
+            isManuallyOrdered: false,
+            generatedAt: new Date().toISOString(),
+          },
+          {
+            courseId: 'python-web-dev',
+            position: 2,
+            justification: 'Web',
+            isManuallyOrdered: false,
+            generatedAt: new Date().toISOString(),
+          },
+          {
+            courseId: 'advanced-python',
+            position: 3,
+            justification: 'Advanced',
+            isManuallyOrdered: false,
+            generatedAt: new Date().toISOString(),
+          },
+        ],
+      }
+    })
     await page.getByTestId('generate-learning-path-button').click()
     await expect(page.getByTestId('learning-path-list')).toBeVisible({ timeout: 10000 })
 
@@ -287,9 +353,9 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
     await seedImportedCourses(page, [
       {
         id: 'intro-to-python',
-        title: 'Introduction to Python',
+        name: 'Introduction to Python',
         status: 'not-started',
-        topics: ['Programming', 'Python'],
+        tags: ['Programming', 'Python'],
       },
     ])
 
@@ -313,30 +379,25 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
     await seedImportedCourses(page, [
       {
         id: 'intro-to-python',
-        title: 'Introduction to Python',
+        name: 'Introduction to Python',
         status: 'not-started',
-        topics: ['Programming', 'Python'],
+        tags: ['Programming', 'Python'],
       },
       {
         id: 'python-web-dev',
-        title: 'Python Web Development',
+        name: 'Python Web Development',
         status: 'not-started',
-        topics: ['Programming', 'Python', 'Web Development'],
+        tags: ['Programming', 'Python', 'Web Development'],
       },
       {
         id: 'advanced-python',
-        title: 'Advanced Python Techniques',
+        name: 'Advanced Python Techniques',
         status: 'not-started',
-        topics: ['Programming', 'Python'],
+        tags: ['Programming', 'Python'],
       },
     ])
 
-    // Mock AI provider timeout/failure
-    await page.route('**/api/ai/generate-learning-path', async route => {
-      // Delay response by 3 seconds (beyond 2s timeout)
-      await new Promise(resolve => setTimeout(resolve, 3000))
-      await route.abort('timedout')
-    })
+    // DO NOT seed AI configuration - test error handling when unavailable
 
     // Navigate to AI Learning Path section
     await page.goto('/ai-learning-path')

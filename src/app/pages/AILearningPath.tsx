@@ -14,7 +14,9 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
+  useSortable,
 } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { Button } from '@/app/components/ui/button'
@@ -31,6 +33,64 @@ import {
 } from '@/app/components/ui/alert-dialog'
 import { Sparkles, RotateCw, Loader2, AlertCircle, BookOpen } from 'lucide-react'
 import { staggerContainer, fadeUp } from '@/lib/motion'
+import type { LearningPathCourse, ImportedCourse } from '@/data/types'
+
+/** Sortable wrapper for course cards */
+function SortableCourseCard({
+  course,
+  courseData,
+  index,
+}: {
+  course: LearningPathCourse
+  courseData: ImportedCourse | undefined
+  index: number
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
+    id: course.courseId,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <motion.div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      variants={fadeUp}
+      custom={index}
+      data-testid={`learning-path-course-${index}`}
+    >
+      <div className="relative bg-card border border-border rounded-[24px] p-8 shadow-sm cursor-grab active:cursor-grabbing">
+        {/* Position Badge */}
+        <div className="absolute -top-4 -left-4 w-12 h-12 rounded-full bg-gradient-to-br from-gold to-warning flex items-center justify-center font-heading text-white font-bold shadow-lg">
+          {course.position}
+        </div>
+
+        {/* Manual Override Badge */}
+        {course.isManuallyOrdered && (
+          <div
+            className="absolute top-4 right-4 px-3 py-1 rounded-full bg-info/10 text-info border border-info/20 text-sm font-medium"
+            data-testid="manual-override-indicator"
+          >
+            Manual
+          </div>
+        )}
+
+        {/* Course Title */}
+        <h3 className="font-heading text-2xl mb-3 mt-2">{courseData?.name || 'Unknown Course'}</h3>
+
+        {/* AI Justification */}
+        <p className="text-muted-foreground italic" data-testid="course-justification">
+          {course.justification}
+        </p>
+      </div>
+    </motion.div>
+  )
+}
 
 export function AILearningPath() {
   const { courses, isGenerating, error, generatePath, reorderCourse, regeneratePath, loadLearningPath } =
@@ -118,7 +178,7 @@ export function AILearningPath() {
             {isGenerating ? (
               <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Generating learning path...
+                Analyzing courses...
               </>
             ) : (
               <>
@@ -207,48 +267,12 @@ export function AILearningPath() {
                 const courseData = importedCourses.find(c => c.id === course.courseId)
 
                 return (
-                  <motion.div
+                  <SortableCourseCard
                     key={course.courseId}
-                    variants={fadeUp}
-                    custom={index}
-                    data-testid={`learning-path-course-${index}`}
-                  >
-                    {/* Course Waypoint Card will be implemented in Step 5 */}
-                    <div className="relative bg-card border border-border rounded-[24px] p-8 shadow-sm">
-                      {/* Position Badge */}
-                      <div className="absolute -top-4 -left-4 w-12 h-12 rounded-full bg-gradient-to-br from-gold to-warning flex items-center justify-center font-heading text-white font-bold shadow-lg">
-                        {course.position}
-                      </div>
-
-                      {/* Manual Override Badge */}
-                      {course.isManuallyOrdered && (
-                        <div
-                          className="absolute top-4 right-4 px-3 py-1 rounded-full bg-info/10 text-info border border-info/20 text-sm font-medium"
-                          data-testid="manual-override-indicator"
-                        >
-                          Manual
-                        </div>
-                      )}
-
-                      {/* Course Title */}
-                      <h3 className="font-heading text-2xl mb-3 mt-2">
-                        {courseData?.name || 'Unknown Course'}
-                      </h3>
-
-                      {/* AI Justification */}
-                      <p
-                        className="text-muted-foreground italic"
-                        data-testid="course-justification"
-                      >
-                        {course.justification}
-                      </p>
-
-                      {/* Connector Line (except for last item) */}
-                      {index < courses.length - 1 && (
-                        <div className="absolute -bottom-6 left-1/2 w-0.5 h-8 bg-border" />
-                      )}
-                    </div>
-                  </motion.div>
+                    course={course}
+                    courseData={courseData}
+                    index={index}
+                  />
                 )
               })}
             </motion.div>
