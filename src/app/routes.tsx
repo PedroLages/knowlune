@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react'
-import { createBrowserRouter } from 'react-router'
+import { createBrowserRouter, Navigate } from 'react-router'
 import { Layout } from './components/Layout'
 import { DelayedFallback } from './components/DelayedFallback'
 import { Skeleton } from './components/ui/skeleton'
@@ -20,7 +20,6 @@ const ImportedCourseDetail = React.lazy(() =>
 const ImportedLessonPlayer = React.lazy(() =>
   import('./pages/ImportedLessonPlayer').then(m => ({ default: m.ImportedLessonPlayer }))
 )
-const Library = React.lazy(() => import('./pages/Library').then(m => ({ default: m.Library })))
 const Notes = React.lazy(() => import('./pages/Notes').then(m => ({ default: m.Notes })))
 const ChatQA = React.lazy(() => import('./pages/ChatQA').then(m => ({ default: m.ChatQA })))
 const Instructors = React.lazy(() =>
@@ -40,6 +39,9 @@ const WebLLMTest = React.lazy(() => import('../experiments/WebLLMTest'))
 // const WebLLMPerformanceTest = React.lazy(() => import('../experiments/WebLLMPerformanceTest'))
 const AILearningPath = React.lazy(() =>
   import('./pages/AILearningPath').then(m => ({ default: m.AILearningPath }))
+)
+const KnowledgeGaps = React.lazy(() =>
+  import('./pages/KnowledgeGaps').then(m => ({ default: m.KnowledgeGaps }))
 )
 
 // Default exports work directly with React.lazy
@@ -132,11 +134,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'library',
-        element: (
-          <SuspensePage>
-            <Library />
-          </SuspensePage>
-        ),
+        element: <Navigate to="/notes?tab=bookmarks" replace />,
       },
       {
         path: 'notes',
@@ -215,6 +213,14 @@ export const router = createBrowserRouter([
         element: (
           <SuspensePage>
             <AILearningPath />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'knowledge-gaps',
+        element: (
+          <SuspensePage>
+            <KnowledgeGaps />
           </SuspensePage>
         ),
       },

@@ -2,7 +2,6 @@ import {
   LayoutDashboard,
   BookOpen,
   GraduationCap,
-  Library,
   StickyNote,
   MessageSquare,
   Users,
@@ -10,6 +9,7 @@ import {
   History,
   BarChart3,
   Sparkles,
+  Brain,
   Settings as SettingsIcon,
   type LucideIcon,
 } from 'lucide-react'
@@ -34,12 +34,7 @@ export const navigationGroups: NavigationGroup[] = [
       { name: 'My Classes', path: '/my-class', icon: BookOpen },
       { name: 'Courses', path: '/courses', icon: GraduationCap },
       { name: 'Learning Path', path: '/ai-learning-path', icon: Sparkles },
-    ],
-  },
-  {
-    label: 'Resources',
-    items: [
-      { name: 'Library', path: '/library', icon: Library },
+      { name: 'Knowledge Gaps', path: '/knowledge-gaps', icon: Brain },
       { name: 'Notes', path: '/notes', icon: StickyNote },
     ],
   },
@@ -74,7 +69,7 @@ export const navigationItems: NavigationItem[] = [
 ]
 
 // Paths for primary navigation (shown in mobile bottom bar)
-const primaryNavPaths = ['/', '/my-class', '/courses', '/library']
+const primaryNavPaths = ['/', '/my-class', '/courses', '/notes']
 
 // Get primary navigation items (for mobile bottom bar)
 export function getPrimaryNav(): NavigationItem[] {

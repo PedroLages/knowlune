@@ -364,81 +364,81 @@ FR111: Epic 20 - Skill proficiency radar chart
 
 ## Epic List
 
-### Epic 1: Course Import & Library Management
+### Epic 1: Course Import & Library Management `[CORE]`
 
 Users can import local course folders, browse their library, organize by topic, and manage course status — establishing the content foundation for all learning activities.
 
 **FRs covered:** FR1, FR2, FR3, FR4, FR5, FR6, FR89
 **Phase:** 1 (Foundation)
 
-### Epic 2: Lesson Player & Content Consumption
+### Epic 2: Lesson Player & Content Consumption `[CORE]`
 
 Users can watch videos with full playback controls, view PDFs, bookmark positions, resume where they left off, load captions, and navigate course structure in a focused, distraction-free interface.
 
 **FRs covered:** FR7, FR8, FR9, FR10, FR11, FR12, FR13, FR45, FR88
 **Phase:** 1 (Foundation)
 
-### Epic 3: Smart Note System
+### Epic 3: Smart Note System `[CORE]`
 
 Users can create Markdown notes linked to courses and videos, timestamp notes to exact playback positions, search across all notes with full-text search, and work in a side-by-side video+notes layout — all with invisible autosave.
 
 **FRs covered:** FR20, FR21, FR22, FR23, FR24, FR25, FR26, FR27, FR76, FR77
 **Phase:** 1 (Foundation)
 
-### Epic 4: Progress Tracking & Session History
+### Epic 4: Progress Tracking & Session History `[CORE]`
 
 Users can mark content completion status, view visual progress maps with color coding, track study time, review session history, and resume their last session directly from the dashboard.
 
 **FRs covered:** FR14, FR15, FR16, FR17, FR18, FR19, FR95
 **Phase:** 1 (Foundation)
 
-### Epic 5: Study Streaks & Daily Goals
+### Epic 5: Study Streaks & Daily Goals `[CORE]`
 
 Users can build daily study streaks, set study goals, view a streak calendar, configure reminders and freeze days, and celebrate streak milestones — creating the daily accountability loop that drives consistent learning.
 
 **FRs covered:** FR28, FR29, FR30, FR31, FR90, FR91, FR98, FR101
 **Phase:** 1-2 (Foundation → Intelligence)
 
-### Epic 6: Learning Challenges & Gamification
+### Epic 6: Learning Challenges & Gamification `[CORE]`
 
 Users can create custom learning challenges with specific targets and deadlines, track progress, and receive milestone celebrations — adding goal-directed motivation beyond daily streaks.
 
 **FRs covered:** FR32, FR33, FR34, FR35
 **Phase:** 2 (Intelligence & Gamification)
 
-### Epic 7: Course Momentum & Learning Intelligence
+### Epic 7: Course Momentum & Learning Intelligence `[CORE]`
 
 System calculates momentum scores for each course, recommends what to study next, flags at-risk courses, estimates completion times, and suggests optimal study schedules — providing smart, data-driven learning guidance.
 
 **FRs covered:** FR36, FR37, FR38, FR39, FR40, FR41, FR42, FR79
 **Phase:** 2 (Intelligence & Gamification)
 
-### Epic 8: Analytics & Reports Dashboard
+### Epic 8: Analytics & Reports Dashboard `[CORE]`
 
 Users can view comprehensive study analytics (time breakdowns, completion rates, velocity metrics, retention insights, activity heatmaps) and receive actionable insights derived from their learning patterns.
 
 **FRs covered:** FR43, FR44, FR46, FR47, FR78, FR93, FR101
 **Phase:** 2-3 (Intelligence → AI & Analytics)
 
-### Epic 9: AI-Powered Learning Assistant
+### Epic 9: AI-Powered Learning Assistant `[PREMIUM]`
 
 Users can get AI-generated video summaries, ask questions answered from their notes, view AI-curated learning paths, receive smart note suggestions, and benefit from automatic content analysis — with AI woven throughout the experience as a study coach.
 
 **FRs covered:** FR48, FR49, FR50, FR51, FR52, FR53, FR94, FR97, FR99
 **Phase:** 3 (AI & Analytics)
 
-### Epic 10: Onboarding & First-Use Experience
+### Epic 10: Onboarding & First-Use Experience `[CORE]`
 
 New users are guided through importing their first course, starting a study session, and creating their first learning challenge — ensuring immediate value discovery without documentation.
 
 **FRs covered:** FR96
 **Phase:** 1 (Foundation — deployed after Epics 1-2)
 
-### Epic 11: Knowledge Retention, Export & Advanced Features (Post-MVP)
+### Epic 11: Knowledge Retention, Export & Advanced Features (Post-MVP) `[MIXED]`
 
 Users can schedule spaced reviews, export learning data in multiple formats, configure per-course reminders, and access advanced review modes — extending the platform for power users and data portability.
 
-**FRs covered:** FR80, FR81, FR82, FR83, FR84, FR85, FR86, FR87, FR92, FR100
+**FRs covered:** FR80 `[PREMIUM]`, FR81 `[PREMIUM]`, FR82 `[PREMIUM]`, FR83 `[PREMIUM]`, FR84 `[PREMIUM]`, FR85 `[CORE]`, FR86 `[PREMIUM]`, FR87 `[PREMIUM]`, FR92 `[PREMIUM]`, FR100 `[CORE]`
 **Phase:** 4 (Post-MVP)
 
 ### Epic 19: Platform & Entitlement

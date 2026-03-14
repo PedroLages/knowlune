@@ -2,6 +2,7 @@ import { Course, Note } from '@/data/types'
 import { db } from '@/db'
 import { logStudyAction, getStudyLog } from './studyLog'
 import { addToIndex, updateInIndex, removeFromIndex } from '@/lib/noteSearch'
+import { triggerNoteLinkSuggestions } from '@/ai/knowledgeGaps/noteLinkSuggestions'
 
 const STORAGE_KEY = 'course-progress'
 const MINUTES_PER_LESSON = 15
@@ -286,6 +287,14 @@ export async function saveNote(
     }
 
     logStudyAction({ type: 'note_saved', courseId, lessonId, timestamp: new Date().toISOString() })
+
+    // Trigger cross-course note link suggestions (AC4–AC6)
+    // Re-read from Dexie to get the authoritative state (avoids stale linkedNoteIds)
+    const savedNote = await db.notes.where({ courseId, videoId: lessonId }).first()
+    if (savedNote) {
+      const allNotes = await db.notes.toArray()
+      triggerNoteLinkSuggestions(savedNote, allNotes)
+    }
   } catch (error) {
     console.error('[Progress] Failed to save note to Dexie:', error)
   }

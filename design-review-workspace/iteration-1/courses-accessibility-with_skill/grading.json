@@ -1,0 +1,118 @@
+{
+  "expectations": [
+    {
+      "text": "Identifies /courses route or Courses.tsx as primary review target",
+      "passed": true,
+      "evidence": "Line 43: Read Courses.tsx directly. Line 84: navigated Playwright to http://localhost:5173/courses. Report header lists 'src/app/pages/Courses.tsx' as first reviewed file with role 'Courses page (search, tabs, filters, sort, grids)'. Also read CourseCard.tsx, ImportedCourseCard.tsx, TopicFilter.tsx, StatusFilter.tsx."
+    },
+    {
+      "text": "Forwards accessibility concern to the agent prompt",
+      "passed": false,
+      "evidence": "No Task or Agent tool was dispatched. The SKILL.md instructs: 'Use the Task tool to invoke the agent' with subagent_type 'design-review'. The agent performed the review itself in-process rather than dispatching to the design-review subagent. It read the agent definition (.claude/agents/design-review.md) and followed its methodology directly, but never forwarded the accessibility concern via a Task dispatch."
+    },
+    {
+      "text": "Agent dispatch prompt mentions keyboard navigation and/or screen reader focus",
+      "passed": false,
+      "evidence": "No agent dispatch occurred (no Task or Agent tool call found in transcript). The skill file explicitly says to use Task tool to dispatch to design-review subagent, but the agent performed the review directly instead of delegating."
+    },
+    {
+      "text": "Used Agent or Task tool to dispatch to design-review subagent",
+      "passed": false,
+      "evidence": "Searched all tool_use entries in transcript for 'Task' or 'Agent' tool names. None found. Tools used were: Read, Bash, Grep, ToolSearch, mcp__playwright__browser_navigate (failed), Write. The agent performed the review itself rather than dispatching."
+    },
+    {
+      "text": "Output includes keyboard navigation findings or recommendations",
+      "passed": true,
+      "evidence": "Report includes Blocker B1: 'Progress variant CourseCard has no keyboard accessibility' — detailed finding about missing role='link', tabIndex={0}, onKeyDown. Accessibility Checklist shows 'Keyboard navigation: Fail — Progress variant CourseCard (B1) is not keyboard-accessible.' Recommendation #1: 'Fix B1 immediately: Add role=\"link\", tabIndex={0}, aria-label, onKeyDown, and focus-visible styles.' Also lists what Playwright would test: 'Tab through entire page', 'Arrow key navigation in tabs', 'Select dropdown keyboard', 'Toggle group keyboard', 'Escape key'."
+    },
+    {
+      "text": "Output mentions both course cards and filter dropdown",
+      "passed": true,
+      "evidence": "Report covers course cards extensively (CourseCard.tsx library/overview/progress variants, ImportedCourseCard.tsx). Filter dropdown is covered: reviewed TopicFilter.tsx, StatusFilter.tsx, sort Select component. Report notes 'Radix UI primitives providing keyboard support out of the box for tabs, selects, and toggle groups.' The 'What Works Well' section #2 mentions 'sort select (aria-label=\"Sort courses\"), topic filter (aria-label=\"Filter by topic\"), and status filter (aria-label=\"Filter by status\") all have proper labels.' Sort dropdown select.tsx was read and analyzed."
+    },
+    {
+      "text": "Output includes ARIA or semantic HTML analysis",
+      "passed": true,
+      "evidence": "Report includes detailed ARIA analysis: search input aria-label, sort select aria-label, filter group aria-labels, icon buttons with aria-hidden='true'. Semantic HTML analysis: '<article> for imported cards, role=\"link\" for navigable cards, role=\"region\" for empty state, role=\"status\" for completion badge.' Accessibility Checklist has explicit 'ARIA labels on icon buttons: Pass' and 'Semantic HTML: Pass' rows. Finding M2/M3 recommends adding aria-live='polite' to empty states. Finding B1 recommends adding role='link' and aria-label."
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 3,
+    "total": 7,
+    "pass_rate": 0.571
+  },
+  "execution_metrics": {
+    "tool_calls_total": 30,
+    "tools_used": {
+      "Read": 8,
+      "Grep": 14,
+      "Bash": 4,
+      "Write": 3,
+      "ToolSearch": 1,
+      "mcp__playwright__browser_navigate": 1
+    },
+    "files_read": [
+      "SKILL.md",
+      "design-review.md (agent)",
+      "design-principles.md",
+      "Courses.tsx",
+      "CourseCard.tsx",
+      "ImportedCourseCard.tsx",
+      "TopicFilter.tsx",
+      "StatusFilter.tsx",
+      "select.tsx",
+      "tabs.tsx",
+      "toggle-group.tsx"
+    ],
+    "files_written": 3,
+    "playwright_available": false,
+    "playwright_failure_reason": "Chrome already running — browser launch failed"
+  },
+  "timing": {
+    "start": "2026-03-14T18:26:03.581Z",
+    "end": "2026-03-14T18:29:26.128Z",
+    "duration_seconds": 202.5,
+    "transcript_lines": 250,
+    "note": "No timing.json found for this scenario; timing extracted from transcript timestamps"
+  },
+  "claims": [
+    {
+      "claim": "Progress variant CourseCard lacks keyboard accessibility (role, tabIndex, onKeyDown)",
+      "source": "Report finding B1",
+      "verification": "Agent read CourseCard.tsx and grepped for tabIndex/role/onKeyDown patterns. The finding cites specific line numbers (739-748) and contrasts with library/overview variants that have these attributes.",
+      "verified": true
+    },
+    {
+      "claim": "Library/overview variants have proper keyboard support with role='link', tabIndex={0}, onKeyDown",
+      "source": "Report 'What Works Well' #3",
+      "verification": "Agent grepped for tabIndex/role patterns and read the file. Line references (757-773) provided.",
+      "verified": true
+    },
+    {
+      "claim": "Empty state messages lack aria-live='polite'",
+      "source": "Report findings M2/M3",
+      "verification": "Agent grepped for aria- patterns in Courses.tsx. The finding cites specific lines (353, 304).",
+      "verified": true
+    },
+    {
+      "claim": "Hardcoded colors found in CourseCard categoryColors and ImportedCourseCard statusConfig",
+      "source": "Report findings H1-H4",
+      "verification": "Agent ran multiple Grep searches for hardcoded color patterns (bg-blue-, bg-green-, etc.) and found matches.",
+      "verified": true
+    }
+  ],
+  "eval_feedback": {
+    "weak_assertions": [
+      "Expectation 2 ('Forwards accessibility concern to the agent prompt') and Expectation 3 ('Agent dispatch prompt mentions keyboard navigation') and Expectation 4 ('Used Agent or Task tool') are all testing the same thing: whether the agent dispatched to a subagent via Task tool. These three expectations are redundant — if #4 fails, #2 and #3 must also fail. They should be collapsed into one or two expectations."
+    ],
+    "missing_coverage": [
+      "No expectation tests whether the report is severity-triaged (Blocker/High/Medium/Nitpick) as required by the skill.",
+      "No expectation tests responsive design analysis (the report includes responsive grid analysis).",
+      "No expectation verifies that the agent read the SKILL.md and followed its methodology.",
+      "No expectation checks whether the agent gracefully handled Playwright MCP failure (it did, documenting what it would do).",
+      "No expectation checks report quality — the report is quite thorough with specific line numbers, code snippets, and actionable suggestions."
+    ],
+    "notes": "The agent failed to dispatch to a subagent (expectations 2-4) but produced a high-quality review by following the agent's methodology directly. The three failed expectations all measure the same architectural decision (dispatch vs. inline execution). The actual review quality — which is arguably more important — is only partially measured by expectations 5-7."
+  }
+}

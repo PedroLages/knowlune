@@ -6,6 +6,7 @@ import { Agentation } from 'agentation'
 import { router } from './routes'
 import { useSessionStore } from '@/stores/useSessionStore'
 import { ErrorBoundary } from '@/app/components/ErrorBoundary'
+import { PWAUpdatePrompt } from '@/app/components/PWAUpdatePrompt'
 import { initErrorTracking } from '@/lib/errorTracking'
 import { vectorStorePersistence } from '@/ai/vector-store'
 import { supportsWorkers } from '@/ai/lib/workerCapabilities'
@@ -35,6 +36,7 @@ export default function App() {
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <RouterProvider router={router} />
         <Toaster />
+        {import.meta.env.PROD && <PWAUpdatePrompt />}
         {process.env.NODE_ENV === 'development' && <Agentation />}
       </ThemeProvider>
     </ErrorBoundary>

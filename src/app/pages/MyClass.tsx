@@ -239,11 +239,11 @@ export default function MyClass() {
                   <Clock className="w-12 h-12 text-muted-foreground mb-4" aria-hidden="true" />
                   <h2 className="text-xl font-semibold mb-2">No courses in progress</h2>
                   <p className="text-muted-foreground mb-6 max-w-md">
-                    Start a new course from your library to begin learning!
+                    Start a new course to begin learning!
                   </p>
                   <Button asChild className="bg-brand hover:bg-brand-hover">
-                    <Link to="/library">
-                      Go to Library
+                    <Link to="/courses">
+                      Browse Courses
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Link>
                   </Button>

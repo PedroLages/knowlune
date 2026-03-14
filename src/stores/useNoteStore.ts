@@ -5,6 +5,7 @@ import { persistWithRetry } from '@/lib/persistWithRetry'
 import { addToIndex, updateInIndex, removeFromIndex } from '@/lib/noteSearch'
 import { embeddingPipeline } from '@/ai/embeddingPipeline'
 import { supportsWorkers } from '@/ai/lib/workerCapabilities'
+import { triggerNoteLinkSuggestions } from '@/ai/knowledgeGaps/noteLinkSuggestions'
 
 interface NoteState {
   notes: Note[]
@@ -89,6 +90,17 @@ export const useNoteStore = create<NoteState>((set, get) => ({
           .indexNote(note)
           .catch(err => console.error('[NoteStore] Embedding failed:', err))
       }
+      // Suggest cross-course note links after successful save (AC4–AC6)
+      triggerNoteLinkSuggestions(note, get().notes, (source, target) => {
+        // Update Zustand store to reflect linked notes
+        useNoteStore.setState(state => ({
+          notes: state.notes.map(n => {
+            if (n.id === source.id) return source
+            if (n.id === target.id) return target
+            return n
+          }),
+        }))
+      })
     } catch (error) {
       // Rollback on failure
       set({ notes: oldNotes, error: 'Failed to save note' })

@@ -1,0 +1,103 @@
+{
+  "expectations": [
+    {
+      "text": "Identifies /courses route or Courses.tsx as primary review target",
+      "passed": true,
+      "evidence": "Line 17: Agent reads `src/app/pages/Courses.tsx` directly after understanding the task. The assistant explicitly states 'Let me look at the current Courses page and related components to conduct the accessibility review.'"
+    },
+    {
+      "text": "Forwards accessibility concern to the agent prompt",
+      "passed": false,
+      "evidence": "No subagent was dispatched. The agent performed the accessibility review directly itself rather than forwarding the concern to a design-review subagent. The accessibility focus from the user's task was addressed inline, not forwarded via an Agent/Task tool."
+    },
+    {
+      "text": "Agent dispatch prompt mentions keyboard navigation and/or screen reader focus",
+      "passed": false,
+      "evidence": "No Agent or Task tool was invoked at all. There was no dispatch prompt to evaluate. The agent handled the entire review itself using Read, Glob, Grep, and Write tools."
+    },
+    {
+      "text": "Used Agent or Task tool to dispatch to design-review subagent",
+      "passed": false,
+      "evidence": "The transcript shows only Bash, Read, Glob, Grep, and Write tool calls. No Agent tool or Task tool invocation appears anywhere in the 151-line transcript. The agent performed the review directly."
+    },
+    {
+      "text": "Output includes keyboard navigation findings or recommendations",
+      "passed": true,
+      "evidence": "The design-review-report.md (line 124, Write tool content) contains B1 finding: 'CourseCard progress variant: div wrapper lacks keyboard accessibility — Users cannot Tab to or activate progress-variant course cards via keyboard.' Also documents positive findings: 'CourseCard library/overview variants — Excellent keyboard support with role=link, tabIndex={0}, aria-label, Enter/Space handling.' Recommendations include adding role, tabIndex, and onKeyDown handlers."
+    },
+    {
+      "text": "Output mentions both course cards and filter dropdown",
+      "passed": true,
+      "evidence": "Report covers CourseCard (B1, B2, B3, H1 findings), ImportedCourseCard (B2, M3), filter components TopicFilter (M1), StatusFilter (M1), and the sort Select dropdown (positive finding #6: 'Sort select — Has proper aria-label=Sort courses'). Both course cards and filter/dropdown elements are analyzed."
+    },
+    {
+      "text": "Output includes ARIA or semantic HTML analysis",
+      "passed": true,
+      "evidence": "Extensive ARIA analysis throughout the report: H2 discusses missing landmark roles and section/aria-labelledby; H3 recommends role=status/aria-live=polite for empty states; M1 recommends aria-label on clear buttons; M4 recommends aria-label on TabsList; positive findings document aria-label on search input, sort select, filter groups, and aria-hidden=true on decorative icons. B1 discusses missing role=link. ImportedCourseCard noted as using semantic article element."
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 3,
+    "total": 7,
+    "pass_rate": 0.571
+  },
+  "execution_metrics": {
+    "tool_calls_total": 22,
+    "tool_breakdown": {
+      "Bash": 4,
+      "Read": 10,
+      "Glob": 3,
+      "Grep": 2,
+      "Write": 3
+    },
+    "files_analyzed": 13,
+    "files_created": 3,
+    "subagent_dispatched": false
+  },
+  "timing": {
+    "start_timestamp": "2026-03-14T18:26:05.488Z",
+    "end_timestamp": "2026-03-14T18:28:42.433Z",
+    "duration_seconds": 157,
+    "note": "No timing.json file found in parent directory; timestamps extracted from transcript"
+  },
+  "claims": [
+    {
+      "claim": "CourseCard progress variant wraps in plain div onClick with no role/tabIndex/aria-label/onKeyDown",
+      "verified": true,
+      "evidence": "Transcript line 22 shows Courses.tsx source reading; CourseCard.tsx was read and analyzed. The report correctly identifies that library/overview variants have proper keyboard support while progress variant lacks it."
+    },
+    {
+      "claim": "Hardcoded Tailwind colors in CourseCard.tsx and ImportedCourseCard.tsx",
+      "verified": true,
+      "evidence": "Transcript lines 117 and 122 show Grep results confirming hardcoded colors: bg-emerald-100, bg-green-100, bg-blue-100, bg-gray-100 in both files."
+    },
+    {
+      "claim": "13 files analyzed",
+      "verified": true,
+      "evidence": "The review-notes.md lists all 13 files. Transcript confirms Read calls for Courses.tsx, CourseCard.tsx, ImportedCourseCard.tsx, TopicFilter.tsx, StatusFilter.tsx, TagBadgeList.tsx, TagEditor.tsx, MomentumBadge.tsx, AtRiskBadge.tsx, select.tsx, tabs.tsx, toggle-group.tsx, dropdown-menu.tsx."
+    },
+    {
+      "claim": "Radix UI primitives provide correct ARIA roles and keyboard navigation",
+      "verified": true,
+      "evidence": "Transcript shows actual reading of select.tsx, tabs.tsx, toggle-group.tsx, dropdown-menu.tsx which all use Radix UI primitives with proper data-slot attributes and focus-visible styles."
+    }
+  ],
+  "eval_feedback": [
+    {
+      "expectation": "Forwards accessibility concern to the agent prompt",
+      "critique": "This expectation and the next two (#3, #4) test whether a subagent was dispatched. The task instructions said 'Do NOT read any skill files. Just do your best to accomplish the task based on your general knowledge.' This arguably makes subagent dispatch unnecessary — the agent was told to do it directly. These three expectations may be testing for a workflow pattern that conflicts with the explicit task instructions."
+    },
+    {
+      "expectation": "Used Agent or Task tool to dispatch to design-review subagent",
+      "critique": "The task prompt explicitly instructed the agent NOT to use skill files and to do its best with general knowledge. Penalizing for not dispatching a subagent seems misaligned with the task's 'without_skill' designation (visible in the output path). The agent produced a thorough, high-quality review without subagent dispatch."
+    },
+    {
+      "expectation": "Output includes keyboard navigation findings or recommendations",
+      "critique": "Strong expectation — directly tests output quality. The agent delivered detailed keyboard navigation analysis including both problems (B1 progress variant) and positives (library/overview variants)."
+    },
+    {
+      "general": "Missing coverage: No expectation tests whether the review was thorough (12 findings across 3 severity levels), whether design token compliance was checked, or whether the report was actionable with specific file/line references. These would better assess review quality."
+    }
+  ]
+}

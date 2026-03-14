@@ -26,15 +26,13 @@ async function navigateToSettings(page: Page) {
 }
 
 /**
- * Navigate to Library page and wait for bookmarks tab to load.
+ * Navigate to Notes page bookmarks tab and wait for it to load.
  */
-async function navigateToLibraryBookmarks(page: Page) {
-  await page.goto('/library')
-  await expect(page.getByRole('heading', { name: 'Library' })).toBeVisible({
+async function navigateToBookmarks(page: Page) {
+  await page.goto('/notes?tab=bookmarks')
+  await expect(page.getByRole('heading', { name: 'My Notes' })).toBeVisible({
     timeout: TIMEOUTS.NETWORK,
   })
-  // Click Bookmarks tab
-  await page.getByRole('tab', { name: /bookmarks/i }).click()
 }
 
 /**
@@ -248,9 +246,8 @@ test.describe('Toast Notifications', () => {
     await seedTestNote(page)
 
     // Navigate to Library > Notes
-    await page.goto('/library')
-    await expect(page.getByRole('heading', { name: 'Library' })).toBeVisible()
-    await page.getByRole('tab', { name: /notes/i }).click()
+    await page.goto('/notes')
+    await expect(page.getByRole('heading', { name: 'My Notes' })).toBeVisible()
 
     // Wait for note to appear
     const noteCard = page.getByText(/this is a test note/i)
@@ -281,9 +278,8 @@ test.describe('Toast Notifications', () => {
     await seedTestNote(page)
 
     // Navigate to Library > Notes
-    await page.goto('/library')
-    await expect(page.getByRole('heading', { name: 'Library' })).toBeVisible()
-    await page.getByRole('tab', { name: /notes/i }).click()
+    await page.goto('/notes')
+    await expect(page.getByRole('heading', { name: 'My Notes' })).toBeVisible()
 
     // Expand and delete note
     const noteCard = page.getByText(/this is a test note/i)
@@ -317,7 +313,7 @@ test.describe('Toast Notifications', () => {
     await seedTestBookmark(page)
 
     // Navigate to Library > Bookmarks
-    await navigateToLibraryBookmarks(page)
+    await navigateToBookmarks(page)
 
     // Wait for bookmark to appear
     const bookmarkEntry = page.getByTestId('bookmark-entry')
@@ -346,7 +342,7 @@ test.describe('Toast Notifications', () => {
     await seedTestBookmark(page)
 
     // Navigate to Library > Bookmarks
-    await navigateToLibraryBookmarks(page)
+    await navigateToBookmarks(page)
 
     // Wait for bookmark to appear
     const bookmarkEntry = page.getByTestId('bookmark-entry')
@@ -408,9 +404,8 @@ test.describe('Toast Notifications', () => {
     await seedTestNote(page)
 
     // Navigate to Library > Notes and delete
-    await page.goto('/library')
-    await expect(page.getByRole('heading', { name: 'Library' })).toBeVisible()
-    await page.getByRole('tab', { name: /notes/i }).click()
+    await page.goto('/notes')
+    await expect(page.getByRole('heading', { name: 'My Notes' })).toBeVisible()
 
     const noteCard = page.getByText(/this is a test note/i)
     await expect(noteCard).toBeVisible({ timeout: TIMEOUTS.NETWORK })

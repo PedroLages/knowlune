@@ -27,5 +27,10 @@ db.open()
 
 createRoot(document.getElementById('root')!).render(<App />)
 
+// Request persistent storage (prevents browser from evicting IndexedDB + cache data)
+if (navigator.storage?.persist) {
+  navigator.storage.persist()
+}
+
 // Start Web Vitals performance monitoring (LCP, FID, CLS, FCP, TTFB, INP)
 initPerformanceMonitoring()

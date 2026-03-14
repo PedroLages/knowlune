@@ -3410,5 +3410,49 @@ The architecture is comprehensive, coherent, and provides sufficient guidance to
 
 ---
 
+## Future: Premium Tier Architecture
+
+> This section outlines the architectural direction for LevelUp's open-core premium tier. Full implementation details will be designed during Epic 19 (Platform & Entitlement). See [open-core-strategy.md](open-core-strategy.md) for business context and feature tier matrix.
+
+### Authentication Layer
+
+- **Provider:** Supabase Auth or Firebase Auth (managed — zero backend to maintain)
+- **Flow:** Email/password + magic link; OAuth (Google, GitHub) optional
+- **Local integration:** Auth token stored in IndexedDB, validated on premium feature access
+- **Core isolation:** Core features remain fully unauthenticated (FR107, NFR56)
+
+### Payment Integration
+
+- **Provider:** Stripe
+- **Subscription flow:** Stripe Checkout (hosted) for subscription creation, Stripe Customer Portal for management
+- **Webhook:** Single serverless function (Cloudflare Worker or Vercel Edge Function) receives Stripe webhook events and updates entitlement status
+- **Security:** No card data ever touches LevelUp code (NFR71). PCI compliance delegated entirely to Stripe
+
+### Entitlement System
+
+- **Guard function:** `isPremium()` checks cached entitlement before rendering premium components
+- **Storage:** Entitlement status cached in IndexedDB with expiry timestamp
+- **Refresh:** On app launch if online and cache expired (>7 days per NFR70)
+- **Offline:** Cached entitlement honored for up to 7 days without network connectivity
+- **Architecture:** Feature flags pattern — premium components lazy-loaded only when entitled
+
+### Cloud Sync Layer (Future)
+
+- **Sync engine:** CRDTs via Yjs (already in dependencies) or simple last-write-wins
+- **Backend:** Supabase Postgres or Cloudflare D1
+- **Sync scope:** Notes, progress, streaks, settings only (not video/PDF files — too large)
+- **Conflict resolution:** Per-field timestamps; user-visible merge UI for note conflicts
+- **Core value:** Local IndexedDB remains the primary data store. Cloud is backup/sync, not a requirement
+
+### Premium Code Boundary
+
+- **Directory:** `src/premium/` for premium-only components and logic
+- **License headers:** Proprietary license in all premium source files (not AGPL)
+- **Build:** Premium features tree-shaken from the open-source AGPL core build
+- **Entrypoint:** `src/premium/index.ts` exports feature gates and lazy-loaded components
+- **Open-source build:** Core build excludes `src/premium/` entirely
+
+---
+
 **Architecture Complete** ✅
 

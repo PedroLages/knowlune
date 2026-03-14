@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router'
 import { Search, Bell, ChevronDown, ChevronLeft, ChevronRight, Sun, Moon, Menu } from 'lucide-react'
 import { LevelUpLogo } from './figma/LevelUpLogo'
@@ -17,6 +17,8 @@ import { navigationGroups, settingsItem } from '@/app/config/navigation'
 import type { NavigationItem } from '@/app/config/navigation'
 import { getSettings } from '@/lib/settings'
 import { getInitials } from '@/lib/avatarUpload'
+import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
+import { toast } from 'sonner'
 
 // Individual nav link — wraps in Tooltip when collapsed
 function NavLink({
@@ -171,6 +173,22 @@ export function Layout() {
   const isDesktop = useIsDesktop()
 
   useStudyReminders()
+
+  const isOnline = useOnlineStatus()
+  const isInitialRender = useRef(true)
+
+  // Toast on connectivity changes (skip initial render)
+  useEffect(() => {
+    if (isInitialRender.current) {
+      isInitialRender.current = false
+      return
+    }
+    if (isOnline) {
+      toast.success('Back online', { duration: 3000 })
+    } else {
+      toast.warning('You are offline', { duration: 5000 })
+    }
+  }, [isOnline])
 
   const [searchOpen, setSearchOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
@@ -429,6 +447,15 @@ export function Layout() {
           data-testid="main-scroll-container"
           className="flex-1 overflow-auto p-6 pt-6 pb-20 sm:pb-6"
         >
+          {!isOnline && (
+            <div
+              role="status"
+              aria-live="polite"
+              className="bg-warning/10 text-warning-foreground border-b border-warning/20 px-4 py-2 text-center text-sm -mx-6 -mt-6 mb-4"
+            >
+              You are offline. Some features may be limited.
+            </div>
+          )}
           <Outlet />
         </main>
       </div>
