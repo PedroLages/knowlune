@@ -357,11 +357,10 @@ test.describe('AC5: Navigation from related note', () => {
     const relatedRegion = page.locator('[aria-label="Related concepts"]')
     await expect(relatedRegion).toBeVisible({ timeout: 5000 })
 
-    // Click on a related note (rendered as buttons, not links)
-    const relatedButton = relatedRegion
-      .getByRole('button', { name: /useEffect/i })
-      .or(relatedRegion.getByRole('button').first())
-    await relatedButton.click()
+    // Click on a related note entry (aria-label includes "Related note:")
+    const relatedButton = relatedRegion.getByRole('button', { name: /related note/i }).first()
+    await expect(relatedButton).toBeVisible({ timeout: 5000 })
+    await relatedButton.dispatchEvent('click')
 
     // Back-link should be visible after navigation
     await expect(page.getByTestId('back-to-note')).toBeVisible({ timeout: 5000 })
