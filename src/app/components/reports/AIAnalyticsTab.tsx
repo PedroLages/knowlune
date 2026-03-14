@@ -54,7 +54,10 @@ const FEATURE_CHART_COLORS: Record<AIFeatureType, string> = {
   knowledge_gaps: 'var(--chart-5)',
 }
 
-const TREND_CONFIG: Record<TrendDirection, { icon: typeof TrendingUp; className: string; label: string }> = {
+const TREND_CONFIG: Record<
+  TrendDirection,
+  { icon: typeof TrendingUp; className: string; label: string }
+> = {
   up: { icon: TrendingUp, className: 'text-success', label: 'Up from previous period' },
   down: { icon: TrendingDown, className: 'text-destructive', label: 'Down from previous period' },
   stable: { icon: Minus, className: 'text-muted-foreground', label: 'Same as previous period' },
@@ -215,16 +218,11 @@ export function AIAnalyticsTab() {
                     </div>
                   )}
                 </div>
-                <p
-                  className="text-2xl font-bold tabular-nums"
-                  aria-live="polite"
-                >
+                <p className="text-2xl font-bold tabular-nums" aria-live="polite">
                   {isKnowledgeGaps ? '—' : feature.count}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {isKnowledgeGaps
-                    ? 'Coming soon'
-                    : AI_FEATURE_LABELS[feature.featureType]}
+                  {isKnowledgeGaps ? 'Coming soon' : AI_FEATURE_LABELS[feature.featureType]}
                 </p>
               </CardContent>
             </Card>

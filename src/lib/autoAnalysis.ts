@@ -112,18 +112,13 @@ async function runAutoAnalysis(course: ImportedCourse): Promise<void> {
     console.error('[AutoAnalysis] Failed:', message)
     store.setAutoAnalysisStatus(course.id, 'error')
 
-    toast.error(
-      isTimeout
-        ? 'Auto-analysis timed out'
-        : 'Auto-analysis could not complete',
-      {
-        description: 'Course imported successfully without AI enrichment.',
-        action: {
-          label: 'Retry',
-          onClick: () => triggerAutoAnalysis(course),
-        },
-      }
-    )
+    toast.error(isTimeout ? 'Auto-analysis timed out' : 'Auto-analysis could not complete', {
+      description: 'Course imported successfully without AI enrichment.',
+      action: {
+        label: 'Retry',
+        onClick: () => triggerAutoAnalysis(course),
+      },
+    })
 
     trackAIUsage('summary', {
       courseId: course.id,
@@ -185,7 +180,12 @@ function buildTagExtractionPayload(provider: string, content: string): unknown {
   }
   // OpenAI-compatible (openai, groq, glm)
   return {
-    model: provider === 'groq' ? 'llama-3.3-70b-versatile' : provider === 'glm' ? 'glm-4-flash' : 'gpt-4o-mini',
+    model:
+      provider === 'groq'
+        ? 'llama-3.3-70b-versatile'
+        : provider === 'glm'
+          ? 'glm-4-flash'
+          : 'gpt-4o-mini',
     messages: [{ role: 'user', content: prompt }],
     max_tokens: 100,
   }

@@ -139,10 +139,7 @@ export async function getAIUsageStats(period: TimePeriod): Promise<AIUsageStats>
   // Fetch events for current and previous periods in parallel
   const [currentEvents, previousEvents] = await Promise.all([
     db.aiUsageEvents.where('timestamp').aboveOrEqual(currentStart).toArray(),
-    db.aiUsageEvents
-      .where('timestamp')
-      .between(previousStart, previousEnd, true, false)
-      .toArray(),
+    db.aiUsageEvents.where('timestamp').between(previousStart, previousEnd, true, false).toArray(),
   ])
 
   // Count events per feature for each period

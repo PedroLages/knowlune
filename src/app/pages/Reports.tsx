@@ -150,186 +150,190 @@ export default function Reports() {
         </TabsContent>
 
         <TabsContent value="study" className="mt-6">
+          {/* Study Time Analytics */}
+          <div className="mb-6">
+            <StudyTimeAnalytics />
+          </div>
 
-      {/* Study Time Analytics */}
-      <div className="mb-6">
-        <StudyTimeAnalytics />
-      </div>
+          {/* Stats row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {stats.map(stat => {
+              const Icon = stat.icon
+              return (
+                <Card key={stat.label}>
+                  <CardContent className="flex items-center gap-4 p-5">
+                    <div className="rounded-xl bg-primary/10 p-3">
+                      <Icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{stat.value}</p>
+                      <p className="text-sm text-muted-foreground">{stat.label}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
 
-      {/* Stats row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {stats.map(stat => {
-          const Icon = stat.icon
-          return (
-            <Card key={stat.label}>
-              <CardContent className="flex items-center gap-4 p-5">
-                <div className="rounded-xl bg-primary/10 p-3">
-                  <Icon className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stat.value}</p>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                </div>
+          {/* Charts grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+            <Card className="col-span-2">
+              <CardHeader>
+                <CardTitle className="text-base">Course Completion</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={barChartConfig} className="h-[300px] w-full">
+                  <BarChart data={courseCompletionData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="name"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      angle={-20}
+                      textAnchor="end"
+                      height={60}
+                      tick={{ fontSize: 12 }}
+                    />
+                    <YAxis domain={[0, 100]} tickLine={false} axisLine={false} tickMargin={8} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar
+                      dataKey="completion"
+                      fill="var(--color-completion)"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ChartContainer>
               </CardContent>
             </Card>
-          )
-        })}
-      </div>
 
-      {/* Charts grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <Card className="col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">Course Completion</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={barChartConfig} className="h-[300px] w-full">
-              <BarChart data={courseCompletionData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="name"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  angle={-20}
-                  textAnchor="end"
-                  height={60}
-                  tick={{ fontSize: 12 }}
-                />
-                <YAxis domain={[0, 100]} tickLine={false} axisLine={false} tickMargin={8} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="completion" fill="var(--color-completion)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Progress by Category</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={pieChartConfig} className="h-[300px] w-full">
+                  <PieChart>
+                    <Pie
+                      data={categoryData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      dataKey="value"
+                      nameKey="name"
+                      label={({
+                        cx,
+                        cy,
+                        midAngle,
+                        outerRadius,
+                        name,
+                        value,
+                      }: {
+                        cx: number
+                        cy: number
+                        midAngle?: number
+                        outerRadius: number
+                        name?: string | number
+                        value: number
+                      }) => {
+                        const RADIAN = Math.PI / 180
+                        const angle = midAngle ?? 0
+                        const radius = outerRadius + 20
+                        const x = cx + radius * Math.cos(-angle * RADIAN)
+                        const y = cy + radius * Math.sin(-angle * RADIAN)
+                        return (
+                          <text
+                            x={x}
+                            y={y}
+                            className="fill-muted-foreground"
+                            textAnchor={x > cx ? 'start' : 'end'}
+                            dominantBaseline="central"
+                            fontSize={12}
+                          >
+                            {`${name}: ${value}%`}
+                          </text>
+                        )
+                      }}
+                    >
+                      {categoryData.map((_, i) => (
+                        <Cell key={i} fill={`var(--color-${PIE_KEYS[i % PIE_KEYS.length]})`} />
+                      ))}
+                    </Pie>
+                    <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
+                  </PieChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Progress by Category</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={pieChartConfig} className="h-[300px] w-full">
-              <PieChart>
-                <Pie
-                  data={categoryData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  dataKey="value"
-                  nameKey="name"
-                  label={({
-                    cx,
-                    cy,
-                    midAngle,
-                    outerRadius,
-                    name,
-                    value,
-                  }: {
-                    cx: number
-                    cy: number
-                    midAngle?: number
-                    outerRadius: number
-                    name?: string | number
-                    value: number
-                  }) => {
-                    const RADIAN = Math.PI / 180
-                    const angle = midAngle ?? 0
-                    const radius = outerRadius + 20
-                    const x = cx + radius * Math.cos(-angle * RADIAN)
-                    const y = cy + radius * Math.sin(-angle * RADIAN)
-                    return (
-                      <text
-                        x={x}
-                        y={y}
-                        className="fill-muted-foreground"
-                        textAnchor={x > cx ? 'start' : 'end'}
-                        dominantBaseline="central"
-                        fontSize={12}
-                      >
-                        {`${name}: ${value}%`}
-                      </text>
-                    )
-                  }}
-                >
-                  {categoryData.map((_, i) => (
-                    <Cell key={i} fill={`var(--color-${PIE_KEYS[i % PIE_KEYS.length]})`} />
-                  ))}
-                </Pie>
-                <ChartTooltip content={<ChartTooltipContent nameKey="name" />} />
-              </PieChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      </div>
+          {/* Activity chart + Recent activity */}
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Study Activity (Last 30 Days)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={areaChartConfig} className="h-[200px] w-full">
+                  <AreaChart data={activityData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="date"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      tick={{ fontSize: 10 }}
+                    />
+                    <YAxis tickLine={false} axisLine={false} tickMargin={8} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Area
+                      type="monotone"
+                      dataKey="count"
+                      stroke="var(--color-count)"
+                      fill="var(--color-count)"
+                      fillOpacity={0.1}
+                    />
+                  </AreaChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
 
-      {/* Activity chart + Recent activity */}
-      <div className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Study Activity (Last 30 Days)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={areaChartConfig} className="h-[200px] w-full">
-              <AreaChart data={activityData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="date"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  tick={{ fontSize: 10 }}
-                />
-                <YAxis tickLine={false} axisLine={false} tickMargin={8} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Area
-                  type="monotone"
-                  dataKey="count"
-                  stroke="var(--color-count)"
-                  fill="var(--color-count)"
-                  fillOpacity={0.1}
-                />
-              </AreaChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Recent Activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {recentActions.length === 0 ? (
-              <p className="text-muted-foreground text-center py-4">
-                No activity yet. Start studying to see your progress here.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {recentActions.map((action, i) => {
-                  const course = allCourses.find(c => c.id === action.courseId)
-                  return (
-                    <div key={i} className="flex items-center gap-3 text-sm">
-                      <div
-                        className={`w-2 h-2 rounded-full ${
-                          action.type === 'lesson_complete' ? 'bg-green-500' : 'bg-blue-500'
-                        }`}
-                      />
-                      <span className="text-muted-foreground">
-                        {new Date(action.timestamp).toLocaleDateString()}
-                      </span>
-                      <span>
-                        {action.type === 'lesson_complete' ? 'Completed a lesson' : 'Watched video'}
-                        {course ? ` in ${course.title}` : ''}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Recent Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {recentActions.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">
+                    No activity yet. Start studying to see your progress here.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {recentActions.map((action, i) => {
+                      const course = allCourses.find(c => c.id === action.courseId)
+                      return (
+                        <div key={i} className="flex items-center gap-3 text-sm">
+                          <div
+                            className={`w-2 h-2 rounded-full ${
+                              action.type === 'lesson_complete' ? 'bg-green-500' : 'bg-blue-500'
+                            }`}
+                          />
+                          <span className="text-muted-foreground">
+                            {new Date(action.timestamp).toLocaleDateString()}
+                          </span>
+                          <span>
+                            {action.type === 'lesson_complete'
+                              ? 'Completed a lesson'
+                              : 'Watched video'}
+                            {course ? ` in ${course.title}` : ''}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
