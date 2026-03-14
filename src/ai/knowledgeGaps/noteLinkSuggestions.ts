@@ -1,3 +1,5 @@
+import { toast } from 'sonner'
+import { db } from '@/db'
 import type { Note } from '@/data/types'
 import type { NoteLinkSuggestion } from './types'
 
@@ -149,4 +151,99 @@ export function findNoteLinkSuggestions(
   }
 
   return suggestions
+}
+
+/**
+ * After a note is saved, run cross-course link detection and show a Sonner
+ * toast for the first matching suggestion. Non-blocking — errors are swallowed.
+ *
+ * @param savedNote - The note that was just saved
+ * @param allNotes  - All notes in memory (passed to avoid extra DB read)
+ * @param onLinked  - Optional callback after notes are linked (e.g. to update Zustand store)
+ */
+export function triggerNoteLinkSuggestions(
+  savedNote: Note,
+  allNotes: Note[],
+  onLinked?: (source: Note, target: Note) => void
+): void {
+  try {
+    db.importedCourses
+      .toArray()
+      .then(courses => {
+        const courseMap = new Map(courses.map(c => [c.id, c.name]))
+        const suggestions = findNoteLinkSuggestions(savedNote, allNotes, courseMap)
+        if (suggestions.length === 0) return
+
+        suggestions.slice(0, 2).forEach(s => {
+          showNoteLinkToast(s, onLinked)
+        })
+      })
+      .catch(err => console.error('[NoteLinkSuggestions] Suggestion failed:', err))
+  } catch (err) {
+    console.error('[NoteLinkSuggestions] Suggestion failed:', err)
+  }
+}
+
+function showNoteLinkToast(
+  suggestion: NoteLinkSuggestion,
+  onLinked?: (source: Note, target: Note) => void
+): void {
+  const preview =
+    suggestion.previewContent.length > 60
+      ? suggestion.previewContent.slice(0, 60) + '…'
+      : suggestion.previewContent
+
+  toast('Note connection found', {
+    description: `"${preview}" — ${suggestion.targetCourseTitle}`,
+    duration: 8000,
+    action: {
+      label: 'Link notes',
+      onClick: () => acceptNoteLinkSuggestion(suggestion, onLinked),
+    },
+    cancel: {
+      label: 'Dismiss',
+      onClick: () => dismissNoteLinkPair(suggestion.sourceNoteId, suggestion.targetNoteId),
+    },
+  })
+}
+
+async function acceptNoteLinkSuggestion(
+  suggestion: NoteLinkSuggestion,
+  onLinked?: (source: Note, target: Note) => void
+): Promise<void> {
+  try {
+    const [sourceNote, targetNote] = await Promise.all([
+      db.notes.get(suggestion.sourceNoteId),
+      db.notes.get(suggestion.targetNoteId),
+    ])
+
+    if (!sourceNote || !targetNote) {
+      console.error('[NoteLinkSuggestions] Could not find notes for link suggestion')
+      return
+    }
+
+    const updatedSource: Note = {
+      ...sourceNote,
+      linkedNoteIds: [...new Set([...(sourceNote.linkedNoteIds ?? []), targetNote.id])],
+      updatedAt: new Date().toISOString(),
+    }
+
+    const updatedTarget: Note = {
+      ...targetNote,
+      linkedNoteIds: [...new Set([...(targetNote.linkedNoteIds ?? []), sourceNote.id])],
+      updatedAt: new Date().toISOString(),
+    }
+
+    await Promise.all([db.notes.put(updatedSource), db.notes.put(updatedTarget)])
+
+    onLinked?.(updatedSource, updatedTarget)
+
+    toast.success('Notes linked!', {
+      description: `Linked to note in ${suggestion.targetCourseTitle}`,
+      duration: 3000,
+    })
+  } catch (err) {
+    console.error('[NoteLinkSuggestions] Failed to accept note link suggestion:', err)
+    toast.error('Failed to link notes')
+  }
 }
