@@ -6,7 +6,7 @@ started: 2026-03-14
 completed:
 reviewed: in-progress
 review_started: 2026-03-14
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -228,15 +228,31 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+Report: `docs/reviews/design/design-review-2026-03-14-e9b-s05.md`
+
+- H1: `useMemo` as side-effect in OrganizePreviewDialog (shared with code review blocker)
+- H2: Misleading success toast on partial/full save failure
+- M1: Touch target 32px on mobile (below 44px minimum)
+- M2: Note card expanders lack `aria-label` (pre-existing)
+- M3: Sort select has no accessible label (pre-existing)
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+Report: `docs/reviews/code/code-review-2026-03-14-e9b-s05.md`
+
+- BLOCKER: `useMemo` used as side-effect hook in OrganizePreviewDialog:41-43
+- HIGH: `applyChanges()` shows success toast even when saves fail
+- HIGH: `useEffect` dependency creates new string each render
+- MEDIUM: Dead empty span, linear scan in vector matches, 0-changes toast
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+Report: (inline — web-design-guidelines agent)
+
+- 0 blockers, 2 HIGH, 5 MEDIUM, 5 LOW
+- Design token usage: excellent — zero hardcoded colors
+- Semantic HTML: proper button/dialog/region roles throughout
+- Progressive enhancement: graceful AI unavailable degradation
 
 ## Challenges and Lessons Learned
 
