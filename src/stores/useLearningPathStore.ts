@@ -98,7 +98,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     }
   },
 
-  reorderCourse: (fromIndex: number, toIndex: number) => {
+  reorderCourse: async (fromIndex: number, toIndex: number) => {
     const { courses } = get()
     if (fromIndex === toIndex) return
 
