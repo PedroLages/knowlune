@@ -5,6 +5,31 @@ import * as RechartsPrimitive from 'recharts'
 
 import { cn } from './utils'
 
+/**
+ * Validates if a string is a safe CSS color value.
+ * Prevents CSS injection attacks via chart configuration.
+ *
+ * @param color - Color value to validate
+ * @returns true if color is safe to use in CSS
+ */
+function isValidCSSColor(color: string | undefined): boolean {
+  if (!color) return false
+
+  // Allow hex colors: #RGB, #RRGGBB, #RRGGBBAA
+  const hexPattern = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
+  if (hexPattern.test(color)) return true
+
+  // Allow CSS color functions: rgb(), rgba(), hsl(), hsla(), oklch(), lch(), lab()
+  const funcPattern = /^(rgb|rgba|hsl|hsla|oklch|lch|lab)\([^)]*\)$/
+  if (funcPattern.test(color)) return true
+
+  // Allow safe CSS color keywords
+  const keywords = ['transparent', 'currentColor', 'inherit', 'initial', 'unset']
+  if (keywords.includes(color.toLowerCase())) return true
+
+  return false
+}
+
 // Recharts tooltip payload item shape
 interface ChartPayloadItem {
   dataKey?: string | number
