@@ -7,6 +7,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from '@/app/components/ui/chart'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs'
 import {
   BarChart,
   Bar,
@@ -29,6 +30,7 @@ import {
 } from '@/lib/progress'
 import { getActionsPerDay, getRecentActions } from '@/lib/studyLog'
 import StudyTimeAnalytics from '@/app/components/StudyTimeAnalytics'
+import { AIAnalyticsTab } from '@/app/components/reports/AIAnalyticsTab'
 
 /* ------------------------------------------------------------------ */
 /*  Chart configs                                                      */
@@ -136,6 +138,18 @@ export default function Reports() {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">Reports</h1>
+
+      <Tabs defaultValue="study" className="mb-6">
+        <TabsList>
+          <TabsTrigger value="study">Study Analytics</TabsTrigger>
+          <TabsTrigger value="ai">AI Analytics</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="ai" className="mt-6">
+          <AIAnalyticsTab />
+        </TabsContent>
+
+        <TabsContent value="study" className="mt-6">
 
       {/* Study Time Analytics */}
       <div className="mb-6">
@@ -315,6 +329,9 @@ export default function Reports() {
           </CardContent>
         </Card>
       </div>
+
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
