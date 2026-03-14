@@ -1,5 +1,6 @@
 import { db } from '@/db'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { triggerAutoAnalysis } from '@/lib/autoAnalysis'
 import {
   showDirectoryPicker,
   scanDirectory,
@@ -194,6 +195,9 @@ export async function importCourseFromFolder(): Promise<ImportedCourse> {
     toast.success(
       `Imported: ${courseName} — ${videos.length} ${videos.length === 1 ? 'video' : 'videos'}, ${pdfs.length} ${pdfs.length === 1 ? 'PDF' : 'PDFs'}`
     )
+
+    // Step 9: Trigger auto-analysis (fire-and-forget, consent-gated)
+    triggerAutoAnalysis(course)
 
     return course
   } catch (error) {

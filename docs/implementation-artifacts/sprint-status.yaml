@@ -176,7 +176,7 @@ development_status:
   9b-3-ai-learning-path-generation: done
   9b-4-knowledge-gap-detection: backlog
   9b-5-ai-note-organization-and-cross-course-links: done
-  9b-6-ai-feature-analytics-and-auto-analysis: backlog
+  9b-6-ai-feature-analytics-and-auto-analysis: done
   epic-9b-retrospective: optional
 
   # ──────────────────────────────────────────────────
@@ -245,6 +245,7 @@ development_status:
   16-2-display-score-history-across-all-attempts: backlog
   16-3-calculate-and-display-score-improvement: backlog
   16-4-calculate-normalized-gain-hakes-formula: backlog
+  16-5-display-score-improvement-trajectory-chart: backlog
   epic-16-retrospective: optional
 
   # ──────────────────────────────────────────────────
@@ -270,6 +271,9 @@ development_status:
   18-6-display-quiz-performance-in-overview-dashboard: backlog
   18-7-surface-quiz-analytics-in-reports-section: backlog
   18-8-display-quiz-availability-badges-on-courses-page: backlog
+  18-9-configure-quiz-preferences-in-settings: backlog
+  18-10-export-quiz-results: backlog
+  18-11-track-quiz-progress-in-content-completion: backlog
   epic-18-retrospective: optional
 
   # ──────────────────────────────────────────────────

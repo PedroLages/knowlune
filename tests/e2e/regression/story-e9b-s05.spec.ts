@@ -264,11 +264,11 @@ test.describe('AC3: Apply selected changes', () => {
     await expect(dialog).not.toBeVisible()
 
     // Toast should indicate fewer changes applied ("Applied changes to 3 notes")
-    await expect(
-      page.getByText(/applied.*changes.*3/i).or(page.getByText(/3 notes/i))
-    ).toBeVisible({
-      timeout: 5000,
-    })
+    await expect(page.getByText(/applied.*changes.*3/i).or(page.getByText(/3 notes/i))).toBeVisible(
+      {
+        timeout: 5000,
+      }
+    )
 
     // Verify rejected note-1 does NOT have the proposed tags persisted
     // Expand note-1 and check its tag list
@@ -331,7 +331,9 @@ test.describe('AC4: Related Concepts panel', () => {
 
     // Should show note-3 from course-2 (cross-course match via 'hooks' tag)
     await expect(
-      relatedRegion.getByText(mockNote3.content.slice(0, 20)).or(relatedRegion.getByText(/Vue composables/i))
+      relatedRegion
+        .getByText(mockNote3.content.slice(0, 20))
+        .or(relatedRegion.getByText(/Vue composables/i))
     ).toBeVisible()
 
     // Should show shared 'hooks' tag

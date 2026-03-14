@@ -13,6 +13,7 @@ import type {
   Embedding,
   LearningPathCourse,
   CourseThumbnail,
+  AIUsageEvent,
 } from '@/data/types'
 
 const db = new Dexie('ElearningDB') as Dexie & {
@@ -29,6 +30,7 @@ const db = new Dexie('ElearningDB') as Dexie & {
   embeddings: EntityTable<Embedding, 'noteId'>
   learningPath: EntityTable<LearningPathCourse, 'courseId'>
   courseThumbnails: EntityTable<CourseThumbnail, 'courseId'>
+  aiUsageEvents: EntityTable<AIUsageEvent, 'id'>
 }
 
 db.version(1).stores({
@@ -276,6 +278,23 @@ db.version(11).stores({
   embeddings: 'noteId, createdAt',
   learningPath: 'courseId, position, generatedAt',
   courseThumbnails: 'courseId',
+})
+
+db.version(12).stores({
+  importedCourses: 'id, name, importedAt, status, *tags',
+  importedVideos: 'id, courseId, filename',
+  importedPdfs: 'id, courseId, filename',
+  progress: '[courseId+videoId], courseId, videoId',
+  bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+  screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+  contentProgress: '[courseId+itemId], courseId, itemId, status',
+  challenges: 'id, type, deadline, createdAt',
+  embeddings: 'noteId, createdAt',
+  learningPath: 'courseId, position, generatedAt',
+  courseThumbnails: 'courseId',
+  aiUsageEvents: 'id, featureType, timestamp, courseId',
 })
 
 export { db }

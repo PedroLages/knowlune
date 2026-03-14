@@ -28,6 +28,7 @@ import {
   isAIAvailable,
 } from '@/lib/aiConfiguration'
 import { fetchAndParseTranscript, generateVideoSummary } from '@/lib/aiSummary'
+import { trackAIUsage } from '@/lib/aiEventTracking'
 
 type PanelState = 'idle' | 'generating' | 'completed' | 'error'
 
@@ -90,6 +91,8 @@ export function AISummaryPanel({ transcriptSrc }: AISummaryPanelProps) {
     setErrorMessage(undefined)
     setWordCount(0)
 
+    const startTime = Date.now()
+
     try {
       // Fetch and parse transcript (with cancellation support)
       const transcript = await fetchAndParseTranscript(transcriptSrc, controller.signal)
@@ -117,6 +120,8 @@ export function AISummaryPanel({ transcriptSrc }: AISummaryPanelProps) {
       setWordCount(finalWordCount)
 
       setState('completed')
+
+      trackAIUsage('summary', { durationMs: Date.now() - startTime }).catch(() => {})
     } catch (error) {
       // Don't show error if request was cancelled
       if (error instanceof Error && error.name === 'AbortError') {
@@ -124,6 +129,11 @@ export function AISummaryPanel({ transcriptSrc }: AISummaryPanelProps) {
       }
 
       console.error('Failed to generate video summary:', error)
+      trackAIUsage('summary', {
+        status: 'error',
+        durationMs: Date.now() - startTime,
+        metadata: { error: error instanceof Error ? error.message : 'Unknown error' },
+      }).catch(() => {})
 
       if (error instanceof Error) {
         setErrorMessage(error.message)

@@ -31,6 +31,7 @@ import { ScrollArea } from '@/app/components/ui/scroll-area'
 import { useQAChatStore } from '@/stores/useQAChatStore'
 import { retrieveRelevantNotes, generateQAAnswer } from '@/lib/noteQA'
 import { getAIConfiguration, getDecryptedApiKey, isAIAvailable } from '@/lib/aiConfiguration'
+import { trackAIUsage } from '@/lib/aiEventTracking'
 import { db } from '@/db'
 import { useMediaQuery } from '@/app/hooks/useMediaQuery'
 
@@ -85,6 +86,8 @@ export function QAChatPanel() {
     addQuestion(query)
     setGenerating(true)
 
+    const startTime = Date.now()
+
     try {
       // Retrieve relevant notes
       const retrievedNotes = await retrieveRelevantNotes(query)
@@ -116,9 +119,19 @@ export function QAChatPanel() {
         fullAnswer += chunk
         updateAnswer(answerId, fullAnswer)
       }
+
+      trackAIUsage('qa', {
+        durationMs: Date.now() - startTime,
+        metadata: { retrievedNotesCount: retrievedNotes.length },
+      }).catch(() => {})
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate answer'
       setError(errorMessage)
+      trackAIUsage('qa', {
+        status: 'error',
+        durationMs: Date.now() - startTime,
+        metadata: { error: errorMessage },
+      }).catch(() => {})
     } finally {
       setGenerating(false)
     }

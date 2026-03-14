@@ -4,6 +4,7 @@ import type { ImportedCourse, LearnerCourseStatus } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { saveCourseThumbnail, loadCourseThumbnailUrl } from '@/lib/thumbnailService'
 import type { ThumbnailSource } from '@/data/types'
+import type { AutoAnalysisStatus } from '@/lib/autoAnalysis'
 
 function normalizeTags(tags: string[]): string[] {
   const unique = [...new Set(tags.map(t => t.trim().toLowerCase()).filter(Boolean))]
@@ -17,6 +18,7 @@ interface CourseImportState {
   importError: string | null
   importProgress: { current: number; total: number } | null
   thumbnailUrls: Record<string, string> // courseId → object URL
+  autoAnalysisStatus: Record<string, AutoAnalysisStatus> // courseId → status
 
   addImportedCourse: (course: ImportedCourse) => Promise<void>
   removeImportedCourse: (courseId: string) => Promise<void>
@@ -29,6 +31,7 @@ interface CourseImportState {
   setImporting: (isImporting: boolean) => void
   setImportError: (error: string | null) => void
   setImportProgress: (progress: { current: number; total: number } | null) => void
+  setAutoAnalysisStatus: (courseId: string, status: AutoAnalysisStatus) => void
 }
 
 export const useCourseImportStore = create<CourseImportState>((set, get) => ({
@@ -37,6 +40,7 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
   importError: null,
   importProgress: null,
   thumbnailUrls: {},
+  autoAnalysisStatus: {},
 
   addImportedCourse: async (course: ImportedCourse) => {
     // Optimistic update
@@ -205,4 +209,8 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
   setImportError: (error: string | null) => set({ importError: error }),
   setImportProgress: (progress: { current: number; total: number } | null) =>
     set({ importProgress: progress }),
+  setAutoAnalysisStatus: (courseId: string, status: AutoAnalysisStatus) =>
+    set(state => ({
+      autoAnalysisStatus: { ...state.autoAnalysisStatus, [courseId]: status },
+    })),
 }))
