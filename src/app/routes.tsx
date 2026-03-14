@@ -39,6 +39,9 @@ const WebLLMTest = React.lazy(() => import('../experiments/WebLLMTest'))
 const AILearningPath = React.lazy(() =>
   import('./pages/AILearningPath').then(m => ({ default: m.AILearningPath }))
 )
+const KnowledgeGaps = React.lazy(() =>
+  import('./pages/KnowledgeGaps').then(m => ({ default: m.KnowledgeGaps }))
+)
 
 // Default exports work directly with React.lazy
 const MyClass = React.lazy(() => import('./pages/MyClass'))
@@ -204,6 +207,14 @@ export const router = createBrowserRouter([
         element: (
           <SuspensePage>
             <AILearningPath />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'knowledge-gaps',
+        element: (
+          <SuspensePage>
+            <KnowledgeGaps />
           </SuspensePage>
         ),
       },

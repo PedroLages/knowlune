@@ -10,6 +10,7 @@ import {
   History,
   BarChart3,
   Sparkles,
+  Brain,
   Settings as SettingsIcon,
   type LucideIcon,
 } from 'lucide-react'
@@ -34,6 +35,7 @@ export const navigationGroups: NavigationGroup[] = [
       { name: 'My Classes', path: '/my-class', icon: BookOpen },
       { name: 'Courses', path: '/courses', icon: GraduationCap },
       { name: 'Learning Path', path: '/ai-learning-path', icon: Sparkles },
+      { name: 'Knowledge Gaps', path: '/knowledge-gaps', icon: Brain },
     ],
   },
   {
