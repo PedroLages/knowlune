@@ -25,7 +25,7 @@
   --font-weight-medium: 500;
   --font-weight-normal: 400;
   --font-body: 'DM Sans', system-ui, -apple-system, sans-serif;
-  --font-heading: 'DM Serif Display', Georgia, 'Times New Roman', serif;
+  --font-heading: 'Space Grotesk Variable', 'Space Grotesk', system-ui, -apple-system, sans-serif;
 
   /* Surface depth tokens */
   --brand-soft: #eff6ff;
