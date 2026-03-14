@@ -140,3 +140,76 @@ export async function seedVectorEmbeddings(
 ): Promise<void> {
   await seedIndexedDBStore(page, 'ElearningDB', 'embeddings', embeddings)
 }
+
+/**
+ * Clears all records from an IndexedDB object store.
+ * Uses frame-accurate delays via requestAnimationFrame instead of Date.now().
+ *
+ * @param page - Playwright Page instance
+ * @param dbName - IndexedDB database name
+ * @param storeName - Object store name to clear
+ * @throws Error if store not found after MAX_RETRIES attempts
+ */
+export async function clearIndexedDBStore(
+  page: Page,
+  dbName: string,
+  storeName: string
+): Promise<void> {
+  await page.evaluate(
+    async ({ dbName, storeName, retryDelay, maxRetries }) => {
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        const result = await new Promise<'ok' | 'store-missing'>((resolve, reject) => {
+          const request = indexedDB.open(dbName)
+          request.onsuccess = () => {
+            const db = request.result
+            if (!db.objectStoreNames.contains(storeName)) {
+              db.close()
+              resolve('store-missing')
+              return
+            }
+            const tx = db.transaction(storeName, 'readwrite')
+            const store = tx.objectStore(storeName)
+            store.clear()
+            tx.oncomplete = () => {
+              db.close()
+              resolve('ok')
+            }
+            tx.onerror = () => {
+              db.close()
+              reject(tx.error)
+            }
+          }
+          request.onerror = () => reject(request.error)
+        })
+
+        if (result === 'ok') return
+
+        // Frame-accurate wait using requestAnimationFrame tick counting
+        await new Promise<void>(resolve => {
+          let ticks = 0
+          const targetTicks = Math.ceil(retryDelay / 16.67)
+          const tick = () => {
+            ticks++
+            if (ticks >= targetTicks) resolve()
+            else requestAnimationFrame(tick)
+          }
+          requestAnimationFrame(tick)
+        })
+      }
+      throw new Error(
+        `Store "${storeName}" not found in database "${dbName}" after ${maxRetries} retries`
+      )
+    },
+    { dbName, storeName, retryDelay: RETRY_DELAY_MS, maxRetries: MAX_RETRIES }
+  )
+}
+
+/**
+ * Clears the learningPath object store in ElearningDB.
+ * Convenience wrapper around clearIndexedDBStore.
+ *
+ * @param page - Playwright Page instance
+ */
+export async function clearLearningPath(page: Page): Promise<void> {
+  await clearIndexedDBStore(page, 'ElearningDB', 'learningPath')
+}

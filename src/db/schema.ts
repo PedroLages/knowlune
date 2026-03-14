@@ -1,5 +1,4 @@
 import Dexie, { type EntityTable, type Table } from 'dexie'
-import { z } from 'zod'
 import type {
   ImportedCourse,
   ImportedVideo,
@@ -12,6 +11,7 @@ import type {
   ContentProgress,
   Challenge,
   Embedding,
+  LearningPathCourse,
 } from '@/data/types'
 
 const db = new Dexie('ElearningDB') as Dexie & {
@@ -26,6 +26,7 @@ const db = new Dexie('ElearningDB') as Dexie & {
   contentProgress: Table<ContentProgress> // compound PK: [courseId+itemId]
   challenges: EntityTable<Challenge, 'id'>
   embeddings: EntityTable<Embedding, 'noteId'>
+  learningPath: EntityTable<LearningPathCourse, 'courseId'>
 }
 
 db.version(1).stores({
@@ -59,22 +60,57 @@ db.version(3).stores({
   bookmarks: 'id, courseId, lessonId, createdAt',
 })
 
-// Zod schema for migration data validation (prevents corrupt data crashes)
-const MigrationNoteSchema = z.object({
-  id: z.string(),
-  content: z.string(),
-  timestamp: z.number().optional(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-  tags: z.array(z.string()),
-})
+// Type guards for migration data validation (prevents corrupt data crashes)
+interface MigrationNote {
+  id: string
+  content: string
+  timestamp?: number
+  createdAt: string
+  updatedAt: string
+  tags: string[]
+}
 
-const MigrationProgressSchema = z.record(
-  z.object({
-    courseId: z.string(),
-    notes: z.record(z.array(MigrationNoteSchema)).optional(),
+interface MigrationCourseProgress {
+  courseId: string
+  notes?: Record<string, MigrationNote[]>
+}
+
+type MigrationProgress = Record<string, MigrationCourseProgress>
+
+function isValidMigrationNote(note: unknown): note is MigrationNote {
+  if (typeof note !== 'object' || note === null) return false
+  const n = note as Record<string, unknown>
+  return (
+    typeof n.id === 'string' &&
+    typeof n.content === 'string' &&
+    (n.timestamp === undefined || typeof n.timestamp === 'number') &&
+    typeof n.createdAt === 'string' &&
+    typeof n.updatedAt === 'string' &&
+    Array.isArray(n.tags) &&
+    n.tags.every((tag: unknown) => typeof tag === 'string')
+  )
+}
+
+function isValidMigrationProgress(data: unknown): data is MigrationProgress {
+  if (typeof data !== 'object' || data === null) return false
+  const record = data as Record<string, unknown>
+
+  return Object.entries(record).every(([_courseId, progress]) => {
+    if (typeof progress !== 'object' || progress === null) return false
+    const p = progress as Record<string, unknown>
+
+    if (typeof p.courseId !== 'string') return false
+    if (p.notes !== undefined) {
+      if (typeof p.notes !== 'object' || p.notes === null) return false
+      const notes = p.notes as Record<string, unknown>
+      return Object.values(notes).every(lessonNotes => {
+        if (!Array.isArray(lessonNotes)) return false
+        return lessonNotes.every(isValidMigrationNote)
+      })
+    }
+    return true
   })
-)
+}
 
 db.version(4)
   .stores({
@@ -103,17 +139,13 @@ db.version(4)
         return
       }
 
-      // Security: Validate structure with Zod schema
-      const validationResult = MigrationProgressSchema.safeParse(parsedData)
-      if (!validationResult.success) {
-        console.error(
-          '[Migration] Invalid data structure, skipping migration:',
-          validationResult.error
-        )
+      // Security: Validate structure with type guard
+      if (!isValidMigrationProgress(parsedData)) {
+        console.error('[Migration] Invalid data structure, skipping migration')
         return
       }
 
-      const allProgress = validationResult.data
+      const allProgress: MigrationProgress = parsedData
 
       const notesToInsert: Note[] = []
 
@@ -211,6 +243,21 @@ db.version(9).stores({
   contentProgress: '[courseId+itemId], courseId, itemId, status',
   challenges: 'id, type, deadline, createdAt',
   embeddings: 'noteId, createdAt',
+})
+
+db.version(10).stores({
+  importedCourses: 'id, name, importedAt, status, *tags',
+  importedVideos: 'id, courseId, filename',
+  importedPdfs: 'id, courseId, filename',
+  progress: '[courseId+videoId], courseId, videoId',
+  bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+  screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+  contentProgress: '[courseId+itemId], courseId, itemId, status',
+  challenges: 'id, type, deadline, createdAt',
+  embeddings: 'noteId, createdAt',
+  learningPath: 'courseId, position, generatedAt',
 })
 
 export { db }
