@@ -29,7 +29,9 @@ import {
   getCourseCompletionPercent,
 } from '@/lib/progress'
 import { getActionsPerDay, getRecentActions } from '@/lib/studyLog'
+import { cn } from '@/app/components/ui/utils'
 import { EmptyState } from '@/app/components/EmptyState'
+import { useSessionStore } from '@/stores/useSessionStore'
 import StudyTimeAnalytics from '@/app/components/StudyTimeAnalytics'
 import { AIAnalyticsTab } from '@/app/components/reports/AIAnalyticsTab'
 
@@ -137,7 +139,8 @@ export default function Reports() {
   const recentActions = getRecentActions(10)
 
   const totalLessons = getTotalCompletedLessons()
-  const hasActivity = totalLessons > 0 || recentActions.length > 0
+  const { getTotalStudyTime } = useSessionStore()
+  const hasActivity = totalLessons > 0 || recentActions.length > 0 || getTotalStudyTime() > 0
 
   return (
     <div>
@@ -177,7 +180,7 @@ export default function Reports() {
                   <Card key={stat.label}>
                     <CardContent className="flex items-center gap-4 p-5">
                       <div className="rounded-xl bg-primary/10 p-3">
-                        <Icon className="h-5 w-5 text-primary" />
+                        <Icon className="size-5 text-primary" />
                       </div>
                       <div>
                         <p className="text-2xl font-bold">{stat.value}</p>
@@ -325,11 +328,9 @@ export default function Reports() {
                       {recentActions.map((action, i) => {
                         const course = allCourses.find(c => c.id === action.courseId)
                         return (
-                          <div key={i} className="flex items-center gap-3 text-sm">
+                          <div key={`${action.courseId}-${action.timestamp}`} className="flex items-center gap-3 text-sm">
                             <div
-                              className={`w-2 h-2 rounded-full ${
-                                action.type === 'lesson_complete' ? 'bg-success' : 'bg-brand'
-                              }`}
+                              className={cn('size-2 rounded-full', action.type === 'lesson_complete' ? 'bg-success' : 'bg-brand')}
                             />
                             <span className="text-muted-foreground">
                               {new Date(action.timestamp).toLocaleDateString()}
