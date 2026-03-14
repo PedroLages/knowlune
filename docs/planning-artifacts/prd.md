@@ -96,6 +96,19 @@ LevelUp is a personal learning platform for self-directed learners who accumulat
 - **AI-augmented:** AI summaries, Q&A, and cross-course connections enhance comprehension and retention
 - **Completion-focused:** Every feature drives course completion, not just consumption
 
+**Business Model:** LevelUp follows an open-core model. The core platform (course management, progress tracking, streaks, notes, analytics) is free and open source under AGPL-3.0. Premium features (AI-powered learning assistant, spaced review, advanced export) are available through a paid subscription. See [open-core-strategy.md](open-core-strategy.md) for the full strategy.
+
+## Business Model
+
+**Model:** Open-core (free open-source core + paid premium tier)
+**License:** AGPL-3.0 (core), Proprietary (premium)
+**Revenue:** Individual subscription (~$12/month or ~$99/year)
+**Core Value:** All learning data stays local. Premium enhances but never gates core workflows. A user who never upgrades has a complete, useful learning platform.
+
+**Tier boundary:** AI features (Epic 9) and advanced learning science features (spaced review, xAPI, Open Badges from Epic 11) are premium. Everything else — including data export (FR85) — is core.
+
+See [open-core-strategy.md](open-core-strategy.md) for the complete feature tier matrix, licensing rationale, and pricing details.
+
 ## Success Criteria
 
 ### User Success
@@ -1095,7 +1108,7 @@ Beyond the existing WCAG 2.1 AA+ target, WCAG 2.2 adds edtech-relevant criteria:
 - FR47: User can view 3-5 actionable insights on the analytics dashboard derived from study patterns (e.g., "Your completion rate improves 40% when you study before 9 PM")
 - FR78: User can view learning velocity metrics — completion rate over time (videos completed per week), content consumed per hour (duration watched / time spent), and progress acceleration/deceleration trends (week-over-week comparison). *(Added to preserve original FR45 intent after FR45 was reassigned to bookmarks. Implemented in Epic 7 Story 7.3.)*
 
-### AI-Powered Assistance
+### AI-Powered Assistance `[PREMIUM]`
 
 - FR48: User can request an AI-generated summary (100-300 words) of a video's content, displayed in a collapsible panel alongside the video
 - FR49: User can ask questions in a chat-style panel and receive answers citing specific source notes (note title and linked video), generated from the user's own note corpus
@@ -1104,7 +1117,7 @@ Beyond the existing WCAG 2.1 AA+ target, WCAG 2.2 adds edtech-relevant criteria:
 - FR52: User can request AI to auto-tag, categorize, and link related notes across courses, with a preview before applying changes
 - FR53: System displays a "Related Concepts" panel showing notes from other courses that share 1+ tags or AI-determined topical overlap (minimum 2 shared key terms), with each suggestion showing the matching reason
 
-### Knowledge Retention & Review *(Domain-driven: Learning Science)*
+### Knowledge Retention & Review *(Domain-driven: Learning Science)* `[PREMIUM]`
 
 - FR80: User can schedule notes for spaced review using a 3-grade rating system (Hard / Good / Easy) that adjusts the next review interval based on recall difficulty
 - FR81: User can view a review queue showing notes due for review, sorted by predicted retention percentage (lowest retention first)
@@ -1112,12 +1125,12 @@ Beyond the existing WCAG 2.1 AA+ target, WCAG 2.2 adds edtech-relevant criteria:
 - FR83: System detects engagement decay when study frequency drops below 50% of the user's 2-week rolling average, session duration declines more than 30% over 4 weeks, or completion velocity is negative for 3+ consecutive weeks — and displays a contextual alert
 - FR84: System can score each study session on a 0-100 scale based on active time ratio (40% weight), interaction density (30% weight), session length within 25-52 minute optimal range (15% weight), and breaks taken (15% weight)
 
-### Data Portability & Export *(Domain-driven: EdTech Standards)*
+### Data Portability & Export *(Domain-driven: EdTech Standards)* `[MIXED]`
 
-- FR85: User can export all learning data in three formats: JSON (full structured data with schema version), CSV (sessions, progress, and streak tabular data), and Markdown (notes with YAML frontmatter including title, tags, course, and timestamp)
-- FR86: System logs learning activities using an Actor + Verb + Object structure compatible with the xAPI statement format, enabling future export to Learning Record Stores
-- FR87: User can export earned achievements as Open Badges v3.0 JSON files containing badge name, description, criteria, evidence, and issuance date
-- FR88: User can load SRT or WebVTT caption/subtitle files alongside local video content, with captions displayed synchronized to video playback
+- FR85: `[CORE]` User can export all learning data in three formats: JSON (full structured data with schema version), CSV (sessions, progress, and streak tabular data), and Markdown (notes with YAML frontmatter including title, tags, course, and timestamp)
+- FR86: `[PREMIUM]` System logs learning activities using an Actor + Verb + Object structure compatible with the xAPI statement format, enabling future export to Learning Record Stores
+- FR87: `[PREMIUM]` User can export earned achievements as Open Badges v3.0 JSON files containing badge name, description, criteria, evidence, and issuance date
+- FR88: `[CORE]` User can load SRT or WebVTT caption/subtitle files alongside local video content, with captions displayed synchronized to video playback
 
 ### Content Metadata *(Domain-driven: Content Standards)*
 
@@ -1128,21 +1141,30 @@ Beyond the existing WCAG 2.1 AA+ target, WCAG 2.2 adds edtech-relevant criteria:
 - FR90: User can set specific daily or weekly study goals (e.g., "Study 45 minutes daily" or "Complete 5 videos this week") and view progress against those goals on the dashboard
 - FR91: User can configure streak freeze days (1-3 per week) that count as rest days without breaking the study streak
 
-### Advanced Analytics *(Domain-driven: Learning Analytics)*
+### Advanced Analytics *(Domain-driven: Learning Analytics)* `[MIXED]`
 
-- FR92: User can activate an interleaved review mode that surfaces notes from multiple courses in a mixed sequence, weighted by topic similarity and time since last review
-- FR93: User can view a learning activity heatmap showing daily study activity over the past 12 months, with color intensity indicating session duration
+- FR92: `[PREMIUM]` User can activate an interleaved review mode that surfaces notes from multiple courses in a mixed sequence, weighted by topic similarity and time since last review
+- FR93: `[CORE]` User can view a learning activity heatmap showing daily study activity over the past 12 months, with color intensity indicating session duration
 
-### Traceability Gap Closures *(Validation-driven)*
+### Traceability Gap Closures *(Validation-driven)* `[MIXED]`
 
-- FR94: User can view feature usage statistics showing usage frequency for AI features (summaries generated, Q&A questions asked, cross-course connections viewed) over daily, weekly, and monthly periods *(closes success criteria gaps: "AI summaries used for 50%+ videos," "AI Q&A used 3x/week," "cross-course connections acted on")*
+- FR94: `[PREMIUM]` User can view feature usage statistics showing usage frequency for AI features (summaries generated, Q&A questions asked, cross-course connections viewed) over daily, weekly, and monthly periods *(closes success criteria gaps: "AI summaries used for 50%+ videos," "AI Q&A used 3x/week," "cross-course connections acted on")*
 - FR95: User can resume their last study session directly from a "Continue Learning" action on the dashboard, loading the most recent course at the last video position *(promoted from NFR17 — functional capability, not quality attribute)*
 - FR96: System can display onboarding prompts during first use guiding the user through importing a course, starting a study session, and creating a first learning challenge *(traces to Journey 1 onboarding flow)*
-- FR97: System can proactively suggest AI-generated note links when a newly saved note shares 2+ tags or key terms (nouns/noun phrases extracted from title and body, excluding stop words — same matching criteria as FR53) with existing notes across other courses, with an accept/dismiss action *(traces to Journey 2 — unprompted AI suggestions)*
+- FR97: `[PREMIUM]` System can proactively suggest AI-generated note links when a newly saved note shares 2+ tags or key terms (nouns/noun phrases extracted from title and body, excluding stop words — same matching criteria as FR53) with existing notes across other courses, with an accept/dismiss action *(traces to Journey 2 — unprompted AI suggestions)*
 - FR98: System can display a toast notification with streak milestone badge when the user reaches 7-day, 30-day, 60-day, and 100-day streak milestones *(traces to Journey 2 — streak celebrations distinct from challenge milestones in FR35)*
-- FR99: System can trigger AI analysis (summary generation, topic tagging) automatically when a new course is imported; processing runs asynchronously with a progress indicator, completing within 60 seconds per video, and results are available on next course view *(traces to Journey 4 — import-triggered AI)*
+- FR99: `[PREMIUM]` System can trigger AI analysis (summary generation, topic tagging) automatically when a new course is imported; processing runs asynchronously with a progress indicator, completing within 60 seconds per video, and results are available on next course view *(traces to Journey 4 — import-triggered AI)*
 - FR100: User can configure per-course study reminders with selectable days and times independent of the streak reminder in FR30 *(traces to Journey 5 — per-course scheduling)*
 - FR101: User can view weekly adherence percentage (study days / target days) on the dashboard and in analytics *(closes success criteria gap: "80%+ weekly adherence")*
+
+### Platform & Entitlement `[PREMIUM]`
+
+- FR102: User can create an account with email and password to access premium features
+- FR103: User can subscribe to the premium tier via Stripe Checkout (hosted payment page — no card data touches LevelUp)
+- FR104: System validates premium entitlement on app launch and caches status locally in IndexedDB for offline use (up to 7 days)
+- FR105: User can manage their subscription (view status, cancel, update payment method) via Stripe Customer Portal
+- FR106: Premium features display an "Upgrade to Premium" CTA with feature preview when the user is on the free tier
+- FR107: `[CORE]` User can use all core features without creating an account — no login, registration, or session management required for core workflows
 
 ## Non-Functional Requirements
 
@@ -1249,7 +1271,7 @@ Beyond the existing WCAG 2.1 AA+ target, WCAG 2.2 adds edtech-relevant criteria:
 
 **Authentication:**
 
-- NFR56: Application operates without authentication — no login, registration, or session management required (personal single-user tool)
+- NFR56: Core features operate without authentication — no login, registration, or session management required for core workflows (see FR107). Premium features require account creation and entitlement validation (see FR102-FR105)
 
 ### EdTech Accessibility *(Domain-driven: WCAG 2.2 + EdTech Standards)*
 
@@ -1268,4 +1290,10 @@ Beyond the existing WCAG 2.1 AA+ target, WCAG 2.2 adds edtech-relevant criteria:
 - NFR66: Cloud AI features transmit only aggregated or anonymized data (never raw personal notes or full session logs); each AI feature has an independent user consent toggle
 - NFR67: Exported data can be re-imported into the application with ≥95% semantic fidelity (no loss of notes, progress, tags, or timestamps)
 - NFR68: All animations and transitions respect the `prefers-reduced-motion` media query by disabling or reducing motion to static alternatives
+
+### Premium Platform *(Open-core infrastructure)*
+
+- NFR69: Authentication flow (account creation, login) completes in less than 3 seconds
+- NFR70: Premium entitlement validation caches locally for 7 days, enabling offline premium feature use without network connectivity
+- NFR71: Payment processing uses Stripe hosted checkout (Stripe Checkout + Customer Portal) — no payment card data is transmitted to or stored by LevelUp
 

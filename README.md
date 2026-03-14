@@ -1,6 +1,10 @@
 # LevelUp
 
-LevelUp is a personal learning platform for tracking progress, courses, and achievements. Built with React, TypeScript, and Tailwind CSS. The original Figma design is available at <https://www.figma.com/design/q4x6ttJD11avObQNFoeQ2D/E-learning-platform-wireframes>.
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
+
+LevelUp is a free, open-source personal learning platform for tracking progress, completing courses, and building study habits. Built with React, TypeScript, and Tailwind CSS. The original Figma design is available at <https://www.figma.com/design/q4x6ttJD11avObQNFoeQ2D/E-learning-platform-wireframes>.
+
+**Open-core model:** The core platform is free and open source. Premium features (AI-powered learning, spaced review, advanced analytics) are available as a paid subscription. See [Open-Core Strategy](docs/planning-artifacts/open-core-strategy.md) for details.
 
 ## Running the code
 
@@ -248,3 +252,11 @@ make format
 - [Playwright Configuration](playwright.config.ts)
 - [ESLint Configuration](eslint.config.js)
 - [TypeScript Configuration](tsconfig.json)
+
+## License
+
+The core platform is licensed under [AGPL-3.0](LICENSE). Premium features (`src/premium/`) are proprietary and not covered by the AGPL license.
+
+## Contributing
+
+We welcome contributions to the core platform! By contributing, you agree to our Contributor License Agreement (CLA).
