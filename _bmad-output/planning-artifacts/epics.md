@@ -370,6 +370,14 @@ Users can import local course folders, browse their library, organize by topic, 
 **FRs covered:** FR1, FR2, FR3, FR4, FR5, FR6, FR89
 **Phase:** 1 (Foundation)
 
+### Epic 1B: Library Enhancements
+
+Users can import multiple courses simultaneously, see rich metadata (duration, thumbnails), receive transparent progress feedback during imports, and enjoy a visually engaging library experience — polishing the course management foundation established in Epic 1.
+
+**FRs covered:** Enhancement epic (no new FRs, improves UX for FR1-FR6)
+**Phase:** 1 (Foundation — Optional polish after Epic 1)
+**Research basis:** Competitive analysis of Udemy, Coursera, Plex, Jellyfin (2026-03-14)
+
 ### Epic 2: Lesson Player & Content Consumption
 
 Users can watch videos with full playback controls, view PDFs, bookmark positions, resume where they left off, load captions, and navigate course structure in a focused, distraction-free interface.
@@ -604,6 +612,149 @@ So that I know which content is unavailable and can take action.
 **When** the system re-verifies the handle (on next course load)
 **Then** the "file not found" badge is removed
 **And** the content becomes accessible again
+
+---
+
+## Epic 1B: Library Enhancements
+
+Users can import multiple courses simultaneously, see rich metadata (duration, thumbnails), receive transparent progress feedback during imports, and enjoy a visually engaging library experience — polishing the course management foundation established in Epic 1.
+
+**Enhancement Epic:** Extends Epic 1 with industry-standard features based on competitive analysis of Udemy, Coursera, Plex, and Jellyfin (research: 2026-03-14).
+
+### Story 1.6: Bulk Course Import
+
+As a learner,
+I want to select and import multiple course folders at once,
+So that I can quickly set up my entire library without importing folders one by one.
+
+**Acceptance Criteria:**
+
+**Given** the user is on the Course Library page
+**When** the user clicks the "Import Course" button
+**Then** a dialog appears with options: "Import Single Folder" or "Import Multiple Folders"
+
+**Given** the user selects "Import Multiple Folders"
+**When** the folder picker dialog opens
+**Then** the user can select multiple folders (browser-native multi-select behavior)
+**And** confirmation shows the count of selected folders (e.g., "5 folders selected")
+
+**Given** the user confirms multiple folder selection
+**When** the import process begins
+**Then** the system scans all folders in parallel (max 5 concurrent to avoid performance issues)
+**And** each folder creates a separate course entity as it completes scanning
+**And** courses appear in the library immediately via optimistic Zustand updates
+
+**Given** one or more folders in a bulk import contain zero supported files
+**When** those scans complete
+**Then** a consolidated toast notification displays: "3 of 5 folders imported. 2 folders had no supported files."
+**And** only valid courses are created in IndexedDB
+
+**Given** some folders succeed and others fail during bulk import
+**When** the import completes
+**Then** successfully imported courses appear in the library
+**And** failed imports show detailed error messages without blocking successful ones
+**And** the user can retry failed imports individually
+
+### Story 1.7: Auto-Extract Video Metadata
+
+As a learner,
+I want to see the total duration and file details for each course,
+So that I can make informed decisions about which courses to start based on time commitment.
+
+**Acceptance Criteria:**
+
+**Given** a course folder is being imported
+**When** the system scans video files
+**Then** it extracts metadata: duration, file size, and resolution (e.g., 1080p, 720p) for each video
+**And** metadata extraction happens in the background without blocking UI rendering
+
+**Given** video metadata has been extracted
+**When** the course card displays in the library
+**Then** the card shows total duration in human-readable format (e.g., "8h 24m")
+**And** the card shows video count (e.g., "24 videos")
+**And** hovering over duration reveals additional details: total file size (e.g., "2.4 GB")
+
+**Given** metadata extraction fails for one or more videos
+**When** the extraction error occurs
+**Then** the system gracefully skips that file and continues processing others
+**And** the duration calculation uses only successfully extracted metadata
+**And** no error toast is shown to the user (silent failure for metadata extraction)
+
+**Given** a course contains videos of mixed resolutions (720p, 1080p, 4K)
+**When** the course card displays
+**Then** a resolution badge shows the highest resolution available (e.g., "4K")
+**And** the badge is subtle and does not dominate the card design
+
+### Story 1.8: Import Progress Indicator
+
+As a learner,
+I want to see real-time progress when importing large course folders,
+So that I know the system is working and can estimate how long it will take.
+
+**Acceptance Criteria:**
+
+**Given** the user initiates a course import
+**When** the folder scan begins
+**Then** a progress modal or toast appears showing: "Scanning folder... 0 of ? files processed"
+**And** the modal is non-blocking (user can navigate away, import continues in background)
+
+**Given** the folder scan is in progress
+**When** files are being processed
+**Then** the progress indicator updates every 10 files (not per file to avoid UI jank)
+**And** the display shows: "Scanning folder... 45 of 120 files processed (38%)"
+**And** after processing 20 files, an estimated time remaining is shown (e.g., "~2 minutes remaining")
+
+**Given** the user is importing multiple folders (bulk import)
+**When** the scans are running
+**Then** the progress indicator shows overall progress: "Importing 3 of 7 courses..."
+**And** each course's individual status is visible (e.g., "Course 1: 80% complete, Course 2: 20% complete")
+
+**Given** the user clicks "Cancel" on the progress indicator
+**When** the cancellation is triggered
+**Then** the import stops immediately without corrupting existing data
+**And** partially scanned courses are not saved to IndexedDB
+**And** a toast confirms: "Import canceled. No changes were made."
+
+**Given** the import completes successfully
+**When** all files are processed
+**Then** the progress indicator shows: "Import complete! 3 courses added to your library."
+**And** the modal auto-dismisses after 3 seconds or user clicks "Close"
+
+### Story 1.9: Course Card Thumbnails
+
+As a learner,
+I want to see visual thumbnails on course cards,
+So that I can quickly recognize courses at a glance and enjoy a more engaging library experience.
+
+**Acceptance Criteria:**
+
+**Given** a course is being imported and contains at least one video file
+**When** the import scan completes
+**Then** the system generates a thumbnail from the first video in the course
+**And** the thumbnail is captured at the 10% mark of the video duration (to avoid black screens or intros)
+**And** the thumbnail is saved to IndexedDB as a base64-encoded image or blob
+
+**Given** a thumbnail has been generated
+**When** the course card displays in the library
+**Then** the thumbnail appears at the top of the card with 16:9 aspect ratio
+**And** the thumbnail width is approximately 200px (responsive to card width)
+**And** the thumbnail has subtle rounded corners matching the card's border-radius
+
+**Given** thumbnail generation fails for a video (corrupted file, unsupported codec)
+**When** the failure occurs
+**Then** a default placeholder icon is displayed instead (e.g., video play icon or folder icon)
+**And** no error toast is shown to the user
+**And** the card layout remains consistent with other cards
+
+**Given** a course has been imported and displayed
+**When** the user refreshes the page or navigates away and returns
+**Then** thumbnails load from IndexedDB cache without regenerating
+**And** thumbnail loading does not block rendering of course titles or metadata
+
+**Given** the library contains 50+ courses with thumbnails
+**When** the library page loads
+**Then** thumbnails display progressively (lazy loading for off-screen cards)
+**And** the page remains responsive (<100ms query per NFR4)
 
 ---
 

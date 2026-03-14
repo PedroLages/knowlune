@@ -22,5 +22,6 @@
   "tailwindCSS.validate": true,
   "tailwindCSS.experimental.classRegex": [
     ["cn\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"]
-  ]
+  ],
+  "claudeCode.initialPermissionMode": "plan"
 }
