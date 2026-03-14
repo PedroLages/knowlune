@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Sparkles, Check, X } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { Badge } from '@/app/components/ui/badge'
@@ -38,7 +38,7 @@ export function OrganizePreviewDialog({
   const [accepted, setAccepted] = useState<Set<string>>(() => new Set(proposals.map(p => p.noteId)))
 
   // Reset accepted state when proposals change
-  useMemo(() => {
+  useEffect(() => {
     setAccepted(new Set(proposals.map(p => p.noteId)))
   }, [proposals])
 
@@ -68,6 +68,7 @@ export function OrganizePreviewDialog({
   async function applyChanges() {
     const acceptedProposals = proposals.filter(p => accepted.has(p.noteId))
     let appliedCount = 0
+    let failedCount = 0
 
     for (const proposal of acceptedProposals) {
       const note = noteMap.get(proposal.noteId)
@@ -91,11 +92,20 @@ export function OrganizePreviewDialog({
         await saveNote(updatedNote)
         appliedCount++
       } catch (err) {
+        failedCount++
         console.error(`[OrganizePreview] Failed to update note ${note.id}:`, err)
       }
     }
 
-    toast.success(`Applied changes to ${appliedCount} notes`)
+    if (failedCount > 0 && appliedCount === 0) {
+      toast.error(`Failed to apply changes to ${failedCount} notes`)
+    } else if (failedCount > 0) {
+      toast.warning(`Applied ${appliedCount} changes, ${failedCount} failed`)
+    } else if (appliedCount === 0) {
+      toast.info('No changes needed — notes already have these tags')
+    } else {
+      toast.success(`Applied changes to ${appliedCount} notes`)
+    }
     onOpenChange(false)
   }
 
@@ -207,7 +217,7 @@ export function OrganizePreviewDialog({
           </div>
         </ScrollArea>
 
-        <DialogFooter className="flex-row justify-between sm:justify-between gap-2">
+        <DialogFooter className="flex-col sm:flex-row justify-between sm:justify-between gap-2">
           <div className="flex items-center gap-2">
             <Button type="button" variant="ghost" size="sm" onClick={selectAll} className="text-xs">
               <Check className="size-3 mr-1" aria-hidden="true" />

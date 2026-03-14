@@ -56,18 +56,18 @@ export function OrganizeNotesButton({ notes, courseNames }: OrganizeNotesButtonP
       type="button"
       variant="outline"
       size="sm"
+      className="min-h-11 sm:min-h-0"
       onClick={handleOrganize}
       disabled={isDisabled}
       aria-label="Organize notes with AI"
       aria-busy={isProcessing}
     >
       {isProcessing ? (
-        <Loader2 className="size-4 animate-spin mr-1.5" aria-hidden="true" />
+        <Loader2 className="size-4 animate-spin sm:mr-1.5" aria-hidden="true" />
       ) : (
-        <Sparkles className="size-4 mr-1.5" aria-hidden="true" />
+        <Sparkles className="size-4 sm:mr-1.5" aria-hidden="true" />
       )}
       <span className="hidden sm:inline">{isProcessing ? 'Analyzing...' : 'Organize with AI'}</span>
-      <span className="sm:hidden">{isProcessing ? '' : ''}</span>
     </Button>
   )
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Link2, ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
@@ -25,6 +25,8 @@ export function RelatedConceptsPanel({ note, allNotes, courseNames }: RelatedCon
   const [isOpen, setIsOpen] = useState(true)
   const [isTagOnly, setIsTagOnly] = useState(false)
 
+  const tagKey = useMemo(() => note.tags.join(','), [note.tags])
+
   useEffect(() => {
     let cancelled = false
 
@@ -47,7 +49,7 @@ export function RelatedConceptsPanel({ note, allNotes, courseNames }: RelatedCon
     return () => {
       cancelled = true
     }
-  }, [note.id, note.tags.join(','), allNotes.length])
+  }, [note.id, tagKey, allNotes.length])
 
   function handleNavigate(related: RelatedNote) {
     // Find the candidate note to determine navigation target

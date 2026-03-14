@@ -41,7 +41,7 @@ const mockNote3 = {
   content: 'Vue composables are similar to React hooks. They encapsulate reactive state logic.',
   createdAt: FIXED_DATE,
   updatedAt: FIXED_DATE,
-  tags: ['vue', 'composables'],
+  tags: ['vue', 'composables', 'hooks'],
 }
 
 const mockNote4 = {
@@ -269,6 +269,15 @@ test.describe('AC3: Apply selected changes', () => {
     ).toBeVisible({
       timeout: 5000,
     })
+
+    // Verify rejected note-1 does NOT have the proposed tags persisted
+    // Expand note-1 and check its tag list
+    await expect(page.getByText(mockNote1.content.slice(0, 30))).toBeVisible({ timeout: 5000 })
+    const note1Card = page.locator('[data-testid="note-card"]').filter({
+      hasText: mockNote1.content.slice(0, 30),
+    })
+    // note-1's rejected tags (state-management, functional-components) should NOT appear
+    await expect(note1Card.getByText('functional-components')).not.toBeVisible()
   })
 })
 
@@ -282,8 +291,10 @@ test.describe('AC4: Related Concepts panel', () => {
     await expect(page.getByText(mockNote1.content.slice(0, 30))).toBeVisible({ timeout: 5000 })
 
     // Expand note-1 (has 'react' tag shared with note-2)
-    const noteCard = page.getByText(mockNote1.content.slice(0, 30)).locator('..')
-    await noteCard.click()
+    const noteCard = page.locator('[data-testid="note-card"]').filter({
+      hasText: mockNote1.content.slice(0, 30),
+    })
+    await noteCard.locator('[role="button"]').click()
 
     // Related Concepts panel should appear
     const relatedPanel = page.getByText(/related concepts/i)
@@ -301,58 +312,60 @@ test.describe('AC4: Related Concepts panel', () => {
     await expect(relatedRegion.getByText('react').first()).toBeVisible()
   })
 
-  test('related panel shows cross-course notes with shared terms', async ({ page }) => {
-    // note-3 (course-2, tags: ['vue', 'composables']) and note-2 (course-1, tags: ['react', 'effects'])
-    // don't share tags, but note-1 and note-3 share no tags either.
-    // Test cross-course by expanding note-3 — it shares no tags with course-1 notes,
-    // but we verify that expanding any note with tags shows the Related Concepts panel.
-    // Use note-1 which has 'react' tag shared with note-2 (same course = not cross-course)
+  test('related panel shows cross-course notes with shared tags', async ({ page }) => {
+    // note-1 (course-1, tags: ['react', 'hooks']) and note-3 (course-2, tags: ['vue', 'composables', 'hooks'])
+    // share the 'hooks' tag across different courses
     await setupNotesPage(page, { seedNotes: true })
 
     await expect(page.getByText(mockNote1.content.slice(0, 30))).toBeVisible({ timeout: 5000 })
 
-    // Expand note-1 which has 'react' tag shared with note-2
-    const noteCard = page.getByText(mockNote1.content.slice(0, 30)).locator('..')
-    await noteCard.click()
+    // Expand note-1 which has 'hooks' tag shared with note-3 (cross-course)
+    const noteCard = page.locator('[data-testid="note-card"]').filter({
+      hasText: mockNote1.content.slice(0, 30),
+    })
+    await noteCard.locator('[role="button"]').click()
 
-    // Related Concepts panel should appear with tag-based matches
+    // Related Concepts panel should appear
     const relatedRegion = page.locator('[aria-label="Related concepts"]')
     await expect(relatedRegion).toBeVisible({ timeout: 5000 })
 
-    // Should show the course name of the related note
-    await expect(relatedRegion.getByText(/course/i).first()).toBeVisible()
+    // Should show note-3 from course-2 (cross-course match via 'hooks' tag)
+    await expect(
+      relatedRegion.getByText(mockNote3.content.slice(0, 20)).or(relatedRegion.getByText(/Vue composables/i))
+    ).toBeVisible()
+
+    // Should show shared 'hooks' tag
+    await expect(relatedRegion.getByText('hooks').first()).toBeVisible()
   })
 })
 
 // ── AC5: Navigation Between Related Notes ───────────────────────────────────
 
 test.describe('AC5: Navigation from related note', () => {
-  test('clicking a related note navigates to its detail view', async ({ page }) => {
+  test('clicking a related note navigates and shows back-link', async ({ page }) => {
     await setupNotesPage(page, { seedNotes: true })
 
     await expect(page.getByText(mockNote1.content.slice(0, 30))).toBeVisible({ timeout: 5000 })
 
-    // Expand a note to see related concepts
-    const noteCard = page.getByText(mockNote1.content.slice(0, 30)).locator('..')
-    await noteCard.click()
+    // Expand note-1 to see related concepts
+    const noteCard = page.locator('[data-testid="note-card"]').filter({
+      hasText: mockNote1.content.slice(0, 30),
+    })
+    await noteCard.locator('[role="button"]').click()
 
     // Wait for Related Concepts panel
-    await expect(page.getByText(/related concepts/i)).toBeVisible({ timeout: 5000 })
+    const relatedRegion = page.locator('[aria-label="Related concepts"]')
+    await expect(relatedRegion).toBeVisible({ timeout: 5000 })
 
-    // Click on a related note link
-    const relatedLink = page
-      .getByRole('link', { name: /useEffect/i })
-      .or(page.getByText(mockNote2.content.slice(0, 20)).locator('a'))
+    // Click on a related note (rendered as buttons, not links)
+    const relatedButton = relatedRegion
+      .getByRole('button', { name: /useEffect/i })
+      .or(relatedRegion.getByRole('button').first())
+    await relatedButton.click()
 
-    if (await relatedLink.isVisible()) {
-      await relatedLink.click()
-
-      // Should navigate to the related note or scroll to it
-      // Back-link should be visible
-      await expect(
-        page.getByText(/back/i).or(page.getByRole('link', { name: /back/i }))
-      ).toBeVisible()
-    }
+    // Back-link should be visible after navigation
+    await expect(page.getByTestId('back-to-note')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText(/back to original note/i)).toBeVisible()
   })
 })
 
@@ -386,8 +399,10 @@ test.describe('AC6: AI unavailable fallback', () => {
     await expect(page.getByText(mockNote1.content.slice(0, 30))).toBeVisible({ timeout: 5000 })
 
     // Expand note-1 (has 'react' tag)
-    const noteCard = page.getByText(mockNote1.content.slice(0, 30)).locator('..')
-    await noteCard.click()
+    const noteCard = page.locator('[data-testid="note-card"]').filter({
+      hasText: mockNote1.content.slice(0, 30),
+    })
+    await noteCard.locator('[role="button"]').click()
 
     // Related Concepts should still work via tag matching
     const relatedPanel = page.getByText(/related concepts/i)
@@ -406,8 +421,10 @@ test.describe('AC6: AI unavailable fallback', () => {
 
     await expect(page.getByText(mockNote1.content.slice(0, 30))).toBeVisible({ timeout: 5000 })
 
-    const noteCard = page.getByText(mockNote1.content.slice(0, 30)).locator('..')
-    await noteCard.click()
+    const noteCard = page.locator('[data-testid="note-card"]').filter({
+      hasText: mockNote1.content.slice(0, 30),
+    })
+    await noteCard.locator('[role="button"]').click()
 
     // Related Concepts should appear within 2 seconds (AC6 fallback requirement)
     // Playwright's timeout IS the assertion — if it resolves, fallback was fast enough
