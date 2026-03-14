@@ -111,7 +111,7 @@ function findTagMatches(
       if (sharedTags.length === 0) return null
 
       const candidateTerms = extractKeyTerms(candidate.content)
-      const sharedTerms = sourceTerms.filter(t => candidateTerms.has(t))
+      const sharedTerms = [...sourceTerms].filter((t: string) => candidateTerms.has(t))
 
       return {
         noteId: candidate.id,
@@ -119,9 +119,8 @@ function findTagMatches(
         courseName: courseNames.get(candidate.courseId) ?? candidate.courseId,
         sharedTags,
         sharedTerms,
-        similarityScore: undefined,
         tagOnly: true,
-      }
+      } satisfies RelatedNote
     })
     .filter((r): r is RelatedNote => r != null)
     .sort((a, b) => b.sharedTags.length - a.sharedTags.length)
@@ -158,7 +157,7 @@ async function findVectorMatches(
 
       const sharedTags = candidate.tags.filter(t => sourceTagSet.has(t))
       const candidateTerms = extractKeyTerms(candidate.content)
-      const sharedTerms = sourceTerms.filter(t => candidateTerms.has(t))
+      const sharedTerms = [...sourceTerms].filter((t: string) => candidateTerms.has(t))
 
       return {
         noteId: candidate.id,
@@ -168,7 +167,7 @@ async function findVectorMatches(
         sharedTerms,
         similarityScore: result.similarity,
         tagOnly: false,
-      }
+      } satisfies RelatedNote
     })
     .filter((r): r is RelatedNote => r != null)
 }

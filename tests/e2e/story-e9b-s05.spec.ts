@@ -386,15 +386,11 @@ test.describe('AC6: AI unavailable fallback', () => {
     await expect(page.getByText(mockNote1.content.slice(0, 30))).toBeVisible({ timeout: 5000 })
 
     const noteCard = page.getByText(mockNote1.content.slice(0, 30)).locator('..')
-
-    const startTime = Date.now()
     await noteCard.click()
 
-    // Related Concepts should appear within 2 seconds
+    // Related Concepts should appear within 2 seconds (AC6 fallback requirement)
+    // Playwright's timeout IS the assertion — if it resolves, fallback was fast enough
     await expect(page.getByText(/related concepts/i)).toBeVisible({ timeout: 2000 })
-
-    const elapsed = Date.now() - startTime
-    expect(elapsed).toBeLessThan(2000)
   })
 })
 
