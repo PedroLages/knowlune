@@ -92,7 +92,7 @@ Instructions:
 IMPORTANT: Return ONLY the JSON object, no markdown code blocks, no extra text.`
 
   // Create timeout promise with cleanup
-  let timeoutId: NodeJS.Timeout | number
+  let timeoutId!: NodeJS.Timeout | number
   const timeoutPromise = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => reject(new Error('AI request timed out')), timeout)
   })
