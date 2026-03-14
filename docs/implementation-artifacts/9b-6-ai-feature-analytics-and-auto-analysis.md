@@ -90,7 +90,65 @@ so that I can track my AI-assisted study habits and benefit from immediate AI in
 
 ## Design Guidance
 
-[Optional — populated by /start-story if UI story detected]
+### Layout Approach
+
+**AI Analytics Section** — Add as a new section within the Reports page (or as a tab/subsection) following existing analytics patterns:
+- Grid layout: `grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4`
+- Each AI feature gets a stat card (5 cards: summaries, Q&A, learning paths, notes organized, gaps detected)
+- Below cards: area chart showing AI usage trends over selected period
+
+**Auto-Analysis Progress** — Overlay on course cards during import processing:
+- Progress indicator integrated into existing course card component
+- Notification via toast (Sonner) on completion
+- Error state with retry button
+
+### Component Structure
+
+| Component | Pattern | Reference |
+|-----------|---------|-----------|
+| AI stat cards | `StatsCard` pattern with NumberFlow + trend arrows + sparkline | `src/app/components/figma/StatsCard.tsx` |
+| Period toggle | Button group (default/outline variants) with `role="group"` | `StudyTimeAnalytics.tsx` pattern |
+| Usage trend chart | `ChartContainer` + `AreaChart` with gradient fill | `ProgressChart.tsx` pattern |
+| Auto-analysis progress | `Progress` bar inside course card with status text | `src/app/components/ui/progress.tsx` |
+| Consent toggle | Switch + label following AI config pattern | `AIConfigurationSettings.tsx` |
+| Completion notification | Sonner toast with `Sparkles` icon | Existing toast patterns |
+
+### Design System Tokens
+
+- **AI feature accent**: Use `var(--chart-1)` through `var(--chart-5)` for per-feature colors
+- **Trend up**: `text-success` (green) with `TrendingUp` icon
+- **Trend down**: `text-destructive` (red) with `TrendingDown` icon
+- **Trend stable**: `text-muted-foreground` with `Minus` icon
+- **AI indicator**: `Sparkles` icon from Lucide, `bg-brand-soft text-brand` badge
+- **Card styling**: `rounded-[24px] border bg-card` with `p-6` padding
+- **No hardcoded colors** — ESLint `design-tokens/no-hardcoded-colors` enforced
+
+### Responsive Strategy
+
+- **Mobile** (< 640px): Single column, stacked stat cards, full-width chart
+- **Tablet** (640-1023px): 2-3 column grid for stats, close sidebar to prevent overlay
+- **Desktop** (1024px+): 5-column stat grid, side-by-side layouts where applicable
+- Touch targets ≥ 44x44px on mobile for toggles and buttons
+
+### Accessibility Requirements
+
+- `aria-live="polite"` on stat values and trend indicators (dynamic content)
+- `role="group" aria-label="Time period selection"` on toggle buttons
+- Chart wrapped in `role="img"` with `aria-label` describing the data
+- Progress bars with `aria-label` describing analysis status
+- Keyboard navigable toggles and retry buttons
+- Loading skeletons with `aria-busy="true"`
+
+### Animation Strategy
+
+- NumberFlow animated number transitions on stat values
+- Framer Motion stagger on card grid entrance (`motion-safe`)
+- Smooth toggle transitions — use `min-h-[value]` to prevent layout shift during period switching
+- Progress bar animated fill for auto-analysis
+
+## Implementation Plan
+
+See [plan](plans/e9b-s06-ai-feature-analytics-auto-analysis.md) for implementation approach.
 
 ## Implementation Notes
 
