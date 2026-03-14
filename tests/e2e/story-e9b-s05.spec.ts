@@ -122,15 +122,27 @@ async function injectMockOrganizationResponse(page: Page) {
   )
 }
 
-async function setupNotesPage(page: Page, options: { aiAvailable?: boolean } = {}) {
-  const { aiAvailable = true } = options
+async function setupNotesPage(
+  page: Page,
+  options: { aiAvailable?: boolean; seedNotes?: boolean } = {}
+) {
+  const { aiAvailable = true, seedNotes = false } = options
 
-  // Prevent sidebar overlay on tablet viewports
+  // addInitScript must be called before navigation
+  if (aiAvailable) {
+    await injectMockOrganizationResponse(page)
+  }
+
+  // Navigate first to initialize app and make IndexedDB available
+  await page.goto('/')
   await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+
+  if (seedNotes) {
+    await seedTestNotes(page)
+  }
 
   if (aiAvailable) {
     await seedAIWithOrganizationConsent(page)
-    await injectMockOrganizationResponse(page)
   }
 
   await page.goto('/notes')
@@ -141,8 +153,7 @@ async function setupNotesPage(page: Page, options: { aiAvailable?: boolean } = {
 
 test.describe('AC1: Organize Notes with AI', () => {
   test('clicking "Organize with AI" triggers analysis and shows proposals', async ({ page }) => {
-    await seedTestNotes(page)
-    await setupNotesPage(page)
+    await setupNotesPage(page, { seedNotes: true })
 
     // Find and click the organize button
     const organizeButton = page.getByRole('button', { name: /organize.*ai/i })
@@ -173,8 +184,7 @@ test.describe('AC1: Organize Notes with AI', () => {
 
 test.describe('AC2: Preview panel with accept/reject', () => {
   test('preview panel shows proposed changes with AI rationale', async ({ page }) => {
-    await seedTestNotes(page)
-    await setupNotesPage(page)
+    await setupNotesPage(page, { seedNotes: true })
 
     await page.getByRole('button', { name: /organize.*ai/i }).click()
 
@@ -192,8 +202,7 @@ test.describe('AC2: Preview panel with accept/reject', () => {
   })
 
   test('each proposal has an individual accept/reject checkbox', async ({ page }) => {
-    await seedTestNotes(page)
-    await setupNotesPage(page)
+    await setupNotesPage(page, { seedNotes: true })
 
     await page.getByRole('button', { name: /organize.*ai/i }).click()
 
@@ -219,8 +228,7 @@ test.describe('AC2: Preview panel with accept/reject', () => {
 
 test.describe('AC3: Apply selected changes', () => {
   test('applying changes updates note tags and shows confirmation toast', async ({ page }) => {
-    await seedTestNotes(page)
-    await setupNotesPage(page)
+    await setupNotesPage(page, { seedNotes: true })
 
     await page.getByRole('button', { name: /organize.*ai/i }).click()
 
@@ -239,8 +247,7 @@ test.describe('AC3: Apply selected changes', () => {
   })
 
   test('rejected proposals are not applied', async ({ page }) => {
-    await seedTestNotes(page)
-    await setupNotesPage(page)
+    await setupNotesPage(page, { seedNotes: true })
 
     await page.getByRole('button', { name: /organize.*ai/i }).click()
 
@@ -268,8 +275,7 @@ test.describe('AC3: Apply selected changes', () => {
 
 test.describe('AC4: Related Concepts panel', () => {
   test('expanding a note shows related notes with shared tags', async ({ page }) => {
-    await seedTestNotes(page)
-    await setupNotesPage(page)
+    await setupNotesPage(page, { seedNotes: true })
 
     // Wait for notes to load
     await expect(page.getByText(mockNote1.content.slice(0, 30))).toBeVisible({ timeout: 5000 })
@@ -294,8 +300,7 @@ test.describe('AC4: Related Concepts panel', () => {
   test('related panel shows cross-course notes with shared terms', async ({ page }) => {
     // note-1 (course-1, react hooks) and note-3 (course-2, vue composables)
     // share terms about state management
-    await seedTestNotes(page)
-    await setupNotesPage(page)
+    await setupNotesPage(page, { seedNotes: true })
 
     await expect(page.getByText(mockNote1.content.slice(0, 30))).toBeVisible({ timeout: 5000 })
 
@@ -313,8 +318,7 @@ test.describe('AC4: Related Concepts panel', () => {
 
 test.describe('AC5: Navigation from related note', () => {
   test('clicking a related note navigates to its detail view', async ({ page }) => {
-    await seedTestNotes(page)
-    await setupNotesPage(page)
+    await setupNotesPage(page, { seedNotes: true })
 
     await expect(page.getByText(mockNote1.content.slice(0, 30))).toBeVisible({ timeout: 5000 })
 
@@ -346,9 +350,10 @@ test.describe('AC5: Navigation from related note', () => {
 
 test.describe('AC6: AI unavailable fallback', () => {
   test('shows "AI unavailable" message when provider not configured', async ({ page }) => {
-    await seedTestNotes(page)
     // Do NOT seed AI configuration — AI is unavailable
+    await page.goto('/')
     await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+    await seedTestNotes(page)
     await page.goto('/notes')
     await page.waitForLoadState('networkidle')
 
@@ -362,8 +367,9 @@ test.describe('AC6: AI unavailable fallback', () => {
   test('Related Concepts panel falls back to tag-based matching when AI unavailable', async ({
     page,
   }) => {
-    await seedTestNotes(page)
+    await page.goto('/')
     await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+    await seedTestNotes(page)
     await page.goto('/notes')
     await page.waitForLoadState('networkidle')
 
@@ -382,8 +388,9 @@ test.describe('AC6: AI unavailable fallback', () => {
   })
 
   test('fallback activates within 2 seconds', async ({ page }) => {
-    await seedTestNotes(page)
+    await page.goto('/')
     await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+    await seedTestNotes(page)
     await page.goto('/notes')
     await page.waitForLoadState('networkidle')
 
@@ -402,10 +409,12 @@ test.describe('AC6: AI unavailable fallback', () => {
 
 test.describe('AC7: Privacy - no metadata in API payload', () => {
   test('API request contains only note content, tags, and course context', async ({ page }) => {
+    // Navigate first to make IndexedDB available
+    await page.goto('/')
+    await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
     await seedTestNotes(page)
     await seedAIWithOrganizationConsent(page)
     // Do NOT inject mock — let request go through so we can intercept it
-    await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
 
     // Intercept the API call to inspect payload
     let capturedPayload: Record<string, unknown> | null = null
