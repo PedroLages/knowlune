@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { db } from '@/db'
-import type { ImportedCourse, LearningPathCourse } from '@/data/types'
+import type { LearningPathCourse } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 
 interface LearningPathState {
