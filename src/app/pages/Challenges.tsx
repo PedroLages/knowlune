@@ -61,7 +61,7 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
     <Card
       className={cn(
         isExpired && !isCompleted && 'opacity-60',
-        isCompleted && 'border-amber-400 bg-amber-50/30 dark:border-amber-600 dark:bg-amber-900/10'
+        isCompleted && 'border-warning/60 bg-warning/5'
       )}
     >
       <CardContent className="flex flex-col gap-3 p-5">
@@ -70,7 +70,7 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
             <div
               className={cn(
                 'flex size-10 items-center justify-center rounded-lg',
-                isCompleted ? 'bg-amber-600/10 text-amber-600' : 'bg-blue-600/10 text-blue-600'
+                isCompleted ? 'bg-warning/10 text-warning' : 'bg-brand/10 text-brand'
               )}
             >
               {isCompleted ? <Check className="size-4.5" /> : <Icon className="size-4.5" />}
@@ -84,7 +84,7 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
           </div>
           <Badge
             variant={isCompleted ? 'default' : isExpired ? 'secondary' : 'outline'}
-            className={cn('shrink-0 text-xs', isCompleted && 'bg-amber-600 hover:bg-amber-700')}
+            className={cn('shrink-0 text-xs', isCompleted && 'bg-warning hover:bg-warning/90')}
           >
             {isCompleted ? 'Completed' : config.label}
           </Badge>
@@ -170,7 +170,7 @@ export function Challenges() {
 
   const sectionTriggerClass = cn(
     'flex w-full items-center gap-2 rounded-sm py-3 text-sm font-medium text-muted-foreground',
-    'transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2'
+    'transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
   )
 
   return (
