@@ -20,6 +20,7 @@ const ImportedLessonPlayer = React.lazy(() =>
 )
 const Library = React.lazy(() => import('./pages/Library').then(m => ({ default: m.Library })))
 const Notes = React.lazy(() => import('./pages/Notes').then(m => ({ default: m.Notes })))
+const ChatQA = React.lazy(() => import('./pages/ChatQA').then(m => ({ default: m.ChatQA })))
 const Instructors = React.lazy(() =>
   import('./pages/Instructors').then(m => ({ default: m.Instructors }))
 )
@@ -128,6 +129,14 @@ export const router = createBrowserRouter([
         element: (
           <SuspensePage>
             <Notes />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'notes/chat',
+        element: (
+          <SuspensePage>
+            <ChatQA />
           </SuspensePage>
         ),
       },

@@ -27,6 +27,7 @@ import { searchNotesWithContext } from '@/lib/noteSearch'
 import { getAllNoteTags } from '@/lib/progress'
 import { highlightMatches, buildHighlightPatterns } from '@/lib/searchUtils'
 import { exportNoteAsMarkdown } from '@/lib/noteExport'
+import { QAChatPanel } from '@/app/components/figma/QAChatPanel'
 import { toast } from 'sonner'
 import { allCourses } from '@/data/courses'
 import { formatTimestamp } from '@/lib/format'
@@ -422,6 +423,7 @@ export function Notes() {
             My Notes <span className="text-muted-foreground font-normal">({notes.length})</span>
           </h1>
           <div className="flex items-center gap-3">
+            <QAChatPanel />
             <Select value={sortOption} onValueChange={v => setSortOption(v as SortOption)}>
               <SelectTrigger className="w-[160px]">
                 <ArrowUpDown className="size-3.5 mr-1.5" />

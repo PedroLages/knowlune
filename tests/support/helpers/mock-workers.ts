@@ -32,7 +32,7 @@ export async function mockEmbeddingWorker(page: Page): Promise<void> {
             responseData = {
               requestId: req.requestId,
               type: 'success',
-              result: { embeddings: payload.texts.map(() => new Float32Array(384)) },
+              result: { embeddings: payload.texts.map(() => new Float32Array(384).fill(0.1)) },
             }
           } else if (req.type === 'load-index') {
             responseData = { requestId: req.requestId, type: 'success', result: undefined }

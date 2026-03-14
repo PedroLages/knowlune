@@ -171,21 +171,12 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-9b: in-progress
   9b-1-ai-video-summary: done
-  9b-2-chat-style-qa-from-notes-rag: done
-  9b-2-qa-from-notes-with-vercel-ai-sdk: in-progress
+  9b-2-qa-from-notes-with-vercel-ai-sdk: done
   9b-3-ai-learning-path-generation: backlog
   9b-4-knowledge-gap-detection: backlog
   9b-5-ai-note-organization-and-cross-course-links: backlog
   9b-6-ai-feature-analytics-and-auto-analysis: backlog
   epic-9b-retrospective: optional
-
-  # ──────────────────────────────────────────────────
-  # Epic 10: Onboarding & First-Use Experience
-  # ──────────────────────────────────────────────────
-  epic-10: backlog
-  10-1-first-use-onboarding-flow: backlog
-  10-2-empty-state-guidance: backlog
-  epic-10-retrospective: optional
 
   # ──────────────────────────────────────────────────
   # Epic 11: Knowledge Retention, Export & Advanced Features (Post-MVP)
@@ -279,3 +270,11 @@ development_status:
   18-7-surface-quiz-analytics-in-reports-section: backlog
   18-8-display-quiz-availability-badges-on-courses-page: backlog
   epic-18-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 10: Onboarding & First-Use Experience
+  # ──────────────────────────────────────────────────
+  epic-10: backlog
+  10-1-first-use-onboarding-flow: backlog
+  10-2-empty-state-guidance: backlog
+  epic-10-retrospective: optional

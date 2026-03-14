@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { FIXED_DATE } from '../utils/test-time'
 
 /**
  * NFR24: Toast-based undo for destructive actions
@@ -24,8 +25,8 @@ test.describe('NFR24: Note soft delete and restore', () => {
             courseId: 'test-course',
             videoId: 'test-video',
             content: '<p>Test note for NFR24</p>',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            createdAt: FIXED_DATE,
+            updatedAt: FIXED_DATE,
             tags: ['test'],
           }
 
