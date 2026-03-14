@@ -104,6 +104,12 @@ export default defineConfig({
     }
   },
   server: {
+    proxy: {
+      '/api/ai': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
     headers: {
       // XSS Protection
       'X-Content-Type-Options': 'nosniff',

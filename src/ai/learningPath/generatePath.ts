@@ -10,8 +10,8 @@ interface GeneratePathOptions {
 /**
  * Generate an AI-powered learning path from imported courses.
  *
- * Uses OpenAI to analyze course metadata (titles, tags, status) and infer
- * prerequisite relationships to suggest an optimal learning sequence.
+ * Uses the configured AI provider to analyze course metadata (titles, tags, status)
+ * and infer prerequisite relationships to suggest an optimal learning sequence.
  *
  * @param courses - Array of imported courses to sequence
  * @param onUpdate - Callback invoked as courses are streamed (for progressive UI updates)
@@ -97,18 +97,18 @@ IMPORTANT: Return ONLY the JSON object, no markdown code blocks, no extra text.`
     timeoutId = setTimeout(() => reject(new Error('AI request timed out')), timeout)
   })
 
-  // Create fetch promise
-  const fetchPromise = fetch('https://api.openai.com/v1/chat/completions', {
+  // Create fetch promise — uses local proxy to support all AI providers
+  const fetchPromise = fetch('/api/ai/generate', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'gpt-4-turbo',
+      provider: config.provider,
+      apiKey,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3, // Lower temperature for more consistent ordering
-      max_tokens: 2000,
+      maxTokens: 2000,
     }),
     signal,
   })
@@ -130,7 +130,7 @@ IMPORTANT: Return ONLY the JSON object, no markdown code blocks, no extra text.`
     }
 
     const data = await response.json()
-    const content = data.choices?.[0]?.message?.content
+    const content = data.text
 
     if (!content) {
       throw new Error('AI response is empty')

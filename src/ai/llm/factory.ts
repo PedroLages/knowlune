@@ -7,8 +7,7 @@
 import type { AIProviderId } from '@/lib/aiConfiguration'
 import { getAIConfiguration, getDecryptedApiKey } from '@/lib/aiConfiguration'
 import type { LLMClient } from './client'
-import { OpenAIClient } from './openai'
-import { AnthropicClient } from './anthropic'
+import { ProxyLLMClient } from './proxy-client'
 import { LLMError } from './types'
 
 /**
@@ -59,12 +58,9 @@ export async function getLLMClient(): Promise<LLMClient> {
  * const client = getLLMClientForProvider('openai', 'sk-...')
  */
 export function getLLMClientForProvider(providerId: AIProviderId, apiKey: string): LLMClient {
-  switch (providerId) {
-    case 'openai':
-      return new OpenAIClient(apiKey)
-    case 'anthropic':
-      return new AnthropicClient(apiKey)
-    default:
-      throw new LLMError(`Unsupported AI provider: ${providerId}`, 'UNKNOWN', providerId)
+  const supported: AIProviderId[] = ['openai', 'anthropic', 'groq', 'gemini']
+  if (!supported.includes(providerId)) {
+    throw new LLMError(`Unsupported AI provider: ${providerId}`, 'UNKNOWN', providerId)
   }
+  return new ProxyLLMClient(providerId, apiKey)
 }
