@@ -297,30 +297,15 @@ test('AC5 — accepting note link suggestion creates bidirectional link visible 
   ).toBeVisible({ timeout: 5000 })
 
   // Verify bidirectional link in IDB: both notes have linkedNoteIds
-  const linkCheck = await page.evaluate(() => {
-    return new Promise<{ sourceLinked: boolean; targetLinked: boolean }>(resolve => {
-      const req = indexedDB.open('ElearningDB')
-      req.onsuccess = () => {
-        const idb = req.result
-        const tx = idb.transaction('notes', 'readonly')
-        const store = tx.objectStore('notes')
-        const getAll = store.getAll()
-        getAll.onsuccess = () => {
-          const allNotes = getAll.result as Array<{
-            id: string
-            courseId: string
-            videoId: string
-            linkedNoteIds?: string[]
-          }>
-          const source = allNotes.find(n => n.courseId === 'course-1' && n.videoId === 'video-1')
-          const target = allNotes.find(n => n.id === 'note-existing')
-          resolve({
-            sourceLinked: source?.linkedNoteIds?.includes('note-existing') ?? false,
-            targetLinked: target?.linkedNoteIds?.includes(source?.id ?? '') ?? false,
-          })
-        }
-      }
-    })
+  const linkCheck = await page.evaluate(async () => {
+    const { db } = await import('/src/db/index.ts')
+    const allNotes = await db.notes.toArray()
+    const source = allNotes.find(n => n.courseId === 'course-1' && n.videoId === 'video-1')
+    const target = allNotes.find(n => n.id === 'note-existing')
+    return {
+      sourceLinked: source?.linkedNoteIds?.includes('note-existing') ?? false,
+      targetLinked: target?.linkedNoteIds?.includes(source?.id ?? '') ?? false,
+    }
   })
 
   expect(linkCheck.sourceLinked).toBe(true)
@@ -340,12 +325,10 @@ test('AC6 — dismissing note link suggestion prevents it from reappearing for t
   // First save: create note → expect toast
   await page.evaluate(async () => {
     const { saveNote } = await import('/src/lib/progress.ts')
-    await saveNote(
-      'course-1',
-      'video-1',
-      'JavaScript async patterns — dismissed pair test.',
-      ['javascript', 'async']
-    )
+    await saveNote('course-1', 'video-1', 'JavaScript async patterns — dismissed pair test.', [
+      'javascript',
+      'async',
+    ])
   })
 
   const toastEl = page.locator('[data-sonner-toast]').filter({ hasText: 'Note connection found' })

@@ -6,9 +6,7 @@ import { persistWithRetry } from '@/lib/persistWithRetry'
 import { addToIndex, updateInIndex, removeFromIndex } from '@/lib/noteSearch'
 import { embeddingPipeline } from '@/ai/embeddingPipeline'
 import { supportsWorkers } from '@/ai/lib/workerCapabilities'
-import {
-  triggerNoteLinkSuggestions,
-} from '@/ai/knowledgeGaps/noteLinkSuggestions'
+import { triggerNoteLinkSuggestions } from '@/ai/knowledgeGaps/noteLinkSuggestions'
 
 interface NoteState {
   notes: Note[]
@@ -192,4 +190,3 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     return notes.find(n => n.courseId === courseId && n.videoId === videoId)
   },
 }))
-
