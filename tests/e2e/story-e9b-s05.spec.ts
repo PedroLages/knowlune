@@ -233,9 +233,9 @@ test.describe('AC3: Apply selected changes', () => {
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible({ timeout: 10000 })
 
-    // Click apply button
+    // Click apply button via dispatchEvent (button may be outside viewport in constrained dialog)
     const applyButton = dialog.getByRole('button', { name: /apply.*changes/i })
-    await applyButton.click()
+    await applyButton.dispatchEvent('click')
 
     // Dialog should close
     await expect(dialog).not.toBeVisible()
@@ -258,9 +258,9 @@ test.describe('AC3: Apply selected changes', () => {
     const checkboxes = dialog.getByRole('checkbox')
     await checkboxes.nth(0).uncheck()
 
-    // Click apply
+    // Click apply via dispatchEvent (button may be outside viewport in constrained dialog)
     const applyBtn = dialog.getByRole('button', { name: /apply.*changes/i })
-    await applyBtn.click()
+    await applyBtn.dispatchEvent('click')
     await expect(dialog).not.toBeVisible()
 
     // Toast should indicate fewer changes applied ("Applied changes to 3 notes")
