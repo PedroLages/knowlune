@@ -166,10 +166,8 @@ test.describe('AC1: Organize Notes with AI', () => {
 
     // Should show proposals for our test notes (state-management appears on multiple proposals)
     await expect(dialog.getByText(/state-management/i).first()).toBeVisible()
-    // Rationale text should be present
-    await expect(
-      dialog.getByText(/state management via hooks/i).or(dialog.getByText(/lifecycle concepts/i))
-    ).toBeVisible()
+    // Rationale text should be present (first proposal's rationale)
+    await expect(dialog.getByText(/state management via hooks/i)).toBeVisible()
   })
 
   test('organize button is disabled when no notes exist', async ({ page }) => {
@@ -235,8 +233,9 @@ test.describe('AC3: Apply selected changes', () => {
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible({ timeout: 10000 })
 
-    // Click apply
+    // Scroll to and click apply button (dialog may be tall with 4 proposals)
     const applyButton = dialog.getByRole('button', { name: /apply.*changes/i })
+    await applyButton.scrollIntoViewIfNeeded()
     await applyButton.click()
 
     // Dialog should close
@@ -260,8 +259,10 @@ test.describe('AC3: Apply selected changes', () => {
     const checkboxes = dialog.getByRole('checkbox')
     await checkboxes.nth(0).uncheck()
 
-    // Apply remaining
-    await dialog.getByRole('button', { name: /apply.*changes/i }).click()
+    // Scroll to and click apply (dialog may be tall)
+    const applyBtn = dialog.getByRole('button', { name: /apply.*changes/i })
+    await applyBtn.scrollIntoViewIfNeeded()
+    await applyBtn.click()
     await expect(dialog).not.toBeVisible()
 
     // Toast should indicate fewer changes applied ("Applied changes to 3 notes")
