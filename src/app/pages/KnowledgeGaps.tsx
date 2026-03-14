@@ -64,9 +64,10 @@ function GapCard({ gap }: { gap: GapItem }) {
 
       {gap.gapType === 'under-noted' && (
         <p className="text-sm text-muted-foreground">
-          {gap.noteCount === 0 ? 'No notes yet' : `${gap.noteCount} note${gap.noteCount === 1 ? '' : 's'}`}
-          {' '}for this video
-          {' '}(course has {gap.videoCount} video{gap.videoCount === 1 ? '' : 's'})
+          {gap.noteCount === 0
+            ? 'No notes yet'
+            : `${gap.noteCount} note${gap.noteCount === 1 ? '' : 's'}`}{' '}
+          for this video (course has {gap.videoCount} video{gap.videoCount === 1 ? '' : 's'})
         </p>
       )}
 
@@ -80,10 +81,7 @@ function GapCard({ gap }: { gap: GapItem }) {
       )}
 
       {gap.aiDescription && (
-        <p
-          className="text-sm mt-2 italic text-foreground/70"
-          data-testid="ai-gap-description"
-        >
+        <p className="text-sm mt-2 italic text-foreground/70" data-testid="ai-gap-description">
           {gap.aiDescription}
         </p>
       )}
@@ -167,7 +165,8 @@ export function KnowledgeGaps() {
       {/* Screen reader live region for analysis status */}
       <div aria-live="polite" aria-atomic="true" className="sr-only">
         {pageState === 'analyzing' && 'Analyzing your study patterns for knowledge gaps…'}
-        {pageState === 'completed' && `Analysis complete. ${totalGaps} gap${totalGaps === 1 ? '' : 's'} found.`}
+        {pageState === 'completed' &&
+          `Analysis complete. ${totalGaps} gap${totalGaps === 1 ? '' : 's'} found.`}
       </div>
 
       {/* Page Header */}
@@ -177,7 +176,8 @@ export function KnowledgeGaps() {
         </div>
         <h1 className="font-display text-4xl text-foreground mb-4">Knowledge Gaps</h1>
         <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-          Identify topics you&apos;ve under-annotated or videos you rushed through — and get back on track.
+          Identify topics you&apos;ve under-annotated or videos you rushed through — and get back on
+          track.
         </p>
       </header>
 

@@ -36,10 +36,12 @@ function skippedSeverity(watchPercentage: number): GapSeverity {
  * @param options.timeout - Milliseconds before AI enrichment is abandoned (default 2000)
  * @param options.signal - AbortSignal to cancel the entire operation
  */
-export async function detectGaps(options: {
-  timeout?: number
-  signal?: AbortSignal
-} = {}): Promise<GapDetectionResult> {
+export async function detectGaps(
+  options: {
+    timeout?: number
+    signal?: AbortSignal
+  } = {}
+): Promise<GapDetectionResult> {
   const { timeout = 2000, signal } = options
 
   // ── Check for E2E test mock ────────────────────────────────────────────────
@@ -192,7 +194,8 @@ IMPORTANT: Return ONLY the JSON, no markdown, no extra text.`
     const data = await response.json()
     const content: string = data.text ?? ''
 
-    const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) ?? content.match(/```\s*([\s\S]*?)\s*```/)
+    const jsonMatch =
+      content.match(/```json\s*([\s\S]*?)\s*```/) ?? content.match(/```\s*([\s\S]*?)\s*```/)
     const jsonStr = jsonMatch ? jsonMatch[1] : content
     const parsed = JSON.parse(jsonStr.trim()) as { descriptions: string[] }
 

@@ -192,7 +192,9 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
       const courses = await db.importedCourses.toArray()
       set({ importedCourses: courses, importError: null })
       // Load thumbnail object URLs in parallel (non-blocking)
-      get().loadThumbnailUrls(courses.map(c => c.id)).catch(() => {})
+      get()
+        .loadThumbnailUrls(courses.map(c => c.id))
+        .catch(() => {})
     } catch (error) {
       set({ importError: 'Failed to load courses from database' })
       console.error('[Database] Failed to load courses:', error)

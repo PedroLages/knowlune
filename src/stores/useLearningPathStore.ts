@@ -30,7 +30,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
         set({
           courses: sorted,
           generatedAt: sorted[0]?.generatedAt || null,
-          error: null
+          error: null,
         })
       }
     } catch (error) {
@@ -49,7 +49,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       if (importedCourses.length < 2) {
         set({
           isGenerating: false,
-          error: 'At least 2 courses are needed to generate a learning path'
+          error: 'At least 2 courses are needed to generate a learning path',
         })
         return
       }
@@ -61,14 +61,11 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       const generatedAt = new Date().toISOString()
 
       // Generate path with streaming updates
-      const result = await generateLearningPath(
-        importedCourses,
-        (course: LearningPathCourse) => {
-          // Update UI with streaming results
-          generatedCourses.push(course)
-          set({ courses: [...generatedCourses] })
-        }
-      )
+      const result = await generateLearningPath(importedCourses, (course: LearningPathCourse) => {
+        // Update UI with streaming results
+        generatedCourses.push(course)
+        set({ courses: [...generatedCourses] })
+      })
 
       // Persist to IndexedDB
       await persistWithRetry(async () => {
@@ -77,9 +74,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
           await db.learningPath.clear()
 
           // Add new path with generatedAt timestamp
-          await db.learningPath.bulkAdd(
-            result.map(course => ({ ...course, generatedAt }))
-          )
+          await db.learningPath.bulkAdd(result.map(course => ({ ...course, generatedAt })))
         })
       })
 
@@ -87,13 +82,13 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
         courses: result,
         generatedAt,
         isGenerating: false,
-        error: null
+        error: null,
       })
     } catch (error) {
       console.error('[LearningPathStore] Failed to generate path:', error)
       set({
         isGenerating: false,
-        error: error instanceof Error ? error.message : 'Failed to generate learning path'
+        error: error instanceof Error ? error.message : 'Failed to generate learning path',
       })
     }
   },
@@ -123,7 +118,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
         await db.learningPath.bulkAdd(
           updated.map(course => ({
             ...course,
-            generatedAt: get().generatedAt || new Date().toISOString()
+            generatedAt: get().generatedAt || new Date().toISOString(),
           }))
         )
       })

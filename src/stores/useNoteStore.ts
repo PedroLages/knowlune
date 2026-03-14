@@ -195,25 +195,29 @@ export const useNoteStore = create<NoteState>((set, get) => ({
 function triggerNoteLinkSuggestions(savedNote: Note, allNotes: Note[]): void {
   try {
     // Build courseId → name map from DB (fire-and-forget, non-blocking)
-    db.importedCourses.toArray().then(courses => {
-      const courseMap = new Map(courses.map(c => [c.id, c.name]))
-      const suggestions = findNoteLinkSuggestions(savedNote, allNotes, courseMap)
-      if (suggestions.length === 0) return
+    db.importedCourses
+      .toArray()
+      .then(courses => {
+        const courseMap = new Map(courses.map(c => [c.id, c.name]))
+        const suggestions = findNoteLinkSuggestions(savedNote, allNotes, courseMap)
+        if (suggestions.length === 0) return
 
-      // Show one toast per suggestion (cap at 2 to avoid toast flooding)
-      suggestions.slice(0, 2).forEach(s => {
-        showNoteLinkToast(s)
+        // Show one toast per suggestion (cap at 2 to avoid toast flooding)
+        suggestions.slice(0, 2).forEach(s => {
+          showNoteLinkToast(s)
+        })
       })
-    }).catch(err => console.error('[NoteStore] Note link suggestion failed:', err))
+      .catch(err => console.error('[NoteStore] Note link suggestion failed:', err))
   } catch (err) {
     console.error('[NoteStore] Note link suggestion failed:', err)
   }
 }
 
 function showNoteLinkToast(suggestion: NoteLinkSuggestion): void {
-  const preview = suggestion.previewContent.length > 60
-    ? suggestion.previewContent.slice(0, 60) + '…'
-    : suggestion.previewContent
+  const preview =
+    suggestion.previewContent.length > 60
+      ? suggestion.previewContent.slice(0, 60) + '…'
+      : suggestion.previewContent
 
   toast('Note connection found', {
     description: `"${preview}" — ${suggestion.targetCourseTitle}`,
@@ -257,10 +261,7 @@ async function acceptNoteLinkSuggestion(suggestion: NoteLinkSuggestion): Promise
       updatedAt: new Date().toISOString(),
     }
 
-    await Promise.all([
-      db.notes.put(updatedSource),
-      db.notes.put(updatedTarget),
-    ])
+    await Promise.all([db.notes.put(updatedSource), db.notes.put(updatedTarget)])
 
     // Update Zustand store to reflect linked notes
     useNoteStore.setState(state => ({

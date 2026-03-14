@@ -191,10 +191,7 @@ test('AC2 — detects skipped videos (marked complete but < 50% watched)', async
   await page.getByTestId('analyze-gaps-button').click()
   await expect(page.getByTestId('knowledge-gaps-list')).toBeVisible({ timeout: 10000 })
 
-  const skippedGap = page
-    .getByTestId('gap-item')
-    .filter({ hasText: 'Intro to React' })
-    .first()
+  const skippedGap = page.getByTestId('gap-item').filter({ hasText: 'Intro to React' }).first()
   await expect(skippedGap.getByTestId('gap-type')).toHaveText(/skipped/i)
   await expect(skippedGap.getByTestId('gap-watch-percentage')).toHaveText(/30%/)
 })
@@ -229,7 +226,10 @@ test('AC3 — gaps sorted by severity with direct video links', async ({ page })
 
   // Critical gap should appear before medium gap
   const gapItems = page.getByTestId('gap-item')
-  const firstSeverity = await gapItems.nth(0).getByTestId('gap-severity').getAttribute('data-severity')
+  const firstSeverity = await gapItems
+    .nth(0)
+    .getByTestId('gap-severity')
+    .getAttribute('data-severity')
   expect(firstSeverity).toBe('critical')
 
   // Each gap has a direct link to the video
@@ -299,7 +299,10 @@ test('AC5 — accepting note link suggestion creates bidirectional link visible 
 
   // Verify bidirectional link: the new note's metadata shows the existing note as linked
   await page.goto('/notes')
-  const newNoteCard = page.getByTestId('note-card').filter({ hasText: 'JavaScript async patterns in React' }).first()
+  const newNoteCard = page
+    .getByTestId('note-card')
+    .filter({ hasText: 'JavaScript async patterns in React' })
+    .first()
   await expect(newNoteCard.getByTestId('linked-notes-count')).toBeVisible()
 
   // The existing note (note-existing) should also show the new note as linked
