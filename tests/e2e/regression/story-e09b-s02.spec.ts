@@ -319,7 +319,7 @@ test.describe('Chat Q&A Interface', () => {
 
   test('Error handling - No relevant notes', async ({ page }) => {
     await mockAIConfigured(page)
-    await mockEmbeddingWorker(page)
+    await mockEmbeddingWorker(page, { emptyResults: true })
     await mockLLMClient(page)
 
     await page.goto('/')
@@ -381,21 +381,22 @@ test.describe('Chat Q&A Interface', () => {
 
   test('AC7: Privacy - no metadata in API payload', async ({ page }) => {
     await mockAIConfigured(page)
+    await mockEmbeddingWorker(page) // Need this for RAG to work
     await page.goto('/')
     await seedTestData(page)
     await page.goto('/notes/chat')
 
-    // Intercept API requests and capture payload
+    // Intercept OpenAI API requests and capture payload
     let capturedPayload: any = null
-    await page.route('**/v1/messages', async route => {
+    await page.route('**/v1/chat/completions', async route => {
       const request = route.request()
       capturedPayload = request.postDataJSON()
 
-      // Fulfill with mock response
+      // Fulfill with mock OpenAI streaming response
       await route.fulfill({
         status: 200,
         contentType: 'text/event-stream',
-        body: 'data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"React hooks"}}\n\ndata: {"type":"message_delta","delta":{"stop_reason":"end_turn"}}\n\n',
+        body: 'data: {"choices":[{"delta":{"content":"React hooks"}}]}\n\ndata: [DONE]\n\n',
       })
     })
 

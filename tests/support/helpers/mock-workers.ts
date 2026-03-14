@@ -12,8 +12,16 @@
 
 import type { Page } from '@playwright/test'
 
-export async function mockEmbeddingWorker(page: Page): Promise<void> {
-  await page.addInitScript(() => {
+export interface MockEmbeddingWorkerOptions {
+  /** Whether to return empty search results (for testing "no notes found" scenario) */
+  emptyResults?: boolean
+}
+
+export async function mockEmbeddingWorker(
+  page: Page,
+  options: MockEmbeddingWorkerOptions = {}
+): Promise<void> {
+  await page.addInitScript((opts: MockEmbeddingWorkerOptions) => {
     class MockWorker extends EventTarget {
       constructor(
         public url: string | URL,
@@ -42,10 +50,12 @@ export async function mockEmbeddingWorker(page: Page): Promise<void> {
               requestId: req.requestId,
               type: 'success',
               result: {
-                results: Array.from({ length: payload.topK ?? 5 }, (_, i) => ({
-                  noteId: `note-${i + 1}`,
-                  score: 0.95 - i * 0.05,
-                })),
+                results: opts.emptyResults
+                  ? []
+                  : Array.from({ length: payload.topK ?? 5 }, (_, i) => ({
+                      noteId: `note-${i + 1}`,
+                      score: 0.95 - i * 0.05,
+                    })),
               },
             }
           } else {
@@ -66,5 +76,5 @@ export async function mockEmbeddingWorker(page: Page): Promise<void> {
     }
 
     ;(window as unknown as Record<string, unknown>)['Worker'] = MockWorker
-  })
+  }, options)
 }

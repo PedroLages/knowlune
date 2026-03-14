@@ -102,7 +102,11 @@ export function NoteCard({ note, courseId, courseName, lessonTitle, onDelete }: 
   }
 
   return (
-    <div className="relative bg-card rounded-[24px] border p-4 transition-shadow hover:shadow-sm">
+    <div
+      id={`note-${note.id}`}
+      data-note-id={note.id}
+      className="relative bg-card rounded-[24px] border p-4 transition-shadow hover:shadow-sm"
+    >
       {/* Card header */}
       <div className="relative flex items-start justify-between gap-3">
         {/* Overlay button for click-to-expand — sits behind interactive children */}
