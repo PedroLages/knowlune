@@ -769,7 +769,7 @@ So that I can concentrate on learning without UI clutter.
 
 **Given** the user opens a course and starts a study session
 **When** the lesson player view loads
-**Then** the interface shows only: the video/PDF player, the note panel (placeholder until Epic 3), and the course navigation panel
+**Then** the interface shows only: the video/PDF player, a note panel (minimal text area for quick notes; full Markdown editor added in Epic 3), and the course navigation panel
 **And** the main app sidebar is hidden
 **And** no dashboard widgets, unrelated navigation, or promotional elements are visible
 
@@ -2684,90 +2684,90 @@ This is a brownfield integration extending the existing LevelUp learning platfor
 
 ### Functional Requirements
 
-**Quiz Taking & Navigation (FR1-FR8)**
+**Quiz Taking & Navigation (QFR1-QFR8)**
 
-- FR1: Learners can start a quiz from a course lesson
-- FR2: Learners can navigate between questions in any order during quiz
-- FR3: Learners can mark questions for review before submitting
-- FR4: Learners can pause a quiz and resume later without losing progress
-- FR5: Learners can submit completed quiz for scoring
-- FR6: Learners can retake any quiz unlimited times with no cooldown period
-- FR7: Learners can review all questions and answers after quiz completion
-- FR8: Learners can exit quiz without submitting (progress auto-saved)
+- QFR1: Learners can start a quiz from a course lesson
+- QFR2: Learners can navigate between questions in any order during quiz
+- QFR3: Learners can mark questions for review before submitting
+- QFR4: Learners can pause a quiz and resume later without losing progress
+- QFR5: Learners can submit completed quiz for scoring
+- QFR6: Learners can retake any quiz unlimited times with no cooldown period
+- QFR7: Learners can review all questions and answers after quiz completion
+- QFR8: Learners can exit quiz without submitting (progress auto-saved)
 
-**Question Management & Presentation (FR9-FR15)**
+**Question Management & Presentation (QFR9-QFR15)**
 
-- FR9: System can present Multiple Choice questions with 2-6 answer options
-- FR10: System can present True/False questions
-- FR11: System can present Multiple Select questions (select all that apply)
-- FR12: System can present Fill-in-Blank questions with text input
-- FR13: System can randomize question order for each quiz attempt
-- FR14: System can display question progress indicator (e.g., "Question 5 of 12")
-- FR15: System can display question text with rich formatting (code blocks, lists, emphasis)
+- QFR9: System can present Multiple Choice questions with 2-6 answer options
+- QFR10: System can present True/False questions
+- QFR11: System can present Multiple Select questions (select all that apply)
+- QFR12: System can present Fill-in-Blank questions with text input
+- QFR13: System can randomize question order for each quiz attempt
+- QFR14: System can display question progress indicator (e.g., "Question 5 of 12")
+- QFR15: System can display question text with rich formatting (code blocks, lists, emphasis)
 
-**Scoring & Feedback (FR16-FR23)**
+**Scoring & Feedback (QFR16-QFR23)**
 
-- FR16: System can calculate partial credit for each question (0-100% granular scoring)
-- FR17: System can calculate total quiz score as percentage of possible points
-- FR18: System can provide immediate explanatory feedback per question upon answer selection
-- FR19: System can display correct answer explanation for incorrect responses
-- FR20: System can provide performance summary after quiz completion
-- FR21: System can highlight learner's strongest topic areas in performance summary
-- FR22: System can identify growth opportunity topics in performance summary
-- FR23: System can display encouraging, non-judgmental messaging regardless of score
+- QFR16: System can calculate partial credit for each question (0-100% granular scoring)
+- QFR17: System can calculate total quiz score as percentage of possible points
+- QFR18: System can provide immediate explanatory feedback per question upon answer selection
+- QFR19: System can display correct answer explanation for incorrect responses
+- QFR20: System can provide performance summary after quiz completion
+- QFR21: System can highlight learner's strongest topic areas in performance summary
+- QFR22: System can identify growth opportunity topics in performance summary
+- QFR23: System can display encouraging, non-judgmental messaging regardless of score
 
-**Timer & Pacing (FR24-FR30)**
+**Timer & Pacing (QFR24-QFR30)**
 
-- FR24: System can display countdown timer during quiz
-- FR25: Learners can configure timer duration before starting quiz
-- FR26: Learners can enable timer accommodations (150-200% time extensions)
-- FR27: System can provide timer warnings at configurable thresholds (default: 75%, 90%)
-- FR28: System can announce timer warnings for screen reader users
-- FR29: Learners can disable timer for untimed practice mode
-- FR30: System can track time-to-completion for each quiz attempt
+- QFR24: System can display countdown timer during quiz
+- QFR25: Learners can configure timer duration before starting quiz
+- QFR26: Learners can enable timer accommodations (150-200% time extensions)
+- QFR27: System can provide timer warnings at configurable thresholds (default: 75%, 90%)
+- QFR28: System can announce timer warnings for screen reader users
+- QFR29: Learners can disable timer for untimed practice mode
+- QFR30: System can track time-to-completion for each quiz attempt
 
-**Performance Analytics & Tracking (FR31-FR40)**
+**Performance Analytics & Tracking (QFR31-QFR40)**
 
-- FR31: System can store score history for all quiz attempts
-- FR32: System can calculate score improvement between first and most recent attempt
-- FR33: System can display improvement trajectory graph (score vs. attempt number)
-- FR34: System can calculate normalized gain using Hake's formula
-- FR35: System can track quiz completion rate (completed / started)
-- FR36: System can track average retake frequency per quiz
-- FR37: System can display time-on-task metrics per quiz attempt
-- FR38: System can identify learning trajectory patterns (exponential, linear, logarithmic)
-- FR39: System can calculate item difficulty (P-values) for each question
-- FR40: System can calculate discrimination indices (point-biserial correlation) for questions
+- QFR31: System can store score history for all quiz attempts
+- QFR32: System can calculate score improvement between first and most recent attempt
+- QFR33: System can display improvement trajectory graph (score vs. attempt number)
+- QFR34: System can calculate normalized gain using Hake's formula
+- QFR35: System can track quiz completion rate (completed / started)
+- QFR36: System can track average retake frequency per quiz
+- QFR37: System can display time-on-task metrics per quiz attempt
+- QFR38: System can identify learning trajectory patterns (exponential, linear, logarithmic)
+- QFR39: System can calculate item difficulty (P-values) for each question
+- QFR40: System can calculate discrimination indices (point-biserial correlation) for questions
 
-**Accessibility & Accommodations (FR41-FR48)**
+**Accessibility & Accommodations (QFR41-QFR48)**
 
-- FR41: Learners can navigate entire quiz interface using keyboard only (Tab, Enter, Space, Arrow keys)
-- FR42: System can announce dynamic content updates via ARIA live regions for screen readers
-- FR43: Learners can configure accessibility settings before quiz starts
-- FR44: System can provide focus indicators with 4.5:1 contrast ratio on all interactive elements
-- FR45: System can maintain semantic HTML structure for assistive technology compatibility
-- FR46: System can support screen readers (NVDA, JAWS, VoiceOver)
-- FR47: Learners can export quiz results for external review
-- FR48: System can ensure 4.5:1 minimum contrast ratio for text, 3:1 for UI components
+- QFR41: Learners can navigate entire quiz interface using keyboard only (Tab, Enter, Space, Arrow keys)
+- QFR42: System can announce dynamic content updates via ARIA live regions for screen readers
+- QFR43: Learners can configure accessibility settings before quiz starts
+- QFR44: System can provide focus indicators with 4.5:1 contrast ratio on all interactive elements
+- QFR45: System can maintain semantic HTML structure for assistive technology compatibility
+- QFR46: System can support screen readers (NVDA, JAWS, VoiceOver)
+- QFR47: Learners can export quiz results for external review
+- QFR48: System can ensure 4.5:1 minimum contrast ratio for text, 3:1 for UI components
 
-**Data Persistence & Recovery (FR49-FR54)**
+**Data Persistence & Recovery (QFR49-QFR54)**
 
-- FR49: System can auto-save quiz progress to localStorage every answer selection
-- FR50: System can recover incomplete quiz from localStorage after browser crash
-- FR51: System can store quiz history in IndexedDB for analytics queries
-- FR52: System can persist quiz state across browser sessions
-- FR53: System can handle localStorage quota exceeded errors gracefully
-- FR54: System can prevent data loss during quiz submission
+- QFR49: System can auto-save quiz progress to localStorage every answer selection
+- QFR50: System can recover incomplete quiz from localStorage after browser crash
+- QFR51: System can store quiz history in IndexedDB for analytics queries
+- QFR52: System can persist quiz state across browser sessions
+- QFR53: System can handle localStorage quota exceeded errors gracefully
+- QFR54: System can prevent data loss during quiz submission
 
-**Platform Integration (FR55-FR61)**
+**Platform Integration (QFR55-QFR61)**
 
-- FR55: System can trigger study streak update upon quiz completion
-- FR56: System can display quiz performance data in Overview progress dashboard
-- FR57: System can surface quiz analytics in Reports section
-- FR58: Courses page can display quiz availability badges per lesson
-- FR59: Settings page can provide quiz preference configuration (timer defaults, accessibility options)
-- FR60: System can integrate quiz completion events with existing progress tracking
-- FR61: System can associate quizzes with specific course lessons in navigation
+- QFR55: System can trigger study streak update upon quiz completion
+- QFR56: System can display quiz performance data in Overview progress dashboard
+- QFR57: System can surface quiz analytics in Reports section
+- QFR58: Courses page can display quiz availability badges per lesson
+- QFR59: Settings page can provide quiz preference configuration (timer defaults, accessibility options)
+- QFR60: System can integrate quiz completion events with existing progress tracking
+- QFR61: System can associate quizzes with specific course lessons in navigation
 
 ### NonFunctional Requirements
 
@@ -2933,7 +2933,7 @@ src/
 - Resume-where-left-off pattern (quiz state persists across sessions)
 - Progressive disclosure (show quiz interface, hide other UI during quiz)
 - Immediate feedback on answer selection
-- Encouraging, non-judgmental tone in all UI copy (FR23)
+- Encouraging, non-judgmental tone in all UI copy (QFR23)
 - Clean session closure with performance summary
 
 **Animation Philosophy:**
@@ -2956,97 +2956,97 @@ src/
 
 | FR | Epic | Description |
 |----|------|-------------|
-| FR1 | Epic 12 | Start quiz from lesson |
-| FR2 | Epic 13 | Navigate between questions |
-| FR3 | Epic 13 | Mark questions for review |
-| FR4 | Epic 13 | Pause and resume quiz |
-| FR5 | Epic 12 | Submit quiz for scoring |
-| FR6 | Epic 13 | Unlimited retakes |
-| FR7 | Epic 13 | Review Q&A after completion |
-| FR8 | Epic 13 | Exit without submitting (auto-save) |
-| FR9 | Epic 12 | Multiple Choice questions |
-| FR10 | Epic 14 | True/False questions |
-| FR11 | Epic 14 | Multiple Select questions |
-| FR12 | Epic 14 | Fill-in-Blank questions |
-| FR13 | Epic 13 | Randomize question order |
-| FR14 | Epic 12 | Question progress indicator |
-| FR15 | Epic 14 | Rich text formatting |
-| FR16 | Epic 12 | Partial credit calculation |
-| FR17 | Epic 12 | Total score percentage |
-| FR18 | Epic 15 | Immediate explanatory feedback |
-| FR19 | Epic 15 | Correct answer explanation |
-| FR20 | Epic 15 | Performance summary |
-| FR21 | Epic 15 | Highlight strongest topics |
-| FR22 | Epic 15 | Identify growth opportunities |
-| FR23 | Epic 15 | Encouraging messaging |
-| FR24 | Epic 15 | Countdown timer display |
-| FR25 | Epic 15 | Configure timer duration |
-| FR26 | Epic 15 | Timer accommodations |
-| FR27 | Epic 15 | Timer warnings |
-| FR28 | Epic 15 | Timer announcements (screen reader) |
-| FR29 | Epic 15 | Disable timer (untimed mode) |
-| FR30 | Epic 15 | Time-to-completion tracking |
-| FR31 | Epic 16 | Store score history |
-| FR32 | Epic 16 | Calculate score improvement |
-| FR33 | Epic 16 | Improvement trajectory graph |
-| FR34 | Epic 16 | Normalized gain (Hake's formula) |
-| FR35 | Epic 17 | Quiz completion rate |
-| FR36 | Epic 17 | Average retake frequency |
-| FR37 | Epic 17 | Time-on-task metrics |
-| FR38 | Epic 17 | Learning trajectory patterns |
-| FR39 | Epic 17 | Item difficulty (P-values) |
-| FR40 | Epic 17 | Discrimination indices |
-| FR41 | Epic 18 | Keyboard-only navigation |
-| FR42 | Epic 18 | ARIA live regions |
-| FR43 | Epic 18 | Accessibility settings |
-| FR44 | Epic 18 | Focus indicators (4.5:1 contrast) |
-| FR45 | Epic 18 | Semantic HTML |
-| FR46 | Epic 18 | Screen reader support |
-| FR47 | Epic 18 | Export quiz results |
-| FR48 | Epic 18 | Contrast ratios (4.5:1 text, 3:1 UI) |
-| FR49 | Epic 12 | Auto-save to localStorage |
-| FR50 | Epic 12 | Crash recovery |
-| FR51 | Epic 12 | Store history in IndexedDB |
-| FR52 | Epic 12 | Persist across sessions |
-| FR53 | Epic 13 | Handle quota exceeded |
-| FR54 | Epic 12 | Prevent data loss on submit |
-| FR55 | Epic 18 | Study streak update |
-| FR56 | Epic 18 | Dashboard integration |
-| FR57 | Epic 18 | Reports section integration |
-| FR58 | Epic 18 | Courses page badges |
-| FR59 | Epic 18 | Settings preferences |
-| FR60 | Epic 18 | Progress tracking integration |
-| FR61 | Epic 18 | Lesson navigation links |
+| QFR1 | Epic 12 | Start quiz from lesson |
+| QFR2 | Epic 13 | Navigate between questions |
+| QFR3 | Epic 13 | Mark questions for review |
+| QFR4 | Epic 13 | Pause and resume quiz |
+| QFR5 | Epic 12 | Submit quiz for scoring |
+| QFR6 | Epic 13 | Unlimited retakes |
+| QFR7 | Epic 13 | Review Q&A after completion |
+| QFR8 | Epic 13 | Exit without submitting (auto-save) |
+| QFR9 | Epic 12 | Multiple Choice questions |
+| QFR10 | Epic 14 | True/False questions |
+| QFR11 | Epic 14 | Multiple Select questions |
+| QFR12 | Epic 14 | Fill-in-Blank questions |
+| QFR13 | Epic 13 | Randomize question order |
+| QFR14 | Epic 12 | Question progress indicator |
+| QFR15 | Epic 14 | Rich text formatting |
+| QFR16 | Epic 12 | Partial credit calculation |
+| QFR17 | Epic 12 | Total score percentage |
+| QFR18 | Epic 15 | Immediate explanatory feedback |
+| QFR19 | Epic 15 | Correct answer explanation |
+| QFR20 | Epic 15 | Performance summary |
+| QFR21 | Epic 15 | Highlight strongest topics |
+| QFR22 | Epic 15 | Identify growth opportunities |
+| QFR23 | Epic 15 | Encouraging messaging |
+| QFR24 | Epic 15 | Countdown timer display |
+| QFR25 | Epic 15 | Configure timer duration |
+| QFR26 | Epic 15 | Timer accommodations |
+| QFR27 | Epic 15 | Timer warnings |
+| QFR28 | Epic 15 | Timer announcements (screen reader) |
+| QFR29 | Epic 15 | Disable timer (untimed mode) |
+| QFR30 | Epic 15 | Time-to-completion tracking |
+| QFR31 | Epic 16 | Store score history |
+| QFR32 | Epic 16 | Calculate score improvement |
+| QFR33 | Epic 16 | Improvement trajectory graph |
+| QFR34 | Epic 16 | Normalized gain (Hake's formula) |
+| QFR35 | Epic 17 | Quiz completion rate |
+| QFR36 | Epic 17 | Average retake frequency |
+| QFR37 | Epic 17 | Time-on-task metrics |
+| QFR38 | Epic 17 | Learning trajectory patterns |
+| QFR39 | Epic 17 | Item difficulty (P-values) |
+| QFR40 | Epic 17 | Discrimination indices |
+| QFR41 | Epic 18 | Keyboard-only navigation |
+| QFR42 | Epic 18 | ARIA live regions |
+| QFR43 | Epic 18 | Accessibility settings |
+| QFR44 | Epic 18 | Focus indicators (4.5:1 contrast) |
+| QFR45 | Epic 18 | Semantic HTML |
+| QFR46 | Epic 18 | Screen reader support |
+| QFR47 | Epic 18 | Export quiz results |
+| QFR48 | Epic 18 | Contrast ratios (4.5:1 text, 3:1 UI) |
+| QFR49 | Epic 12 | Auto-save to localStorage |
+| QFR50 | Epic 12 | Crash recovery |
+| QFR51 | Epic 12 | Store history in IndexedDB |
+| QFR52 | Epic 12 | Persist across sessions |
+| QFR53 | Epic 13 | Handle quota exceeded |
+| QFR54 | Epic 12 | Prevent data loss on submit |
+| QFR55 | Epic 18 | Study streak update |
+| QFR56 | Epic 18 | Dashboard integration |
+| QFR57 | Epic 18 | Reports section integration |
+| QFR58 | Epic 18 | Courses page badges |
+| QFR59 | Epic 18 | Settings preferences |
+| QFR60 | Epic 18 | Progress tracking integration |
+| QFR61 | Epic 18 | Lesson navigation links |
 
 ## Epic List
 
 ### Epic 12: Take Basic Quizzes
 Learners can start a quiz from a lesson, answer multiple-choice questions, submit for scoring, and see their results.
-**FRs covered:** FR1, FR5, FR9, FR14, FR16, FR17, FR49, FR50, FR51, FR52, FR54
+**FRs covered:** QFR1, QFR5, QFR9, QFR14, QFR16, QFR17, QFR49, QFR50, QFR51, QFR52, QFR54
 
 ### Epic 13: Navigate and Control Quiz Flow
 Learners can navigate between questions in any order, pause and resume quizzes, mark questions for review, and safely exit without losing progress.
-**FRs covered:** FR2, FR3, FR4, FR6, FR7, FR8, FR13, FR53
+**FRs covered:** QFR2, QFR3, QFR4, QFR6, QFR7, QFR8, QFR13, QFR53
 
 ### Epic 14: Practice with Diverse Question Types
 Learners can practice with True/False, Multiple Select, and Fill-in-Blank questions in addition to Multiple Choice.
-**FRs covered:** FR10, FR11, FR12, FR15
+**FRs covered:** QFR10, QFR11, QFR12, QFR15
 
 ### Epic 15: Timed Quizzes with Enhanced Feedback
 Learners can take timed quizzes with countdown timers, configurable accommodations, warnings, and receive immediate explanatory feedback.
-**FRs covered:** FR18, FR19, FR20, FR21, FR22, FR23, FR24, FR25, FR26, FR27, FR28, FR29, FR30
+**FRs covered:** QFR18, QFR19, QFR20, QFR21, QFR22, QFR23, QFR24, QFR25, QFR26, QFR27, QFR28, QFR29, QFR30
 
 ### Epic 16: Review Performance and Track Improvement
 Learners can review quiz results, see detailed performance summaries, track score improvement across attempts, and visualize learning trajectories.
-**FRs covered:** FR31, FR32, FR33, FR34
+**FRs covered:** QFR31, QFR32, QFR33, QFR34
 
 ### Epic 17: Analyze Quiz Data and Patterns
 Learners can see detailed analytics including completion rates, retake frequency, time metrics, learning patterns, item difficulty, and discrimination indices.
-**FRs covered:** FR35, FR36, FR37, FR38, FR39, FR40
+**FRs covered:** QFR35, QFR36, QFR37, QFR38, QFR39, QFR40
 
 ### Epic 18: Accessible and Integrated Quiz Experience
 All learners can access quiz features via keyboard and screen readers (WCAG 2.1 AA+). Quiz data integrates across the LevelUp platform.
-**FRs covered:** FR41, FR42, FR43, FR44, FR45, FR46, FR47, FR48, FR55, FR56, FR57, FR58, FR59, FR60, FR61
+**FRs covered:** QFR41, QFR42, QFR43, QFR44, QFR45, QFR46, QFR47, QFR48, QFR55, QFR56, QFR57, QFR58, QFR59, QFR60, QFR61
 
 ---
 
@@ -6664,7 +6664,7 @@ submitQuiz: async () => {
   try {
     await db.quizAttempts.add(attempt)
     
-    // Trigger study streak update (FR55)
+    // Trigger study streak update (QFR55)
     useStreakStore.getState().recordActivity('quiz', attempt.timeSpent)
     
     // ... rest of submission logic

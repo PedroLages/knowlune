@@ -1144,6 +1144,15 @@ Beyond the existing WCAG 2.1 AA+ target, WCAG 2.2 adds edtech-relevant criteria:
 - FR100: User can configure per-course study reminders with selectable days and times independent of the streak reminder in FR30 *(traces to Journey 5 — per-course scheduling)*
 - FR101: User can view weekly adherence percentage (study days / target days) on the dashboard and in analytics *(closes success criteria gap: "80%+ weekly adherence")*
 
+### Platform & Entitlement *(Open-Core Business Model — Epic 19)*
+
+- FR102: User can create an account with email and password to access premium features, while all core features (import, playback, notes, streaks, analytics) remain fully functional without an account
+- FR103: User can subscribe to the premium tier via Stripe Checkout hosted payment page, with subscription status updated immediately upon payment completion and cached locally with a 7-day TTL for offline access
+- FR104: System validates premium entitlement on app launch (when online) and caches the result in IndexedDB; cached entitlement is honored for up to 7 days offline, after which premium features are temporarily disabled until re-validation
+- FR105: User can view subscription status (plan, billing period, next billing date) in Settings, manage billing via Stripe Customer Portal, and cancel with premium access continuing until end of current billing period
+- FR106: System displays upgrade CTAs in place of premium features for free-tier users, showing feature previews and descriptions; premium components are not bundled or lazy-loaded for free-tier users
+- FR107: Premium code resides in an isolated `src/premium/` directory with separate build configuration; the open-source AGPL build excludes all premium code and passes all tests without premium dependencies
+
 ## Non-Functional Requirements
 
 ### Performance
