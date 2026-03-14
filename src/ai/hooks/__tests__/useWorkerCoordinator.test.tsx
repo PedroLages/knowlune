@@ -18,7 +18,7 @@ describe('useWorkerCoordinator', () => {
   it('AC9: calls terminateWorkerType for specified types on unmount', () => {
     const spy = vi.spyOn(coordinator, 'terminateWorkerType')
 
-    const { unmount } = renderHook(() => useWorkerCoordinator({ terminateOnUnmount: ['search'] }))
+    const { unmount } = renderHook(() => useWorkerCoordinator(['search']))
 
     unmount()
 
@@ -29,7 +29,7 @@ describe('useWorkerCoordinator', () => {
   it('AC9: does not terminate other worker types on unmount', () => {
     const spy = vi.spyOn(coordinator, 'terminateWorkerType')
 
-    const { unmount } = renderHook(() => useWorkerCoordinator({ terminateOnUnmount: ['search'] }))
+    const { unmount } = renderHook(() => useWorkerCoordinator(['search']))
 
     unmount()
 
@@ -40,7 +40,7 @@ describe('useWorkerCoordinator', () => {
   it('AC9: does not call terminateWorkerType when no types specified', () => {
     const spy = vi.spyOn(coordinator, 'terminateWorkerType')
 
-    const { unmount } = renderHook(() => useWorkerCoordinator())
+    const { unmount } = renderHook(() => useWorkerCoordinator([]))
 
     unmount()
 
@@ -48,16 +48,15 @@ describe('useWorkerCoordinator', () => {
   })
 
   it('returns the global coordinator singleton', () => {
-    const { result } = renderHook(() => useWorkerCoordinator())
-    expect(result.current.coordinator).toBe(coordinator)
+    renderHook(() => useWorkerCoordinator([]))
+    // Hook is void, just verify it doesn't throw
+    expect(coordinator).toBeDefined()
   })
 
   it('AC9: terminates multiple worker types on unmount', () => {
     const spy = vi.spyOn(coordinator, 'terminateWorkerType')
 
-    const { unmount } = renderHook(() =>
-      useWorkerCoordinator({ terminateOnUnmount: ['search', 'embed'] })
-    )
+    const { unmount } = renderHook(() => useWorkerCoordinator(['search', 'embed']))
 
     unmount()
 

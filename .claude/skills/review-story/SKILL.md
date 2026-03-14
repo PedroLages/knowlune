@@ -31,6 +31,7 @@ All gates must use these exact names in `review_gates_passed`. No variants (e.g.
 | `design-review` | Design review agent completes | Yes (or `design-review-skipped` if no UI changes) |
 | `code-review` | Code review agent completes | Yes |
 | `code-review-testing` | Test coverage agent completes | Yes |
+| `web-design-guidelines` | Web design guidelines agent completes | Yes (or `web-design-guidelines-skipped` if no UI changes) |
 
 The `-skipped` suffix indicates the gate was intentionally skipped (no lint script, no test files, no UI changes). Both the base name and `-skipped` variant satisfy the requirement.
 
@@ -68,6 +69,7 @@ The orchestrator should NOT:
 [ ] Design review (Agent)
 [ ] Code review — architecture (Agent)
 [ ] Code review — testing (Agent)
+[ ] Web design guidelines review (Agent)
 [ ] Consolidate findings and verdict
 ```
 
@@ -136,6 +138,18 @@ Mark the first todo as `in_progress` and proceed:
    git status --porcelain
    ```
    If there are uncommitted changes, STOP and warn the user: "Uncommitted changes detected. Commit all changes before review — code review runs against the committed snapshot, not the working tree. Run `git add -A && git commit` first." Do NOT proceed until working tree is clean.
+
+   **UI change detection** (after pre-review commit gate, before build):
+
+   Detect if this story involves UI changes to determine which review agents to dispatch:
+   ```bash
+   git diff --name-only main...HEAD | grep -E 'src/app/(pages|components)/.*\.tsx'
+   ```
+
+   Store the result as `HAS_UI_CHANGES` (boolean) for use in Step 7 (review agent swarm).
+
+   - If matches found → `HAS_UI_CHANGES=true` (dispatch design-review + web-design-guidelines)
+   - If no matches → `HAS_UI_CHANGES=false` (skip both agents, add `-skipped` suffix to gates)
 
    Run these sequentially — stop on first failure:
 
@@ -351,6 +365,8 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
      description: "Test coverage review E##-S##"
    })
    ```
+
+   **Note**: The code-review agent has selective WebFetch access for deprecated APIs, security issues, and framework bugs. It will use this sparingly (max 1-2 fetches) for high-severity findings only. This may add 10-30s to code review time but provides authoritative fix guidance.
 
    **As each agent returns**:
    - Mark its todo → `completed`

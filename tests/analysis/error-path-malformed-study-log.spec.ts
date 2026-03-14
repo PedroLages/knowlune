@@ -13,6 +13,7 @@
  */
 import { test, expect } from '../support/fixtures'
 import { closeSidebar } from '../support/fixtures/constants/sidebar-constants'
+import { FIXED_TIMESTAMP, getRelativeTimestamp } from '../utils/test-time'
 
 // Seed sidebar state to prevent fullscreen Sheet overlay at tablet viewports
 async function seedSidebar(page: import('@playwright/test').Page) {
@@ -365,7 +366,7 @@ test.describe('Error Path: Malformed Study Log Data', () => {
         largeLog.push({
           type: 'lesson_complete',
           courseId: `course-${i % 10}`,
-          timestamp: new Date(Date.now() - i * 3600000).toISOString(),
+          timestamp: new Date(getRelativeTimestamp(-(i / 24))).toISOString(),
         })
       }
     }

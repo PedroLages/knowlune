@@ -23,9 +23,9 @@ import type { TranscriptCue } from '@/data/types'
  * Can be overridden for E2E tests via window.__AI_SUMMARY_TIMEOUT__
  */
 const getTimeout = (): number => {
-  // @ts-expect-error - Test-only global variable
+  // @ts-expect-error - Test-only global variable for E2E timeout control
   return typeof window !== 'undefined' && window.__AI_SUMMARY_TIMEOUT__
-    ? // @ts-expect-error
+    ? // @ts-expect-error - Test-only global variable accessed from window object
       window.__AI_SUMMARY_TIMEOUT__
     : 30000
 }
@@ -80,10 +80,7 @@ function parseVTT(text: string): TranscriptCue[] {
  * @returns Full transcript text (space-separated cue text)
  * @throws Error if fetch fails or VTT is malformed
  */
-export async function fetchAndParseTranscript(
-  src: string,
-  signal?: AbortSignal
-): Promise<string> {
+export async function fetchAndParseTranscript(src: string, signal?: AbortSignal): Promise<string> {
   const response = await fetch(src, { signal })
   if (!response.ok) {
     throw new Error(`Failed to fetch transcript: ${response.status} ${response.statusText}`)

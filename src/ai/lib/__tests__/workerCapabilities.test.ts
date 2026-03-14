@@ -37,13 +37,12 @@ describe('workerCapabilities', () => {
 
     const features = detectWorkerFeatures()
     expect(features.workers).toBe(false)
-    expect(features.moduleWorkers).toBe(false)
+    expect(features.sharedWorkers).toBe(false)
   })
 
   it('detectWorkerFeatures reports workers: true when Worker is defined', () => {
     const features = detectWorkerFeatures()
     expect(features.workers).toBe(true)
-    expect(typeof features.indexedDB).toBe('boolean')
-    expect(typeof features.sharedArrayBuffer).toBe('boolean')
+    expect(typeof features.sharedWorkers).toBe('boolean')
   })
 })

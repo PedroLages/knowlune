@@ -4,9 +4,9 @@ story_name: "Q&A from Notes (with Vercel AI SDK Migration)"
 status: in-progress
 started: 2026-03-13
 completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+reviewed: in-progress
+review_started: 2026-03-13
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
 burn_in_validated: false
 ---
 
@@ -229,21 +229,64 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-### Vercel AI SDK Migration
+### E2E Testing Streaming LLM Responses
 
-**Challenge:** [To be documented during implementation]
+**Challenge:** Playwright cannot mock Server-Sent Events (SSE) streams at the network level
 
-**Solution:** [To be documented]
+Initial approach used `page.route()` with `route.fulfill()` to mock the OpenAI streaming API, but Playwright's `route.fulfill()` returns the entire response body immediately — it doesn't support true streaming with incremental chunk delivery. This is a known limitation ([Playwright Issue #15353](https://github.com/microsoft/playwright/issues/15353)) that has existed since 2022.
 
-**Key insight:** [To be documented]
+Burn-in testing revealed 8/11 tests failing with no AI responses appearing despite "successful" network mocks.
 
-### RAG Implementation
+**Solution:** Mock at the LLM client layer instead of network layer
 
-**Challenge:** [To be documented during implementation]
+Created `MockLLMClient` that implements the `LLMClient` interface and injects via `window.__mockLLMClient`:
 
-**Solution:** [To be documented]
+1. **Test Injection Point**: Modified `getLLMClient()` factory to check for `window.__mockLLMClient` in test environments
+2. **Deterministic Streaming**: Mock yields chunks with configurable delays (10-100ms) for realistic streaming behavior
+3. **UI-First Testing**: Tests validate chat UI updates, loading states, and message display — not network mechanics
 
-**Key insight:** [To be documented]
+```typescript
+// Test setup
+await mockLLMClient(page, {
+  response: 'React hooks are functions...',
+  chunkDelay: 10,  // Fast for tests
+  chunkSize: 20,   // Deterministic chunks
+})
+```
+
+**Key insight:** E2E tests should test UI behavior, not network streaming mechanics
+
+Industry best practice (per DZone, The Quality Duck, Playwright docs) is to test what users see, not how data arrives. Streaming response mechanics belong in unit/integration tests. E2E tests should mock at the application boundary (client layer) and validate UI updates.
+
+**Time saved**: 3 hours of debugging broken network mocks → 2 hours implementing proper client mocking = **1 hour net savings** plus more reliable tests.
+
+### Embedding Vector Compatibility
+
+**Challenge:** Vector search returned zero results despite seeded embeddings
+
+RAG coordinator showed "no relevant notes found" even with properly seeded notes and embeddings in IndexedDB. Root cause: `mockEmbeddingWorker` returned zero-filled vectors (`new Float32Array(384)`), while seeded embeddings used `fill(0.1)`. Cosine similarity between zero vector and any other vector is undefined/NaN, failing the `minSimilarity >= 0.5` threshold check.
+
+**Solution:** Match mock embedding values to seeded test data
+
+Changed `mockEmbeddingWorker` to return `.fill(0.1)` vectors matching seeded embeddings. This ensures perfect similarity scores (1.0) for deterministic test behavior.
+
+**Key insight:** Test mocks must match data layer assumptions
+
+When testing multi-layer systems (RAG = embeddings + vector search + LLM), ensure mocks at each layer produce compatible data. Zero-filled arrays are convenient defaults but can cause subtle bugs in distance/similarity calculations.
+
+### Vector Store Initialization Timing
+
+**Challenge:** Tests seeded embeddings after app initialized empty vector store
+
+The `vectorStorePersistence.loadAll()` runs on app mount, loading embeddings from IndexedDB into memory. Tests navigated to `/` (triggering load), then seeded data, but the in-memory store remained empty.
+
+**Solution:** Reload vector store after seeding test data
+
+Added `page.evaluate()` to call `vectorStorePersistence.loadAll()` after seeding embeddings, refreshing the in-memory index with test data.
+
+**Key insight:** Stateful in-memory caches need explicit refresh in tests
+
+Unlike database-backed systems where seeded data is immediately available, in-memory indexes (vector stores, caches) must be explicitly reloaded after test data changes.
 
 ## Implementation Plan
 

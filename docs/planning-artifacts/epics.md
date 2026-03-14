@@ -2212,111 +2212,6 @@ So that I can track my AI-assisted study habits and benefit from immediate AI in
 
 ---
 
-## Epic 10: Onboarding & First-Use Experience
-
-New users are guided through importing their first course, starting a study session, and creating their first learning challenge — ensuring immediate value discovery without documentation.
-
-### Story 10.1: First-Use Onboarding Flow
-
-As a first-time user,
-I want a guided onboarding flow that walks me through importing a course, starting a study session, and creating a learning challenge,
-So that I discover the platform's core value immediately without needing documentation.
-
-**Acceptance Criteria:**
-
-**Given** I am a new user with no courses imported and no onboarding completion flag in local storage
-**When** I land on the dashboard for the first time
-**Then** an onboarding overlay appears with a welcome message and a progress indicator showing 3 steps
-**And** the first step "Import your first course" is highlighted as active
-
-**Given** the onboarding flow is active on step 1 (Import a course)
-**When** I view the prompt
-**Then** the relevant UI element for course import is visually highlighted with a spotlight/tooltip
-**And** I see a clear call-to-action directing me to the import workflow
-**And** a "Skip onboarding" option is visible and accessible
-
-**Given** I have completed step 1 by importing a course
-**When** the import finishes successfully
-**Then** the onboarding advances to step 2 "Start studying"
-**And** the progress indicator updates to show step 2 of 3 as active
-**And** the video player or course content area is highlighted with a guiding tooltip
-
-**Given** I have completed step 2 by starting a study session (playing a video for at least 5 seconds)
-**When** the session registers
-**Then** the onboarding advances to step 3 "Create a learning challenge"
-**And** the progress indicator updates to show step 3 of 3 as active
-**And** the challenge creation UI element is highlighted with a guiding tooltip
-
-**Given** I have completed step 3 by creating a learning challenge
-**When** the challenge is saved
-**Then** a congratulatory message appears confirming onboarding is complete
-**And** the onboarding completion flag is persisted to local storage
-**And** the onboarding overlay dismisses and does not reappear on subsequent visits
-
-**Given** the onboarding flow is active on any step
-**When** I click "Skip onboarding"
-**Then** the onboarding overlay dismisses immediately
-**And** the onboarding completion flag is persisted to local storage
-**And** the onboarding does not reappear on subsequent visits
-
-**Given** I previously completed or skipped onboarding
-**When** I return to the dashboard
-**Then** no onboarding overlay appears
-**And** the app loads directly into the normal dashboard view
-
-**Given** the onboarding flow is active
-**When** I interact with the highlighted UI element for the current step
-**Then** the spotlight follows the element correctly even if the layout shifts or scrolls
-**And** the rest of the UI remains accessible but visually de-emphasized
-
-### Story 10.2: Empty State Guidance
-
-As a new or returning user viewing a section with no content,
-I want contextual empty states that explain what belongs here and link me to the relevant action,
-So that I always know my next step and can complete core workflows within 2 minutes without documentation.
-
-**Acceptance Criteria:**
-
-**Given** I have no courses imported
-**When** I view the dashboard overview
-**Then** an empty state is displayed with the message "Import your first course to get started"
-**And** a prominent call-to-action button links directly to the course import workflow
-**And** the empty state includes a supportive illustration or icon that matches the app's visual style
-
-**Given** I have no notes recorded
-**When** I view the notes section or notes panel
-**Then** an empty state is displayed with the message "Start a video and take your first note"
-**And** a call-to-action links to the course library or most recent course so I can begin a session
-**And** the empty state briefly describes what notes are for (e.g., "Capture key moments while you study")
-
-**Given** I have no learning challenges created
-**When** I view the challenges section
-**Then** an empty state is displayed with the message "Create your first learning challenge"
-**And** a call-to-action button opens the challenge creation flow directly
-**And** the empty state briefly describes the value of challenges
-
-**Given** I have no study sessions recorded
-**When** I view the reports or activity section
-**Then** an empty state is displayed with a message guiding me to start studying
-**And** a call-to-action links to available courses or the course import flow
-
-**Given** any empty state is displayed
-**When** I click the call-to-action button
-**Then** I am navigated to the correct destination for that action without intermediate steps
-**And** the transition completes within 300ms
-
-**Given** I complete the action prompted by an empty state (e.g., import a course)
-**When** I return to the previously empty section
-**Then** the empty state is replaced with the actual content
-**And** no residual empty state messaging is visible
-
-**Given** I am a new user following empty state prompts without any prior training
-**When** I complete the sequence of importing a course, starting a study session, and creating a challenge
-**Then** the entire sequence is completable within 2 minutes
-**And** no external documentation or help pages are required to understand the prompts
-
----
-
 ## Epic 11: Knowledge Retention, Export & Advanced Features (Post-MVP)
 
 Users can schedule spaced reviews, export learning data in multiple formats, configure per-course reminders, and access advanced review modes — extending the platform for power users and data portability.
@@ -6885,6 +6780,111 @@ E2E tests:
 - Icon choice (graduation cap, document with checkmark, etc.)
 - Badge interaction (button, link, or card)
 - Score display formatting
+
+---
+
+## Epic 10: Onboarding & First-Use Experience
+
+New users are guided through importing their first course, starting a study session, and creating their first learning challenge — ensuring immediate value discovery without documentation.
+
+### Story 10.1: First-Use Onboarding Flow
+
+As a first-time user,
+I want a guided onboarding flow that walks me through importing a course, starting a study session, and creating a learning challenge,
+So that I discover the platform's core value immediately without needing documentation.
+
+**Acceptance Criteria:**
+
+**Given** I am a new user with no courses imported and no onboarding completion flag in local storage
+**When** I land on the dashboard for the first time
+**Then** an onboarding overlay appears with a welcome message and a progress indicator showing 3 steps
+**And** the first step "Import your first course" is highlighted as active
+
+**Given** the onboarding flow is active on step 1 (Import a course)
+**When** I view the prompt
+**Then** the relevant UI element for course import is visually highlighted with a spotlight/tooltip
+**And** I see a clear call-to-action directing me to the import workflow
+**And** a "Skip onboarding" option is visible and accessible
+
+**Given** I have completed step 1 by importing a course
+**When** the import finishes successfully
+**Then** the onboarding advances to step 2 "Start studying"
+**And** the progress indicator updates to show step 2 of 3 as active
+**And** the video player or course content area is highlighted with a guiding tooltip
+
+**Given** I have completed step 2 by starting a study session (playing a video for at least 5 seconds)
+**When** the session registers
+**Then** the onboarding advances to step 3 "Create a learning challenge"
+**And** the progress indicator updates to show step 3 of 3 as active
+**And** the challenge creation UI element is highlighted with a guiding tooltip
+
+**Given** I have completed step 3 by creating a learning challenge
+**When** the challenge is saved
+**Then** a congratulatory message appears confirming onboarding is complete
+**And** the onboarding completion flag is persisted to local storage
+**And** the onboarding overlay dismisses and does not reappear on subsequent visits
+
+**Given** the onboarding flow is active on any step
+**When** I click "Skip onboarding"
+**Then** the onboarding overlay dismisses immediately
+**And** the onboarding completion flag is persisted to local storage
+**And** the onboarding does not reappear on subsequent visits
+
+**Given** I previously completed or skipped onboarding
+**When** I return to the dashboard
+**Then** no onboarding overlay appears
+**And** the app loads directly into the normal dashboard view
+
+**Given** the onboarding flow is active
+**When** I interact with the highlighted UI element for the current step
+**Then** the spotlight follows the element correctly even if the layout shifts or scrolls
+**And** the rest of the UI remains accessible but visually de-emphasized
+
+### Story 10.2: Empty State Guidance
+
+As a new or returning user viewing a section with no content,
+I want contextual empty states that explain what belongs here and link me to the relevant action,
+So that I always know my next step and can complete core workflows within 2 minutes without documentation.
+
+**Acceptance Criteria:**
+
+**Given** I have no courses imported
+**When** I view the dashboard overview
+**Then** an empty state is displayed with the message "Import your first course to get started"
+**And** a prominent call-to-action button links directly to the course import workflow
+**And** the empty state includes a supportive illustration or icon that matches the app's visual style
+
+**Given** I have no notes recorded
+**When** I view the notes section or notes panel
+**Then** an empty state is displayed with the message "Start a video and take your first note"
+**And** a call-to-action links to the course library or most recent course so I can begin a session
+**And** the empty state briefly describes what notes are for (e.g., "Capture key moments while you study")
+
+**Given** I have no learning challenges created
+**When** I view the challenges section
+**Then** an empty state is displayed with the message "Create your first learning challenge"
+**And** a call-to-action button opens the challenge creation flow directly
+**And** the empty state briefly describes the value of challenges
+
+**Given** I have no study sessions recorded
+**When** I view the reports or activity section
+**Then** an empty state is displayed with a message guiding me to start studying
+**And** a call-to-action links to available courses or the course import flow
+
+**Given** any empty state is displayed
+**When** I click the call-to-action button
+**Then** I am navigated to the correct destination for that action without intermediate steps
+**And** the transition completes within 300ms
+
+**Given** I complete the action prompted by an empty state (e.g., import a course)
+**When** I return to the previously empty section
+**Then** the empty state is replaced with the actual content
+**And** no residual empty state messaging is visible
+
+**Given** I am a new user following empty state prompts without any prior training
+**When** I complete the sequence of importing a course, starting a study session, and creating a challenge
+**Then** the entire sequence is completable within 2 minutes
+**And** no external documentation or help pages are required to understand the prompts
 
 ---
 
