@@ -299,7 +299,11 @@ export function Overview() {
               title="Import your first course to get started"
               description="Add a folder with videos, PDFs, or documents to begin learning"
               actionLabel="Import Course"
-              onAction={() => importCourseFromFolder()}
+              onAction={() => {
+                importCourseFromFolder().catch(() => {
+                  // User cancelled file picker or permission denied — no action needed
+                })
+              }}
             />
           </motion.section>
         )}
