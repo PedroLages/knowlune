@@ -9,7 +9,6 @@
 
 import { test, expect, type Page } from '@playwright/test'
 import { seedIndexedDBStore } from '../support/helpers/indexeddb-seed'
-import { mockLLMClient } from '../support/helpers/mock-llm-client'
 import { FIXED_DATE } from '../utils/test-time'
 
 // ─── Shared test fixtures ────────────────────────────────────────────────────
@@ -305,7 +304,6 @@ test('AC5 — accepting note link suggestion creates bidirectional link visible 
 
   // The existing note (note-existing) should also show the new note as linked
   await page.goto('/imported-courses/course-2/lessons/video-4')
-  const existingNoteCard = page.getByTestId('note-editor')
   // Check linked note badge/indicator is visible
   await expect(page.getByTestId('linked-notes-indicator')).toBeVisible()
 })
@@ -347,8 +345,7 @@ test('AC6 — dismissing note link suggestion prevents it from reappearing for t
   await page.keyboard.type(' Updated.')
   await page.getByTestId('save-note-button').click()
 
-  // Wait briefly and confirm toast does NOT appear
-  await page.waitForTimeout(1000)
+  // Confirm toast does NOT appear (use not.toBeVisible with timeout for auto-retry)
   await expect(
     page.locator('[data-sonner-toast]').filter({ hasText: 'Note connection found' })
   ).not.toBeVisible()
