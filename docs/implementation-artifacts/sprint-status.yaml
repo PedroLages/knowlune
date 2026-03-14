@@ -281,7 +281,7 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-10: in-progress
   10-1-first-use-onboarding-flow: backlog
-  10-2-empty-state-guidance: in-progress
+  10-2-empty-state-guidance: done
   epic-10-retrospective: optional
 
   # ──────────────────────────────────────────────────
