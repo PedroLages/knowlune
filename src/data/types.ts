@@ -260,3 +260,13 @@ export interface Embedding {
   embedding: number[] // 384-dimensional vector
   createdAt: string // ISO timestamp
 }
+
+// --- Learning Path (Story 9B.3) ---
+
+export interface LearningPathCourse {
+  courseId: string // Primary key: course UUID
+  position: number // 1-indexed sequence position
+  justification: string // AI-provided reasoning for placement
+  isManuallyOrdered: boolean // User manually reordered it
+  generatedAt: string // ISO timestamp when path was generated
+}
