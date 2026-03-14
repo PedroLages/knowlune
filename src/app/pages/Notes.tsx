@@ -413,11 +413,7 @@ export function Notes() {
               )}
             </div>
 
-            <RelatedConceptsPanel
-              note={item.note}
-              allNotes={notes}
-              courseNames={courseNames}
-            />
+            <RelatedConceptsPanel note={item.note} allNotes={notes} courseNames={courseNames} />
           </div>
         )}
       </div>

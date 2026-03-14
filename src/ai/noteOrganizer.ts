@@ -274,37 +274,39 @@ function parseResponse(
     throw new Error('AI response format is invalid (missing proposals array)')
   }
 
-  return parsed.proposals.map(proposal => {
-    const noteId = indexToNoteId.get(proposal.index)
-    if (!noteId) {
-      console.warn('[noteOrganizer] AI returned unknown index:', proposal.index)
-      return null
-    }
+  return parsed.proposals
+    .map(proposal => {
+      const noteId = indexToNoteId.get(proposal.index)
+      if (!noteId) {
+        console.warn('[noteOrganizer] AI returned unknown index:', proposal.index)
+        return null
+      }
 
-    const note = notes.find(n => n.id === noteId)
-    const existingTags = new Set(note?.tags ?? [])
+      const note = notes.find(n => n.id === noteId)
+      const existingTags = new Set(note?.tags ?? [])
 
-    // Filter out tags that already exist on the note
-    const newTags = (proposal.suggestedTags ?? [])
-      .map(t => t.toLowerCase().trim())
-      .filter(t => t.length > 0 && !existingTags.has(t))
+      // Filter out tags that already exist on the note
+      const newTags = (proposal.suggestedTags ?? [])
+        .map(t => t.toLowerCase().trim())
+        .filter(t => t.length > 0 && !existingTags.has(t))
 
-    // Format category as namespaced tag
-    const categories = proposal.category
-      ? [`category:${proposal.category.toLowerCase().trim()}`]
-      : []
+      // Format category as namespaced tag
+      const categories = proposal.category
+        ? [`category:${proposal.category.toLowerCase().trim()}`]
+        : []
 
-    // Map cross-course link indices back to real noteIds
-    const crossCourseLinks = (proposal.crossCourseLinks ?? [])
-      .map(idx => indexToNoteId.get(idx))
-      .filter((id): id is string => id != null)
+      // Map cross-course link indices back to real noteIds
+      const crossCourseLinks = (proposal.crossCourseLinks ?? [])
+        .map(idx => indexToNoteId.get(idx))
+        .filter((id): id is string => id != null)
 
-    return {
-      noteId,
-      suggestedTags: newTags,
-      suggestedCategories: categories,
-      crossCourseLinks,
-      rationale: proposal.rationale ?? 'No rationale provided',
-    }
-  }).filter((p): p is NoteOrganizationProposal => p != null)
+      return {
+        noteId,
+        suggestedTags: newTags,
+        suggestedCategories: categories,
+        crossCourseLinks,
+        rationale: proposal.rationale ?? 'No rationale provided',
+      }
+    })
+    .filter((p): p is NoteOrganizationProposal => p != null)
 }

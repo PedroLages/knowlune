@@ -1,11 +1,7 @@
 import { useState } from 'react'
 import { Sparkles, Loader2 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/app/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/tooltip'
 import { toast } from 'sonner'
 import { isAIAvailable, isFeatureEnabled } from '@/lib/aiConfiguration'
 import { organizeNotes, type NoteOrganizationProposal } from '@/ai/noteOrganizer'
@@ -70,12 +66,8 @@ export function OrganizeNotesButton({ notes, courseNames }: OrganizeNotesButtonP
       ) : (
         <Sparkles className="size-4 mr-1.5" aria-hidden="true" />
       )}
-      <span className="hidden sm:inline">
-        {isProcessing ? 'Analyzing...' : 'Organize with AI'}
-      </span>
-      <span className="sm:hidden">
-        {isProcessing ? '' : ''}
-      </span>
+      <span className="hidden sm:inline">{isProcessing ? 'Analyzing...' : 'Organize with AI'}</span>
+      <span className="sm:hidden">{isProcessing ? '' : ''}</span>
     </Button>
   )
 

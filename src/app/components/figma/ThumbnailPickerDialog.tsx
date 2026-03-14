@@ -14,10 +14,7 @@ import {
   fetchThumbnailFromUrl,
   generateThumbnailWithGemini,
 } from '@/lib/thumbnailService'
-import {
-  getAIConfiguration,
-  getDecryptedApiKey,
-} from '@/lib/aiConfiguration'
+import { getAIConfiguration, getDecryptedApiKey } from '@/lib/aiConfiguration'
 import type { ThumbnailSource } from '@/data/types'
 import type { ImportedVideo } from '@/data/types'
 
@@ -291,7 +288,10 @@ export function ThumbnailPickerDialog({
                 {isLoading ? (
                   <Loader2 className="size-8 mx-auto text-muted-foreground animate-spin mb-2" />
                 ) : (
-                  <Upload className="size-8 mx-auto text-muted-foreground mb-2" aria-hidden="true" />
+                  <Upload
+                    className="size-8 mx-auto text-muted-foreground mb-2"
+                    aria-hidden="true"
+                  />
                 )}
                 <p className="text-sm font-medium">
                   {isLoading ? 'Loading…' : 'Click or drag an image here'}
@@ -343,11 +343,7 @@ export function ThumbnailPickerDialog({
                       placeholder={courseName}
                     />
                   </div>
-                  <Button
-                    onClick={handleGenerate}
-                    disabled={isLoading}
-                    className="w-full gap-2"
-                  >
+                  <Button onClick={handleGenerate} disabled={isLoading} className="w-full gap-2">
                     {isLoading ? (
                       <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                     ) : (

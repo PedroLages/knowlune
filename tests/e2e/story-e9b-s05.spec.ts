@@ -17,7 +17,8 @@ const mockNote1 = {
   id: 'note-1',
   courseId: 'course-1',
   videoId: 'video-1',
-  content: 'React hooks allow state management in functional components. useState is the primary hook.',
+  content:
+    'React hooks allow state management in functional components. useState is the primary hook.',
   createdAt: FIXED_DATE,
   updatedAt: FIXED_DATE,
   tags: ['react', 'hooks'],
@@ -47,7 +48,8 @@ const mockNote4 = {
   id: 'note-4',
   courseId: 'course-2',
   videoId: 'video-4',
-  content: 'State management patterns differ between frameworks but share core concepts like reactivity.',
+  content:
+    'State management patterns differ between frameworks but share core concepts like reactivity.',
   createdAt: FIXED_DATE,
   updatedAt: FIXED_DATE,
   tags: ['state-management'],
@@ -180,9 +182,7 @@ test.describe('AC2: Preview panel with accept/reject', () => {
     await expect(dialog).toBeVisible({ timeout: 10000 })
 
     // Each proposal should show rationale text
-    await expect(
-      dialog.getByText(/state management via hooks.*connecting to Vue/i)
-    ).toBeVisible()
+    await expect(dialog.getByText(/state management via hooks.*connecting to Vue/i)).toBeVisible()
 
     // Should show proposed tags as badges
     await expect(dialog.getByText('functional-components')).toBeVisible()
@@ -256,7 +256,9 @@ test.describe('AC3: Apply selected changes', () => {
     await expect(dialog).not.toBeVisible()
 
     // Toast should indicate fewer changes applied
-    await expect(page.getByText(/applied.*changes.*3/i).or(page.getByText(/3.*notes/i))).toBeVisible({
+    await expect(
+      page.getByText(/applied.*changes.*3/i).or(page.getByText(/3.*notes/i))
+    ).toBeVisible({
       timeout: 5000,
     })
   })
@@ -324,16 +326,18 @@ test.describe('AC5: Navigation from related note', () => {
     await expect(page.getByText(/related concepts/i)).toBeVisible({ timeout: 5000 })
 
     // Click on a related note link
-    const relatedLink = page.getByRole('link', { name: /useEffect/i }).or(
-      page.getByText(mockNote2.content.slice(0, 20)).locator('a')
-    )
+    const relatedLink = page
+      .getByRole('link', { name: /useEffect/i })
+      .or(page.getByText(mockNote2.content.slice(0, 20)).locator('a'))
 
     if (await relatedLink.isVisible()) {
       await relatedLink.click()
 
       // Should navigate to the related note or scroll to it
       // Back-link should be visible
-      await expect(page.getByText(/back/i).or(page.getByRole('link', { name: /back/i }))).toBeVisible()
+      await expect(
+        page.getByText(/back/i).or(page.getByRole('link', { name: /back/i }))
+      ).toBeVisible()
     }
   })
 })

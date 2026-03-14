@@ -4,8 +4,8 @@ story_name: "AI Note Organization and Cross-Course Links"
 status: in-progress
 started: 2026-03-14
 completed:
-reviewed: false
-review_started:
+reviewed: in-progress
+review_started: 2026-03-14
 review_gates_passed: []
 burn_in_validated: false
 ---

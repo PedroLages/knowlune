@@ -35,9 +35,7 @@ export function OrganizePreviewDialog({
   const saveNote = useNoteStore(s => s.saveNote)
 
   // Track which proposals are accepted (all checked by default)
-  const [accepted, setAccepted] = useState<Set<string>>(() =>
-    new Set(proposals.map(p => p.noteId))
-  )
+  const [accepted, setAccepted] = useState<Set<string>>(() => new Set(proposals.map(p => p.noteId)))
 
   // Reset accepted state when proposals change
   useMemo(() => {
@@ -77,10 +75,9 @@ export function OrganizePreviewDialog({
 
       // Merge new tags (avoid duplicates)
       const existingTags = new Set(note.tags)
-      const newTags = [
-        ...proposal.suggestedTags,
-        ...proposal.suggestedCategories,
-      ].filter(t => !existingTags.has(t))
+      const newTags = [...proposal.suggestedTags, ...proposal.suggestedCategories].filter(
+        t => !existingTags.has(t)
+      )
 
       if (newTags.length === 0) continue
 
@@ -189,10 +186,7 @@ export function OrganizePreviewDialog({
                         <div className="flex flex-wrap items-center gap-1">
                           <span className="text-xs text-muted-foreground mr-1">+ Links:</span>
                           {proposal.crossCourseLinks.map(linkedId => (
-                            <span
-                              key={linkedId}
-                              className="text-xs text-brand"
-                            >
+                            <span key={linkedId} className="text-xs text-brand">
                               {getNotePreview(linkedId)}
                             </span>
                           ))}
@@ -200,9 +194,7 @@ export function OrganizePreviewDialog({
                       )}
 
                       {/* AI rationale */}
-                      <p className="text-sm text-muted-foreground italic">
-                        {proposal.rationale}
-                      </p>
+                      <p className="text-sm text-muted-foreground italic">{proposal.rationale}</p>
 
                       {!hasChanges && (
                         <p className="text-xs text-muted-foreground">No changes proposed</p>
@@ -217,13 +209,7 @@ export function OrganizePreviewDialog({
 
         <DialogFooter className="flex-row justify-between sm:justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={selectAll}
-              className="text-xs"
-            >
+            <Button type="button" variant="ghost" size="sm" onClick={selectAll} className="text-xs">
               <Check className="size-3 mr-1" aria-hidden="true" />
               Select All
             </Button>
@@ -238,11 +224,7 @@ export function OrganizePreviewDialog({
               Deselect All
             </Button>
           </div>
-          <Button
-            type="button"
-            onClick={applyChanges}
-            disabled={acceptedCount === 0}
-          >
+          <Button type="button" onClick={applyChanges} disabled={acceptedCount === 0}>
             Apply Selected Changes ({acceptedCount})
           </Button>
         </DialogFooter>

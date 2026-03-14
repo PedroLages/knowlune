@@ -4,7 +4,11 @@ import { Link2, ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { Badge } from '@/app/components/ui/badge'
 import { Skeleton } from '@/app/components/ui/skeleton'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/app/components/ui/collapsible'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/app/components/ui/collapsible'
 import { findRelatedNotes, type RelatedNote } from '@/lib/relatedConcepts'
 import type { Note } from '@/data/types'
 
@@ -40,7 +44,9 @@ export function RelatedConceptsPanel({ note, allNotes, courseNames }: RelatedCon
     }
 
     load()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [note.id, note.tags.join(','), allNotes.length])
 
   function handleNavigate(related: RelatedNote) {
@@ -59,11 +65,7 @@ export function RelatedConceptsPanel({ note, allNotes, courseNames }: RelatedCon
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <div
-        className="mt-4 border-t pt-3"
-        role="region"
-        aria-label="Related concepts"
-      >
+      <div className="mt-4 border-t pt-3" role="region" aria-label="Related concepts">
         <CollapsibleTrigger asChild>
           <button
             type="button"
@@ -110,9 +112,7 @@ export function RelatedConceptsPanel({ note, allNotes, courseNames }: RelatedCon
                   aria-label={`Related note: ${related.title} from ${related.courseName}`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-sm font-medium truncate flex-1">
-                      {related.title}
-                    </span>
+                    <span className="text-sm font-medium truncate flex-1">{related.title}</span>
                     {related.similarityScore != null && (
                       <Badge variant="outline" className="text-xs shrink-0">
                         {Math.round(related.similarityScore * 100)}%

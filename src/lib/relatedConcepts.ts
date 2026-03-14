@@ -30,18 +30,112 @@ export interface RelatedNote {
 
 /** Common English stopwords to exclude from term extraction */
 const STOPWORDS = new Set([
-  'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-  'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
-  'should', 'may', 'might', 'can', 'shall', 'to', 'of', 'in', 'for',
-  'on', 'with', 'at', 'by', 'from', 'as', 'into', 'through', 'during',
-  'before', 'after', 'above', 'below', 'between', 'under', 'again',
-  'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why',
-  'how', 'all', 'each', 'every', 'both', 'few', 'more', 'most', 'other',
-  'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so',
-  'than', 'too', 'very', 'just', 'but', 'and', 'or', 'if', 'this',
-  'that', 'these', 'those', 'it', 'its', 'i', 'we', 'you', 'they',
-  'he', 'she', 'me', 'him', 'her', 'us', 'them', 'my', 'your', 'his',
-  'our', 'their', 'what', 'which', 'who', 'whom', 'about', 'up',
+  'the',
+  'a',
+  'an',
+  'is',
+  'are',
+  'was',
+  'were',
+  'be',
+  'been',
+  'being',
+  'have',
+  'has',
+  'had',
+  'do',
+  'does',
+  'did',
+  'will',
+  'would',
+  'could',
+  'should',
+  'may',
+  'might',
+  'can',
+  'shall',
+  'to',
+  'of',
+  'in',
+  'for',
+  'on',
+  'with',
+  'at',
+  'by',
+  'from',
+  'as',
+  'into',
+  'through',
+  'during',
+  'before',
+  'after',
+  'above',
+  'below',
+  'between',
+  'under',
+  'again',
+  'further',
+  'then',
+  'once',
+  'here',
+  'there',
+  'when',
+  'where',
+  'why',
+  'how',
+  'all',
+  'each',
+  'every',
+  'both',
+  'few',
+  'more',
+  'most',
+  'other',
+  'some',
+  'such',
+  'no',
+  'nor',
+  'not',
+  'only',
+  'own',
+  'same',
+  'so',
+  'than',
+  'too',
+  'very',
+  'just',
+  'but',
+  'and',
+  'or',
+  'if',
+  'this',
+  'that',
+  'these',
+  'those',
+  'it',
+  'its',
+  'i',
+  'we',
+  'you',
+  'they',
+  'he',
+  'she',
+  'me',
+  'him',
+  'her',
+  'us',
+  'them',
+  'my',
+  'your',
+  'his',
+  'our',
+  'their',
+  'what',
+  'which',
+  'who',
+  'whom',
+  'about',
+  'up',
 ])
 
 /** Minimum word length to consider as a key term */
@@ -190,12 +284,8 @@ function mergeResults(tagMatches: RelatedNote[], vectorMatches: RelatedNote[]): 
       seen.set(match.noteId, match)
     } else {
       // Merge: keep vector match but ensure shared tags/terms are complete
-      existing.sharedTags = [
-        ...new Set([...existing.sharedTags, ...match.sharedTags]),
-      ]
-      existing.sharedTerms = [
-        ...new Set([...existing.sharedTerms, ...match.sharedTerms]),
-      ]
+      existing.sharedTags = [...new Set([...existing.sharedTags, ...match.sharedTags])]
+      existing.sharedTerms = [...new Set([...existing.sharedTerms, ...match.sharedTerms])]
     }
   }
 
@@ -218,9 +308,7 @@ function mergeResults(tagMatches: RelatedNote[], vectorMatches: RelatedNote[]): 
  */
 function extractKeyTerms(content: string): Set<string> {
   const plain = stripHtml(content).toLowerCase()
-  const words = plain.split(/\W+/).filter(
-    w => w.length >= MIN_TERM_LENGTH && !STOPWORDS.has(w)
-  )
+  const words = plain.split(/\W+/).filter(w => w.length >= MIN_TERM_LENGTH && !STOPWORDS.has(w))
   return new Set(words)
 }
 

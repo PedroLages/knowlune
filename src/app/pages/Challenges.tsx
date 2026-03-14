@@ -194,12 +194,7 @@ export function Challenges() {
         </Card>
       ) : isLoading ? (
         <DelayedFallback>
-          <div
-            role="status"
-            aria-busy="true"
-            aria-label="Loading challenges"
-            className="space-y-4"
-          >
+          <div role="status" aria-busy="true" aria-label="Loading challenges" className="space-y-4">
             {Array.from({ length: 3 }, (_, i) => (
               <Skeleton key={i} className="h-28 w-full rounded-[24px]" />
             ))}

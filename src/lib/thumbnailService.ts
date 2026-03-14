@@ -52,9 +52,7 @@ function resizeImageToBlob(
 // Source 1: Auto-extract frame from video FileSystemFileHandle
 // ---------------------------------------------------------------------------
 
-export async function extractThumbnailFromVideo(
-  videoHandle: FileSystemFileHandle
-): Promise<Blob> {
+export async function extractThumbnailFromVideo(videoHandle: FileSystemFileHandle): Promise<Blob> {
   const file = await videoHandle.getFile()
   const url = URL.createObjectURL(file)
 
@@ -124,7 +122,9 @@ export async function fetchThumbnailFromUrl(url: string): Promise<Blob> {
 
   const contentType = response.headers.get('content-type') ?? ''
   if (!contentType.startsWith('image/')) {
-    throw new Error('URL did not return an image. Make sure the link points directly to an image file.')
+    throw new Error(
+      'URL did not return an image. Make sure the link points directly to an image file.'
+    )
   }
 
   const arrayBuffer = await response.arrayBuffer()
