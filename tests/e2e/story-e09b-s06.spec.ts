@@ -1,6 +1,6 @@
 import { test, expect } from '../support/fixtures'
 import { seedIndexedDBStore } from '../support/helpers/indexeddb-seed'
-import { FIXED_DATE, getRelativeDate } from '../utils/test-time'
+import { FIXED_DATE } from '../utils/test-time'
 
 /**
  * Seed AI configuration into localStorage
@@ -67,7 +67,7 @@ test.describe('E09B-S06: AI Feature Analytics & Auto-Analysis', () => {
       await page.goto('/')
 
       // Seed events for the current period
-      const now = new Date().toISOString()
+      const now = FIXED_DATE
       await seedAIUsageEvents(page, [
         { id: 'evt-1', featureType: 'summary', timestamp: now },
         { id: 'evt-2', featureType: 'summary', timestamp: now },
@@ -98,7 +98,7 @@ test.describe('E09B-S06: AI Feature Analytics & Auto-Analysis', () => {
       await page.goto('/')
 
       // Seed some events
-      const now = new Date().toISOString()
+      const now = FIXED_DATE
       await seedAIUsageEvents(page, [
         { id: 'evt-1', featureType: 'summary', timestamp: now },
       ])
@@ -158,7 +158,7 @@ test.describe('E09B-S06: AI Feature Analytics & Auto-Analysis', () => {
       await page.goto('/')
 
       // Simulate auto-analysis completion by seeding an event with metadata
-      const now = new Date().toISOString()
+      const now = FIXED_DATE
       await seedAIUsageEvents(page, [
         {
           id: 'evt-auto-1',
