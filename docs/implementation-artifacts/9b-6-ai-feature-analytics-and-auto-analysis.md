@@ -152,11 +152,18 @@ See [plan](plans/e9b-s06-ai-feature-analytics-auto-analysis.md) for implementati
 
 ## Implementation Notes
 
-[Architecture decisions, patterns used, dependencies added]
+- **AI Event Tracking Service** (`src/lib/aiEventTracking.ts`): New service with Dexie `aiUsageEvents` table (schema v13). Aggregation queries compute daily/weekly/monthly stats with trend indicators (up/down/stable) by comparing current vs previous period counts.
+- **Auto-Analysis Pipeline** (`src/lib/autoAnalysis.ts`): Fire-and-forget pattern — `triggerAutoAnalysis()` never throws, never blocks course import. Uses `AbortController` with 30s timeout. Consent-gated via `isFeatureEnabled('analytics')`. Progress tracked via `useCourseImportStore.autoAnalysisStatus`.
+- **AI Analytics Tab** (`src/app/components/reports/AIAnalyticsTab.tsx`): Added as new tab in Reports page. 5 stat cards (one per AI feature) with trend arrows, period toggle (daily/weekly/monthly) with `aria-pressed` for accessibility, and Recharts `AreaChart` for usage trends.
+- **Instrumentation hooks**: Added `trackAIUsage()` calls in `AISummaryPanel`, `QAChatPanel`, `OrganizeNotesButton`, and `useLearningPathStore` to record events as AI features are used.
+- **Dependencies**: No new dependencies — uses existing Dexie, Recharts, Sonner, and Lucide icons.
 
 ## Testing Notes
 
-[Test strategy, edge cases discovered, coverage notes]
+- **E2E strategy**: 6 tests covering all 6 ACs. Seeds AI config via `localStorage` and AI events via `seedIndexedDBStore` into the `aiUsageEvents` table.
+- **Edge case: `about:blank` localStorage access**: Playwright starts pages at `about:blank` where `localStorage` is inaccessible. Fixed by navigating to `/` in `beforeEach` before any localStorage seeding.
+- **Deterministic time**: Uses `FIXED_DATE` from `test-time.ts` instead of `new Date()` for event timestamps, satisfying the `deterministic-time` ESLint rule.
+- **AC3 limitation**: Full auto-analysis E2E test requires File System Access API (not available in headless browsers). Test verifies the mechanism exists and consent gating works rather than the full import-to-analysis flow.
 
 ## Pre-Review Checklist
 
@@ -185,4 +192,10 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+1. **`about:blank` localStorage SecurityError in E2E tests**: The `beforeEach` hook called `page.evaluate(() => localStorage.setItem(...))` before any navigation. Playwright pages start at `about:blank` where `localStorage` is blocked by the browser security model. Fix: navigate to `/` first, then seed localStorage. This pattern differs from unit tests where JSDOM provides localStorage unconditionally.
+
+2. **Fire-and-forget needs careful error boundaries**: `triggerAutoAnalysis()` is called after course import and must never throw — if it did, it could crash the import success flow. The entire function body is wrapped in try/catch with toast error reporting. This "never throw, always report" pattern is essential for background enhancement features.
+
+3. **Trend calculation requires period alignment**: Computing "up/down/stable" trends requires comparing the same-length period (e.g., this week vs last week). The `getDateRange()` helper in `aiEventTracking.ts` handles this by computing aligned start/end timestamps for current and previous periods.
+
+4. **Husky deprecation warning**: The `.husky/pre-commit` file uses the deprecated `husky.sh` sourcing pattern. This doesn't break functionality but produces a warning on every commit. Should be cleaned up in a separate chore commit.
