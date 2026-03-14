@@ -1,13 +1,12 @@
 /**
  * ATDD tests for E10-S02: Empty State Guidance
  *
- * RED phase — these tests define the acceptance criteria as failing E2E tests.
- * Each test maps to a specific AC from the story file.
- *
  * Tests run with NO seeded data to trigger empty states.
+ * Each test maps to a specific AC from the story file.
  */
 import { test, expect } from '../support/fixtures'
 import { navigateAndWait } from '../support/helpers/navigation'
+import { createImportedCourse } from '../support/fixtures/factories/imported-course-factory'
 
 test.describe('E10-S02: Empty State Guidance', () => {
   // ── AC1: Dashboard overview — no courses ──────────────────────
@@ -39,7 +38,7 @@ test.describe('E10-S02: Empty State Guidance', () => {
   // ── AC2: Notes section — no notes ─────────────────────────────
   test.describe('Notes — no notes recorded', () => {
     test('displays empty state with note-taking message', async ({ page }) => {
-      await navigateAndWait(page, '/')
+      await navigateAndWait(page, '/notes')
 
       const emptyState = page.getByTestId('empty-state-notes')
       await expect(emptyState).toBeVisible()
@@ -47,14 +46,14 @@ test.describe('E10-S02: Empty State Guidance', () => {
     })
 
     test('shows description of what notes are for', async ({ page }) => {
-      await navigateAndWait(page, '/')
+      await navigateAndWait(page, '/notes')
 
       const emptyState = page.getByTestId('empty-state-notes')
       await expect(emptyState).toContainText(/capture|key moments|study/i)
     })
 
     test('CTA links to course library', async ({ page }) => {
-      await navigateAndWait(page, '/')
+      await navigateAndWait(page, '/notes')
 
       const cta = page.getByTestId('empty-state-notes').getByRole('link')
       await expect(cta).toBeVisible()
@@ -64,7 +63,7 @@ test.describe('E10-S02: Empty State Guidance', () => {
   // ── AC3: Challenges section — no challenges ───────────────────
   test.describe('Challenges — no challenges created', () => {
     test('displays empty state with challenge creation message', async ({ page }) => {
-      await navigateAndWait(page, '/')
+      await navigateAndWait(page, '/challenges')
 
       const emptyState = page.getByTestId('empty-state-challenges')
       await expect(emptyState).toBeVisible()
@@ -72,7 +71,7 @@ test.describe('E10-S02: Empty State Guidance', () => {
     })
 
     test('describes the value of challenges', async ({ page }) => {
-      await navigateAndWait(page, '/')
+      await navigateAndWait(page, '/challenges')
 
       const emptyState = page.getByTestId('empty-state-challenges')
       // Should have descriptive text beyond just the title
@@ -81,7 +80,7 @@ test.describe('E10-S02: Empty State Guidance', () => {
     })
 
     test('CTA opens challenge creation flow', async ({ page }) => {
-      await navigateAndWait(page, '/')
+      await navigateAndWait(page, '/challenges')
 
       const cta = page.getByTestId('empty-state-challenges').getByRole('button', { name: /create|challenge/i })
       await expect(cta).toBeVisible()
@@ -109,15 +108,13 @@ test.describe('E10-S02: Empty State Guidance', () => {
 
   // ── AC5: CTA navigation ──────────────────────────────────────
   test.describe('CTA navigation', () => {
-    test('navigates to correct destination without intermediate steps', async ({ page }) => {
-      await navigateAndWait(page, '/')
+    test('Notes CTA navigates to courses page', async ({ page }) => {
+      await navigateAndWait(page, '/notes')
 
-      // Click the courses empty state CTA
-      const cta = page.getByTestId('empty-state-courses').getByRole('button', { name: /import/i })
+      const cta = page.getByTestId('empty-state-notes').getByRole('link')
       await cta.click()
 
-      // Should navigate directly — verify URL changed or import dialog opened
-      await expect(page).toHaveURL(/courses|import/, { timeout: 3000 })
+      await expect(page).toHaveURL(/courses/, { timeout: 3000 })
     })
   })
 
@@ -128,21 +125,12 @@ test.describe('E10-S02: Empty State Guidance', () => {
       await navigateAndWait(page, '/')
       await expect(page.getByTestId('empty-state-courses')).toBeVisible()
 
-      // Seed course data and reload
-      await indexedDB.seed('courses', [
-        {
-          id: 'test-course-1',
-          title: 'Test Course',
-          status: 'Active',
-          topic: 'Testing',
-          modules: [],
-          addedAt: new Date().toISOString(),
-        },
-      ])
+      // Seed an imported course and reload
+      await indexedDB.seedImportedCourses([createImportedCourse({ id: 'test-course-1' })])
       await page.reload()
       await page.waitForLoadState('load')
 
-      // Empty state should be gone, real content should show
+      // Empty state should be gone
       await expect(page.getByTestId('empty-state-courses')).not.toBeVisible()
     })
   })
