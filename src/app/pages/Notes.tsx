@@ -46,7 +46,6 @@ import { allCourses } from '@/data/courses'
 import { formatTimestamp } from '@/lib/format'
 import { stripHtml } from '@/lib/textUtils'
 import { ReadOnlyContent } from '@/app/components/notes/ReadOnlyContent'
-import { OrganizeNotesButton } from '@/app/components/notes/OrganizeNotesButton'
 import { RelatedConceptsPanel } from '@/app/components/notes/RelatedConceptsPanel'
 import { generateEmbeddings } from '@/ai/workers/coordinator'
 import { vectorStorePersistence } from '@/ai/vector-store'
@@ -547,9 +546,7 @@ export function Notes() {
                     htmlFor="semantic-search"
                     className={cn(
                       'text-sm cursor-pointer',
-                      semanticSearchAvailable
-                        ? 'text-muted-foreground'
-                        : 'text-muted-foreground/50'
+                      semanticSearchAvailable ? 'text-muted-foreground' : 'text-muted-foreground/50'
                     )}
                   >
                     Semantic

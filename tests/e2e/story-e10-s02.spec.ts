@@ -82,7 +82,9 @@ test.describe('E10-S02: Empty State Guidance', () => {
     test('CTA opens challenge creation flow', async ({ page }) => {
       await navigateAndWait(page, '/challenges')
 
-      const cta = page.getByTestId('empty-state-challenges').getByRole('button', { name: /create|challenge/i })
+      const cta = page
+        .getByTestId('empty-state-challenges')
+        .getByRole('button', { name: /create|challenge/i })
       await expect(cta).toBeVisible()
     })
   })
