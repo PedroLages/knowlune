@@ -383,14 +383,29 @@ test.describe('Chat Q&A Interface', () => {
   })
 
   test('AC7: Privacy - no metadata in API payload', async ({ page }) => {
-    await mockAIConfigured(page)
+    // Mock AI as configured with test API key (for network interception)
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          provider: 'openai',
+          connectionStatus: 'connected',
+          _testApiKey: 'test-api-key-for-privacy-check', // Plaintext key for DEV mode
+          consentSettings: {
+            videoSummary: true,
+            noteQA: true,
+            learningPath: true,
+            knowledgeGaps: true,
+            noteOrganization: true,
+            analytics: true,
+          },
+        })
+      )
+    })
     await mockEmbeddingWorker(page) // Need this for RAG to work
     // Do NOT mock LLM client - let it hit the network so we can intercept
-    await page.goto('/')
-    await seedTestData(page)
-    await page.goto('/notes/chat')
 
-    // Intercept OpenAI API requests and capture payload
+    // Intercept OpenAI API requests and capture payload BEFORE navigation
     let capturedPayload: any = null
     await page.route('**/v1/chat/completions', async route => {
       const request = route.request()
@@ -403,6 +418,11 @@ test.describe('Chat Q&A Interface', () => {
         body: 'data: {"choices":[{"delta":{"content":"React hooks"}}]}\n\ndata: [DONE]\n\n',
       })
     })
+
+    // Now navigate and seed data
+    await page.goto('/')
+    await seedTestData(page)
+    await page.goto('/notes/chat')
 
     // Trigger chat query
     const input = page.getByPlaceholder(/Ask a question/)
