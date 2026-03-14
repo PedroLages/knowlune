@@ -173,3 +173,15 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - H2: Retry button `setPeriod(p => p)` is a no-op -- React skips re-render when setter returns same value
 - M1: Hard wait `setTimeout(r, 500)` in AC3 test without justification comment
 - Nit: Story doc says "schema v13" but code is v12 (documentation inaccuracy)
+
+## E10-S02: Empty State Guidance (Round 1)
+- No uncommitted changes (positive)
+- H1 (RECURRING x15): Fire-and-forget `importCourseFromFolder()` in Overview.tsx onAction -- no .catch()
+- H2 (RECURRING): `w-16 h-16` / `w-8 h-8` in EmptyState.tsx instead of `size-*` Tailwind v4 shorthand
+- H3 (RECURRING): Hardcoded `bg-blue-600/10 text-blue-600` and `ring-blue-600` in Challenges.tsx (pre-existing)
+- H4 (RECURRING): String interpolation for className in Reports.tsx line 330 instead of cn()
+- M1: Icon uses `text-brand` instead of design-specified `text-brand-muted`
+- M2: Missing `font-display` on empty state title (renders in body font, not heading font)
+- M3: Reports `hasActivity` check doesn't include session store data -- users with timer-only activity see empty state
+- M4: EmptyState props allow both `onAction` and `actionHref` without TypeScript enforcement
+- Positive: Clean E2E tests, proper async cleanup patterns, well-typed component API
