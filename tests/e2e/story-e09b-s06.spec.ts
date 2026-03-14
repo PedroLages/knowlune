@@ -55,6 +55,8 @@ async function seedAIUsageEvents(
 
 test.describe('E09B-S06: AI Feature Analytics & Auto-Analysis', () => {
   test.beforeEach(async ({ page }) => {
+    // Navigate first so localStorage is accessible (about:blank blocks it)
+    await page.goto('/')
     // Prevent tablet sidebar overlay
     await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
   })
@@ -62,7 +64,6 @@ test.describe('E09B-S06: AI Feature Analytics & Auto-Analysis', () => {
   test.describe('AC1: AI Analytics dashboard with usage statistics', () => {
     test('displays usage statistics for each AI feature', async ({ page }) => {
       await seedAIConfig(page)
-      await page.goto('/')
 
       // Seed events for the current period
       const now = FIXED_DATE
