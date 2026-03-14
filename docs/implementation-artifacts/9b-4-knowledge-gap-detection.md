@@ -135,11 +135,17 @@ See [plan](plans/golden-brewing-naur.md) for implementation approach.
 
 ## Implementation Notes
 
-[Architecture decisions, patterns used, dependencies added]
+- **Rule-based detection first, AI as progressive enhancement**: Gap detection always runs the rule engine (note count ratios, watch percentage thresholds) and optionally enriches with AI descriptions via `Promise.race` with a 2-second timeout. No new dependencies needed — reuses existing `getAIConfiguration` and `/api/ai/generate` endpoint.
+- **Window mock injection for E2E**: `window.__mockKnowledgeGapsResponse` lets tests control exact gap data without a real AI backend or complex Dexie seeding. Declared in `types.ts` via `declare global`.
+- **Note link suggestions via key-term extraction**: Stopword-filtered content matching (≥2 shared terms or tags) with dismissed pairs persisted in localStorage. Integrated into `useNoteStore.saveNote()` with Sonner toast.
+- **State machine UI pattern**: `KnowledgeGaps.tsx` uses explicit `PageState` union (`idle | analyzing | completed | error`) with `AbortController` cleanup in `useEffect`.
 
 ## Testing Notes
 
-[Test strategy, edge cases discovered, coverage notes]
+- **ATDD approach**: Tests written in Red phase before implementation. 7 test cases covering all ACs.
+- **IndexedDB seeding**: Uses shared `seedIndexedDBStore` helper for course/video/note/progress data.
+- **Window mock pattern**: `page.addInitScript()` injects `__mockKnowledgeGapsResponse` to control gap detection output without hitting Dexie queries.
+- **Sidebar seeding**: localStorage `eduvi-sidebar-v1` seeded to `false` to prevent tablet overlay blocking interactions.
 
 ## Pre-Review Checklist
 
@@ -168,4 +174,7 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Window mock vs Dexie seeding trade-off**: Seeding all 4 Dexie tables (courses, videos, notes, progress) with the right relationships for gap detection would be fragile and verbose. The `window.__mockKnowledgeGapsResponse` injection pattern bypasses the data layer entirely for UI tests, while keeping the rule engine testable via unit tests. Trade-off: UI tests don't exercise the actual detection algorithm — but the algorithm is pure logic testable in isolation.
+- **Note link suggestion timing**: Suggestions trigger after `saveNote()` completes in the Zustand store. Initially considered triggering in a `useEffect` watching the notes array, but that would fire on every load/delete too. Direct invocation after the DB write is more predictable.
+- **Severity sorting stability**: The two-level sort (severity bucket first, then note ratio ascending within each bucket) ensures consistent ordering. Without the secondary sort, cards would shuffle on re-analysis since `Map` iteration order depends on insertion order.
+- **AbortController cleanup pattern**: The `useRef` + `useEffect` cleanup pattern ensures in-flight `detectGaps()` calls are aborted on unmount, preventing state updates on unmounted components.
