@@ -289,9 +289,8 @@ export async function saveNote(
     logStudyAction({ type: 'note_saved', courseId, lessonId, timestamp: new Date().toISOString() })
 
     // Trigger cross-course note link suggestions (AC4–AC6)
-    const savedNote = existing
-      ? { ...existing, content, tags: normalizedTags, updatedAt: new Date().toISOString() }
-      : await db.notes.where({ courseId, videoId: lessonId }).first()
+    // Re-read from Dexie to get the authoritative state (avoids stale linkedNoteIds)
+    const savedNote = await db.notes.where({ courseId, videoId: lessonId }).first()
     if (savedNote) {
       const allNotes = await db.notes.toArray()
       triggerNoteLinkSuggestions(savedNote, allNotes)

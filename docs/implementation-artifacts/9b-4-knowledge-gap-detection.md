@@ -4,9 +4,9 @@ story_name: "Knowledge Gap Detection"
 status: in-progress
 started: 2026-03-14
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-14
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -162,15 +162,45 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+**1 Blocker, 2 High, 2 Medium, 3 Nits** — Report: `docs/reviews/design/design-review-2026-03-14-e9b-s04.md`
+
+- **B1**: Severity color bleeds into video title h3 — `text-destructive` applied to entire card, ~4.3:1 contrast on title
+- **H1**: "Review video →" touch target 20px (needs 44px) — fix with `py-3 -my-3`
+- **H2**: Course `<section>` lacks `aria-labelledby` for screen reader navigation
+- **M2**: Button disabled state may not propagate correctly during store load
+- **M3**: Course section h3 contrast ~3.8:1 at 12px — below AA threshold
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**0 Blockers, 5 High, 4 Medium, 2 Nits** — Report: `docs/reviews/code/code-review-2026-03-14-e9b-s04.md`
+
+- **H1**: String interpolation for className instead of `cn()` in GapCard (recurring)
+- **H2**: Under-noted detection logic may scale incorrectly — per-video vs course-level ratio
+- **H3**: Bidirectional note link write not wrapped in Dexie transaction
+- **H4**: Stale `savedNote` in progress.ts trigger call
+- **H5**: setTimeout not cleared on AI enrichment success (recurring from E9B-S03)
+- **M1**: Unused `toast` import in useNoteStore
+- **M2**: Silent swallow in `dismissNoteLinkPair` catch block
+- **M3**: Unsafe JSON.parse cast of AI response
+- **M4**: Test file approaching 300-line target (384 lines)
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+**0 Blockers, 2 High, 4 Medium, 3 Low** — Report: `docs/reviews/code/web-design-guidelines-2026-03-14-e9b-s04.md`
+
+- **H1**: GapCard uses `<div>` instead of `<article>` — screen readers can't identify cards
+- **H2**: "Review video" links have identical text — needs `aria-label` per video
+- **M1**: Severity badge uses manual `<span>` instead of imported `<Badge>` component
+- **M3**: `aria-live` region doesn't announce error state
+- **M4**: "Import a course" link may not meet 44px touch target
+
+## Test Coverage Review
+
+**7/7 ACs covered, 0 Blockers, 2 High, 5 Medium** — Report: `docs/reviews/code/code-review-testing-2026-03-14-e9b-s04.md`
+
+- **H1**: AC7 timing requirement (2s fallback) not asserted
+- **H2**: No `afterEach` cleanup for `dismissed-note-links` localStorage
+- Notable edge cases identified: boundary values (49% vs 50%), empty courses, error/retry state, absence of unit tests for pure logic
 
 ## Challenges and Lessons Learned
 

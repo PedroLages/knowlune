@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { toast } from 'sonner'
 import { db } from '@/db'
 import type { Note } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'

@@ -212,29 +212,31 @@ async function acceptNoteLinkSuggestion(
   onLinked?: (source: Note, target: Note) => void
 ): Promise<void> {
   try {
-    const [sourceNote, targetNote] = await Promise.all([
-      db.notes.get(suggestion.sourceNoteId),
-      db.notes.get(suggestion.targetNoteId),
-    ])
+    const { updatedSource, updatedTarget } = await db.transaction('rw', db.notes, async () => {
+      const [sourceNote, targetNote] = await Promise.all([
+        db.notes.get(suggestion.sourceNoteId),
+        db.notes.get(suggestion.targetNoteId),
+      ])
 
-    if (!sourceNote || !targetNote) {
-      console.error('[NoteLinkSuggestions] Could not find notes for link suggestion')
-      return
-    }
+      if (!sourceNote || !targetNote) {
+        throw new Error('Could not find notes for link suggestion')
+      }
 
-    const updatedSource: Note = {
-      ...sourceNote,
-      linkedNoteIds: [...new Set([...(sourceNote.linkedNoteIds ?? []), targetNote.id])],
-      updatedAt: new Date().toISOString(),
-    }
+      const src: Note = {
+        ...sourceNote,
+        linkedNoteIds: [...new Set([...(sourceNote.linkedNoteIds ?? []), targetNote.id])],
+        updatedAt: new Date().toISOString(),
+      }
 
-    const updatedTarget: Note = {
-      ...targetNote,
-      linkedNoteIds: [...new Set([...(targetNote.linkedNoteIds ?? []), sourceNote.id])],
-      updatedAt: new Date().toISOString(),
-    }
+      const tgt: Note = {
+        ...targetNote,
+        linkedNoteIds: [...new Set([...(targetNote.linkedNoteIds ?? []), sourceNote.id])],
+        updatedAt: new Date().toISOString(),
+      }
 
-    await Promise.all([db.notes.put(updatedSource), db.notes.put(updatedTarget)])
+      await Promise.all([db.notes.put(src), db.notes.put(tgt)])
+      return { updatedSource: src, updatedTarget: tgt }
+    })
 
     onLinked?.(updatedSource, updatedTarget)
 

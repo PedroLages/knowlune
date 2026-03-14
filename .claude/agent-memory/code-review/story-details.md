@@ -137,3 +137,14 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M3: Optimistic UI reorder without rollback on persistence failure (violates pre-review checklist)
 - M4: Grammar error in empty state message ("You need at least 2 courses are needed")
 - Positive: No uncommitted changes (pattern broken), typed Window mock interface, good LLM response validation
+
+## E9B-S04: Knowledge Gap Detection
+- H1 (RECURRING x14): String interpolation for className instead of cn() in GapCard component (2 instances)
+- H2: Under-noted detection logic scales incorrectly -- per-video noteCount compared against videoCount/3 (course-level), so courses with 30 videos require 10+ notes per video
+- H3: Bidirectional note link write (two db.notes.put) not wrapped in Dexie transaction -- partial write risk
+- H4: progress.ts constructs stale savedNote for link suggestions (uses pre-write `existing` object)
+- H5 (RECURRING from E9B-S03): setTimeout in Promise.race never cleared on success (resource leak)
+- M1: Unused `toast` import in useNoteStore.ts
+- M2: dismissNoteLinkPair silently swallows localStorage write failures (empty catch)
+- M3: AI response descriptions not type-guarded (non-string values flow to UI)
+- Positive: No uncommitted changes, clean state machine, good AbortController cleanup, typed Window mock

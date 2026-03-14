@@ -138,10 +138,13 @@ export async function detectGaps(
     return { gaps, aiEnriched: false }
   }
 
-  // Race AI enrichment against timeout
+  // Race AI enrichment against timeout (clear timer on success to avoid resource leak)
+  let timeoutId: ReturnType<typeof setTimeout>
   const enriched = await Promise.race([
-    enrichWithAI(gaps, config.provider, apiKey, signal),
-    new Promise<null>(resolve => setTimeout(() => resolve(null), timeout)),
+    enrichWithAI(gaps, config.provider, apiKey, signal).finally(() => clearTimeout(timeoutId)),
+    new Promise<null>(resolve => {
+      timeoutId = setTimeout(() => resolve(null), timeout)
+    }),
   ])
 
   if (!enriched) {

@@ -4,6 +4,7 @@ import { Brain, AlertCircle, CheckCircle2, Loader2, Cpu } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/app/components/ui/alert'
 import { Badge } from '@/app/components/ui/badge'
+import { cn } from '@/app/components/ui/utils'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { detectGaps } from '@/ai/knowledgeGaps/detectGaps'
 import type { GapDetectionResult, GapItem, GapSeverity } from '@/ai/knowledgeGaps/types'
@@ -15,6 +16,12 @@ const SEVERITY_LABEL: Record<GapSeverity, string> = {
   critical: 'Critical',
   medium: 'Medium',
   low: 'Low',
+}
+
+const SEVERITY_CARD_CLASS: Record<GapSeverity, string> = {
+  critical: 'bg-destructive/10 border-destructive/20',
+  medium: 'bg-warning/10 border-warning/20',
+  low: 'bg-info/10 border-info/20',
 }
 
 const SEVERITY_BADGE_CLASS: Record<GapSeverity, string> = {
@@ -32,14 +39,17 @@ function GapCard({ gap }: { gap: GapItem }) {
   const videoPath = `/imported-courses/${gap.courseId}/lessons/${gap.videoId}`
 
   return (
-    <div
-      className={`rounded-[24px] border p-6 shadow-sm ${SEVERITY_BADGE_CLASS[gap.severity]}`}
+    <article
+      className={cn('rounded-[24px] border p-6 shadow-sm', SEVERITY_CARD_CLASS[gap.severity])}
       data-testid="gap-item"
     >
       <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
         <div className="flex flex-wrap items-center gap-2">
           <span
-            className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${SEVERITY_BADGE_CLASS[gap.severity]}`}
+            className={cn(
+              'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold',
+              SEVERITY_BADGE_CLASS[gap.severity]
+            )}
             data-testid="gap-severity"
             data-severity={gap.severity}
           >
@@ -53,14 +63,15 @@ function GapCard({ gap }: { gap: GapItem }) {
 
         <Link
           to={videoPath}
-          className="text-sm font-medium text-brand hover:text-brand-hover underline underline-offset-2 shrink-0"
+          className="text-sm font-medium text-brand hover:text-brand-hover underline underline-offset-2 shrink-0 py-3 -my-3"
           data-testid="gap-video-link"
+          aria-label={`Review video: ${gap.videoTitle}`}
         >
           Review video →
         </Link>
       </div>
 
-      <h3 className="font-semibold text-base mb-1">{gap.videoTitle}</h3>
+      <h3 className="font-semibold text-base mb-1 text-foreground">{gap.videoTitle}</h3>
 
       {gap.gapType === 'under-noted' && (
         <p className="text-sm text-muted-foreground">
@@ -85,7 +96,7 @@ function GapCard({ gap }: { gap: GapItem }) {
           {gap.aiDescription}
         </p>
       )}
-    </div>
+    </article>
   )
 }
 
@@ -167,6 +178,7 @@ export function KnowledgeGaps() {
         {pageState === 'analyzing' && 'Analyzing your study patterns for knowledge gaps…'}
         {pageState === 'completed' &&
           `Analysis complete. ${totalGaps} gap${totalGaps === 1 ? '' : 's'} found.`}
+        {pageState === 'error' && `Analysis failed. ${errorMessage ?? 'Please try again.'}`}
       </div>
 
       {/* Page Header */}
@@ -277,8 +289,11 @@ export function KnowledgeGaps() {
           {totalGaps > 0 && (
             <div className="space-y-8" data-testid="knowledge-gaps-list">
               {[...gapsByCourse.entries()].map(([courseId, courseGaps]) => (
-                <section key={courseId}>
-                  <h3 className="font-semibold text-muted-foreground text-sm uppercase tracking-wide mb-3 px-1">
+                <section key={courseId} aria-labelledby={`course-heading-${courseId}`}>
+                  <h3
+                    id={`course-heading-${courseId}`}
+                    className="font-semibold text-foreground/60 text-sm uppercase tracking-wide mb-3 px-1"
+                  >
                     {courseGaps[0]?.courseTitle ?? courseId}
                   </h3>
                   <div className="space-y-4">
