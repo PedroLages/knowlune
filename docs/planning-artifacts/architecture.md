@@ -506,41 +506,39 @@ const PlayButton = () => {
 - TypeScript support with type-safe queries
 
 **Schema Design:**
+
+> **Canonical source:** `src/db/schema.ts` — always check the actual code for the current schema version and table definitions. The schema below reflects the state as of v11 (2026-03-14). Future epics add tables via incremental versions (e.g., Epic 12 adds quiz tables at v12).
+
 ```typescript
 const db = new Dexie('ElearningDB')
 
-db.version(1).stores({
-  courses: '++id, name, importedAt, *tags',
-  videos: '++id, courseId, filename, duration, completionStatus',
-  pdfs: '++id, courseId, filename, pageCount',
-  notes: 'id, courseId, &videoId, *tags, createdAt, updatedAt',
-  progress: '++id, courseId, videoId, currentTime, completionPercentage',
-  streaks: '++id, date, minutesStudied',
-  studySessions: '++id, courseId, startTime, endTime, duration',
-  courseMomentum: 'courseId, score, category, lastStudied',
-  bookmarks: 'id, courseId, lessonId, createdAt'
+// Current schema (v11) — 13 tables
+db.version(11).stores({
+  importedCourses: 'id, name, importedAt, status, *tags',
+  importedVideos: 'id, courseId, filename',
+  importedPdfs: 'id, courseId, filename',
+  progress: '[courseId+videoId], courseId, videoId',
+  bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+  screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+  contentProgress: '[courseId+itemId], courseId, itemId, status',
+  challenges: 'id, type, deadline, createdAt',
+  embeddings: 'noteId, createdAt',
+  learningPath: 'courseId, position, generatedAt',
+  courseThumbnails: 'courseId',
 })
+// Note: `notes` and `bookmarks` use manual ID (crypto.randomUUID()).
+// All IDs are manual (no auto-increment) — tables use 'id' not '++id'.
+// See src/db/schema.ts for full migration history (v1 through v11).
 
-// v2: Domain research tables (Phase 4) — see Project Structure for full schema
-db.version(2).stores({
-  reviewCards: '++id, noteId, courseId, nextReviewDate, stability, difficulty',
-  studyGoals: '++id, type, target, startDate, endDate',
-  activityLog: '++id, verb, objectType, objectId, timestamp',
-  achievements: '++id, badgeType, earnedAt, courseId',
-  captions: '++id, videoId, format, filePath',
-  courseMetadata: 'courseId, creator, subject, language, difficulty',
-  streakConfig: 'id, freezeDaysPerWeek, restDays'
-})
-// Note: `notes` and `bookmarks` tables use manual ID (crypto.randomUUID())
-// per Architecture convention. All other tables use ++id (auto-increment).
+// PLANNED: Quiz tables (Epic 12, v12)
+// quizzes: 'id, lessonId, createdAt'
+// quizAttempts: 'id, quizId, [quizId+completedAt], completedAt'
 
-// v3: Platform & Entitlement tables (Epic 19)
-db.version(3).stores({
-  entitlements: 'userId, tier, expiresAt, cachedAt, stripeCustomerId, planId'
-})
-// Auth state is managed by Supabase SDK (localStorage), NOT Dexie.
-// Only entitlement cache lives in IndexedDB for offline access.
-// `userId` is the Supabase auth user ID (UUID).
+// PLANNED: Platform & Entitlement tables (Epic 19, v13+)
+// entitlements: 'userId, tier, expiresAt, cachedAt, stripeCustomerId, planId'
+// Auth state managed by Supabase SDK (localStorage), NOT Dexie.
 ```
 
 **Performance Optimizations:**
@@ -2545,41 +2543,35 @@ export const useNoteStore = create<NoteState>((set, get) => ({
 - **Pattern:** Central schema definition with versioned migrations
 
 **Schema Organization:**
+
+> **Canonical source:** `src/db/schema.ts` — see that file for the full migration chain (v1 through v11). The snippet below shows the current state. Future tables are listed as PLANNED with their target version.
+
 ```typescript
-// src/db/schema.ts
+// src/db/schema.ts — current state (v11, 13 tables)
 export const db = new Dexie('ElearningDB')
 
-db.version(1).stores({
-  courses: '++id, name, importedAt, *tags',
-  videos: '++id, courseId, filename, duration, completionStatus',
-  pdfs: '++id, courseId, filename, pageCount',
-  notes: 'id, courseId, &videoId, *tags, createdAt, updatedAt',
-  progress: '++id, courseId, videoId, currentTime, completionPercentage',
-  streaks: '++id, date, minutesStudied',
-  studySessions: '++id, courseId, startTime, endTime, duration',
-  courseMomentum: 'courseId, score, category, lastStudied',
-  bookmarks: 'id, courseId, lessonId, createdAt'
+db.version(11).stores({
+  importedCourses: 'id, name, importedAt, status, *tags',
+  importedVideos: 'id, courseId, filename',
+  importedPdfs: 'id, courseId, filename',
+  progress: '[courseId+videoId], courseId, videoId',
+  bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+  screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+  contentProgress: '[courseId+itemId], courseId, itemId, status',
+  challenges: 'id, type, deadline, createdAt',
+  embeddings: 'noteId, createdAt',
+  learningPath: 'courseId, position, generatedAt',
+  courseThumbnails: 'courseId',
 })
 
-// v2: Domain research tables (Phase 4 features)
-db.version(2).stores({
-  // Spaced repetition review scheduling (FR80-FR82)
-  reviewCards: '++id, noteId, courseId, nextReviewDate, stability, difficulty',
-  // Study goals — daily/weekly targets (FR90)
-  studyGoals: '++id, type, target, startDate, endDate',
-  // xAPI-compatible activity log (FR86)
-  activityLog: '++id, verb, objectType, objectId, timestamp',
-  // Earned achievements for Open Badges export (FR87)
-  achievements: '++id, badgeType, earnedAt, courseId',
-  // Caption/subtitle file references (FR88)
-  captions: '++id, videoId, format, filePath',
-  // Course metadata — Dublin Core + Schema.org fields (FR89)
-  courseMetadata: 'courseId, creator, subject, language, difficulty',
-  // Streak freeze configuration (FR91)
-  streakConfig: 'id, freezeDaysPerWeek, restDays'
-})
-// Note: `notes` and `bookmarks` tables use manual ID (crypto.randomUUID())
-// per Architecture convention. All other tables use ++id (auto-increment).
+// PLANNED future tables (not yet implemented):
+// v12 (Epic 12 — Quiz): quizzes, quizAttempts
+// v13+ (Epic 19 — Entitlements): entitlements
+// v14+ (Epic 11 — Post-MVP): reviewCards (FR80-82), studyGoals (FR90),
+//   activityLog (FR86), achievements (FR87), captions (FR88),
+//   courseMetadata (FR89), streakConfig (FR91)
 ```
 
 **Access Pattern:**
@@ -2787,7 +2779,7 @@ db.version(2).stores({
 - `src/app/pages/Review.tsx` - Review queue page (FUTURE)
 - `src/analytics/engagement.ts` - Engagement decay detection (FUTURE)
 - `src/analytics/sessionQuality.ts` - Session quality scoring (FUTURE)
-- `src/db/schema.ts` - `reviewCards` table (v2)
+- `src/db/schema.ts` - `reviewCards` table (PLANNED — v14+)
 
 **Flow:**
 1. User schedules note for review → creates `reviewCard` entry with ts-fsrs initial parameters
@@ -2808,7 +2800,7 @@ db.version(2).stores({
 - `src/lib/export/badgeExport.ts` - Open Badges v3.0 JSON generation (FUTURE)
 - `src/lib/activityLog.ts` - xAPI-compatible activity logging (FUTURE)
 - `src/app/components/video/CaptionTrack.tsx` - SRT/VTT caption rendering (FUTURE)
-- `src/db/schema.ts` - `activityLog`, `achievements`, `captions`, `courseMetadata` tables (v2)
+- `src/db/schema.ts` - `activityLog`, `achievements`, `captions`, `courseMetadata` tables (PLANNED — v14+)
 
 **Flow:**
 1. Activity logging: key user actions (video watched, note created, challenge completed) → `activityLog` table with Actor+Verb+Object structure
@@ -2824,7 +2816,7 @@ db.version(2).stores({
 **Files:**
 - `src/stores/useGoalStore.ts` - Study goal state (FUTURE)
 - `src/app/components/goals/GoalTracker.tsx` - Goal progress widget (FUTURE)
-- `src/db/schema.ts` - `studyGoals`, `streakConfig` tables (v2)
+- `src/db/schema.ts` - `studyGoals`, `streakConfig` tables (PLANNED — v14+)
 
 **Flow:**
 1. User creates daily/weekly goal → `studyGoals` table with type, target, date range
@@ -3135,7 +3127,7 @@ User clicks "Delete My Account" in Settings
 ### Implementation Sequence Mapping
 
 **Phase 1: Foundation (Months 1-2)**
-- `src/db/schema.ts` - IndexedDB schema (v1)
+- `src/db/schema.ts` - IndexedDB schema (v1-v11, see file for current state)
 - `src/stores/useCourseStore.ts` - Course state
 - `src/lib/fileSystem.ts` - File System Access API
 - `src/app/pages/Library.tsx` - Course import UI
@@ -3155,7 +3147,7 @@ User clicks "Delete My Account" in Settings
 - `tests/` - Comprehensive test suite
 
 **Phase 4: Domain-Driven Features (Post-MVP)**
-- `src/db/schema.ts` - IndexedDB schema (v2: reviewCards, studyGoals, activityLog, etc.)
+- `src/db/schema.ts` - IndexedDB schema (PLANNED tables: reviewCards, studyGoals, activityLog, etc. — v14+)
 - `src/lib/spacedRepetition.ts` - ts-fsrs spaced repetition scheduling
 - `src/lib/export/` - Data export (JSON, CSV, Markdown, Open Badges)
 - `src/app/components/review/` - Spaced review UI

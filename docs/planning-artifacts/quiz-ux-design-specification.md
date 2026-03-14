@@ -792,9 +792,8 @@ Settings persist to localStorage via the settings store. Quiz-specific settings 
 
 Quiz completion events trigger cross-store updates:
 
-1. **Study Streak**: `useProgressStore.getState().recordStudyActivity()` -- quiz completion counts toward daily streak
-2. **Lesson Progress**: `useProgressStore.getState().markLessonComplete()` -- quiz completion marks the associated lesson as complete (if passing score met)
-3. **Study Session**: `useSessionStore.getState().recordStudyActivity('quiz', timeSpent)` -- quiz time counts toward study session metrics
+1. **Lesson Progress**: `useContentProgressStore.getState().setItemStatus(courseId, lessonId, 'completed', modules)` -- quiz completion marks the associated lesson as complete (if passing score met)
+2. **Study Session**: Session time is tracked by `useSessionStore`'s `startSession`/`endSession` lifecycle -- no separate call needed, quiz time is automatically captured within the active session
 
 ### Data Persistence
 

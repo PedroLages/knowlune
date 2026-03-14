@@ -3776,7 +3776,11 @@ All learners can access quiz features via keyboard and screen readers (WCAG 2.1 
 
 **Goal:** Learners can start a quiz from a lesson, answer multiple-choice questions, submit for scoring, and see their results.
 
-**Technical Foundation:** This epic establishes the complete quiz infrastructure needed for all future epics - type definitions, Dexie schema, Zustand store, routing, and a minimal working quiz experience.
+**Technical Foundation:** This epic establishes the complete quiz infrastructure needed for all future epics (13-18) — type definitions, Dexie schema, Zustand store, routing, and a minimal working quiz experience.
+
+**QFRs Covered:** QFR1, QFR2, QFR4, QFR5, QFR6, QFR9, QFR17, QFR23, QFR49, QFR50, QFR52, QFR55 (partial — quiz entry, MC questions, scoring, results, data persistence, basic progress integration)
+
+**Note on QFR numbering:** Quiz functional requirements (QFR1-QFR61) are defined in `docs/planning-artifacts/quiz-ux-design-specification.md`, not the main PRD. All story traceability maps to QFR numbers.
 
 ### Story 12.1: Create Quiz Type Definitions
 
@@ -3784,14 +3788,16 @@ As a developer,
 I want Quiz, Question, and QuizAttempt TypeScript interfaces with Zod validation,
 So that I have type safety and runtime validation for quiz data throughout the application.
 
+**FRs Fulfilled:** QFR9 (MC type), QFR10 (TF type), QFR11 (MS type), QFR12 (FIB type), QFR49 (data structure)
+
 **Acceptance Criteria:**
 
-**Given** quiz data requirements from PRD and Architecture
+**Given** quiz data requirements from the quiz UX design specification
 **When** I create `src/types/quiz.ts`
-**Then** it exports all required TypeScript interfaces (Quiz, Question, QuizAttempt, Answer, QuizProgress)
-**And** all properties match the architecture specification exactly
-**And** Zod schemas are defined for runtime validation
-**And** QuestionType enum includes all 4 types (multiple-choice, true-false, multiple-select, fill-in-blank)
+**Then** it exports all required TypeScript interfaces (Quiz, Question, QuizAttempt, Answer, QuizProgress, QuestionMedia)
+**And** all properties match the quiz UX specification
+**And** Zod schemas are defined for runtime validation using `.safeParse()` (returns result objects, never throws)
+**And** QuestionType enum includes all 4 types: 'multiple-choice' | 'true-false' | 'multiple-select' | 'fill-in-blank'
 **And** JSDoc comments document each interface and property
 **And** types are importable from other modules using `@/types/quiz`
 
@@ -3799,32 +3805,51 @@ So that I have type safety and runtime validation for quiz data throughout the a
 **When** defining the `correctAnswer` property
 **Then** it supports both `string` and `string[]` types for polymorphic question handling
 **And** the `options` property is optional (not needed for fill-in-blank)
-**And** the `media` property supports image, video, and audio types
+**And** the `media` property uses the `QuestionMedia` type: `{ type: 'image' | 'video' | 'audio'; url: string; alt?: string }`
+
+**Given** the QuizProgress interface
+**When** defining progress state for crash recovery
+**Then** it includes `markedForReview: string[]` for question flagging (per UX spec)
+**And** it includes `questionOrder: string[]` to persist shuffled question sequence
+**And** it includes `timerAccommodation: 'standard' | '150%' | '200%' | 'untimed'`
+
+**Given** the Quiz interface
+**When** defining the `passingScore` property
+**Then** it is a percentage value constrained to 0-100 via Zod: `z.number().min(0).max(100)`
 
 **Technical Details:**
 
 Files to create:
-- `src/types/quiz.ts`
+- `src/types/quiz.ts` — New file justified because quiz types span 7 epics (12-18) with 61 QFRs. Keeping them separate from `src/data/types.ts` prevents bloating the existing types file and provides clear module boundaries for the quiz subsystem.
 
 Type interfaces to define:
 - `QuestionType` enum: 'multiple-choice' | 'true-false' | 'multiple-select' | 'fill-in-blank'
-- `Question` interface: id, order, type, text, options, correctAnswer, explanation, points, media
-- `Quiz` interface: id, lessonId, title, description, questions, timeLimit, passingScore, allowRetakes, shuffleQuestions, shuffleAnswers, createdAt, updatedAt
-- `Answer` interface: questionId, userAnswer, isCorrect, pointsEarned, pointsPossible
-- `QuizAttempt` interface: id, quizId, answers, score, percentage, passed, timeSpent, completedAt, startedAt
-- `QuizProgress` interface: quizId, currentQuestionIndex, answers, startTime, timeRemaining, isPaused
+- `QuestionMedia` interface: `{ type: 'image' | 'video' | 'audio'; url: string; alt?: string }`
+- `Question` interface: id, order, type, text, options (optional), correctAnswer (string | string[]), explanation, points, media (QuestionMedia, optional)
+- `Quiz` interface: id, lessonId, title, description, questions, timeLimit (number | null), passingScore (0-100), allowRetakes, shuffleQuestions, shuffleAnswers, createdAt, updatedAt
+- `Answer` interface: questionId, userAnswer (string | string[]), isCorrect, pointsEarned, pointsPossible
+- `QuizAttempt` interface: id, quizId, answers, score, percentage, passed, timeSpent, completedAt, startedAt, timerAccommodation
+- `QuizProgress` interface: quizId, currentQuestionIndex, answers (Record<string, string | string[]>), startTime, timeRemaining (number | null), isPaused, markedForReview (string[]), questionOrder (string[]), timerAccommodation
 
 Zod schemas to create:
-- `QuestionSchema` with type-specific validation (MC/MS require options array)
-- `QuizSchema` with nested QuestionSchema validation
+- `QuestionMediaSchema` for media validation
+- `QuestionSchema` with type-specific refinement (MC/MS require non-empty options array; TF requires exactly 2 options)
+- `QuizSchema` with nested QuestionSchema validation and `passingScore: z.number().min(0).max(100)`
+- All schemas expose `.safeParse()` — never throw. Consumers handle `{ success: false, error }` results.
 - Type inference: `export type Quiz = z.infer<typeof QuizSchema>`
+
+Scoring convention (documented, not enforced in types):
+- MC, TF, FIB: all-or-nothing (0% or 100% of question points)
+- MS: Partial Credit Model — `max(0, (correct - incorrect) / total_correct)` (implemented in Epic 14)
 
 **Testing Requirements:**
 
 Unit tests:
 - TypeScript compilation verification
-- Zod schema validation for valid quiz data
-- Zod schema rejection for invalid data (missing required fields, wrong types)
+- Zod schema `.safeParse()` for valid quiz data returns `{ success: true }`
+- Zod schema `.safeParse()` for invalid data returns `{ success: false }` with descriptive errors
+- MC/MS questions without options array fail validation
+- passingScore outside 0-100 fails validation
 - Type inference correctness
 
 **Dependencies:** None (foundation story)
@@ -3835,68 +3860,79 @@ Unit tests:
 
 ---
 
-### Story 12.2: Set Up Dexie Schema v3 Migration
+### Story 12.2: Set Up Dexie Schema v12 Migration
 
 As a developer,
-I want to migrate Dexie schema from v2 to v3 with quiz tables,
+I want to add quiz tables to the Dexie schema (v11 → v12),
 So that quiz data persists reliably in IndexedDB with proper indexes for efficient queries.
+
+**FRs Fulfilled:** QFR49 (IndexedDB persistence), QFR50 (quiz data storage), QFR52 (attempt history)
 
 **Acceptance Criteria:**
 
-**Given** the existing Dexie schema at v2
-**When** I run the schema migration
-**Then** version 3 is created with three new tables: `quizzes`, `quizAttempts`, `quizProgress`
-**And** the `quizzes` table has indexes on: id (primary), lessonId, title, createdAt
-**And** the `quizAttempts` table has indexes on: id (primary), quizId, completedAt, passed
-**And** the `quizProgress` table has quizId as primary key (only one active quiz at a time)
+**Given** the existing Dexie schema at v11 (current version in `src/db/schema.ts`)
+**When** I add version 12 with quiz tables
+**Then** two new tables are created: `quizzes` and `quizAttempts`
+**And** the `quizzes` table has indexes on: id (primary), lessonId, createdAt
+**And** the `quizAttempts` table has indexes on: id (primary), quizId, [quizId+completedAt] (compound), completedAt
+**And** all 13 existing v11 tables are redeclared with their current index definitions
 **And** no data migration/backfill is needed (new feature, no existing data)
-**And** existing v2 tables remain unchanged
+**And** the typed `db` instance declares `quizzes` and `quizAttempts` as EntityTable properties
 
-**Given** a quiz being stored
-**When** querying quizzes by lessonId
-**Then** the query uses the lessonId index for efficient retrieval
-**And** compound queries (e.g., "all passed attempts for quiz X") use the appropriate indexes
+**Given** a quiz attempt being queried
+**When** querying for "most recent attempt for quiz X"
+**Then** the compound index `[quizId+completedAt]` enables efficient retrieval without table scan
+
+**Note:** Current quiz progress is stored in localStorage via Zustand persist middleware (per UX spec QFR49), NOT in IndexedDB. Only quiz definitions and completed attempts use IndexedDB.
 
 **Technical Details:**
 
 Files to modify:
-- `src/db/schema.ts`
+- `src/db/schema.ts` — Add v12 stores block and typed table declarations
+- `src/data/types.ts` or `src/types/quiz.ts` — Import Quiz/QuizAttempt types for Dexie typing (from Story 12.1)
 
-Migration code:
+Migration code (must redeclare ALL existing tables):
 ```typescript
-db.version(3)
-  .stores({
-    // Existing v2 tables (unchanged)
-    courses: 'id, name, category',
-    progress: 'id, courseId, lessonId, completedAt',
-    bookmarks: 'id, lessonId, timestamp',
-    notes: 'id, lessonId, createdAt',
-    sessions: 'id, startTime, endTime',
-    
-    // NEW: Quiz tables
-    quizzes: 'id, lessonId, title, createdAt',
-    quizAttempts: 'id, quizId, completedAt, passed',
-    quizProgress: 'quizId'
-  })
-  .upgrade(tx => {
-    // No backfill needed - new feature
-    return Promise.resolve()
-  })
+// Add to typed db instance:
+//   quizzes: EntityTable<Quiz, 'id'>
+//   quizAttempts: EntityTable<QuizAttempt, 'id'>
+
+db.version(12).stores({
+  // ALL existing v11 tables (unchanged — must redeclare or Dexie deletes them)
+  importedCourses: 'id, name, importedAt, status, *tags',
+  importedVideos: 'id, courseId, filename',
+  importedPdfs: 'id, courseId, filename',
+  progress: '[courseId+videoId], courseId, videoId',
+  bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+  screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+  contentProgress: '[courseId+itemId], courseId, itemId, status',
+  challenges: 'id, type, deadline, createdAt',
+  embeddings: 'noteId, createdAt',
+  learningPath: 'courseId, position, generatedAt',
+  courseThumbnails: 'courseId',
+
+  // NEW: Quiz tables
+  quizzes: 'id, lessonId, createdAt',
+  quizAttempts: 'id, quizId, [quizId+completedAt], completedAt',
+})
 ```
 
 **Testing Requirements:**
 
 Unit tests:
-- Schema migration runs successfully
-- Tables created with correct indexes
-- Existing v2 data remains intact
+- Schema v12 migration runs successfully from v11
+- New tables created with correct indexes
+- All 13 existing v11 tables remain intact with data preserved
 - Can write and read quiz data from new tables
+- Compound index `[quizId+completedAt]` returns results in correct order
 
 Integration tests:
-- Query performance using indexes (measure with large dataset)
-- Dexie upgrade callback executes without errors
+- Dexie upgrade from v11 to v12 executes without errors
+- Typed `db.quizzes` and `db.quizAttempts` compile and work at runtime
 
-**Dependencies:** Story 12.1 (needs Quiz types for TypeScript)
+**Dependencies:** Story 12.1 (needs Quiz types for TypeScript table typing)
 
 **Complexity:** Small (1-2 hours)
 
@@ -3910,38 +3946,58 @@ As a developer,
 I want a Zustand store for quiz state management following LevelUp patterns,
 So that quiz state is managed consistently with individual selectors and optimistic updates.
 
+**FRs Fulfilled:** QFR1 (quiz start), QFR2 (answer selection), QFR4 (resume), QFR6 (retake), QFR49 (crash recovery via localStorage persist), QFR55 (progress integration)
+
 **Acceptance Criteria:**
 
 **Given** the LevelUp Zustand patterns (individual selectors, optimistic updates)
 **When** I create `src/stores/useQuizStore.ts`
 **Then** it follows the `create<State>()(persist(...))` TypeScript pattern
 **And** it exports individual selectors (never destructure full store)
-**And** it implements optimistic update pattern (Zustand → Dexie → rollback on failure)
+**And** it implements optimistic update pattern (Zustand → Dexie → retry with backoff → rollback on exhaustion)
 **And** persist middleware auto-saves `currentProgress` to localStorage with key `levelup-quiz-store`
-**And** it includes actions: startQuiz, submitAnswer, submitQuiz, retakeQuiz, loadAttempts, resumeQuiz, clearQuiz
+**And** it includes actions: startQuiz, submitAnswer, submitQuiz, retakeQuiz, loadAttempts, resumeQuiz, clearQuiz, toggleReviewMark, clearError
 
 **Given** the startQuiz action
 **When** a learner starts a quiz
-**Then** it loads the quiz from Dexie by quizId
+**Then** it loads the quiz from Dexie by lessonId (resolving the quiz associated with the lesson)
 **And** applies Fisher-Yates shuffle if quiz.shuffleQuestions is true
-**And** initializes QuizProgress state (currentQuestionIndex=0, empty answers, start time)
-**And** sets timeRemaining if quiz has a timeLimit
+**And** persists the shuffled question order in `currentProgress.questionOrder` (for deterministic crash recovery)
+**And** initializes QuizProgress state (currentQuestionIndex=0, empty answers, start time, empty markedForReview)
+**And** sets timeRemaining based on quiz.timeLimit × timerAccommodation multiplier
 
 **Given** the submitAnswer action
 **When** a learner selects an answer
-**Then** it calculates partial credit immediately (≤50ms)
+**Then** it stores the answer in `currentProgress.answers[questionId]`
 **And** updates Zustand state optimistically (instant UI feedback)
 **And** localStorage auto-saves via persist middleware (debounced)
 **And** does NOT write to Dexie (wait until quiz submission to avoid write amplification)
 
 **Given** the submitQuiz action
 **When** a learner submits the completed quiz
-**Then** it calculates total score and percentage
+**Then** it calculates total score and percentage using `calculateQuizScore` from `src/lib/scoring.ts`
 **And** creates QuizAttempt record with all answers and metrics
-**And** writes attempt to Dexie `quizAttempts` table
+**And** writes attempt to Dexie `quizAttempts` table with retry (3 attempts: 1s, 2s, 4s backoff per Architecture convention)
+**And** ONLY AFTER Dexie write succeeds: triggers cross-store updates
 **And** clears `currentProgress` from localStorage
-**And** triggers cross-store updates (useProgressStore.markLessonComplete, useSessionStore.recordStudyActivity)
-**And** rolls back on Dexie write failure
+**And** on Dexie retry exhaustion: reverts Zustand state, shows error toast, preserves currentProgress for retry
+
+**Given** cross-store communication on quiz submission
+**When** the Dexie write succeeds and the quiz score meets the passing threshold
+**Then** it calls `useContentProgressStore.getState().setItemStatus(courseId, lessonId, 'completed', modules)` to mark the lesson complete
+
+**Given** the retakeQuiz action
+**When** a learner chooses to retake a quiz
+**Then** it calls `startQuiz` with the same lessonId, generating a fresh shuffle order and resetting all progress
+
+**Given** the resumeQuiz action
+**When** the store rehydrates from localStorage on page load
+**Then** it restores `currentProgress` including answers, questionOrder, markedForReview, and timerAccommodation
+**And** the quiz displays questions in the persisted `questionOrder` (NOT re-shuffled)
+
+**Given** the toggleReviewMark action
+**When** a learner marks/unmarks a question for review
+**Then** it adds/removes the questionId from `currentProgress.markedForReview`
 
 **Technical Details:**
 
@@ -3956,13 +4012,15 @@ interface QuizState {
   attempts: QuizAttempt[]
   isLoading: boolean
   error: string | null
-  startQuiz: (quizId: string) => Promise<void>
+  startQuiz: (lessonId: string) => Promise<void>
   submitAnswer: (questionId: string, answer: string | string[]) => void
-  submitQuiz: () => Promise<void>
-  retakeQuiz: (quizId: string) => void
+  submitQuiz: (courseId: string, modules: Module[]) => Promise<void>
+  retakeQuiz: (lessonId: string) => Promise<void>
   loadAttempts: (quizId: string) => Promise<void>
-  resumeQuiz: (quizId: string) => void
+  resumeQuiz: () => void  // no-op beyond persist rehydration
   clearQuiz: () => void
+  toggleReviewMark: (questionId: string) => void
+  clearError: () => void
 }
 ```
 
@@ -3970,28 +4028,35 @@ Zustand persist configuration:
 - name: 'levelup-quiz-store'
 - partialize: only persist `currentProgress` (not full quiz or attempts)
 
-Cross-store communication:
-- useProgressStore.getState().markLessonComplete(lessonId)
-- useSessionStore.getState().recordStudyActivity('quiz', timeSpent)
+Cross-store communication (AFTER successful Dexie write only):
+- `useContentProgressStore.getState().setItemStatus(courseId, lessonId, 'completed', modules)` — if passing score met
+- Session time is already tracked by useSessionStore's startSession/endSession lifecycle (no separate call needed)
+
+Retry pattern (per Architecture convention):
+- Use `persistWithRetry` from `src/lib/persistWithRetry.ts` for Dexie writes
+- 3 attempts with exponential backoff (1s, 2s, 4s)
+- On exhaustion: revert Zustand to pre-submission state, show error toast via Sonner, preserve currentProgress
 
 **Testing Requirements:**
 
 Unit tests:
-- startQuiz loads quiz and initializes state
-- submitAnswer updates state optimistically
-- submitQuiz creates attempt and persists to Dexie
-- Fisher-Yates shuffle applied when enabled
+- startQuiz loads quiz and initializes state with shuffled questionOrder persisted
+- submitAnswer updates currentProgress.answers correctly
+- submitQuiz creates attempt, writes to Dexie, triggers cross-store on success
+- submitQuiz reverts state on Dexie failure after retries
+- Cross-store calls only execute AFTER Dexie write succeeds
+- Fisher-Yates shuffle applied when enabled, order persisted
+- resumeQuiz restores exact question order from localStorage (no re-shuffle)
 - persist middleware saves only currentProgress
-- Rollback on Dexie failure
+- toggleReviewMark adds/removes from markedForReview array
 
 Integration tests:
-- localStorage persistence across page reloads
-- Cross-store communication triggers correctly
-- Error handling for missing quiz
+- localStorage persistence across page reloads preserves answers, questionOrder, markedForReview
+- Error handling for missing quiz (lessonId with no associated quiz)
 
-**Dependencies:** 
+**Dependencies:**
 - Story 12.1 (needs Quiz types)
-- Story 12.2 (needs Dexie schema)
+- Story 12.2 (needs Dexie schema with quizzes/quizAttempts tables)
 
 **Complexity:** Medium (3-4 hours)
 
@@ -3999,83 +4064,92 @@ Integration tests:
 
 ---
 
-### Story 12.4: Create Quiz Route and Basic QuizPlayer Component
+### Story 12.4: Create Quiz Route and QuizPage Component
 
 As a learner,
 I want to navigate to a quiz from a lesson and see the quiz start screen,
 So that I can begin taking a quiz when I'm ready.
+
+**FRs Fulfilled:** QFR1 (quiz entry from lesson), QFR4 (resume in-progress quiz), QFR8 (quiz metadata display), QFR50 (start screen)
 
 **Acceptance Criteria:**
 
 **Given** a course lesson with an associated quiz
 **When** I click "Take Quiz" from the lesson page
 **Then** I navigate to `/courses/:courseId/lessons/:lessonId/quiz`
+**And** the quiz is resolved by looking up the quiz associated with the lessonId from Dexie
 **And** I see the quiz title and description
-**And** I see the number of questions (e.g., "12 questions")
-**And** I see the time limit if configured (e.g., "15 minutes") or "Untimed" if no limit
-**And** I see a "Start Quiz" button prominently displayed
+**And** I see metadata badges: question count (e.g., "12 questions"), time limit or "Untimed", passing score (e.g., "70% to pass")
+**And** I see a "Start Quiz" button (`bg-brand text-brand-foreground hover:bg-brand-hover rounded-xl h-12 px-8`)
 **And** I do NOT see any questions yet (start screen only)
 
 **Given** the quiz start screen
 **When** I click "Start Quiz"
-**Then** useQuizStore.startQuiz() is called
+**Then** useQuizStore.startQuiz(lessonId) is called
 **And** the first question loads and displays
-**And** the quiz header shows progress (e.g., "Question 1 of 12")
-**And** the timer starts counting down if quiz is timed
+**And** the quiz header shows progress (e.g., "Question 1 of 12") with a progress bar
+**And** the timer starts counting down if quiz is timed (MM:SS format, right-aligned)
 
-**Given** I am on a different page
-**When** I navigate directly to a quiz URL
-**Then** the quiz loads from the quizId route parameter
-**And** if I have an incomplete quiz in progress, I see a "Resume Quiz" option
-**And** if no progress exists, I see the normal start screen
+**Given** I have an incomplete quiz in progress (currentProgress exists in localStorage)
+**When** I navigate to the quiz URL
+**Then** I see a "Resume Quiz" button showing "Resume Quiz (5 of 12 answered)"
+**And** clicking it restores my exact position, answers, and question order
+
+**Given** I navigate to a quiz URL for a non-existent quiz or a lesson with no quiz
+**When** the quiz lookup fails
+**Then** I see an error message: "No quiz found for this lesson"
+**And** I see a link back to the course page
+
+**Out of scope (deferred):**
+- Accessibility accommodations link on start screen (Epic 15 — timer stories)
+- `<QuestionDisplay>` renders a stub/placeholder until Story 12.5 implements it
 
 **Technical Details:**
 
 Files to create:
-- `src/app/pages/Quiz.tsx` (route-level page component)
-- `src/app/components/quiz/QuizHeader.tsx` (title, progress indicator)
-- `src/app/components/quiz/QuizStartScreen.tsx` (pre-quiz info and start button)
+- `src/app/pages/Quiz.tsx` (route-level page component — the QuizPage)
+- `src/app/components/quiz/QuizHeader.tsx` (title, progress bar, timer placeholder)
+- `src/app/components/quiz/QuizStartScreen.tsx` (pre-quiz metadata and start/resume buttons)
 
 Files to modify:
-- `src/app/routes.tsx` (add quiz route)
+- `src/app/routes.tsx` (add quiz route as nested route inside Layout)
 
 Route configuration:
 ```typescript
-{
-  path: '/courses/:courseId/lessons/:lessonId/quiz',
-  element: <Quiz />
-}
+{ path: '/courses/:courseId/lessons/:lessonId/quiz', element: <Quiz /> }
 ```
 
-QuizPlayer component structure:
+QuizPage component structure:
 ```tsx
-<QuizContainer>
-  <QuizHeader quiz={currentQuiz} currentIndex={0} />
-  {!quizStarted && <QuizStartScreen quiz={currentQuiz} onStart={handleStart} />}
-  {quizStarted && <QuestionDisplay ... />}
-</QuizContainer>
+<div className="bg-card rounded-[24px] p-8 max-w-2xl mx-auto shadow-sm">
+  <QuizHeader quiz={currentQuiz} progress={currentProgress} />
+  {!quizStarted && <QuizStartScreen quiz={currentQuiz} progress={currentProgress} onStart={handleStart} onResume={handleResume} />}
+  {quizStarted && <QuestionDisplay question={currentQuestion} ... />}  {/* Stub until Story 12.5 */}
+</div>
 ```
 
-Components:
-- QuizHeader: displays title, question progress (1 of 12), timer (if applicable)
-- QuizStartScreen: quiz metadata, start button, resume button if progress exists
+Start screen metadata badges (per UX spec):
+- Question count: `bg-brand-soft text-brand rounded-full px-3 py-1 text-sm`
+- Time limit: `bg-muted text-muted-foreground rounded-full px-3 py-1 text-sm`
+- Passing score: same style as time limit
 
 **Testing Requirements:**
 
 Unit tests:
-- QuizPlayer renders start screen correctly
-- Start button triggers useQuizStore.startQuiz()
-- Resume button appears when currentProgress exists
+- QuizPage renders start screen with title, description, metadata badges
+- Start button triggers useQuizStore.startQuiz(lessonId)
+- Resume button appears when currentProgress exists, shows answer count
+- Error state renders when quiz not found
 
 E2E tests:
-- Navigate to quiz URL → see start screen
-- Click "Start Quiz" → first question displays
-- Refresh page mid-quiz → can resume
-- Browser back button returns to lesson (quiz state preserved)
+- Navigate to quiz URL → see start screen with all metadata
+- Click "Start Quiz" → quiz header appears with progress bar
+- Refresh page mid-quiz → can resume with preserved state
+- Navigate to invalid quiz URL → see error with course link
 
 Accessibility tests:
-- Keyboard navigation (Tab to Start button, Enter to activate)
-- Screen reader announces quiz title, question count, time limit
+- Keyboard navigation (Tab to Start/Resume button, Enter to activate)
+- Screen reader announces quiz title, question count, time limit, passing score
 - Focus moves to first question after starting
 
 **Dependencies:**
@@ -4086,10 +4160,11 @@ Accessibility tests:
 **Complexity:** Medium (4-5 hours)
 
 **Design Review Focus:**
-- Quiz start screen layout at 375px, 768px, 1440px
-- "Start Quiz" button prominence and touch target size (≥44px)
-- Warm color scheme (#FAF5EE background, blue-600 CTA)
-- Typography hierarchy (quiz title, metadata, button text)
+- Quiz start screen layout at mobile (<640px), tablet (640-1023px), desktop (≥1024px)
+- Start Quiz button: `h-12` touch target (48px), `rounded-xl`, brand colors
+- Metadata badges inline display with proper spacing
+- Container: `bg-card rounded-[24px] p-8 max-w-2xl mx-auto shadow-sm`
+- Typography: title `text-2xl font-semibold`, description `text-base text-muted-foreground`
 
 ---
 
@@ -4099,50 +4174,69 @@ As a learner,
 I want to see multiple choice questions with selectable answer options,
 So that I can answer quiz questions by selecting the correct option.
 
+**FRs Fulfilled:** QFR9 (multiple choice display), QFR2 (question display), QFR14 (rich text in questions)
+
 **Acceptance Criteria:**
 
 **Given** a quiz with multiple choice questions
-**When** I start the quiz
-**Then** I see the question text displayed clearly with proper typography
-**And** I see 2-6 answer options as radio buttons below the question
-**And** each option has a visible label with the answer text
+**When** I view a question
+**Then** I see the question text rendered as Markdown (via `react-markdown` with `remark-gfm`)
+**And** the question is wrapped in a card: `bg-card rounded-[24px] p-6 lg:p-8`
+**And** I see 2-6 answer options as styled radio buttons below the question
+**And** each option uses the label wrapper pattern from the UX spec
 **And** all options are unselected initially (no default selection)
 **And** I can select exactly one option at a time (radio group behavior)
 
-**Given** a question with rich formatting
-**When** the question text contains code blocks, lists, or emphasis
-**Then** the formatting renders correctly using Markdown
-**And** code blocks have syntax highlighting (if applicable)
-**And** lists display with proper indentation
-
 **Given** I select an answer option
 **When** I click or tap on a radio button or its label
-**Then** the option becomes visually selected (filled radio button)
+**Then** the option becomes visually selected: `border-2 border-brand bg-brand-soft rounded-xl p-4`
+**And** unselected options show: `border border-border bg-card hover:bg-accent rounded-xl p-4`
 **And** any previously selected option becomes unselected
-**And** the selection state persists if I navigate away and return to this question
+**And** `useQuizStore.submitAnswer(questionId, selectedOption)` is called
+**And** the selection persists via Zustand store if I navigate away and return
 
-**Given** the question display component
-**When** rendering on mobile (375px)
-**Then** answer options stack vertically with full-width labels
-**And** touch targets are ≥44px tall for easy selection
-**When** rendering on desktop (1440px)
-**Then** answer options may display in a single column or two columns based on content length
+**Given** the QuestionDisplay component API
+**When** defining the component props
+**Then** it accepts a `mode` prop: `'active' | 'review-correct' | 'review-incorrect' | 'review-disabled'`
+**And** in 'active' mode (Epic 12): only unselected and selected states render
+**And** review modes (Epic 16): correct (`border-success bg-success-soft`), incorrect (`border-warning`), disabled (`opacity-60`)
+**And** this prop surface exists now to prevent API breakage when review mode ships
+
+**Given** the question display on mobile (<640px)
+**When** rendering answer options
+**Then** options stack vertically with full-width labels
+**And** each option has minimum height `h-12` (48px) for touch targets per UX spec
+
+**Given** a question with fewer than 2 or more than 6 options
+**When** rendering the question
+**Then** it renders whatever options exist (graceful degradation)
+**And** logs a warning to console for data quality monitoring
 
 **Technical Details:**
 
 Files to create:
-- `src/app/components/quiz/QuestionDisplay.tsx` (polymorphic renderer)
+- `src/app/components/quiz/QuestionDisplay.tsx` (polymorphic renderer with `mode` prop)
 - `src/app/components/quiz/questions/MultipleChoiceQuestion.tsx`
 
-MultipleChoiceQuestion component:
+Dependencies to verify (should already be in package.json):
+- `react-markdown` and `remark-gfm` for question text rendering
+- Syntax highlighting for code blocks: defer to implementation decision (explicit scope boundary — add if trivial, skip if significant bundle impact)
+
+MultipleChoiceQuestion component (per UX spec styling):
 ```tsx
 <fieldset className="space-y-3">
-  <legend className="text-lg font-semibold mb-4">
-    <ReactMarkdown>{question.text}</ReactMarkdown>
+  <legend className="text-lg lg:text-xl text-foreground leading-relaxed mb-4">
+    <ReactMarkdown remarkPlugins={[remarkGfm]}>{question.text}</ReactMarkdown>
   </legend>
   <RadioGroup value={selectedAnswer} onValueChange={handleAnswerChange}>
-    {question.options.map((option, index) => (
-      <RadioGroupItem key={index} value={option} label={option} />
+    {question.options.map(option => (
+      <label key={option.id} className="flex items-start gap-3 p-4 rounded-xl border
+                    hover:bg-accent cursor-pointer min-h-12
+                    data-[state=checked]:border-brand data-[state=checked]:border-2
+                    data-[state=checked]:bg-brand-soft">
+        <RadioGroupItem value={option.id} />
+        <span className="text-base text-foreground leading-relaxed">{option.text}</span>
+      </label>
     ))}
   </RadioGroup>
 </fieldset>
@@ -4150,47 +4244,51 @@ MultipleChoiceQuestion component:
 
 QuestionDisplay polymorphic rendering:
 ```tsx
+// mode defaults to 'active' for Epic 12
 switch (question.type) {
   case 'multiple-choice':
-    return <MultipleChoiceQuestion question={question} value={userAnswer} onChange={onAnswerChange} />
-  // Future question types...
+    return <MultipleChoiceQuestion question={question} value={userAnswer} onChange={onAnswerChange} mode={mode} />
+  default:
+    return <div>Unsupported question type: {question.type}</div>
 }
 ```
 
 **Testing Requirements:**
 
 Unit tests:
-- MultipleChoiceQuestion renders all options correctly
-- Selecting an option calls onChange callback
+- MultipleChoiceQuestion renders all options with correct UX spec styling
+- Selecting an option calls onChange callback and updates visual state
 - Only one option can be selected at a time
-- Markdown rendering for question text
+- Markdown rendering for question text (emphasis, code blocks, lists)
+- `mode` prop correctly applies active vs review styles
+- Options with < 2 or > 6 items render with console warning
 
 E2E tests:
-- Click each answer option → selection updates
-- Navigate away and back → selection persists
-- Keyboard navigation (Tab to options, Space/Enter to select)
+- Click each answer option → selection updates with brand styling
+- Navigate to next question and back → selection persists via store
+- Keyboard navigation (Tab to options, Space/Enter to select, Arrow keys between)
 
 Accessibility tests:
-- fieldset/legend semantic structure
-- Radio group has proper ARIA attributes
+- `<fieldset>/<legend>` semantic structure present
+- RadioGroup has proper ARIA attributes (role="radiogroup", aria-labelledby)
 - Screen reader announces question text and all options
-- Focus indicators visible on all options (4.5:1 contrast)
-- Touch targets ≥44px on mobile
+- Focus indicators visible: `outline-2 outline-brand outline-offset-2`
+- Touch targets ≥48px (`min-h-12`) on mobile
 
 **Dependencies:**
-- Story 12.1 (needs Question type)
-- Story 12.3 (needs useQuizStore for answer submission)
-- Story 12.4 (needs QuizPlayer to render questions)
+- Story 12.1 (needs Question type with options)
+- Story 12.3 (needs useQuizStore.submitAnswer for answer persistence)
+- Story 12.4 (needs QuizPage to render QuestionDisplay)
 
 **Complexity:** Medium (3-4 hours)
 
 **Design Review Focus:**
-- Question text typography and spacing
-- Radio button styling and selection state
-- Responsive layout (stacked on mobile, potentially multi-column on desktop)
-- Touch target sizes on mobile (≥44px)
-- Markdown rendering quality (code blocks, lists)
-- Focus states on radio buttons
+- Question card: `bg-card rounded-[24px] p-6 lg:p-8`
+- Option styling matches UX spec 5 states (only active/selected rendered in Epic 12)
+- Touch targets: `min-h-12` (48px) per UX spec
+- Responsive: stacked single column on all viewports (two-column deferred — threshold undefined)
+- Markdown rendering: code blocks, lists, emphasis render cleanly
+- Focus states: `outline-2 outline-brand outline-offset-2`
 
 ---
 
@@ -4200,41 +4298,48 @@ As a learner,
 I want to submit my quiz and immediately see my score,
 So that I know how well I performed.
 
+**FRs Fulfilled:** QFR5 (results display), QFR17 (scoring calculation), QFR23 (non-judgmental messaging), QFR6 (retake)
+
 **Acceptance Criteria:**
 
 **Given** I have answered all required questions in a quiz
 **When** I click "Submit Quiz"
 **Then** the quiz is submitted to useQuizStore.submitQuiz()
 **And** my score is calculated as a percentage of total possible points
-**And** I am redirected to `/courses/:courseId/lessons/:lessonId/quiz/results`
-**And** I see my score displayed prominently (e.g., "85%")
-**And** I see the number of questions I answered correctly (e.g., "10 of 12 correct")
-**And** I see whether I passed or failed based on the quiz's passing score
-**And** I see the total time I spent on the quiz (e.g., "Completed in 8m 32s")
+**And** I am navigated to `/courses/:courseId/lessons/:lessonId/quiz/results`
+**And** I see an animated circular SVG score indicator with my percentage in `text-5xl font-bold text-foreground`
+**And** I see the number of questions correct (e.g., "10 of 12 correct")
+**And** I see pass/fail status: "Congratulations! You passed!" or "Keep Going! You got X of Y correct"
+**And** the word "Failed" MUST NOT appear anywhere on the results screen (QFR23)
+**And** I see the total time spent (e.g., "Completed in 8m 32s") — sourced from `QuizAttempt.timeSpent`
 
 **Given** I have NOT answered all questions
-**When** I attempt to submit the quiz
-**Then** I see a warning message: "You have N unanswered questions. Submit anyway?"
-**And** I can choose to continue reviewing or submit with unanswered questions
-**And** unanswered questions are scored as 0 points
-
-**Given** the quiz has partial credit scoring enabled
-**When** my score is calculated
-**Then** each question receives 0-100% of possible points based on correctness
-**And** the total score is the sum of all question scores
-**And** the percentage is calculated as (total score / total possible points) * 100
+**When** I click "Submit Quiz"
+**Then** I see a confirmation dialog (shadcn/ui AlertDialog): "You have N unanswered questions. Submit anyway?"
+**And** I can click "Continue Reviewing" (outline variant) to return to the quiz
+**And** I can click "Submit Anyway" (default variant) to submit with unanswered questions scored as 0
 
 **Given** the quiz results screen
 **When** I view my score
-**Then** I see a "Retake Quiz" button to start over
-**And** I see a "Review Answers" button to see all questions and correct answers
-**And** I see an encouraging message regardless of score (e.g., "Great effort!" or "You're making progress!")
+**Then** I see a "Retake Quiz" button (`variant="outline" rounded-xl`)
+**And** I see a "Review Answers" button (`variant="default" bg-brand rounded-xl`)
+**And** I see a "Back to Lesson" text link below the buttons
+
+**Given** the submitQuiz store action fails (Dexie write error after retries)
+**When** the error occurs
+**Then** I see an error toast via Sonner: "Failed to save quiz results. Your answers are preserved — try again."
+**And** I remain on the quiz page with my answers intact (currentProgress preserved)
+
+**Given** a question of type 'multiple-select' exists in a quiz during Epic 12
+**When** scoring that question
+**Then** `calculatePartialCredit` returns `{ pointsEarned: 0, isCorrect: false }` as a safe fallback
+**And** logs a console warning: "multiple-select scoring not yet implemented (Epic 14)"
 
 **Technical Details:**
 
 Files to create:
-- `src/app/pages/QuizResults.tsx` (results page)
-- `src/app/components/quiz/ScoreSummary.tsx` (score display component)
+- `src/app/pages/QuizResults.tsx` (results page with animated score circle)
+- `src/app/components/quiz/ScoreSummary.tsx` (animated circular SVG + score text + pass/fail message)
 - `src/lib/scoring.ts` (scoring utility functions)
 
 Files to modify:
@@ -4249,22 +4354,25 @@ export function calculatePartialCredit(
   switch (question.type) {
     case 'multiple-choice':
     case 'true-false':
-    case 'fill-in-blank':
-      // All-or-nothing
       const isCorrect = userAnswer === question.correctAnswer
       return { pointsEarned: isCorrect ? question.points : 0, isCorrect }
-    
+
+    case 'fill-in-blank':
+      // Case-insensitive, whitespace-trimmed comparison per UX spec
+      const userStr = String(userAnswer).trim().toLowerCase()
+      const correctStr = String(question.correctAnswer).trim().toLowerCase()
+      const fibCorrect = userStr === correctStr
+      return { pointsEarned: fibCorrect ? question.points : 0, isCorrect: fibCorrect }
+
     case 'multiple-select':
-      // Partial Credit Model (PCM)
-      // (correct selections - incorrect selections) / total correct
-      // Implementation in Story 14.2
+      // Safe fallback until Epic 14 implements PCM scoring
+      console.warn('multiple-select scoring not yet implemented (Epic 14)')
+      return { pointsEarned: 0, isCorrect: false }
   }
 }
 
 export function calculateQuizScore(answers: Answer[]): {
-  score: number
-  percentage: number
-  totalPoints: number
+  score: number; percentage: number; totalPoints: number
 } {
   const score = answers.reduce((sum, a) => sum + a.pointsEarned, 0)
   const totalPoints = answers.reduce((sum, a) => sum + a.pointsPossible, 0)
@@ -4275,47 +4383,54 @@ export function calculateQuizScore(answers: Answer[]): {
 
 Results route:
 ```typescript
-{
-  path: '/courses/:courseId/lessons/:lessonId/quiz/results',
-  element: <QuizResults />
-}
+{ path: '/courses/:courseId/lessons/:lessonId/quiz/results', element: <QuizResults /> }
 ```
+
+Note: `/quiz/review/:attemptId` route for detailed answer review is a separate page (Epic 16). The "Review Answers" button navigates there but the route/page is out of scope for Epic 12 — button links to a placeholder or the route is added in Epic 16.
+
+Encouraging messages (per UX spec QFR23):
+- Pass: "Congratulations! You passed!"
+- Not pass: "Keep Going! You got X of Y correct."
+- Never use: "Failed", "Wrong", "Incorrect"
 
 **Testing Requirements:**
 
 Unit tests:
-- calculatePartialCredit for multiple-choice (all-or-nothing)
+- calculatePartialCredit for MC/TF (all-or-nothing, exact match)
+- calculatePartialCredit for FIB (case-insensitive, whitespace-trimmed)
+- calculatePartialCredit for MS returns safe fallback `{ pointsEarned: 0, isCorrect: false }`
 - calculateQuizScore with various answer combinations
-- Percentage calculation accuracy
-- Passed/failed determination
+- Zero-division handling (empty answers array)
+- Percentage rounding accuracy
 
 E2E tests:
-- Submit quiz with all questions answered → see results
-- Submit quiz with unanswered questions → see warning, can submit anyway
-- Results page displays score, percentage, time, pass/fail status
-- "Retake Quiz" button navigates to quiz start screen
-- "Review Answers" button shows question review mode
+- Submit quiz with all answered → see animated score, pass/fail, time
+- Submit quiz with unanswered → AlertDialog confirmation, can cancel or submit
+- Results page shows Retake, Review Answers buttons and Back to Lesson link
+- "Retake Quiz" navigates to fresh quiz start screen
+- Pass/fail message never contains the word "Failed"
 
 Accessibility tests:
-- Screen reader announces score and pass/fail status
-- Keyboard navigation to Retake and Review buttons
-- Focus moves to score on results page load (aria-live region)
+- Score announced via `aria-live="polite"` region on results page load
+- Keyboard navigation to all three action buttons/links
+- AlertDialog traps focus correctly
 
 **Dependencies:**
-- Story 12.1 (needs Answer, QuizAttempt types)
+- Story 12.1 (needs Answer, QuizAttempt, Question types)
 - Story 12.3 (needs useQuizStore.submitQuiz)
-- Story 12.4 (needs QuizPlayer for submit flow)
-- Story 12.5 (needs question answering to have data to score)
+- Story 12.4 (needs QuizPage for submit flow)
+- Story 12.5 (needs question answering to produce data to score)
 
 **Complexity:** Medium (4-5 hours)
 
 **Design Review Focus:**
-- Score display prominence and typography (large, bold percentage)
-- Pass/fail visual indicator (green checkmark vs. orange neutral icon)
-- Encouraging message tone (non-judgmental language)
-- Button spacing and touch targets (Retake, Review)
-- Responsive layout at 375px, 768px, 1440px
-- Time display formatting (8m 32s, not 512 seconds)
+- Animated circular SVG score: `text-5xl font-bold`, brand color ring
+- Pass: green checkmark icon; Not pass: orange neutral icon (never red X)
+- Non-judgmental message copy exactly matching UX spec
+- Three actions: Retake (outline), Review (brand), Back to Lesson (text link)
+- Responsive layout at <640px, 640-1023px, ≥1024px
+- Time formatting: "8m 32s" (not "512 seconds")
+- AlertDialog for unanswered questions confirmation
 
 ---
 
