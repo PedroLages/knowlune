@@ -1,0 +1,45 @@
+{
+  "name": "start-story",
+  "version": "2.0.0",
+  "description": "Automates story setup: feature branch (with optional git worktree), sprint tracking, ATDD test suggestion, design guidance, contextual research, and plan mode entry",
+  "author": "LevelUp Team",
+  "arguments": {
+    "pattern": "[E##-S##]",
+    "optional": true,
+    "description": "Story ID in format E##-S## (e.g., E01-S03). If omitted, picks next backlog story from sprint-status.yaml"
+  },
+  "tags": [
+    "workflow",
+    "orchestrator",
+    "planning",
+    "git",
+    "tdd"
+  ],
+  "minModelCapability": "sonnet",
+  "estimatedDuration": "3-5 minutes",
+  "changelog": [
+    {
+      "version": "2.0.0",
+      "date": "2026-03-14",
+      "changes": [
+        "Added optional git worktree support via superpowers:using-git-worktrees skill integration",
+        "Added design guidance suggestion for UI stories via frontend-design skill integration",
+        "Enhanced UI story detection algorithm (keyword analysis + affected files)",
+        "Improved resumption logic for stories already in-progress",
+        "Added workflow recommendation (Review first vs Quick ship) based on story complexity"
+      ]
+    },
+    {
+      "version": "1.0.0",
+      "date": "2025-11-15",
+      "changes": [
+        "Initial release with core orchestration features",
+        "Branch creation and story file setup",
+        "ATDD test suggestion based on acceptance criteria",
+        "Parallel research agents (story context, code patterns, test patterns)",
+        "Plan mode entry with ExitPlanMode integration",
+        "Idempotent recovery support"
+      ]
+    }
+  ]
+}
