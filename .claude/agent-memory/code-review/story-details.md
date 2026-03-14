@@ -137,3 +137,13 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M3: Optimistic UI reorder without rollback on persistence failure (violates pre-review checklist)
 - M4: Grammar error in empty state message ("You need at least 2 courses are needed")
 - Positive: No uncommitted changes (pattern broken), typed Window mock interface, good LLM response validation
+
+## E9B-S06: AI Feature Analytics & Auto-Analysis
+- H1 (RECURRING): `trackAIUsage()` calls in instrumented files are fire-and-forget without `.catch()` -- promise rejections unhandled
+- H2 (RECURRING): String interpolation `${trendConfig.className}` in AIAnalyticsTab.tsx instead of `cn()` utility
+- H3: `getAIUsageTimeline` ISO string comparison for timestamps -- lexicographic sort works for ISO but fragile pattern
+- H4: AC3 E2E test verifies `typeof window !== 'undefined'` -- trivially true, doesn't test auto-analysis
+- M1: `autoAnalysis.ts` records `'summary'` as featureType instead of a distinct auto-analysis feature type
+- M2: `buildChartConfig()` called on every render without memoization
+- M3: `parseTagsFromResponse` silently returns empty array on parse errors (catch block with no logging)
+- Positive: No uncommitted changes, good ignore flag pattern in useEffect, proper AbortController cleanup, consent gating well-implemented
