@@ -39,14 +39,22 @@ export class ApiClientError extends Error {
 // ============================================================================
 
 /**
- * Base fetch wrapper with error handling
+ * Base fetch wrapper with error handling and timeout
+ * @param endpoint - API endpoint path
+ * @param options - Fetch options
+ * @param timeoutMs - Timeout in milliseconds (default: 30000ms = 30 seconds)
  */
-async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+async function fetchApi<T>(endpoint: string, options: RequestInit = {}, timeoutMs: number = 30000): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`
+
+  // Create AbortController for timeout handling
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
   try {
     const response = await fetch(url, {
       ...options,
+      signal: controller.signal, // Attach abort signal
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -64,30 +72,43 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
 
     return data as T
   } catch (error) {
+    // Handle timeout errors specifically
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new ApiClientError('Request timeout', 408)
+    }
+
     if (error instanceof ApiClientError) {
       throw error
     }
 
     // Handle network errors or JSON parsing errors
     throw new ApiClientError(error instanceof Error ? error.message : 'Unknown error occurred', 0)
+  } finally {
+    // Always clear the timeout
+    clearTimeout(timeoutId)
   }
 }
 
 /**
  * GET request helper
+ * @param endpoint - API endpoint path
+ * @param timeoutMs - Optional timeout in milliseconds (default: 30s)
  */
-async function get<T>(endpoint: string): Promise<T> {
-  return fetchApi<T>(endpoint, { method: 'GET' })
+async function get<T>(endpoint: string, timeoutMs?: number): Promise<T> {
+  return fetchApi<T>(endpoint, { method: 'GET' }, timeoutMs)
 }
 
 /**
  * POST request helper
+ * @param endpoint - API endpoint path
+ * @param data - Request body data
+ * @param timeoutMs - Optional timeout in milliseconds (default: 30s)
  */
-async function post<T, D = unknown>(endpoint: string, data: D): Promise<T> {
+async function post<T, D = unknown>(endpoint: string, data: D, timeoutMs?: number): Promise<T> {
   return fetchApi<T>(endpoint, {
     method: 'POST',
     body: JSON.stringify(data),
-  })
+  }, timeoutMs)
 }
 
 // Note: PUT and DELETE helpers removed as they're currently unused.
