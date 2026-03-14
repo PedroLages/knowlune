@@ -33,6 +33,8 @@ import { allCourses } from '@/data/courses'
 import { formatTimestamp } from '@/lib/format'
 import { stripHtml } from '@/lib/textUtils'
 import { ReadOnlyContent } from '@/app/components/notes/ReadOnlyContent'
+import { OrganizeNotesButton } from '@/app/components/notes/OrganizeNotesButton'
+import { RelatedConceptsPanel } from '@/app/components/notes/RelatedConceptsPanel'
 import { generateEmbeddings } from '@/ai/workers/coordinator'
 import { vectorStorePersistence } from '@/ai/vector-store'
 import { supportsWorkers } from '@/ai/lib/workerCapabilities'
@@ -410,6 +412,12 @@ export function Notes() {
                 </Button>
               )}
             </div>
+
+            <RelatedConceptsPanel
+              note={item.note}
+              allNotes={notes}
+              courseNames={courseNames}
+            />
           </div>
         )}
       </div>
@@ -444,6 +452,7 @@ export function Notes() {
           </h1>
           <div className="flex items-center gap-3">
             <QAChatPanel />
+            <OrganizeNotesButton notes={notes} courseNames={courseNames} />
             <Select value={sortOption} onValueChange={v => setSortOption(v as SortOption)}>
               <SelectTrigger className="w-[160px]">
                 <ArrowUpDown className="size-3.5 mr-1.5" />
