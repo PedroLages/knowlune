@@ -1,6 +1,3 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
 # Validate lessons learned sections in story files before commit
 # Epic 8 Retrospective Action Item #1 - prevent documentation debt
 
