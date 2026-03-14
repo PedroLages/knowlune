@@ -1,0 +1,171 @@
+---
+story_id: E9B-S04
+story_name: "Knowledge Gap Detection"
+status: in-progress
+started: 2026-03-14
+completed:
+reviewed: false
+review_started:
+review_gates_passed: []
+burn_in_validated: false
+---
+
+# Story 9B.4: Knowledge Gap Detection
+
+## Story
+
+As a learner,
+I want the system to identify gaps in my study coverage and suggest content to revisit,
+So that I can strengthen weak areas and ensure comprehensive understanding.
+
+## Acceptance Criteria
+
+**Given** I have courses with videos and notes
+**When** the system analyzes my study patterns
+**Then** it identifies topics where I have fewer than 1 note per 3 videos
+**And** flags these as "under-noted topics" in a Knowledge Gaps panel
+
+**Given** the system detects a video marked as complete
+**When** my watch progress for that video is less than 50% of its total duration
+**Then** it flags the video as "skipped" in the Knowledge Gaps panel
+**And** displays the actual watch percentage alongside the flag
+
+**Given** the Knowledge Gaps panel is displayed
+**When** I view the flagged items
+**Then** each gap shows the specific videos or sections recommended to revisit
+**And** each recommendation includes a direct link to the video
+**And** gaps are sorted by severity (least notes per video ratio first)
+
+**Given** I save a new note
+**When** the note shares 2 or more tags or key terms with existing notes in other courses
+**Then** the system proactively suggests linking the new note to the related existing notes
+**And** the suggestion appears as a non-blocking notification with a preview of the related notes
+
+**Given** the system suggests note links
+**When** I accept a suggested link
+**Then** the notes are linked bidirectionally
+**And** the link is immediately visible in both notes' metadata
+
+**Given** the system suggests note links
+**When** I dismiss a suggestion
+**Then** the suggestion is removed and not re-shown for that specific note pair
+**And** future suggestions for other note pairs are unaffected
+
+**Given** the AI provider is unavailable
+**When** the system attempts gap analysis
+**Then** it falls back to rule-based detection (note count ratios and watch percentage thresholds) without AI enrichment
+**And** the fallback activates within 2 seconds
+
+## Tasks / Subtasks
+
+- [ ] Task 1: Add types for GapItem, NoteLinkSuggestion to `src/data/types.ts` and `src/ai/knowledgeGaps/types.ts` (AC: 1, 2, 3, 4)
+  - [ ] 1.1 Add `linkedNoteIds?: string[]` to `Note` interface in `src/data/types.ts`
+  - [ ] 1.2 Create `src/ai/knowledgeGaps/types.ts` with `GapItem`, `GapSeverity`, `NoteLinkSuggestion`
+
+- [ ] Task 2: Implement gap detection engine (AC: 1, 2, 3, 7)
+  - [ ] 2.1 Create `src/ai/knowledgeGaps/detectGaps.ts` — rule-based algorithm (under-noted + skipped)
+  - [ ] 2.2 Add optional AI enrichment with AbortController (2s timeout, falls back gracefully)
+  - [ ] 2.3 Sort output by severity (critical first, then note ratio ascending)
+
+- [ ] Task 3: Implement note link suggestion engine (AC: 4, 5, 6)
+  - [ ] 3.1 Create `src/ai/knowledgeGaps/noteLinkSuggestions.ts` — tag + key term matching
+  - [ ] 3.2 Dismissed pairs persistence via localStorage `dismissed-note-links`
+  - [ ] 3.3 Accept handler: bidirectional `linkedNoteIds` update in Dexie
+
+- [ ] Task 4: Create KnowledgeGaps page (AC: 1, 2, 3, 7)
+  - [ ] 4.1 Create `src/app/pages/KnowledgeGaps.tsx` — state machine (idle/analyzing/completed/error)
+  - [ ] 4.2 Gap item cards with severity badges, type labels, video links
+  - [ ] 4.3 Empty state, error state, AI unavailable badge ("Rule-based analysis")
+
+- [ ] Task 5: Hook note link suggestions into note save flow (AC: 4, 5, 6)
+  - [ ] 5.1 Trigger `findNoteLinkSuggestions` after note save in Notes page
+  - [ ] 5.2 Show Sonner toast with "Link notes" / "Dismiss" action buttons
+
+- [ ] Task 6: Navigation and routing
+  - [ ] 6.1 Add "Knowledge Gaps" to `src/app/config/navigation.ts` Learn group
+  - [ ] 6.2 Register `/knowledge-gaps` route in `src/app/routes.tsx`
+
+- [ ] Task 7: E2E tests (AC: 1–7)
+  - [ ] 7.1 Create `tests/e2e/story-e09b-s04.spec.ts` with 7 test cases
+
+## Design Guidance
+
+This is a UI story — design guidance covers the KnowledgeGaps page and note link suggestion toast.
+
+### Page: `/knowledge-gaps`
+
+**Layout**: Full-page editorial layout, following `AILearningPath.tsx` structure. Max-width container with generous vertical spacing (gap between sections: `space-y-8`).
+
+**Visual hierarchy**:
+- Page header: "Knowledge Gaps" with subheading description + "Analyze My Learning" primary CTA button
+- Analyzing state: skeleton cards + ARIA live region ("Analyzing your study patterns...")
+- Results: grouped by course, within each group cards sorted critical → medium → low
+
+**Gap item card anatomy**:
+```
+┌─────────────────────────────────────────────────────┐
+│ [BADGE: Critical] [Under-noted]  [Course: React 101] │
+│ "Async/Await Patterns" — Lesson 3                    │
+│ 0 notes / 3 videos in this topic                     │
+│                              [Review Video →]        │
+└─────────────────────────────────────────────────────┘
+```
+
+**Severity color system** (design tokens from `theme.css`):
+- Critical → `text-destructive` badge + `bg-destructive/10` card background
+- Medium → `text-warning` badge + `bg-warning/10` card background
+- Low → `text-info` badge + `bg-info/10` card background
+
+**AI unavailable indicator**: Small `<Badge variant="outline">` pill at top right: "Rule-based analysis" with Cpu icon.
+
+**Empty state**: Centered illustration-like layout — checkmark icon, heading "No gaps found!", subtext "Your study coverage looks great. Keep it up!".
+
+**Mobile-first**: Single column on mobile (<640px), 2-column grid at 768px+ for gap cards.
+
+### Note Link Suggestion Toast
+
+Non-blocking Sonner toast (duration: 8 seconds, top-right position):
+- Title: "Note connection found"
+- Description: Preview of related note + source course name
+- Actions: "Link notes" (primary) / "Dismiss" (ghost)
+
+## Implementation Plan
+
+See [plan](plans/golden-brewing-naur.md) for implementation approach.
+
+## Implementation Notes
+
+[Architecture decisions, patterns used, dependencies added]
+
+## Testing Notes
+
+[Test strategy, edge cases discovered, coverage notes]
+
+## Pre-Review Checklist
+
+Before requesting `/review-story`, verify:
+
+- [ ] All changes committed (`git status` clean)
+- [ ] No error swallowing — catch blocks log AND surface errors
+- [ ] useEffect hooks have cleanup functions (ignore flags for async, event listener removal)
+- [ ] No optimistic UI updates before persistence — state updates after DB write succeeds
+- [ ] Type guards on all dynamic lookups (e.g., `LABELS[type]` when type can be empty)
+- [ ] E2E afterEach cleanup uses `await` (not fire-and-forget)
+- [ ] Date handling uses `toLocaleDateString('sv-SE')` pattern (not `toISOString().split('T')[0]`)
+- [ ] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
+
+## Design Review Feedback
+
+[Populated by /review-story — Playwright MCP findings]
+
+## Code Review Feedback
+
+[Populated by /review-story — adversarial code review findings]
+
+## Web Design Guidelines Review
+
+[Populated by /review-story — Web Interface Guidelines compliance findings]
+
+## Challenges and Lessons Learned
+
+[Document issues, solutions, and patterns worth remembering]
