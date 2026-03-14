@@ -1,12 +1,12 @@
 ---
 story_id: E9B-S06
 story_name: "AI Feature Analytics & Auto-Analysis"
-status: in-progress
+status: done
 started: 2026-03-14
-completed:
-reviewed: in-progress
+completed: 2026-03-14
+reviewed: true
 review_started: 2026-03-14
-review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -199,3 +199,35 @@ Before requesting `/review-story`, verify:
 3. **Trend calculation requires period alignment**: Computing "up/down/stable" trends requires comparing the same-length period (e.g., this week vs last week). The `getDateRange()` helper in `aiEventTracking.ts` handles this by computing aligned start/end timestamps for current and previous periods.
 
 4. **Husky deprecation warning**: The `.husky/pre-commit` file uses the deprecated `husky.sh` sourcing pattern. This doesn't break functionality but produces a warning on every commit. Should be cleaned up in a separate chore commit.
+
+## Design Review Feedback
+
+**Date**: 2026-03-14 | **Report**: `docs/reviews/design/design-review-2026-03-14-e9b-s06.md`
+
+- HIGH: "Not configured" state has no actionable link to Settings page (AIAnalyticsTab.tsx:169-180)
+- HIGH: Dark mode 12px muted text contrast borderline ~3.89:1 (AIAnalyticsTab.tsx:259-267)
+- MEDIUM: Dark mode focus ring low contrast on period toggle buttons
+- Design tokens: PASS (zero hardcoded colors)
+- Responsive: PASS at 375px/768px/1440px
+- Touch targets: PASS (44px period buttons)
+- Accessibility: PASS (aria-pressed, aria-live, role="group", keyboard nav)
+
+## Code Review Feedback
+
+**Date**: 2026-03-14 | **Report**: `docs/reviews/code/code-review-2026-03-14-e9b-s06.md`
+
+- HIGH: Gemini API auth sends Bearer header instead of `?key=` query param (autoAnalysis.ts:144-162)
+- HIGH: Retry button is no-op — `setPeriod(p => p)` returns same value (AIAnalyticsTab.tsx:188)
+- MEDIUM: Hard wait `setTimeout(r, 500)` in AC3 test without justification (spec:194)
+- MEDIUM: Provider helper duplication across autoAnalysis/aiSummary/thumbnailService
+- All round-1 fixes (blockers, HIGHs) verified correct
+
+## Test Coverage Review Feedback
+
+**Date**: 2026-03-14 | **Report**: `docs/reviews/code/code-review-testing-2026-03-14-e9b-s06.md`
+
+- AC Coverage: 6/6 ACs tested (100%), 3 partial
+- HIGH: setTimeout race in AC3 test — consent check is synchronous (spec:194)
+- HIGH: Missing afterEach cleanup for aiUsageEvents (spec:56-64)
+- MEDIUM: AC4 partial — tags + toast untested; AC6 indirect — import path not verified
+- Previous blockers (tautology AC3, wrong behavior AC4) verified fixed

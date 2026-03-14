@@ -66,7 +66,7 @@ async function runAutoAnalysis(course: ImportedCourse): Promise<void> {
     const courseContext = `Course: "${course.name}" with ${course.videoCount} videos and ${course.pdfCount} PDFs`
     const sanitized = sanitizeAIRequestPayload(courseContext)
 
-    const response = await fetch(getEndpoint(config.provider), {
+    const response = await fetch(getEndpoint(config.provider, apiKey), {
       method: 'POST',
       headers: getHeaders(config.provider, apiKey),
       body: JSON.stringify(buildTagExtractionPayload(config.provider, sanitized.content)),
@@ -133,7 +133,7 @@ async function runAutoAnalysis(course: ImportedCourse): Promise<void> {
 
 // --- Provider-specific helpers ---
 
-function getEndpoint(provider: string): string {
+function getEndpoint(provider: string, apiKey: string): string {
   switch (provider) {
     case 'anthropic':
       return 'https://api.anthropic.com/v1/messages'
@@ -142,7 +142,7 @@ function getEndpoint(provider: string): string {
     case 'glm':
       return 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
     case 'gemini':
-      return 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent'
+      return `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`
     default:
       return 'https://api.openai.com/v1/chat/completions'
   }
@@ -155,6 +155,9 @@ function getHeaders(provider: string, apiKey: string): Record<string, string> {
       'x-api-key': apiKey,
       'anthropic-version': '2023-06-01',
     }
+  }
+  if (provider === 'gemini') {
+    return { 'Content-Type': 'application/json' }
   }
   return {
     'Content-Type': 'application/json',

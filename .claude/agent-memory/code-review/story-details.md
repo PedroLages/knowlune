@@ -138,7 +138,7 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M4: Grammar error in empty state message ("You need at least 2 courses are needed")
 - Positive: No uncommitted changes (pattern broken), typed Window mock interface, good LLM response validation
 
-## E9B-S06: AI Feature Analytics & Auto-Analysis
+## E9B-S06: AI Feature Analytics & Auto-Analysis (Round 1)
 - H1 (RECURRING): `trackAIUsage()` calls in instrumented files are fire-and-forget without `.catch()` -- promise rejections unhandled
 - H2 (RECURRING): String interpolation `${trendConfig.className}` in AIAnalyticsTab.tsx instead of `cn()` utility
 - H3: `getAIUsageTimeline` ISO string comparison for timestamps -- lexicographic sort works for ISO but fragile pattern
@@ -147,3 +147,18 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M2: `buildChartConfig()` called on every render without memoization
 - M3: `parseTagsFromResponse` silently returns empty array on parse errors (catch block with no logging)
 - Positive: No uncommitted changes, good ignore flag pattern in useEffect, proper AbortController cleanup, consent gating well-implemented
+
+## E9B-S06: AI Feature Analytics & Auto-Analysis (Round 2 - Revalidation)
+**Round 1 fixes verified:**
+- H1 FIXED: `.catch(() => {})` added to all `trackAIUsage()` calls in AISummaryPanel, QAChatPanel, OrganizeNotesButton, useLearningPathStore
+- H2 FIXED: `cn()` used for className merging in stat cards
+- H4 FIXED: AC3 test now imports `triggerAutoAnalysis` directly and verifies consent gating blocks AI requests
+- M1 FIXED: `autoAnalysis.ts` now uses `'auto_analysis'` featureType
+- M2 FIXED: `CHART_CONFIG` hoisted to module-level constant
+- M3 FIXED: `console.warn` added to parseTagsFromResponse catch block
+
+**Round 2 findings:**
+- H1: `autoAnalysis.ts` Gemini API key sent as Bearer header instead of `?key=` query param (will 401 for Gemini users)
+- H2: Retry button `setPeriod(p => p)` is a no-op -- React skips re-render when setter returns same value
+- M1: Hard wait `setTimeout(r, 500)` in AC3 test without justification comment
+- Nit: Story doc says "schema v13" but code is v12 (documentation inaccuracy)

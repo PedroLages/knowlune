@@ -22,6 +22,7 @@ import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { cn } from '@/app/components/ui/utils'
+import { Link } from 'react-router'
 import { isAIAvailable } from '@/lib/aiConfiguration'
 import {
   getAIUsageStats,
@@ -112,6 +113,7 @@ export function AIAnalyticsTab() {
   const [chartData, setChartData] = useState<Record<string, unknown>[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
   const aiAvailable = isAIAvailable()
 
   useEffect(() => {
@@ -144,7 +146,7 @@ export function AIAnalyticsTab() {
     return () => {
       ignore = true
     }
-  }, [period])
+  }, [period, retryCount])
 
   // Period status announcement for screen readers (single region instead of 5)
   const periodStatusMessage = useMemo(() => {
@@ -172,7 +174,11 @@ export function AIAnalyticsTab() {
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
           <AlertCircle className="size-10 text-muted-foreground mb-3" aria-hidden="true" />
           <p className="text-muted-foreground">
-            AI provider not configured. Set up an AI provider in Settings to see analytics.
+            AI provider not configured. Set up an AI provider in{' '}
+            <Link to="/settings" className="text-brand underline hover:text-brand-hover">
+              Settings
+            </Link>{' '}
+            to see analytics.
           </p>
         </CardContent>
       </Card>
@@ -185,7 +191,7 @@ export function AIAnalyticsTab() {
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
           <AlertCircle className="size-10 text-destructive mb-3" aria-hidden="true" />
           <p className="text-muted-foreground mb-4">{error}</p>
-          <Button variant="outline" onClick={() => setPeriod(p => p)}>
+          <Button variant="outline" onClick={() => setRetryCount(c => c + 1)}>
             Retry
           </Button>
         </CardContent>
@@ -256,7 +262,7 @@ export function AIAnalyticsTab() {
                 <p className="text-2xl font-bold tabular-nums">
                   {showComingSoon ? '—' : feature.count}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   {showComingSoon ? (
                     <Badge variant="secondary" className="text-xs">
                       Coming soon

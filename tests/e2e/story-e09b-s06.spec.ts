@@ -63,6 +63,30 @@ test.describe('E09B-S06: AI Feature Analytics & Auto-Analysis', () => {
     await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
   })
 
+  test.afterEach(async ({ page }) => {
+    // Clear seeded aiUsageEvents to prevent test interference
+    // (seedIndexedDBStore bypasses fixture auto-cleanup which only tracks importedCourses)
+    await page.evaluate(async () => {
+      const dbs = await indexedDB.databases()
+      const edb = dbs.find(d => d.name === 'ElearningDB')
+      if (!edb) return
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const req = indexedDB.open('ElearningDB')
+        req.onsuccess = () => resolve(req.result)
+        req.onerror = () => reject(req.error)
+      })
+      if (db.objectStoreNames.contains('aiUsageEvents')) {
+        const tx = db.transaction('aiUsageEvents', 'readwrite')
+        tx.objectStore('aiUsageEvents').clear()
+        await new Promise<void>((resolve, reject) => {
+          tx.oncomplete = () => resolve()
+          tx.onerror = () => reject(tx.error)
+        })
+      }
+      db.close()
+    })
+  })
+
   test.describe('AC1: AI Analytics dashboard with usage statistics', () => {
     test('displays usage statistics with trend indicators for each AI feature', async ({
       page,
@@ -173,10 +197,9 @@ test.describe('E09B-S06: AI Feature Analytics & Auto-Analysis', () => {
 
       await page.goto('/courses')
 
-      // Attempt to invoke triggerAutoAnalysis with a mock course
-      // The function should early-return due to analytics consent being disabled
-      const result = await page.evaluate(async () => {
-        // Access the autoAnalysis module from the app bundle
+      // Invoke triggerAutoAnalysis — should early-return due to disabled analytics consent.
+      // The consent check (isFeatureEnabled) is synchronous, so no async wait is needed.
+      await page.evaluate(async () => {
         const { triggerAutoAnalysis } = await import('/src/lib/autoAnalysis.ts')
         const mockCourse = {
           id: 'test-course-1',
@@ -190,12 +213,7 @@ test.describe('E09B-S06: AI Feature Analytics & Auto-Analysis', () => {
           fileCount: 4,
         }
         triggerAutoAnalysis(mockCourse as never)
-        // Wait briefly for any async operations
-        await new Promise(r => setTimeout(r, 500))
-        return true
       })
-
-      expect(result).toBe(true)
       // No AI request should have been made because consent is disabled
       expect(aiRequestMade).toBe(false)
     })
