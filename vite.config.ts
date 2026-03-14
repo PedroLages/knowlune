@@ -17,7 +17,18 @@ function serveLocalMedia(): Plugin {
     configureServer(server) {
       server.middlewares.use('/media', (req, res, next) => {
         const decodedPath = decodeURIComponent(req.url || '');
-        const filePath = path.join(COURSES_ROOT, decodedPath);
+
+        // Security: Resolve and validate path to prevent directory traversal attacks
+        const filePath = path.resolve(path.join(COURSES_ROOT, decodedPath));
+        const coursesRootResolved = path.resolve(COURSES_ROOT);
+
+        // Block path traversal attempts (e.g., ../../../etc/passwd)
+        if (!filePath.startsWith(coursesRootResolved)) {
+          res.statusCode = 403;
+          res.end('Forbidden: Path traversal detected');
+          return;
+        }
+
         if (!fs.existsSync(filePath)) {
           res.statusCode = 404;
           res.end('Not found');
@@ -94,6 +105,15 @@ export default defineConfig({
   },
   server: {
     headers: {
+      // XSS Protection
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'SAMEORIGIN',
+      'X-XSS-Protection': '1; mode=block',
+
+      // Privacy
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+      'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
+
       // Required for WebLLM/WebGPU (SharedArrayBuffer)
       'Cross-Origin-Embedder-Policy': 'require-corp',
       'Cross-Origin-Opener-Policy': 'same-origin',
