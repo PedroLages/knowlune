@@ -4,7 +4,7 @@ inputDocuments:
   - 'docs/planning-artifacts/prd.md'
   - '_bmad-output/planning-artifacts/architecture.md'
   - '_bmad-output/planning-artifacts/ux-design-specification.md'
-  - 'docs/planning-artifacts/epic-19-engagement-adaptive-experience.md'
+  - 'docs/planning-artifacts/epic-20-engagement-adaptive-experience.md'
   - 'docs/planning-artifacts/epic-20-learning-pathways.md'
   - '_bmad-output/planning-artifacts/epics.md'
 epicFocus: 'Epic 10: Onboarding & First-Use Experience'

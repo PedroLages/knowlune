@@ -1,4 +1,4 @@
-# Epic 19: Engagement & Adaptive Experience
+# Epic 20: Engagement & Adaptive Experience
 
 ## Epic Goal
 
@@ -60,19 +60,19 @@ Transform LevelUp from an "analytics-first platform" to an "adaptive learning co
 
 | Story ID | Name | Effort | Priority | Phase |
 |----------|------|--------|----------|-------|
-| **E19-S01** | AB-Loop Video Controls | 2h | P0 (Quick Win) | Phase 1 |
-| **E19-S02** | Enhanced Video Keyboard Shortcuts | 1h | P0 (Quick Win) | Phase 1 |
-| **E19-S03** | Pomodoro Focus Timer | 4h | P0 (Quick Win) | Phase 1 |
-| **E19-S04** | Visual Energy Boost (Color Saturation) | 4h | P1 | Phase 2 |
-| **E19-S05** | User Engagement Preference Controls | 4h | P1 | Phase 2 |
-| **E19-S06** | Smart Dashboard Reordering | 6h | P1 | Phase 4 |
-| **E19-S07** | Age-Appropriate Defaults & Font Scaling | 10h | P1 | Phase 4 |
+| **E20-S01** | AB-Loop Video Controls | 2h | P0 (Quick Win) | Phase 1 |
+| **E20-S02** | Enhanced Video Keyboard Shortcuts | 1h | P0 (Quick Win) | Phase 1 |
+| **E20-S03** | Pomodoro Focus Timer | 4h | P0 (Quick Win) | Phase 1 |
+| **E20-S04** | Visual Energy Boost (Color Saturation) | 4h | P1 | Phase 2 |
+| **E20-S05** | User Engagement Preference Controls | 4h | P1 | Phase 2 |
+| **E20-S06** | Smart Dashboard Reordering | 6h | P1 | Phase 4 |
+| **E20-S07** | Age-Appropriate Defaults & Font Scaling | 10h | P1 | Phase 4 |
 
 **Total Effort:** 43 hours over 4 weeks
 
 ## Story Summaries
 
-### E19-S01: AB-Loop Video Controls (2h)
+### E20-S01: AB-Loop Video Controls (2h)
 
 **User Story:**
 As a learner reviewing difficult video sections,
@@ -89,7 +89,7 @@ so that I can master complex concepts through repetition without manually rewind
 
 ---
 
-### E19-S02: Enhanced Video Keyboard Shortcuts (1h)
+### E20-S02: Enhanced Video Keyboard Shortcuts (1h)
 
 **User Story:**
 As a power user watching video lessons,
@@ -106,7 +106,7 @@ so that I can navigate videos efficiently without touching the mouse.
 
 ---
 
-### E19-S03: Pomodoro Focus Timer (4h)
+### E20-S03: Pomodoro Focus Timer (4h)
 
 **User Story:**
 As a learner practicing sustained study sessions,
@@ -124,7 +124,7 @@ so that I maintain optimal focus and avoid burnout.
 
 ---
 
-### E19-S04: Visual Energy Boost (4h)
+### E20-S04: Visual Energy Boost (4h)
 
 **User Story:**
 As a Gen Z learner,
@@ -141,7 +141,7 @@ so that the platform feels modern and energizing.
 
 ---
 
-### E19-S05: User Engagement Preference Controls (4h)
+### E20-S05: User Engagement Preference Controls (4h)
 
 **User Story:**
 As a user who values control over my experience,
@@ -159,7 +159,7 @@ so that I can customize the platform to my learning style.
 
 ---
 
-### E19-S06: Smart Dashboard Reordering (6h)
+### E20-S06: Smart Dashboard Reordering (6h)
 
 **User Story:**
 As a returning user,
@@ -176,7 +176,7 @@ so that my most-used features are always at the top.
 
 ---
 
-### E19-S07: Age-Appropriate Defaults & Font Scaling (10h)
+### E20-S07: Age-Appropriate Defaults & Font Scaling (10h)
 
 **User Story:**
 As a Boomer learner,
@@ -231,28 +231,28 @@ so that I can use the platform comfortably without strain.
 ## Implementation Timeline
 
 ### Sprint 1 (Week 1) - Quick Wins
-- Days 1-2: E19-S01 (AB-Loop) + E19-S02 (Keyboard Shortcuts) - 3 hours
-- Days 3-5: E19-S03 (Pomodoro Timer) - 4 hours
+- Days 1-2: E20-S01 (AB-Loop) + E20-S02 (Keyboard Shortcuts) - 3 hours
+- Days 3-5: E20-S03 (Pomodoro Timer) - 4 hours
 - **Outcome:** 3 power-user features shipped
 
 ### Sprint 2 (Week 2) - Engagement Layer
-- Days 1-3: E19-S04 (Visual Energy Boost) - 4 hours
-- Days 4-5: E19-S05 (Preference Controls) - 4 hours
+- Days 1-3: E20-S04 (Visual Energy Boost) - 4 hours
+- Days 4-5: E20-S05 (Preference Controls) - 4 hours
 - **Outcome:** User-controlled gamification live
 
 ### Sprint 3-4 (Weeks 3-4) - Adaptive Intelligence
-- Week 3: E19-S06 (Smart Dashboard Reordering) - 6 hours
-- Week 4: E19-S07 (Age-Appropriate Defaults & Font Scaling) - 10 hours
+- Week 3: E20-S06 (Smart Dashboard Reordering) - 6 hours
+- Week 4: E20-S07 (Age-Appropriate Defaults & Font Scaling) - 10 hours
 - **Outcome:** Fully adaptive UX for all demographics
 
 ## Dependencies & Integration
 
 **Sequential Dependencies:**
-- E19-S04 (Visual Energy) must come BEFORE E19-S05 (User Controls) → User controls need vibrant colors to toggle
-- E19-S06 (Smart Dashboard) should come AFTER E19-S05 (User Controls) → Dashboard reordering uses preference system
+- E20-S04 (Visual Energy) must come BEFORE E20-S05 (User Controls) → User controls need vibrant colors to toggle
+- E20-S06 (Smart Dashboard) should come AFTER E20-S05 (User Controls) → Dashboard reordering uses preference system
 
 **Parallel Opportunities:**
-- E19-S01, E19-S02, E19-S03 can all be implemented in parallel (no shared state)
+- E20-S01, E20-S02, E20-S03 can all be implemented in parallel (no shared state)
 
 **Integrates With:**
 - Epic 5 (Streaks): Preference controls toggle streak visibility

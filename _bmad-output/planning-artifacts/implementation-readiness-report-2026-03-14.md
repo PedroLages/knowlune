@@ -27,7 +27,7 @@ stepsCompleted:
 | Document | Location | Size |
 |----------|----------|------|
 | PRD Validation Report | `docs/planning-artifacts/prd-validation-report.md` | 32k |
-| Epic 19 Detail | `docs/planning-artifacts/epic-19-engagement-adaptive-experience.md` | 11k |
+| Epic 20 Detail | `docs/planning-artifacts/epic-20-engagement-adaptive-experience.md` | 11k |
 | Epic 20 Detail | `docs/planning-artifacts/epic-20-learning-pathways.md` | 12k |
 | Heatmap Architecture | `docs/planning-artifacts/heatmap-architecture.md` | 18k |
 | Web Worker Architecture | `docs/planning-artifacts/web-worker-architecture.md` | 34k |
