@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { seedImportedCourses } from '../support/helpers/indexeddb-seed'
+import { seedImportedCourses, clearLearningPath } from '../support/helpers/indexeddb-seed'
 import { seedAIConfiguration } from '../support/helpers/ai-summary-mocks'
 
 /**
@@ -45,6 +45,9 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
 
     // Prevent sidebar overlay in tablet viewports (640-1023px)
     await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+
+    // Clear learning path table to ensure clean state for each test
+    await clearLearningPath(page)
   })
 
   test('AC1: Show Generate Learning Path button when 2+ courses exist', async ({ page }) => {
