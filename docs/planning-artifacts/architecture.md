@@ -533,6 +533,14 @@ db.version(2).stores({
 })
 // Note: `notes` and `bookmarks` tables use manual ID (crypto.randomUUID())
 // per Architecture convention. All other tables use ++id (auto-increment).
+
+// v3: Platform & Entitlement tables (Epic 19)
+db.version(3).stores({
+  entitlements: 'userId, tier, expiresAt, cachedAt, stripeCustomerId, planId'
+})
+// Auth state is managed by Supabase SDK (localStorage), NOT Dexie.
+// Only entitlement cache lives in IndexedDB for offline access.
+// `userId` is the Supabase auth user ID (UUID).
 ```
 
 **Performance Optimizations:**
@@ -1020,6 +1028,187 @@ async function extractPdfMetadata(fileHandle: FileSystemFileHandle): Promise<Pdf
 
 ---
 
+### Authentication & Identity
+
+#### Auth Provider: Supabase Auth
+
+**Decision:** Use Supabase Auth for user authentication with email/password, magic link, and Google OAuth support.
+
+**Rationale:**
+- Managed auth service with zero backend maintenance (no auth server to deploy or scale)
+- Built-in support for email/password, magic link (passwordless), and OAuth providers
+- Generous free tier (50,000 MAUs) covers solo-dev launch phase
+- JavaScript SDK handles token storage, refresh, and session management automatically
+- Row Level Security (RLS) available if server-side data is added later
+- Open-source (can self-host if vendor lock-in becomes a concern)
+
+**Bundle Size:** ~40 KB gzipped (@supabase/supabase-js)
+
+**Key Features:**
+- `supabase.auth.signUp()` / `signInWithPassword()` / `signInWithOtp()` / `signInWithOAuth()`
+- Automatic token refresh via `onAuthStateChange()` listener
+- Session stored in localStorage by Supabase SDK (not manually in IndexedDB)
+- Magic link emails sent via Supabase's built-in email service (or custom SMTP)
+- Google OAuth via Supabase dashboard configuration (no server code needed)
+
+**Implementation Pattern:**
+```typescript
+// src/lib/auth/supabase.ts — Supabase client singleton
+import { createClient } from '@supabase/supabase-js'
+
+export const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+)
+
+// src/stores/useAuthStore.ts — Auth state (Zustand)
+interface AuthState {
+  user: User | null
+  session: Session | null
+  loading: boolean
+  signIn: (email: string, password: string) => Promise<void>
+  signUp: (email: string, password: string) => Promise<void>
+  signInWithGoogle: () => Promise<void>
+  signInWithMagicLink: (email: string) => Promise<void>
+  signOut: () => Promise<void>
+}
+```
+
+**Affects:** All premium features, Settings page, upgrade CTAs, entitlement system
+
+---
+
+#### Entitlement System: Local Cache with Server Validation
+
+**Decision:** Validate premium entitlement against a serverless function on app launch (when online), cache result in IndexedDB with 7-day TTL, and expose a `useIsPremium()` reactive hook for UI gating.
+
+**Rationale:**
+- Local-first: cached entitlement allows premium features to work offline for up to 7 days
+- Server validation prevents entitlement spoofing (cache is convenience, server is truth)
+- Reactive hook enables declarative premium gating in React components
+- 7-day TTL balances offline usability with subscription accuracy
+
+**Bundle Size:** 0 KB (uses existing Dexie.js + Zustand + fetch)
+
+**Key Features:**
+- `useIsPremium()` hook returns `{ isPremium: boolean, loading: boolean, tier: 'free' | 'trial' | 'premium' }`
+- Automatic validation on app launch if online and cache is stale
+- Graceful degradation: expired cache disables premium features, shows upgrade CTA
+- Distinguishes server-unreachable (honor cache) from server-returns-denied (disable premium)
+
+**Implementation Pattern:**
+```typescript
+// src/lib/entitlement/isPremium.ts
+interface EntitlementCache {
+  tier: 'free' | 'trial' | 'premium'
+  expiresAt: string       // ISO date, server-set
+  cachedAt: string        // ISO date, client-set
+  stripeCustomerId: string
+  planId: string | null
+}
+
+// src/stores/useEntitlementStore.ts — Entitlement state (Zustand)
+interface EntitlementState {
+  tier: 'free' | 'trial' | 'premium'
+  loading: boolean
+  cachedAt: Date | null
+  validate: () => Promise<void>  // Called on app launch
+}
+
+// React hook for components
+export function useIsPremium(): { isPremium: boolean; loading: boolean; tier: string } {
+  const tier = useEntitlementStore((s) => s.tier)
+  const loading = useEntitlementStore((s) => s.loading)
+  return { isPremium: tier !== 'free', loading, tier }
+}
+```
+
+**Affects:** All premium feature components, upgrade CTAs, Settings subscription panel
+
+---
+
+#### Payment Processing: Stripe Checkout + Customer Portal
+
+**Decision:** Use Stripe Checkout (hosted) for payment collection and Stripe Customer Portal for subscription management. A single serverless function (Supabase Edge Function) handles webhook events.
+
+**Rationale:**
+- Stripe Checkout hosted page: zero PCI scope (no card data touches LevelUp)
+- Stripe Customer Portal: managed UI for billing, invoices, cancellation (zero custom UI)
+- Supabase Edge Functions: co-located with auth provider, Deno runtime, free tier includes 500K invocations/month
+- Single webhook handler: idempotent processing of subscription lifecycle events
+- Trial support: Stripe natively supports 14-day free trials on subscriptions
+
+**Bundle Size:** 0 KB (Stripe Checkout is a redirect, not a client-side SDK)
+
+**Key Features:**
+- Checkout session created by Edge Function (not client-side) to protect Stripe secret key
+- Webhook handler verifies signatures, processes events idempotently
+- Events handled: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
+- Entitlement updated server-side, client polls or re-validates on redirect return
+- Customer Portal session created by Edge Function, opened via redirect
+
+**Implementation Pattern:**
+```typescript
+// supabase/functions/stripe-webhook/index.ts (Supabase Edge Function)
+// Handles: POST /functions/v1/stripe-webhook
+// Verifies Stripe signature, updates entitlement record in Supabase DB
+// Returns 200 to Stripe on success (idempotent — duplicate events are no-ops)
+
+// supabase/functions/create-checkout/index.ts (Supabase Edge Function)
+// Handles: POST /functions/v1/create-checkout
+// Auth: requires Supabase JWT
+// Creates Stripe Checkout Session with trial_period_days: 14
+// Returns { url: string } for client redirect
+
+// supabase/functions/create-portal/index.ts (Supabase Edge Function)
+// Handles: POST /functions/v1/create-portal
+// Auth: requires Supabase JWT
+// Creates Stripe Customer Portal Session
+// Returns { url: string } for client redirect
+```
+
+**Affects:** Settings subscription panel, upgrade CTAs, entitlement system, legal pages
+
+---
+
+#### Premium Code Boundary: Vite Build Exclusion
+
+**Decision:** Premium features live in `src/premium/` with a proprietary license. The AGPL core build excludes this directory via a Vite plugin that errors on `@/premium/*` imports during core builds. Premium builds include it via a separate Vite config.
+
+**Rationale:**
+- Directory isolation is simpler than feature flags for license separation
+- Build-time import guard prevents accidental coupling (not just tree-shaking)
+- Separate Vite config (`vite.config.premium.ts`) enables different entry points and dependencies
+- CI runs core-only build to verify no premium leakage
+
+**Bundle Size:** 0 KB impact on core build (premium code excluded entirely)
+
+**Key Features:**
+- `npm run build` → AGPL core build (excludes `src/premium/`)
+- `npm run build:premium` → Full build (includes `src/premium/`)
+- ESLint rule or Vite plugin errors if `src/` (non-premium) imports from `@/premium/*`
+- `src/premium/index.ts` exports lazy component factories and feature flags
+- Core components use `useIsPremium()` + `React.lazy()` to conditionally load premium features
+
+**Implementation Pattern:**
+```typescript
+// src/premium/index.ts — Premium entry point (proprietary license)
+export const PremiumAISummary = lazy(() => import('./features/AISummary'))
+export const PremiumSpacedReview = lazy(() => import('./features/SpacedReview'))
+
+// Core component usage:
+function VideoPlayerToolbar() {
+  const { isPremium } = useIsPremium()
+  return isPremium
+    ? <Suspense fallback={<Skeleton />}><PremiumAISummary /></Suspense>
+    : <UpgradeCTA feature="ai-summary" />
+}
+```
+
+**Affects:** Build system, CI pipeline, all premium feature components, licensing compliance
+
+---
+
 ### Decision Impact Analysis
 
 **Implementation Sequence:**
@@ -1041,6 +1230,14 @@ async function extractPdfMetadata(fileHandle: FileSystemFileHandle): Promise<Pdf
    - Framer Motion animations (celebration micro-moments)
    - Comprehensive test suite (Vitest + Playwright)
 
+4. **Platform & Entitlement (Epic 19):**
+   - Supabase Auth integration (sign-up, sign-in, session management)
+   - Stripe Checkout + Customer Portal via Edge Functions
+   - Entitlement system with offline caching
+   - Premium code boundary (`src/premium/`)
+   - Legal pages (Privacy Policy, Terms of Service)
+   - GDPR compliance (account deletion, data export)
+
 **Cross-Component Dependencies:**
 - **Video Player → Note Editor:** Timestamp link insertion requires shared video position state (Zustand)
 - **File System → Dexie.js:** FileSystemHandles stored in IndexedDB for persistent access
@@ -1048,11 +1245,16 @@ async function extractPdfMetadata(fileHandle: FileSystemFileHandle): Promise<Pdf
 - **Analytics → All Features:** Session tracking monitors video player, PDF viewer, note editor
 - **Framer Motion → Progress Tracking:** Celebration animations triggered on completion events
 - **AI SDK → MiniSearch:** Q&A feature uses search to retrieve relevant note context
+- **Auth → Entitlement:** Supabase JWT required for entitlement validation
+- **Stripe → Entitlement:** Webhook events update subscription status, trigger entitlement cache refresh
+- **Entitlement → Premium Features:** `useIsPremium()` gates all premium component rendering
+- **Premium Boundary → Build System:** Vite plugin enforces import restrictions at build time
 
 **Performance Budget Status:**
-- **Target:** <500 KB gzipped
-- **Actual:** ~487 KB gzipped (97% of budget)
-- **Remaining:** ~13 KB headroom for minor additions
+- **Target:** <750 KB gzipped
+- **Actual:** ~527 KB gzipped (70% of budget)
+- **Remaining:** ~223 KB headroom
+- **Note:** Supabase Auth SDK (~40 KB) is loaded only for authenticated users via dynamic import
 
 **Bundle Breakdown:**
 - react-pdf: 300 KB (60% of total - largest dependency, justified by core functionality)
@@ -2209,6 +2411,22 @@ Elearningplatformwireframes/
 │   │   ├── velocity.ts      # Learning velocity calculations
 │   │   └── recommendations.ts # Recommendation algorithms
 │   │
+│   ├── premium/            # Premium features (proprietary license, excluded from AGPL build)
+│   │   ├── index.ts        # Lazy component exports and feature flags
+│   │   ├── features/       # Premium feature components
+│   │   │   ├── AISummary.tsx
+│   │   │   ├── AIQandA.tsx
+│   │   │   ├── SpacedReview.tsx
+│   │   │   └── AdvancedExport.tsx
+│   │   └── LICENSE          # Proprietary license (not AGPL)
+│   │
+│   ├── lib/
+│   │   ├── auth/            # Authentication utilities
+│   │   │   ├── supabase.ts  # Supabase client singleton
+│   │   │   └── guards.ts    # Route guards and auth helpers
+│   │   └── entitlement/     # Entitlement validation
+│   │       └── isPremium.ts # useIsPremium() hook and cache logic
+│   │
 │   ├── data/
 │   │   └── types.ts         # Centralized TypeScript types
 │   │
@@ -2392,6 +2610,18 @@ db.version(2).stores({
 - **Responsibility:** Course momentum scoring, learning velocity calculations, recommendations
 - **Communication:** Reads from IndexedDB, updates momentum scores in background (Web Worker)
 - **Pattern:** Pure functions for calculations, scheduled background tasks for aggregation
+
+**Premium Boundary (`src/premium/`):**
+- **Responsibility:** Contains all proprietary premium feature implementations. Excluded from AGPL core build.
+- **Communication:** Core components access premium features ONLY through lazy imports from `src/premium/index.ts`, gated by `useIsPremium()` hook.
+- **Do NOT:** Import from `src/premium/` directly in any core file. Do not place shared utilities in `src/premium/` — use `src/lib/` for shared code.
+- **Pattern:** Lazy component factory with Suspense fallback. Core → Premium: `useIsPremium()` check + `React.lazy()`. Premium → Core: Premium features MAY import from core (`@/app/`, `@/lib/`, `@/stores/`). Never: Core importing Premium directly (enforced by build-time guard).
+
+**Auth & Entitlement (`src/lib/auth/`, `src/lib/entitlement/`, `src/stores/useAuthStore.ts`, `src/stores/useEntitlementStore.ts`):**
+- **Responsibility:** Authentication state, session management, entitlement validation, and premium gating
+- **Communication:** Supabase SDK for auth, Edge Functions for entitlement validation, Dexie.js for entitlement cache, Zustand for reactive UI state
+- **Do NOT:** Store auth tokens manually (Supabase SDK manages this). Do not check entitlement by reading Dexie directly — use `useIsPremium()` hook.
+- **Pattern:** Zustand store + Supabase SDK listener + Dexie cache. `onAuthStateChange()` drives `useAuthStore` updates. `useEntitlementStore.validate()` called on app launch.
 
 ---
 
@@ -2709,6 +2939,56 @@ Study session ends
     → Calculate recency + completion + frequency
     → Save to courseMomentum table
   → Overview page: Query courseMomentum for hot courses
+```
+
+**Authentication Flow:**
+```
+User clicks "Sign Up" or "Sign In"
+  → useAuthStore: Show auth modal/page
+  → Supabase SDK: signUp() / signInWithPassword() / signInWithOtp() / signInWithOAuth()
+  → Supabase: Returns session + JWT
+  → useAuthStore: Update user state
+  → useEntitlementStore: validate() → fetch entitlement from Edge Function
+  → Dexie.js: Cache entitlement in `entitlements` table
+  → UI: Premium features enabled if entitled
+```
+
+**Stripe Checkout Flow:**
+```
+User clicks "Upgrade to Premium"
+  → Supabase Edge Function: create-checkout (POST with JWT)
+  → Stripe API: Create Checkout Session (with trial_period_days if eligible)
+  → Client: window.location.href = session.url (redirect to Stripe)
+  → Stripe Checkout: User enters payment info
+  → Stripe: Redirects back to LevelUp success URL
+  → Client: Polls entitlement endpoint for up to 10 seconds
+  → Stripe Webhook → Edge Function: Update entitlement in Supabase DB
+  → Client: Entitlement validated, premium features activated
+```
+
+**Entitlement Validation Flow:**
+```
+App launches
+  → useEntitlementStore: Check cached entitlement in Dexie `entitlements` table
+  → If cache < 7 days old AND offline → honor cache, enable premium
+  → If cache ≥ 7 days old AND offline → disable premium, show message
+  → If online → fetch /functions/v1/validate-entitlement (with JWT)
+    → If server unreachable → honor existing cache
+    → If server returns valid → update Dexie cache, enable premium
+    → If server returns expired/cancelled → clear cache, disable premium, show resubscribe CTA
+```
+
+**Account Deletion Flow:**
+```
+User clicks "Delete My Account" in Settings
+  → Re-authentication if session > 5 minutes old
+  → Confirmation dialog: type "DELETE" to confirm
+  → If active subscription: Cancel Stripe subscription first
+  → Supabase Edge Function: delete-account (POST with JWT)
+    → Stripe API: Delete customer record
+    → Supabase Auth: Delete user
+  → Client: Clear entitlement cache from Dexie
+  → Client: Sign out, continue with core features (local data preserved)
 ```
 
 ---
