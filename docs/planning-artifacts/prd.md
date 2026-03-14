@@ -1153,6 +1153,13 @@ Beyond the existing WCAG 2.1 AA+ target, WCAG 2.2 adds edtech-relevant criteria:
 - FR106: System displays upgrade CTAs in place of premium features for free-tier users, showing feature previews and descriptions; premium components are not bundled or lazy-loaded for free-tier users
 - FR107: Premium code resides in an isolated `src/premium/` directory with separate build configuration; the open-source AGPL build excludes all premium code and passes all tests without premium dependencies
 
+### Learning Pathways & Knowledge Retention *(Epic 20)*
+
+- FR108: User can browse curated multi-course learning paths (Career Paths) showing title, description, course count, estimated hours, and completion progress; each path has staged progression where later stages require earlier stage completion
+- FR109: User can create flashcards from notes by selecting text and specifying front/back content; flashcards are scheduled for review using the SM-2 spaced repetition algorithm with a 3-grade rating system (Hard/Good/Easy) that adjusts review intervals
+- FR110: User can view a 365-day activity heatmap (GitHub-style contribution graph) showing daily study activity with 5-level color intensity based on session duration and hover tooltips showing date and hours studied *(extends FR93 heatmap from 12 months to full year with enhanced visualization)*
+- FR111: User can view a skill proficiency radar chart showing 5-7 skill domains with proficiency calculated from course completion percentage per domain
+
 ## Non-Functional Requirements
 
 ### Performance
@@ -1252,13 +1259,13 @@ Beyond the existing WCAG 2.1 AA+ target, WCAG 2.2 adds edtech-relevant criteria:
 - NFR52: AI API keys are never exposed in client-side code or logs
 
 **Privacy:**
-- NFR53: All data remains local — no network requests are made except to configured AI API endpoints; verified by monitoring network tab during a full workflow (import, study, notes, progress)
+- NFR53: All learning data remains local — no network requests are made except to configured AI API endpoints and, when the user has opted into premium features, authentication and entitlement validation endpoints *(amended by Epic 19: auth/payment/entitlement traffic is user-initiated and consent-gated; core workflows make zero network requests)*
 - NFR54: AI API calls include only the content being analyzed (note text, video transcript excerpt) — no user metadata, file paths, or session data is transmitted
 - NFR55: Course content and notes never leave user's device (except explicit AI queries)
 
 **Authentication:**
 
-- NFR56: Application operates without authentication — no login, registration, or session management required (personal single-user tool)
+- NFR56: All core features (import, playback, notes, streaks, analytics, export) operate without authentication; premium features (AI, spaced review, advanced export) require an account and active subscription *(amended by Epic 19: auth is additive, never gates core workflows; see FR102)*
 
 ### EdTech Accessibility *(Domain-driven: WCAG 2.2 + EdTech Standards)*
 
@@ -1272,7 +1279,7 @@ Beyond the existing WCAG 2.1 AA+ target, WCAG 2.2 adds edtech-relevant criteria:
 ### Data Portability *(Domain-driven: GDPR, xAPI, Learning Records)*
 
 - NFR63: Full data export in structured, machine-readable format (JSON with schema version, CSV) completes within 30 seconds regardless of data volume
-- NFR64: All learning data is stored locally with no server-side data transmission occurring without explicit per-feature user consent
+- NFR64: All learning data is stored locally with no server-side data transmission occurring without explicit per-feature user consent; account data (email, subscription status) is transmitted to authentication and payment providers only when the user explicitly creates an account or subscribes *(amended by Epic 19: account creation and payment are explicit user-initiated actions with informed consent via Privacy Policy and Terms of Service)*
 - NFR65: All data schemas include a version identifier; schema changes apply non-destructive automatic migrations that preserve existing data
 - NFR66: Cloud AI features transmit only aggregated or anonymized data (never raw personal notes or full session logs); each AI feature has an independent user consent toggle
 - NFR67: Exported data can be re-imported into the application with ≥95% semantic fidelity (no loss of notes, progress, tags, or timestamps)

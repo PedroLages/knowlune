@@ -357,6 +357,10 @@ FR98: Epic 5 - Streak milestone toast notifications (7/30/60/100 days)
 FR99: Epic 9 - Auto-trigger AI analysis on course import
 FR100: Epic 11 - Per-course study reminders
 FR101: Epic 5 - Weekly adherence percentage on dashboard/analytics
+FR108: Epic 20 - Career Paths (curated multi-course learning journeys with staged progression)
+FR109: Epic 20 - Flashcard system with SM-2 spaced repetition
+FR110: Epic 20 - 365-day activity heatmap (extends FR93)
+FR111: Epic 20 - Skill proficiency radar chart
 
 ## Epic List
 
@@ -445,6 +449,16 @@ Users can create accounts, subscribe to premium features via Stripe, and manage 
 **Phase:** 4 (Post-MVP, before premium feature launch)
 **Stories:** 19.1 Authentication Setup, 19.2 Stripe Subscription, 19.3 Entitlement & Offline Caching, 19.4 Subscription Management, 19.5 Feature Gating & Upgrade CTAs, 19.6 Code Boundary & Build Separation
 
+### Epic 20: Learning Pathways & Knowledge Retention
+
+Users can follow curated multi-course learning paths with staged progression, create flashcards from notes with spaced repetition scheduling, and view enhanced analytics visualizations (activity heatmap, skill radar chart) — providing learning direction and long-term knowledge retention.
+
+**FRs covered:** FR108, FR109, FR110, FR111
+**Phase:** 3-5 (Strategic features in Phase 3, polish in Phase 5)
+**Stories:** 20.1 Career Paths System, 20.2 Flashcard System with Spaced Repetition, 20.3 365-Day Activity Heatmap, 20.4 Skill Proficiency Radar Chart
+**Dependencies:** Epics 3 (Notes), 4 (Progress), 8 (Analytics)
+**Note:** E20-S02 (Flashcards) overlaps with Epic 11 (spaced review system) — consider merging. Full story details in `docs/planning-artifacts/epic-20-learning-pathways.md`.
+
 ---
 
 ## Epic 1: Course Import & Library Management
@@ -487,6 +501,17 @@ So that I can start studying without manually organizing files.
 **Then** subfolder names are used as section/chapter groupings in the course structure
 **And** files within each subfolder are ordered alphabetically by default
 
+**Given** an IndexedDB write fails during course creation
+**When** the error is detected
+**Then** a toast notification displays the error with a retry option
+**And** the partially created course data is cleaned up to prevent orphaned records
+
+**Dependencies:** None (foundation story)
+
+**Complexity:** Large (6-8 hours)
+
+**Testing Requirements:** Unit tests for file scanning and filtering logic, Integration tests for IndexedDB persistence via Dexie.js, E2E for folder import workflow and permission handling
+
 ### Story 1.2: View Course Library
 
 As a learner,
@@ -516,6 +541,12 @@ So that I can quickly find and access any course I've imported.
 **Then** all courses render without perceptible delay (data query <100ms per NFR4)
 **And** course data persists across browser sessions without manual save (NFR9)
 
+**Dependencies:** Story 1.1 (course data required)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for card rendering and data display, E2E for library browsing, empty state, and responsive grid layout
+
 ### Story 1.3: Manage Course Status
 
 As a learner,
@@ -539,6 +570,12 @@ So that I can focus on what I'm currently studying and track what I've finished.
 **When** the user views the library
 **Then** courses can be filtered by status (All, Active, Completed, Paused)
 **And** the active filter is visually indicated
+
+**Dependencies:** Story 1.1 (course entities), Story 1.2 (library view)
+
+**Complexity:** Small (1-2 hours)
+
+**Testing Requirements:** Unit tests for status transitions and persistence, E2E for status badge interaction and filtering
 
 ### Story 1.4: Organize Courses by Topic
 
@@ -572,6 +609,12 @@ So that I can keep my library organized as it grows.
 **When** the last course is removed from that topic
 **Then** the empty topic remains available for future use (not auto-deleted)
 
+**Dependencies:** Story 1.1 (course entities), Story 1.2 (library view)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for topic CRUD and autocomplete, E2E for topic assignment, filtering, and creation flow
+
 ### Story 1.5: Detect Missing or Relocated Files
 
 As a learner,
@@ -600,6 +643,12 @@ So that I know which content is unavailable and can take action.
 **When** the system re-verifies the handle (on next course load)
 **Then** the "file not found" badge is removed
 **And** the content becomes accessible again
+
+**Dependencies:** Story 1.1 (FileSystemHandle persistence)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for handle verification logic, E2E for file-not-found badge display and recovery
 
 ---
 
@@ -641,6 +690,17 @@ So that I can watch content at my own pace with full control over playback.
 **Then** the player shows a completion state
 **And** the next video in the course structure is suggested (if one exists)
 
+**Given** a video file fails to load (corrupted, unsupported codec)
+**When** the player detects the error
+**Then** an error message is displayed with the file name and a "Try Next Video" action
+**And** the player does not crash or block navigation to other content
+
+**Dependencies:** Epic 1 (course import and file handle system)
+
+**Complexity:** Large (6-8 hours)
+
+**Testing Requirements:** Unit tests for keyboard shortcuts and playback speed logic, E2E for video controls, fullscreen toggle, and completion state
+
 ### Story 2.2: Course Structure Navigation
 
 As a learner,
@@ -670,6 +730,12 @@ So that I can follow the course in order or jump to specific content.
 **Then** sections are collapsible/expandable
 **And** each section shows the count of items within it
 
+**Dependencies:** Story 2.1 (video player), Epic 1 (course data with sections)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for section collapse/expand logic, E2E for navigation between items and content switching
+
 ### Story 2.3: PDF Viewer
 
 As a learner,
@@ -698,6 +764,17 @@ So that I can read supplementary content alongside my video lessons.
 **When** rendering completes
 **Then** memory usage stays within bounds (NFR33 — no more than 100MB additional for 2GB+ files)
 **And** pages render progressively without blocking the UI
+
+**Given** a PDF file fails to load or is corrupted
+**When** the rendering error is detected
+**Then** an error message is displayed explaining the file could not be rendered
+**And** the user can navigate to other content items without disruption
+
+**Dependencies:** Epic 1 (course data and file handles), Story 2.2 (course structure navigation)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for page navigation and keyboard controls, E2E for PDF rendering, page jumping, and memory bounds
 
 ### Story 2.4: Video Bookmarks & Bookmarks Page
 
@@ -732,6 +809,12 @@ So that I can quickly return to important sections across all my courses.
 **Then** a confirmation dialog appears (NFR23 — destructive actions require confirmation)
 **And** upon confirmation, the bookmark is removed
 
+**Dependencies:** Story 2.1 (video player with playback position), Epic 1 (course data)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for bookmark CRUD and seek-bar indicator, E2E for bookmark creation, Bookmarks page navigation, and bookmark deletion
+
 ### Story 2.5: Resume Video Playback Position
 
 As a learner,
@@ -758,6 +841,17 @@ So that I can seamlessly pick up where I left off.
 **When** resume positions are stored
 **Then** each video's position is stored independently
 **And** positions persist across browser sessions (NFR9)
+
+**Given** an IndexedDB write fails when saving the playback position
+**When** the error is detected
+**Then** the system retries the save silently up to 3 times
+**And** if all retries fail, a toast notification alerts the user that resume position could not be saved
+
+**Dependencies:** Story 2.1 (video player), Epic 1 (IndexedDB course data)
+
+**Complexity:** Small (1-2 hours)
+
+**Testing Requirements:** Unit tests for position save/restore logic, E2E for resume behavior across sessions and completion reset
 
 ### Story 2.6: Focused Content Interface
 
@@ -788,6 +882,12 @@ So that I can concentrate on learning without UI clutter.
 **When** the layout renders
 **Then** the video player is stacked above the note panel area
 **And** the course navigation is accessible via a toggle/drawer
+
+**Dependencies:** Story 2.1 (video player), Story 2.2 (course structure navigation), Epic 1 (course data)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** E2E for layout at desktop and mobile breakpoints, sidebar hiding, and back-to-library navigation
 
 ### Story 2.7: Caption and Subtitle Support
 
@@ -821,6 +921,12 @@ So that I can follow along with captions for better comprehension.
 **When** the user returns to that video later
 **Then** the caption file association is persisted
 **And** captions load automatically on subsequent visits
+
+**Dependencies:** Story 2.1 (video player with controls)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for SRT/WebVTT parsing and synchronization, E2E for caption loading, toggle visibility, and error handling for malformed files
 
 ---
 
@@ -859,6 +965,12 @@ So that I can capture ideas and key points in a structured, readable format.
 **When** the user navigates away without any explicit save action
 **Then** no "unsaved changes" warning appears (persistence is handled by autosave, implemented in a subsequent story within this epic)
 
+**Dependencies:** Story 2.6 (focused content interface with note panel area)
+
+**Complexity:** Large (6-8 hours)
+
+**Testing Requirements:** Unit tests for Markdown serialization and TipTap editor behavior, E2E for editor rendering, keyboard shortcuts, and content persistence
+
 ### Story 3.2: Link Notes to Courses and Videos
 
 As a learner,
@@ -887,6 +999,12 @@ So that I can always find my notes in the right context.
 **And** each note shows the linked video title and a preview of its content
 **And** notes are sorted by most recently modified
 
+**Dependencies:** Story 3.1 (TipTap editor), Epic 1 (course/video entities)
+
+**Complexity:** Small (1-2 hours)
+
+**Testing Requirements:** Unit tests for automatic course/video linking, E2E for note context switching between videos and course notes list
+
 ### Story 3.3: Tag Notes for Organization
 
 As a learner,
@@ -914,6 +1032,12 @@ So that I can categorize and find related notes across different courses.
 **When** the user clicks on a tag
 **Then** the view filters to show only notes with that tag
 **And** the active tag filter is visually indicated
+
+**Dependencies:** Story 3.1 (note editor), Story 3.2 (note-to-course linking)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for tag autocomplete and CRUD, E2E for tag creation, assignment, removal, and filtering
 
 ### Story 3.4: Timestamp Notes to Video Positions
 
@@ -945,6 +1069,12 @@ So that I can create precise references between my notes and the video content.
 **Given** a note with timestamps is viewed outside the video context (e.g., in course notes list)
 **When** the user clicks a timestamp
 **Then** the system navigates to the course player, loads the linked video, and seeks to the timestamp position
+
+**Dependencies:** Story 3.1 (TipTap editor), Story 2.1 (video player with playback position)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for timestamp insertion and shortcut configuration, E2E for timestamp click-to-seek and cross-context navigation
 
 ### Story 3.5: Autosave Notes
 
@@ -979,6 +1109,12 @@ So that I never lose my work and don't have to think about saving.
 **Then** any pending unsaved changes are flushed to IndexedDB immediately
 **And** zero data loss occurs for notes during standard workflows (NFR8)
 
+**Dependencies:** Story 3.1 (TipTap editor), Story 3.2 (note persistence in IndexedDB)
+
+**Complexity:** Small (1-2 hours)
+
+**Testing Requirements:** Unit tests for debounce timing and IndexedDB write/rollback, E2E for autosave behavior, storage failure notification, and beforeunload flush
+
 ### Story 3.6: Full-Text Note Search
 
 As a learner,
@@ -1009,6 +1145,12 @@ So that I can find information I've written regardless of which course it's in.
 **When** a note is created, updated, or deleted
 **Then** the MiniSearch index is updated incrementally (not rebuilt from scratch)
 **And** subsequent searches immediately reflect the change
+
+**Dependencies:** Story 3.1 (notes with content), Story 3.2 (note-to-course linking), Story 3.3 (tags)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for MiniSearch indexing and fuzzy matching, E2E for search-as-you-type, result navigation, and index incremental updates
 
 ### Story 3.7: Side-by-Side Video and Notes Layout
 
@@ -1041,6 +1183,12 @@ So that I can take notes while watching without switching between views.
 **Given** the user has adjusted the panel proportions
 **When** they return to the focused content interface later
 **Then** the previous panel proportions are restored from stored preferences
+
+**Dependencies:** Story 2.6 (focused content interface), Story 3.1 (TipTap editor)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** E2E for side-by-side layout at 1024px+, stacked layout below 1024px, divider resizing, and proportion persistence
 
 ---
 
@@ -1082,6 +1230,12 @@ So that I can visually track my progress through course content at a glance.
 **Then** any parent chapter that was auto-completed reverts to In Progress
 **And** dependent progress calculations update immediately
 
+**Dependencies:** Epic 1 (course data), Story 2.2 (course structure panel)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for status transitions and parent-chapter auto-completion, E2E for color-coded indicators, optimistic updates, and IndexedDB rollback on failure
+
 ### Story 4.2: Course Completion Percentage
 
 As a learner,
@@ -1116,6 +1270,12 @@ So that I can understand how far I am through each course and prioritize my stud
 **Then** each card displays its individual completion percentage progress bar
 **And** progress bars are consistent in size, position, and styling across all cards
 
+**Dependencies:** Story 4.1 (content completion status), Story 1.2 (course library view)
+
+**Complexity:** Small (1-2 hours)
+
+**Testing Requirements:** Unit tests for percentage calculation and ARIA attributes, E2E for progress bar rendering, animation, and 0%/100% edge cases
+
 ### Story 4.3: Automatic Study Session Logging
 
 As a learner,
@@ -1149,6 +1309,17 @@ So that I can understand my study habits without manual effort and see my total 
 **When** the application next loads
 **Then** the system detects any orphaned session records (sessions with a start time but no end time)
 **And** closes them with the last known activity timestamp as the end time
+
+**Given** an IndexedDB write fails when creating or updating a session record
+**When** the error is detected
+**Then** the system retries the write silently
+**And** if retries fail, the session data is preserved in the Zustand store for the next successful write opportunity
+
+**Dependencies:** Story 2.6 (focused content interface — session start/end triggers)
+
+**Complexity:** Large (6-8 hours)
+
+**Testing Requirements:** Unit tests for session timing, idle detection, and orphan recovery, Integration tests for visibilitychange and beforeunload handlers, E2E for session lifecycle
 
 ### Story 4.4: View Study Session History
 
@@ -1186,6 +1357,12 @@ So that I can reflect on my learning patterns and verify my study activity.
 **Given** a user is viewing a session entry
 **When** they click or tap on the entry
 **Then** an expanded view shows additional details: exact start and end times, individual content items accessed with timestamps, and a link to resume that course
+
+**Dependencies:** Story 4.3 (session logging data)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for filtering and sorting logic, E2E for session list rendering, course/date filters, empty state, and expandable details
 
 ### Story 4.5: Continue Learning Dashboard Action
 
@@ -1225,6 +1402,12 @@ So that I can pick up exactly where I left off within one click of launching the
 **Then** the card is fully responsive with touch-friendly tap targets (minimum 44x44px)
 **And** the card maintains its prominence as the first actionable element on the page
 
+**Dependencies:** Story 4.3 (session data), Story 2.5 (resume playback position), Story 1.2 (course library)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for most-recent-session selection, E2E for continue learning card rendering, navigation, deleted course fallback, and mobile responsiveness
+
 ---
 
 ## Epic 5: Study Streaks & Daily Goals
@@ -1258,6 +1441,12 @@ So that I feel motivated to maintain consistent study habits.
 **When** they complete their first study session
 **Then** the streak counter displays 1
 **And** the fire emoji and pulse animation appear
+
+**Dependencies:** Story 4.3 (study session data for consecutive day tracking)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for streak increment/reset logic and calendar day boundaries, E2E for streak counter display, animation, and reset behavior
 
 ### Story 5.2: Streak Pause & Freeze Days
 
@@ -1304,6 +1493,12 @@ So that I can take planned rest days without losing my streak progress.
 **When** the streak is paused
 **Then** freeze day logic is suspended until the streak is resumed
 
+**Dependencies:** Story 5.1 (streak counter)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for freeze day validation (max 3), pause/resume logic, E2E for pause toggle, freeze day configuration, and interaction with streak reset
+
 ### Story 5.3: Study Goals & Weekly Adherence
 
 As a learner,
@@ -1340,6 +1535,16 @@ So that I can hold myself accountable to a consistent study schedule.
 **When** the goal threshold is reached
 **Then** the progress widget visually indicates completion (e.g., filled ring, checkmark)
 
+**Given** the user enters an invalid goal value (zero, negative, or non-numeric)
+**When** they attempt to save
+**Then** inline validation prevents submission with an appropriate error message
+
+**Dependencies:** Story 4.3 (session data for tracking against goals)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for adherence percentage calculation and goal type logic, E2E for goal configuration, progress widget, and validation errors
+
 ### Story 5.4: Study History Calendar
 
 As a learner,
@@ -1374,6 +1579,12 @@ So that I can see patterns in my study habits and identify gaps.
 **Given** the learner views the calendar on a mobile viewport
 **When** the calendar renders
 **Then** it remains usable with appropriately sized touch targets (minimum 44x44px)
+
+**Dependencies:** Story 4.3 (session data for highlighting), Story 5.2 (freeze days for visual distinction)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for calendar data aggregation and month navigation, E2E for calendar rendering, day click details, freeze day indicators, and mobile touch targets
 
 ### Story 5.5: Study Reminders & Notifications
 
@@ -1417,6 +1628,12 @@ So that I receive timely nudges that help me maintain my streak and study habits
 **When** the streak is paused
 **Then** streak-at-risk notifications are suppressed until the streak is resumed
 
+**Dependencies:** Story 5.1 (streak data), Story 5.2 (pause state for suppression)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for notification scheduling and permission handling, E2E for reminder configuration, notification permission flow, and toggle behavior
+
 ### Story 5.6: Streak Milestone Celebrations
 
 As a learner,
@@ -1458,6 +1675,12 @@ So that I feel rewarded for my consistency and motivated to keep going.
 **Then** the celebration toast appears again
 **And** the new achievement date is recorded alongside the previous one
 
+**Dependencies:** Story 5.1 (streak counter with milestone thresholds)
+
+**Complexity:** Small (1-2 hours)
+
+**Testing Requirements:** Unit tests for milestone detection and badge persistence, E2E for toast notifications, prefers-reduced-motion handling, and milestone collection view
+
 ---
 
 ## Epic 6: Learning Challenges & Gamification
@@ -1494,6 +1717,17 @@ So that I can set concrete goals that motivate me beyond daily streaks.
 **Given** a screen reader user interacts with the create challenge form
 **When** they navigate through the fields
 **Then** all inputs have associated labels, error messages are announced via aria-live, and the form is fully keyboard-navigable
+
+**Given** an IndexedDB write fails when saving a new challenge
+**When** the error is detected
+**Then** a toast notification displays the error with a retry option
+**And** the form data is preserved so the user does not need to re-enter it
+
+**Dependencies:** Epic 4 (session data for time-based challenges), Epic 5 (streak data for streak-based challenges)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for form validation and challenge type logic, E2E for challenge creation, validation errors, accessibility, and IndexedDB persistence
 
 ### Story 6.2: Track Challenge Progress
 
@@ -1532,6 +1766,12 @@ So that I can understand how close I am to achieving each goal.
 **Then** an empty state is displayed with a message encouraging the user to create their first challenge
 **And** a prominent call-to-action links to the create challenge form
 
+**Dependencies:** Story 6.1 (challenge entities), Story 4.3 (session data), Story 4.1 (completion data), Story 5.1 (streak data)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for progress calculation across all three challenge types, E2E for progress bar rendering, expired challenge handling, and empty state
+
 ### Story 6.3: Challenge Milestone Celebrations
 
 As a learner,
@@ -1569,6 +1809,12 @@ So that I feel recognized and motivated as I make progress toward my goals.
 **Then** the system triggers toasts sequentially for each uncelebrated threshold (25%, 50%, 75%) with a brief stagger delay
 **And** each milestone is individually recorded as celebrated in IndexedDB
 
+**Dependencies:** Story 6.2 (challenge progress tracking)
+
+**Complexity:** Small (1-2 hours)
+
+**Testing Requirements:** Unit tests for milestone threshold detection and sequential toast logic, E2E for toast notifications, prefers-reduced-motion, and multi-milestone simultaneous crossing
+
 ---
 
 ## Epic 7: Course Momentum & Learning Intelligence
@@ -1605,6 +1851,12 @@ So that I can instantly identify which courses have strong engagement momentum a
 **When** the session is recorded
 **Then** the momentum score for that course recalculates within the same page session without requiring a full page reload
 
+**Dependencies:** Epic 4 (study session and completion data for recency/frequency/completion inputs)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for momentum score formula and hot/warm/cold thresholds, E2E for indicator display, sort-by-momentum, and score recalculation after session
+
 ### Story 7.2: Recommended Next Dashboard Section
 
 As a learner,
@@ -1632,6 +1884,12 @@ So that I can quickly resume learning without having to manually decide which co
 **Given** the user completes a study session from the dashboard
 **When** they return to the dashboard
 **Then** the "Recommended Next" rankings recalculate to reflect the updated momentum and recency data
+
+**Dependencies:** Story 7.1 (momentum score), Story 4.2 (completion percentage for proximity ranking)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for composite ranking algorithm, E2E for section rendering with 0/1/2/3+ courses, card navigation, and empty state
 
 ### Story 7.3: Next Course Suggestion After Completion
 
@@ -1664,6 +1922,12 @@ So that I can maintain my learning momentum without a gap between courses.
 **Given** the completed course has no tags
 **When** the suggestion algorithm runs
 **Then** courses are ranked entirely by momentum score (100% weight)
+
+**Dependencies:** Story 7.1 (momentum score), Story 1.4 (course tags for shared-tag ranking), Story 4.1 (completion status)
+
+**Complexity:** Small (1-2 hours)
+
+**Testing Requirements:** Unit tests for tag-weighted + momentum ranking algorithm, E2E for suggestion card display, dismiss behavior, and no-remaining-courses fallback
 
 ### Story 7.4: At-Risk Course Detection & Completion Estimates
 
@@ -1699,6 +1963,12 @@ So that I can identify neglected courses before I fall too far behind and plan m
 **When** the user sorts by momentum
 **Then** at-risk courses naturally appear at the bottom of the list due to their low momentum scores
 
+**Dependencies:** Story 7.1 (momentum score for at-risk threshold), Story 4.3 (session data for inactivity detection and pace calculation)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for at-risk detection logic and completion time estimation, E2E for at-risk badge display/removal, estimated time rendering, and new-user default pace
+
 ### Story 7.5: Smart Study Schedule Suggestion
 
 As a learner,
@@ -1732,6 +2002,12 @@ So that I can build consistent study habits aligned with when I'm most likely to
 **Given** the user's historical peak study hour changes over time
 **When** the 30-day rolling window updates with new session data
 **Then** the suggested study time adjusts to reflect the updated peak hour without requiring manual intervention
+
+**Dependencies:** Story 4.3 (session history for peak hour analysis), Story 5.3 (weekly study goal), Story 7.1 (momentum for time distribution)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for peak hour calculation and schedule distribution, E2E for widget rendering, insufficient-data state, and rolling window updates
 
 ---
 
@@ -1770,6 +2046,12 @@ So that I can understand how consistently I study and adjust my schedule to meet
 **When** the user views the Study Time Analytics section
 **Then** an empty state is displayed with a message explaining that data will appear once study sessions are recorded
 
+**Dependencies:** Story 4.3 (session data), Story 5.3 (weekly study target for adherence)
+
+**Complexity:** Large (6-8 hours)
+
+**Testing Requirements:** Unit tests for time aggregation across daily/weekly/monthly periods, E2E for chart rendering, period toggle, adherence percentage, accessibility table toggle, and empty state
+
 ### Story 8.2: Course Completion Tracking
 
 As a learner,
@@ -1802,6 +2084,12 @@ So that I can measure my progress and stay motivated by seeing how many courses 
 **When** the user views the Course Completion Tracking section
 **Then** an empty state is displayed encouraging the user to continue their in-progress courses
 **And** if the user has in-progress courses, a summary of current progress percentages is shown
+
+**Dependencies:** Story 4.1 (completion status), Story 4.2 (completion percentage), Story 4.3 (session data for time-to-completion)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for completion rate calculation and timeline data, E2E for chart rendering, tooltip interaction, timeline navigation, and empty state
 
 ### Story 8.3: Learning Velocity & Trends
 
@@ -1837,6 +2125,12 @@ So that I can identify when I am losing momentum and take corrective action befo
 **When** the chart renders
 **Then** the chart includes alt text describing the overall velocity trend
 **And** a "View as table" toggle is available showing weekly video counts in tabular format
+
+**Dependencies:** Story 4.3 (session data with content items), Story 4.1 (video completion tracking)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for velocity calculation and trend detection algorithm, E2E for chart rendering, trend indicator, insufficient-data state, and accessible table toggle
 
 ### Story 8.4: Retention Insights & Activity Heatmap
 
@@ -1879,6 +2173,12 @@ So that I can identify patterns that lead to successful completion and maintain 
 **When** the Retention Insights and Activity Heatmap sections load
 **Then** both sections display appropriate empty states explaining what data is needed
 
+**Dependencies:** Story 4.3 (session data for heatmap and retention analysis), Story 4.1 (completion data for abandoned course detection), Epic 3 (notes data for notes-per-video ratio)
+
+**Complexity:** Large (6-8 hours)
+
+**Testing Requirements:** Unit tests for retention metric calculations and heatmap intensity levels, E2E for side-by-side comparison, heatmap rendering, accessibility patterns, and empty states
+
 ### Story 8.5: Actionable Study Insights
 
 As a learner,
@@ -1912,6 +2212,12 @@ So that I can make informed adjustments to improve my learning outcomes without 
 **Then** each card uses semantic markup with a heading for the observation and body text for the recommendation
 **And** cards are keyboard navigable and screen reader accessible
 **And** no insight relies solely on color or iconography to convey its meaning
+
+**Dependencies:** Story 8.1 (study time data), Story 8.3 (velocity data), Story 8.4 (retention data), Story 7.1 (momentum data)
+
+**Complexity:** Large (6-8 hours)
+
+**Testing Requirements:** Unit tests for insight generation engine and pattern detection, E2E for insight card rendering, refresh cycle, insufficient-data state, and accessibility
 
 ---
 
@@ -1962,6 +2268,12 @@ So that I can enable AI-powered features while maintaining control over my crede
 **When** the request payload is constructed
 **Then** only the content being analyzed is included — no user metadata, file paths, or personally identifiable information is transmitted
 
+**Dependencies:** None (foundation story for AI features)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for API key encryption/decryption and validation, Integration tests for provider connectivity, E2E for settings UI, consent toggles, and unavailable state badges
+
 ### Story 9.2: AI Video Summary
 
 As a learner,
@@ -2002,6 +2314,12 @@ So that I can quickly review key concepts without rewatching the entire video.
 **When** I return to the same video later
 **Then** the cached summary is available without regeneration
 **And** a "Regenerate" option is visible to request a fresh summary
+
+**Dependencies:** Story 9.1 (AI provider configuration), Story 2.1 (video player)
+
+**Complexity:** Large (6-8 hours)
+
+**Testing Requirements:** Unit tests for streaming response handling and caching, Integration tests for AI provider API calls, E2E for summary generation, collapse/expand, timeout, error fallback, and regeneration
 
 ### Story 9.3: Chat-Style Q&A from Notes
 
@@ -2048,6 +2366,12 @@ So that I can quickly find information across my study materials without manual 
 **Then** only note content and the user's question are transmitted
 **And** no user metadata, file paths, or personally identifiable information is included
 
+**Dependencies:** Story 9.1 (AI provider configuration), Epic 3 (notes corpus for Q&A source), Story 3.6 (note search for fallback)
+
+**Complexity:** Large (6-8 hours)
+
+**Testing Requirements:** Unit tests for citation extraction and context management, Integration tests for RAG pipeline, E2E for chat interaction, citation navigation, no-results handling, and AI unavailable fallback
+
 ### Story 9.4: AI Learning Path Generation
 
 As a learner,
@@ -2086,6 +2410,12 @@ So that I can study topics in the most logical sequence and build knowledge prog
 **When** I attempt to generate a learning path
 **Then** the system displays an "AI unavailable" status with retry option
 **And** falls back within 2 seconds without disrupting other page functionality
+
+**Dependencies:** Story 9.1 (AI provider configuration), Epic 1 (course catalog with 2+ courses)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for prerequisite inference and drag-reorder logic, E2E for learning path generation, manual reorder, regeneration confirmation, and insufficient-courses state
 
 ### Story 9.5: Knowledge Gap Detection
 
@@ -2130,6 +2460,12 @@ So that I can strengthen weak areas and ensure comprehensive understanding.
 **When** the system attempts gap analysis
 **Then** it falls back to rule-based detection (note count ratios and watch percentage thresholds) without AI enrichment
 **And** the fallback activates within 2 seconds
+
+**Dependencies:** Story 9.1 (AI provider configuration), Epic 3 (notes with tags), Story 4.1 (completion status for skipped video detection)
+
+**Complexity:** Large (6-8 hours)
+
+**Testing Requirements:** Unit tests for note-per-video ratio and watch-percentage detection, E2E for knowledge gaps panel, suggested links accept/dismiss, and rule-based fallback
 
 ### Story 9.6: AI Note Organization
 
@@ -2176,6 +2512,12 @@ So that my notes are well-organized and I can discover connections between diffe
 **Then** only note content, existing tags, and course context are transmitted
 **And** no user metadata, file paths, or personally identifiable information is included
 
+**Dependencies:** Story 9.1 (AI provider configuration), Epic 3 (notes corpus), Story 3.3 (tags)
+
+**Complexity:** Large (6-8 hours)
+
+**Testing Requirements:** Unit tests for AI proposal generation and change application logic, E2E for organize workflow, preview/accept/reject changes, Related Concepts panel, and AI unavailable fallback
+
 ### Story 9.7: AI Feature Analytics & Auto-Analysis
 
 As a learner,
@@ -2218,6 +2560,12 @@ So that I can track my AI-assisted study habits and benefit from immediate AI in
 **Then** no automatic AI analysis is triggered
 **And** the course imports normally without any data sent to the AI provider
 
+**Dependencies:** Story 9.1 (AI provider configuration), Story 9.2 through 9.6 (AI features to track), Story 1.1 (course import trigger for auto-analysis)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for usage statistics aggregation and trend indicators, E2E for analytics dashboard, period toggles, auto-analysis on import, consent toggle, and AI unavailable fallback
+
 ---
 
 ## Epic 11: Knowledge Retention, Export & Advanced Features (Post-MVP)
@@ -2251,6 +2599,17 @@ So that I can retain knowledge more effectively by reviewing material at optimal
 **When** they open the review queue
 **Then** the system displays an empty state indicating no reviews are currently due
 **And** shows the date and time of the next upcoming review
+
+**Given** an IndexedDB write fails when saving a review rating
+**When** the error is detected
+**Then** the system displays a toast notification with a retry option
+**And** the rating is preserved in memory so the review queue state is not lost
+
+**Dependencies:** Epic 3 (notes with course/video context)
+
+**Complexity:** Large (6-8 hours)
+
+**Testing Requirements:** Unit tests for spaced repetition interval calculation, E2E for review queue, rating interaction, interval updates, and empty state
 
 ### Story 11.2: Knowledge Retention Dashboard
 
@@ -2288,6 +2647,12 @@ So that I can identify weak areas and re-engage before knowledge fades.
 **When** the learner views the dashboard
 **Then** no decay alerts are shown and the engagement status displays as healthy
 
+**Dependencies:** Story 11.1 (spaced review data for retention levels), Story 4.3 (session data for engagement metrics)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for retention level degradation and engagement decay thresholds, E2E for dashboard rendering, retention indicators, and decay alerts
+
 ### Story 11.3: Study Session Quality Scoring
 
 As a learner,
@@ -2319,6 +2684,12 @@ So that I can understand how effectively I studied and improve my habits over ti
 **Given** a learner is in an active study session
 **When** the session is ongoing
 **Then** the system tracks active time, interactions, and breaks in real time without displaying the score until the session concludes
+
+**Dependencies:** Story 4.3 (session tracking infrastructure for active time and interaction data)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for quality score formula and weight calculations, E2E for score display after session end, breakdown factors, and trend indicator
 
 ### Story 11.4: Data Export
 
@@ -2365,6 +2736,17 @@ So that I own my data, can use it in other tools, and can share verifiable crede
 **Then** a progress indicator shows the current export status
 **And** the learner can continue using the application while the export runs in the background
 
+**Given** the export fails due to insufficient disk space or a browser write error
+**When** the error is detected
+**Then** a toast notification explains the failure and suggests freeing disk space
+**And** the partially exported data is cleaned up
+
+**Dependencies:** Epic 3 (notes data), Epic 4 (session and progress data), Epic 5 (streak data), Epic 6 (challenge/achievement data)
+
+**Complexity:** Large (6-8 hours)
+
+**Testing Requirements:** Unit tests for JSON/CSV/Markdown serialization and schema versioning, Integration tests for re-import fidelity, E2E for export workflow, progress indicator, and Open Badges output
+
 ### Story 11.5: Interleaved Review Mode
 
 As a learner,
@@ -2396,6 +2778,12 @@ So that I can strengthen cross-topic connections and improve long-term retention
 **Given** an interleaved review session is in progress
 **When** the learner completes all queued notes or chooses to end the session
 **Then** the system displays a session summary showing total notes reviewed, ratings distribution, courses covered, and an estimated retention improvement
+
+**Dependencies:** Story 11.1 (spaced review system and rating infrastructure), Epic 3 (notes across multiple courses)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for interleaved sequence weighting algorithm, E2E for card-flip interface, rating interaction, single-course fallback, and session summary
 
 ### Story 11.6: Per-Course Study Reminders
 
@@ -2436,6 +2824,11 @@ So that I can maintain a consistent study schedule tailored to each course indep
 **Then** all per-course reminders are listed with their schedules, organized by course
 **And** each reminder shows its enabled or disabled status
 
+**Dependencies:** Story 5.5 (notification permission and scheduling infrastructure), Epic 1 (course entities for per-course settings)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** Unit tests for per-course scheduling logic and independence from streak reminders, E2E for reminder configuration, notification delivery, permission flow, and multi-course reminder overview
 
 ---
 
@@ -7078,6 +7471,12 @@ So that I discover the platform's core value immediately without needing documen
 **Then** the spotlight follows the element correctly even if the layout shifts or scrolls
 **And** the rest of the UI remains accessible but visually de-emphasized
 
+**Dependencies:** Epic 1 (course import), Epic 2 (video playback for step 2), Epic 6 (challenge creation for step 3)
+
+**Complexity:** Large (6-8 hours)
+
+**Testing Requirements:** Unit tests for step progression logic and completion flag persistence, E2E for full onboarding flow, skip behavior, spotlight positioning, and no-reappear on subsequent visits
+
 ### Story 10.2: Empty State Guidance
 
 As a new or returning user viewing a section with no content,
@@ -7123,6 +7522,12 @@ So that I always know my next step and can complete core workflows within 2 minu
 **When** I complete the sequence of importing a course, starting a study session, and creating a challenge
 **Then** the entire sequence is completable within 2 minutes
 **And** no external documentation or help pages are required to understand the prompts
+
+**Dependencies:** Epic 1 (course import for empty course state), Epic 3 (notes for empty notes state), Epic 6 (challenges for empty challenges state), Epic 4 (sessions for empty reports state)
+
+**Complexity:** Medium (3-5 hours)
+
+**Testing Requirements:** E2E for each empty state message and CTA, navigation to correct destination, replacement with real content after action, and 2-minute completion target
 
 ---
 
