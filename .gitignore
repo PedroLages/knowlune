@@ -17,6 +17,9 @@ coverage/
 
 # Playwright screenshots
 *.png
+# PWA icons (exceptions)
+!public/pwa-*.png
+!public/apple-touch-icon-*.png
 
 # Lighthouse
 .lighthouseci/

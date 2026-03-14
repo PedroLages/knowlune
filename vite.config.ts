@@ -5,6 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = typeof globalThis.__dirname !== 'undefined'
@@ -93,7 +94,70 @@ export default defineConfig({
         ['babel-plugin-react-compiler', {}],
       ],
     },
-  }), tailwindcss(), serveLocalMedia()],
+  }),
+  tailwindcss(),
+  serveLocalMedia(),
+  VitePWA({
+    registerType: 'prompt',
+    includeAssets: ['favicon.svg', 'apple-touch-icon-180x180.png'],
+    manifest: {
+      name: 'LevelUp',
+      short_name: 'LevelUp',
+      description: 'Personal learning platform with progress tracking and study streaks',
+      theme_color: '#FAF5EE',
+      background_color: '#FAF5EE',
+      display: 'standalone',
+      scope: '/',
+      start_url: '/',
+      icons: [
+        { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+        { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+        { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      ],
+    },
+    workbox: {
+      globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2}'],
+      globIgnores: ['**/mockServiceWorker.js', '**/webllm*.js'],
+      navigateFallback: 'index.html',
+      navigateFallbackDenylist: [/^\/api\//],
+      runtimeCaching: [
+        {
+          urlPattern: /^\/images\/.+\.(png|webp|jpg|jpeg)$/i,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'local-images',
+            expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 },
+          },
+        },
+        {
+          urlPattern: /^https:\/\/images\.unsplash\.com\/.*/i,
+          handler: 'StaleWhileRevalidate',
+          options: {
+            cacheName: 'unsplash-images',
+            expiration: { maxEntries: 80, maxAgeSeconds: 30 * 24 * 60 * 60 },
+            cacheableResponse: { statuses: [0, 200] },
+          },
+        },
+        {
+          urlPattern: /^https:\/\/huggingface\.co\/.*/i,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'hf-models',
+            expiration: { maxEntries: 20, maxAgeSeconds: 90 * 24 * 60 * 60 },
+            cacheableResponse: { statuses: [0, 200] },
+          },
+        },
+        {
+          urlPattern: /^\/api\/ai\/.*/i,
+          handler: 'NetworkOnly',
+        },
+      ],
+    },
+    devOptions: {
+      enabled: false,
+    },
+  }),
+  ],
   worker: {
     format: 'es', // ES module workers — enables `import` in worker scope
   },

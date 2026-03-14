@@ -145,6 +145,7 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.55.0",
     "vite": "^6.4.1",
+    "vite-plugin-pwa": "^1.2.0",
     "vitest": "^4.0.18"
   },
   "overrides": {
