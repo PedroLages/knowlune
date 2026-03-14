@@ -270,6 +270,25 @@ export interface Embedding {
   createdAt: string // ISO timestamp
 }
 
+// --- AI Usage Events (Story 9B.6) ---
+
+export type AIFeatureType =
+  | 'summary'
+  | 'qa'
+  | 'learning_path'
+  | 'note_organization'
+  | 'knowledge_gaps'
+
+export interface AIUsageEvent {
+  id: string // UUID
+  featureType: AIFeatureType
+  courseId?: string // Optional — not all features are course-scoped
+  timestamp: string // ISO 8601
+  durationMs?: number // How long the AI operation took
+  status: 'success' | 'error'
+  metadata?: Record<string, unknown> // Feature-specific data
+}
+
 // --- Learning Path (Story 9B.3) ---
 
 export interface LearningPathCourse {
