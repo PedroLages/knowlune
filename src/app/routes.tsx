@@ -35,6 +35,9 @@ const Challenges = React.lazy(() =>
 const WebLLMTest = React.lazy(() => import('../experiments/WebLLMTest'))
 // Temporarily commented out - causing Mobile Safari module loading failures in CI
 // const WebLLMPerformanceTest = React.lazy(() => import('../experiments/WebLLMPerformanceTest'))
+const AILearningPath = React.lazy(() =>
+  import('./pages/AILearningPath').then(m => ({ default: m.AILearningPath }))
+)
 
 // Default exports work directly with React.lazy
 const MyClass = React.lazy(() => import('./pages/MyClass'))
@@ -184,6 +187,14 @@ export const router = createBrowserRouter([
         element: (
           <SuspensePage>
             <Settings />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'ai-learning-path',
+        element: (
+          <SuspensePage>
+            <AILearningPath />
           </SuspensePage>
         ),
       },
