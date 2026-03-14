@@ -201,11 +201,17 @@ See [plan](plans/e9b-s05-ai-note-organization-plan.md) for implementation approa
 
 ## Implementation Notes
 
-[Architecture decisions, patterns used, dependencies added]
+- **AI service pattern**: Follows `generateLearningPath` pattern — config → consent → sanitize → fetch → parse. Window mock (`__mockNoteOrganizationResponse`) bypasses the full pipeline for E2E tests.
+- **Related concepts**: Hybrid approach — tag intersection (instant, always available) + vector similarity search (with 1.5s timeout fallback to tag-only). Uses `findRelatedNotes()` in `src/lib/relatedConcepts.ts`.
+- **Privacy (AC7)**: Internal numeric indices replace real noteIds in LLM prompts. Only truncated content (200 chars), existing tags, and course display names are transmitted.
+- **Dialog responsiveness**: `OrganizePreviewDialog` uses `DialogContent` with `max-h-[80vh] flex flex-col overflow-hidden` and `ScrollArea` with `min-h-0` to keep footer in viewport.
 
 ## Testing Notes
 
-[Test strategy, edge cases discovered, coverage notes]
+- **IDB seeding order**: Must navigate to app (`page.goto('/')`) before calling `seedIndexedDBStore()`. IndexedDB is not available at `about:blank` — causes `SecurityError`.
+- **Mock data shape**: When mock bypasses `parseResponse()`, mock data must match the final `NoteOrganizationProposal` interface exactly (`suggestedCategories: string[]`, not `category: string`).
+- **Strict mode**: Tests using `getByText()` with patterns matching multiple elements (e.g., badge text appearing on several proposals) need `.first()` or scoped locators (`[aria-label="Related concepts"]`).
+- **Viewport overflow**: Dialog footer outside viewport requires `dispatchEvent('click')` instead of `.click()` — Playwright rejects clicks on elements outside viewport even with `force: true`.
 
 ## Pre-Review Checklist
 
@@ -234,4 +240,12 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+1. **Set has no `.filter()` method** — `Set<string>` is iterable but not an Array. Calling `.filter()` on a Set returns `any` and silently compiles but fails at runtime. Always spread to array first: `[...set].filter(...)`.
+
+2. **TypeScript literal type narrowing breaks type predicates** — When `.map()` returns `{ tagOnly: true, similarityScore: undefined }`, TypeScript infers literal types that conflict with the broader `RelatedNote` interface (`tagOnly: boolean`, `similarityScore?: number`). Replaced map/filter chain with imperative loop that pushes into a typed array to avoid the predicate mismatch.
+
+3. **IndexedDB unavailable at `about:blank`** — Playwright's default page context (`about:blank`) denies IndexedDB access with `SecurityError`. The working pattern from E09B-S01: navigate to `/` first to initialize the app context, then seed IDB stores.
+
+4. **Mock data must match post-processing shape** — When the mock response bypasses `parseResponse()` (returned directly from window object), it must match the final `NoteOrganizationProposal` interface. The LLM response shape (`category: string`) differs from the processed shape (`suggestedCategories: string[]`). Mismatch caused the dialog component to crash on `undefined.length`.
+
+5. **Dialog overflow is a flex layout problem, not a scroll problem** — `max-h-[80vh]` without `overflow-hidden` and `min-h-0` on the flex child allows the dialog to grow beyond its constraint. Even with this fix, Playwright still rejected `.click()` on elements outside viewport. `dispatchEvent('click')` is the reliable workaround.
