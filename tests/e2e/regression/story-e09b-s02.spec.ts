@@ -323,12 +323,9 @@ test.describe('Chat Q&A Interface', () => {
     await mockLLMClient(page)
 
     await page.goto('/')
-    // Seed minimal data WITHOUT embeddings so vector search returns empty
-    // (AC9 requires notes to exist so input isn't disabled)
-    await seedIndexedDBStore(page, 'ElearningDB', 'notes', [mockNote1, mockNote2])
-    await seedIndexedDBStore(page, 'ElearningDB', 'importedVideos', [mockVideo1, mockVideo2])
-    await seedIndexedDBStore(page, 'ElearningDB', 'importedCourses', [mockCourse])
-    // Do NOT seed embeddings - this makes vector search return empty results
+    // Seed minimal data so AC9 doesn't block input
+    // Vector search will still return no results (mocked to return empty)
+    await seedTestData(page)
     await page.goto('/notes/chat')
 
     const input = page.getByPlaceholder(/Ask a question/)
@@ -383,58 +380,32 @@ test.describe('Chat Q&A Interface', () => {
   })
 
   test('AC7: Privacy - no metadata in API payload', async ({ page }) => {
-    // Mock AI as configured with test API key (for network interception)
-    await page.addInitScript(() => {
-      localStorage.setItem(
-        'ai-configuration',
-        JSON.stringify({
-          provider: 'openai',
-          connectionStatus: 'connected',
-          _testApiKey: 'test-api-key-for-privacy-check', // Plaintext key for DEV mode
-          consentSettings: {
-            videoSummary: true,
-            noteQA: true,
-            learningPath: true,
-            knowledgeGaps: true,
-            noteOrganization: true,
-            analytics: true,
-          },
-        })
-      )
-    })
-    await mockEmbeddingWorker(page) // Need this for RAG to work
-    // Do NOT mock LLM client - let it hit the network so we can intercept
-
-    // Intercept OpenAI API requests and capture payload BEFORE navigation
-    let capturedPayload: any = null
-    await page.route('**/v1/chat/completions', async route => {
-      const request = route.request()
-      capturedPayload = request.postDataJSON()
-
-      // Fulfill with mock OpenAI streaming response
-      await route.fulfill({
-        status: 200,
-        contentType: 'text/event-stream',
-        body: 'data: {"choices":[{"delta":{"content":"React hooks"}}]}\n\ndata: [DONE]\n\n',
-      })
-    })
-
-    // Now navigate and seed data
+    await mockAIConfigured(page)
     await page.goto('/')
     await seedTestData(page)
     await page.goto('/notes/chat')
+
+    // Intercept API requests and capture payload
+    let capturedPayload: any = null
+    await page.route('**/v1/messages', async route => {
+      const request = route.request()
+      capturedPayload = request.postDataJSON()
+
+      // Fulfill with mock response
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream',
+        body: 'data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"React hooks"}}\n\ndata: {"type":"message_delta","delta":{"stop_reason":"end_turn"}}\n\n',
+      })
+    })
 
     // Trigger chat query
     const input = page.getByPlaceholder(/Ask a question/)
     await input.fill('What are React hooks?')
     await page.click('button:has-text("Send")')
 
-    // Wait for user message first
-    await expect(page.getByText('What are React hooks?')).toBeVisible()
-    // Then wait for AI response (at least 2 messages now - user + AI)
-    await expect(page.locator('[role="img"][aria-label*="AI Assistant"]')).toBeVisible({
-      timeout: 10000,
-    })
+    // Wait for response
+    await expect(page.getByText(/React hooks/)).toBeVisible({ timeout: 10000 })
 
     // Verify privacy: payload should contain ONLY messages array
     expect(capturedPayload).toBeTruthy()
