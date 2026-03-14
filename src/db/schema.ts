@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable, type Table } from 'dexie'
+import { z } from 'zod'
 import type {
   ImportedCourse,
   ImportedVideo,
@@ -58,6 +59,23 @@ db.version(3).stores({
   bookmarks: 'id, courseId, lessonId, createdAt',
 })
 
+// Zod schema for migration data validation (prevents corrupt data crashes)
+const MigrationNoteSchema = z.object({
+  id: z.string(),
+  content: z.string(),
+  timestamp: z.number().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  tags: z.array(z.string()),
+})
+
+const MigrationProgressSchema = z.record(
+  z.object({
+    courseId: z.string(),
+    notes: z.record(z.array(MigrationNoteSchema)).optional(),
+  })
+)
+
 db.version(4)
   .stores({
     importedCourses: 'id, name, importedAt, status, *tags',
@@ -76,23 +94,23 @@ db.version(4)
         return
       }
 
-      const allProgress: Record<
-        string,
-        {
-          courseId: string
-          notes: Record<
-            string,
-            Array<{
-              id: string
-              content: string
-              timestamp?: number
-              createdAt: string
-              updatedAt: string
-              tags: string[]
-            }>
-          >
-        }
-      > = JSON.parse(raw)
+      // Security: Parse and validate JSON data before using it
+      let parsedData: unknown
+      try {
+        parsedData = JSON.parse(raw)
+      } catch (parseError) {
+        console.error('[Migration] Failed to parse localStorage data:', parseError)
+        return
+      }
+
+      // Security: Validate structure with Zod schema
+      const validationResult = MigrationProgressSchema.safeParse(parsedData)
+      if (!validationResult.success) {
+        console.error('[Migration] Invalid data structure, skipping migration:', validationResult.error)
+        return
+      }
+
+      const allProgress = validationResult.data
 
       const notesToInsert: Note[] = []
 
