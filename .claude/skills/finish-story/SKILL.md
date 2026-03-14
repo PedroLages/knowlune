@@ -30,20 +30,7 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
 
 ## Orchestrator Discipline
 
-The orchestrator (main session) should:
-- **Read state**: story file, sprint status, git status
-- **Make decisions**: resumed? reviewed? UI changes?
-- **Dispatch agents**: via Task tool (parallel when independent)
-- **Collect results**: extract key data from agent returns
-- **Update state**: frontmatter, sprint status, TodoWrite
-- **Run git ops**: branch, commit, push, PR
-- **Communicate**: completion output, AskUserQuestion
-
-The orchestrator should NOT:
-- Do deep code analysis (delegate to agents)
-- Retain raw build/lint/test output beyond error messages
-- Read large files for exploration (dispatch Explore agents instead)
-- Perform review reasoning (agents handle this)
+**See:** [../_shared/orchestrator-principles.md](../_shared/orchestrator-principles.md)
 
 ## Steps
 
@@ -51,38 +38,7 @@ The orchestrator should NOT:
 
 1.5. **Detect worktree and resolve base path**: Before reading story files, detect if the current branch belongs to a git worktree and resolve the correct base path for file operations.
 
-   ```bash
-   # Get current git context
-   CURRENT_BRANCH=$(git branch --show-current)
-   CURRENT_ROOT=$(git rev-parse --show-toplevel)
-
-   # Check if current branch belongs to a worktree
-   WORKTREE_PATH=$(git worktree list --porcelain 2>/dev/null | awk '
-     /^worktree / { path=$2 }
-     /^branch / {
-       if ($2 == "refs/heads/'"$CURRENT_BRANCH"'") {
-         print path
-         exit
-       }
-     }
-   ')
-
-   # Determine base path for file operations
-   if [ -n "$WORKTREE_PATH" ] && [ "$WORKTREE_PATH" != "$CURRENT_ROOT" ]; then
-     # Branch has a worktree, but we're in the main workspace
-     BASE_PATH="$WORKTREE_PATH"
-
-     echo "⚠️  Worktree detected" >&2
-     echo "This story was started in a git worktree." >&2
-     echo "📍 Worktree: $WORKTREE_PATH" >&2
-     echo "📂 Current:  $CURRENT_ROOT" >&2
-     echo "Using worktree path for file operations." >&2
-     echo "" >&2
-   else
-     # Either no worktree, or we're already in it
-     BASE_PATH="$CURRENT_ROOT"
-   fi
-   ```
+   **See:** `/start-story` [docs/worktree-setup.md](../start-story/docs/worktree-setup.md) for worktree detection logic (use the same pattern).
 
    All file path references in subsequent steps must use `${BASE_PATH}/` prefix.
 
@@ -101,6 +57,7 @@ The orchestrator should NOT:
    [ ] Identify story and check status
    [ ] Validate: build + lint + type-check + tests
    [ ] Cross-check unresolved blockers
+   [ ] Validate all required gates present
    [ ] Update story file and sprint status
    [ ] Commit, push, create PR
    [ ] Post-merge cleanup
@@ -114,6 +71,7 @@ The orchestrator should NOT:
    [ ] Code review — architecture (Agent)
    [ ] Code review — testing (Agent)
    [ ] Consolidate review findings
+   [ ] Validate all required gates present
    [ ] Update story file and sprint status
    [ ] Commit, push, create PR
    [ ] Post-merge cleanup
@@ -147,6 +105,7 @@ The orchestrator should NOT:
    Skip this check (reviews already done or resuming — validation in Step 5 handles it).
 
 4a. **If `reviewed: in-progress`** (interrupted review):
+
    - Inform the user: "Previous `/review-story` was interrupted. Checking what completed."
    - Read `review_gates_passed` from frontmatter. Check for existing report files.
    - **If agent reviews completed** (`design-review` or `design-review-skipped`, `code-review`, and `code-review-testing` all in gates, reports exist):
@@ -158,236 +117,215 @@ The orchestrator should NOT:
      - If no blockers → continue to step 6.
 
 4b. **If NOT reviewed** (streamlined mode):
-   - Set `reviewed: in-progress`, `review_started: YYYY-MM-DD`, `review_gates_passed: []` in story frontmatter.
-   - Run the full review pipeline inline — same steps as `/review-story` steps 4-7:
-     a. Pre-checks: build, lint, type check, format check, unit tests, E2E tests (smoke specs + current story spec, Chromium only — see review-story step 4)
-     b. Review agent swarm: dispatch all applicable agents (design-review, code-review, code-review-testing) **in a single message** for maximum parallelism. Mark all dispatched agent todos as `in_progress` simultaneously.
-     c. Consolidated report
-   - Update `review_gates_passed` after each gate completes.
-   - If **Blockers** found → STOP with fix instructions. Developer fixes and re-runs `/finish-story`. Completed gates are preserved.
-   - If no blockers → continue to step 6.
+
+   **See:** [docs/streamlined-mode.md](docs/streamlined-mode.md) for complete streamlined mode workflow.
+
+   **Summary:**
+   - Set `reviewed: in-progress`, `review_started: YYYY-MM-DD`, `review_gates_passed: []`
+   - **Lessons Learned Gate**: Check for placeholder text (documented in streamlined-mode.md)
+   - Run pre-checks via `./scripts/workflow/run-prechecks.sh --mode=full`
+   - Run burn-in validation if applicable (E2E spec exists, tests passed, not already validated)
+   - Dispatch all review agents in parallel (design-review, code-review, code-review-testing)
+   - If **Blockers** found → STOP with fix instructions
+   - If no blockers → set `reviewed: true`, continue to step 6
 
 5. **If already reviewed** (comprehensive mode):
-   - **5a. Blocker cross-check**: Read the latest code review report at `${BASE_PATH}/docs/reviews/code/code-review-*-{story-id}.md`. Parse the `#### Blockers` section. If blockers exist:
-     - Check each blocker's file:line against the current code (`git show HEAD:path/to/file`). If the code at that location still matches the blocker description (issue not fixed), STOP:
-       ```
-       Cannot ship — [N] unresolved blocker(s) from code review:
-       1. [file:line]: [Description]
-       2. [file:line]: [Description]
-       Fix these and re-run /finish-story.
-       ```
-     - If the code has changed at those locations (likely fixed), note: "Code review had [N] blockers; code at those locations has changed since review. Proceeding with validation."
-   - **5b. Lightweight validation**:
-     a. `npm run build` — STOP on failure.
-     b. `npm run lint` — STOP on failure (if script exists).
-     c. **Type check** — `npx tsc --noEmit`. Auto-fix type errors in branch-changed files (`git diff --name-only main...HEAD`). Ignore pre-existing errors in other files.
-     d. **Format check** — `npx prettier --check "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}"`. Auto-fix with `--write` if needed.
-     e. `npm run test:unit -- --run` — STOP on failure (if tests exist).
-     f. E2E tests — run smoke specs + current story's spec on Chromium only:
-        ```
-        npx playwright test ${BASE_PATH}/tests/e2e/navigation.spec.ts ${BASE_PATH}/tests/e2e/overview.spec.ts ${BASE_PATH}/tests/e2e/courses.spec.ts ${BASE_PATH}/tests/e2e/story-{id}.spec.ts --project=chromium
-        ```
-        If the current story has no spec file in `${BASE_PATH}/tests/e2e/`, run smoke specs only. STOP on failure.
-   - If any fail → STOP. Developer fixes and re-runs.
 
-6. **Update story file**:
+   **See:** [docs/comprehensive-mode.md](docs/comprehensive-mode.md) for complete comprehensive mode workflow.
+
+   **Summary:**
+   - **5a. Blocker cross-check**: Run `./scripts/workflow/validate-blockers.sh` or manually check code review report. If unresolved blockers found → STOP.
+   - **5b. Lightweight validation**: Run `./scripts/workflow/run-prechecks.sh --mode=lightweight --skip-commit-check`. If any fail → STOP.
+
+6. **Validate all required gates**: Before proceeding to PR creation, check that `review_gates_passed` contains all 9 canonical gates (base or `-skipped` variant):
+   - `build`, `lint` (or `lint-skipped`), `type-check`, `format-check`
+   - `unit-tests` (or `unit-tests-skipped`), `e2e-tests` (or `e2e-tests-skipped`)
+   - `design-review` (or `design-review-skipped`), `code-review`, `code-review-testing`
+
+   **Missing gates** → STOP with error:
+   ```
+   ❌ Cannot create PR — missing required gates: [list]
+
+   [For each missing gate, explain why and how to fix]
+
+   Re-run /finish-story after fixing.
+   ```
+
+   **All gates present** → Continue to step 7.
+
+7. **Update story file**:
    - Set `status: done` and `completed: YYYY-MM-DD` in frontmatter.
    - Set `reviewed: true` if not already.
 
-7. **Update sprint status**: In `${BASE_PATH}/docs/implementation-artifacts/sprint-status.yaml`, set story → `done`.
+8. **Update sprint status**: In `${BASE_PATH}/docs/implementation-artifacts/sprint-status.yaml`, set story → `done`.
 
-8. **Commit**: Stage story file, sprint-status.yaml, and any review reports.
+9. **Commit**: Stage story file, sprint-status.yaml, and any review reports.
    Apply `writing-clearly-and-concisely` rules to the commit message — active voice, omit needless words:
    ```
    git commit -m "feat(E##-S##): [concise description of what the story delivers]"
    ```
 
-9. **Archive story spec**: If `${BASE_PATH}/tests/e2e/story-*.spec.ts` exists for this story, move it to `${BASE_PATH}/tests/e2e/regression/`:
+10. **Archive story spec**: If `${BASE_PATH}/tests/e2e/story-*.spec.ts` exists for this story, move it to `${BASE_PATH}/tests/e2e/regression/`:
    ```
    git mv ${BASE_PATH}/tests/e2e/story-{id}.spec.ts ${BASE_PATH}/tests/e2e/regression/
    git commit -m "chore: archive E##-S## spec to regression"
    ```
    If no story spec exists in `${BASE_PATH}/tests/e2e/`, skip this step.
 
-10. **Push branch**: `git push -u origin feature/e##-s##-slug`.
+11. **Push branch**: `git push -u origin feature/e##-s##-slug`.
 
-11. **Create PR** via `gh pr create`:
+12. **Create PR**:
 
-    Apply `writing-clearly-and-concisely` to PR title and body. Active voice, no AI puffery, no filler.
+   **See:** [docs/pr-creation.md](docs/pr-creation.md) for PR template and writing guidelines.
 
-    ```bash
-    gh pr create --title "feat(E##-S##): [Story name]" --body "$(cat <<'EOF'
-    ## Summary
-    - [1-3 bullet points of what changed and why]
+   Print the PR URL.
 
-    ## Verification
-    - Build: passed
-    - Lint: {passed/skipped}
-    - Type check: {passed/auto-fixed}
-    - Format check: {passed/auto-fixed N files}
-    - Unit tests: {passed/skipped} ({N} tests)
-    - E2E tests: {passed/skipped} ({N} tests)
-    - Design review: {passed/skipped/warnings} ([report link])
-    - Code review: {passed/warnings} ([report link])
-    - Code review (testing): {N/N ACs covered/warnings} ([report link])
+13. **Check PR merge status**: Ask the developer via AskUserQuestion:
 
-    ## Test Plan
-    - [ ] [Manual verification steps derived from acceptance criteria]
+   ```
+   What would you like to do next?
 
-    🤖 Generated with [Claude Code](https://claude.com/claude-code)
-    EOF
-    )"
-    ```
+   Options:
+   1. "PR merged — cleanup worktree" (only if worktree used)
+      Description: "Clean up the worktree and switch to main (automatic cleanup)"
+   2. "Keep working — make additional changes"
+      Description: "Keep worktree active for additional commits, re-run /finish-story after merge"
+   3. "Done — I'll cleanup manually later"
+      Description: "Exit without cleanup (use worktree-cleanup {story-key} later)"
+   ```
 
-    Print the PR URL.
+13a. **If "Keep working" or "Done"**:
 
-12. **Check PR merge status**: Ask the developer via AskUserQuestion:
+   - Inform the user:
+     ```
+     👍 Keeping worktree active.
 
-    ```
-    Has the PR been merged?
+     You can:
+     • Make additional changes and commit them
+     • Run /finish-story again after PR is merged
+     • Or manually cleanup: worktree-cleanup {story-key-lower}
 
-    [Yes] - Cleanup worktree and complete story
-    [No]  - Keep worktree for additional changes
-    ```
+     [If in worktree, show:]
+     Worktree location: {worktree-path}
+     ```
+   - **STOP here**. Exit workflow. User will re-run `/finish-story` after merge.
 
-13a. **If PR NOT merged**:
-    - Inform the user:
-      ```
-      👍 Keeping worktree active.
+13b. **If "PR merged"** (cleanup if in worktree):
 
-      You can:
-      • Make additional changes and commit them
-      • Run /finish-story again after PR is merged
-      • Or manually cleanup: worktree-cleanup {story-key-lower}
+   **See:** [docs/worktree-cleanup.md](docs/worktree-cleanup.md) for complete worktree cleanup logic.
 
-      [If in worktree, show:]
-      Worktree location: {worktree-path}
-      ```
-    - **STOP here**. Exit workflow. User will re-run `/finish-story` after merge.
-
-13b. **If PR IS merged** (cleanup if in worktree):
-    - Detect if running in a worktree: Check if `$(git rev-parse --show-toplevel)` contains `-worktrees/`.
-    - **If in worktree**:
-      - Extract story key: `STORY_KEY=$(basename $(pwd))`
-      - Save current worktree path: `WORKTREE_PATH=$(pwd)`
-      - Switch to main workspace:
-        ```bash
-        PROJECT_NAME=$(git remote get-url origin | sed 's/.*\///' | sed 's/.git$//')
-        MAIN_WORKSPACE=$(dirname "$(git rev-parse --show-toplevel)" | sed 's/-worktrees$//')
-        cd "$MAIN_WORKSPACE"
-        ```
-      - Clean up worktree:
-        ```bash
-        worktree-cleanup "${STORY_KEY}"
-        ```
-      - Checkout main and pull:
-        ```bash
-        git checkout main
-        git pull
-        ```
-      - Inform user:
-        ```
-        ✅ Worktree cleanup complete!
-        📂 You're now in main workspace
-        🌿 On branch: main
-        ```
-    - **If NOT in worktree**:
-      - Just switch to main and pull:
-        ```bash
-        git checkout main
-        git pull
-        ```
-    - Continue to step 14.
+   **Summary:**
+   - Detect if running in a worktree: Check if `$(git rev-parse --show-toplevel)` contains `-worktrees/`.
+   - **If in worktree**: Run `worktree-cleanup "${STORY_KEY}"`, switch to main workspace, checkout main, pull.
+   - **If NOT in worktree**: Just switch to main and pull.
+   - Continue to step 14.
 
 14. **Lessons learned** (optional): Ask the developer via AskUserQuestion with these options:
 
-    - **"Claude, write them"** — Auto-generate lessons learned by analyzing the story's git log, review reports, and any blocker/fix cycles encountered during implementation. Write concise, actionable bullets covering: patterns discovered, pitfalls avoided, decisions made and why. Append to the story's "Challenges and Lessons Learned" section.
-    - **"Yes, let me share"** — Wait for the developer to provide lessons, then append them.
-    - **"Skip"** — No lessons to capture. Continue.
+   - **"Claude, write them"** — Auto-generate lessons learned by analyzing the story's git log, review reports, and any blocker/fix cycles encountered during implementation. Write concise, actionable bullets covering: patterns discovered, pitfalls avoided, decisions made and why. Append to the story's "Challenges and Lessons Learned" section.
+   - **"Yes, let me share"** — Wait for the developer to provide lessons, then append them.
+   - **"Skip"** — No lessons to capture. Continue.
 
 15. **Completion output**: Display the following summary to the user.
 
-    **Preparation** (not shown to user): Read the story file's acceptance criteria, tasks, and the git diff for the branch to understand what was delivered.
+   **Preparation** (not shown to user): Read the story file's acceptance criteria, tasks, and the git diff for the branch to understand what was delivered.
 
-    **Writing guidelines** (not shown to user):
-    - "What's New" bullets must describe what the user can now DO, not implementation details. Plain, non-technical language. 2-5 bullets.
-      - Good: "You can now tag courses with topics like React or TypeScript and filter your library by subject"
-      - Bad: "Added updateCourseTags method to Zustand store"
-    - "Try It" steps must be concrete — name the page, the button, the expected result. 2-4 steps derived from acceptance criteria.
-    - Apply `writing-clearly-and-concisely` rules throughout — active voice, no filler, no AI puffery.
+   **Writing guidelines** (not shown to user):
+   - "What's New" bullets must describe what the user can now DO, not implementation details. Plain, non-technical language. 2-5 bullets.
+     - Good: "You can now tag courses with topics like React or TypeScript and filter your library by subject"
+     - Bad: "Added updateCourseTags method to Zustand store"
+   - "Try It" steps must be concrete — name the page, the button, the expected result. 2-4 steps derived from acceptance criteria.
+   - Apply `writing-clearly-and-concisely` rules throughout — active voice, no filler, no AI puffery.
 
-    **Output template** (this is what the user sees):
+   **Output template** (this is what the user sees):
 
-    ```markdown
-    ---
+   ```markdown
+   ---
 
-    ## Story Shipped: E##-S## — [Story Name]
+   ## Story Shipped: E##-S## — [Story Name]
 
-    **PR**: [PR URL]
+   **PR**: [PR URL]
 
-    ### What's New
+   ### What's New
 
-    - [bullet 1]
-    - [bullet 2]
-    - [bullet 3]
+   - [bullet 1]
+   - [bullet 2]
+   - [bullet 3]
 
-    ### Try It
+   ### Try It
 
-    1. [step 1]
-    2. [step 2]
-    3. [step 3]
+   1. [step 1]
+   2. [step 2]
+   3. [step 3]
 
-    ---
+   ---
 
-    <details>
-    <summary>Verification</summary>
+   <details>
+   <summary>Verification</summary>
 
-    | Check                  | Result                      |
-    | ---------------------- | --------------------------- |
-    | Build                  | passed                      |
-    | Lint                   | passed / skipped            |
-    | Type check             | passed / auto-fixed         |
-    | Format check           | passed / auto-fixed N files |
-    | Unit tests             | passed (N) / skipped        |
-    | E2E tests              | passed (N) / skipped        |
-    | Design review          | passed / N warnings         |
-    | Code review            | passed / N warnings         |
-    | Code review (testing)  | N/N ACs covered / N warnings |
+   | Check                  | Result                      |
+   | ---------------------- | --------------------------- |
+   | Build                  | passed                      |
+   | Lint                   | passed / skipped            |
+   | Type check             | passed / auto-fixed         |
+   | Format check           | passed / auto-fixed N files |
+   | Unit tests             | passed (N) / skipped        |
+   | E2E tests              | passed (N) / skipped        |
+   | Design review          | passed / N warnings         |
+   | Code review            | passed / N warnings         |
+   | Code review (testing)  | N/N ACs covered / N warnings |
 
-    - Mode: Comprehensive / Streamlined
-    - Branch: `feature/e##-s##-slug`
-    - Worktree: [Cleaned up / Main workspace]
-    - Reports: `${BASE_PATH}/docs/reviews/design/` + `${BASE_PATH}/docs/reviews/code/`
+   - Mode: Comprehensive / Streamlined
+   - Branch: `feature/e##-s##-slug`
+   - Worktree: [Cleaned up / Main workspace]
+   - Reports: `${BASE_PATH}/docs/reviews/design/` + `${BASE_PATH}/docs/reviews/code/`
 
-    </details>
+   </details>
 
-    ---
+   ---
 
-    [If epic NOT complete:]
-    **Next up** — **E##-S##: [Name]**. Run `/start-story E##-S##` when ready.
+   [If epic NOT complete:]
+   **Next up** — **E##-S##: [Name]**. Run `/start-story E##-S##` when ready.
 
-    [If epic IS complete:]
-    ### Epic Complete!
+   [If epic IS complete:]
+   ### Epic Complete!
 
-    All stories in Epic ## are done. Recommended next steps:
-    1. `/testarch-trace` — Requirements-to-tests traceability
-    2. `/testarch-nfr` — Non-functional requirements validation
-    3. `/retrospective` — Lessons learned
+   All stories in Epic ## are done. Recommended next steps:
+   1. `/testarch-trace` — Requirements-to-tests traceability
+   2. `/testarch-nfr` — Non-functional requirements validation
+   3. `/retrospective` — Lessons learned
 
-    ---
-    ```
+   ---
+   ```
 
 **Without arguments**: Parse ID from current branch, run steps above.
 
+## Reference Documentation
+
+- **[Streamlined Mode](docs/streamlined-mode.md)** — Step 4b: reviews run inline, lessons learned gate, burn-in validation
+- **[Comprehensive Mode](docs/comprehensive-mode.md)** — Step 5: blocker cross-check, lightweight validation
+- **[Worktree Cleanup](docs/worktree-cleanup.md)** — Step 13b: automatic cleanup after PR merge
+- **[PR Creation](docs/pr-creation.md)** — Step 12: template and writing guidelines
+- **[Recovery Guide](docs/recovery.md)** — Troubleshooting all failure points
+- **[Orchestrator Principles](../_shared/orchestrator-principles.md)** — Shared orchestration guidelines
+
+## Scripts
+
+- `./scripts/workflow/run-prechecks.sh` — Unified pre-check script (full or lightweight mode)
+- `./scripts/workflow/validate-blockers.sh` — Blocker cross-check automation
+
 ## Recovery
 
+**See:** [docs/recovery.md](docs/recovery.md) for comprehensive recovery guide.
+
+**Quick reference:**
 - **Steps 1-2 fail** (lookup): Nothing changed. Fix and re-run.
 - **Steps 3-5 fail** (validation): Fix errors, re-run `/finish-story`.
-- **Step 4a/4b fail** (inline review): Story stays `reviewed: in-progress` with `review_gates_passed` tracking progress. Re-run `/finish-story` resumes — pre-checks re-run, completed agent reviews are skipped.
-- **Step 9 fail** (push): Check `git remote -v`, fix remote config, re-run.
-- **Step 10 fail** (PR): Check `gh auth status`, authenticate if needed, re-run.
-- **Step 12 (PR not merged yet)**: Re-run `/finish-story` after merge. Worktree stays active for additional changes.
-- **Step 13b fail** (worktree cleanup): If `worktree-cleanup` fails, manually remove: `git worktree remove {path} && git branch -D {branch}`.
+- **Step 4a/4b fail** (inline review): Story stays `reviewed: in-progress` with `review_gates_passed` tracking progress. Re-run resumes.
+- **Step 10 fail** (push): Check `git remote -v`, fix remote config, re-run.
+- **Step 12 fail** (PR): Check `gh auth status`, authenticate if needed, re-run.
+- **Step 13 (PR not merged yet)**: Re-run `/finish-story` after merge. Worktree stays active.
+- **Step 13b fail** (worktree cleanup): Manual cleanup: `git worktree remove {path} && git branch -D {branch}`.
 
 ## Common Mistakes
 

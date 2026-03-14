@@ -52,19 +52,7 @@ const FILE_TEMPLATES = {
 
 ## Orchestrator Discipline
 
-The orchestrator (main session) should:
-- **Read state**: story file, sprint status, git status
-- **Make decisions**: resumed? reviewed? UI changes?
-- **Dispatch agents**: via Task tool (parallel when independent)
-- **Collect results**: extract key data from agent returns
-- **Update state**: frontmatter, sprint status, TodoWrite
-- **Run git ops**: branch, commit, push, PR
-- **Communicate**: completion output, AskUserQuestion
-
-The orchestrator should NOT:
-- Do deep code analysis (delegate to agents)
-- Retain raw file contents beyond what's needed for decisions
-- Read large files for exploration (dispatch Explore agents instead)
+**See:** [../_shared/orchestrator-principles.md](../_shared/orchestrator-principles.md)
 
 ## Steps
 
