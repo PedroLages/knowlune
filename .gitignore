@@ -40,3 +40,8 @@ experiments/
 
 # ESLint cache
 .eslintcache
+
+# Session memory (temporary session context, not version controlled)
+.claude/session-memory/current-session/
+.claude/session-memory/archived/*
+!.claude/session-memory/archived/.gitkeep
