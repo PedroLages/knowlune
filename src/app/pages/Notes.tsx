@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router'
-import { Search, StickyNote, ArrowUpDown, BookOpen, Clock, Info, Download } from 'lucide-react'
+import { useNavigate, useLocation } from 'react-router'
+import {
+  Search,
+  StickyNote,
+  ArrowUpDown,
+  ArrowLeft,
+  BookOpen,
+  Clock,
+  Info,
+  Download,
+} from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/app/components/ui/utils'
 import { Input } from '@/app/components/ui/input'
@@ -33,6 +42,8 @@ import { allCourses } from '@/data/courses'
 import { formatTimestamp } from '@/lib/format'
 import { stripHtml } from '@/lib/textUtils'
 import { ReadOnlyContent } from '@/app/components/notes/ReadOnlyContent'
+import { OrganizeNotesButton } from '@/app/components/notes/OrganizeNotesButton'
+import { RelatedConceptsPanel } from '@/app/components/notes/RelatedConceptsPanel'
 import { generateEmbeddings } from '@/ai/workers/coordinator'
 import { vectorStorePersistence } from '@/ai/vector-store'
 import { supportsWorkers } from '@/ai/lib/workerCapabilities'
@@ -104,6 +115,8 @@ export function Notes() {
   const isLoading = useNoteStore(s => s.isLoading)
   const loadNotes = useNoteStore(s => s.loadNotes)
   const navigate = useNavigate()
+  const location = useLocation()
+  const fromNoteId = (location.state as { fromNote?: string } | null)?.fromNote ?? null
 
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
@@ -410,16 +423,18 @@ export function Notes() {
                 </Button>
               )}
             </div>
+
+            <RelatedConceptsPanel note={item.note} allNotes={notes} courseNames={courseNames} />
           </div>
         )}
       </div>
     )
   }
 
-  // Skeleton loading state
+  // Skeleton loading state — still show tabs so user can switch to bookmarks
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6" aria-busy="true" aria-label="Loading notes">
         <div className="flex items-center justify-between">
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-8 w-32" />
@@ -437,6 +452,23 @@ export function Notes() {
   return (
     <TooltipProvider>
       <div className="space-y-6">
+        {/* Back-link from Related Concepts navigation (AC5) */}
+        {fromNoteId && (
+          <button
+            type="button"
+            data-testid="back-to-note"
+            className="flex items-center gap-1.5 text-sm text-brand hover:text-brand-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+            onClick={() => {
+              setExpandedNoteId(fromNoteId)
+              navigate('/notes', { replace: true })
+              document.getElementById(`note-${fromNoteId}`)?.scrollIntoView({ behavior: 'smooth' })
+            }}
+          >
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            Back to original note
+          </button>
+        )}
+
         {/* Page header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -444,6 +476,7 @@ export function Notes() {
           </h1>
           <div className="flex items-center gap-3">
             <QAChatPanel />
+            <OrganizeNotesButton notes={notes} courseNames={courseNames} />
             <Select value={sortOption} onValueChange={v => setSortOption(v as SortOption)}>
               <SelectTrigger className="w-[160px]">
                 <ArrowUpDown className="size-3.5 mr-1.5" />

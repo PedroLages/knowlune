@@ -437,6 +437,14 @@ Users can schedule spaced reviews, export learning data in multiple formats, con
 **FRs covered:** FR80, FR81, FR82, FR83, FR84, FR85, FR86, FR87, FR92, FR100
 **Phase:** 4 (Post-MVP)
 
+### Epic 19: Platform & Entitlement
+
+Users can create accounts, subscribe to premium features via Stripe, and manage their subscription — enabling the open-core business model while preserving full functionality of the free core.
+
+**FRs covered:** FR102, FR103, FR104, FR105, FR106, FR107
+**Phase:** 4 (Post-MVP, before premium feature launch)
+**Stories:** 19.1 Authentication Setup, 19.2 Stripe Subscription, 19.3 Entitlement & Offline Caching, 19.4 Subscription Management, 19.5 Feature Gating & Upgrade CTAs, 19.6 Code Boundary & Build Separation
+
 ---
 
 ## Epic 1: Course Import & Library Management
@@ -2428,6 +2436,236 @@ So that I can maintain a consistent study schedule tailored to each course indep
 **Then** all per-course reminders are listed with their schedules, organized by course
 **And** each reminder shows its enabled or disabled status
 
+
+---
+
+## Epic 19: Platform & Entitlement
+
+Users can create accounts, subscribe to premium features via Stripe, and manage their subscription — enabling the open-core business model while preserving full functionality of the free core.
+
+### Story 19.1: Authentication Setup
+
+As a learner,
+I want to create an account with email and password,
+So that I can access premium features while keeping my core learning experience fully functional without an account.
+
+**Acceptance Criteria:**
+
+**Given** I am using LevelUp without an account
+**When** I use any core feature (import, playback, notes, streaks, analytics)
+**Then** all core features work identically to a logged-in user
+**And** no login prompt or account requirement blocks any core workflow
+
+**Given** I want to access premium features
+**When** I click "Sign Up" or any premium feature's upgrade CTA
+**Then** I see a sign-up form with email and password fields
+**And** the form includes a "Sign in" link for existing accounts
+
+**Given** I submit a valid email and password
+**When** the account is created
+**Then** the authentication completes in less than 3 seconds
+**And** my auth token is stored locally in IndexedDB
+**And** I am redirected back to where I was before sign-up
+
+**Given** I have an existing account
+**When** I click "Sign In" and enter my credentials
+**Then** I am authenticated and my premium entitlement status is loaded
+**And** my existing local learning data is preserved (not overwritten)
+
+**Given** I am logged in
+**When** I click "Sign Out" in Settings
+**Then** my auth token is removed
+**And** I continue using all core features without interruption
+**And** premium features revert to showing upgrade CTAs
+
+**Given** I attempt to sign up with an already-registered email
+**When** I submit the form
+**Then** I see a clear error message suggesting I sign in instead
+**And** no duplicate account is created
+
+### Story 19.2: Stripe Subscription Integration
+
+As a learner,
+I want to subscribe to the premium tier via a secure checkout flow,
+So that I can unlock AI-powered features and advanced learning tools.
+
+**Acceptance Criteria:**
+
+**Given** I am authenticated and on the free tier
+**When** I click "Upgrade to Premium" in Settings or from any upgrade CTA
+**Then** I am redirected to a Stripe Checkout hosted payment page
+**And** no credit card data is entered on or transmitted through LevelUp
+
+**Given** I complete payment on Stripe Checkout
+**When** Stripe redirects me back to LevelUp
+**Then** my subscription status is updated to "Premium"
+**And** I see a confirmation message with my plan details
+**And** all premium features become immediately available
+
+**Given** Stripe Checkout redirects me back
+**When** the subscription webhook has not yet been processed
+**Then** the system polls for entitlement status for up to 10 seconds
+**And** shows a "Activating your subscription..." loading state
+**And** premium access activates as soon as the webhook completes
+
+**Given** I cancel the Stripe Checkout flow
+**When** I return to LevelUp without completing payment
+**Then** my account remains on the free tier
+**And** no charge is applied
+**And** I see a message that the upgrade was not completed
+
+**Given** the Stripe webhook fires for a new subscription
+**When** the serverless function receives the event
+**Then** the entitlement record is updated with subscription status, plan ID, and expiry date
+**And** the entitlement is cached locally with a 7-day TTL for offline access
+
+### Story 19.3: Entitlement System & Offline Caching
+
+As a learner,
+I want my premium status to be validated and cached locally,
+So that premium features work even when I'm offline or have intermittent connectivity.
+
+**Acceptance Criteria:**
+
+**Given** I have an active premium subscription
+**When** the app launches and I am online
+**Then** the system validates my entitlement against the server
+**And** caches the result in IndexedDB with a 7-day expiry timestamp
+
+**Given** I have a cached entitlement that is less than 7 days old
+**When** the app launches and I am offline
+**Then** the cached entitlement is honored
+**And** all premium features are available
+
+**Given** my cached entitlement is older than 7 days
+**When** the app launches and I am offline
+**Then** premium features are temporarily disabled
+**And** a message explains that premium features require a periodic online check
+**And** all core features remain fully functional
+
+**Given** my cached entitlement has expired
+**When** I come back online
+**Then** the system automatically re-validates my entitlement
+**And** premium features are restored if the subscription is still active
+**And** no manual action is required
+
+**Given** my subscription has been cancelled or expired
+**When** the system validates my entitlement
+**Then** premium features are disabled
+**And** all my data (including data created with premium features) remains accessible and exportable
+**And** I see a clear message about my subscription status with an option to resubscribe
+
+**Given** the `isPremium()` guard function is called
+**When** I am not entitled to premium features
+**Then** the premium component is not rendered
+**And** an upgrade CTA is shown in its place
+**And** no error or broken UI state occurs
+
+### Story 19.4: Subscription Management
+
+As a learner,
+I want to view my subscription status and manage billing through Stripe,
+So that I can update my payment method, cancel, or resubscribe without leaving the app.
+
+**Acceptance Criteria:**
+
+**Given** I am authenticated and have an active subscription
+**When** I navigate to Settings > Subscription
+**Then** I see my current plan name, billing period, next billing date, and subscription status
+**And** I see buttons for "Manage Billing" and "Cancel Subscription"
+
+**Given** I click "Manage Billing"
+**When** the Stripe Customer Portal opens
+**Then** I can update my payment method, view invoices, and download receipts
+**And** I am redirected back to LevelUp after making changes
+
+**Given** I click "Cancel Subscription"
+**When** a confirmation dialog appears
+**Then** the dialog explains what I'll lose (premium features) and what I keep (all data, core features)
+**And** cancellation is processed through Stripe Customer Portal
+**And** premium access continues until the end of the current billing period
+
+**Given** I am on the free tier
+**When** I navigate to Settings > Subscription
+**Then** I see a "Free" plan indicator
+**And** an "Upgrade to Premium" button with a feature comparison summary
+
+**Given** I previously cancelled and want to resubscribe
+**When** I click "Upgrade to Premium"
+**Then** I am directed to Stripe Checkout to create a new subscription
+**And** the flow is identical to a first-time subscription
+
+### Story 19.5: Premium Feature Gating & Upgrade CTAs
+
+As a learner on the free tier,
+I want to see what premium features offer before upgrading,
+So that I can make an informed decision about subscribing based on real feature previews.
+
+**Acceptance Criteria:**
+
+**Given** I am on the free tier
+**When** I navigate to a page containing premium features (AI summaries, Q&A, spaced review)
+**Then** the premium feature area shows an "Upgrade to Premium" CTA
+**And** the CTA includes a brief description or preview of what the feature does
+**And** the rest of the page functions normally with all core features visible
+
+**Given** I click an upgrade CTA from any premium feature location
+**When** I am authenticated
+**Then** I am taken directly to the Stripe Checkout flow
+**And** after completing, I return to the exact feature I was trying to access
+
+**Given** I click an upgrade CTA from any premium feature location
+**When** I am not authenticated
+**Then** I am shown the sign-up/sign-in flow first
+**And** after authentication, I continue to the Stripe Checkout flow
+
+**Given** I am on the free tier and AI features are premium
+**When** I view the video player
+**Then** the "Generate Summary" button is replaced by an upgrade CTA
+**And** the AI Q&A panel shows a locked state with feature preview
+
+**Given** I am on the free tier
+**When** I view the dashboard or navigation
+**Then** premium features are visually indicated (e.g., subtle lock icon or "Premium" badge)
+**And** clicking them shows the upgrade CTA — not an error or blank page
+
+**Given** premium features are gated
+**When** the app loads
+**Then** premium components are not lazy-loaded or bundled for free-tier users
+**And** the app bundle size is not increased by unused premium code
+
+### Story 19.6: Premium Code Boundary & Build Separation
+
+As a developer,
+I want premium code to live in an isolated directory with a separate build configuration,
+So that the open-source AGPL distribution never includes proprietary premium code.
+
+**Acceptance Criteria:**
+
+**Given** the project has a `src/premium/` directory
+**When** the open-source build is produced
+**Then** no files from `src/premium/` are included in the output bundle
+**And** the build completes successfully without premium dependencies
+
+**Given** the premium build is produced
+**When** the `src/premium/index.ts` entrypoint is included
+**Then** premium components are lazy-loaded via dynamic imports
+**And** they only load when `isPremium()` returns true
+
+**Given** a file in `src/premium/`
+**When** it is inspected
+**Then** it contains a proprietary license header (not AGPL)
+**And** it does not import from or depend on other premium files in a circular manner
+
+**Given** a core component needs to reference a premium feature
+**When** it checks for premium availability
+**Then** it uses the `isPremium()` guard from the entitlement system
+**And** it does not import premium modules directly — only through lazy loading
+
+**Given** the CI pipeline runs
+**When** the core-only build is tested
+**Then** all tests pass without `src/premium/` present
+**And** no import errors or missing module warnings occur
 
 ---
 

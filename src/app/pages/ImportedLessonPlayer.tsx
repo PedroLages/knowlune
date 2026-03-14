@@ -8,6 +8,8 @@ import { useIdleDetection } from '@/app/hooks/useIdleDetection'
 import { useSessionStore } from '@/stores/useSessionStore'
 import { VideoPlayer } from '@/app/components/figma/VideoPlayer'
 import { Button } from '@/app/components/ui/button'
+import { Skeleton } from '@/app/components/ui/skeleton'
+import { DelayedFallback } from '@/app/components/DelayedFallback'
 import type { ImportedVideo } from '@/data/types'
 
 export function ImportedLessonPlayer() {
@@ -114,12 +116,23 @@ export function ImportedLessonPlayer() {
   // Loading state (initial Dexie query in flight or blob URL loading)
   if (video === undefined || loading) {
     return (
-      <div
-        data-testid="lesson-player-content"
-        className="flex items-center justify-center h-full text-muted-foreground"
-      >
-        <span className="text-sm">Loading...</span>
-      </div>
+      <DelayedFallback>
+        <div
+          data-testid="lesson-player-content"
+          className="flex flex-col h-full"
+          aria-busy="true"
+          aria-label="Loading video"
+        >
+          <div className="flex items-center gap-3 px-4 py-3 border-b shrink-0">
+            <Skeleton className="size-4" />
+            <div className="flex flex-col gap-1 flex-1">
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+          </div>
+          <Skeleton className="flex-1 m-4 rounded-xl" />
+        </div>
+      </DelayedFallback>
     )
   }
 

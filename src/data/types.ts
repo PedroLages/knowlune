@@ -206,6 +206,15 @@ export interface Screenshot {
   createdAt: string // ISO 8601
 }
 
+export type ThumbnailSource = 'auto' | 'local' | 'url' | 'ai'
+
+export interface CourseThumbnail {
+  courseId: string // Primary key
+  blob: Blob // 200×112px JPEG
+  source: ThumbnailSource
+  createdAt: string // ISO 8601
+}
+
 export interface StudySession {
   id: string // UUID
   courseId: string // Parent course

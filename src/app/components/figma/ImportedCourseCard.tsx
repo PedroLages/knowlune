@@ -8,6 +8,7 @@ import {
   PauseCircle,
   Eye,
   Info,
+  Camera,
 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Card } from '@/app/components/ui/card'
@@ -26,6 +27,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/componen
 import { TagBadgeList } from '@/app/components/figma/TagBadgeList'
 import { TagEditor } from '@/app/components/figma/TagEditor'
 import { VideoPlayer } from '@/app/components/figma/VideoPlayer'
+import { ThumbnailPickerDialog } from '@/app/components/figma/ThumbnailPickerDialog'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useCourseCardPreview } from '@/hooks/useCourseCardPreview'
 import { useVideoFromHandle } from '@/hooks/useVideoFromHandle'
@@ -64,7 +66,11 @@ interface ImportedCourseCardProps {
 export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedCourseCardProps) {
   const updateCourseTags = useCourseImportStore(state => state.updateCourseTags)
   const updateCourseStatus = useCourseImportStore(state => state.updateCourseStatus)
+  const thumbnailUrls = useCourseImportStore(state => state.thumbnailUrls)
   const navigate = useNavigate()
+
+  const [thumbnailPickerOpen, setThumbnailPickerOpen] = useState(false)
+  const thumbnailUrl = thumbnailUrls[course.id] ?? null
 
   const {
     showPreview,
@@ -180,7 +186,30 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
             data-testid="course-card-placeholder"
             className="relative h-44 bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-950/50 dark:to-teal-950/50 flex items-center justify-center"
           >
-            <FolderOpen className="size-16 text-emerald-300 dark:text-emerald-600" />
+            {/* Static thumbnail image (when set) */}
+            {thumbnailUrl && !showPreview && (
+              <img
+                src={thumbnailUrl}
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            )}
+            {/* Gradient placeholder icon (shown when no thumbnail) */}
+            {!thumbnailUrl && (
+              <FolderOpen className="size-16 text-emerald-300 dark:text-emerald-600" />
+            )}
+            {/* Camera overlay — appears on hover to change thumbnail */}
+            <button
+              onClick={e => {
+                e.stopPropagation()
+                setThumbnailPickerOpen(true)
+              }}
+              aria-label="Change thumbnail"
+              className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white outline-none z-10"
+            >
+              <Camera className="size-8 text-white drop-shadow" aria-hidden="true" />
+            </button>
             {/* Inline video preview */}
             {showPreview && previewBlobUrl && (
               <video
@@ -347,6 +376,14 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
           </div>
         </Card>
       </article>
+
+      <ThumbnailPickerDialog
+        open={thumbnailPickerOpen}
+        onOpenChange={setThumbnailPickerOpen}
+        courseId={course.id}
+        courseName={course.name}
+        firstVideo={firstVideo}
+      />
 
       <Dialog open={previewOpen} onOpenChange={handleDialogChange}>
         <DialogContent className="max-w-3xl p-0 overflow-hidden rounded-[24px]">

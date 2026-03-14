@@ -10,8 +10,8 @@ interface GeneratePathOptions {
 /**
  * Generate an AI-powered learning path from imported courses.
  *
- * Uses OpenAI to analyze course metadata (titles, tags, status) and infer
- * prerequisite relationships to suggest an optimal learning sequence.
+ * Uses the configured AI provider to analyze course metadata (titles, tags, status)
+ * and infer prerequisite relationships to suggest an optimal learning sequence.
  *
  * @param courses - Array of imported courses to sequence
  * @param onUpdate - Callback invoked as courses are streamed (for progressive UI updates)
@@ -97,18 +97,18 @@ IMPORTANT: Return ONLY the JSON object, no markdown code blocks, no extra text.`
     timeoutId = setTimeout(() => reject(new Error('AI request timed out')), timeout)
   })
 
-  // Create fetch promise
-  const fetchPromise = fetch('https://api.openai.com/v1/chat/completions', {
+  // Create fetch promise — uses local proxy to support all AI providers
+  const fetchPromise = fetch('/api/ai/generate', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'gpt-4-turbo',
+      provider: config.provider,
+      apiKey,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3, // Lower temperature for more consistent ordering
-      max_tokens: 2000,
+      maxTokens: 2000,
     }),
     signal,
   })
@@ -123,25 +123,26 @@ IMPORTANT: Return ONLY the JSON object, no markdown code blocks, no extra text.`
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
       throw new Error(
-        `AI provider error (${response.status}): ${
-          errorData.error?.message || response.statusText
-        }`
+        `AI provider error (${response.status}): ${errorData.error?.message || response.statusText}`
       )
     }
 
     const data = await response.json()
-    const content = data.choices?.[0]?.message?.content
+    const content = data.text
 
     if (!content) {
       throw new Error('AI response is empty')
     }
 
     // Parse LLM response (handle both JSON objects and markdown code blocks)
-    let parsed: { learningPath: Array<{ courseId: string; position: number; justification: string }> }
+    let parsed: {
+      learningPath: Array<{ courseId: string; position: number; justification: string }>
+    }
 
     try {
       // Try to extract JSON from markdown code block if present
-      const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/```\s*([\s\S]*?)\s*```/)
+      const jsonMatch =
+        content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/```\s*([\s\S]*?)\s*```/)
       const jsonStr = jsonMatch ? jsonMatch[1] : content
 
       parsed = JSON.parse(jsonStr.trim())
@@ -182,9 +183,7 @@ IMPORTANT: Return ONLY the JSON object, no markdown code blocks, no extra text.`
     })
 
     // Ensure all input courses are in the output
-    const missingCourses = courses.filter(
-      c => !learningPath.some(lp => lp.courseId === c.id)
-    )
+    const missingCourses = courses.filter(c => !learningPath.some(lp => lp.courseId === c.id))
     if (missingCourses.length > 0) {
       console.warn('[generatePath] AI did not include all courses:', missingCourses)
       // Add missing courses at the end

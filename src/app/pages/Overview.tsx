@@ -140,7 +140,7 @@ export function Overview() {
 
   if (isLoading) {
     return (
-      <div className="space-y-12">
+      <div className="space-y-12" aria-busy="true" aria-label="Loading dashboard">
         {/* Hero skeleton */}
         <div>
           <Skeleton className="h-5 w-28 mb-2" />

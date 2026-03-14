@@ -378,6 +378,14 @@ Users can import multiple courses simultaneously, see rich metadata (duration, t
 **Phase:** 1 (Foundation — Optional polish after Epic 1)
 **Research basis:** Competitive analysis of Udemy, Coursera, Plex, Jellyfin (2026-03-14)
 
+### Epic 1C: Course Library Management (Delete, Edit, Sort, Search)
+
+Users can delete courses, edit course titles, manage tags globally, sort imported courses by momentum, search within course content, and navigate directly to detail pages — fixing all critical UX gaps found during real-world testing.
+
+**FRs covered:** FR2, FR3, FR4 (gaps) — addresses BLOCKER B-1 and HIGH/MEDIUM findings from design review 2026-03-14
+**Phase:** 1 (Foundation — Critical fix after Epic 1B)
+**Stories:** 1C.1 (Delete + BLOCKER fix), 1C.2 (Edit title), 1C.3 (Touch targets + filters), 1C.4 (Tag management), 1C.5 (Momentum sort for imported), 1C.6 (In-page search)
+
 ### Epic 2: Lesson Player & Content Consumption
 
 Users can watch videos with full playback controls, view PDFs, bookmark positions, resume where they left off, load captions, and navigate course structure in a focused, distraction-free interface.
@@ -755,6 +763,205 @@ So that I can quickly recognize courses at a glance and enjoy a more engaging li
 **When** the library page loads
 **Then** thumbnails display progressively (lazy loading for off-screen cards)
 **And** the page remains responsive (<100ms query per NFR4)
+
+---
+
+## Epic 1C: Course Library Management (Delete, Edit, Sort, Search)
+
+Users can delete courses, edit course titles, manage tags globally, sort imported courses by momentum, search within course content, and navigate directly to detail pages via URL — fixing all UX gaps and a navigation blocker identified during real-world testing.
+
+**Enhancement Epic:** Addresses BLOCKER B-1 and HIGH/MEDIUM-severity findings from design review 2026-03-14.
+
+### Story 1C.1: Delete Course + Direct Navigation Fix (BLOCKER)
+
+As a learner,
+I want to delete a course I no longer need and navigate directly to course detail pages,
+So that I can keep my library tidy and not see a broken "Course not found" page on direct URL access.
+
+**Acceptance Criteria:**
+
+**Given** `ImportedCourseDetail` is loaded directly via URL (e.g., `/imported-courses/:id` on hard refresh)
+**When** the component mounts
+**Then** it calls `loadImportedCourses()` if the store is empty
+**And** the course data loads and renders correctly
+**And** no "Course not found" error appears for valid course IDs
+
+**Given** the user is on the Course Library page
+**When** the user opens a course card's action menu or detail page
+**Then** a "Delete Course" option is visible
+
+**Given** the user clicks "Delete Course"
+**When** the confirmation dialog appears
+**Then** the dialog displays the course name and asks for confirmation (NFR23)
+**And** a destructive-style "Delete" button and a "Cancel" button are shown
+
+**Given** the user confirms deletion
+**When** the delete is processed
+**Then** the course is removed from IndexedDB (videos, PDFs, thumbnail, and course record)
+**And** the course disappears from the library immediately (optimistic update)
+**And** a toast notification confirms: "Course deleted"
+**And** if the user is on the course detail page, they are redirected to `/courses`
+
+**Given** the user cancels the confirmation dialog
+**When** the dialog closes
+**Then** no changes are made to the course or library
+
+**Given** the deletion fails (e.g., IndexedDB write error)
+**When** the error occurs
+**Then** the course reappears in the library (rollback)
+**And** an error toast displays: "Failed to delete course. Please try again."
+
+### Story 1C.2: Edit Course Title
+
+As a learner,
+I want to rename a course after importing it,
+So that I can correct auto-detected names or give courses meaningful titles for my context.
+
+**Acceptance Criteria:**
+
+**Given** the user is on the course detail page
+**When** the user clicks the course title or an "Edit title" icon next to it
+**Then** the title becomes an inline editable text field
+**And** the current title is pre-filled and selected
+
+**Given** the title field is in edit mode
+**When** the user types a new title and presses Enter or clicks outside the field
+**Then** the title is saved (trimmed, non-empty) to IndexedDB
+**And** the title updates immediately in the UI (optimistic update)
+**And** the edit field returns to display mode
+
+**Given** the user clears the title field entirely and tries to save
+**When** the save action triggers
+**Then** the original title is restored (empty title rejected)
+**And** an inline validation message displays: "Title cannot be empty"
+
+**Given** the user is editing the title
+**When** the user presses Escape
+**Then** the edit is cancelled and the original title is restored
+**And** no changes are saved
+
+**Given** the title has been renamed
+**When** the user navigates to the Course Library
+**Then** the course card shows the updated title
+
+### Story 1C.3: Touch Target & Filter Accessibility Fix
+
+As a learner using the Course Library,
+I want to interact with filter pills and UI controls that meet WCAG touch target standards,
+So that the interface is comfortable and accessible on all devices.
+
+**Acceptance Criteria:**
+
+**Given** the user views the Topic filter pills in the Course Library
+**When** the filter area renders
+**Then** each pill has a minimum height of 44px (WCAG 2.1 AA, NFR touch targets)
+**And** the active filter pill is clearly distinguished from inactive pills
+**And** keyboard focus is visible on each pill (focus ring)
+
+**Given** the user views the Status filter pills
+**When** the filter area renders
+**Then** each status pill meets the 44px minimum height requirement
+**And** clicking a status filter correctly filters the course grid
+
+**Given** the library has search results with zero matches in a category tab
+**When** the user switches to that tab
+**Then** an empty state message displays instead of an empty tab with no content
+
+**Given** the "Import Course" button appears in both the header and the empty state
+**When** the library is empty
+**Then** only the empty state CTA button is shown (no duplicate header button)
+**And** when courses exist, the header button is the only import entry point
+
+### Story 1C.4: Tag Management (Global Rename & Delete)
+
+As a learner,
+I want to rename or delete tags I've created across my courses,
+So that I can fix typos, consolidate duplicate tags, and keep my library organized.
+
+**Acceptance Criteria:**
+
+**Given** the user is on the Course Library page
+**When** the user opens the tag management panel (accessible via a "Manage Tags" button near the topic filters)
+**Then** a list of all existing tags is shown, sorted alphabetically
+**And** each tag shows a count of how many courses use it
+
+**Given** the user clicks "Rename" on a tag
+**When** the rename input appears with the current tag pre-filled
+**Then** the user can type a new name and confirm with Enter
+**And** all courses using the old tag are updated to the new tag
+**And** the tag filter updates immediately
+
+**Given** the user clicks "Delete" on a tag
+**When** a confirmation prompt appears
+**Then** confirming removes the tag from all courses that use it
+**And** the tag disappears from the filter pills and tag lists
+
+**Given** the user tries to rename a tag to a name that already exists
+**When** the user confirms
+**Then** the tags are merged (all courses now carry only the existing tag)
+**And** an inline message confirms: "Merged into existing tag"
+
+**Given** there are no tags in the library
+**When** the user opens the tag management panel
+**Then** an empty state message shows: "No tags yet. Add tags to your courses to organize them."
+
+### Story 1C.5: Momentum Sort for Imported Courses
+
+As a learner,
+I want to sort my imported courses by momentum score,
+So that I can quickly see which courses I should prioritise based on recent activity.
+
+**Acceptance Criteria:**
+
+**Given** the user is on the Course Library page and has imported courses with momentum scores
+**When** the user selects "Sort by Momentum" from the sort dropdown
+**Then** imported courses are sorted by momentum score (highest first)
+**And** courses with no study activity appear at the end of the list
+
+**Given** imported courses are sorted by momentum
+**When** the sort is active
+**Then** the sort applies to imported courses alongside any active topic/status filters
+**And** removing filters retains the momentum sort order
+
+**Given** the user switches from "Sort by Momentum" to "Most Recent"
+**When** the sort changes
+**Then** imported courses return to sort order by `importedAt` (newest first)
+
+**Given** an imported course has momentum score zero (never studied)
+**When** any sort mode is active
+**Then** zero-momentum courses appear after all courses with scores > 0
+**And** zero-momentum courses among themselves are sorted by `importedAt`
+
+### Story 1C.6: Search & Filter Inside Course Detail Page
+
+As a learner,
+I want to search for a specific video or PDF within a course's content list,
+So that I can quickly find a lesson in a large course without scrolling through all files.
+
+**Acceptance Criteria:**
+
+**Given** the user is on the course detail page for a course with 10+ content items
+**When** the detail page renders
+**Then** a search/filter input is shown above the content list
+
+**Given** the user types in the search field
+**When** characters are entered
+**Then** the content list filters in real-time (< 100ms) to show only items whose filename contains the query (case-insensitive)
+**And** matched characters in the filename are visually highlighted
+
+**Given** the search query matches zero items
+**When** no results are found
+**Then** an empty state message displays: "No videos or PDFs match your search"
+**And** a "Clear search" button resets the filter
+
+**Given** the user clears the search field
+**When** the field is emptied
+**Then** all content items are shown again
+**And** scroll position resets to the top of the list
+
+**Given** a course has fewer than 10 items
+**When** the detail page renders
+**Then** the search input is hidden (not needed for small courses)
 
 ---
 

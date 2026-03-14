@@ -3,6 +3,8 @@ import { Link } from 'react-router'
 import { History, ChevronDown, ChevronUp, X } from 'lucide-react'
 import { db } from '@/db'
 import { EmptyState } from '@/app/components/EmptyState'
+import { Skeleton } from '@/app/components/ui/skeleton'
+import { DelayedFallback } from '@/app/components/DelayedFallback'
 import type { StudySession, ImportedCourse, ImportedVideo } from '@/data/types'
 
 // Extended session type that includes denormalized display fields
@@ -164,9 +166,21 @@ export function SessionHistory() {
 
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="text-muted-foreground text-sm">Loading...</div>
-      </div>
+      <DelayedFallback>
+        <div className="space-y-6" aria-busy="true" aria-label="Loading study sessions">
+          <Skeleton className="h-8 w-64" />
+          <div className="flex flex-wrap gap-4">
+            <Skeleton className="h-10 w-40" />
+            <Skeleton className="h-10 w-36" />
+            <Skeleton className="h-10 w-36" />
+          </div>
+          <div className="space-y-3">
+            {Array.from({ length: 5 }, (_, i) => (
+              <Skeleton key={i} className="h-20 w-full rounded-[24px]" />
+            ))}
+          </div>
+        </div>
+      </DelayedFallback>
     )
   }
 

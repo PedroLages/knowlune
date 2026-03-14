@@ -27,11 +27,13 @@ function createTestCourse(overrides: {
 /**
  * Helper to inject mock learning path response for deterministic tests
  */
-function createMockLearningPath(courses: Array<{
-  courseId: string
-  position: number
-  justification: string
-}>) {
+function createMockLearningPath(
+  courses: Array<{
+    courseId: string
+    position: number
+    justification: string
+  }>
+) {
   return {
     learningPath: courses.map(course => ({
       ...course,
@@ -101,7 +103,9 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
     await expect(generateButton).toBeEnabled()
   })
 
-  test('AC2: Display ordered course list with justifications after generation', async ({ page }) => {
+  test('AC2: Display ordered course list with justifications after generation', async ({
+    page,
+  }) => {
     // Seed 3 courses
     await seedImportedCourses(page, [
       {

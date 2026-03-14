@@ -1,0 +1,159 @@
+/**
+ * AI Proxy Server
+ *
+ * Lightweight Express server that proxies LLM requests through the Vercel AI SDK.
+ * Solves CORS restrictions (Anthropic, Groq, Gemini block browser-direct calls)
+ * and keeps API keys out of browser network traffic.
+ *
+ * Endpoints:
+ *   POST /api/ai/generate  — Non-streaming text generation
+ *   POST /api/ai/stream    — SSE streaming text generation
+ *
+ * The browser sends { provider, apiKey, messages, model?, temperature?, maxTokens? }
+ * and receives a unified response regardless of which provider is used.
+ */
+
+import express from 'express'
+import { generateText, streamText } from 'ai'
+import { z } from 'zod'
+import { getProviderModel } from './providers.js'
+
+const app = express()
+const PORT = 3001
+
+app.use(express.json({ limit: '1mb' }))
+
+/** Request body schema — validated on every request */
+const RequestSchema = z.object({
+  provider: z.enum(['openai', 'anthropic', 'groq', 'gemini', 'glm']),
+  apiKey: z.string().min(1, 'API key is required'),
+  messages: z
+    .array(
+      z.object({
+        role: z.enum(['system', 'user', 'assistant']),
+        content: z.string(),
+      })
+    )
+    .min(1, 'At least one message is required'),
+  model: z.string().optional(),
+  temperature: z.number().min(0).max(2).optional(),
+  maxTokens: z.number().int().positive().optional(),
+})
+
+/**
+ * POST /api/ai/generate
+ *
+ * Non-streaming completion. Used by generatePath.ts for learning path generation.
+ * Returns { text: string } with the full response.
+ */
+app.post('/api/ai/generate', async (req, res) => {
+  try {
+    const parsed = RequestSchema.safeParse(req.body)
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten().fieldErrors })
+      return
+    }
+
+    const { provider, apiKey, messages, model, temperature, maxTokens } = parsed.data
+
+    if (provider === 'glm') {
+      res.status(400).json({ error: 'GLM provider is not yet supported' })
+      return
+    }
+
+    const providerModel = getProviderModel(provider, apiKey, model)
+
+    const result = await generateText({
+      model: providerModel,
+      messages,
+      temperature: temperature ?? 0.7,
+      maxTokens: maxTokens ?? 4096,
+    })
+
+    res.json({ text: result.text })
+  } catch (error) {
+    console.error('[/api/ai/generate] Error:', (error as Error).message)
+    const status = getErrorStatus(error as Error)
+    res.status(status).json({ error: (error as Error).message })
+  }
+})
+
+/**
+ * POST /api/ai/stream
+ *
+ * SSE streaming completion. Used by LLM clients for chat/Q&A features.
+ * Sends plain SSE events: `data: {"content": "..."}\n\n`
+ * Compatible with the existing parseSSEStream in BaseLLMClient.
+ */
+app.post('/api/ai/stream', async (req, res) => {
+  try {
+    const parsed = RequestSchema.safeParse(req.body)
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten().fieldErrors })
+      return
+    }
+
+    const { provider, apiKey, messages, model, temperature, maxTokens } = parsed.data
+
+    if (provider === 'glm') {
+      res.status(400).json({ error: 'GLM provider is not yet supported' })
+      return
+    }
+
+    const providerModel = getProviderModel(provider, apiKey, model)
+
+    const result = streamText({
+      model: providerModel,
+      messages,
+      temperature: temperature ?? 0.7,
+      maxTokens: maxTokens ?? 4096,
+    })
+
+    // Set SSE headers
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    })
+
+    // Stream text chunks as SSE events
+    for await (const chunk of result.textStream) {
+      res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`)
+    }
+
+    // Signal stream end
+    res.write('data: [DONE]\n\n')
+    res.end()
+  } catch (error) {
+    console.error('[/api/ai/stream] Error:', (error as Error).message)
+
+    // If headers haven't been sent yet, send JSON error
+    if (!res.headersSent) {
+      const status = getErrorStatus(error as Error)
+      res.status(status).json({ error: (error as Error).message })
+    } else {
+      // Headers already sent (mid-stream error) — send error as SSE event
+      res.write(`data: ${JSON.stringify({ error: (error as Error).message })}\n\n`)
+      res.end()
+    }
+  }
+})
+
+/** Map common API errors to HTTP status codes */
+function getErrorStatus(error: Error): number {
+  const msg = error.message.toLowerCase()
+  if (msg.includes('401') || msg.includes('unauthorized') || msg.includes('invalid api key')) {
+    return 401
+  }
+  if (msg.includes('429') || msg.includes('rate limit')) {
+    return 429
+  }
+  if (msg.includes('unsupported provider')) {
+    return 400
+  }
+  return 500
+}
+
+app.listen(PORT, () => {
+  console.log(`AI proxy server running on http://localhost:${PORT}`)
+})

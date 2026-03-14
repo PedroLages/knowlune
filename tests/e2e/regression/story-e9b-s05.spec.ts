@@ -1,0 +1,485 @@
+/**
+ * E2E tests for Story E9B-S05: AI Note Organization and Cross-Course Links
+ *
+ * ATDD: These tests are written BEFORE implementation (RED phase).
+ * They validate AI-powered auto-tagging, categorization, cross-course linking,
+ * preview/accept/reject workflow, and the Related Concepts panel.
+ */
+
+import { test, expect, type Page } from '@playwright/test'
+import { seedIndexedDBStore } from '../support/helpers/indexeddb-seed'
+import { seedAIConfiguration } from '../support/helpers/ai-summary-mocks'
+import { FIXED_DATE } from '../utils/test-time'
+
+// ── Test Data ──────────────────────────────────────────────────────────────
+
+const mockNote1 = {
+  id: 'note-1',
+  courseId: 'course-1',
+  videoId: 'video-1',
+  content:
+    'React hooks allow state management in functional components. useState is the primary hook.',
+  createdAt: FIXED_DATE,
+  updatedAt: FIXED_DATE,
+  tags: ['react', 'hooks'],
+}
+
+const mockNote2 = {
+  id: 'note-2',
+  courseId: 'course-1',
+  videoId: 'video-2',
+  content: 'useEffect handles side effects in React. Cleanup functions prevent memory leaks.',
+  createdAt: FIXED_DATE,
+  updatedAt: FIXED_DATE,
+  tags: ['react', 'effects'],
+}
+
+const mockNote3 = {
+  id: 'note-3',
+  courseId: 'course-2',
+  videoId: 'video-3',
+  content: 'Vue composables are similar to React hooks. They encapsulate reactive state logic.',
+  createdAt: FIXED_DATE,
+  updatedAt: FIXED_DATE,
+  tags: ['vue', 'composables', 'hooks'],
+}
+
+const mockNote4 = {
+  id: 'note-4',
+  courseId: 'course-2',
+  videoId: 'video-4',
+  content:
+    'State management patterns differ between frameworks but share core concepts like reactivity.',
+  createdAt: FIXED_DATE,
+  updatedAt: FIXED_DATE,
+  tags: ['state-management'],
+}
+
+/** Mock AI response for note organization proposals — must match NoteOrganizationProposal interface */
+const mockOrganizationResponse = {
+  proposals: [
+    {
+      noteId: 'note-1',
+      suggestedTags: ['state-management', 'functional-components'],
+      suggestedCategories: ['category:frontend-development'],
+      crossCourseLinks: ['note-3'],
+      rationale:
+        'This note covers state management via hooks, connecting to Vue composables in course-2.',
+    },
+    {
+      noteId: 'note-2',
+      suggestedTags: ['lifecycle', 'cleanup'],
+      suggestedCategories: ['category:frontend-development'],
+      crossCourseLinks: [],
+      rationale: 'Side effects and cleanup are lifecycle concepts applicable across frameworks.',
+    },
+    {
+      noteId: 'note-3',
+      suggestedTags: ['state-management', 'reactive-state'],
+      suggestedCategories: ['category:frontend-development'],
+      crossCourseLinks: ['note-1'],
+      rationale:
+        'Vue composables share the same pattern as React hooks for encapsulating reactive logic.',
+    },
+    {
+      noteId: 'note-4',
+      suggestedTags: ['design-patterns', 'reactivity'],
+      suggestedCategories: ['category:software-architecture'],
+      crossCourseLinks: ['note-1', 'note-3'],
+      rationale:
+        'Cross-framework state management patterns connect to both React hooks and Vue composables.',
+    },
+  ],
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+async function seedTestNotes(page: Page) {
+  await seedIndexedDBStore(page, 'ElearningDB', 'notes', [
+    mockNote1,
+    mockNote2,
+    mockNote3,
+    mockNote4,
+  ])
+}
+
+async function seedAIWithOrganizationConsent(page: Page) {
+  await seedAIConfiguration(page, {
+    provider: 'openai',
+    apiKey: 'sk-test-key-for-e2e',
+    videoSummaryConsent: true,
+  })
+}
+
+async function injectMockOrganizationResponse(page: Page) {
+  await page.addInitScript(
+    ({ response }) => {
+      ;(
+        window as unknown as { __mockNoteOrganizationResponse: typeof response }
+      ).__mockNoteOrganizationResponse = response
+    },
+    { response: mockOrganizationResponse }
+  )
+}
+
+async function setupNotesPage(
+  page: Page,
+  options: { aiAvailable?: boolean; seedNotes?: boolean } = {}
+) {
+  const { aiAvailable = true, seedNotes = false } = options
+
+  // addInitScript must be called before navigation
+  if (aiAvailable) {
+    await injectMockOrganizationResponse(page)
+  }
+
+  // Navigate first to initialize app and make IndexedDB available
+  await page.goto('/')
+  await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+
+  if (seedNotes) {
+    await seedTestNotes(page)
+  }
+
+  if (aiAvailable) {
+    await seedAIWithOrganizationConsent(page)
+  }
+
+  await page.goto('/notes')
+  await page.waitForLoadState('networkidle')
+}
+
+// ── AC1: AI Organization Request ────────────────────────────────────────────
+
+test.describe('AC1: Organize Notes with AI', () => {
+  test('clicking "Organize with AI" triggers analysis and shows proposals', async ({ page }) => {
+    await setupNotesPage(page, { seedNotes: true })
+
+    // Find and click the organize button
+    const organizeButton = page.getByRole('button', { name: /organize.*ai/i })
+    await expect(organizeButton).toBeVisible()
+    await organizeButton.click()
+
+    // Preview dialog should appear with proposals (mock returns instantly, skip loading state check)
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible({ timeout: 10000 })
+
+    // Should show proposals for our test notes (state-management appears on multiple proposals)
+    await expect(dialog.getByText(/state-management/i).first()).toBeVisible()
+    // Rationale text should be present (first proposal's rationale)
+    await expect(dialog.getByText(/state management via hooks/i)).toBeVisible()
+  })
+
+  test('organize button is disabled when no notes exist', async ({ page }) => {
+    await setupNotesPage(page)
+
+    const organizeButton = page.getByRole('button', { name: /organize.*ai/i })
+    await expect(organizeButton).toBeDisabled()
+  })
+})
+
+// ── AC2: Preview Panel ──────────────────────────────────────────────────────
+
+test.describe('AC2: Preview panel with accept/reject', () => {
+  test('preview panel shows proposed changes with AI rationale', async ({ page }) => {
+    await setupNotesPage(page, { seedNotes: true })
+
+    await page.getByRole('button', { name: /organize.*ai/i }).click()
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible({ timeout: 10000 })
+
+    // Each proposal should show rationale text
+    await expect(dialog.getByText(/state management via hooks.*connecting to Vue/i)).toBeVisible()
+
+    // Should show proposed tags as badges
+    await expect(dialog.getByText('functional-components')).toBeVisible()
+
+    // Should show proposed category (appears on multiple proposals)
+    await expect(dialog.getByText(/frontend-development/i).first()).toBeVisible()
+  })
+
+  test('each proposal has an individual accept/reject checkbox', async ({ page }) => {
+    await setupNotesPage(page, { seedNotes: true })
+
+    await page.getByRole('button', { name: /organize.*ai/i }).click()
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible({ timeout: 10000 })
+
+    // Should have checkboxes for each proposal (4 notes = 4 checkboxes)
+    const checkboxes = dialog.getByRole('checkbox')
+    await expect(checkboxes).toHaveCount(4)
+
+    // All should be checked by default
+    for (let i = 0; i < 4; i++) {
+      await expect(checkboxes.nth(i)).toBeChecked()
+    }
+
+    // User can uncheck individual proposals
+    await checkboxes.nth(1).uncheck()
+    await expect(checkboxes.nth(1)).not.toBeChecked()
+  })
+})
+
+// ── AC3: Apply Changes ──────────────────────────────────────────────────────
+
+test.describe('AC3: Apply selected changes', () => {
+  test('applying changes updates note tags and shows confirmation toast', async ({ page }) => {
+    await setupNotesPage(page, { seedNotes: true })
+
+    await page.getByRole('button', { name: /organize.*ai/i }).click()
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible({ timeout: 10000 })
+
+    // Click apply button via dispatchEvent (button may be outside viewport in constrained dialog)
+    const applyButton = dialog.getByRole('button', { name: /apply.*changes/i })
+    await applyButton.dispatchEvent('click')
+
+    // Dialog should close
+    await expect(dialog).not.toBeVisible()
+
+    // Toast should confirm applied changes (actual text: "Applied changes to N notes")
+    await expect(
+      page.getByText(/applied.*changes/i).or(page.getByText(/applied.*\d+.*notes/i))
+    ).toBeVisible({ timeout: 5000 })
+  })
+
+  test('rejected proposals are not applied', async ({ page }) => {
+    await setupNotesPage(page, { seedNotes: true })
+
+    await page.getByRole('button', { name: /organize.*ai/i }).click()
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible({ timeout: 10000 })
+
+    // Uncheck note-1 proposal (first checkbox)
+    const checkboxes = dialog.getByRole('checkbox')
+    await checkboxes.nth(0).uncheck()
+
+    // Click apply via dispatchEvent (button may be outside viewport in constrained dialog)
+    const applyBtn = dialog.getByRole('button', { name: /apply.*changes/i })
+    await applyBtn.dispatchEvent('click')
+    await expect(dialog).not.toBeVisible()
+
+    // Toast should indicate fewer changes applied ("Applied changes to 3 notes")
+    await expect(
+      page.getByText(/applied.*changes.*3/i).or(page.getByText(/3 notes/i))
+    ).toBeVisible({
+      timeout: 5000,
+    })
+
+    // Verify rejected note-1 does NOT have the proposed tags persisted
+    // Expand note-1 and check its tag list
+    await expect(page.getByText(mockNote1.content.slice(0, 30))).toBeVisible({ timeout: 5000 })
+    const note1Card = page.locator('[data-testid="note-card"]').filter({
+      hasText: mockNote1.content.slice(0, 30),
+    })
+    // note-1's rejected tags (state-management, functional-components) should NOT appear
+    await expect(note1Card.getByText('functional-components')).not.toBeVisible()
+  })
+})
+
+// ── AC4: Related Concepts Panel ─────────────────────────────────────────────
+
+test.describe('AC4: Related Concepts panel', () => {
+  test('expanding a note shows related notes with shared tags', async ({ page }) => {
+    await setupNotesPage(page, { seedNotes: true })
+
+    // Wait for notes to load
+    await expect(page.getByText(mockNote1.content.slice(0, 30))).toBeVisible({ timeout: 5000 })
+
+    // Expand note-1 (has 'react' tag shared with note-2)
+    const noteCard = page.locator('[data-testid="note-card"]').filter({
+      hasText: mockNote1.content.slice(0, 30),
+    })
+    await noteCard.locator('[role="button"]').click()
+
+    // Related Concepts panel should appear
+    const relatedPanel = page.getByText(/related concepts/i)
+    await expect(relatedPanel).toBeVisible({ timeout: 5000 })
+
+    // Should show note-2 as related within the Related Concepts panel (shares 'react' tag)
+    const relatedRegion = page.locator('[aria-label="Related concepts"]')
+    await expect(
+      relatedRegion
+        .getByText(mockNote2.content.slice(0, 20))
+        .or(relatedRegion.getByText(/useEffect/i))
+    ).toBeVisible()
+
+    // Should show shared tag within the related panel
+    await expect(relatedRegion.getByText('react').first()).toBeVisible()
+  })
+
+  test('related panel shows cross-course notes with shared tags', async ({ page }) => {
+    // note-1 (course-1, tags: ['react', 'hooks']) and note-3 (course-2, tags: ['vue', 'composables', 'hooks'])
+    // share the 'hooks' tag across different courses
+    await setupNotesPage(page, { seedNotes: true })
+
+    await expect(page.getByText(mockNote1.content.slice(0, 30))).toBeVisible({ timeout: 5000 })
+
+    // Expand note-1 which has 'hooks' tag shared with note-3 (cross-course)
+    const noteCard = page.locator('[data-testid="note-card"]').filter({
+      hasText: mockNote1.content.slice(0, 30),
+    })
+    await noteCard.locator('[role="button"]').click()
+
+    // Related Concepts panel should appear
+    const relatedRegion = page.locator('[aria-label="Related concepts"]')
+    await expect(relatedRegion).toBeVisible({ timeout: 5000 })
+
+    // Should show note-3 from course-2 (cross-course match via 'hooks' tag)
+    await expect(
+      relatedRegion.getByText(mockNote3.content.slice(0, 20)).or(relatedRegion.getByText(/Vue composables/i))
+    ).toBeVisible()
+
+    // Should show shared 'hooks' tag
+    await expect(relatedRegion.getByText('hooks').first()).toBeVisible()
+  })
+})
+
+// ── AC5: Navigation Between Related Notes ───────────────────────────────────
+
+test.describe('AC5: Navigation from related note', () => {
+  test('clicking a related note navigates and shows back-link', async ({ page }) => {
+    await setupNotesPage(page, { seedNotes: true })
+
+    await expect(page.getByText(mockNote1.content.slice(0, 30))).toBeVisible({ timeout: 5000 })
+
+    // Expand note-1 to see related concepts
+    const noteCard = page.locator('[data-testid="note-card"]').filter({
+      hasText: mockNote1.content.slice(0, 30),
+    })
+    await noteCard.locator('[role="button"]').click()
+
+    // Wait for Related Concepts panel
+    const relatedRegion = page.locator('[aria-label="Related concepts"]')
+    await expect(relatedRegion).toBeVisible({ timeout: 5000 })
+
+    // Click on a related note entry (aria-label includes "Related note:")
+    const relatedButton = relatedRegion.getByRole('button', { name: /related note/i }).first()
+    await expect(relatedButton).toBeVisible({ timeout: 5000 })
+    await relatedButton.dispatchEvent('click')
+
+    // Back-link should be visible after navigation
+    await expect(page.getByTestId('back-to-note')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText(/back to original note/i)).toBeVisible()
+  })
+})
+
+// ── AC6: AI Unavailable Fallback ────────────────────────────────────────────
+
+test.describe('AC6: AI unavailable fallback', () => {
+  test('shows "AI unavailable" message when provider not configured', async ({ page }) => {
+    // Do NOT seed AI configuration — AI is unavailable
+    await page.goto('/')
+    await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+    await seedTestNotes(page)
+    await page.goto('/notes')
+    await page.waitForLoadState('networkidle')
+
+    await expect(page.getByText(mockNote1.content.slice(0, 30))).toBeVisible({ timeout: 5000 })
+
+    // Organize button should be disabled or show unavailable state
+    const organizeButton = page.getByRole('button', { name: /organize.*ai/i })
+    await expect(organizeButton).toBeDisabled()
+  })
+
+  test('Related Concepts panel falls back to tag-based matching when AI unavailable', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+    await seedTestNotes(page)
+    await page.goto('/notes')
+    await page.waitForLoadState('networkidle')
+
+    await expect(page.getByText(mockNote1.content.slice(0, 30))).toBeVisible({ timeout: 5000 })
+
+    // Expand note-1 (has 'react' tag)
+    const noteCard = page.locator('[data-testid="note-card"]').filter({
+      hasText: mockNote1.content.slice(0, 30),
+    })
+    await noteCard.locator('[role="button"]').click()
+
+    // Related Concepts should still work via tag matching
+    const relatedPanel = page.getByText(/related concepts/i)
+    await expect(relatedPanel).toBeVisible({ timeout: 5000 })
+
+    // Should show tag-only matches indicator
+    await expect(page.getByText(/tag.*match/i).or(page.getByText(/tag-based/i))).toBeVisible()
+  })
+
+  test('fallback activates within 2 seconds', async ({ page }) => {
+    await page.goto('/')
+    await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+    await seedTestNotes(page)
+    await page.goto('/notes')
+    await page.waitForLoadState('networkidle')
+
+    await expect(page.getByText(mockNote1.content.slice(0, 30))).toBeVisible({ timeout: 5000 })
+
+    const noteCard = page.locator('[data-testid="note-card"]').filter({
+      hasText: mockNote1.content.slice(0, 30),
+    })
+    await noteCard.locator('[role="button"]').click()
+
+    // Related Concepts should appear within 2 seconds (AC6 fallback requirement)
+    // Playwright's timeout IS the assertion — if it resolves, fallback was fast enough
+    await expect(page.getByText(/related concepts/i)).toBeVisible({ timeout: 2000 })
+  })
+})
+
+// ── AC7: Privacy ────────────────────────────────────────────────────────────
+
+test.describe('AC7: Privacy - no metadata in API payload', () => {
+  test('API request contains only note content, tags, and course context', async ({ page }) => {
+    // Navigate first to make IndexedDB available
+    await page.goto('/')
+    await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+    await seedTestNotes(page)
+    await seedAIWithOrganizationConsent(page)
+    // Do NOT inject mock — let request go through so we can intercept it
+
+    // Intercept the API call to inspect payload
+    let capturedPayload: Record<string, unknown> | null = null
+    await page.route('**/api/ai/generate', async route => {
+      const postData = route.request().postDataJSON()
+      capturedPayload = postData
+      // Fulfill with mock response
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ text: JSON.stringify(mockOrganizationResponse) }),
+      })
+    })
+
+    await page.goto('/notes')
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByText(mockNote1.content.slice(0, 30))).toBeVisible({ timeout: 5000 })
+
+    await page.getByRole('button', { name: /organize.*ai/i }).click()
+
+    // Wait for the API call
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10000 })
+
+    // Verify payload privacy
+    expect(capturedPayload).not.toBeNull()
+    const payloadStr = JSON.stringify(capturedPayload)
+
+    // Should NOT contain noteIds, file paths, or user metadata
+    expect(payloadStr).not.toContain('note-1')
+    expect(payloadStr).not.toContain('note-2')
+    expect(payloadStr).not.toContain('video-1')
+    expect(payloadStr).not.toContain('video-2')
+    expect(payloadStr).not.toContain('/path/to/')
+    expect(payloadStr).not.toContain('createdAt')
+    expect(payloadStr).not.toContain('updatedAt')
+    expect(payloadStr).not.toContain('deletedAt')
+
+    // SHOULD contain note content and tags (sanitized payload)
+    expect(payloadStr).toContain('React hooks')
+    expect(payloadStr).toContain('react')
+  })
+})

@@ -1,6 +1,8 @@
 import React, { Suspense } from 'react'
 import { createBrowserRouter } from 'react-router'
 import { Layout } from './components/Layout'
+import { DelayedFallback } from './components/DelayedFallback'
+import { Skeleton } from './components/ui/skeleton'
 
 // Lazy-loaded page components (code-splitting)
 // Named exports need .then(m => ({ default: m.ExportName }))
@@ -48,9 +50,18 @@ const Settings = React.lazy(() => import('./pages/Settings'))
 
 function PageLoader() {
   return (
-    <div className="flex h-full items-center justify-center">
-      <div className="text-muted-foreground text-sm">Loading...</div>
-    </div>
+    <DelayedFallback>
+      <div className="space-y-6 p-1" aria-busy="true" aria-label="Loading page">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-10 w-full" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {Array.from({ length: 3 }, (_, i) => (
+            <Skeleton key={i} className="h-32 w-full rounded-[24px]" />
+          ))}
+        </div>
+        <Skeleton className="h-48 w-full rounded-[24px]" />
+      </div>
+    </DelayedFallback>
   )
 }
 

@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { db } from '@/db'
 import type { ImportedCourse, LearnerCourseStatus } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
+import { saveCourseThumbnail, loadCourseThumbnailUrl } from '@/lib/thumbnailService'
+import type { ThumbnailSource } from '@/data/types'
 
 function normalizeTags(tags: string[]): string[] {
   const unique = [...new Set(tags.map(t => t.trim().toLowerCase()).filter(Boolean))]
@@ -14,13 +16,16 @@ interface CourseImportState {
   isImporting: boolean
   importError: string | null
   importProgress: { current: number; total: number } | null
+  thumbnailUrls: Record<string, string> // courseId → object URL
 
   addImportedCourse: (course: ImportedCourse) => Promise<void>
   removeImportedCourse: (courseId: string) => Promise<void>
   updateCourseTags: (courseId: string, tags: string[]) => Promise<void>
   updateCourseStatus: (courseId: string, status: LearnerCourseStatus) => Promise<void>
+  updateCourseThumbnail: (courseId: string, blob: Blob, source: ThumbnailSource) => Promise<void>
   getAllTags: () => string[]
   loadImportedCourses: () => Promise<void>
+  loadThumbnailUrls: (courseIds: string[]) => Promise<void>
   setImporting: (isImporting: boolean) => void
   setImportError: (error: string | null) => void
   setImportProgress: (progress: { current: number; total: number } | null) => void
@@ -31,6 +36,7 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
   isImporting: false,
   importError: null,
   importProgress: null,
+  thumbnailUrls: {},
 
   addImportedCourse: async (course: ImportedCourse) => {
     // Optimistic update
@@ -148,6 +154,28 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
     }
   },
 
+  updateCourseThumbnail: async (courseId: string, blob: Blob, source: ThumbnailSource) => {
+    await saveCourseThumbnail(courseId, blob, source)
+    const url = URL.createObjectURL(blob)
+    set(state => ({
+      thumbnailUrls: { ...state.thumbnailUrls, [courseId]: url },
+    }))
+  },
+
+  loadThumbnailUrls: async (courseIds: string[]) => {
+    const entries = await Promise.all(
+      courseIds.map(async id => {
+        const url = await loadCourseThumbnailUrl(id)
+        return [id, url] as [string, string | null]
+      })
+    )
+    const urls: Record<string, string> = {}
+    for (const [id, url] of entries) {
+      if (url) urls[id] = url
+    }
+    set({ thumbnailUrls: urls })
+  },
+
   getAllTags: () => {
     const { importedCourses } = get()
     const tagSet = new Set<string>()
@@ -163,6 +191,10 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
     try {
       const courses = await db.importedCourses.toArray()
       set({ importedCourses: courses, importError: null })
+      // Load thumbnail object URLs in parallel (non-blocking)
+      get()
+        .loadThumbnailUrls(courses.map(c => c.id))
+        .catch(() => {})
     } catch (error) {
       set({ importError: 'Failed to load courses from database' })
       console.error('[Database] Failed to load courses:', error)
