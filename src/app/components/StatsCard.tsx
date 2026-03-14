@@ -1,8 +1,20 @@
 import { LucideIcon, TrendingUp, TrendingDown, Download, Activity } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import NumberFlow from '@number-flow/react'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/app/components/ui/tooltip'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/app/components/ui/tooltip'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/app/components/ui/sheet'
 import { Button } from '@/app/components/ui/button'
 import { StatsCardComparison } from './StatsCardComparison'
 
@@ -129,10 +141,16 @@ export function StatsCard({
               />
             </div>
 
-            <div className="text-2xl font-bold tabular-nums block" data-testid={testId || 'stat-value'}>
+            <div
+              className="text-2xl font-bold tabular-nums block"
+              data-testid={testId || 'stat-value'}
+            >
               <NumberFlow
                 value={isNaN(numericValue) ? 0 : numericValue}
-                format={{ notation: 'standard', maximumFractionDigits: stringValue.includes('.') ? 1 : 0 }}
+                format={{
+                  notation: 'standard',
+                  maximumFractionDigits: stringValue.includes('.') ? 1 : 0,
+                }}
                 locales="en-US"
                 aria-live="polite"
               />
@@ -144,9 +162,7 @@ export function StatsCard({
               <div
                 className={cn(
                   'flex items-center gap-1 text-xs font-medium mt-1',
-                  trend === 'up'
-                    ? 'text-success'
-                    : 'text-destructive'
+                  trend === 'up' ? 'text-success' : 'text-destructive'
                 )}
               >
                 {trend === 'up' ? (
@@ -187,7 +203,11 @@ export function StatsCard({
               <Download className="size-4 mr-2" aria-hidden="true" />
               Export Data
             </Button>
-            <Button variant="outline" className="w-full justify-start" aria-label="View all activity">
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              aria-label="View all activity"
+            >
               <Activity className="size-4 mr-2" aria-hidden="true" />
               View All Activity
             </Button>

@@ -260,7 +260,8 @@ const PROVIDER_CONFIGS: Record<AIProviderId, ProviderConfig> = {
     },
   },
   gemini: {
-    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent',
+    endpoint:
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent',
     headers: () => ({
       'Content-Type': 'application/json',
     }),
@@ -337,8 +338,7 @@ export async function* generateVideoSummary(
 
   try {
     // Gemini uses query parameter for API key, others use headers
-    const endpoint =
-      provider === 'gemini' ? `${config.endpoint}?key=${apiKey}` : config.endpoint
+    const endpoint = provider === 'gemini' ? `${config.endpoint}?key=${apiKey}` : config.endpoint
 
     const response = await fetch(endpoint, {
       method: 'POST',

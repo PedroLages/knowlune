@@ -55,40 +55,7 @@ Mark the first todo as `in_progress` and proceed:
 
 2. **Detect worktree and resolve base path**:
 
-   Before reading story files, detect if the current branch belongs to a git worktree and resolve the correct base path for file operations.
-
-   ```bash
-   # Get current git context
-   CURRENT_BRANCH=$(git branch --show-current)
-   CURRENT_ROOT=$(git rev-parse --show-toplevel)
-
-   # Check if current branch belongs to a worktree
-   WORKTREE_PATH=$(git worktree list --porcelain 2>/dev/null | awk '
-     /^worktree / { path=$2 }
-     /^branch / {
-       if ($2 == "refs/heads/'"$CURRENT_BRANCH"'") {
-         print path
-         exit
-       }
-     }
-   ')
-
-   # Determine base path for file operations
-   if [ -n "$WORKTREE_PATH" ] && [ "$WORKTREE_PATH" != "$CURRENT_ROOT" ]; then
-     # Branch has a worktree, but we're in the main workspace
-     BASE_PATH="$WORKTREE_PATH"
-
-     echo "⚠️  Worktree detected" >&2
-     echo "This story was started in a git worktree." >&2
-     echo "📍 Worktree: $WORKTREE_PATH" >&2
-     echo "📂 Current:  $CURRENT_ROOT" >&2
-     echo "Using worktree path for file operations." >&2
-     echo "" >&2
-   else
-     # Either no worktree, or we're already in it
-     BASE_PATH="$CURRENT_ROOT"
-   fi
-   ```
+   **See:** [../start-story/docs/worktree-detection.md](../start-story/docs/worktree-detection.md) for worktree detection logic and BASE_PATH resolution.
 
    **All file path references in subsequent steps must use `${BASE_PATH}/` prefix.**
 

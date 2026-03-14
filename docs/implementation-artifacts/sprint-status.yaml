@@ -279,3 +279,26 @@ development_status:
   10-1-first-use-onboarding-flow: backlog
   10-2-empty-state-guidance: backlog
   epic-10-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 19: Engagement & Adaptive Experience
+  # ──────────────────────────────────────────────────
+  epic-19: backlog
+  19-1-ab-loop-video-controls: backlog
+  19-2-enhanced-video-keyboard-shortcuts: backlog
+  19-3-pomodoro-focus-timer: backlog
+  19-4-visual-energy-boost: backlog
+  19-5-user-engagement-preference-controls: backlog
+  19-6-smart-dashboard-reordering: backlog
+  19-7-age-appropriate-defaults-and-font-scaling: backlog
+  epic-19-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 20: Learning Pathways & Knowledge Retention
+  # ──────────────────────────────────────────────────
+  epic-20: backlog
+  20-1-career-paths-system: backlog
+  20-2-flashcard-system-with-spaced-repetition: backlog
+  20-3-365-day-activity-heatmap: backlog
+  20-4-skill-proficiency-radar-chart: backlog
+  epic-20-retrospective: optional

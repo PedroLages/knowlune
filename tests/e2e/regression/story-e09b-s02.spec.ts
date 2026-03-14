@@ -432,7 +432,9 @@ test.describe('Chat Q&A Interface', () => {
     // Wait for user message first
     await expect(page.getByText('What are React hooks?')).toBeVisible()
     // Then wait for AI response (at least 2 messages now - user + AI)
-    await expect(page.locator('[role="img"][aria-label*="AI Assistant"]')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('[role="img"][aria-label*="AI Assistant"]')).toBeVisible({
+      timeout: 10000,
+    })
 
     // Verify privacy: payload should contain ONLY messages array
     expect(capturedPayload).toBeTruthy()

@@ -69,7 +69,7 @@ import { pipeline, env } from '@xenova/transformers'
 
 // Disable local model cache (IndexedDB only)
 env.allowLocalModels = false
-env.backends.onnx.wasm.numThreads = 1  // CRITICAL: Limit to 1 thread per worker
+env.backends.onnx.wasm.numThreads = 1 // CRITICAL: Limit to 1 thread per worker
 
 let embeddingPipeline: any = null
 
@@ -80,7 +80,7 @@ async function initializePipeline() {
     try {
       embeddingPipeline = await pipeline(
         'feature-extraction',
-        'Xenova/all-MiniLM-L6-v2'  // 384-dim, 23MB model (defaults to WASM/CPU)
+        'Xenova/all-MiniLM-L6-v2' // 384-dim, 23MB model (defaults to WASM/CPU)
       )
 
       console.log('[EmbeddingWorker] Model loaded successfully')
@@ -98,7 +98,7 @@ async function generateEmbeddings(texts: string[]): Promise<Float32Array[]> {
 
   // Generate embeddings (returns Float32Array[])
   const result = await pipeline(texts, { pooling: 'mean', normalize: true })
-  return result.data  // 384-dim vectors
+  return result.data // 384-dim vectors
 }
 
 // ============================================================================

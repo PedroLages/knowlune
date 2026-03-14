@@ -106,7 +106,10 @@ db.version(4)
       // Security: Validate structure with Zod schema
       const validationResult = MigrationProgressSchema.safeParse(parsedData)
       if (!validationResult.success) {
-        console.error('[Migration] Invalid data structure, skipping migration:', validationResult.error)
+        console.error(
+          '[Migration] Invalid data structure, skipping migration:',
+          validationResult.error
+        )
         return
       }
 

@@ -48,11 +48,7 @@ NOTE Another note, still no actual cues with timestamps`
  * @param summaryText - Full summary text to stream (will be split into word chunks)
  * @param delayMs - Minimum delay for "Generating summary..." state to be observable in Playwright (default: 200ms)
  */
-export async function mockOpenAIStreaming(
-  page: Page,
-  summaryText: string,
-  delayMs = 200
-) {
+export async function mockOpenAIStreaming(page: Page, summaryText: string, delayMs = 200) {
   await page.route('https://api.openai.com/v1/chat/completions', async route => {
     const chunks = summaryText.split(' ')
     let responseBody = ''

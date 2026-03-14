@@ -24,7 +24,8 @@ test.describe('Overview Card Enhancements', () => {
 
       // Verify shimmer class is applied (CSS animation handles the visual effect)
       const skeletonClasses = await allSkeletons.first().getAttribute('class')
-      const hasShimmerOrPulse = skeletonClasses?.includes('animate-shimmer') || skeletonClasses?.includes('animate-pulse')
+      const hasShimmerOrPulse =
+        skeletonClasses?.includes('animate-shimmer') || skeletonClasses?.includes('animate-pulse')
       expect(hasShimmerOrPulse).toBeTruthy()
     })
 
@@ -32,10 +33,13 @@ test.describe('Overview Card Enhancements', () => {
       await goToOverview(page)
 
       // Wait for data to load by checking for non-zero values
-      await page.waitForFunction(() => {
-        const firstValue = document.querySelector('[data-testid="stat-value"]')
-        return firstValue && firstValue.textContent && firstValue.textContent.trim() !== '0'
-      }, { timeout: 5000 })
+      await page.waitForFunction(
+        () => {
+          const firstValue = document.querySelector('[data-testid="stat-value"]')
+          return firstValue && firstValue.textContent && firstValue.textContent.trim() !== '0'
+        },
+        { timeout: 5000 }
+      )
 
       // NumberFlow renders numbers with specific markup
       const statsValue = page.getByTestId('stat-value').first()
@@ -58,7 +62,7 @@ test.describe('Overview Card Enhancements', () => {
       if (await sparklineSVG.isVisible()) {
         // Hover over sparkline circle (data point)
         const dataPoint = sparklineSVG.locator('circle[class*="hover:opacity-100"]').first()
-        if (await dataPoint.count() > 0) {
+        if ((await dataPoint.count()) > 0) {
           await dataPoint.hover()
 
           // Tooltip should appear
@@ -111,7 +115,7 @@ test.describe('Overview Card Enhancements', () => {
 
         // Check for badge (lesson count)
         const badge = tooltip.locator('[class*="badge"]')
-        if (await badge.count() > 0) {
+        if ((await badge.count()) > 0) {
           await expect(badge).toBeVisible()
         }
       }
@@ -170,7 +174,9 @@ test.describe('Overview Card Enhancements', () => {
       await goToOverview(page)
 
       // Click stats card button to open Sheet
-      const statsCardButton = page.locator('button[aria-label*="View details for Lessons Completed"]')
+      const statsCardButton = page.locator(
+        'button[aria-label*="View details for Lessons Completed"]'
+      )
       await expect(statsCardButton).toBeVisible({ timeout: 5000 })
       await statsCardButton.click()
 
@@ -236,8 +242,8 @@ test.describe('Overview Card Enhancements', () => {
       if (await skeleton.isVisible()) {
         // When reduced motion is enabled, animate-shimmer should not be applied
         // or should be overridden by prefers-reduced-motion media query
-        const hasShimmer = await skeleton.evaluate(el =>
-          window.getComputedStyle(el).animationName !== 'none'
+        const hasShimmer = await skeleton.evaluate(
+          el => window.getComputedStyle(el).animationName !== 'none'
         )
 
         // Animation should be disabled

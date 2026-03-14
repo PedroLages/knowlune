@@ -126,3 +126,14 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M1: Still no word count validation/warning displayed to user (comment says "prompt-enforced only")
 - M2 (RECURRING): `(window as any)` casts for test hooks -- typed window interface extension preferred
 - Nit: `handleGenerate` abort-cancelled state leaves component in `generating` -- no visual reset
+
+## E9B-S03: AI Learning Path Generation
+- BLOCKER: 20s timeout violates AC6 2-second requirement; AC6 E2E test only exercises "no API key" path, never network timeout
+- H1 (RECURRING): Fire-and-forget `regeneratePath()` calls in handleRegenerateClick and handleRegenerateConfirm
+- H2: Timeout promise `setTimeout` never cleared on success (resource leak)
+- H3 (RECURRING): `w-12 h-12` instead of `size-12` Tailwind v4 shorthand
+- M1: `text-white` hardcoded instead of `text-gold-foreground` theme token (dark mode contrast)
+- M2: `font-heading` class not a valid Tailwind v4 utility (works by coincidence from base layer h1/h3 styles)
+- M3: Optimistic UI reorder without rollback on persistence failure (violates pre-review checklist)
+- M4: Grammar error in empty state message ("You need at least 2 courses are needed")
+- Positive: No uncommitted changes (pattern broken), typed Window mock interface, good LLM response validation

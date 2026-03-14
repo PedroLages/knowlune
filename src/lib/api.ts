@@ -44,7 +44,11 @@ export class ApiClientError extends Error {
  * @param options - Fetch options
  * @param timeoutMs - Timeout in milliseconds (default: 30000ms = 30 seconds)
  */
-async function fetchApi<T>(endpoint: string, options: RequestInit = {}, timeoutMs: number = 30000): Promise<T> {
+async function fetchApi<T>(
+  endpoint: string,
+  options: RequestInit = {},
+  timeoutMs: number = 30000
+): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`
 
   // Create AbortController for timeout handling
@@ -105,10 +109,14 @@ async function get<T>(endpoint: string, timeoutMs?: number): Promise<T> {
  * @param timeoutMs - Optional timeout in milliseconds (default: 30s)
  */
 async function post<T, D = unknown>(endpoint: string, data: D, timeoutMs?: number): Promise<T> {
-  return fetchApi<T>(endpoint, {
-    method: 'POST',
-    body: JSON.stringify(data),
-  }, timeoutMs)
+  return fetchApi<T>(
+    endpoint,
+    {
+      method: 'POST',
+      body: JSON.stringify(data),
+    },
+    timeoutMs
+  )
 }
 
 // Note: PUT and DELETE helpers removed as they're currently unused.

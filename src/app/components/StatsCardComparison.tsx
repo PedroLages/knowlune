@@ -34,19 +34,21 @@ export function StatsCardComparison({ currentValue, label }: StatsCardComparison
   const changePercentage = previousValue > 0 ? ((change / previousValue) * 100).toFixed(1) : '0.0'
   const isIncrease = change > 0
 
-  const currentPercentage = Math.max(currentValue, previousValue) > 0
-    ? (currentValue / Math.max(currentValue, previousValue)) * 100
-    : 50
-  const previousPercentage = Math.max(currentValue, previousValue) > 0
-    ? (previousValue / Math.max(currentValue, previousValue)) * 100
-    : 50
+  const currentPercentage =
+    Math.max(currentValue, previousValue) > 0
+      ? (currentValue / Math.max(currentValue, previousValue)) * 100
+      : 50
+  const previousPercentage =
+    Math.max(currentValue, previousValue) > 0
+      ? (previousValue / Math.max(currentValue, previousValue)) * 100
+      : 50
 
   return (
     <div className="space-y-4">
       {/* Period selector */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-foreground">Compare {label}</h3>
-        <Select value={period} onValueChange={(value) => setPeriod(value as Period)}>
+        <Select value={period} onValueChange={value => setPeriod(value as Period)}>
           <SelectTrigger className="w-[140px]" aria-label="Select comparison period">
             <SelectValue />
           </SelectTrigger>
@@ -109,7 +111,8 @@ export function StatsCardComparison({ currentValue, label }: StatsCardComparison
           <TrendingDown className="size-4" aria-hidden="true" />
         )}
         <span className="text-sm font-medium">
-          {isIncrease ? '+' : ''}{changePercentage}% vs previous {period}
+          {isIncrease ? '+' : ''}
+          {changePercentage}% vs previous {period}
         </span>
       </div>
     </div>

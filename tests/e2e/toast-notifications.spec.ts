@@ -303,9 +303,7 @@ test.describe('Toast Notifications', () => {
     await undoButton.click()
 
     // Verify success toast appears
-    const successToast = page
-      .locator('[data-sonner-toast]')
-      .filter({ hasText: /note restored/i })
+    const successToast = page.locator('[data-sonner-toast]').filter({ hasText: /note restored/i })
     await expect(successToast).toBeVisible({ timeout: TIMEOUTS.NETWORK })
 
     // Verify note is restored

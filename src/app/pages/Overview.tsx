@@ -48,18 +48,9 @@ export function Overview() {
 
   // Memoize progress calculations to prevent recalculation on every render
   const allProgress = useMemo(() => getAllProgress(), [])
-  const inProgress = useMemo(
-    () => getCoursesInProgress(allCourses, allProgress),
-    [allProgress]
-  )
-  const completed = useMemo(
-    () => getCompletedCourses(allCourses, allProgress),
-    [allProgress]
-  )
-  const completedLessons = useMemo(
-    () => getTotalCompletedLessons(allProgress),
-    [allProgress]
-  )
+  const inProgress = useMemo(() => getCoursesInProgress(allCourses, allProgress), [allProgress])
+  const completed = useMemo(() => getCompletedCourses(allCourses, allProgress), [allProgress])
+  const completedLessons = useMemo(() => getTotalCompletedLessons(allProgress), [allProgress])
   const [studyNotes, setStudyNotes] = useState(0)
 
   useEffect(() => {
@@ -136,7 +127,15 @@ export function Overview() {
         icon: CheckCircle,
       },
     ],
-    [inProgress.length, completed.length, completedLessons, lessonsChange, lessonSparkline, totalStudyTimeHours, studyNotes]
+    [
+      inProgress.length,
+      completed.length,
+      completedLessons,
+      lessonsChange,
+      lessonSparkline,
+      totalStudyTimeHours,
+      studyNotes,
+    ]
   )
 
   if (isLoading) {

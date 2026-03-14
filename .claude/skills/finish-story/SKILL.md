@@ -38,7 +38,7 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
 
 1.5. **Detect worktree and resolve base path**: Before reading story files, detect if the current branch belongs to a git worktree and resolve the correct base path for file operations.
 
-   **See:** `/start-story` [docs/worktree-setup.md](../start-story/docs/worktree-setup.md) for worktree detection logic (use the same pattern).
+   **See:** [../start-story/docs/worktree-detection.md](../start-story/docs/worktree-detection.md) for worktree detection logic and BASE_PATH resolution.
 
    All file path references in subsequent steps must use `${BASE_PATH}/` prefix.
 

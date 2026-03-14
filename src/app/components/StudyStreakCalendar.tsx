@@ -93,9 +93,7 @@ function buildWeekGrid(
 
       // Mock course list: randomly select 1-4 courses based on lesson count
       const courseCount = Math.min(day.lessonCount, 1 + Math.floor(Math.random() * 4))
-      courses = mockCourses
-        .sort(() => Math.random() - 0.5)
-        .slice(0, courseCount)
+      courses = mockCourses.sort(() => Math.random() - 0.5).slice(0, courseCount)
     }
 
     return {
@@ -480,7 +478,9 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
                                 <Badge variant="secondary" className="text-xs">
                                   {day.lessonCount} lesson{day.lessonCount > 1 ? 's' : ''}
                                 </Badge>
-                                <span className="text-muted-foreground">{day.studyMinutes} min</span>
+                                <span className="text-muted-foreground">
+                                  {day.studyMinutes} min
+                                </span>
                               </div>
                             )}
 
@@ -488,7 +488,10 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
                             {day.hasActivity && day.courses && day.courses.length > 0 && (
                               <div className="space-y-1 pt-1 border-t border-border">
                                 {day.courses.slice(0, 3).map(course => (
-                                  <div key={course.id} className="text-muted-foreground leading-snug">
+                                  <div
+                                    key={course.id}
+                                    className="text-muted-foreground leading-snug"
+                                  >
                                     • {course.title}
                                   </div>
                                 ))}

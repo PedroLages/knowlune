@@ -132,9 +132,7 @@ export function AchievementBanner({ completedLessons }: AchievementBannerProps) 
                     r={markerRadius}
                     fill="currentColor"
                     className={`motion-safe:transition-all motion-safe:duration-500 ${
-                      isCompleted
-                        ? 'text-gold'
-                        : 'text-muted'
+                      isCompleted ? 'text-gold' : 'text-muted'
                     } ${isCurrent ? 'drop-shadow-[0_0_4px_var(--gold)]' : ''}`}
                   />
                 )
