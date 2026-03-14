@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BookOpen, CheckCircle, FileText, TrendingUp } from 'lucide-react'
+import { BookOpen, CheckCircle, Clock, FileText, TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import {
   ChartContainer,
@@ -29,6 +29,7 @@ import {
   getCourseCompletionPercent,
 } from '@/lib/progress'
 import { getActionsPerDay, getRecentActions } from '@/lib/studyLog'
+import { EmptyState } from '@/app/components/EmptyState'
 import StudyTimeAnalytics from '@/app/components/StudyTimeAnalytics'
 import { AIAnalyticsTab } from '@/app/components/reports/AIAnalyticsTab'
 
@@ -135,10 +136,23 @@ export default function Reports() {
   const activityData = getActionsPerDay(30)
   const recentActions = getRecentActions(10)
 
+  const totalLessons = getTotalCompletedLessons()
+  const hasActivity = totalLessons > 0 || recentActions.length > 0
+
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">Reports</h1>
 
+      {!hasActivity ? (
+        <EmptyState
+          data-testid="empty-state-sessions"
+          icon={Clock}
+          title="Start studying to see your analytics"
+          description="Your study time, completion rates, and insights will appear here"
+          actionLabel="Browse Courses"
+          actionHref="/courses"
+        />
+      ) : (
       <Tabs defaultValue="study" className="mb-6">
         <TabsList>
           <TabsTrigger value="study">Study Analytics</TabsTrigger>
@@ -336,6 +350,7 @@ export default function Reports() {
           </div>
         </TabsContent>
       </Tabs>
+      )}
     </div>
   )
 }
