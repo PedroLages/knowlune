@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { motion } from 'motion/react'
+import { Link } from 'react-router'
+import { motion, MotionConfig } from 'motion/react'
 import {
   DndContext,
   closestCenter,
@@ -30,7 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/app/components/ui/alert-dialog'
-import { Sparkles, RotateCw, Loader2, AlertCircle, BookOpen } from 'lucide-react'
+import { Sparkles, RotateCw, Loader2, AlertCircle, BookOpen, GripVertical } from 'lucide-react'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 import type { LearningPathCourse, ImportedCourse } from '@/data/types'
 
@@ -58,21 +59,29 @@ function SortableCourseCard({
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
       variants={fadeUp}
       custom={index}
       data-testid={`learning-path-course-${index}`}
     >
-      <div className="relative bg-surface border border-default rounded-[24px] p-8 shadow-sm cursor-grab active:cursor-grabbing">
+      <div className="relative bg-card border border-border rounded-[24px] p-8 shadow-sm">
         {/* Position Badge */}
-        <div className="absolute -top-4 -left-4 size-12 rounded-full bg-gradient-to-br from-gold to-warning flex items-center justify-center font-heading text-white font-bold shadow-lg">
+        <div className="absolute -top-4 -left-4 size-12 rounded-full bg-gradient-to-br from-gold to-warning flex items-center justify-center font-display text-gold-foreground font-bold shadow-lg">
           {course.position}
         </div>
+
+        {/* Drag Handle */}
+        <button
+          className="absolute top-4 right-4 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted cursor-grab active:cursor-grabbing touch-manipulation"
+          aria-label="Drag to reorder"
+          {...listeners}
+        >
+          <GripVertical className="size-5" />
+        </button>
 
         {/* Manual Override Badge */}
         {course.isManuallyOrdered && (
           <div
-            className="absolute top-4 right-4 px-3 py-1 rounded-full bg-info/10 text-info border border-info/20 text-sm font-medium"
+            className="absolute top-4 right-14 px-3 py-1 rounded-full bg-info/10 text-info border border-info/20 text-sm font-medium"
             data-testid="manual-override-indicator"
           >
             Manual
@@ -80,7 +89,7 @@ function SortableCourseCard({
         )}
 
         {/* Course Title */}
-        <h3 className="font-heading text-2xl mb-3 mt-2">{courseData?.name || 'Unknown Course'}</h3>
+        <h3 className="font-display text-2xl mb-3 mt-2 pr-12">{courseData?.name || 'Unknown Course'}</h3>
 
         {/* AI Justification */}
         <p className="text-muted-foreground italic" data-testid="course-justification">
@@ -153,10 +162,11 @@ export function AILearningPath() {
   const canGenerate = courseCount >= 2 && !isGenerating
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="container mx-auto max-w-3xl px-4 py-12">
       {/* Page Header */}
       <header className="mb-12 text-center">
-        <h1 className="font-heading text-4xl text-foreground mb-4">Your Learning Path</h1>
+        <h1 className="font-display text-4xl text-foreground mb-4">Your Learning Path</h1>
         <p className="text-muted-foreground text-lg">
           {hasPath
             ? 'AI-suggested course sequence based on prerequisites'
@@ -166,7 +176,7 @@ export function AILearningPath() {
 
       {/* Action Bar */}
       <div className="mb-8 flex flex-wrap items-center justify-center gap-4">
-        {!hasPath && (
+        {!hasPath && canGenerate && (
           <Button
             size="lg"
             onClick={handleGenerate}
@@ -230,12 +240,12 @@ export function AILearningPath() {
           <div className="mx-auto size-20 rounded-full bg-brand-soft flex items-center justify-center mb-6">
             <BookOpen className="size-10 text-brand" />
           </div>
-          <h3 className="font-heading text-2xl mb-2">Not Enough Courses</h3>
+          <h3 className="font-display text-2xl mb-2">Not Enough Courses</h3>
           <p className="text-muted-foreground text-lg mb-4">
             At least 2 courses are needed to generate a learning path.
           </p>
           <p className="text-muted-foreground">
-            Import more courses from the <a href="/courses" className="text-brand underline">Courses page</a> to get started.
+            Import more courses from the <Link to="/courses" className="text-brand underline">Courses page</Link> to get started.
           </p>
         </div>
       )}
@@ -298,5 +308,6 @@ export function AILearningPath() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </MotionConfig>
   )
 }
