@@ -5,6 +5,8 @@ import { Button } from '@/app/components/ui/button'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
 import { Progress } from '@/app/components/ui/progress'
+import { Skeleton } from '@/app/components/ui/skeleton'
+import { DelayedFallback } from '@/app/components/DelayedFallback'
 import {
   Collapsible,
   CollapsibleTrigger,
@@ -191,13 +193,18 @@ export function Challenges() {
           </CardContent>
         </Card>
       ) : isLoading ? (
-        <div
-          role="status"
-          aria-live="polite"
-          className="text-muted-foreground py-12 text-center text-sm"
-        >
-          Loading challenges...
-        </div>
+        <DelayedFallback>
+          <div
+            role="status"
+            aria-busy="true"
+            aria-label="Loading challenges"
+            className="space-y-4"
+          >
+            {Array.from({ length: 3 }, (_, i) => (
+              <Skeleton key={i} className="h-28 w-full rounded-[24px]" />
+            ))}
+          </div>
+        </DelayedFallback>
       ) : active.length === 0 && completed.length === 0 && expired.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-4 py-16">

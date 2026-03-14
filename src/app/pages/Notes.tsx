@@ -416,10 +416,10 @@ export function Notes() {
     )
   }
 
-  // Skeleton loading state
+  // Skeleton loading state — still show tabs so user can switch to bookmarks
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6" aria-busy="true" aria-label="Loading notes">
         <div className="flex items-center justify-between">
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-8 w-32" />
