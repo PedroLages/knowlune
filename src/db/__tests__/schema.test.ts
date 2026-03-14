@@ -54,6 +54,7 @@ describe('ElearningDB schema', () => {
       'importedCourses',
       'importedPdfs',
       'importedVideos',
+      'learningPath',
       'notes',
       'progress',
       'screenshots',
@@ -61,8 +62,8 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 9', () => {
-    expect(db.verno).toBe(9)
+  it('should be at version 10', () => {
+    expect(db.verno).toBe(10)
   })
 })
 
