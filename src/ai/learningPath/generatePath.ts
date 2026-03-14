@@ -25,7 +25,7 @@ export async function generateLearningPath(
   onUpdate: (course: LearningPathCourse) => void,
   options: GeneratePathOptions = {}
 ): Promise<LearningPathCourse[]> {
-  const { timeout = 20000, signal } = options
+  const { timeout = 2000, signal } = options
 
   if (courses.length < 2) {
     throw new Error('At least 2 courses are required to generate a learning path')
@@ -91,9 +91,10 @@ Instructions:
 
 IMPORTANT: Return ONLY the JSON object, no markdown code blocks, no extra text.`
 
-  // Create timeout promise
+  // Create timeout promise with cleanup
+  let timeoutId: NodeJS.Timeout | number
   const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error('AI request timed out')), timeout)
+    timeoutId = setTimeout(() => reject(new Error('AI request timed out')), timeout)
   })
 
   // Create fetch promise
@@ -115,6 +116,9 @@ IMPORTANT: Return ONLY the JSON object, no markdown code blocks, no extra text.`
   try {
     // Race between fetch and timeout
     const response = await Promise.race([fetchPromise, timeoutPromise])
+
+    // Clear timeout if fetch wins
+    clearTimeout(timeoutId)
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))

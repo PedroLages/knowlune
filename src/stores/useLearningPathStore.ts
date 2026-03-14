@@ -116,8 +116,8 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     // Optimistic update
     set({ courses: updated, error: null })
 
-    // Persist to IndexedDB
-    persistWithRetry(async () => {
+    // Persist to IndexedDB (await to prevent fire-and-forget)
+    await persistWithRetry(async () => {
       await db.transaction('rw', db.learningPath, async () => {
         await db.learningPath.clear()
         await db.learningPath.bulkAdd(

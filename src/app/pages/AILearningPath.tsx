@@ -63,9 +63,9 @@ function SortableCourseCard({
       custom={index}
       data-testid={`learning-path-course-${index}`}
     >
-      <div className="relative bg-card border border-border rounded-[24px] p-8 shadow-sm cursor-grab active:cursor-grabbing">
+      <div className="relative bg-surface border border-default rounded-[24px] p-8 shadow-sm cursor-grab active:cursor-grabbing">
         {/* Position Badge */}
-        <div className="absolute -top-4 -left-4 w-12 h-12 rounded-full bg-gradient-to-br from-gold to-warning flex items-center justify-center font-heading text-white font-bold shadow-lg">
+        <div className="absolute -top-4 -left-4 size-12 rounded-full bg-gradient-to-br from-gold to-warning flex items-center justify-center font-heading text-white font-bold shadow-lg">
           {course.position}
         </div>
 
@@ -176,12 +176,12 @@ export function AILearningPath() {
           >
             {isGenerating ? (
               <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                <Loader2 className="mr-2 size-5 animate-spin" />
                 Analyzing courses...
               </>
             ) : (
               <>
-                <Sparkles className="mr-2 h-5 w-5" />
+                <Sparkles className="mr-2 size-5" />
                 Generate Learning Path
               </>
             )}
@@ -195,7 +195,7 @@ export function AILearningPath() {
             onClick={handleRegenerateClick}
             data-testid="regenerate-learning-path-button"
           >
-            <RotateCw className="mr-2 h-4 w-4" />
+            <RotateCw className="mr-2 size-4" />
             Regenerate
           </Button>
         )}
@@ -204,7 +204,7 @@ export function AILearningPath() {
       {/* Error State */}
       {error && (
         <Alert variant="destructive" className="mb-8" data-testid="ai-unavailable-status">
-          <AlertCircle className="h-4 w-4" />
+          <AlertCircle className="size-4" />
           <AlertTitle>AI unavailable</AlertTitle>
           <AlertDescription className="flex items-center justify-between">
             <span>{error}</span>
@@ -227,12 +227,12 @@ export function AILearningPath() {
           className="text-center py-16"
           data-testid="learning-path-empty-state"
         >
-          <div className="mx-auto w-20 h-20 rounded-full bg-brand-soft flex items-center justify-center mb-6">
-            <BookOpen className="h-10 w-10 text-brand" />
+          <div className="mx-auto size-20 rounded-full bg-brand-soft flex items-center justify-center mb-6">
+            <BookOpen className="size-10 text-brand" />
           </div>
           <h3 className="font-heading text-2xl mb-2">Not Enough Courses</h3>
           <p className="text-muted-foreground text-lg mb-4">
-            You need at least 2 courses are needed to generate a learning path.
+            At least 2 courses are needed to generate a learning path.
           </p>
           <p className="text-muted-foreground">
             Import more courses from the <a href="/courses" className="text-brand underline">Courses page</a> to get started.
@@ -243,7 +243,7 @@ export function AILearningPath() {
       {/* Loading State */}
       {isGenerating && !hasPath && (
         <div className="text-center py-16">
-          <Loader2 className="mx-auto h-12 w-12 animate-spin text-brand mb-4" />
+          <Loader2 className="mx-auto size-12 animate-spin text-brand mb-4" />
           <p className="text-muted-foreground text-lg">Generating learning path...</p>
         </div>
       )}
