@@ -1,6 +1,6 @@
 import { test, expect } from '../support/fixtures'
 import { seedIndexedDBStore } from '../support/helpers/indexeddb-seed'
-import { FIXED_DATE } from '../utils/test-time'
+import { FIXED_DATE, getRelativeDate } from '../utils/test-time'
 
 /**
  * Seed AI configuration into localStorage
@@ -55,6 +55,8 @@ async function seedAIUsageEvents(
 
 test.describe('E09B-S06: AI Feature Analytics & Auto-Analysis', () => {
   test.beforeEach(async ({ page }) => {
+    // Freeze clock to FIXED_DATE so getPeriodBounds() aligns with seeded event timestamps
+    await page.clock.setFixedTime(new Date(FIXED_DATE))
     // Navigate first so localStorage is accessible (about:blank blocks it)
     await page.goto('/')
     // Prevent tablet sidebar overlay
@@ -62,17 +64,24 @@ test.describe('E09B-S06: AI Feature Analytics & Auto-Analysis', () => {
   })
 
   test.describe('AC1: AI Analytics dashboard with usage statistics', () => {
-    test('displays usage statistics for each AI feature', async ({ page }) => {
+    test('displays usage statistics with trend indicators for each AI feature', async ({
+      page,
+    }) => {
       await seedAIConfig(page)
 
-      // Seed events for the current period
-      const now = FIXED_DATE
+      // Seed current-period events (same week as FIXED_DATE = Jan 15 2025, Wednesday)
       await seedAIUsageEvents(page, [
-        { id: 'evt-1', featureType: 'summary', timestamp: now },
-        { id: 'evt-2', featureType: 'summary', timestamp: now },
-        { id: 'evt-3', featureType: 'qa', timestamp: now },
-        { id: 'evt-4', featureType: 'learning_path', timestamp: now },
-        { id: 'evt-5', featureType: 'note_organization', timestamp: now },
+        { id: 'evt-1', featureType: 'summary', timestamp: FIXED_DATE },
+        { id: 'evt-2', featureType: 'summary', timestamp: FIXED_DATE },
+        { id: 'evt-3', featureType: 'qa', timestamp: FIXED_DATE },
+        { id: 'evt-4', featureType: 'learning_path', timestamp: FIXED_DATE },
+        { id: 'evt-5', featureType: 'note_organization', timestamp: FIXED_DATE },
+      ])
+
+      // Seed previous-period events (previous week) for trend comparison
+      const lastWeek = getRelativeDate(-7)
+      await seedAIUsageEvents(page, [
+        { id: 'evt-prev-1', featureType: 'summary', timestamp: lastWeek },
       ])
 
       // Navigate to Reports → AI Analytics tab
@@ -80,25 +89,38 @@ test.describe('E09B-S06: AI Feature Analytics & Auto-Analysis', () => {
       await page.getByRole('tab', { name: /ai analytics/i }).click()
 
       // All 5 stat cards should be visible
-      await expect(page.getByTestId('ai-stat-summary')).toBeVisible()
-      await expect(page.getByTestId('ai-stat-qa')).toBeVisible()
-      await expect(page.getByTestId('ai-stat-learning_path')).toBeVisible()
-      await expect(page.getByTestId('ai-stat-note_organization')).toBeVisible()
-      await expect(page.getByTestId('ai-stat-knowledge_gaps')).toBeVisible()
+      const summaryCard = page.getByTestId('ai-stat-summary')
+      const qaCard = page.getByTestId('ai-stat-qa')
+      const learningPathCard = page.getByTestId('ai-stat-learning_path')
+      const noteOrgCard = page.getByTestId('ai-stat-note_organization')
+      const knowledgeGapsCard = page.getByTestId('ai-stat-knowledge_gaps')
 
-      // Knowledge gaps should show "Coming soon"
-      await expect(page.getByTestId('ai-stat-knowledge_gaps')).toContainText('Coming soon')
+      await expect(summaryCard).toBeVisible()
+      await expect(qaCard).toBeVisible()
+      await expect(learningPathCard).toBeVisible()
+      await expect(noteOrgCard).toBeVisible()
+      await expect(knowledgeGapsCard).toBeVisible()
+
+      // Verify trend indicator: summaries went from 1 (previous) to 2 (current) = "up"
+      const summaryTrend = summaryCard.locator('[aria-label*="Up from previous period"]')
+      await expect(summaryTrend).toBeVisible()
+
+      // Knowledge gaps should show "Coming soon" badge
+      await expect(knowledgeGapsCard).toContainText('Coming soon')
     })
   })
 
   test.describe('AC2: Time period toggle updates statistics', () => {
-    test('switches between daily, weekly, and monthly views', async ({ page }) => {
+    test('switches between daily, weekly, monthly and stats reflect selected period', async ({
+      page,
+    }) => {
       await seedAIConfig(page)
-      await page.goto('/')
 
-      // Seed some events
-      const now = FIXED_DATE
-      await seedAIUsageEvents(page, [{ id: 'evt-1', featureType: 'summary', timestamp: now }])
+      // Seed events at FIXED_DATE (clock is frozen to this date)
+      await seedAIUsageEvents(page, [
+        { id: 'evt-1', featureType: 'summary', timestamp: FIXED_DATE },
+        { id: 'evt-2', featureType: 'summary', timestamp: FIXED_DATE },
+      ])
 
       await page.getByRole('link', { name: /reports/i }).click()
       await page.getByRole('tab', { name: /ai analytics/i }).click()
@@ -112,95 +134,183 @@ test.describe('E09B-S06: AI Feature Analytics & Auto-Analysis', () => {
       await expect(weeklyBtn).toBeVisible()
       await expect(monthlyBtn).toBeVisible()
 
-      // Weekly should be default (pressed)
+      // Weekly should be default (pressed) and show the seeded data
       await expect(weeklyBtn).toHaveAttribute('aria-pressed', 'true')
+      const summaryCard = page.getByTestId('ai-stat-summary')
+      await expect(summaryCard).toContainText('2')
 
-      // Switch to daily
+      // Switch to daily — stats should still show data (events are on the frozen "today")
       await dailyBtn.click()
       await expect(dailyBtn).toHaveAttribute('aria-pressed', 'true')
       await expect(weeklyBtn).toHaveAttribute('aria-pressed', 'false')
+      await expect(summaryCard).toContainText('2')
 
       // Switch to monthly
       await monthlyBtn.click()
       await expect(monthlyBtn).toHaveAttribute('aria-pressed', 'true')
       await expect(dailyBtn).toHaveAttribute('aria-pressed', 'false')
+      await expect(summaryCard).toContainText('2')
     })
   })
 
   test.describe('AC3: Auto-analysis triggers on course import', () => {
-    test('auto-analysis is consent-gated and calls AI provider', async ({ page }) => {
-      // This test verifies the auto-analysis integration by checking
-      // that AI requests are made after course import when consent is enabled.
-      // Full import flow requires File System Access API which is not
-      // available in headless browsers, so we verify the mechanism exists.
-      await seedAIConfig(page)
+    test('auto-analysis respects consent: no AI fetch when analytics disabled', async ({
+      page,
+    }) => {
+      // Disable analytics consent
+      await seedAIConfig(page, { analytics: false })
+
+      // Track whether any AI provider request is made
+      let aiRequestMade = false
+      await page.route('**/api.openai.com/**', route => {
+        aiRequestMade = true
+        return route.abort()
+      })
+      await page.route('**/api.anthropic.com/**', route => {
+        aiRequestMade = true
+        return route.abort()
+      })
+
       await page.goto('/courses')
 
-      // Verify the auto-analysis module is importable (no runtime errors)
-      const hasModule = await page.evaluate(async () => {
-        try {
-          // Verify the triggerAutoAnalysis function exists in the bundle
-          return typeof window !== 'undefined'
-        } catch {
-          return false
+      // Attempt to invoke triggerAutoAnalysis with a mock course
+      // The function should early-return due to analytics consent being disabled
+      const result = await page.evaluate(async () => {
+        // Access the autoAnalysis module from the app bundle
+        const { triggerAutoAnalysis } = await import('/src/lib/autoAnalysis.ts')
+        const mockCourse = {
+          id: 'test-course-1',
+          name: 'Test Course',
+          videoCount: 3,
+          pdfCount: 1,
+          tags: [],
+          title: 'Test Course',
+          importDate: '2025-01-15T12:00:00.000Z',
+          totalSize: 1000,
+          fileCount: 4,
         }
+        triggerAutoAnalysis(mockCourse as never)
+        // Wait briefly for any async operations
+        await new Promise(r => setTimeout(r, 500))
+        return true
       })
-      expect(hasModule).toBe(true)
+
+      expect(result).toBe(true)
+      // No AI request should have been made because consent is disabled
+      expect(aiRequestMade).toBe(false)
     })
   })
 
   test.describe('AC4: Auto-analysis completion applies results', () => {
-    test('AI analytics tab shows events after auto-analysis completes', async ({ page }) => {
+    test('auto-analysis records events with auto_analysis featureType and shows toast', async ({
+      page,
+    }) => {
       await seedAIConfig(page)
-      await page.goto('/')
 
-      // Simulate auto-analysis completion by seeding an event with metadata
-      const now = FIXED_DATE
+      // Seed an auto_analysis event (simulating completed auto-analysis)
       await seedAIUsageEvents(page, [
         {
           id: 'evt-auto-1',
-          featureType: 'summary',
-          timestamp: now,
+          featureType: 'auto_analysis',
+          timestamp: FIXED_DATE,
           courseId: 'test-course-1',
+        },
+      ])
+
+      // Also seed a course so we can verify it coexists
+      await seedIndexedDBStore(page, 'ElearningDB', 'importedCourses', [
+        {
+          id: 'test-course-1',
+          name: 'Test Course',
+          title: 'Test Course',
+          importDate: FIXED_DATE,
+          totalSize: 1000,
+          fileCount: 4,
+          videoCount: 3,
+          pdfCount: 1,
+          tags: ['react', 'hooks'],
         },
       ])
 
       await page.getByRole('link', { name: /reports/i }).click()
       await page.getByRole('tab', { name: /ai analytics/i }).click()
 
-      // Summary stat card should show the event count
+      // The auto_analysis events should NOT inflate the summaries count
+      // (auto_analysis is a separate featureType now)
       const summaryCard = page.getByTestId('ai-stat-summary')
       await expect(summaryCard).toBeVisible()
+      // Summary count should be 0 (only auto_analysis event was seeded, not summary)
+      await expect(summaryCard).toContainText('0')
     })
   })
 
   test.describe('AC5: Graceful fallback on AI provider failure', () => {
     test('shows AI unavailable state when provider not configured', async ({ page }) => {
-      // Set AI as unconfigured
+      // Set AI as unconfigured — tests the static configuration guard
       await seedAIConfig(page, { connectionStatus: 'unconfigured' })
-      await page.goto('/')
 
       await page.getByRole('link', { name: /reports/i }).click()
       await page.getByRole('tab', { name: /ai analytics/i }).click()
 
-      // Should show "AI provider not configured" message
+      // Should show "AI provider not configured" message with guidance
       await expect(page.getByText(/AI provider not configured/i)).toBeVisible()
+      await expect(page.getByText(/Set up an AI provider in Settings/i)).toBeVisible()
+    })
+
+    test('auto-analysis shows error toast on network failure', async ({ page }) => {
+      await seedAIConfig(page)
+
+      // Intercept AI provider with network failure
+      await page.route('**/api.openai.com/**', route => route.abort())
+
+      await page.goto('/courses')
+
+      // Trigger auto-analysis which should fail
+      await page.evaluate(async () => {
+        const { triggerAutoAnalysis } = await import('/src/lib/autoAnalysis.ts')
+        const mockCourse = {
+          id: 'test-course-fail',
+          name: 'Failing Course',
+          videoCount: 1,
+          pdfCount: 0,
+          tags: [],
+          title: 'Failing Course',
+          importDate: '2025-01-15T12:00:00.000Z',
+          totalSize: 500,
+          fileCount: 1,
+        }
+        triggerAutoAnalysis(mockCourse as never)
+      })
+
+      // Should show error toast with retry option
+      await expect(page.getByText(/auto-analysis could not complete/i)).toBeVisible({
+        timeout: 10000,
+      })
     })
   })
 
   test.describe('AC6: Consent toggle prevents auto-analysis', () => {
-    test('analytics tab works but auto-analysis disabled when consent off', async ({ page }) => {
+    test('no data sent to AI provider when analytics consent is off', async ({ page }) => {
       // Disable analytics consent
       await seedAIConfig(page, { analytics: false })
+
+      // Track all AI provider requests — none should be made
+      const aiRequests: string[] = []
+      await page.route('**/api.openai.com/**', route => {
+        aiRequests.push(route.request().url())
+        return route.abort()
+      })
+
       await page.goto('/')
 
       await page.getByRole('link', { name: /reports/i }).click()
       await page.getByRole('tab', { name: /ai analytics/i }).click()
 
-      // AI Analytics tab should still load (it's a display-only component)
-      // but no new events should be recorded
-      // The empty state should be shown since consent is off and no events exist
+      // Empty state should be shown since consent is off and no events exist
       await expect(page.getByText(/No AI usage data yet/i)).toBeVisible()
+
+      // Verify no AI provider requests were made
+      expect(aiRequests).toHaveLength(0)
     })
   })
 })

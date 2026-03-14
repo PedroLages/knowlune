@@ -314,7 +314,7 @@ export default function Reports() {
                         <div key={i} className="flex items-center gap-3 text-sm">
                           <div
                             className={`w-2 h-2 rounded-full ${
-                              action.type === 'lesson_complete' ? 'bg-green-500' : 'bg-blue-500'
+                              action.type === 'lesson_complete' ? 'bg-success' : 'bg-brand'
                             }`}
                           />
                           <span className="text-muted-foreground">

@@ -121,7 +121,7 @@ export function AISummaryPanel({ transcriptSrc }: AISummaryPanelProps) {
 
       setState('completed')
 
-      trackAIUsage('summary', { durationMs: Date.now() - startTime })
+      trackAIUsage('summary', { durationMs: Date.now() - startTime }).catch(() => {})
     } catch (error) {
       // Don't show error if request was cancelled
       if (error instanceof Error && error.name === 'AbortError') {
@@ -133,7 +133,7 @@ export function AISummaryPanel({ transcriptSrc }: AISummaryPanelProps) {
         status: 'error',
         durationMs: Date.now() - startTime,
         metadata: { error: error instanceof Error ? error.message : 'Unknown error' },
-      })
+      }).catch(() => {})
 
       if (error instanceof Error) {
         setErrorMessage(error.message)

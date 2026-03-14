@@ -3,6 +3,7 @@ import { isFeatureEnabled } from '@/lib/aiConfiguration'
 import type { AIFeatureType, AIUsageEvent } from '@/data/types'
 
 /** All trackable AI features (order matches dashboard display) */
+/** AI features shown on the dashboard (excludes auto_analysis which is backend-only) */
 export const AI_FEATURES: readonly AIFeatureType[] = [
   'summary',
   'qa',
@@ -18,6 +19,7 @@ export const AI_FEATURE_LABELS: Record<AIFeatureType, string> = {
   learning_path: 'Learning Paths Created',
   note_organization: 'Notes Organized',
   knowledge_gaps: 'Gaps Detected',
+  auto_analysis: 'Auto-Analyses Run',
 }
 
 export type TrendDirection = 'up' | 'down' | 'stable'
@@ -75,12 +77,15 @@ export async function trackAIUsage(
 /**
  * Returns the start of the current and previous period as ISO strings.
  */
-function getPeriodBounds(period: TimePeriod): {
+function getPeriodBounds(
+  period: TimePeriod,
+  referenceDate?: Date
+): {
   currentStart: string
   previousStart: string
   previousEnd: string
 } {
-  const now = new Date()
+  const now = referenceDate ?? new Date()
   let currentStart: Date
   let previousStart: Date
   let previousEnd: Date

@@ -100,11 +100,11 @@ async function runAutoAnalysis(course: ImportedCourse): Promise<void> {
       description: tags.length > 0 ? `Added ${tags.length} topic tags` : 'No additional tags found',
     })
 
-    trackAIUsage('summary', {
+    trackAIUsage('auto_analysis', {
       courseId: course.id,
       durationMs: Date.now() - startTime,
-      metadata: { type: 'auto_analysis', tagsGenerated: tags.length },
-    })
+      metadata: { tagsGenerated: tags.length },
+    }).catch(() => {})
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
     const isTimeout = error instanceof Error && error.name === 'AbortError'
@@ -120,12 +120,12 @@ async function runAutoAnalysis(course: ImportedCourse): Promise<void> {
       },
     })
 
-    trackAIUsage('summary', {
+    trackAIUsage('auto_analysis', {
       courseId: course.id,
       status: 'error',
       durationMs: Date.now() - startTime,
-      metadata: { type: 'auto_analysis', error: message },
-    })
+      metadata: { error: message },
+    }).catch(() => {})
   } finally {
     clearTimeout(timeoutId)
   }
@@ -219,7 +219,8 @@ function parseTagsFromResponse(provider: string, data: unknown): string[] {
       .map(t => t.trim().toLowerCase())
       .filter(Boolean)
       .slice(0, 5)
-  } catch {
+  } catch (error) {
+    console.warn('[AutoAnalysis] Failed to parse tags from response:', error)
     return []
   }
 }

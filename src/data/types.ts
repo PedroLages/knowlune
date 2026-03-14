@@ -276,6 +276,7 @@ export type AIFeatureType =
   | 'summary'
   | 'qa'
   | 'learning_path'
+  | 'auto_analysis'
   | 'note_organization'
   | 'knowledge_gaps'
 

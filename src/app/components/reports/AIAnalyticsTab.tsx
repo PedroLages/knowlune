@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Sparkles,
   TrendingUp,
@@ -19,7 +19,9 @@ import {
 } from '@/app/components/ui/chart'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts'
 import { Button } from '@/app/components/ui/button'
+import { Badge } from '@/app/components/ui/badge'
 import { Skeleton } from '@/app/components/ui/skeleton'
+import { cn } from '@/app/components/ui/utils'
 import { isAIAvailable } from '@/lib/aiConfiguration'
 import {
   getAIUsageStats,
@@ -44,6 +46,7 @@ const FEATURE_ICONS: Record<AIFeatureType, typeof Sparkles> = {
   learning_path: Route,
   note_organization: Tags,
   knowledge_gaps: Search,
+  auto_analysis: Sparkles,
 }
 
 const FEATURE_CHART_COLORS: Record<AIFeatureType, string> = {
@@ -52,6 +55,7 @@ const FEATURE_CHART_COLORS: Record<AIFeatureType, string> = {
   learning_path: 'var(--chart-3)',
   note_organization: 'var(--chart-4)',
   knowledge_gaps: 'var(--chart-5)',
+  auto_analysis: 'var(--chart-1)',
 }
 
 const TREND_CONFIG: Record<
@@ -63,16 +67,13 @@ const TREND_CONFIG: Record<
   stable: { icon: Minus, className: 'text-muted-foreground', label: 'Same as previous period' },
 }
 
-function buildChartConfig(): ChartConfig {
-  const config: ChartConfig = {}
-  for (const feature of AI_FEATURES) {
-    config[feature] = {
-      label: AI_FEATURE_LABELS[feature],
-      color: FEATURE_CHART_COLORS[feature],
-    }
-  }
-  return config
-}
+/** Static chart config — AI_FEATURES and FEATURE_CHART_COLORS are constants */
+const CHART_CONFIG: ChartConfig = Object.fromEntries(
+  AI_FEATURES.map(feature => [
+    feature,
+    { label: AI_FEATURE_LABELS[feature], color: FEATURE_CHART_COLORS[feature] },
+  ])
+)
 
 /**
  * Groups timeline events into date buckets for chart rendering.
@@ -85,13 +86,10 @@ function buildChartData(events: AIUsageEvent[], period: TimePeriod) {
     let key: string
 
     if (period === 'daily') {
-      // Group by hour
       key = `${date.getHours()}:00`
     } else if (period === 'weekly') {
-      // Group by day name
       key = date.toLocaleDateString('en-US', { weekday: 'short' })
     } else {
-      // Group by date
       key = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     }
 
@@ -113,6 +111,7 @@ export function AIAnalyticsTab() {
   const [stats, setStats] = useState<AIUsageStats | null>(null)
   const [chartData, setChartData] = useState<Record<string, unknown>[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const aiAvailable = isAIAvailable()
 
   useEffect(() => {
@@ -120,6 +119,7 @@ export function AIAnalyticsTab() {
 
     async function loadData() {
       setIsLoading(true)
+      setError(null)
       try {
         const [usageStats, timeline] = await Promise.all([
           getAIUsageStats(period),
@@ -130,9 +130,12 @@ export function AIAnalyticsTab() {
           setChartData(buildChartData(timeline, period))
           setIsLoading(false)
         }
-      } catch (error) {
-        console.error('[AIAnalytics] Failed to load stats:', error)
-        if (!ignore) setIsLoading(false)
+      } catch (err) {
+        console.error('[AIAnalytics] Failed to load stats:', err)
+        if (!ignore) {
+          setError('Failed to load analytics data.')
+          setIsLoading(false)
+        }
       }
     }
 
@@ -142,6 +145,12 @@ export function AIAnalyticsTab() {
       ignore = true
     }
   }, [period])
+
+  // Period status announcement for screen readers (single region instead of 5)
+  const periodStatusMessage = useMemo(() => {
+    if (!stats) return ''
+    return `${PERIOD_LABELS[period]} stats loaded`
+  }, [stats, period])
 
   if (isLoading) {
     return (
@@ -170,10 +179,34 @@ export function AIAnalyticsTab() {
     )
   }
 
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <AlertCircle className="size-10 text-destructive mb-3" aria-hidden="true" />
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <Button variant="outline" onClick={() => setPeriod(p => p)}>
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
+    )
+  }
+
   const hasData = stats && stats.totalEvents > 0
 
   return (
-    <div className="space-y-6">
+    <section aria-labelledby="ai-analytics-heading" className="space-y-6">
+      {/* Screen reader announcement for period changes */}
+      <span className="sr-only" aria-live="polite" aria-atomic="true">
+        {periodStatusMessage}
+      </span>
+
+      {/* Section heading for screen reader navigation */}
+      <h2 id="ai-analytics-heading" className="sr-only">
+        AI Feature Analytics
+      </h2>
+
       {/* Period toggle */}
       <div role="group" aria-label="Time period selection" className="flex gap-1">
         {(Object.keys(PERIOD_LABELS) as TimePeriod[]).map(p => (
@@ -181,6 +214,7 @@ export function AIAnalyticsTab() {
             key={p}
             variant={period === p ? 'default' : 'outline'}
             size="sm"
+            className="min-h-[44px]"
             onClick={() => setPeriod(p)}
             aria-pressed={period === p}
           >
@@ -196,11 +230,12 @@ export function AIAnalyticsTab() {
           const trendConfig = TREND_CONFIG[feature.trend]
           const TrendIcon = trendConfig.icon
           const isKnowledgeGaps = feature.featureType === 'knowledge_gaps'
+          const showComingSoon = isKnowledgeGaps && feature.count === 0
 
           return (
             <Card
               key={feature.featureType}
-              className={isKnowledgeGaps ? 'opacity-60' : ''}
+              className={cn(showComingSoon && 'opacity-60')}
               data-testid={`ai-stat-${feature.featureType}`}
             >
               <CardContent className="p-5 min-h-[7rem]">
@@ -208,21 +243,27 @@ export function AIAnalyticsTab() {
                   <div className="rounded-xl bg-brand-soft p-2">
                     <Icon className="size-4 text-brand" aria-hidden="true" />
                   </div>
-                  {!isKnowledgeGaps && (
+                  {!showComingSoon && (
                     <div
-                      className={`flex items-center gap-1 text-xs ${trendConfig.className}`}
-                      aria-label={trendConfig.label}
+                      className={cn('flex items-center gap-1 text-xs', trendConfig.className)}
+                      aria-label={`${trendConfig.label}, was ${feature.previousCount}`}
                     >
                       <TrendIcon className="size-3" aria-hidden="true" />
-                      <span>{feature.previousCount}</span>
+                      <span aria-hidden="true">{feature.previousCount}</span>
                     </div>
                   )}
                 </div>
-                <p className="text-2xl font-bold tabular-nums" aria-live="polite">
-                  {isKnowledgeGaps ? '—' : feature.count}
+                <p className="text-2xl font-bold tabular-nums">
+                  {showComingSoon ? '—' : feature.count}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {isKnowledgeGaps ? 'Coming soon' : AI_FEATURE_LABELS[feature.featureType]}
+                  {showComingSoon ? (
+                    <Badge variant="secondary" className="text-xs">
+                      Coming soon
+                    </Badge>
+                  ) : (
+                    AI_FEATURE_LABELS[feature.featureType]
+                  )}
                 </p>
               </CardContent>
             </Card>
@@ -238,7 +279,7 @@ export function AIAnalyticsTab() {
           </CardHeader>
           <CardContent>
             <div role="img" aria-label="AI feature usage over time">
-              <ChartContainer config={buildChartConfig()} className="h-[300px] w-full">
+              <ChartContainer config={CHART_CONFIG} className="h-[300px] w-full">
                 <AreaChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis
@@ -277,6 +318,6 @@ export function AIAnalyticsTab() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </section>
   )
 }

@@ -123,7 +123,7 @@ export function QAChatPanel() {
       trackAIUsage('qa', {
         durationMs: Date.now() - startTime,
         metadata: { retrievedNotesCount: retrievedNotes.length },
-      })
+      }).catch(() => {})
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate answer'
       setError(errorMessage)
@@ -131,7 +131,7 @@ export function QAChatPanel() {
         status: 'error',
         durationMs: Date.now() - startTime,
         metadata: { error: errorMessage },
-      })
+      }).catch(() => {})
     } finally {
       setGenerating(false)
     }

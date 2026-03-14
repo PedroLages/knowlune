@@ -91,14 +91,14 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       trackAIUsage('learning_path', {
         durationMs: Date.now() - startTime,
         metadata: { courseCount: result.length },
-      })
+      }).catch(() => {})
     } catch (error) {
       console.error('[LearningPathStore] Failed to generate path:', error)
       trackAIUsage('learning_path', {
         status: 'error',
         durationMs: Date.now() - startTime,
         metadata: { error: error instanceof Error ? error.message : 'Unknown error' },
-      })
+      }).catch(() => {})
       set({
         isGenerating: false,
         error: error instanceof Error ? error.message : 'Failed to generate learning path',
