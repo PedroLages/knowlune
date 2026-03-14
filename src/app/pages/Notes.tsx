@@ -130,6 +130,24 @@ export function Notes() {
     loadNotes()
   }, [loadNotes])
 
+  // Scroll to hash anchor (e.g., #note-note-1 from citation clicks)
+  useEffect(() => {
+    const hash = window.location.hash
+    if (hash && notes.length > 0) {
+      // Wait for DOM to render, then scroll
+      const targetId = hash.slice(1) // Remove '#'
+      setTimeout(() => {
+        const element = document.getElementById(targetId)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          // Expand the note for better visibility
+          const noteId = targetId.replace('note-', '')
+          setExpandedNoteId(noteId)
+        }
+      }, 100)
+    }
+  }, [notes])
+
   // Load available tags when notes change
   useEffect(() => {
     let ignore = false
@@ -283,6 +301,8 @@ export function Notes() {
     return (
       <div
         key={item.note.id}
+        id={`note-${item.note.id}`}
+        data-note-id={item.note.id}
         data-testid="note-card"
         className="bg-card rounded-[24px] border p-4 transition-shadow hover:shadow-sm"
       >

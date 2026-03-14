@@ -319,13 +319,16 @@ test.describe('Chat Q&A Interface', () => {
 
   test('Error handling - No relevant notes', async ({ page }) => {
     await mockAIConfigured(page)
-    await mockEmbeddingWorker(page, { emptyResults: true })
+    await mockEmbeddingWorker(page)
     await mockLLMClient(page)
 
     await page.goto('/')
-    // Seed minimal data so AC9 doesn't block input
-    // Vector search will still return no results (mocked to return empty)
-    await seedTestData(page)
+    // Seed minimal data WITHOUT embeddings so vector search returns empty
+    // (AC9 requires notes to exist so input isn't disabled)
+    await seedIndexedDBStore(page, 'ElearningDB', 'notes', [mockNote1, mockNote2])
+    await seedIndexedDBStore(page, 'ElearningDB', 'importedVideos', [mockVideo1, mockVideo2])
+    await seedIndexedDBStore(page, 'ElearningDB', 'importedCourses', [mockCourse])
+    // Do NOT seed embeddings - this makes vector search return empty results
     await page.goto('/notes/chat')
 
     const input = page.getByPlaceholder(/Ask a question/)
@@ -382,6 +385,7 @@ test.describe('Chat Q&A Interface', () => {
   test('AC7: Privacy - no metadata in API payload', async ({ page }) => {
     await mockAIConfigured(page)
     await mockEmbeddingWorker(page) // Need this for RAG to work
+    // Do NOT mock LLM client - let it hit the network so we can intercept
     await page.goto('/')
     await seedTestData(page)
     await page.goto('/notes/chat')
