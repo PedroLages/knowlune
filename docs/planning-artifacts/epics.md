@@ -2876,6 +2876,38 @@ So that I can access premium features while keeping my core learning experience 
 **Then** I see a clear error message suggesting I sign in instead
 **And** no duplicate account is created
 
+**Dependencies:** None (foundation story)
+
+**Technical Details:**
+- Auth provider: Supabase Auth (see Architecture ADR)
+- Files: `src/lib/auth/supabase.ts`, `src/stores/useAuthStore.ts`
+- Session management handled by Supabase SDK (localStorage)
+- Password requirements: minimum 8 characters (Supabase default)
+
+**Error State ACs:**
+
+**Given** I attempt to sign up or sign in
+**When** the network is unavailable or the auth provider is unreachable
+**Then** I see an error message: "Unable to connect. Please check your internet connection and try again."
+**And** a "Retry" button is available
+**And** all core features remain accessible
+
+**Given** I am using magic link sign-in
+**When** I click a link that has expired (>10 minutes) or was already used
+**Then** I see an error message: "This link has expired or was already used. Please request a new one."
+**And** a "Send New Link" button is available
+
+**Loading State ACs:**
+
+**Given** I submit any authentication form
+**When** the request is in progress
+**Then** the submit button shows a loading spinner and is disabled
+**And** form inputs are disabled to prevent duplicate submissions
+
+**Given** the app launches and I was previously signed in
+**When** the session is being restored
+**Then** a brief loading indicator appears (not blocking — core features load immediately)
+
 ### Story 19.2: Stripe Subscription Integration
 
 As a learner,
@@ -2911,6 +2943,33 @@ So that I can unlock AI-powered features and advanced learning tools.
 **When** the serverless function receives the event
 **Then** the entitlement record is updated with subscription status, plan ID, and expiry date
 **And** the entitlement is cached locally with a 7-day TTL for offline access
+
+**Dependencies:** Story 19.1 (authentication — Supabase JWT required for checkout session creation)
+
+**Technical Details:**
+- Checkout via Supabase Edge Function `create-checkout` (see Architecture ADR)
+- Webhook handler: `supabase/functions/stripe-webhook/index.ts`
+- Events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
+- Test strategy: Stripe test mode API keys + `stripe trigger` CLI for webhook simulation
+
+**Error State ACs:**
+
+**Given** I click "Upgrade to Premium"
+**When** the checkout session creation fails (network error, server error)
+**Then** I see an error message: "Unable to start checkout. Please try again."
+**And** I remain on the current page with no charge applied
+
+**Given** I complete payment on Stripe Checkout
+**When** the payment fails (card declined, insufficient funds, 3DS abandonment)
+**Then** Stripe displays the error on the Checkout page
+**And** I can retry with a different payment method or return to LevelUp
+**And** no subscription is created
+
+**Loading State ACs:**
+
+**Given** I click "Upgrade to Premium"
+**When** the checkout session is being created
+**Then** the button shows a loading spinner and is disabled
 
 ### Story 19.3: Entitlement System & Offline Caching
 
@@ -2954,6 +3013,34 @@ So that premium features work even when I'm offline or have intermittent connect
 **And** an upgrade CTA is shown in its place
 **And** no error or broken UI state occurs
 
+**Dependencies:** Story 19.1 (auth — user identity for entitlement lookup), Story 19.2 (Stripe — subscription creates entitlement)
+
+**Technical Details:**
+- Entitlement hook: `src/lib/entitlement/isPremium.ts` → `useIsPremium()`
+- Returns: `{ isPremium: boolean, loading: boolean, tier: 'free' | 'trial' | 'premium' }`
+- Dexie table: `entitlements` (schema v3, see Architecture)
+- Cache TTL: 7 days (configurable via `ENTITLEMENT_CACHE_TTL_DAYS` constant)
+- Test strategy: use `FIXED_DATE` pattern for cache expiry tests
+
+**Error State ACs:**
+
+**Given** the app launches and I am online
+**When** the entitlement validation endpoint is unreachable (network error, server 500)
+**Then** the existing cached entitlement is honored (if cache exists and is <7 days old)
+**And** no error is shown to the user (silent retry on next launch)
+
+**Given** the app launches and I am online
+**When** the entitlement validation returns an explicit denial (subscription cancelled/expired)
+**Then** premium features are disabled immediately
+**And** the cached entitlement is cleared
+**And** I see a message with an option to resubscribe
+
+**Loading State ACs:**
+
+**Given** the app launches with a stale entitlement cache
+**When** re-validation is in progress
+**Then** premium features show a brief skeleton/loading state (not blocked — core features load immediately)
+
 ### Story 19.4: Subscription Management
 
 As a learner,
@@ -2987,6 +3074,32 @@ So that I can update my payment method, cancel, or resubscribe without leaving t
 **When** I click "Upgrade to Premium"
 **Then** I am directed to Stripe Checkout to create a new subscription
 **And** the flow is identical to a first-time subscription
+
+**Dependencies:** Story 19.1 (auth), Story 19.2 (Stripe — Customer Portal), Story 19.3 (entitlement — subscription status display)
+
+**Technical Details:**
+- Subscription data sourced from entitlement cache (Dexie) + Supabase Edge Function for fresh data
+- "Manage Billing" → Edge Function `create-portal` → Stripe Customer Portal redirect
+- Feature comparison: reference canonical tier matrix from open-core strategy document
+
+**Error State ACs:**
+
+**Given** I click "Manage Billing" or "Cancel Subscription"
+**When** the Stripe Portal session creation fails
+**Then** I see an error message: "Unable to open billing management. Please try again."
+**And** a "Retry" button is available
+
+**Given** I navigate to Settings > Subscription
+**When** the subscription data cannot be loaded (offline, server error)
+**Then** I see the last cached subscription status with a note: "Last updated [date]"
+**And** "Manage Billing" and "Cancel" buttons are disabled with tooltip: "Requires internet connection"
+
+**Loading State ACs:**
+
+**Given** I navigate to Settings > Subscription
+**When** subscription data is being fetched
+**Then** a skeleton loader appears for plan details
+**And** action buttons are disabled until data loads
 
 ### Story 19.5: Premium Feature Gating & Upgrade CTAs
 
@@ -3027,6 +3140,33 @@ So that I can make an informed decision about subscribing based on real feature 
 **Then** premium components are not lazy-loaded or bundled for free-tier users
 **And** the app bundle size is not increased by unused premium code
 
+**Dependencies:** Story 19.1 (auth — unauthenticated upgrade flow), Story 19.2 (Stripe — checkout redirect), Story 19.3 (entitlement — `useIsPremium()` hook)
+
+**Technical Details:**
+- Gating scope (this story): AI Summary button, AI Q&A panel, Spaced Review entry point (3 features)
+- Remaining premium features gated in follow-up stories
+- CTA component: `src/app/components/figma/UpgradeCTA.tsx`
+- Uses `useIsPremium()` to conditionally render premium vs CTA
+
+**Error State ACs:**
+
+**Given** I click an upgrade CTA
+**When** the Stripe Checkout session creation fails
+**Then** I see an inline error near the CTA: "Unable to start upgrade. Please try again."
+**And** the CTA remains clickable for retry
+
+**Given** I click an upgrade CTA while unauthenticated
+**When** the auth flow fails or is cancelled
+**Then** I return to the page with the CTA still visible
+**And** no upgrade is initiated
+
+**AC for premium users:**
+
+**Given** I have an active premium subscription
+**When** I view a page with premium features
+**Then** the premium features render fully (no CTA, no lock icon)
+**And** no upgrade prompts are shown
+
 ### Story 19.6: Premium Code Boundary & Build Separation
 
 As a developer,
@@ -3059,6 +3199,195 @@ So that the open-source AGPL distribution never includes proprietary premium cod
 **When** the core-only build is tested
 **Then** all tests pass without `src/premium/` present
 **And** no import errors or missing module warnings occur
+
+**Dependencies:** Story 19.3 (entitlement — `useIsPremium()` used by premium gate)
+
+**Technical Details:**
+- Core build: `npm run build` (uses `vite.config.ts`)
+- Premium build: `npm run build:premium` (uses `vite.config.premium.ts`)
+- Import guard: Vite plugin that errors on `@/premium/*` imports during core build
+- License header: `// SPDX-License-Identifier: LicenseRef-LevelUp-Premium` + full proprietary notice
+- CI: core-only build verified in CI pipeline (premium directory excluded)
+
+**Testing Requirements:**
+- CI runs `npm run build` (core-only) and verifies no errors
+- CI runs `npm run build:premium` and verifies premium components are included
+- ESLint rule or Vite plugin test: verify that importing from `@/premium/` in a core file produces a build error
+
+### Story 19.7: Legal Pages & Compliance
+
+As a learner,
+I want to review the Privacy Policy and Terms of Service before creating an account,
+So that I understand how my data is handled and what I agree to when using premium features.
+
+**Acceptance Criteria:**
+
+**Given** I am on the sign-up page or Stripe Checkout
+**When** I look for legal information
+**Then** I see links to the Privacy Policy and Terms of Service
+
+**Given** I navigate to `/privacy` or `/terms`
+**When** the page loads
+**Then** I see the full legal document with a table of contents, effective date, and clear section headings
+**And** the page is accessible without logging in
+
+**Given** the Privacy Policy or Terms of Service has been updated
+**When** I visit the app after the effective date changes
+**Then** I see a notification that the legal documents have been updated
+**And** the notification includes a link to view the changes
+
+**Dependencies:** Story 19.1 (auth — sign-up form links to legal pages), Story 19.2 (Stripe — Checkout page links)
+
+**Technical Details:**
+- Routes: `/privacy` and `/terms` as public routes (no auth required)
+- Content format: MDX files in `src/app/pages/legal/` (rendered at build time)
+- Effective date tracked via frontmatter `effectiveDate` field
+- Change notification: compare `effectiveDate` against `localStorage.getItem('legal-acknowledged-date')`
+- Stripe disclosure: reference https://stripe.com/docs/checkout/compliance
+
+**Additional ACs:**
+
+**Given** I am not logged in
+**When** I navigate to `/privacy` or `/terms`
+**Then** I can view the full legal page without being redirected to login
+
+**Given** a material change has been made to the Privacy Policy or Terms
+**When** I visit the app for the first time after the change
+**Then** an in-app banner appears at the top of the page with a link to the updated document
+**And** the banner has a "Dismiss" button that updates `localStorage` with the new effective date
+
+### Story 19.8: Free Trial Flow
+
+As a learner,
+I want to try premium features for free before committing to a subscription,
+So that I can evaluate whether the premium tier is worth paying for.
+
+**Acceptance Criteria:**
+
+**Given** I am authenticated and have never used a free trial
+**When** I click "Start Free Trial" from an upgrade CTA or Settings
+**Then** I am taken to Stripe Checkout with a 14-day trial configured
+**And** a payment method is collected but not charged until the trial ends
+
+**Given** I have an active trial
+**When** I use the app
+**Then** I see a trial indicator in the header showing days remaining
+**And** all premium features are fully available
+
+**Given** my trial has 3 days or fewer remaining
+**When** I open the app
+**Then** I see a reminder banner encouraging me to subscribe
+**And** the reminder can be dismissed (shows again the next calendar day)
+
+**Given** my trial expires
+**When** the trial period ends
+**Then** Stripe automatically charges the payment method on file
+**And** if the charge succeeds, my subscription converts to premium seamlessly
+
+**Given** I want to cancel my trial
+**When** I navigate to Settings > Subscription and click "Cancel Trial"
+**Then** the trial ends and no charge is applied
+**And** premium features revert to showing upgrade CTAs
+
+**Dependencies:** Story 19.1 (auth), Story 19.2 (Stripe — trial checkout), Story 19.3 (entitlement — trial tier), Story 19.4 (subscription management — cancel trial)
+
+**Technical Details:**
+- Trial configured via Stripe Checkout `subscription_data.trial_period_days: 14`
+- Trial status is an entitlement tier: `tier: 'trial'` (distinct from `'premium'`)
+- Trial indicator component: `src/app/components/figma/TrialIndicator.tsx` (header bar, right-aligned before notification bell)
+- Reminder state: `localStorage.getItem('trial-reminder-dismissed-date')` — show max once per calendar day
+- Test strategy: Stripe test clocks for trial lifecycle; `FIXED_DATE` pattern for countdown UI tests
+- One trial per Stripe customer: enforced by checking `customer.subscriptions` for prior trial history before creating checkout session
+
+**Error State ACs:**
+
+**Given** I click "Start Free Trial"
+**When** the checkout session creation fails
+**Then** I see an error message: "Unable to start trial. Please try again."
+**And** no payment method is collected
+
+**Given** my trial has expired
+**When** Stripe attempts the first charge and payment fails
+**Then** premium features are disabled
+**And** I see a message: "Your payment could not be processed. Please update your payment method to continue using premium features."
+**And** a "Update Payment Method" button opens Stripe Customer Portal
+
+**Trial uniqueness AC:**
+
+**Given** I have previously used a free trial (on this Stripe customer record)
+**When** I click "Start Free Trial" or "Upgrade to Premium"
+**Then** I am taken directly to a paid checkout (no trial option)
+**And** the UI reflects "Subscribe" not "Start Free Trial"
+
+**Grace period AC:**
+
+**Given** my trial end date has passed
+**When** Stripe is processing the first charge (up to 1 hour after trial end)
+**Then** premium features remain active during this grace period
+**And** if the charge succeeds, premium continues seamlessly
+**And** if the charge fails, premium is disabled after the grace period
+
+### Story 19.9: GDPR Compliance & Account Lifecycle
+
+As a learner,
+I want to delete my account and all associated data,
+So that I can exercise my right to erasure and control my personal information.
+
+**Acceptance Criteria:**
+
+**Given** I navigate to Settings > Account
+**When** I click "Delete My Account"
+**Then** I see a confirmation dialog explaining the consequences (data deletion, subscription cancellation)
+**And** I must type "DELETE" to confirm
+
+**Given** I confirm account deletion
+**When** the deletion is processed
+**Then** my Stripe subscription is cancelled, my Stripe customer record is deleted, and my Supabase auth account is removed
+**And** my local entitlement cache is cleared
+**And** I am signed out and see a confirmation message
+
+**Given** I navigate to Settings > Account > My Data
+**When** the page loads
+**Then** I see a summary of my account data (email, subscription history, account creation date)
+**And** I can export this data alongside my learning data export
+
+**Dependencies:** Story 19.1 (auth — account identity), Story 19.2 (Stripe — customer deletion), Story 19.3 (entitlement — cache clearing)
+
+**Technical Details:**
+- Deletion endpoint: Supabase Edge Function `delete-account`
+- Sequence: (1) Cancel Stripe subscription, (2) Delete Stripe customer, (3) Delete Supabase auth user, (4) Clear local entitlement cache
+- Stripe retention: `stripe.customers.del()` marks customer as deleted; Stripe retains records per legal obligations (7+ years for tax). The AC reflects "deleted from LevelUp's perspective" not "deleted from Stripe's servers"
+- Re-authentication: require password re-entry (or recent OAuth) before deletion (session must be <5 minutes old)
+- Grace period: 7-day soft-delete — account marked for deletion, actual deletion after 7 days. User can cancel during grace period by signing in.
+- Data export: extends existing export (FR85) with account-specific data (email, subscription history)
+
+**Error State ACs:**
+
+**Given** I confirm account deletion
+**When** the Stripe customer deletion fails (open invoice, API error)
+**Then** the deletion is aborted — no partial state
+**And** I see an error message: "Account deletion failed. Please resolve any open invoices and try again."
+**And** my account and subscription remain active
+
+**Given** I confirm account deletion
+**When** the auth provider deletion fails after Stripe succeeds
+**Then** the system retries auth deletion up to 3 times
+**And** if all retries fail, the account is flagged for manual admin review
+**And** I see a message: "Account deletion is being processed. You will receive confirmation within 48 hours."
+
+**Loading State ACs:**
+
+**Given** I confirm account deletion by typing "DELETE"
+**When** the deletion is in progress
+**Then** a progress indicator shows the current step: "Cancelling subscription..." → "Removing account data..." → "Complete"
+**And** all actions are disabled during processing
+
+**Re-authentication AC:**
+
+**Given** I click "Delete My Account"
+**When** my session is older than 5 minutes
+**Then** I am prompted to re-enter my password (or re-authenticate via OAuth)
+**Before** the deletion confirmation dialog appears
 
 ---
 
