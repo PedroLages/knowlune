@@ -72,7 +72,7 @@ export function LessonPlayer() {
   const isMobile = useIsMobile()
 
   // Session tracking
-  const { startSession, updateLastActivity, pauseSession, resumeSession, endSession, heartbeat } =
+  const { startSession, updateLastActivity, pauseSession, resumeSession, endSession, heartbeat, recordInteraction } =
     useSessionStore()
 
   const course = allCourses.find(c => c.id === courseId)
@@ -390,6 +390,7 @@ export function LessonPlayer() {
 
   const handleVideoSeek = (timestamp: number) => {
     setSeekToTime(timestamp)
+    recordInteraction()
   }
 
   const handleSeekComplete = () => {
@@ -401,6 +402,7 @@ export function LessonPlayer() {
       await addBookmark(courseId, lessonId, timestamp)
       setBookmarks(await getLessonBookmarks(courseId, lessonId))
       toast(`Bookmarked at ${formatBookmarkTimestamp(timestamp)}`, { duration: 2000 })
+      recordInteraction()
     }
   }
 
@@ -412,6 +414,7 @@ export function LessonPlayer() {
 
   const toggleComplete = () => {
     if (!courseId || !lessonId) return
+    recordInteraction()
     if (completed) {
       markLessonIncomplete(courseId, lessonId)
       setCompleted(false)
@@ -438,6 +441,7 @@ export function LessonPlayer() {
       saveNote(courseId, lessonId, value, tags).catch(() => {
         toast.error('Failed to save note')
       })
+      recordInteraction()
     }
   }
 
@@ -570,7 +574,10 @@ export function LessonPlayer() {
               bookmarks={bookmarks}
               onBookmarkSeek={handleVideoSeek}
               captions={videoResource.metadata?.captions}
-              onPlayStateChange={setIsVideoPlaying}
+              onPlayStateChange={(playing: boolean) => {
+                setIsVideoPlaying(playing)
+                recordInteraction()
+              }}
               theaterMode={isTheaterMode}
               onTheaterModeToggle={handleTheaterModeToggle}
             />
