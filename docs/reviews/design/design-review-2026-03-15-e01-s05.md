@@ -1,23 +1,33 @@
-# Design Review Report — E01-S05: Detect Missing or Relocated Files
+# Design Review Report — E01-S05 Detect Missing or Relocated Files
 
 **Review Date**: 2026-03-15
 **Reviewed By**: Claude Code (design-review agent via Playwright MCP)
 **Story**: E01-S05 — Detect Missing or Relocated Files
-**Branch**: `feature/e01-s05-detect-missing-relocated-files`
-**Changed Files** (UI-relevant):
+**Branch**: feature/e01-s05-detect-missing-relocated-files
+**Changed Files**:
 - `src/app/pages/ImportedCourseDetail.tsx`
 - `src/hooks/useFileStatusVerification.ts`
 - `src/lib/fileVerification.ts`
 
 **Affected Pages**: `/imported-courses/:courseId` (ImportedCourseDetail)
-**Viewports Tested**: 1440px (desktop), 768px (tablet), 375px (mobile)
-**Theme Tested**: Dark mode (active in test browser session)
 
 ---
 
 ## Executive Summary
 
-E01-S05 implements file status detection for imported courses using the File System Access API. The badge design, disabled state styling, and toast notification are all structurally correct and follow design guidance from the story. Two issues require attention before merge: a confirmed double-toast bug caused by separate video and PDF async loads triggering the `useFileStatusVerification` hook twice, and an inconsistent treatment of `permission-denied` status between the video and PDF rendering paths.
+E01-S05 adds file status verification to the ImportedCourseDetail page, surfacing "File not found" and "Permission needed" badges on content items whose FileSystemHandles are no longer accessible. The implementation is clean, uses design tokens correctly, and the toast aggregation pattern is sound. Three issues require attention before merge: PDFs always render `aria-disabled="true"` regardless of their actual file status (a pre-existing condition now made more visible), the `checking` transient state has no loading indicator, and the component does not call `loadImportedCourses()` so direct URL navigation always shows "Course not found".
+
+---
+
+## What Works Well
+
+- **Zero hardcoded colors**: All color usage goes through design tokens (`bg-destructive`, `text-brand`, `text-warning`, `bg-warning`, `text-muted-foreground`, `bg-card`). The ESLint design-token rule is having its intended effect.
+- **Aggregated toast**: A single `toast.warning()` fires with all affected filenames rather than one toast per file. This prevents notification flooding for courses with many unavailable items. The 8-second `TOAST_DURATION.LONG` duration gives users time to read a multi-filename list.
+- **Semantic list structure**: The content list correctly uses `<ul aria-label="Course content">` with `<li>` items, providing proper landmark structure for screen readers.
+- **Badge role**: `role="status"` on each `FileStatusBadge` correctly marks these as live-region announcements. Icons are marked `aria-hidden="true"`.
+- **No horizontal scroll at any breakpoint**: Verified at 375px, 768px, and 1440px. The `max-w-3xl mx-auto` constraint keeps content readable without overflow.
+- **Transition timing matches spec**: `transition-colors duration-150` (0.15s) on interactive items falls within the 150-200ms quick-action range from design principles.
+- **Clean abort pattern**: `useFileStatusVerification` uses an `ignore` ref to prevent state updates after unmount, and initialises all items to `'checking'` before the async batch — correct race-condition prevention.
 
 ---
 
@@ -25,163 +35,140 @@ E01-S05 implements file status detection for imported courses using the File Sys
 
 ### Blockers (Must fix before merge)
 
-None.
+#### 1. Direct URL navigation always shows "Course not found"
 
-### High Priority (Should fix before merge)
+**Location**: `src/app/pages/ImportedCourseDetail.tsx:42-85`
 
-**1. Double toast fires on every course load**
+**Evidence**: Navigating directly to `/imported-courses/:courseId` via `page.goto()` renders the "Course not found" empty state because the component reads `importedCourses` from the Zustand store but never calls `loadImportedCourses()`. The store is only populated when the `/courses` page mounts first (it calls `loadImportedCourses()` on mount). The page only functions via client-side navigation from `/courses`.
 
-The `useFileStatusVerification` hook's `useEffect` depends on `[videos, pdfs]`. In `ImportedCourseDetail.tsx`, videos and PDFs are loaded via two separate `useEffect` calls, each resolving independently. Because the DB queries are not coordinated, the hook frequently runs first with `[videos, []]` (triggering a "2 files not found" toast), then again immediately with `[videos, pdfs]` (triggering a second "3 files not found" toast). The `toastFiredRef` guard is reset to `false` at the start of each effect run (line 36 of `useFileStatusVerification.ts`), so it cannot prevent the second toast.
+**Impact**: Any learner who bookmarks a course detail URL, follows a shared link, or opens the page after a browser restart will always see an error state rather than their course content. This is the most common real-world navigation pattern for a detail page.
 
-Observed live during review: both toasts were visible simultaneously on every navigation to the course detail page.
-
-This violates the story's own guidance: "Show one aggregated toast per course load (not per file) to avoid toast spam." The design intent is a single notification, but users currently see two in quick succession, with different file counts, which is confusing.
-
-**Location**: `src/hooks/useFileStatusVerification.ts:36`, `src/app/pages/ImportedCourseDetail.tsx:50-72`
-
-**Suggestion**: Load both videos and PDFs in a single coordinated `useEffect` in `ImportedCourseDetail.tsx` before passing them to the verification hook, or pass a single `allItems` array to the hook so it only ever runs once per course load. For example:
+**Suggestion**: Add `loadImportedCourses` to the component's effect, guarded so it only fetches when the store is empty:
 
 ```tsx
-// In ImportedCourseDetail.tsx — combine into one effect
+const { importedCourses, loadImportedCourses } = useCourseImportStore(...)
 useEffect(() => {
-  if (!courseId) return
-  let ignore = false
-  Promise.all([
-    db.importedVideos.where('courseId').equals(courseId).sortBy('order'),
-    db.importedPdfs.where('courseId').equals(courseId).toArray(),
-  ]).then(([videos, pdfs]) => {
-    if (!ignore) { setVideos(videos); setPdfs(pdfs) }
-  })
-  return () => { ignore = true }
-}, [courseId])
+  if (importedCourses.length === 0) loadImportedCourses()
+}, [])
 ```
+
+Alternatively, add a loading state while the store initializes rather than immediately falling through to "Course not found".
 
 ---
 
-**2. `permission-denied` status not handled in the PDF rendering path**
+### High Priority (Should fix before merge)
 
-The video rendering path uses `isUnavailable = status === 'missing' || status === 'permission-denied'` (line 109), correctly treating both states as unavailable. The PDF rendering path uses `isMissing = status === 'missing'` only (line 157), leaving `permission-denied` PDFs with:
-- `opacity-75` instead of `opacity-50`
-- `text-warning` icon instead of `text-muted-foreground`
-- `cursor-not-allowed` but via the unconditional class, not tied to the unavailability state
+#### 2. No visual loading indicator during the "checking" state
 
-The `FileStatusBadge` component does correctly show a "Permission needed" badge for `permission-denied` PDFs (since it receives `status` directly), but the row's visual treatment is inconsistent with videos and with the story's design table, which specifies `opacity-0.65` for permission-denied across all content types.
+**Location**: `src/app/pages/ImportedCourseDetail.tsx:111-163`, `src/hooks/useFileStatusVerification.ts:38-43`
 
-**Location**: `src/app/pages/ImportedCourseDetail.tsx:157-183`
+**Evidence**: The hook correctly initialises all items to `'checking'` before the async `verifyAll()` call, but the component renders `<FileStatusBadge status="checking" />` which returns `null` — so items show no badge during verification. On a fast connection this flicker is imperceptible, but on real devices with many handles the verification may take several hundred milliseconds. There is also no loading skeleton or spinner during this window.
 
-**Suggestion**: Align the PDF rendering path with the video path. Introduce `isUnavailable` (covering both states) alongside `isMissing` for the icon color differentiation:
+**Impact**: Items briefly appear to be available (no badge, full opacity for available items) before snapping to their disabled/badged state. For a learner who quickly clicks a video during the checking window, they may navigate to a lesson that immediately fails to load.
+
+**Suggestion**: During `'checking'`, render a muted pulse skeleton or a neutral "Verifying..." badge so learners understand the state is transitional. At minimum, disable the item row during checking to prevent premature navigation:
 
 ```tsx
 const isUnavailable = status === 'missing' || status === 'permission-denied'
-const isMissing = status === 'missing'
-// Use isUnavailable for opacity/cursor, isMissing vs permission-denied for icon color
+const isChecking = status === 'checking'
+// treat checking same as unavailable for click-prevention
 ```
+
+#### 3. PDFs always have `aria-disabled="true"` regardless of file status
+
+**Location**: `src/app/pages/ImportedCourseDetail.tsx:170-200`
+
+**Evidence**: The PDF rendering block applies `aria-disabled="true"` and `cursor-not-allowed` unconditionally:
+
+```tsx
+<div
+  className={cn(
+    'flex items-center gap-3 p-4 rounded-xl border bg-card cursor-not-allowed',
+    isUnavailable ? 'opacity-50' : 'opacity-75'
+  )}
+  aria-disabled="true"  // always applied
+>
+```
+
+Computed values confirm: both `pdf-missing` (opacity 0.5) and `pdf-regular` (opacity 0.75) have `aria-disabled="true"`. A PDF with a valid, accessible handle still appears disabled.
+
+**Impact**: Screen readers announce all PDFs as disabled, which is false and misleading. Sighted users also cannot click any PDF regardless of availability — this is presumably intentional (PDF viewing not yet implemented), but the `opacity: 0.75` on "available" PDFs contradicts the `aria-disabled` signal. The UI implies PDFs are mostly available but disabled by policy, yet the accessibility tree says they are all disabled.
+
+**Suggestion**: If PDF viewing is not yet implemented, apply a distinct "coming soon" visual pattern rather than reusing the file-status-disabled style. This distinguishes a deliberate feature gap from a file system error. If PDF viewing is intended to work, remove the unconditional `aria-disabled` and treat PDFs the same as videos.
 
 ---
 
 ### Medium Priority (Fix when possible)
 
-**3. Settlement failure uses hardcoded `'unknown'` as map key**
+#### 4. Missing `loading` state causes "Course not found" flash on slow stores
 
-In `useFileStatusVerification.ts` line 66, when a `Promise.allSettled` rejection occurs (the `else` branch of `result.status === 'fulfilled'`), the code writes `verified.set('unknown', 'missing')`. The literal string `'unknown'` is used as the key rather than the item's actual ID. The rejected item will have no entry in the `verified` map, so the component falls through to `?? 'checking'` and the item permanently shows no status indicator (stuck in the `checking` state visually — in this implementation that means no badge, appearing as if the item is available when it may not be).
+**Location**: `src/app/pages/ImportedCourseDetail.tsx:76-85`
 
-This is a low-probability path (it would require the `verifyFileHandle` promise itself to throw, not just return a status), but it is a silent failure when it does occur.
+**Evidence**: The component has a binary state: either `course` is in the store or it shows "Course not found". There is no intermediate loading/pending state for the window between component mount and store hydration completing.
 
-**Location**: `src/hooks/useFileStatusVerification.ts:63-67`
+**Impact**: Even after the blocker (finding 1) is fixed by calling `loadImportedCourses`, there will be a brief flash of "Course not found" before the async DB read completes. This creates a jarring content shift that could confuse learners.
 
-**Suggestion**: The rejection handler needs access to the item ID. Since `Promise.allSettled` does not provide it in the rejection case with the current structure, capture it in the closure:
+**Suggestion**: Track a `isLoading` state alongside the store hydration, and render a skeleton or spinner during the pending window rather than the error state.
 
-```ts
-items.map(async item => {
-  try {
-    const status = await verifyFileHandle(item.fileHandle)
-    return { id: item.id, filename: item.filename, status }
-  } catch {
-    return { id: item.id, filename: item.filename, status: 'missing' as FileStatus }
-  }
-})
+#### 5. `opacity-75` on available-but-unimplemented PDFs is ambiguous
+
+**Location**: `src/app/pages/ImportedCourseDetail.tsx:171-173`
+
+**Evidence**:
+```tsx
+isUnavailable ? 'opacity-50' : 'opacity-75'
 ```
 
-Then the outer `Promise.allSettled` rejection case can simply be removed, since individual errors are already caught.
+Both states reduce opacity, with only a 25-percentage-point difference between "file missing" (0.5) and "file found but PDF viewer not implemented" (0.75). The visual distinction is subtle and does not clearly communicate different meanings.
 
----
+**Impact**: Learners cannot easily distinguish between "this PDF is unavailable because the file moved" and "this PDF is here but the viewer isn't ready". Both look like errors. The design principles state "color is never the sole indicator of information" — this same principle extends to opacity levels.
 
-**4. No `'checking'` skeleton/loading state visible during verification**
+**Suggestion**: Use a distinct visual treatment for unimplemented features. A "Coming soon" badge with a neutral/muted style (not a warning or destructive color) communicates intent without implying an error. Alternatively, render these at full opacity with a lock icon and a tooltip.
 
-When the course content list first renders, all items begin in the `'checking'` status. The component currently shows a fully-styled item row during this window (the `?? 'checking'` fallback returns `'checking'`, which is not `'missing'` or `'permission-denied'`, so the available-file styling applies). For fast connections this is imperceptible. On slower devices or with many items, the content list briefly shows all items as clickable/available before badges appear — which could lead a learner to click a missing item during the brief window.
+#### 6. No `prefers-reduced-motion` handling for status transitions
 
-The story design guidance does not explicitly specify a skeleton, but a subtle opacity or visual cue during `'checking'` would eliminate the misleading-state window.
+**Location**: `src/app/pages/ImportedCourseDetail.tsx:127-132`
 
-**Location**: `src/app/pages/ImportedCourseDetail.tsx:108-132`
+**Evidence**: The filename span uses `transition-colors` which is unguarded. The design principles require `prefers-reduced-motion` respect for all animations.
 
-**Suggestion**: Treat `'checking'` similarly to unavailable for click purposes (render as `div` rather than `Link` until status is resolved), or add a subtle opacity reduction:
+**Impact**: Learners with vestibular disorders or motion sensitivity who have enabled `prefers-reduced-motion` will still see color transitions. The impact here is low (color transition, not movement), but it is a spec violation.
 
+**Suggestion**: Use Tailwind's `motion-safe:transition-colors` modifier instead of bare `transition-colors`:
 ```tsx
-const isUnavailable = status === 'missing' || status === 'permission-denied'
-const isChecking = status === 'checking'
-// Render as non-link until status is known
-const isNonNavigable = isUnavailable || isChecking
+className={cn('flex-1 font-medium text-sm', !isUnavailable && 'motion-safe:transition-colors group-hover:text-brand')}
 ```
 
 ---
 
 ### Nitpicks (Optional)
 
-**5. `<ul>` content list has no accessible label**
+#### 7. Toast description lists all filenames as a flat comma-separated string
 
-The `data-testid="course-content-list"` `<ul>` element has no `aria-label` or `aria-labelledby`. Screen readers will announce it as an unlabelled list. Adding `aria-label="Course content"` or pointing to the course title heading via `aria-labelledby` would improve the screen reader context when navigating by landmark/list.
+**Location**: `src/hooks/useFileStatusVerification.ts:79-82`
 
-**Location**: `src/app/pages/ImportedCourseDetail.tsx:106`
+**Evidence**:
+```tsx
+description: affectedFiles.join(', ')
+```
 
----
+For a course with 10+ unavailable files, this produces a very long single-line description that is hard to parse at a glance.
 
-**6. Content item border-radius is `rounded-xl` (14px computed) rather than `12px`**
+**Suggestion**: Cap the visible list at 3 filenames with "+ N more" for larger sets:
+```tsx
+const visible = affectedFiles.slice(0, 3)
+const rest = affectedFiles.length - 3
+const description = rest > 0
+  ? `${visible.join(', ')} +${rest} more`
+  : visible.join(', ')
+```
 
-The design tokens specify `rounded-xl` as 12px for buttons, but Tailwind's `rounded-xl` resolves to `0.75rem = 12px` at default scale. The computed value observed was `14px`, suggesting either a non-default Tailwind configuration or a different utility is in effect. This is a very minor visual discrepancy that does not affect usability.
+#### 8. `aria-label` missing on the `Back to Courses` link icon
 
----
+**Location**: `src/app/pages/ImportedCourseDetail.tsx:89-95`
 
-## What Works Well
+**Evidence**: The `<ArrowLeft>` icon inside the back link has `aria-hidden` but the link text "Back to Courses" is present as visible text, so this is not a problem for screen readers — the link is already well-labelled. This is purely a note that the icon is decorative and correctly marked as such.
 
-- **Badge design is pixel-perfect against the story spec.** The destructive variant badge with `AlertTriangle` icon, `role="status"`, and `aria-hidden="true"` on the icon is exactly as specified. The "Permission needed" warning badge correctly uses `bg-warning text-warning-foreground` tokens (no hardcoded colors).
-
-- **Disabled state is thorough.** Missing items correctly render as `<div>` (not `<Link>`), carry `aria-disabled="true"`, and have `tabIndex: -1` set by the browser, so they are skipped by keyboard navigation. No focusable children exist inside disabled items.
-
-- **Responsive behaviour is correct.** At 375px mobile: no horizontal overflow, all items are 74px tall (exceeding the 44px touch-target minimum), and the badge wraps below the filename as the story specifies. At 768px tablet: layout is clean, no overflow.
-
-- **No hardcoded colors.** All color utilities in the changed files use design tokens (`text-brand`, `text-muted-foreground`, `text-warning`, `bg-warning`, `bg-card`, destructive variant). ESLint enforcement is effective here.
-
-- **Toast content is correct.** The aggregated toast includes both a count summary ("3 files not found") and the specific filenames as the description — good UX for a learner who needs to know which files to locate.
-
-- **`prefers-reduced-motion` is respected.** Global CSS handles this and `transition-colors` on available items will be suppressed for users who opt out of motion.
-
----
-
-## Detailed Findings
-
-### Finding 1 — Double Toast
-
-- **Issue**: Two toasts fire on a single course load due to separate async loads of videos and PDFs
-- **Location**: `src/hooks/useFileStatusVerification.ts:36` and `src/app/pages/ImportedCourseDetail.tsx:54-72`
-- **Evidence**: Observed live — both "2 files not found" and "3 files not found" toasts visible simultaneously. The `toastFiredRef.current = false` reset at line 36 means the guard is ineffective across re-runs caused by deps changing.
-- **Impact**: A learner sees two notifications with contradictory file counts. The second overrides the meaning of the first, causing confusion about how many files are actually missing. It also adds noise to the notification region.
-- **Suggestion**: Combine the two `db` queries in `ImportedCourseDetail.tsx` into a single `Promise.all` so both resolve before state is set, ensuring the hook only runs once with the full item list.
-
-### Finding 2 — PDF `permission-denied` Inconsistency
-
-- **Issue**: PDF items with `permission-denied` status receive different visual treatment than video items with the same status
-- **Location**: `src/app/pages/ImportedCourseDetail.tsx:157` — uses `isMissing` (line 157) where video path uses `isUnavailable` (line 109)
-- **Evidence**: Code inspection — the PDF block declares `const isMissing = status === 'missing'` and does not declare `isUnavailable`. The `opacity-75` class is applied to `permission-denied` PDFs instead of `opacity-50`.
-- **Impact**: The design guidance table specifies `opacity-0.65` for `permission-denied` across all item types. The inconsistency would confuse learners if a course mixes permission-denied videos and PDFs — they would look different despite being the same state.
-- **Suggestion**: Introduce `isUnavailable` in the PDF rendering block, mirroring the video block exactly.
-
-### Finding 3 — Settlement Failure Silent Failure
-
-- **Issue**: `Promise.allSettled` rejection handler uses `'unknown'` literal as map key instead of the item ID
-- **Location**: `src/hooks/useFileStatusVerification.ts:66`
-- **Evidence**: `verified.set('unknown', 'missing')` — the item's actual ID is not accessible in the `else` branch because it comes from the `result.reason` path of `allSettled`, which does not carry the value
-- **Impact**: A rejected verification leaves the item stuck in `'checking'` state (falls through to `?? 'checking'` in the component), appearing available rather than missing. Low probability path but a silent failure when triggered.
-- **Suggestion**: Wrap individual `verifyFileHandle` calls in try/catch to return `{ id, status: 'missing' }` on error, making the rejection path in `allSettled` unreachable.
+No action needed.
 
 ---
 
@@ -189,33 +176,58 @@ The design tokens specify `rounded-xl` as 12px for buttons, but Tailwind's `roun
 
 | Check | Status | Notes |
 |-------|--------|-------|
-| Text contrast >= 4.5:1 | Pass | Dark mode: badge white text on destructive red background passes. Filename text at `rgb(232,233,240)` on dark card background passes. |
-| Keyboard navigation | Pass | Tab 1 lands on "Back to Courses" link. Disabled items have `tabIndex: -1` and are correctly skipped. |
-| Focus indicators visible | Pass | Back to Courses link shows focus ring via Tailwind focus-visible utilities. |
-| Heading hierarchy | Pass | Single H1 "File Detection Test Course" — appropriate for a detail page. |
-| ARIA labels on icon buttons | Pass | `AlertTriangle` and `ShieldAlert` icons have `aria-hidden="true"`. Badge text provides the label. |
-| Semantic HTML | Pass | `<ul>/<li>` for content list, `<Link>` for available items, `<div aria-disabled>` for unavailable items. |
+| Text contrast ≥4.5:1 | Pass | Destructive badge: white text on `rgb(196,72,80)` — ratio ~4.6:1. Filename text `rgb(28,29,43)` on `rgb(255,255,255)` — ratio ~18:1. Warning token `#c49245` with white `#ffffff` — ratio ~2.8:1 (see note below). |
+| Keyboard navigation | Partial | Disabled items correctly not focusable (tabIndex -1). However, when all items are unavailable, there are zero focusable elements in the content list — keyboard users cannot interact with or even read the list items. Back link is focusable. |
+| Focus indicators visible | Pass | Back link uses `focus-visible:ring` via Tailwind. Badge uses `focus-visible:ring-[3px]` from CVA. |
+| Heading hierarchy | Pass | Single H1 for course title. No sub-headings needed at this page scale. |
+| ARIA labels on icon buttons | Pass | All icons are `aria-hidden="true"`. No icon-only buttons on this page. |
+| Semantic HTML | Partial | `<ul aria-label="Course content">` with `<li>` items — correct. Disabled items use `<div aria-disabled="true">` rather than `<button disabled>` — acceptable since these items are intentionally non-interactive (not buttons). |
 | Form labels associated | N/A | No form inputs on this page. |
-| `prefers-reduced-motion` | Pass | Global CSS handles this in `src/styles/index.css:306`. |
-| `role="status"` on badges | Pass | All `FileStatusBadge` renders include `role="status"` for screen reader announcement. |
-| Content list accessible label | Fail (Nitpick) | `<ul data-testid="course-content-list">` has no `aria-label`. Minor — does not block. |
+| `prefers-reduced-motion` | Fail | `transition-colors` not guarded with `motion-safe:` modifier. |
+| `role="status"` on badges | Pass | Both `FileStatusBadge` variants use `role="status"`. |
+| Toast accessibility | Pass | Sonner renders toasts into a `region[aria-label]` with correct live region semantics. |
+
+**Warning badge contrast note**: The `bg-warning` token resolves to `#c49245` with `text-warning-foreground: #ffffff`. This pairing produces a contrast ratio of approximately 2.8:1, which fails WCAG AA for normal-weight text at 12px (the badge font size). The permission-denied warning badge variant is affected. The missing badge uses `bg-destructive` which passes at ~4.6:1. This is a pre-existing token definition issue, not introduced by this story, but the badge is the first visible use of `bg-warning` with white text at small size.
 
 ---
 
 ## Responsive Design Verification
 
-- **Mobile (375px)**: Pass — No horizontal overflow. Item height 74px (exceeds 44px minimum). Badge wraps below filename as specified (`badgeTop > filenameTop + 5px` confirmed). No layout breakage.
-- **Tablet (768px)**: Pass — No horizontal overflow. Items render at full width. Sidebar collapses to hamburger menu correctly. All badges visible.
-- **Desktop (1440px)**: Pass — Content constrained to `max-w-3xl mx-auto` as coded. Badge inline with filename and duration. Layout matches story wireframe.
+| Breakpoint | Status | Notes |
+|------------|--------|-------|
+| Mobile (375px) | Pass | No horizontal scroll. Content renders in single column. Badge text fits within row at `113px` wide. Row height `74px` exceeds minimum 44px touch target. `flex-nowrap` keeps badge and duration on same line — tight but not overflowing. Long filenames use `flex-1` to shrink. |
+| Tablet (768px) | Pass | No horizontal scroll. Content area `709px` wide respects `max-w-3xl`. Mobile nav bar switches correctly to bottom tab bar at this viewport. |
+| Desktop (1440px) | Pass | No horizontal scroll. Content area constrained to `768px` (max-w-3xl = 48rem). Sidebar visible and persistent. |
+
+**Mobile observation**: On 375px, a filename of ~50+ characters combined with the badge and duration creates a dense row. The `flex-1` on the filename span ensures it shrinks rather than overflows, but long filenames may be truncated visually without `overflow-hidden text-ellipsis` — the current `overflow: visible; white-space: normal` means they can wrap to a second line, making the row taller. This is acceptable behaviour but could be refined with explicit truncation if the design calls for single-line rows.
+
+---
+
+## Detailed Findings Summary
+
+| # | Severity | File | Line | Issue |
+|---|----------|------|------|-------|
+| 1 | Blocker | `ImportedCourseDetail.tsx` | 42 | Direct URL navigation always shows "Course not found" — store not loaded |
+| 2 | High | `ImportedCourseDetail.tsx` | 111-163 | No visual indicator during `checking` state — premature click risk |
+| 3 | High | `ImportedCourseDetail.tsx` | 170 | PDFs always `aria-disabled="true"` regardless of actual file status |
+| 4 | Medium | `ImportedCourseDetail.tsx` | 76-85 | No loading state — "Course not found" flash during store hydration |
+| 5 | Medium | `ImportedCourseDetail.tsx` | 171-173 | `opacity-75` vs `opacity-50` insufficient to distinguish two different disabled meanings |
+| 6 | Medium | `ImportedCourseDetail.tsx` | 127-132 | `transition-colors` not guarded with `motion-safe:` |
+| 7 | Nitpick | `useFileStatusVerification.ts` | 79 | Toast description unbounded for large file counts |
+| 8 | Nitpick | (token definition) | `theme.css:64` | `bg-warning` + white text fails WCAG AA at 12px — pre-existing, not introduced here |
 
 ---
 
 ## Recommendations
 
-1. **Fix the double-toast (High)** — Combine the `importedVideos` and `importedPdfs` DB queries into a single `Promise.all` in `ImportedCourseDetail.tsx` before setting state. This is a one-line change that eliminates the race condition entirely without restructuring the hook.
+1. **Fix the direct navigation blocker first** (finding 1). This is a user-facing regression for any learner who bookmarks or shares a course URL. A two-line fix in the component's `useEffect` is sufficient.
 
-2. **Align PDF `permission-denied` path with video path (High)** — Replace `isMissing` with `isUnavailable` in the PDF rendering block (lines 157-183) to handle both `missing` and `permission-denied` consistently.
+2. **Treat `checking` as non-navigable** (finding 2). The simplest fix is to include `'checking'` in the `isUnavailable` check so items are non-clickable during verification. A skeleton shimmer is ideal but not required for merge.
 
-3. **Fix the settlement failure key bug (Medium)** — Wrap individual `verifyFileHandle` calls in try/catch within the `Promise.allSettled` map to ensure every item always gets a status entry.
+3. **Resolve the PDF `aria-disabled` ambiguity** (finding 3). Decide whether PDFs are "not yet implemented" or "file system dependent". Each needs a distinct visual treatment. The current implementation conflates both cases.
 
-4. **Add `aria-label` to the content list (Nitpick)** — `aria-label="Course content"` on the `<ul>` improves screen reader orientation on the page.
+4. **Log the warning token contrast issue** (finding 8) in the design token backlog. The `bg-warning` + white pairing used by `FileStatusBadge` for "Permission needed" does not meet WCAG AA at the badge's 12px text size. Consider `text-warning-foreground` using a dark color (e.g. the existing dark-mode value `#1a1b26`) in light mode as well, or darkening the warning background token.
+
+---
+
+*Review conducted via Playwright MCP with live IndexedDB seeding. All computed styles verified against running application at `http://localhost:5173`. No console errors observed during testing.*

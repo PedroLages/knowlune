@@ -1,53 +1,165 @@
-# Web Design Guidelines Review: E01-S05
+# Web Design Guidelines Review: E01-S05 — Detect Missing or Relocated Files
 
-## Summary
+**Review Date**: 2026-03-15
+**Reviewed By**: Claude Opus 4.6 (web design guidelines compliance)
+**Story**: E01-S05 "Detect Missing or Relocated Files"
+**Branch**: `feature/e01-s05-detect-missing-relocated-files`
 
-Story E01-S05 adds file status detection for imported course content, displaying badges when files are missing or need re-authorization. The implementation is well-structured with proper accessibility foundations (ARIA attributes, screen reader support, semantic HTML). Six findings identified: one HIGH related to missing visual feedback during the "checking" state, and five MEDIUM/LOW items covering opacity spec deviation, keyboard focus visibility, flex-wrap for narrow viewports, error handling in the hook, and the permission-denied interaction gap.
+## Executive Summary
+
+The implementation is solid overall, with good use of design tokens, proper ARIA attributes on badges, and well-structured semantic HTML. Two HIGH findings relate to the "checking" state lacking any visual indicator and the destructive badge using a hardcoded `text-white` instead of `text-destructive-foreground`. Several MEDIUM findings address missing screen reader announcements, touch target compliance, and a potential color contrast concern in dark mode. No blockers found.
+
+## What Works Well
+
+1. **Design token compliance**: Badge colors use `bg-destructive`, `bg-warning`, `text-warning-foreground` — proper token usage throughout. No hardcoded Tailwind color classes (e.g., `bg-red-500`) detected.
+2. **ARIA attributes**: `role="status"` on status badges enables live region semantics. `aria-hidden="true"` on decorative icons (Video, FileText, AlertTriangle, ShieldAlert). `aria-disabled="true"` on unavailable items. `aria-label="Course content"` on the content list.
+3. **Semantic HTML**: Uses `<ul>` / `<li>` for the content list. Uses `<Link>` for navigable items and `<div>` for disabled items (correct pattern — disabled items should not be links).
+4. **Progressive enhancement — error handling**: `verifyFileHandle()` catches exceptions and falls back to `'missing'`. `Promise.allSettled` ensures one failed handle does not block others. The `ignore` flag prevents state updates after unmount.
+5. **Toast aggregation**: Single toast for all affected files prevents notification flooding. Uses `TOAST_DURATION.LONG` (8s) for error-like notifications — exceeds WCAG 2.2.1 minimum of 3s.
+6. **Cleanup pattern**: Both the page component and the hook use `ignore` flags to prevent stale state updates — correct React async cleanup.
 
 ## Findings
 
-### HIGH: No visual indication during "checking" state
+### BLOCKER
 
-- **Confidence**: 90
-- **File**: `/Volumes/SSD/Dev/Apps/Elearningplatformwireframes/src/app/pages/ImportedCourseDetail.tsx:108`
-- **Description**: When `fileStatuses.get(video.id)` returns `'checking'` (the initial state before verification completes), the item renders as a fully clickable link with no loading indicator. The user could click a link to a lesson whose file is actually missing, leading to a confusing error downstream. The `FileStatusBadge` component returns `null` for `'checking'`, so there is zero visual feedback that verification is in progress.
-- **Recommendation**: Add a subtle loading indicator (e.g., a `Loader2` spinner icon or a pulsing dot) inside `FileStatusBadge` for the `'checking'` state. Alternatively, disable navigation until verification completes by rendering all items as non-interactive `div` elements during the checking phase.
+None.
 
-### MEDIUM: Permission-denied video items missing clickable re-permission interaction
+### HIGH
 
-- **Confidence**: 85
-- **File**: `/Volumes/SSD/Dev/Apps/Elearningplatformwireframes/src/app/pages/ImportedCourseDetail.tsx:109,136-141`
-- **Description**: The story design guidance specifies that "Permission denied" items should be "Clickable -- triggers re-permission prompt" with opacity 0.65. However, the implementation treats `permission-denied` identically to `missing` via `isUnavailable`, rendering both as a non-clickable `div` with `cursor-not-allowed` and `opacity-50`. This means users cannot re-authorize file access from the UI.
-- **Recommendation**: Separate the `permission-denied` case from `missing`. Render permission-denied items as a `<button>` (not a link or div) that calls `handle.requestPermission({ mode: 'read' })` on click. Use `opacity-65` (or the closest Tailwind equivalent, `opacity-[0.65]`) and a pointer cursor instead of `cursor-not-allowed`.
+**H1. "Checking" state has no visual indicator** (UX, progressive enhancement)
 
-### MEDIUM: No flex-wrap on content item rows for narrow viewports
+When `fileStatuses.get(video.id)` returns `'checking'` (the initial state while verification is in-flight), no badge or loading indicator is rendered. The `FileStatusBadge` component returns `null` for any status other than `'missing'` or `'permission-denied'`. Users see a brief flash where items appear fully functional before suddenly becoming disabled.
 
-- **Confidence**: 75
-- **File**: `/Volumes/SSD/Dev/Apps/Elearningplatformwireframes/src/app/pages/ImportedCourseDetail.tsx:138,146`
-- **Description**: The story's responsive design guidance states "Badge wraps below filename on very narrow viewports (flex-wrap)." The content item rows use `flex items-center gap-3` without `flex-wrap`, which means on very narrow screens the badge text and duration/page count will be squeezed or overflow rather than wrapping gracefully.
-- **Recommendation**: Add `flex-wrap` to the content row containers. Consider using `flex-wrap` on the inner content fragment's parent elements so the badge and metadata can wrap below the filename on screens narrower than ~360px.
+- **Location**: `src/app/pages/ImportedCourseDetail.tsx:18-40` (FileStatusBadge) and lines 112-113
+- **Impact**: Items are rendered as clickable links during the checking phase. A user could click a link to a file that is about to be marked as missing.
+- **Recommendation**: Add a "Checking..." skeleton state or a subtle spinner badge while status is `'checking'`. Alternatively, render items as non-interactive until verification completes.
 
-### MEDIUM: Promise.allSettled rejection branch loses item identity
+**H2. Destructive badge uses hardcoded `text-white` instead of `text-destructive-foreground`**
 
-- **Confidence**: 80
-- **File**: `/Volumes/SSD/Dev/Apps/Elearningplatformwireframes/src/hooks/useFileStatusVerification.ts:64-67`
-- **Description**: In the `Promise.allSettled` rejection handler, the code sets `verified.set('unknown', 'missing')`. This loses the association with the actual item ID, meaning: (1) the item that failed verification will not appear in the status map at all (still shows "checking" forever), and (2) if multiple items reject, they all overwrite the same `'unknown'` key. This is a progressive enhancement concern -- the UI would show a perpetually indeterminate state for those items.
-- **Recommendation**: Use `items[index]` to recover the item ID in the rejection branch. `Promise.allSettled` preserves ordering, so `results.forEach((result, index) => ...)` allows `items[index].id` as the fallback key.
+The Badge component's `destructive` variant in `badge.tsx:16` uses `text-white` instead of `text-destructive-foreground`. In dark mode, `--destructive-foreground` is `#fce8e9` (a warm tint) rather than pure white. While the visual difference is minimal, this bypasses the design token system and would not respond to future theme changes.
 
-### LOW: Missing focus-visible outline on unavailable (disabled) content items
+- **Location**: `src/app/components/ui/badge.tsx:16`
+- **Impact**: Low visual impact today, but violates the project's strict design token policy. The ESLint rule `design-tokens/no-hardcoded-colors` should flag this if it checks for `text-white`.
+- **Recommendation**: Replace `text-white` with `text-destructive-foreground` in the badge variant definition.
 
-- **Confidence**: 70
-- **File**: `/Volumes/SSD/Dev/Apps/Elearningplatformwireframes/src/app/pages/ImportedCourseDetail.tsx:137-141`
-- **Description**: Unavailable content items render as `<div aria-disabled="true">` which is not focusable via keyboard. While these items are intentionally non-interactive, screen reader users navigating by list items (`<li>`) may encounter these items without any indication they are disabled beyond the badge text. The `aria-disabled` on a `div` does not prevent focus or convey disabled state to all assistive technologies the way a native `<button disabled>` would.
-- **Recommendation**: This is acceptable for the current implementation since the `role="status"` on the badge provides the key information. For enhanced accessibility, consider adding `role="group"` and `aria-label="[filename] - file not found"` to the disabled container so screen readers announce the full context when navigating by list.
+### MEDIUM
 
-### LOW: Opacity-50 used for both missing videos and missing PDFs, deviating from design spec
+**M1. No `aria-live` region for status transitions** (Accessibility)
 
-- **Confidence**: 65
-- **File**: `/Volumes/SSD/Dev/Apps/Elearningplatformwireframes/src/app/pages/ImportedCourseDetail.tsx:138,162`
-- **Description**: The design guidance specifies opacity 0.5 for "Missing" state and opacity 0.65 for "Permission denied" state. The implementation uses `opacity-50` for missing (correct) but also uses `opacity-50` for missing videos via `isUnavailable` which groups both states. PDFs already had `opacity-75` as a baseline. The distinction between missing and permission-denied opacity is lost for video items.
-- **Recommendation**: When the permission-denied interaction is separated (see MEDIUM finding above), ensure video items with `permission-denied` use `opacity-[0.65]` per the design spec, while `missing` retains `opacity-50`.
+When file verification completes and items transition from available-looking to disabled with a "File not found" badge, screen reader users receive no announcement beyond the toast. The `role="status"` on individual badges creates implicit `aria-live="polite"` regions, but these are conditionally rendered (not in the DOM initially), so the transition from absent to present may not be reliably announced by all screen readers.
 
-## Verdict
+- **Location**: `src/app/pages/ImportedCourseDetail.tsx:21, 30`
+- **Impact**: Screen reader users may not notice that items they were about to interact with have become unavailable.
+- **Recommendation**: Wrap the badge area in a persistent container with `aria-live="polite"` so the status text is announced when it appears. Example: `<span aria-live="polite">{badge}</span>`.
 
-**PASS with recommendations** -- The implementation has solid accessibility foundations (ARIA attributes, `role="status"` badges, `aria-hidden` on decorative icons, `aria-disabled` on non-interactive items, semantic `<ul>`/`<li>` list structure, design token usage). The HIGH finding about the checking state is a UX gap but not a functional blocker since verification typically completes in milliseconds for local file handles. The two MEDIUM findings about permission-denied interaction and flex-wrap should be addressed before shipping to match the story's design specification. The Promise.allSettled bug (MEDIUM) should be fixed as it could cause permanent "checking" states for edge-case failures.
+**M2. Warning badge color contrast in light mode may be insufficient**
+
+The warning badge uses `bg-warning text-warning-foreground`. In light mode: `--warning: #c49245` (background) and `--warning-foreground: #ffffff` (text). The contrast ratio of white text on a golden background calculates to approximately 2.7:1, which fails WCAG AA for small text (requires 4.5:1).
+
+- **Location**: `src/app/pages/ImportedCourseDetail.tsx:30`, `src/styles/theme.css:64-65`
+- **Impact**: "Permission needed" badge text may be unreadable for users with low vision in light mode.
+- **Recommendation**: Verify with a contrast checker tool. If failing, darken `--warning` to approximately `#9a7530` or switch to `--warning-foreground: #1c1d2b` (dark text on gold) in light mode.
+
+**M3. Touch target size for disabled items**
+
+The disabled items use `p-4` (16px padding) on all sides, giving a total height that depends on content. With `text-sm` (14px) content plus padding, the item height is approximately 46px — likely meeting the 44x44px minimum. However, the badge itself (`px-2 py-0.5`, yielding ~24px height) is not independently tappable, which is fine since it is informational, not interactive. This is acceptable but worth verifying on actual mobile devices.
+
+- **Location**: `src/app/pages/ImportedCourseDetail.tsx:148, 173`
+- **Impact**: Low risk — the list items themselves meet the target size.
+- **Recommendation**: No action required; verify during manual QA.
+
+**M4. PDF items are always disabled with no explanation**
+
+All PDF items render with `aria-disabled="true"` and `cursor-not-allowed` regardless of file status (lines 171-199). Available PDFs get `opacity-75` while unavailable ones get `opacity-50`. There is no tooltip or text explaining why available PDFs cannot be opened.
+
+- **Location**: `src/app/pages/ImportedCourseDetail.tsx:170-201`
+- **Impact**: Users may not understand why they cannot open a PDF that shows no error badge. This is a UX clarity issue.
+- **Recommendation**: Add a tooltip or inline text like "PDF viewer coming soon" for available PDFs, or use a distinct visual treatment that communicates "not yet supported" vs "file missing."
+
+### LOW
+
+**L1. No `flex-wrap` on item content when viewport is narrow**
+
+The item content uses `flex items-center gap-3` without `flex-wrap`. On very narrow viewports (< 320px), the filename, badge, and duration/page-count could overflow or cause horizontal scrolling.
+
+- **Location**: `src/app/pages/ImportedCourseDetail.tsx:148, 156`
+- **Impact**: Edge case on extremely narrow screens.
+- **Recommendation**: Add `flex-wrap` or ensure filenames truncate with `truncate` (which adds `overflow-hidden text-ellipsis whitespace-nowrap`) on the filename span.
+
+**L2. Filename span lacks text truncation**
+
+Long filenames (e.g., "Lecture 12 - Advanced Topics in Machine Learning Part 2 - Final Version.mp4") will push badges and duration off-screen or cause layout overflow.
+
+- **Location**: `src/app/pages/ImportedCourseDetail.tsx:126-134, 188-190`
+- **Impact**: Layout breakage with long filenames.
+- **Recommendation**: Add `truncate` class to the filename `<span>` elements. Note: `flex-1` helps but does not guarantee truncation without `min-w-0` and `truncate`.
+
+**L3. Console warning on verification failure could be more structured**
+
+`console.warn('File handle verification failed:', error)` in `fileVerification.ts:27` is fine for development but provides no structured data for error monitoring.
+
+- **Location**: `src/lib/fileVerification.ts:27`
+- **Impact**: Negligible — development-only concern.
+- **Recommendation**: No action needed for current scope.
+
+**L4. Empty state message could be more helpful**
+
+"No content found in this course." does not suggest any action. For an imported course, this could mean the import failed partially.
+
+- **Location**: `src/app/pages/ImportedCourseDetail.tsx:204-208`
+- **Impact**: Minor UX clarity.
+- **Recommendation**: Consider "No content found. Try re-importing this course." with a link/action.
+
+## Accessibility Audit Summary
+
+| Criterion | Status | Notes |
+|-----------|--------|-------|
+| WCAG 2.1 AA Color Contrast | WARN | Warning badge light mode needs verification (M2) |
+| Keyboard Navigation | PASS | Links are focusable; disabled divs correctly have `aria-disabled` and are not in tab order |
+| Screen Reader Support | WARN | Status transitions may not be announced (M1) |
+| Focus Indicators | PASS | Global `*:focus-visible` style applies via `theme.css` |
+| ARIA Usage | PASS | `role="status"`, `aria-disabled`, `aria-hidden`, `aria-label` all correctly applied |
+| Touch Targets | PASS | List items meet 44x44px minimum (M3 — verify) |
+| Motion/Animation | PASS | No motion concerns — `transition-colors` is subtle |
+| Semantic HTML | PASS | `ul/li` structure, proper heading hierarchy |
+
+## Design Token Compliance
+
+| Element | Token Used | Correct? |
+|---------|-----------|----------|
+| Destructive badge bg | `bg-destructive` (via variant) | Yes |
+| Destructive badge text | `text-white` (hardcoded in badge.tsx) | No (H2) |
+| Warning badge bg | `bg-warning` | Yes |
+| Warning badge text | `text-warning-foreground` | Yes |
+| Icon color (available) | `text-brand` | Yes |
+| Icon color (unavailable) | `text-muted-foreground` | Yes |
+| Card background | `bg-card` | Yes |
+| Hover state | `hover:bg-accent` | Yes |
+| Muted text | `text-muted-foreground` | Yes |
+| Back link | `text-brand` | Yes |
+
+## Responsive Design
+
+| Viewport | Status | Notes |
+|----------|--------|-------|
+| Desktop (1024px+) | PASS | `max-w-3xl mx-auto` centers content cleanly |
+| Tablet (640-1023px) | PASS | Single column layout works well |
+| Mobile (< 640px) | WARN | Long filenames may overflow without truncation (L1, L2) |
+
+## Summary of Findings
+
+| Severity | Count | Key Issues |
+|----------|-------|------------|
+| BLOCKER | 0 | — |
+| HIGH | 2 | Missing "checking" state indicator; hardcoded `text-white` in badge |
+| MEDIUM | 4 | Screen reader announcements; warning contrast; touch targets; PDF disabled UX |
+| LOW | 4 | Text truncation; narrow viewport overflow; console warning; empty state |
+
+## Recommended Priority
+
+1. **H1** — Add loading/checking state (prevents users clicking links to missing files)
+2. **H2** — Fix `text-white` to `text-destructive-foreground` in badge variant
+3. **M2** — Verify warning badge contrast ratio with a tool; fix if failing
+4. **M1** — Add `aria-live` wrapper for status badge area
+5. **M4** — Add explanatory text for disabled-but-available PDFs
+6. **L2** — Add `truncate` + `min-w-0` to filename spans

@@ -2,69 +2,94 @@
 
 ### AC Coverage Summary
 
-**Acceptance Criteria Coverage:** 3/4 ACs tested (**75%**)
+**Acceptance Criteria Coverage:** 4/4 ACs tested (**100%**)
 
-**COVERAGE GATE:** BLOCKER (<80%)
-
----
+**COVERAGE GATE:** PASS (>=80%)
 
 ### AC Coverage Table
 
 | AC# | Description | Unit Test | E2E Test | Verdict |
 |-----|-------------|-----------|----------|---------|
-| 1 | System verifies FileSystemHandle accessibility on course load, non-blocking | `ImportedCourseDetail.test.tsx` — mocks hook, verifies rendering proceeds | `story-e01-s05.spec.ts:73` — verifies `course-content-list` visible + `file-status-*` present | Covered |
-| 2 | Missing files show "File not found" badge + toast within 2s | `ImportedCourseDetail.test.tsx:157` — badge text + no link | `story-e01-s05.spec.ts:97,125` — badge visible + toast within `timeout:2000` | Covered |
-| 3 | Available files functional, missing files show badge but remain in structure | `ImportedCourseDetail.test.tsx:150` — link href present for available; `ImportedCourseDetail.test.tsx:157` — no link for missing | `story-e01-s05.spec.ts:147` — items remain in DOM + `aria-disabled` + no links BUT only exercises all-missing scenario | **Partial** |
-| 4 | Badge removed when file restored on next course load | None | `story-e01-s05.spec.ts:179` — re-navigation triggers re-verification; cannot assert badge removal (test-comment acknowledges this) | **Partial** |
+| 1 | System verifies FileSystemHandle accessibility on course load (non-blocking) | `ImportedCourseDetail.test.tsx:125` (renders items with status indicators) | `story-e01-s05.spec.ts:73` (UI renders without blocking, file-status testids visible) | Covered |
+| 2 | Missing files display "File not found" badge + toast notification within 2 seconds | `ImportedCourseDetail.test.tsx:157` (badge present, no link) | `story-e01-s05.spec.ts:97` (badge visible), `story-e01-s05.spec.ts:125` (toast within 2000ms) | Covered |
+| 3 | Available files remain functional alongside missing files | `ImportedCourseDetail.test.tsx:186` (available link href correct, missing has no link, badge present) | `story-e01-s05.spec.ts:147` (all items visible, aria-disabled, no anchor tag on missing) | Covered |
+| 4 | Badge removed when file is recovered on next course load | `ImportedCourseDetail.test.tsx:200` (re-render with available status clears badge) | `story-e01-s05.spec.ts:180` (re-verify on return navigation, file-status indicators still present) | Partial |
 
-**Coverage**: 2/4 ACs fully covered | 0 gaps | 2 partial
+**Coverage**: 3/4 ACs fully covered | 0 gaps | 1 partial
 
 ---
 
 ### Test Quality Findings
 
-#### Blockers (coverage gate failure)
+#### Blockers (untested ACs)
 
-- **(confidence: 92)** AC3 partial — "available files remain functional alongside missing files" is the defining behaviour of this AC: a mixed-state course where some files are present and some are absent. Neither the E2E spec nor the unit tests exercise this scenario. Every E2E test seeds videos/PDFs **without** a `fileHandle` property, so `verifyFileHandle(null)` returns `'missing'` for all items unconditionally. The unit test at `src/app/pages/__tests__/ImportedCourseDetail.test.tsx:150` sets `v1` to `'available'` and asserts a link exists — this is the closest coverage — but no test simultaneously has one item `'available'` AND another `'missing'` and asserts that the available item is clickable while the missing item shows a badge. Suggested test in `src/app/pages/__tests__/ImportedCourseDetail.test.tsx`: `it('available items remain clickable when sibling items are missing', async () => { mockStatusMap.set('v1', 'available'); mockStatusMap.set('v2', 'missing'); renderDetail(); const v1 = await screen.findByTestId('course-content-item-video-v1'); expect(v1.querySelector('a')).toHaveAttribute('href', '/imported-courses/course-1/lessons/v1'); const v2 = await screen.findByTestId('course-content-item-video-v2'); expect(v2.querySelector('a')).toBeNull(); expect(await screen.findByTestId('file-not-found-badge-v2')).toBeInTheDocument(); })`.
+None. All four acceptance criteria have at least one test. Coverage gate passes.
 
-- **(confidence: 92)** AC4 partial — The recovery path ("badge removed when file restored") is explicitly marked as requiring manual testing in the E2E spec comment at line 21-23 and the test at `tests/e2e/story-e01-s05.spec.ts:196-200` only asserts that `file-status-*` indicators are present after re-navigation — it cannot and does not assert that a previously-missing badge is absent. There is no unit test that sets an item to `'missing'`, then changes it to `'available'` (simulating recovery), and asserts the badge disappears. The `useFileStatusVerification` hook's `useEffect` re-runs when `videos` or `pdfs` references change, so the recovery path is exercised by the hook — but it is untested. Suggested test in `src/app/pages/__tests__/ImportedCourseDetail.test.tsx`: start with `mockStatusMap.set('v1', 'missing')`, render, assert badge present, then use `rerender` or update mockStatusMap to `'available'`, re-render, and assert `queryByTestId('file-not-found-badge-v1')` returns `null`.
+---
 
 #### High Priority
 
-- **`tests/e2e/story-e01-s05.spec.ts:180-201` (confidence: 85)** — AC4 E2E test never asserts the badge is removed; it only asserts `file-status-video-1` is visible after re-navigation. The test comment at line 196 explicitly concedes this limitation. While the constraint is real (browser FileSystemHandle cannot be mocked in Playwright), the test currently does not add coverage beyond AC1 — re-verification firing is not meaningfully distinguishable from the initial load test. The AC4 E2E test should at minimum assert `file-not-found-badge-video-1` is still visible (confirming persistence), which it does not do, or the test should be retitled to reflect that it only validates re-verification triggers rather than recovery. Fix: either remove the redundant test and document the AC4 limitation explicitly in a test-coverage note, or assert the badge still exists (`await expect(page.getByTestId('file-not-found-badge-video-1')).toBeVisible()`) to make the re-verification path unambiguous.
+**`tests/e2e/story-e01-s05.spec.ts:179-202` (confidence: 82)**: AC4's E2E test does not verify badge removal on recovery. The test comment at line 197 explicitly acknowledges this: "With real handles, recovery would clear them (manual test required)." The test only confirms that `file-status-video-1` and `file-status-video-2` exist on second load — it does not assert the badge is absent when a handle becomes valid. The unit test at `ImportedCourseDetail.test.tsx:200` covers this path by simulating a status change from `missing` to `available` via `mockStatusMap`, which is sound. However, the E2E leg of AC4 is untestable with the current seeding approach (no real FileSystemHandle in test data), and the test as written provides no behavioral signal beyond "the page loaded again." The test comment documents this as intentional, but AC4's E2E coverage is effectively a structural assertion only.
 
-- **`src/hooks/useFileStatusVerification.ts` — no unit tests exist (confidence: 82)** — The hook at `/Volumes/SSD/Dev/Apps/Elearningplatformwireframes/src/hooks/useFileStatusVerification.ts` and the utility at `/Volumes/SSD/Dev/Apps/Elearningplatformwireframes/src/lib/fileVerification.ts` are new files with zero direct unit tests. `verifyFileHandle` covers three distinct branches: `handle === null/undefined` → `'missing'`; `queryPermission !== 'granted'` → `'permission-denied'`; `getFile()` throws → `'missing'`; success → `'available'`. None of these branches are directly tested. `verifyFileHandle` is a pure async function and is straightforwardly testable with mocked `FileSystemFileHandle` objects. Suggested location: `src/lib/__tests__/fileVerification.test.ts`. Key cases: null handle returns `'missing'`; denied permission returns `'permission-denied'`; `getFile` throwing returns `'missing'`; successful `getFile` returns `'available'`.
+Fix: Accept the constraint as documented — this is an honest representation of the browser API limitation. The unit test at line 200 provides the behavioral assertion. Add a comment in the E2E test explicitly stating that AC4 badge-removal behavior is fully covered by the unit test, so the gap is documented rather than silently missed.
 
-- **`src/hooks/useFileStatusVerification.ts:63-67` (confidence: 78)** — The `Promise.allSettled` rejection branch sets `verified.set('unknown', 'missing')` — the key `'unknown'` is a literal string, not the item's actual `id`. If a settlement ever rejects, the resulting status entry is keyed to the string `'unknown'` rather than the affected item's id, silently losing the association. There is no test that exercises a rejected promise from `verifyFileHandle`, so this bug path is untested. Suggested assertion: a test that causes `verifyFileHandle` to throw (via a mock that rejects) should verify that the affected item's `data-testid` shows a badge, not that a phantom `'unknown'` key appears.
+**`src/app/pages/__tests__/ImportedCourseDetail.test.tsx` (confidence: 78)**: The `useFileStatusVerification` hook — the central piece of AC1 and AC2 — has no dedicated unit tests. Its toast emission, `toastFiredRef` deduplication guard, `Promise.allSettled` rejected-branch handling, and cleanup `ignore` flag are all exercised only indirectly through `ImportedCourseDetail` with the hook mocked out entirely (`vi.mock('@/hooks/useFileStatusVerification')`). The mock at line 10 bypasses every behavior in `src/hooks/useFileStatusVerification.ts`. The `src/lib/__tests__/toastHelpers.test.ts` file tests general toast helpers but does not touch the file-verification toast.
+
+Fix: Add `src/hooks/__tests__/useFileStatusVerification.test.ts` with at minimum:
+- Verifies toast fires with correct count and filenames when items have null handles.
+- Verifies toast fires exactly once (not twice) when the hook re-renders due to dependency array change.
+- Verifies `ignore` flag prevents state update after unmount.
+- Verifies rejected `Promise.allSettled` branch maps item to `missing` status.
+
+**`src/lib/fileVerification.ts` has no unit tests (confidence: 90)**: The `verifyFileHandle` utility is the lowest-level function in this feature and handles three distinct branches: `null/undefined` handle returns `missing`; `queryPermission` returning non-`granted` returns `permission-denied`; `getFile()` throwing returns `missing` with `console.warn`. None of these paths have a dedicated unit test. The function is small but branchy — each branch is mockable with a simple `FileSystemFileHandle` stub.
+
+Fix: Add `src/lib/__tests__/fileVerification.test.ts` with:
+- `verifyFileHandle(null)` returns `'missing'`.
+- `verifyFileHandle(undefined)` returns `'missing'`.
+- Handle where `queryPermission` returns `'denied'` returns `'permission-denied'`.
+- Handle where `queryPermission` returns `'granted'` and `getFile()` resolves returns `'available'`.
+- Handle where `getFile()` throws returns `'missing'` and calls `console.warn`.
+
+---
 
 #### Medium
 
-- **`tests/e2e/story-e01-s05.spec.ts` — no `afterEach` cleanup (confidence: 72)** — The spec has a `beforeEach` that seeds `localStorage` but has no `afterEach` to clear the seeded IndexedDB data (imported courses, videos, PDFs). Other specs in the suite use `indexedDB.clearAll()` or equivalent patterns in `afterEach`. Without cleanup, test data from one run may persist and interfere when tests run more than once against the same browser context (e.g., in burn-in). Fix: add `test.afterEach(async ({ indexedDB }) => { await indexedDB.clearAll() })` or equivalent.
+**`tests/e2e/story-e01-s05.spec.ts:66-93` (confidence: 72)**: AC1 asserts non-blocking behavior via "course structure renders" (`course-content-list` visible), but the test only seeds videos and omits PDFs. This means `file-status-pdf-1` is never exercised in the AC1 test, and no assertion checks that verification completes asynchronously rather than synchronously. The assertion that `file-status-video-1` and `file-status-video-2` are visible is correct but does not distinguish between `checking` state (indicator rendered but verification not yet complete) and `available`/`missing` state. The `data-status` attribute on the span element exists in the implementation but is never asserted in any test.
 
-- **`tests/e2e/story-e01-s05.spec.ts:25-63` — inline test data instead of factory (confidence: 65)** — `TEST_VIDEOS` and `TEST_PDFS` are defined as inline literal arrays rather than using a factory. The `imported-course-factory.ts` factory is already imported and used for `TEST_COURSE`, but no equivalent video/PDF factories exist yet. This inconsistency leaves video/PDF test data without the realistic values and uniqueness guarantees a factory would provide. Note: no video/PDF factory currently exists in `tests/support/fixtures/factories/`, so this is a gap in the factory infrastructure rather than a test authoring choice. Medium severity because the hardcoded IDs (`'video-1'`, `'pdf-1'`) are deterministic and unlikely to collide in a single-context run.
+Fix: Add an assertion checking `data-status` attribute on `file-status-video-1` to confirm final status was applied (e.g., `expect(locator).toHaveAttribute('data-status', 'missing')`). Also seed PDFs in the AC1 test to ensure uniform coverage.
 
-- **`src/app/pages/__tests__/ImportedCourseDetail.test.tsx` — `permission-denied` state not unit-tested (confidence: 68)** — The `FileStatusBadge` component renders a distinct "Permission needed" badge when `status === 'permission-denied'` (see `src/app/pages/ImportedCourseDetail.tsx:27-38`). No unit test sets any item to `'permission-denied'` and asserts `data-testid="file-permission-badge-v1"` is rendered with the correct text. This is a distinct AC state described in the story design guidance. Suggested test: `it('permission-denied items show permission badge', async () => { mockStatusMap.set('v1', 'permission-denied'); renderDetail(); expect(await screen.findByTestId('file-permission-badge-v1')).toHaveTextContent(/permission needed/i); })`.
+**`tests/e2e/story-e01-s05.spec.ts` (confidence: 70)**: The `indexedDB` fixture auto-cleans seeded `importedCourses` records via `clearRecords()` (fixture teardown at `indexeddb-fixture.ts:158`). However, the `importedVideos` and `importedPdfs` stores seeded using `seedImportedVideos` / `seedImportedPdfs` (raw helpers from `indexeddb-seed.ts`) are NOT included in that auto-cleanup. These stores are seeded in four of the five tests and no `afterEach` clears them. Each test uses fixed IDs (`video-1`, `video-2`, `pdf-1`), so `store.put()` semantics mean collisions would not cause failures — but leftover records could affect future tests that read from these stores without seeding their own data.
+
+Fix: Add an `afterEach` block that calls `indexedDB.clearStore('importedVideos')` and `indexedDB.clearStore('importedPdfs')` to ensure clean state between tests.
+
+**`src/app/pages/__tests__/ImportedCourseDetail.test.tsx:213-221` (confidence: 65)**: The `permission-denied` unit test asserts that the badge appears and the link is absent, but the design spec at `1-5-detect-missing-or-relocated-files.md:94` states permission-denied items should be "Clickable — triggers re-permission prompt." The implementation at `ImportedCourseDetail.tsx:113` treats `permission-denied` identically to `missing` (both map to `isUnavailable = true`, both render as a non-clickable `div`). The test asserts this non-clickable behavior. While the code review already flagged this as a finding, the unit test actively confirms the incorrect behavior rather than the specified behavior. If the design intent is later corrected to make permission-denied items clickable, this test will need to be inverted.
+
+Fix: Either align the test with the design spec (assert that permission-denied items are clickable and trigger re-auth), or add a clear comment in the test noting the intentional deviation from the design spec so reviewers understand the test is documenting a known gap, not the AC-specified behavior.
+
+---
 
 #### Nits
 
-- **Nit** `tests/e2e/story-e01-s05.spec.ts:180` (confidence: 55): The test describe label "AC4: Re-verification on course reload" and the test name "should re-verify file status on each course load" overstate what is actually verified. The test confirms that status indicators render after a second navigation, not that re-verification occurred. A more accurate name would be "status indicators persist across navigations (recovery requires manual test)".
+**Nit `tests/e2e/story-e01-s05.spec.ts:34-53` (confidence: 55)**: `TEST_VIDEOS` and `TEST_PDFS` are defined as inline object literals rather than using the `createImportedCourse` factory pattern. While a video/PDF factory does not yet exist, the items include realistic values, so this is acceptable. Consider creating a factory to maintain consistency with the project pattern of using factories from `tests/support/fixtures/factories/` for all test data.
 
-- **Nit** `src/app/pages/__tests__/ImportedCourseDetail.test.tsx:113` (confidence: 50): `beforeEach` resets `mockStatusMap` to all `'available'` correctly, but the `storeState` reset on line 111 only resets `importedCourses`. If a future test modifies other `storeState` fields (e.g., `isImporting`), those changes would leak into subsequent tests. Consider spreading a `DEFAULT_STORE_STATE` constant in `beforeEach` rather than restoring individual fields.
+**Nit `tests/e2e/story-e01-s05.spec.ts:141` (confidence: 50)**: The toast locator uses the CSS attribute selector `[data-sonner-toast]`. This is a reasonable selector tied to the Sonner library's DOM output, but it is library-internal markup rather than a `data-testid`. If Sonner changes its DOM structure, this selector breaks silently. The selector is acceptable given Sonner does not expose a `data-testid` API, but the usage is worth noting as a fragility point.
+
+**Nit `src/app/pages/__tests__/ImportedCourseDetail.test.tsx:76-97` (confidence: 45)**: The `db` mock at line 80 stubs `importedVideos` and `importedPdfs` at the query-chain level (`where().equals().sortBy()`) rather than mocking the Dexie instance at the module boundary. This is functional but differs from the project's guidance to "mock at the Dexie.js layer." A module-level mock of the `db` export would be slightly more resilient to query API changes.
 
 ---
 
 ### Edge Cases to Consider
 
-- **`verifyFileHandle` with a stale handle after browser restart**: The real-world scenario where a handle was granted in a previous session but the browser cleared permissions is represented by `queryPermission` returning `'prompt'` (not `'denied'`). The current implementation treats anything that is not `'granted'` as `'permission-denied'`. A test should confirm `'prompt'` results in `'permission-denied'` rather than falling through to `getFile()`.
+- **`verifyFileHandle` with a revoked handle mid-verification**: The implementation's `catch` block handles `getFile()` throwing, but there is no test for a handle where `queryPermission` itself throws (e.g., a corrupted handle object). Adding a test for this in `fileVerification.test.ts` would cover the `console.warn` path fully.
 
-- **Empty course (no videos, no PDFs)**: `useFileStatusVerification` returns early on line 33 when `items.length === 0`. There is no test that loads a course with zero content items and verifies that no toast fires and no badges appear. The unit test `renders content list container` at line 180 of `ImportedCourseDetail.test.tsx` renders with content, not without.
+- **Single-file course (one video, zero PDFs)**: No test exercises the singular form of the toast message. `useFileStatusVerification` uses `count === 1 ? 'file' : 'files'` pluralization. The E2E tests always have 2+ missing files; a single-file course with one missing item would emit "1 file unavailable" — this pluralization branch is untested.
 
-- **Single missing file vs multiple missing files toast copy**: The toast message uses `count === 1 ? 'file' : 'files'` (see `src/hooks/useFileStatusVerification.ts:76`). No test verifies the singular form — all E2E tests seed two videos plus one PDF (all missing), so the plural branch is always exercised.
+- **Course with zero videos and zero PDFs (empty course)**: `ImportedCourseDetail.tsx:204` renders "No content found in this course." The unit test file does not include a test for this empty state, and the E2E suite omits it. This is a non-AC edge case but a real user-visible state.
 
-- **PDF `permission-denied` state**: The PDF rendering path in `ImportedCourseDetail.tsx:157` checks `isMissing = status === 'missing'` and does not handle `permission-denied` for the opacity class. A `permission-denied` PDF would render at `opacity-75` (the "not missing" branch) rather than `opacity-50`. No test catches this inconsistency between video and PDF unavailability handling.
+- **Toast deduplication on React strict mode double-invoke**: `useFileStatusVerification` uses `toastFiredRef.current` as a deduplication guard. In React StrictMode, effects run twice in development. The `toastFiredRef.current = false` reset at the start of the effect means a second synchronous invocation would fire the toast again before the first `verifyAll()` promise settles. No test covers this StrictMode behavior.
 
-- **Toast deduplication across rapid navigations**: `toastFiredRef` resets to `false` on each `useEffect` invocation. If a user navigates away and back quickly, two toasts could fire. The `ignore` flag prevents double `setStatusMap` calls, but `toastFiredRef.current = false` at line 37 runs synchronously before the async `verifyAll()` completes, so a rapid re-mount would reset the ref and allow a second toast. No test exercises this race.
+- **`Promise.allSettled` rejected branch**: `useFileStatusVerification.ts:67-69` handles the case where a `Promise.allSettled` result has `status === 'rejected'`. This branch falls back to `item.id` from the parallel `items` array. There is no unit test confirming this fallback works correctly when the async item mapping rejects.
 
 ---
 
-ACs: 2 covered / 4 total (2 partial) | Findings: 10 | Blockers: 2 | High: 3 | Medium: 3 | Nits: 2
+ACs: 4 covered / 4 total | Findings: 9 | Blockers: 0 | High: 3 | Medium: 3 | Nits: 3

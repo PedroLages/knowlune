@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router'
-import { ArrowLeft, Video, FileText, AlertTriangle, ShieldAlert } from 'lucide-react'
+import { ArrowLeft, Video, FileText, AlertTriangle, ShieldAlert, RefreshCw } from 'lucide-react'
 import { db } from '@/db/schema'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useFileStatusVerification } from '@/hooks/useFileStatusVerification'
@@ -47,6 +47,7 @@ export function ImportedCourseDetail() {
 
   const [videos, setVideos] = useState<ImportedVideo[]>([])
   const [pdfs, setPdfs] = useState<ImportedPdf[]>([])
+  const [loadError, setLoadError] = useState(false)
 
   useEffect(() => {
     if (!courseId) return
@@ -64,6 +65,7 @@ export function ImportedCourseDetail() {
       })
       .catch(err => {
         console.error('Failed to load course content:', err)
+        if (!ignore) setLoadError(true)
       })
 
     return () => {
@@ -102,6 +104,25 @@ export function ImportedCourseDetail() {
         {course.videoCount === 1 ? 'video' : 'videos'}, {course.pdfCount}{' '}
         {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
       </p>
+
+      {loadError && (
+        <div
+          data-testid="course-load-error"
+          role="alert"
+          className="flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive mb-4"
+        >
+          <AlertTriangle className="size-5 shrink-0" aria-hidden="true" />
+          <span>Failed to load course content.</span>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="ml-auto inline-flex items-center gap-1.5 text-xs font-medium hover:underline"
+          >
+            <RefreshCw className="size-3" aria-hidden="true" />
+            Reload
+          </button>
+        </div>
+      )}
 
       <ul
         data-testid="course-content-list"
@@ -145,7 +166,7 @@ export function ImportedCourseDetail() {
             <li key={video.id} data-testid={`course-content-item-video-${video.id}`}>
               {isUnavailable ? (
                 <div
-                  className="flex items-center gap-3 p-4 rounded-xl border bg-card opacity-50 cursor-not-allowed"
+                  className="flex flex-wrap items-center gap-3 p-4 rounded-xl border bg-card opacity-50 cursor-not-allowed"
                   aria-disabled="true"
                 >
                   {content}
@@ -153,7 +174,7 @@ export function ImportedCourseDetail() {
               ) : (
                 <Link
                   to={`/imported-courses/${courseId}/lessons/${video.id}`}
-                  className="flex items-center gap-3 p-4 rounded-xl border bg-card hover:bg-accent transition-colors group"
+                  className="flex flex-wrap items-center gap-3 p-4 rounded-xl border bg-card hover:bg-accent transition-colors group"
                 >
                   {content}
                 </Link>
@@ -170,10 +191,10 @@ export function ImportedCourseDetail() {
             <li key={pdf.id} data-testid={`course-content-item-pdf-${pdf.id}`}>
               <div
                 className={cn(
-                  'flex items-center gap-3 p-4 rounded-xl border bg-card cursor-not-allowed',
-                  isUnavailable ? 'opacity-50' : 'opacity-75'
+                  'flex flex-wrap items-center gap-3 p-4 rounded-xl border bg-card',
+                  isUnavailable ? 'opacity-50 cursor-not-allowed' : 'opacity-75'
                 )}
-                aria-disabled="true"
+                aria-disabled={isUnavailable ? 'true' : undefined}
               >
                 <FileText
                   data-testid="content-type-icon"
@@ -190,7 +211,17 @@ export function ImportedCourseDetail() {
                 >
                   {pdf.filename}
                 </span>
-                <FileStatusBadge status={status} itemId={pdf.id} />
+                {isUnavailable ? (
+                  <FileStatusBadge status={status} itemId={pdf.id} />
+                ) : (
+                  <Badge
+                    variant="secondary"
+                    className="text-muted-foreground"
+                    data-testid={`pdf-coming-soon-${pdf.id}`}
+                  >
+                    PDF viewer coming soon
+                  </Badge>
+                )}
                 {pdf.pageCount > 0 && (
                   <span className="text-xs text-muted-foreground">
                     {pdf.pageCount} {pdf.pageCount === 1 ? 'page' : 'pages'}

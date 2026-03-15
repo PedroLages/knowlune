@@ -69,6 +69,11 @@ test.describe('E01-S05: Detect Missing or Relocated Files', () => {
     })
   })
 
+  test.afterEach(async ({ indexedDB }) => {
+    await indexedDB.clearStore('importedVideos')
+    await indexedDB.clearStore('importedPdfs')
+  })
+
   test.describe('AC1: FileSystemHandle verification on course load', () => {
     test('should verify file accessibility and show status indicators without blocking UI', async ({
       page,
@@ -78,6 +83,7 @@ test.describe('E01-S05: Detect Missing or Relocated Files', () => {
       await navigateAndWait(page, '/courses')
       await indexedDB.seedImportedCourses([TEST_COURSE])
       await seedImportedVideos(page, TEST_VIDEOS)
+      await seedImportedPdfs(page, TEST_PDFS)
       await page.reload()
 
       // WHEN the user opens the course
@@ -87,9 +93,19 @@ test.describe('E01-S05: Detect Missing or Relocated Files', () => {
       // THEN the course structure renders without blocking (non-blocking verification)
       await expect(page.getByTestId('course-content-list')).toBeVisible()
 
-      // AND each content item has a file status indicator
-      await expect(page.getByTestId('file-status-video-1')).toBeVisible()
-      await expect(page.getByTestId('file-status-video-2')).toBeVisible()
+      // AND each content item has a file status indicator with resolved status
+      const videoStatus1 = page.getByTestId('file-status-video-1')
+      await expect(videoStatus1).toBeVisible()
+      await expect(videoStatus1).toHaveAttribute('data-status', 'missing')
+
+      const videoStatus2 = page.getByTestId('file-status-video-2')
+      await expect(videoStatus2).toBeVisible()
+      await expect(videoStatus2).toHaveAttribute('data-status', 'missing')
+
+      // AND PDF items also have status indicators
+      const pdfStatus = page.getByTestId('file-status-pdf-1')
+      await expect(pdfStatus).toBeVisible()
+      await expect(pdfStatus).toHaveAttribute('data-status', 'missing')
     })
   })
 
@@ -196,6 +212,8 @@ test.describe('E01-S05: Detect Missing or Relocated Files', () => {
       // THEN verification runs again (status indicators present)
       // In test context, handles are still null so badges persist.
       // With real handles, recovery would clear them (manual test required).
+      // AC4 badge-removal behavior is fully covered by unit test
+      // (ImportedCourseDetail.test.tsx: "badge removed when file status changes to available").
       await expect(page.getByTestId('file-status-video-1')).toBeVisible()
       await expect(page.getByTestId('file-status-video-2')).toBeVisible()
     })

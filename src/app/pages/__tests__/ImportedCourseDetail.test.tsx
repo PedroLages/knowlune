@@ -77,19 +77,26 @@ vi.mock('@/stores/useCourseImportStore', () => ({
   useCourseImportStore: (selector: (state: typeof storeState) => unknown) => selector(storeState),
 }))
 
+let mockDbShouldReject = false
 vi.mock('@/db/schema', () => ({
   db: {
     importedVideos: {
       where: () => ({
         equals: () => ({
-          sortBy: () => Promise.resolve(mockVideos),
+          sortBy: () =>
+            mockDbShouldReject
+              ? Promise.reject(new Error('IndexedDB read failed'))
+              : Promise.resolve(mockVideos),
         }),
       }),
     },
     importedPdfs: {
       where: () => ({
         equals: () => ({
-          toArray: () => Promise.resolve(mockPdfs),
+          toArray: () =>
+            mockDbShouldReject
+              ? Promise.reject(new Error('IndexedDB read failed'))
+              : Promise.resolve(mockPdfs),
         }),
       }),
     },
@@ -109,6 +116,7 @@ function renderDetail(courseId = 'course-1') {
 describe('ImportedCourseDetail', () => {
   beforeEach(() => {
     storeState.importedCourses = [mockCourse]
+    mockDbShouldReject = false
     // Default: all files available
     mockStatusMap.clear()
     mockStatusMap.set('v1', 'available')
@@ -210,6 +218,10 @@ describe('ImportedCourseDetail', () => {
   })
 
   // Permission-denied state
+  // Note: Design spec (1-5-detect-missing-or-relocated-files.md:94) states permission-denied
+  // items should be "Clickable — triggers re-permission prompt", but current implementation
+  // renders them as non-clickable (same as missing). This is a known deviation flagged in
+  // design review — permission re-auth flow deferred to a future story.
   it('permission-denied files show permission badge and are not clickable', async () => {
     mockStatusMap.set('v1', 'permission-denied')
     renderDetail()
@@ -218,5 +230,13 @@ describe('ImportedCourseDetail', () => {
     expect(badge).toHaveTextContent('Permission needed')
     const v1 = screen.getByTestId('course-content-item-video-v1')
     expect(v1.querySelector('a')).toBeNull()
+  })
+
+  it('shows error message when Dexie query fails', async () => {
+    mockDbShouldReject = true
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    renderDetail()
+    expect(await screen.findByTestId('course-load-error')).toBeInTheDocument()
+    expect(screen.getByText('Failed to load course content.')).toBeInTheDocument()
   })
 })
