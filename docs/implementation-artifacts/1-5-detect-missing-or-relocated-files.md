@@ -4,9 +4,9 @@ story_name: "Detect Missing or Relocated Files"
 status: in-progress
 started: 2026-03-15
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-15
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -164,15 +164,21 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+Reviewed 2026-03-15. Report: `docs/reviews/design/design-review-2026-03-15-e01-s05.md`
+
+**Verdict: PASS with warnings.** Badge design, accessibility, responsive behavior, and token usage all correct. Two HIGH findings: (1) double toast on course load due to separate video/PDF useEffect runs, (2) permission-denied not handled in PDF rendering path.
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+Reviewed 2026-03-15. Report: `docs/reviews/code/code-review-2026-03-15-e01-s05.md`
+
+**Verdict: PASS with warnings.** 0 blockers, 4 high, 3 medium, 3 nits. Key findings: (1) Dexie queries missing .catch(), (2) className string interpolation instead of cn(), (3) Promise.allSettled 'unknown' key bug, (4) toast only reports missing files, not permission-denied.
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+Reviewed 2026-03-15. Report: `docs/reviews/design/web-design-guidelines-2026-03-15-e01-s05.md`
+
+**Verdict: PASS with recommendations.** Accessibility foundations solid. Key findings: (1) no visual indication during 'checking' state, (2) permission-denied items should be clickable for re-auth per design spec, (3) missing flex-wrap on content rows for narrow viewports.
 
 ## Challenges and Lessons Learned
 
