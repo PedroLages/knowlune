@@ -1,5 +1,6 @@
 import { test, expect } from '../support/fixtures'
 import { goToSettings } from '../support/helpers/navigation'
+import { seedIndexedDBStore } from '../support/helpers/indexeddb-seed'
 
 /**
  * E11-S04: Data Export
@@ -21,62 +22,34 @@ import { goToSettings } from '../support/helpers/navigation'
 
 /** Seed a note into IndexedDB so markdown export has data */
 async function seedNote(page: import('@playwright/test').Page) {
-  await page.evaluate(async () => {
-    const request = indexedDB.open('ElearningDB')
-    await new Promise<void>((resolve, reject) => {
-      request.onsuccess = () => {
-        const db = request.result
-        const tx = db.transaction(['notes'], 'readwrite')
-        const store = tx.objectStore('notes')
-        store.put({
-          id: 'test-note-export',
-          courseId: 'course-1',
-          videoId: 'video-1',
-          content: '<p>Test note for export</p>',
-          createdAt: '2025-06-01T10:00:00.000Z',
-          updatedAt: '2025-06-01T12:00:00.000Z',
-          tags: ['test'],
-        })
-        tx.oncomplete = () => {
-          db.close()
-          resolve()
-        }
-        tx.onerror = () => reject(tx.error)
-      }
-      request.onerror = () => reject(request.error)
-    })
-  })
+  await seedIndexedDBStore(page, 'ElearningDB', 'notes', [
+    {
+      id: 'test-note-export',
+      courseId: 'course-1',
+      videoId: 'video-1',
+      content: '<p>Test note for export</p>',
+      createdAt: '2025-06-01T10:00:00.000Z',
+      updatedAt: '2025-06-01T12:00:00.000Z',
+      tags: ['test'],
+    },
+  ])
 }
 
 /** Seed a completed challenge into IndexedDB so badge export has data */
 async function seedCompletedChallenge(page: import('@playwright/test').Page) {
-  await page.evaluate(async () => {
-    const request = indexedDB.open('ElearningDB')
-    await new Promise<void>((resolve, reject) => {
-      request.onsuccess = () => {
-        const db = request.result
-        const tx = db.transaction(['challenges'], 'readwrite')
-        const store = tx.objectStore('challenges')
-        store.put({
-          id: 'test-challenge-export',
-          name: 'Complete 5 lessons',
-          type: 'lessons',
-          targetValue: 5,
-          deadline: '2025-12-31',
-          createdAt: '2025-01-01T00:00:00.000Z',
-          currentProgress: 5,
-          celebratedMilestones: [25, 50, 75, 100],
-          completedAt: '2025-06-15T14:30:00.000Z',
-        })
-        tx.oncomplete = () => {
-          db.close()
-          resolve()
-        }
-        tx.onerror = () => reject(tx.error)
-      }
-      request.onerror = () => reject(request.error)
-    })
-  })
+  await seedIndexedDBStore(page, 'ElearningDB', 'challenges', [
+    {
+      id: 'test-challenge-export',
+      name: 'Complete 5 lessons',
+      type: 'lessons',
+      targetValue: 5,
+      deadline: '2025-12-31',
+      createdAt: '2025-01-01T00:00:00.000Z',
+      currentProgress: 5,
+      celebratedMilestones: [25, 50, 75, 100],
+      completedAt: '2025-06-15T14:30:00.000Z',
+    },
+  ])
 }
 
 test.describe('E11-S04: Data Export', () => {
