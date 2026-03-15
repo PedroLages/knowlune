@@ -96,7 +96,7 @@ export function getTopicRetention(
     const avgRetention = Math.round(retentions.reduce((sum, r) => sum + r, 0) / retentions.length)
 
     const lastReviewedAt = data.reviews.reduce((latest, r) => {
-      return new Date(r.reviewedAt) > new Date(latest) ? r.reviewedAt : latest
+      return r.reviewedAt > latest ? r.reviewedAt : latest
     }, data.reviews[0].reviewedAt)
 
     results.push({
@@ -153,7 +153,7 @@ function getWeeklySessionCounts(sessions: StudySession[], weeks: number, now: Da
     const weekStart = new Date(weekEnd.getTime() - 7 * MS_PER_DAY)
     const count = sessions.filter(s => {
       const t = new Date(s.startTime).getTime()
-      return t >= weekStart.getTime() && t < weekEnd.getTime() && s.endTime
+      return t >= weekStart.getTime() && t < weekEnd.getTime()
     }).length
     counts.unshift(count) // oldest first
   }
@@ -168,7 +168,7 @@ function getWeeklyAvgDurations(sessions: StudySession[], weeks: number, now: Dat
     const weekStart = new Date(weekEnd.getTime() - 7 * MS_PER_DAY)
     const weekSessions = sessions.filter(s => {
       const t = new Date(s.startTime).getTime()
-      return t >= weekStart.getTime() && t < weekEnd.getTime() && s.endTime
+      return t >= weekStart.getTime() && t < weekEnd.getTime()
     })
     const avg =
       weekSessions.length > 0
@@ -209,8 +209,11 @@ export function detectEngagementDecay(sessions: StudySession[], now: Date): Enga
 
   // --- Duration decay (AC4) ---
   const weeklyDurations = getWeeklyAvgDurations(completedSessions, 4, now)
+  const nonZeroWeeks = weeklyDurations.filter(d => d > 0)
   const fourWeekAvg =
-    weeklyDurations.reduce((sum, d) => sum + d, 0) / weeklyDurations.filter(d => d > 0).length || 0
+    nonZeroWeeks.length > 0
+      ? nonZeroWeeks.reduce((sum, d) => sum + d, 0) / nonZeroWeeks.length
+      : 0
   const latestWeekDuration = weeklyDurations[weeklyDurations.length - 1]
 
   if (fourWeekAvg > 0 && latestWeekDuration < fourWeekAvg * 0.7) {
