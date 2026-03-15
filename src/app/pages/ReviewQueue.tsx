@@ -127,7 +127,7 @@ function ReviewEmptyState({ nextReviewDate }: { nextReviewDate: string | null })
           <EmptyDescription>
             {nextReviewDate ? (
               <span data-testid="next-review-date" aria-live="polite">
-                Next review: {format(new Date(nextReviewDate), 'MMM d, yyyy \'at\' h:mm a')}
+                Next review: {format(new Date(nextReviewDate), "MMM d, yyyy 'at' h:mm a")}
               </span>
             ) : (
               'Rate a note after studying to start building your review queue.'

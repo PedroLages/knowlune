@@ -124,7 +124,15 @@ export default function Reports() {
         trendValue: `${Math.abs(notesChange)} this week`,
       },
     ],
-    [completedLessons, lessonsChange, sparkline, inProgressCount, completedCount, studyNotes, notesChange]
+    [
+      completedLessons,
+      lessonsChange,
+      sparkline,
+      inProgressCount,
+      completedCount,
+      studyNotes,
+      notesChange,
+    ]
   )
 
   // ── Dynamic height for horizontal bar chart ──
@@ -132,11 +140,7 @@ export default function Reports() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <motion.div
-        variants={staggerContainer}
-        initial="hidden"
-        animate="visible"
-      >
+      <motion.div variants={staggerContainer} initial="hidden" animate="visible">
         <motion.h1 variants={fadeUp} className="text-2xl font-bold mb-6">
           Reports
         </motion.h1>
@@ -144,8 +148,12 @@ export default function Reports() {
         <Tabs defaultValue="study" className="mb-6">
           <motion.div variants={fadeUp}>
             <TabsList className="h-11">
-              <TabsTrigger value="study" className="h-9">Study Analytics</TabsTrigger>
-              <TabsTrigger value="ai" className="h-9">AI Analytics</TabsTrigger>
+              <TabsTrigger value="study" className="h-9">
+                Study Analytics
+              </TabsTrigger>
+              <TabsTrigger value="ai" className="h-9">
+                AI Analytics
+              </TabsTrigger>
             </TabsList>
           </motion.div>
 
@@ -166,10 +174,7 @@ export default function Reports() {
             </motion.div>
 
             {/* ── Row 2: Weekly Goal Ring + Study Time ── */}
-            <motion.div
-              variants={fadeUp}
-              className="grid grid-cols-1 lg:grid-cols-3 gap-4"
-            >
+            <motion.div variants={fadeUp} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
@@ -190,81 +195,80 @@ export default function Reports() {
             </motion.div>
 
             {/* ── Row 3: Course Completion (horizontal bars) + Category Radar ── */}
-            <motion.div
-              variants={fadeUp}
-              className="grid grid-cols-1 lg:grid-cols-3 gap-4"
-            >
+            <motion.div variants={fadeUp} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <Card className="lg:col-span-2">
                 <CardHeader>
                   <CardTitle className="text-base">Course Completion</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto -mx-2 px-2">
-                  <ChartContainer
-                    config={barChartConfig}
-                    className={`min-w-[480px] w-full min-h-[1px]`}
-                    style={{ height: barChartHeight }}
-                  >
-                    <BarChart
-                      data={courseCompletionData}
-                      layout="vertical"
-                      margin={{ left: 8, right: 40 }}
+                    <ChartContainer
+                      config={barChartConfig}
+                      className={`min-w-[480px] w-full min-h-[1px]`}
+                      style={{ height: barChartHeight }}
                     >
-                      <CartesianGrid horizontal={false} strokeDasharray="3 3" strokeOpacity={0.3} />
-                      <XAxis
-                        type="number"
-                        domain={[0, 100]}
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={8}
-                        tickFormatter={(v: number) => `${v}%`}
-                      />
-                      <YAxis
-                        type="category"
-                        dataKey="name"
-                        tickLine={false}
-                        axisLine={false}
-                        width={160}
-                        tick={{ fontSize: 12 }}
-                      />
-                      <ChartTooltip
-                        content={
-                          <ChartTooltipContent
-                            formatter={(value) => [`${value}%`, 'Completion']}
-                          />
-                        }
-                      />
-                      <Bar
-                        dataKey="completion"
-                        radius={[0, 4, 4, 0]}
-                        barSize={20}
-                        shape={
-                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                          ((props: any) => {
-                            const { x, y, width, height, payload } = props as {
-                              x: number
-                              y: number
-                              width: number
-                              height: number
-                              payload: { category: string }
-                            }
-                            const color = categoryColorMap[payload.category] || 'var(--chart-1)'
-                            return (
-                              <rect
-                                x={x}
-                                y={y}
-                                width={width}
-                                height={height}
-                                rx={4}
-                                fill={color}
-                                className="opacity-80 hover:opacity-100 motion-safe:transition-opacity"
-                              />
-                            )
-                          }) as never
-                        }
-                      />
-                    </BarChart>
-                  </ChartContainer>
+                      <BarChart
+                        data={courseCompletionData}
+                        layout="vertical"
+                        margin={{ left: 8, right: 40 }}
+                      >
+                        <CartesianGrid
+                          horizontal={false}
+                          strokeDasharray="3 3"
+                          strokeOpacity={0.3}
+                        />
+                        <XAxis
+                          type="number"
+                          domain={[0, 100]}
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={8}
+                          tickFormatter={(v: number) => `${v}%`}
+                        />
+                        <YAxis
+                          type="category"
+                          dataKey="name"
+                          tickLine={false}
+                          axisLine={false}
+                          width={160}
+                          tick={{ fontSize: 12 }}
+                        />
+                        <ChartTooltip
+                          content={
+                            <ChartTooltipContent formatter={value => [`${value}%`, 'Completion']} />
+                          }
+                        />
+                        <Bar
+                          dataKey="completion"
+                          radius={[0, 4, 4, 0]}
+                          barSize={20}
+                          shape={
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            ((props: any) => {
+                              const { x, y, width, height, payload } = props as {
+                                x: number
+                                y: number
+                                width: number
+                                height: number
+                                payload: { category: string }
+                              }
+                              const color = categoryColorMap[payload.category] || 'var(--chart-1)'
+                              return (
+                                <rect
+                                  x={x}
+                                  y={y}
+                                  width={width}
+                                  height={height}
+                                  rx={4}
+                                  fill={color}
+                                  className="opacity-80 hover:opacity-100 motion-safe:transition-opacity"
+                                />
+                              )
+                            }) as never
+                          }
+                        />
+                      </BarChart>
+                    </ChartContainer>
                   </div>
                 </CardContent>
               </Card>
@@ -280,10 +284,7 @@ export default function Reports() {
             </motion.div>
 
             {/* ── Row 4: Study Activity (gradient area) + Skills Radar ── */}
-            <motion.div
-              variants={fadeUp}
-              className="grid grid-cols-1 lg:grid-cols-3 gap-4"
-            >
+            <motion.div variants={fadeUp} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <Card className="lg:col-span-2">
                 <CardHeader>
                   <CardTitle className="text-base">Study Activity (Last 30 Days)</CardTitle>

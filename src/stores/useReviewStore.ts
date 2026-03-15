@@ -45,7 +45,11 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
     const existing = allReviews.find(r => r.noteId === noteId)
 
     const now = new Date()
-    const { interval, easeFactor, nextReviewAt } = calculateNextReview(existing ?? null, rating, now)
+    const { interval, easeFactor, nextReviewAt } = calculateNextReview(
+      existing ?? null,
+      rating,
+      now
+    )
 
     const updatedRecord: ReviewRecord = {
       id: existing?.id ?? crypto.randomUUID(),

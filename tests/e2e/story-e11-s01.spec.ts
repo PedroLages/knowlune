@@ -15,7 +15,11 @@ const DB_NAME = 'ElearningDB'
 const FIXED_NOW = new Date('2026-03-15T12:00:00.000Z')
 
 /** Create a review record that is due now (nextReviewAt in the past) */
-function createDueReview(noteId: string, retention: number, overrides: Record<string, unknown> = {}) {
+function createDueReview(
+  noteId: string,
+  retention: number,
+  overrides: Record<string, unknown> = {}
+) {
   // Lower retention → reviewed longer ago → more overdue
   const daysAgo = Math.max(1, Math.round((1 - retention / 100) * 10))
   const reviewedAt = new Date(FIXED_NOW.getTime() - daysAgo * 86400000)
@@ -67,7 +71,10 @@ async function goToReviewQueue(page: import('@playwright/test').Page) {
   // Wait for either the queue or the empty state to appear
   await Promise.race([
     page.waitForSelector('[data-testid="review-queue"]', { state: 'visible', timeout: 10_000 }),
-    page.waitForSelector('[data-testid="review-empty-state"]', { state: 'visible', timeout: 10_000 }),
+    page.waitForSelector('[data-testid="review-empty-state"]', {
+      state: 'visible',
+      timeout: 10_000,
+    }),
   ])
 }
 
@@ -224,10 +231,7 @@ test.describe('Spaced Review System (E11-S01)', () => {
           // Let the first calls through (page load), block subsequent writes
           if (callCount > 5) {
             const req = originalIDBOpen(...args)
-            const origSuccess = Object.getOwnPropertyDescriptor(
-              IDBRequest.prototype,
-              'onsuccess'
-            )
+            const origSuccess = Object.getOwnPropertyDescriptor(IDBRequest.prototype, 'onsuccess')
             Object.defineProperty(req, 'onsuccess', {
               set(fn) {
                 origSuccess?.set?.call(req, function (this: IDBOpenDBRequest, evt: Event) {

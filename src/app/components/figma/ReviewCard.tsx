@@ -74,10 +74,7 @@ export function ReviewCard({ record, note, courseName, onRate, disabled }: Revie
                 >
                   {courseName}
                 </p>
-                <p
-                  data-testid="topic-name"
-                  className="text-xs text-muted-foreground truncate"
-                >
+                <p data-testid="topic-name" className="text-xs text-muted-foreground truncate">
                   {topicTag}
                 </p>
               </div>
@@ -94,16 +91,11 @@ export function ReviewCard({ record, note, courseName, onRate, disabled }: Revie
           </div>
 
           {/* Note excerpt */}
-          <p className="text-sm leading-relaxed text-foreground">
-            {getNoteExcerpt(note.content)}
-          </p>
+          <p className="text-sm leading-relaxed text-foreground">{getNoteExcerpt(note.content)}</p>
 
           {/* Due time + Rating */}
           <div className="flex flex-col gap-3">
-            <p
-              data-testid="time-until-due"
-              className="text-xs text-muted-foreground"
-            >
+            <p data-testid="time-until-due" className="text-xs text-muted-foreground">
               {timeUntilDue}
             </p>
             <RatingButtons onRate={rating => onRate(note.id, rating)} disabled={disabled} />

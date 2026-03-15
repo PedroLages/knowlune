@@ -11,8 +11,7 @@ const RATINGS: { rating: ReviewRating; label: string; ariaLabel: string; classes
     rating: 'hard',
     label: 'Hard',
     ariaLabel: 'Rate as Hard — shorter review interval',
-    classes:
-      'bg-destructive/10 text-destructive hover:bg-destructive/20 border-destructive/20',
+    classes: 'bg-destructive/10 text-destructive hover:bg-destructive/20 border-destructive/20',
   },
   {
     rating: 'good',
