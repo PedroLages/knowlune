@@ -1,4 +1,4 @@
-# generated: 2026-03-07
+# generated: 2026-03-15
 # project: Elearningplatformwireframes
 # project_key: NOKEY
 # tracking_system: file-system
@@ -33,15 +33,16 @@
 # - SM typically creates next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 #
-# REFRESH NOTES (2026-03-07):
+# REFRESH NOTES (2026-03-15):
 # ===========================
-# - Epics 1-4: done, all stories completed, retrospectives done
-# - Epic 5: in-progress (5-1 through 5-4 done, 5-5 and 5-6 remain)
+# - Epics 1-8: done, all stories completed
+# - Epic 9/9B: done (all stories completed)
+# - Epic 10: in-progress (10-1 done, 10-2 backlog)
 # - Epic 9 split into Epic 9 (infrastructure) + Epic 9B (AI features) per updated epics.md
 # - Implementation-only stories preserved (2-6..2-9, 3-0, 3-8..3-14)
 # - Deferred stories retained: 1-5 (file detection), 2-10 (captions)
 
-generated: 2026-03-07
+generated: 2026-03-15
 project: Elearningplatformwireframes
 project_key: NOKEY
 tracking_system: file-system
@@ -160,7 +161,7 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 9: AI Infrastructure & Platform
   # ──────────────────────────────────────────────────
-  epic-9: in-progress
+  epic-9: done
   9-1-ai-provider-configuration-security: done
   9-2-web-worker-architecture-and-memory-management: done
   9-3-embedding-pipeline-and-vector-store: done
@@ -169,7 +170,7 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 9B: AI-Powered Learning Features
   # ──────────────────────────────────────────────────
-  epic-9b: in-progress
+  epic-9b: done
   9b-1-ai-video-summary: done
   9b-2-chat-style-qa-from-notes-rag: done
   9b-2-qa-from-notes-with-vercel-ai-sdk: done
@@ -279,8 +280,8 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 10: Onboarding & First-Use Experience
   # ──────────────────────────────────────────────────
-  epic-10: backlog
-  10-1-first-use-onboarding-flow: backlog
+  epic-10: in-progress
+  10-1-first-use-onboarding-flow: done
   10-2-empty-state-guidance: backlog
   epic-10-retrospective: optional
 
