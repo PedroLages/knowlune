@@ -59,13 +59,14 @@ describe('ElearningDB schema', () => {
       'learningPath',
       'notes',
       'progress',
+      'reviewRecords',
       'screenshots',
       'studySessions',
     ])
   })
 
-  it('should be at version 12', () => {
-    expect(db.verno).toBe(12)
+  it('should be at version 13', () => {
+    expect(db.verno).toBe(13)
   })
 })
 

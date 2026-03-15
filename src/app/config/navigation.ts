@@ -3,6 +3,7 @@ import {
   BookOpen,
   GraduationCap,
   StickyNote,
+  RotateCcw,
   MessageSquare,
   Users,
   Target,
@@ -36,6 +37,7 @@ export const navigationGroups: NavigationGroup[] = [
       { name: 'Learning Path', path: '/ai-learning-path', icon: Sparkles },
       { name: 'Knowledge Gaps', path: '/knowledge-gaps', icon: Brain },
       { name: 'Notes', path: '/notes', icon: StickyNote },
+      { name: 'Review', path: '/review', icon: RotateCcw },
     ],
   },
   {
