@@ -103,7 +103,11 @@ export function ImportedCourseDetail() {
         {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
       </p>
 
-      <ul data-testid="course-content-list" aria-label="Course content" className="flex flex-col gap-2">
+      <ul
+        data-testid="course-content-list"
+        aria-label="Course content"
+        className="flex flex-col gap-2"
+      >
         {videos.map(video => {
           const status = fileStatuses.get(video.id) ?? 'checking'
           const isUnavailable = status === 'missing' || status === 'permission-denied'
@@ -112,13 +116,19 @@ export function ImportedCourseDetail() {
             <>
               <Video
                 data-testid="content-type-icon"
-                className={cn('size-5 shrink-0', isUnavailable ? 'text-muted-foreground' : 'text-brand')}
+                className={cn(
+                  'size-5 shrink-0',
+                  isUnavailable ? 'text-muted-foreground' : 'text-brand'
+                )}
                 aria-hidden="true"
               />
               <span
                 data-testid={`file-status-${video.id}`}
                 data-status={status}
-                className={cn('flex-1 font-medium text-sm', !isUnavailable && 'group-hover:text-brand transition-colors')}
+                className={cn(
+                  'flex-1 font-medium text-sm',
+                  !isUnavailable && 'group-hover:text-brand transition-colors'
+                )}
               >
                 {video.filename}
               </span>
@@ -159,12 +169,18 @@ export function ImportedCourseDetail() {
           return (
             <li key={pdf.id} data-testid={`course-content-item-pdf-${pdf.id}`}>
               <div
-                className={cn('flex items-center gap-3 p-4 rounded-xl border bg-card cursor-not-allowed', isUnavailable ? 'opacity-50' : 'opacity-75')}
+                className={cn(
+                  'flex items-center gap-3 p-4 rounded-xl border bg-card cursor-not-allowed',
+                  isUnavailable ? 'opacity-50' : 'opacity-75'
+                )}
                 aria-disabled="true"
               >
                 <FileText
                   data-testid="content-type-icon"
-                  className={cn('size-5 shrink-0', isUnavailable ? 'text-muted-foreground' : 'text-warning')}
+                  className={cn(
+                    'size-5 shrink-0',
+                    isUnavailable ? 'text-muted-foreground' : 'text-warning'
+                  )}
                   aria-hidden="true"
                 />
                 <span
