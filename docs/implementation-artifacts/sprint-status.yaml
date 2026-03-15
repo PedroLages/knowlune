@@ -183,8 +183,8 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 11: Knowledge Retention, Export & Advanced Features (Post-MVP)
   # ──────────────────────────────────────────────────
-  epic-11: backlog
-  11-1-spaced-review-system: backlog
+  epic-11: in-progress
+  11-1-spaced-review-system: in-progress
   11-2-knowledge-retention-dashboard: backlog
   11-3-study-session-quality-scoring: backlog
   11-4-data-export: backlog
