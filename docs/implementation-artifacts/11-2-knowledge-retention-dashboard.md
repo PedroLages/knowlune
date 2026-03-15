@@ -149,11 +149,19 @@ See [plan](../../.claude/plans/playful-doodling-balloon.md) for implementation a
 
 ## Implementation Notes
 
-[Architecture decisions, patterns used, dependencies added]
+- **Pure function architecture**: All retention and decay logic lives in `src/lib/retentionMetrics.ts` as pure functions accepting `now: Date` for deterministic testing. No side effects — the dashboard component handles data loading and passes `now` down.
+- **Reuse of spaced repetition engine**: `predictRetention()` and `isDue()` from `src/lib/spacedRepetition.ts` drive the per-topic retention calculations, avoiding duplication of the exponential decay formula.
+- **Topic grouping strategy**: Notes are grouped by their first tag (`tags[0]`), falling back to "General". Topics with zero review records are excluded since they haven't entered the spaced repetition system.
+- **Component decomposition**: `TopicRetentionCard` and `EngagementDecayAlerts` are standalone components in `src/app/components/figma/`, keeping the page component thin (~150 lines).
+- **Design token compliance**: All retention level colors use semantic tokens (`text-success`, `text-warning`, `text-destructive`) with soft backgrounds, matching the pattern from `ReviewCard.tsx`.
+- **No new dependencies added** — uses existing shadcn/ui components (Card, Badge, Alert), Framer Motion, and Lucide icons.
 
 ## Testing Notes
 
-[Test strategy, edge cases discovered, coverage notes]
+- **Unit tests**: 100% branch coverage on `retentionMetrics.ts` — tests cover empty inputs, single/multiple topics, boundary values at 50%/80% thresholds, and all three decay alert types.
+- **E2E tests**: 7 tests across 6 ACs using `page.clock.install()` for deterministic time. Each test seeds specific IndexedDB data (notes, reviewRecords, studySessions) to trigger the exact retention/decay scenario.
+- **Test data design**: Review records are crafted with specific `reviewedDaysAgo` and `intervalDays` to produce predictable `predictRetention()` outputs (e.g., `e^(-1/7) = 87%` for strong, `e^(-14/3) ≈ 1%` for weak).
+- **Edge case: velocity stall detection** — requires sessions older than 21 days to produce 3 consecutive zero-session weeks in the weekly bucket calculation.
 
 ## Pre-Review Checklist
 
@@ -183,4 +191,7 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-(To be filled during implementation)
+- **Engagement decay algorithm design**: The three decay detectors (frequency, duration, velocity) each need different time windows and thresholds. The weekly bucket approach (`getWeeklySessionCounts`/`getWeeklyAvgDurations`) keeps the logic readable while supporting all three ACs. Key insight: the "2-week rolling average" in AC3 maps to comparing two 2-week sums, not a sliding window average.
+- **E2E test data precision**: Getting E2E tests to trigger specific decay conditions required careful session placement in time. For example, the velocity stall test needs sessions older than 21 days but recent enough to count as "completed sessions exist" — without this, `detectEngagementDecay` returns early.
+- **Pure function testability**: Accepting `now: Date` as a parameter across all metric functions made unit tests trivial and E2E tests deterministic via `page.clock.install()`. This pattern (from E11-S01) continues to pay dividends.
+- **Empty state handling**: The dashboard needs to handle the case where a user has notes but no review records — these topics are excluded from the retention grid rather than shown with 0% retention, since they haven't entered the spaced repetition system yet.
