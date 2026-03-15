@@ -1,4 +1,5 @@
 import type { Note } from '../../../../src/data/types'
+import { FIXED_DATE } from '../../../utils/test-time'
 
 /**
  * Creates a Dexie-compatible Note with courseId and videoId.
@@ -6,7 +7,7 @@ import type { Note } from '../../../../src/data/types'
  * omits these fields.
  */
 export function createDexieNote(overrides: Partial<Note> = {}): Note {
-  const now = new Date().toISOString()
+  const now = FIXED_DATE
   return {
     id: crypto.randomUUID(),
     courseId: 'course-1',

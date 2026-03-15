@@ -131,6 +131,7 @@ vi.mock('motion/react', () => ({
     }
   ),
   MotionConfig: ({ children }: React.PropsWithChildren) => <>{children}</>,
+  useReducedMotion: () => false,
 }))
 
 import { Overview } from '../Overview'

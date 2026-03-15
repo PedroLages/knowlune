@@ -14,6 +14,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { closeSidebar } from '../support/fixtures/constants/sidebar-constants'
 import { TIMEOUTS } from '../utils/constants'
+import { FIXED_DATE } from '../utils/test-time'
 
 /**
  * Navigate to Settings page and wait for it to load.
@@ -198,7 +199,7 @@ test.describe('Toast Notifications', () => {
         theme: 'light',
       },
       version: '1.0.0',
-      exportDate: new Date().toISOString(),
+      exportDate: FIXED_DATE,
     }
     const buffer = Buffer.from(JSON.stringify(validBackup), 'utf-8')
 

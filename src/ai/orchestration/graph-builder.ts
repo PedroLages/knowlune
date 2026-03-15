@@ -14,7 +14,6 @@ import type {
   DependencyEdge,
   DecompositionResponse,
   ValidationResult,
-  DispatchStrategy,
   TaskStatus,
 } from './types'
 
@@ -174,7 +173,7 @@ export class GraphBuilder {
    * @param edges - Dependency edges
    * @returns Array of cycles (each cycle is array of task IDs)
    */
-  private detectCycles(nodes: Map<string, TaskNode>, edges: DependencyEdge[]): string[][] {
+  private detectCycles(nodes: Map<string, TaskNode>, _edges: DependencyEdge[]): string[][] {
     const cycles: string[][] = []
     const visited = new Set<string>()
     const recursionStack = new Set<string>()
@@ -263,7 +262,7 @@ export class GraphBuilder {
    * @param edges - Dependency edges
    * @returns Array of task IDs with no dependencies
    */
-  private findIndependentTasks(nodes: Map<string, TaskNode>, edges: DependencyEdge[]): string[] {
+  private findIndependentTasks(nodes: Map<string, TaskNode>, _edges: DependencyEdge[]): string[] {
     return Array.from(nodes.values())
       .filter(node => node.dependencies.length === 0)
       .map(node => node.id)
@@ -327,7 +326,7 @@ export class GraphBuilder {
   private hasAlternatePath(
     from: string,
     to: string,
-    nodes: Map<string, TaskNode>,
+    _nodes: Map<string, TaskNode>,
     edges: DependencyEdge[],
     excludeEdge: DependencyEdge
   ): boolean {
@@ -369,7 +368,7 @@ export class GraphBuilder {
    * @param edges - Dependency edges
    * @returns Array of task IDs in critical path
    */
-  private findCriticalPath(nodes: Map<string, TaskNode>, edges: DependencyEdge[]): string[] {
+  private findCriticalPath(nodes: Map<string, TaskNode>, _edges: DependencyEdge[]): string[] {
     const memo = new Map<string, { path: string[]; duration: number }>()
 
     const findLongestPath = (nodeId: string): { path: string[]; duration: number } => {
@@ -435,10 +434,9 @@ export class GraphBuilder {
    */
   private findParallelizableSets(
     nodes: Map<string, TaskNode>,
-    edges: DependencyEdge[]
+    _edges: DependencyEdge[]
   ): string[][] {
     const sets: string[][] = []
-    const processed = new Set<string>()
 
     // Group tasks by dependency level
     const levels = new Map<number, string[]>()

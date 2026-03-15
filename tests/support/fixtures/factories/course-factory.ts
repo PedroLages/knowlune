@@ -18,7 +18,7 @@ import type {
   ResourceType,
   Note,
 } from '../../../../src/data/types'
-import { FIXED_TIMESTAMP } from '../../../utils/test-time'
+import { FIXED_DATE, FIXED_TIMESTAMP } from '../../../utils/test-time'
 
 let counter = 0
 function uid(): string {
@@ -110,7 +110,7 @@ export function createCourse(overrides: Partial<Course> = {}): Course {
 
 export function createNote(overrides: Partial<Note> = {}): Note {
   const id = overrides.id ?? uid()
-  const now = new Date().toISOString()
+  const now = FIXED_DATE
   return {
     id,
     content: 'A test note for E2E testing.',
@@ -134,7 +134,7 @@ export interface CourseProgress {
 }
 
 export function createCourseProgress(overrides: Partial<CourseProgress> = {}): CourseProgress {
-  const now = new Date().toISOString()
+  const now = FIXED_DATE
   return {
     courseId: overrides.courseId ?? uid(),
     completedLessons: [],
@@ -161,7 +161,7 @@ export function createStudyAction(overrides: Partial<StudyAction> = {}): StudyAc
   return {
     type: 'lesson_complete',
     courseId: uid(),
-    timestamp: new Date().toISOString(),
+    timestamp: FIXED_DATE,
     ...overrides,
   }
 }
@@ -185,7 +185,7 @@ export function createVideoBookmark(overrides: Partial<VideoBookmark> = {}): Vid
     lessonId: uid(),
     timestamp: 120,
     label: 'Important section',
-    createdAt: new Date().toISOString(),
+    createdAt: FIXED_DATE,
     ...overrides,
   }
 }

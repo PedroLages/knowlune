@@ -48,7 +48,7 @@ export class TaskGraphVisualizer {
    * @param graph - Task graph
    * @returns Header string
    */
-  private renderHeader(graph: TaskGraph): string {
+  private renderHeader(_graph: TaskGraph): string {
     const title = 'Task Graph Generated'
     const separator = '━'.repeat(50)
 

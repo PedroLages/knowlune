@@ -91,9 +91,9 @@ describe('ImportedLessonPlayer', () => {
     storeState.importedCourses = [mockCourse]
   })
 
-  it('renders lesson player content container', () => {
+  it('renders lesson player content container', async () => {
     renderPlayer()
-    expect(screen.getByTestId('lesson-player-content')).toBeInTheDocument()
+    expect(await screen.findByTestId('lesson-player-content')).toBeInTheDocument()
   })
 
   it('shows video filename in header', async () => {

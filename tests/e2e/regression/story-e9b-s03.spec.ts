@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { seedImportedCourses, clearLearningPath } from '../../support/helpers/indexeddb-seed'
 import { seedAIConfiguration } from '../../support/helpers/ai-summary-mocks'
+import { FIXED_DATE } from '../../utils/test-time'
 
 /**
  * Helper to create minimal ImportedCourse objects for testing
@@ -14,7 +15,7 @@ function createTestCourse(overrides: {
   return {
     id: overrides.id,
     name: overrides.name,
-    importedAt: new Date().toISOString(),
+    importedAt: FIXED_DATE,
     category: 'Programming',
     tags: overrides.tags || [],
     status: overrides.status || 'not-started',
@@ -38,7 +39,7 @@ function createMockLearningPath(
     learningPath: courses.map(course => ({
       ...course,
       isManuallyOrdered: false,
-      generatedAt: new Date().toISOString(),
+      generatedAt: FIXED_DATE,
     })),
   }
 }
@@ -345,7 +346,7 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
     await page.waitForLoadState('networkidle')
 
     // Inject mock learning path response
-    await page.evaluate(() => {
+    await page.evaluate((fixedDate) => {
       ;(window as any).__mockLearningPathResponse = {
         learningPath: [
           {
@@ -353,25 +354,25 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
             position: 1,
             justification: 'Intro course',
             isManuallyOrdered: false,
-            generatedAt: new Date().toISOString(),
+            generatedAt: fixedDate,
           },
           {
             courseId: 'python-web-dev',
             position: 2,
             justification: 'Web dev course',
             isManuallyOrdered: false,
-            generatedAt: new Date().toISOString(),
+            generatedAt: fixedDate,
           },
           {
             courseId: 'advanced-python',
             position: 3,
             justification: 'Advanced course',
             isManuallyOrdered: false,
-            generatedAt: new Date().toISOString(),
+            generatedAt: fixedDate,
           },
         ],
       }
-    })
+    }, FIXED_DATE)
     await page.getByTestId('generate-learning-path-button').click()
     await expect(page.getByTestId('learning-path-list')).toBeVisible({ timeout: 10000 })
 
@@ -434,7 +435,7 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
     await page.waitForLoadState('networkidle')
 
     // Inject mock learning path response
-    await page.evaluate(() => {
+    await page.evaluate((fixedDate) => {
       ;(window as any).__mockLearningPathResponse = {
         learningPath: [
           {
@@ -442,25 +443,25 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
             position: 1,
             justification: 'Intro',
             isManuallyOrdered: false,
-            generatedAt: new Date().toISOString(),
+            generatedAt: fixedDate,
           },
           {
             courseId: 'python-web-dev',
             position: 2,
             justification: 'Web',
             isManuallyOrdered: false,
-            generatedAt: new Date().toISOString(),
+            generatedAt: fixedDate,
           },
           {
             courseId: 'advanced-python',
             position: 3,
             justification: 'Advanced',
             isManuallyOrdered: false,
-            generatedAt: new Date().toISOString(),
+            generatedAt: fixedDate,
           },
         ],
       }
-    })
+    }, FIXED_DATE)
     await page.getByTestId('generate-learning-path-button').click()
     await expect(page.getByTestId('learning-path-list')).toBeVisible({ timeout: 10000 })
 

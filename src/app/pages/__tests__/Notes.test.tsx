@@ -2,6 +2,14 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 
+vi.mock('motion/react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('motion/react')>()
+  return {
+    ...actual,
+    useReducedMotion: () => false,
+  }
+})
+
 vi.mock('@/data/courses', () => ({
   allCourses: [
     {
@@ -87,7 +95,7 @@ describe('Notes page', () => {
 
   it('shows empty state when no notes exist', () => {
     renderNotes()
-    expect(screen.getByText('No notes yet')).toBeInTheDocument()
+    expect(screen.getByText('Start a video and take your first note')).toBeInTheDocument()
   })
 
   it('renders the search input', () => {
