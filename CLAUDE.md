@@ -20,8 +20,8 @@ Original Figma design: https://www.figma.com/design/q4x6ttJD11avObQNFoeQ2D/E-lea
 
 ### Tech Stack
 
-- **Framework**: React 18.3.1 with TypeScript
-- **Build Tool**: Vite 6.3.5
+- **Framework**: React 19.2.4 with TypeScript
+- **Build Tool**: Vite 6.4.1
 - **Styling**: Tailwind CSS v4 (via @tailwindcss/vite plugin)
 - **Routing**: React Router v7
 - **UI Components**: shadcn/ui components (Radix UI primitives)
