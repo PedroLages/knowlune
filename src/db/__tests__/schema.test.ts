@@ -47,9 +47,11 @@ describe('ElearningDB schema', () => {
   it('should create the database with correct tables including notes', async () => {
     expect(db.name).toBe('ElearningDB')
     expect(db.tables.map(t => t.name).sort()).toEqual([
+      'aiUsageEvents',
       'bookmarks',
       'challenges',
       'contentProgress',
+      'courseThumbnails',
       'embeddings',
       'importedCourses',
       'importedPdfs',
@@ -57,13 +59,14 @@ describe('ElearningDB schema', () => {
       'learningPath',
       'notes',
       'progress',
+      'reviewRecords',
       'screenshots',
       'studySessions',
     ])
   })
 
-  it('should be at version 10', () => {
-    expect(db.verno).toBe(10)
+  it('should be at version 13', () => {
+    expect(db.verno).toBe(13)
   })
 })
 

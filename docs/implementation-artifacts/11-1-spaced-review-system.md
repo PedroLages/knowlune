@@ -125,11 +125,17 @@ See [plan](plans/e11-s01-spaced-review-system.md) for implementation approach.
 
 ## Implementation Notes
 
-[Architecture decisions, patterns used, dependencies added]
+- **Algorithm**: SM-2 variant with 3-grade system (Hard/Good/Easy) mapped to quality values 1/3/5. Pure functions in `src/lib/spacedRepetition.ts` — no side effects.
+- **Retention prediction**: Exponential forgetting curve `R = e^(-t/S)` where stability is proportional to the scheduled interval.
+- **Dexie schema**: Added `reviewRecords` table at version 13 with indexes on `noteId`, `nextReviewAt`, `reviewedAt`.
+- **Store pattern**: Zustand `useReviewStore` with optimistic updates and rollback on IDB write failure (AC5). Uses `persistWithRetry` for resilience.
+- **Dependencies**: No new dependencies added — reused existing `date-fns`, `motion/react`, `sonner` (toast).
 
 ## Testing Notes
 
-[Test strategy, edge cases discovered, coverage notes]
+- **Unit tests**: 19 tests covering SM-2 interval calculation, retention prediction, ease factor bounds, and edge cases (first review, re-rating, minimum intervals).
+- **E2E tests**: 8 tests covering all 5 ACs. IDB seeding pattern: navigate to target page → seed via raw IDB API → `page.reload()` → assert.
+- **Edge case**: Empty state rendering when no notes are due, and next review date display when only future reviews exist.
 
 ## Pre-Review Checklist
 
@@ -158,4 +164,10 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+1. **IDB seeding pattern for E2E tests**: Initial approach seeded data on the home page (`/`) then navigated to `/review` via `page.goto()`. This caused all 7 data-dependent tests to fail because Dexie's `toArray()` returned empty arrays. The fix was to follow the proven pattern from E08-S01: seed on the TARGET page, then `page.reload()`. This ensures Dexie re-initializes with the seeded data visible.
+
+2. **Schema test version drift**: The `schema.test.ts` expected version 10 and an outdated table list. Three schema versions (v11 courseThumbnails, v12 aiUsageEvents, v13 reviewRecords) had been added without updating the test. Updated to expect version 13 with all 15 tables.
+
+3. **SM-2 algorithm simplicity**: The 3-grade system (Hard/Good/Easy) mapped to SM-2 quality values proved straightforward. The key insight was keeping the algorithm as pure functions with no side effects — all persistence is handled by the store layer, making unit testing trivial (19 tests, all passing in 4ms).
+
+4. **Optimistic updates with rollback (AC5)**: The rating flow applies the update optimistically to `allReviews`, then persists to IDB. On failure, the store rolls back to the previous state and preserves the rating in `pendingRating` for retry. This keeps the UI responsive while ensuring data consistency.

@@ -52,30 +52,41 @@ function createFutureReview(noteId: string, daysUntilDue = 5) {
   }
 }
 
-/** Seed notes and review records into IndexedDB */
+/** Seed notes and review records into IndexedDB, then reload to pick up data.
+ *  Follows the same pattern as other IDB-seeded tests (E08-S01, etc.):
+ *  navigate to target page → seed → reload.
+ */
 async function seedReviewData(
   page: import('@playwright/test').Page,
   notes: Record<string, unknown>[],
   reviews: Record<string, unknown>[]
 ) {
-  // Navigate first so Dexie initializes the DB
-  await navigateAndWait(page, '/')
+  // Navigate to /review first so Dexie initializes all stores including reviewRecords
+  await navigateAndWait(page, '/review')
 
   await seedIndexedDBStore(page, DB_NAME, 'notes', notes)
   await seedIndexedDBStore(page, DB_NAME, 'reviewRecords', reviews)
+
+  // Reload so the app re-reads seeded data from IDB on mount
+  await page.reload()
+  await page.waitForLoadState('load')
 }
 
-/** Navigate to the Review Queue page */
-async function goToReviewQueue(page: import('@playwright/test').Page) {
-  await navigateAndWait(page, '/review')
-  // Wait for either the queue or the empty state to appear
+/** Wait for the Review Queue page to settle (cards or empty state visible) */
+async function waitForReviewQueue(page: import('@playwright/test').Page) {
   await Promise.race([
-    page.waitForSelector('[data-testid="review-queue"]', { state: 'visible', timeout: 10_000 }),
+    page.waitForSelector('[data-testid="review-card"]', { state: 'visible', timeout: 15_000 }),
     page.waitForSelector('[data-testid="review-empty-state"]', {
       state: 'visible',
-      timeout: 10_000,
+      timeout: 15_000,
     }),
   ])
+}
+
+/** Navigate to the Review Queue page (no seeding — for empty state tests) */
+async function goToReviewQueue(page: import('@playwright/test').Page) {
+  await navigateAndWait(page, '/review')
+  await waitForReviewQueue(page)
 }
 
 test.describe('Spaced Review System (E11-S01)', () => {
@@ -92,7 +103,7 @@ test.describe('Spaced Review System (E11-S01)', () => {
       const review = createDueReview('note-ac1', 60)
 
       await seedReviewData(page, [note], [review])
-      await goToReviewQueue(page)
+      await waitForReviewQueue(page)
 
       const ratingGroup = page.getByTestId('rating-buttons').first()
       await expect(ratingGroup.getByRole('button', { name: /hard/i })).toBeVisible()
@@ -105,7 +116,7 @@ test.describe('Spaced Review System (E11-S01)', () => {
       const review = createDueReview('note-ac1b', 40)
 
       await seedReviewData(page, [note], [review])
-      await goToReviewQueue(page)
+      await waitForReviewQueue(page)
 
       // Verify card is visible
       const card = page.getByTestId('review-card').first()
@@ -136,7 +147,7 @@ test.describe('Spaced Review System (E11-S01)', () => {
       })
 
       await seedReviewData(page, [note1, note2], [reviewLow, reviewHigh])
-      await goToReviewQueue(page)
+      await waitForReviewQueue(page)
 
       const retentionValues = await page.getByTestId('retention-percentage').allTextContents()
       expect(retentionValues.length).toBeGreaterThanOrEqual(2)
@@ -159,7 +170,7 @@ test.describe('Spaced Review System (E11-S01)', () => {
       const review = createDueReview('note-meta', 50)
 
       await seedReviewData(page, [note], [review])
-      await goToReviewQueue(page)
+      await waitForReviewQueue(page)
 
       const firstCard = page.getByTestId('review-card').first()
       await expect(firstCard.getByTestId('retention-percentage')).toBeVisible()
@@ -176,7 +187,7 @@ test.describe('Spaced Review System (E11-S01)', () => {
       const review = createDueReview('note-rerate', 50)
 
       await seedReviewData(page, [note], [review])
-      await goToReviewQueue(page)
+      await waitForReviewQueue(page)
 
       // Rate as Hard
       const card = page.getByTestId('review-card').first()
@@ -190,7 +201,6 @@ test.describe('Spaced Review System (E11-S01)', () => {
   // ── AC4: Empty state when no reviews due ─────────────────────────
   test.describe('AC4: Empty state', () => {
     test('shows empty state when no notes are due for review', async ({ page }) => {
-      await navigateAndWait(page, '/')
       await goToReviewQueue(page)
 
       const emptyState = page.getByTestId('review-empty-state')
@@ -204,7 +214,7 @@ test.describe('Spaced Review System (E11-S01)', () => {
       const review = createFutureReview('note-future', 5)
 
       await seedReviewData(page, [note], [review])
-      await goToReviewQueue(page)
+      await waitForReviewQueue(page)
 
       const nextReview = page.getByTestId('next-review-date')
       await expect(nextReview).toBeVisible()
@@ -218,7 +228,7 @@ test.describe('Spaced Review System (E11-S01)', () => {
       const review = createDueReview('note-error', 50)
 
       await seedReviewData(page, [note], [review])
-      await goToReviewQueue(page)
+      await waitForReviewQueue(page)
 
       // Break Dexie's ability to write to reviewRecords by deleting the DB mid-operation
       // This simulates a quota exceeded or corruption error
