@@ -89,8 +89,9 @@ async function waitForDashboard(page: import('@playwright/test').Page) {
   ])
 }
 
-// Seed sidebar closed for tablet viewports
+// Freeze browser clock to FIXED_DATE and seed sidebar closed for tablet viewports
 test.beforeEach(async ({ page }) => {
+  await page.clock.install({ time: FIXED_NOW })
   await page.addInitScript(() => {
     localStorage.setItem('eduvi-sidebar-v1', 'false')
   })
@@ -121,10 +122,10 @@ test.describe('AC1: Topic retention levels', () => {
       reviewedDaysAgo: 1,
       intervalDays: 7,
     })
-    // Fading: reviewed a while ago (5 days ago, 3-day interval → medium retention)
+    // Fading: e^(-3/7) = 65% → fading range (50-79%)
     const reviewFading = createReviewRecord(noteFading.id, {
-      reviewedDaysAgo: 5,
-      intervalDays: 3,
+      reviewedDaysAgo: 3,
+      intervalDays: 7,
     })
     // Weak: reviewed long ago (14 days ago, 3-day interval → low retention)
     const reviewWeak = createReviewRecord(noteWeak.id, {
@@ -239,22 +240,23 @@ test.describe('AC3: Frequency decline alert', () => {
     const note = createDexieNote({ tags: ['General'] })
     const review = createReviewRecord(note.id, { reviewedDaysAgo: 1, intervalDays: 7 })
 
-    // Create sessions: many in weeks 3-4 ago, very few in last 2 weeks
-    // This simulates a frequency decline
+    // Create sessions: many in previous 2 weeks (14-28d ago), few in current 2 weeks (0-14d)
+    // Weekly buckets: [w3: 28-21d, w2: 21-14d, w1: 14-7d, w0: 7-0d]
+    // previousTwoWeeks = w3+w2, currentTwoWeeks = w1+w0
     const sessions: Record<string, unknown>[] = []
 
-    // Weeks 3-4 ago: 10 sessions (high frequency baseline)
+    // Previous 2 weeks (14-28 days ago): 10 sessions
     for (let i = 0; i < 10; i++) {
       sessions.push(
         createStudySession({
-          startTime: getRelativeDate(-21 + i),
-          endTime: getRelativeDate(-21 + i),
+          startTime: getRelativeDate(-15 - i), // days 15-24 ago
+          endTime: getRelativeDate(-15 - i),
           duration: 1800,
         })
       )
     }
 
-    // Last 2 weeks: 2 sessions (low frequency — <50% of baseline)
+    // Current 2 weeks (0-14 days ago): 2 sessions (<50% of 10)
     sessions.push(
       createStudySession({
         startTime: getRelativeDate(-5),
@@ -367,14 +369,14 @@ test.describe('AC5: Stalled progress alert', () => {
     const note = createDexieNote({ tags: ['General'] })
     const review = createReviewRecord(note.id, { reviewedDaysAgo: 1, intervalDays: 7 })
 
-    // Sessions exist but no new completions for 3+ weeks
-    // (completion velocity = 0 or negative)
+    // All sessions are older than 3 weeks — nothing in last 21 days
+    // This means recentWeeks (last 3 weekly buckets) all have 0 sessions
     const sessions: Record<string, unknown>[] = []
-    for (let week = 0; week < 4; week++) {
+    for (let i = 0; i < 4; i++) {
       sessions.push(
         createStudySession({
-          startTime: getRelativeDate(-7 * (week + 1)),
-          endTime: getRelativeDate(-7 * (week + 1)),
+          startTime: getRelativeDate(-25 - i), // 25-28 days ago
+          endTime: getRelativeDate(-25 - i),
           duration: 1800,
         })
       )
