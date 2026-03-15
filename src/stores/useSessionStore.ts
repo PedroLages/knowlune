@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { db } from '@/db'
 import type { StudySession } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
+import { calculateQualityScore } from '@/lib/qualityScore'
 
 interface SessionState {
   activeSession: StudySession | null
@@ -17,6 +18,7 @@ interface SessionState {
     sessionType: 'video' | 'pdf' | 'mixed'
   ) => Promise<void>
   updateLastActivity: (timestamp?: string) => void
+  recordInteraction: () => void // Increment interaction counter for quality scoring
   pauseSession: () => Promise<void>
   resumeSession: () => void
   endSession: () => void // Synchronous for beforeunload compatibility
@@ -58,6 +60,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       videosWatched: [],
       lastActivity: now,
       sessionType,
+      interactionCount: 0,
+      breakCount: 0,
     }
 
     // Optimistic update + track when active period started
@@ -101,6 +105,13 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
   },
 
+  recordInteraction: () => {
+    const { activeSession } = get()
+    if (!activeSession) return
+    // Increment in-memory only — persisted on next heartbeat, pause, or end
+    activeSession.interactionCount = (activeSession.interactionCount ?? 0) + 1
+  },
+
   pauseSession: async () => {
     const { activeSession, activeStartTime } = get()
     if (!activeSession || !activeStartTime) return
@@ -120,6 +131,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       duration: activeSession.duration + Math.max(0, activeSeconds),
       idleTime: activeSession.idleTime + IDLE_TIMEOUT_SECONDS,
       lastActivity: now, // Update to current time for heartbeat
+      breakCount: (activeSession.breakCount ?? 0) + 1,
     }
 
     // Optimistic update (keep activeStartTime - will reset on resume)
@@ -162,10 +174,18 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     // Use lastActivity instead of currentTime because user may have been idle before closing
     const activeSeconds = Math.floor((lastActivityMs - activeStartMs) / 1000)
 
-    const closedSession: StudySession = {
+    const sessionWithDuration: StudySession = {
       ...activeSession,
       endTime: now,
       duration: activeSession.duration + Math.max(0, activeSeconds),
+    }
+
+    // Calculate quality score before persisting
+    const qualityResult = calculateQualityScore(sessionWithDuration)
+    const closedSession: StudySession = {
+      ...sessionWithDuration,
+      qualityScore: qualityResult.score,
+      qualityFactors: qualityResult.factors,
     }
 
     // Clear active state immediately (synchronous)
@@ -179,6 +199,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       .then(() => {
         // Notify listeners (e.g., momentum scores) that session data changed
         window.dispatchEvent(new CustomEvent('study-log-updated'))
+        // Notify quality score UI to show the result dialog
+        window.dispatchEvent(
+          new CustomEvent('session-quality-calculated', {
+            detail: qualityResult,
+          })
+        )
       })
       .catch(error => {
         console.error('[SessionStore] Failed to end session:', error)
