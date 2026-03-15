@@ -4,9 +4,9 @@ story_name: "Data Export"
 status: in-progress
 started: 2026-03-15
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-15
-review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -211,15 +211,36 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+Report: `docs/reviews/design/design-review-2026-03-15-e11-s04.md`
+
+- **HIGH**: All export buttons 32px tall — below 44px touch-target minimum. Fix: add `min-h-[44px]`.
+- **HIGH**: Import button missing `aria-label`.
+- **MEDIUM**: Export progress container has no `aria-live` region.
+- **MEDIUM**: Heading hierarchy — three H3 sub-sections inside H3 card title.
+- **MEDIUM**: JSON+CSV dual-button row overflows on 375px mobile.
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+Report: `docs/reviews/code/code-review-2026-03-15-e11-s04.md`
+
+- **HIGH**: localStorage restoration outside Dexie transaction (split-brain on failure).
+- **HIGH**: Schema migration silently skips versions without registered functions.
+- **HIGH**: Non-deterministic `new Date().toISOString()` in export.
+- **HIGH**: `w-4 h-4` instead of `size-4` shorthand (19 instances).
+- **MEDIUM**: `getLocalStorageData()` exports ALL keys without filtering.
+- **MEDIUM**: `streak-milestones` parsed without type validation.
+- **MEDIUM**: Early returns use error toast for "no data" (not a failure).
+- **MEDIUM**: `downloadBlob` synchronously revokes URL after click.
+- **MEDIUM**: `createActor()` reads localStorage per statement in bulk export.
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+Report: `docs/reviews/design/web-design-guidelines-2026-03-15-e11-s04.md`
+
+- **MEDIUM**: Missing `aria-label` on Import button (also flagged by design review).
+- **MEDIUM**: Hidden file input lacks accessible labeling.
+- **MEDIUM**: Export progress missing `role="status"` / `aria-live="polite"`.
+- Design token compliance excellent (zero hardcoded colors).
 
 ## Challenges and Lessons Learned
 
