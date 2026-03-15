@@ -28,6 +28,7 @@ import {
   computeSkillsDimensions,
 } from '@/lib/reportStats'
 import { StatsCard } from '@/app/components/StatsCard'
+import { EmptyState } from '@/app/components/EmptyState'
 import StudyTimeAnalytics from '@/app/components/StudyTimeAnalytics'
 import { AIAnalyticsTab } from '@/app/components/reports/AIAnalyticsTab'
 import { CategoryRadar } from '@/app/components/reports/CategoryRadar'
@@ -138,6 +139,8 @@ export default function Reports() {
   // ── Dynamic height for horizontal bar chart ──
   const barChartHeight = Math.max(250, courseCompletionData.length * 36)
 
+  const hasActivity = completedLessons > 0 || studyNotes > 0 || activityData.some(d => d.activities > 0)
+
   return (
     <MotionConfig reducedMotion="user">
       <motion.div variants={staggerContainer} initial="hidden" animate="visible">
@@ -145,6 +148,16 @@ export default function Reports() {
           Reports
         </motion.h1>
 
+        {!hasActivity ? (
+          <EmptyState
+            data-testid="empty-state-sessions"
+            icon={Clock}
+            title="Start studying to see your analytics"
+            description="Your study time, completion rates, and insights will appear here"
+            actionLabel="Browse Courses"
+            actionHref="/courses"
+          />
+        ) : (
         <Tabs defaultValue="study" className="mb-6">
           <motion.div variants={fadeUp}>
             <TabsList className="h-11">
@@ -362,6 +375,7 @@ export default function Reports() {
             </motion.div>
           </TabsContent>
         </Tabs>
+        )}
       </motion.div>
     </MotionConfig>
   )
