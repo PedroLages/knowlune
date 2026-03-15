@@ -19,6 +19,8 @@ import { getSettings } from '@/lib/settings'
 import { getInitials } from '@/lib/avatarUpload'
 import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
 import { toast } from 'sonner'
+import { QualityScoreDialog } from './session/QualityScoreDialog'
+import type { QualityScoreResult } from '@/lib/qualityScore'
 
 // Individual nav link — wraps in Tooltip when collapsed
 function NavLink({
@@ -275,6 +277,22 @@ export function Layout() {
     localStorage.setItem('eduvi-sidebar-collapsed-v1', JSON.stringify(sidebarCollapsed))
   }, [sidebarCollapsed])
 
+  // Quality score dialog state (E11-S03)
+  const [qualityDialogOpen, setQualityDialogOpen] = useState(false)
+  const [qualityResult, setQualityResult] = useState<QualityScoreResult | null>(null)
+
+  useEffect(() => {
+    const handleQualityScore = (e: Event) => {
+      const detail = (e as CustomEvent<QualityScoreResult>).detail
+      if (detail && typeof detail.score === 'number') {
+        setQualityResult(detail)
+        setQualityDialogOpen(true)
+      }
+    }
+    window.addEventListener('session-quality-calculated', handleQualityScore)
+    return () => window.removeEventListener('session-quality-calculated', handleQualityScore)
+  }, [])
+
   return (
     <div className="flex h-screen bg-background grain-overlay">
       {/* Skip to content link for keyboard/screen-reader users */}
@@ -468,6 +486,16 @@ export function Layout() {
 
       {/* Mobile Bottom Navigation - Only visible on mobile (<640px) */}
       {isMobile && <BottomNav />}
+
+      {/* Quality Score Dialog (E11-S03) */}
+      {qualityResult && (
+        <QualityScoreDialog
+          open={qualityDialogOpen}
+          onOpenChange={setQualityDialogOpen}
+          score={qualityResult.score}
+          factors={qualityResult.factors}
+        />
+      )}
     </div>
   )
 }
