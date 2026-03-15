@@ -53,7 +53,11 @@ export function EmptyState({
       <Card className={cn('border-2 border-dashed', className)}>
         <CardContent className="flex flex-col items-center justify-center py-12 px-6 text-center">
           <div className="size-16 rounded-full bg-brand-soft flex items-center justify-center mb-4">
-            <Icon className="size-8 text-brand-muted" aria-hidden="true" data-testid="empty-state-icon" />
+            <Icon
+              className="size-8 text-brand-muted"
+              aria-hidden="true"
+              data-testid="empty-state-icon"
+            />
           </div>
           <Heading className="font-display text-lg font-medium mb-2">{title}</Heading>
           <p className="text-muted-foreground mb-6 max-w-sm">{description}</p>
