@@ -72,8 +72,15 @@ export function LessonPlayer() {
   const isMobile = useIsMobile()
 
   // Session tracking
-  const { startSession, updateLastActivity, pauseSession, resumeSession, endSession, heartbeat, recordInteraction } =
-    useSessionStore()
+  const {
+    startSession,
+    updateLastActivity,
+    pauseSession,
+    resumeSession,
+    endSession,
+    heartbeat,
+    recordInteraction,
+  } = useSessionStore()
 
   const course = allCourses.find(c => c.id === courseId)
 

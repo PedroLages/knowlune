@@ -5,7 +5,10 @@ interface TrendIndicatorProps {
   trend: QualityTrend
 }
 
-const TREND_CONFIG: Record<QualityTrend, { icon: typeof TrendingUp; label: string; className: string }> = {
+const TREND_CONFIG: Record<
+  QualityTrend,
+  { icon: typeof TrendingUp; label: string; className: string }
+> = {
   improving: { icon: TrendingUp, label: 'Improving', className: 'text-success' },
   stable: { icon: Minus, label: 'Stable', className: 'text-muted-foreground' },
   declining: { icon: TrendingDown, label: 'Declining', className: 'text-warning' },

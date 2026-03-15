@@ -171,9 +171,7 @@ export function SessionHistory() {
 
   // Quality trend across sessions (most recent first — sessions are already sorted)
   const qualityTrend = useMemo(() => {
-    const scores = sessions
-      .filter(s => s.qualityScore != null)
-      .map(s => s.qualityScore!)
+    const scores = sessions.filter(s => s.qualityScore != null).map(s => s.qualityScore!)
     return calculateQualityTrend(scores)
   }, [sessions])
 
@@ -327,7 +325,10 @@ export function SessionHistory() {
                       <span className="font-semibold" data-testid="session-course-name">
                         {session.courseTitle || session.courseId}
                       </span>
-                      <span className="text-sm font-medium text-brand" data-testid="session-duration">
+                      <span
+                        className="text-sm font-medium text-brand"
+                        data-testid="session-duration"
+                      >
                         {formatDuration(session.duration)}
                       </span>
                       <QualityBadge score={session.qualityScore} />

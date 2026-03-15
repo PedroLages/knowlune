@@ -172,9 +172,7 @@ test.describe('E11-S03: Study Session Quality Scoring', () => {
     expect(count).toBe(4)
   })
 
-  test('AC4: session history shows dash for sessions without quality score', async ({
-    page,
-  }) => {
+  test('AC4: session history shows dash for sessions without quality score', async ({ page }) => {
     // Seed a legacy session (no quality score)
     const session = makeSession({
       qualityScore: undefined,

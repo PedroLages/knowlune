@@ -211,9 +211,7 @@ export function detectEngagementDecay(sessions: StudySession[], now: Date): Enga
   const weeklyDurations = getWeeklyAvgDurations(completedSessions, 4, now)
   const nonZeroWeeks = weeklyDurations.filter(d => d > 0)
   const fourWeekAvg =
-    nonZeroWeeks.length > 0
-      ? nonZeroWeeks.reduce((sum, d) => sum + d, 0) / nonZeroWeeks.length
-      : 0
+    nonZeroWeeks.length > 0 ? nonZeroWeeks.reduce((sum, d) => sum + d, 0) / nonZeroWeeks.length : 0
   const latestWeekDuration = weeklyDurations[weeklyDurations.length - 1]
 
   if (fourWeekAvg > 0 && latestWeekDuration < fourWeekAvg * 0.7) {
