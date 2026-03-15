@@ -227,7 +227,24 @@ export interface StudySession {
   videosWatched: string[] // Video IDs watched during session
   lastActivity: string // ISO 8601 of last interaction
   sessionType: 'video' | 'pdf' | 'mixed'
+  // Quality scoring fields (E11-S03)
+  interactionCount?: number // Meaningful learning actions (seek, note, bookmark, navigate)
+  breakCount?: number // Number of pause→resume cycles
+  qualityScore?: number // 0-100 composite score (calculated on session end)
+  qualityFactors?: QualityFactors // Individual factor scores
 }
+
+// --- Quality Scoring (Story 11.3) ---
+
+export interface QualityFactors {
+  activeTimeScore: number // 0-100, weight 40%
+  interactionDensityScore: number // 0-100, weight 30%
+  sessionLengthScore: number // 0-100, weight 15%
+  breaksScore: number // 0-100, weight 15%
+}
+
+export type QualityTier = 'excellent' | 'good' | 'fair' | 'needs-improvement'
+export type QualityTrend = 'improving' | 'stable' | 'declining'
 
 // --- Learning Challenges (Story 6.1) ---
 
