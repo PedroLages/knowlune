@@ -2,7 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import type { ImportedCourse, ImportedVideo, ImportedPdf } from '@/data/types'
+import type { FileStatus } from '@/lib/fileVerification'
 import { ImportedCourseDetail } from '../ImportedCourseDetail'
+
+// Mock file verification to return all items as 'available' by default
+const mockStatusMap = new Map<string, FileStatus>()
+vi.mock('@/hooks/useFileStatusVerification', () => ({
+  useFileStatusVerification: () => mockStatusMap,
+}))
 
 const mockCourse: ImportedCourse = {
   id: 'course-1',
@@ -102,6 +109,11 @@ function renderDetail(courseId = 'course-1') {
 describe('ImportedCourseDetail', () => {
   beforeEach(() => {
     storeState.importedCourses = [mockCourse]
+    // Default: all files available
+    mockStatusMap.clear()
+    mockStatusMap.set('v1', 'available')
+    mockStatusMap.set('v2', 'available')
+    mockStatusMap.set('p1', 'available')
   })
 
   it('renders page with course title', () => {
@@ -112,17 +124,16 @@ describe('ImportedCourseDetail', () => {
 
   it('renders video items with correct testids', async () => {
     renderDetail()
-    const videoItems = await screen.findAllByTestId('course-content-item-video')
-    expect(videoItems).toHaveLength(2)
-    expect(videoItems[0]).toHaveTextContent('01-Introduction.mp4')
-    expect(videoItems[1]).toHaveTextContent('02-Components.mp4')
+    const v1 = await screen.findByTestId('course-content-item-video-v1')
+    const v2 = await screen.findByTestId('course-content-item-video-v2')
+    expect(v1).toHaveTextContent('01-Introduction.mp4')
+    expect(v2).toHaveTextContent('02-Components.mp4')
   })
 
   it('renders PDF items with correct testids', async () => {
     renderDetail()
-    const pdfItems = await screen.findAllByTestId('course-content-item-pdf')
-    expect(pdfItems).toHaveLength(1)
-    expect(pdfItems[0]).toHaveTextContent('slides.pdf')
+    const p1 = await screen.findByTestId('course-content-item-pdf-p1')
+    expect(p1).toHaveTextContent('slides.pdf')
   })
 
   it('renders content type icons', async () => {
@@ -136,11 +147,20 @@ describe('ImportedCourseDetail', () => {
     expect(await screen.findByText('5:20')).toBeInTheDocument()
   })
 
-  it('video items link to lesson player route', async () => {
+  it('video items link to lesson player route when available', async () => {
     renderDetail()
-    const videoItems = await screen.findAllByTestId('course-content-item-video')
-    const link = videoItems[0].querySelector('a')
+    const v1 = await screen.findByTestId('course-content-item-video-v1')
+    const link = v1.querySelector('a')
     expect(link).toHaveAttribute('href', '/imported-courses/course-1/lessons/v1')
+  })
+
+  it('missing files show badge and are not clickable', async () => {
+    mockStatusMap.set('v1', 'missing')
+    renderDetail()
+    const badge = await screen.findByTestId('file-not-found-badge-v1')
+    expect(badge).toHaveTextContent('File not found')
+    const v1 = screen.getByTestId('course-content-item-video-v1')
+    expect(v1.querySelector('a')).toBeNull()
   })
 
   it('shows "Back to Courses" link', () => {
