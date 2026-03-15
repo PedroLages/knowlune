@@ -191,11 +191,19 @@ See [plan](plans/e11-s03-quality-scoring.md) for implementation approach.
 
 ## Implementation Notes
 
-[Architecture decisions, patterns used, dependencies added]
+- **Pure function scoring engine**: `src/lib/qualityScore.ts` uses stateless pure functions for each factor score, making them independently testable and composable via weighted sum
+- **Zustand direct mutation for high-frequency counters**: `recordInteraction()` and `updateLastActivity()` bypass Zustand's `set()` to avoid re-renders on every user interaction — values only consumed at `endSession()` for quality score calculation
+- **CustomEvent wiring**: `session-quality-calculated` event dispatched from store after persistence, listened by Layout.tsx to trigger QualityScoreDialog — decouples store from UI
+- **Responsive dialog pattern**: QualityScoreDialog uses `useIsMobile()` hook to render shadcn Sheet (bottom) on mobile vs Dialog on desktop
+- **MotionConfig reducedMotion="user"**: Wraps all Framer Motion animations to respect OS `prefers-reduced-motion` setting — established codebase pattern
+- **Design token usage**: All color classes use semantic tokens (bg-success-soft, text-destructive, bg-brand) — enforced by ESLint rule
 
 ## Testing Notes
 
-[Test strategy, edge cases discovered, coverage notes]
+- **Unit tests** (qualityScore.test.ts): 30+ tests covering each scoring function independently — edge cases include zero duration, no interactions, boundary tier values, trend with 2-3 scores
+- **E2E tests** (story-e11-s03.spec.ts): 6 tests covering all 5 ACs — uses `seedIndexedDBStore` for session data and `page.evaluate()` + CustomEvent dispatch for dialog wiring tests
+- **Factory pattern**: `createStudySession()` factory provides defaults for quality-related fields (interactionCount, breakCount), test-specific `makeSession()` helper adds display fields
+- **Key edge cases**: Legacy sessions without qualityScore (shows dash), tier boundary at 40 (was 50), trend with exactly 2 scores
 
 ## Pre-Review Checklist
 
@@ -260,4 +268,8 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-- Story setup complete. Lessons to be documented during implementation.
+- **Zustand direct mutation is a valid pattern** — bypassing `set()` for `recordInteraction()` avoids ~100 re-renders per session. Key: document intent clearly and ensure values are only consumed at session end, never rendered live
+- **Tier boundaries must match spec exactly** — initial implementation used `score >= 50` for "fair" but spec defined 40-69. Caught by code review; test assertions must mirror spec thresholds
+- **Trend threshold affects UX significantly** — `calculateQualityTrend` with `< 4` threshold meant 3-session learners always saw "stable" even with clear improvement (30→60→90). Lowered to `< 2` to give earlier feedback
+- **CustomEvent testing in Playwright** — testing dialog appearance without full lesson player flow by dispatching `session-quality-calculated` via `page.evaluate()`. Clean pattern for testing event-driven UI
+- **Mobile-first dialog rendering** — shadcn Dialog renders centered on all viewports by default. Mobile users need bottom Sheet for better reachability. Used `useIsMobile()` hook for conditional rendering
