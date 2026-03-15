@@ -43,7 +43,12 @@ export function ImportedCourseDetail() {
   const { courseId } = useParams<{ courseId: string }>()
 
   const importedCourses = useCourseImportStore(state => state.importedCourses)
+  const loadImportedCourses = useCourseImportStore(state => state.loadImportedCourses)
   const course = importedCourses.find(c => c.id === courseId)
+
+  useEffect(() => {
+    loadImportedCourses()
+  }, [loadImportedCourses])
 
   const [videos, setVideos] = useState<ImportedVideo[]>([])
   const [pdfs, setPdfs] = useState<ImportedPdf[]>([])
