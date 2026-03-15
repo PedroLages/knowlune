@@ -5,6 +5,8 @@ import { db } from '@/db'
 import { EmptyState } from '@/app/components/EmptyState'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
+import { TrendIndicator } from '@/app/components/session/TrendIndicator'
+import { calculateQualityTrend, getQualityTier } from '@/lib/qualityScore'
 import type { StudySession, ImportedCourse, ImportedVideo } from '@/data/types'
 
 // Extended session type that includes denormalized display fields
@@ -36,6 +38,29 @@ function formatDate(timestamp: string | number): string {
 
 function toDate(timestamp: string | number): Date {
   return new Date(timestamp)
+}
+
+function QualityBadge({ score }: { score?: number }) {
+  if (score == null) {
+    return <span className="text-xs text-muted-foreground">—</span>
+  }
+  const tier = getQualityTier(score)
+  const colorClasses =
+    tier === 'excellent' || tier === 'good'
+      ? 'bg-success-soft text-success'
+      : tier === 'fair'
+        ? 'bg-gold-muted text-warning'
+        : 'bg-destructive/10 text-destructive'
+
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium tabular-nums ${colorClasses}`}
+      data-testid="session-quality-score"
+      aria-label={`Quality score: ${score}`}
+    >
+      {score}
+    </span>
+  )
 }
 
 export function SessionHistory() {
@@ -144,6 +169,16 @@ export function SessionHistory() {
     return result
   }, [sessions, courseFilter, startDate, endDate])
 
+  // Quality trend across sessions (most recent first — sessions are already sorted)
+  const qualityTrend = useMemo(() => {
+    const scores = sessions
+      .filter(s => s.qualityScore != null)
+      .map(s => s.qualityScore!)
+    return calculateQualityTrend(scores)
+  }, [sessions])
+
+  const hasQualityScores = sessions.some(s => s.qualityScore != null)
+
   // Paginated slice
   const visibleSessions = filteredSessions.slice(0, visibleCount)
   const hasMore = visibleCount < filteredSessions.length
@@ -197,7 +232,10 @@ export function SessionHistory() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Study Session History</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Study Session History</h1>
+        {hasQualityScores && <TrendIndicator trend={qualityTrend} />}
+      </div>
 
       {sessions.length === 0 ? (
         <EmptyState
@@ -268,11 +306,11 @@ export function SessionHistory() {
           </div>
 
           {/* Session List */}
-          <div className="space-y-3">
+          <div className="space-y-3" data-testid="session-history">
             {visibleSessions.map(session => (
               <div
                 key={session.id}
-                data-testid="session-entry"
+                data-testid="session-row"
                 className="rounded-[24px] border border-border bg-card transition-colors hover:bg-accent/50"
               >
                 {/* Clickable header — native button for a11y */}
@@ -286,12 +324,13 @@ export function SessionHistory() {
                       <span className="text-sm text-muted-foreground" data-testid="session-date">
                         {formatDate(session.startTime)}
                       </span>
-                      <span className="font-semibold">
+                      <span className="font-semibold" data-testid="session-course-name">
                         {session.courseTitle || session.courseId}
                       </span>
-                      <span className="text-sm font-medium text-brand">
+                      <span className="text-sm font-medium text-brand" data-testid="session-duration">
                         {formatDuration(session.duration)}
                       </span>
+                      <QualityBadge score={session.qualityScore} />
                     </div>
                     {expandedId === session.id ? (
                       <ChevronUp className="size-4 text-muted-foreground" />
