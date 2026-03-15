@@ -51,6 +51,7 @@ Before requesting `/review-story`, verify:
 - [ ] E2E afterEach cleanup uses `await` (not fire-and-forget)
 - [ ] Date handling uses `toLocaleDateString('sv-SE')` pattern (not `toISOString().split('T')[0]`)
 - [ ] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
+- [ ] If story calls external APIs: CSP allowlist configured (see engineering-patterns.md § CSP Configuration)
 
 ## Design Review Feedback
 

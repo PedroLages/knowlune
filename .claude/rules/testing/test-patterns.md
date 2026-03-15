@@ -184,6 +184,64 @@ story-{epic}-s{story}-part{N}.spec.ts      # Split story tests
 {feature}-{aspect}.spec.ts                 # Feature-focused tests
 ```
 
+## LLM Client-Layer Mocking (AI Features)
+
+When testing AI features with streaming responses, **mock at the LLM client layer**, not the network/fetch layer. Client-layer mocks are deterministic, avoid timing issues with streaming chunks, and are easier to maintain.
+
+**Why not network mocking?**
+- Streaming responses (`ReadableStream`) are hard to simulate via `page.route()`
+- Timing of chunks is non-deterministic at the network level
+- Mock payloads must match exact wire format (headers, SSE framing)
+- Client-layer mocks bypass all of this complexity
+
+**Pattern — Inject mock at AI client level:**
+```typescript
+// In test setup: inject mock response before navigation
+await page.addInitScript(() => {
+  window.__AI_MOCK__ = {
+    generateSummary: async () => ({
+      text: 'Mock summary for testing purposes.',
+      citations: [{ noteTitle: 'Test Note', videoName: 'Lecture 1' }]
+    }),
+    streamResponse: async function* () {
+      yield { type: 'text-delta', text: 'Streaming ' }
+      yield { type: 'text-delta', text: 'mock response.' }
+      yield { type: 'finish', finishReason: 'stop' }
+    }
+  }
+})
+```
+
+**In application code — check for mock:**
+```typescript
+const client = window.__AI_MOCK__ ?? realAIClient
+```
+
+**Key rules:**
+- Mock shape must match the real client's return types exactly
+- Test both success and error paths (mock throwing errors for timeout/unavailable)
+- For Vercel AI SDK: mock the `useChat` or `useCompletion` hook's underlying client, not the hook itself
+- Never mock at the React hook level — that skips the streaming rendering logic you want to test
+
+## `about:blank` Browser API Restrictions
+
+Playwright pages start at `about:blank` before navigation. Browser storage APIs (localStorage, IndexedDB) throw `SecurityError` at this URL.
+
+**Rule:** Always navigate to a real URL (`/`) before accessing any browser storage in tests.
+
+```typescript
+// WRONG — SecurityError at about:blank
+await page.evaluate(() => localStorage.setItem('key', 'value'))
+await page.goto('/dashboard')
+
+// CORRECT — navigate first, then seed
+await page.goto('/')
+await page.evaluate(() => localStorage.setItem('key', 'value'))
+await page.goto('/dashboard')
+```
+
+This also applies to IndexedDB seeding — the `indexedDB.open()` call will fail at `about:blank`.
+
 ## References
 
 **Test Utilities**:
