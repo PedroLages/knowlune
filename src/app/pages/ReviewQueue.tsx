@@ -31,16 +31,21 @@ export function ReviewQueue() {
   const { allReviews, isLoading, loadReviews, rateNote } = useReviewStore()
   const { notes, loadNotes } = useNoteStore()
 
-  // Stable time reference for the current page session — ensures consistent
-  // retention calculations and isDue checks across all cards in a single render
-  const [now] = useState(() => new Date())
+  // Refreshing time reference — ensures retention calculations stay current
+  // during long review sessions. Updates every 60s so newly-due notes appear.
+  const [now, setNow] = useState(() => new Date())
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(interval)
+  }, [])
 
   const headingRef = useRef<HTMLHeadingElement>(null)
   const cardListRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    loadReviews()
-    loadNotes()
+    loadReviews().catch(console.error)
+    loadNotes().catch(console.error)
   }, [loadReviews, loadNotes])
 
   // Derive due reviews from subscribed allReviews — this triggers re-renders
@@ -156,7 +161,8 @@ export function ReviewQueue() {
           >
             <AnimatePresence mode="popLayout">
               {validReviews.map(record => {
-                const note = noteMap.get(record.noteId)!
+                const note = noteMap.get(record.noteId)
+                if (!note) return null
 
                 return (
                   <motion.div key={record.id} variants={fadeUp}>

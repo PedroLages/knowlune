@@ -3,37 +3,45 @@
 **Review Date**: 2026-03-15
 **Reviewed By**: Claude Code (design-review agent via Playwright MCP)
 **Story**: E11-S01 — Spaced Review System
+**Review Round**: 2 (post-fix verification — all prior findings addressed in commit `0c07cac`)
 **Changed Files**:
 - `src/app/pages/ReviewQueue.tsx`
 - `src/app/components/figma/ReviewCard.tsx`
 - `src/app/components/figma/RatingButtons.tsx`
 - `src/app/config/navigation.ts` (Review entry added)
 - `src/app/routes.tsx` (lazy-loaded ReviewQueue route)
+- `src/stores/useReviewStore.ts`
 
 **Affected Pages**: `/review` (Review Queue)
 **Tested Viewports**: Desktop 1440px, Tablet 768px, Mobile 375px
-**Theme tested**: Dark mode (system default in test environment)
+**Theme tested**: Light mode (switched via header toggle; dark mode available)
 
 ---
 
 ## Executive Summary
 
-The Spaced Review System introduces a clean, well-structured review queue with properly implemented ARIA labels on all interactive elements, correct design token usage throughout, and a smooth card exit animation on rating. The interaction model — rate and dismiss — is intuitive and works correctly. Three issues require attention before merge: rating buttons are 32px tall across all viewports (below the 44px minimum touch target), the empty state title uses a `<div>` instead of a semantic heading element, and the note excerpt display bleeds the markdown heading text into the content preview.
+All blockers and high-priority findings from the prior review have been resolved in commit `0c07cac`. The Spaced Review System is in a shippable state. Rating buttons now meet the 44px touch target requirement, the empty state title renders as a semantic `<h2>`, review cards are wrapped in `<motion.article>` elements with descriptive `aria-label` values, and the note excerpt cleanly strips markdown heading lines. One medium-priority pre-existing issue with collapsed sidebar accessibility remains open but is out of scope for this story. One new low-priority contrast observation is noted below.
 
 ---
 
 ## What Works Well
 
-- **ARIA on rating buttons**: The `role="group"` wrapper with `aria-label="Rate your recall"` and individual descriptive `aria-labels` (e.g., "Rate as Hard — shorter review interval") are exemplary. This is exactly the pattern specified in the story design guidance.
-- **Retention badge accessibility**: `aria-label="Predicted retention: 42%"` is correctly applied, giving screen readers the full context rather than just the bare number.
-- **Design token compliance**: All new files use semantic tokens (`bg-brand-soft`, `text-destructive`, `text-warning`, `text-success`, `text-muted-foreground`) with zero hardcoded color values. The ESLint rule is working.
-- **`MotionConfig reducedMotion="user"`**: Correctly wraps the entire page, ensuring card animations respect the OS-level `prefers-reduced-motion` preference.
-- **`aria-current="page"`**: The `/review` sidebar nav link correctly receives `aria-current="page"` when active — confirmed via computed attribute inspection.
-- **No console errors**: Zero application errors across all viewports and interactions. One pre-existing deprecation warning (`apple-mobile-web-app-capable`) unrelated to this story.
-- **Card exit interaction**: Clicking a rating button correctly removes the card with a fade-out + slide-up animation and decrements the subtitle count ("3 notes due" → "2 notes due") immediately.
-- **Loading state**: `aria-busy="true"` and `aria-label="Loading review queue"` on the skeleton container is a solid accessibility pattern.
-- **Responsive layout**: No horizontal overflow at any tested viewport. The `max-w-2xl` container provides appropriate content width at desktop and scales well to mobile.
-- **`aria-live="polite"` on next review date**: Correctly applied within the empty state description so screen readers announce the date when it updates dynamically.
+- **Touch targets now correct**: Rating buttons measure exactly `44px` height at all viewports — meets WCAG 2.5.5. The `size="default"` change was applied correctly.
+- **Semantic article landmark**: Each review card is a `<motion.article>` with `aria-label` drawn from the note excerpt, giving screen readers a named, navigable list of review items.
+- **Exemplary ARIA on rating buttons**: `role="group" aria-label="Rate your recall"` wraps three buttons each carrying a full descriptive label (e.g., "Rate as Hard — shorter review interval"). This is the gold standard for this pattern.
+- **Retention badge accessibility**: `aria-label="Predicted retention: X%"` provides context beyond the bare number for screen reader users.
+- **Complete design token compliance**: Zero hardcoded hex colors or raw Tailwind palette values in all new files. Semantic tokens (`bg-brand-soft`, `text-destructive`, `text-warning`, `text-success`, `text-muted-foreground`) used throughout.
+- **`prefers-reduced-motion` layered correctly**: `MotionConfig reducedMotion="user"` wraps the page, CSS has `@media (prefers-reduced-motion)` rules present, and the button hover scale uses `motion-safe:hover:scale-[1.02]` — three layers of defence.
+- **Empty state heading hierarchy**: `<h2>No reviews due right now</h2>` correctly follows the page `<h1>Review Queue</h1>`, giving a clean two-level structure for this state.
+- **`aria-live` for dynamic content**: Both the subtitle count (`aria-live="polite"` on the notes-due paragraph) and the next review date in the empty state announce changes to screen readers without interrupting.
+- **`aria-busy` on loading skeleton**: The skeleton container correctly uses `aria-busy="true"` and `aria-label="Loading review queue"`.
+- **Card exit animation**: Clicking a rating button produces a smooth fade-out + slide-up exit (`opacity: 0, y: -16, duration: 0.2s`), the count immediately decrements in the subtitle, and focus moves to the next card's first button (or back to the H1 heading when the queue empties).
+- **No console errors**: Zero application errors across all viewports and interactions. The three orphaned-review warnings (`rr-1`, `rr-2`, `rr-3` referencing test fixture notes) are expected behaviour — the component gracefully skips them with a `console.warn`.
+- **Responsive layout clean**: No horizontal scroll at any breakpoint. `max-w-2xl` card container scales appropriately. Mobile bottom nav touch targets are 56×73px — well above minimum.
+- **Background color correct**: Body background is `rgb(250, 245, 238)` = `#FAF5EE` — matches design token exactly.
+- **Card border radius**: Cards measure `24px` border radius — matches the `rounded-[24px]` specification.
+- **CLS zero**: Cumulative Layout Shift logged as `0.00` — no layout instability during card entry or exit.
+- **Focus management after rating**: After dismissing a card via keyboard, focus correctly advances to the first button of the next card (via `requestAnimationFrame` + `querySelector`), then falls back to the H1 heading when the queue empties. This is a strong keyboard UX pattern.
 
 ---
 
@@ -41,93 +49,61 @@ The Spaced Review System introduces a clean, well-structured review queue with p
 
 ### Blockers (Must fix before merge)
 
-**B1 — Rating buttons below 44px touch target minimum on mobile**
-
-The rating buttons render at 32px height at all viewports (mobile 375px, tablet 768px, desktop 1440px). WCAG 2.5.5 requires a minimum 44x44px touch target on touch devices. The design guidance for this story explicitly specifies "Rating buttons span full width" on mobile but does not address height. This directly impacts learners reviewing on phones — a primary use case for spaced repetition.
-
-- **Location**: `src/app/components/figma/RatingButtons.tsx:39` — `size="sm"` on the Button renders at 32px height
-- **Evidence**: Computed `getBoundingClientRect().height === 32` at 375px viewport
-- **Impact**: Learners reviewing notes on mobile will frequently mis-tap between Hard/Good/Easy buttons, corrupting their review history and undermining the core learning experience
-- **Suggestion**: Change `size="sm"` to `size="default"` (which renders at 40px) and add `min-h-[44px]` via the `className` prop to meet the 44px requirement. Alternatively, keep `size="sm"` and add `py-3` to override the vertical padding.
+None. All prior blockers resolved.
 
 ---
 
 ### High Priority (Should fix before merge)
 
-**H1 — Empty state title is a `<div>`, not a semantic heading**
-
-`EmptyTitle` in `src/app/components/ui/empty.tsx:58` renders as a `<div>` styled to look like a heading. When the review queue shows the empty state, there is no heading between the `<h1>Review Queue</h1>` and the "No reviews due right now" text. Screen reader users navigating by headings will only find one level of structure on this page.
-
-- **Location**: `src/app/components/ui/empty.tsx:58-66` — `EmptyTitle` is a `<div>`; `src/app/pages/ReviewQueue.tsx:139` — usage site
-- **Evidence**: Computed `titleTag === "DIV"`, `titleRole === null` — confirmed by DOM inspection
-- **Impact**: Screen reader users relying on heading navigation (a common strategy for low-vision users) cannot jump to the empty state's message. The H1 "Review Queue" becomes the only navigational landmark.
-- **Suggestion**: The `EmptyTitle` component should render as a `<p>` with `role="heading" aria-level="2"`, or better, change it to render as `<h2>` by default with an optional `as` prop for flexibility. Since this is a shared component, any change should be validated against all other usages in the app.
-
-**H2 — Note excerpt shows markdown heading text duplicated in content**
-
-The `getNoteExcerpt()` function strips markdown syntax (`##`, `**`, etc.) but does not remove the heading text itself. Notes stored with `## Title\n\nBody` render the excerpt as "Title Body content..." — the heading and body text flow together without a separator. Combined with the card's lack of a dedicated note title field, learners see the same text twice conceptually.
-
-- **Location**: `src/app/components/figma/ReviewCard.tsx:30-44` — `getNoteExcerpt()`, line 94 — usage
-- **Evidence**: Observed excerpt "React Hooks Hooks allow function components to use state..." — "React Hooks" is the markdown heading text, "Hooks allow..." is the body
-- **Impact**: The excerpt is meant to help learners recall the note's content before rating. Seeing the heading merged into the body is confusing and reduces the excerpt's utility as a memory cue. Learners may struggle to identify whether they're seeing context or content.
-- **Suggestion**: Two options: (1) Strip the first heading line entirely from the excerpt (`content.replace(/^#{1,6}\s.+\n?/, '').trim()`), letting the body speak for itself. (2) Display the note's `title` field separately above the excerpt as a `<strong>` or visually distinct element, so learners see structured title + body preview. Option 2 is preferable for clarity.
-
-**H3 — `ReviewCard` contains no `<article>` or landmark role**
-
-Each review card represents a discrete item of content (a note to review). Wrapping with a `<motion.div>` and `<Card>` (which renders as `<div>`) means screen reader users hear a generic container rather than a named content item. A learner using a screen reader cannot quickly scan "how many review cards are there and what are their titles."
-
-- **Location**: `src/app/components/figma/ReviewCard.tsx:57-106`
-- **Evidence**: Accessibility snapshot shows `generic [ref=e131]` for each card with no semantic role
-- **Impact**: Screen reader users cannot efficiently navigate between review items. The `<main>` contains an unlabeled list of anonymous containers.
-- **Suggestion**: Wrap the card's `<Card>` in an `<article>` element with `aria-label` set to the note title (e.g., `aria-label={note.title}`). This gives screen readers a scannable list of named articles. The `motion.div` can remain as the animation wrapper outside the `article`.
+None. All prior high-priority findings resolved.
 
 ---
 
 ### Medium Priority (Fix when possible)
 
-**M1 — Sidebar nav links have no accessible name in collapsed mode**
+**M1 — Muted text contrast is 3.88:1 on white card — below WCAG AA for 12px text**
 
-When the sidebar is collapsed (72px width, icon-only mode), all nav links lose their visible text label. The Tooltip renders the name on mouse hover, but the underlying `<Link>` element has no `aria-label`, no `title`, and no text content — only an SVG icon with `aria-hidden="true"`. Screen readers announce these as unlabeled links.
+The `text-xs` (12px) metadata fields — course name, topic tag, and "Due now" / time-until-due — render `rgb(125, 129, 144)` on the white card background `rgb(255, 255, 255)`. Computed contrast ratio: **3.88:1**. WCAG AA requires 4.5:1 for normal text at this size. The same token is used system-wide as `text-muted-foreground`, so this is a systemic issue rather than specific to the review cards.
 
-- **Location**: `src/app/components/Layout.tsx:38-54` — the `NavLink` component; `src/app/config/navigation.ts:40` — Review entry
-- **Evidence**: Confirmed via computed `link.ariaLabel === null`, `link.textContent === ""` on all 12 nav links in collapsed state
-- **Impact**: This is a pre-existing system-wide issue — not introduced by E11-S01. However, the new Review nav link inherits the same gap. Screen reader users navigating the collapsed sidebar cannot identify any navigation destination.
-- **Suggestion**: Add `aria-label={item.name}` to the `<Link>` element when `iconOnly` is true (line 39 of Layout.tsx). This ensures screen readers announce "Review" regardless of the Tooltip state. Fix applies to all nav items at once.
-- **Note**: This is pre-existing — flag to the team but low urgency for this specific story merge.
+- **Location**: `src/app/components/figma/ReviewCard.tsx:75–79` (`text-muted-foreground` on `course-name` and `topic-name`); line 102 (`text-muted-foreground` on `time-until-due`). Root cause: `--color-muted-foreground` token value in `src/styles/theme.css`.
+- **Evidence**: Computed via `relativeLuminance()` in browser: muted foreground lum = 0.213, white lum = 1.0, ratio = `(1.05) / (0.263)` = **3.88:1**. `passesAA: "FAIL"` at 12px.
+- **Impact**: Learners with low vision or in bright-light conditions may struggle to read the course name, topic, and due-time metadata. These fields are important for contextualising the note being reviewed.
+- **Suggestion**: Two options: (1) Update the `--color-muted-foreground` token to a slightly darker value (approximately `rgb(107, 111, 126)` or darker achieves 4.5:1 on white — verify in `theme.css`). (2) Promote these specific labels to `text-foreground` or `text-sm` size (14px counts as "large text" at bold weight and requires only 3:1). Option 1 is preferred as it fixes the token globally. Note: validate that any token change passes contrast in dark mode too.
 
-**M2 — Hardcoded Tailwind blue colors in active nav link state**
+**M2 — "Unknown Course" displays for all imported-course notes**
 
-In `Layout.tsx:47`, the active nav link uses hardcoded `bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400` instead of design tokens `bg-brand-soft` / `text-brand`. This is a pre-existing issue that the new Review link inherits.
+Notes attached to imported courses (not in the `allCourses` static map) show "Unknown Course" as the course name. The code comment at `ReviewQueue.tsx:22` acknowledges this: "only covers static courses — imported courses not yet supported." In a live session where the primary content is imported, every card shows "Unknown Course," degrading the context learners need to situate their recall.
 
-- **Location**: `src/app/components/Layout.tsx:47`
-- **Evidence**: Code inspection — no ESLint error because the ESLint rule may not apply retroactively to existing files not touched in this story
-- **Impact**: If the brand color changes in `theme.css`, the active nav state won't update automatically. Low visual impact today.
-- **Suggestion**: Replace with `bg-brand-soft dark:bg-brand/10 text-brand` for both light and dark modes. Pre-existing issue — can be addressed in a separate cleanup story.
+- **Location**: `src/app/pages/ReviewQueue.tsx:23–27` (`getCourseName()` function) and lines 167 (`courseName={getCourseName(note.courseId)}`).
+- **Evidence**: All three review cards in the test session displayed "Unknown Course" — confirmed via `[data-testid="course-name"]` computed text.
+- **Impact**: Spaced repetition is most valuable when reviewing notes from imported study materials. Seeing "Unknown Course" on every card reduces the contextual value of the metadata row and may confuse learners who have not seen this label before.
+- **Suggestion**: Extend `getCourseName()` to also query the `importedCourses` Dexie table (or pass the note's `courseTitle` field if it exists). This could be done reactively by loading the imported courses map in `ReviewQueue` alongside `allReviews` and `notes`. If that is out of scope for this story, replace "Unknown Course" with a softer fallback like "Imported material" or simply omit the course name row when it cannot be resolved.
 
-**M3 — No visible note title in ReviewCard**
+**M3 — Collapsed sidebar nav links have no accessible name (pre-existing)**
 
-Each card shows course name and topic tag but not the note's own `title` field. Learners see "React" (topic) and "Unknown Course" (course) but no specific note identifier. The excerpt starts with the stripped heading text, which partially compensates, but a dedicated title display would significantly improve card scannability.
+When the sidebar is collapsed (icon-only mode), all nav links — including the new `/review` entry — have empty `textContent`, no `aria-label`, and no `title` attribute. Screen readers announce these as unlabeled links. This is a pre-existing system-wide issue not introduced by this story.
 
-- **Location**: `src/app/components/figma/ReviewCard.tsx:64-80` — the card header section
-- **Evidence**: Card header shows only course name and topic; no `note.title` is rendered
-- **Impact**: When reviewing multiple notes from the same course and topic, learners cannot quickly distinguish them by scanning the cards. This forces them to read the full excerpt for every card.
-- **Suggestion**: Add a `<p className="font-medium text-sm text-foreground">{note.title}</p>` below the course/topic metadata in the header section. This also resolves H2 if the excerpt then strips the heading line.
+- **Location**: `src/app/components/Layout.tsx` — the collapsed `NavLink` render path. `src/app/config/navigation.ts:40` — the Review entry that inherits the same gap.
+- **Evidence**: Confirmed for all 12 nav links: `link.ariaLabel === null`, `link.textContent === ""` in collapsed state.
+- **Impact**: Keyboard and screen reader users navigating the collapsed sidebar cannot identify any destination. This affects all pages, not just `/review`.
+- **Suggestion**: Add `aria-label={item.name}` to the `<Link>` rendered when the sidebar is in icon-only mode. A one-line fix in `Layout.tsx` resolves the issue globally. Queue as a separate patch story if needed.
 
 ---
 
 ### Nitpicks (Optional)
 
-**N1 — Loading skeleton uses `p-1` padding inconsistently**
+**N1 — Note title absent from card header**
 
-The loading state and the loaded state both use `space-y-6 p-1` on their root `<div>`. The `p-1` (4px) is minimal and appears intentional to avoid double-padding with the Layout shell, but it's worth documenting this as a deliberate choice rather than an oversight.
+The card header shows course name and topic tag but does not display `note.title`. When reviewing multiple notes from the same course and topic, learners must read the excerpt to distinguish cards. A brief `note.title` line above the excerpt would improve at-a-glance scannability.
 
-**N2 — `forceRender` workaround for Zustand v5**
+- **Location**: `src/app/components/figma/ReviewCard.tsx:66–80` — card header section.
+- **Suggestion**: Add `<p className="font-medium text-sm text-foreground truncate">{note.title}</p>` as a third line in the metadata block, below topic tag.
 
-The `useState(0)` / `forceRender(c => c + 1)` pattern in `ReviewQueue.tsx:35-45` is a pragmatic workaround for a Zustand v5 `useSyncExternalStore` edge case. The code comment explains it well. This should be removed when the underlying Zustand issue is resolved. Consider adding a TODO comment with a link to the Zustand issue tracker.
+**N2 — `getNextReviewDate()` computed unconditionally on every render**
 
-**N3 — `getNextReviewDate()` called unconditionally**
+`nextReviewDate` (line 99–105 of `ReviewQueue.tsx`) sorts all `allReviews` on every render even when `validReviews.length > 0` and the value is only consumed in the empty state. Minor performance consideration.
 
-`getNextReviewDate()` at line 61 is called on every render regardless of whether `dueReviews.length === 0`. Since it's only needed for the empty state, it could be moved inside the `ReviewEmptyState` component or conditionally computed. Minor performance consideration.
+- **Suggestion**: Conditionally derive it: `const nextReviewDate = useMemo(() => validReviews.length === 0 ? ... : null, [validReviews, allReviews])`. This is a micro-optimisation — only worth changing if the review list grows large.
 
 ---
 
@@ -135,28 +111,33 @@ The `useState(0)` / `forceRender(c => c + 1)` pattern in `ReviewQueue.tsx:35-45`
 
 | Check | Status | Notes |
 |-------|--------|-------|
-| Text contrast ≥4.5:1 | Pass | H1: 14.12:1, muted text: 5.21:1 in dark mode |
-| Keyboard navigation | Partial | Rating buttons reachable via Tab; focus ring visible via box-shadow. Nav links unlabeled (pre-existing). |
-| Focus indicators visible | Pass | Tailwind ring applied as box-shadow: `oklab(...) 0px 0px 0px 3px` — confirmed present |
-| Heading hierarchy | Fail | Only H1 on page. Empty state title is a `<div>`, not H2. Review cards have no heading. |
-| ARIA labels on rating buttons | Pass | All three buttons have descriptive `aria-label` values |
-| ARIA group on rating buttons | Pass | `role="group" aria-label="Rate your recall"` correctly wraps buttons |
+| Text contrast ≥4.5:1 (body text) | Pass | H1: 15.37:1 on body bg; excerpt text: 15.37:1 on card |
+| Text contrast ≥4.5:1 (small/muted text) | Fail | `text-xs` muted text: 3.88:1 on white card — below AA |
+| Keyboard navigation | Pass | All rating buttons reachable via Tab; focus advances after rating |
+| Focus indicators visible | Pass | Ring applied via box-shadow on all interactive elements |
+| Heading hierarchy | Pass | H1 "Review Queue" → H2 "No reviews due right now" (empty state) |
+| ARIA labels on icon buttons | Pass | Rating buttons have full descriptive `aria-label` values |
+| ARIA group on rating buttons | Pass | `role="group" aria-label="Rate your recall"` present |
 | Retention badge ARIA | Pass | `aria-label="Predicted retention: X%"` present |
-| Semantic HTML for cards | Fail | Cards are `<div>` — no `<article>` or equivalent landmark |
+| Semantic HTML for cards | Pass | `<motion.article aria-label={excerpt}>` wraps each card |
+| Semantic HTML for empty state | Pass | Empty state title is `<h2>` |
+| Loading state accessible | Pass | `aria-busy="true"`, `aria-label="Loading review queue"` on skeleton |
+| `aria-live` for dynamic content | Pass | Count subtitle and next review date both have `aria-live="polite"` |
+| Focus management after interaction | Pass | Focus advances to next card's button or H1 after rating |
+| `prefers-reduced-motion` | Pass | `MotionConfig reducedMotion="user"` + CSS media query + `motion-safe:` prefix |
+| Touch targets ≥44×44px | Pass | Rating buttons: 44px height (corrected from prior review) |
+| Mobile nav touch targets | Pass | Bottom nav items: 56×73px |
 | Form labels associated | N/A | No form inputs in this feature |
-| `prefers-reduced-motion` | Pass | `MotionConfig reducedMotion="user"` wraps entire page |
-| Touch targets ≥44x44px | Fail | Rating buttons: 32px height at all viewports |
-| `aria-live` for dynamic content | Pass | Next review date in empty state has `aria-live="polite"` |
-| `aria-busy` on loading state | Pass | Skeleton container has `aria-busy="true"` |
-| Loading state accessible | Pass | `aria-label="Loading review queue"` on skeleton container |
+| No horizontal scroll | Pass | Confirmed at 375px, 768px, 1440px |
+| Collapsed sidebar nav labels | Fail | Pre-existing — all nav links unlabeled in collapsed state |
 
 ---
 
 ## Responsive Design Verification
 
-- **Mobile (375px)**: Partial — No horizontal scroll. Layout adapts correctly. Rating buttons 80px wide (flex-1 fills card) but 32px tall — fails touch target requirement. Card width 297px fits within viewport.
-- **Tablet (768px)**: Pass — No horizontal scroll. Container 672px. Sidebar correctly collapsed. Rating buttons 205px wide, still 32px tall.
-- **Desktop (1440px)**: Pass — Content centered with `max-w-2xl`. Proper use of whitespace. Retention badge right-aligned in card header. Card staggered entrance animation smooth.
+- **Mobile (375px)**: Pass — No horizontal scroll. Single-column card stack. Rating buttons fill card width (`flex-1`) at 44px height. Bottom tab bar includes Review in the "More" drawer. Main content has 80px bottom padding to clear the nav bar.
+- **Tablet (768px)**: Pass — No horizontal scroll. Card container 672px. Sidebar correctly collapsed to icon-only.
+- **Desktop (1440px)**: Pass — Content centred with `max-w-2xl`. Strong use of whitespace. Card staggered entrance animation smooth. Retention badge right-aligned in header. Hover shadow on cards works correctly.
 
 ---
 
@@ -164,21 +145,40 @@ The `useState(0)` / `forceRender(c => c + 1)` pattern in `ReviewQueue.tsx:35-45`
 
 | Interaction | Result | Notes |
 |-------------|--------|-------|
-| Rate as Hard (click) | Pass | Card exits with fade+slide-up, count decrements |
-| Queue subtitle updates | Pass | "3 notes due" → "2 notes due" immediately after rating |
-| Empty state renders | Pass | Shows "No reviews due right now" with correct message |
-| Empty state with next date | Pass (code verified) | `aria-live="polite"` on next review date span |
-| Console errors | Pass | 0 errors, 1 pre-existing deprecation warning |
-| CLS (Cumulative Layout Shift) | Pass | CLS: 0.00 logged by performance monitor |
-| LCP | Pass | ~740ms (good rating from internal monitor) |
+| Rate as Hard (click) | Pass | Card exits with fade + slide-up, count decrements immediately |
+| Rate as Good (click) | Pass | Same — queue empties correctly when last card rated |
+| Empty state renders after all rated | Pass | "No reviews due right now" with next review date shown |
+| Queue count subtitle updates | Pass | `aria-live="polite"` — screen readers notified |
+| Empty state "no reviews ever" text | Pass (code verified) | "Rate a note after studying to start building your review queue." |
+| Console errors | Pass | 0 errors |
+| Console warnings | Pass | 3 orphaned-review warns (expected test data); 1 pre-existing meta tag deprecation |
+| CLS | Pass | 0.00 — no layout shift |
+| LCP | Pass | ~556ms (good rating per performance monitor) |
+| TTFB | Pass | 12ms (excellent) |
+
+---
+
+## Prior Findings Resolution Status
+
+| Finding | Severity | Status |
+|---------|----------|--------|
+| B1 — Rating buttons 32px touch target | Blocker | Resolved — now 44px (`size="default"`) |
+| H1 — EmptyTitle was `<div>` not heading | High | Resolved — now `<h2>` |
+| H2 — Note excerpt showed merged heading+body text | High | Resolved — heading lines stripped in `getNoteExcerpt()` |
+| H3 — ReviewCard had no semantic landmark | High | Resolved — `<motion.article aria-label={...}>` |
+| M1 — Sidebar nav links unlabeled (pre-existing) | Medium | Open — pre-existing, out of scope |
+| M2 — Hardcoded blue in Layout active state (pre-existing) | Medium | Open — pre-existing, out of scope |
+| M3 — No visible note title in card | Medium | Partially addressed — heading text now stripped from excerpt; title field still not displayed |
+| N1 — Loading skeleton `p-1` padding | Nitpick | Acknowledged, intentional |
+| N2 — `forceRender` Zustand workaround | Nitpick | Acknowledged, commented |
+| N3 — `getNextReviewDate()` unconditional | Nitpick | Open — acceptable |
 
 ---
 
 ## Recommendations
 
-1. **Fix touch targets first (B1)**: Change `size="sm"` to `size="default"` on RatingButtons and add `min-h-[44px]` — this is a one-line change with immediate mobile UX impact.
-2. **Fix note excerpt display (H2 + M3 together)**: Add `note.title` as a visible card header element and strip the heading line from `getNoteExcerpt()`. These two changes are coupled and best done together.
-3. **Fix EmptyTitle semantic element (H1)**: Either change `EmptyTitle` to render as `<h2>` or add `role="heading" aria-level="2"` — validate against all other empty state usages in the app first.
-4. **Address ReviewCard article landmark (H3)**: Wrap card content in `<article aria-label={note.title}>` — this also helps with M3 once the title is available.
-5. **Pre-existing sidebar accessibility (M1, M2)**: Queue as a separate story for Layout.tsx cleanup — these affect all pages, not just `/review`.
+1. **Address muted text contrast (M1)**: Darken the `--color-muted-foreground` token in `src/styles/theme.css` to achieve ≥4.5:1 on white. This is a one-token change that improves contrast across the entire app, not just the review cards. Verify dark mode contrast after the change.
+2. **Resolve "Unknown Course" for imported notes (M2)**: Either extend `getCourseName()` to query the Dexie `importedCourses` table, or substitute a softer fallback. This is the most visible UX gap in a real usage scenario where the primary study material is imported.
+3. **Add sidebar aria-labels (M3)**: Add `aria-label={item.name}` to collapsed nav links in `Layout.tsx` — a single-line fix that resolves screen reader accessibility for all navigation items across the entire app.
+4. **Add note title to card (N1)**: A low-effort card header improvement that significantly aids scannability when multiple notes share the same course and topic.
 

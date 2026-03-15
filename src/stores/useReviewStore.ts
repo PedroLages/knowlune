@@ -17,7 +17,7 @@ interface ReviewState {
   pendingRating: PendingRating | null
 
   loadReviews: () => Promise<void>
-  rateNote: (noteId: string, rating: ReviewRating) => Promise<void>
+  rateNote: (noteId: string, rating: ReviewRating, now?: Date) => Promise<void>
   retryPendingRating: () => Promise<void>
   getDueReviews: (now?: Date) => ReviewRecord[]
   getNextReviewDate: () => string | null
@@ -40,11 +40,9 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
     }
   },
 
-  rateNote: async (noteId: string, rating: ReviewRating) => {
+  rateNote: async (noteId: string, rating: ReviewRating, now: Date = new Date()) => {
     const { allReviews } = get()
     const existing = allReviews.find(r => r.noteId === noteId)
-
-    const now = new Date()
     const { interval, easeFactor, nextReviewAt } = calculateNextReview(
       existing ?? null,
       rating,
@@ -86,7 +84,7 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
         action: {
           label: 'Retry',
           onClick: () => {
-            get().retryPendingRating()
+            get().retryPendingRating().catch(console.error)
           },
         },
       })

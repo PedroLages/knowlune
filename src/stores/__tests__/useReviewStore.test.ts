@@ -45,6 +45,40 @@ describe('loadReviews', () => {
   })
 })
 
+describe('rateNote (happy path)', () => {
+  it('should update allReviews with new interval and increment reviewCount on success', async () => {
+    const review = makeReview({ id: 'review-hp', noteId: 'note-hp', reviewCount: 1 })
+    useReviewStore.setState({ allReviews: [review] })
+
+    vi.spyOn(db.reviewRecords, 'put').mockResolvedValue(undefined as never)
+
+    await useReviewStore.getState().rateNote('note-hp', 'good', FIXED_DATE)
+
+    const state = useReviewStore.getState()
+    const updated = state.allReviews.find(r => r.noteId === 'note-hp')
+    expect(updated).toBeDefined()
+    expect(updated!.reviewCount).toBe(2)
+    expect(new Date(updated!.nextReviewAt).getTime()).toBeGreaterThan(FIXED_DATE.getTime())
+    expect(state.pendingRating).toBeNull()
+    expect(state.error).toBeNull()
+  })
+
+  it('should create a new review record for a first-time rating', async () => {
+    useReviewStore.setState({ allReviews: [] })
+
+    vi.spyOn(db.reviewRecords, 'put').mockResolvedValue(undefined as never)
+
+    await useReviewStore.getState().rateNote('note-new', 'easy', FIXED_DATE)
+
+    const state = useReviewStore.getState()
+    expect(state.allReviews).toHaveLength(1)
+    expect(state.allReviews[0].noteId).toBe('note-new')
+    expect(state.allReviews[0].rating).toBe('easy')
+    expect(state.allReviews[0].reviewCount).toBe(1)
+    expect(new Date(state.allReviews[0].nextReviewAt).getTime()).toBeGreaterThan(FIXED_DATE.getTime())
+  })
+})
+
 describe('rateNote (AC5 — error handling)', () => {
   it('should rollback optimistic update on persistence failure', async () => {
     const review = makeReview({ id: 'review-1', noteId: 'note-fail' })
@@ -145,6 +179,40 @@ describe('getDueReviews', () => {
 
     const due = useReviewStore.getState().getDueReviews(FIXED_DATE)
     expect(due).toHaveLength(0)
+  })
+})
+
+describe('AC3 — queue re-sorts after rating', () => {
+  it('should re-sort due reviews by retention after a rating', async () => {
+    const reviewA = makeReview({
+      id: 'a',
+      noteId: 'note-a',
+      reviewedAt: new Date(FIXED_DATE.getTime() - 8 * 86400000).toISOString(),
+      nextReviewAt: new Date(FIXED_DATE.getTime() - 86400000).toISOString(),
+      interval: 3,
+    })
+    const reviewB = makeReview({
+      id: 'b',
+      noteId: 'note-b',
+      reviewedAt: new Date(FIXED_DATE.getTime() - 2 * 86400000).toISOString(),
+      nextReviewAt: new Date(FIXED_DATE.getTime() - 86400000).toISOString(),
+      interval: 3,
+    })
+
+    useReviewStore.setState({ allReviews: [reviewA, reviewB] })
+
+    // Before rating: note-a has lower retention (reviewed longer ago) → first
+    const dueBefore = useReviewStore.getState().getDueReviews(FIXED_DATE)
+    expect(dueBefore[0].noteId).toBe('note-a')
+
+    vi.spyOn(db.reviewRecords, 'put').mockResolvedValue(undefined as never)
+
+    // Rate note-a as 'good' — pushes it to the future, leaving only note-b due
+    await useReviewStore.getState().rateNote('note-a', 'good', FIXED_DATE)
+
+    const dueAfter = useReviewStore.getState().getDueReviews(FIXED_DATE)
+    expect(dueAfter).toHaveLength(1)
+    expect(dueAfter[0].noteId).toBe('note-b')
   })
 })
 

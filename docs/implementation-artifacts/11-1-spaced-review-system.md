@@ -1,12 +1,12 @@
 ---
 story_id: E11-S01
 story_name: "Spaced Review System"
-status: in-progress
+status: done
 started: 2026-03-15
-completed:
-reviewed: in-progress
+completed: 2026-03-15
+reviewed: true
 review_started: 2026-03-15
-review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing]
 burn_in_validated: false
 ---
 
