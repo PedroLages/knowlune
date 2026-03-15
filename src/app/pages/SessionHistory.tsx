@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Link } from 'react-router'
 import { History, ChevronDown, ChevronUp, X } from 'lucide-react'
 import { db } from '@/db'
+import { cn } from '@/app/components/ui/utils'
 import { EmptyState } from '@/app/components/EmptyState'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
@@ -50,11 +51,14 @@ function QualityBadge({ score }: { score?: number }) {
       ? 'bg-success-soft text-success'
       : tier === 'fair'
         ? 'bg-gold-muted text-warning'
-        : 'bg-destructive/10 text-destructive'
+        : 'bg-destructive/15 text-destructive'
 
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium tabular-nums ${colorClasses}`}
+      className={cn(
+        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium tabular-nums',
+        colorClasses
+      )}
       data-testid="session-quality-score"
       aria-label={`Quality score: ${score}`}
     >
@@ -169,11 +173,11 @@ export function SessionHistory() {
     return result
   }, [sessions, courseFilter, startDate, endDate])
 
-  // Quality trend across sessions (most recent first — sessions are already sorted)
+  // Quality trend scoped to filtered sessions (respects course/date filters)
   const qualityTrend = useMemo(() => {
-    const scores = sessions.filter(s => s.qualityScore != null).map(s => s.qualityScore!)
+    const scores = filteredSessions.filter(s => s.qualityScore != null).map(s => s.qualityScore!)
     return calculateQualityTrend(scores)
-  }, [sessions])
+  }, [filteredSessions])
 
   const hasQualityScores = sessions.some(s => s.qualityScore != null)
 
@@ -304,17 +308,19 @@ export function SessionHistory() {
           </div>
 
           {/* Session List */}
-          <div className="space-y-3" data-testid="session-history">
+          <ul className="space-y-3" data-testid="session-history" aria-label="Study sessions">
             {visibleSessions.map(session => (
-              <div
+              <li
                 key={session.id}
                 data-testid="session-row"
-                className="rounded-[24px] border border-border bg-card transition-colors hover:bg-accent/50"
+                className="list-none rounded-[24px] border border-border bg-card transition-colors hover:bg-accent/50"
               >
                 {/* Clickable header — native button for a11y */}
                 <button
                   onClick={() => setExpandedId(prev => (prev === session.id ? null : session.id))}
                   aria-expanded={expandedId === session.id}
+                  aria-controls={`session-detail-${session.id}`}
+                  aria-label={`${session.courseTitle || session.courseId} — ${formatDate(session.startTime)}, ${formatDuration(session.duration)}`}
                   className="w-full cursor-pointer p-4 text-left"
                 >
                   <div className="flex w-full items-center justify-between">
@@ -348,7 +354,10 @@ export function SessionHistory() {
 
                 {/* Expanded details — outside the button to avoid nested interactive elements */}
                 {expandedId === session.id && (
-                  <div className="border-t border-border px-4 pb-4 pt-4 space-y-3">
+                  <div
+                    id={`session-detail-${session.id}`}
+                    className="border-t border-border px-4 pb-4 pt-4 space-y-3"
+                  >
                     <div className="flex gap-6 text-sm">
                       <div>
                         <span className="text-muted-foreground">Start: </span>
@@ -410,12 +419,12 @@ export function SessionHistory() {
                     </Link>
                   </div>
                 )}
-              </div>
+              </li>
             ))}
 
             {/* Filtered empty state */}
             {filteredSessions.length === 0 && hasActiveFilters && (
-              <div className="rounded-[24px] border border-border bg-card p-8 text-center">
+              <li className="list-none rounded-[24px] border border-border bg-card p-8 text-center">
                 <p className="text-muted-foreground">No sessions match your current filters.</p>
                 <button
                   onClick={handleClearFilters}
@@ -423,9 +432,9 @@ export function SessionHistory() {
                 >
                   Clear all filters
                 </button>
-              </div>
+              </li>
             )}
-          </div>
+          </ul>
 
           {/* Show more */}
           {hasMore && (

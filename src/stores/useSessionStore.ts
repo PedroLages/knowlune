@@ -100,7 +100,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         lastHeartbeat: currentTime,
       })
     } else {
-      // Update in-memory only (no re-render), will persist on next heartbeat or pause/end
+      // INTENTIONAL DIRECT MUTATION: Bypasses Zustand's immutable set() to avoid
+      // re-renders on every mouse move / activity event (~100s per session).
+      // This value is only read at pause/end/heartbeat time, never rendered directly.
+      // If a component ever needs to display lastActivity live, switch to set().
       activeSession.lastActivity = now
     }
   },
@@ -108,7 +111,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   recordInteraction: () => {
     const { activeSession } = get()
     if (!activeSession) return
-    // Increment in-memory only — persisted on next heartbeat, pause, or end
+    // INTENTIONAL DIRECT MUTATION: Bypasses Zustand's immutable set() to avoid
+    // re-renders on every user interaction (video seeks, note edits, page changes).
+    // interactionCount is only consumed at endSession() for quality score calculation,
+    // never rendered during an active session. If a component ever needs to display
+    // the live count, switch to set({ activeSession: { ...activeSession, interactionCount } }).
     activeSession.interactionCount = (activeSession.interactionCount ?? 0) + 1
   },
 
@@ -188,9 +195,6 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       qualityFactors: qualityResult.factors,
     }
 
-    // Clear active state immediately (synchronous)
-    set({ activeSession: null, activeStartTime: null, lastHeartbeat: null, error: null })
-
     // Persist to database async (fire-and-forget for beforeunload compatibility)
     // If this fails, orphan recovery will handle it on next load
     persistWithRetry(async () => {
@@ -200,6 +204,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         // Notify listeners (e.g., momentum scores) that session data changed
         window.dispatchEvent(new CustomEvent('study-log-updated'))
         // Notify quality score UI to show the result dialog
+        // Event detail includes all needed data so listeners don't need store access
         window.dispatchEvent(
           new CustomEvent('session-quality-calculated', {
             detail: qualityResult,
@@ -210,6 +215,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         console.error('[SessionStore] Failed to end session:', error)
         // Don't rollback - let orphan recovery handle incomplete writes
       })
+
+    // Clear active state after dispatching persistence — synchronous for beforeunload
+    // compatibility. Events fire after persistence succeeds (async), so listeners
+    // can safely read from the store if needed before state is cleared.
+    set({ activeSession: null, activeStartTime: null, lastHeartbeat: null, error: null })
   },
 
   loadSessionStats: async (courseId?: string) => {

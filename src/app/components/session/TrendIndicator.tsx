@@ -1,4 +1,5 @@
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { cn } from '@/app/components/ui/utils'
 import type { QualityTrend } from '@/data/types'
 
 interface TrendIndicatorProps {
@@ -20,7 +21,7 @@ export function TrendIndicator({ trend }: TrendIndicatorProps) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1 text-sm font-medium ${config.className}`}
+      className={cn('inline-flex items-center gap-1 text-sm font-medium', config.className)}
       aria-label={`Session quality trend: ${config.label.toLowerCase()}`}
       data-testid="quality-trend-indicator"
     >

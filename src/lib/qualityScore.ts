@@ -124,7 +124,7 @@ export function calculateQualityScore(session: StudySession): QualityScoreResult
 export function getQualityTier(score: number): QualityTier {
   if (score >= 85) return 'excellent'
   if (score >= 70) return 'good'
-  if (score >= 50) return 'fair'
+  if (score >= 40) return 'fair'
   return 'needs-improvement'
 }
 
@@ -140,7 +140,7 @@ export const QUALITY_TIER_LABELS: Record<QualityTier, string> = {
  * Compares average of latest 5 sessions vs previous 5.
  */
 export function calculateQualityTrend(scores: number[]): QualityTrend {
-  if (scores.length < 4) return 'stable' // Not enough data
+  if (scores.length < 2) return 'stable' // Need at least 2 data points for a trend
 
   const recent = scores.slice(0, Math.min(5, Math.floor(scores.length / 2)))
   const previous = scores.slice(recent.length, recent.length * 2)

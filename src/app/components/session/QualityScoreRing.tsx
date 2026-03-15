@@ -1,5 +1,6 @@
 import { motion } from 'motion/react'
 import { getQualityTier, QUALITY_TIER_LABELS } from '@/lib/qualityScore'
+import { cn } from '@/app/components/ui/utils'
 import type { QualityTier } from '@/data/types'
 
 interface QualityScoreRingProps {
@@ -74,7 +75,7 @@ export function QualityScoreRing({ score, size = 160 }: QualityScoreRingProps) {
           {score}
         </motion.span>
         <motion.span
-          className={`text-sm font-medium ${TIER_COLORS[tier]}`}
+          className={cn('text-sm font-medium', TIER_COLORS[tier])}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.4, delay: 0.5 }}

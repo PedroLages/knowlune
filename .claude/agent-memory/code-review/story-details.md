@@ -204,3 +204,13 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M1: `fourWeekAvg` operator precedence relies on NaN || 0 fallback -- fragile
 - M2: `getWeeklySessionCounts` and `getWeeklyAvgDurations` redundantly filter `s.endTime` on already-filtered input
 - Positive: Pure function architecture, deterministic time injection, proper useEffect ignore flag, comprehensive unit tests, good design token usage
+
+## E11-S03: Study Session Quality Scoring (Round 1)
+- No uncommitted changes (positive)
+- H1: `recordInteraction` directly mutates Zustand state object -- breaks immutability contract
+- H2 (RECURRING x16): String interpolation for className instead of cn() in QualityScoreRing, TrendIndicator, QualityBadge (3 instances)
+- H3: `calculateQualityTrend` splitting logic produces wrong groups when scores.length is odd (e.g. 5 scores: recent=[90,85], previous=[80] -- compares 2 vs 1, not spec's "last 5 vs previous 5")
+- H4: E2E tests don't test AC5 (real-time tracking) or AC1 quality score dialog display
+- M1: `endSession` clears state before persist -- `session-quality-calculated` event fires after state is null (potential race if listener reads store)
+- M2: No E2E test for QualityScoreDialog appearance after session ends
+- Positive: Pure function scoring engine, comprehensive unit tests, proper design tokens, clean DB migration, good factory usage

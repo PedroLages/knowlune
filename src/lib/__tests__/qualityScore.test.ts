@@ -141,14 +141,15 @@ describe('getQualityTier', () => {
     expect(getQualityTier(84)).toBe('good')
   })
 
-  it('returns fair for scores 50-69', () => {
+  it('returns fair for scores 40-69', () => {
+    expect(getQualityTier(40)).toBe('fair')
     expect(getQualityTier(50)).toBe('fair')
     expect(getQualityTier(69)).toBe('fair')
   })
 
-  it('returns needs-improvement for scores < 50', () => {
+  it('returns needs-improvement for scores < 40', () => {
     expect(getQualityTier(0)).toBe('needs-improvement')
-    expect(getQualityTier(49)).toBe('needs-improvement')
+    expect(getQualityTier(39)).toBe('needs-improvement')
   })
 })
 
@@ -213,10 +214,18 @@ describe('calculateQualityScore', () => {
 // ── calculateQualityTrend ───────────────────────────────────────
 
 describe('calculateQualityTrend', () => {
-  it('returns stable for insufficient data', () => {
+  it('returns stable for insufficient data (0-1 scores)', () => {
     expect(calculateQualityTrend([])).toBe('stable')
     expect(calculateQualityTrend([80])).toBe('stable')
-    expect(calculateQualityTrend([80, 75, 70])).toBe('stable')
+  })
+
+  it('computes trend with 2-3 scores', () => {
+    // 2 scores: [90, 30] → recent=[90], previous=[30] → improving
+    expect(calculateQualityTrend([90, 30])).toBe('improving')
+    // 3 scores: [30, 90, 85] → recent=[30], previous=[90] → declining
+    expect(calculateQualityTrend([30, 90, 85])).toBe('declining')
+    // 3 scores within ±5: [72, 70, 71] → stable
+    expect(calculateQualityTrend([72, 70, 71])).toBe('stable')
   })
 
   it('returns improving when recent scores are higher', () => {

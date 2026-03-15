@@ -77,6 +77,7 @@ export function FactorBreakdown({ factors }: FactorBreakdownProps) {
             <div className="bg-muted h-2 overflow-hidden rounded-full">
               <motion.div
                 className="h-full rounded-full"
+                // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic CSS variable (var(--chart-N)) per factor; cannot be expressed as static Tailwind class
                 style={{ backgroundColor: factor.color }}
                 initial={{ width: 0 }}
                 animate={{ width: `${value}%` }}

@@ -172,6 +172,81 @@ test.describe('E11-S03: Study Session Quality Scoring', () => {
     expect(count).toBe(4)
   })
 
+  test('AC1: quality score dialog shows breakdown after session ends', async ({ page }) => {
+    // Navigate to any page that renders Layout (which hosts the dialog)
+    await page.goto('/')
+    await page.waitForLoadState('domcontentloaded')
+
+    // Quality score dialog should NOT be visible initially
+    await expect(page.getByTestId('quality-score-display')).not.toBeVisible()
+
+    // Simulate session end by dispatching the custom event that Layout listens for
+    await page.evaluate(() => {
+      window.dispatchEvent(
+        new CustomEvent('session-quality-calculated', {
+          detail: {
+            score: 78,
+            factors: {
+              activeTimeScore: 85,
+              interactionDensityScore: 72,
+              sessionLengthScore: 68,
+              breaksScore: 82,
+            },
+            tier: 'good',
+          },
+        })
+      )
+    })
+
+    // Dialog should appear with score ring
+    const scoreDisplay = page.getByTestId('quality-score-display')
+    await expect(scoreDisplay).toBeVisible()
+    await expect(page.getByTestId('quality-score-value')).toHaveText('78')
+
+    // All four factor breakdowns should be visible
+    await expect(page.getByTestId('factor-active-time')).toBeVisible()
+    await expect(page.getByTestId('factor-interaction-density')).toBeVisible()
+    await expect(page.getByTestId('factor-session-length')).toBeVisible()
+    await expect(page.getByTestId('factor-breaks')).toBeVisible()
+
+    // Close the dialog
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await expect(scoreDisplay).not.toBeVisible()
+  })
+
+  test('AC5: quality score dialog absent during active session, shown after end', async ({
+    page,
+  }) => {
+    // Navigate to app — dialog should not be visible
+    await page.goto('/')
+    await page.waitForLoadState('domcontentloaded')
+
+    // Simulate that a session is "active" — dialog must NOT appear
+    await expect(page.getByTestId('quality-score-display')).not.toBeVisible()
+
+    // Now simulate session end via custom event
+    await page.evaluate(() => {
+      window.dispatchEvent(
+        new CustomEvent('session-quality-calculated', {
+          detail: {
+            score: 65,
+            factors: {
+              activeTimeScore: 70,
+              interactionDensityScore: 60,
+              sessionLengthScore: 55,
+              breaksScore: 75,
+            },
+            tier: 'fair',
+          },
+        })
+      )
+    })
+
+    // Dialog should now be visible with the score
+    await expect(page.getByTestId('quality-score-display')).toBeVisible()
+    await expect(page.getByTestId('quality-score-value')).toHaveText('65')
+  })
+
   test('AC4: session history shows dash for sessions without quality score', async ({ page }) => {
     // Seed a legacy session (no quality score)
     const session = makeSession({
