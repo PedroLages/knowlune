@@ -110,7 +110,10 @@ export function RetentionDashboard() {
               <motion.section variants={fadeUp} aria-labelledby="retention-by-topic-heading">
                 <Card className="rounded-[24px]">
                   <CardHeader>
-                    <h2 id="retention-by-topic-heading" className="text-base font-semibold flex items-center gap-2">
+                    <h2
+                      id="retention-by-topic-heading"
+                      className="text-base font-semibold flex items-center gap-2"
+                    >
                       <Brain className="size-4 text-muted-foreground" aria-hidden="true" />
                       Retention by Topic
                     </h2>
@@ -130,7 +133,10 @@ export function RetentionDashboard() {
             <motion.section variants={fadeUp} aria-labelledby="engagement-health-heading">
               <Card className="rounded-[24px]">
                 <CardHeader>
-                  <h2 id="engagement-health-heading" className="text-base font-semibold flex items-center gap-2">
+                  <h2
+                    id="engagement-health-heading"
+                    className="text-base font-semibold flex items-center gap-2"
+                  >
                     <ShieldCheck className="size-4 text-muted-foreground" aria-hidden="true" />
                     Engagement Health
                   </h2>

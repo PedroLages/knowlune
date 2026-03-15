@@ -73,7 +73,6 @@ export function TopicRetentionCard({ topic, now }: TopicRetentionCardProps) {
                 topic.level === 'fading' && 'bg-warning',
                 topic.level === 'weak' && 'bg-destructive'
               )}
-              // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic percentage width requires inline style
               style={{ width: `${Math.max(2, topic.retention)}%` }}
               role="progressbar"
               aria-valuenow={topic.retention}
