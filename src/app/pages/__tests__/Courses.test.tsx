@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import type { ImportedCourse } from '@/data/types'
 
-vi.mock('motion/react', async (importOriginal) => {
+vi.mock('motion/react', async importOriginal => {
   const actual = await importOriginal<typeof import('motion/react')>()
   return {
     ...actual,

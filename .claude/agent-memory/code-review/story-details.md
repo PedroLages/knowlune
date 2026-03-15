@@ -185,3 +185,13 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M3: Reports `hasActivity` check doesn't include session store data -- users with timer-only activity see empty state
 - M4: EmptyState props allow both `onAction` and `actionHref` without TypeScript enforcement
 - Positive: Clean E2E tests, proper async cleanup patterns, well-typed component API
+
+## E01-S05: Detect Missing or Relocated Files (Re-Review)
+**Round 1 fixes verified:** All 4 high + 3 medium findings addressed (cn(), .catch(), Promise.allSettled index fix, toast aggregation, PDF opacity).
+**Round 2 findings:**
+- H1 (RECURRING): `verifyAll()` fire-and-forget async without .catch() in useEffect
+- H2: Dexie .catch() logs but provides no user-facing error state (empty list indistinguishable from load failure)
+- M1: Missing flex-wrap on content rows per design spec (narrow viewport badge overflow)
+- M2: Available PDFs rendered as disabled (opacity-75, cursor-not-allowed, aria-disabled) -- contradicts AC3
+- M3: No E2E afterEach IndexedDB cleanup between tests
+- Positive: All round-1 findings fixed, clean separation of concerns, good unit test coverage for mixed states

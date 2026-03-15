@@ -104,7 +104,9 @@ vi.mock('@/lib/studyLog', () => ({
 
 // ── Mock reportStats ──
 vi.mock('@/lib/reportStats', () => ({
-  getCourseCompletionData: () => [{ name: 'Test Course', completion: 50, category: 'Behavior Analysis' }],
+  getCourseCompletionData: () => [
+    { name: 'Test Course', completion: 50, category: 'Behavior Analysis' },
+  ],
   getCategoryColorMap: () => ({ 'Behavior Analysis': 'var(--chart-1)' }),
   getCategoryCompletionForRadar: () => [],
   computeSkillsDimensions: () => [],

@@ -100,6 +100,17 @@ export async function seedImportedVideos(
 }
 
 /**
+ * Seeds the importedPdfs object store in ElearningDB.
+ * Convenience wrapper around seedIndexedDBStore.
+ *
+ * @param page - Playwright Page instance
+ * @param pdfs - Array of imported PDF records
+ */
+export async function seedImportedPdfs(page: Page, pdfs: Record<string, unknown>[]): Promise<void> {
+  await seedIndexedDBStore(page, 'ElearningDB', 'importedPdfs', pdfs)
+}
+
+/**
  * Seeds the importedCourses object store in ElearningDB.
  * Convenience wrapper around seedIndexedDBStore.
  *

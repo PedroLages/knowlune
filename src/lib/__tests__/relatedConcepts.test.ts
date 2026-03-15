@@ -310,9 +310,7 @@ describe('relatedConcepts', () => {
       const { vectorStorePersistence } = await import('@/ai/vector-store')
       const { db } = await import('@/db')
 
-      const mockSearch = vi.fn(() => [
-        { id: 'vec-match', similarity: 0.85 },
-      ])
+      const mockSearch = vi.fn(() => [{ id: 'vec-match', similarity: 0.85 }])
       vi.mocked(vectorStorePersistence.getStore).mockReturnValue({
         size: 5,
         search: mockSearch,
@@ -344,9 +342,7 @@ describe('relatedConcepts', () => {
       const { vectorStorePersistence } = await import('@/ai/vector-store')
       const { db } = await import('@/db')
 
-      const mockSearch = vi.fn(() => [
-        { id: 'low-sim', similarity: 0.2 },
-      ])
+      const mockSearch = vi.fn(() => [{ id: 'low-sim', similarity: 0.2 }])
       vi.mocked(vectorStorePersistence.getStore).mockReturnValue({
         size: 5,
         search: mockSearch,
@@ -409,9 +405,7 @@ describe('relatedConcepts', () => {
       const { vectorStorePersistence } = await import('@/ai/vector-store')
       const { db } = await import('@/db')
 
-      const mockSearch = vi.fn(() => [
-        { id: 'overlap', similarity: 0.8 },
-      ])
+      const mockSearch = vi.fn(() => [{ id: 'overlap', similarity: 0.8 }])
       vi.mocked(vectorStorePersistence.getStore).mockReturnValue({
         size: 5,
         search: mockSearch,
@@ -443,9 +437,7 @@ describe('relatedConcepts', () => {
       const { vectorStorePersistence } = await import('@/ai/vector-store')
       const { db } = await import('@/db')
 
-      const mockSearch = vi.fn(() => [
-        { id: 'vec-1', similarity: 0.6 },
-      ])
+      const mockSearch = vi.fn(() => [{ id: 'vec-1', similarity: 0.6 }])
       vi.mocked(vectorStorePersistence.getStore).mockReturnValue({
         size: 5,
         search: mockSearch,
@@ -467,11 +459,7 @@ describe('relatedConcepts', () => {
         content: 'Vector match content',
       })
 
-      const result = await findRelatedNotes(
-        source,
-        [source, tagOnly, vecMatch],
-        makeCourseNames()
-      )
+      const result = await findRelatedNotes(source, [source, tagOnly, vecMatch], makeCourseNames())
 
       // Vector match should come first even with fewer shared tags
       expect(result[0].noteId).toBe('vec-1')
@@ -503,11 +491,7 @@ describe('relatedConcepts', () => {
       const high = makeNote({ id: 'high', tags: [], content: 'High similarity' })
       const mid = makeNote({ id: 'mid', tags: [], content: 'Mid similarity' })
 
-      const result = await findRelatedNotes(
-        source,
-        [source, low, high, mid],
-        makeCourseNames()
-      )
+      const result = await findRelatedNotes(source, [source, low, high, mid], makeCourseNames())
 
       expect(result[0].noteId).toBe('high')
       expect(result[1].noteId).toBe('mid')

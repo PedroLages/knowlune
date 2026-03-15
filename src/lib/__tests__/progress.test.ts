@@ -737,10 +737,7 @@ describe('progress', () => {
       // After invalidation, re-reads localStorage (now has lesson-1 and lesson-2)
       invalidateProgressCache()
       const afterInvalidation = getAllProgress()
-      expect(afterInvalidation['course-1'].completedLessons).toEqual([
-        'lesson-1',
-        'lesson-2',
-      ])
+      expect(afterInvalidation['course-1'].completedLessons).toEqual(['lesson-1', 'lesson-2'])
     })
   })
 

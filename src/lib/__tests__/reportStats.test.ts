@@ -184,9 +184,7 @@ describe('getCategoryCompletionForRadar', () => {
   })
 
   it('formats hyphenated category slugs to Title Case', () => {
-    mockCourses = [
-      makeCourse({ id: 'c1', category: 'operative-training' }),
-    ]
+    mockCourses = [makeCourse({ id: 'c1', category: 'operative-training' })]
     mockGetCourseCompletionPercent.mockReturnValue(50)
 
     const result = getCategoryCompletionForRadar()
@@ -278,10 +276,7 @@ describe('getCourseCompletionData', () => {
   it('passes total lessons from modules to getCourseCompletionPercent', () => {
     const course = makeCourse({
       id: 'c1',
-      modules: [
-        makeModule('m1', ['l1', 'l2']),
-        makeModule('m2', ['l3']),
-      ],
+      modules: [makeModule('m1', ['l1', 'l2']), makeModule('m2', ['l3'])],
     })
     mockCourses = [course]
     mockGetCourseCompletionPercent.mockReturnValue(33)
@@ -443,10 +438,7 @@ describe('computeSkillsDimensions', () => {
   })
 
   it('calculates Depth from average completion of started courses', () => {
-    mockCourses = [
-      makeCourse({ id: 'c1' }),
-      makeCourse({ id: 'c2' }),
-    ]
+    mockCourses = [makeCourse({ id: 'c1' }), makeCourse({ id: 'c2' })]
     mockGetAllProgress.mockReturnValue({})
     mockGetTotalCompletedLessons.mockReturnValue(0)
     mockGetCurrentStreak.mockReturnValue(0)
@@ -515,9 +507,7 @@ describe('computeSkillsDimensions', () => {
     mockGetCoursesInProgress.mockReturnValue([])
     mockGetCompletedCourses.mockReturnValue([])
     // 10 actions/day average (double the 5/day threshold)
-    mockGetActionsPerDay.mockReturnValue([
-      { date: '2025-01-15', count: 10 },
-    ])
+    mockGetActionsPerDay.mockReturnValue([{ date: '2025-01-15', count: 10 }])
 
     const result = computeSkillsDimensions()
 
@@ -532,9 +522,7 @@ describe('computeSkillsDimensions', () => {
     mockGetCurrentStreak.mockReturnValue(0)
     mockGetCoursesInProgress.mockReturnValue([])
     // Completed course with no lessons — should get 0% not 100%
-    mockGetCompletedCourses.mockReturnValue([
-      makeCourse({ id: 'c1', modules: [] }),
-    ])
+    mockGetCompletedCourses.mockReturnValue([makeCourse({ id: 'c1', modules: [] })])
     mockGetActionsPerDay.mockReturnValue([])
 
     const result = computeSkillsDimensions()
@@ -603,9 +591,7 @@ describe('computeWeeklyGoalProgress', () => {
 
   it('handles sessions with zero duration', async () => {
     const { db } = await import('@/db/schema')
-    const mockSessions = [
-      { id: '1', duration: 0, startTime: '2025-01-15T10:00:00Z' },
-    ]
+    const mockSessions = [{ id: '1', duration: 0, startTime: '2025-01-15T10:00:00Z' }]
     vi.mocked(db.studySessions.where).mockReturnValue({
       aboveOrEqual: vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue(mockSessions),
@@ -620,9 +606,7 @@ describe('computeWeeklyGoalProgress', () => {
 
   it('handles sessions with undefined duration', async () => {
     const { db } = await import('@/db/schema')
-    const mockSessions = [
-      { id: '1', duration: undefined, startTime: '2025-01-15T10:00:00Z' },
-    ]
+    const mockSessions = [{ id: '1', duration: undefined, startTime: '2025-01-15T10:00:00Z' }]
     vi.mocked(db.studySessions.where).mockReturnValue({
       aboveOrEqual: vi.fn().mockReturnValue({
         toArray: vi.fn().mockResolvedValue(mockSessions),
