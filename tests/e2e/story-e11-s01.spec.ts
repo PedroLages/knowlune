@@ -226,7 +226,8 @@ test.describe('Spaced Review System (E11-S01)', () => {
     test.skip('displays toast with retry option when rating fails', async ({ page }) => {
       // Skip: IDB error simulation is unreliable in E2E — Dexie wraps IDB
       // internally and doesn't expose a hookable put() path. The error handling
-      // and toast display are covered by unit tests in useReviewStore.test.ts.
+      // rollback, pending rating preservation, and retry logic are covered by
+      // unit tests in src/stores/__tests__/useReviewStore.test.ts (AC5 suite).
       const note = createDexieNote({ id: 'note-error', content: 'Error test note' })
       const review = createDueReview('note-error', 50)
 
