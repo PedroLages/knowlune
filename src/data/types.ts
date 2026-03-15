@@ -300,3 +300,18 @@ export interface LearningPathCourse {
   isManuallyOrdered: boolean // User manually reordered it
   generatedAt: string // ISO timestamp when path was generated
 }
+
+// --- Spaced Review System (Story 11.1) ---
+
+export type ReviewRating = 'hard' | 'good' | 'easy'
+
+export interface ReviewRecord {
+  id: string // UUID
+  noteId: string // FK to Note.id
+  rating: ReviewRating // Last rating given
+  reviewedAt: string // ISO 8601 — when last reviewed
+  nextReviewAt: string // ISO 8601 — when next review is due
+  interval: number // Days until next review
+  easeFactor: number // SM-2 ease factor (starts at 2.5, min 1.3)
+  reviewCount: number // Cumulative number of reviews
+}
