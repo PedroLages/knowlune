@@ -1,8 +1,5 @@
 import { useState, useEffect } from 'react'
-import {
-  ChartContainer,
-  type ChartConfig,
-} from '@/app/components/ui/chart'
+import { ChartContainer, type ChartConfig } from '@/app/components/ui/chart'
 import { RadialBarChart, RadialBar, PolarAngleAxis } from 'recharts'
 import { computeWeeklyGoalProgress, type WeeklyGoalProgress } from '@/lib/reportStats'
 import { Skeleton } from '@/app/components/ui/skeleton'
@@ -68,8 +65,16 @@ export function WeeklyGoalRing() {
   const chartData = [{ name: 'progress', value: displayPercent, fill: color }]
 
   return (
-    <div className="relative" role="img" aria-label={`Weekly study goal: ${hours} of ${goalHours} hours (${goal.percentage}%)`}>
-      <ChartContainer config={chartConfig} className="mx-auto h-[220px] w-full min-h-[1px]" aria-hidden="true">
+    <div
+      className="relative"
+      role="img"
+      aria-label={`Weekly study goal: ${hours} of ${goalHours} hours (${goal.percentage}%)`}
+    >
+      <ChartContainer
+        config={chartConfig}
+        className="mx-auto h-[220px] w-full min-h-[1px]"
+        aria-hidden="true"
+      >
         <RadialBarChart
           data={chartData}
           startAngle={90}
@@ -78,12 +83,7 @@ export function WeeklyGoalRing() {
           outerRadius="90%"
           barSize={12}
         >
-          <PolarAngleAxis
-            type="number"
-            domain={[0, 100]}
-            angleAxisId={0}
-            tick={false}
-          />
+          <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
           <RadialBar
             dataKey="value"
             background={{ fill: 'var(--muted)' }}
@@ -96,7 +96,9 @@ export function WeeklyGoalRing() {
 
       {/* Center label */}
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-        <span className={cn('text-3xl font-bold tabular-nums', getProgressTextClass(goal.percentage))}>
+        <span
+          className={cn('text-3xl font-bold tabular-nums', getProgressTextClass(goal.percentage))}
+        >
           {goal.percentage}%
         </span>
         <span className="text-xs text-muted-foreground mt-0.5">

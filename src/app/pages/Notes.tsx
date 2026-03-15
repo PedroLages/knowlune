@@ -546,9 +546,7 @@ export function Notes() {
                     htmlFor="semantic-search"
                     className={cn(
                       'text-sm cursor-pointer',
-                      semanticSearchAvailable
-                        ? 'text-muted-foreground'
-                        : 'text-muted-foreground/50'
+                      semanticSearchAvailable ? 'text-muted-foreground' : 'text-muted-foreground/50'
                     )}
                   >
                     Semantic

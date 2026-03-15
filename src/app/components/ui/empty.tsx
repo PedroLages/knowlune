@@ -55,9 +55,13 @@ function EmptyMedia({
   )
 }
 
-function EmptyTitle({ className, ...props }: React.ComponentProps<'div'>) {
+function EmptyTitle({
+  as: Tag = 'h2',
+  className,
+  ...props
+}: { as?: React.ElementType } & React.ComponentProps<'h2'>) {
   return (
-    <div
+    <Tag
       data-slot="empty-title"
       className={cn('text-lg font-medium tracking-tight', className)}
       {...props}

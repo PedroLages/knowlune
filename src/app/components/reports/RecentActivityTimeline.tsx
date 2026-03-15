@@ -136,7 +136,8 @@ export function RecentActivityTimeline({ limit = 8 }: RecentActivityTimelineProp
                       {getActionLabel(action.type)}
                       {course && (
                         <span className="text-muted-foreground font-normal">
-                          {' '}in {course.title}
+                          {' '}
+                          in {course.title}
                         </span>
                       )}
                     </p>
@@ -145,7 +146,10 @@ export function RecentActivityTimeline({ limit = 8 }: RecentActivityTimelineProp
                   {/* Category badge + time */}
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {course && (
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 hidden sm:inline-flex">
+                      <Badge
+                        variant="secondary"
+                        className="text-[10px] px-1.5 py-0 hidden sm:inline-flex"
+                      >
                         {course.category}
                       </Badge>
                     )}
