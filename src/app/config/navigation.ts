@@ -4,6 +4,7 @@ import {
   GraduationCap,
   StickyNote,
   RotateCcw,
+  ShieldCheck,
   MessageSquare,
   Users,
   Target,
@@ -38,6 +39,7 @@ export const navigationGroups: NavigationGroup[] = [
       { name: 'Knowledge Gaps', path: '/knowledge-gaps', icon: Brain },
       { name: 'Notes', path: '/notes', icon: StickyNote },
       { name: 'Review', path: '/review', icon: RotateCcw },
+      { name: 'Retention', path: '/retention', icon: ShieldCheck },
     ],
   },
   {
