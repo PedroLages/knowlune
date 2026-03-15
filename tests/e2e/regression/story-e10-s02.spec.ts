@@ -3,11 +3,11 @@
  *
  * Tests run with NO seeded data to trigger empty states.
  * Each test maps to a specific AC from the story file.
- * 13 tests covering all 7 ACs.
+ * 16 tests covering all 7 ACs.
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
-import { createImportedCourse } from '../support/fixtures/factories/imported-course-factory'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
+import { createImportedCourse } from '../../support/fixtures/factories/imported-course-factory'
 
 test.describe('E10-S02: Empty State Guidance', () => {
   // ── AC1: Dashboard overview — no courses ──────────────────────

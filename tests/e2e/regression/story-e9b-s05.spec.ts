@@ -7,9 +7,9 @@
  */
 
 import { test, expect, type Page } from '@playwright/test'
-import { seedIndexedDBStore } from '../support/helpers/indexeddb-seed'
-import { seedAIConfiguration } from '../support/helpers/ai-summary-mocks'
-import { FIXED_DATE } from '../utils/test-time'
+import { seedIndexedDBStore } from '../../support/helpers/indexeddb-seed'
+import { seedAIConfiguration } from '../../support/helpers/ai-summary-mocks'
+import { FIXED_DATE } from '../../utils/test-time'
 
 // ── Test Data ──────────────────────────────────────────────────────────────
 

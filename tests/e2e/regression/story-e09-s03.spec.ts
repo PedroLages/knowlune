@@ -10,9 +10,9 @@
  * 6. Text search works with toggle off (AC6)
  * 7. Semantic search displays similarity badges ordered by score (AC5/AC6)
  */
-import { test, expect } from '../support/fixtures'
-import { seedVectorEmbeddings, seedIndexedDBStore } from '../support/helpers/indexeddb-seed'
-import { FIXED_DATE } from '../utils/test-time'
+import { test, expect } from '../../support/fixtures'
+import { seedVectorEmbeddings, seedIndexedDBStore } from '../../support/helpers/indexeddb-seed'
+import { FIXED_DATE } from '../../utils/test-time'
 
 const VECTOR_LOAD_TIMEOUT = 5_000
 

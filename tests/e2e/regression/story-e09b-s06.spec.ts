@@ -1,6 +1,6 @@
-import { test, expect } from '../support/fixtures'
-import { seedIndexedDBStore } from '../support/helpers/indexeddb-seed'
-import { FIXED_DATE, getRelativeDate } from '../utils/test-time'
+import { test, expect } from '../../support/fixtures'
+import { seedIndexedDBStore } from '../../support/helpers/indexeddb-seed'
+import { FIXED_DATE, getRelativeDate } from '../../utils/test-time'
 
 /**
  * Seed AI configuration into localStorage

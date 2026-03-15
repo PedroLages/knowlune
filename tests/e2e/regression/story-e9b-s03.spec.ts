@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
-import { seedImportedCourses, clearLearningPath } from '../support/helpers/indexeddb-seed'
-import { seedAIConfiguration } from '../support/helpers/ai-summary-mocks'
+import { seedImportedCourses, clearLearningPath } from '../../support/helpers/indexeddb-seed'
+import { seedAIConfiguration } from '../../support/helpers/ai-summary-mocks'
 
 /**
  * Helper to create minimal ImportedCourse objects for testing
