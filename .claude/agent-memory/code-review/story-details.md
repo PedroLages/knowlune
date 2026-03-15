@@ -195,3 +195,12 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M2: Available PDFs rendered as disabled (opacity-75, cursor-not-allowed, aria-disabled) -- contradicts AC3
 - M3: No E2E afterEach IndexedDB cleanup between tests
 - Positive: All round-1 findings fixed, clean separation of concerns, good unit test coverage for mixed states
+
+## E11-S02: Knowledge Retention Dashboard (Round 1)
+- No uncommitted changes (positive)
+- H1: Inline `style={{ width: ... }}` on TopicRetentionCard progress bar -- should use Tailwind arbitrary value or CSS variable
+- H2: `now` memoized with `useMemo(() => new Date(), [])` -- semantically correct but never updates if user stays on page for hours
+- H3: E2E afterEach `.catch(() => {})` silently swallows cleanup failures (recurring pattern)
+- M1: `fourWeekAvg` operator precedence relies on NaN || 0 fallback -- fragile
+- M2: `getWeeklySessionCounts` and `getWeeklyAvgDurations` redundantly filter `s.endTime` on already-filtered input
+- Positive: Pure function architecture, deterministic time injection, proper useEffect ignore flag, comprehensive unit tests, good design token usage

@@ -6,7 +6,7 @@ started: 2026-03-15
 completed:
 reviewed: in-progress
 review_started: 2026-03-15
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -179,15 +179,41 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+**Report**: `docs/reviews/design/design-review-2026-03-15-e11-s02.md`
+
+### Blockers
+1. "Fading" badge text contrast 3.63:1 (needs 4.5:1) — `TopicRetentionCard.tsx:16`
+2. "Weak" badge text contrast 4.05:1 (needs 4.5:1) — `TopicRetentionCard.tsx:16`
+3. `text-muted-foreground` on white cards 3.88:1 — `TopicRetentionCard.tsx:42-48, 64-66, 87-89`
+
+### High
+4. Heading hierarchy skips H2 (H1 → H3) — `RetentionDashboard.tsx:113, 133`
+5. `<section>` elements missing accessible names — `RetentionDashboard.tsx:110, 130`
+6. Raw emoji `💡` in alert text — `EngagementDecayAlert.tsx:55`
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**Report**: `docs/reviews/code/code-review-2026-03-15-e11-s02.md`
+
+### High
+1. Inline `style={{ width }}` on progress bar — `TopicRetentionCard.tsx:76` — add ESLint disable comment
+2. `now` captured once on mount, never updates — `RetentionDashboard.tsx:20` — document trade-off
+3. Silent `.catch(() => {})` in E2E afterEach — `story-e11-s02.spec.ts:104`
+
+### Medium
+4. `fourWeekAvg` relies on `NaN || 0` coercion — `retentionMetrics.ts:212-213`
+5. Redundant `s.endTime` filter in helpers — `retentionMetrics.ts:154-156, 169-171`
+6. `new Date()` in hot loop for `lastReviewedAt` — `retentionMetrics.ts:98-100`
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+### High
+1. `<section>` landmarks missing accessible names — `RetentionDashboard.tsx:110, 130` (dedupe with design review #5)
+2. Healthy status not in live region — `EngagementDecayAlert.tsx:22-35`
+3. Heading hierarchy skips H2 (dedupe with design review #4)
+
+### Medium
+4. Progress bar fill lacks `motion-reduce:transition-none` — `TopicRetentionCard.tsx:71`
 
 ## Challenges and Lessons Learned
 
