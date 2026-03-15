@@ -32,7 +32,7 @@ export async function downloadZip(
   downloadBlob(blob, filename)
 }
 
-/** Core download: create object URL, click anchor, revoke */
+/** Core download: create object URL, click anchor, revoke after delay */
 function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -41,5 +41,6 @@ function downloadBlob(blob: Blob, filename: string): void {
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+  // Defer revocation to ensure the browser has started the download
+  setTimeout(() => URL.revokeObjectURL(url), 10_000)
 }

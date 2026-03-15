@@ -105,9 +105,9 @@ function secondsToIsoDuration(seconds: number): string {
 
 // --- Statement Generators ---
 
-export function sessionToXAPI(session: StudySession): XAPIStatement {
+export function sessionToXAPI(session: StudySession, cachedActor?: XAPIActor): XAPIStatement {
   const isComplete = session.endTime !== undefined
-  const actor = createActor()
+  const actor = cachedActor ?? createActor()
 
   return {
     actor,
@@ -131,8 +131,8 @@ export function sessionToXAPI(session: StudySession): XAPIStatement {
   }
 }
 
-export function progressToXAPI(progress: ContentProgress): XAPIStatement {
-  const actor = createActor()
+export function progressToXAPI(progress: ContentProgress, cachedActor?: XAPIActor): XAPIStatement {
+  const actor = cachedActor ?? createActor()
 
   return {
     actor,
@@ -152,10 +152,13 @@ export function progressToXAPI(progress: ContentProgress): XAPIStatement {
   }
 }
 
-export function challengeToXAPI(challenge: Challenge): XAPIStatement | null {
+export function challengeToXAPI(
+  challenge: Challenge,
+  cachedActor?: XAPIActor
+): XAPIStatement | null {
   if (!challenge.completedAt) return null
 
-  const actor = createActor()
+  const actor = cachedActor ?? createActor()
 
   return {
     actor,
@@ -180,23 +183,24 @@ export function challengeToXAPI(challenge: Challenge): XAPIStatement | null {
 
 export async function exportAsXAPI(onProgress?: ExportProgressCallback): Promise<XAPIStatement[]> {
   const statements: XAPIStatement[] = []
+  const actor = createActor() // Cache once — avoid repeated localStorage reads
 
   onProgress?.(0, 'Loading sessions for xAPI...')
   const sessions = await db.studySessions.toArray()
   for (const session of sessions) {
-    statements.push(sessionToXAPI(session))
+    statements.push(sessionToXAPI(session, actor))
   }
 
   onProgress?.(33, 'Loading progress for xAPI...')
   const progress = await db.contentProgress.toArray()
   for (const p of progress) {
-    statements.push(progressToXAPI(p))
+    statements.push(progressToXAPI(p, actor))
   }
 
   onProgress?.(66, 'Loading challenges for xAPI...')
   const challenges = await db.challenges.toArray()
   for (const challenge of challenges) {
-    const stmt = challengeToXAPI(challenge)
+    const stmt = challengeToXAPI(challenge, actor)
     if (stmt) statements.push(stmt)
   }
 

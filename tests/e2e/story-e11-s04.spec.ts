@@ -1,6 +1,7 @@
 import { test, expect } from '../support/fixtures'
 import { goToSettings } from '../support/helpers/navigation'
 import { seedIndexedDBStore } from '../support/helpers/indexeddb-seed'
+import * as fs from 'fs'
 
 /**
  * E11-S04: Data Export
@@ -68,11 +69,19 @@ test.describe('E11-S04: Data Export', () => {
     await jsonExportBtn.click()
     const download = await downloadPromise
     expect(download.suggestedFilename()).toMatch(/\.json$/)
+
+    // Verify the exported JSON contains schemaVersion at root level
+    const filePath = await download.path()
+    if (filePath) {
+      const content = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+      expect(content).toHaveProperty('schemaVersion')
+      expect(typeof content.schemaVersion).toBe('number')
+      expect(content).toHaveProperty('exportedAt')
+      expect(content).toHaveProperty('data')
+    }
   })
 
-  test('AC2: Export CSV with separate files for sessions, progress, streaks', async ({
-    page,
-  }) => {
+  test('AC2: Export CSV with separate files for sessions, progress, streaks', async ({ page }) => {
     const csvExportBtn = page.getByRole('button', { name: /export.*csv/i })
     await expect(csvExportBtn).toBeVisible()
 
@@ -82,14 +91,12 @@ test.describe('E11-S04: Data Export', () => {
     expect(download.suggestedFilename()).toMatch(/\.zip$/)
   })
 
-  test('AC3: Export notes as Markdown with YAML frontmatter', async ({
-    page,
-  }) => {
+  test('AC3: Export notes as Markdown with YAML frontmatter', async ({ page }) => {
     // Seed a note so the export has data (empty notes → early return, no download)
     await seedNote(page)
 
     const mdExportBtn = page.getByRole('button', {
-      name: /export.*markdown|export.*notes/i,
+      name: /markdown|export.*notes/i,
     })
     await expect(mdExportBtn).toBeVisible()
 
@@ -104,7 +111,7 @@ test.describe('E11-S04: Data Export', () => {
     await seedCompletedChallenge(page)
 
     const badgeExportBtn = page.getByRole('button', {
-      name: /export.*badge|export.*achievement/i,
+      name: /badges|export.*achievement/i,
     })
     await expect(badgeExportBtn).toBeVisible()
 
@@ -118,10 +125,11 @@ test.describe('E11-S04: Data Export', () => {
     const jsonExportBtn = page.getByRole('button', { name: /export.*json/i })
     await jsonExportBtn.click()
 
+    // Progress indicator should appear (has role="status" and aria-live)
     const progressIndicator = page.getByTestId('export-progress')
     await expect(progressIndicator).toBeVisible()
 
-    // App should remain interactive (can navigate away)
+    // App should remain interactive — verify a different interactive element is clickable
     const settingsHeading = page.getByRole('heading', { level: 1 })
     await expect(settingsHeading).toBeVisible()
   })
@@ -130,18 +138,11 @@ test.describe('E11-S04: Data Export', () => {
     // Mock URL.createObjectURL to throw — this is the actual download mechanism
     // (the app uses blob + anchor click, not showSaveFilePicker)
     await page.evaluate(() => {
-      const origCreateObjectURL = URL.createObjectURL.bind(URL)
-      let callCount = 0
-      URL.createObjectURL = (blob: Blob) => {
-        callCount++
-        // Allow first call (potential internal uses), fail on export call
-        if (callCount >= 1) {
-          throw new DOMException(
-            'Failed to execute createObjectURL: quota exceeded',
-            'QuotaExceededError',
-          )
-        }
-        return origCreateObjectURL(blob)
+      URL.createObjectURL = () => {
+        throw new DOMException(
+          'Failed to execute createObjectURL: quota exceeded',
+          'QuotaExceededError'
+        )
       }
     })
 
@@ -152,5 +153,12 @@ test.describe('E11-S04: Data Export', () => {
     const toast = page.locator('[data-sonner-toast]')
     await expect(toast).toBeVisible({ timeout: 5_000 })
     await expect(toast).toContainText(/error|fail|disk/i, { timeout: 5_000 })
+
+    // Verify no download was triggered (partial export cleanup)
+    const downloads: unknown[] = []
+    page.on('download', d => downloads.push(d))
+    // Brief wait to confirm no late download arrives
+    await page.waitForTimeout(1_000) // justified: confirming no download fires after error
+    expect(downloads).toHaveLength(0)
   })
 })

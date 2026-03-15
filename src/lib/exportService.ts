@@ -54,18 +54,29 @@ export interface LevelUpExport {
 
 export type ExportProgressCallback = (percent: number, phase: string) => void
 
-/** Yield to the UI thread between heavy operations */
+/** Yield to the UI thread between heavy operations (works in background tabs) */
 function yieldToUI(): Promise<void> {
-  return new Promise(resolve => requestAnimationFrame(() => resolve()))
+  return new Promise(resolve => setTimeout(resolve, 0))
 }
 
 // --- JSON Export (AC1) ---
+
+/** Allowlist of localStorage keys safe to export (no auth tokens, API keys, etc.) */
+const EXPORTABLE_LS_PREFIXES = [
+  'app-settings',
+  'streak-',
+  'eduvi-sidebar',
+  'levelup-',
+  'theme',
+  'study-',
+  'onboarding',
+]
 
 function getLocalStorageData(): Record<string, unknown> {
   const data: Record<string, unknown> = {}
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i)
-    if (key) {
+    if (key && EXPORTABLE_LS_PREFIXES.some(prefix => key.startsWith(prefix))) {
       try {
         data[key] = JSON.parse(localStorage.getItem(key)!)
       } catch {

@@ -146,7 +146,7 @@ export default function Settings() {
         setExportPhase(phase)
       })
       if (mdFiles.length === 0) {
-        toastError.saveFailed('No notes to export')
+        toastSuccess.exported('No notes to export — create notes first')
         return
       }
       const dateStr = new Date().toLocaleDateString('sv-SE')
@@ -171,7 +171,7 @@ export default function Settings() {
         setExportPhase(phase)
       })
       if (badges.length === 0) {
-        toastError.saveFailed('No achievements to export')
+        toastSuccess.exported('No achievements to export — complete challenges first')
         return
       }
       const dateStr = new Date().toLocaleDateString('sv-SE')
@@ -356,7 +356,7 @@ export default function Settings() {
                   className="text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded-lg px-3 py-2.5 animate-in fade-in slide-in-from-top-1 duration-300 flex items-start gap-2"
                   aria-live="polite"
                 >
-                  <X className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <X className="size-4 flex-shrink-0 mt-0.5" />
                   <span>{uploadError}</span>
                 </div>
               )}
@@ -367,7 +367,7 @@ export default function Settings() {
                   className="text-xs text-success bg-success-soft border border-success/20 rounded-lg px-3 py-2.5 animate-in fade-in slide-in-from-top-1 duration-300 flex items-center gap-2"
                   aria-live="polite"
                 >
-                  <div className="w-4 h-4 rounded-full bg-success flex items-center justify-center flex-shrink-0">
+                  <div className="size-4 rounded-full bg-success flex items-center justify-center flex-shrink-0">
                     <svg
                       className="w-3 h-3 text-white"
                       fill="none"
@@ -458,7 +458,7 @@ export default function Settings() {
                     className="gap-2 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-brand/20 min-h-[44px]"
                     size="lg"
                   >
-                    <Save className="w-4 h-4" />
+                    <Save className="size-4" />
                     {saved ? 'Saved Successfully!' : 'Save Profile Changes'}
                   </Button>
                   {saved && !settings.profilePhotoDataUrl && (
@@ -496,7 +496,7 @@ export default function Settings() {
                     <RadioGroupItem value="system" className="sr-only" />
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Monitor className="w-5 h-5 text-muted-foreground" />
+                        <Monitor className="size-5 text-muted-foreground" />
                         <span className="text-sm font-medium">System</span>
                       </div>
                       {theme === 'system' && <div className="w-2 h-2 bg-brand rounded-full" />}
@@ -517,7 +517,7 @@ export default function Settings() {
                     <RadioGroupItem value="light" className="sr-only" />
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Sun className="w-5 h-5 text-muted-foreground" />
+                        <Sun className="size-5 text-muted-foreground" />
                         <span className="text-sm font-medium">Light</span>
                       </div>
                       {theme === 'light' && <div className="w-2 h-2 bg-brand rounded-full" />}
@@ -538,7 +538,7 @@ export default function Settings() {
                     <RadioGroupItem value="dark" className="sr-only" />
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Moon className="w-5 h-5 text-muted-foreground" />
+                        <Moon className="size-5 text-muted-foreground" />
                         <span className="text-sm font-medium">Dark</span>
                       </div>
                       {theme === 'dark' && <div className="w-2 h-2 bg-brand rounded-full" />}
@@ -562,7 +562,7 @@ export default function Settings() {
           <CardHeader className="border-b border-border/50 bg-surface-sunken/30">
             <div className="flex items-center gap-3">
               <div className="rounded-full bg-brand-soft p-2">
-                <HardDrive className="w-5 h-5 text-brand" aria-hidden="true" />
+                <HardDrive className="size-5 text-brand" aria-hidden="true" />
               </div>
               <div>
                 <CardTitle className="text-lg font-display">Data Management</CardTitle>
@@ -575,14 +575,14 @@ export default function Settings() {
           <CardContent className="space-y-6 pt-6" data-testid="data-export-section">
             {/* Export Your Data Section */}
             <div className="space-y-3">
-              <h3 className="text-sm font-medium">Export Your Data</h3>
+              <h4 className="text-sm font-medium">Export Your Data</h4>
 
               {/* Full Data Export — JSON */}
               <div className="rounded-xl border border-border bg-surface-elevated p-4 hover:bg-surface-elevated/80 transition-colors">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3">
                     <div className="rounded-lg bg-success-soft p-2 mt-0.5">
-                      <FileJson className="w-4 h-4 text-success" aria-hidden="true" />
+                      <FileJson className="size-4 text-success" aria-hidden="true" />
                     </div>
                     <div>
                       <h4 className="text-sm font-medium">Full Data Export</h4>
@@ -591,16 +591,16 @@ export default function Settings() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={handleExportJson}
                       disabled={isExporting}
-                      className="gap-2"
+                      className="gap-2 min-h-[44px]"
                       aria-label="Export all data as JSON"
                     >
-                      <Download className="w-4 h-4" />
+                      <Download className="size-4" />
                       JSON
                     </Button>
                     <Button
@@ -608,10 +608,10 @@ export default function Settings() {
                       size="sm"
                       onClick={handleExportCsv}
                       disabled={isExporting}
-                      className="gap-2"
+                      className="gap-2 min-h-[44px]"
                       aria-label="Export all data as CSV"
                     >
-                      <FileSpreadsheet className="w-4 h-4" />
+                      <FileSpreadsheet className="size-4" />
                       CSV
                     </Button>
                   </div>
@@ -623,7 +623,7 @@ export default function Settings() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3">
                     <div className="rounded-lg bg-brand-soft p-2 mt-0.5">
-                      <FileText className="w-4 h-4 text-brand" aria-hidden="true" />
+                      <FileText className="size-4 text-brand" aria-hidden="true" />
                     </div>
                     <div>
                       <h4 className="text-sm font-medium">Notes Export</h4>
@@ -637,11 +637,11 @@ export default function Settings() {
                     size="sm"
                     onClick={handleExportMarkdown}
                     disabled={isExporting}
-                    className="gap-2"
+                    className="gap-2 min-h-[44px]"
                     aria-label="Export notes as Markdown"
                   >
-                    <Download className="w-4 h-4" />
-                    Export
+                    <Download className="size-4" />
+                    Markdown
                   </Button>
                 </div>
               </div>
@@ -651,7 +651,7 @@ export default function Settings() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3">
                     <div className="rounded-lg bg-warning/10 p-2 mt-0.5">
-                      <Award className="w-4 h-4 text-warning" aria-hidden="true" />
+                      <Award className="size-4 text-warning" aria-hidden="true" />
                     </div>
                     <div>
                       <h4 className="text-sm font-medium">Achievements Export</h4>
@@ -665,11 +665,11 @@ export default function Settings() {
                     size="sm"
                     onClick={handleExportBadges}
                     disabled={isExporting}
-                    className="gap-2"
+                    className="gap-2 min-h-[44px]"
                     aria-label="Export achievements as Open Badges"
                   >
-                    <Award className="w-4 h-4" />
-                    Export
+                    <Award className="size-4" />
+                    Badges
                   </Button>
                 </div>
               </div>
@@ -679,6 +679,8 @@ export default function Settings() {
                 <div
                   className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-300"
                   data-testid="export-progress"
+                  role="status"
+                  aria-live="polite"
                 >
                   <Progress
                     value={exportProgress}
@@ -696,13 +698,13 @@ export default function Settings() {
 
             {/* Import Data Section */}
             <div className="space-y-3">
-              <h3 className="text-sm font-medium">Import Data</h3>
+              <h4 className="text-sm font-medium">Import Data</h4>
 
               <div className="rounded-xl border border-border bg-surface-elevated p-4 hover:bg-surface-elevated/80 transition-colors">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3">
                     <div className="rounded-lg bg-brand-soft p-2 mt-0.5">
-                      <Upload className="w-4 h-4 text-brand" aria-hidden="true" />
+                      <Upload className="size-4 text-brand" aria-hidden="true" />
                     </div>
                     <div>
                       <h4 className="text-sm font-medium">Restore from Backup</h4>
@@ -715,9 +717,11 @@ export default function Settings() {
                     variant="outline"
                     size="sm"
                     onClick={() => importFileRef.current?.click()}
-                    className="gap-2"
+                    disabled={isExporting}
+                    className="gap-2 min-h-[44px]"
+                    aria-label="Import data from JSON backup file"
                   >
-                    <Upload className="w-4 h-4" />
+                    <Upload className="size-4" />
                     Import
                   </Button>
                 </div>
@@ -729,6 +733,8 @@ export default function Settings() {
                 accept=".json"
                 onChange={handleImport}
                 className="hidden"
+                aria-label="Select JSON backup file to import"
+                tabIndex={-1}
               />
             </div>
 
@@ -737,15 +743,15 @@ export default function Settings() {
             {/* Danger Zone Section */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-destructive" aria-hidden="true" />
-                <h3 className="text-sm font-medium text-destructive">Danger Zone</h3>
+                <Shield className="size-4 text-destructive" aria-hidden="true" />
+                <h4 className="text-sm font-medium text-destructive">Danger Zone</h4>
               </div>
 
               <div className="rounded-xl border-2 border-destructive/20 bg-destructive/5 p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3">
                     <div className="rounded-lg bg-destructive/10 p-2 mt-0.5">
-                      <Trash2 className="w-4 h-4 text-destructive" aria-hidden="true" />
+                      <Trash2 className="size-4 text-destructive" aria-hidden="true" />
                     </div>
                     <div>
                       <h4 className="text-sm font-medium text-destructive">Reset All Data</h4>
@@ -759,8 +765,13 @@ export default function Settings() {
                   </div>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="destructive" size="sm" className="gap-2">
-                        <Trash2 className="w-4 h-4" />
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="gap-2 min-h-[44px]"
+                        aria-label="Reset all learning data"
+                      >
+                        <Trash2 className="size-4" />
                         Reset
                       </Button>
                     </AlertDialogTrigger>

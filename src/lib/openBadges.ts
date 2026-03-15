@@ -145,9 +145,19 @@ export async function exportAchievementsAsBadges(
   try {
     const raw = localStorage.getItem('streak-milestones')
     if (raw) {
-      const milestones: StreakMilestone[] = JSON.parse(raw)
-      for (const milestone of milestones) {
-        badges.push(streakMilestoneToBadge(milestone, issuerName))
+      const parsed: unknown = JSON.parse(raw)
+      if (Array.isArray(parsed)) {
+        for (const milestone of parsed) {
+          if (
+            milestone &&
+            typeof milestone === 'object' &&
+            typeof milestone.milestoneValue === 'number' &&
+            typeof milestone.earnedAt === 'string' &&
+            typeof milestone.streakStartDate === 'string'
+          ) {
+            badges.push(streakMilestoneToBadge(milestone as StreakMilestone, issuerName))
+          }
+        }
       }
     }
   } catch (error) {

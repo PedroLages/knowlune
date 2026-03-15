@@ -43,11 +43,17 @@ const migrations: Record<number, MigrationFn> = {
 function applyMigrations(data: LevelUpExport): LevelUpExport {
   let current = data
   for (let v = current.schemaVersion; v < CURRENT_SCHEMA_VERSION; v++) {
-    const migrate = migrations[v + 1]
+    const targetVersion = v + 1
+    const migrate = migrations[targetVersion]
     if (migrate) {
       current = migrate(current)
-      current.schemaVersion = v + 1
+    } else {
+      console.warn(
+        `[ImportService] No migration registered for v${v} → v${targetVersion}. ` +
+          'Data passes through unchanged. Register a no-op migration if intentional.',
+      )
     }
+    current.schemaVersion = targetVersion
   }
   return current
 }
@@ -140,10 +146,30 @@ export async function importFullData(json: string): Promise<ImportResult> {
       }
     )
 
-    // Restore localStorage settings
+    // Restore localStorage settings (after transaction succeeds)
+    // Capture old values for rollback if localStorage write fails
     if (data.settings && typeof data.settings === 'object') {
-      for (const [key, value] of Object.entries(data.settings)) {
-        localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value))
+      const oldValues = new Map<string, string | null>()
+      try {
+        for (const [key, value] of Object.entries(data.settings)) {
+          oldValues.set(key, localStorage.getItem(key))
+          localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value))
+        }
+      } catch (lsError) {
+        // Roll back localStorage changes on failure (e.g., QuotaExceededError)
+        for (const [key, oldVal] of oldValues) {
+          if (oldVal === null) {
+            localStorage.removeItem(key)
+          } else {
+            localStorage.setItem(key, oldVal)
+          }
+        }
+        console.error('[ImportService] localStorage restore failed:', lsError)
+        return {
+          success: false,
+          recordCount: totalRecords,
+          error: 'Database imported but settings restore failed — try freeing storage space',
+        }
       }
     }
 
