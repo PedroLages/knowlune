@@ -140,7 +140,7 @@ test.describe('E01-S05: Detect Missing or Relocated Files', () => {
       // THEN a toast notification identifies the affected files within 2 seconds (NFR11)
       const toast = page.locator('[data-sonner-toast]')
       await expect(toast.first()).toBeVisible({ timeout: 2000 })
-      await expect(toast.first()).toContainText(/files? not found/i)
+      await expect(toast.first()).toContainText(/files? unavailable/i)
     })
   })
 
