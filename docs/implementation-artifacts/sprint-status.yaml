@@ -57,7 +57,7 @@ development_status:
   1-2-display-course-library: done
   1-3-organize-courses-by-topic: done
   1-4-manage-course-status: done
-  1-5-detect-missing-or-relocated-files: backlog  # deferred — FR5/NFR31
+  1-5-detect-missing-or-relocated-files: in-progress
   epic-1-retrospective: done
 
   # ──────────────────────────────────────────────────
