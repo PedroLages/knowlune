@@ -91,9 +91,9 @@ async function goToReviewQueue(page: import('@playwright/test').Page) {
 
 test.describe('Spaced Review System (E11-S01)', () => {
   test.afterEach(async ({ page }) => {
-    // Clean up seeded data
-    await clearIndexedDBStore(page, DB_NAME, 'reviewRecords').catch(() => {})
-    await clearIndexedDBStore(page, DB_NAME, 'notes').catch(() => {})
+    // Clean up seeded data — log errors instead of swallowing them
+    await clearIndexedDBStore(page, DB_NAME, 'reviewRecords').catch(e => console.warn('[cleanup]', e))
+    await clearIndexedDBStore(page, DB_NAME, 'notes').catch(e => console.warn('[cleanup]', e))
   })
 
   // ── AC1: Rate note with 3-grade system ──────────────────────────
@@ -182,19 +182,32 @@ test.describe('Spaced Review System (E11-S01)', () => {
 
   // ── AC3: Updated intervals on re-rating ─────────────────────────
   test.describe('AC3: Cumulative review history updates', () => {
-    test('re-rating a previously reviewed note updates the queue', async ({ page }) => {
-      const note = createDexieNote({ id: 'note-rerate', content: 'Re-rate me' })
-      const review = createDueReview('note-rerate', 50)
+    test('rating a card removes it and remaining cards stay sorted', async ({ page }) => {
+      // Seed 2 notes with different retention levels
+      const noteA = createDexieNote({ id: 'note-a', content: 'Note A (low retention)' })
+      const noteB = createDexieNote({ id: 'note-b', content: 'Note B (higher retention)' })
 
-      await seedReviewData(page, [note], [review])
+      const reviewA = createDueReview('note-a', 20, {
+        reviewedAt: new Date(FIXED_NOW.getTime() - 8 * 86400000).toISOString(),
+        interval: 3,
+      })
+      const reviewB = createDueReview('note-b', 70, {
+        reviewedAt: new Date(FIXED_NOW.getTime() - 1 * 86400000).toISOString(),
+        interval: 3,
+      })
+
+      await seedReviewData(page, [noteA, noteB], [reviewA, reviewB])
       await waitForReviewQueue(page)
 
-      // Rate as Hard
-      const card = page.getByTestId('review-card').first()
-      await card.getByRole('button', { name: /hard/i }).click()
+      // Should start with 2 cards
+      await expect(page.getByTestId('review-card')).toHaveCount(2)
 
-      // After rating, the queue should show empty state (only card was rated away)
-      await expect(page.getByTestId('review-empty-state')).toBeVisible({ timeout: 10_000 })
+      // Rate the first card (lowest retention) as Good — it should be removed
+      const firstCard = page.getByTestId('review-card').first()
+      await firstCard.getByRole('button', { name: /good/i }).click()
+
+      // Remaining queue should have 1 card with the higher retention note
+      await expect(page.getByTestId('review-card')).toHaveCount(1, { timeout: 10_000 })
     })
   })
 

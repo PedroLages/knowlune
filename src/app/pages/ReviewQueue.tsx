@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useCallback, useState } from 'react'
+import { useEffect, useMemo, useCallback, useState, useRef } from 'react'
 import { RotateCcw, CalendarClock } from 'lucide-react'
 import { motion, MotionConfig, AnimatePresence } from 'motion/react'
 import { format } from 'date-fns'
 import { useReviewStore } from '@/stores/useReviewStore'
 import { useNoteStore } from '@/stores/useNoteStore'
+import { isDue, predictRetention } from '@/lib/spacedRepetition'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 import { ReviewCard } from '@/app/components/figma/ReviewCard'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
@@ -16,9 +17,10 @@ import {
   EmptyDescription,
 } from '@/app/components/ui/empty'
 import { allCourses } from '@/data/courses'
-import type { Note } from '@/data/types'
+import type { Note, ReviewRating } from '@/data/types'
 
-/** Map courseId → course title for display */
+/** Map courseId → course title for display.
+ *  Note: only covers static courses — imported courses not yet supported. */
 const courseNameMap = new Map(allCourses.map(c => [c.id, c.title]))
 
 function getCourseName(courseId: string): string {
@@ -26,28 +28,31 @@ function getCourseName(courseId: string): string {
 }
 
 export function ReviewQueue() {
-  const { allReviews, isLoading, getDueReviews, getNextReviewDate, loadReviews, rateNote } =
-    useReviewStore()
+  const { allReviews, isLoading, loadReviews, rateNote } = useReviewStore()
   const { notes, loadNotes } = useNoteStore()
 
-  // Force re-render after rating — Zustand v5 useSyncExternalStore doesn't
-  // always trigger re-renders for state changes inside async event handlers
-  const [, forceRender] = useState(0)
+  // Stable time reference for the current page session — ensures consistent
+  // retention calculations and isDue checks across all cards in a single render
+  const [now] = useState(() => new Date())
+
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  const cardListRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     loadReviews()
     loadNotes()
   }, [loadReviews, loadNotes])
 
-  const handleRate = useCallback(
-    async (noteId: string, rating: Parameters<typeof rateNote>[1]) => {
-      await rateNote(noteId, rating)
-      forceRender(c => c + 1)
-    },
-    [rateNote]
+  // Derive due reviews from subscribed allReviews — this triggers re-renders
+  // when rateNote updates allReviews via set(), unlike calling getDueReviews()
+  // which is a store method outside React's subscription model
+  const dueReviews = useMemo(
+    () =>
+      allReviews
+        .filter(r => isDue(r, now))
+        .sort((a, b) => predictRetention(a, now) - predictRetention(b, now)),
+    [allReviews, now]
   )
-
-  const dueReviews = getDueReviews()
 
   // Build noteId → Note lookup
   const noteMap = useMemo(() => {
@@ -58,7 +63,46 @@ export function ReviewQueue() {
     return map
   }, [notes])
 
-  const nextReviewDate = getNextReviewDate()
+  // Filter out orphaned reviews (note deleted but review record remains)
+  const validReviews = useMemo(
+    () =>
+      dueReviews.filter(r => {
+        if (!noteMap.get(r.noteId)) {
+          console.warn(`[ReviewQueue] Review ${r.id} references missing note ${r.noteId}, skipping`)
+          return false
+        }
+        return true
+      }),
+    [dueReviews, noteMap]
+  )
+
+  const handleRate = useCallback(
+    async (noteId: string, rating: ReviewRating) => {
+      await rateNote(noteId, rating)
+      // Focus management: move focus to the next card's button or the heading
+      requestAnimationFrame(() => {
+        const nextButton = cardListRef.current?.querySelector<HTMLButtonElement>(
+          '[data-testid="rating-buttons"] button'
+        )
+        if (nextButton) {
+          nextButton.focus()
+        } else {
+          headingRef.current?.focus()
+        }
+      })
+    },
+    [rateNote]
+  )
+
+  // Derive next review date from subscribed allReviews (not via store method)
+  // to ensure the component re-renders when allReviews changes
+  const nextReviewDate = useMemo(() => {
+    if (allReviews.length === 0) return null
+    const sorted = [...allReviews].sort(
+      (a, b) => new Date(a.nextReviewAt).getTime() - new Date(b.nextReviewAt).getTime()
+    )
+    return sorted[0].nextReviewAt
+  }, [allReviews])
 
   if (isLoading) {
     return (
@@ -84,35 +128,42 @@ export function ReviewQueue() {
             <RotateCcw className="size-5" />
           </div>
           <div>
-            <h1 className="font-display text-2xl tracking-tight">Review Queue</h1>
-            <p className="text-sm text-muted-foreground">
-              {dueReviews.length > 0
-                ? `${dueReviews.length} note${dueReviews.length === 1 ? '' : 's'} due for review`
+            <h1
+              ref={headingRef}
+              tabIndex={-1}
+              className="font-display text-2xl tracking-tight outline-none"
+            >
+              Review Queue
+            </h1>
+            <p className="text-sm text-muted-foreground" aria-live="polite">
+              {validReviews.length > 0
+                ? `${validReviews.length} note${validReviews.length === 1 ? '' : 's'} due for review`
                 : 'No reviews due'}
             </p>
           </div>
         </div>
 
         {/* Content */}
-        {dueReviews.length === 0 ? (
+        {validReviews.length === 0 ? (
           <ReviewEmptyState nextReviewDate={nextReviewDate} />
         ) : (
           <motion.div
+            ref={cardListRef}
             variants={staggerContainer}
             initial="hidden"
             animate="visible"
             className="mx-auto max-w-2xl space-y-4"
           >
             <AnimatePresence mode="popLayout">
-              {dueReviews.map(record => {
-                const note = noteMap.get(record.noteId)
-                if (!note) return null
+              {validReviews.map(record => {
+                const note = noteMap.get(record.noteId)!
 
                 return (
                   <motion.div key={record.id} variants={fadeUp}>
                     <ReviewCard
                       record={record}
                       note={note}
+                      now={now}
                       courseName={getCourseName(note.courseId)}
                       onRate={handleRate}
                     />

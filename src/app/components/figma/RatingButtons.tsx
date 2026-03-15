@@ -1,4 +1,5 @@
 import { Button } from '@/app/components/ui/button'
+import { cn } from '@/app/components/ui/utils'
 import type { ReviewRating } from '@/data/types'
 
 interface RatingButtonsProps {
@@ -39,10 +40,13 @@ export function RatingButtons({ onRate, disabled }: RatingButtonsProps) {
         <Button
           key={rating}
           variant="outline"
-          size="sm"
+          size="default"
           aria-label={ariaLabel}
           disabled={disabled}
-          className={`flex-1 border font-medium transition-all duration-150 hover:scale-[1.02] ${classes}`}
+          className={cn(
+            'flex-1 border font-medium transition-all duration-150 motion-safe:hover:scale-[1.02]',
+            classes
+          )}
           onClick={() => onRate(rating)}
         >
           {label}

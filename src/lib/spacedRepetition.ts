@@ -5,6 +5,7 @@
  * No side effects — all persistence is handled by the store layer.
  */
 import type { ReviewRating, ReviewRecord } from '@/data/types'
+import { addDays } from 'date-fns'
 
 /** Quality mapping: rating → SM-2 quality value (0-5 scale) */
 const QUALITY_MAP: Record<ReviewRating, number> = {
@@ -109,9 +110,3 @@ function calculateNewEaseFactor(currentEF: number, quality: number): number {
   return Math.max(MIN_EASE_FACTOR, currentEF + delta)
 }
 
-/** Add days to a date, returning a new Date. */
-function addDays(date: Date, days: number): Date {
-  const result = new Date(date)
-  result.setDate(result.getDate() + days)
-  return result
-}

@@ -2,6 +2,7 @@ import { motion } from 'motion/react'
 import { FileText } from 'lucide-react'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
+import { cn } from '@/app/components/ui/utils'
 import { RatingButtons } from './RatingButtons'
 import { predictRetention } from '@/lib/spacedRepetition'
 import type { ReviewRating, ReviewRecord, Note } from '@/data/types'
@@ -11,6 +12,7 @@ interface ReviewCardProps {
   record: ReviewRecord
   note: Note
   courseName: string
+  now: Date
   onRate: (noteId: string, rating: ReviewRating) => void
   disabled?: boolean
 }
@@ -28,9 +30,8 @@ function getRetentionBadgeClasses(retention: number): string {
 }
 
 function getNoteExcerpt(content: string, maxLength = 120): string {
-  // Strip markdown formatting for a clean preview
   const plain = content
-    .replace(/#{1,6}\s/g, '')
+    .replace(/^#{1,6}\s+.*$/gm, '') // Strip full heading lines
     .replace(/\*\*|__/g, '')
     .replace(/\*|_/g, '')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
@@ -43,21 +44,21 @@ function getNoteExcerpt(content: string, maxLength = 120): string {
   return plain.slice(0, maxLength).trimEnd() + '...'
 }
 
-export function ReviewCard({ record, note, courseName, onRate, disabled }: ReviewCardProps) {
-  const retention = predictRetention(record)
+export function ReviewCard({ record, note, courseName, now, onRate, disabled }: ReviewCardProps) {
+  const retention = predictRetention(record, now)
   const topicTag = note.tags[0] ?? 'General'
   const dueDate = new Date(record.nextReviewAt)
-  const now = new Date()
   const isDue = dueDate <= now
   const timeUntilDue = isDue
     ? 'Due now'
     : `Due ${formatDistanceToNow(dueDate, { addSuffix: true })}`
 
   return (
-    <motion.div
+    <motion.article
       layout
       exit={{ opacity: 0, y: -16, transition: { duration: 0.2 } }}
       data-testid="review-card"
+      aria-label={getNoteExcerpt(note.content, 60)}
     >
       <Card className="rounded-[24px] transition-shadow duration-200 hover:shadow-md">
         <CardContent className="flex flex-col gap-4 p-5">
@@ -84,7 +85,10 @@ export function ReviewCard({ record, note, courseName, onRate, disabled }: Revie
               variant="outline"
               data-testid="retention-percentage"
               aria-label={`Predicted retention: ${retention}%`}
-              className={`shrink-0 border font-semibold tabular-nums ${getRetentionBadgeClasses(retention)}`}
+              className={cn(
+                'shrink-0 border font-semibold tabular-nums',
+                getRetentionBadgeClasses(retention)
+              )}
             >
               <span className={getRetentionColor(retention)}>{retention}%</span>
             </Badge>
@@ -102,6 +106,6 @@ export function ReviewCard({ record, note, courseName, onRate, disabled }: Revie
           </div>
         </CardContent>
       </Card>
-    </motion.div>
+    </motion.article>
   )
 }
