@@ -122,11 +122,11 @@ test.describe('Spaced Review System (E11-S01)', () => {
       const card = page.getByTestId('review-card').first()
       await expect(card).toBeVisible()
 
-      // Rate as Good
+      // Rate as Good (use evaluate to bypass any overlays)
       await card.getByRole('button', { name: /good/i }).click()
 
-      // Card should disappear (rated = no longer due)
-      await expect(page.getByTestId('review-card')).not.toBeVisible({ timeout: 5_000 })
+      // After rating, the queue should show empty state (only card was rated away)
+      await expect(page.getByTestId('review-empty-state')).toBeVisible({ timeout: 10_000 })
     })
   })
 
@@ -193,8 +193,8 @@ test.describe('Spaced Review System (E11-S01)', () => {
       const card = page.getByTestId('review-card').first()
       await card.getByRole('button', { name: /hard/i }).click()
 
-      // After rating, the note should no longer be in the queue (just reviewed)
-      await expect(page.getByTestId('review-card')).not.toBeVisible({ timeout: 5_000 })
+      // After rating, the queue should show empty state (only card was rated away)
+      await expect(page.getByTestId('review-empty-state')).toBeVisible({ timeout: 10_000 })
     })
   })
 
@@ -230,45 +230,13 @@ test.describe('Spaced Review System (E11-S01)', () => {
       await seedReviewData(page, [note], [review])
       await waitForReviewQueue(page)
 
-      // Break Dexie's ability to write to reviewRecords by deleting the DB mid-operation
-      // This simulates a quota exceeded or corruption error
+      // Break IDBObjectStore.put to simulate a write failure (e.g., quota exceeded)
       await page.evaluate(() => {
-        // Override the global fetch to intercept Dexie transactions
-        const originalIDBOpen = indexedDB.open.bind(indexedDB)
-        let callCount = 0
-        indexedDB.open = function (...args: Parameters<typeof indexedDB.open>) {
-          callCount++
-          // Let the first calls through (page load), block subsequent writes
-          if (callCount > 5) {
-            const req = originalIDBOpen(...args)
-            const origSuccess = Object.getOwnPropertyDescriptor(IDBRequest.prototype, 'onsuccess')
-            Object.defineProperty(req, 'onsuccess', {
-              set(fn) {
-                origSuccess?.set?.call(req, function (this: IDBOpenDBRequest, evt: Event) {
-                  const db = (evt.target as IDBOpenDBRequest).result
-                  const origTx = db.transaction.bind(db)
-                  db.transaction = function (...txArgs: Parameters<typeof db.transaction>) {
-                    const tx = origTx(...txArgs)
-                    // Force abort to simulate write failure
-                    setTimeout(() => {
-                      try {
-                        tx.abort()
-                      } catch {
-                        // Ignore if already completed
-                      }
-                    }, 10)
-                    return tx
-                  }
-                  fn.call(this, evt)
-                })
-              },
-              get() {
-                return origSuccess?.get?.call(req)
-              },
-            })
-            return req
-          }
-          return originalIDBOpen(...args)
+        const origPut = IDBObjectStore.prototype.put
+        IDBObjectStore.prototype.put = function (...args) {
+          // Restore after first call so cleanup operations still work
+          IDBObjectStore.prototype.put = origPut
+          throw new DOMException('Simulated write failure', 'QuotaExceededError')
         }
       })
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useCallback, useState } from 'react'
 import { RotateCcw, CalendarClock } from 'lucide-react'
 import { motion, MotionConfig, AnimatePresence } from 'motion/react'
 import { format } from 'date-fns'
@@ -30,12 +30,24 @@ export function ReviewQueue() {
     useReviewStore()
   const { notes, loadNotes } = useNoteStore()
 
+  // Force re-render after rating — Zustand v5 useSyncExternalStore doesn't
+  // always trigger re-renders for state changes inside async event handlers
+  const [, forceRender] = useState(0)
+
   useEffect(() => {
     loadReviews()
     loadNotes()
   }, [loadReviews, loadNotes])
 
-  const dueReviews = useMemo(() => getDueReviews(), [allReviews, getDueReviews])
+  const handleRate = useCallback(
+    async (noteId: string, rating: Parameters<typeof rateNote>[1]) => {
+      await rateNote(noteId, rating)
+      forceRender(c => c + 1)
+    },
+    [rateNote]
+  )
+
+  const dueReviews = getDueReviews()
 
   // Build noteId → Note lookup
   const noteMap = useMemo(() => {
@@ -102,7 +114,7 @@ export function ReviewQueue() {
                       record={record}
                       note={note}
                       courseName={getCourseName(note.courseId)}
-                      onRate={rateNote}
+                      onRate={handleRate}
                     />
                   </motion.div>
                 )
