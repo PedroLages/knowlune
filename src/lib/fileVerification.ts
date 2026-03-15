@@ -23,7 +23,8 @@ export async function verifyFileHandle(
     }
     await handle.getFile()
     return 'available'
-  } catch {
+  } catch (error) {
+    console.warn('File handle verification failed:', error)
     return 'missing'
   }
 }

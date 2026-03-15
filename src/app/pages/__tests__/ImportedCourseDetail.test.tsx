@@ -181,4 +181,42 @@ describe('ImportedCourseDetail', () => {
     renderDetail()
     expect(screen.getByTestId('course-content-list')).toBeInTheDocument()
   })
+
+  // AC3: Mixed available + missing state
+  it('available items remain clickable when sibling items are missing', async () => {
+    mockStatusMap.set('v1', 'available')
+    mockStatusMap.set('v2', 'missing')
+    renderDetail()
+
+    const v1 = await screen.findByTestId('course-content-item-video-v1')
+    expect(v1.querySelector('a')).toHaveAttribute('href', '/imported-courses/course-1/lessons/v1')
+
+    const v2 = screen.getByTestId('course-content-item-video-v2')
+    expect(v2.querySelector('a')).toBeNull()
+    expect(screen.getByTestId('file-not-found-badge-v2')).toBeInTheDocument()
+  })
+
+  // AC4: Recovery — badge removed when status changes to available
+  it('badge removed when file status changes to available', async () => {
+    mockStatusMap.set('v1', 'missing')
+    const { unmount } = renderDetail()
+    expect(await screen.findByTestId('file-not-found-badge-v1')).toBeInTheDocument()
+    unmount()
+
+    mockStatusMap.set('v1', 'available')
+    renderDetail()
+    await screen.findByTestId('course-content-item-video-v1')
+    expect(screen.queryByTestId('file-not-found-badge-v1')).toBeNull()
+  })
+
+  // Permission-denied state
+  it('permission-denied files show permission badge and are not clickable', async () => {
+    mockStatusMap.set('v1', 'permission-denied')
+    renderDetail()
+
+    const badge = await screen.findByTestId('file-permission-badge-v1')
+    expect(badge).toHaveTextContent('Permission needed')
+    const v1 = screen.getByTestId('course-content-item-video-v1')
+    expect(v1.querySelector('a')).toBeNull()
+  })
 })

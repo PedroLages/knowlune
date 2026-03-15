@@ -53,28 +53,31 @@ export function useFileStatusVerification(
       if (ignore) return
 
       const verified = new Map<string, FileStatus>()
-      const missingFiles: string[] = []
+      const affectedFiles: string[] = []
 
-      for (const result of results) {
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i]
+        const item = items[i]
         if (result.status === 'fulfilled') {
           verified.set(result.value.id, result.value.status)
-          if (result.value.status === 'missing') {
-            missingFiles.push(result.value.filename)
+          if (result.value.status === 'missing' || result.value.status === 'permission-denied') {
+            affectedFiles.push(result.value.filename)
           }
         } else {
-          // Settlement failure — treat as missing
-          verified.set('unknown', 'missing')
+          // Settlement failure — treat as missing, preserve item identity
+          verified.set(item.id, 'missing')
+          affectedFiles.push(item.filename)
         }
       }
 
       setStatusMap(verified)
 
-      // Fire a single aggregated toast for missing files
-      if (missingFiles.length > 0 && !toastFiredRef.current) {
+      // Fire a single aggregated toast for affected files (missing + permission-denied)
+      if (affectedFiles.length > 0 && !toastFiredRef.current) {
         toastFiredRef.current = true
-        const count = missingFiles.length
-        toast.warning(`${count} ${count === 1 ? 'file' : 'files'} not found`, {
-          description: missingFiles.join(', '),
+        const count = affectedFiles.length
+        toast.warning(`${count} ${count === 1 ? 'file' : 'files'} unavailable`, {
+          description: affectedFiles.join(', '),
           duration: TOAST_DURATION.LONG,
         })
       }

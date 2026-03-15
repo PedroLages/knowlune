@@ -5,6 +5,7 @@ import { db } from '@/db/schema'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useFileStatusVerification } from '@/hooks/useFileStatusVerification'
 import { Badge } from '@/app/components/ui/badge'
+import { cn } from '@/app/components/ui/utils'
 import type { ImportedVideo, ImportedPdf } from '@/data/types'
 import type { FileStatus } from '@/lib/fileVerification'
 
@@ -51,19 +52,18 @@ export function ImportedCourseDetail() {
     if (!courseId) return
     let ignore = false
 
-    db.importedVideos
-      .where('courseId')
-      .equals(courseId)
-      .sortBy('order')
-      .then(videos => {
-        if (!ignore) setVideos(videos)
+    Promise.all([
+      db.importedVideos.where('courseId').equals(courseId).sortBy('order'),
+      db.importedPdfs.where('courseId').equals(courseId).toArray(),
+    ])
+      .then(([v, p]) => {
+        if (!ignore) {
+          setVideos(v)
+          setPdfs(p)
+        }
       })
-    db.importedPdfs
-      .where('courseId')
-      .equals(courseId)
-      .toArray()
-      .then(pdfs => {
-        if (!ignore) setPdfs(pdfs)
+      .catch(err => {
+        console.error('Failed to load course content:', err)
       })
 
     return () => {
@@ -103,7 +103,7 @@ export function ImportedCourseDetail() {
         {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
       </p>
 
-      <ul data-testid="course-content-list" className="flex flex-col gap-2">
+      <ul data-testid="course-content-list" aria-label="Course content" className="flex flex-col gap-2">
         {videos.map(video => {
           const status = fileStatuses.get(video.id) ?? 'checking'
           const isUnavailable = status === 'missing' || status === 'permission-denied'
@@ -112,13 +112,13 @@ export function ImportedCourseDetail() {
             <>
               <Video
                 data-testid="content-type-icon"
-                className={`size-5 shrink-0 ${isUnavailable ? 'text-muted-foreground' : 'text-brand'}`}
+                className={cn('size-5 shrink-0', isUnavailable ? 'text-muted-foreground' : 'text-brand')}
                 aria-hidden="true"
               />
               <span
                 data-testid={`file-status-${video.id}`}
                 data-status={status}
-                className={`flex-1 font-medium text-sm ${isUnavailable ? '' : 'group-hover:text-brand transition-colors'}`}
+                className={cn('flex-1 font-medium text-sm', !isUnavailable && 'group-hover:text-brand transition-colors')}
               >
                 {video.filename}
               </span>
@@ -154,17 +154,17 @@ export function ImportedCourseDetail() {
 
         {pdfs.map(pdf => {
           const status = fileStatuses.get(pdf.id) ?? 'checking'
-          const isMissing = status === 'missing'
+          const isUnavailable = status === 'missing' || status === 'permission-denied'
 
           return (
             <li key={pdf.id} data-testid={`course-content-item-pdf-${pdf.id}`}>
               <div
-                className={`flex items-center gap-3 p-4 rounded-xl border bg-card ${isMissing ? 'opacity-50' : 'opacity-75'} cursor-not-allowed`}
+                className={cn('flex items-center gap-3 p-4 rounded-xl border bg-card cursor-not-allowed', isUnavailable ? 'opacity-50' : 'opacity-75')}
                 aria-disabled="true"
               >
                 <FileText
                   data-testid="content-type-icon"
-                  className={`size-5 shrink-0 ${isMissing ? 'text-muted-foreground' : 'text-warning'}`}
+                  className={cn('size-5 shrink-0', isUnavailable ? 'text-muted-foreground' : 'text-warning')}
                   aria-hidden="true"
                 />
                 <span
