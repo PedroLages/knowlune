@@ -4,9 +4,9 @@ story_name: "Study Session Quality Scoring"
 status: in-progress
 started: 2026-03-15
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-15
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -221,45 +221,33 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-**Reviewed:** 2026-03-15 | **Report:** `docs/reviews/design/design-review-2026-03-15-e11-s03.md`
+**Reviewed:** 2026-03-15 (re-review) | **Report:** `docs/reviews/design/design-review-2026-03-15-e11-s03.md`
 
-**HIGH (3):**
-1. No `prefers-reduced-motion` guard on `motion/react` animations in QualityScoreRing/FactorBreakdown — add `<MotionConfig reducedMotion="user">`
-2. Dialog renders as centered modal on mobile instead of Sheet (spec requires bottom Sheet < 640px)
-3. Dialog max-width 512px instead of spec's 420-480px — `sm:max-w-lg` default overrides `max-w-md`
+Previous H1-H3, M4-M6, N7 all confirmed fixed.
 
-**MEDIUM (3):**
-4. Destructive badge contrast ~4.08:1 in dark mode — increase `bg-destructive/10` to `/15` or `/20`
-5. Tier boundary inconsistency — spec says "Fair = 40-69" but code uses `score >= 50` as fair floor
-6. Session row expand button accessible name garbled — needs explicit `aria-label`
-
-**NIT (1):** ESLint warning on FactorBreakdown inline style — add disable comment
+**New findings (non-blocking):**
+- M1: `declining` trend uses `text-warning` instead of `text-destructive` (confidence: 72)
+- M2: Empty DialogFooter/SheetFooter elements (confidence: 75)
+- M3: aria-controls references conditionally rendered element (confidence: 85)
+- L1-L3: Minor a11y refinements (SVG aria-hidden, icon aria-hidden, em-dash label)
 
 ## Code Review Feedback
 
-**Reviewed:** 2026-03-15 | **Reports:**
+**Reviewed:** 2026-03-15 (re-review) | **Reports:**
 - `docs/reviews/code/code-review-2026-03-15-e11-s03.md`
 - `docs/reviews/code/code-review-testing-2026-03-15-e11-s03.md`
 
-**HIGH (4 code + 3 testing):**
-1. `recordInteraction` mutates Zustand state directly — document or fix (confidence: 92)
-2. String interpolation instead of `cn()` in 3 components (confidence: 90)
-3. `calculateQualityTrend` threshold `< 4` too aggressive — 3 sessions always "stable" (confidence: 85)
-4. No E2E test for QualityScoreDialog or AC5 real-time tracking (confidence: 80-92)
-5. `endSession` doesn't assert `qualityScore` persistence in store tests (confidence: 82)
-6. No test for event non-emission on persistence failure (confidence: 78)
+Previous H1-H3, M7-M9 all confirmed fixed.
 
-**MEDIUM (3 code + 3 testing):**
-7. `endSession` clears state before async event — fragile pattern (confidence: 75)
-8. Inline style in FactorBreakdown acceptable but needs ESLint comment (confidence: 72)
-9. `qualityTrend` computed from all sessions, not filtered (confidence: 70)
-10. No afterEach cleanup in E2E spec (confidence: 75)
-11. `makeSession` duplicates factory (confidence: 72)
-12. Trend calculation not tested with 10+ scores (confidence: 70)
+**New findings (non-blocking):**
+- H1: endSession persistence failure silently loses quality score dialog (confidence: 82)
+- H2: endSession test doesn't assert qualityScore persistence in DB (confidence: 88)
+- M1-M3: SVG stroke constant, hasQualityScores filter scope, makeSession duplication
+- M4-M5: No afterEach cleanup in E2E, trend not tested with 10+ scores
 
 ## Web Design Guidelines Review
 
-**Reviewed:** 2026-03-15
+**Reviewed:** 2026-03-15 (re-review)
 
 **HIGH (1):** Missing `MotionConfig reducedMotion="user"` on animated components (duplicates design review H1)
 **MEDIUM (1):** Missing `aria-controls` on session row expand buttons (+ garbled accessible name from design review)
