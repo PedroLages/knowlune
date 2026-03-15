@@ -76,33 +76,25 @@ function getLocalStorageData(): Record<string, unknown> {
   return data
 }
 
-function stripDirectoryHandle(
-  course: ImportedCourse
-): Omit<ImportedCourse, 'directoryHandle'> {
+function stripDirectoryHandle(course: ImportedCourse): Omit<ImportedCourse, 'directoryHandle'> {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { directoryHandle, ...rest } = course
   return rest
 }
 
-function stripFileHandleVideo(
-  video: ImportedVideo
-): Omit<ImportedVideo, 'fileHandle'> {
+function stripFileHandleVideo(video: ImportedVideo): Omit<ImportedVideo, 'fileHandle'> {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { fileHandle, ...rest } = video
   return rest
 }
 
-function stripFileHandlePdf(
-  pdf: ImportedPdf
-): Omit<ImportedPdf, 'fileHandle'> {
+function stripFileHandlePdf(pdf: ImportedPdf): Omit<ImportedPdf, 'fileHandle'> {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { fileHandle, ...rest } = pdf
   return rest
 }
 
-export async function exportAllAsJson(
-  onProgress?: ExportProgressCallback
-): Promise<LevelUpExport> {
+export async function exportAllAsJson(onProgress?: ExportProgressCallback): Promise<LevelUpExport> {
   const tables = [
     'importedCourses',
     'importedVideos',
@@ -166,9 +158,7 @@ export interface CsvExportFiles {
   streaks: string
 }
 
-export async function exportAllAsCsv(
-  onProgress?: ExportProgressCallback
-): Promise<CsvExportFiles> {
+export async function exportAllAsCsv(onProgress?: ExportProgressCallback): Promise<CsvExportFiles> {
   onProgress?.(0, 'Loading sessions...')
   const sessions = await db.studySessions.toArray()
   await yieldToUI()
@@ -203,11 +193,7 @@ export interface MarkdownNoteFile {
   content: string
 }
 
-function generateBulkFrontmatter(
-  note: Note,
-  courseName: string,
-  lastReviewedAt?: string
-): string {
+function generateBulkFrontmatter(note: Note, courseName: string, lastReviewedAt?: string): string {
   const plainText = extractTextFromHtml(note.content)
   const firstLine = plainText.split('\n')[0]?.trim() || 'Untitled Note'
   const title = firstLine.slice(0, 100)

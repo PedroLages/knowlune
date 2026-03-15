@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  sessionsToCSV,
-  progressToCSV,
-  deriveStreakDays,
-  streakDaysToCSV,
-} from '../csvSerializer'
+import { sessionsToCSV, progressToCSV, deriveStreakDays, streakDaysToCSV } from '../csvSerializer'
 import type { StudySession, ContentProgress } from '@/data/types'
 
 describe('csvSerializer', () => {
@@ -65,7 +60,12 @@ describe('csvSerializer', () => {
     it('generates CSV for content progress', () => {
       const progress: ContentProgress[] = [
         { courseId: 'c1', itemId: 'mod1', status: 'completed', updatedAt: '2026-01-15T12:00:00Z' },
-        { courseId: 'c1', itemId: 'mod2', status: 'in-progress', updatedAt: '2026-01-15T13:00:00Z' },
+        {
+          courseId: 'c1',
+          itemId: 'mod2',
+          status: 'in-progress',
+          updatedAt: '2026-01-15T13:00:00Z',
+        },
       ]
 
       const csv = progressToCSV(progress)

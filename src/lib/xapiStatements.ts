@@ -178,9 +178,7 @@ export function challengeToXAPI(challenge: Challenge): XAPIStatement | null {
 
 // --- Bulk Export ---
 
-export async function exportAsXAPI(
-  onProgress?: ExportProgressCallback
-): Promise<XAPIStatement[]> {
+export async function exportAsXAPI(onProgress?: ExportProgressCallback): Promise<XAPIStatement[]> {
   const statements: XAPIStatement[] = []
 
   onProgress?.(0, 'Loading sessions for xAPI...')

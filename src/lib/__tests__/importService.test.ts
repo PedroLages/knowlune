@@ -7,9 +7,11 @@ const mockTable = vi.fn().mockReturnValue({ clear: mockClear, bulkPut: mockBulkP
 
 vi.mock('@/db/schema', () => ({
   db: {
-    transaction: vi.fn().mockImplementation(async (_mode: string, _tables: unknown[], fn: () => Promise<void>) => {
-      await fn()
-    }),
+    transaction: vi
+      .fn()
+      .mockImplementation(async (_mode: string, _tables: unknown[], fn: () => Promise<void>) => {
+        await fn()
+      }),
     table: mockTable,
     importedCourses: { clear: mockClear },
     importedVideos: { clear: mockClear },
@@ -42,7 +44,9 @@ describe('importService', () => {
   })
 
   it('rejects JSON without data field', async () => {
-    const result = await importFullData(JSON.stringify({ schemaVersion: 14, exportedAt: '2026-01-01' }))
+    const result = await importFullData(
+      JSON.stringify({ schemaVersion: 14, exportedAt: '2026-01-01' })
+    )
     expect(result.success).toBe(false)
     expect(result.error).toContain('data')
   })

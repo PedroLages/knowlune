@@ -17,14 +17,9 @@ function escapeCsvValue(value: unknown): string {
 }
 
 /** Convert array of objects to CSV string with headers */
-function toCsv<T>(
-  headers: Array<{ key: keyof T & string; label: string }>,
-  rows: T[]
-): string {
+function toCsv<T>(headers: Array<{ key: keyof T & string; label: string }>, rows: T[]): string {
   const headerLine = headers.map(h => escapeCsvValue(h.label)).join(',')
-  const dataLines = rows.map(row =>
-    headers.map(h => escapeCsvValue(row[h.key])).join(',')
-  )
+  const dataLines = rows.map(row => headers.map(h => escapeCsvValue(row[h.key])).join(','))
   return [headerLine, ...dataLines].join('\n')
 }
 

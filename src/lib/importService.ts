@@ -143,10 +143,7 @@ export async function importFullData(json: string): Promise<ImportResult> {
     // Restore localStorage settings
     if (data.settings && typeof data.settings === 'object') {
       for (const [key, value] of Object.entries(data.settings)) {
-        localStorage.setItem(
-          key,
-          typeof value === 'string' ? value : JSON.stringify(value)
-        )
+        localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value))
       }
     }
 

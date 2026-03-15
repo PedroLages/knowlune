@@ -36,11 +36,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/app/components/ui/alert-dialog'
-import {
-  getSettings,
-  saveSettings,
-  resetAllData,
-} from '@/lib/settings'
+import { getSettings, saveSettings, resetAllData } from '@/lib/settings'
 import { exportAllAsJson, exportAllAsCsv, exportNotesAsMarkdown } from '@/lib/exportService'
 import { importFullData } from '@/lib/importService'
 import { downloadJson, downloadZip } from '@/lib/fileDownload'

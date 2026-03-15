@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { sessionToXAPI, progressToXAPI, challengeToXAPI } from '../xapiStatements'
 import type { StudySession, ContentProgress, Challenge } from '@/data/types'
 

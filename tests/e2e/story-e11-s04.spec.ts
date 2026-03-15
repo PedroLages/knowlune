@@ -39,9 +39,7 @@ test.describe('E11-S04: Data Export', () => {
     expect(download.suggestedFilename()).toMatch(/\.json$/)
   })
 
-  test('AC2: Export CSV with separate files for sessions, progress, streaks', async ({
-    page,
-  }) => {
+  test('AC2: Export CSV with separate files for sessions, progress, streaks', async ({ page }) => {
     const csvExportBtn = page.getByRole('button', { name: /export.*csv/i })
     await expect(csvExportBtn).toBeVisible()
     await csvExportBtn.click()

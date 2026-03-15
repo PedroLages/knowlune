@@ -75,7 +75,9 @@ describe('openBadges', () => {
 
     expect(badges).toHaveLength(1)
     expect(badges[0].credentialSubject.achievement.name).toBe('30-Day Study Streak')
-    expect(badges[0].credentialSubject.achievement.criteria.narrative).toContain('30 consecutive days')
+    expect(badges[0].credentialSubject.achievement.criteria.narrative).toContain(
+      '30 consecutive days'
+    )
   })
 
   it('skips incomplete challenges', async () => {
