@@ -11,6 +11,10 @@ import {
   Moon,
   HardDrive,
   Shield,
+  FileJson,
+  FileSpreadsheet,
+  FileText,
+  Award,
 } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
@@ -35,10 +39,12 @@ import {
 import {
   getSettings,
   saveSettings,
-  exportAllData,
-  importAllData,
   resetAllData,
 } from '@/lib/settings'
+import { exportAllAsJson, exportAllAsCsv, exportNotesAsMarkdown } from '@/lib/exportService'
+import { importFullData } from '@/lib/importService'
+import { downloadJson, downloadZip } from '@/lib/fileDownload'
+import { exportAchievementsAsBadges } from '@/lib/openBadges'
 import { ReminderSettings } from '@/app/components/figma/ReminderSettings'
 import { AIConfigurationSettings } from '@/app/components/figma/AIConfigurationSettings'
 import { AvatarCropDialog } from '@/app/components/ui/avatar-crop-dialog'
@@ -55,7 +61,12 @@ export default function Settings() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isCropDialogOpen, setIsCropDialogOpen] = useState(false)
   const [tempPhotoDataUrl, setTempPhotoDataUrl] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const importFileRef = useRef<HTMLInputElement>(null)
+
+  // Export state
+  const [isExporting, setIsExporting] = useState(false)
+  const [exportProgress, setExportProgress] = useState(0)
+  const [exportPhase, setExportPhase] = useState('')
 
   // Character limits
   const DISPLAY_NAME_LIMIT = 50
@@ -81,41 +92,126 @@ export default function Settings() {
     toastSuccess.saved('Profile settings')
   }
 
-  function handleExport() {
-    const data = exportAllData()
-    const blob = new Blob([data], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'levelup-backup.json'
-    a.click()
-    URL.revokeObjectURL(url)
-    toastSuccess.exported('Data')
+  async function handleExportJson() {
+    if (isExporting) return
+    setIsExporting(true)
+    try {
+      const data = await exportAllAsJson((percent, phase) => {
+        setExportProgress(percent)
+        setExportPhase(phase)
+      })
+      const dateStr = new Date().toLocaleDateString('sv-SE')
+      downloadJson(data, `levelup-export-${dateStr}.json`)
+      toastSuccess.exported('All data (JSON)')
+    } catch (error) {
+      console.error('JSON export error:', error)
+      toastError.saveFailed('Export failed — try freeing disk space')
+    } finally {
+      setIsExporting(false)
+      setExportProgress(0)
+      setExportPhase('')
+    }
   }
 
-  function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleExportCsv() {
+    if (isExporting) return
+    setIsExporting(true)
+    try {
+      const csvFiles = await exportAllAsCsv((percent, phase) => {
+        setExportProgress(percent)
+        setExportPhase(phase)
+      })
+      const dateStr = new Date().toLocaleDateString('sv-SE')
+      await downloadZip(
+        [
+          { name: 'sessions.csv', content: csvFiles.sessions },
+          { name: 'progress.csv', content: csvFiles.progress },
+          { name: 'streaks.csv', content: csvFiles.streaks },
+        ],
+        `levelup-export-${dateStr}.zip`
+      )
+      toastSuccess.exported('All data (CSV)')
+    } catch (error) {
+      console.error('CSV export error:', error)
+      toastError.saveFailed('Export failed — try freeing disk space')
+    } finally {
+      setIsExporting(false)
+      setExportProgress(0)
+      setExportPhase('')
+    }
+  }
+
+  async function handleExportMarkdown() {
+    if (isExporting) return
+    setIsExporting(true)
+    try {
+      const mdFiles = await exportNotesAsMarkdown((percent, phase) => {
+        setExportProgress(percent)
+        setExportPhase(phase)
+      })
+      if (mdFiles.length === 0) {
+        toastError.saveFailed('No notes to export')
+        return
+      }
+      const dateStr = new Date().toLocaleDateString('sv-SE')
+      await downloadZip(mdFiles, `levelup-notes-${dateStr}.zip`)
+      toastSuccess.exported(`${mdFiles.length} notes (Markdown)`)
+    } catch (error) {
+      console.error('Markdown export error:', error)
+      toastError.saveFailed('Export failed — try freeing disk space')
+    } finally {
+      setIsExporting(false)
+      setExportProgress(0)
+      setExportPhase('')
+    }
+  }
+
+  async function handleExportBadges() {
+    if (isExporting) return
+    setIsExporting(true)
+    try {
+      const badges = await exportAchievementsAsBadges((percent, phase) => {
+        setExportProgress(percent)
+        setExportPhase(phase)
+      })
+      if (badges.length === 0) {
+        toastError.saveFailed('No achievements to export')
+        return
+      }
+      const dateStr = new Date().toLocaleDateString('sv-SE')
+      downloadJson(badges, `levelup-badges-${dateStr}.json`)
+      toastSuccess.exported(`${badges.length} badges (Open Badges v3.0)`)
+    } catch (error) {
+      console.error('Badges export error:', error)
+      toastError.saveFailed('Export failed — try freeing disk space')
+    } finally {
+      setIsExporting(false)
+      setExportProgress(0)
+      setExportPhase('')
+    }
+  }
+
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Validate file type
     if (!file.name.endsWith('.json')) {
       toastError.invalidFile('JSON')
       return
     }
 
     const reader = new FileReader()
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
-        const success = importAllData(reader.result as string)
-        if (success) {
-          toastSuccess.saved('Data imported successfully')
-          // Delay reload to show toast
+        const result = await importFullData(reader.result as string)
+        if (result.success) {
+          toastSuccess.saved(`Data imported: ${result.recordCount} records restored`)
           setTimeout(() => {
             setSettings(getSettings())
             window.location.reload()
           }, 1500)
         } else {
-          toastError.importFailed()
+          toastError.importFailed(result.error)
         }
       } catch (error) {
         console.error('Import error:', error)
@@ -126,6 +222,9 @@ export default function Settings() {
       toastError.importFailed('Failed to read file')
     }
     reader.readAsText(file)
+
+    // Reset file input so same file can be selected again
+    e.target.value = ''
   }
 
   function handleReset() {
@@ -477,33 +576,132 @@ export default function Settings() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-6 pt-6">
-            {/* Backup & Restore Section */}
+          <CardContent className="space-y-6 pt-6" data-testid="data-export-section">
+            {/* Export Your Data Section */}
             <div className="space-y-3">
-              <h3 className="text-sm font-medium">Backup & Restore</h3>
+              <h3 className="text-sm font-medium">Export Your Data</h3>
 
-              {/* Export Card */}
+              {/* Full Data Export — JSON */}
               <div className="rounded-xl border border-border bg-surface-elevated p-4 hover:bg-surface-elevated/80 transition-colors">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3">
                     <div className="rounded-lg bg-success-soft p-2 mt-0.5">
-                      <Download className="w-4 h-4 text-success" aria-hidden="true" />
+                      <FileJson className="w-4 h-4 text-success" aria-hidden="true" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-medium">Export Data</h4>
+                      <h4 className="text-sm font-medium">Full Data Export</h4>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Download all your courses, progress, and settings as JSON
+                        All sessions, progress, streaks, notes, and achievements
                       </p>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExportJson}
+                      disabled={isExporting}
+                      className="gap-2"
+                      aria-label="Export all data as JSON"
+                    >
+                      <Download className="w-4 h-4" />
+                      JSON
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExportCsv}
+                      disabled={isExporting}
+                      className="gap-2"
+                      aria-label="Export all data as CSV"
+                    >
+                      <FileSpreadsheet className="w-4 h-4" />
+                      CSV
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes Export — Markdown */}
+              <div className="rounded-xl border border-border bg-surface-elevated p-4 hover:bg-surface-elevated/80 transition-colors">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-lg bg-brand-soft p-2 mt-0.5">
+                      <FileText className="w-4 h-4 text-brand" aria-hidden="true" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium">Notes Export</h4>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Individual Markdown files with YAML frontmatter
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportMarkdown}
+                    disabled={isExporting}
+                    className="gap-2"
+                    aria-label="Export notes as Markdown"
+                  >
                     <Download className="w-4 h-4" />
                     Export
                   </Button>
                 </div>
               </div>
 
-              {/* Import Card */}
+              {/* Achievements Export — Open Badges */}
+              <div className="rounded-xl border border-border bg-surface-elevated p-4 hover:bg-surface-elevated/80 transition-colors">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-lg bg-warning/10 p-2 mt-0.5">
+                      <Award className="w-4 h-4 text-warning" aria-hidden="true" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium">Achievements Export</h4>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Open Badges v3.0 compliant credentials
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportBadges}
+                    disabled={isExporting}
+                    className="gap-2"
+                    aria-label="Export achievements as Open Badges"
+                  >
+                    <Award className="w-4 h-4" />
+                    Export
+                  </Button>
+                </div>
+              </div>
+
+              {/* Export Progress Indicator */}
+              {isExporting && (
+                <div
+                  className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-300"
+                  data-testid="export-progress"
+                >
+                  <Progress
+                    value={exportProgress}
+                    className="h-1.5 bg-brand-soft"
+                    aria-label="Export progress"
+                  />
+                  <p className="text-xs text-muted-foreground text-center">
+                    {exportPhase || 'Preparing export...'}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* Import Data Section */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium">Import Data</h3>
+
               <div className="rounded-xl border border-border bg-surface-elevated p-4 hover:bg-surface-elevated/80 transition-colors">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3">
@@ -511,16 +709,16 @@ export default function Settings() {
                       <Upload className="w-4 h-4 text-brand" aria-hidden="true" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-medium">Import Data</h4>
+                      <h4 className="text-sm font-medium">Restore from Backup</h4>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Restore your data from a previously exported JSON file
+                        Import a previously exported LevelUp JSON file
                       </p>
                     </div>
                   </div>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => importFileRef.current?.click()}
                     className="gap-2"
                   >
                     <Upload className="w-4 h-4" />
@@ -530,7 +728,7 @@ export default function Settings() {
               </div>
 
               <input
-                ref={fileInputRef}
+                ref={importFileRef}
                 type="file"
                 accept=".json"
                 onChange={handleImport}
@@ -559,7 +757,7 @@ export default function Settings() {
                         Permanently delete all your progress, journal entries, and settings
                       </p>
                       <p className="text-xs text-warning mt-2 font-medium">
-                        ⚠️ This action cannot be undone
+                        This action cannot be undone
                       </p>
                     </div>
                   </div>
