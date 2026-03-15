@@ -7,10 +7,7 @@
 
 import { getLLMClient } from '../llm/factory'
 import type { LLMMessage } from '../llm/types'
-import type {
-  DecompositionRequest,
-  DecompositionResponse,
-} from './types'
+import type { DecompositionRequest, DecompositionResponse } from './types'
 
 /**
  * Task decomposition prompt template

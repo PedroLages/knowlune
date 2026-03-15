@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 
-vi.mock('motion/react', async (importOriginal) => {
+vi.mock('motion/react', async importOriginal => {
   const actual = await importOriginal<typeof import('motion/react')>()
   return {
     ...actual,

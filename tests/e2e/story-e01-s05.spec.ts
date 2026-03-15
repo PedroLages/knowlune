@@ -177,10 +177,7 @@ test.describe('E01-S05: Detect Missing or Relocated Files', () => {
   })
 
   test.describe('AC4: Re-verification on course reload', () => {
-    test('should re-verify file status on each course load', async ({
-      page,
-      indexedDB,
-    }) => {
+    test('should re-verify file status on each course load', async ({ page, indexedDB }) => {
       // GIVEN a course that has been loaded and shows missing badges
       await navigateAndWait(page, '/courses')
       await indexedDB.seedImportedCourses([TEST_COURSE])

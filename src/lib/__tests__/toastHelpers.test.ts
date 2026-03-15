@@ -16,12 +16,7 @@ vi.mock('sonner', () => {
 
 import { toast } from 'sonner'
 import { TOAST_DURATION } from '@/lib/toastConfig'
-import {
-  toastSuccess,
-  toastError,
-  toastPromise,
-  toastWithUndo,
-} from '@/lib/toastHelpers'
+import { toastSuccess, toastError, toastPromise, toastWithUndo } from '@/lib/toastHelpers'
 
 const mockedToast = toast as unknown as ReturnType<typeof vi.fn> & {
   error: ReturnType<typeof vi.fn>

@@ -16,10 +16,7 @@ beforeEach(async () => {
   // (fake timers break IndexedDB internal async operations)
   const OrigDate = globalThis.Date
   const fixedNow = new OrigDate(FIXED_DATE).getTime()
-  vi.spyOn(globalThis, 'Date').mockImplementation(function (
-    this: Date,
-    ...args: unknown[]
-  ) {
+  vi.spyOn(globalThis, 'Date').mockImplementation(function (this: Date, ...args: unknown[]) {
     if (args.length === 0) {
       return new OrigDate(fixedNow)
     }
@@ -148,9 +145,7 @@ describe('loadThumbnailFromFile', () => {
 
     const mockBitmap = { close: vi.fn() } as unknown as ImageBitmap
     vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue(mockBitmap))
-    vi.spyOn(document, 'createElement').mockReturnValueOnce(
-      canvas as unknown as HTMLCanvasElement
-    )
+    vi.spyOn(document, 'createElement').mockReturnValueOnce(canvas as unknown as HTMLCanvasElement)
 
     const file = new File(['data'], 'photo.jpg', { type: 'image/jpeg' })
     const blob = await mod.loadThumbnailFromFile(file)
@@ -165,9 +160,7 @@ describe('loadThumbnailFromFile', () => {
 
     const mockBitmap = { close: vi.fn() } as unknown as ImageBitmap
     vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue(mockBitmap))
-    vi.spyOn(document, 'createElement').mockReturnValueOnce(
-      canvas as unknown as HTMLCanvasElement
-    )
+    vi.spyOn(document, 'createElement').mockReturnValueOnce(canvas as unknown as HTMLCanvasElement)
 
     const file = new File(['data'], 'photo.jpg', { type: 'image/jpeg' })
     await expect(mod.loadThumbnailFromFile(file)).rejects.toThrow('Canvas context unavailable')
@@ -178,9 +171,7 @@ describe('loadThumbnailFromFile', () => {
 
     const mockBitmap = { close: vi.fn() } as unknown as ImageBitmap
     vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue(mockBitmap))
-    vi.spyOn(document, 'createElement').mockReturnValueOnce(
-      canvas as unknown as HTMLCanvasElement
-    )
+    vi.spyOn(document, 'createElement').mockReturnValueOnce(canvas as unknown as HTMLCanvasElement)
 
     const file = new File(['data'], 'photo.jpg', { type: 'image/jpeg' })
     await expect(mod.loadThumbnailFromFile(file)).rejects.toThrow('Canvas toBlob returned null')
@@ -205,9 +196,7 @@ describe('fetchThumbnailFromUrl', () => {
 
     const mockBitmap = { close: vi.fn() } as unknown as ImageBitmap
     vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue(mockBitmap))
-    vi.spyOn(document, 'createElement').mockReturnValueOnce(
-      canvas as unknown as HTMLCanvasElement
-    )
+    vi.spyOn(document, 'createElement').mockReturnValueOnce(canvas as unknown as HTMLCanvasElement)
 
     const blob = await mod.fetchThumbnailFromUrl('https://example.com/image.png')
 
@@ -502,9 +491,7 @@ describe('generateThumbnailWithGemini', () => {
 
     const mockBitmap = { close: vi.fn() } as unknown as ImageBitmap
     vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue(mockBitmap))
-    vi.spyOn(document, 'createElement').mockReturnValueOnce(
-      canvas as unknown as HTMLCanvasElement
-    )
+    vi.spyOn(document, 'createElement').mockReturnValueOnce(canvas as unknown as HTMLCanvasElement)
 
     const blob = await mod.generateThumbnailWithGemini('React Basics', 'test-api-key')
 
@@ -519,9 +506,9 @@ describe('generateThumbnailWithGemini', () => {
   it('throws on network error', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Network error')))
 
-    await expect(
-      mod.generateThumbnailWithGemini('Course', 'key')
-    ).rejects.toThrow('Network error — check your internet connection')
+    await expect(mod.generateThumbnailWithGemini('Course', 'key')).rejects.toThrow(
+      'Network error — check your internet connection'
+    )
   })
 
   it('throws specific message for 401 (invalid API key)', async () => {
@@ -533,9 +520,9 @@ describe('generateThumbnailWithGemini', () => {
 
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse))
 
-    await expect(
-      mod.generateThumbnailWithGemini('Course', 'bad-key')
-    ).rejects.toThrow('Invalid Gemini API key')
+    await expect(mod.generateThumbnailWithGemini('Course', 'bad-key')).rejects.toThrow(
+      'Invalid Gemini API key'
+    )
   })
 
   it('throws specific message for 403 (forbidden)', async () => {
@@ -547,9 +534,9 @@ describe('generateThumbnailWithGemini', () => {
 
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse))
 
-    await expect(
-      mod.generateThumbnailWithGemini('Course', 'bad-key')
-    ).rejects.toThrow('Invalid Gemini API key')
+    await expect(mod.generateThumbnailWithGemini('Course', 'bad-key')).rejects.toThrow(
+      'Invalid Gemini API key'
+    )
   })
 
   it('throws generic API error for other status codes', async () => {
@@ -561,21 +548,19 @@ describe('generateThumbnailWithGemini', () => {
 
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse))
 
-    await expect(
-      mod.generateThumbnailWithGemini('Course', 'key')
-    ).rejects.toThrow('Gemini API error 500')
+    await expect(mod.generateThumbnailWithGemini('Course', 'key')).rejects.toThrow(
+      'Gemini API error 500'
+    )
   })
 
   it('throws when response has no image part', async () => {
-    const mockResponse = makeGeminiResponse([
-      { text: 'Sorry, I cannot generate that image.' },
-    ])
+    const mockResponse = makeGeminiResponse([{ text: 'Sorry, I cannot generate that image.' }])
 
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse))
 
-    await expect(
-      mod.generateThumbnailWithGemini('Course', 'key')
-    ).rejects.toThrow('Gemini did not return an image')
+    await expect(mod.generateThumbnailWithGemini('Course', 'key')).rejects.toThrow(
+      'Gemini did not return an image'
+    )
   })
 
   it('throws when response has no candidates', async () => {
@@ -586,9 +571,9 @@ describe('generateThumbnailWithGemini', () => {
 
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse))
 
-    await expect(
-      mod.generateThumbnailWithGemini('Course', 'key')
-    ).rejects.toThrow('Gemini did not return an image')
+    await expect(mod.generateThumbnailWithGemini('Course', 'key')).rejects.toThrow(
+      'Gemini did not return an image'
+    )
   })
 
   it('truncates long error detail from API response', async () => {
@@ -620,9 +605,9 @@ describe('generateThumbnailWithGemini', () => {
 
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse))
 
-    await expect(
-      mod.generateThumbnailWithGemini('Course', 'key')
-    ).rejects.toThrow('Gemini API error 502')
+    await expect(mod.generateThumbnailWithGemini('Course', 'key')).rejects.toThrow(
+      'Gemini API error 502'
+    )
   })
 
   it('includes course name in the prompt', async () => {
@@ -637,9 +622,7 @@ describe('generateThumbnailWithGemini', () => {
 
     const mockBitmap = { close: vi.fn() } as unknown as ImageBitmap
     vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue(mockBitmap))
-    vi.spyOn(document, 'createElement').mockReturnValueOnce(
-      canvas as unknown as HTMLCanvasElement
-    )
+    vi.spyOn(document, 'createElement').mockReturnValueOnce(canvas as unknown as HTMLCanvasElement)
 
     await mod.generateThumbnailWithGemini('Advanced TypeScript', 'key')
 

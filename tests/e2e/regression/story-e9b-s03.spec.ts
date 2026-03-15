@@ -346,7 +346,7 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
     await page.waitForLoadState('networkidle')
 
     // Inject mock learning path response
-    await page.evaluate((fixedDate) => {
+    await page.evaluate(fixedDate => {
       ;(window as any).__mockLearningPathResponse = {
         learningPath: [
           {
@@ -435,7 +435,7 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
     await page.waitForLoadState('networkidle')
 
     // Inject mock learning path response
-    await page.evaluate((fixedDate) => {
+    await page.evaluate(fixedDate => {
       ;(window as any).__mockLearningPathResponse = {
         learningPath: [
           {

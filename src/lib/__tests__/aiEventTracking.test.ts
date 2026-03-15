@@ -111,9 +111,7 @@ describe('aiEventTracking.ts', () => {
 
       await trackAIUsage('qa')
 
-      expect(mockAdd).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'success' })
-      )
+      expect(mockAdd).toHaveBeenCalledWith(expect.objectContaining({ status: 'success' }))
     })
 
     it('uses provided status when specified', async () => {
@@ -122,9 +120,7 @@ describe('aiEventTracking.ts', () => {
 
       await trackAIUsage('learning_path', { status: 'error' })
 
-      expect(mockAdd).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'error' })
-      )
+      expect(mockAdd).toHaveBeenCalledWith(expect.objectContaining({ status: 'error' }))
     })
 
     it('includes metadata when provided', async () => {
@@ -302,11 +298,7 @@ describe('aiEventTracking.ts', () => {
 
       expect(result).toEqual(events)
       // Verify it queries timestamp field and sorts by timestamp
-      expect(mockSortBy).toHaveBeenCalledWith(
-        'timestamp',
-        expect.any(String),
-        'timestamp'
-      )
+      expect(mockSortBy).toHaveBeenCalledWith('timestamp', expect.any(String), 'timestamp')
     })
 
     it('works for weekly period', async () => {

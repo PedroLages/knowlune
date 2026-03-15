@@ -117,9 +117,9 @@ This is a test`
         text: async () => 'WEBVTT\n\n',
       })
 
-      await expect(
-        fetchAndParseTranscript('https://example.com/transcript.vtt')
-      ).rejects.toThrow('Transcript contains no parsable cues')
+      await expect(fetchAndParseTranscript('https://example.com/transcript.vtt')).rejects.toThrow(
+        'Transcript contains no parsable cues'
+      )
     })
 
     it('should respect abort signal', async () => {
@@ -272,14 +272,13 @@ Real content`
   describe('generateVideoSummary', () => {
     it('should throw for unsupported provider', async () => {
       const gen = generateVideoSummary('transcript', 'invalid-provider' as AIProviderId, 'key')
-      await expect(collectGenerator(gen)).rejects.toThrow('Unsupported AI provider: invalid-provider')
+      await expect(collectGenerator(gen)).rejects.toThrow(
+        'Unsupported AI provider: invalid-provider'
+      )
     })
 
     it('should call sanitizeAIRequestPayload when building payload', async () => {
-      const chunks = [
-        'data: {"choices":[{"delta":{"content":"Hello"}}]}\n\n',
-        'data: [DONE]\n\n',
-      ]
+      const chunks = ['data: {"choices":[{"delta":{"content":"Hello"}}]}\n\n', 'data: [DONE]\n\n']
       globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
 
       const gen = generateVideoSummary('my transcript', 'openai', 'test-key')
@@ -298,7 +297,9 @@ Real content`
       } as unknown as Response)
 
       const gen = generateVideoSummary('transcript', 'openai', 'bad-key')
-      await expect(collectGenerator(gen)).rejects.toThrow('AI provider error (401): Invalid API key')
+      await expect(collectGenerator(gen)).rejects.toThrow(
+        'AI provider error (401): Invalid API key'
+      )
     })
 
     it('should throw on non-ok response when error body read fails', async () => {
@@ -307,7 +308,9 @@ Real content`
         status: 500,
         statusText: 'Internal Server Error',
         body: null,
-        text: async () => { throw new Error('read failed') },
+        text: async () => {
+          throw new Error('read failed')
+        },
       } as unknown as Response)
 
       const gen = generateVideoSummary('transcript', 'openai', 'key')
@@ -323,7 +326,9 @@ Real content`
       } as unknown as Response)
 
       const gen = generateVideoSummary('transcript', 'openai', 'key')
-      await expect(collectGenerator(gen)).rejects.toThrow('Response body is null - streaming not supported')
+      await expect(collectGenerator(gen)).rejects.toThrow(
+        'Response body is null - streaming not supported'
+      )
     })
 
     // -----------------------------------------------------------------------
@@ -437,9 +442,9 @@ Real content`
       })
 
       it('should use correct endpoint and headers', async () => {
-        globalThis.fetch = vi.fn().mockResolvedValue(
-          mockStreamResponse(['data: {"type":"message_stop"}\n'])
-        )
+        globalThis.fetch = vi
+          .fn()
+          .mockResolvedValue(mockStreamResponse(['data: {"type":"message_stop"}\n']))
 
         const gen = generateVideoSummary('transcript', 'anthropic', 'sk-ant-test')
         await collectGenerator(gen)
@@ -458,9 +463,9 @@ Real content`
       })
 
       it('should include correct model in payload', async () => {
-        globalThis.fetch = vi.fn().mockResolvedValue(
-          mockStreamResponse(['data: {"type":"message_stop"}\n'])
-        )
+        globalThis.fetch = vi
+          .fn()
+          .mockResolvedValue(mockStreamResponse(['data: {"type":"message_stop"}\n']))
 
         const gen = generateVideoSummary('transcript', 'anthropic', 'key')
         await collectGenerator(gen)
@@ -761,10 +766,7 @@ Real content`
     describe('streaming edge cases', () => {
       it('should handle chunks split across multiple reads', async () => {
         // A single SSE message split across two chunks
-        const chunks = [
-          'data: {"choices":[{"delta":{"con',
-          'tent":"split"}}]}\ndata: [DONE]\n',
-        ]
+        const chunks = ['data: {"choices":[{"delta":{"con', 'tent":"split"}}]}\ndata: [DONE]\n']
         globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
 
         const gen = generateVideoSummary('transcript', 'openai', 'key')

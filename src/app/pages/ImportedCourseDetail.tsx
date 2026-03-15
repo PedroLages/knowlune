@@ -17,11 +17,7 @@ function formatDuration(seconds: number): string {
 function FileStatusBadge({ status, itemId }: { status: FileStatus; itemId: string }) {
   if (status === 'missing') {
     return (
-      <Badge
-        variant="destructive"
-        data-testid={`file-not-found-badge-${itemId}`}
-        role="status"
-      >
+      <Badge variant="destructive" data-testid={`file-not-found-badge-${itemId}`} role="status">
         <AlertTriangle className="size-3" aria-hidden="true" />
         File not found
       </Badge>

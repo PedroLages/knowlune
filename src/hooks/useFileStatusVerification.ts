@@ -73,13 +73,10 @@ export function useFileStatusVerification(
       if (missingFiles.length > 0 && !toastFiredRef.current) {
         toastFiredRef.current = true
         const count = missingFiles.length
-        toast.warning(
-          `${count} ${count === 1 ? 'file' : 'files'} not found`,
-          {
-            description: missingFiles.join(', '),
-            duration: TOAST_DURATION.LONG,
-          }
-        )
+        toast.warning(`${count} ${count === 1 ? 'file' : 'files'} not found`, {
+          description: missingFiles.join(', '),
+          duration: TOAST_DURATION.LONG,
+        })
       }
     }
 
