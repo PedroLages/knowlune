@@ -185,7 +185,7 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-11: in-progress
   11-1-spaced-review-system: done
-  11-2-knowledge-retention-dashboard: backlog
+  11-2-knowledge-retention-dashboard: done
   11-3-study-session-quality-scoring: backlog
   11-4-data-export: backlog
   11-5-interleaved-review-mode: backlog

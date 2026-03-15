@@ -92,7 +92,9 @@ async function goToReviewQueue(page: import('@playwright/test').Page) {
 test.describe('Spaced Review System (E11-S01)', () => {
   test.afterEach(async ({ page }) => {
     // Clean up seeded data — log errors instead of swallowing them
-    await clearIndexedDBStore(page, DB_NAME, 'reviewRecords').catch(e => console.warn('[cleanup]', e))
+    await clearIndexedDBStore(page, DB_NAME, 'reviewRecords').catch(e =>
+      console.warn('[cleanup]', e)
+    )
     await clearIndexedDBStore(page, DB_NAME, 'notes').catch(e => console.warn('[cleanup]', e))
   })
 
