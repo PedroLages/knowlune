@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { AlertTriangle, Brain, Calendar, ShieldCheck } from 'lucide-react'
 import { MotionConfig, motion } from 'motion/react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/app/components/ui/card'
 import { StatsCard } from '@/app/components/StatsCard'
 import { EmptyState } from '@/app/components/EmptyState'
 import { TopicRetentionCard } from '@/app/components/figma/TopicRetentionCard'
@@ -107,13 +107,13 @@ export function RetentionDashboard() {
 
             {/* Row 2: Topic Retention Cards */}
             {topicRetention.length > 0 && (
-              <motion.section variants={fadeUp}>
+              <motion.section variants={fadeUp} aria-labelledby="retention-by-topic-heading">
                 <Card className="rounded-[24px]">
                   <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
+                    <h2 id="retention-by-topic-heading" className="text-base font-semibold flex items-center gap-2">
                       <Brain className="size-4 text-muted-foreground" aria-hidden="true" />
                       Retention by Topic
-                    </CardTitle>
+                    </h2>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -127,13 +127,13 @@ export function RetentionDashboard() {
             )}
 
             {/* Row 3: Engagement Status */}
-            <motion.section variants={fadeUp}>
+            <motion.section variants={fadeUp} aria-labelledby="engagement-health-heading">
               <Card className="rounded-[24px]">
                 <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
+                  <h2 id="engagement-health-heading" className="text-base font-semibold flex items-center gap-2">
                     <ShieldCheck className="size-4 text-muted-foreground" aria-hidden="true" />
                     Engagement Health
-                  </CardTitle>
+                  </h2>
                 </CardHeader>
                 <CardContent>
                   <EngagementDecayAlerts alerts={decayAlerts} />

@@ -12,8 +12,8 @@ interface TopicRetentionCardProps {
 
 const LEVEL_BADGE_CLASSES: Record<TopicRetention['level'], string> = {
   strong: 'bg-success-soft text-success border-success/20',
-  fading: 'bg-warning/10 text-warning border-warning/20',
-  weak: 'bg-destructive/10 text-destructive border-destructive/20',
+  fading: 'bg-warning/20 text-warning border-warning/30',
+  weak: 'bg-destructive/20 text-destructive border-destructive/30',
 }
 
 const LEVEL_LABELS: Record<TopicRetention['level'], string> = {
@@ -39,7 +39,7 @@ export function TopicRetentionCard({ topic, now }: TopicRetentionCardProps) {
             </div>
             <div className="min-w-0">
               <p className="text-sm font-medium truncate">{topic.topic}</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-foreground/60">
                 {topic.noteCount} {topic.noteCount === 1 ? 'note' : 'notes'}
                 {topic.dueCount > 0 && (
                   <span className="text-warning"> · {topic.dueCount} due</span>
@@ -61,18 +61,19 @@ export function TopicRetentionCard({ topic, now }: TopicRetentionCardProps) {
 
         {/* Retention bar */}
         <div className="space-y-1">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center justify-between text-xs text-foreground/60">
             <span>Retention</span>
             <span className="tabular-nums font-medium">{topic.retention}%</span>
           </div>
           <div className="h-2 rounded-full bg-muted overflow-hidden">
             <div
               className={cn(
-                'h-full rounded-full transition-all duration-500',
+                'h-full rounded-full transition-all duration-500 motion-reduce:transition-none',
                 topic.level === 'strong' && 'bg-success',
                 topic.level === 'fading' && 'bg-warning',
                 topic.level === 'weak' && 'bg-destructive'
               )}
+              // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic percentage width requires inline style
               style={{ width: `${Math.max(2, topic.retention)}%` }}
               role="progressbar"
               aria-valuenow={topic.retention}
@@ -84,7 +85,7 @@ export function TopicRetentionCard({ topic, now }: TopicRetentionCardProps) {
         </div>
 
         {/* Last reviewed */}
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <div className="flex items-center gap-1.5 text-xs text-foreground/60">
           <Clock className="size-3" aria-hidden="true" />
           <span>Last reviewed: {elapsed}</span>
         </div>

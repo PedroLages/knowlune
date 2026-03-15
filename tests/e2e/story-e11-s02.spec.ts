@@ -100,8 +100,10 @@ test.beforeEach(async ({ page }) => {
 test.afterEach(async ({ page }) => {
   await clearIndexedDBStore(page, DB_NAME, 'notes')
   await clearIndexedDBStore(page, DB_NAME, 'reviewRecords')
-  // studySessions may not exist in all tests, ignore errors
-  await clearIndexedDBStore(page, DB_NAME, 'studySessions').catch(() => {})
+  // studySessions may not exist in all tests
+  await clearIndexedDBStore(page, DB_NAME, 'studySessions').catch(e =>
+    console.warn('[afterEach] studySessions cleanup:', e)
+  )
 })
 
 // ─────────────────────────────────────────────────────────
