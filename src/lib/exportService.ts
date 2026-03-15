@@ -23,6 +23,7 @@ import type {
   LearningPathCourse,
   AIUsageEvent,
 } from '@/data/types'
+import { sessionsToCSV, progressToCSV, deriveStreakDays, streakDaysToCSV } from './csvSerializer'
 
 // --- Export Schema ---
 
@@ -153,5 +154,43 @@ export async function exportAllAsJson(
       learningPath: tableData.learningPath as LearningPathCourse[],
       aiUsageEvents: tableData.aiUsageEvents as AIUsageEvent[],
     },
+  }
+}
+
+// --- CSV Export (AC2) ---
+
+export interface CsvExportFiles {
+  sessions: string
+  progress: string
+  streaks: string
+}
+
+export async function exportAllAsCsv(
+  onProgress?: ExportProgressCallback
+): Promise<CsvExportFiles> {
+  onProgress?.(0, 'Loading sessions...')
+  const sessions = await db.studySessions.toArray()
+  await yieldToUI()
+
+  onProgress?.(33, 'Loading progress...')
+  const contentProgress = await db.contentProgress.toArray()
+  await yieldToUI()
+
+  onProgress?.(50, 'Generating CSV files...')
+  const sessionsCsv = sessionsToCSV(sessions)
+  const progressCsv = progressToCSV(contentProgress)
+  await yieldToUI()
+
+  onProgress?.(75, 'Calculating streaks...')
+  const streakDays = deriveStreakDays(sessions)
+  const streaksCsv = streakDaysToCSV(streakDays)
+  await yieldToUI()
+
+  onProgress?.(100, 'Complete')
+
+  return {
+    sessions: sessionsCsv,
+    progress: progressCsv,
+    streaks: streaksCsv,
   }
 }
