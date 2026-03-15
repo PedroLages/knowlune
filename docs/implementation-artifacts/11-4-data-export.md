@@ -6,7 +6,7 @@ started: 2026-03-15
 completed:
 reviewed: in-progress
 review_started: 2026-03-15
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
 burn_in_validated: false
 ---
 
@@ -223,4 +223,18 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-Story setup phase — lessons will be documented during implementation.
+### ATDD tests required data seeding for export-dependent paths
+
+The ATDD tests for AC3 (Markdown notes) and AC5 (Open Badges) were written RED before implementation but didn't account for the empty-data guard paths added during implementation. Both `handleExportMarkdown()` and `handleExportBadges()` return early with an error toast when no data exists — so the tests timed out waiting for a download that never triggered. Fixed by seeding a note and a completed challenge via `seedIndexedDBStore()` before each export test.
+
+### Error handling mock targeted wrong API
+
+The AC8 error test mocked `showSaveFilePicker` (File System Access API) but the implementation chose the simpler blob + anchor click pattern (`URL.createObjectURL` + `a.click()`). The mock had no effect, so the export succeeded instead of failing. Fixed by mocking `URL.createObjectURL` to throw a `QuotaExceededError`, which propagates through the try-catch in the handler and surfaces the error toast.
+
+### Blob + anchor download pattern is Playwright-friendly
+
+The `downloadBlob()` utility using `URL.createObjectURL` + programmatic anchor click works reliably with Playwright's `page.waitForEvent('download')`. Key pattern: register the download listener BEFORE clicking the export button (`const downloadPromise = page.waitForEvent('download')` then `await btn.click()` then `await downloadPromise`).
+
+### Multi-format export benefits from shared download utilities
+
+Centralizing download logic in `fileDownload.ts` (`downloadJson`, `downloadText`, `downloadZip`) kept the Settings.tsx handlers clean and made error handling consistent across JSON, CSV, Markdown, and Open Badges exports. JSZip's `generateAsync()` integrates cleanly with the async handler pattern.
