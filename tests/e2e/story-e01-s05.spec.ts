@@ -63,6 +63,10 @@ const TEST_PDFS = [
 ]
 
 test.describe('E01-S05: Detect Missing or Relocated Files', () => {
+  // IndexedDB is shared per origin across browser contexts in Chromium.
+  // With fullyParallel: true, parallel tests corrupt each other's seeded data.
+  test.describe.configure({ mode: 'serial' })
+
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.setItem('eduvi-sidebar-v1', 'false')
