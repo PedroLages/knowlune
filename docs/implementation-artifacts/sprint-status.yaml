@@ -37,7 +37,7 @@
 # ===========================
 # - Epics 1-8: done, all stories completed
 # - Epic 9/9B: done (all stories completed)
-# - Epic 10: in-progress (10-1 done, 10-2 backlog)
+# - Epic 10: done (all stories completed)
 # - Epic 9 split into Epic 9 (infrastructure) + Epic 9B (AI features) per updated epics.md
 # - Implementation-only stories preserved (2-6..2-9, 3-0, 3-8..3-14)
 # - Deferred stories retained: 1-5 (file detection), 2-10 (captions)
@@ -156,7 +156,7 @@ development_status:
   8-3-learning-velocity-and-trends: done
   8-4-retention-insights-and-activity-heatmap: done
   8-5-actionable-study-insights: done
-  epic-8-retrospective: optional
+  epic-8-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 9: AI Infrastructure & Platform
@@ -165,7 +165,7 @@ development_status:
   9-1-ai-provider-configuration-security: done
   9-2-web-worker-architecture-and-memory-management: done
   9-3-embedding-pipeline-and-vector-store: done
-  epic-9-retrospective: optional
+  epic-9-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 9B: AI-Powered Learning Features
@@ -178,7 +178,7 @@ development_status:
   9b-4-knowledge-gap-detection: done
   9b-5-ai-note-organization-and-cross-course-links: done
   9b-6-ai-feature-analytics-and-auto-analysis: done
-  epic-9b-retrospective: optional
+  epic-9b-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 11: Knowledge Retention, Export & Advanced Features (Post-MVP)
@@ -280,9 +280,9 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 10: Onboarding & First-Use Experience
   # ──────────────────────────────────────────────────
-  epic-10: in-progress
+  epic-10: done
   10-1-first-use-onboarding-flow: done
-  10-2-empty-state-guidance: backlog
+  10-2-empty-state-guidance: done
   epic-10-retrospective: optional
 
   # ──────────────────────────────────────────────────

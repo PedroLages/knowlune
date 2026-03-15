@@ -3,7 +3,10 @@ import { Link } from 'react-router'
 import { BookOpen, CheckCircle, FileText, Clock, ArrowRight } from 'lucide-react'
 import { motion, MotionConfig } from 'motion/react'
 import { useSessionStore } from '@/stores/useSessionStore'
+import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { importCourseFromFolder } from '@/lib/courseImport'
 import { Skeleton } from '@/app/components/ui/skeleton'
+import { EmptyState } from '@/app/components/EmptyState'
 import { AchievementBanner } from '@/app/components/AchievementBanner'
 import { ContinueLearning } from '@/app/components/ContinueLearning'
 import { RecentActivity } from '@/app/components/RecentActivity'
@@ -66,10 +69,16 @@ export function Overview() {
   }, [])
 
   const { loadSessionStats, getTotalStudyTime } = useSessionStore()
+  const importedCourses = useCourseImportStore(s => s.importedCourses)
+  const loadImportedCourses = useCourseImportStore(s => s.loadImportedCourses)
 
   useEffect(() => {
     loadSessionStats()
   }, [loadSessionStats])
+
+  useEffect(() => {
+    loadImportedCourses()
+  }, [loadImportedCourses])
 
   const totalStudyTimeSeconds = getTotalStudyTime()
   const totalStudyTimeHours = Math.round((totalStudyTimeSeconds / 3600) * 10) / 10
@@ -280,6 +289,24 @@ export function Overview() {
             lastWatchedLesson={lastWatchedLesson}
           />
         </motion.section>
+
+        {/* ── Import Course Empty State ── */}
+        {importedCourses.length === 0 && (
+          <motion.section variants={fadeUp}>
+            <EmptyState
+              data-testid="empty-state-courses"
+              icon={BookOpen}
+              title="Import your first course to get started"
+              description="Add a folder with videos, PDFs, or documents to begin learning"
+              actionLabel="Import Course"
+              onAction={() => {
+                importCourseFromFolder().catch(() => {
+                  // User cancelled file picker or permission denied — no action needed
+                })
+              }}
+            />
+          </motion.section>
+        )}
 
         {/* ── Course Gallery ── */}
         <motion.section

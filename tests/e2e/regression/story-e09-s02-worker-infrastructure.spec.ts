@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { mockEmbeddingWorker } from '../support/helpers/mock-workers'
+import { mockEmbeddingWorker } from '../../support/helpers/mock-workers'
 
 test.describe('E09-S02: Web Worker Infrastructure', () => {
   test.beforeEach(async ({ page }) => {

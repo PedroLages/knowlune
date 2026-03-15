@@ -3410,6 +3410,95 @@ The architecture is comprehensive, coherent, and provides sufficient guidance to
 
 ---
 
+## AI Layer Architecture (Epic 9/9B)
+
+> Added post-implementation (2026-03-15). Documents the AI architecture as built.
+
+### AI Provider Abstraction
+
+```
+Settings UI → AIConfigStore (Zustand) → Web Crypto API → IndexedDB (encrypted)
+                    ↓
+              AI Client Factory → Provider-specific client (OpenAI / Anthropic)
+                    ↓
+              Feature Components (Summary, Q&A, Learning Path, etc.)
+```
+
+**Key decisions:**
+- **API key storage:** Web Crypto API with session-scoped encryption keys. Keys decrypted on each access, never held in plain text in memory
+- **Cross-tab sync:** `storage` event fires in other tabs automatically; custom `CustomEvent` dispatched for same-tab updates
+- **Consent model:** Per-feature consent toggles — disabling a toggle prevents any data transmission for that feature
+- **Data minimization:** Only content being analyzed is sent to AI providers. No user metadata, file paths, or PII
+
+### Streaming Response Architecture
+
+All AI features use Vercel AI SDK for streaming:
+
+```
+User Action → React Component → useChat/useCompletion hook
+                                        ↓
+                                  AI Client (Vercel AI SDK)
+                                        ↓
+                                  Provider API (streaming SSE)
+                                        ↓
+                                  Real-time UI updates via React state
+```
+
+**Patterns:**
+- `useChat` for conversational features (Q&A)
+- `useCompletion` for single-shot features (summary, learning path)
+- Structured output via Zod schemas for typed responses
+- 30-second timeout with retry for all AI calls
+
+### Graceful Degradation
+
+Every AI feature has a fallback path that activates within 2 seconds:
+
+| Feature | AI Mode | Fallback Mode |
+|---------|---------|---------------|
+| Video Summary | LLM-generated 100-300 word summary | "Summary unavailable" with retry |
+| Q&A from Notes | RAG with citation extraction | Manual full-text note search |
+| Learning Path | LLM-inferred prerequisite ordering | Alphabetical course list |
+| Knowledge Gaps | AI-enriched gap analysis | Rule-based (note ratio + watch %) |
+| Note Organization | AI auto-tag + topical overlap | Tag-based matching only |
+| Related Concepts | AI topical similarity | Shared tag matching only |
+
+### Vector Search
+
+**Implementation:** `BruteForceVectorStore` class (~200 lines) in `src/lib/vectorSearch.ts`
+
+**Performance:** 10.27ms p50 @ 10K vectors, 100% recall (exact search)
+
+**Storage:** IndexedDB v9 schema with Float32Array embeddings
+
+**Migration trigger:** If >50K vectors OR >200ms latency → migrate to EdgeVec library (drop-in replacement). See `docs/research/epic-9-vector-migration-triggers.md`
+
+### Web Worker Architecture
+
+```
+Main Thread → WorkerCoordinator → Worker Pool (lazy-spawned)
+                                        ↓
+                                  Dedicated Workers (embedding, analysis)
+                                        ↓
+                                  Auto-terminate after 60s idle
+```
+
+**Memory management:**
+- Workers terminated on `visibilitychange` (tab hidden) to free memory
+- Capability detection: graceful fallback to main-thread execution if Workers unavailable
+- Pool size limited based on `navigator.hardwareConcurrency`
+
+### CSP Requirements
+
+External AI provider APIs require CSP allowlists:
+
+```html
+<meta http-equiv="Content-Security-Policy"
+  content="connect-src 'self' https://api.openai.com https://api.anthropic.com">
+```
+
+**Rule:** CSP must be configured in infrastructure stories before any feature story calls external APIs. Violations fail silently in browser but clearly in E2E tests.
+
 ## Future: Premium Tier Architecture
 
 > This section outlines the architectural direction for LevelUp's open-core premium tier. Full implementation details will be designed during Epic 19 (Platform & Entitlement). See [open-core-strategy.md](open-core-strategy.md) for business context and feature tier matrix.

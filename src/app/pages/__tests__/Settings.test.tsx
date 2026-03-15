@@ -36,7 +36,7 @@ describe('Settings page', () => {
 
   it('renders Profile, Appearance, and Data Management sections', () => {
     render(<Settings />)
-    expect(screen.getByText('Profile')).toBeInTheDocument()
+    expect(screen.getByText('Your Profile')).toBeInTheDocument()
     expect(screen.getByText('Appearance')).toBeInTheDocument()
     expect(screen.getByText('Data Management')).toBeInTheDocument()
   })

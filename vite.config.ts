@@ -204,6 +204,10 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reportOnFailure: true,
+      exclude: [
+        'src/ai/orchestration/**', // Experimental auto-parallel infrastructure (not production)
+        'src/app/components/ui/**', // shadcn/ui vendor components (third-party)
+      ],
       thresholds: {
         lines: 70,
       },

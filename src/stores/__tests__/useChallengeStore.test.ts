@@ -10,13 +10,20 @@ vi.mock('@/lib/persistWithRetry', () => ({
 }))
 
 // Mock sonner toast for error assertions
-vi.mock('sonner', () => ({
-  toast: {
-    error: vi.fn(),
-    success: vi.fn(),
-    custom: vi.fn(),
-  },
-}))
+// toast is used both as a function (toastWithUndo) and as an object with methods (toast.error)
+vi.mock('sonner', () => {
+  const toastFn = vi.fn() as ReturnType<typeof vi.fn> & {
+    error: ReturnType<typeof vi.fn>
+    success: ReturnType<typeof vi.fn>
+    custom: ReturnType<typeof vi.fn>
+    promise: ReturnType<typeof vi.fn>
+  }
+  toastFn.error = vi.fn()
+  toastFn.success = vi.fn()
+  toastFn.custom = vi.fn()
+  toastFn.promise = vi.fn()
+  return { toast: toastFn }
+})
 
 // Mock challengeProgress so refreshAllProgress tests are isolated
 vi.mock('@/lib/challengeProgress', () => ({

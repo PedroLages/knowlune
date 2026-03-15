@@ -2,8 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
-import { Courses } from '../Courses'
 import type { ImportedCourse } from '@/data/types'
+
+vi.mock('motion/react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('motion/react')>()
+  return {
+    ...actual,
+    useReducedMotion: () => false,
+  }
+})
 
 const mockCourses: ImportedCourse[] = [
   {
@@ -35,6 +42,7 @@ const storeState = {
   isImporting: false,
   importError: null as string | null,
   importProgress: null,
+  thumbnailUrls: {} as Record<string, string>,
   addImportedCourse: vi.fn(),
   removeImportedCourse: vi.fn(),
   updateCourseTags: vi.fn(),
@@ -64,6 +72,43 @@ vi.mock('@/lib/progress', () => ({
     notes: {},
   }),
 }))
+
+vi.mock('@/hooks/useCourseCardPreview', () => ({
+  useCourseCardPreview: () => ({
+    showPreview: false,
+    videoReady: false,
+    setVideoReady: vi.fn(),
+    previewHandlers: { onMouseEnter: vi.fn(), onMouseLeave: vi.fn() },
+    previewOpen: false,
+    setPreviewOpen: vi.fn(),
+    infoOpen: false,
+    setInfoOpen: vi.fn(),
+    guardNavigation: vi.fn(),
+  }),
+}))
+
+vi.mock('@/hooks/useVideoFromHandle', () => ({
+  useVideoFromHandle: () => ({ videoUrl: null, error: null }),
+}))
+
+vi.mock('@/db/schema', () => ({
+  db: { importedVideos: { where: () => ({ toArray: () => Promise.resolve([]) }) } },
+}))
+
+vi.mock('@/app/components/figma/VideoPlayer', () => ({
+  VideoPlayer: () => <div data-testid="video-player" />,
+}))
+
+vi.mock('@/app/components/figma/ThumbnailPickerDialog', () => ({
+  ThumbnailPickerDialog: () => null,
+}))
+
+vi.mock('@/app/components/figma/MomentumBadge', () => ({
+  MomentumBadge: () => null,
+}))
+
+// Import component AFTER all mocks
+import { Courses } from '../Courses'
 
 function renderCourses() {
   return render(

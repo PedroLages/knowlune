@@ -8,6 +8,7 @@
 import { test, expect } from '@playwright/test'
 import * as fs from 'fs'
 import * as path from 'path'
+import { FIXED_DATE, FIXED_TIMESTAMP } from '../utils/test-time'
 
 interface StreamingMetrics {
   firstTokenLatency: number
@@ -128,7 +129,7 @@ test.describe('WebLLM Streaming Performance', () => {
       promptSize,
       run,
       metrics,
-      timestamp: Date.now(),
+      timestamp: FIXED_TIMESTAMP,
     })
 
     console.log(
@@ -217,7 +218,7 @@ function generateReport(results: TestResult[]): string {
 
   let report = '# WebLLM Streaming Performance Validation\n\n'
   report += `**Model**: Llama-3.2-1B-Instruct-q4f32_1-MLC\n`
-  report += `**Test Date**: ${new Date().toISOString()}\n`
+  report += `**Test Date**: ${FIXED_DATE}\n`
   report += `**Total Runs**: ${results.length}\n`
   report += `**Browser**: Chromium (Playwright)\n`
   report += `**Test Type**: Automated\n\n`
@@ -430,7 +431,7 @@ function generateReport(results: TestResult[]): string {
 
   // Footer
   report += '---\n\n'
-  report += `*Report generated: ${new Date().toISOString()}*\n`
+  report += `*Report generated: ${FIXED_DATE}*\n`
   const testDurationMin =
     ((results[results.length - 1]?.timestamp || 0) - (results[0]?.timestamp || 0)) / 1000 / 60
   report += `*Test execution time: ${testDurationMin.toFixed(1)} minutes*\n`

@@ -8,16 +8,16 @@
  *   - Accessibility (alt text, table view, color-blind patterns)
  *   - Empty state when no sessions recorded
  */
-import { test, expect, type Page } from '../support/fixtures'
-import { createStudySession } from '../support/fixtures/factories/session-factory'
+import { test, expect, type Page } from '../../support/fixtures'
+import { createStudySession } from '../../support/fixtures/factories/session-factory'
 import {
   FIXED_DATE,
   FIXED_TIMESTAMP,
   getRelativeDate,
   addMinutes,
   getRelativeDateWithMinutes,
-} from '../utils/test-time'
-import { seedStudySessions } from '../support/helpers/indexeddb-seed'
+} from '../../utils/test-time'
+import { seedStudySessions } from '../../support/helpers/indexeddb-seed'
 
 /**
  * Mock Date constructor and Date.now() to return FIXED_DATE

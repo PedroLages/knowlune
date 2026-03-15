@@ -7,8 +7,8 @@
  *   - SPA client-side routing works without network
  *   - IndexedDB remains accessible offline
  */
-import { test, expect } from '../support/fixtures'
-import { closeSidebar } from '../support/fixtures/constants/sidebar-constants'
+import { test, expect } from '../../support/fixtures'
+import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants'
 
 test.describe('Offline Degradation', () => {
   test.skip(

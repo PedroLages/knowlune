@@ -10,9 +10,6 @@ import type { LLMMessage } from '../llm/types'
 import type {
   DecompositionRequest,
   DecompositionResponse,
-  TaskNode,
-  DependencyEdge,
-  DispatchStrategy,
 } from './types'
 
 /**

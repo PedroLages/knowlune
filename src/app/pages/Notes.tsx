@@ -39,13 +39,13 @@ import { searchNotesWithContext } from '@/lib/noteSearch'
 import { getAllNoteTags } from '@/lib/progress'
 import { highlightMatches, buildHighlightPatterns } from '@/lib/searchUtils'
 import { exportNoteAsMarkdown } from '@/lib/noteExport'
+import { EmptyState } from '@/app/components/EmptyState'
 import { QAChatPanel } from '@/app/components/figma/QAChatPanel'
 import { toast } from 'sonner'
 import { allCourses } from '@/data/courses'
 import { formatTimestamp } from '@/lib/format'
 import { stripHtml } from '@/lib/textUtils'
 import { ReadOnlyContent } from '@/app/components/notes/ReadOnlyContent'
-import { OrganizeNotesButton } from '@/app/components/notes/OrganizeNotesButton'
 import { RelatedConceptsPanel } from '@/app/components/notes/RelatedConceptsPanel'
 import { generateEmbeddings } from '@/ai/workers/coordinator'
 import { vectorStorePersistence } from '@/ai/vector-store'
@@ -546,9 +546,7 @@ export function Notes() {
                     htmlFor="semantic-search"
                     className={cn(
                       'text-sm cursor-pointer',
-                      semanticSearchAvailable
-                        ? 'text-muted-foreground'
-                        : 'text-muted-foreground/50'
+                      semanticSearchAvailable ? 'text-muted-foreground' : 'text-muted-foreground/50'
                     )}
                   >
                     Semantic
@@ -601,14 +599,14 @@ export function Notes() {
 
             {/* Empty state — no notes at all */}
             {notes.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <StickyNote className="size-12 text-muted-foreground/50 mb-4" />
-                <h2 className="text-lg font-medium mb-2">No notes yet</h2>
-                <p className="text-sm text-muted-foreground max-w-md">
-                  Start taking notes while watching lessons. Open any course, play a video, and use
-                  the notes panel to capture your thoughts.
-                </p>
-              </div>
+              <EmptyState
+                data-testid="empty-state-notes"
+                icon={StickyNote}
+                title="Start a video and take your first note"
+                description="Capture key moments while you study"
+                actionLabel="Browse Courses"
+                actionHref="/courses"
+              />
             )}
 
             {/* No search results */}

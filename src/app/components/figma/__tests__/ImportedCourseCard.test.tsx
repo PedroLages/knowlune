@@ -13,7 +13,38 @@ vi.mock('@/stores/useCourseImportStore', () => ({
     selector({
       updateCourseTags: mockUpdateCourseTags,
       updateCourseStatus: mockUpdateCourseStatus,
+      thumbnailUrls: {},
     }),
+}))
+
+vi.mock('@/hooks/useCourseCardPreview', () => ({
+  useCourseCardPreview: () => ({
+    showPreview: false,
+    videoReady: false,
+    setVideoReady: vi.fn(),
+    previewHandlers: {},
+    previewOpen: false,
+    setPreviewOpen: vi.fn(),
+    infoOpen: false,
+    setInfoOpen: vi.fn(),
+    guardNavigation: vi.fn(),
+  }),
+}))
+
+vi.mock('@/hooks/useVideoFromHandle', () => ({
+  useVideoFromHandle: () => ({ blobUrl: null, error: null, loading: false }),
+}))
+
+vi.mock('@/db/schema', () => ({
+  db: {
+    importedVideos: {
+      where: () => ({
+        equals: () => ({
+          sortBy: () => Promise.resolve([]),
+        }),
+      }),
+    },
+  },
 }))
 
 function makeCourse(overrides: Partial<ImportedCourse> = {}): ImportedCourse {

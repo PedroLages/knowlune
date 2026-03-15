@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Plus, Target, Clock, Flame, Trophy, RefreshCcw, ChevronDown, Check } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
+import { EmptyState } from '@/app/components/EmptyState'
 import { Button } from '@/app/components/ui/button'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
@@ -60,7 +61,7 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
     <Card
       className={cn(
         isExpired && !isCompleted && 'opacity-60',
-        isCompleted && 'border-amber-400 bg-amber-50/30 dark:border-amber-600 dark:bg-amber-900/10'
+        isCompleted && 'border-warning/60 bg-warning/5'
       )}
     >
       <CardContent className="flex flex-col gap-3 p-5">
@@ -69,7 +70,7 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
             <div
               className={cn(
                 'flex size-10 items-center justify-center rounded-lg',
-                isCompleted ? 'bg-amber-600/10 text-amber-600' : 'bg-blue-600/10 text-blue-600'
+                isCompleted ? 'bg-warning/10 text-warning' : 'bg-brand/10 text-brand'
               )}
             >
               {isCompleted ? <Check className="size-4.5" /> : <Icon className="size-4.5" />}
@@ -83,7 +84,7 @@ function ChallengeCard({ challenge }: { challenge: Challenge }) {
           </div>
           <Badge
             variant={isCompleted ? 'default' : isExpired ? 'secondary' : 'outline'}
-            className={cn('shrink-0 text-xs', isCompleted && 'bg-amber-600 hover:bg-amber-700')}
+            className={cn('shrink-0 text-xs', isCompleted && 'bg-warning hover:bg-warning/90')}
           >
             {isCompleted ? 'Completed' : config.label}
           </Badge>
@@ -169,7 +170,7 @@ export function Challenges() {
 
   const sectionTriggerClass = cn(
     'flex w-full items-center gap-2 rounded-sm py-3 text-sm font-medium text-muted-foreground',
-    'transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2'
+    'transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
   )
 
   return (
@@ -201,23 +202,14 @@ export function Challenges() {
           </div>
         </DelayedFallback>
       ) : active.length === 0 && completed.length === 0 && expired.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-4 py-16">
-            <div className="bg-muted flex size-14 items-center justify-center rounded-full">
-              <Target className="text-muted-foreground size-7" />
-            </div>
-            <div className="text-center">
-              <h2 className="text-base font-semibold">No challenges yet</h2>
-              <p className="text-muted-foreground mt-1 text-sm">
-                Create your first challenge to set concrete learning goals.
-              </p>
-            </div>
-            <Button onClick={() => setDialogOpen(true)}>
-              <Plus className="mr-2 size-4" />
-              Create Challenge
-            </Button>
-          </CardContent>
-        </Card>
+        <EmptyState
+          data-testid="empty-state-challenges"
+          icon={Trophy}
+          title="Create your first learning challenge"
+          description="Set goals and track your progress with timed challenges"
+          actionLabel="Create Challenge"
+          onAction={() => setDialogOpen(true)}
+        />
       ) : (
         <>
           {active.length > 0 && (

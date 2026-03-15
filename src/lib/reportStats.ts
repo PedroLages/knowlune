@@ -45,9 +45,7 @@ export interface CategoryRadarData {
 
 /** Format category slugs to Title Case (e.g. "behavioral-analysis" → "Behavioral Analysis") */
 function formatCategoryLabel(slug: string): string {
-  return slug
-    .replace(/[-_]/g, ' ')
-    .replace(/\b\w/g, c => c.toUpperCase())
+  return slug.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
 export function getCategoryCompletionForRadar(): CategoryRadarData[] {
@@ -98,7 +96,13 @@ export function getCourseCompletionData(): CourseCompletionData[] {
 /** Map category names to chart color tokens */
 export function getCategoryColorMap(): Record<string, string> {
   const categories = [...new Set(allCourses.map(c => c.category))]
-  const colors = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)']
+  const colors = [
+    'var(--chart-1)',
+    'var(--chart-2)',
+    'var(--chart-3)',
+    'var(--chart-4)',
+    'var(--chart-5)',
+  ]
   const map: Record<string, string> = {}
   categories.forEach((cat, i) => {
     map[cat] = colors[i % colors.length]
@@ -144,10 +148,13 @@ export function computeSkillsDimensions(): SkillDimension[] {
   // 4. Depth: average completion of started courses
   const inProgress = getCoursesInProgress(allCourses, allProgress)
   const completed = getCompletedCourses(allCourses, allProgress)
-  const startedCourses = [...inProgress, ...completed.map(c => {
-    const total = c.modules.reduce((s, m) => s + m.lessons.length, 0)
-    return { ...c, completionPercent: total > 0 ? 100 : 0 }
-  })]
+  const startedCourses = [
+    ...inProgress,
+    ...completed.map(c => {
+      const total = c.modules.reduce((s, m) => s + m.lessons.length, 0)
+      return { ...c, completionPercent: total > 0 ? 100 : 0 }
+    }),
+  ]
   const depthScore =
     startedCourses.length > 0
       ? Math.round(

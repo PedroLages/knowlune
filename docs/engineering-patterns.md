@@ -1,6 +1,6 @@
 # Engineering Patterns
 
-Shared patterns extracted from retrospectives (Epics 5-6). Read this before starting any story.
+Shared patterns extracted from retrospectives (Epics 5-9B). Read this before starting any story.
 
 ## IDB Cleanup in E2E Tests
 
@@ -118,6 +118,88 @@ catch (error) {
   toast.error('Operation failed. Please try again.')
 }
 ```
+
+## Start Simple, Escalate If Needed (Decision Framework)
+
+When choosing between implementation approaches of varying complexity, **default to the simplest viable solution**. Only escalate to a more complex approach if the simple one fails to meet explicit, measured performance or capability targets.
+
+**Decision Process:**
+
+1. **Identify the simplest approach** that could work (brute force, linear scan, naive algorithm)
+2. **Define measurable failure criteria** before building (e.g., ">100ms latency", ">100MB memory")
+3. **Build and benchmark** the simple approach first
+4. **Escalate only if** the simple approach fails the defined criteria
+5. **When research scores differ by <15%**, choose the lower-risk/simpler option
+
+**Case Study — Epic 9 Vector Search:**
+- Custom HNSW (complex): 700+ lines, 6.2% recall, 3 hours invested, 0 progress
+- Brute force k-NN (simple): 200 lines, 100% recall, 10.27ms @ 10K vectors (10x under budget)
+- Lesson: Brute force should have been the starting point. HNSW was premature optimization.
+
+**Migration Triggers (document upfront):**
+When building the simple approach, document the specific conditions that would trigger migration to a more complex solution. Example: "If >50K vectors OR >200ms latency → evaluate EdgeVec library."
+
+**Anti-patterns:**
+- Building complex solutions before proving the simple one is insufficient
+- Choosing higher-scored research options when the score gap is small but complexity gap is large
+- Continuing to fix a failing complex approach instead of pivoting to a simpler one (sunk cost)
+
+## Epic Split Criteria
+
+When planning an epic that covers both infrastructure/foundation work AND feature work built on that foundation, consider splitting into two epics.
+
+**Split when:**
+- The epic has 3+ "foundation" stories (data layer, config, API setup, worker architecture) AND 3+ "feature" stories that depend on them
+- Infrastructure stories need to stabilize before feature stories can begin productively
+- Different skill sets or review criteria apply to infrastructure vs. features
+- The combined epic would exceed 8 stories
+
+**Don't split when:**
+- Infrastructure is just 1-2 small stories (setup/config)
+- Features can be developed incrementally alongside infrastructure
+- The total scope is ≤6 stories
+
+**Naming convention:** Use letter suffix for the feature epic (e.g., Epic 9 = infrastructure, Epic 9B = features).
+
+**Case Study — Epic 9/9B:**
+- Epic 9 (3 stories): AI provider config, web workers, embedding pipeline — all foundation
+- Epic 9B (6 stories): Video summary, Q&A, learning paths, gap detection, note org, analytics — all features
+- Result: Clean dependency boundary, infrastructure stabilized before features started
+
+## Fire-and-Forget Error Boundaries
+
+Auto-analysis features, background analytics, and telemetry must **never** throw unhandled errors. These features enhance the experience but must not break user workflows.
+
+```typescript
+// CORRECT — fire-and-forget with error boundary
+const runAutoAnalysis = async (courseId: string) => {
+  try {
+    await analyzeCourseMaterial(courseId)
+  } catch (error) {
+    console.error('[AutoAnalysis] Failed:', error)
+    toast.error('Auto-analysis unavailable. Your data is safe.')
+    // Never re-throw — caller continues normally
+  }
+}
+```
+
+**Rules:**
+- Wrap all background/analytics operations in try/catch
+- Log the error for debugging (console.error with component prefix)
+- Show a non-blocking toast notification (never a modal or alert)
+- Never re-throw — the calling workflow must complete regardless
+- Never let analytics errors propagate to React error boundaries
+
+## CSP Configuration for External APIs
+
+Content Security Policy violations fail **silently** in the browser but **clearly** in E2E tests. This causes features to appear working in dev but fail in tests.
+
+**Rule:** Configure CSP allowlists in infrastructure stories **before** any feature story that calls external APIs.
+
+**Checklist for external API stories:**
+1. Add API domain to `connect-src` in CSP meta tag or header
+2. Verify in both browser console (check for CSP violation warnings) and E2E tests
+3. Document the CSP change in the story's implementation notes
 
 ## Playwright addInitScript
 
