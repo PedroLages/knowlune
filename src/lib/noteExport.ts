@@ -7,7 +7,7 @@ import type { Note } from '@/data/types'
  * - Collapses multiple spaces/hyphens into single hyphen
  * - Trims hyphens from start/end
  */
-function sanitizeFilename(filename: string): string {
+export function sanitizeFilename(filename: string): string {
   return filename
     .replace(/[/\\:*?"<>|]/g, '-') // Replace filesystem-unsafe chars
     .replace(/\s+/g, '-') // Replace spaces with hyphens
@@ -31,7 +31,7 @@ function stripTipTapAttributes(html: string): string {
  * Extracts plain text from HTML using DOMParser (safe from XSS).
  * Preserves newlines between block-level elements.
  */
-function extractTextFromHtml(html: string): string {
+export function extractTextFromHtml(html: string): string {
   const parser = new DOMParser()
   const doc = parser.parseFromString(html, 'text/html')
 
@@ -64,7 +64,7 @@ function extractTextFromHtml(html: string): string {
 /**
  * Converts HTML note content to Markdown using Turndown.
  */
-function htmlToMarkdown(html: string): string {
+export function htmlToMarkdown(html: string): string {
   const turndown = new TurndownService({
     headingStyle: 'atx', // Use # for headings
     codeBlockStyle: 'fenced', // Use ``` for code blocks

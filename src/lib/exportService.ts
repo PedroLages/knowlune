@@ -24,6 +24,7 @@ import type {
   AIUsageEvent,
 } from '@/data/types'
 import { sessionsToCSV, progressToCSV, deriveStreakDays, streakDaysToCSV } from './csvSerializer'
+import { sanitizeFilename, extractTextFromHtml, htmlToMarkdown } from './noteExport'
 
 // --- Export Schema ---
 
@@ -193,4 +194,105 @@ export async function exportAllAsCsv(
     progress: progressCsv,
     streaks: streaksCsv,
   }
+}
+
+// --- Markdown Notes Export (AC3) ---
+
+export interface MarkdownNoteFile {
+  name: string
+  content: string
+}
+
+function generateBulkFrontmatter(
+  note: Note,
+  courseName: string,
+  lastReviewedAt?: string
+): string {
+  const plainText = extractTextFromHtml(note.content)
+  const firstLine = plainText.split('\n')[0]?.trim() || 'Untitled Note'
+  const title = firstLine.slice(0, 100)
+
+  const lines = [
+    '---',
+    `title: "${title.replace(/"/g, '\\"')}"`,
+    `course: "${courseName.replace(/"/g, '\\"')}"`,
+    `topic: "${(note.tags[0] || '').replace(/"/g, '\\"')}"`,
+    `tags: [${note.tags.map(tag => `"${tag}"`).join(', ')}]`,
+    `created: "${note.createdAt}"`,
+    `updated: "${note.updatedAt}"`,
+  ]
+
+  if (lastReviewedAt) {
+    lines.push(`lastReviewedAt: "${lastReviewedAt}"`)
+  }
+
+  lines.push('---', '')
+  return lines.join('\n')
+}
+
+export async function exportNotesAsMarkdown(
+  onProgress?: ExportProgressCallback
+): Promise<MarkdownNoteFile[]> {
+  onProgress?.(0, 'Loading notes...')
+  const notes = await db.notes.toArray()
+  // Filter out soft-deleted notes
+  const activeNotes = notes.filter(n => !n.deleted)
+  await yieldToUI()
+
+  onProgress?.(25, 'Loading course names...')
+  const courses = await db.importedCourses.toArray()
+  const courseMap = new Map(courses.map(c => [c.id, c.name]))
+  await yieldToUI()
+
+  onProgress?.(40, 'Loading review records...')
+  const reviewRecords = await db.reviewRecords.toArray()
+  // Build map: noteId → most recent reviewedAt
+  const lastReviewMap = new Map<string, string>()
+  for (const record of reviewRecords) {
+    const existing = lastReviewMap.get(record.noteId)
+    if (!existing || record.reviewedAt > existing) {
+      lastReviewMap.set(record.noteId, record.reviewedAt)
+    }
+  }
+  await yieldToUI()
+
+  onProgress?.(50, 'Converting notes to Markdown...')
+  const files: MarkdownNoteFile[] = []
+  const usedFilenames = new Set<string>()
+
+  for (let i = 0; i < activeNotes.length; i++) {
+    const note = activeNotes[i]
+    const courseName = courseMap.get(note.courseId) || 'Unknown Course'
+    const lastReviewedAt = lastReviewMap.get(note.id)
+
+    const frontmatter = generateBulkFrontmatter(note, courseName, lastReviewedAt)
+    const markdown = htmlToMarkdown(note.content)
+    const fullContent = frontmatter + markdown
+
+    // Generate unique filename
+    const plainText = extractTextFromHtml(note.content)
+    const firstLine = plainText.split('\n')[0]?.trim() || 'note'
+    let baseName = sanitizeFilename(firstLine.slice(0, 50))
+    if (!baseName) baseName = `note-${note.id.slice(0, 8)}`
+
+    let filename = `${baseName}.md`
+    let counter = 1
+    while (usedFilenames.has(filename)) {
+      filename = `${baseName}-${counter}.md`
+      counter++
+    }
+    usedFilenames.add(filename)
+
+    files.push({ name: filename, content: fullContent })
+
+    // Yield every 20 notes
+    if (i % 20 === 0) {
+      const percent = 50 + Math.round((i / activeNotes.length) * 50)
+      onProgress?.(percent, `Converting note ${i + 1}/${activeNotes.length}...`)
+      await yieldToUI()
+    }
+  }
+
+  onProgress?.(100, 'Complete')
+  return files
 }
