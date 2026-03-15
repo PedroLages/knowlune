@@ -109,4 +109,3 @@ function calculateNewEaseFactor(currentEF: number, quality: number): number {
   const delta = 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)
   return Math.max(MIN_EASE_FACTOR, currentEF + delta)
 }
-

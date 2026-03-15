@@ -9,11 +9,7 @@ import { EngagementDecayAlerts } from '@/app/components/figma/EngagementDecayAle
 import { useReviewStore } from '@/stores/useReviewStore'
 import { useNoteStore } from '@/stores/useNoteStore'
 import { useSessionStore } from '@/stores/useSessionStore'
-import {
-  getTopicRetention,
-  getRetentionStats,
-  detectEngagementDecay,
-} from '@/lib/retentionMetrics'
+import { getTopicRetention, getRetentionStats, detectEngagementDecay } from '@/lib/retentionMetrics'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 
 export function RetentionDashboard() {
@@ -41,15 +37,9 @@ export function RetentionDashboard() {
     [notes, allReviews, now]
   )
 
-  const stats = useMemo(
-    () => getRetentionStats(allReviews, now),
-    [allReviews, now]
-  )
+  const stats = useMemo(() => getRetentionStats(allReviews, now), [allReviews, now])
 
-  const decayAlerts = useMemo(
-    () => detectEngagementDecay(sessions, now),
-    [sessions, now]
-  )
+  const decayAlerts = useMemo(() => detectEngagementDecay(sessions, now), [sessions, now])
 
   const hasData = allReviews.length > 0
 

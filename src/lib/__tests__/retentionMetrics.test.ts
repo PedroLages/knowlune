@@ -24,10 +24,7 @@ function makeNote(overrides: Partial<Note> = {}): Note {
   }
 }
 
-function makeReview(
-  noteId: string,
-  overrides: Partial<ReviewRecord> = {}
-): ReviewRecord {
+function makeReview(noteId: string, overrides: Partial<ReviewRecord> = {}): ReviewRecord {
   return {
     id: crypto.randomUUID(),
     noteId,
@@ -135,11 +132,7 @@ describe('getTopicRetention', () => {
       interval: 3,
     })
 
-    const result = getTopicRetention(
-      [noteStrong, noteWeak],
-      [reviewStrong, reviewWeak],
-      FIXED_NOW
-    )
+    const result = getTopicRetention([noteStrong, noteWeak], [reviewStrong, reviewWeak], FIXED_NOW)
     expect(result[0].topic).toBe('Weak Topic')
     expect(result[1].topic).toBe('Strong Topic')
   })
@@ -241,12 +234,8 @@ describe('detectEngagementDecay', () => {
       for (let i = 0; i < 3; i++) {
         sessions.push(
           makeSession({
-            startTime: new Date(
-              FIXED_NOW.getTime() - (week * 7 + i) * MS_PER_DAY
-            ).toISOString(),
-            endTime: new Date(
-              FIXED_NOW.getTime() - (week * 7 + i) * MS_PER_DAY
-            ).toISOString(),
+            startTime: new Date(FIXED_NOW.getTime() - (week * 7 + i) * MS_PER_DAY).toISOString(),
+            endTime: new Date(FIXED_NOW.getTime() - (week * 7 + i) * MS_PER_DAY).toISOString(),
             duration: 3600,
           })
         )

@@ -22,10 +22,7 @@ const ALERT_TITLES = {
 export function EngagementDecayAlerts({ alerts }: EngagementDecayAlertsProps) {
   if (alerts.length === 0) {
     return (
-      <div
-        className="flex items-center gap-2"
-        data-testid="engagement-status-healthy"
-      >
+      <div className="flex items-center gap-2" data-testid="engagement-status-healthy">
         <CheckCircle className="size-4 text-success" aria-hidden="true" />
         <Badge
           variant="outline"
@@ -55,9 +52,7 @@ export function EngagementDecayAlerts({ alerts }: EngagementDecayAlertsProps) {
             <AlertDescription>
               <p>{alert.message}</p>
               {alert.suggestion && (
-                <p className="mt-1 text-xs font-medium">
-                  💡 {alert.suggestion}
-                </p>
+                <p className="mt-1 text-xs font-medium">💡 {alert.suggestion}</p>
               )}
             </AlertDescription>
           </Alert>

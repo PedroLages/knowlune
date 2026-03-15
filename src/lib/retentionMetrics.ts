@@ -75,10 +75,7 @@ export function getTopicRetention(
   }
 
   // Group notes by primary tag
-  const topicMap = new Map<
-    string,
-    { notes: Note[]; reviews: ReviewRecord[] }
-  >()
+  const topicMap = new Map<string, { notes: Note[]; reviews: ReviewRecord[] }>()
 
   for (const note of notes) {
     if (note.deleted) continue
@@ -96,9 +93,7 @@ export function getTopicRetention(
     if (data.reviews.length === 0) continue // Skip topics with no reviews
 
     const retentions = data.reviews.map(r => predictRetention(r, now))
-    const avgRetention = Math.round(
-      retentions.reduce((sum, r) => sum + r, 0) / retentions.length
-    )
+    const avgRetention = Math.round(retentions.reduce((sum, r) => sum + r, 0) / retentions.length)
 
     const lastReviewedAt = data.reviews.reduce((latest, r) => {
       return new Date(r.reviewedAt) > new Date(latest) ? r.reviewedAt : latest
@@ -191,10 +186,7 @@ function getWeeklyAvgDurations(sessions: StudySession[], weeks: number, now: Dat
  * - Duration: latest week avg < 70% of 4-week overall avg
  * - Velocity: 0 completed sessions for 3+ consecutive recent weeks
  */
-export function detectEngagementDecay(
-  sessions: StudySession[],
-  now: Date
-): EngagementDecayAlert[] {
+export function detectEngagementDecay(sessions: StudySession[], now: Date): EngagementDecayAlert[] {
   const alerts: EngagementDecayAlert[] = []
 
   // Need at least 4 weeks of data for meaningful analysis
