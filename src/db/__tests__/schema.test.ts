@@ -65,8 +65,8 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 13', () => {
-    expect(db.verno).toBe(13)
+  it('should be at version 14', () => {
+    expect(db.verno).toBe(14)
   })
 })
 
