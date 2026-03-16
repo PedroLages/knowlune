@@ -11,6 +11,8 @@ import {
 
 const COURSE_REMINDER_DEDUP_PREFIX = 'course-reminder-last-'
 
+// Sunday-first order matches JS Date.getDay() (0=Sunday, 6=Saturday).
+// UI components (DaySelector, CourseReminderRow) use Monday-first for display.
 const DAY_NAMES: DayOfWeek[] = [
   'sunday',
   'monday',
@@ -69,7 +71,7 @@ export function shouldFireReminder(reminder: CourseReminder, now: Date): boolean
   const currentMinutes = currentHour * 60 + currentMinute
   const diff = currentMinutes - targetMinutes
 
-  return diff >= 0 && diff <= 1
+  return diff >= 0 && diff <= 2
 }
 
 /**
@@ -102,12 +104,18 @@ export function markNotifiedCourseToday(courseId: string): void {
 export function sendCourseReminder(reminder: CourseReminder): void {
   if (getNotificationPermission() !== 'granted') return
 
-  new Notification(`Time to study ${reminder.courseName}!`, {
+  const url = `/courses/${reminder.courseId}`
+  const notification = new Notification(`Time to study ${reminder.courseName}!`, {
     body: `Your scheduled study session for ${reminder.courseName} is starting now. Tap to jump in.`,
     icon: '/favicon.svg',
     tag: `levelup-course-reminder-${reminder.courseId}`,
-    data: { url: `/courses/${reminder.courseId}` },
+    data: { url },
   })
+
+  notification.onclick = () => {
+    window.focus()
+    window.location.href = url
+  }
 
   markNotifiedCourseToday(reminder.courseId)
 }

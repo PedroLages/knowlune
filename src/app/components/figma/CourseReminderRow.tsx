@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Pencil, X, Check } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { Switch } from '@/app/components/ui/switch'
@@ -34,8 +35,8 @@ function formatDays(days: DayOfWeek[]): string {
 
 interface CourseReminderRowProps {
   reminder: CourseReminder
-  onToggle: (id: string, enabled: boolean) => void
-  onSave: (reminder: CourseReminder) => void
+  onToggle: (id: string, enabled: boolean) => void | Promise<void>
+  onSave: (reminder: CourseReminder) => void | Promise<void>
 }
 
 export function CourseReminderRow({ reminder, onToggle, onSave }: CourseReminderRowProps) {
@@ -53,15 +54,20 @@ export function CourseReminderRow({ reminder, onToggle, onSave }: CourseReminder
     setIsEditing(false)
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (editDays.length === 0) return
-    onSave({
-      ...reminder,
-      days: editDays,
-      time: editTime,
-      updatedAt: new Date().toISOString(),
-    })
-    setIsEditing(false)
+    try {
+      await onSave({
+        ...reminder,
+        days: editDays,
+        time: editTime,
+        updatedAt: new Date().toISOString(),
+      })
+      setIsEditing(false)
+    } catch (error) {
+      console.error('[CourseReminderRow] Failed to save:', error)
+      toast.error('Failed to save changes. Please try again.')
+    }
   }
 
   if (isEditing) {
@@ -83,7 +89,16 @@ export function CourseReminderRow({ reminder, onToggle, onSave }: CourseReminder
           </Button>
         </div>
 
-        <DaySelector selectedDays={editDays} onChange={setEditDays} />
+        <div className="space-y-1.5">
+          <Label id={`edit-days-label-${reminder.id}`} className="text-sm text-muted-foreground">
+            Days
+          </Label>
+          <DaySelector
+            selectedDays={editDays}
+            onChange={setEditDays}
+            aria-labelledby={`edit-days-label-${reminder.id}`}
+          />
+        </div>
 
         <div className="space-y-1.5">
           <Label htmlFor={`edit-time-${reminder.id}`} className="text-sm text-muted-foreground">

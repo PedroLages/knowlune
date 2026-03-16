@@ -15,9 +15,15 @@ interface DaySelectorProps {
   selectedDays: DayOfWeek[]
   onChange: (days: DayOfWeek[]) => void
   disabled?: boolean
+  'aria-labelledby'?: string
 }
 
-export function DaySelector({ selectedDays, onChange, disabled }: DaySelectorProps) {
+export function DaySelector({
+  selectedDays,
+  onChange,
+  disabled,
+  'aria-labelledby': ariaLabelledBy,
+}: DaySelectorProps) {
   function toggleDay(day: DayOfWeek) {
     if (disabled) return
     if (selectedDays.includes(day)) {
@@ -30,7 +36,8 @@ export function DaySelector({ selectedDays, onChange, disabled }: DaySelectorPro
   return (
     <div
       role="group"
-      aria-label="Days of the week"
+      aria-label={ariaLabelledBy ? undefined : 'Days of the week'}
+      aria-labelledby={ariaLabelledBy}
       data-testid="course-reminder-day-selector"
       className="flex flex-wrap gap-2"
     >

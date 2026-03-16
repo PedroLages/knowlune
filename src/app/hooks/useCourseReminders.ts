@@ -27,10 +27,14 @@ export function useCourseReminders(): void {
   const startScheduler = useCallback(() => {
     clearScheduler()
 
-    if (getNotificationPermission() !== 'granted') return
-    if (remindersRef.current.length === 0) return
+    const enabledReminders = remindersRef.current.filter(r => r.enabled)
+    if (enabledReminders.length === 0) return
 
     intervalRef.current = setInterval(() => {
+      // Re-check permission each tick so the scheduler activates
+      // when permissions are granted after initial mount (AC4)
+      if (getNotificationPermission() !== 'granted') return
+
       const now = new Date()
       for (const reminder of remindersRef.current) {
         if (!reminder.enabled) continue

@@ -10,7 +10,11 @@
  */
 import { test, expect } from '../support/fixtures'
 import { goToSettings } from '../support/helpers/navigation'
-import { seedImportedCourses, seedIndexedDBStore } from '../support/helpers/indexeddb-seed'
+import {
+  seedImportedCourses,
+  seedIndexedDBStore,
+  clearIndexedDBStore,
+} from '../support/helpers/indexeddb-seed'
 import { FIXED_DATE } from '../utils/test-time'
 
 /**
@@ -86,6 +90,7 @@ test.describe('E11-S06: Per-Course Study Reminders', () => {
     // Navigate to initialize Dexie, then seed courses
     await page.goto('/')
     await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+    await clearIndexedDBStore(page, 'ElearningDB', 'courseReminders')
     await seedTwoCourses(page)
     await page.reload()
     await page.waitForLoadState('load')
@@ -131,6 +136,15 @@ test.describe('E11-S06: Per-Course Study Reminders', () => {
     await expect(reminderItem).toBeVisible()
     await expect(courseRemindersSection.getByText(/mon.*wed.*fri/i)).toBeVisible()
     await expect(courseRemindersSection.getByText(/09:00/i)).toBeVisible()
+
+    // Verify persistence survives page reload (Dexie round-trip)
+    await page.reload()
+    await page.waitForLoadState('load')
+    await goToSettings(page)
+    const reloadedSection = page.getByTestId('course-reminders-section')
+    await expect(reloadedSection.getByText(/typescript fundamentals/i)).toBeVisible()
+    await expect(reloadedSection.getByText(/mon.*wed.*fri/i)).toBeVisible()
+    await expect(reloadedSection.getByText(/09:00/i)).toBeVisible()
   })
 
   test('AC3: per-course reminders are independent from streak reminders', async ({ page }) => {
@@ -219,6 +233,27 @@ test.describe('E11-S06: Per-Course Study Reminders', () => {
     // Continue configuring the reminder anyway (AC4: save regardless)
     const continueBtn = page.getByRole('button', { name: /continue.*without/i })
     await expect(continueBtn).toBeVisible()
+    await continueBtn.click()
+
+    // Fill out and save a reminder despite denied permissions
+    const courseSelect = page.getByTestId('course-reminder-course-select')
+    await expect(courseSelect).toBeVisible()
+    await courseSelect.click()
+    await page.getByRole('option', { name: /typescript fundamentals/i }).click()
+
+    const daySelector = page.getByTestId('course-reminder-day-selector')
+    await daySelector.getByRole('checkbox', { name: /tuesday/i }).click()
+    await daySelector.getByRole('checkbox', { name: /thursday/i }).click()
+
+    const timeInput = page.getByTestId('course-reminder-time-input')
+    await timeInput.fill('10:00')
+
+    await page.getByRole('button', { name: /save.*reminder/i }).click()
+
+    // Verify the reminder was persisted despite permission denial
+    const courseRemindersAfter = page.getByTestId('course-reminders-section')
+    await expect(courseRemindersAfter.getByText(/typescript fundamentals/i)).toBeVisible()
+    await expect(courseRemindersAfter.getByText(/10:00/i)).toBeVisible()
   })
 
   test('AC5: edit and disable an existing per-course reminder', async ({ page }) => {
@@ -263,6 +298,8 @@ test.describe('E11-S06: Per-Course Study Reminders', () => {
 
     // Verify updated values
     await expect(reminderRow.getByText(/14:30/i)).toBeVisible()
+    // Monday should no longer appear in schedule summary
+    await expect(reminderRow.getByText(/wed.*fri/i)).toBeVisible()
 
     // Disable the reminder entirely
     const enableToggle = reminderRow.getByRole('switch', { name: /enable/i })

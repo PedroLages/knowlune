@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { toast } from 'sonner'
 import { CalendarClock, Bell, AlertTriangle, Plus } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import { Button } from '@/app/components/ui/button'
@@ -72,6 +73,7 @@ export function CourseReminderSettings() {
     setPermission(currentPerm)
 
     if (currentPerm === 'default') {
+      // Show prompt but don't block — user can skip via "Skip for now"
       setShowPermissionPrompt(true)
       return
     }
@@ -81,6 +83,11 @@ export function CourseReminderSettings() {
     }
 
     // AC4: allow configuration regardless of permission state
+    openAddForm()
+  }
+
+  function handleSkipPermission() {
+    setShowPermissionPrompt(false)
     openAddForm()
   }
 
@@ -135,23 +142,40 @@ export function CourseReminderSettings() {
       updatedAt: now,
     }
 
-    await saveCourseReminder(reminder)
-    setShowAddForm(false)
+    try {
+      await saveCourseReminder(reminder)
+      setShowAddForm(false)
+    } catch (error) {
+      console.error('[CourseReminderSettings] Failed to save reminder:', error)
+      toast.error('Failed to save reminder. Please try again.')
+    }
   }
 
   async function handleToggle(id: string, enabled: boolean) {
-    await toggleCourseReminder(id, enabled)
+    try {
+      await toggleCourseReminder(id, enabled)
+    } catch (error) {
+      console.error('[CourseReminderSettings] Failed to toggle reminder:', error)
+      toast.error('Failed to update reminder. Please try again.')
+      loadReminders() // Revert UI by reloading actual state
+    }
   }
 
   async function handleSaveEdit(updated: CourseReminder) {
-    await saveCourseReminder(updated)
+    try {
+      await saveCourseReminder(updated)
+    } catch (error) {
+      console.error('[CourseReminderSettings] Failed to save changes:', error)
+      toast.error('Failed to save changes. Please try again.')
+      loadReminders() // Revert UI
+    }
   }
 
   // Filter out courses that already have a reminder
   const availableCourses = courses.filter(c => !reminders.some(r => r.courseId === c.id))
 
   return (
-    <Card data-testid="course-reminders-section">
+    <Card data-testid="course-reminders-section" className="rounded-[24px]">
       <CardHeader className="border-b border-border/50 bg-surface-sunken/30">
         <div className="flex items-center gap-3">
           <div className="rounded-full bg-brand-soft p-2">
@@ -180,15 +204,26 @@ export function CourseReminderSettings() {
               <p className="text-xs text-muted-foreground">
                 Enable browser notifications to receive study reminders at your scheduled times.
               </p>
-              <Button
-                size="sm"
-                onClick={handleEnableNotifications}
-                className="gap-1.5 min-h-[44px]"
-                aria-label="Enable notifications"
-              >
-                <Bell className="size-4" />
-                Enable Notifications
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={handleEnableNotifications}
+                  className="gap-1.5 min-h-[44px]"
+                  aria-label="Enable notifications"
+                >
+                  <Bell className="size-4" />
+                  Enable Notifications
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleSkipPermission}
+                  className="min-h-[44px] text-muted-foreground"
+                  aria-label="Skip for now"
+                >
+                  Skip for now
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -286,8 +321,14 @@ export function CourseReminderSettings() {
 
             {/* Day selector */}
             <div className="space-y-1.5">
-              <Label className="text-sm text-muted-foreground">Days</Label>
-              <DaySelector selectedDays={selectedDays} onChange={setSelectedDays} />
+              <Label id="new-reminder-days-label" className="text-sm text-muted-foreground">
+                Days
+              </Label>
+              <DaySelector
+                selectedDays={selectedDays}
+                onChange={setSelectedDays}
+                aria-labelledby="new-reminder-days-label"
+              />
             </div>
 
             {/* Time input */}

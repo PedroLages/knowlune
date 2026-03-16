@@ -4,9 +4,9 @@ story_name: "Per-Course Study Reminders"
 status: in-progress
 started: 2026-03-16
 completed:
-reviewed: false          # false | in-progress | true
-review_started:          # YYYY-MM-DD — set when /review-story begins
-review_gates_passed: []  # tracks completed gates: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
+reviewed: in-progress    # false | in-progress | true
+review_started: 2026-03-16  # YYYY-MM-DD — set when /review-story begins
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]  # tracks completed gates
 burn_in_validated: false # true if burn-in testing (10 iterations) passed
 ---
 
@@ -243,15 +243,18 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+**Verdict: PASS** — No blockers. 1 medium (orphaned label), 1 medium (pre-existing contrast issue), 3 nits.
+Report: docs/reviews/design/design-review-2026-03-16-e11-s06.md
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**Verdict: BLOCKED** — 2 blockers (missing notification click handler, unhandled async in handleSaveNew), 3 high, 4 medium, 3 nits.
+Report: docs/reviews/code/code-review-2026-03-16-e11-s06.md
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+**Verdict: PASS** — 8 PASS, 2 LOW warnings (keyboard nav ergonomics, loading state).
+Report: docs/reviews/design/web-design-guidelines-2026-03-16-e11-s06.md
 
 ## Challenges and Lessons Learned
 
