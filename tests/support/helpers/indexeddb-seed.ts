@@ -224,3 +224,22 @@ export async function clearIndexedDBStore(
 export async function clearLearningPath(page: Page): Promise<void> {
   await clearIndexedDBStore(page, 'ElearningDB', 'learningPath')
 }
+
+/**
+ * Seeds the notes object store in ElearningDB.
+ * Convenience wrapper around seedIndexedDBStore.
+ */
+export async function seedNotes(page: Page, notes: Record<string, unknown>[]): Promise<void> {
+  await seedIndexedDBStore(page, 'ElearningDB', 'notes', notes)
+}
+
+/**
+ * Seeds the reviewRecords object store in ElearningDB.
+ * Convenience wrapper around seedIndexedDBStore.
+ */
+export async function seedReviewRecords(
+  page: Page,
+  records: Record<string, unknown>[]
+): Promise<void> {
+  await seedIndexedDBStore(page, 'ElearningDB', 'reviewRecords', records)
+}
