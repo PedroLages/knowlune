@@ -3,7 +3,6 @@
  *
  * Verifies:
  *   - AC1: Configure per-course reminder with day/time selection
- *   - AC2: Browser notification delivery with course deep-link
  *   - AC3: Independence from streak reminders
  *   - AC4: Notification permission prompt and graceful handling
  *   - AC5: Edit and disable reminders
@@ -11,24 +10,53 @@
  */
 import { test, expect } from '../support/fixtures'
 import { goToSettings } from '../support/helpers/navigation'
-import { seedImportedCourses } from '../support/helpers/indexeddb-seed'
-import { createCourse } from '../support/fixtures/factories/course-factory'
+import {
+  seedImportedCourses,
+  seedIndexedDBStore,
+} from '../support/helpers/indexeddb-seed'
+import { FIXED_DATE } from '../utils/test-time'
+
+/**
+ * Helper: create an ImportedCourse record for seeding.
+ */
+function createImportedCourse(overrides: Record<string, unknown> = {}) {
+  const id = (overrides.id as string) ?? 'course-test'
+  return {
+    id,
+    name: overrides.name ?? `Test Course ${id}`,
+    importedAt: FIXED_DATE,
+    category: 'technology',
+    tags: ['test'],
+    status: 'active',
+    videoCount: 5,
+    pdfCount: 1,
+    ...overrides,
+  }
+}
 
 /**
  * Helper: seed two courses into IndexedDB for multi-course tests.
  */
 async function seedTwoCourses(page: import('@playwright/test').Page) {
-  const courseA = createCourse({
+  const courseA = createImportedCourse({
     id: 'course-a',
-    title: 'TypeScript Fundamentals',
-    slug: 'typescript-fundamentals',
+    name: 'TypeScript Fundamentals',
   })
-  const courseB = createCourse({
+  const courseB = createImportedCourse({
     id: 'course-b',
-    title: 'React Patterns',
-    slug: 'react-patterns',
+    name: 'React Patterns',
   })
   await seedImportedCourses(page, [courseA, courseB])
+}
+
+/**
+ * Helper: seed course reminders into IndexedDB (courseReminders store).
+ */
+async function seedCourseReminders(
+  page: import('@playwright/test').Page,
+  reminders: Record<string, unknown>[]
+) {
+  await seedIndexedDBStore(page, 'ElearningDB', 'courseReminders', reminders)
 }
 
 /**
@@ -67,7 +95,6 @@ test.describe('E11-S06: Per-Course Study Reminders', () => {
   })
 
   test('AC1: configure per-course reminder with day and time selection', async ({ page }) => {
-    // Navigate to course settings or reminder configuration area
     await goToSettings(page)
 
     // Expect a per-course reminders section
@@ -86,12 +113,12 @@ test.describe('E11-S06: Per-Course Study Reminders', () => {
     await courseSelect.click()
     await page.getByRole('option', { name: /typescript fundamentals/i }).click()
 
-    // Select days of the week (e.g., Monday, Wednesday, Friday)
+    // Select days of the week (pill toggles — use click, not check)
     const daySelector = page.getByTestId('course-reminder-day-selector')
     await expect(daySelector).toBeVisible()
-    await daySelector.getByRole('checkbox', { name: /monday/i }).check()
-    await daySelector.getByRole('checkbox', { name: /wednesday/i }).check()
-    await daySelector.getByRole('checkbox', { name: /friday/i }).check()
+    await daySelector.getByRole('checkbox', { name: /monday/i }).click()
+    await daySelector.getByRole('checkbox', { name: /wednesday/i }).click()
+    await daySelector.getByRole('checkbox', { name: /friday/i }).click()
 
     // Set a time
     const timeInput = page.getByTestId('course-reminder-time-input')
@@ -102,7 +129,7 @@ test.describe('E11-S06: Per-Course Study Reminders', () => {
     const saveBtn = page.getByRole('button', { name: /save.*reminder/i })
     await saveBtn.click()
 
-    // Verify the reminder appears in the list, independent from streak reminders
+    // Verify the reminder appears in the list
     const reminderItem = courseRemindersSection.getByText(/typescript fundamentals/i)
     await expect(reminderItem).toBeVisible()
     await expect(courseRemindersSection.getByText(/mon.*wed.*fri/i)).toBeVisible()
@@ -134,11 +161,10 @@ test.describe('E11-S06: Per-Course Study Reminders', () => {
     await expect(courseReminders).toBeVisible()
 
     // Both sections should be independently visible and configurable
-    // The streak reminder toggle should not affect per-course reminders
     const streakToggle = streakReminders.getByRole('switch', { name: /enable.*reminders/i })
     await expect(streakToggle).toBeChecked()
 
-    // Per-course section should have its own controls, not be nested under streak
+    // Per-course section should have its own controls
     const addCourseReminderBtn = courseReminders.getByRole('button', {
       name: /add.*reminder/i,
     })
@@ -193,29 +219,27 @@ test.describe('E11-S06: Per-Course Study Reminders', () => {
     await expect(deniedGuidance).toBeVisible()
     await expect(deniedGuidance).toContainText(/browser settings/i)
 
-    // Continue configuring the reminder anyway
+    // Continue configuring the reminder anyway (AC4: save regardless)
     const continueBtn = page.getByRole('button', { name: /continue.*without/i })
     await expect(continueBtn).toBeVisible()
   })
 
   test('AC5: edit and disable an existing per-course reminder', async ({ page }) => {
-    // First, seed a pre-existing course reminder in IndexedDB
-    await page.evaluate(() => {
-      // Seed a course reminder directly (will be replaced by Dexie seeding in implementation)
-      localStorage.setItem(
-        'course-reminders',
-        JSON.stringify([
-          {
-            id: 'reminder-1',
-            courseId: 'course-a',
-            courseName: 'TypeScript Fundamentals',
-            days: ['monday', 'wednesday', 'friday'],
-            time: '09:00',
-            enabled: true,
-          },
-        ])
-      )
-    })
+    // Seed a pre-existing course reminder in IndexedDB
+    await seedCourseReminders(page, [
+      {
+        id: 'reminder-1',
+        courseId: 'course-a',
+        courseName: 'TypeScript Fundamentals',
+        days: ['monday', 'wednesday', 'friday'],
+        time: '09:00',
+        enabled: true,
+        createdAt: FIXED_DATE,
+        updatedAt: FIXED_DATE,
+      },
+    ])
+    await page.reload()
+    await page.waitForLoadState('load')
 
     await goToSettings(page)
 
@@ -233,9 +257,9 @@ test.describe('E11-S06: Per-Course Study Reminders', () => {
     const timeInput = page.getByTestId('course-reminder-time-input')
     await timeInput.fill('14:30')
 
-    // Uncheck Monday
+    // Uncheck Monday (click to toggle off)
     const daySelector = page.getByTestId('course-reminder-day-selector')
-    await daySelector.getByRole('checkbox', { name: /monday/i }).uncheck()
+    await daySelector.getByRole('checkbox', { name: /monday/i }).click()
 
     // Save changes
     await page.getByRole('button', { name: /save.*reminder/i }).click()
@@ -250,30 +274,31 @@ test.describe('E11-S06: Per-Course Study Reminders', () => {
   })
 
   test('AC6: multi-course reminder overview lists all reminders by course', async ({ page }) => {
-    // Seed multiple course reminders
-    await page.evaluate(() => {
-      localStorage.setItem(
-        'course-reminders',
-        JSON.stringify([
-          {
-            id: 'reminder-1',
-            courseId: 'course-a',
-            courseName: 'TypeScript Fundamentals',
-            days: ['monday', 'wednesday', 'friday'],
-            time: '09:00',
-            enabled: true,
-          },
-          {
-            id: 'reminder-2',
-            courseId: 'course-b',
-            courseName: 'React Patterns',
-            days: ['tuesday', 'thursday'],
-            time: '18:00',
-            enabled: false,
-          },
-        ])
-      )
-    })
+    // Seed multiple course reminders in IndexedDB
+    await seedCourseReminders(page, [
+      {
+        id: 'reminder-1',
+        courseId: 'course-a',
+        courseName: 'TypeScript Fundamentals',
+        days: ['monday', 'wednesday', 'friday'],
+        time: '09:00',
+        enabled: true,
+        createdAt: FIXED_DATE,
+        updatedAt: FIXED_DATE,
+      },
+      {
+        id: 'reminder-2',
+        courseId: 'course-b',
+        courseName: 'React Patterns',
+        days: ['tuesday', 'thursday'],
+        time: '18:00',
+        enabled: false,
+        createdAt: FIXED_DATE,
+        updatedAt: FIXED_DATE,
+      },
+    ])
+    await page.reload()
+    await page.waitForLoadState('load')
 
     await goToSettings(page)
 
