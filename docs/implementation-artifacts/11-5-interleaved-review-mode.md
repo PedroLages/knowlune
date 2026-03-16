@@ -4,9 +4,9 @@ story_name: "Interleaved Review Mode"
 status: in-progress
 started: 2026-03-16
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-16
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -188,15 +188,15 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+**Reviewed 2026-03-16** — 0 blockers, 2 medium, 2 nits. No layout shift (CLS 0.00), correct design tokens throughout, MotionConfig reducedMotion working. Medium: (M1) "Press Space to flip" hint visible on mobile — add `hidden sm:inline`; (M2) aria-live flip announcement missing "Answer revealed" prefix. See `docs/reviews/design/design-review-2026-03-16-e11-s05.md`.
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**Reviewed 2026-03-16** — 0 blockers, 3 high, 4 medium, 3 nits. High: (1) `rateInterleavedNote` advances past failed ratings — data integrity risk; (2) missing useEffect deps for `startSession`; (3) frozen `now` stale for long sessions. Medium: hardcoded 95% retention in summary, duplicated markdown-stripping, aria-live region, missing eslint-disable for inline style. See `docs/reviews/code/code-review-2026-03-16-e11-s05.md`.
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+**Reviewed 2026-03-16** — 0 blockers, 3 high, 5 medium, 5 low. High: (1) missing error state on data load failure — user sees infinite skeleton; (2) focus management unreliable during flip animation; (3) aria-live region may not announce on flip. Good: prefers-reduced-motion support, design tokens, heading hierarchy, keyboard shortcuts, GPU-accelerated animations. See `docs/reviews/web-design-guidelines/web-design-guidelines-2026-03-16-e11-s05.md`.
 
 ## Challenges and Lessons Learned
 
