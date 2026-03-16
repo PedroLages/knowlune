@@ -35,7 +35,7 @@ interface ReviewState {
   isInterleavedActive: boolean
 
   loadReviews: () => Promise<void>
-  rateNote: (noteId: string, rating: ReviewRating, now?: Date) => Promise<void>
+  rateNote: (noteId: string, rating: ReviewRating, now?: Date) => Promise<boolean>
   retryPendingRating: () => Promise<void>
   getDueReviews: (now?: Date) => ReviewRecord[]
   getNextReviewDate: () => string | null
@@ -107,6 +107,7 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
       await persistWithRetry(async () => {
         await db.reviewRecords.put(updatedRecord)
       })
+      return true
     } catch (error) {
       // Rollback optimistic update, preserve rating in memory for retry (AC5)
       set({
@@ -124,6 +125,7 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
           },
         },
       })
+      return false
     }
   },
 
@@ -185,7 +187,8 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
     if (!currentRecord) return
 
     // Delegate to existing rateNote for persistence + optimistic update
-    await get().rateNote(currentRecord.noteId, rating, now)
+    const success = await get().rateNote(currentRecord.noteId, rating, now)
+    if (!success) return // Don't advance — let user retry via toast
 
     // Track the course for this card
     const note = noteMap.get(currentRecord.noteId)
@@ -216,11 +219,18 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
           interleavedRetentionsBefore.length
         : 0
 
-    // Estimate "after" retention: assume reviewing bumps retention to ~95%
-    // weighted by how many of the queued notes were actually reviewed
+    // Compute actual post-review retention from updated records
+    const { allReviews, interleavedQueue } = get()
     const reviewed = interleavedRatings.length
     const total = interleavedRetentionsBefore.length
-    const avgAfter = total > 0 ? (reviewed * 95 + (total - reviewed) * avgBefore) / total : 95
+    const now = new Date()
+    let reviewedRetentionSum = 0
+    for (let i = 0; i < reviewed; i++) {
+      const record = allReviews.find(r => r.noteId === interleavedQueue[i]?.noteId)
+      reviewedRetentionSum += record ? predictRetention(record, now) : 95
+    }
+    const unreviewedRetentionSum = (total - reviewed) * avgBefore
+    const avgAfter = total > 0 ? (reviewedRetentionSum + unreviewedRetentionSum) / total : 95
 
     const courseNames = interleavedCourseIds.map(id => courseNameMap.get(id) ?? 'Unknown Course')
 

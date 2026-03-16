@@ -66,8 +66,9 @@ export function InterleavedReview() {
   const [phase, setPhase] = useState<SessionPhase>('loading')
   const [isFlipped, setIsFlipped] = useState(false)
   const [summary, setSummary] = useState<InterleavedSessionSummary | null>(null)
-  const [now] = useState(() => new Date())
+  const [now, setNow] = useState(() => new Date())
   const [dataLoaded, setDataLoaded] = useState(false)
+  const [loadError, setLoadError] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
 
   // Derived data
@@ -81,16 +82,31 @@ export function InterleavedReview() {
 
   const courseNameMap = useMemo(() => buildCourseNameMap(importedCourses), [importedCourses])
 
+  // Refresh `now` every 60s so retention percentages stay current during long sessions
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(interval)
+  }, [])
+
   // Load data on mount
   useEffect(() => {
     Promise.all([loadReviews(), loadNotes(), loadImportedCourses()])
       .then(() => setDataLoaded(true))
-      .catch(console.error)
+      .catch(err => {
+        console.error('[InterleavedReview] Failed to load data:', err)
+        setLoadError(true)
+      })
     return () => {
       // Cleanup session on unmount if still active
       resetInterleavedSession()
     }
   }, [loadReviews, loadNotes, loadImportedCourses, resetInterleavedSession])
+
+  const startSession = useCallback(() => {
+    startInterleavedSession(noteMap, now)
+    setIsFlipped(false)
+    setPhase('reviewing')
+  }, [startInterleavedSession, noteMap, now])
 
   // Determine initial phase after data loads (runs once)
   // Does NOT re-run during an active session — handleRate manages
@@ -123,13 +139,16 @@ export function InterleavedReview() {
     } else {
       startSession()
     }
-  }, [dataLoaded, reviewsLoading, notesLoading, allReviews, noteMap, now, isInterleavedActive])
-
-  function startSession() {
-    startInterleavedSession(noteMap, now)
-    setIsFlipped(false)
-    setPhase('reviewing')
-  }
+  }, [
+    dataLoaded,
+    reviewsLoading,
+    notesLoading,
+    allReviews,
+    noteMap,
+    now,
+    isInterleavedActive,
+    startSession,
+  ])
 
   const handleFlip = useCallback(() => {
     setIsFlipped(true)
@@ -147,13 +166,13 @@ export function InterleavedReview() {
         setSummary(sessionSummary)
         setPhase('summary')
       } else {
-        // Focus the card for the next flip
-        requestAnimationFrame(() => {
+        // Focus the card after flip animation completes (500ms transition)
+        setTimeout(() => {
           const frontFace = cardRef.current?.querySelector<HTMLElement>(
             '[data-testid="interleaved-card-front"]'
           )
           frontFace?.focus()
-        })
+        }, 500)
       }
     },
     [rateInterleavedNote, endInterleavedSession, noteMap, courseNameMap, now]
@@ -192,6 +211,41 @@ export function InterleavedReview() {
 
   // --- Render phases ---
 
+  if (loadError) {
+    return (
+      <main data-testid="interleaved-review" className="space-y-6 p-1">
+        <PageHeader onBack={() => navigate('/review')} />
+        <div className="mx-auto max-w-lg pt-12">
+          <Empty className="border-none">
+            <EmptyMedia variant="icon">
+              <Shuffle className="size-6" />
+            </EmptyMedia>
+            <EmptyHeader>
+              <EmptyTitle>Failed to load review data</EmptyTitle>
+              <EmptyDescription>
+                Something went wrong loading your notes and reviews. Please try again.
+              </EmptyDescription>
+            </EmptyHeader>
+            <Button
+              onClick={() => {
+                setLoadError(false)
+                setDataLoaded(false)
+                Promise.all([loadReviews(), loadNotes(), loadImportedCourses()])
+                  .then(() => setDataLoaded(true))
+                  .catch(err => {
+                    console.error('[InterleavedReview] Retry failed:', err)
+                    setLoadError(true)
+                  })
+              }}
+            >
+              Retry
+            </Button>
+          </Empty>
+        </div>
+      </main>
+    )
+  }
+
   if (phase === 'loading') {
     return (
       <DelayedFallback>
@@ -205,7 +259,7 @@ export function InterleavedReview() {
 
   if (phase === 'empty') {
     return (
-      <div data-testid="interleaved-review" className="space-y-6 p-1">
+      <main data-testid="interleaved-review" className="space-y-6 p-1">
         <PageHeader onBack={() => navigate('/review')} />
         <div className="mx-auto max-w-lg pt-12">
           <Empty className="border-none">
@@ -221,18 +275,20 @@ export function InterleavedReview() {
             </EmptyHeader>
           </Empty>
         </div>
-      </div>
+      </main>
     )
   }
 
   if (phase === 'single-course-prompt') {
     return (
-      <div data-testid="interleaved-review" className="space-y-6 p-1">
+      <main data-testid="interleaved-review" className="space-y-6 p-1">
         <PageHeader onBack={() => navigate('/review')} />
         <AlertDialog open>
           <AlertDialogContent data-testid="single-course-dialog">
             <AlertDialogHeader>
-              <AlertDialogTitle>Single Course Detected</AlertDialogTitle>
+              <AlertDialogTitle>
+                Interleaved Review Works Best with Multiple Courses
+              </AlertDialogTitle>
               <AlertDialogDescription>
                 Interleaved review works best with notes from multiple courses — mixing topics
                 strengthens cross-topic connections and improves retention. You currently have notes
@@ -247,13 +303,13 @@ export function InterleavedReview() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </div>
+      </main>
     )
   }
 
   if (phase === 'summary' && summary) {
     return (
-      <div data-testid="interleaved-review" className="space-y-6 p-1">
+      <main data-testid="interleaved-review" className="space-y-6 p-1">
         <PageHeader onBack={() => navigate('/review')} />
         <InterleavedSummary
           summary={summary}
@@ -263,7 +319,7 @@ export function InterleavedReview() {
           }}
           onReturnToQueue={() => navigate('/review')}
         />
-      </div>
+      </main>
     )
   }
 
@@ -278,7 +334,7 @@ export function InterleavedReview() {
   const progressPct = total > 0 ? (interleavedIndex / total) * 100 : 0
 
   return (
-    <div data-testid="interleaved-review" className="space-y-6 p-1" ref={cardRef}>
+    <main data-testid="interleaved-review" className="space-y-6 p-1" ref={cardRef}>
       {/* Header with progress */}
       <div className="flex items-center justify-between">
         <PageHeader onBack={() => navigate('/review')} />
@@ -302,7 +358,7 @@ export function InterleavedReview() {
           <span className="tabular-nums">
             {current} / {total}
           </span>
-          <span className="text-xs">
+          <span className="hidden text-xs sm:inline">
             Press{' '}
             <kbd className="rounded border border-border bg-muted px-1 py-0.5 text-[10px]">
               Space
@@ -340,7 +396,7 @@ export function InterleavedReview() {
           onRate={handleRate}
         />
       )}
-    </div>
+    </main>
   )
 }
 

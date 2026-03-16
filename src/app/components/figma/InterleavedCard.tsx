@@ -17,20 +17,21 @@ interface InterleavedCardProps {
   onRate: (rating: ReviewRating) => void
 }
 
-function getRetentionColor(retention: number): string {
-  if (retention < 50) return 'text-destructive'
-  if (retention < 80) return 'text-warning'
-  return 'text-success'
-}
-
 function getRetentionBadgeClasses(retention: number): string {
   if (retention < 50) return 'bg-destructive/10 text-destructive border-destructive/20'
   if (retention < 80) return 'bg-warning/10 text-warning border-warning/20'
   return 'bg-success-soft text-success border-success/20'
 }
 
-function getPromptExcerpt(content: string, maxLength = 80): string {
-  const plain = content
+function getRetentionLabel(retention: number): string {
+  if (retention < 50) return 'Low'
+  if (retention < 80) return 'Med'
+  return 'High'
+}
+
+/** Strip markdown formatting to plain text */
+function stripMarkdown(content: string): string {
+  return content
     .replace(/^#{1,6}\s+.*$/gm, '')
     .replace(/\*\*|__/g, '')
     .replace(/\*|_/g, '')
@@ -39,7 +40,10 @@ function getPromptExcerpt(content: string, maxLength = 80): string {
     .replace(/`([^`]+)`/g, '$1')
     .replace(/\n+/g, ' ')
     .trim()
+}
 
+function getPromptExcerpt(content: string, maxLength = 80): string {
+  const plain = stripMarkdown(content)
   // Take the first sentence as the "prompt"
   const firstSentence = plain.match(/^[^.!?]+[.!?]?/)?.[0]?.trim() ?? plain
   if (firstSentence.length <= maxLength) return firstSentence
@@ -47,16 +51,7 @@ function getPromptExcerpt(content: string, maxLength = 80): string {
 }
 
 function getFullExcerpt(content: string, maxLength = 200): string {
-  const plain = content
-    .replace(/^#{1,6}\s+.*$/gm, '')
-    .replace(/\*\*|__/g, '')
-    .replace(/\*|_/g, '')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/```[\s\S]*?```/g, '')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/\n+/g, ' ')
-    .trim()
-
+  const plain = stripMarkdown(content)
   if (plain.length <= maxLength) return plain
   return plain.slice(0, maxLength).trimEnd() + '...'
 }
@@ -171,12 +166,12 @@ export function InterleavedCard({
                       getRetentionBadgeClasses(retention)
                     )}
                   >
-                    <span className={getRetentionColor(retention)}>{retention}%</span>
+                    {getRetentionLabel(retention)} {retention}%
                   </Badge>
                 </div>
 
                 {/* Full note content */}
-                <div aria-live="polite" className="flex-1">
+                <div className="flex-1">
                   <p className="text-sm leading-relaxed text-foreground">
                     {getFullExcerpt(note.content)}
                   </p>
@@ -188,6 +183,12 @@ export function InterleavedCard({
             </Card>
           </div>
         </motion.div>
+        {/* Screen reader announcement — outside card faces so content change triggers aria-live */}
+        {isFlipped && (
+          <span className="sr-only" aria-live="polite">
+            Answer revealed. Rate your recall.
+          </span>
+        )}
       </div>
       {/* eslint-enable react-best-practices/no-inline-styles */}
     </MotionConfig>

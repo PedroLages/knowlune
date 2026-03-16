@@ -98,6 +98,29 @@ test.describe('E11-S05: Interleaved Review Mode', () => {
     await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
   })
 
+  test.afterEach(async ({ page }) => {
+    // Clean up IndexedDB stores to prevent data leaking between tests
+    await page.evaluate(async () => {
+      const dbReq = indexedDB.open('ElearningDB')
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        dbReq.onsuccess = () => resolve(dbReq.result)
+        dbReq.onerror = () => reject(dbReq.error)
+      })
+      const stores = ['reviewRecords', 'notes', 'importedCourses']
+      for (const storeName of stores) {
+        if (db.objectStoreNames.contains(storeName)) {
+          const tx = db.transaction(storeName, 'readwrite')
+          tx.objectStore(storeName).clear()
+          await new Promise<void>((resolve, reject) => {
+            tx.oncomplete = () => resolve()
+            tx.onerror = () => reject(tx.error)
+          })
+        }
+      }
+      db.close()
+    })
+  })
+
   test('AC1: Notes from multiple courses are surfaced in a mixed sequence', async ({ page }) => {
     await seedMultiCourseData(page)
     await page.goto('/review/interleaved')
@@ -157,6 +180,34 @@ test.describe('E11-S05: Interleaved Review Mode', () => {
 
     // Front face of next card should be visible again (not flipped)
     await expect(page.getByTestId('interleaved-card-front')).toBeVisible()
+
+    // Verify rating was persisted to IndexedDB (not just UI advancement)
+    const persisted = await page.evaluate(async () => {
+      const dbReq = indexedDB.open('ElearningDB')
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        dbReq.onsuccess = () => resolve(dbReq.result)
+        dbReq.onerror = () => reject(dbReq.error)
+      })
+      const tx = db.transaction('reviewRecords', 'readonly')
+      const store = tx.objectStore('reviewRecords')
+      const all: { noteId: string; interval: number; nextReviewAt: string }[] = await new Promise(
+        (resolve, reject) => {
+          const req = store.getAll()
+          req.onsuccess = () => resolve(req.result)
+          req.onerror = () => reject(req.error)
+        }
+      )
+      db.close()
+      const record = all.find(r => r.noteId === 'note-1')
+      return record ? { interval: record.interval, nextReviewAt: record.nextReviewAt } : null
+    })
+
+    // After a "Good" rating on interval=4, next interval should be > 4
+    expect(persisted).not.toBeNull()
+    expect(persisted!.interval).toBeGreaterThan(4)
+    expect(new Date(persisted!.nextReviewAt).getTime()).toBeGreaterThan(
+      new Date(FIXED_DATE).getTime()
+    )
   })
 
   test('AC4: Single-course fallback shows informational message', async ({ page }) => {
@@ -184,7 +235,7 @@ test.describe('E11-S05: Interleaved Review Mode', () => {
     // Should show the single-course AlertDialog
     const dialog = page.getByTestId('single-course-dialog')
     await expect(dialog).toBeVisible()
-    await expect(dialog).toContainText('Single Course Detected')
+    await expect(dialog).toContainText('Interleaved Review Works Best with Multiple Courses')
 
     // Should have two action buttons
     await expect(dialog.getByRole('button', { name: /Continue Anyway/i })).toBeVisible()
@@ -195,6 +246,42 @@ test.describe('E11-S05: Interleaved Review Mode', () => {
 
     // Should now be in review mode
     await expect(page.getByTestId('interleaved-progress')).toBeVisible()
+  })
+
+  test('AC4b: Return to Review Queue navigates back', async ({ page }) => {
+    // Seed only ONE course with notes
+    const singleNote = createDexieNote({
+      id: 'note-return',
+      courseId: 'course-1',
+      videoId: 'video-return',
+      content: 'Return to queue test note.',
+      tags: ['javascript'],
+      createdAt: FIXED_DATE,
+      updatedAt: FIXED_DATE,
+    })
+    const singleReview = createDueReviewRecord({
+      id: 'review-return',
+      noteId: 'note-return',
+    })
+
+    await seedImportedCourses(page, [course1])
+    await seedNotes(page, [singleNote])
+    await seedReviewRecords(page, [singleReview])
+
+    await page.goto('/review/interleaved')
+
+    // Should show the single-course AlertDialog
+    const dialog = page.getByTestId('single-course-dialog')
+    await expect(dialog).toBeVisible()
+
+    // Click "Return to Review Queue"
+    await dialog.getByRole('button', { name: /Return to Review Queue/i }).click()
+
+    // Should navigate to /review
+    await expect(page).toHaveURL(/\/review$/)
+
+    // Dialog should be gone
+    await expect(dialog).not.toBeVisible()
   })
 
   test('AC5: Session summary displayed on completion', async ({ page }) => {
@@ -228,6 +315,17 @@ test.describe('E11-S05: Interleaved Review Mode', () => {
     // Verify summary content
     await expect(page.getByTestId('summary-total-reviewed')).toHaveText('2')
     await expect(page.getByTestId('summary-courses-covered')).toHaveText('2')
+
+    // Verify ratings distribution is visible with correct counts
+    await expect(page.getByTestId('rating-good-count')).toHaveText('1')
+    await expect(page.getByTestId('rating-easy-count')).toHaveText('1')
+
+    // Verify retention improvement is displayed
+    const retentionAfter = page.getByTestId('summary-retention-after')
+    await expect(retentionAfter).toBeVisible()
+    const retentionText = await retentionAfter.textContent()
+    // Retention should be a non-zero percentage
+    expect(retentionText).toMatch(/\d+%/)
 
     // Action buttons should be visible
     await expect(summary.getByRole('button', { name: /Review More/i })).toBeVisible()

@@ -81,18 +81,21 @@ export function InterleavedSummary({
                     count={summary.ratings.hard}
                     total={totalRatings}
                     className="bg-destructive/60"
+                    testId="rating-hard-count"
                   />
                   <RatingBar
                     label="Good"
                     count={summary.ratings.good}
                     total={totalRatings}
                     className="bg-brand"
+                    testId="rating-good-count"
                   />
                   <RatingBar
                     label="Easy"
                     count={summary.ratings.easy}
                     total={totalRatings}
                     className="bg-success"
+                    testId="rating-easy-count"
                   />
                 </div>
               </div>
@@ -101,7 +104,10 @@ export function InterleavedSummary({
               <div className="rounded-xl bg-muted/50 p-4">
                 <p className="text-xs font-medium text-muted-foreground">Retention</p>
                 <div className="mt-1 flex items-baseline gap-1">
-                  <span className="text-2xl font-semibold tabular-nums text-foreground">
+                  <span
+                    data-testid="summary-retention-after"
+                    className="text-2xl font-semibold tabular-nums text-foreground"
+                  >
                     {summary.averageRetentionAfter}%
                   </span>
                   {retentionDelta > 0 && (
@@ -141,11 +147,13 @@ function RatingBar({
   count,
   total,
   className,
+  testId,
 }: {
   label: string
   count: number
   total: number
   className: string
+  testId?: string
 }) {
   const pct = total > 0 ? (count / total) * 100 : 0
 
@@ -158,7 +166,12 @@ function RatingBar({
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className="w-4 text-right text-[10px] tabular-nums text-muted-foreground">{count}</span>
+      <span
+        data-testid={testId}
+        className="w-4 text-right text-[10px] tabular-nums text-muted-foreground"
+      >
+        {count}
+      </span>
     </div>
   )
 }
