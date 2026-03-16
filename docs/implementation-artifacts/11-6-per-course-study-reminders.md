@@ -1,10 +1,10 @@
 ---
 story_id: E11-S06
 story_name: "Per-Course Study Reminders"
-status: in-progress
+status: done
 started: 2026-03-16
-completed:
-reviewed: in-progress    # false | in-progress | true
+completed: 2026-03-16
+reviewed: true    # false | in-progress | true
 review_started: 2026-03-16  # YYYY-MM-DD — set when /review-story begins
 review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]  # tracks completed gates
 burn_in_validated: false # true if burn-in testing (10 iterations) passed

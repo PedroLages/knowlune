@@ -214,3 +214,16 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M1: `endSession` clears state before persist -- `session-quality-calculated` event fires after state is null (potential race if listener reads store)
 - M2: No E2E test for QualityScoreDialog appearance after session ends
 - Positive: Pure function scoring engine, comprehensive unit tests, proper design tokens, clean DB migration, good factory usage
+
+## E11-S06: Per-Course Study Reminders (Round 1)
+- No uncommitted changes (positive)
+- BLOCKER: Notification `data.url` deep-link is inert -- no `onclick` handler or Service Worker `notificationclick` listener (AC2 unmet)
+- BLOCKER: `handleSaveNew` async onClick has no try/catch -- silent IndexedDB failure
+- H1 (RECURRING): `handleToggle`/`handleSaveEdit` fire-and-forget async without .catch()
+- H2: Scheduler never starts if notification permission not granted at mount -- no re-check mechanism (AC4 "activates once permissions granted" gap)
+- H3: `shouldFireReminder` comment says "2-minute window" but code checks `diff <= 1` (1-minute window)
+- H4: Permission prompt has no escape hatch -- dismissing native dialog leaves user stuck
+- M1: `new Date().toISOString()` in production code without injectable time parameter
+- M2: Card missing `rounded-[24px]` design convention
+- M3: Scheduler runs 60s interval even when all reminders disabled
+- Positive: Clean separation of concerns, proper interval cleanup, good accessibility (role=checkbox, aria-checked, 44px targets), proper design token usage, no hardcoded colors
