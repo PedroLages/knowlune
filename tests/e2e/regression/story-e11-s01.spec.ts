@@ -4,10 +4,10 @@
  * Acceptance tests mapped to each AC.
  * Tests seed IndexedDB with notes and review records before navigating.
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
-import { seedIndexedDBStore, clearIndexedDBStore } from '../support/helpers/indexeddb-seed'
-import { createDexieNote } from '../support/fixtures/factories/note-factory'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
+import { seedIndexedDBStore, clearIndexedDBStore } from '../../support/helpers/indexeddb-seed'
+import { createDexieNote } from '../../support/fixtures/factories/note-factory'
 
 const DB_NAME = 'ElearningDB'
 
