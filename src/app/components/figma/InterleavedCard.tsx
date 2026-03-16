@@ -82,7 +82,9 @@ export function InterleavedCard({
 
   return (
     <MotionConfig reducedMotion="user">
-      {/* Perspective container for 3D effect */}
+      {/* Perspective container for 3D card-flip — no Tailwind equivalents for
+          perspective, transformStyle, or backfaceVisibility (CSS 3D transform properties) */}
+      {/* eslint-disable react-best-practices/no-inline-styles */}
       <div style={{ perspective: 1000 }} className="mx-auto w-full max-w-lg">
         <motion.div
           animate={{ rotateY: isFlipped ? 180 : 0 }}
@@ -183,6 +185,7 @@ export function InterleavedCard({
           </div>
         </motion.div>
       </div>
+      {/* eslint-enable react-best-practices/no-inline-styles */}
     </MotionConfig>
   )
 }
