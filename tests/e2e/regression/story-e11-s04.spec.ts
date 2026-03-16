@@ -18,7 +18,7 @@ import * as fs from 'fs'
  * - AC7: Progress indicator during export, non-blocking UI
  * - AC8: Error toast on export failure with cleanup
  *
- * Note: AC4 (xAPI logging) validated via unit tests only (pure function).
+ * - AC4: xAPI statement generation with Actor/Verb/Object structure
  */
 
 /** Seed a note into IndexedDB so markdown export has data */
@@ -155,6 +155,45 @@ test.describe('E11-S04: Data Export', () => {
     await expect(settingsHeading).toBeVisible()
   })
 
+  test('AC4: xAPI statements generated with Actor/Verb/Object structure', async ({ page }) => {
+    // Seed a study session so xAPI has data to transform
+    await seedIndexedDBStore(page, 'ElearningDB', 'studySessions', [
+      {
+        id: 'session-xapi',
+        courseId: 'course-1',
+        contentItemId: 'lesson-1',
+        startTime: '2026-03-15T10:00:00Z',
+        endTime: '2026-03-15T10:45:00Z',
+        duration: 2700,
+        idleTime: 0,
+        videosWatched: [],
+        lastActivity: '2026-03-15T10:45:00Z',
+        sessionType: 'video',
+      },
+    ])
+
+    // Call exportAsXAPI in browser context — validates the pipeline with real IDB data
+    const statements = await page.evaluate(async () => {
+      const { exportAsXAPI } = await import('/src/lib/xapiStatements.ts')
+      return exportAsXAPI()
+    })
+
+    expect(statements.length).toBeGreaterThanOrEqual(1)
+
+    // Verify Actor + Verb + Object structure (AC4 requirement)
+    const stmt = statements[0]
+    expect(stmt).toHaveProperty('actor')
+    expect(stmt.actor).toHaveProperty('objectType', 'Agent')
+    expect(stmt.actor).toHaveProperty('name')
+    expect(stmt).toHaveProperty('verb')
+    expect(stmt.verb).toHaveProperty('id')
+    expect(stmt.verb).toHaveProperty('display')
+    expect(stmt).toHaveProperty('object')
+    expect(stmt.object).toHaveProperty('objectType', 'Activity')
+    expect(stmt.object).toHaveProperty('definition')
+    expect(stmt).toHaveProperty('timestamp')
+  })
+
   test('AC6: Export JSON then re-import restores data (round-trip)', async ({ page }) => {
     // Seed data so the export has something meaningful
     await seedIndexedDBStore(page, 'ElearningDB', 'studySessions', [
@@ -195,10 +234,9 @@ test.describe('E11-S04: Data Export', () => {
       buffer: Buffer.from(exportedContent),
     })
 
-    // Wait for success toast
-    const toast = page.locator('[data-sonner-toast]')
-    await expect(toast).toBeVisible({ timeout: 10_000 })
-    await expect(toast).toContainText(/imported|restored/i, { timeout: 5_000 })
+    // Wait for import success toast (filter to avoid matching the export toast)
+    const importToast = page.locator('[data-sonner-toast]', { hasText: /imported|restored/i })
+    await expect(importToast).toBeVisible({ timeout: 10_000 })
   })
 
   test('AC8: Toast notification on export failure', async ({ page }) => {
