@@ -67,6 +67,7 @@ export function InterleavedReview() {
   const [isFlipped, setIsFlipped] = useState(false)
   const [summary, setSummary] = useState<InterleavedSessionSummary | null>(null)
   const [now] = useState(() => new Date())
+  const [dataLoaded, setDataLoaded] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
 
   // Derived data
@@ -85,16 +86,23 @@ export function InterleavedReview() {
 
   // Load data on mount
   useEffect(() => {
-    Promise.all([loadReviews(), loadNotes(), loadImportedCourses()]).catch(console.error)
+    Promise.all([loadReviews(), loadNotes(), loadImportedCourses()])
+      .then(() => setDataLoaded(true))
+      .catch(console.error)
     return () => {
       // Cleanup session on unmount if still active
       resetInterleavedSession()
     }
   }, [loadReviews, loadNotes, loadImportedCourses, resetInterleavedSession])
 
-  // Determine phase after data loads
+  // Determine initial phase after data loads (runs once)
+  // Does NOT re-run during an active session — handleRate manages
+  // phase transitions from 'reviewing' → 'summary'.
+  const phaseInitialised = useRef(false)
   useEffect(() => {
-    if (reviewsLoading || notesLoading) return
+    if (!dataLoaded || reviewsLoading || notesLoading) return
+    if (phaseInitialised.current) return
+    phaseInitialised.current = true
 
     // If session is already active (navigated away and back), resume
     if (isInterleavedActive) {
@@ -120,7 +128,7 @@ export function InterleavedReview() {
     } else {
       startSession()
     }
-  }, [reviewsLoading, notesLoading, allReviews, noteMap, now, isInterleavedActive])
+  }, [dataLoaded, reviewsLoading, notesLoading, allReviews, noteMap, now, isInterleavedActive])
 
   function startSession() {
     startInterleavedSession(noteMap, now)

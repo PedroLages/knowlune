@@ -94,12 +94,13 @@ export function InterleavedCard({
           <div
             data-testid="interleaved-card-front"
             role="button"
-            tabIndex={0}
+            tabIndex={isFlipped ? -1 : 0}
             aria-label="Flip card to reveal answer"
+            aria-hidden={isFlipped}
             onClick={!isFlipped ? onFlip : undefined}
             onKeyDown={handleKeyDown}
             className="absolute inset-0 cursor-pointer"
-            style={{ backfaceVisibility: 'hidden' }}
+            style={{ backfaceVisibility: 'hidden', visibility: isFlipped ? 'hidden' : 'visible' }}
           >
             <Card className="h-full rounded-[24px] transition-shadow duration-200 hover:shadow-lg">
               <CardContent className="flex h-full flex-col justify-between gap-4 p-6">
@@ -136,8 +137,9 @@ export function InterleavedCard({
           {/* ── Back face ── */}
           <div
             data-testid="interleaved-card-back"
+            aria-hidden={!isFlipped}
             className="absolute inset-0"
-            style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+            style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)', visibility: isFlipped ? 'visible' : 'hidden' }}
           >
             <Card className="h-full rounded-[24px] shadow-lg">
               <CardContent className="flex h-full flex-col gap-4 p-6">
