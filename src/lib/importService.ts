@@ -50,7 +50,7 @@ function applyMigrations(data: LevelUpExport): LevelUpExport {
     } else {
       console.warn(
         `[ImportService] No migration registered for v${v} → v${targetVersion}. ` +
-          'Data passes through unchanged. Register a no-op migration if intentional.',
+          'Data passes through unchanged. Register a no-op migration if intentional.'
       )
     }
     current.schemaVersion = targetVersion

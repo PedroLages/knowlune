@@ -110,12 +110,7 @@ export function CourseReminderRow({ reminder, onToggle, onSave }: CourseReminder
             <Check className="size-4" />
             Save reminder
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleCancel}
-            className="min-h-[44px]"
-          >
+          <Button variant="ghost" size="sm" onClick={handleCancel} className="min-h-[44px]">
             Cancel
           </Button>
         </div>

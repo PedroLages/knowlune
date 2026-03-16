@@ -148,9 +148,7 @@ export function CourseReminderSettings() {
   }
 
   // Filter out courses that already have a reminder
-  const availableCourses = courses.filter(
-    c => !reminders.some(r => r.courseId === c.id)
-  )
+  const availableCourses = courses.filter(c => !reminders.some(r => r.courseId === c.id))
 
   return (
     <Card data-testid="course-reminders-section">
@@ -203,7 +201,10 @@ export function CourseReminderSettings() {
             aria-live="polite"
             className="flex items-start gap-3 rounded-xl border border-warning/20 bg-warning/10 p-4 animate-in fade-in-0 slide-in-from-top-1 duration-300"
           >
-            <AlertTriangle className="size-5 text-warning flex-shrink-0 mt-0.5" aria-hidden="true" />
+            <AlertTriangle
+              className="size-5 text-warning flex-shrink-0 mt-0.5"
+              aria-hidden="true"
+            />
             <div className="space-y-2">
               <p className="text-sm font-medium text-warning">Notifications are blocked</p>
               <p className="text-xs text-muted-foreground">
@@ -260,10 +261,7 @@ export function CourseReminderSettings() {
               <Label htmlFor="course-select" className="text-sm text-muted-foreground">
                 Course
               </Label>
-              <Select
-                value={selectedCourseId}
-                onValueChange={setSelectedCourseId}
-              >
+              <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
                 <SelectTrigger
                   id="course-select"
                   data-testid="course-reminder-course-select"
@@ -318,12 +316,7 @@ export function CourseReminderSettings() {
               >
                 Save reminder
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCancelAdd}
-                className="min-h-[44px]"
-              >
+              <Button variant="ghost" size="sm" onClick={handleCancelAdd} className="min-h-[44px]">
                 Cancel
               </Button>
             </div>

@@ -10,10 +10,7 @@
  */
 import { test, expect } from '../support/fixtures'
 import { goToSettings } from '../support/helpers/navigation'
-import {
-  seedImportedCourses,
-  seedIndexedDBStore,
-} from '../support/helpers/indexeddb-seed'
+import { seedImportedCourses, seedIndexedDBStore } from '../support/helpers/indexeddb-seed'
 import { FIXED_DATE } from '../utils/test-time'
 
 /**

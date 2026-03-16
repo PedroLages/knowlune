@@ -27,9 +27,7 @@ export async function getCourseReminders(): Promise<CourseReminder[]> {
   return db.courseReminders.toArray()
 }
 
-export async function getCourseRemindersByCourse(
-  courseId: string
-): Promise<CourseReminder[]> {
+export async function getCourseRemindersByCourse(courseId: string): Promise<CourseReminder[]> {
   return db.courseReminders.where('courseId').equals(courseId).toArray()
 }
 
