@@ -42,7 +42,11 @@ interface ReviewState {
 
   // Interleaved session actions
   startInterleavedSession: (noteMap: Map<string, Note>, now?: Date) => void
-  rateInterleavedNote: (rating: ReviewRating, noteMap: Map<string, Note>, now?: Date) => Promise<void>
+  rateInterleavedNote: (
+    rating: ReviewRating,
+    noteMap: Map<string, Note>,
+    now?: Date
+  ) => Promise<void>
   endInterleavedSession: (courseNameMap: Map<string, string>) => InterleavedSessionSummary
   resetInterleavedSession: () => void
 }
@@ -157,7 +161,9 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
     const retentionsBefore = queue.map(r => predictRetention(r, now))
 
     // Collect unique course IDs from the queue
-    const courseIds = [...new Set(queue.map(r => noteMap.get(r.noteId)?.courseId).filter(Boolean) as string[])]
+    const courseIds = [
+      ...new Set(queue.map(r => noteMap.get(r.noteId)?.courseId).filter(Boolean) as string[]),
+    ]
 
     set({
       interleavedQueue: queue,
@@ -169,7 +175,11 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
     })
   },
 
-  rateInterleavedNote: async (rating: ReviewRating, noteMap: Map<string, Note>, now: Date = new Date()) => {
+  rateInterleavedNote: async (
+    rating: ReviewRating,
+    noteMap: Map<string, Note>,
+    now: Date = new Date()
+  ) => {
     const { interleavedQueue, interleavedIndex, interleavedRatings, interleavedCourseIds } = get()
     const currentRecord = interleavedQueue[interleavedIndex]
     if (!currentRecord) return
@@ -180,9 +190,10 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
     // Track the course for this card
     const note = noteMap.get(currentRecord.noteId)
     const courseId = note?.courseId
-    const updatedCourseIds = courseId && !interleavedCourseIds.includes(courseId)
-      ? [...interleavedCourseIds, courseId]
-      : interleavedCourseIds
+    const updatedCourseIds =
+      courseId && !interleavedCourseIds.includes(courseId)
+        ? [...interleavedCourseIds, courseId]
+        : interleavedCourseIds
 
     set({
       interleavedIndex: interleavedIndex + 1,
@@ -199,20 +210,19 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
       ratings[r]++
     }
 
-    const avgBefore = interleavedRetentionsBefore.length > 0
-      ? interleavedRetentionsBefore.reduce((a, b) => a + b, 0) / interleavedRetentionsBefore.length
-      : 0
+    const avgBefore =
+      interleavedRetentionsBefore.length > 0
+        ? interleavedRetentionsBefore.reduce((a, b) => a + b, 0) /
+          interleavedRetentionsBefore.length
+        : 0
 
     // Estimate "after" retention: assume reviewing bumps retention to ~95%
     // weighted by how many of the queued notes were actually reviewed
     const reviewed = interleavedRatings.length
     const total = interleavedRetentionsBefore.length
-    const avgAfter = total > 0
-      ? (reviewed * 95 + (total - reviewed) * avgBefore) / total
-      : 95
+    const avgAfter = total > 0 ? (reviewed * 95 + (total - reviewed) * avgBefore) / total : 95
 
-    const courseNames = interleavedCourseIds
-      .map(id => courseNameMap.get(id) ?? 'Unknown Course')
+    const courseNames = interleavedCourseIds.map(id => courseNameMap.get(id) ?? 'Unknown Course')
 
     const summary: InterleavedSessionSummary = {
       totalReviewed: reviewed,

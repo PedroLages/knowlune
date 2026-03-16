@@ -104,10 +104,7 @@ describe('interleaveReviews', () => {
 
   it('prioritises urgency when tags are empty', () => {
     // Two notes with no tags — urgency should dominate
-    const notes = [
-      makeNote({ id: 'n-old', tags: [] }),
-      makeNote({ id: 'n-new', tags: [] }),
-    ]
+    const notes = [makeNote({ id: 'n-old', tags: [] }), makeNote({ id: 'n-new', tags: [] })]
     const noteMap = new Map(notes.map(n => [n.id, n]))
 
     const records = [

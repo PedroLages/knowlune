@@ -46,7 +46,8 @@ const note2 = createDexieNote({
   id: 'note-2',
   courseId: 'course-2',
   videoId: 'video-2',
-  content: 'React hooks let you use state in function components. useState is the most common hook.',
+  content:
+    'React hooks let you use state in function components. useState is the most common hook.',
   tags: ['react', 'hooks'],
   createdAt: FIXED_DATE,
   updatedAt: FIXED_DATE,
@@ -97,9 +98,7 @@ test.describe('E11-S05: Interleaved Review Mode', () => {
     await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
   })
 
-  test('AC1: Notes from multiple courses are surfaced in a mixed sequence', async ({
-    page,
-  }) => {
+  test('AC1: Notes from multiple courses are surfaced in a mixed sequence', async ({ page }) => {
     await seedMultiCourseData(page)
     await page.goto('/review/interleaved')
 
@@ -115,9 +114,7 @@ test.describe('E11-S05: Interleaved Review Mode', () => {
     await expect(page.getByTestId('interleaved-progress')).toContainText('1 / 3')
   })
 
-  test('AC2: Card-flip interface shows prompt on front, content on back', async ({
-    page,
-  }) => {
+  test('AC2: Card-flip interface shows prompt on front, content on back', async ({ page }) => {
     await seedMultiCourseData(page)
     await page.goto('/review/interleaved')
 

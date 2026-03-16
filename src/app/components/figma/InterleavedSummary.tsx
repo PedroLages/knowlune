@@ -38,9 +38,7 @@ export function InterleavedSummary({
                 <CheckCircle2 className="size-6" />
               </div>
               <h2 className="font-display text-xl tracking-tight">Session Complete</h2>
-              <p className="text-sm text-muted-foreground">
-                Great work reviewing your notes!
-              </p>
+              <p className="text-sm text-muted-foreground">Great work reviewing your notes!</p>
             </div>
 
             {/* Stats grid */}
@@ -67,11 +65,7 @@ export function InterleavedSummary({
                 </p>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {summary.courseNames.map(name => (
-                    <Badge
-                      key={name}
-                      variant="secondary"
-                      className="text-[10px] leading-tight"
-                    >
+                    <Badge key={name} variant="secondary" className="text-[10px] leading-tight">
                       {name}
                     </Badge>
                   ))}
@@ -124,11 +118,7 @@ export function InterleavedSummary({
 
             {/* Actions */}
             <div className="flex w-full gap-3">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={onReturnToQueue}
-              >
+              <Button variant="outline" className="flex-1" onClick={onReturnToQueue}>
                 Back to Queue
               </Button>
               <Button
@@ -168,9 +158,7 @@ function RatingBar({
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className="w-4 text-right text-[10px] tabular-nums text-muted-foreground">
-        {count}
-      </span>
+      <span className="w-4 text-right text-[10px] tabular-nums text-muted-foreground">{count}</span>
     </div>
   )
 }

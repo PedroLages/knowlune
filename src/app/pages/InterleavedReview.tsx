@@ -79,10 +79,7 @@ export function InterleavedReview() {
     return map
   }, [notes])
 
-  const courseNameMap = useMemo(
-    () => buildCourseNameMap(importedCourses),
-    [importedCourses]
-  )
+  const courseNameMap = useMemo(() => buildCourseNameMap(importedCourses), [importedCourses])
 
   // Load data on mount
   useEffect(() => {
@@ -118,9 +115,7 @@ export function InterleavedReview() {
 
     // Check unique courses among due notes
     const courseIds = new Set(
-      dueReviews
-        .map(r => noteMap.get(r.noteId)?.courseId)
-        .filter(Boolean) as string[]
+      dueReviews.map(r => noteMap.get(r.noteId)?.courseId).filter(Boolean) as string[]
     )
 
     if (courseIds.size <= 1) {
@@ -146,8 +141,7 @@ export function InterleavedReview() {
       setIsFlipped(false)
 
       // Check if session is complete
-      const { interleavedIndex: nextIndex, interleavedQueue: queue } =
-        useReviewStore.getState()
+      const { interleavedIndex: nextIndex, interleavedQueue: queue } = useReviewStore.getState()
       if (nextIndex >= queue.length) {
         const sessionSummary = endInterleavedSession(courseNameMap)
         setSummary(sessionSummary)
@@ -221,7 +215,8 @@ export function InterleavedReview() {
             <EmptyHeader>
               <EmptyTitle>No notes due for review</EmptyTitle>
               <EmptyDescription>
-                Rate notes after studying to build your review queue, then come back for interleaved practice.
+                Rate notes after studying to build your review queue, then come back for interleaved
+                practice.
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -240,8 +235,8 @@ export function InterleavedReview() {
               <AlertDialogTitle>Single Course Detected</AlertDialogTitle>
               <AlertDialogDescription>
                 Interleaved review works best with notes from multiple courses — mixing topics
-                strengthens cross-topic connections and improves retention. You currently have
-                notes due from only one course.
+                strengthens cross-topic connections and improves retention. You currently have notes
+                due from only one course.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -276,7 +271,7 @@ export function InterleavedReview() {
   const currentRecord = interleavedQueue[interleavedIndex]
   const currentNote = currentRecord ? noteMap.get(currentRecord.noteId) : null
   const currentCourseName = currentNote
-    ? courseNameMap.get(currentNote.courseId) ?? 'Unknown Course'
+    ? (courseNameMap.get(currentNote.courseId) ?? 'Unknown Course')
     : ''
   const total = interleavedQueue.length
   const current = interleavedIndex + 1
@@ -308,11 +303,25 @@ export function InterleavedReview() {
             {current} / {total}
           </span>
           <span className="text-xs">
-            Press <kbd className="rounded border border-border bg-muted px-1 py-0.5 text-[10px]">Space</kbd> to flip
+            Press{' '}
+            <kbd className="rounded border border-border bg-muted px-1 py-0.5 text-[10px]">
+              Space
+            </kbd>{' '}
+            to flip
             {isFlipped && (
-              <>, <kbd className="rounded border border-border bg-muted px-1 py-0.5 text-[10px]">1</kbd>
-              <kbd className="rounded border border-border bg-muted px-1 py-0.5 text-[10px]">2</kbd>
-              <kbd className="rounded border border-border bg-muted px-1 py-0.5 text-[10px]">3</kbd> to rate</>
+              <>
+                ,{' '}
+                <kbd className="rounded border border-border bg-muted px-1 py-0.5 text-[10px]">
+                  1
+                </kbd>
+                <kbd className="rounded border border-border bg-muted px-1 py-0.5 text-[10px]">
+                  2
+                </kbd>
+                <kbd className="rounded border border-border bg-muted px-1 py-0.5 text-[10px]">
+                  3
+                </kbd>{' '}
+                to rate
+              </>
             )}
           </span>
         </div>

@@ -141,7 +141,11 @@ export function InterleavedCard({
             data-testid="interleaved-card-back"
             aria-hidden={!isFlipped}
             className="absolute inset-0"
-            style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)', visibility: isFlipped ? 'visible' : 'hidden' }}
+            style={{
+              backfaceVisibility: 'hidden',
+              transform: 'rotateY(180deg)',
+              visibility: isFlipped ? 'visible' : 'hidden',
+            }}
           >
             <Card className="h-full rounded-[24px] shadow-lg">
               <CardContent className="flex h-full flex-col gap-4 p-6">
