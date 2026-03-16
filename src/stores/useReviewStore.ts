@@ -1,13 +1,23 @@
 import { create } from 'zustand'
 import { toast } from 'sonner'
 import { db } from '@/db'
-import type { ReviewRating, ReviewRecord } from '@/data/types'
+import type { ReviewRating, ReviewRecord, Note } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { calculateNextReview, predictRetention, isDue } from '@/lib/spacedRepetition'
+import { interleaveReviews } from '@/lib/interleave'
 
 interface PendingRating {
   noteId: string
   rating: ReviewRating
+}
+
+export interface InterleavedSessionSummary {
+  totalReviewed: number
+  ratings: { hard: number; good: number; easy: number }
+  coursesCount: number
+  courseNames: string[]
+  averageRetentionBefore: number
+  averageRetentionAfter: number
 }
 
 interface ReviewState {
@@ -16,11 +26,29 @@ interface ReviewState {
   error: string | null
   pendingRating: PendingRating | null
 
+  // Interleaved session state
+  interleavedQueue: ReviewRecord[]
+  interleavedIndex: number
+  interleavedRatings: ReviewRating[]
+  interleavedCourseIds: string[]
+  interleavedRetentionsBefore: number[]
+  isInterleavedActive: boolean
+
   loadReviews: () => Promise<void>
-  rateNote: (noteId: string, rating: ReviewRating, now?: Date) => Promise<void>
+  rateNote: (noteId: string, rating: ReviewRating, now?: Date) => Promise<boolean>
   retryPendingRating: () => Promise<void>
   getDueReviews: (now?: Date) => ReviewRecord[]
   getNextReviewDate: () => string | null
+
+  // Interleaved session actions
+  startInterleavedSession: (noteMap: Map<string, Note>, now?: Date) => void
+  rateInterleavedNote: (
+    rating: ReviewRating,
+    noteMap: Map<string, Note>,
+    now?: Date
+  ) => Promise<void>
+  endInterleavedSession: (courseNameMap: Map<string, string>) => InterleavedSessionSummary
+  resetInterleavedSession: () => void
 }
 
 export const useReviewStore = create<ReviewState>((set, get) => ({
@@ -28,6 +56,14 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
   isLoading: false,
   error: null,
   pendingRating: null,
+
+  // Interleaved session defaults
+  interleavedQueue: [],
+  interleavedIndex: 0,
+  interleavedRatings: [],
+  interleavedCourseIds: [],
+  interleavedRetentionsBefore: [],
+  isInterleavedActive: false,
 
   loadReviews: async () => {
     set({ isLoading: true, error: null })
@@ -71,6 +107,7 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
       await persistWithRetry(async () => {
         await db.reviewRecords.put(updatedRecord)
       })
+      return true
     } catch (error) {
       // Rollback optimistic update, preserve rating in memory for retry (AC5)
       set({
@@ -88,6 +125,7 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
           },
         },
       })
+      return false
     }
   },
 
@@ -113,5 +151,119 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
       (a, b) => new Date(a.nextReviewAt).getTime() - new Date(b.nextReviewAt).getTime()
     )
     return sorted[0].nextReviewAt
+  },
+
+  // --- Interleaved session actions ---
+
+  startInterleavedSession: (noteMap: Map<string, Note>, now: Date = new Date()) => {
+    const dueReviews = get().getDueReviews(now)
+    const queue = interleaveReviews(dueReviews, noteMap, now)
+
+    // Pre-compute retention before review for summary
+    const retentionsBefore = queue.map(r => predictRetention(r, now))
+
+    // Collect unique course IDs from the queue
+    const courseIds = [
+      ...new Set(queue.map(r => noteMap.get(r.noteId)?.courseId).filter(Boolean) as string[]),
+    ]
+
+    set({
+      interleavedQueue: queue,
+      interleavedIndex: 0,
+      interleavedRatings: [],
+      interleavedCourseIds: courseIds,
+      interleavedRetentionsBefore: retentionsBefore,
+      isInterleavedActive: true,
+    })
+  },
+
+  rateInterleavedNote: async (
+    rating: ReviewRating,
+    noteMap: Map<string, Note>,
+    now: Date = new Date()
+  ) => {
+    const { interleavedQueue, interleavedIndex, interleavedRatings, interleavedCourseIds } = get()
+    const currentRecord = interleavedQueue[interleavedIndex]
+    if (!currentRecord) return
+
+    // Delegate to existing rateNote for persistence + optimistic update
+    const success = await get().rateNote(currentRecord.noteId, rating, now)
+    if (!success) return // Don't advance — let user retry via toast
+
+    // Track the course for this card
+    const note = noteMap.get(currentRecord.noteId)
+    const courseId = note?.courseId
+    const updatedCourseIds =
+      courseId && !interleavedCourseIds.includes(courseId)
+        ? [...interleavedCourseIds, courseId]
+        : interleavedCourseIds
+
+    set({
+      interleavedIndex: interleavedIndex + 1,
+      interleavedRatings: [...interleavedRatings, rating],
+      interleavedCourseIds: updatedCourseIds,
+    })
+  },
+
+  endInterleavedSession: (courseNameMap: Map<string, string>) => {
+    const { interleavedRatings, interleavedCourseIds, interleavedRetentionsBefore } = get()
+
+    const ratings = { hard: 0, good: 0, easy: 0 }
+    for (const r of interleavedRatings) {
+      ratings[r]++
+    }
+
+    const avgBefore =
+      interleavedRetentionsBefore.length > 0
+        ? interleavedRetentionsBefore.reduce((a, b) => a + b, 0) /
+          interleavedRetentionsBefore.length
+        : 0
+
+    // Compute actual post-review retention from updated records
+    const { allReviews, interleavedQueue } = get()
+    const reviewed = interleavedRatings.length
+    const total = interleavedRetentionsBefore.length
+    const now = new Date()
+    let reviewedRetentionSum = 0
+    for (let i = 0; i < reviewed; i++) {
+      const record = allReviews.find(r => r.noteId === interleavedQueue[i]?.noteId)
+      reviewedRetentionSum += record ? predictRetention(record, now) : 95
+    }
+    const unreviewedRetentionSum = (total - reviewed) * avgBefore
+    const avgAfter = total > 0 ? (reviewedRetentionSum + unreviewedRetentionSum) / total : 95
+
+    const courseNames = interleavedCourseIds.map(id => courseNameMap.get(id) ?? 'Unknown Course')
+
+    const summary: InterleavedSessionSummary = {
+      totalReviewed: reviewed,
+      ratings,
+      coursesCount: interleavedCourseIds.length,
+      courseNames,
+      averageRetentionBefore: Math.round(avgBefore),
+      averageRetentionAfter: Math.round(avgAfter),
+    }
+
+    // Reset session state
+    set({
+      interleavedQueue: [],
+      interleavedIndex: 0,
+      interleavedRatings: [],
+      interleavedCourseIds: [],
+      interleavedRetentionsBefore: [],
+      isInterleavedActive: false,
+    })
+
+    return summary
+  },
+
+  resetInterleavedSession: () => {
+    set({
+      interleavedQueue: [],
+      interleavedIndex: 0,
+      interleavedRatings: [],
+      interleavedCourseIds: [],
+      interleavedRetentionsBefore: [],
+      isInterleavedActive: false,
+    })
   },
 }))
