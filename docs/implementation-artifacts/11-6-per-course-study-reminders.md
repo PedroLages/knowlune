@@ -258,4 +258,8 @@ Report: docs/reviews/design/web-design-guidelines-2026-03-16-e11-s06.md
 
 ## Challenges and Lessons Learned
 
-Story setup phase — lessons will be documented during implementation.
+- **Notification click handlers are not automatic.** `new Notification()` with `data: { url }` does nothing on click — you must attach an `onclick` handler explicitly. The `data` property is inert storage, not a behavior trigger. Caught by code review as a blocker.
+- **Async event handlers need try/catch without exception.** Five async handlers were missing error handling. Dexie writes can fail (quota, corruption), and without try/catch the promise rejection is silent. Pattern: wrap every async onClick/onChange in try/catch and surface errors.
+- **Permission re-activation gap.** The scheduler initially gated on `Notification.permission === 'granted'` at mount time only. If a user saves reminders without permission (AC4 allows this), then grants permission later, the scheduler never starts until full page reload. Fix: re-check permission on each interval tick.
+- **`shouldFireReminder` window must exceed interval.** A 1-minute check window with a 60-second interval can miss reminders if the JS event loop delays a tick. Widened to 2-minute tolerance for background tab throttling.
+- **Clean component decomposition pays off.** Splitting into DaySelector, CourseReminderRow, and CourseReminderSettings kept each file under 200 lines and made review findings easy to address in isolation.
