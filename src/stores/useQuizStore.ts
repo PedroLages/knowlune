@@ -136,10 +136,7 @@ export const useQuizStore = create<QuizState>()(
       },
 
       loadAttempts: async (quizId: string) => {
-        const attempts = await db.quizAttempts
-          .where('quizId')
-          .equals(quizId)
-          .sortBy('completedAt')
+        const attempts = await db.quizAttempts.where('quizId').equals(quizId).sortBy('completedAt')
         set({ attempts })
       },
 
@@ -168,7 +165,7 @@ export const useQuizStore = create<QuizState>()(
     }),
     {
       name: 'levelup-quiz-store',
-      partialize: (state) => ({ currentProgress: state.currentProgress }),
+      partialize: state => ({ currentProgress: state.currentProgress }),
     }
   )
 )

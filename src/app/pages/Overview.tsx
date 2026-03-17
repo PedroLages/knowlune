@@ -52,8 +52,14 @@ export function Overview() {
 
   // Memoize progress calculations to prevent recalculation on every render
   const allProgress = useMemo(() => getAllProgress(), [])
-  const inProgress = useMemo(() => getCoursesInProgress(allCourses, allProgress), [allCourses, allProgress])
-  const completed = useMemo(() => getCompletedCourses(allCourses, allProgress), [allCourses, allProgress])
+  const inProgress = useMemo(
+    () => getCoursesInProgress(allCourses, allProgress),
+    [allCourses, allProgress]
+  )
+  const completed = useMemo(
+    () => getCompletedCourses(allCourses, allProgress),
+    [allCourses, allProgress]
+  )
   const completedLessons = useMemo(() => getTotalCompletedLessons(allProgress), [allProgress])
   const [studyNotes, setStudyNotes] = useState(0)
 

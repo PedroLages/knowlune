@@ -24,10 +24,7 @@ export function ReviewQueue() {
   const allCourses = useCourseStore(s => s.courses)
 
   /** Map courseId → course title for display. */
-  const courseNameMap = useMemo(
-    () => new Map(allCourses.map(c => [c.id, c.title])),
-    [allCourses]
-  )
+  const courseNameMap = useMemo(() => new Map(allCourses.map(c => [c.id, c.title])), [allCourses])
 
   const getCourseName = useCallback(
     (courseId: string): string => courseNameMap.get(courseId) ?? 'Unknown Course',

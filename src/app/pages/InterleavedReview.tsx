@@ -84,7 +84,10 @@ export function InterleavedReview() {
     return map
   }, [notes])
 
-  const courseNameMap = useMemo(() => buildCourseNameMap(allCourses, importedCourses), [allCourses, importedCourses])
+  const courseNameMap = useMemo(
+    () => buildCourseNameMap(allCourses, importedCourses),
+    [allCourses, importedCourses]
+  )
 
   // Refresh `now` every 60s so retention percentages stay current during long sessions
   useEffect(() => {

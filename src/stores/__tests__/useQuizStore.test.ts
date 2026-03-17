@@ -504,7 +504,11 @@ describe('persist partialize', () => {
     // The store name and partialize are defined at module level — we verify
     // that attempts and currentQuiz are NOT in the persisted state shape
     // by checking the store's persist API directly.
-    const persistApi = (useQuizStore as unknown as { persist: { getOptions: () => { partialize: (s: unknown) => unknown; name: string } } }).persist
+    const persistApi = (
+      useQuizStore as unknown as {
+        persist: { getOptions: () => { partialize: (s: unknown) => unknown; name: string } }
+      }
+    ).persist
 
     if (persistApi) {
       const options = persistApi.getOptions()
