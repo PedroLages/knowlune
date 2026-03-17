@@ -487,9 +487,6 @@ export function Layout() {
         </main>
       </div>
 
-      {/* First-Use Onboarding */}
-      <OnboardingOverlay />
-
       {/* Search Command Palette */}
       <SearchCommandPalette open={searchOpen} onOpenChange={setSearchOpen} />
 
