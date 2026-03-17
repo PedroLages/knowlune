@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import Dexie from 'dexie'
+import Dexie, { type Table } from 'dexie'
+import type { Quiz, QuizAttempt } from '@/types/quiz'
 import { createChallenge } from '../../../tests/support/fixtures/factories/challenge-factory'
 
 // Must import after fake-indexeddb/auto polyfill is active
@@ -61,14 +62,16 @@ describe('ElearningDB schema', () => {
       'learningPath',
       'notes',
       'progress',
+      'quizAttempts',
+      'quizzes',
       'reviewRecords',
       'screenshots',
       'studySessions',
     ])
   })
 
-  it('should be at version 16', () => {
-    expect(db.verno).toBe(16)
+  it('should be at version 17', () => {
+    expect(db.verno).toBe(17)
   })
 })
 
@@ -398,5 +401,82 @@ describe('v4 migration from localStorage', () => {
 
     // Clean up
     localStorage.removeItem('course-progress')
+  })
+})
+
+describe('quizzes table', () => {
+  function makeQuiz(overrides: Record<string, unknown> = {}): Quiz {
+    return {
+      id: crypto.randomUUID(),
+      lessonId: crypto.randomUUID(),
+      title: 'Test Quiz',
+      description: 'A test quiz',
+      questions: [],
+      timeLimit: null,
+      passingScore: 70,
+      allowRetakes: true,
+      shuffleQuestions: false,
+      shuffleAnswers: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      ...overrides,
+    } as Quiz
+  }
+
+  it('should add and retrieve a quiz', async () => {
+    const quiz = makeQuiz()
+    await db.quizzes.add(quiz)
+    const retrieved = await db.quizzes.get(quiz.id)
+    expect(retrieved).toBeDefined()
+    expect(retrieved!.title).toBe('Test Quiz')
+  })
+
+  it('should query by lessonId index', async () => {
+    const lessonId = crypto.randomUUID()
+    await db.quizzes.add(makeQuiz({ lessonId }))
+    const results = await db.quizzes.where('lessonId').equals(lessonId).toArray()
+    expect(results).toHaveLength(1)
+    expect(results[0].lessonId).toBe(lessonId)
+  })
+})
+
+describe('quizAttempts table', () => {
+  function makeAttempt(overrides: Record<string, unknown> = {}): QuizAttempt {
+    return {
+      id: crypto.randomUUID(),
+      quizId: crypto.randomUUID(),
+      answers: [],
+      score: 80,
+      percentage: 80,
+      passed: true,
+      timeSpent: 120,
+      completedAt: new Date().toISOString(),
+      startedAt: new Date().toISOString(),
+      timerAccommodation: 'standard',
+      ...overrides,
+    } as QuizAttempt
+  }
+
+  it('should add and retrieve an attempt', async () => {
+    const attempt = makeAttempt()
+    await db.quizAttempts.add(attempt)
+    const retrieved = await db.quizAttempts.get(attempt.id)
+    expect(retrieved).toBeDefined()
+    expect(retrieved!.score).toBe(80)
+  })
+
+  it('should query attempts by quizId using compound index', async () => {
+    const quizId = crypto.randomUUID()
+    const t1 = new Date('2024-01-01').toISOString()
+    const t2 = new Date('2024-01-02').toISOString()
+    await db.quizAttempts.bulkAdd([
+      makeAttempt({ quizId, completedAt: t1 }),
+      makeAttempt({ quizId, completedAt: t2 }),
+    ])
+    const results = await (db.quizAttempts as unknown as Table).where('[quizId+completedAt]')
+      .between([quizId, Dexie.minKey], [quizId, Dexie.maxKey])
+      .toArray()
+    expect(results).toHaveLength(2)
+    expect(results[results.length - 1].completedAt).toBe(t2)
   })
 })
