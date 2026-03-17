@@ -8,8 +8,8 @@ import { calculateMomentumScore } from '@/lib/momentum'
 import { computeStudySchedule } from '@/lib/studySchedule'
 import type { StudyScheduleResult, CourseWithMomentum } from '@/lib/studySchedule'
 import { useSessionStore } from '@/stores/useSessionStore'
-import type { StudySession } from '@/data/types'
-import { allCourses } from '@/data/courses'
+import type { StudySession, Course } from '@/data/types'
+import { useCourseStore } from '@/stores/useCourseStore'
 import { Progress } from '@/app/components/ui/progress'
 
 function formatHour(hour: number): string {
@@ -26,7 +26,7 @@ function formatDuration(minutes: number): string {
   return `${h}h ${m}m`
 }
 
-function buildActiveCoursesWithMomentum(sessions: StudySession[]): CourseWithMomentum[] {
+function buildActiveCoursesWithMomentum(sessions: StudySession[], allCourses: Course[]): CourseWithMomentum[] {
   return allCourses
     .map(course => {
       const completionPercent = getCourseCompletionPercent(course.id, course.totalLessons)
@@ -47,16 +47,17 @@ function buildActiveCoursesWithMomentum(sessions: StudySession[]): CourseWithMom
 
 export function StudyScheduleWidget() {
   const [schedule, setSchedule] = useState<StudyScheduleResult | null>(null)
+  const allCourses = useCourseStore(s => s.courses)
   // Subscribe reactively so refresh captures fresh sessions whenever the store updates
   const sessions = useSessionStore(state => state.sessions)
 
   const refresh = useCallback(() => {
     const studyLog = getStudyLog()
     const goal = getStudyGoal()
-    const activeCourses = buildActiveCoursesWithMomentum(sessions)
+    const activeCourses = buildActiveCoursesWithMomentum(sessions, allCourses)
     const result = computeStudySchedule({ studyLog, goal, activeCourses })
     setSchedule(result)
-  }, [sessions])
+  }, [sessions, allCourses])
 
   useEffect(() => {
     refresh()

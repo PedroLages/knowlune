@@ -1,5 +1,5 @@
 import { BookOpen, Video, FileText, Play, FileDown } from 'lucide-react'
-import { allCourses } from '@/data/courses'
+import { useCourseStore } from '@/stores/useCourseStore'
 import { getRecentActions, type StudyAction } from '@/lib/studyLog'
 import { Badge } from '@/app/components/ui/badge'
 
@@ -91,6 +91,7 @@ interface RecentActivityTimelineProps {
 }
 
 export function RecentActivityTimeline({ limit = 8 }: RecentActivityTimelineProps) {
+  const allCourses = useCourseStore(s => s.courses)
   const actions = getRecentActions(limit)
 
   if (actions.length === 0) {

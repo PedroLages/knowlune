@@ -17,18 +17,22 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from '@/app/components/ui/empty'
-import { allCourses } from '@/data/courses'
+import { useCourseStore } from '@/stores/useCourseStore'
 import type { Note, ReviewRating } from '@/data/types'
 
-/** Map courseId → course title for display.
- *  Note: only covers static courses — imported courses not yet supported. */
-const courseNameMap = new Map(allCourses.map(c => [c.id, c.title]))
-
-function getCourseName(courseId: string): string {
-  return courseNameMap.get(courseId) ?? 'Unknown Course'
-}
-
 export function ReviewQueue() {
+  const allCourses = useCourseStore(s => s.courses)
+
+  /** Map courseId → course title for display. */
+  const courseNameMap = useMemo(
+    () => new Map(allCourses.map(c => [c.id, c.title])),
+    [allCourses]
+  )
+
+  const getCourseName = useCallback(
+    (courseId: string): string => courseNameMap.get(courseId) ?? 'Unknown Course',
+    [courseNameMap]
+  )
   const { allReviews, isLoading, loadReviews, rateNote } = useReviewStore()
   const { notes, loadNotes } = useNoteStore()
 

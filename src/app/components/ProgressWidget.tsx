@@ -1,7 +1,8 @@
-import { allCourses } from '@/data/courses'
+import { useCourseStore } from '@/stores/useCourseStore'
 import { getTotalCompletedLessons, getCompletedCourses } from '@/lib/progress'
 
 export function ProgressWidget() {
+  const allCourses = useCourseStore(s => s.courses)
   const completedCourses = getCompletedCourses(allCourses).length
   const totalCourses = allCourses.length
   const completedLessons = getTotalCompletedLessons()

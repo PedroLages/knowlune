@@ -15,7 +15,7 @@ import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
 import { TopicFilter } from '@/app/components/figma/TopicFilter'
 import { StatusFilter } from '@/app/components/figma/StatusFilter'
 import { Search, FolderOpen, Loader2 } from 'lucide-react'
-import { allCourses } from '@/data/courses'
+import { useCourseStore } from '@/stores/useCourseStore'
 import { getCourseCompletionPercent, getProgress } from '@/lib/progress'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { importCourseFromFolder } from '@/lib/courseImport'
@@ -42,6 +42,7 @@ const tabs: { value: string; label: string; category?: CourseCategory }[] = [
 type SortMode = 'recent' | 'momentum'
 
 export function Courses() {
+  const allCourses = useCourseStore(s => s.courses)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState('all')
   const [selectedTopics, setSelectedTopics] = useState<string[]>([])
@@ -134,7 +135,7 @@ export function Courses() {
       ignore = true
       window.removeEventListener('study-log-updated', handleStudyLogUpdated)
     }
-  }, [])
+  }, [allCourses])
 
   const filtered = (() => {
     let courses = allCourses

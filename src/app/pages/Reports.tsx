@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/ta
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area } from 'recharts'
 import { MotionConfig, motion } from 'motion/react'
 import { format } from 'date-fns'
-import { allCourses } from '@/data/courses'
+import { useCourseStore } from '@/stores/useCourseStore'
 import {
   getCoursesInProgress,
   getCompletedCourses,
@@ -60,6 +60,7 @@ const areaChartConfig = {
 /* ------------------------------------------------------------------ */
 
 export default function Reports() {
+  const allCourses = useCourseStore(s => s.courses)
   const [studyNotes, setStudyNotes] = useState(0)
 
   useEffect(() => {
@@ -93,8 +94,8 @@ export default function Reports() {
   }, [])
 
   const completedLessons = useMemo(() => getTotalCompletedLessons(), [])
-  const inProgressCount = useMemo(() => getCoursesInProgress(allCourses).length, [])
-  const completedCount = useMemo(() => getCompletedCourses(allCourses).length, [])
+  const inProgressCount = useMemo(() => getCoursesInProgress(allCourses).length, [allCourses])
+  const completedCount = useMemo(() => getCompletedCourses(allCourses).length, [allCourses])
 
   // ── Stats cards (reuse StatsCard component from Overview) ──
   const statsCards = useMemo(

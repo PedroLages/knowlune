@@ -6,11 +6,7 @@ import { buttonVariants } from '@/app/components/ui/button'
 import { cn } from '@/app/components/ui/utils'
 import { getMonthStudyData, type DayStudyData } from '@/lib/studyCalendar'
 import { toLocalDateString } from '@/lib/dateUtils'
-import { allCourses } from '@/data/courses'
-
-function getCourseNameMap() {
-  return new Map(allCourses.map(c => [c.id, c.title]))
-}
+import { useCourseStore } from '@/stores/useCourseStore'
 
 function formatTime(timestamp: string): string {
   return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -73,7 +69,8 @@ export function StudyHistoryCalendar() {
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
   const [popoverOpen, setPopoverOpen] = useState(false)
   const anchorRef = useRef<HTMLDivElement>(null)
-  const courseNameMap = useMemo(() => getCourseNameMap(), [])
+  const allCourses = useCourseStore(s => s.courses)
+  const courseNameMap = useMemo(() => new Map(allCourses.map(c => [c.id, c.title])), [allCourses])
 
   const refreshData = useCallback(() => {
     const data = getMonthStudyData(month.getFullYear(), month.getMonth() + 1)

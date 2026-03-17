@@ -17,13 +17,14 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/ta
 import { ModuleAccordion } from '@/app/components/figma/ModuleAccordion'
 import { CourseNotesTab } from '@/app/components/notes/CourseNotesTab'
 import { categoryLabels, categoryColors } from '@/app/components/figma/CourseCard'
-import { allCourses } from '@/data/courses'
+import { useCourseStore } from '@/stores/useCourseStore'
 import { getInstructorById } from '@/data/instructors'
 import { getAvatarSrc } from '@/lib/instructors'
 import { getProgress, getCourseCompletionPercent } from '@/lib/progress'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 
 export function CourseDetail() {
+  const allCourses = useCourseStore(s => s.courses)
   const { courseId } = useParams<{ courseId: string }>()
   const course = allCourses.find(c => c.id === courseId)
   // Subscribe to statusMap changes to trigger re-render when content status updates

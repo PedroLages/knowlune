@@ -5,7 +5,7 @@ import { Button } from '@/app/components/ui/button'
 import { computeNextCourseSuggestion } from '@/lib/suggestions'
 import { getAllProgress } from '@/lib/progress'
 import { useSuggestionStore } from '@/stores/useSuggestionStore'
-import { allCourses } from '@/data/courses'
+import { useCourseStore } from '@/stores/useCourseStore'
 
 interface NextCourseSuggestionProps {
   completedCourseId: string
@@ -19,6 +19,7 @@ interface NextCourseSuggestionProps {
  */
 export function NextCourseSuggestion({ completedCourseId, onDismiss }: NextCourseSuggestionProps) {
   const navigate = useNavigate()
+  const allCourses = useCourseStore(s => s.courses)
   const { isDismissed, dismiss } = useSuggestionStore()
   const cardRef = useRef<HTMLDivElement>(null)
 

@@ -1,9 +1,9 @@
-import { allCourses } from '@/data/courses'
+import { useCourseStore } from '@/stores/useCourseStore'
 import { getInstructorById } from '@/data/instructors'
 import type { Course, Instructor } from '@/data/types'
 
 export function getInstructorStats(instructor: Instructor) {
-  const courses = allCourses.filter(c => c.instructorId === instructor.id)
+  const courses = useCourseStore.getState().courses.filter(c => c.instructorId === instructor.id)
   return {
     courses,
     courseCount: courses.length,

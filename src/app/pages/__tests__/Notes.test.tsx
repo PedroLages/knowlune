@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
+import { useCourseStore } from '@/stores/useCourseStore'
 
 vi.mock('motion/react', async importOriginal => {
   const actual = await importOriginal<typeof import('motion/react')>()
@@ -9,34 +10,6 @@ vi.mock('motion/react', async importOriginal => {
     useReducedMotion: () => false,
   }
 })
-
-vi.mock('@/data/courses', () => ({
-  allCourses: [
-    {
-      id: 'c1',
-      title: 'Test Course',
-      shortTitle: 'Test',
-      description: 'desc',
-      category: 'general',
-      difficulty: 'Beginner',
-      totalLessons: 2,
-      totalVideos: 2,
-      totalPDFs: 0,
-      estimatedHours: 1,
-      tags: [],
-      modules: [
-        {
-          id: 'm1',
-          title: 'Module 1',
-          lessons: [{ id: 'l1', title: 'Lesson 1', type: 'video' }],
-        },
-      ],
-      isSequential: false,
-      basePath: '/test',
-      instructorId: 'i1',
-    },
-  ],
-}))
 
 vi.mock('@/stores/useNoteStore', () => ({
   useNoteStore: (selector: (state: Record<string, unknown>) => unknown) =>
@@ -73,6 +46,41 @@ vi.mock('@/app/components/notes/ReadOnlyContent', () => ({
 }))
 
 import { Notes } from '../Notes'
+
+beforeEach(() => {
+  useCourseStore.setState({
+    courses: [
+      {
+        id: 'c1',
+        title: 'Test Course',
+        shortTitle: 'Test',
+        description: 'desc',
+        category: 'general',
+        difficulty: 'Beginner',
+        totalLessons: 2,
+        totalVideos: 2,
+        totalPDFs: 0,
+        estimatedHours: 1,
+        tags: [],
+        modules: [
+          {
+            id: 'm1',
+            title: 'Module 1',
+            lessons: [{ id: 'l1', title: 'Lesson 1', type: 'video' }],
+          },
+        ],
+        isSequential: false,
+        basePath: '/test',
+        instructorId: 'i1',
+      },
+    ],
+    isLoaded: true,
+  })
+})
+
+afterEach(() => {
+  useCourseStore.setState({ courses: [], isLoaded: false })
+})
 
 function renderNotes() {
   return render(

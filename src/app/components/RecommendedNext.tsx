@@ -7,7 +7,7 @@ import { CourseCard } from '@/app/components/figma/CourseCard'
 import { useSessionStore } from '@/stores/useSessionStore'
 import { getAllProgress, invalidateProgressCache, PROGRESS_UPDATED_EVENT } from '@/lib/progress'
 import { getRecommendedCourses } from '@/lib/recommendations'
-import { allCourses } from '@/data/courses'
+import { useCourseStore } from '@/stores/useCourseStore'
 
 export function RecommendedNextSkeleton() {
   return (
@@ -54,6 +54,7 @@ function EmptyState() {
 }
 
 export function RecommendedNext() {
+  const allCourses = useCourseStore(s => s.courses)
   const { loadSessionStats, sessions, isLoading } = useSessionStore()
   // Bump when course-progress changes in localStorage so rankings stay fresh
   // after lesson completions even without a new study session.
@@ -97,7 +98,7 @@ export function RecommendedNext() {
     }
 
     return getRecommendedCourses(allCourses, allProgress, sessionCountsPerCourse, 3)
-  }, [sessions, progressTick])
+  }, [sessions, progressTick, allCourses])
 
   if (isLoading) {
     return (

@@ -1,4 +1,4 @@
-import { allCourses } from '@/data/courses'
+import { useCourseStore } from '@/stores/useCourseStore'
 import {
   getAllProgress,
   getCourseCompletionPercent,
@@ -49,6 +49,7 @@ function formatCategoryLabel(slug: string): string {
 }
 
 export function getCategoryCompletionForRadar(): CategoryRadarData[] {
+  const allCourses = useCourseStore.getState().courses
   const categoryMap: Record<string, { totalCompletion: number; count: number }> = {}
 
   for (const course of allCourses) {
@@ -81,6 +82,7 @@ export interface CourseCompletionData {
 }
 
 export function getCourseCompletionData(): CourseCompletionData[] {
+  const allCourses = useCourseStore.getState().courses
   return allCourses
     .map(c => ({
       name: c.title,
@@ -95,6 +97,7 @@ export function getCourseCompletionData(): CourseCompletionData[] {
 
 /** Map category names to chart color tokens */
 export function getCategoryColorMap(): Record<string, string> {
+  const allCourses = useCourseStore.getState().courses
   const categories = [...new Set(allCourses.map(c => c.category))]
   const colors = [
     'var(--chart-1)',
@@ -121,6 +124,7 @@ export interface SkillDimension {
 }
 
 export function computeSkillsDimensions(): SkillDimension[] {
+  const allCourses = useCourseStore.getState().courses
   const allProgress = getAllProgress()
   const totalLessons = allCourses.reduce(
     (sum, c) => sum + c.modules.reduce((s, m) => s + m.lessons.length, 0),

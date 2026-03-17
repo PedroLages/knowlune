@@ -5,7 +5,7 @@ import { motion, useMotionValue, useTransform, useSpring } from 'motion/react'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Progress } from '@/app/components/ui/progress'
 import { Button } from '@/app/components/ui/button'
-import { allCourses } from '@/data/courses'
+import { useCourseStore } from '@/stores/useCourseStore'
 import { getAllProgress, getNotStartedCourses } from '@/lib/progress'
 import type { Course } from '@/data/types'
 import type { CourseProgress } from '@/lib/progress'
@@ -37,7 +37,7 @@ interface SessionResult {
   deleted: DeletedSession[]
 }
 
-function resolveSessionData(allProgress: Record<string, CourseProgress>): SessionResult {
+function resolveSessionData(allProgress: Record<string, CourseProgress>, allCourses: Course[]): SessionResult {
   const resolved: ResolvedSession[] = []
   const deleted: DeletedSession[] = []
 
@@ -287,7 +287,8 @@ function DeletedContentBanner({ count }: { count: number }) {
 }
 
 function DiscoveryState() {
-  const suggested = useMemo(() => getNotStartedCourses(allCourses).slice(0, 3), [])
+  const allCourses = useCourseStore(s => s.courses)
+  const suggested = useMemo(() => getNotStartedCourses(allCourses).slice(0, 3), [allCourses])
 
   return (
     <div className="text-center py-8">
@@ -355,7 +356,8 @@ function DiscoveryState() {
 }
 
 export function ContinueLearning() {
-  const { resolved: sessions, deleted } = useMemo(() => resolveSessionData(getAllProgress()), [])
+  const allCourses = useCourseStore(s => s.courses)
+  const { resolved: sessions, deleted } = useMemo(() => resolveSessionData(getAllProgress(), allCourses), [allCourses])
   const heroSession = sessions[0]
   const otherSessions = sessions.slice(1)
 

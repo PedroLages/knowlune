@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { NextCourseSuggestion } from './NextCourseSuggestion'
 import type { Course } from '@/data/types'
+import { useCourseStore } from '@/stores/useCourseStore'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -35,9 +36,6 @@ vi.mock('@/stores/useSuggestionStore', () => ({
   }),
 }))
 
-vi.mock('@/data/courses', () => ({
-  allCourses: [],
-}))
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -79,6 +77,11 @@ function renderComponent(completedCourseId = 'course-1', onDismiss?: () => void)
 beforeEach(() => {
   vi.clearAllMocks()
   mockIsDismissed.mockReturnValue(false)
+  useCourseStore.setState({ courses: [], isLoaded: true })
+})
+
+afterEach(() => {
+  useCourseStore.setState({ courses: [], isLoaded: false })
 })
 
 describe('NextCourseSuggestion', () => {

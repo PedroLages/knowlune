@@ -12,12 +12,13 @@ import {
 } from '@/app/components/ui/select'
 import { ProgressStats } from '@/app/components/ProgressStats'
 import { CourseCard } from '@/app/components/figma/CourseCard'
-import { allCourses } from '@/data/courses'
+import { useCourseStore } from '@/stores/useCourseStore'
 import { getCoursesInProgress, getCompletedCourses, getNotStartedCourses } from '@/lib/progress'
 
 type SortOption = 'recent' | 'progress-high' | 'progress-low' | 'alpha' | 'time'
 
 export default function MyClass() {
+  const allCourses = useCourseStore(s => s.courses)
   const [sortBy, setSortBy] = useState<SortOption>('recent')
 
   const inProgress = getCoursesInProgress(allCourses)

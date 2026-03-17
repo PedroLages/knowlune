@@ -8,7 +8,7 @@ import { SwissStreakCalendar } from './components/SwissStreakCalendar'
 import { SwissProgressChart } from './components/SwissProgressChart'
 import { SwissCourseCard } from './components/SwissCourseCard'
 import { ComparisonToggle } from './components/ComparisonToggle'
-import { allCourses } from '@/data/courses'
+import { useCourseStore } from '@/stores/useCourseStore'
 import {
   getCoursesInProgress,
   getCompletedCourses,
@@ -22,6 +22,7 @@ import {
 import { getActionsPerDay } from '@/lib/studyLog'
 
 export function SwissOverview() {
+  const allCourses = useCourseStore(s => s.courses)
   const inProgress = getCoursesInProgress(allCourses)
   const completed = getCompletedCourses(allCourses)
   const completedLessons = getTotalCompletedLessons()

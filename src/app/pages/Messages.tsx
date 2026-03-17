@@ -15,9 +15,10 @@ import {
   type JournalEntry,
 } from '@/lib/journal'
 import { getAllProgress } from '@/lib/progress'
-import { allCourses } from '@/data/courses'
+import { useCourseStore } from '@/stores/useCourseStore'
+import type { Course } from '@/data/types'
 
-function getAllLessonNotes(): {
+function getAllLessonNotes(allCourses: Course[]): {
   courseId: string
   courseName: string
   lessonId: string
@@ -55,6 +56,7 @@ function getAllLessonNotes(): {
 }
 
 export default function Messages() {
+  const allCourses = useCourseStore(s => s.courses)
   const [entries, setEntries] = useState<JournalEntry[]>(getJournalEntries())
   const [selectedId, setSelectedId] = useState<string | null>(entries[0]?.id ?? null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -85,7 +87,7 @@ export default function Messages() {
     setSelectedId(updated[0]?.id ?? null)
   }
 
-  const allNotes = getAllLessonNotes()
+  const allNotes = getAllLessonNotes(allCourses)
 
   return (
     <div className="h-full flex flex-col">

@@ -10,12 +10,13 @@ import {
   formatBookmarkTimestamp,
 } from '@/lib/bookmarks'
 import { toastWithUndo, toastError } from '@/lib/toastHelpers'
-import { allCourses } from '@/data/courses'
-import type { VideoBookmark } from '@/data/types'
+import { useCourseStore } from '@/stores/useCourseStore'
+import type { VideoBookmark, Course } from '@/data/types'
 
 function findCourseAndLesson(
   courseId: string,
-  lessonId: string
+  lessonId: string,
+  allCourses: Course[]
 ): { courseTitle: string; lessonTitle: string } {
   const course = allCourses.find(c => c.id === courseId)
   if (!course) return { courseTitle: courseId, lessonTitle: lessonId }
@@ -24,6 +25,7 @@ function findCourseAndLesson(
 }
 
 export function BookmarksSection() {
+  const allCourses = useCourseStore(s => s.courses)
   const navigate = useNavigate()
   const [bookmarks, setBookmarks] = useState<VideoBookmark[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -115,7 +117,8 @@ export function BookmarksSection() {
       {bookmarks.map(bookmark => {
         const { courseTitle, lessonTitle } = findCourseAndLesson(
           bookmark.courseId,
-          bookmark.lessonId
+          bookmark.lessonId,
+          allCourses
         )
         return (
           <div

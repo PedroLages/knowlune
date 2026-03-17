@@ -22,7 +22,8 @@ import {
   CommandShortcut,
 } from '@/app/components/ui/command'
 import { Badge } from '@/app/components/ui/badge'
-import { allCourses } from '@/data/courses'
+import { useCourseStore } from '@/stores/useCourseStore'
+import type { Course } from '@/data/types'
 import { searchNotesWithContext, type NoteSearchResult } from '@/lib/noteSearch'
 import { truncateSnippet, highlightMatches, buildHighlightPatterns } from '@/lib/searchUtils'
 
@@ -103,7 +104,7 @@ const navigationPages: SearchItem[] = [
   },
 ]
 
-function buildSearchIndex(): SearchItem[] {
+function buildSearchIndex(allCourses: Course[]): SearchItem[] {
   const items: SearchItem[] = [...navigationPages]
 
   for (const course of allCourses) {
@@ -148,12 +149,13 @@ interface SearchCommandPaletteProps {
 
 export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPaletteProps) {
   const navigate = useNavigate()
+  const allCourses = useCourseStore(s => s.courses)
   const previouslyFocusedRef = useRef<HTMLElement | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [noteResults, setNoteResults] = useState<NoteSearchResult[]>([])
 
-  const searchIndex = useMemo(() => buildSearchIndex(), [])
+  const searchIndex = useMemo(() => buildSearchIndex(allCourses), [allCourses])
 
   const commandFilter = useCallback((value: string, search: string) => {
     // Note items are managed by MiniSearch — always show them

@@ -41,7 +41,7 @@ import { ResourceBadge } from '../components/figma/ResourceBadge'
 import { NoteEditor } from '../components/notes/NoteEditor'
 import { CompletionModal, type CelebrationType } from '../components/celebrations/CompletionModal'
 import { BookmarksList } from '../components/BookmarksList'
-import { allCourses } from '@/data/courses'
+import { useCourseStore } from '@/stores/useCourseStore'
 import { getResourceUrl } from '@/lib/media'
 import {
   getProgress,
@@ -61,6 +61,7 @@ import { toast } from 'sonner'
 import { captureVideoFrame, saveFrameCapture, type CapturedFrame } from '@/lib/frame-capture'
 
 export function LessonPlayer() {
+  const allCourses = useCourseStore(s => s.courses)
   const { courseId, lessonId } = useParams<{
     courseId: string
     lessonId: string

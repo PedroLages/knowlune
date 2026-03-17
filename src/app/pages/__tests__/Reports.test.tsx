@@ -1,6 +1,7 @@
 import React from 'react'
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { useCourseStore } from '@/stores/useCourseStore'
 
 // ── Mock motion/react ──
 vi.mock('motion/react', () => {
@@ -55,34 +56,7 @@ vi.mock('date-fns', () => ({
   format: (date: Date, _fmt: string) => date.toISOString().slice(0, 10),
 }))
 
-// ── Mock courses data ──
-vi.mock('@/data/courses', () => ({
-  allCourses: [
-    {
-      id: 'c1',
-      title: 'Test Course',
-      shortTitle: 'Test',
-      description: 'desc',
-      category: 'Behavior Analysis',
-      difficulty: 'Beginner',
-      totalLessons: 3,
-      totalVideos: 3,
-      totalPDFs: 0,
-      estimatedHours: 1,
-      tags: [],
-      modules: [
-        {
-          id: 'm1',
-          title: 'Module 1',
-          lessons: [{ id: 'l1', title: 'Lesson 1', type: 'video' }],
-        },
-      ],
-      isSequential: false,
-      basePath: '/test',
-      instructorId: 'i1',
-    },
-  ],
-}))
+// ── Course store setup (replaces vi.mock('@/data/courses')) ──
 
 // ── Mock progress lib ──
 // Return non-zero completedLessons so hasActivity = true and the full UI renders
@@ -181,6 +155,41 @@ vi.mock('recharts', async importOriginal => {
 })
 
 import Reports from '../Reports'
+
+beforeEach(() => {
+  useCourseStore.setState({
+    courses: [
+      {
+        id: 'c1',
+        title: 'Test Course',
+        shortTitle: 'Test',
+        description: 'desc',
+        category: 'Behavior Analysis',
+        difficulty: 'Beginner',
+        totalLessons: 3,
+        totalVideos: 3,
+        totalPDFs: 0,
+        estimatedHours: 1,
+        tags: [],
+        modules: [
+          {
+            id: 'm1',
+            title: 'Module 1',
+            lessons: [{ id: 'l1', title: 'Lesson 1', type: 'video' }],
+          },
+        ],
+        isSequential: false,
+        basePath: '/test',
+        instructorId: 'i1',
+      },
+    ],
+    isLoaded: true,
+  })
+})
+
+afterEach(() => {
+  useCourseStore.setState({ courses: [], isLoaded: false })
+})
 
 describe('Reports page', () => {
   it('renders without crashing', () => {

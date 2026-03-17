@@ -19,6 +19,7 @@ import type { NavigationItem } from '@/app/config/navigation'
 import { getSettings } from '@/lib/settings'
 import { getInitials } from '@/lib/avatarUpload'
 import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
+import { useCourseStore } from '@/stores/useCourseStore'
 import { toast } from 'sonner'
 import { QualityScoreDialog } from './session/QualityScoreDialog'
 import type { QualityScoreResult } from '@/lib/qualityScore'
@@ -177,6 +178,12 @@ export function Layout() {
 
   useStudyReminders()
   useCourseReminders()
+
+  // Ensure courses are loaded from IndexedDB (backup for deferInit race)
+  const loadCourses = useCourseStore(s => s.loadCourses)
+  useEffect(() => {
+    loadCourses()
+  }, [loadCourses])
 
   const isOnline = useOnlineStatus()
   const isInitialRender = useRef(true)

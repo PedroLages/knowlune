@@ -1,37 +1,7 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
-
-vi.mock('@/data/courses', () => ({
-  allCourses: [
-    {
-      id: 'c1',
-      title: 'Test Course Alpha',
-      shortTitle: 'Alpha',
-      description: 'First test course',
-      category: 'Behavior Analysis',
-      difficulty: 'Beginner',
-      totalLessons: 4,
-      totalVideos: 4,
-      totalPDFs: 0,
-      estimatedHours: 2,
-      tags: [],
-      modules: [
-        {
-          id: 'm1',
-          title: 'Module 1',
-          lessons: [
-            { id: 'l1', title: 'Lesson 1', type: 'video' },
-            { id: 'l2', title: 'Lesson 2', type: 'video' },
-          ],
-        },
-      ],
-      isSequential: false,
-      basePath: '/test',
-      instructorId: 'i1',
-    },
-  ],
-}))
+import { useCourseStore } from '@/stores/useCourseStore'
 
 vi.mock('@/lib/progress', () => ({
   getCoursesInProgress: () => [],
@@ -50,6 +20,44 @@ vi.mock('@/app/components/figma/CourseCard', () => ({
 }))
 
 import MyClass from '../MyClass'
+
+beforeEach(() => {
+  useCourseStore.setState({
+    courses: [
+      {
+        id: 'c1',
+        title: 'Test Course Alpha',
+        shortTitle: 'Alpha',
+        description: 'First test course',
+        category: 'Behavior Analysis',
+        difficulty: 'Beginner',
+        totalLessons: 4,
+        totalVideos: 4,
+        totalPDFs: 0,
+        estimatedHours: 2,
+        tags: [],
+        modules: [
+          {
+            id: 'm1',
+            title: 'Module 1',
+            lessons: [
+              { id: 'l1', title: 'Lesson 1', type: 'video' },
+              { id: 'l2', title: 'Lesson 2', type: 'video' },
+            ],
+          },
+        ],
+        isSequential: false,
+        basePath: '/test',
+        instructorId: 'i1',
+      },
+    ],
+    isLoaded: true,
+  })
+})
+
+afterEach(() => {
+  useCourseStore.setState({ courses: [], isLoaded: false })
+})
 
 function renderMyClass() {
   return render(

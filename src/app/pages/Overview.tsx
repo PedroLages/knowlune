@@ -19,7 +19,7 @@ import { StudyScheduleWidget } from '@/app/components/StudyScheduleWidget'
 import { RecommendedNext, RecommendedNextSkeleton } from '@/app/components/RecommendedNext'
 import { CourseCard } from '@/app/components/figma/CourseCard'
 import { ProgressChart } from '@/app/components/charts/ProgressChart'
-import { allCourses } from '@/data/courses'
+import { useCourseStore } from '@/stores/useCourseStore'
 import {
   getCoursesInProgress,
   getCompletedCourses,
@@ -42,6 +42,7 @@ function getGreeting(): string {
 }
 
 export function Overview() {
+  const allCourses = useCourseStore(s => s.courses)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -51,8 +52,8 @@ export function Overview() {
 
   // Memoize progress calculations to prevent recalculation on every render
   const allProgress = useMemo(() => getAllProgress(), [])
-  const inProgress = useMemo(() => getCoursesInProgress(allCourses, allProgress), [allProgress])
-  const completed = useMemo(() => getCompletedCourses(allCourses, allProgress), [allProgress])
+  const inProgress = useMemo(() => getCoursesInProgress(allCourses, allProgress), [allCourses, allProgress])
+  const completed = useMemo(() => getCompletedCourses(allCourses, allProgress), [allCourses, allProgress])
   const completedLessons = useMemo(() => getTotalCompletedLessons(allProgress), [allProgress])
   const [studyNotes, setStudyNotes] = useState(0)
 
@@ -84,7 +85,7 @@ export function Overview() {
   const totalStudyTimeHours = Math.round((totalStudyTimeSeconds / 3600) * 10) / 10
 
   // Memoize activity metrics to prevent recalculation on every render
-  const recentActivity = useMemo(() => getRecentActivity(allCourses, 5), [])
+  const recentActivity = useMemo(() => getRecentActivity(allCourses, 5), [allCourses])
   const lessonSparkline = useMemo(() => getLast7DaysLessonCompletions(), [])
   const lessonsChange = useMemo(() => getWeeklyChange('lessons'), [])
   const chartData = useMemo(() => getActionsPerDay(14), [])

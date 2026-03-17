@@ -5,7 +5,7 @@ import { useReviewStore } from '@/stores/useReviewStore'
 import { useNoteStore } from '@/stores/useNoteStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { isDue } from '@/lib/spacedRepetition'
-import { allCourses } from '@/data/courses'
+import { useCourseStore } from '@/stores/useCourseStore'
 import { InterleavedCard } from '@/app/components/figma/InterleavedCard'
 import { InterleavedSummary } from '@/app/components/figma/InterleavedSummary'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
@@ -35,7 +35,10 @@ import type { InterleavedSessionSummary } from '@/stores/useReviewStore'
 type SessionPhase = 'loading' | 'single-course-prompt' | 'reviewing' | 'summary' | 'empty'
 
 /** Build a combined course name map from static + imported courses */
-function buildCourseNameMap(importedCourses: { id: string; name: string }[]): Map<string, string> {
+function buildCourseNameMap(
+  allCourses: { id: string; title: string }[],
+  importedCourses: { id: string; name: string }[]
+): Map<string, string> {
   const map = new Map(allCourses.map(c => [c.id, c.title]))
   for (const c of importedCourses) {
     map.set(c.id, c.name)
@@ -44,6 +47,7 @@ function buildCourseNameMap(importedCourses: { id: string; name: string }[]): Ma
 }
 
 export function InterleavedReview() {
+  const allCourses = useCourseStore(s => s.courses)
   const navigate = useNavigate()
 
   // Stores
@@ -80,7 +84,7 @@ export function InterleavedReview() {
     return map
   }, [notes])
 
-  const courseNameMap = useMemo(() => buildCourseNameMap(importedCourses), [importedCourses])
+  const courseNameMap = useMemo(() => buildCourseNameMap(allCourses, importedCourses), [allCourses, importedCourses])
 
   // Refresh `now` every 60s so retention percentages stay current during long sessions
   useEffect(() => {

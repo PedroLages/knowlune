@@ -41,7 +41,7 @@ import { highlightMatches, buildHighlightPatterns } from '@/lib/searchUtils'
 import { exportNoteAsMarkdown } from '@/lib/noteExport'
 import { EmptyState } from '@/app/components/EmptyState'
 import { toast } from 'sonner'
-import { allCourses } from '@/data/courses'
+import { useCourseStore } from '@/stores/useCourseStore'
 import { formatTimestamp } from '@/lib/format'
 import { stripHtml } from '@/lib/textUtils'
 import { supportsWorkers } from '@/ai/lib/workerCapabilities'
@@ -62,23 +62,6 @@ const RelatedConceptsPanel = React.lazy(() =>
 
 type SortOption = 'most-recent' | 'oldest-first' | 'by-course'
 
-/** Build lookup maps from static course data — called ONCE at module level. */
-function buildLookups() {
-  const courseNames = new Map<string, string>()
-  const lessonTitles = new Map<string, string>()
-  for (const course of allCourses) {
-    courseNames.set(course.id, course.shortTitle || course.title)
-    for (const mod of course.modules) {
-      for (const lesson of mod.lessons) {
-        lessonTitles.set(lesson.id, lesson.title)
-      }
-    }
-  }
-  return { courseNames, lessonTitles }
-}
-
-const { courseNames, lessonTitles } = buildLookups()
-
 /** Truncate plain text to ~120 characters. */
 function truncatePreview(text: string, max = 120): string {
   if (text.length <= max) return text
@@ -90,15 +73,6 @@ interface EnrichedNote {
   courseName: string
   lessonTitle: string
   plainPreview: string
-}
-
-function enrichNotes(notes: Note[]): EnrichedNote[] {
-  return notes.map(note => ({
-    note,
-    courseName: courseNames.get(note.courseId) ?? note.courseId,
-    lessonTitle: lessonTitles.get(note.videoId) ?? note.videoId,
-    plainPreview: truncatePreview(stripHtml(note.content)),
-  }))
 }
 
 function sortNotes(notes: EnrichedNote[], sort: SortOption): EnrichedNote[] {
@@ -122,6 +96,7 @@ function sortNotes(notes: EnrichedNote[], sort: SortOption): EnrichedNote[] {
 }
 
 export function Notes() {
+  const allCourses = useCourseStore(s => s.courses)
   const notes = useNoteStore(s => s.notes)
   const isLoading = useNoteStore(s => s.isLoading)
   const loadNotes = useNoteStore(s => s.loadNotes)
@@ -141,6 +116,30 @@ export function Notes() {
   const [semanticResults, setSemanticResults] = useState<Array<{ noteId: string; score: number }>>(
     []
   )
+
+  // Build lookup maps from course data
+  const { courseNames, lessonTitles } = useMemo(() => {
+    const cn = new Map<string, string>()
+    const lt = new Map<string, string>()
+    for (const course of allCourses) {
+      cn.set(course.id, course.shortTitle || course.title)
+      for (const mod of course.modules) {
+        for (const lesson of mod.lessons) {
+          lt.set(lesson.id, lesson.title)
+        }
+      }
+    }
+    return { courseNames: cn, lessonTitles: lt }
+  }, [allCourses])
+
+  function enrichNotes(rawNotes: Note[]): EnrichedNote[] {
+    return rawNotes.map(note => ({
+      note,
+      courseName: courseNames.get(note.courseId) ?? note.courseId,
+      lessonTitle: lessonTitles.get(note.videoId) ?? note.videoId,
+      plainPreview: truncatePreview(stripHtml(note.content)),
+    }))
+  }
 
   // Track vector store size reactively via a custom event dispatched by loadAll()
   // vectorStorePersistence is dynamically imported to avoid pulling AI infra into main chunk
@@ -239,7 +238,8 @@ export function Notes() {
   }, [debouncedQuery, useSemanticSearch])
 
   // Enrich notes ONCE in parent
-  const enriched = useMemo(() => enrichNotes(notes), [notes])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const enriched = useMemo(() => enrichNotes(notes), [notes, courseNames, lessonTitles])
 
   // Build semantic score lookup for display
   const semanticScoreMap = useMemo(() => {

@@ -1,31 +1,10 @@
 import React from 'react'
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
+import { useCourseStore } from '@/stores/useCourseStore'
 
 // Mock all heavy dependencies before importing the component
-
-vi.mock('@/data/courses', () => ({
-  allCourses: [
-    {
-      id: 'test-course-1',
-      title: 'Test Course',
-      shortTitle: 'Test',
-      description: 'A test course',
-      category: 'general',
-      difficulty: 'Beginner',
-      totalLessons: 5,
-      totalVideos: 5,
-      totalPDFs: 0,
-      estimatedHours: 2,
-      tags: [],
-      modules: [{ id: 'm1', title: 'Module 1', lessons: [] }],
-      isSequential: false,
-      basePath: '/test',
-      instructorId: 'i1',
-    },
-  ],
-}))
 
 vi.mock('@/lib/progress', () => ({
   getCoursesInProgress: () => [],
@@ -135,6 +114,35 @@ vi.mock('motion/react', () => ({
 }))
 
 import { Overview } from '../Overview'
+
+beforeEach(() => {
+  useCourseStore.setState({
+    courses: [
+      {
+        id: 'test-course-1',
+        title: 'Test Course',
+        shortTitle: 'Test',
+        description: 'A test course',
+        category: 'general',
+        difficulty: 'Beginner',
+        totalLessons: 5,
+        totalVideos: 5,
+        totalPDFs: 0,
+        estimatedHours: 2,
+        tags: [],
+        modules: [{ id: 'm1', title: 'Module 1', lessons: [] }],
+        isSequential: false,
+        basePath: '/test',
+        instructorId: 'i1',
+      },
+    ],
+    isLoaded: true,
+  })
+})
+
+afterEach(() => {
+  useCourseStore.setState({ courses: [], isLoaded: false })
+})
 
 function renderOverview() {
   return render(

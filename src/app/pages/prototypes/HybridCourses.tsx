@@ -3,7 +3,7 @@ import { HybridLayout } from './layouts/HybridLayout'
 import { HybridCourseCard } from './components/HybridCourseCard'
 import { ComparisonToggle } from './components/ComparisonToggle'
 import { Search } from 'lucide-react'
-import { allCourses } from '@/data/courses'
+import { useCourseStore } from '@/stores/useCourseStore'
 import { getCourseCompletionPercent } from '@/lib/progress'
 import type { CourseCategory } from '@/data/types'
 
@@ -17,6 +17,7 @@ const tabs: { value: string; label: string; category?: CourseCategory }[] = [
 ]
 
 export function HybridCourses() {
+  const allCourses = useCourseStore(s => s.courses)
   const [activeTab, setActiveTab] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
 

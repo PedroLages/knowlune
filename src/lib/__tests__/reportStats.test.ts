@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { Course } from '@/data/types'
+import { useCourseStore } from '@/stores/useCourseStore'
 
 /* ------------------------------------------------------------------ */
 /*  Test course factory                                                */
@@ -52,14 +53,10 @@ function makeCourse(overrides: Partial<Course> = {}): Course {
 /*  Mock dependencies BEFORE importing the module under test           */
 /* ------------------------------------------------------------------ */
 
-// Mock @/data/courses — we control allCourses per-test
-let mockCourses: Course[] = []
-
-vi.mock('@/data/courses', () => ({
-  get allCourses() {
-    return mockCourses
-  },
-}))
+// Course store — we control courses per-test via useCourseStore.setState
+function setCourses(courses: Course[]) {
+  useCourseStore.setState({ courses, isLoaded: true })
+}
 
 // Mock @/lib/progress — return controlled data
 const mockGetCourseCompletionPercent = vi.fn().mockReturnValue(0)
@@ -121,7 +118,11 @@ import {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mockCourses = []
+  useCourseStore.setState({ courses: [], isLoaded: true })
+})
+
+afterEach(() => {
+  useCourseStore.setState({ courses: [], isLoaded: false })
 })
 
 describe('computeStatTrends', () => {
@@ -157,11 +158,11 @@ describe('getCategoryCompletionForRadar', () => {
   })
 
   it('returns one entry per category with average completion', () => {
-    mockCourses = [
+    setCourses([
       makeCourse({ id: 'c1', category: 'behavioral-analysis' }),
       makeCourse({ id: 'c2', category: 'behavioral-analysis' }),
       makeCourse({ id: 'c3', category: 'influence-authority' }),
-    ]
+    ])
     mockGetCourseCompletionPercent.mockImplementation((courseId: string) => {
       if (courseId === 'c1') return 60
       if (courseId === 'c2') return 40
@@ -184,7 +185,7 @@ describe('getCategoryCompletionForRadar', () => {
   })
 
   it('formats hyphenated category slugs to Title Case', () => {
-    mockCourses = [makeCourse({ id: 'c1', category: 'operative-training' })]
+    setCourses([makeCourse({ id: 'c1', category: 'operative-training' })])
     mockGetCourseCompletionPercent.mockReturnValue(50)
 
     const result = getCategoryCompletionForRadar()
@@ -193,7 +194,7 @@ describe('getCategoryCompletionForRadar', () => {
   })
 
   it('handles single course with zero completion', () => {
-    mockCourses = [makeCourse({ id: 'c1' })]
+    setCourses([makeCourse({ id: 'c1' })])
     mockGetCourseCompletionPercent.mockReturnValue(0)
 
     const result = getCategoryCompletionForRadar()
@@ -203,10 +204,10 @@ describe('getCategoryCompletionForRadar', () => {
   })
 
   it('handles all courses at 100% completion', () => {
-    mockCourses = [
+    setCourses([
       makeCourse({ id: 'c1', category: 'behavioral-analysis' }),
       makeCourse({ id: 'c2', category: 'behavioral-analysis' }),
-    ]
+    ])
     mockGetCourseCompletionPercent.mockReturnValue(100)
 
     const result = getCategoryCompletionForRadar()
@@ -222,11 +223,11 @@ describe('getCourseCompletionData', () => {
   })
 
   it('returns sorted course data (highest completion first)', () => {
-    mockCourses = [
+    setCourses([
       makeCourse({ id: 'c1', title: 'Low Course', category: 'behavioral-analysis' }),
       makeCourse({ id: 'c2', title: 'High Course', category: 'influence-authority' }),
       makeCourse({ id: 'c3', title: 'Mid Course', category: 'operative-training' }),
-    ]
+    ])
     mockGetCourseCompletionPercent.mockImplementation((courseId: string) => {
       if (courseId === 'c1') return 20
       if (courseId === 'c2') return 90
@@ -247,10 +248,10 @@ describe('getCourseCompletionData', () => {
   })
 
   it('handles courses with equal completion (stable sort)', () => {
-    mockCourses = [
+    setCourses([
       makeCourse({ id: 'c1', title: 'Course A' }),
       makeCourse({ id: 'c2', title: 'Course B' }),
-    ]
+    ])
     mockGetCourseCompletionPercent.mockReturnValue(50)
 
     const result = getCourseCompletionData()
@@ -260,7 +261,7 @@ describe('getCourseCompletionData', () => {
   })
 
   it('handles single course', () => {
-    mockCourses = [makeCourse({ id: 'c1', title: 'Solo' })]
+    setCourses([makeCourse({ id: 'c1', title: 'Solo' })])
     mockGetCourseCompletionPercent.mockReturnValue(75)
 
     const result = getCourseCompletionData()
@@ -278,7 +279,7 @@ describe('getCourseCompletionData', () => {
       id: 'c1',
       modules: [makeModule('m1', ['l1', 'l2']), makeModule('m2', ['l3'])],
     })
-    mockCourses = [course]
+    setCourses([course])
     mockGetCourseCompletionPercent.mockReturnValue(33)
 
     getCourseCompletionData()
@@ -295,10 +296,10 @@ describe('getCategoryColorMap', () => {
   })
 
   it('maps each unique category to a chart color variable', () => {
-    mockCourses = [
+    setCourses([
       makeCourse({ id: 'c1', category: 'behavioral-analysis' }),
       makeCourse({ id: 'c2', category: 'influence-authority' }),
-    ]
+    ])
 
     const result = getCategoryColorMap()
 
@@ -310,11 +311,11 @@ describe('getCategoryColorMap', () => {
   })
 
   it('deduplicates categories from multiple courses', () => {
-    mockCourses = [
+    setCourses([
       makeCourse({ id: 'c1', category: 'behavioral-analysis' }),
       makeCourse({ id: 'c2', category: 'behavioral-analysis' }),
       makeCourse({ id: 'c3', category: 'behavioral-analysis' }),
-    ]
+    ])
 
     const result = getCategoryColorMap()
 
@@ -332,9 +333,9 @@ describe('getCategoryColorMap', () => {
       'extra-category',
     ] as const
 
-    mockCourses = categories.map((cat, i) =>
+    setCourses(categories.map((cat, i) =>
       makeCourse({ id: `c${i}`, category: cat as Course['category'] })
-    )
+    ))
 
     const result = getCategoryColorMap()
 
@@ -346,7 +347,7 @@ describe('getCategoryColorMap', () => {
 
 describe('computeSkillsDimensions', () => {
   it('returns 5 dimensions with zero values when no data exists', () => {
-    mockCourses = []
+    setCourses([])
     mockGetAllProgress.mockReturnValue({})
     mockGetTotalCompletedLessons.mockReturnValue(0)
     mockGetCurrentStreak.mockReturnValue(0)
@@ -369,7 +370,7 @@ describe('computeSkillsDimensions', () => {
   })
 
   it('calculates Completion score from total lessons completed', () => {
-    mockCourses = [makeCourse({ id: 'c1', modules: [makeModule('m1', ['l1', 'l2', 'l3', 'l4'])] })]
+    setCourses([makeCourse({ id: 'c1', modules: [makeModule('m1', ['l1', 'l2', 'l3', 'l4'])] })])
     mockGetAllProgress.mockReturnValue({})
     mockGetTotalCompletedLessons.mockReturnValue(2) // 2 of 4 lessons
     mockGetCurrentStreak.mockReturnValue(0)
@@ -384,7 +385,7 @@ describe('computeSkillsDimensions', () => {
   })
 
   it('calculates Consistency score from streak (capped at 100)', () => {
-    mockCourses = []
+    setCourses([])
     mockGetAllProgress.mockReturnValue({})
     mockGetTotalCompletedLessons.mockReturnValue(0)
     mockGetCurrentStreak.mockReturnValue(3) // 3 days
@@ -400,7 +401,7 @@ describe('computeSkillsDimensions', () => {
   })
 
   it('caps Consistency at 100 for streaks >= 7 days', () => {
-    mockCourses = []
+    setCourses([])
     mockGetAllProgress.mockReturnValue({})
     mockGetTotalCompletedLessons.mockReturnValue(0)
     mockGetCurrentStreak.mockReturnValue(14) // 14 days
@@ -415,11 +416,11 @@ describe('computeSkillsDimensions', () => {
   })
 
   it('calculates Breadth from started category ratio', () => {
-    mockCourses = [
+    setCourses([
       makeCourse({ id: 'c1', category: 'behavioral-analysis' }),
       makeCourse({ id: 'c2', category: 'influence-authority' }),
       makeCourse({ id: 'c3', category: 'operative-training' }),
-    ]
+    ])
     // Progress exists for c1 and c3 (2 of 3 categories started)
     mockGetAllProgress.mockReturnValue({
       c1: { completedLessons: ['l1'] },
@@ -438,7 +439,7 @@ describe('computeSkillsDimensions', () => {
   })
 
   it('calculates Depth from average completion of started courses', () => {
-    mockCourses = [makeCourse({ id: 'c1' }), makeCourse({ id: 'c2' })]
+    setCourses([makeCourse({ id: 'c1' }), makeCourse({ id: 'c2' })])
     mockGetAllProgress.mockReturnValue({})
     mockGetTotalCompletedLessons.mockReturnValue(0)
     mockGetCurrentStreak.mockReturnValue(0)
@@ -460,7 +461,7 @@ describe('computeSkillsDimensions', () => {
   })
 
   it('returns Depth 0 when no courses started', () => {
-    mockCourses = [makeCourse({ id: 'c1' })]
+    setCourses([makeCourse({ id: 'c1' })])
     mockGetAllProgress.mockReturnValue({})
     mockGetTotalCompletedLessons.mockReturnValue(0)
     mockGetCurrentStreak.mockReturnValue(0)
@@ -475,7 +476,7 @@ describe('computeSkillsDimensions', () => {
   })
 
   it('calculates Engagement from actions per day (capped at 100)', () => {
-    mockCourses = []
+    setCourses([])
     mockGetAllProgress.mockReturnValue({})
     mockGetTotalCompletedLessons.mockReturnValue(0)
     mockGetCurrentStreak.mockReturnValue(0)
@@ -500,7 +501,7 @@ describe('computeSkillsDimensions', () => {
   })
 
   it('caps Engagement at 100 for high activity levels', () => {
-    mockCourses = []
+    setCourses([])
     mockGetAllProgress.mockReturnValue({})
     mockGetTotalCompletedLessons.mockReturnValue(0)
     mockGetCurrentStreak.mockReturnValue(0)
@@ -516,7 +517,7 @@ describe('computeSkillsDimensions', () => {
   })
 
   it('handles completed course with zero lessons for Depth', () => {
-    mockCourses = [makeCourse({ id: 'c1', modules: [] })]
+    setCourses([makeCourse({ id: 'c1', modules: [] })])
     mockGetAllProgress.mockReturnValue({})
     mockGetTotalCompletedLessons.mockReturnValue(0)
     mockGetCurrentStreak.mockReturnValue(0)

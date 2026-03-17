@@ -8,7 +8,7 @@ import { HybridStreakCalendar } from './components/HybridStreakCalendar'
 import { HybridProgressChart } from './components/HybridProgressChart'
 import { HybridCourseCard } from './components/HybridCourseCard'
 import { ComparisonToggle } from './components/ComparisonToggle'
-import { allCourses } from '@/data/courses'
+import { useCourseStore } from '@/stores/useCourseStore'
 import {
   getCoursesInProgress,
   getCompletedCourses,
@@ -29,6 +29,7 @@ function formatCategory(slug: string): string {
 }
 
 export function HybridOverview() {
+  const allCourses = useCourseStore(s => s.courses)
   const inProgress = getCoursesInProgress(allCourses)
   const completed = getCompletedCourses(allCourses)
   const completedLessons = getTotalCompletedLessons()

@@ -16,6 +16,7 @@ import type {
   AIUsageEvent,
   ReviewRecord,
   CourseReminder,
+  Course,
 } from '@/data/types'
 
 const db = new Dexie('ElearningDB') as Dexie & {
@@ -35,6 +36,7 @@ const db = new Dexie('ElearningDB') as Dexie & {
   aiUsageEvents: EntityTable<AIUsageEvent, 'id'>
   reviewRecords: EntityTable<ReviewRecord, 'id'>
   courseReminders: EntityTable<CourseReminder, 'id'>
+  courses: EntityTable<Course, 'id'>
 }
 
 db.version(1).stores({
@@ -358,6 +360,27 @@ db.version(15).stores({
   aiUsageEvents: 'id, featureType, timestamp, courseId',
   reviewRecords: 'id, noteId, nextReviewAt, reviewedAt',
   courseReminders: 'id, courseId',
+})
+
+// v16: Seed courses table — moves hardcoded Course[] from src/data/courses into IndexedDB
+db.version(16).stores({
+  importedCourses: 'id, name, importedAt, status, *tags',
+  importedVideos: 'id, courseId, filename',
+  importedPdfs: 'id, courseId, filename',
+  progress: '[courseId+videoId], courseId, videoId',
+  bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+  screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+  contentProgress: '[courseId+itemId], courseId, itemId, status',
+  challenges: 'id, type, deadline, createdAt',
+  embeddings: 'noteId, createdAt',
+  learningPath: 'courseId, position, generatedAt',
+  courseThumbnails: 'courseId',
+  aiUsageEvents: 'id, featureType, timestamp, courseId',
+  reviewRecords: 'id, noteId, nextReviewAt, reviewedAt',
+  courseReminders: 'id, courseId',
+  courses: 'id, category, difficulty, instructorId',
 })
 
 export { db }
