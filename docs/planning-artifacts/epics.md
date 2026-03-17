@@ -3860,22 +3860,22 @@ Unit tests:
 
 ---
 
-### Story 12.2: Set Up Dexie Schema v12 Migration
+### Story 12.2: Set Up Dexie Schema v15 Migration
 
 As a developer,
-I want to add quiz tables to the Dexie schema (v11 → v12),
+I want to add quiz tables to the Dexie schema (v14 → v15),
 So that quiz data persists reliably in IndexedDB with proper indexes for efficient queries.
 
 **FRs Fulfilled:** QFR49 (IndexedDB persistence), QFR50 (quiz data storage), QFR52 (attempt history)
 
 **Acceptance Criteria:**
 
-**Given** the existing Dexie schema at v11 (current version in `src/db/schema.ts`)
-**When** I add version 12 with quiz tables
+**Given** the existing Dexie schema at v14 (current version in `src/db/schema.ts` — v13 added reviewRecords, v14 added quality scoring fields to studySessions)
+**When** I add version 15 with quiz tables
 **Then** two new tables are created: `quizzes` and `quizAttempts`
 **And** the `quizzes` table has indexes on: id (primary), lessonId, createdAt
 **And** the `quizAttempts` table has indexes on: id (primary), quizId, [quizId+completedAt] (compound), completedAt
-**And** all 13 existing v11 tables are redeclared with their current index definitions
+**And** all 15 existing v14 tables are redeclared with their current index definitions
 **And** no data migration/backfill is needed (new feature, no existing data)
 **And** the typed `db` instance declares `quizzes` and `quizAttempts` as EntityTable properties
 
@@ -3888,7 +3888,7 @@ So that quiz data persists reliably in IndexedDB with proper indexes for efficie
 **Technical Details:**
 
 Files to modify:
-- `src/db/schema.ts` — Add v12 stores block and typed table declarations
+- `src/db/schema.ts` — Add v15 stores block and typed table declarations
 - `src/data/types.ts` or `src/types/quiz.ts` — Import Quiz/QuizAttempt types for Dexie typing (from Story 12.1)
 
 Migration code (must redeclare ALL existing tables):
@@ -3897,8 +3897,8 @@ Migration code (must redeclare ALL existing tables):
 //   quizzes: EntityTable<Quiz, 'id'>
 //   quizAttempts: EntityTable<QuizAttempt, 'id'>
 
-db.version(12).stores({
-  // ALL existing v11 tables (unchanged — must redeclare or Dexie deletes them)
+db.version(15).stores({
+  // ALL existing v14 tables (unchanged — must redeclare or Dexie deletes them)
   importedCourses: 'id, name, importedAt, status, *tags',
   importedVideos: 'id, courseId, filename',
   importedPdfs: 'id, courseId, filename',
@@ -3912,6 +3912,8 @@ db.version(12).stores({
   embeddings: 'noteId, createdAt',
   learningPath: 'courseId, position, generatedAt',
   courseThumbnails: 'courseId',
+  aiUsageEvents: 'id, featureId, createdAt',
+  reviewRecords: 'id, noteId, nextReviewAt, reviewedAt',
 
   // NEW: Quiz tables
   quizzes: 'id, lessonId, createdAt',
@@ -3922,14 +3924,14 @@ db.version(12).stores({
 **Testing Requirements:**
 
 Unit tests:
-- Schema v12 migration runs successfully from v11
+- Schema v15 migration runs successfully from v14
 - New tables created with correct indexes
-- All 13 existing v11 tables remain intact with data preserved
+- All 15 existing v14 tables remain intact with data preserved
 - Can write and read quiz data from new tables
 - Compound index `[quizId+completedAt]` returns results in correct order
 
 Integration tests:
-- Dexie upgrade from v11 to v12 executes without errors
+- Dexie upgrade from v14 to v15 executes without errors
 - Typed `db.quizzes` and `db.quizAttempts` compile and work at runtime
 
 **Dependencies:** Story 12.1 (needs Quiz types for TypeScript table typing)
@@ -4803,10 +4805,10 @@ retakeQuiz: (quizId: string) => {
 ScoreSummary improvement display:
 ```tsx
 {previousBestScore && (
-  <div className="text-sm text-gray-600">
+  <div className="text-sm text-muted-foreground">
     Previous best: {previousBestScore}%
     {currentScore > previousBestScore && (
-      <span className="text-green-600 font-semibold">
+      <span className="text-success font-semibold">
         (+{currentScore - previousBestScore}%)
       </span>
     )}

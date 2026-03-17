@@ -190,7 +190,7 @@ development_status:
   11-4-data-export: done
   11-5-interleaved-review-mode: done
   11-6-per-course-study-reminders: backlog
-  epic-11-retrospective: optional
+  epic-11-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 12: Take Basic Quizzes (Quiz & Assessment System)
