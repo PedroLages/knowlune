@@ -1,9 +1,9 @@
 ---
 story_id: E12-S03
 story_name: "Create useQuizStore with Zustand"
-status: in-progress
+status: done
 started: 2026-03-17
-completed:
+completed: 2026-03-17
 reviewed: true    # false | in-progress | true
 review_started: 2026-03-17  # YYYY-MM-DD — set when /review-story begins
 review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review-skipped, web-design-guidelines-skipped, code-review, code-review-testing]
