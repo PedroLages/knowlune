@@ -1,5 +1,5 @@
-import { test, expect } from '../support/fixtures'
-import { seedIndexedDBStore } from '../support/helpers/indexeddb-seed'
+import { test, expect } from '../../support/fixtures'
+import { seedIndexedDBStore } from '../../support/helpers/indexeddb-seed'
 
 /**
  * E11-S03: Study Session Quality Scoring

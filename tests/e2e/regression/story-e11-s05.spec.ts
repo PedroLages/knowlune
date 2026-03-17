@@ -1,13 +1,13 @@
-import { test, expect } from '../support/fixtures'
+import { test, expect } from '../../support/fixtures'
 import {
   seedImportedCourses,
   seedNotes,
   seedReviewRecords,
-} from '../support/helpers/indexeddb-seed'
-import { createImportedCourse } from '../support/fixtures/factories/imported-course-factory'
-import { createDexieNote } from '../support/fixtures/factories/note-factory'
-import { createDueReviewRecord } from '../support/fixtures/factories/review-factory'
-import { FIXED_DATE, getRelativeDate } from '../utils/test-time'
+} from '../../support/helpers/indexeddb-seed'
+import { createImportedCourse } from '../../support/fixtures/factories/imported-course-factory'
+import { createDexieNote } from '../../support/fixtures/factories/note-factory'
+import { createDueReviewRecord } from '../../support/fixtures/factories/review-factory'
+import { FIXED_DATE, getRelativeDate } from '../../utils/test-time'
 
 /**
  * E11-S05: Interleaved Review Mode

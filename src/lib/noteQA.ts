@@ -15,14 +15,6 @@
  * @see docs/implementation-artifacts/9b-2-qa-from-notes-with-vercel-ai-sdk.md
  */
 
-import { streamText } from 'ai'
-import { createOpenAI } from '@ai-sdk/openai'
-import { createAnthropic } from '@ai-sdk/anthropic'
-import { createGroq } from '@ai-sdk/groq'
-import { createGoogleGenerativeAI } from '@ai-sdk/google'
-import { createZhipu } from 'zhipu-ai-provider'
-import { generateEmbeddings } from '@/ai/workers/coordinator'
-import { BruteForceVectorStore } from '@/lib/vectorSearch'
 import { db } from '@/db'
 import type { Note } from '@/data/types'
 import type { AIProviderId } from '@/lib/aiConfiguration'
@@ -36,22 +28,33 @@ export interface RetrievedNote {
 }
 
 /**
- * Select AI model based on provider ID and API key
+ * Dynamically import the AI provider SDK for the selected provider.
+ * Only the provider the user has configured is loaded — avoids bundling
+ * all 5 SDKs (OpenAI, Anthropic, Groq, Google, Zhipu) into one chunk.
  */
-function getModel(providerId: AIProviderId, apiKey: string) {
+async function getModel(providerId: AIProviderId, apiKey: string) {
   switch (providerId as string) {
-    case 'openai':
-      return createOpenAI({ apiKey })('gpt-4o-mini')
-    case 'anthropic':
+    case 'anthropic': {
+      const { createAnthropic } = await import('@ai-sdk/anthropic')
       return createAnthropic({ apiKey })('claude-3-5-haiku-20241022')
-    case 'groq':
+    }
+    case 'groq': {
+      const { createGroq } = await import('@ai-sdk/groq')
       return createGroq({ apiKey })('llama-3.3-70b-versatile')
-    case 'glm':
+    }
+    case 'glm': {
+      const { createZhipu } = await import('zhipu-ai-provider')
       return createZhipu({ apiKey })('glm-4-flash')
-    case 'gemini':
+    }
+    case 'gemini': {
+      const { createGoogleGenerativeAI } = await import('@ai-sdk/google')
       return createGoogleGenerativeAI({ apiKey })('gemini-2.0-flash-exp')
-    default:
+    }
+    case 'openai':
+    default: {
+      const { createOpenAI } = await import('@ai-sdk/openai')
       return createOpenAI({ apiKey })('gpt-4o-mini')
+    }
   }
 }
 
@@ -68,7 +71,8 @@ export async function retrieveRelevantNotes(query: string): Promise<RetrievedNot
     throw new Error('Query cannot be empty')
   }
 
-  // Step 1: Generate query embedding
+  // Step 1: Generate query embedding (dynamically imported to avoid bundling AI infra)
+  const { generateEmbeddings } = await import('@/ai/workers/coordinator')
   const [queryEmbedding] = await generateEmbeddings([query.trim()])
 
   // Step 2: Load all note embeddings from IndexedDB
@@ -78,7 +82,8 @@ export async function retrieveRelevantNotes(query: string): Promise<RetrievedNot
     return [] // No notes with embeddings
   }
 
-  // Step 3: Build vector store from all embeddings
+  // Step 3: Build vector store from all embeddings (dynamic to avoid bundling vectorSearch)
+  const { BruteForceVectorStore } = await import('@/lib/vectorSearch')
   const vectorStore = new BruteForceVectorStore(384)
   for (const { noteId, embedding } of allEmbeddings) {
     vectorStore.insert(noteId, embedding)
@@ -164,8 +169,10 @@ Question: ${query}
 Provide a concise answer citing specific notes.`
 
   try {
+    const { streamText } = await import('ai')
+    const model = await getModel(provider, apiKey)
     const result = streamText({
-      model: getModel(provider, apiKey),
+      model,
       messages: [
         {
           role: 'system',

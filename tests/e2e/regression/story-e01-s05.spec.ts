@@ -1,8 +1,8 @@
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
-import { seedImportedVideos, seedImportedPdfs } from '../support/helpers/indexeddb-seed'
-import { createImportedCourse } from '../support/fixtures/factories/imported-course-factory'
-import { FIXED_DATE } from '../utils/test-time'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
+import { seedImportedVideos, seedImportedPdfs } from '../../support/helpers/indexeddb-seed'
+import { createImportedCourse } from '../../support/fixtures/factories/imported-course-factory'
+import { FIXED_DATE } from '../../utils/test-time'
 
 /**
  * E01-S05: Detect Missing or Relocated Files

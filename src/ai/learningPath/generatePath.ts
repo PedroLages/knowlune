@@ -146,7 +146,7 @@ IMPORTANT: Return ONLY the JSON object, no markdown code blocks, no extra text.`
       const jsonStr = jsonMatch ? jsonMatch[1] : content
 
       parsed = JSON.parse(jsonStr.trim())
-    } catch (_parseError) {
+    } catch {
       console.error('[generatePath] Failed to parse LLM response:', content)
       throw new Error('AI response is not valid JSON. Please try again.')
     }

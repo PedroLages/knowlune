@@ -5,16 +5,16 @@
  * Tests seed IndexedDB with notes, review records, and study sessions,
  * then verify the retention dashboard renders correctly.
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
 import {
   seedIndexedDBStore,
   clearIndexedDBStore,
   seedStudySessions,
-} from '../support/helpers/indexeddb-seed'
-import { createDexieNote } from '../support/fixtures/factories/note-factory'
-import { createStudySession } from '../support/fixtures/factories/session-factory'
-import { FIXED_DATE, getRelativeDate } from '../utils/test-time'
+} from '../../support/helpers/indexeddb-seed'
+import { createDexieNote } from '../../support/fixtures/factories/note-factory'
+import { createStudySession } from '../../support/fixtures/factories/session-factory'
+import { FIXED_DATE, getRelativeDate } from '../../utils/test-time'
 
 const DB_NAME = 'ElearningDB'
 

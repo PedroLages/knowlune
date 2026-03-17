@@ -72,7 +72,9 @@ describe('useChatQA', () => {
     vi.mocked(RAGCoordinator.prototype.retrieveContext).mockImplementation(
       mockRetrieveContext as any
     )
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(PromptBuilder.prototype.buildMessages).mockImplementation(mockBuildMessages as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(CitationExtractor.prototype.extract).mockImplementation(mockExtract as any)
     vi.mocked(getLLMClient).mockResolvedValue({
       streamCompletion: mockStreamCompletion,

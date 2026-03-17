@@ -42,6 +42,7 @@ import { importFullData } from '@/lib/importService'
 import { downloadJson, downloadZip } from '@/lib/fileDownload'
 import { exportAchievementsAsBadges } from '@/lib/openBadges'
 import { ReminderSettings } from '@/app/components/figma/ReminderSettings'
+import { CourseReminderSettings } from '@/app/components/figma/CourseReminderSettings'
 import { AIConfigurationSettings } from '@/app/components/figma/AIConfigurationSettings'
 import { AvatarCropDialog } from '@/app/components/ui/avatar-crop-dialog'
 import { AvatarUploadZone } from '@/app/components/settings/avatar-upload-zone'
@@ -553,6 +554,9 @@ export default function Settings() {
 
         {/* Reminders */}
         <ReminderSettings />
+
+        {/* Per-Course Reminders */}
+        <CourseReminderSettings />
 
         {/* AI Configuration */}
         <AIConfigurationSettings />

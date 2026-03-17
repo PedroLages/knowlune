@@ -195,6 +195,7 @@ export function QAChatPanel() {
       )}
 
       {/* Messages */}
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any -- ScrollArea ref type mismatch */}
       <ScrollArea className="flex-1 px-4" ref={scrollRef as any}>
         <div className="space-y-4 py-4">
           {messages.length === 0 && aiAvailable && hasNotes && (

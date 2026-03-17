@@ -10,6 +10,7 @@ import { SearchCommandPalette } from './figma/SearchCommandPalette'
 import { KeyboardShortcutsDialog } from './figma/KeyboardShortcutsDialog'
 import { BottomNav } from './navigation/BottomNav'
 import { useStudyReminders } from '@/app/hooks/useStudyReminders'
+import { useCourseReminders } from '@/app/hooks/useCourseReminders'
 import { useIsMobile, useIsTablet, useIsDesktop } from '@/app/hooks/useMediaQuery'
 import { Sheet, SheetContent } from './ui/sheet'
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip'
@@ -175,6 +176,7 @@ export function Layout() {
   const isDesktop = useIsDesktop()
 
   useStudyReminders()
+  useCourseReminders()
 
   const isOnline = useOnlineStatus()
   const isInitialRender = useRef(true)

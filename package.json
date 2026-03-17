@@ -151,7 +151,9 @@
     "vitest": "^4.0.18"
   },
   "overrides": {
-    "minimatch": ">=3.1.2"
+    "minimatch": ">=3.1.2",
+    "serialize-javascript": ">=7.0.3",
+    "tmp": ">=0.2.4"
   },
   "msw": {
     "workerDirectory": [

@@ -183,20 +183,20 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 11: Knowledge Retention, Export & Advanced Features (Post-MVP)
   # ──────────────────────────────────────────────────
-  epic-11: in-progress
+  epic-11: done
   11-1-spaced-review-system: done
   11-2-knowledge-retention-dashboard: done
   11-3-study-session-quality-scoring: done
   11-4-data-export: done
   11-5-interleaved-review-mode: done
-  11-6-per-course-study-reminders: backlog
-  epic-11-retrospective: optional
+  11-6-per-course-study-reminders: done
+  epic-11-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 12: Take Basic Quizzes (Quiz & Assessment System)
   # ──────────────────────────────────────────────────
-  epic-12: backlog
-  12-1-create-quiz-type-definitions: backlog
+  epic-12: in-progress
+  12-1-create-quiz-type-definitions: done
   12-2-set-up-dexie-schema-v12-migration: backlog
   12-3-create-usequizstore-with-zustand: backlog
   12-4-create-quiz-route-and-basic-quizplayer-component: backlog

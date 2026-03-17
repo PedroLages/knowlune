@@ -71,6 +71,7 @@ import { pipeline, env } from '@xenova/transformers'
 env.allowLocalModels = false
 env.backends.onnx.wasm.numThreads = 1 // CRITICAL: Limit to 1 thread per worker
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic pipeline type from @xenova/transformers
 let embeddingPipeline: any = null
 
 async function initializePipeline() {
