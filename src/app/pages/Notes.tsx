@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, Suspense } from 'react'
 import { useNavigate, useLocation, useSearchParams } from 'react-router'
 import {
   Search,
@@ -40,17 +40,25 @@ import { getAllNoteTags } from '@/lib/progress'
 import { highlightMatches, buildHighlightPatterns } from '@/lib/searchUtils'
 import { exportNoteAsMarkdown } from '@/lib/noteExport'
 import { EmptyState } from '@/app/components/EmptyState'
-import { QAChatPanel } from '@/app/components/figma/QAChatPanel'
 import { toast } from 'sonner'
 import { allCourses } from '@/data/courses'
 import { formatTimestamp } from '@/lib/format'
 import { stripHtml } from '@/lib/textUtils'
-import { ReadOnlyContent } from '@/app/components/notes/ReadOnlyContent'
-import { RelatedConceptsPanel } from '@/app/components/notes/RelatedConceptsPanel'
-import { generateEmbeddings } from '@/ai/workers/coordinator'
-import { vectorStorePersistence } from '@/ai/vector-store'
 import { supportsWorkers } from '@/ai/lib/workerCapabilities'
 import type { Note } from '@/data/types'
+
+// Lazy-loaded heavy components (TipTap renderer pulls ~400KB, QAChatPanel pulls AI infra)
+const ReadOnlyContent = React.lazy(() =>
+  import('@/app/components/notes/ReadOnlyContent').then(m => ({ default: m.ReadOnlyContent }))
+)
+const QAChatPanel = React.lazy(() =>
+  import('@/app/components/figma/QAChatPanel').then(m => ({ default: m.QAChatPanel }))
+)
+const RelatedConceptsPanel = React.lazy(() =>
+  import('@/app/components/notes/RelatedConceptsPanel').then(m => ({
+    default: m.RelatedConceptsPanel,
+  }))
+)
 
 type SortOption = 'most-recent' | 'oldest-first' | 'by-course'
 
@@ -135,11 +143,23 @@ export function Notes() {
   )
 
   // Track vector store size reactively via a custom event dispatched by loadAll()
-  const [vectorStoreSize, setVectorStoreSize] = useState(() => vectorStorePersistence.size)
+  // vectorStorePersistence is dynamically imported to avoid pulling AI infra into main chunk
+  const [vectorStoreSize, setVectorStoreSize] = useState(0)
   useEffect(() => {
-    const updateSize = () => setVectorStoreSize(vectorStorePersistence.size)
+    let cancelled = false
+    import('@/ai/vector-store').then(({ vectorStorePersistence }) => {
+      if (!cancelled) setVectorStoreSize(vectorStorePersistence.size)
+    })
+    const updateSize = () => {
+      import('@/ai/vector-store').then(({ vectorStorePersistence }) => {
+        if (!cancelled) setVectorStoreSize(vectorStorePersistence.size)
+      })
+    }
     window.addEventListener('vector-store-ready', updateSize)
-    return () => window.removeEventListener('vector-store-ready', updateSize)
+    return () => {
+      cancelled = true
+      window.removeEventListener('vector-store-ready', updateSize)
+    }
   }, [])
   const semanticSearchAvailable = supportsWorkers() && vectorStoreSize > 0
 
@@ -196,12 +216,15 @@ export function Notes() {
     }
 
     let cancelled = false
-    generateEmbeddings([debouncedQuery])
-      .then(([queryVector]) => {
-        const store = vectorStorePersistence.getStore()
-        const rawResults = store.search(Array.from(queryVector), 10)
-        return rawResults.map(r => ({ noteId: r.id, score: r.similarity }))
-      })
+    // Dynamic import to avoid pulling AI infra into main Notes chunk
+    Promise.all([import('@/ai/workers/coordinator'), import('@/ai/vector-store')])
+      .then(([{ generateEmbeddings }, { vectorStorePersistence }]) =>
+        generateEmbeddings([debouncedQuery]).then(([queryVector]) => {
+          const store = vectorStorePersistence.getStore()
+          const rawResults = store.search(Array.from(queryVector), 10)
+          return rawResults.map(r => ({ noteId: r.id, score: r.similarity }))
+        })
+      )
       .then(results => {
         if (!cancelled) setSemanticResults(results)
       })
@@ -385,7 +408,9 @@ export function Notes() {
         {/* Expanded view — full TipTap content + actions */}
         {isExpanded && (
           <div className="mt-4 border-t pt-4">
-            <ReadOnlyContent content={item.note.content} />
+            <Suspense fallback={<Skeleton className="h-24 w-full" />}>
+              <ReadOnlyContent content={item.note.content} />
+            </Suspense>
 
             <div className="flex flex-wrap items-center gap-2 mt-4">
               <Button
@@ -429,7 +454,9 @@ export function Notes() {
               )}
             </div>
 
-            <RelatedConceptsPanel note={item.note} allNotes={notes} courseNames={courseNames} />
+            <Suspense fallback={null}>
+              <RelatedConceptsPanel note={item.note} allNotes={notes} courseNames={courseNames} />
+            </Suspense>
           </div>
         )}
       </div>
@@ -506,7 +533,9 @@ export function Notes() {
           <TabsContent value="notes" className="mt-6 space-y-6">
             {/* Sort + QA controls */}
             <div className="flex items-center justify-end gap-3">
-              <QAChatPanel />
+              <Suspense fallback={null}>
+                <QAChatPanel />
+              </Suspense>
               <Select value={sortOption} onValueChange={v => setSortOption(v as SortOption)}>
                 <SelectTrigger className="w-[160px]">
                   <ArrowUpDown className="size-3.5 mr-1.5" />

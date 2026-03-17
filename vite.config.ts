@@ -223,12 +223,15 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
+      // Exclude WebLLM from the bundle — it's a 6MB ML runtime used only in
+      // the experimental /webllm-test route. Load it from CDN at runtime instead.
+      external: ['@mlc-ai/web-llm'],
       output: {
+        // Map the external to a global or CDN URL for runtime loading
+        paths: {
+          '@mlc-ai/web-llm': 'https://esm.run/@mlc-ai/web-llm@0.2.81',
+        },
         manualChunks(id) {
-          // WebLLM (large ML inference engine - only loaded on demand)
-          if (id.includes('@mlc-ai/web-llm')) {
-            return 'webllm'
-          }
           // ProseMirror core (TipTap's editing engine)
           if (id.includes('prosemirror')) {
             return 'prosemirror'
@@ -256,6 +259,48 @@ export default defineConfig({
           // React Router
           if (id.includes('react-router')) {
             return 'react-router'
+          }
+          // Dexie (IndexedDB ORM — heavy schema + runtime)
+          if (id.includes('dexie')) {
+            return 'dexie'
+          }
+          // Recharts / chart.js (data visualization)
+          if (id.includes('recharts') || id.includes('d3-') || id.includes('victory')) {
+            return 'chart'
+          }
+          // MiniSearch (full-text search engine)
+          if (id.includes('minisearch')) {
+            return 'minisearch'
+          }
+          // PDF.js (PDF rendering)
+          if (id.includes('pdfjs-dist') || id.includes('react-pdf')) {
+            return 'pdf'
+          }
+          // date-fns (date utility library)
+          if (id.includes('date-fns')) {
+            return 'date-fns'
+          }
+          // cmdk (command palette)
+          if (id.includes('cmdk')) {
+            return 'cmdk'
+          }
+          // Vercel AI SDK core
+          if (id.includes('/ai/') && id.includes('node_modules') && !id.includes('@ai-sdk')) {
+            return 'ai-sdk-core'
+          }
+          // AI provider SDKs (each lazy-loaded per user's config)
+          if (id.includes('@ai-sdk/openai')) return 'ai-openai'
+          if (id.includes('@ai-sdk/anthropic')) return 'ai-anthropic'
+          if (id.includes('@ai-sdk/groq')) return 'ai-groq'
+          if (id.includes('@ai-sdk/google')) return 'ai-google'
+          if (id.includes('zhipu-ai-provider')) return 'ai-zhipu'
+          // sonner (toast notifications)
+          if (id.includes('sonner')) {
+            return 'sonner'
+          }
+          // class-variance-authority + clsx (utility)
+          if (id.includes('class-variance-authority') || id.includes('clsx') || id.includes('tailwind-merge')) {
+            return 'style-utils'
           }
         },
       },

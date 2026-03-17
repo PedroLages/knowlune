@@ -65,6 +65,7 @@ describe('OpenAIClient', () => {
       const messages: LLMMessage[] = [{ role: 'user', content: 'Test' }]
 
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         for await (const _chunk of client.streamCompletion(messages)) {
           // Should throw
         }
@@ -86,6 +87,7 @@ describe('OpenAIClient', () => {
       const messages: LLMMessage[] = [{ role: 'user', content: 'Test' }]
 
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         for await (const _chunk of client.streamCompletion(messages)) {
           // Should throw
         }
@@ -103,6 +105,7 @@ describe('OpenAIClient', () => {
       const messages: LLMMessage[] = [{ role: 'user', content: 'Test' }]
 
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         for await (const _chunk of client.streamCompletion(messages)) {
           // Should throw
         }
