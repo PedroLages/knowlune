@@ -6,7 +6,7 @@ started: 2026-03-17
 completed:
 reviewed: in-progress    # false | in-progress | true
 review_started: 2026-03-17  # YYYY-MM-DD — set when /review-story begins
-review_gates_passed: []  # tracks completed gates: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review-skipped, web-design-guidelines-skipped]
 burn_in_validated: false # true if burn-in testing (10 iterations) passed
 ---
 
