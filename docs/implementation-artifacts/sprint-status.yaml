@@ -195,8 +195,8 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 12: Take Basic Quizzes (Quiz & Assessment System)
   # ──────────────────────────────────────────────────
-  epic-12: backlog
-  12-1-create-quiz-type-definitions: backlog
+  epic-12: in-progress
+  12-1-create-quiz-type-definitions: done
   12-2-set-up-dexie-schema-v12-migration: backlog
   12-3-create-usequizstore-with-zustand: backlog
   12-4-create-quiz-route-and-basic-quizplayer-component: backlog
