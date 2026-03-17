@@ -15,6 +15,7 @@ import type {
   CourseThumbnail,
   AIUsageEvent,
   ReviewRecord,
+  CourseReminder,
 } from '@/data/types'
 
 const db = new Dexie('ElearningDB') as Dexie & {
@@ -33,6 +34,7 @@ const db = new Dexie('ElearningDB') as Dexie & {
   courseThumbnails: EntityTable<CourseThumbnail, 'courseId'>
   aiUsageEvents: EntityTable<AIUsageEvent, 'id'>
   reviewRecords: EntityTable<ReviewRecord, 'id'>
+  courseReminders: EntityTable<CourseReminder, 'id'>
 }
 
 db.version(1).stores({
@@ -336,6 +338,26 @@ db.version(14).stores({
   courseThumbnails: 'courseId',
   aiUsageEvents: 'id, featureType, timestamp, courseId',
   reviewRecords: 'id, noteId, nextReviewAt, reviewedAt',
+})
+
+// v15: Per-course study reminders (E11-S06)
+db.version(15).stores({
+  importedCourses: 'id, name, importedAt, status, *tags',
+  importedVideos: 'id, courseId, filename',
+  importedPdfs: 'id, courseId, filename',
+  progress: '[courseId+videoId], courseId, videoId',
+  bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+  screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+  contentProgress: '[courseId+itemId], courseId, itemId, status',
+  challenges: 'id, type, deadline, createdAt',
+  embeddings: 'noteId, createdAt',
+  learningPath: 'courseId, position, generatedAt',
+  courseThumbnails: 'courseId',
+  aiUsageEvents: 'id, featureType, timestamp, courseId',
+  reviewRecords: 'id, noteId, nextReviewAt, reviewedAt',
+  courseReminders: 'id, courseId',
 })
 
 export { db }

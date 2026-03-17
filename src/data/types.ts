@@ -320,6 +320,26 @@ export interface LearningPathCourse {
 
 // --- Spaced Review System (Story 11.1) ---
 
+export type DayOfWeek =
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday'
+
+export interface CourseReminder {
+  id: string // UUID
+  courseId: string // FK to ImportedCourse.id
+  courseName: string // Denormalized for notification display
+  days: DayOfWeek[] // Selected days of the week
+  time: string // "HH:MM" format
+  enabled: boolean
+  createdAt: string // ISO 8601
+  updatedAt: string // ISO 8601
+}
+
 export type ReviewRating = 'hard' | 'good' | 'easy'
 
 export interface ReviewRecord {
