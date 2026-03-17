@@ -151,8 +151,8 @@ export type Quiz = z.infer<typeof QuizSchema>
 export const AnswerSchema = z.object({
   /** Question this answer corresponds to */
   questionId: z.string().min(1),
-  /** Learner's response: string for MC/TF/FIB, string[] for MS (must be non-empty) */
-  userAnswer: z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]),
+  /** Learner's response: string for MC/TF/FIB (empty string = unanswered), string[] for MS (must be non-empty) */
+  userAnswer: z.union([z.string(), z.array(z.string().min(1)).min(1)]),
   /** Whether the answer was scored as correct */
   isCorrect: z.boolean(),
   /** Points awarded for this answer */

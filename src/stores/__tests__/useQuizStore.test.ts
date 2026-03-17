@@ -510,23 +510,204 @@ describe('persist partialize', () => {
       }
     ).persist
 
-    if (persistApi) {
-      const options = persistApi.getOptions()
-      expect(options.name).toBe('levelup-quiz-store')
+    expect(persistApi).toBeDefined()
 
-      const mockState = {
-        currentQuiz: { id: 'quiz-x' } as never,
-        currentProgress: { quizId: 'q1' } as never,
-        attempts: [{ id: 'a1' }] as never,
-        isLoading: false,
-        error: null,
-      }
-      const partial = options.partialize(mockState)
-      expect(partial).toEqual({ currentProgress: { quizId: 'q1' } })
-    } else {
-      // Fallback: verify by reading mock localStorage (zustand writes on setState)
-      // This path shouldn't be reached with zustand v4+
-      expect(true).toBe(true)
+    const options = persistApi.getOptions()
+    expect(options.name).toBe('levelup-quiz-store')
+
+    const mockState = {
+      currentQuiz: { id: 'quiz-x' } as never,
+      currentProgress: { quizId: 'q1' } as never,
+      attempts: [{ id: 'a1' }] as never,
+      isLoading: false,
+      error: null,
     }
+    const partial = options.partialize(mockState)
+    expect(partial).toEqual({ currentProgress: { quizId: 'q1' } })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Individual selectors
+// ---------------------------------------------------------------------------
+
+describe('individual selectors', () => {
+  it('selectCurrentQuiz maps to currentQuiz', async () => {
+    const { selectCurrentQuiz } = await import('@/stores/useQuizStore')
+    const quiz = {
+      id: 'quiz-sel',
+      lessonId: 'les-sel',
+      title: 'Selector Quiz',
+      description: '',
+      questions: [],
+      timeLimit: null,
+      passingScore: 70,
+      allowRetakes: true,
+      shuffleQuestions: false,
+      shuffleAnswers: false,
+      createdAt: '2025-01-15T12:00:00.000Z',
+      updatedAt: '2025-01-15T12:00:00.000Z',
+    }
+    useQuizStore.setState({ currentQuiz: quiz })
+    expect(selectCurrentQuiz(useQuizStore.getState())).toEqual(quiz)
+  })
+
+  it('selectCurrentProgress maps to currentProgress', async () => {
+    const { selectCurrentProgress } = await import('@/stores/useQuizStore')
+    const progress = {
+      quizId: 'quiz-sel',
+      currentQuestionIndex: 1,
+      answers: { q1: 'A' },
+      startTime: 1000,
+      timeRemaining: null,
+      isPaused: false,
+      markedForReview: [],
+      questionOrder: ['q1'],
+      timerAccommodation: 'standard' as const,
+    }
+    useQuizStore.setState({ currentProgress: progress })
+    expect(selectCurrentProgress(useQuizStore.getState())).toEqual(progress)
+  })
+
+  it('selectIsLoading maps to isLoading', async () => {
+    const { selectIsLoading } = await import('@/stores/useQuizStore')
+    useQuizStore.setState({ isLoading: true })
+    expect(selectIsLoading(useQuizStore.getState())).toBe(true)
+  })
+
+  it('selectError maps to error', async () => {
+    const { selectError } = await import('@/stores/useQuizStore')
+    useQuizStore.setState({ error: 'test error' })
+    expect(selectError(useQuizStore.getState())).toBe('test error')
+  })
+
+  it('selectAttempts maps to attempts', async () => {
+    const { selectAttempts } = await import('@/stores/useQuizStore')
+    useQuizStore.setState({ attempts: [] })
+    expect(selectAttempts(useQuizStore.getState())).toEqual([])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// clearQuiz and clearError
+// ---------------------------------------------------------------------------
+
+describe('clearQuiz', () => {
+  it('resets all state fields to initial values', () => {
+    useQuizStore.setState({
+      currentQuiz: { id: 'q' } as never,
+      currentProgress: { quizId: 'q' } as never,
+      attempts: [{ id: 'a' }] as never,
+      error: 'some error',
+    })
+
+    useQuizStore.getState().clearQuiz()
+
+    const state = useQuizStore.getState()
+    expect(state.currentQuiz).toBeNull()
+    expect(state.currentProgress).toBeNull()
+    expect(state.attempts).toHaveLength(0)
+    expect(state.error).toBeNull()
+  })
+})
+
+describe('clearError', () => {
+  it('clears error without touching other state', () => {
+    useQuizStore.setState({ error: 'existing error', isLoading: false })
+    useQuizStore.getState().clearError()
+    expect(useQuizStore.getState().error).toBeNull()
+    expect(useQuizStore.getState().isLoading).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// submitAnswer — no-op when no active progress
+// ---------------------------------------------------------------------------
+
+describe('submitAnswer — guard', () => {
+  it('is a no-op when currentProgress is null', () => {
+    useQuizStore.setState({ currentProgress: null })
+    useQuizStore.getState().submitAnswer('q1', 'A')
+    expect(useQuizStore.getState().currentProgress).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// startQuiz — timeLimit non-null
+// ---------------------------------------------------------------------------
+
+describe('startQuiz — timeLimit', () => {
+  it('sets timeRemaining to quiz.timeLimit when non-null', async () => {
+    const quiz = {
+      id: 'quiz-tl',
+      lessonId: 'les-tl',
+      title: 'Timed Quiz',
+      description: '',
+      questions: [
+        {
+          id: 'q1',
+          order: 1,
+          type: 'multiple-choice' as const,
+          text: 'Q1',
+          options: ['A'],
+          correctAnswer: 'A',
+          explanation: '',
+          points: 1,
+        },
+      ],
+      timeLimit: 30,
+      passingScore: 70,
+      allowRetakes: true,
+      shuffleQuestions: false,
+      shuffleAnswers: false,
+      createdAt: '2025-01-15T12:00:00.000Z',
+      updatedAt: '2025-01-15T12:00:00.000Z',
+    }
+    await db.quizzes.add(quiz)
+    await act(async () => {
+      await useQuizStore.getState().startQuiz('les-tl')
+    })
+    expect(useQuizStore.getState().currentProgress?.timeRemaining).toBe(30)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// submitQuiz — early return guard
+// ---------------------------------------------------------------------------
+
+describe('submitQuiz — guard', () => {
+  it('returns early without DB write when no active quiz', async () => {
+    useQuizStore.setState({ currentQuiz: null, currentProgress: null })
+    await act(async () => {
+      await useQuizStore.getState().submitQuiz('course-1', mockModules)
+    })
+    const dbAttempts = await db.quizAttempts.toArray()
+    expect(dbAttempts).toHaveLength(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// loadAttempts — empty result
+// ---------------------------------------------------------------------------
+
+describe('loadAttempts — empty', () => {
+  it('sets attempts to empty array when no records match', async () => {
+    useQuizStore.setState({ attempts: [{ id: 'stale' }] as never })
+    await act(async () => {
+      await useQuizStore.getState().loadAttempts('non-existent-quiz')
+    })
+    expect(useQuizStore.getState().attempts).toHaveLength(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// toggleReviewMark — no-op when no active progress
+// ---------------------------------------------------------------------------
+
+describe('toggleReviewMark — guard', () => {
+  it('is a no-op when currentProgress is null', () => {
+    useQuizStore.setState({ currentProgress: null })
+    useQuizStore.getState().toggleReviewMark('q1')
+    expect(useQuizStore.getState().currentProgress).toBeNull()
   })
 })

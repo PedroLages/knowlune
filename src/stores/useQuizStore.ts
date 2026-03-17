@@ -48,29 +48,35 @@ export const useQuizStore = create<QuizState>()(
       startQuiz: async (lessonId: string) => {
         set({ isLoading: true, error: null })
 
-        const quiz = await db.quizzes.where('lessonId').equals(lessonId).first()
-        if (!quiz) {
-          set({ isLoading: false, error: 'Quiz not found' })
-          return
+        try {
+          const quiz = await db.quizzes.where('lessonId').equals(lessonId).first()
+          if (!quiz) {
+            set({ isLoading: false, error: 'Quiz not found' })
+            return
+          }
+
+          const questionOrder = quiz.shuffleQuestions
+            ? shuffleArray(quiz.questions.map(q => q.id))
+            : quiz.questions.map(q => q.id)
+
+          const progress: QuizProgress = {
+            quizId: quiz.id,
+            currentQuestionIndex: 0,
+            answers: {},
+            startTime: Date.now(),
+            // TODO(E15-S02): Apply timerAccommodation multiplier when timer accommodations are implemented
+            timeRemaining: quiz.timeLimit ?? null,
+            isPaused: false,
+            markedForReview: [],
+            questionOrder,
+            timerAccommodation: 'standard',
+          }
+
+          set({ currentQuiz: quiz, currentProgress: progress, isLoading: false })
+        } catch (err) {
+          console.error('[useQuizStore] startQuiz failed:', err)
+          set({ isLoading: false, error: 'Failed to load quiz' })
         }
-
-        const questionOrder = quiz.shuffleQuestions
-          ? shuffleArray(quiz.questions.map(q => q.id))
-          : quiz.questions.map(q => q.id)
-
-        const progress: QuizProgress = {
-          quizId: quiz.id,
-          currentQuestionIndex: 0,
-          answers: {},
-          startTime: Date.now(),
-          timeRemaining: quiz.timeLimit ?? null,
-          isPaused: false,
-          markedForReview: [],
-          questionOrder,
-          timerAccommodation: 'standard',
-        }
-
-        set({ currentQuiz: quiz, currentProgress: progress, isLoading: false })
       },
 
       submitAnswer: (questionId: string, answer: string | string[]) => {
@@ -113,11 +119,17 @@ export const useQuizStore = create<QuizState>()(
             await db.quizAttempts.add(attempt)
           })
 
-          // Cross-store: mark lesson complete only after successful DB write
+          // Cross-store: mark lesson complete only after successful DB write.
+          // Isolated in its own try/catch — a failure here does NOT roll back the
+          // already-persisted quiz attempt.
           if (result.passed) {
-            await useContentProgressStore
-              .getState()
-              .setItemStatus(courseId, currentQuiz.lessonId, 'completed', modules)
+            try {
+              await useContentProgressStore
+                .getState()
+                .setItemStatus(courseId, currentQuiz.lessonId, 'completed', modules)
+            } catch (err) {
+              console.error('[useQuizStore] setItemStatus failed after quiz submit:', err)
+            }
           }
 
           set({
@@ -125,9 +137,12 @@ export const useQuizStore = create<QuizState>()(
             currentProgress: null,
             isLoading: false,
           })
-        } catch {
+        } catch (err) {
+          console.error('[useQuizStore] submitQuiz failed:', err)
           set({ ...snapshot, isLoading: false, error: 'Failed to save quiz attempt' })
-          toastError.saveFailed('Quiz attempt could not be saved. Your answers are preserved.')
+          toastError.saveFailed(
+            err instanceof Error ? err.message : 'Quiz attempt could not be saved. Your answers are preserved.'
+          )
         }
       },
 
@@ -136,8 +151,13 @@ export const useQuizStore = create<QuizState>()(
       },
 
       loadAttempts: async (quizId: string) => {
-        const attempts = await db.quizAttempts.where('quizId').equals(quizId).sortBy('completedAt')
-        set({ attempts })
+        try {
+          const attempts = await db.quizAttempts.where('quizId').equals(quizId).sortBy('completedAt')
+          set({ attempts })
+        } catch (err) {
+          console.error('[useQuizStore] loadAttempts failed:', err)
+          set({ error: 'Failed to load quiz history' })
+        }
       },
 
       resumeQuiz: () => {
