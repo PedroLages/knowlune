@@ -176,7 +176,7 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
 
 12. **Create PR**:
 
-   **See:** [docs/pr-creation.md](docs/pr-creation.md) for PR template and writing guidelines.
+   **See:** [docs/pr-creation.md](docs/pr-creation.md) for PR template, writing guidelines, and Known Issues extraction (HIGH findings from review reports).
 
    Print the PR URL.
 

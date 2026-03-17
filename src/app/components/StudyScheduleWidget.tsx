@@ -26,7 +26,10 @@ function formatDuration(minutes: number): string {
   return `${h}h ${m}m`
 }
 
-function buildActiveCoursesWithMomentum(sessions: StudySession[], allCourses: Course[]): CourseWithMomentum[] {
+function buildActiveCoursesWithMomentum(
+  sessions: StudySession[],
+  allCourses: Course[]
+): CourseWithMomentum[] {
   return allCourses
     .map(course => {
       const completionPercent = getCourseCompletionPercent(course.id, course.totalLessons)

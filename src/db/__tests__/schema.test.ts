@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import Dexie from 'dexie'
+import Dexie, { type Table } from 'dexie'
+import type { Quiz, QuizAttempt } from '@/types/quiz'
 import { createChallenge } from '../../../tests/support/fixtures/factories/challenge-factory'
 
 // Must import after fake-indexeddb/auto polyfill is active
@@ -61,14 +62,29 @@ describe('ElearningDB schema', () => {
       'learningPath',
       'notes',
       'progress',
+      'quizAttempts',
+      'quizzes',
       'reviewRecords',
       'screenshots',
       'studySessions',
     ])
   })
 
-  it('should be at version 16', () => {
-    expect(db.verno).toBe(16)
+  it('should be at version 17', () => {
+    expect(db.verno).toBe(17)
+  })
+
+  it('should preserve key indexes on existing v16 tables in v17 migration', async () => {
+    // Dexie uses i.name for the index identifier (e.g. '[courseId+lessonId]', '*tags')
+    const bookmarkIndexNames = db.bookmarks.schema.indexes.map(i => i.name)
+    expect(bookmarkIndexNames).toContain('[courseId+lessonId]')
+
+    const contentProgressPrimKey = db.contentProgress.schema.primKey.name
+    expect(contentProgressPrimKey).toBe('[courseId+itemId]')
+
+    const notesIndexNames = db.notes.schema.indexes.map(i => i.name)
+    expect(notesIndexNames).toContain('[courseId+videoId]')
+    expect(notesIndexNames).toContain('tags') // Dexie stores multi-entry index name without the '*' prefix
   })
 })
 
@@ -398,5 +414,111 @@ describe('v4 migration from localStorage', () => {
 
     // Clean up
     localStorage.removeItem('course-progress')
+  })
+})
+
+describe('quizzes table', () => {
+  // Schema-level fixture: questions intentionally empty — Dexie doesn't enforce Zod constraints at
+  // write time, so these tests validate index behavior only, not quiz content validity.
+  function makeQuiz(overrides: Record<string, unknown> = {}): Quiz {
+    return {
+      id: crypto.randomUUID(),
+      lessonId: crypto.randomUUID(),
+      title: 'Test Quiz',
+      description: 'A test quiz',
+      questions: [],
+      timeLimit: null,
+      passingScore: 70,
+      allowRetakes: true,
+      shuffleQuestions: false,
+      shuffleAnswers: false,
+      createdAt: '2026-01-15T10:00:00.000Z',
+      updatedAt: '2026-01-15T10:00:00.000Z',
+      ...overrides,
+    } as Quiz
+  }
+
+  it('should add and retrieve a quiz', async () => {
+    const quiz = makeQuiz()
+    await db.quizzes.add(quiz)
+    const retrieved = await db.quizzes.get(quiz.id)
+    expect(retrieved).toBeDefined()
+    expect(retrieved!.title).toBe('Test Quiz')
+  })
+
+  it('should query by lessonId index', async () => {
+    const lessonId = crypto.randomUUID()
+    await db.quizzes.add(makeQuiz({ lessonId }))
+    const results = await db.quizzes.where('lessonId').equals(lessonId).toArray()
+    expect(results).toHaveLength(1)
+    expect(results[0].lessonId).toBe(lessonId)
+  })
+
+  it('should query by createdAt index', async () => {
+    const t1 = '2026-01-01T00:00:00.000Z'
+    const t2 = '2026-01-02T00:00:00.000Z'
+    await db.quizzes.bulkAdd([makeQuiz({ createdAt: t1 }), makeQuiz({ createdAt: t2 })])
+    const results = await db.quizzes.where('createdAt').above(t1).toArray()
+    expect(results).toHaveLength(1)
+    expect(results[0].createdAt).toBe(t2)
+  })
+})
+
+describe('quizAttempts table', () => {
+  // Schema-level fixture: answers intentionally empty — Dexie doesn't enforce Zod constraints at
+  // write time. score/percentage/passed values are fixed constants for index testing only.
+  function makeAttempt(overrides: Record<string, unknown> = {}): QuizAttempt {
+    return {
+      id: crypto.randomUUID(),
+      quizId: crypto.randomUUID(),
+      answers: [],
+      score: 80,
+      percentage: 80,
+      passed: true,
+      timeSpent: 120,
+      completedAt: '2026-01-15T10:00:00.000Z',
+      startedAt: '2026-01-15T09:58:00.000Z',
+      timerAccommodation: 'standard',
+      ...overrides,
+    } as QuizAttempt
+  }
+
+  it('should add and retrieve an attempt', async () => {
+    const attempt = makeAttempt()
+    await db.quizAttempts.add(attempt)
+    const retrieved = await db.quizAttempts.get(attempt.id)
+    expect(retrieved).toBeDefined()
+    expect(retrieved!.score).toBe(80)
+  })
+
+  it('should query attempts by quizId using compound index', async () => {
+    const quizId = crypto.randomUUID()
+    const t1 = '2024-01-01T00:00:00.000Z'
+    const t2 = '2024-01-02T00:00:00.000Z'
+    await db.quizAttempts.bulkAdd([
+      makeAttempt({ quizId, completedAt: t1 }),
+      makeAttempt({ quizId, completedAt: t2 }),
+    ])
+    // EntityTable<T, K> doesn't expose compound index names in its where() types;
+    // cast to Table<T> to access compound indexes while preserving QuizAttempt return type.
+    const results = await (db.quizAttempts as Table<QuizAttempt>)
+      .where('[quizId+completedAt]')
+      .between([quizId, Dexie.minKey], [quizId, Dexie.maxKey])
+      .toArray()
+    expect(results).toHaveLength(2)
+    // Results are ordered ascending by completedAt within the compound index range
+    expect(results[results.length - 1].completedAt).toBe(t2)
+  })
+
+  it('should query attempts by completedAt index', async () => {
+    const t1 = '2024-01-01T00:00:00.000Z'
+    const t2 = '2024-01-02T00:00:00.000Z'
+    await db.quizAttempts.bulkAdd([
+      makeAttempt({ completedAt: t1 }),
+      makeAttempt({ completedAt: t2 }),
+    ])
+    const results = await db.quizAttempts.where('completedAt').above(t1).toArray()
+    expect(results).toHaveLength(1)
+    expect(results[0].completedAt).toBe(t2)
   })
 })

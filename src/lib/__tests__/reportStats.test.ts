@@ -333,9 +333,9 @@ describe('getCategoryColorMap', () => {
       'extra-category',
     ] as const
 
-    setCourses(categories.map((cat, i) =>
-      makeCourse({ id: `c${i}`, category: cat as Course['category'] })
-    ))
+    setCourses(
+      categories.map((cat, i) => makeCourse({ id: `c${i}`, category: cat as Course['category'] }))
+    )
 
     const result = getCategoryColorMap()
 

@@ -37,7 +37,10 @@ interface SessionResult {
   deleted: DeletedSession[]
 }
 
-function resolveSessionData(allProgress: Record<string, CourseProgress>, allCourses: Course[]): SessionResult {
+function resolveSessionData(
+  allProgress: Record<string, CourseProgress>,
+  allCourses: Course[]
+): SessionResult {
   const resolved: ResolvedSession[] = []
   const deleted: DeletedSession[] = []
 
@@ -357,7 +360,10 @@ function DiscoveryState() {
 
 export function ContinueLearning() {
   const allCourses = useCourseStore(s => s.courses)
-  const { resolved: sessions, deleted } = useMemo(() => resolveSessionData(getAllProgress(), allCourses), [allCourses])
+  const { resolved: sessions, deleted } = useMemo(
+    () => resolveSessionData(getAllProgress(), allCourses),
+    [allCourses]
+  )
   const heroSession = sessions[0]
   const otherSessions = sessions.slice(1)
 

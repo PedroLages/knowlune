@@ -215,6 +215,17 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M2: No E2E test for QualityScoreDialog appearance after session ends
 - Positive: Pure function scoring engine, comprehensive unit tests, proper design tokens, clean DB migration, good factory usage
 
+## E12-S03: Create useQuizStore with Zustand (Round 1)
+- No uncommitted changes (positive)
+- H1 (RECURRING): `startQuiz` Dexie query has no try/catch -- unhandled rejection leaves store stuck in loading state
+- H2: `loadAttempts` Dexie query has no try/catch -- same pattern
+- H3: `scoring.ts` sets `userAnswer: ''` for unanswered questions but `AnswerSchema.userAnswer` requires `.min(1)` -- schema/code divergence
+- H4: Cross-store `setItemStatus` call in `submitQuiz` catch block reverts quiz attempt even though Dexie write succeeded -- false failure
+- M1: `timerAccommodation` multiplier not applied to `timeRemaining` despite AC stating it should be
+- M2: Dead else branch in persist partialize test auto-passes
+- Nit: Bare `catch` discards original Dexie error object -- error details lost for debugging
+- Positive: Snapshot rollback pattern, correct partialize scope, clean scoring logic, proper persist middleware usage
+
 ## E11-S06: Per-Course Study Reminders (Round 1)
 - No uncommitted changes (positive)
 - BLOCKER: Notification `data.url` deep-link is inert -- no `onclick` handler or Service Worker `notificationclick` listener (AC2 unmet)
