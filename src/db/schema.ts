@@ -388,7 +388,7 @@ db.version(16).stores({
 
 // v17: Quiz tables for quiz subsystem (E12-S02)
 db.version(17).stores({
-  // All 18 existing v16 tables (unchanged — must redeclare or Dexie deletes them)
+  // All 17 existing v16 tables (unchanged — must redeclare or Dexie deletes them)
   importedCourses: 'id, name, importedAt, status, *tags',
   importedVideos: 'id, courseId, filename',
   importedPdfs: 'id, courseId, filename',

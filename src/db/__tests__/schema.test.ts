@@ -73,6 +73,19 @@ describe('ElearningDB schema', () => {
   it('should be at version 17', () => {
     expect(db.verno).toBe(17)
   })
+
+  it('should preserve key indexes on existing v16 tables in v17 migration', async () => {
+    // Dexie uses i.name for the index identifier (e.g. '[courseId+lessonId]', '*tags')
+    const bookmarkIndexNames = db.bookmarks.schema.indexes.map(i => i.name)
+    expect(bookmarkIndexNames).toContain('[courseId+lessonId]')
+
+    const contentProgressPrimKey = db.contentProgress.schema.primKey.name
+    expect(contentProgressPrimKey).toBe('[courseId+itemId]')
+
+    const notesIndexNames = db.notes.schema.indexes.map(i => i.name)
+    expect(notesIndexNames).toContain('[courseId+videoId]')
+    expect(notesIndexNames).toContain('tags') // Dexie stores multi-entry index name without the '*' prefix
+  })
 })
 
 describe('importedCourses table', () => {
@@ -405,6 +418,8 @@ describe('v4 migration from localStorage', () => {
 })
 
 describe('quizzes table', () => {
+  // Schema-level fixture: questions intentionally empty — Dexie doesn't enforce Zod constraints at
+  // write time, so these tests validate index behavior only, not quiz content validity.
   function makeQuiz(overrides: Record<string, unknown> = {}): Quiz {
     return {
       id: crypto.randomUUID(),
@@ -417,8 +432,8 @@ describe('quizzes table', () => {
       allowRetakes: true,
       shuffleQuestions: false,
       shuffleAnswers: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: '2026-01-15T10:00:00.000Z',
+      updatedAt: '2026-01-15T10:00:00.000Z',
       ...overrides,
     } as Quiz
   }
@@ -438,9 +453,20 @@ describe('quizzes table', () => {
     expect(results).toHaveLength(1)
     expect(results[0].lessonId).toBe(lessonId)
   })
+
+  it('should query by createdAt index', async () => {
+    const t1 = '2026-01-01T00:00:00.000Z'
+    const t2 = '2026-01-02T00:00:00.000Z'
+    await db.quizzes.bulkAdd([makeQuiz({ createdAt: t1 }), makeQuiz({ createdAt: t2 })])
+    const results = await db.quizzes.where('createdAt').above(t1).toArray()
+    expect(results).toHaveLength(1)
+    expect(results[0].createdAt).toBe(t2)
+  })
 })
 
 describe('quizAttempts table', () => {
+  // Schema-level fixture: answers intentionally empty — Dexie doesn't enforce Zod constraints at
+  // write time. score/percentage/passed values are fixed constants for index testing only.
   function makeAttempt(overrides: Record<string, unknown> = {}): QuizAttempt {
     return {
       id: crypto.randomUUID(),
@@ -450,8 +476,8 @@ describe('quizAttempts table', () => {
       percentage: 80,
       passed: true,
       timeSpent: 120,
-      completedAt: new Date().toISOString(),
-      startedAt: new Date().toISOString(),
+      completedAt: '2026-01-15T10:00:00.000Z',
+      startedAt: '2026-01-15T09:58:00.000Z',
       timerAccommodation: 'standard',
       ...overrides,
     } as QuizAttempt
@@ -467,16 +493,32 @@ describe('quizAttempts table', () => {
 
   it('should query attempts by quizId using compound index', async () => {
     const quizId = crypto.randomUUID()
-    const t1 = new Date('2024-01-01').toISOString()
-    const t2 = new Date('2024-01-02').toISOString()
+    const t1 = '2024-01-01T00:00:00.000Z'
+    const t2 = '2024-01-02T00:00:00.000Z'
     await db.quizAttempts.bulkAdd([
       makeAttempt({ quizId, completedAt: t1 }),
       makeAttempt({ quizId, completedAt: t2 }),
     ])
-    const results = await (db.quizAttempts as unknown as Table).where('[quizId+completedAt]')
+    // EntityTable<T, K> doesn't expose compound index names in its where() types;
+    // cast to Table<T> to access compound indexes while preserving QuizAttempt return type.
+    const results = await (db.quizAttempts as Table<QuizAttempt>)
+      .where('[quizId+completedAt]')
       .between([quizId, Dexie.minKey], [quizId, Dexie.maxKey])
       .toArray()
     expect(results).toHaveLength(2)
+    // Results are ordered ascending by completedAt within the compound index range
     expect(results[results.length - 1].completedAt).toBe(t2)
+  })
+
+  it('should query attempts by completedAt index', async () => {
+    const t1 = '2024-01-01T00:00:00.000Z'
+    const t2 = '2024-01-02T00:00:00.000Z'
+    await db.quizAttempts.bulkAdd([
+      makeAttempt({ completedAt: t1 }),
+      makeAttempt({ completedAt: t2 }),
+    ])
+    const results = await db.quizAttempts.where('completedAt').above(t1).toArray()
+    expect(results).toHaveLength(1)
+    expect(results[0].completedAt).toBe(t2)
   })
 })
