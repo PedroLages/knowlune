@@ -34,6 +34,10 @@ gh pr create \
 - [ ] [Manual verification step 2 from acceptance criteria]
 - [ ] [Manual verification step 3 from acceptance criteria]
 
+[## Known Issues — include only if HIGH findings exist; omit section entirely otherwise]
+[> Unresolved HIGH findings from review — non-blocking, flagged for reviewer awareness]
+[- [source-agent] `file.ts:line` — finding description]
+
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF
 )"
@@ -85,6 +89,40 @@ Derive from acceptance criteria. Make it actionable:
 - ❌ "Test the filtering"
 - ❌ "Verify streak calculation works"
 - ❌ "Check progress tracking"
+
+## Known Issues Extraction
+
+Before constructing the PR body, extract HIGH findings from review reports to populate the `## Known Issues` section.
+
+**Step 1 — locate reports** (glob, may not all exist):
+```
+${BASE_PATH}/docs/reviews/code/code-review-*-{story-id}.md       → [code-review]
+${BASE_PATH}/docs/reviews/design/design-review-*-{story-id}.md   → [design-review]
+${BASE_PATH}/docs/reviews/code/code-review-testing-*-{story-id}.md → [code-review-testing]
+```
+
+**Step 2 — extract HIGH section from each report** (same approach `validate-blockers.sh` uses for blockers):
+```bash
+sed -n '/^#### High Priority/,/^####/p' "$REPORT_FILE" | grep -v '^####'
+```
+
+**Step 3 — filter and format**:
+- Strip blank lines and lines containing only "None" (case-insensitive)
+- Prefix each surviving line with the source agent: `- [code-review] original line text`
+- Collect findings from all three reports into a single list
+
+**Step 4 — include or omit**:
+- If the collected list is **non-empty**: include the `## Known Issues` section with the blockquote and findings
+- If the list is **empty**: omit the `## Known Issues` section entirely — do not include a placeholder
+
+**Example output (non-empty)**:
+```markdown
+## Known Issues
+> Unresolved HIGH findings from review — non-blocking, flagged for reviewer awareness
+
+- [code-review] `src/stores/useOnboardingStore.ts:42` — missing error boundary for failed DB writes
+- [design-review] `OnboardingWizard.tsx:118` — focus trap not implemented (WCAG 2.4.3)
+```
 
 ## Validation Before Creation
 
