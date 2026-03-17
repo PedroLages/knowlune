@@ -4,9 +4,9 @@ story_name: "Create useQuizStore with Zustand"
 status: in-progress
 started: 2026-03-17
 completed:
-reviewed: in-progress    # false | in-progress | true
+reviewed: true    # false | in-progress | true
 review_started: 2026-03-17  # YYYY-MM-DD — set when /review-story begins
-review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review-skipped, web-design-guidelines-skipped]
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review-skipped, web-design-guidelines-skipped, code-review, code-review-testing]
 burn_in_validated: false # true if burn-in testing (10 iterations) passed
 ---
 
@@ -151,7 +151,20 @@ N/A — store only, no UI changes.
 
 ## Code Review Feedback
 
-To be populated by /review-story.
+**Review date:** 2026-03-17
+**Reports:** [code-review](../reviews/code/code-review-2026-03-17-e12-s03.md) | [code-review-testing](../reviews/code/code-review-testing-2026-03-17-e12-s03.md)
+
+**All findings addressed:**
+
+- HIGH: `startQuiz` — added try/catch around Dexie query (infinite spinner on DB unavailability)
+- HIGH: `loadAttempts` — added try/catch, sets error state on failure
+- HIGH: `submitQuiz` cross-store call — isolated `setItemStatus` in its own try/catch so a progress-marking failure no longer reverts an already-persisted quiz attempt
+- HIGH: `AnswerSchema.userAnswer` type mismatch — relaxed `z.string().min(1)` to `z.string()` to allow empty string for unanswered questions (aligns schema with scoring output)
+- MEDIUM: `timerAccommodation` AC gap — added `TODO(E15-S02)` comment documenting the deferred multiplier
+- MEDIUM: Dead `else { expect(true) }` branch — replaced with `expect(persistApi).toBeDefined()`
+- NIT: Capture original error in submitQuiz catch block, pass message to `toastError.saveFailed`
+- TESTING HIGH: `scoring.ts` had no unit tests — created `src/lib/__tests__/scoring.test.ts` (all 4 question types, rounding, boundary, empty-questions guard)
+- TESTING HIGH: `submitAnswer` no-op guard, exported selectors, `clearQuiz`, `clearError`, `submitQuiz` early-return, `timeLimit` non-null, `loadAttempts` empty, `toggleReviewMark` guard — all added
 
 ## Web Design Guidelines Review
 
