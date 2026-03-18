@@ -128,6 +128,7 @@ export function Quiz() {
       <div
         role="status"
         aria-busy="true"
+        aria-label="Loading quiz"
         className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm space-y-4"
       >
         <Skeleton className="h-8 w-64" />
@@ -177,18 +178,19 @@ export function Quiz() {
       currentQuiz.questions.find(q => q.id === questionId) ??
       currentQuiz.questions[currentProgress.currentQuestionIndex]
 
-    const currentAnswer = currentQuestion
-      ? (currentProgress.answers[currentQuestion.id] as string | undefined)
+    const currentQuestionId = currentQuestion?.id
+    const currentAnswer = currentQuestionId
+      ? (currentProgress.answers[currentQuestionId] as string | undefined)
       : undefined
 
     return (
       <div className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm">
         <QuizHeader quiz={currentQuiz} progress={currentProgress} />
-        {currentQuestion ? (
+        {currentQuestion && currentQuestionId ? (
           <QuestionDisplay
             question={currentQuestion}
             value={currentAnswer}
-            onChange={answer => submitAnswer(currentQuestion.id, answer)}
+            onChange={answer => submitAnswer(currentQuestionId, answer)}
             mode="active"
           />
         ) : (

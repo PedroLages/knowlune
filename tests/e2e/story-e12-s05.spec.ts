@@ -48,7 +48,7 @@ async function seedAndNavigateToQuiz(page: import('@playwright/test').Page) {
 
   // Navigate first so Dexie initializes the DB and localStorage is accessible
   await page.goto('/')
-  await page.waitForLoadState('networkidle')
+  await page.waitForLoadState('domcontentloaded')
 
   // Prevent sidebar overlay in tablet viewports (must be after navigation)
   await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
@@ -58,7 +58,7 @@ async function seedAndNavigateToQuiz(page: import('@playwright/test').Page) {
 
   // Navigate to quiz page
   await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz`)
-  await page.waitForLoadState('networkidle')
+  await page.getByRole('button', { name: /start quiz/i }).waitFor({ state: 'visible' })
 }
 
 async function startQuiz(page: import('@playwright/test').Page) {
@@ -107,16 +107,52 @@ test.describe('E12-S05: Display Multiple Choice Questions', () => {
     await seedAndNavigateToQuiz(page)
     await startQuiz(page)
 
-    // Select first option
+    // Select first option via label
+    const optionALabel = page.locator('label').filter({ hasText: 'Option A' })
+    await optionALabel.click()
+
     const firstOption = page.getByRole('radio').first()
-    await firstOption.click()
     await expect(firstOption).toBeChecked()
 
+    // Verify selected label has brand styling
+    await expect(optionALabel).toHaveClass(/border-brand/)
+    await expect(optionALabel).toHaveClass(/bg-brand-soft/)
+
+    // Verify unselected label has default styling
+    const optionBLabel = page.locator('label').filter({ hasText: 'Option B' })
+    await expect(optionBLabel).toHaveClass(/border-border/)
+    await expect(optionBLabel).toHaveClass(/bg-card/)
+
     // Select second option — first should uncheck (radio group behavior)
+    await optionBLabel.click()
     const secondOption = page.getByRole('radio').nth(1)
-    await secondOption.click()
     await expect(secondOption).toBeChecked()
     await expect(firstOption).not.toBeChecked()
+
+    // Verify styling swapped
+    await expect(optionBLabel).toHaveClass(/border-brand/)
+    await expect(optionALabel).toHaveClass(/border-border/)
+  })
+
+  test('AC2: Answer persists via store across navigation', async ({ page }) => {
+    await seedAndNavigateToQuiz(page)
+    await startQuiz(page)
+
+    // Select Option B
+    const optionBLabel = page.locator('label').filter({ hasText: 'Option B' })
+    await optionBLabel.click()
+    await expect(page.getByRole('radio').nth(1)).toBeChecked()
+
+    // Navigate away
+    await page.goto('/')
+    await page.waitForLoadState('domcontentloaded')
+
+    // Navigate back to quiz
+    await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz`)
+    await page.getByRole('radiogroup').waitFor({ state: 'visible' })
+
+    // Verify Option B is still selected
+    await expect(page.getByRole('radio').nth(1)).toBeChecked()
   })
 
   test('AC4: Mobile viewport — options have min 48px touch targets', async ({ page }) => {
@@ -127,7 +163,6 @@ test.describe('E12-S05: Display Multiple Choice Questions', () => {
     await startQuiz(page)
 
     // Verify each option's clickable area has at least 48px height
-    // The label wrapping the radio should meet the min-h-12 requirement
     const radioGroup = page.getByRole('radiogroup')
     await expect(radioGroup).toBeVisible()
 
@@ -145,13 +180,21 @@ test.describe('E12-S05: Display Multiple Choice Questions', () => {
     }
   })
 
-  test('Accessibility: radiogroup structure and focusable options', async ({ page }) => {
+  test('AC1/AC4: Accessibility — radiogroup structure, aria-labelledby, and focusable options', async ({
+    page,
+  }) => {
     await seedAndNavigateToQuiz(page)
     await startQuiz(page)
 
     // Verify radiogroup role exists
     const radioGroup = page.getByRole('radiogroup')
     await expect(radioGroup).toBeVisible()
+
+    // Verify radiogroup has aria-labelledby pointing to the legend
+    const ariaLabelledBy = await radioGroup.getAttribute('aria-labelledby')
+    expect(ariaLabelledBy).toBeTruthy()
+    const legend = page.locator(`#${ariaLabelledBy}`)
+    await expect(legend).toBeVisible()
 
     // Verify individual radio items are focusable
     const firstRadio = page.getByRole('radio').first()

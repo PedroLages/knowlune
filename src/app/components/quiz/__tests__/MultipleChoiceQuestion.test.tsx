@@ -2,27 +2,13 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MultipleChoiceQuestion } from '../questions/MultipleChoiceQuestion'
-import type { Question } from '@/types/quiz'
-
-function makeTestQuestion(overrides: Partial<Question> = {}): Question {
-  return {
-    id: 'q-1',
-    order: 1,
-    type: 'multiple-choice',
-    text: 'What is the capital of France?',
-    options: ['Paris', 'London', 'Berlin', 'Madrid'],
-    correctAnswer: 'Paris',
-    explanation: 'Paris is the capital of France.',
-    points: 1,
-    ...overrides,
-  }
-}
+import { makeQuestion } from '../../../../../tests/support/fixtures/factories/quiz-factory'
 
 describe('MultipleChoiceQuestion', () => {
   it('renders all options from question.options', () => {
     render(
       <MultipleChoiceQuestion
-        question={makeTestQuestion()}
+        question={makeQuestion()}
         value={undefined}
         onChange={vi.fn()}
         mode="active"
@@ -38,7 +24,7 @@ describe('MultipleChoiceQuestion', () => {
   it('renders radio group with correct number of options', () => {
     render(
       <MultipleChoiceQuestion
-        question={makeTestQuestion()}
+        question={makeQuestion()}
         value={undefined}
         onChange={vi.fn()}
         mode="active"
@@ -52,7 +38,7 @@ describe('MultipleChoiceQuestion', () => {
   it('no option is pre-selected when value is undefined', () => {
     render(
       <MultipleChoiceQuestion
-        question={makeTestQuestion()}
+        question={makeQuestion()}
         value={undefined}
         onChange={vi.fn()}
         mode="active"
@@ -68,7 +54,7 @@ describe('MultipleChoiceQuestion', () => {
   it('shows the correct option as selected when value is provided', () => {
     render(
       <MultipleChoiceQuestion
-        question={makeTestQuestion()}
+        question={makeQuestion()}
         value="London"
         onChange={vi.fn()}
         mode="active"
@@ -80,13 +66,50 @@ describe('MultipleChoiceQuestion', () => {
     expect(london).toBeChecked()
   })
 
+  it('applies selected CSS classes to selected option label', () => {
+    const { container } = render(
+      <MultipleChoiceQuestion
+        question={makeQuestion()}
+        value="London"
+        onChange={vi.fn()}
+        mode="active"
+      />
+    )
+
+    const labels = container.querySelectorAll('label')
+    const londonLabel = Array.from(labels).find(l => l.textContent?.includes('London'))
+    expect(londonLabel?.className).toContain('border-brand')
+    expect(londonLabel?.className).toContain('bg-brand-soft')
+
+    // Unselected labels should have border-border
+    const parisLabel = Array.from(labels).find(l => l.textContent?.includes('Paris'))
+    expect(parisLabel?.className).toContain('border-border')
+    expect(parisLabel?.className).toContain('bg-card')
+  })
+
+  it('all labels use border-2 for consistent width (no layout shift)', () => {
+    const { container } = render(
+      <MultipleChoiceQuestion
+        question={makeQuestion()}
+        value="London"
+        onChange={vi.fn()}
+        mode="active"
+      />
+    )
+
+    const labels = container.querySelectorAll('label')
+    labels.forEach(label => {
+      expect(label.className).toContain('border-2')
+    })
+  })
+
   it('calls onChange with option text when clicked', async () => {
     const user = userEvent.setup()
     const handleChange = vi.fn()
 
     render(
       <MultipleChoiceQuestion
-        question={makeTestQuestion()}
+        question={makeQuestion()}
         value={undefined}
         onChange={handleChange}
         mode="active"
@@ -100,7 +123,7 @@ describe('MultipleChoiceQuestion', () => {
   it('renders question text with Markdown (bold)', () => {
     render(
       <MultipleChoiceQuestion
-        question={makeTestQuestion({ text: '**Bold question** text' })}
+        question={makeQuestion({ text: '**Bold question** text' })}
         value={undefined}
         onChange={vi.fn()}
         mode="active"
@@ -114,7 +137,7 @@ describe('MultipleChoiceQuestion', () => {
   it('renders question text with Markdown (inline code)', () => {
     render(
       <MultipleChoiceQuestion
-        question={makeTestQuestion({ text: 'What does `console.log` do?' })}
+        question={makeQuestion({ text: 'What does `console.log` do?' })}
         value={undefined}
         onChange={vi.fn()}
         mode="active"
@@ -125,12 +148,42 @@ describe('MultipleChoiceQuestion', () => {
     expect(code.tagName).toBe('CODE')
   })
 
+  it('renders question text with GFM strikethrough', () => {
+    render(
+      <MultipleChoiceQuestion
+        question={makeQuestion({ text: 'This is ~~wrong~~ correct' })}
+        value={undefined}
+        onChange={vi.fn()}
+        mode="active"
+      />
+    )
+
+    const del = screen.getByText('wrong')
+    expect(del.tagName).toBe('DEL')
+  })
+
+  it('renders Markdown as inline content inside legend (no block p tags)', () => {
+    const { container } = render(
+      <MultipleChoiceQuestion
+        question={makeQuestion({ text: 'Simple question text' })}
+        value={undefined}
+        onChange={vi.fn()}
+        mode="active"
+      />
+    )
+
+    const legend = container.querySelector('legend')
+    // Should contain <span> not <p> (legend only allows phrasing content)
+    expect(legend?.querySelector('p')).toBeNull()
+    expect(legend?.querySelector('span')).not.toBeNull()
+  })
+
   it('warns on console when fewer than 2 options', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
     render(
       <MultipleChoiceQuestion
-        question={makeTestQuestion({ options: ['Only one'] })}
+        question={makeQuestion({ options: ['Only one'] })}
         value={undefined}
         onChange={vi.fn()}
         mode="active"
@@ -146,7 +199,7 @@ describe('MultipleChoiceQuestion', () => {
 
     render(
       <MultipleChoiceQuestion
-        question={makeTestQuestion({
+        question={makeQuestion({
           options: ['A', 'B', 'C', 'D', 'E', 'F', 'G'],
         })}
         value={undefined}
@@ -159,10 +212,36 @@ describe('MultipleChoiceQuestion', () => {
     warnSpy.mockRestore()
   })
 
+  it('does not warn for valid option counts (2 and 6)', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const { unmount } = render(
+      <MultipleChoiceQuestion
+        question={makeQuestion({ options: ['A', 'B'] })}
+        value={undefined}
+        onChange={vi.fn()}
+        mode="active"
+      />
+    )
+    expect(warnSpy).not.toHaveBeenCalled()
+    unmount()
+
+    render(
+      <MultipleChoiceQuestion
+        question={makeQuestion({ options: ['A', 'B', 'C', 'D', 'E', 'F'] })}
+        value={undefined}
+        onChange={vi.fn()}
+        mode="active"
+      />
+    )
+    expect(warnSpy).not.toHaveBeenCalled()
+    warnSpy.mockRestore()
+  })
+
   it('renders with fieldset semantic structure', () => {
     const { container } = render(
       <MultipleChoiceQuestion
-        question={makeTestQuestion()}
+        question={makeQuestion()}
         value={undefined}
         onChange={vi.fn()}
         mode="active"
@@ -176,23 +255,29 @@ describe('MultipleChoiceQuestion', () => {
     expect(legend).toBeInTheDocument()
   })
 
-  it('has radiogroup role', () => {
-    render(
+  it('has radiogroup role with aria-labelledby pointing to legend', () => {
+    const { container } = render(
       <MultipleChoiceQuestion
-        question={makeTestQuestion()}
+        question={makeQuestion()}
         value={undefined}
         onChange={vi.fn()}
         mode="active"
       />
     )
 
-    expect(screen.getByRole('radiogroup')).toBeInTheDocument()
+    const radioGroup = screen.getByRole('radiogroup')
+    expect(radioGroup).toBeInTheDocument()
+
+    const legend = container.querySelector('legend')
+    const legendId = legend?.getAttribute('id')
+    expect(legendId).toBeTruthy()
+    expect(radioGroup).toHaveAttribute('aria-labelledby', legendId)
   })
 
   it('option labels have min-h-12 class for touch targets', () => {
     const { container } = render(
       <MultipleChoiceQuestion
-        question={makeTestQuestion()}
+        question={makeQuestion()}
         value={undefined}
         onChange={vi.fn()}
         mode="active"
@@ -205,17 +290,46 @@ describe('MultipleChoiceQuestion', () => {
     })
   })
 
-  it('disables interaction in non-active modes', () => {
+  it('option labels have focus-within ring for keyboard indication', () => {
+    const { container } = render(
+      <MultipleChoiceQuestion
+        question={makeQuestion()}
+        value={undefined}
+        onChange={vi.fn()}
+        mode="active"
+      />
+    )
+
+    const labels = container.querySelectorAll('label')
+    labels.forEach(label => {
+      expect(label.className).toContain('focus-within:ring-2')
+    })
+  })
+
+  it('disables interaction in review-correct mode', () => {
     render(
       <MultipleChoiceQuestion
-        question={makeTestQuestion()}
+        question={makeQuestion()}
         value="Paris"
         onChange={vi.fn()}
         mode="review-correct"
       />
     )
 
-    // Radix RadioGroup uses data-disabled attribute, not native disabled
+    const radioGroup = screen.getByRole('radiogroup')
+    expect(radioGroup).toHaveAttribute('data-disabled')
+  })
+
+  it('disables interaction in review-incorrect mode', () => {
+    render(
+      <MultipleChoiceQuestion
+        question={makeQuestion()}
+        value="London"
+        onChange={vi.fn()}
+        mode="review-incorrect"
+      />
+    )
+
     const radioGroup = screen.getByRole('radiogroup')
     expect(radioGroup).toHaveAttribute('data-disabled')
   })
@@ -223,15 +337,16 @@ describe('MultipleChoiceQuestion', () => {
   it('accepts mode prop for forward compatibility (review-disabled)', () => {
     const { container } = render(
       <MultipleChoiceQuestion
-        question={makeTestQuestion()}
+        question={makeQuestion()}
         value="Paris"
         onChange={vi.fn()}
         mode="review-disabled"
       />
     )
 
-    // Verify it renders without crashing
     expect(container.querySelector('fieldset')).toBeInTheDocument()
+    const radioGroup = screen.getByRole('radiogroup')
+    expect(radioGroup).toHaveAttribute('data-disabled')
   })
 
   it('gracefully renders with empty options array', () => {
@@ -239,7 +354,7 @@ describe('MultipleChoiceQuestion', () => {
 
     render(
       <MultipleChoiceQuestion
-        question={makeTestQuestion({ options: [] })}
+        question={makeQuestion({ options: [] })}
         value={undefined}
         onChange={vi.fn()}
         mode="active"

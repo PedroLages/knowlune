@@ -30,18 +30,24 @@ export function QuestionDisplay({
   mode = 'active',
 }: QuestionDisplayProps) {
   switch (question.type) {
-    case 'multiple-choice':
+    case 'multiple-choice': {
+      const mcValue = typeof value === 'string' ? value : undefined
+      const mcOnChange = (answer: string) => onChange(answer)
       return (
         <MultipleChoiceQuestion
           question={question}
-          value={value as string | undefined}
-          onChange={onChange as (answer: string) => void}
+          value={mcValue}
+          onChange={mcOnChange}
           mode={mode}
         />
       )
+    }
     default:
       return (
-        <div className="mt-6 rounded-xl border border-border p-6 text-center text-muted-foreground text-sm">
+        <div
+          role="status"
+          className="mt-6 rounded-xl border border-border p-6 text-center text-muted-foreground text-sm"
+        >
           Unsupported question type: {question.type}
         </div>
       )

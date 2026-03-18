@@ -2,26 +2,13 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { QuestionDisplay } from '../QuestionDisplay'
 import type { Question } from '@/types/quiz'
-
-function makeTestQuestion(overrides: Partial<Question> = {}): Question {
-  return {
-    id: 'q-1',
-    order: 1,
-    type: 'multiple-choice',
-    text: 'What is 2 + 2?',
-    options: ['3', '4', '5'],
-    correctAnswer: '4',
-    explanation: '',
-    points: 1,
-    ...overrides,
-  }
-}
+import { makeQuestion } from '../../../../../tests/support/fixtures/factories/quiz-factory'
 
 describe('QuestionDisplay', () => {
   it('dispatches multiple-choice questions to MultipleChoiceQuestion', () => {
     render(
       <QuestionDisplay
-        question={makeTestQuestion()}
+        question={makeQuestion({ options: ['3', '4', '5'] })}
         value={undefined}
         onChange={vi.fn()}
         mode="active"
@@ -37,7 +24,7 @@ describe('QuestionDisplay', () => {
   it('shows unsupported type fallback for unknown question types', () => {
     render(
       <QuestionDisplay
-        question={makeTestQuestion({ type: 'fill-in-blank' as Question['type'] })}
+        question={makeQuestion({ type: 'fill-in-blank' as Question['type'] })}
         value={undefined}
         onChange={vi.fn()}
         mode="active"
@@ -47,11 +34,41 @@ describe('QuestionDisplay', () => {
     expect(screen.getByText(/unsupported question type/i)).toBeInTheDocument()
   })
 
-  it('defaults mode to active when not provided', () => {
-    render(<QuestionDisplay question={makeTestQuestion()} value={undefined} onChange={vi.fn()} />)
+  it('unsupported type fallback has role="status"', () => {
+    render(
+      <QuestionDisplay
+        question={makeQuestion({ type: 'fill-in-blank' as Question['type'] })}
+        value={undefined}
+        onChange={vi.fn()}
+        mode="active"
+      />
+    )
 
-    // Active mode: radiogroup should be enabled
+    expect(screen.getByRole('status')).toBeInTheDocument()
+  })
+
+  it('defaults mode to active when not provided', () => {
+    render(<QuestionDisplay question={makeQuestion()} value={undefined} onChange={vi.fn()} />)
+
+    // Active mode: radiogroup should not be disabled
     const radioGroup = screen.getByRole('radiogroup')
-    expect(radioGroup).not.toHaveAttribute('disabled')
+    expect(radioGroup).not.toHaveAttribute('data-disabled')
+  })
+
+  it('narrows value type safely for multiple-choice (ignores array values)', () => {
+    render(
+      <QuestionDisplay
+        question={makeQuestion()}
+        value={['Paris', 'London']}
+        onChange={vi.fn()}
+        mode="active"
+      />
+    )
+
+    // Array value should be treated as undefined for MC (no pre-selection)
+    const radios = screen.getAllByRole('radio')
+    radios.forEach(radio => {
+      expect(radio).not.toBeChecked()
+    })
   })
 })
