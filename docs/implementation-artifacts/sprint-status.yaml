@@ -64,7 +64,7 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 2: Lesson Player & Content Consumption
   # ──────────────────────────────────────────────────
-  epic-2: done
+  epic-2: in-progress  # reopened for deferred story 2-10
   2-1-lesson-player-page-with-video-playback: done
   2-2-video-playback-controls-and-keyboard-shortcuts: done
   2-3-video-bookmarking-and-resume: done
