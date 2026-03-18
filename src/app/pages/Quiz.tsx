@@ -13,6 +13,7 @@ import {
 } from '@/stores/useQuizStore'
 import { QuizStartScreen } from '@/app/components/quiz/QuizStartScreen'
 import { QuizHeader } from '@/app/components/quiz/QuizHeader'
+import { QuestionDisplay } from '@/app/components/quiz/QuestionDisplay'
 import { Skeleton } from '@/app/components/ui/skeleton'
 
 // ---------------------------------------------------------------------------
@@ -56,6 +57,7 @@ export function Quiz() {
   const storeError = useQuizStore(selectError)
   const clearError = useQuizStore(s => s.clearError)
   const startQuiz = useQuizStore(s => s.startQuiz)
+  const submitAnswer = useQuizStore(s => s.submitAnswer)
 
   // Fetch quiz from Dexie on mount
   useEffect(() => {
@@ -126,6 +128,7 @@ export function Quiz() {
       <div
         role="status"
         aria-busy="true"
+        aria-label="Loading quiz"
         className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm space-y-4"
       >
         <Skeleton className="h-8 w-64" />
@@ -167,13 +170,34 @@ export function Quiz() {
   const isQuizActive = currentProgress !== null && currentProgress.quizId === quiz.id
 
   if (isQuizActive && currentQuiz) {
+    // Resolve current question via questionOrder (supports shuffled order)
+    const questionId =
+      currentProgress.questionOrder[currentProgress.currentQuestionIndex] ??
+      currentQuiz.questions[currentProgress.currentQuestionIndex]?.id
+    const currentQuestion =
+      currentQuiz.questions.find(q => q.id === questionId) ??
+      currentQuiz.questions[currentProgress.currentQuestionIndex]
+
+    const currentQuestionId = currentQuestion?.id
+    const currentAnswer = currentQuestionId
+      ? (currentProgress.answers[currentQuestionId] as string | undefined)
+      : undefined
+
     return (
       <div className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm">
         <QuizHeader quiz={currentQuiz} progress={currentProgress} />
-        {/* QuestionDisplay — implemented in Story 12.5 */}
-        <div className="mt-6 rounded-xl border border-border p-6 text-center text-muted-foreground text-sm">
-          Question display coming in Story 12.5
-        </div>
+        {currentQuestion && currentQuestionId ? (
+          <QuestionDisplay
+            question={currentQuestion}
+            value={currentAnswer}
+            onChange={answer => submitAnswer(currentQuestionId, answer)}
+            mode="active"
+          />
+        ) : (
+          <div className="mt-6 rounded-xl border border-border p-6 text-center text-muted-foreground text-sm">
+            No question found at index {currentProgress.currentQuestionIndex}
+          </div>
+        )}
       </div>
     )
   }

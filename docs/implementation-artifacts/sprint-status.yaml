@@ -64,7 +64,7 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 2: Lesson Player & Content Consumption
   # ──────────────────────────────────────────────────
-  epic-2: done
+  epic-2: in-progress  # reopened for deferred story 2-10
   2-1-lesson-player-page-with-video-playback: done
   2-2-video-playback-controls-and-keyboard-shortcuts: done
   2-3-video-bookmarking-and-resume: done
@@ -201,7 +201,7 @@ development_status:
   12-2-set-up-dexie-schema-v15-migration: done
   12-3-create-usequizstore-with-zustand: done
   12-4-create-quiz-route-and-basic-quizplayer-component: done
-  12-5-display-multiple-choice-questions: backlog
+  12-5-display-multiple-choice-questions: done
   12-6-calculate-and-display-quiz-score: backlog
   epic-12-retrospective: optional
 
