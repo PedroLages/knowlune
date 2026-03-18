@@ -158,11 +158,17 @@ See [plan](plans/elegant-gathering-whisper.md) for implementation approach.
 
 ## Implementation Notes
 
-[Architecture decisions, patterns used, dependencies added]
+- **Polymorphic dispatcher pattern**: `QuestionDisplay` uses a switch on `question.type` to dispatch to type-specific renderers. Only `multiple-choice` is implemented now; additional types (fill-in-the-blank, matching) will be added in Epic 14 by adding new cases.
+- **Mode prop surface**: The `QuestionDisplayMode` union type (`active | review-correct | review-incorrect | review-disabled`) is defined now but only `active` renders interactively. Review modes will ship in Epic 16 without API changes.
+- **Semantic HTML**: `<fieldset>` + `<legend>` wrap the question for accessibility. The `<legend>` contains the Markdown-rendered question text.
+- **Dependencies**: `react-markdown` and `remark-gfm` were already installed from prior work.
+- **Store integration**: Selection calls `useQuizStore.submitAnswer()` via the `onChange` prop threaded from Quiz page. The Quiz page reads the current answer from `progress.answers[question.id]` for persistence across navigation.
 
 ## Testing Notes
 
-[Test strategy, edge cases discovered, coverage notes]
+- **Unit tests** (Vitest + React Testing Library): Cover QuestionDisplay dispatch (multiple-choice renders correctly, unsupported type shows fallback), MultipleChoiceQuestion rendering (options display, selection state, radio group behavior, Markdown rendering, console warning for <2 or >6 options).
+- **E2E tests** (Playwright): `story-e12-s05.spec.ts` validates answer selection, visual styling for selected/unselected states, persistence via store, and keyboard navigation (arrow keys between options).
+- **Hooks ordering fix**: Initial integration surfaced a React hooks ordering issue in Quiz.tsx — hooks were called conditionally after early returns. Fixed by moving all hooks above conditional rendering logic (commit `285b23a`).
 
 ## Pre-Review Checklist
 
@@ -192,4 +198,8 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-_To be filled during implementation._
+1. **React hooks ordering with conditional early returns**: The Quiz page had early returns for loading/error/not-found states that appeared *before* hooks. After adding `QuestionDisplay` integration (which required reading store state), hooks were being called conditionally, violating the Rules of Hooks. **Fix**: Moved all hooks to the top of the component, before any conditional returns. **Lesson**: When integrating new components into existing pages with early-return patterns, audit hook placement first.
+
+2. **Polymorphic type narrowing**: The `QuestionDisplay` component receives a generic `Question` type but dispatches to `MultipleChoiceQuestion` which expects `string | undefined` for `value`. A type assertion (`value as string | undefined`) was needed at the dispatch boundary. **Lesson**: Polymorphic dispatchers need explicit type narrowing at the switch boundary — this is an expected trade-off of the pattern.
+
+3. **Fieldset/legend with Markdown**: Using `<legend>` to contain `react-markdown` output provides excellent screen reader behavior (the question text is announced as the group label) but required testing to confirm Markdown block elements render correctly inside `<legend>`. They do in all tested browsers.
