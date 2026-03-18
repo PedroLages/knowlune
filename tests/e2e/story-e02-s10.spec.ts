@@ -193,10 +193,13 @@ test.describe('E02-S10: Caption and Subtitle Support', () => {
     await page.goto(LESSON_URL)
 
     // Captions should auto-load — a track element with blob: src should be present
-    await page.waitForFunction(() => {
-      const video = document.querySelector('video')
-      const tracks = video?.querySelectorAll('track') ?? []
-      return Array.from(tracks).some(t => t.src.startsWith('blob:'))
-    }, { timeout: 5000 })
+    await page.waitForFunction(
+      () => {
+        const video = document.querySelector('video')
+        const tracks = video?.querySelectorAll('track') ?? []
+        return Array.from(tracks).some(t => t.src.startsWith('blob:'))
+      },
+      { timeout: 5000 }
+    )
   })
 })
