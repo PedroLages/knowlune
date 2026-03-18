@@ -13,6 +13,7 @@ import {
 } from '@/stores/useQuizStore'
 import { QuizStartScreen } from '@/app/components/quiz/QuizStartScreen'
 import { QuizHeader } from '@/app/components/quiz/QuizHeader'
+import { QuestionDisplay } from '@/app/components/quiz/QuestionDisplay'
 import { Skeleton } from '@/app/components/ui/skeleton'
 
 // ---------------------------------------------------------------------------
@@ -166,14 +167,36 @@ export function Quiz() {
   // ---------------------------------------------------------------------------
   const isQuizActive = currentProgress !== null && currentProgress.quizId === quiz.id
 
+  const submitAnswer = useQuizStore(s => s.submitAnswer)
+
   if (isQuizActive && currentQuiz) {
+    // Resolve current question via questionOrder (supports shuffled order)
+    const questionId =
+      currentProgress.questionOrder[currentProgress.currentQuestionIndex] ??
+      currentQuiz.questions[currentProgress.currentQuestionIndex]?.id
+    const currentQuestion =
+      currentQuiz.questions.find(q => q.id === questionId) ??
+      currentQuiz.questions[currentProgress.currentQuestionIndex]
+
+    const currentAnswer = currentQuestion
+      ? (currentProgress.answers[currentQuestion.id] as string | undefined)
+      : undefined
+
     return (
       <div className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm">
         <QuizHeader quiz={currentQuiz} progress={currentProgress} />
-        {/* QuestionDisplay — implemented in Story 12.5 */}
-        <div className="mt-6 rounded-xl border border-border p-6 text-center text-muted-foreground text-sm">
-          Question display coming in Story 12.5
-        </div>
+        {currentQuestion ? (
+          <QuestionDisplay
+            question={currentQuestion}
+            value={currentAnswer}
+            onChange={answer => submitAnswer(currentQuestion.id, answer)}
+            mode="active"
+          />
+        ) : (
+          <div className="mt-6 rounded-xl border border-border p-6 text-center text-muted-foreground text-sm">
+            No question found at index {currentProgress.currentQuestionIndex}
+          </div>
+        )}
       </div>
     )
   }
