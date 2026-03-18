@@ -48,13 +48,7 @@ describe('QuestionDisplay', () => {
   })
 
   it('defaults mode to active when not provided', () => {
-    render(
-      <QuestionDisplay
-        question={makeTestQuestion()}
-        value={undefined}
-        onChange={vi.fn()}
-      />
-    )
+    render(<QuestionDisplay question={makeTestQuestion()} value={undefined} onChange={vi.fn()} />)
 
     // Active mode: radiogroup should be enabled
     const radioGroup = screen.getByRole('radiogroup')

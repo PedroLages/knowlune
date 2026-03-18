@@ -137,9 +137,7 @@ describe('MultipleChoiceQuestion', () => {
       />
     )
 
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('has 1 options (expected 2-6)')
-    )
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('has 1 options (expected 2-6)'))
     warnSpy.mockRestore()
   })
 
@@ -157,9 +155,7 @@ describe('MultipleChoiceQuestion', () => {
       />
     )
 
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('has 7 options (expected 2-6)')
-    )
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('has 7 options (expected 2-6)'))
     warnSpy.mockRestore()
   })
 
