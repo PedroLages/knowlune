@@ -737,7 +737,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
         >
           {captions?.map((caption, index) => (
             <track
-              key={`${caption.language}-${index}`}
+              key={caption.src}
               kind="subtitles"
               src={caption.src}
               srcLang={caption.language}
@@ -755,6 +755,8 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
             type="file"
             accept=".srt,.vtt"
             className="hidden"
+            aria-hidden="true"
+            tabIndex={-1}
             data-testid="caption-file-input"
             onChange={handleCaptionFileChange}
           />

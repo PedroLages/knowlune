@@ -500,6 +500,12 @@ describe('VideoPlayer', () => {
       expect(btn).toBeDisabled()
     })
 
+    it('enables captions button when onLoadCaptions is provided (file picker mode)', () => {
+      renderPlayer({ captions: [], onLoadCaptions: vi.fn() })
+      const btn = screen.getByRole('button', { name: 'Load captions' })
+      expect(btn).not.toBeDisabled()
+    })
+
     it('enables captions button when captions are provided', () => {
       renderPlayer({
         captions: [{ src: 'en.vtt', label: 'English', language: 'en' }],

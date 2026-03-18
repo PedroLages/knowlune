@@ -10,17 +10,26 @@
 import type { CaptionTrack, TranscriptCue, VideoCaptionRecord } from '@/data/types'
 import { db } from '@/db/schema'
 
+/** Max caption file size: 5MB (generous for text-based subtitle files) */
+const MAX_CAPTION_FILE_SIZE = 5 * 1024 * 1024
+
 // ---------------------------------------------------------------------------
 // Timestamp parsing (extracted from TranscriptPanel)
 // Handles HH:MM:SS.mmm, MM:SS.mmm, HH:MM:SS,mmm (SRT comma format)
 // ---------------------------------------------------------------------------
 
 export function parseTime(t: string): number {
+  if (!t || !t.trim()) return NaN
   const parts = t.replace(',', '.').split(':')
   if (parts.length === 3) {
-    return parseFloat(parts[0]) * 3600 + parseFloat(parts[1]) * 60 + parseFloat(parts[2])
+    const val = parseFloat(parts[0]) * 3600 + parseFloat(parts[1]) * 60 + parseFloat(parts[2])
+    return isFinite(val) ? val : NaN
   }
-  return parseFloat(parts[0]) * 60 + parseFloat(parts[1])
+  if (parts.length === 2) {
+    const val = parseFloat(parts[0]) * 60 + parseFloat(parts[1])
+    return isFinite(val) ? val : NaN
+  }
+  return NaN
 }
 
 // ---------------------------------------------------------------------------
@@ -30,7 +39,9 @@ export function parseTime(t: string): number {
 const TIMESTAMP_RE = /(\d+:\d{2}(?::\d{2})?(?:[.,]\d+)?)\s*-->\s*(\d+:\d{2}(?::\d{2})?(?:[.,]\d+)?)/
 
 export function parseVTT(text: string): TranscriptCue[] {
-  const blocks = text.trim().split(/\n\n+/)
+  // Normalize Windows line endings
+  const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+  const blocks = normalized.trim().split(/\n\n+/)
   const cues: TranscriptCue[] = []
 
   for (const block of blocks) {
@@ -43,6 +54,9 @@ export function parseVTT(text: string): TranscriptCue[] {
 
     const startTime = parseTime(match[1])
     const endTime = parseTime(match[2])
+
+    // Skip cues with invalid timestamps
+    if (isNaN(startTime) || isNaN(endTime)) continue
 
     const tsIdx = lines.indexOf(timestampLine)
     const textLines = lines.slice(tsIdx + 1).filter(l => l.trim())
@@ -66,19 +80,32 @@ export function parseSRT(text: string): TranscriptCue[] {
 }
 
 // ---------------------------------------------------------------------------
-// SRT → WebVTT conversion
+// SRT → WebVTT conversion (structural, not regex)
 // ---------------------------------------------------------------------------
 
 export function srtToWebVTT(srtText: string): string {
-  // Replace SRT comma timestamps with WebVTT dot timestamps
-  // and prepend the required WEBVTT header
-  const converted = srtText
-    // Match timestamps: 00:00:01,000 → 00:00:01.000
-    .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2')
-    // Remove SRT sequence numbers (lines that are just digits before timestamps)
-    .replace(/^\d+\s*\n(?=\d{2}:\d{2})/gm, '')
+  // Parse SRT into cues, then reconstruct as WebVTT.
+  // This avoids regex fragility with sequence numbers, Windows line endings,
+  // BOM characters, and numeric cue text.
+  const cues = parseSRT(srtText)
 
-  return `WEBVTT\n\n${converted.trim()}\n`
+  const lines = ['WEBVTT', '']
+  for (const cue of cues) {
+    const start = formatVTTTimestamp(cue.startTime)
+    const end = formatVTTTimestamp(cue.endTime)
+    lines.push(`${start} --> ${end}`)
+    lines.push(cue.text)
+    lines.push('')
+  }
+
+  return lines.join('\n')
+}
+
+function formatVTTTimestamp(seconds: number): string {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toFixed(3).padStart(6, '0')}`
 }
 
 // ---------------------------------------------------------------------------
@@ -134,6 +161,10 @@ export async function saveCaptionForVideo(
   const format = detectCaptionFormat(file.name)
   if (!format) {
     return { captionTrack: null, error: 'Unsupported file format. Use .srt or .vtt files' }
+  }
+
+  if (file.size > MAX_CAPTION_FILE_SIZE) {
+    return { captionTrack: null, error: 'Caption file is too large (max 5MB)' }
   }
 
   const text = await file.text()

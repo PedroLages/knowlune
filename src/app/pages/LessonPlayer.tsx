@@ -59,8 +59,7 @@ import { NextCourseSuggestion } from '../components/NextCourseSuggestion'
 import { addBookmark, getLessonBookmarks, formatBookmarkTimestamp } from '@/lib/bookmarks'
 import { toast } from 'sonner'
 import { captureVideoFrame, saveFrameCapture, type CapturedFrame } from '@/lib/frame-capture'
-import { saveCaptionForVideo, getCaptionForVideo } from '@/lib/captions'
-import type { CaptionTrack } from '@/data/types'
+import { useCaptionLoader } from '@/app/hooks/useCaptionLoader'
 
 export function LessonPlayer() {
   const allCourses = useCourseStore(s => s.courses)
@@ -107,8 +106,7 @@ export function LessonPlayer() {
 
   const [seekToTime, setSeekToTime] = useState<number | undefined>(undefined)
   const [bookmarks, setBookmarks] = useState<import('@/data/types').VideoBookmark[]>([])
-  const [userCaptions, setUserCaptions] = useState<CaptionTrack | null>(null)
-  const userCaptionBlobUrl = useRef<string | null>(null)
+  const { userCaptions, handleLoadCaptions } = useCaptionLoader(courseId, lessonId)
 
   // Idle detection for session tracking
   useIdleDetection({
@@ -343,53 +341,6 @@ export function LessonPlayer() {
 
     // Note: No cleanup needed - endSession handled by visibility/unload handlers
   }, [courseId, lessonId, startSession, videoResource, primaryPdf])
-
-  // Load persisted user captions on mount / lesson change
-  useEffect(() => {
-    if (!courseId || !lessonId) return
-    let cancelled = false
-
-    getCaptionForVideo(courseId, lessonId).then(track => {
-      if (cancelled) return
-      if (track) {
-        // Revoke any previous blob URL
-        if (userCaptionBlobUrl.current) URL.revokeObjectURL(userCaptionBlobUrl.current)
-        userCaptionBlobUrl.current = track.src
-        setUserCaptions(track)
-      }
-    })
-
-    return () => {
-      cancelled = true
-    }
-  }, [courseId, lessonId])
-
-  // Cleanup blob URL on unmount
-  useEffect(() => {
-    return () => {
-      if (userCaptionBlobUrl.current) URL.revokeObjectURL(userCaptionBlobUrl.current)
-    }
-  }, [])
-
-  // Handle user loading a caption file
-  const handleLoadCaptions = useCallback(
-    async (file: File) => {
-      if (!courseId || !lessonId) return
-
-      const result = await saveCaptionForVideo(courseId, lessonId, file)
-      if (!result.captionTrack) {
-        toast.error(result.error)
-        return
-      }
-
-      // Revoke previous blob URL before replacing
-      if (userCaptionBlobUrl.current) URL.revokeObjectURL(userCaptionBlobUrl.current)
-      userCaptionBlobUrl.current = result.captionTrack.src
-      setUserCaptions(result.captionTrack)
-      toast.success(`Captions loaded: ${file.name}`)
-    },
-    [courseId, lessonId]
-  )
 
   // Merge course captions with user-loaded captions
   const mergedCaptions = (() => {

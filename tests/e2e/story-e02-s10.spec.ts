@@ -114,15 +114,21 @@ test.describe('E02-S10: Caption and Subtitle Support', () => {
     await expect(page.locator('[data-sonner-toast]')).toContainText(/captions loaded/i)
 
     // Verify a <track> element exists with a blob: src (user-loaded caption)
-    const trackCount = await page.evaluate(() => {
+    const trackInfo = await page.evaluate(() => {
       const video = document.querySelector('video')
-      return video?.querySelectorAll('track').length ?? 0
+      const tracks = video?.querySelectorAll('track') ?? []
+      return {
+        count: tracks.length,
+        hasBlobSrc: Array.from(tracks).some(t => t.src.startsWith('blob:')),
+      }
     })
-    expect(trackCount).toBeGreaterThan(0)
+    expect(trackInfo.count).toBeGreaterThan(0)
+    expect(trackInfo.hasBlobSrc).toBe(true)
   })
 
   test('AC3: C key toggles caption visibility', async ({ page }) => {
     await page.goto(LESSON_URL)
+    await page.waitForLoadState('networkidle')
 
     // Load captions first
     const fileInput = page.locator('[data-testid="caption-file-input"]')
@@ -136,15 +142,19 @@ test.describe('E02-S10: Caption and Subtitle Support', () => {
 
     await expect(page.locator('[data-sonner-toast]')).toContainText(/captions loaded/i)
 
+    const captionButton = page.locator('[data-testid="caption-toggle-button"]')
+
+    // After loading, captions default to disabled (localStorage empty) — "Enable captions"
+    await expect(captionButton).toHaveAttribute('aria-label', 'Enable captions')
+
     // Focus the video player container so keyboard events reach it
     await page.locator('[data-testid="video-player-container"]').click()
 
-    // Press C to toggle captions — should toggle the enabled state
+    // Press C to toggle captions on
     await page.keyboard.press('c')
 
-    // The caption toggle button should reflect the state change
-    const captionButton = page.locator('[data-testid="caption-toggle-button"]')
-    await expect(captionButton).toBeVisible()
+    // Verify the toggle actually changed the state to enabled
+    await expect(captionButton).toHaveAttribute('aria-label', 'Disable captions')
   })
 
   test('AC4: Invalid file shows error toast and video continues', async ({ page }) => {
@@ -204,14 +214,16 @@ test.describe('E02-S10: Caption and Subtitle Support', () => {
     await page.goto(LESSON_URL)
     await page.waitForLoadState('networkidle')
 
-    // Captions should auto-load — a track element with blob: src should be present
-    await page.waitForFunction(
+    // Captions should auto-load — a track with blob: src and correct label
+    const trackLabel = await page.waitForFunction(
       () => {
         const video = document.querySelector('video')
         const tracks = video?.querySelectorAll('track') ?? []
-        return Array.from(tracks).some(t => t.src.startsWith('blob:'))
+        const blobTrack = Array.from(tracks).find(t => t.src.startsWith('blob:'))
+        return blobTrack?.label || null
       },
       { timeout: 10000 },
     )
+    expect(await trackLabel.jsonValue()).toBe('test-captions.vtt')
   })
 })

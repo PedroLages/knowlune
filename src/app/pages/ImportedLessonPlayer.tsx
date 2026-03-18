@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router'
 import { ArrowLeft, FileWarning, FolderSearch } from 'lucide-react'
 import { db } from '@/db/schema'
@@ -6,13 +6,12 @@ import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useVideoFromHandle } from '@/hooks/useVideoFromHandle'
 import { useIdleDetection } from '@/app/hooks/useIdleDetection'
 import { useSessionStore } from '@/stores/useSessionStore'
+import { useCaptionLoader } from '@/app/hooks/useCaptionLoader'
 import { VideoPlayer } from '@/app/components/figma/VideoPlayer'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
-import type { ImportedVideo, CaptionTrack } from '@/data/types'
-import { saveCaptionForVideo, getCaptionForVideo } from '@/lib/captions'
-import { toast } from 'sonner'
+import type { ImportedVideo } from '@/data/types'
 
 export function ImportedLessonPlayer() {
   const { courseId, lessonId } = useParams<{ courseId: string; lessonId: string }>()
@@ -93,53 +92,8 @@ export function ImportedLessonPlayer() {
     return () => clearInterval(interval)
   }, [heartbeat])
 
-  // Caption state and persistence
-  const [userCaptions, setUserCaptions] = useState<CaptionTrack | null>(null)
-  const userCaptionBlobUrl = useRef<string | null>(null)
-
-  // Load persisted user captions on mount / lesson change
-  useEffect(() => {
-    if (!courseId || !lessonId) return
-    let cancelled = false
-
-    getCaptionForVideo(courseId, lessonId).then(track => {
-      if (cancelled) return
-      if (track) {
-        if (userCaptionBlobUrl.current) URL.revokeObjectURL(userCaptionBlobUrl.current)
-        userCaptionBlobUrl.current = track.src
-        setUserCaptions(track)
-      }
-    })
-
-    return () => {
-      cancelled = true
-    }
-  }, [courseId, lessonId])
-
-  // Cleanup blob URL on unmount
-  useEffect(() => {
-    return () => {
-      if (userCaptionBlobUrl.current) URL.revokeObjectURL(userCaptionBlobUrl.current)
-    }
-  }, [])
-
-  const handleLoadCaptions = useCallback(
-    async (file: File) => {
-      if (!courseId || !lessonId) return
-
-      const result = await saveCaptionForVideo(courseId, lessonId, file)
-      if (!result.captionTrack) {
-        toast.error(result.error)
-        return
-      }
-
-      if (userCaptionBlobUrl.current) URL.revokeObjectURL(userCaptionBlobUrl.current)
-      userCaptionBlobUrl.current = result.captionTrack.src
-      setUserCaptions(result.captionTrack)
-      toast.success(`Captions loaded: ${file.name}`)
-    },
-    [courseId, lessonId]
-  )
+  // Caption loading and persistence (shared hook)
+  const { userCaptions, handleLoadCaptions } = useCaptionLoader(courseId, lessonId)
 
   async function handleLocateFile() {
     try {
