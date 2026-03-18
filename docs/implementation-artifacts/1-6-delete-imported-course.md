@@ -208,4 +208,10 @@ Not yet reviewed — story is ready-for-dev.
 
 ## Challenges and Lessons Learned
 
-Not yet implemented — to be filled in after development and review.
+- **AlertDialog outside DropdownMenu**: Radix `AlertDialog` must be rendered as a sibling to the card, not inside `DropdownMenuContent`. Nesting modal-like components inside a dropdown causes focus trapping conflicts — the dropdown unmounts on close, which would also unmount the dialog. Controlled via `open`/`onOpenChange` props instead of `AlertDialogTrigger`.
+
+- **Unit test breakage from new menu item**: Adding the "Delete course" `DropdownMenuItem` increased the `menuitem` role count from 3 to 4, breaking the existing `toHaveLength(3)` assertion. Lesson: tests that assert exact counts on dynamic lists are brittle — prefer asserting specific items by name when possible.
+
+- **Optimistic delete with error checking pattern**: The store's `removeImportedCourse` uses optimistic update (removes from Zustand immediately, then runs Dexie transaction). Error detection requires checking `importError` from `useCourseImportStore.getState()` after the `await`, not catching an exception — because the store catches internally and sets state. This is the established pattern from E01-S04/S05.
+
+- **z-index for dropdown trigger**: Added `z-20` to the dropdown trigger container to ensure it stays above adjacent card elements during hover interactions.
