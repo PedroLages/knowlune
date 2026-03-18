@@ -74,7 +74,7 @@ development_status:
   2-7-skip-controls-pip-shortcuts-help: done
   2-8-chapter-progress-bar-transcript-panel: done
   2-9-mini-player-theater-mode: done
-  2-10-caption-and-subtitle-support: backlog  # deferred — FR88
+  2-10-caption-and-subtitle-support: in-progress  # deferred — FR88
   epic-2-retrospective: done
 
   # ──────────────────────────────────────────────────
