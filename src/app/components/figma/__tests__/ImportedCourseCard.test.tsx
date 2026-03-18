@@ -7,14 +7,21 @@ import type { ImportedCourse } from '@/data/types'
 
 const mockUpdateCourseTags = vi.fn()
 const mockUpdateCourseStatus = vi.fn()
+const mockRemoveImportedCourse = vi.fn().mockResolvedValue(undefined)
 
 vi.mock('@/stores/useCourseImportStore', () => ({
-  useCourseImportStore: (selector: (state: Record<string, unknown>) => unknown) =>
-    selector({
-      updateCourseTags: mockUpdateCourseTags,
-      updateCourseStatus: mockUpdateCourseStatus,
-      thumbnailUrls: {},
-    }),
+  useCourseImportStore: Object.assign(
+    (selector: (state: Record<string, unknown>) => unknown) =>
+      selector({
+        updateCourseTags: mockUpdateCourseTags,
+        updateCourseStatus: mockUpdateCourseStatus,
+        removeImportedCourse: mockRemoveImportedCourse,
+        thumbnailUrls: {},
+      }),
+    {
+      getState: () => ({ importError: null }),
+    }
+  ),
 }))
 
 vi.mock('@/hooks/useCourseCardPreview', () => ({
@@ -207,13 +214,13 @@ describe('ImportedCourseCard', () => {
   })
 
   describe('status dropdown', () => {
-    it('opens dropdown with all three status options on click', async () => {
+    it('opens dropdown with all three status options and delete on click', async () => {
       const user = userEvent.setup()
       renderCard({ status: 'active' })
 
       await user.click(screen.getByTestId('status-badge'))
 
-      expect(screen.getAllByRole('menuitem')).toHaveLength(3)
+      expect(screen.getAllByRole('menuitem')).toHaveLength(4)
     })
 
     it('calls updateCourseStatus when a different status is selected', async () => {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   FolderOpen,
   Video,
@@ -9,6 +9,7 @@ import {
   Eye,
   Info,
   Camera,
+  Trash2,
 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Card } from '@/app/components/ui/card'
@@ -20,9 +21,21 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/app/components/ui/alert-dialog'
+import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog'
 import { TagBadgeList } from '@/app/components/figma/TagBadgeList'
 import { TagEditor } from '@/app/components/figma/TagEditor'
@@ -66,10 +79,14 @@ interface ImportedCourseCardProps {
 export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedCourseCardProps) {
   const updateCourseTags = useCourseImportStore(state => state.updateCourseTags)
   const updateCourseStatus = useCourseImportStore(state => state.updateCourseStatus)
+  const removeImportedCourse = useCourseImportStore(state => state.removeImportedCourse)
   const thumbnailUrls = useCourseImportStore(state => state.thumbnailUrls)
   const navigate = useNavigate()
 
   const [thumbnailPickerOpen, setThumbnailPickerOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const statusBadgeRef = useRef<HTMLButtonElement>(null)
   const thumbnailUrl = thumbnailUrls[course.id] ?? null
 
   const {
@@ -123,6 +140,7 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
   }
 
   function handleCardKeyDown(e: React.KeyboardEvent) {
+    if (e.target !== e.currentTarget) return
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
       navigate(`/imported-courses/${course.id}`)
@@ -164,6 +182,19 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
     }
   }
 
+  async function handleDelete() {
+    if (deleting) return
+    setDeleting(true)
+    await removeImportedCourse(course.id)
+    const { importError } = useCourseImportStore.getState()
+    if (importError) {
+      toast.error('Failed to remove course')
+      setDeleting(false)
+    } else {
+      toast.success('Course removed')
+    }
+  }
+
   const isLoading = searching || videoLoading
 
   return (
@@ -177,7 +208,7 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
         {...previewHandlers}
         data-preview={showPreview && videoReady ? '' : undefined}
         className={cn(
-          'group rounded-[24px] cursor-default focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 outline-none hover:shadow-2xl hover:[transform:scale(1.02)] transition-shadow duration-300 motion-reduce:hover:[transform:scale(1)] h-full',
+          'group rounded-[24px] cursor-default focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none hover:shadow-2xl hover:[transform:scale(1.02)] transition-shadow duration-300 motion-reduce:hover:[transform:scale(1)] h-full',
           showPreview && videoReady && '[transform:scale(1.05)] z-10'
         )}
       >
@@ -228,13 +259,14 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
                 )}
               />
             )}
-            <div className="absolute top-3 right-3">
+            <div className="absolute top-3 right-3 z-20">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
+                    ref={statusBadgeRef}
                     data-testid="status-badge"
                     onClick={e => e.stopPropagation()}
-                    className="focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-full outline-none"
+                    className="focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-full outline-none min-h-[44px] flex items-center"
                     aria-label={`Course status: ${config.label}. Click to change.`}
                   >
                     <Badge
@@ -270,6 +302,19 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
                       )
                     }
                   )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    data-testid="delete-course-menu-item"
+                    variant="destructive"
+                    className="gap-2 min-h-[44px]"
+                    onClick={e => {
+                      e.stopPropagation()
+                      setDeleteDialogOpen(true)
+                    }}
+                  >
+                    <Trash2 className="size-4" aria-hidden="true" />
+                    Delete course
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -376,6 +421,35 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
           </div>
         </Card>
       </article>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent
+          data-testid="delete-confirm-dialog"
+          onCloseAutoFocus={e => {
+            e.preventDefault()
+            statusBadgeRef.current?.focus()
+          }}
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete &ldquo;{course.name}&rdquo;?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove the course and all its content from your library. This
+              action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              data-testid="delete-confirm-button"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleting}
+              onClick={handleDelete}
+            >
+              {deleting ? 'Deleting…' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <ThumbnailPickerDialog
         open={thumbnailPickerOpen}

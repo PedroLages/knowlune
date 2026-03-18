@@ -1,12 +1,12 @@
 ---
 story_id: E01-S06
 story_name: "Delete Imported Course"
-status: ready-for-dev
-started:
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+status: done
+started: 2026-03-18
+completed: 2026-03-18
+reviewed: true
+review_started: 2026-03-18
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -143,6 +143,10 @@ const handleDelete = async () => {
 - Delete menu item must have visible destructive color (not icon alone)
 - `AlertDialogDescription` provides context for screen readers
 
+## Implementation Plan
+
+See [plan](plans/e01-s06-delete-imported-course.md) for implementation approach.
+
 ## Implementation Notes
 
 **Store method is already complete** — `useCourseImportStore.removeImportedCourse()` at `src/stores/useCourseImportStore.ts:66-98`:
@@ -192,16 +196,36 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-Not yet reviewed — story is ready-for-dev.
+**Reviewed 2026-03-18** — All ACs pass live testing. Fixes applied:
+- Added `variant="destructive"` on delete DropdownMenuItem for proper focus/hover background
+- Fixed focus return to status badge after dialog close (WCAG 2.4.3)
+- Added 44px minimum touch targets on delete item and status badge
+- Report: `docs/reviews/design/design-review-2026-03-18-e01-s06.md`
 
 ## Code Review Feedback
 
-Not yet reviewed — story is ready-for-dev.
+**Reviewed 2026-03-18** — 0 blockers. Fixes applied:
+- Fixed Enter key on child elements triggering card navigation (`e.target !== e.currentTarget` guard)
+- Added double-click guard with `deleting` state + disabled button
+- Added `stopPropagation` on delete menu item for consistency
+- Fixed hardcoded `ring-blue-600` → `ring-brand` (design token compliance)
+- Added `removeImportedCourse` to unit test mock
+- Added Escape key test for AC4
+- Reports: `docs/reviews/code/code-review-2026-03-18-e01-s06.md`, `docs/reviews/code/edge-case-review-2026-03-18-e01-s06.md`
 
 ## Web Design Guidelines Review
 
-Not yet reviewed — story is ready-for-dev.
+**Reviewed 2026-03-18** — Keyboard a11y blocker found and fixed. Remaining pre-existing items:
+- AlertDialog description contrast 3.88:1 (shared component — tracked separately)
+- `statusConfig` hardcoded colors (pre-existing tech debt, not introduced by this PR)
+- Report: `docs/reviews/design/design-review-2026-03-18-e01-s06.md`
 
 ## Challenges and Lessons Learned
 
-Not yet implemented — to be filled in after development and review.
+- **AlertDialog outside DropdownMenu**: Radix `AlertDialog` must be rendered as a sibling to the card, not inside `DropdownMenuContent`. Nesting modal-like components inside a dropdown causes focus trapping conflicts — the dropdown unmounts on close, which would also unmount the dialog. Controlled via `open`/`onOpenChange` props instead of `AlertDialogTrigger`.
+
+- **Unit test breakage from new menu item**: Adding the "Delete course" `DropdownMenuItem` increased the `menuitem` role count from 3 to 4, breaking the existing `toHaveLength(3)` assertion. Lesson: tests that assert exact counts on dynamic lists are brittle — prefer asserting specific items by name when possible.
+
+- **Optimistic delete with error checking pattern**: The store's `removeImportedCourse` uses optimistic update (removes from Zustand immediately, then runs Dexie transaction). Error detection requires checking `importError` from `useCourseImportStore.getState()` after the `await`, not catching an exception — because the store catches internally and sets state. This is the established pattern from E01-S04/S05.
+
+- **z-index for dropdown trigger**: Added `z-20` to the dropdown trigger container to ensure it stays above adjacent card elements during hover interactions.

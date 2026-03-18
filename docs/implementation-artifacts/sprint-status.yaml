@@ -58,7 +58,7 @@ development_status:
   1-3-organize-courses-by-topic: done
   1-4-manage-course-status: done
   1-5-detect-missing-or-relocated-files: done
-  1-6-delete-imported-course: ready-for-dev
+  1-6-delete-imported-course: done
   epic-1-retrospective: done
 
   # ──────────────────────────────────────────────────
