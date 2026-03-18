@@ -243,3 +243,11 @@ export async function seedReviewRecords(
 ): Promise<void> {
   await seedIndexedDBStore(page, 'ElearningDB', 'reviewRecords', records)
 }
+
+/**
+ * Seeds the quizzes object store in ElearningDB.
+ * Convenience wrapper around seedIndexedDBStore.
+ */
+export async function seedQuizzes(page: Page, quizzes: Record<string, unknown>[]): Promise<void> {
+  await seedIndexedDBStore(page, 'ElearningDB', 'quizzes', quizzes)
+}

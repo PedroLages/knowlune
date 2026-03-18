@@ -80,11 +80,13 @@ Format: `feature/e##-s##-slug` (lowercase, hyphens, no filler words)
 
 ## After Epic Completion
 
-When all stories in an epic are done, run:
+When all stories in an epic are done, run in order:
 
-- `/testarch-trace` — Requirements-to-tests traceability matrix
-- `/testarch-nfr` — Non-functional requirements validation
-- `/retrospective` — Lessons learned and pattern extraction
+1. `/sprint-status` — Verify epic is fully complete, surface any orphaned or in-progress stories *(pre-gate)*
+2. `/testarch-trace` — Requirements-to-tests traceability matrix
+3. `/testarch-nfr` — Non-functional requirements validation
+4. `/review-adversarial` — Optional: cynical critique of the epic's scope and implementation *(skip if low-risk epic)*
+5. `/retrospective` — Lessons learned and pattern extraction
 
 ## Key Files
 

@@ -38,6 +38,8 @@ const mockModules: Module[] = [
 
 beforeEach(async () => {
   await Dexie.delete('ElearningDB')
+  // Clear persist storage to prevent cross-test state rehydration
+  localStorage.removeItem('levelup-quiz-store')
   vi.resetModules()
   const storeMod = await import('@/stores/useQuizStore')
   useQuizStore = storeMod.useQuizStore
@@ -499,11 +501,9 @@ describe('loadAttempts', () => {
 // ---------------------------------------------------------------------------
 
 describe('persist partialize', () => {
-  it('only serializes currentProgress to localStorage, not currentQuiz or attempts', () => {
-    // Verify partialize config by inspecting the store's persist options
-    // The store name and partialize are defined at module level — we verify
-    // that attempts and currentQuiz are NOT in the persisted state shape
-    // by checking the store's persist API directly.
+  it('serializes currentProgress and currentQuiz to localStorage, not attempts', () => {
+    // Verify partialize config — currentQuiz must be persisted alongside
+    // currentProgress so browser refresh during active quiz preserves state.
     const persistApi = (
       useQuizStore as unknown as {
         persist: { getOptions: () => { partialize: (s: unknown) => unknown; name: string } }
@@ -523,7 +523,10 @@ describe('persist partialize', () => {
       error: null,
     }
     const partial = options.partialize(mockState)
-    expect(partial).toEqual({ currentProgress: { quizId: 'q1' } })
+    expect(partial).toEqual({
+      currentProgress: { quizId: 'q1' },
+      currentQuiz: { id: 'quiz-x' },
+    })
   })
 })
 

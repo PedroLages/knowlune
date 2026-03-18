@@ -238,7 +238,7 @@ export function Notes() {
   }, [debouncedQuery, useSemanticSearch])
 
   // Enrich notes ONCE in parent
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Deps intentionally include courseNames/lessonTitles to re-enrich when lookup maps change
   const enriched = useMemo(() => enrichNotes(notes), [notes, courseNames, lessonTitles])
 
   // Build semantic score lookup for display

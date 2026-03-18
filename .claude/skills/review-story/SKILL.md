@@ -329,6 +329,7 @@ Mark the first todo as `in_progress` and proceed:
    - **Design review**: Skip if (a) resuming AND `design-review` in `review_gates_passed` AND report file exists, OR (b) no UI changes in `git diff --name-only main...HEAD` (no changes in `src/app/`). If skipping for no UI changes, add `design-review-skipped` to gates.
    - **Code review**: Skip if resuming AND `code-review` in `review_gates_passed` AND report file exists.
    - **Code review testing**: Skip if resuming AND `code-review-testing` in `review_gates_passed` AND report file exists.
+   - **Edge case review**: Skip if resuming AND `edge-case-review` in `review_gates_passed` AND report file exists.
 
    **Design review pre-requisite** (only if design review will run):
    - Check dev server: `curl -s -o /dev/null -w "%{http_code}" http://localhost:5173`.
@@ -364,6 +365,12 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
      prompt: "Review test coverage for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run git diff main...HEAD for changes. Map every acceptance criterion to its tests. Review test quality, isolation, and edge case coverage. Score each finding with confidence (0-100).",
      description: "Test coverage review E##-S##"
    })
+
+   Task({
+     subagent_type: "general-purpose",
+     prompt: "Use the bmad-review-edge-case-hunter skill on story E##-S##. Run `git diff main...HEAD` to get the changed code. Pass the diff as the content to review. After the skill completes, format the JSON findings into a markdown report saved to ${BASE_PATH}/docs/reviews/code/edge-case-review-{YYYY-MM-DD}-{story-id}.md using this format:\n\n## Edge Case Review — E##-S## ({YYYY-MM-DD})\n\n### Unhandled Edge Cases\n\nFor each finding:\n**[location]** — `[trigger_condition]`\n> Consequence: [potential_consequence]\n> Guard: `[guard_snippet]`\n\n---\n**Total:** N unhandled edge cases found.",
+     description: "Edge case review E##-S##"
+   })
    ```
 
    **Note**: The code-review agent has selective WebFetch access for deprecated APIs, security issues, and framework bugs. It will use this sparingly (max 1-2 fetches) for high-severity findings only. This may add 10-30s to code review time but provides authoritative fix guidance.
@@ -378,8 +385,9 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
    - `${BASE_PATH}/docs/reviews/design/design-review-{YYYY-MM-DD}-{story-id}.md`
    - `${BASE_PATH}/docs/reviews/code/code-review-{YYYY-MM-DD}-{story-id}.md`
    - `${BASE_PATH}/docs/reviews/code/code-review-testing-{YYYY-MM-DD}-{story-id}.md`
+   - `${BASE_PATH}/docs/reviews/code/edge-case-review-{YYYY-MM-DD}-{story-id}.md`
 
-   **Deduplicate**: If code-review and code-review-testing flag the same file:line, keep the finding with the higher confidence score. Prefix deduplicated findings with their source agent.
+   **Deduplicate**: If code-review and code-review-testing flag the same file:line, keep the finding with the higher confidence score. Prefix deduplicated findings with their source agent. Edge case review findings are additive (different format — location + trigger condition), so include them in the consolidated report under a dedicated "Edge Cases" section. Treat each edge case finding as HIGH severity for blocker assessment.
 
 8. **Merge test quality findings**:
 

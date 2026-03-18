@@ -28,7 +28,7 @@
   --font-heading: 'Space Grotesk Variable', 'Space Grotesk', system-ui, -apple-system, sans-serif;
 
   /* Surface depth tokens */
-  --brand-soft: #eeeef8;
+  --brand-soft: #e4e5f4;
   --brand-muted: #c8c9e4;
   --success-soft: #eef5f0;
   --surface-elevated: #ffffff;
@@ -107,7 +107,7 @@
   --secondary: #32334a;
   --secondary-foreground: #e8e9f0;
   --muted: #32334a;
-  --muted-foreground: #8a8da0;
+  --muted-foreground: #b2b5c8;
   --accent: #32334a;
   --accent-foreground: #e8e9f0;
   --destructive: #d8636a;
@@ -121,7 +121,7 @@
   --font-weight-normal: 400;
 
   /* Surface depth tokens (dark) */
-  --brand-soft: #262840;
+  --brand-soft: #2a2c48;
   --brand-muted: #3a3c60;
   --success-soft: #1a2e22;
   --surface-elevated: #2a2b3e;
@@ -146,7 +146,7 @@
   --scrollbar-thumb-hover: oklch(0.55 0.03 270);
   --scrollbar-track: #1a1b26;
   --brand: #8b92da;
-  --brand-hover: #7078c8;
+  --brand-hover: #7a82d0;
   --brand-foreground: #ffffff;
   --success: #6ab888;
   --success-foreground: #ffffff;

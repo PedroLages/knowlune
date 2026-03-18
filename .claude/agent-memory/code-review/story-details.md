@@ -226,6 +226,30 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - Nit: Bare `catch` discards original Dexie error object -- error details lost for debugging
 - Positive: Snapshot rollback pattern, correct partialize scope, clean scoring logic, proper persist middleware usage
 
+## E12-S04: Create Quiz Route and QuizPage Component (Round 1)
+- No uncommitted changes in story files (positive), but 6 unrelated files modified in working tree
+- BLOCKER: Zod schema JSDoc says timeLimit is "milliseconds" and timeRemaining is "milliseconds" but all code treats both as minutes -- future data import will produce 60x wrong timer values
+- H1 (RECURRING): Silent .catch() in Quiz.tsx Dexie lookup -- sets error state but no console.error
+- H2: Timer countdown in QuizHeader runs locally in useState but never syncs back to Zustand store -- resume gives full time back
+- H3: localStorage progress restored via raw JSON.parse + as cast without Zod validation -- corruption vector
+- H4 (RECURRING): Uncommitted changes in working tree (6 files including store formatting)
+- M1: handleStart fire-and-forget startQuiz().catch(console.error) -- no user-facing error feedback
+- M2: aria-live="polite" on timer updates every second; story spec says per-minute updates only
+- M3: savedProgress.answers accessed without null guard in QuizStartScreen
+- Positive: Clean async cleanup pattern, proper component decomposition, good E2E test quality with shared helpers
+
+## E12-S04: Create Quiz Route and QuizPage Component (Round 2 - Re-Review)
+- 5 of 6 carry-forward items STILL OPEN (see Round 1 entry)
+
+## E12-S04: Create Quiz Route and QuizPage Component (Round 3 - Re-Review)
+- All 6 Round 1 carry-forward items FIXED in commits 12207ed and ebf19dc
+- H1 NEW: Persist middleware only saves currentProgress, not currentQuiz -- browser refresh silently loses quiz state (per-quiz localStorage key has no production writer)
+- H2 NEW: useEffect dependency `[remainingSeconds === null]` is fragile boolean expression -- extract to named `isTimed` variable
+- H3 NEW: `.catch(console.error)` on startQuiz is dead code (store catches internally) -- misleading error handling
+- M1: `??` fallback on questionOrder.length never triggers (always a number) -- use `||` or remove
+- M2: handleResume doesn't validate questionOrder entries exist in current quiz questions
+- Positive: All round-1/round-2 findings addressed, clean timer sync architecture, proper Zod safeParse on localStorage
+
 ## E11-S06: Per-Course Study Reminders (Round 1)
 - No uncommitted changes (positive)
 - BLOCKER: Notification `data.url` deep-link is inert -- no `onclick` handler or Service Worker `notificationclick` listener (AC2 unmet)

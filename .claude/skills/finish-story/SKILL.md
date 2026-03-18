@@ -291,9 +291,11 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
    ### Epic Complete!
 
    All stories in Epic ## are done. Recommended next steps:
-   1. `/testarch-trace` — Requirements-to-tests traceability
-   2. `/testarch-nfr` — Non-functional requirements validation
-   3. `/retrospective` — Lessons learned
+   1. `/sprint-status` — Verify all stories are done, surface risks
+   2. `/testarch-trace` — Requirements-to-tests traceability
+   3. `/testarch-nfr` — Non-functional requirements validation
+   4. `/review-adversarial` — (Optional) Cynical epic-level critique
+   5. `/retrospective` — Lessons learned
 
    ---
    ```

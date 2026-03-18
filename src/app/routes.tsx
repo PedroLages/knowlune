@@ -52,6 +52,7 @@ const RetentionDashboard = React.lazy(() =>
 const InterleavedReview = React.lazy(() =>
   import('./pages/InterleavedReview').then(m => ({ default: m.InterleavedReview }))
 )
+const Quiz = React.lazy(() => import('./pages/Quiz').then(m => ({ default: m.Quiz })))
 
 // Default exports work directly with React.lazy
 const MyClass = React.lazy(() => import('./pages/MyClass'))
@@ -122,6 +123,14 @@ export const router = createBrowserRouter([
         element: (
           <SuspensePage>
             <LessonPlayer />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'courses/:courseId/lessons/:lessonId/quiz',
+        element: (
+          <SuspensePage>
+            <Quiz />
           </SuspensePage>
         ),
       },

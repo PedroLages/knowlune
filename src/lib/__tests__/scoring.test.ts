@@ -177,9 +177,36 @@ describe('calculateQuizScore — percentage and passing', () => {
   const quiz = makeQuiz({
     passingScore: 70,
     questions: [
-      { id: 'q1', order: 1, type: 'multiple-choice', text: 'Q1', options: ['A'], correctAnswer: 'A', explanation: '', points: 1 },
-      { id: 'q2', order: 2, type: 'multiple-choice', text: 'Q2', options: ['A'], correctAnswer: 'A', explanation: '', points: 1 },
-      { id: 'q3', order: 3, type: 'multiple-choice', text: 'Q3', options: ['A'], correctAnswer: 'A', explanation: '', points: 1 },
+      {
+        id: 'q1',
+        order: 1,
+        type: 'multiple-choice',
+        text: 'Q1',
+        options: ['A'],
+        correctAnswer: 'A',
+        explanation: '',
+        points: 1,
+      },
+      {
+        id: 'q2',
+        order: 2,
+        type: 'multiple-choice',
+        text: 'Q2',
+        options: ['A'],
+        correctAnswer: 'A',
+        explanation: '',
+        points: 1,
+      },
+      {
+        id: 'q3',
+        order: 3,
+        type: 'multiple-choice',
+        text: 'Q3',
+        options: ['A'],
+        correctAnswer: 'A',
+        explanation: '',
+        points: 1,
+      },
     ],
   })
 

@@ -126,7 +126,7 @@ export const QuizSchema = z.object({
   description: z.string(),
   /** Ordered list of questions */
   questions: z.array(QuestionSchema).min(1),
-  /** Time limit in milliseconds, or null for untimed */
+  /** Time limit in minutes, or null for untimed */
   timeLimit: z.number().positive().nullable(),
   /** Minimum percentage (0-100) to pass */
   passingScore: z.number().min(0).max(100),
@@ -209,7 +209,7 @@ export const QuizProgressSchema = z.object({
   answers: z.record(z.string().min(1), z.union([z.string(), z.array(z.string())])),
   /** Unix timestamp (ms) when the attempt started */
   startTime: z.number(),
-  /** Remaining time in milliseconds, or null for untimed quizzes */
+  /** Remaining time in minutes, or null for untimed quizzes */
   timeRemaining: z.number().min(0).nullable(),
   /** Whether the quiz is currently paused */
   isPaused: z.boolean(),

@@ -266,7 +266,20 @@ Mark the first todo as `in_progress` and proceed:
 
    **TodoWrite**: Mark "Enter plan mode" → `completed`. Mark "Link plan, commit, and output" → `in_progress`.
 
-11. **Link plan to story file**: After `ExitPlanMode` returns (plan approved), save the plan to `docs/implementation-artifacts/plans/{plan-filename}.md`, then append an `## Implementation Plan` section to the story file so the developer can find the plan in a later session. If the section already exists, skip.
+11. **Optional elicitation** (complex stories only): After `ExitPlanMode` returns (plan approved), check if the story warrants a refinement pass using `bmad-advanced-elicitation`.
+
+    Offer elicitation when ANY of:
+    - Story has 4+ tasks in the plan
+    - Story touches 3+ areas of the codebase
+    - Story has complex/ambiguous acceptance criteria (4+ ACs or ACs with unclear scope)
+
+    If triggered, ask the user:
+    > "The plan is approved. This story has [reason — e.g. 5 tasks / 4 ACs]. Want me to run a quick elicitation pass to stress-test the plan before you start? (y/N)"
+
+    If yes → invoke `bmad-advanced-elicitation` skill, passing the plan content as context. Incorporate any meaningful changes into the saved plan file.
+    If no (or story does not meet criteria) → skip, proceed to Step 12.
+
+12. **Link plan to story file**: After `ExitPlanMode` returns (plan approved), save the plan to `docs/implementation-artifacts/plans/{plan-filename}.md`, then append an `## Implementation Plan` section to the story file so the developer can find the plan in a later session. If the section already exists, skip.
 
     Format:
     ```markdown
@@ -277,7 +290,7 @@ Mark the first todo as `in_progress` and proceed:
 
     Use the actual plan filename (relative to `docs/implementation-artifacts/`) from the current session.
 
-12. **Assess workflow recommendation**: Based on research from Steps 9-10, determine which shipping workflow to recommend:
+13. **Assess workflow recommendation**: Based on research from Steps 9-10, determine which shipping workflow to recommend:
 
     **Recommend "Review first"** (`/review-story` → `/finish-story`) when ANY of:
     - Story involves UI changes (pages, components, styles in affected files)
@@ -292,12 +305,12 @@ Mark the first todo as `in_progress` and proceed:
     - Simple acceptance criteria (1-3 ACs)
     - Changes confined to a single area
 
-13. **Initial commit** (idempotent):
+14. **Initial commit** (idempotent):
     - Check if an initial commit already exists: `git log --oneline --grep="chore: start story E##-S##"`.
     - **Commit exists**: Skip. Inform user: "Initial commit already made."
     - **Commit does not exist**: `git add docs/implementation-artifacts/{story-key}.md docs/implementation-artifacts/sprint-status.yaml` (and `tests/e2e/story-{id}.spec.ts` if ATDD tests were created). Commit: `chore: start story E##-S##`.
 
-14. **Completion output**: Display the following summary to the user:
+15. **Completion output**: Display the following summary to the user:
 
     ```markdown
     ---

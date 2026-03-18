@@ -51,7 +51,7 @@ export const useQuizStore = create<QuizState>()(
         try {
           const quiz = await db.quizzes.where('lessonId').equals(lessonId).first()
           if (!quiz) {
-            set({ isLoading: false, error: 'Quiz not found' })
+            set({ currentQuiz: null, currentProgress: null, isLoading: false, error: 'Quiz not found' })
             return
           }
 
@@ -141,7 +141,9 @@ export const useQuizStore = create<QuizState>()(
           console.error('[useQuizStore] submitQuiz failed:', err)
           set({ ...snapshot, isLoading: false, error: 'Failed to save quiz attempt' })
           toastError.saveFailed(
-            err instanceof Error ? err.message : 'Quiz attempt could not be saved. Your answers are preserved.'
+            err instanceof Error
+              ? err.message
+              : 'Quiz attempt could not be saved. Your answers are preserved.'
           )
         }
       },
@@ -152,7 +154,10 @@ export const useQuizStore = create<QuizState>()(
 
       loadAttempts: async (quizId: string) => {
         try {
-          const attempts = await db.quizAttempts.where('quizId').equals(quizId).sortBy('completedAt')
+          const attempts = await db.quizAttempts
+            .where('quizId')
+            .equals(quizId)
+            .sortBy('completedAt')
           set({ attempts })
         } catch (err) {
           console.error('[useQuizStore] loadAttempts failed:', err)
@@ -185,7 +190,10 @@ export const useQuizStore = create<QuizState>()(
     }),
     {
       name: 'levelup-quiz-store',
-      partialize: state => ({ currentProgress: state.currentProgress }),
+      partialize: state => ({
+        currentProgress: state.currentProgress,
+        currentQuiz: state.currentQuiz,
+      }),
     }
   )
 )
