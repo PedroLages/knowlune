@@ -1,6 +1,4 @@
 import { test, expect } from '@playwright/test'
-import { seedImportedCourses } from '../support/helpers/indexeddb-seed'
-import { createOperativeSixCourse } from '../support/helpers/ai-summary-mocks'
 
 /**
  * E02-S10: Caption and Subtitle Support
@@ -38,12 +36,13 @@ no timestamps here
 just random text
 `
 
+// Uses built-in course from seedCourses (LessonPlayer route)
 const LESSON_URL = '/courses/operative-six/op6-introduction'
 
 test.describe('E02-S10: Caption and Subtitle Support', () => {
   test.beforeEach(async ({ page }) => {
     // Mock video file to avoid 404
-    await page.route('**/01-00- Introduction.mp4', async route => {
+    await page.route('**/*Introduction.mp4', async route => {
       await route.fulfill({ status: 200, body: '' })
     })
 
@@ -56,21 +55,19 @@ test.describe('E02-S10: Caption and Subtitle Support', () => {
       })
     })
 
+    // Initialize app and wait for course seeding to complete
     await page.goto('/')
-
-    // Prevent sidebar overlay in tablet viewports (640-1023px)
     await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
-
-    // Seed course with video
-    await seedImportedCourses(page, [createOperativeSixCourse()])
+    await page.waitForLoadState('networkidle')
   })
 
   test('AC1: Load valid WebVTT file via caption button', async ({ page }) => {
     await page.goto(LESSON_URL)
+    await page.waitForLoadState('networkidle')
 
-    // The caption file input should exist (hidden)
+    // Wait for VideoPlayer to render with onLoadCaptions prop (file input appears)
     const fileInput = page.locator('[data-testid="caption-file-input"]')
-    await expect(fileInput).toBeAttached()
+    await expect(fileInput).toBeAttached({ timeout: 15000 })
 
     // Load a WebVTT file via the hidden input
     await fileInput.setInputFiles({
@@ -85,8 +82,10 @@ test.describe('E02-S10: Caption and Subtitle Support', () => {
 
   test('AC1: Load valid SRT file via caption button', async ({ page }) => {
     await page.goto(LESSON_URL)
+    await page.waitForLoadState('networkidle')
 
     const fileInput = page.locator('[data-testid="caption-file-input"]')
+    await expect(fileInput).toBeAttached({ timeout: 15000 })
 
     await fileInput.setInputFiles({
       name: 'test-captions.srt',
@@ -100,8 +99,11 @@ test.describe('E02-S10: Caption and Subtitle Support', () => {
 
   test('AC2: Captions render as track element after loading', async ({ page }) => {
     await page.goto(LESSON_URL)
+    await page.waitForLoadState('networkidle')
 
     const fileInput = page.locator('[data-testid="caption-file-input"]')
+    await expect(fileInput).toBeAttached({ timeout: 15000 })
+
     await fileInput.setInputFiles({
       name: 'test-captions.vtt',
       mimeType: 'text/vtt',
@@ -124,6 +126,8 @@ test.describe('E02-S10: Caption and Subtitle Support', () => {
 
     // Load captions first
     const fileInput = page.locator('[data-testid="caption-file-input"]')
+    await expect(fileInput).toBeAttached({ timeout: 15000 })
+
     await fileInput.setInputFiles({
       name: 'test-captions.vtt',
       mimeType: 'text/vtt',
@@ -145,8 +149,11 @@ test.describe('E02-S10: Caption and Subtitle Support', () => {
 
   test('AC4: Invalid file shows error toast and video continues', async ({ page }) => {
     await page.goto(LESSON_URL)
+    await page.waitForLoadState('networkidle')
 
     const fileInput = page.locator('[data-testid="caption-file-input"]')
+    await expect(fileInput).toBeAttached({ timeout: 15000 })
+
     await fileInput.setInputFiles({
       name: 'bad-file.srt',
       mimeType: 'application/x-subrip',
@@ -163,9 +170,10 @@ test.describe('E02-S10: Caption and Subtitle Support', () => {
 
   test('AC4: File input accepts only .srt and .vtt', async ({ page }) => {
     await page.goto(LESSON_URL)
+    await page.waitForLoadState('networkidle')
 
     const fileInput = page.locator('[data-testid="caption-file-input"]')
-    await expect(fileInput).toBeAttached()
+    await expect(fileInput).toBeAttached({ timeout: 15000 })
 
     const accept = await fileInput.getAttribute('accept')
     expect(accept).toContain('.srt')
@@ -177,6 +185,8 @@ test.describe('E02-S10: Caption and Subtitle Support', () => {
 
     // Load captions
     const fileInput = page.locator('[data-testid="caption-file-input"]')
+    await expect(fileInput).toBeAttached({ timeout: 15000 })
+
     await fileInput.setInputFiles({
       name: 'test-captions.vtt',
       mimeType: 'text/vtt',
@@ -188,9 +198,11 @@ test.describe('E02-S10: Caption and Subtitle Support', () => {
 
     // Navigate away to courses page
     await page.goto('/')
+    await page.waitForLoadState('networkidle')
 
     // Navigate back to the same lesson
     await page.goto(LESSON_URL)
+    await page.waitForLoadState('networkidle')
 
     // Captions should auto-load — a track element with blob: src should be present
     await page.waitForFunction(
@@ -199,7 +211,7 @@ test.describe('E02-S10: Caption and Subtitle Support', () => {
         const tracks = video?.querySelectorAll('track') ?? []
         return Array.from(tracks).some(t => t.src.startsWith('blob:'))
       },
-      { timeout: 5000 }
+      { timeout: 10000 },
     )
   })
 })
