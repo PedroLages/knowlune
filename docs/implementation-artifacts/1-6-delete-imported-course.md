@@ -1,8 +1,8 @@
 ---
 story_id: E01-S06
 story_name: "Delete Imported Course"
-status: ready-for-dev
-started:
+status: in-progress
+started: 2026-03-18
 completed:
 reviewed: false
 review_started:
@@ -142,6 +142,10 @@ const handleDelete = async () => {
 - `AlertDialog` (Radix) traps focus and announces to screen readers via `role="alertdialog"`
 - Delete menu item must have visible destructive color (not icon alone)
 - `AlertDialogDescription` provides context for screen readers
+
+## Implementation Plan
+
+See [plan](plans/e01-s06-delete-imported-course.md) for implementation approach.
 
 ## Implementation Notes
 
