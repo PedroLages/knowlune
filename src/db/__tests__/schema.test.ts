@@ -67,11 +67,12 @@ describe('ElearningDB schema', () => {
       'reviewRecords',
       'screenshots',
       'studySessions',
+      'videoCaptions',
     ])
   })
 
-  it('should be at version 17', () => {
-    expect(db.verno).toBe(17)
+  it('should be at version 18', () => {
+    expect(db.verno).toBe(18)
   })
 
   it('should preserve key indexes on existing v16 tables in v17 migration', async () => {
