@@ -16,9 +16,7 @@ const TEST_COURSE = createImportedCourse({ name: 'Test Course To Delete' })
 
 /** Locates the imported course card article containing the test course name. */
 function getCourseCard(page: import('@playwright/test').Page) {
-  return page
-    .getByTestId('imported-course-card')
-    .filter({ hasText: TEST_COURSE.name })
+  return page.getByTestId('imported-course-card').filter({ hasText: TEST_COURSE.name })
 }
 
 /** Opens the status dropdown on the course card. */

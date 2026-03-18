@@ -51,7 +51,12 @@ export const useQuizStore = create<QuizState>()(
         try {
           const quiz = await db.quizzes.where('lessonId').equals(lessonId).first()
           if (!quiz) {
-            set({ currentQuiz: null, currentProgress: null, isLoading: false, error: 'Quiz not found' })
+            set({
+              currentQuiz: null,
+              currentProgress: null,
+              isLoading: false,
+              error: 'Quiz not found',
+            })
             return
           }
 

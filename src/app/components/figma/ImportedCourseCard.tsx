@@ -416,8 +416,8 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
           <AlertDialogHeader>
             <AlertDialogTitle>Delete &ldquo;{course.name}&rdquo;?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove the course and all its content from your
-              library. This action cannot be undone.
+              This will permanently remove the course and all its content from your library. This
+              action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
