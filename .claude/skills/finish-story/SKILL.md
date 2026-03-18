@@ -287,15 +287,15 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
    [If epic NOT complete:]
    **Next up** — **E##-S##: [Name]**. Run `/start-story E##-S##` when ready.
 
-   [If epic IS complete:]
+   [If epic IS complete — output ALL 5 steps exactly as written, do not abbreviate or omit any:]
    ### Epic Complete!
 
-   All stories in Epic ## are done. Recommended next steps:
+   All stories in Epic ## are done. Once the PR is merged, recommended next steps:
    1. `/sprint-status` — Verify all stories are done, surface risks
    2. `/testarch-trace` — Requirements-to-tests traceability
    3. `/testarch-nfr` — Non-functional requirements validation
    4. `/review-adversarial` — (Optional) Cynical epic-level critique
-   5. `/retrospective` — Lessons learned
+   5. `/retrospective` — Lessons learned and pattern extraction
 
    ---
    ```
