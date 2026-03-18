@@ -2,9 +2,9 @@
 
 Status: in-progress
 Started: 2026-03-18
-Reviewed: in-progress
+Reviewed: true
 review_started: 2026-03-18
-review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 
 ## Story
 
