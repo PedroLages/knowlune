@@ -59,6 +59,8 @@ import { NextCourseSuggestion } from '../components/NextCourseSuggestion'
 import { addBookmark, getLessonBookmarks, formatBookmarkTimestamp } from '@/lib/bookmarks'
 import { toast } from 'sonner'
 import { captureVideoFrame, saveFrameCapture, type CapturedFrame } from '@/lib/frame-capture'
+import { saveCaptionForVideo, getCaptionForVideo } from '@/lib/captions'
+import type { CaptionTrack } from '@/data/types'
 
 export function LessonPlayer() {
   const allCourses = useCourseStore(s => s.courses)
@@ -105,6 +107,8 @@ export function LessonPlayer() {
 
   const [seekToTime, setSeekToTime] = useState<number | undefined>(undefined)
   const [bookmarks, setBookmarks] = useState<import('@/data/types').VideoBookmark[]>([])
+  const [userCaptions, setUserCaptions] = useState<CaptionTrack | null>(null)
+  const userCaptionBlobUrl = useRef<string | null>(null)
 
   // Idle detection for session tracking
   useIdleDetection({
@@ -323,7 +327,7 @@ export function LessonPlayer() {
   const nextLesson = currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null
 
   const videoResource = lesson?.resources.find(r => r.type === 'video')
-  const captionSrc = videoResource?.metadata?.captions?.[0]?.src
+  const captionSrc = userCaptions?.src ?? videoResource?.metadata?.captions?.[0]?.src
   const videoChapters = videoResource?.metadata?.chapters
   const allPdfResources = lesson?.resources.filter(r => r.type === 'pdf') ?? []
   // When no video exists, promote first PDF to primary content
@@ -339,6 +343,60 @@ export function LessonPlayer() {
 
     // Note: No cleanup needed - endSession handled by visibility/unload handlers
   }, [courseId, lessonId, startSession, videoResource, primaryPdf])
+
+  // Load persisted user captions on mount / lesson change
+  useEffect(() => {
+    if (!courseId || !lessonId) return
+    let cancelled = false
+
+    getCaptionForVideo(courseId, lessonId).then(track => {
+      if (cancelled) return
+      if (track) {
+        // Revoke any previous blob URL
+        if (userCaptionBlobUrl.current) URL.revokeObjectURL(userCaptionBlobUrl.current)
+        userCaptionBlobUrl.current = track.src
+        setUserCaptions(track)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [courseId, lessonId])
+
+  // Cleanup blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (userCaptionBlobUrl.current) URL.revokeObjectURL(userCaptionBlobUrl.current)
+    }
+  }, [])
+
+  // Handle user loading a caption file
+  const handleLoadCaptions = useCallback(
+    async (file: File) => {
+      if (!courseId || !lessonId) return
+
+      const result = await saveCaptionForVideo(courseId, lessonId, file)
+      if (!result.captionTrack) {
+        toast.error(result.error)
+        return
+      }
+
+      // Revoke previous blob URL before replacing
+      if (userCaptionBlobUrl.current) URL.revokeObjectURL(userCaptionBlobUrl.current)
+      userCaptionBlobUrl.current = result.captionTrack.src
+      setUserCaptions(result.captionTrack)
+      toast.success(`Captions loaded: ${file.name}`)
+    },
+    [courseId, lessonId]
+  )
+
+  // Merge course captions with user-loaded captions
+  const mergedCaptions = (() => {
+    const courseCaptions = videoResource?.metadata?.captions ?? []
+    if (!userCaptions) return courseCaptions.length > 0 ? courseCaptions : undefined
+    return [...courseCaptions, userCaptions]
+  })()
 
   const handlePdfPageChangeRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const handlePdfPageChange = (page: number) => {
@@ -581,7 +639,8 @@ export function LessonPlayer() {
               onBookmarkAdd={handleBookmarkAdd}
               bookmarks={bookmarks}
               onBookmarkSeek={handleVideoSeek}
-              captions={videoResource.metadata?.captions}
+              captions={mergedCaptions}
+              onLoadCaptions={handleLoadCaptions}
               onPlayStateChange={(playing: boolean) => {
                 setIsVideoPlaying(playing)
                 recordInteraction()

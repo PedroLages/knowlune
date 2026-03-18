@@ -27,6 +27,15 @@ export interface TranscriptCue {
   text: string
 }
 
+export interface VideoCaptionRecord {
+  courseId: string
+  videoId: string
+  filename: string
+  content: string // Raw SRT/WebVTT text
+  format: 'srt' | 'vtt'
+  createdAt: string // ISO date
+}
+
 export interface Resource {
   id: string
   title: string
