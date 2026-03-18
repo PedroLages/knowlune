@@ -4,9 +4,9 @@ story_name: "Delete Imported Course"
 status: in-progress
 started: 2026-03-18
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-18
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -196,15 +196,29 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-Not yet reviewed — story is ready-for-dev.
+**Reviewed 2026-03-18** — All ACs pass live testing. Fixes applied:
+- Added `variant="destructive"` on delete DropdownMenuItem for proper focus/hover background
+- Fixed focus return to status badge after dialog close (WCAG 2.4.3)
+- Added 44px minimum touch targets on delete item and status badge
+- Report: `docs/reviews/design/design-review-2026-03-18-e01-s06.md`
 
 ## Code Review Feedback
 
-Not yet reviewed — story is ready-for-dev.
+**Reviewed 2026-03-18** — 0 blockers. Fixes applied:
+- Fixed Enter key on child elements triggering card navigation (`e.target !== e.currentTarget` guard)
+- Added double-click guard with `deleting` state + disabled button
+- Added `stopPropagation` on delete menu item for consistency
+- Fixed hardcoded `ring-blue-600` → `ring-brand` (design token compliance)
+- Added `removeImportedCourse` to unit test mock
+- Added Escape key test for AC4
+- Reports: `docs/reviews/code/code-review-2026-03-18-e01-s06.md`, `docs/reviews/code/edge-case-review-2026-03-18-e01-s06.md`
 
 ## Web Design Guidelines Review
 
-Not yet reviewed — story is ready-for-dev.
+**Reviewed 2026-03-18** — Keyboard a11y blocker found and fixed. Remaining pre-existing items:
+- AlertDialog description contrast 3.88:1 (shared component — tracked separately)
+- `statusConfig` hardcoded colors (pre-existing tech debt, not introduced by this PR)
+- Report: `docs/reviews/design/design-review-2026-03-18-e01-s06.md`
 
 ## Challenges and Lessons Learned
 
