@@ -4,7 +4,7 @@ Status: in-progress
 Started: 2026-03-18
 Reviewed: in-progress
 review_started: 2026-03-18
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
 
 ## Story
 
@@ -243,6 +243,34 @@ Key lessons from Story 2-9 (mini-player/theater mode):
 - [Source: src/app/components/figma/TranscriptPanel.tsx] — existing VTT parser
 - [Source: src/db/schema.ts:390-412] — current Dexie v17 schema
 - [Source: docs/implementation-artifacts/2-9-mini-player-theater-mode.md] — previous story lessons
+
+## Challenges and Lessons Learned
+
+### 1. E2E Test Route Mismatch — Imported vs Built-in Courses
+**Challenge:** Tests originally used `seedImportedCourses()` to seed course data, then navigated to `/courses/operative-six/...` (LessonPlayer route). But imported courses live at `/imported-courses/` (ImportedLessonPlayer route) and require a separate `importedVideos` table entry with a `fileHandle`.
+
+**Solution:** Switched to using the built-in `operative-six` course from `seedCourses` static data, which auto-seeds on app init. Tests navigate to `/courses/operative-six/op6-introduction` without any manual seeding.
+
+**Pattern:** For LessonPlayer tests, prefer built-in seed data over manual `seedImportedCourses`. Reserve `seedImportedCourses` + `seedImportedVideos` for ImportedLessonPlayer-specific tests.
+
+### 2. Zustand Store Race Condition — `waitForLoadState('networkidle')`
+**Challenge:** `useCourseStore.courses` starts as `[]` and loads asynchronously via `loadCourses()` (triggered by Layout.tsx useEffect). When navigating directly to a lesson URL, LessonPlayer can render before the store finishes loading, showing "Lesson Not Found".
+
+**Solution:** Add `await page.waitForLoadState('networkidle')` after every `page.goto()` call, including the initial `/` navigation in `beforeEach`. This ensures Zustand stores are hydrated from IndexedDB before assertions.
+
+**Pattern:** Always use `networkidle` waits in E2E tests that depend on async Zustand store hydration. This matches the pattern used in story-e09b-s01 tests.
+
+### 3. Unit Test Updates for Schema and Aria-Label Changes
+**Challenge:** Dexie v17→v18 migration added `videoCaptions` table, breaking schema tests expecting v17 and 19 tables. Caption button aria-label changed from "Enable captions" to "Load captions" when no captions are loaded, breaking VideoPlayer unit tests.
+
+**Solution:** Updated `schema.test.ts` to expect v18 with `videoCaptions` table. Updated `VideoPlayer.test.tsx` to expect "Load captions" for the no-captions state.
+
+**Pattern:** When modifying Dexie schema or ARIA labels, always search for existing unit tests that assert on version numbers, table lists, or `getByRole` with the old label text.
+
+### 4. Prettier Auto-Format on E2E Spec
+**Challenge:** The E2E spec had minor formatting differences caught by the format-check gate.
+
+**Solution:** Auto-formatted with `npx prettier --write`. Committed separately to keep formatting changes isolated from logic changes.
 
 ## Implementation Plan
 
