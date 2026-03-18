@@ -1,0 +1,168 @@
+import { test, expect } from '../support/fixtures'
+import { seedQuizzes } from '../support/helpers/indexeddb-seed'
+import { makeQuiz, makeQuestion } from '../support/fixtures/factories/quiz-factory'
+
+/**
+ * E12-S05: Display Multiple Choice Questions
+ *
+ * Tests the QuestionDisplay and MultipleChoiceQuestion components
+ * for rendering, selection, persistence, accessibility, and responsive behavior.
+ *
+ * Acceptance Criteria:
+ * - AC1: Question text rendered as Markdown in a card with 2-6 radio button options
+ * - AC2: Selecting an option shows brand styling, persists via store
+ * - AC3: QuestionDisplay accepts mode prop (active/review modes — prop surface only in E12)
+ * - AC4: Mobile (<640px) stacked layout with 48px touch targets
+ * - AC5: Graceful degradation for <2 or >6 options with console warning
+ */
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const COURSE_ID = 'test-course-mc'
+const LESSON_ID = 'test-lesson-mc'
+
+function buildQuizWithQuestions(questionCount = 3) {
+  const questions = Array.from({ length: questionCount }, (_, i) =>
+    makeQuestion({
+      id: `q-${i + 1}`,
+      order: i + 1,
+      text: `**Question ${i + 1}**: What is ${i + 1} + ${i + 1}?`,
+      options: ['Option A', 'Option B', 'Option C', 'Option D'],
+      correctAnswer: 'Option A',
+    })
+  )
+
+  return makeQuiz({
+    id: 'quiz-mc-test',
+    lessonId: LESSON_ID,
+    title: 'Multiple Choice Test Quiz',
+    description: 'Testing MC question display',
+    questions,
+  })
+}
+
+async function seedAndNavigateToQuiz(page: import('@playwright/test').Page) {
+  // Prevent sidebar overlay in tablet viewports
+  await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+
+  const quiz = buildQuizWithQuestions()
+
+  // Navigate first so Dexie initializes the DB
+  await page.goto('/')
+  await page.waitForLoadState('networkidle')
+
+  // Seed quiz into IndexedDB
+  await seedQuizzes(page, [quiz as unknown as Record<string, unknown>])
+
+  // Navigate to quiz page
+  await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz`)
+  await page.waitForLoadState('networkidle')
+}
+
+async function startQuiz(page: import('@playwright/test').Page) {
+  const startButton = page.getByRole('button', { name: /start quiz/i })
+  await expect(startButton).toBeVisible()
+  await startButton.click()
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+test.describe('E12-S05: Display Multiple Choice Questions', () => {
+  test('AC1: Question text rendered as Markdown in styled card with radio options', async ({
+    page,
+  }) => {
+    await seedAndNavigateToQuiz(page)
+    await startQuiz(page)
+
+    // Verify question text is rendered (Markdown bold should produce <strong>)
+    await expect(page.getByText('Question 1')).toBeVisible()
+
+    // Verify radio group exists with options
+    const radioGroup = page.getByRole('radiogroup')
+    await expect(radioGroup).toBeVisible()
+
+    // Verify all 4 options are displayed
+    const options = page.getByRole('radio')
+    await expect(options).toHaveCount(4)
+
+    // Verify no option is pre-selected
+    for (const option of await options.all()) {
+      await expect(option).not.toBeChecked()
+    }
+
+    // Verify option labels are visible
+    await expect(page.getByText('Option A')).toBeVisible()
+    await expect(page.getByText('Option B')).toBeVisible()
+    await expect(page.getByText('Option C')).toBeVisible()
+    await expect(page.getByText('Option D')).toBeVisible()
+  })
+
+  test('AC2: Selecting an option updates visual state — single selection only', async ({
+    page,
+  }) => {
+    await seedAndNavigateToQuiz(page)
+    await startQuiz(page)
+
+    // Select first option
+    const firstOption = page.getByRole('radio').first()
+    await firstOption.click()
+    await expect(firstOption).toBeChecked()
+
+    // Select second option — first should uncheck (radio group behavior)
+    const secondOption = page.getByRole('radio').nth(1)
+    await secondOption.click()
+    await expect(secondOption).toBeChecked()
+    await expect(firstOption).not.toBeChecked()
+  })
+
+  test('AC4: Mobile viewport — options have min 48px touch targets', async ({ page }) => {
+    // Set mobile viewport
+    await page.setViewportSize({ width: 375, height: 667 })
+
+    await seedAndNavigateToQuiz(page)
+    await startQuiz(page)
+
+    // Verify each option's clickable area has at least 48px height
+    // The label wrapping the radio should meet the min-h-12 requirement
+    const radioGroup = page.getByRole('radiogroup')
+    await expect(radioGroup).toBeVisible()
+
+    const options = page.getByRole('radio')
+    const count = await options.count()
+    expect(count).toBeGreaterThanOrEqual(2)
+
+    for (let i = 0; i < count; i++) {
+      const option = options.nth(i)
+      // Get the parent label element that provides the touch target
+      const label = option.locator('xpath=ancestor::label')
+      const box = await label.boundingBox()
+      expect(box, `Option ${i} label should have a bounding box`).not.toBeNull()
+      expect(box!.height).toBeGreaterThanOrEqual(48)
+    }
+  })
+
+  test('Accessibility: radiogroup structure and keyboard navigation', async ({ page }) => {
+    await seedAndNavigateToQuiz(page)
+    await startQuiz(page)
+
+    // Verify radiogroup role exists
+    const radioGroup = page.getByRole('radiogroup')
+    await expect(radioGroup).toBeVisible()
+
+    // Focus first radio and select via keyboard
+    const firstRadio = page.getByRole('radio').first()
+    await firstRadio.focus()
+    await page.keyboard.press('Space')
+    await expect(firstRadio).toBeChecked()
+
+    // Arrow down to next option — should auto-select in native radio group behavior
+    await page.keyboard.press('ArrowDown')
+    const secondRadio = page.getByRole('radio').nth(1)
+    await expect(secondRadio).toBeChecked()
+    await expect(firstRadio).not.toBeChecked()
+  })
+})

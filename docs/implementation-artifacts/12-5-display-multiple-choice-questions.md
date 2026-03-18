@@ -1,0 +1,195 @@
+---
+story_id: E12-S05
+story_name: "Display Multiple Choice Questions"
+status: in-progress
+started: 2026-03-18
+completed:
+reviewed: false
+review_started:
+review_gates_passed: []
+burn_in_validated: false
+---
+
+# Story 12.5: Display Multiple Choice Questions
+
+## Story
+
+As a learner,
+I want to see multiple choice questions with selectable answer options,
+So that I can answer quiz questions by selecting the correct option.
+
+**FRs Fulfilled:** QFR9 (multiple choice display), QFR2 (question display), QFR14 (rich text in questions)
+
+## Acceptance Criteria
+
+**Given** a quiz with multiple choice questions
+**When** I view a question
+**Then** I see the question text rendered as Markdown (via `react-markdown` with `remark-gfm`)
+**And** the question is wrapped in a card: `bg-card rounded-[24px] p-6 lg:p-8`
+**And** I see 2-6 answer options as styled radio buttons below the question
+**And** each option uses the label wrapper pattern from the UX spec
+**And** all options are unselected initially (no default selection)
+**And** I can select exactly one option at a time (radio group behavior)
+
+**Given** I select an answer option
+**When** I click or tap on a radio button or its label
+**Then** the option becomes visually selected: `border-2 border-brand bg-brand-soft rounded-xl p-4`
+**And** unselected options show: `border border-border bg-card hover:bg-accent rounded-xl p-4`
+**And** any previously selected option becomes unselected
+**And** `useQuizStore.submitAnswer(questionId, selectedOption)` is called
+**And** the selection persists via Zustand store if I navigate away and return
+
+**Given** the QuestionDisplay component API
+**When** defining the component props
+**Then** it accepts a `mode` prop: `'active' | 'review-correct' | 'review-incorrect' | 'review-disabled'`
+**And** in 'active' mode (Epic 12): only unselected and selected states render
+**And** review modes (Epic 16): correct (`border-success bg-success-soft`), incorrect (`border-warning`), disabled (`opacity-60`)
+**And** this prop surface exists now to prevent API breakage when review mode ships
+
+**Given** the question display on mobile (<640px)
+**When** rendering answer options
+**Then** options stack vertically with full-width labels
+**And** each option has minimum height `h-12` (48px) for touch targets per UX spec
+
+**Given** a question with fewer than 2 or more than 6 options
+**When** rendering the question
+**Then** it renders whatever options exist (graceful degradation)
+**And** logs a warning to console for data quality monitoring
+
+## Tasks / Subtasks
+
+- [ ] Task 1: Create QuestionDisplay polymorphic renderer component (AC: 3)
+  - [ ] 1.1 Create `src/app/components/quiz/QuestionDisplay.tsx` with `mode` prop
+  - [ ] 1.2 Implement switch on question.type dispatching to type-specific components
+  - [ ] 1.3 Handle unsupported question type fallback
+- [ ] Task 2: Create MultipleChoiceQuestion component (AC: 1, 2, 4, 5)
+  - [ ] 2.1 Create `src/app/components/quiz/questions/MultipleChoiceQuestion.tsx`
+  - [ ] 2.2 Render question text with react-markdown + remark-gfm
+  - [ ] 2.3 Implement radio group with shadcn/ui RadioGroup
+  - [ ] 2.4 Style selected/unselected states per UX spec
+  - [ ] 2.5 Wire up useQuizStore.submitAnswer on selection change
+  - [ ] 2.6 Ensure 48px touch targets and mobile responsiveness
+  - [ ] 2.7 Add console warning for <2 or >6 options
+- [ ] Task 3: Integrate QuestionDisplay into QuizPlayer page (AC: 1, 2)
+  - [ ] 3.1 Wire QuestionDisplay into existing QuizPlayer component
+  - [ ] 3.2 Pass current question + user answer from store
+  - [ ] 3.3 Verify answer persistence across navigation
+- [ ] Task 4: Verify dependencies (react-markdown, remark-gfm) are installed
+- [ ] Task 5: Write unit tests for MultipleChoiceQuestion and QuestionDisplay
+- [ ] Task 6: Write E2E tests for answer selection, persistence, and keyboard navigation
+
+## Design Guidance
+
+### Layout Approach
+
+The question display lives inside the existing Quiz page card (`bg-card rounded-[24px]`). It renders below QuizHeader as a self-contained section. No additional outer card needed — the Quiz page already provides the card wrapper.
+
+**Vertical flow** (top to bottom):
+1. QuizHeader (title, progress bar, timer) — already exists
+2. Question text (Markdown rendered via `react-markdown`)
+3. Answer options (RadioGroup — vertical stack)
+
+### Component Composition
+
+```
+QuizPage (existing)
+└── QuizHeader (existing)
+└── QuestionDisplay (new — polymorphic dispatcher)
+    └── MultipleChoiceQuestion (new — MC-specific renderer)
+        ├── <fieldset> wrapper
+        ├── <legend> with ReactMarkdown question text
+        └── RadioGroup with label-wrapped RadioGroupItems
+```
+
+**QuestionDisplay** is a thin dispatcher — switches on `question.type` and renders the appropriate sub-component. The `mode` prop flows through to child components but only `'active'` is implemented in Epic 12.
+
+**MultipleChoiceQuestion** owns all MC-specific rendering: Markdown question text, radio group, option styling, and store integration.
+
+### Design System Token Usage
+
+| Element | Token Classes |
+|---------|---------------|
+| Question card | Already provided by Quiz page: `bg-card rounded-[24px] p-4 sm:p-8` |
+| Question text | `text-lg lg:text-xl text-foreground leading-relaxed` |
+| Selected option | `border-2 border-brand bg-brand-soft rounded-xl p-4` |
+| Unselected option | `border border-border bg-card hover:bg-accent rounded-xl p-4` |
+| Option text | `text-base text-foreground leading-relaxed` |
+| Focus ring | Global `*:focus-visible` already handles: `outline-2 outline-brand outline-offset-2` |
+| Review: correct (E16) | `border-2 border-success bg-success-soft` |
+| Review: incorrect (E16) | `border-2 border-warning` |
+| Review: disabled (E16) | `opacity-60 pointer-events-none` |
+
+### Responsive Strategy
+
+**Mobile-first** — single column on all viewports (two-column deferred per ACs):
+- Options always stack vertically via `space-y-3` on the RadioGroup
+- Each option label: `min-h-12` (48px) for WCAG touch targets
+- Padding scales: `p-4` mobile, unchanged on desktop (options don't need more)
+- Question text scales: `text-lg` → `lg:text-xl`
+- Card padding inherited from Quiz page: `p-4 sm:p-8`
+
+### Accessibility Requirements
+
+- **Semantic HTML**: `<fieldset>` wrapping the question, `<legend>` containing the question text
+- **RadioGroup**: shadcn/ui RadioGroup provides `role="radiogroup"` and proper ARIA attributes
+- **Keyboard**: Tab to enter group, Arrow keys between options, Space/Enter to select
+- **Focus visible**: Global theme handles this — `outline: 2px solid var(--brand); outline-offset: 2px`
+- **Screen reader**: Legend announces question text, each RadioGroupItem announces option text
+- **No default selection**: RadioGroup starts with no `value` (empty string)
+
+### Transition & Animation
+
+Keep it subtle — quiz-taking is a focused activity:
+- **Selection state change**: `transition-colors duration-150` on option labels for smooth border/background shifts
+- **No entrance animations**: Questions should appear instantly (no stagger, no fade)
+- **Hover feedback**: `hover:bg-accent` provides gentle highlight on unselected options
+- **Respect `prefers-reduced-motion`**: Transitions are already minimal, but wrap in `motion-safe:` if adding anything beyond color transitions
+
+### Markdown Rendering Notes
+
+- Use `react-markdown` with `remark-gfm` plugin for GFM tables, strikethrough, etc.
+- Question text may contain: bold, italic, code blocks, ordered/unordered lists
+- Apply `prose` or custom styles to Markdown output for consistent typography
+- Code blocks in questions: use default `<code>` styling (no syntax highlighting library needed — defer per ACs)
+
+## Implementation Plan
+
+See [plan](plans/elegant-gathering-whisper.md) for implementation approach.
+
+## Implementation Notes
+
+[Architecture decisions, patterns used, dependencies added]
+
+## Testing Notes
+
+[Test strategy, edge cases discovered, coverage notes]
+
+## Pre-Review Checklist
+
+Before requesting `/review-story`, verify:
+
+- [ ] All changes committed (`git status` clean)
+- [ ] No error swallowing — catch blocks log AND surface errors
+- [ ] useEffect hooks have cleanup functions (ignore flags for async, event listener removal)
+- [ ] No optimistic UI updates before persistence — state updates after DB write succeeds
+- [ ] Type guards on all dynamic lookups (e.g., `LABELS[type]` when type can be empty)
+- [ ] E2E afterEach cleanup uses `await` (not fire-and-forget)
+- [ ] Date handling uses `toLocaleDateString('sv-SE')` pattern (not `toISOString().split('T')[0]`)
+- [ ] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
+- [ ] If story calls external APIs: CSP allowlist configured (see engineering-patterns.md § CSP Configuration)
+
+## Design Review Feedback
+
+[Populated by /review-story — Playwright MCP findings]
+
+## Code Review Feedback
+
+[Populated by /review-story — adversarial code review findings]
+
+## Web Design Guidelines Review
+
+[Populated by /review-story — Web Interface Guidelines compliance findings]
+
+## Challenges and Lessons Learned
+
+_To be filled during implementation._
