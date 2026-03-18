@@ -4,9 +4,9 @@ story_name: "Display Multiple Choice Questions"
 status: in-progress
 started: 2026-03-18
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-18
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -186,15 +186,29 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+- **M1**: Redundant spacing — `space-y-4` on fieldset + `mb-4` on legend both control same gap
+- **M2**: `RadioGroup` div lacks `aria-labelledby` connecting to question legend
+- **N1**: `gap-3` (from shadcn RadioGroup) + `space-y-3` doubles option spacing to 24px
+- Design tokens verified correct, contrast ratios 13.34:1/16.67:1, touch targets 60px on mobile
+- Full report: `docs/reviews/design/design-review-2026-03-18-e12-s05.md`
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**High**: Border 1px→2px layout shift on selection, duplicate option keys as React keys, remarkPlugins array recreated per render, stale closure risk in submitAnswer
+**Medium**: useEffect for sync console.warn, type assertions at dispatch boundary, legend containing block-level Markdown, networkidle in E2E
+**Testing**: AC2 visual CSS states untested, submitAnswer store integration untested, persistence across navigation untested, review-incorrect mode untested
+- Full code report: `docs/reviews/code/code-review-2026-03-18-e12-s05.md`
+- Full testing report: `docs/reviews/code/code-review-testing-2026-03-18-e12-s05.md`
+- Edge case report: `docs/reviews/code/edge-case-review-2026-03-18-e12-s05.md`
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+- **MEDIUM**: Loading skeleton missing `aria-label="Loading quiz"`
+- **MEDIUM**: No retry mechanism for fetch errors (acceptable for IndexedDB)
+- **LOW**: No `focus-within` styling on label card wrappers
+- **LOW**: Unsupported question type fallback div missing `role="status"`
+- **LOW**: No `aria-live` region for question transitions (future concern)
+- Full report via web-design-guidelines agent
 
 ## Challenges and Lessons Learned
 
