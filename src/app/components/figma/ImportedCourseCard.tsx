@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   FolderOpen,
   Video,
@@ -85,6 +85,8 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
 
   const [thumbnailPickerOpen, setThumbnailPickerOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const statusBadgeRef = useRef<HTMLButtonElement>(null)
   const thumbnailUrl = thumbnailUrls[course.id] ?? null
 
   const {
@@ -138,6 +140,7 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
   }
 
   function handleCardKeyDown(e: React.KeyboardEvent) {
+    if (e.target !== e.currentTarget) return
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
       navigate(`/imported-courses/${course.id}`)
@@ -180,10 +183,13 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
   }
 
   async function handleDelete() {
+    if (deleting) return
+    setDeleting(true)
     await removeImportedCourse(course.id)
     const { importError } = useCourseImportStore.getState()
     if (importError) {
       toast.error('Failed to remove course')
+      setDeleting(false)
     } else {
       toast.success('Course removed')
     }
@@ -202,7 +208,7 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
         {...previewHandlers}
         data-preview={showPreview && videoReady ? '' : undefined}
         className={cn(
-          'group rounded-[24px] cursor-default focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 outline-none hover:shadow-2xl hover:[transform:scale(1.02)] transition-shadow duration-300 motion-reduce:hover:[transform:scale(1)] h-full',
+          'group rounded-[24px] cursor-default focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 outline-none hover:shadow-2xl hover:[transform:scale(1.02)] transition-shadow duration-300 motion-reduce:hover:[transform:scale(1)] h-full',
           showPreview && videoReady && '[transform:scale(1.05)] z-10'
         )}
       >
@@ -257,9 +263,10 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
+                    ref={statusBadgeRef}
                     data-testid="status-badge"
                     onClick={e => e.stopPropagation()}
-                    className="focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-full outline-none"
+                    className="focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded-full outline-none min-h-[44px] flex items-center"
                     aria-label={`Course status: ${config.label}. Click to change.`}
                   >
                     <Badge
@@ -298,8 +305,12 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     data-testid="delete-course-menu-item"
-                    className="text-destructive focus:text-destructive gap-2"
-                    onClick={() => setDeleteDialogOpen(true)}
+                    variant="destructive"
+                    className="gap-2 min-h-[44px]"
+                    onClick={e => {
+                      e.stopPropagation()
+                      setDeleteDialogOpen(true)
+                    }}
                   >
                     <Trash2 className="size-4" aria-hidden="true" />
                     Delete course
@@ -412,7 +423,13 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
       </article>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent data-testid="delete-confirm-dialog">
+        <AlertDialogContent
+          data-testid="delete-confirm-dialog"
+          onCloseAutoFocus={e => {
+            e.preventDefault()
+            statusBadgeRef.current?.focus()
+          }}
+        >
           <AlertDialogHeader>
             <AlertDialogTitle>Delete &ldquo;{course.name}&rdquo;?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -425,9 +442,10 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
             <AlertDialogAction
               data-testid="delete-confirm-button"
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleting}
               onClick={handleDelete}
             >
-              Delete
+              {deleting ? 'Deleting…' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

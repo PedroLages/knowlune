@@ -51,7 +51,7 @@ test.describe('E01-S06: Delete Imported Course', () => {
 
     const deleteItem = page.getByTestId('delete-course-menu-item')
     await expect(deleteItem).toBeVisible()
-    await expect(deleteItem).toHaveClass(/text-destructive/)
+    await expect(deleteItem).toHaveAttribute('data-variant', 'destructive')
   })
 
   // AC2 — Confirmation dialog
@@ -76,7 +76,7 @@ test.describe('E01-S06: Delete Imported Course', () => {
     await expect(getCourseCard(page)).not.toBeVisible()
 
     // Success toast appears
-    await expect(page.locator('text=Course removed')).toBeVisible()
+    await expect(page.getByText('Course removed')).toBeVisible()
 
     // Remains on Courses page
     expect(page.url()).toContain('/courses')
@@ -105,8 +105,8 @@ test.describe('E01-S06: Delete Imported Course', () => {
     expect(count).toBe(0)
   })
 
-  // AC4 — Cancellation
-  test('AC4: cancelling preserves the course', async ({ page }) => {
+  // AC4 — Cancellation (Cancel button)
+  test('AC4: cancelling via button preserves the course', async ({ page }) => {
     await openDropdown(page)
     await page.getByTestId('delete-course-menu-item').click()
 
@@ -114,6 +114,20 @@ test.describe('E01-S06: Delete Imported Course', () => {
     await expect(dialog).toBeVisible()
 
     await dialog.getByRole('button', { name: 'Cancel' }).click()
+
+    await expect(dialog).not.toBeVisible()
+    await expect(getCourseCard(page)).toBeVisible()
+  })
+
+  // AC4 — Cancellation (Escape key)
+  test('AC4: pressing Escape closes dialog and preserves the course', async ({ page }) => {
+    await openDropdown(page)
+    await page.getByTestId('delete-course-menu-item').click()
+
+    const dialog = page.getByTestId('delete-confirm-dialog')
+    await expect(dialog).toBeVisible()
+
+    await page.keyboard.press('Escape')
 
     await expect(dialog).not.toBeVisible()
     await expect(getCourseCard(page)).toBeVisible()

@@ -7,14 +7,21 @@ import type { ImportedCourse } from '@/data/types'
 
 const mockUpdateCourseTags = vi.fn()
 const mockUpdateCourseStatus = vi.fn()
+const mockRemoveImportedCourse = vi.fn().mockResolvedValue(undefined)
 
 vi.mock('@/stores/useCourseImportStore', () => ({
-  useCourseImportStore: (selector: (state: Record<string, unknown>) => unknown) =>
-    selector({
-      updateCourseTags: mockUpdateCourseTags,
-      updateCourseStatus: mockUpdateCourseStatus,
-      thumbnailUrls: {},
-    }),
+  useCourseImportStore: Object.assign(
+    (selector: (state: Record<string, unknown>) => unknown) =>
+      selector({
+        updateCourseTags: mockUpdateCourseTags,
+        updateCourseStatus: mockUpdateCourseStatus,
+        removeImportedCourse: mockRemoveImportedCourse,
+        thumbnailUrls: {},
+      }),
+    {
+      getState: () => ({ importError: null }),
+    }
+  ),
 }))
 
 vi.mock('@/hooks/useCourseCardPreview', () => ({
