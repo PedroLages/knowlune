@@ -1,9 +1,9 @@
 ---
 story_id: E12-S05
 story_name: "Display Multiple Choice Questions"
-status: in-progress
+status: done
 started: 2026-03-18
-completed:
+completed: 2026-03-18
 reviewed: true
 review_started: 2026-03-18
 review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
