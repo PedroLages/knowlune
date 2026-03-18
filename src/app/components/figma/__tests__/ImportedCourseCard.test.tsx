@@ -207,13 +207,13 @@ describe('ImportedCourseCard', () => {
   })
 
   describe('status dropdown', () => {
-    it('opens dropdown with all three status options on click', async () => {
+    it('opens dropdown with all three status options and delete on click', async () => {
       const user = userEvent.setup()
       renderCard({ status: 'active' })
 
       await user.click(screen.getByTestId('status-badge'))
 
-      expect(screen.getAllByRole('menuitem')).toHaveLength(3)
+      expect(screen.getAllByRole('menuitem')).toHaveLength(4)
     })
 
     it('calls updateCourseStatus when a different status is selected', async () => {
