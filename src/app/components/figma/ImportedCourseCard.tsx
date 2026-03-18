@@ -9,6 +9,7 @@ import {
   Eye,
   Info,
   Camera,
+  Trash2,
 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Card } from '@/app/components/ui/card'
@@ -20,9 +21,21 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/app/components/ui/alert-dialog'
+import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/app/components/ui/dialog'
 import { TagBadgeList } from '@/app/components/figma/TagBadgeList'
 import { TagEditor } from '@/app/components/figma/TagEditor'
@@ -66,10 +79,12 @@ interface ImportedCourseCardProps {
 export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedCourseCardProps) {
   const updateCourseTags = useCourseImportStore(state => state.updateCourseTags)
   const updateCourseStatus = useCourseImportStore(state => state.updateCourseStatus)
+  const removeImportedCourse = useCourseImportStore(state => state.removeImportedCourse)
   const thumbnailUrls = useCourseImportStore(state => state.thumbnailUrls)
   const navigate = useNavigate()
 
   const [thumbnailPickerOpen, setThumbnailPickerOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const thumbnailUrl = thumbnailUrls[course.id] ?? null
 
   const {
@@ -164,6 +179,16 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
     }
   }
 
+  async function handleDelete() {
+    await removeImportedCourse(course.id)
+    const { importError } = useCourseImportStore.getState()
+    if (importError) {
+      toast.error('Failed to remove course')
+    } else {
+      toast.success('Course removed')
+    }
+  }
+
   const isLoading = searching || videoLoading
 
   return (
@@ -228,7 +253,7 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
                 )}
               />
             )}
-            <div className="absolute top-3 right-3">
+            <div className="absolute top-3 right-3 z-20">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
@@ -270,6 +295,15 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
                       )
                     }
                   )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    data-testid="delete-course-menu-item"
+                    className="text-destructive focus:text-destructive gap-2"
+                    onClick={() => setDeleteDialogOpen(true)}
+                  >
+                    <Trash2 className="size-4" aria-hidden="true" />
+                    Delete course
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -376,6 +410,28 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
           </div>
         </Card>
       </article>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent data-testid="delete-confirm-dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete &ldquo;{course.name}&rdquo;?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove the course and all its content from your
+              library. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              data-testid="delete-confirm-button"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDelete}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <ThumbnailPickerDialog
         open={thumbnailPickerOpen}

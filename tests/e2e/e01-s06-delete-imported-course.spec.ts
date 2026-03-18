@@ -14,6 +14,20 @@ import { goToCourses } from '../support/helpers/navigation'
 
 const TEST_COURSE = createImportedCourse({ name: 'Test Course To Delete' })
 
+/** Locates the imported course card article containing the test course name. */
+function getCourseCard(page: import('@playwright/test').Page) {
+  return page
+    .getByTestId('imported-course-card')
+    .filter({ hasText: TEST_COURSE.name })
+}
+
+/** Opens the status dropdown on the course card. */
+async function openDropdown(page: import('@playwright/test').Page) {
+  const card = getCourseCard(page)
+  await expect(card).toBeVisible()
+  await card.getByTestId('status-badge').click()
+}
+
 test.describe('E01-S06: Delete Imported Course', () => {
   test.describe.configure({ mode: 'serial' })
 
@@ -35,15 +49,8 @@ test.describe('E01-S06: Delete Imported Course', () => {
 
   // AC1 — Delete option in course card dropdown
   test('AC1: shows delete option in course card dropdown', async ({ page }) => {
-    // Open the status dropdown on the course card
-    const courseCard = page.locator(`text=${TEST_COURSE.name}`).first()
-    await expect(courseCard).toBeVisible()
+    await openDropdown(page)
 
-    // Open dropdown (status button on ImportedCourseCard)
-    const dropdownTrigger = courseCard.locator('..').locator('[data-testid="status-badge"]').first()
-    await dropdownTrigger.click()
-
-    // Assert delete option is visible with destructive styling
     const deleteItem = page.getByTestId('delete-course-menu-item')
     await expect(deleteItem).toBeVisible()
     await expect(deleteItem).toHaveClass(/text-destructive/)
@@ -51,33 +58,24 @@ test.describe('E01-S06: Delete Imported Course', () => {
 
   // AC2 — Confirmation dialog
   test('AC2: shows confirmation dialog with course name', async ({ page }) => {
-    // Open dropdown and click delete
-    const courseCard = page.locator(`text=${TEST_COURSE.name}`).first()
-    await courseCard.locator('..').locator('[data-testid="status-badge"]').first().click()
+    await openDropdown(page)
     await page.getByTestId('delete-course-menu-item').click()
 
-    // Assert confirmation dialog appears
     const dialog = page.getByTestId('delete-confirm-dialog')
     await expect(dialog).toBeVisible()
-
-    // Dialog shows course name
     await expect(dialog).toContainText(TEST_COURSE.name)
-
-    // Cancel and Delete buttons are visible
     await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeVisible()
     await expect(page.getByTestId('delete-confirm-button')).toBeVisible()
   })
 
   // AC3 — Deletion executes correctly
   test('AC3: confirming delete removes course and shows toast', async ({ page }) => {
-    // Open dropdown → delete → confirm
-    const courseCard = page.locator(`text=${TEST_COURSE.name}`).first()
-    await courseCard.locator('..').locator('[data-testid="status-badge"]').first().click()
+    await openDropdown(page)
     await page.getByTestId('delete-course-menu-item').click()
     await page.getByTestId('delete-confirm-button').click()
 
     // Course disappears from library
-    await expect(page.locator(`text=${TEST_COURSE.name}`)).not.toBeVisible()
+    await expect(getCourseCard(page)).not.toBeVisible()
 
     // Success toast appears
     await expect(page.locator('text=Course removed')).toBeVisible()
@@ -111,21 +109,15 @@ test.describe('E01-S06: Delete Imported Course', () => {
 
   // AC4 — Cancellation
   test('AC4: cancelling preserves the course', async ({ page }) => {
-    // Open dropdown → delete → cancel
-    const courseCard = page.locator(`text=${TEST_COURSE.name}`).first()
-    await courseCard.locator('..').locator('[data-testid="status-badge"]').first().click()
+    await openDropdown(page)
     await page.getByTestId('delete-course-menu-item').click()
 
     const dialog = page.getByTestId('delete-confirm-dialog')
     await expect(dialog).toBeVisible()
 
-    // Click Cancel
     await dialog.getByRole('button', { name: 'Cancel' }).click()
 
-    // Dialog closes
     await expect(dialog).not.toBeVisible()
-
-    // Course still in library
-    await expect(page.locator(`text=${TEST_COURSE.name}`).first()).toBeVisible()
+    await expect(getCourseCard(page)).toBeVisible()
   })
 })
