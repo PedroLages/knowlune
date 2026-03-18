@@ -57,6 +57,7 @@ export function Quiz() {
   const storeError = useQuizStore(selectError)
   const clearError = useQuizStore(s => s.clearError)
   const startQuiz = useQuizStore(s => s.startQuiz)
+  const submitAnswer = useQuizStore(s => s.submitAnswer)
 
   // Fetch quiz from Dexie on mount
   useEffect(() => {
@@ -166,8 +167,6 @@ export function Quiz() {
   // Active quiz state — show header + question display stub
   // ---------------------------------------------------------------------------
   const isQuizActive = currentProgress !== null && currentProgress.quizId === quiz.id
-
-  const submitAnswer = useQuizStore(s => s.submitAnswer)
 
   if (isQuizActive && currentQuiz) {
     // Resolve current question via questionOrder (supports shuffled order)
