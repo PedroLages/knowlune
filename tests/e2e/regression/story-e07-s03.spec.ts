@@ -479,7 +479,13 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
 
     // Mark all courses except authority, confidence-reboot, and behavior-skills
     // as 100% complete so they are excluded from candidates
-    const excludedCourseIds = ['nci-access', '6mx', 'operative-six', 'ops-manual', 'study-materials']
+    const excludedCourseIds = [
+      'nci-access',
+      '6mx',
+      'operative-six',
+      'ops-manual',
+      'study-materials',
+    ]
     const progress: Record<string, unknown> = {}
 
     for (const courseId of excludedCourseIds) {
