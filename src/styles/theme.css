@@ -87,6 +87,18 @@
   --at-risk: #b84a30;
   --at-risk-bg: #faf0eb;
 
+  /* Resource type badges */
+  --resource-video: oklch(0.546 0.245 262.881);
+  --resource-video-bg: oklch(0.932 0.032 255.585);
+  --resource-pdf: oklch(0.577 0.245 27.325);
+  --resource-pdf-bg: oklch(0.936 0.032 17.717);
+  --resource-audio: oklch(0.558 0.288 302.321);
+  --resource-audio-bg: oklch(0.943 0.029 294.588);
+  --resource-image: oklch(0.527 0.154 150.069);
+  --resource-image-bg: oklch(0.962 0.044 156.743);
+  --resource-notes: oklch(0.553 0.135 66.442);
+  --resource-notes-bg: oklch(0.962 0.059 95.277);
+
   /* Progress heatmap activity levels */
   --heatmap-empty: hsl(var(--muted) / 0.3);
   --heatmap-level-1: hsl(var(--success) / 0.3);
@@ -176,6 +188,18 @@
   --at-risk: #e8845a;
   --at-risk-bg: #2e2018;
 
+  /* Resource type badges - dark */
+  --resource-video: oklch(0.707 0.165 254.624);
+  --resource-video-bg: oklch(0.279 0.077 261.692);
+  --resource-pdf: oklch(0.707 0.165 22.18);
+  --resource-pdf-bg: oklch(0.279 0.077 22.18);
+  --resource-audio: oklch(0.714 0.203 305.504);
+  --resource-audio-bg: oklch(0.279 0.077 296.753);
+  --resource-image: oklch(0.696 0.17 149.48);
+  --resource-image-bg: oklch(0.279 0.077 155.995);
+  --resource-notes: oklch(0.684 0.133 79.938);
+  --resource-notes-bg: oklch(0.279 0.077 85.874);
+
   /* Progress heatmap activity levels (dark) */
   --heatmap-empty: hsl(var(--muted) / 0.3);
   --heatmap-level-1: hsl(var(--success) / 0.3);
@@ -254,6 +278,16 @@
   --color-momentum-cold-bg: var(--momentum-cold-bg);
   --color-at-risk: var(--at-risk);
   --color-at-risk-bg: var(--at-risk-bg);
+  --color-resource-video: var(--resource-video);
+  --color-resource-video-bg: var(--resource-video-bg);
+  --color-resource-pdf: var(--resource-pdf);
+  --color-resource-pdf-bg: var(--resource-pdf-bg);
+  --color-resource-audio: var(--resource-audio);
+  --color-resource-audio-bg: var(--resource-audio-bg);
+  --color-resource-image: var(--resource-image);
+  --color-resource-image-bg: var(--resource-image-bg);
+  --color-resource-notes: var(--resource-notes);
+  --color-resource-notes-bg: var(--resource-notes-bg);
   --font-sans: var(--font-body);
   --font-display: var(--font-heading);
 }
