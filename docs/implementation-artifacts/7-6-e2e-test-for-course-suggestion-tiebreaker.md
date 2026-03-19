@@ -6,7 +6,7 @@ started: 2026-03-19
 completed:
 reviewed: in-progress
 review_started: 2026-03-19
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review-skipped, web-design-guidelines-skipped, code-review, code-review-testing]
 burn_in_validated: false
 ---
 
@@ -67,15 +67,23 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+Skipped — no UI changes in this story (test-only).
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**BLOCKER (confidence 95):** Wrong course ID `'behavior-skills'` used for seeding progress data — actual ID is `'behavior-skills-breakthrough'`. The seeded progress is never found by the algorithm, so the test passes via primary score sort, not the tiebreaker path. Fix: change all `'behavior-skills'` references to `'behavior-skills-breakthrough'`.
+
+**HIGH (confidence 80):** `textContent()` call without Playwright auto-retry at line 556. Replace with `await expect(suggestionCard.locator('h2')).toHaveText(/confidence reboot/i)`.
+
+**HIGH (confidence 92):** Pre-existing `ALL_COURSE_IDS` includes `'behavior-skills'` instead of `'behavior-skills-breakthrough'` — likely root cause of AC5 pre-existing failure.
+
+**MEDIUM:** Test name "AC2" collides with existing AC2 test at line 244. Rename for clarity.
+
+Full report: docs/reviews/code/code-review-2026-03-19-e07-s06.md
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+Skipped — no UI changes in this story (test-only).
 
 ## Challenges and Lessons Learned
 

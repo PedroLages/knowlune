@@ -32,7 +32,7 @@ const ALL_COURSE_IDS = [
   'confidence-reboot',
   '6mx',
   'operative-six',
-  'behavior-skills',
+  'behavior-skills-breakthrough',
   'ops-manual',
   'study-materials',
 ]
@@ -332,14 +332,12 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
 
     // Verify the suggested course title appears (validates 60/40 weighting was applied)
     // The NextCourseSuggestion component has an <h2> with the course title
-    const suggestionCard = page.getByTestId('next-course-suggestion')
-    const suggestedTitle = await suggestionCard.locator('h2').textContent()
-
     // Mathematical proof (see test setup comments):
     // confidence-reboot: (0.286 * 0.6) + (0.679 * 0.4) = 0.444
     // 6mx:               (0.143 * 0.6) + (0.687 * 0.4) = 0.361
     // Expected winner: confidence-reboot due to extra shared tag (2 vs 1)
-    expect(suggestedTitle?.toLowerCase()).toMatch(/(confidence|reboot)/)
+    const suggestionCard = page.getByTestId('next-course-suggestion')
+    await expect(suggestionCard.locator('h2')).toHaveText(/confidence reboot/i)
   })
 
   test('AC3: tiebreaker applies momentum when courses have identical tag overlap', async ({
@@ -442,7 +440,7 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
     })
   })
 
-  test('AC2: tiebreaker selects highest momentum when tag overlap counts match', async ({
+  test('E07-S06: tiebreaker selects highest momentum when tag overlap counts match', async ({
     page,
     localStorage,
   }) => {
@@ -457,8 +455,8 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
     await page.goto('/')
 
     // Both candidates share exactly 2 tags with authority (7 tags):
-    //   confidence-reboot: 'confidence', 'composure'
-    //   behavior-skills:   'influence', 'authority'
+    //   confidence-reboot:            'confidence', 'composure'
+    //   behavior-skills-breakthrough: 'influence', 'authority'
     //
     // Both have identical tagScore = 2/7 ≈ 0.286
     // With equal tag overlap, momentum proxy becomes the deciding factor.
@@ -469,15 +467,15 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
     //   momentumProxy = (0.929 × 0.5) + (0.5 × 0.5) = 0.714
     //   finalScore = (0.286 × 0.6) + (0.714 × 0.4) = 0.457
     //
-    // behavior-skills (EXPECTED LOSER — low momentum):
-    //   progress = 3/13 ≈ 23%
+    // behavior-skills-breakthrough (EXPECTED LOSER — low momentum):
+    //   progress = 3/13 ≈ 23% (13 = module-derived lesson count, matches totalLessons field)
     //   recency  = 10 days ago → recencyScore = 1 - 10/14 ≈ 0.286
     //   momentumProxy = (0.286 × 0.5) + (0.231 × 0.5) = 0.258
     //   finalScore = (0.286 × 0.6) + (0.258 × 0.4) = 0.275
     //
     // Margin: 0.457 vs 0.275 — momentum decides the winner.
 
-    // Mark all courses except authority, confidence-reboot, and behavior-skills
+    // Mark all courses except authority, confidence-reboot, and behavior-skills-breakthrough
     // as 100% complete so they are excluded from candidates
     const excludedCourseIds = [
       'nci-access',
@@ -509,7 +507,7 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
     }
 
     // confidence-reboot: HIGH momentum (recent + 50% progress)
-    // 20 total lessons, seed 10 as complete
+    // 20 total lessons (module-derived count used by algorithm, not totalLessons:18 field), seed 10 as complete
     progress['confidence-reboot'] = {
       courseId: 'confidence-reboot',
       completedLessons: Array.from(
@@ -521,13 +519,13 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
       notes: {},
     }
 
-    // behavior-skills: LOW momentum (old + 23% progress)
-    // 13 total lessons, seed 3 as complete
-    progress['behavior-skills'] = {
-      courseId: 'behavior-skills',
+    // behavior-skills-breakthrough: LOW momentum (old + 23% progress)
+    // 13 total lessons (module-derived count matches totalLessons field), seed 3 as complete
+    progress['behavior-skills-breakthrough'] = {
+      courseId: 'behavior-skills-breakthrough',
       completedLessons: Array.from(
         { length: 3 },
-        (_, i) => `behavior-skills-lesson-${String(i + 1).padStart(2, '0')}`
+        (_, i) => `behavior-skills-breakthrough-lesson-${String(i + 1).padStart(2, '0')}`
       ),
       lastAccessedAt: getRelativeDate(-10), // 10 days ago → low recency
       startedAt: getRelativeDate(-30),
@@ -553,7 +551,6 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
 
     // Verify the suggested course is confidence-reboot (higher momentum wins)
     const suggestionCard = page.getByTestId('next-course-suggestion')
-    const suggestedTitle = await suggestionCard.locator('h2').textContent()
-    expect(suggestedTitle?.toLowerCase()).toMatch(/(confidence|reboot)/)
+    await expect(suggestionCard.locator('h2')).toHaveText(/confidence reboot/i)
   })
 })
