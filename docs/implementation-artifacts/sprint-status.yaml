@@ -133,7 +133,7 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 7: Course Momentum & Learning Intelligence
   # ──────────────────────────────────────────────────
-  epic-7: done
+  epic-7: in-progress
   7-1-momentum-score-calculation-and-display: done
   7-2-recommended-next-dashboard-section: done
   7-3-next-course-suggestion-after-completion: done
@@ -202,7 +202,7 @@ development_status:
   12-3-create-usequizstore-with-zustand: done
   12-4-create-quiz-route-and-basic-quizplayer-component: done
   12-5-display-multiple-choice-questions: done
-  12-6-calculate-and-display-quiz-score: backlog
+  12-6-calculate-and-display-quiz-score: ready-for-dev
   epic-12-retrospective: optional
 
   # ──────────────────────────────────────────────────
