@@ -4,8 +4,8 @@ story_name: "E2E Test for Course Suggestion Tiebreaker"
 status: in-progress
 started: 2026-03-19
 completed:
-reviewed: false
-review_started:
+reviewed: in-progress
+review_started: 2026-03-19
 review_gates_passed: []
 burn_in_validated: false
 ---
@@ -79,4 +79,11 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+### closeCompletionModal helper scoping bug
+The shared `closeCompletionModal` helper used a page-wide `button` locator (`page.getByRole('button', { name: 'Close' })`) that matched disabled PDF viewer toolbar buttons, causing the test to click the wrong element. Fixed by scoping the locator to the dialog: `page.getByRole('dialog').getByRole('button', { name: 'Close' })`. **Pattern:** Always scope interactive locators to their nearest container (dialog, card, section) rather than using page-wide queries.
+
+### AC adaptation — 2 candidates vs 3
+The gap coverage doc specified 3 candidates with identical tag overlap, but the real seeded course data only has pairs sharing the same tags. Using 2 candidates still validates the tiebreaker (momentum score comparison) without inventing artificial course data. **Lesson:** Adapt AC quantities to match available test data when the core behavior under test is preserved.
+
+### Pre-existing test failures on main
+AC1, AC4-dismiss, and AC5 tests in the regression spec fail on both main and the feature branch (Mark lesson complete button visibility timeout). Confirmed these are unrelated to this story's changes by running the same tests on main. **Pattern:** Always baseline regression specs against main before attributing failures to your branch.
