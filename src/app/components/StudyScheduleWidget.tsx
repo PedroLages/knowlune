@@ -38,7 +38,7 @@ function buildActiveCoursesWithMomentum(
     .filter(({ completionPercent }) => completionPercent > 0 && completionPercent < 100)
     .map(({ course, completionPercent }) => {
       const courseSessions = sessions.filter(
-        s => typeof s.courseId === 'string' && s.courseId === course.id
+        s => s != null && typeof s.courseId === 'string' && s.courseId === course.id
       )
       const momentumScore = calculateMomentumScore({
         courseId: course.id,

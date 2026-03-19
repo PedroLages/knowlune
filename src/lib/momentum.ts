@@ -22,6 +22,7 @@ export function getMomentumTier(score: number): MomentumTier {
 
 /** Guard: skip corrupted sessions that would produce NaN in date/math ops */
 function isValidSession(s: StudySession): boolean {
+  if (!s || typeof s !== 'object') return false
   if (typeof s.courseId !== 'string' || !s.courseId) return false
   if (!s.startTime || isNaN(new Date(s.startTime).getTime())) return false
   if (typeof s.duration !== 'number' || !isFinite(s.duration) || s.duration < 0) return false
@@ -29,11 +30,11 @@ function isValidSession(s: StudySession): boolean {
 }
 
 export function calculateMomentumScore(input: MomentumInput): MomentumScore {
-  const { completionPercent, sessions } = input
+  const { completionPercent, sessions = [] } = input
   const now = Date.now()
 
   // Filter out corrupted sessions before any date parsing
-  const validSessions = sessions.filter(isValidSession)
+  const validSessions = (sessions ?? []).filter(isValidSession)
   if (validSessions.length < sessions.length) {
     console.warn(
       `[Momentum] Skipped ${sessions.length - validSessions.length} corrupted session(s) for course ${input.courseId}`
