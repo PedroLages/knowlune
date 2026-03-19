@@ -55,7 +55,11 @@ See [plan](plans/e07-s07-corrupted-indexeddb-sessions.md) for implementation app
 
 ## Implementation Notes
 
-[Architecture decisions, patterns used, dependencies added]
+**Validation strategy:** Added an `isValidSession()` guard in `src/lib/momentum.ts` that checks `courseId` (string + non-empty), `startTime` (parseable date), and `duration` (finite non-negative number). Corrupted sessions are filtered before any date/math operations, with a `console.warn` for observability.
+
+**Defense in depth:** Added upstream filters in `Courses.tsx` (filter before grouping) and `StudyScheduleWidget.tsx` (type-check `courseId` before comparison) so corrupted data never reaches momentum calculations.
+
+**Test approach:** Promoted analysis tests to `tests/e2e/regression/story-e07-s07.spec.ts`. Uses manual IndexedDB seeding (intentional — shared helpers enforce valid schemas, but we need to inject malformed data). Tests cover missing fields, wrong types, malformed timestamps, NaN/Infinity durations, and mixed valid+corrupted scenarios.
 
 ## Testing Notes
 
@@ -96,4 +100,8 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-Story setup — lessons learned will be documented during implementation.
+1. **Manual IDB seeding is unavoidable for corruption tests.** The shared `seedStudySessions()` helper enforces valid schemas by design — you can't use it to inject malformed data. The test pattern validator flags this as MEDIUM, but it's a deliberate choice for error-path testing. Added `seedCorruptedSessions()` as a local test helper.
+
+2. **Guard placement matters.** Initial approach was to only validate in `momentum.ts`, but corrupted `courseId` values (e.g., numeric instead of string) caused silent failures in upstream `.filter(s => s.courseId === course.id)` comparisons. Adding type guards at each data access point (Courses.tsx, StudyScheduleWidget.tsx) provides defense in depth.
+
+3. **`isFinite()` catches more than `!isNaN()`.** For duration validation, `isFinite(s.duration)` rejects both `NaN` and `Infinity`/`-Infinity` in a single check, which is cleaner than `!isNaN(s.duration) && s.duration !== Infinity`.
