@@ -17,7 +17,7 @@ import { closeSidebar } from '../../support/fixtures/constants/sidebar-constants
 
 // Seed sidebar state to prevent fullscreen Sheet overlay at tablet viewports
 async function seedSidebar(page: import('@playwright/test').Page) {
-  await page.evaluate(sidebarState => {
+  await page.addInitScript(sidebarState => {
     Object.entries(sidebarState).forEach(([key, value]) => {
       localStorage.setItem(key, value)
     })
@@ -111,7 +111,7 @@ test.describe('Error Path: Corrupted IndexedDB Sessions', () => {
     await expect(page.getByRole('heading', { name: 'All Courses', level: 1 })).toBeVisible()
 
     // Course cards should render (even with corrupted sessions)
-    await expect(page.getByTestId('course-card').first()).toBeVisible()
+    await expect(page.locator('[data-testid^="course-card-"]').first()).toBeVisible()
 
     await indexedDB.clearStore(STORE_NAME)
   })
@@ -326,7 +326,7 @@ test.describe('Error Path: Corrupted IndexedDB Sessions', () => {
     // Badge should have valid tier text (not error state)
     const badge = page.getByTestId('momentum-badge').first()
     const badgeText = await badge.textContent()
-    expect(badgeText).toMatch(/HOT|WARM|COLD/)
+    expect(badgeText).toMatch(/hot|warm|cold/i)
 
     await indexedDB.clearStore(STORE_NAME)
   })
@@ -353,7 +353,7 @@ test.describe('Error Path: Corrupted IndexedDB Sessions', () => {
     await expect(page.getByRole('heading', { name: /learning studio/i })).toBeVisible()
 
     await page.getByRole('link', { name: /my class/i }).click()
-    await expect(page).toHaveURL(/\/myclass/)
+    await expect(page).toHaveURL(/\/my-class/)
     await expect(page.getByRole('heading', { name: /my progress/i })).toBeVisible()
 
     await indexedDB.clearStore(STORE_NAME)
