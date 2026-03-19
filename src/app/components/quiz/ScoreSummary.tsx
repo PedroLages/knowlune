@@ -1,3 +1,4 @@
+import { CheckCircle, Circle } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { formatDuration } from '@/lib/formatDuration'
 
@@ -8,56 +9,24 @@ interface ScoreSummaryProps {
   passed: boolean
   passingScore: number
   timeSpent: number
-  previousBestPercentage?: number
 }
 
-type ScoreTier = {
-  label: string
-  message: string
-  ringClass: string
-  textClass: string
+function getEncouragingMessage(percentage: number): string {
+  if (percentage >= 90) return 'Excellent work! You\u2019ve mastered this material.'
+  if (percentage >= 70) return 'Great job! You\u2019re on the right track.'
+  if (percentage >= 50) return 'Good effort! Review the growth areas below.'
+  return 'Keep practicing! Focus on the topics below.'
 }
 
-function getScoreTier(percentage: number, passed: boolean): ScoreTier {
-  if (percentage >= 90)
-    return {
-      label: 'EXCELLENT',
-      message: 'Outstanding! You\u2019ve mastered this material.',
-      ringClass: 'text-success',
-      textClass: 'text-success',
-    }
-  if (passed)
-    return {
-      label: 'PASSED',
-      message: 'Great job! You\u2019re on the right track.',
-      ringClass: 'text-brand',
-      textClass: 'text-brand',
-    }
-  if (percentage >= 50)
-    return {
-      label: 'NEEDS REVIEW',
-      message: 'Good effort! Review the growth areas below.',
-      ringClass: 'text-warning',
-      textClass: 'text-warning',
-    }
-  return {
-    label: 'NEEDS WORK',
-    message: 'Keep practicing! Focus on the topics below.',
-    ringClass: 'text-destructive',
-    textClass: 'text-destructive',
-  }
-}
-
-function ScoreRing({ percentage, tier }: { percentage: number; tier: ScoreTier }) {
-  const size = 180
-  const strokeWidth = 12
+function ScoreRing({ percentage, passed }: { percentage: number; passed: boolean }) {
+  const size = 128
+  const strokeWidth = 8
   const radius = (size - strokeWidth) / 2
   const circumference = 2 * Math.PI * radius
-  const clampedPct = Math.min(100, Math.max(0, percentage))
-  const offset = circumference - (clampedPct / 100) * circumference
+  const offset = circumference - (percentage / 100) * circumference
 
   return (
-    <div className="relative inline-flex items-center justify-center size-40 sm:size-44">
+    <div className="relative inline-flex items-center justify-center size-24 sm:size-32">
       <svg
         width="100%"
         height="100%"
@@ -65,7 +34,6 @@ function ScoreRing({ percentage, tier }: { percentage: number; tier: ScoreTier }
         className="-rotate-90"
         aria-hidden="true"
       >
-        {/* Track */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -73,9 +41,8 @@ function ScoreRing({ percentage, tier }: { percentage: number; tier: ScoreTier }
           fill="none"
           stroke="currentColor"
           strokeWidth={strokeWidth}
-          className="text-muted-foreground/30"
+          className="text-accent"
         />
-        {/* Progress arc */}
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -87,21 +54,14 @@ function ScoreRing({ percentage, tier }: { percentage: number; tier: ScoreTier }
           strokeDashoffset={offset}
           strokeLinecap="round"
           className={cn(
-            'transition-[stroke-dashoffset,color] duration-700 ease-out motion-reduce:transition-none',
-            tier.ringClass
+            'transition-all duration-500 motion-reduce:transition-none',
+            passed ? 'text-success' : 'text-warning'
           )}
         />
       </svg>
-      {/* Center content */}
-      <div className="absolute flex flex-col items-center">
-        <span className="text-4xl sm:text-5xl font-bold text-foreground leading-none tabular-nums">
-          {Math.round(clampedPct)}
-          <span className="text-xl sm:text-2xl">%</span>
-        </span>
-        <span className={cn('text-xs font-semibold tracking-widest mt-1', tier.textClass)}>
-          {tier.label}
-        </span>
-      </div>
+      <span className="absolute text-3xl sm:text-5xl font-bold text-foreground">
+        {Math.round(percentage)}%
+      </span>
     </div>
   )
 }
@@ -113,63 +73,42 @@ export function ScoreSummary({
   passed,
   passingScore,
   timeSpent,
-  previousBestPercentage,
 }: ScoreSummaryProps) {
-  const tier = getScoreTier(percentage, passed)
-  const roundedPct = Math.round(Math.min(100, Math.max(0, percentage)))
-
-  // Guard: clamp and validate previousBest before computing delta
-  const clampedPrevBest =
-    previousBestPercentage != null && Number.isFinite(previousBestPercentage)
-      ? Math.min(100, Math.max(0, previousBestPercentage))
-      : null
-  const roundedPrevBest = clampedPrevBest != null ? Math.round(clampedPrevBest) : null
-
-  const delta = roundedPrevBest != null ? roundedPct - roundedPrevBest : null
-
-  const improvementSrText =
-    delta != null && delta > 0
-      ? ` Improved by ${delta} percentage points from previous best of ${roundedPrevBest} percent.`
-      : delta != null && delta === 0
-        ? ` Same as previous best of ${roundedPrevBest} percent.`
-        : delta != null
-          ? ` Previous best was ${roundedPrevBest} percent.`
-          : ''
-
   return (
     <div className="flex flex-col items-center gap-4">
       <div aria-live="polite" aria-atomic="true" className="sr-only">
-        {`Quiz score: ${roundedPct} percent. ${score} of ${maxScore} correct. ${
+        {`Quiz score: ${Math.round(percentage)} percent. ${score} of ${maxScore} correct. ${
           passed ? 'Passed' : 'Not passed'
-        }.${improvementSrText}`}
+        }.`}
       </div>
 
-      <ScoreRing percentage={percentage} tier={tier} />
+      <ScoreRing percentage={percentage} passed={passed} />
 
-      <p className="text-muted-foreground text-sm tabular-nums">
-        {score} of {maxScore} correct &middot; {passingScore}% to pass
+      <p className="text-muted-foreground text-sm">
+        {score} of {maxScore} correct
       </p>
 
-      <p className={cn('text-lg font-medium', tier.textClass)}>{tier.message}</p>
+      <div className="flex items-center gap-2">
+        {passed ? (
+          <>
+            <CheckCircle className="size-5 text-success" aria-hidden="true" />
+            <span className="text-lg font-medium text-success">Congratulations! You passed!</span>
+          </>
+        ) : (
+          <>
+            <Circle className="size-5 text-warning" aria-hidden="true" />
+            <span className="text-lg font-medium text-warning">
+              Keep Going! You got {score} of {maxScore} correct.
+            </span>
+          </>
+        )}
+      </div>
 
-      <p className="text-sm text-muted-foreground">
-        Completed in {formatDuration(Math.max(timeSpent, 1000))}
-      </p>
+      <p className="text-sm text-muted-foreground">{passingScore}% required to pass</p>
 
-      {roundedPrevBest != null && (
-        <p className="text-sm tabular-nums" data-testid="improvement-summary">
-          <span className="text-muted-foreground">Previous best: {roundedPrevBest}%</span>
-          {delta != null && delta > 0 && (
-            <span className="text-success font-semibold ml-1.5">(+{delta}%)</span>
-          )}
-          {delta === 0 && (
-            <span className="text-muted-foreground ml-1.5">&middot; Same as best</span>
-          )}
-          {delta != null && delta < 0 && (
-            <span className="text-muted-foreground ml-1.5">&middot; Keep practicing!</span>
-          )}
-        </p>
-      )}
+      <p className="text-sm text-muted-foreground italic">{getEncouragingMessage(percentage)}</p>
+
+      <p className="text-sm text-muted-foreground">Completed in {formatDuration(timeSpent)}</p>
     </div>
   )
 }

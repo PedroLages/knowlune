@@ -4,8 +4,8 @@ story_name: "Error Path — Corrupted IndexedDB Sessions"
 status: in-progress
 started: 2026-03-19
 completed:
-reviewed: false
-review_started:
+reviewed: in-progress
+review_started: 2026-03-19
 review_gates_passed: []
 burn_in_validated: false
 ---

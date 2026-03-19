@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 import { db } from '@/db'
 import type { Quiz as QuizType, QuizProgress } from '@/types/quiz'
 import { QuizProgressSchema } from '@/types/quiz'
@@ -11,14 +11,10 @@ import {
   selectIsLoading,
   selectError,
 } from '@/stores/useQuizStore'
-import { isQuotaExceeded } from '@/lib/quotaResilientStorage'
 import { QuizStartScreen } from '@/app/components/quiz/QuizStartScreen'
 import { QuizHeader } from '@/app/components/quiz/QuizHeader'
 import { QuestionDisplay } from '@/app/components/quiz/QuestionDisplay'
-import { QuestionHint } from '@/app/components/quiz/QuestionHint'
-import { QuizNavigation } from '@/app/components/quiz/QuizNavigation'
-import { MarkForReview } from '@/app/components/quiz/MarkForReview'
-import { ReviewSummary } from '@/app/components/quiz/ReviewSummary'
+import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import {
   AlertDialog,
@@ -37,15 +33,11 @@ import {
 
 function loadSavedProgress(quizId: string): QuizProgress | null {
   try {
-    const key = `quiz-progress-${quizId}`
-    // Prefer sessionStorage — if present, it means we're in fallback mode
-    // and the adapter cleared the stale localStorage entry. Check localStorage
-    // only as a fallback for the normal (non-quota-exceeded) path.
-    const raw = sessionStorage.getItem(key) ?? localStorage.getItem(key)
+    const raw = localStorage.getItem(`quiz-progress-${quizId}`)
     if (!raw) return null
     const result = QuizProgressSchema.safeParse(JSON.parse(raw))
     if (!result.success) {
-      console.warn('[Quiz] Corrupted progress in storage, ignoring:', result.error.format())
+      console.warn('[Quiz] Corrupted progress in localStorage, ignoring:', result.error.format())
       return null
     }
     // Only treat as valid resume state if there are recorded answers
@@ -64,7 +56,7 @@ function countUnanswered(
 ): number {
   return questions.filter(q => {
     const a = answers[q.id]
-    return a === undefined || a === '' || (Array.isArray(a) && a.length === 0)
+    return a === undefined || a === ''
   }).length
 }
 
@@ -79,7 +71,6 @@ export function Quiz() {
   const [quiz, setQuiz] = useState<QuizType | null>(null)
   const [fetchState, setFetchState] = useState<'loading' | 'found' | 'error'>('loading')
   const [savedProgress, setSavedProgress] = useState<QuizProgress | null>(null)
-  const [hasCompletedBefore, setHasCompletedBefore] = useState(false)
 
   // Store selectors — drives the active quiz view after startQuiz()
   const currentQuiz = useQuizStore(selectCurrentQuiz)
@@ -92,12 +83,8 @@ export function Quiz() {
   const submitQuiz = useQuizStore(s => s.submitQuiz)
   const goToNextQuestion = useQuizStore(s => s.goToNextQuestion)
   const goToPrevQuestion = useQuizStore(s => s.goToPrevQuestion)
-  const navigateToQuestion = useQuizStore(s => s.navigateToQuestion)
-  const toggleReviewMark = useQuizStore(s => s.toggleReviewMark)
   const navigate = useNavigate()
   const [showSubmitDialog, setShowSubmitDialog] = useState(false)
-  const nextBtnRef = useRef<HTMLButtonElement>(null)
-  const rafRef = useRef<number>(0)
 
   // Fetch quiz from Dexie on mount
   useEffect(() => {
@@ -107,10 +94,12 @@ export function Quiz() {
     }
 
     let ignore = false
-    setHasCompletedBefore(false)
-    ;(async () => {
-      try {
-        const found = await db.quizzes.where('lessonId').equals(lessonId).first()
+
+    db.quizzes
+      .where('lessonId')
+      .equals(lessonId)
+      .first()
+      .then(found => {
         if (ignore) return
         if (!found) {
           setFetchState('error')
@@ -118,26 +107,16 @@ export function Quiz() {
         }
         setQuiz(found)
         setSavedProgress(loadSavedProgress(found.id))
-
-        // Check attempt history before showing start screen to avoid label flicker
-        try {
-          const attemptCount = await db.quizAttempts.where('quizId').equals(found.id).count()
-          if (!ignore) setHasCompletedBefore(attemptCount > 0)
-        } catch (err) {
-          console.warn('[Quiz] Failed to check attempt history:', err)
-        }
-
-        if (!ignore) setFetchState('found')
-      } catch (err: unknown) {
+        setFetchState('found')
+      })
+      .catch((err: unknown) => {
         console.error('[Quiz] Failed to load quiz:', err)
         if (!ignore) setFetchState('error')
-      }
-    })()
+      })
 
     return () => {
       ignore = true
       clearError()
-      cancelAnimationFrame(rafRef.current)
     }
   }, [lessonId, clearError])
 
@@ -155,18 +134,17 @@ export function Quiz() {
       console.warn('[Quiz] Saved questionOrder references removed questions, discarding progress')
       setSavedProgress(null)
       localStorage.removeItem(`quiz-progress-${quiz.id}`)
-      sessionStorage.removeItem(`quiz-progress-${quiz.id}`)
       return
     }
-    // Restore saved progress directly into the store.
-    // The subscribe listener will keep the per-quiz localStorage key in sync
-    // as the active quiz progresses — no need to remove it here.
+    // Restore saved progress directly into the store
     useQuizStore.setState({
       currentQuiz: quiz,
       currentProgress: savedProgress,
       isLoading: false,
       error: null,
     })
+    // Clear per-quiz localStorage key — the Zustand persist middleware now owns the state
+    localStorage.removeItem(`quiz-progress-${quiz.id}`)
   }, [quiz, savedProgress])
 
   const handleSubmitConfirm = useCallback(async () => {
@@ -185,47 +163,12 @@ export function Quiz() {
     const q = state.currentQuiz
     if (!progress || !q) return
 
-    if (countUnanswered(q.questions, progress.answers) > 0 || progress.markedForReview.length > 0) {
+    if (countUnanswered(q.questions, progress.answers) > 0) {
       setShowSubmitDialog(true)
     } else {
       handleSubmitConfirm()
     }
   }, [handleSubmitConfirm])
-
-  // Safety net: sync progress to per-quiz localStorage on tab close/crash.
-  // The subscribe listener in useQuizStore fires synchronously on every state change,
-  // so the per-quiz key is always up-to-date. This beforeunload handler provides
-  // defense-in-depth for edge cases where the browser terminates before Zustand
-  // flushes (e.g., process kill, OOM).
-  const isQuizActive =
-    currentProgress !== null && quiz !== null && currentProgress.quizId === quiz.id
-  useEffect(() => {
-    if (!isQuizActive) return
-    const handleBeforeUnload = () => {
-      try {
-        const progress = useQuizStore.getState().currentProgress
-        const currentQuizState = useQuizStore.getState().currentQuiz
-        if (progress && currentQuizState) {
-          const key = `quiz-progress-${currentQuizState.id}`
-          const value = JSON.stringify(progress)
-          try {
-            localStorage.setItem(key, value)
-          } catch (storageErr) {
-            if (isQuotaExceeded(storageErr)) {
-              // QuotaExceededError — fall back to sessionStorage
-              sessionStorage.setItem(key, value)
-            }
-            // Non-quota errors (SecurityError, etc.) — skip silently during unload
-          }
-        }
-      } catch (e) {
-        // Storage completely inaccessible during unload — best effort
-        console.warn('[Quiz] beforeunload storage save failed:', e)
-      }
-    }
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-  }, [isQuizActive])
 
   // ---------------------------------------------------------------------------
   // Loading state
@@ -262,7 +205,7 @@ export function Quiz() {
         <p className="text-muted-foreground">{storeError || 'No quiz found for this lesson.'}</p>
         <Link
           to={`/courses/${courseId}`}
-          className="text-brand hover:underline mt-4 inline-flex items-center gap-1 text-sm min-h-[44px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:rounded-lg"
+          className="text-brand hover:underline mt-4 inline-flex items-center gap-1 text-sm min-h-[44px]"
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
           Back to course
@@ -274,72 +217,76 @@ export function Quiz() {
   // ---------------------------------------------------------------------------
   // Active quiz state — show header + question display stub
   // ---------------------------------------------------------------------------
+  const isQuizActive = currentProgress !== null && currentProgress.quizId === quiz.id
+
   if (isQuizActive && currentQuiz) {
     // Resolve current question via questionOrder (supports shuffled order)
-    const orderedId = currentProgress.questionOrder[currentProgress.currentQuestionIndex]
-    const questionId = orderedId ?? currentQuiz.questions[currentProgress.currentQuestionIndex]?.id
-    if (!orderedId) {
-      console.warn(
-        '[Quiz] questionOrder missing index',
-        currentProgress.currentQuestionIndex,
-        '— falling back to questions array'
-      )
-    }
-    const foundQuestion = currentQuiz.questions.find(q => q.id === questionId)
-    if (questionId && !foundQuestion) {
-      console.warn('[Quiz] Question ID not found in quiz:', questionId)
-    }
+    const questionId =
+      currentProgress.questionOrder[currentProgress.currentQuestionIndex] ??
+      currentQuiz.questions[currentProgress.currentQuestionIndex]?.id
     const currentQuestion =
-      foundQuestion ?? currentQuiz.questions[currentProgress.currentQuestionIndex]
+      currentQuiz.questions.find(q => q.id === questionId) ??
+      currentQuiz.questions[currentProgress.currentQuestionIndex]
 
     const currentQuestionId = currentQuestion?.id
     const currentAnswer = currentQuestionId
       ? (currentProgress.answers[currentQuestionId] as string | undefined)
       : undefined
 
+    const isFirstQuestion = currentProgress.currentQuestionIndex === 0
+    const isLastQuestion = currentProgress.currentQuestionIndex === currentQuiz.questions.length - 1
     const unansweredCount = countUnanswered(currentQuiz.questions, currentProgress.answers)
 
     return (
       <div className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm">
         <QuizHeader quiz={currentQuiz} progress={currentProgress} />
         {currentQuestion && currentQuestionId ? (
-          <>
-            <QuestionDisplay
-              question={currentQuestion}
-              value={currentAnswer}
-              onChange={answer => {
-                submitAnswer(currentQuestionId, answer)
-                // Auto-focus Next/Submit button after answering for quick Enter key advancement
-                cancelAnimationFrame(rafRef.current)
-                rafRef.current = requestAnimationFrame(() => nextBtnRef.current?.focus())
-              }}
-              mode="active"
-            />
-            <QuestionHint hint={currentQuestion.hint} />
-          </>
+          <QuestionDisplay
+            question={currentQuestion}
+            value={currentAnswer}
+            onChange={answer => submitAnswer(currentQuestionId, answer)}
+            mode="active"
+          />
         ) : (
           <div className="mt-6 rounded-xl border border-border p-6 text-center text-muted-foreground text-sm">
             No question found at index {currentProgress.currentQuestionIndex}
           </div>
         )}
 
-        {currentQuestionId && (
-          <MarkForReview
-            questionId={currentQuestionId}
-            isMarked={currentProgress.markedForReview.includes(currentQuestionId)}
-            onToggle={() => toggleReviewMark(currentQuestionId)}
-          />
-        )}
+        {/* Navigation footer */}
+        <nav aria-label="Quiz navigation" className="mt-6 flex items-center justify-between gap-3">
+          <Button
+            variant="outline"
+            className="rounded-xl min-h-[44px]"
+            disabled={isFirstQuestion}
+            onClick={goToPrevQuestion}
+          >
+            <ChevronLeft className="size-4 mr-1" aria-hidden="true" />
+            Previous
+          </Button>
 
-        <QuizNavigation
-          quiz={currentQuiz}
-          progress={currentProgress}
-          onPrevious={goToPrevQuestion}
-          onNext={goToNextQuestion}
-          onSubmit={handleSubmitClick}
-          onQuestionClick={navigateToQuestion}
-          isSubmitting={isStoreLoading}
-        />
+          <div className="flex gap-3">
+            {!isLastQuestion && (
+              <Button
+                variant="outline"
+                className="rounded-xl min-h-[44px]"
+                onClick={goToNextQuestion}
+              >
+                Next
+                <ChevronRight className="size-4 ml-1" aria-hidden="true" />
+              </Button>
+            )}
+            {isLastQuestion && (
+              <Button
+                className="bg-brand text-brand-foreground rounded-xl min-h-[44px]"
+                onClick={handleSubmitClick}
+                disabled={isStoreLoading}
+              >
+                {isStoreLoading ? 'Submitting…' : 'Submit Quiz'}
+              </Button>
+            )}
+          </div>
+        </nav>
 
         {/* Confirmation dialog for unanswered questions */}
         <AlertDialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
@@ -351,14 +298,6 @@ export function Quiz() {
                 {unansweredCount === 1 ? 'question' : 'questions'}. Submit anyway? Unanswered
                 questions will be scored as incorrect.
               </AlertDialogDescription>
-              <ReviewSummary
-                markedForReview={currentProgress.markedForReview}
-                questionOrder={currentProgress.questionOrder}
-                onJumpToQuestion={idx => {
-                  navigateToQuestion(idx)
-                  setShowSubmitDialog(false)
-                }}
-              />
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Continue Reviewing</AlertDialogCancel>
@@ -384,7 +323,6 @@ export function Quiz() {
       <QuizStartScreen
         quiz={quiz}
         savedProgress={savedProgress}
-        hasCompletedBefore={hasCompletedBefore}
         onStart={handleStart}
         onResume={handleResume}
       />

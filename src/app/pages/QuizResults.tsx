@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { useParams, useNavigate, Navigate, Link } from 'react-router'
-import { ArrowLeft, History } from 'lucide-react'
+import { useParams, Navigate, Link } from 'react-router'
+import { ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   useQuizStore,
@@ -9,8 +9,6 @@ import {
   selectIsLoading,
 } from '@/stores/useQuizStore'
 import { ScoreSummary } from '@/app/components/quiz/ScoreSummary'
-import { QuestionBreakdown } from '@/app/components/quiz/QuestionBreakdown'
-import { AreasForGrowth } from '@/app/components/quiz/AreasForGrowth'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
 
@@ -22,20 +20,13 @@ export function QuizResults() {
   const isLoading = useQuizStore(selectIsLoading)
   const loadAttempts = useQuizStore(s => s.loadAttempts)
   const retakeQuiz = useQuizStore(s => s.retakeQuiz)
-  const navigate = useNavigate()
 
   const [attemptsLoaded, setAttemptsLoaded] = useState(false)
 
   // Load attempts from Dexie on mount
   useEffect(() => {
     if (currentQuiz?.id) {
-      loadAttempts(currentQuiz.id)
-        .then(() => setAttemptsLoaded(true))
-        .catch((err: unknown) => {
-          console.error('[QuizResults] Failed to load attempts:', err)
-          toast.error('Could not load quiz results. Please try again.')
-          setAttemptsLoaded(true)
-        })
+      loadAttempts(currentQuiz.id).then(() => setAttemptsLoaded(true))
     }
   }, [currentQuiz?.id, loadAttempts])
 
@@ -46,45 +37,17 @@ export function QuizResults() {
     [lastAttempt]
   )
 
-  const previousBestPercentage = useMemo(() => {
-    if (attempts.length <= 1) return undefined
-    const validPcts = attempts
-      .slice(0, -1)
-      .map(a => a.percentage)
-      .filter(p => Number.isFinite(p))
-    if (validPcts.length === 0) return undefined
-    return Math.min(100, Math.max(0, Math.max(...validPcts)))
-  }, [attempts])
-
-  const incorrectItems = useMemo(() => {
-    if (!lastAttempt || !currentQuiz) return []
-    return lastAttempt.answers
-      .filter(a => !a.isCorrect)
-      .map(a => {
-        const question = currentQuiz.questions.find(q => q.id === a.questionId)
-        const correctAnswer = question?.correctAnswer
-        return {
-          questionId: a.questionId,
-          questionText: question?.text ?? 'Unknown question',
-          correctAnswer: Array.isArray(correctAnswer)
-            ? `All of: ${correctAnswer.join(', ')}`
-            : (correctAnswer ?? 'N/A'),
-        }
-      })
-  }, [lastAttempt, currentQuiz])
-
   const handleRetake = useCallback(async () => {
     try {
       await retakeQuiz(lessonId)
-      navigate(`/courses/${courseId}/lessons/${lessonId}/quiz`)
-    } catch (err: unknown) {
-      console.error('[QuizResults] Failed to retake quiz:', err)
-      toast.error('Could not start retake. Please try again.')
+      window.location.href = `/courses/${courseId}/lessons/${lessonId}/quiz`
+    } catch {
+      // Store shows error toast internally
     }
-  }, [retakeQuiz, lessonId, courseId, navigate])
+  }, [retakeQuiz, lessonId, courseId])
 
   const handleReviewAnswers = useCallback(() => {
-    toast.info('Answer review is coming soon. Use Question Breakdown below to see your results.')
+    toast.info('Answer review is coming in a future update.')
   }, [])
 
   // No quiz data — declarative redirect back (not imperative navigate during render)
@@ -128,46 +91,27 @@ export function QuizResults() {
           passed={lastAttempt.passed}
           passingScore={currentQuiz.passingScore}
           timeSpent={lastAttempt.timeSpent}
-          previousBestPercentage={previousBestPercentage}
         />
 
-        <QuestionBreakdown answers={lastAttempt.answers} questions={currentQuiz.questions} />
-
-        <AreasForGrowth incorrectItems={incorrectItems} />
-
-        <div
-          role="group"
-          aria-label="Quiz actions"
-          className="flex flex-col sm:flex-row gap-3 justify-center pt-2"
-        >
-          <Button variant="brand" className="rounded-xl min-h-[44px]" onClick={handleRetake}>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+          <Button variant="outline" className="rounded-xl min-h-[44px]" onClick={handleRetake}>
             Retake Quiz
           </Button>
           <Button
-            variant="brand-outline"
-            className="rounded-xl min-h-[44px]"
+            className="bg-brand text-brand-foreground rounded-xl min-h-[44px]"
             onClick={handleReviewAnswers}
           >
             Review Answers
           </Button>
         </div>
 
-        <div className="flex flex-col items-center gap-2">
-          <button
-            disabled
-            className="text-muted-foreground text-sm inline-flex items-center gap-1 min-h-[44px] cursor-default disabled:opacity-60"
-          >
-            <History className="size-4" aria-hidden="true" />
-            View All Attempts (Coming Soon)
-          </button>
-          <Link
-            to={`/courses/${courseId}/lessons/${lessonId}`}
-            className="text-brand hover:underline text-sm font-medium inline-flex items-center gap-1 min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded-sm"
-          >
-            <ArrowLeft className="size-4" aria-hidden="true" />
-            Back to Lesson
-          </Link>
-        </div>
+        <Link
+          to={`/courses/${courseId}/lessons/${lessonId}`}
+          className="text-brand hover:underline text-sm font-medium inline-flex items-center gap-1 min-h-[44px]"
+        >
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          Back to Lesson
+        </Link>
       </div>
     </div>
   )
