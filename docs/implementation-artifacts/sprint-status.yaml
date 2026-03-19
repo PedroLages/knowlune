@@ -140,7 +140,7 @@ development_status:
   7-4-at-risk-course-detection-and-completion-estimates: done
   7-5-smart-study-schedule-suggestion: done
   # Gap Coverage Enhancements (from traceability analysis 2026-03-08)
-  7-6-e2e-test-for-course-suggestion-tiebreaker: backlog  # E07-S03-AC2
+  7-6-e2e-test-for-course-suggestion-tiebreaker: in-progress  # E07-S03-AC2
   7-7-error-path-corrupted-indexeddb-sessions: backlog  # E07-S01
   7-8-error-path-empty-corrupted-allcourses: backlog  # E07-S02
   7-9-error-path-zustand-persist-failure: backlog  # E07-S03-AC4
