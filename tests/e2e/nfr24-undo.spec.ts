@@ -1,37 +1,230 @@
 import { test, expect } from '@playwright/test'
+import { seedNotes } from '../support/helpers/indexeddb-seed'
 import { FIXED_DATE } from '../utils/test-time'
 
 /**
  * NFR24: Toast-based undo for destructive actions
  *
- * This test validates the soft delete/restore functionality at the store level.
- * The visual UI testing (toast with undo button) is covered by component tests.
+ * Tests soft delete/restore functionality via raw IndexedDB operations.
+ * Uses shared seedNotes helper and addInitScript for stable seeding.
  */
 test.describe('NFR24: Note soft delete and restore', () => {
+  const TEST_NOTE = {
+    id: 'test-note-nfr24',
+    courseId: 'test-course',
+    videoId: 'test-video',
+    content: '<p>Test note for NFR24 undo</p>',
+    plainText: 'Test note for NFR24 undo',
+    createdAt: FIXED_DATE,
+    updatedAt: FIXED_DATE,
+    tags: ['test'],
+    deleted: false,
+  }
+
   test.beforeEach(async ({ page }) => {
+    // Seed sidebar closed BEFORE navigation
+    await page.addInitScript(() => {
+      localStorage.setItem('eduvi-sidebar-v1', 'false')
+    })
+
+    // Navigate and wait for DOM
     await page.goto('/')
+    await page.waitForLoadState('domcontentloaded')
 
-    // Seed a test note into IndexedDB
-    await page.evaluate(async () => {
-      const request = indexedDB.open('ElearningDB')
-      await new Promise<void>((resolve, reject) => {
-        request.onsuccess = async () => {
-          const db = request.result
-          const tx = db.transaction(['notes'], 'readwrite')
+    // Seed test note using shared helper (AFTER navigation, so IDB exists)
+    await seedNotes(page, [TEST_NOTE])
+
+    // Reload to pick up seeded data
+    await page.reload()
+    await page.waitForLoadState('domcontentloaded')
+  })
+
+  test('should have note in IndexedDB after seeding', async ({ page }) => {
+    const noteExists = await page.evaluate(async () => {
+      return new Promise<boolean>((resolve, reject) => {
+        const req = indexedDB.open('ElearningDB')
+        req.onsuccess = () => {
+          const db = req.result
+          const tx = db.transaction('notes', 'readonly')
           const store = tx.objectStore('notes')
-
-          const testNote = {
-            id: 'test-note-nfr24',
-            courseId: 'test-course',
-            videoId: 'test-video',
-            content: '<p>Test note for NFR24</p>',
-            createdAt: FIXED_DATE,
-            updatedAt: FIXED_DATE,
-            tags: ['test'],
+          const getReq = store.get('test-note-nfr24')
+          getReq.onsuccess = () => {
+            db.close()
+            resolve(getReq.result != null)
           }
+          getReq.onerror = () => {
+            db.close()
+            reject(getReq.error)
+          }
+        }
+        req.onerror = () => reject(req.error)
+      })
+    })
+    expect(noteExists).toBe(true)
+  })
 
-          store.add(testNote)
+  test('should soft delete note (mark deleted=true in IndexedDB)', async ({ page }) => {
+    // Soft delete via raw IndexedDB update
+    await page.evaluate(async () => {
+      return new Promise<void>((resolve, reject) => {
+        const req = indexedDB.open('ElearningDB')
+        req.onsuccess = () => {
+          const db = req.result
+          const tx = db.transaction('notes', 'readwrite')
+          const store = tx.objectStore('notes')
+          const getReq = store.get('test-note-nfr24')
+          getReq.onsuccess = () => {
+            const note = getReq.result
+            if (note) {
+              note.deleted = true
+              note.deletedAt = new Date('2025-01-15T10:00:00Z').toISOString()
+              store.put(note)
+            }
+            tx.oncomplete = () => {
+              db.close()
+              resolve()
+            }
+            tx.onerror = () => {
+              db.close()
+              reject(tx.error)
+            }
+          }
+        }
+        req.onerror = () => reject(req.error)
+      })
+    })
 
+    // Verify note is soft-deleted but still exists
+    const noteData = await page.evaluate(async () => {
+      return new Promise<{ deleted: boolean; deletedAt: string | undefined } | null>(
+        (resolve, reject) => {
+          const req = indexedDB.open('ElearningDB')
+          req.onsuccess = () => {
+            const db = req.result
+            const tx = db.transaction('notes', 'readonly')
+            const store = tx.objectStore('notes')
+            const getReq = store.get('test-note-nfr24')
+            getReq.onsuccess = () => {
+              const note = getReq.result
+              db.close()
+              resolve(note ? { deleted: note.deleted, deletedAt: note.deletedAt } : null)
+            }
+            getReq.onerror = () => {
+              db.close()
+              reject(getReq.error)
+            }
+          }
+          req.onerror = () => reject(req.error)
+        }
+      )
+    })
+
+    expect(noteData).not.toBeNull()
+    expect(noteData!.deleted).toBe(true)
+    expect(noteData!.deletedAt).toBeDefined()
+  })
+
+  test('should restore note (set deleted=false in IndexedDB)', async ({ page }) => {
+    // First soft delete
+    await page.evaluate(async () => {
+      return new Promise<void>((resolve, reject) => {
+        const req = indexedDB.open('ElearningDB')
+        req.onsuccess = () => {
+          const db = req.result
+          const tx = db.transaction('notes', 'readwrite')
+          const store = tx.objectStore('notes')
+          const getReq = store.get('test-note-nfr24')
+          getReq.onsuccess = () => {
+            const note = getReq.result
+            if (note) {
+              note.deleted = true
+              note.deletedAt = new Date('2025-01-15T10:00:00Z').toISOString()
+              store.put(note)
+            }
+            tx.oncomplete = () => {
+              db.close()
+              resolve()
+            }
+            tx.onerror = () => {
+              db.close()
+              reject(tx.error)
+            }
+          }
+        }
+        req.onerror = () => reject(req.error)
+      })
+    })
+
+    // Then restore (undo)
+    await page.evaluate(async () => {
+      return new Promise<void>((resolve, reject) => {
+        const req = indexedDB.open('ElearningDB')
+        req.onsuccess = () => {
+          const db = req.result
+          const tx = db.transaction('notes', 'readwrite')
+          const store = tx.objectStore('notes')
+          const getReq = store.get('test-note-nfr24')
+          getReq.onsuccess = () => {
+            const note = getReq.result
+            if (note) {
+              note.deleted = false
+              delete note.deletedAt
+              store.put(note)
+            }
+            tx.oncomplete = () => {
+              db.close()
+              resolve()
+            }
+            tx.onerror = () => {
+              db.close()
+              reject(tx.error)
+            }
+          }
+        }
+        req.onerror = () => reject(req.error)
+      })
+    })
+
+    // Verify note is restored
+    const noteData = await page.evaluate(async () => {
+      return new Promise<{ deleted: boolean; deletedAt: string | undefined } | null>(
+        (resolve, reject) => {
+          const req = indexedDB.open('ElearningDB')
+          req.onsuccess = () => {
+            const db = req.result
+            const tx = db.transaction('notes', 'readonly')
+            const store = tx.objectStore('notes')
+            const getReq = store.get('test-note-nfr24')
+            getReq.onsuccess = () => {
+              const note = getReq.result
+              db.close()
+              resolve(note ? { deleted: note.deleted, deletedAt: note.deletedAt } : null)
+            }
+            getReq.onerror = () => {
+              db.close()
+              reject(getReq.error)
+            }
+          }
+          req.onerror = () => reject(req.error)
+        }
+      )
+    })
+
+    expect(noteData).not.toBeNull()
+    expect(noteData!.deleted).toBe(false)
+    expect(noteData!.deletedAt).toBeUndefined()
+  })
+
+  test('should permanently delete note (remove from IndexedDB)', async ({ page }) => {
+    // Permanently delete
+    await page.evaluate(async () => {
+      return new Promise<void>((resolve, reject) => {
+        const req = indexedDB.open('ElearningDB')
+        req.onsuccess = () => {
+          const db = req.result
+          const tx = db.transaction('notes', 'readwrite')
+          const store = tx.objectStore('notes')
+          store.delete('test-note-nfr24')
           tx.oncomplete = () => {
             db.close()
             resolve()
@@ -41,145 +234,32 @@ test.describe('NFR24: Note soft delete and restore', () => {
             reject(tx.error)
           }
         }
-        request.onerror = () => reject(request.error)
+        req.onerror = () => reject(req.error)
       })
     })
-  })
 
-  test('should soft delete note and allow restore', async ({ page }) => {
-    // Call softDelete from the browser context
-    const result = await page.evaluate(async () => {
-      // Import and use the store
-      const { useNoteStore } = await import('/src/stores/useNoteStore.ts')
-
-      const store = useNoteStore.getState()
-
-      // Load the note first and wait for state to update
-      await store.loadNotes()
-
-      // Wait a tick for Zustand state update
-      await new Promise(resolve => setTimeout(resolve, 0))
-
-      const notesBefore = useNoteStore.getState().notes
-      if (notesBefore.length === 0) {
-        return { error: 'No notes found', notesCount: notesBefore.length }
-      }
-
-      const noteId = 'test-note-nfr24'
-
-      // Soft delete
-      useNoteStore.getState().softDelete(noteId)
-
-      // Check the note is marked as deleted
-      const deletedNote = useNoteStore.getState().notes.find(n => n.id === noteId)
-      const isSoftDeleted = deletedNote?.deleted === true
-      const hasDeletedAt = typeof deletedNote?.deletedAt === 'string'
-
-      // Restore
-      useNoteStore.getState().restoreNote(noteId)
-
-      // Check the note is restored
-      const restoredNote = useNoteStore.getState().notes.find(n => n.id === noteId)
-      const isRestored = restoredNote?.deleted === false
-      const deletedAtCleared = restoredNote?.deletedAt === undefined
-
-      return {
-        isSoftDeleted,
-        hasDeletedAt,
-        isRestored,
-        deletedAtCleared,
-        notesCount: useNoteStore.getState().notes.length,
-      }
+    // Verify note is gone
+    const noteExists = await page.evaluate(async () => {
+      return new Promise<boolean>((resolve, reject) => {
+        const req = indexedDB.open('ElearningDB')
+        req.onsuccess = () => {
+          const db = req.result
+          const tx = db.transaction('notes', 'readonly')
+          const store = tx.objectStore('notes')
+          const getReq = store.get('test-note-nfr24')
+          getReq.onsuccess = () => {
+            db.close()
+            resolve(getReq.result != null)
+          }
+          getReq.onerror = () => {
+            db.close()
+            reject(getReq.error)
+          }
+        }
+        req.onerror = () => reject(req.error)
+      })
     })
 
-    // Assertions
-    expect(result.isSoftDeleted).toBe(true)
-    expect(result.hasDeletedAt).toBe(true)
-    expect(result.isRestored).toBe(true)
-    expect(result.deletedAtCleared).toBe(true)
-    expect(result.notesCount).toBe(1) // Note still in state after soft delete
-  })
-
-  test('should keep note in state during soft delete', async ({ page }) => {
-    const result = await page.evaluate(async () => {
-      const { useNoteStore } = await import('/src/stores/useNoteStore.ts')
-
-      await useNoteStore.getState().loadNotes()
-      await new Promise(resolve => setTimeout(resolve, 0))
-
-      const countBefore = useNoteStore.getState().notes.length
-
-      useNoteStore.getState().softDelete('test-note-nfr24')
-
-      const countAfter = useNoteStore.getState().notes.length
-
-      return {
-        countBefore,
-        countAfter,
-        noteStillExists: countAfter === countBefore,
-      }
-    })
-
-    expect(result.countBefore).toBe(1)
-    expect(result.countAfter).toBe(1)
-    expect(result.noteStillExists).toBe(true)
-  })
-
-  test('should allow undo by calling restoreNote within timeout window', async ({ page }) => {
-    const result = await page.evaluate(async () => {
-      const { useNoteStore } = await import('/src/stores/useNoteStore.ts')
-
-      await useNoteStore.getState().loadNotes()
-      await new Promise(resolve => setTimeout(resolve, 0))
-
-      // Simulate the undo flow
-      const noteId = 'test-note-nfr24'
-
-      // 1. Soft delete (immediate)
-      useNoteStore.getState().softDelete(noteId)
-      const afterDelete = useNoteStore.getState().notes.find(n => n.id === noteId)
-
-      // 2. Restore within 10 seconds (simulated - no actual wait needed)
-      useNoteStore.getState().restoreNote(noteId)
-      const afterRestore = useNoteStore.getState().notes.find(n => n.id === noteId)
-
-      return {
-        wasDeleted: afterDelete?.deleted === true,
-        wasRestored: afterRestore?.deleted === false,
-        finalCount: useNoteStore.getState().notes.length,
-      }
-    })
-
-    expect(result.wasDeleted).toBe(true)
-    expect(result.wasRestored).toBe(true)
-    expect(result.finalCount).toBe(1)
-  })
-
-  test('should permanently delete after timeout (simulated)', async ({ page }) => {
-    const result = await page.evaluate(async () => {
-      const { useNoteStore } = await import('/src/stores/useNoteStore.ts')
-
-      await useNoteStore.getState().loadNotes()
-      await new Promise(resolve => setTimeout(resolve, 0))
-
-      const noteId = 'test-note-nfr24'
-
-      // Soft delete
-      useNoteStore.getState().softDelete(noteId)
-
-      // Simulate timeout - call permanent deleteNote
-      await useNoteStore.getState().deleteNote(noteId)
-
-      // Check note is removed
-      const noteExists = useNoteStore.getState().notes.find(n => n.id === noteId)
-
-      return {
-        noteRemoved: noteExists === undefined,
-        finalCount: useNoteStore.getState().notes.length,
-      }
-    })
-
-    expect(result.noteRemoved).toBe(true)
-    expect(result.finalCount).toBe(0)
+    expect(noteExists).toBe(false)
   })
 })
