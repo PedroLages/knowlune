@@ -733,3 +733,64 @@ describe('toggleReviewMark — guard', () => {
     expect(useQuizStore.getState().currentProgress).toBeNull()
   })
 })
+
+// ---------------------------------------------------------------------------
+// navigateToQuestion
+// ---------------------------------------------------------------------------
+
+describe('navigateToQuestion', () => {
+  const baseProgress = {
+    quizId: 'quiz-nav',
+    currentQuestionIndex: 0,
+    answers: {},
+    startTime: 1000,
+    timeRemaining: null,
+    isPaused: false,
+    markedForReview: [],
+    questionOrder: ['q1', 'q2', 'q3'],
+    timerAccommodation: 'standard' as const,
+  }
+
+  const baseQuiz = {
+    id: 'quiz-nav',
+    lessonId: 'les-nav',
+    title: 'Nav Quiz',
+    description: '',
+    questions: [
+      { id: 'q1', order: 1, type: 'multiple-choice' as const, text: 'Q1', options: ['A'], correctAnswer: 'A', explanation: '', points: 1 },
+      { id: 'q2', order: 2, type: 'multiple-choice' as const, text: 'Q2', options: ['A'], correctAnswer: 'A', explanation: '', points: 1 },
+      { id: 'q3', order: 3, type: 'multiple-choice' as const, text: 'Q3', options: ['A'], correctAnswer: 'A', explanation: '', points: 1 },
+    ],
+    timeLimit: null,
+    passingScore: 70,
+    allowRetakes: true,
+    shuffleQuestions: false,
+    shuffleAnswers: false,
+    createdAt: '2025-01-15T12:00:00.000Z',
+    updatedAt: '2025-01-15T12:00:00.000Z',
+  }
+
+  it('sets currentQuestionIndex to the given index', () => {
+    useQuizStore.setState({ currentQuiz: baseQuiz, currentProgress: baseProgress })
+    useQuizStore.getState().navigateToQuestion(2)
+    expect(useQuizStore.getState().currentProgress?.currentQuestionIndex).toBe(2)
+  })
+
+  it('is a no-op when index < 0', () => {
+    useQuizStore.setState({ currentQuiz: baseQuiz, currentProgress: { ...baseProgress, currentQuestionIndex: 1 } })
+    useQuizStore.getState().navigateToQuestion(-1)
+    expect(useQuizStore.getState().currentProgress?.currentQuestionIndex).toBe(1)
+  })
+
+  it('is a no-op when index >= questions.length', () => {
+    useQuizStore.setState({ currentQuiz: baseQuiz, currentProgress: { ...baseProgress, currentQuestionIndex: 1 } })
+    useQuizStore.getState().navigateToQuestion(3)
+    expect(useQuizStore.getState().currentProgress?.currentQuestionIndex).toBe(1)
+  })
+
+  it('is a no-op when no active quiz', () => {
+    useQuizStore.setState({ currentQuiz: null, currentProgress: null })
+    useQuizStore.getState().navigateToQuestion(1)
+    expect(useQuizStore.getState().currentProgress).toBeNull()
+  })
+})
