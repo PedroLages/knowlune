@@ -9,7 +9,7 @@
  */
 import { test, expect } from '../support/fixtures'
 import { makeQuiz, makeQuestion } from '../support/fixtures/factories/quiz-factory'
-import { FIXED_DATE, FIXED_TIMESTAMP } from '../utils/test-time'
+// Note: quiz timing uses live Date.now() — no FIXED_DATE mocking needed
 
 // ---------------------------------------------------------------------------
 // Test data
@@ -289,11 +289,11 @@ test.describe('E12-S06: Quiz Score Display', () => {
     // Results page
     await expect(page).toHaveURL(/\/quiz\/results/)
 
-    // Time spent should be visible in "Completed in Xm Ys" or "Completed in Xs" format
-    await expect(page.getByText(/Completed in \d+/i)).toBeVisible()
+    // Time spent should be visible in valid formatDuration output (e.g. "8m 32s", "45s", "1m")
+    await expect(page.getByText(/Completed in (\d+h\s?)?\d+m\s?\d+s|Completed in \d+s|Completed in \d+m/)).toBeVisible()
   })
 
-  test('Retake Quiz navigates to fresh quiz', async ({ page }) => {
+  test('AC4b: Retake Quiz navigates back to quiz start screen', async ({ page }) => {
     await navigateToQuiz(page)
     await startQuiz(page)
 

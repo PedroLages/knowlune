@@ -162,7 +162,11 @@ export function Quiz() {
   const handleSubmitConfirm = useCallback(async () => {
     setShowSubmitDialog(false)
     await submitQuiz(courseId, [])
-    navigate(`/courses/${courseId}/lessons/${lessonId}/quiz/results`)
+    // Only navigate if submit succeeded (store clears currentProgress on success,
+    // preserves it on failure so the user can retry)
+    if (!useQuizStore.getState().currentProgress) {
+      navigate(`/courses/${courseId}/lessons/${lessonId}/quiz/results`)
+    }
   }, [submitQuiz, courseId, lessonId, navigate])
 
   const handleSubmitClick = useCallback(() => {
