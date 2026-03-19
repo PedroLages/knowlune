@@ -105,3 +105,7 @@ No issues — changes are purely data-filtering logic with zero visual/layout/ac
 2. **Guard placement matters.** Initial approach was to only validate in `momentum.ts`, but corrupted `courseId` values (e.g., numeric instead of string) caused silent failures in upstream `.filter(s => s.courseId === course.id)` comparisons. Adding type guards at each data access point (Courses.tsx, StudyScheduleWidget.tsx) provides defense in depth.
 
 3. **`isFinite()` catches more than `!isNaN()`.** For duration validation, `isFinite(s.duration)` rejects both `NaN` and `Infinity`/`-Infinity` in a single check, which is cleaner than `!isNaN(s.duration) && s.duration !== Infinity`.
+
+4. **Playwright serializes NaN/Infinity as null.** `page.evaluate()` uses structured clone / JSON semantics — `NaN` and `Infinity` become `null` when passed from Node to browser context. Tests that seed these values via `page.evaluate({ duration: NaN })` actually test the "wrong type" path (`typeof null !== 'number'`), not the `isFinite()` guard. To test `isFinite()`, construct the values inside the browser callback.
+
+5. **Validation guards need null/object checks first.** The initial `isValidSession()` checked `typeof s.courseId === 'string'` but didn't guard against `s` itself being `null` or a non-object. Added `s != null && typeof s === 'object'` as the first check to prevent TypeErrors on truly corrupted records.
