@@ -1,0 +1,63 @@
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { QuestionGrid } from '../QuestionGrid'
+
+const defaultProps = {
+  total: 3,
+  answers: {},
+  questionOrder: ['q1', 'q2', 'q3'],
+  currentIndex: 0,
+  onQuestionClick: vi.fn(),
+}
+
+describe('QuestionGrid', () => {
+  it('renders the correct number of bubbles', () => {
+    render(<QuestionGrid {...defaultProps} />)
+    const buttons = screen.getAllByRole('button')
+    expect(buttons).toHaveLength(3)
+    expect(screen.getByLabelText('Question 1')).toBeInTheDocument()
+    expect(screen.getByLabelText('Question 2')).toBeInTheDocument()
+    expect(screen.getByLabelText('Question 3')).toBeInTheDocument()
+  })
+
+  it('current question has aria-current="true", others do not', () => {
+    render(<QuestionGrid {...defaultProps} currentIndex={1} />)
+    expect(screen.getByLabelText('Question 1')).not.toHaveAttribute('aria-current')
+    expect(screen.getByLabelText('Question 2')).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByLabelText('Question 3')).not.toHaveAttribute('aria-current')
+  })
+
+  it('answered questions get answered class (bg-brand-soft)', () => {
+    render(
+      <QuestionGrid
+        {...defaultProps}
+        answers={{ q1: 'A', q2: '' }}
+        currentIndex={2}
+      />
+    )
+    // q1 answered — has bg-brand-soft
+    expect(screen.getByLabelText('Question 1').className).toContain('bg-brand-soft')
+    // q2 empty string — treated as unanswered
+    expect(screen.getByLabelText('Question 2').className).toContain('bg-card')
+    // q3 unanswered (current, so gets bg-brand)
+    expect(screen.getByLabelText('Question 3').className).toContain('bg-brand')
+  })
+
+  it('unanswered non-current questions get default class (bg-card)', () => {
+    render(<QuestionGrid {...defaultProps} currentIndex={2} />)
+    expect(screen.getByLabelText('Question 1').className).toContain('bg-card')
+    expect(screen.getByLabelText('Question 2').className).toContain('bg-card')
+  })
+
+  it('clicking a bubble calls onQuestionClick with the correct 0-based index', async () => {
+    const onQuestionClick = vi.fn()
+    render(<QuestionGrid {...defaultProps} onQuestionClick={onQuestionClick} />)
+
+    await userEvent.click(screen.getByLabelText('Question 3'))
+    expect(onQuestionClick).toHaveBeenCalledWith(2)
+
+    await userEvent.click(screen.getByLabelText('Question 1'))
+    expect(onQuestionClick).toHaveBeenCalledWith(0)
+  })
+})
