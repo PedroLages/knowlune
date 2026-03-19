@@ -211,7 +211,7 @@ describe('VideoPlayer', () => {
 
     it('renders captions button', () => {
       renderPlayer()
-      expect(screen.getByRole('button', { name: 'Enable captions' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Load captions' })).toBeInTheDocument()
     })
 
     it('renders speed menu trigger', () => {
@@ -494,10 +494,16 @@ describe('VideoPlayer', () => {
   // Captions toggle
   // -------------------------------------------------------------------------
   describe('captions', () => {
-    it('disables captions button when no captions provided', () => {
+    it('disables captions button when no captions and no onLoadCaptions', () => {
       renderPlayer({ captions: [] })
-      const btn = screen.getByRole('button', { name: 'Enable captions' })
+      const btn = screen.getByRole('button', { name: 'Load captions' })
       expect(btn).toBeDisabled()
+    })
+
+    it('enables captions button when onLoadCaptions is provided (file picker mode)', () => {
+      renderPlayer({ captions: [], onLoadCaptions: vi.fn() })
+      const btn = screen.getByRole('button', { name: 'Load captions' })
+      expect(btn).not.toBeDisabled()
     })
 
     it('enables captions button when captions are provided', () => {

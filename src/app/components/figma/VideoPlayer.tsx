@@ -52,6 +52,7 @@ interface VideoPlayerProps {
   onPlayStateChange?: (isPlaying: boolean) => void
   theaterMode?: boolean
   onTheaterModeToggle?: () => void
+  onLoadCaptions?: (file: File) => void
 }
 
 export interface VideoPlayerHandle {
@@ -83,11 +84,13 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     onPlayStateChange,
     theaterMode,
     onTheaterModeToggle,
+    onLoadCaptions,
   },
   ref
 ) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const captionInputRef = useRef<HTMLInputElement>(null)
   const hasRestoredPosition = useRef(false)
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const announceTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -295,8 +298,25 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
   }, [])
 
-  // Toggle captions
+  // Handle caption file input change
+  const handleCaptionFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file && onLoadCaptions) {
+      onLoadCaptions(file)
+    }
+    // Reset input so the same file can be re-selected
+    if (captionInputRef.current) {
+      captionInputRef.current.value = ''
+    }
+  }
+
+  // Toggle captions or open file picker
   const toggleCaptions = () => {
+    // If no captions loaded but onLoadCaptions is available, open file picker
+    if ((!captions || captions.length === 0) && onLoadCaptions) {
+      captionInputRef.current?.click()
+      return
+    }
     if (!captions || captions.length === 0) return
 
     const newEnabled = !captionsEnabled
@@ -717,7 +737,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
         >
           {captions?.map((caption, index) => (
             <track
-              key={caption.language}
+              key={caption.src}
               kind="subtitles"
               src={caption.src}
               srcLang={caption.language}
@@ -727,6 +747,20 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
           ))}
           Your browser does not support the video element.
         </video>
+
+        {/* Hidden file input for caption loading */}
+        {onLoadCaptions && (
+          <input
+            ref={captionInputRef}
+            type="file"
+            accept=".srt,.vtt"
+            className="hidden"
+            aria-hidden="true"
+            tabIndex={-1}
+            data-testid="caption-file-input"
+            onChange={handleCaptionFileChange}
+          />
+        )}
 
         {/* Error Overlay */}
         {hasError && (
@@ -1028,19 +1062,28 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                   </Button>
                 )}
 
-                {/* Captions Toggle - always visible; grayed out when no captions available */}
+                {/* Captions Toggle — opens file picker when no captions; toggles when loaded */}
                 <Button
                   variant="ghost"
                   size="icon"
                   className={cn(
                     'size-11 text-white hover:bg-white/20',
-                    captionsEnabled && 'bg-white/20',
-                    (!captions || captions.length === 0) && 'opacity-40 cursor-not-allowed'
+                    captionsEnabled && captions && captions.length > 0 && 'bg-white/20',
+                    !onLoadCaptions &&
+                      (!captions || captions.length === 0) &&
+                      'opacity-40 cursor-not-allowed'
                   )}
                   onClick={toggleCaptions}
-                  disabled={!captions || captions.length === 0}
-                  aria-label={captionsEnabled ? 'Disable captions' : 'Enable captions'}
-                  aria-pressed={captionsEnabled}
+                  disabled={!onLoadCaptions && (!captions || captions.length === 0)}
+                  aria-label={
+                    !captions || captions.length === 0
+                      ? 'Load captions'
+                      : captionsEnabled
+                        ? 'Disable captions'
+                        : 'Enable captions'
+                  }
+                  aria-pressed={captions && captions.length > 0 ? captionsEnabled : undefined}
+                  data-testid="caption-toggle-button"
                 >
                   <Subtitles className="size-5" />
                 </Button>

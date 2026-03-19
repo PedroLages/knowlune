@@ -262,3 +262,13 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M2: Card missing `rounded-[24px]` design convention
 - M3: Scheduler runs 60s interval even when all reminders disabled
 - Positive: Clean separation of concerns, proper interval cleanup, good accessibility (role=checkbox, aria-checked, 44px targets), proper design token usage, no hardcoded colors
+
+## E02-S10: Caption and Subtitle Support (Round 1)
+- No uncommitted changes (positive)
+- H1 (RECURRING): `handleLoadCaptions` async callback has no try/catch -- IndexedDB write failure or file.text() rejection silently swallowed
+- H2 (RECURRING): `getCaptionForVideo().then()` has no .catch() -- silent failure on IndexedDB read
+- H3: `srtToWebVTT` uses regex replacement instead of structural parsing -- edge cases with real-world SRT files
+- M1: ~50 lines of identical caption logic duplicated between LessonPlayer and ImportedLessonPlayer (DRY violation)
+- M2: `parseTime` returns NaN for garbled timestamps without validation -- NaN propagates to cues
+- M3: Track `key` uses array index -- React may reuse DOM element without updating src on caption replacement
+- Positive: Thorough blob URL lifecycle management, clean cancellation pattern, good separation of concerns (VideoPlayer stays presentational)

@@ -59,6 +59,7 @@ import { NextCourseSuggestion } from '../components/NextCourseSuggestion'
 import { addBookmark, getLessonBookmarks, formatBookmarkTimestamp } from '@/lib/bookmarks'
 import { toast } from 'sonner'
 import { captureVideoFrame, saveFrameCapture, type CapturedFrame } from '@/lib/frame-capture'
+import { useCaptionLoader } from '@/app/hooks/useCaptionLoader'
 
 export function LessonPlayer() {
   const allCourses = useCourseStore(s => s.courses)
@@ -105,6 +106,7 @@ export function LessonPlayer() {
 
   const [seekToTime, setSeekToTime] = useState<number | undefined>(undefined)
   const [bookmarks, setBookmarks] = useState<import('@/data/types').VideoBookmark[]>([])
+  const { userCaptions, handleLoadCaptions } = useCaptionLoader(courseId, lessonId)
 
   // Idle detection for session tracking
   useIdleDetection({
@@ -323,7 +325,7 @@ export function LessonPlayer() {
   const nextLesson = currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null
 
   const videoResource = lesson?.resources.find(r => r.type === 'video')
-  const captionSrc = videoResource?.metadata?.captions?.[0]?.src
+  const captionSrc = userCaptions?.src ?? videoResource?.metadata?.captions?.[0]?.src
   const videoChapters = videoResource?.metadata?.chapters
   const allPdfResources = lesson?.resources.filter(r => r.type === 'pdf') ?? []
   // When no video exists, promote first PDF to primary content
@@ -339,6 +341,13 @@ export function LessonPlayer() {
 
     // Note: No cleanup needed - endSession handled by visibility/unload handlers
   }, [courseId, lessonId, startSession, videoResource, primaryPdf])
+
+  // Merge course captions with user-loaded captions
+  const mergedCaptions = (() => {
+    const courseCaptions = videoResource?.metadata?.captions ?? []
+    if (!userCaptions) return courseCaptions.length > 0 ? courseCaptions : undefined
+    return [...courseCaptions, userCaptions]
+  })()
 
   const handlePdfPageChangeRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const handlePdfPageChange = (page: number) => {
@@ -581,7 +590,8 @@ export function LessonPlayer() {
               onBookmarkAdd={handleBookmarkAdd}
               bookmarks={bookmarks}
               onBookmarkSeek={handleVideoSeek}
-              captions={videoResource.metadata?.captions}
+              captions={mergedCaptions}
+              onLoadCaptions={handleLoadCaptions}
               onPlayStateChange={(playing: boolean) => {
                 setIsVideoPlaying(playing)
                 recordInteraction()

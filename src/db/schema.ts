@@ -17,6 +17,7 @@ import type {
   ReviewRecord,
   CourseReminder,
   Course,
+  VideoCaptionRecord,
 } from '@/data/types'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 
@@ -40,6 +41,7 @@ const db = new Dexie('ElearningDB') as Dexie & {
   courses: EntityTable<Course, 'id'>
   quizzes: EntityTable<Quiz, 'id'>
   quizAttempts: EntityTable<QuizAttempt, 'id'>
+  videoCaptions: Table<VideoCaptionRecord> // compound PK: [courseId+videoId]
 }
 
 db.version(1).stores({
@@ -409,6 +411,32 @@ db.version(17).stores({
   // NEW: Quiz tables
   quizzes: 'id, lessonId, createdAt',
   quizAttempts: 'id, quizId, [quizId+completedAt], completedAt',
+})
+
+// v18: Caption file associations for user-loaded subtitles (E02-S10)
+db.version(18).stores({
+  // All 19 existing v17 tables (unchanged — must redeclare or Dexie deletes them)
+  importedCourses: 'id, name, importedAt, status, *tags',
+  importedVideos: 'id, courseId, filename',
+  importedPdfs: 'id, courseId, filename',
+  progress: '[courseId+videoId], courseId, videoId',
+  bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+  screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+  contentProgress: '[courseId+itemId], courseId, itemId, status',
+  challenges: 'id, type, deadline, createdAt',
+  embeddings: 'noteId, createdAt',
+  learningPath: 'courseId, position, generatedAt',
+  courseThumbnails: 'courseId',
+  aiUsageEvents: 'id, featureType, timestamp, courseId',
+  reviewRecords: 'id, noteId, nextReviewAt, reviewedAt',
+  courseReminders: 'id, courseId',
+  courses: 'id, category, difficulty, instructorId',
+  quizzes: 'id, lessonId, createdAt',
+  quizAttempts: 'id, quizId, [quizId+completedAt], completedAt',
+  // NEW: User-loaded caption/subtitle file associations
+  videoCaptions: '[courseId+videoId], courseId, videoId',
 })
 
 export { db }

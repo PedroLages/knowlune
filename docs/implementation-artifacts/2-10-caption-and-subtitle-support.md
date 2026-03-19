@@ -1,6 +1,11 @@
 # Story 2.10: Caption and Subtitle Support
 
-Status: ready-for-dev
+Status: done
+Started: 2026-03-18
+Completed: 2026-03-18
+Reviewed: true
+review_started: 2026-03-18
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 
 ## Story
 
@@ -89,6 +94,57 @@ And captions load automatically on subsequent visits
   - [ ] 7.5 Test: Load invalid file → error toast, video continues
   - [ ] 7.6 Test: Return to video → captions auto-load from persistence
   - [ ] 7.7 Test: File picker filters for .srt and .vtt only
+
+## Design Guidance
+
+### Design Philosophy
+
+Seamless integration into the existing VideoPlayer — the caption loading flow should feel native, as if it was always there. No new UI invention needed.
+
+### Subtitles Button — Dual Behavior
+
+The existing `Subtitles` button (VideoPlayer.tsx:1031-1046) gains dual behavior:
+
+| State | Click Action | Visual | aria-label |
+|-------|-------------|--------|------------|
+| No captions loaded | Opens file picker | `opacity-100 text-white hover:bg-white/20` | "Load captions" |
+| Captions loaded + enabled | Toggles off | `bg-white/20` (active indicator) | "Disable captions" |
+| Captions loaded + disabled | Toggles on | `opacity-100`, no bg highlight | "Enable captions" |
+
+**Remove `opacity-40 cursor-not-allowed` state** — button is always interactive.
+
+### Hidden File Input
+
+Use hidden `<input type="file" accept=".srt,.vtt">` triggered programmatically. Cross-browser compatible (no `showOpenFilePicker()`).
+
+### Caption Display Styling
+
+Existing `video::cue` in theme.css:356-363 already satisfies AC2 (semi-transparent background, white text, WCAG AA+ ~15:1 contrast). No changes needed. Do NOT use CSS variables inside `::cue` — hardcoded values are intentional.
+
+### Toast Patterns
+
+| Scenario | Type | Message |
+|----------|------|---------|
+| Success | `toast.success()` | "Captions loaded: filename.srt" |
+| Parse error | `toast.error()` | "Invalid caption file: could not parse SRT format" |
+| Empty file | `toast.error()` | "Caption file is empty" |
+
+### Accessibility
+
+- Button already meets 44px touch target (`size-11`), in tab order, C key toggle works
+- Update `aria-label` dynamically based on state
+- Keep `aria-pressed` for toggle state
+
+### Data-testid Attributes
+
+| Element | data-testid |
+|---------|-------------|
+| File input | `caption-file-input` |
+| Subtitles button | `caption-toggle-button` |
+
+### Component Flow
+
+`onLoadCaptions` callback flows up from VideoPlayer → LessonPlayer/ImportedLessonPlayer, which handles parsing, validation, Dexie persistence, and error toasts. VideoPlayer stays presentational.
 
 ## Dev Notes
 
@@ -188,6 +244,38 @@ Key lessons from Story 2-9 (mini-player/theater mode):
 - [Source: src/app/components/figma/TranscriptPanel.tsx] — existing VTT parser
 - [Source: src/db/schema.ts:390-412] — current Dexie v17 schema
 - [Source: docs/implementation-artifacts/2-9-mini-player-theater-mode.md] — previous story lessons
+
+## Challenges and Lessons Learned
+
+### 1. E2E Test Route Mismatch — Imported vs Built-in Courses
+**Challenge:** Tests originally used `seedImportedCourses()` to seed course data, then navigated to `/courses/operative-six/...` (LessonPlayer route). But imported courses live at `/imported-courses/` (ImportedLessonPlayer route) and require a separate `importedVideos` table entry with a `fileHandle`.
+
+**Solution:** Switched to using the built-in `operative-six` course from `seedCourses` static data, which auto-seeds on app init. Tests navigate to `/courses/operative-six/op6-introduction` without any manual seeding.
+
+**Pattern:** For LessonPlayer tests, prefer built-in seed data over manual `seedImportedCourses`. Reserve `seedImportedCourses` + `seedImportedVideos` for ImportedLessonPlayer-specific tests.
+
+### 2. Zustand Store Race Condition — `waitForLoadState('networkidle')`
+**Challenge:** `useCourseStore.courses` starts as `[]` and loads asynchronously via `loadCourses()` (triggered by Layout.tsx useEffect). When navigating directly to a lesson URL, LessonPlayer can render before the store finishes loading, showing "Lesson Not Found".
+
+**Solution:** Add `await page.waitForLoadState('networkidle')` after every `page.goto()` call, including the initial `/` navigation in `beforeEach`. This ensures Zustand stores are hydrated from IndexedDB before assertions.
+
+**Pattern:** Always use `networkidle` waits in E2E tests that depend on async Zustand store hydration. This matches the pattern used in story-e09b-s01 tests.
+
+### 3. Unit Test Updates for Schema and Aria-Label Changes
+**Challenge:** Dexie v17→v18 migration added `videoCaptions` table, breaking schema tests expecting v17 and 19 tables. Caption button aria-label changed from "Enable captions" to "Load captions" when no captions are loaded, breaking VideoPlayer unit tests.
+
+**Solution:** Updated `schema.test.ts` to expect v18 with `videoCaptions` table. Updated `VideoPlayer.test.tsx` to expect "Load captions" for the no-captions state.
+
+**Pattern:** When modifying Dexie schema or ARIA labels, always search for existing unit tests that assert on version numbers, table lists, or `getByRole` with the old label text.
+
+### 4. Prettier Auto-Format on E2E Spec
+**Challenge:** The E2E spec had minor formatting differences caught by the format-check gate.
+
+**Solution:** Auto-formatted with `npx prettier --write`. Committed separately to keep formatting changes isolated from logic changes.
+
+## Implementation Plan
+
+See [plan](plans/e02-s10-caption-subtitle-support.md) for implementation approach.
 
 ## Dev Agent Record
 

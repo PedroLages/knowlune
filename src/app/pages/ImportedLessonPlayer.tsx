@@ -6,6 +6,7 @@ import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useVideoFromHandle } from '@/hooks/useVideoFromHandle'
 import { useIdleDetection } from '@/app/hooks/useIdleDetection'
 import { useSessionStore } from '@/stores/useSessionStore'
+import { useCaptionLoader } from '@/app/hooks/useCaptionLoader'
 import { VideoPlayer } from '@/app/components/figma/VideoPlayer'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
@@ -90,6 +91,9 @@ export function ImportedLessonPlayer() {
 
     return () => clearInterval(interval)
   }, [heartbeat])
+
+  // Caption loading and persistence (shared hook)
+  const { userCaptions, handleLoadCaptions } = useCaptionLoader(courseId, lessonId)
 
   async function handleLocateFile() {
     try {
@@ -209,6 +213,8 @@ export function ImportedLessonPlayer() {
             title={video.filename}
             courseId={courseId}
             lessonId={lessonId}
+            captions={userCaptions ? [userCaptions] : undefined}
+            onLoadCaptions={handleLoadCaptions}
           />
         ) : null}
       </div>
