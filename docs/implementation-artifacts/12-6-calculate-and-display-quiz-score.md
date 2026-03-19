@@ -1,8 +1,8 @@
 ---
 story_id: E12-S06
 story_name: "Calculate and Display Quiz Score"
-status: ready-for-dev
-started:
+status: in-progress
+started: 2026-03-19
 completed:
 reviewed: false
 review_started:
@@ -12,7 +12,7 @@ burn_in_validated: false
 
 # Story 12.6: Calculate and Display Quiz Score
 
-Status: ready-for-dev
+Status: in-progress
 
 ## Story
 
