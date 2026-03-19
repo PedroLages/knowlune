@@ -273,6 +273,20 @@ Key lessons from Story 2-9 (mini-player/theater mode):
 
 **Solution:** Auto-formatted with `npx prettier --write`. Committed separately to keep formatting changes isolated from logic changes.
 
+### 5. Async Callbacks Need Defensive Error Handling
+**Challenge:** Code review caught that `handleLoadCaptions` (async callback) and `getCaptionForVideo().then()` had no try/catch or `.catch()`. IndexedDB failures (quota exceeded, DB upgrade race) would silently swallow errors — learners would see no feedback.
+
+**Solution:** Wrapped all async caption operations in try/catch with toast error feedback and console.error logging.
+
+**Pattern:** Any async callback that touches IndexedDB (Dexie) needs both validation-level error returns AND infrastructure-level try/catch. Validation handles expected cases (bad file format); try/catch handles unexpected failures (DB quota, corruption).
+
+### 6. Reuse Existing Infrastructure Before Building New
+**Challenge:** VideoPlayer already had full caption rendering support (`<track>` elements, C key toggle, localStorage persistence for enabled state). The SRT→WebVTT conversion was the only genuinely new parsing logic needed.
+
+**Solution:** Built on existing `captions` prop, `captionsEnabled` state, and `toggleCaptions()` function. Only added: file input, `onLoadCaptions` callback, and dynamic button behavior.
+
+**Pattern:** Before implementing a feature, audit the target component for existing hooks and props that can be extended rather than duplicated.
+
 ## Implementation Plan
 
 See [plan](plans/e02-s10-caption-subtitle-support.md) for implementation approach.
