@@ -1,9 +1,9 @@
 ---
 story_id: E07-S06
 story_name: "E2E Test for Course Suggestion Tiebreaker"
-status: in-progress
+status: done
 started: 2026-03-19
-completed:
+completed: 2026-03-19
 reviewed: true
 review_started: 2026-03-19
 review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review-skipped, web-design-guidelines-skipped, code-review, code-review-testing]
