@@ -1,4 +1,5 @@
 import { CheckCircle, Circle } from 'lucide-react'
+import { cn } from '@/app/components/ui/utils'
 import { formatDuration } from '@/lib/formatDuration'
 
 interface ScoreSummaryProps {
@@ -58,12 +59,13 @@ function ScoreRing({
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           strokeLinecap="round"
-          className={`transition-all duration-500 motion-reduce:transition-none ${
+          className={cn(
+            'transition-all duration-500 motion-reduce:transition-none',
             passed ? 'text-success' : 'text-warning'
-          }`}
+          )}
         />
       </svg>
-      <span className="absolute text-5xl font-bold text-foreground">
+      <span className="absolute text-3xl sm:text-5xl font-bold text-foreground">
         {Math.round(percentage)}%
       </span>
     </div>

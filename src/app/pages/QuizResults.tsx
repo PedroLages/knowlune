@@ -1,5 +1,5 @@
-import { useEffect, useCallback } from 'react'
-import { useParams, useNavigate, Link } from 'react-router'
+import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useParams, Navigate, Link } from 'react-router'
 import { ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -14,7 +14,6 @@ import { Skeleton } from '@/app/components/ui/skeleton'
 
 export function QuizResults() {
   const { courseId = '', lessonId = '' } = useParams<{ courseId: string; lessonId: string }>()
-  const navigate = useNavigate()
 
   const currentQuiz = useQuizStore(selectCurrentQuiz)
   const attempts = useQuizStore(selectAttempts)
@@ -22,28 +21,43 @@ export function QuizResults() {
   const loadAttempts = useQuizStore(s => s.loadAttempts)
   const retakeQuiz = useQuizStore(s => s.retakeQuiz)
 
+  const [attemptsLoaded, setAttemptsLoaded] = useState(false)
+
   // Load attempts from Dexie on mount
   useEffect(() => {
     if (currentQuiz?.id) {
-      loadAttempts(currentQuiz.id)
+      loadAttempts(currentQuiz.id).then(() => setAttemptsLoaded(true))
     }
   }, [currentQuiz?.id, loadAttempts])
 
   const lastAttempt = attempts.length > 0 ? attempts[attempts.length - 1] : null
 
+  const maxScore = useMemo(
+    () => lastAttempt?.answers.reduce((sum, a) => sum + a.pointsPossible, 0) ?? 0,
+    [lastAttempt]
+  )
+
   const handleRetake = useCallback(async () => {
-    await retakeQuiz(lessonId)
-    navigate(`/courses/${courseId}/lessons/${lessonId}/quiz`)
-  }, [retakeQuiz, lessonId, navigate, courseId])
+    try {
+      await retakeQuiz(lessonId)
+      window.location.href = `/courses/${courseId}/lessons/${lessonId}/quiz`
+    } catch {
+      // Store shows error toast internally
+    }
+  }, [retakeQuiz, lessonId, courseId])
 
   const handleReviewAnswers = useCallback(() => {
     toast.info('Answer review is coming in a future update.')
   }, [])
 
-  // No quiz data — redirect back
+  // No quiz data — declarative redirect back (not imperative navigate during render)
   if (!currentQuiz && !isLoading) {
-    navigate(`/courses/${courseId}/lessons/${lessonId}/quiz`, { replace: true })
-    return null
+    return <Navigate to={`/courses/${courseId}/lessons/${lessonId}/quiz`} replace />
+  }
+
+  // Loaded but no attempts found — redirect back
+  if (attemptsLoaded && !lastAttempt && !isLoading) {
+    return <Navigate to={`/courses/${courseId}/lessons/${lessonId}/quiz`} replace />
   }
 
   // Loading state
@@ -75,7 +89,7 @@ export function QuizResults() {
         <ScoreSummary
           percentage={lastAttempt.percentage}
           score={lastAttempt.score}
-          maxScore={lastAttempt.answers.reduce((sum, a) => sum + a.pointsPossible, 0)}
+          maxScore={maxScore}
           passed={lastAttempt.passed}
           passingScore={currentQuiz.passingScore}
           timeSpent={lastAttempt.timeSpent}
