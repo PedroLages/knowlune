@@ -27,11 +27,11 @@ so that the full user experience of course suggestion ranking is verified end-to
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create E2E test in regression spec (AC: 1)
-  - [ ] 1.1 Seed 2 completed courses and 3 incomplete courses with identical tag overlap
-  - [ ] 1.2 Set up momentum scores (80, 50, 20) for the 3 incomplete courses
-  - [ ] 1.3 Complete Course A to trigger suggestion
-  - [ ] 1.4 Verify suggestion card shows the course with highest momentum score
+- [x] Task 1: Create E2E test in regression spec (AC: 1)
+  - [x] 1.1 Seed excluded courses as 100% complete + 2 candidates with identical 2-tag overlap
+  - [x] 1.2 Set momentum: confidence-reboot (high: recent, 50%) vs behavior-skills (low: old, 23%)
+  - [x] 1.3 Complete authority to trigger suggestion
+  - [x] 1.4 Verify suggestion card shows confidence-reboot (highest momentum)
 
 ## Implementation Notes
 
@@ -46,7 +46,10 @@ See [plan](plans/e07-s06-plan.md) for implementation approach.
 
 ## Testing Notes
 
-[Test strategy, edge cases discovered, coverage notes]
+- **Test design:** Uses confidence-reboot (2 tags, high momentum: 0.457) vs behavior-skills (2 tags, low momentum: 0.275) — clear 0.18 margin
+- **AC adaptation:** Gap doc specified 3 candidates, but real course data only has pairs with identical tag overlap. 2 candidates sufficiently validates tiebreaker behavior.
+- **Bug found:** `closeCompletionModal` helper used page-wide `button` locator that matched disabled PDF viewer toolbar buttons. Fixed by scoping to `getByRole('dialog')`.
+- **Pre-existing failures:** AC1, AC4-dismiss, AC5 tests fail on both main and feature branch — unrelated to this change (Mark lesson complete button visibility timeout).
 
 ## Pre-Review Checklist
 
