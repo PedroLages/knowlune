@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useParams, Link } from 'react-router'
-import { ArrowLeft } from 'lucide-react'
+import { useParams, useNavigate, Link } from 'react-router'
+import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 import { db } from '@/db'
 import type { Quiz as QuizType, QuizProgress } from '@/types/quiz'
 import { QuizProgressSchema } from '@/types/quiz'
@@ -14,7 +14,18 @@ import {
 import { QuizStartScreen } from '@/app/components/quiz/QuizStartScreen'
 import { QuizHeader } from '@/app/components/quiz/QuizHeader'
 import { QuestionDisplay } from '@/app/components/quiz/QuestionDisplay'
+import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@/app/components/ui/alert-dialog'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -58,6 +69,9 @@ export function Quiz() {
   const clearError = useQuizStore(s => s.clearError)
   const startQuiz = useQuizStore(s => s.startQuiz)
   const submitAnswer = useQuizStore(s => s.submitAnswer)
+  const submitQuiz = useQuizStore(s => s.submitQuiz)
+  const navigate = useNavigate()
+  const [showSubmitDialog, setShowSubmitDialog] = useState(false)
 
   // Fetch quiz from Dexie on mount
   useEffect(() => {
@@ -119,6 +133,59 @@ export function Quiz() {
     // Clear per-quiz localStorage key — the Zustand persist middleware now owns the state
     localStorage.removeItem(`quiz-progress-${quiz.id}`)
   }, [quiz, savedProgress])
+
+  const handlePrevQuestion = useCallback(() => {
+    const progress = useQuizStore.getState().currentProgress
+    if (!progress || progress.currentQuestionIndex <= 0) return
+    useQuizStore.setState({
+      currentProgress: {
+        ...progress,
+        currentQuestionIndex: progress.currentQuestionIndex - 1,
+      },
+    })
+  }, [])
+
+  const handleNextQuestion = useCallback(() => {
+    const state = useQuizStore.getState()
+    const progress = state.currentProgress
+    const q = state.currentQuiz
+    if (!progress || !q) return
+    if (progress.currentQuestionIndex >= q.questions.length - 1) return
+    useQuizStore.setState({
+      currentProgress: {
+        ...progress,
+        currentQuestionIndex: progress.currentQuestionIndex + 1,
+      },
+    })
+  }, [])
+
+  const handleSubmitConfirm = useCallback(async () => {
+    setShowSubmitDialog(false)
+    await submitQuiz(courseId, [])
+    navigate(`/courses/${courseId}/lessons/${lessonId}/quiz/results`)
+  }, [submitQuiz, courseId, lessonId, navigate])
+
+  const handleSubmitClick = useCallback(() => {
+    const state = useQuizStore.getState()
+    const progress = state.currentProgress
+    const q = state.currentQuiz
+    if (!progress || !q) return
+
+    // Count unanswered questions
+    const answeredCount = q.questions.filter(
+      question => {
+        const answer = progress.answers[question.id]
+        return answer !== undefined && answer !== ''
+      }
+    ).length
+    const unansweredCount = q.questions.length - answeredCount
+
+    if (unansweredCount > 0) {
+      setShowSubmitDialog(true)
+    } else {
+      handleSubmitConfirm()
+    }
+  }, [handleSubmitConfirm])
 
   // ---------------------------------------------------------------------------
   // Loading state
@@ -183,6 +250,18 @@ export function Quiz() {
       ? (currentProgress.answers[currentQuestionId] as string | undefined)
       : undefined
 
+    const isFirstQuestion = currentProgress.currentQuestionIndex === 0
+    const isLastQuestion =
+      currentProgress.currentQuestionIndex === currentQuiz.questions.length - 1
+    const totalQuestions = currentQuiz.questions.length
+    const answeredCount = currentQuiz.questions.filter(
+      q => {
+        const a = currentProgress.answers[q.id]
+        return a !== undefined && a !== ''
+      }
+    ).length
+    const unansweredCount = totalQuestions - answeredCount
+
     return (
       <div className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm">
         <QuizHeader quiz={currentQuiz} progress={currentProgress} />
@@ -198,6 +277,63 @@ export function Quiz() {
             No question found at index {currentProgress.currentQuestionIndex}
           </div>
         )}
+
+        {/* Navigation footer */}
+        <nav
+          aria-label="Quiz navigation"
+          className="mt-6 flex items-center justify-between gap-3"
+        >
+          <Button
+            variant="outline"
+            className="rounded-xl min-h-[44px]"
+            disabled={isFirstQuestion}
+            onClick={handlePrevQuestion}
+          >
+            <ChevronLeft className="size-4 mr-1" aria-hidden="true" />
+            Previous
+          </Button>
+
+          <div className="flex gap-3">
+            {!isLastQuestion && (
+              <Button
+                variant="outline"
+                className="rounded-xl min-h-[44px]"
+                onClick={handleNextQuestion}
+              >
+                Next
+                <ChevronRight className="size-4 ml-1" aria-hidden="true" />
+              </Button>
+            )}
+            {isLastQuestion && (
+              <Button
+                className="bg-brand text-brand-foreground rounded-xl min-h-[44px]"
+                onClick={handleSubmitClick}
+              >
+                Submit Quiz
+              </Button>
+            )}
+          </div>
+        </nav>
+
+        {/* Confirmation dialog for unanswered questions */}
+        <AlertDialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Submit quiz?</AlertDialogTitle>
+              <AlertDialogDescription>
+                You have {unansweredCount} unanswered{' '}
+                {unansweredCount === 1 ? 'question' : 'questions'}. Submit anyway?
+                Unanswered questions will be scored as incorrect.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Continue Reviewing</AlertDialogCancel>
+              <AlertDialogAction onClick={handleSubmitConfirm}>
+                Submit Anyway
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     )
   }

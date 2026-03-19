@@ -47,7 +47,7 @@ export function QuizResults() {
   }
 
   // Loading state
-  if (isLoading || !lastAttempt) {
+  if (isLoading || !lastAttempt || !currentQuiz) {
     return (
       <div className="py-6">
         <div
