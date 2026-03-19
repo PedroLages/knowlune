@@ -208,8 +208,8 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 13: Navigate and Control Quiz Flow
   # ──────────────────────────────────────────────────
-  epic-13: backlog
-  13-1-navigate-between-questions: backlog
+  epic-13: in-progress
+  13-1-navigate-between-questions: in-progress
   13-2-mark-questions-for-review: backlog
   13-3-pause-and-resume-quiz: backlog
   13-4-unlimited-quiz-retakes: backlog
