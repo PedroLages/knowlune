@@ -66,8 +66,10 @@ export function Courses() {
 
     async function loadCourseMetrics() {
       try {
-        const sessions = await db.studySessions.toArray()
+        const rawSessions = await db.studySessions.toArray()
         if (ignore) return
+        // Filter out corrupted sessions with invalid courseId before grouping
+        const sessions = rawSessions.filter(s => typeof s.courseId === 'string' && s.courseId)
         const sessionsByCourse = new Map<string, typeof sessions>()
         for (const s of sessions) {
           const arr = sessionsByCourse.get(s.courseId) ?? []

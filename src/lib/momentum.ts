@@ -20,14 +20,30 @@ export function getMomentumTier(score: number): MomentumTier {
   return 'cold'
 }
 
+/** Guard: skip corrupted sessions that would produce NaN in date/math ops */
+function isValidSession(s: StudySession): boolean {
+  if (typeof s.courseId !== 'string' || !s.courseId) return false
+  if (!s.startTime || isNaN(new Date(s.startTime).getTime())) return false
+  if (typeof s.duration !== 'number' || !isFinite(s.duration) || s.duration < 0) return false
+  return true
+}
+
 export function calculateMomentumScore(input: MomentumInput): MomentumScore {
   const { completionPercent, sessions } = input
   const now = Date.now()
 
+  // Filter out corrupted sessions before any date parsing
+  const validSessions = sessions.filter(isValidSession)
+  if (validSessions.length < sessions.length) {
+    console.warn(
+      `[Momentum] Skipped ${sessions.length - validSessions.length} corrupted session(s) for course ${input.courseId}`
+    )
+  }
+
   // Recency score: 0 days = 100, 14+ days = 0
   let recencyScore = 0
-  if (sessions.length > 0) {
-    const latestMs = sessions.reduce((max, s) => {
+  if (validSessions.length > 0) {
+    const latestMs = validSessions.reduce((max, s) => {
       const t = new Date(s.startTime).getTime()
       return t > max ? t : max
     }, 0)
@@ -40,7 +56,7 @@ export function calculateMomentumScore(input: MomentumInput): MomentumScore {
 
   // Frequency score: sessions in last 30 days (10/month = max)
   const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000
-  const sessionsInLast30Days = sessions.filter(
+  const sessionsInLast30Days = validSessions.filter(
     s => new Date(s.startTime).getTime() >= thirtyDaysAgo
   ).length
   const frequencyScore = Math.min(100, sessionsInLast30Days * 10)
