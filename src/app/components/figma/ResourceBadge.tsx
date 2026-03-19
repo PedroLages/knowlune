@@ -5,27 +5,27 @@ const config: Record<ResourceType, { icon: typeof Video; label: string; color: s
   video: {
     icon: Video,
     label: 'Video',
-    color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+    color: 'bg-resource-video-bg text-resource-video',
   },
   pdf: {
     icon: FileText,
     label: 'PDF',
-    color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+    color: 'bg-resource-pdf-bg text-resource-pdf',
   },
   audio: {
     icon: Music,
     label: 'Audio',
-    color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+    color: 'bg-resource-audio-bg text-resource-audio',
   },
   image: {
     icon: Image,
     label: 'Image',
-    color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+    color: 'bg-resource-image-bg text-resource-image',
   },
   markdown: {
     icon: FileCode,
     label: 'Notes',
-    color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+    color: 'bg-resource-notes-bg text-resource-notes',
   },
 }
 
@@ -36,13 +36,16 @@ interface ResourceBadgeProps {
 
 export function ResourceBadge({ type, count }: ResourceBadgeProps) {
   const { icon: Icon, label, color } = config[type]
+  const text = count !== undefined ? `${count} ${label}${count !== 1 ? 's' : ''}` : label
 
   return (
     <span
+      role="status"
+      aria-label={text}
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${color}`}
     >
-      <Icon className="h-3 w-3" />
-      {count !== undefined ? `${count} ${label}${count !== 1 ? 's' : ''}` : label}
+      <Icon className="h-3 w-3" aria-hidden="true" />
+      {text}
     </span>
   )
 }

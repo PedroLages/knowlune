@@ -5,7 +5,6 @@ import { db } from '@/db'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { calculateQuizScore } from '@/lib/scoring'
 import { toastError } from '@/lib/toastHelpers'
-import type { Module } from '@/data/types'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 
 interface QuizState {
@@ -17,11 +16,13 @@ interface QuizState {
 
   startQuiz: (lessonId: string) => Promise<void>
   submitAnswer: (questionId: string, answer: string | string[]) => void
-  submitQuiz: (courseId: string, modules: Module[]) => Promise<void>
+  submitQuiz: (courseId: string) => Promise<void>
   retakeQuiz: (lessonId: string) => Promise<void>
   loadAttempts: (quizId: string) => Promise<void>
   resumeQuiz: () => void
   clearQuiz: () => void
+  goToNextQuestion: () => void
+  goToPrevQuestion: () => void
   toggleReviewMark: (questionId: string) => void
   clearError: () => void
 }
@@ -95,7 +96,7 @@ export const useQuizStore = create<QuizState>()(
         }))
       },
 
-      submitQuiz: async (courseId: string, modules: Module[]) => {
+      submitQuiz: async (courseId: string) => {
         const { currentQuiz, currentProgress } = get()
         if (!currentQuiz || !currentProgress) return
 
@@ -129,6 +130,8 @@ export const useQuizStore = create<QuizState>()(
           // already-persisted quiz attempt.
           if (result.passed) {
             try {
+              const course = await db.courses.get(courseId)
+              const modules = course?.modules ?? []
               await useContentProgressStore
                 .getState()
                 .setItemStatus(courseId, currentQuiz.lessonId, 'completed', modules)
@@ -176,6 +179,29 @@ export const useQuizStore = create<QuizState>()(
 
       clearQuiz: () => {
         set({ currentQuiz: null, currentProgress: null, attempts: [], error: null })
+      },
+
+      goToNextQuestion: () => {
+        const { currentProgress, currentQuiz } = get()
+        if (!currentProgress || !currentQuiz) return
+        if (currentProgress.currentQuestionIndex >= currentQuiz.questions.length - 1) return
+        set({
+          currentProgress: {
+            ...currentProgress,
+            currentQuestionIndex: currentProgress.currentQuestionIndex + 1,
+          },
+        })
+      },
+
+      goToPrevQuestion: () => {
+        const { currentProgress } = get()
+        if (!currentProgress || currentProgress.currentQuestionIndex <= 0) return
+        set({
+          currentProgress: {
+            ...currentProgress,
+            currentQuestionIndex: currentProgress.currentQuestionIndex - 1,
+          },
+        })
       },
 
       toggleReviewMark: (questionId: string) => {

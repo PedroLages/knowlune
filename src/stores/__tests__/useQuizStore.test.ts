@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act } from 'react'
 import Dexie from 'dexie'
-import type { Module } from '@/data/types'
+import type { Module, Course } from '@/data/types'
 
 // Mock persistWithRetry to run operation once (no retries).
 // Retry logic is tested in persistWithRetry's own tests.
@@ -251,7 +251,7 @@ describe('submitQuiz', () => {
     useQuizStore.getState().submitAnswer('q1', 'A')
 
     await act(async () => {
-      await useQuizStore.getState().submitQuiz('course-1', mockModules)
+      await useQuizStore.getState().submitQuiz('course-1')
     })
 
     const state = useQuizStore.getState()
@@ -269,13 +269,32 @@ describe('submitQuiz', () => {
     // Answer correctly (100% >= 70% passing)
     useQuizStore.getState().submitAnswer('q1', 'A')
 
+    // Seed course so submitQuiz can fetch modules from Dexie
+    await db.courses.add({
+      id: 'course-1',
+      title: 'Test Course',
+      shortTitle: 'TC',
+      description: '',
+      category: 'development',
+      difficulty: 'beginner',
+      totalLessons: 1,
+      totalVideos: 0,
+      totalPDFs: 0,
+      estimatedHours: 1,
+      tags: [],
+      modules: mockModules,
+      isSequential: false,
+      basePath: '/courses/course-1',
+      instructorId: 'inst-1',
+    } as Course)
+
     // Mock useContentProgressStore
     const mockSetItemStatus = vi.fn().mockResolvedValue(undefined)
     const { useContentProgressStore } = await import('@/stores/useContentProgressStore')
     useContentProgressStore.setState({ setItemStatus: mockSetItemStatus } as never)
 
     await act(async () => {
-      await useQuizStore.getState().submitQuiz('course-1', mockModules)
+      await useQuizStore.getState().submitQuiz('course-1')
     })
 
     expect(mockSetItemStatus).toHaveBeenCalledOnce()
@@ -292,7 +311,7 @@ describe('submitQuiz', () => {
     useContentProgressStore.setState({ setItemStatus: mockSetItemStatus } as never)
 
     await act(async () => {
-      await useQuizStore.getState().submitQuiz('course-1', mockModules)
+      await useQuizStore.getState().submitQuiz('course-1')
     })
 
     expect(mockSetItemStatus).not.toHaveBeenCalled()
@@ -312,7 +331,7 @@ describe('submitQuiz', () => {
     const toastWithError = toast as typeof toast & { error: ReturnType<typeof vi.fn> }
 
     await act(async () => {
-      await useQuizStore.getState().submitQuiz('course-1', mockModules)
+      await useQuizStore.getState().submitQuiz('course-1')
     })
 
     const state = useQuizStore.getState()
@@ -682,7 +701,7 @@ describe('submitQuiz — guard', () => {
   it('returns early without DB write when no active quiz', async () => {
     useQuizStore.setState({ currentQuiz: null, currentProgress: null })
     await act(async () => {
-      await useQuizStore.getState().submitQuiz('course-1', mockModules)
+      await useQuizStore.getState().submitQuiz('course-1')
     })
     const dbAttempts = await db.quizAttempts.toArray()
     expect(dbAttempts).toHaveLength(0)

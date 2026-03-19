@@ -1,9 +1,9 @@
 ---
 story_id: E12-S06
 story_name: "Calculate and Display Quiz Score"
-status: ready-for-dev
-started:
-completed:
+status: done
+started: 2026-03-19
+completed: 2026-03-19
 reviewed: false
 review_started:
 review_gates_passed: []
@@ -12,7 +12,7 @@ burn_in_validated: false
 
 # Story 12.6: Calculate and Display Quiz Score
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -189,6 +189,20 @@ The store's `submitQuiz(courseId, modules)` requires a `Module[]` array for cros
 - [Quiz page](../../src/app/pages/Quiz.tsx) — modify for Submit button
 - [AlertDialog](../../src/app/components/ui/alert-dialog.tsx) — shadcn/ui component
 - [Quiz factory](../../tests/support/fixtures/factories/quiz-factory.ts) — test data
+
+## Implementation Plan
+
+See [plan](plans/e12-s06-calculate-display-quiz-score.md) for implementation approach.
+
+## Challenges and Lessons Learned
+
+1. **Navigate during render is a React anti-pattern**: Initial implementation called `navigate()` directly in the render body for redirect logic. Code review caught this as a blocker — React 18 Strict Mode fires it twice, and concurrent rendering makes it unpredictable. Fix: Use `<Navigate>` component for declarative redirects.
+
+2. **Async handlers need error guards before navigation**: `handleSubmitConfirm` and `handleRetake` both called `navigate()` after `await storeAction()` with no try/catch. If the Dexie write fails, the user gets redirected to a page with no data. The store shows an error toast, but the component navigates away before the user sees it.
+
+3. **Playwright strict mode catches duplicate text in aria-live regions**: E2E tests using `getByText(/X of Y correct/)` resolved to 3 elements: the sr-only aria-live announcement, the visible score text, and the encouraging message. Fix: use `{ exact: true }` matching or scoped locators (`data-testid` container).
+
+4. **Responsive text sizing in SVG containers**: `text-5xl` (48px) inside a `size-24` (96px) ring overflows on mobile for "100%". Fix: `text-3xl sm:text-5xl` scales with the ring container.
 
 ## Dev Agent Record
 
