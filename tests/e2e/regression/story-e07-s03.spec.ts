@@ -62,8 +62,9 @@ async function seedAuthorityAlmostComplete(
 async function closeCompletionModal(page: import('@playwright/test').Page) {
   // The CompletionModal renders a <Button variant="outline">Close</Button>
   // The Dialog also has an X icon button with aria-label "Close"
-  // We want the explicit text button — use a data-testid-independent locator
-  await page.locator('button', { hasText: 'Close' }).first().click()
+  // Scope to the dialog to avoid matching PDF viewer toolbar buttons
+  const dialog = page.getByRole('dialog')
+  await dialog.locator('button', { hasText: 'Close' }).first().click()
 }
 
 test.describe('E07-S03: Next Course Suggestion After Completion', () => {
@@ -439,5 +440,114 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
     await expect(page).toHaveURL(/\/courses\/(confidence-reboot|6mx|operative-six)/, {
       timeout: TIMEOUTS.LONG,
     })
+  })
+
+  test('AC2: tiebreaker selects highest momentum when tag overlap counts match', async ({
+    page,
+    localStorage,
+  }) => {
+    // Mock Date.now() for deterministic recency calculations
+    await page.addInitScript(
+      ({ fixedTimestamp }) => {
+        Date.now = () => fixedTimestamp
+      },
+      { fixedTimestamp: new Date(FIXED_DATE).getTime() }
+    )
+
+    await page.goto('/')
+
+    // Both candidates share exactly 2 tags with authority (7 tags):
+    //   confidence-reboot: 'confidence', 'composure'
+    //   behavior-skills:   'influence', 'authority'
+    //
+    // Both have identical tagScore = 2/7 ≈ 0.286
+    // With equal tag overlap, momentum proxy becomes the deciding factor.
+    //
+    // confidence-reboot (EXPECTED WINNER — high momentum):
+    //   progress = 10/20 = 50%
+    //   recency  = 1 day ago → recencyScore = 1 - 1/14 ≈ 0.929
+    //   momentumProxy = (0.929 × 0.5) + (0.5 × 0.5) = 0.714
+    //   finalScore = (0.286 × 0.6) + (0.714 × 0.4) = 0.457
+    //
+    // behavior-skills (EXPECTED LOSER — low momentum):
+    //   progress = 3/13 ≈ 23%
+    //   recency  = 10 days ago → recencyScore = 1 - 10/14 ≈ 0.286
+    //   momentumProxy = (0.286 × 0.5) + (0.231 × 0.5) = 0.258
+    //   finalScore = (0.286 × 0.6) + (0.258 × 0.4) = 0.275
+    //
+    // Margin: 0.457 vs 0.275 — momentum decides the winner.
+
+    // Mark all courses except authority, confidence-reboot, and behavior-skills
+    // as 100% complete so they are excluded from candidates
+    const excludedCourseIds = ['nci-access', '6mx', 'operative-six', 'ops-manual', 'study-materials']
+    const progress: Record<string, unknown> = {}
+
+    for (const courseId of excludedCourseIds) {
+      progress[courseId] = {
+        courseId,
+        completedLessons: Array.from({ length: 1000 }, (_, i) => `${courseId}-lesson-${i + 1}`),
+        lastAccessedAt: FIXED_DATE,
+        startedAt: getRelativeDate(-30),
+        notes: {},
+      }
+    }
+
+    // Authority: N-1 lessons complete (completing the last triggers suggestion)
+    progress.authority = {
+      courseId: 'authority',
+      completedLessons: AUTHORITY_LESSONS.slice(0, 6),
+      lastWatchedLesson: AUTHORITY_LESSONS[5],
+      lastAccessedAt: FIXED_DATE,
+      startedAt: getRelativeDate(-7),
+      notes: {},
+    }
+
+    // confidence-reboot: HIGH momentum (recent + 50% progress)
+    // 20 total lessons, seed 10 as complete
+    progress['confidence-reboot'] = {
+      courseId: 'confidence-reboot',
+      completedLessons: Array.from(
+        { length: 10 },
+        (_, i) => `confidence-reboot-lesson-${String(i + 1).padStart(2, '0')}`
+      ),
+      lastAccessedAt: getRelativeDate(-1), // 1 day ago → high recency
+      startedAt: getRelativeDate(-14),
+      notes: {},
+    }
+
+    // behavior-skills: LOW momentum (old + 23% progress)
+    // 13 total lessons, seed 3 as complete
+    progress['behavior-skills'] = {
+      courseId: 'behavior-skills',
+      completedLessons: Array.from(
+        { length: 3 },
+        (_, i) => `behavior-skills-lesson-${String(i + 1).padStart(2, '0')}`
+      ),
+      lastAccessedAt: getRelativeDate(-10), // 10 days ago → low recency
+      startedAt: getRelativeDate(-30),
+      notes: {},
+    }
+
+    await localStorage.seed('course-progress', progress)
+
+    // Navigate to last lesson and complete it
+    await page.goto(LAST_LESSON_URL)
+    await page.waitForLoadState('domcontentloaded')
+
+    const markCompleteBtn = page.locator('button[aria-label="Mark lesson complete"]')
+    await markCompleteBtn.waitFor({ state: 'visible', timeout: TIMEOUTS.EXTENDED })
+    await markCompleteBtn.click()
+
+    // Close completion modal
+    await expect(page.getByText('🎉 Course Completed!')).toBeVisible({ timeout: TIMEOUTS.EXTENDED })
+    await closeCompletionModal(page)
+
+    // Suggestion card should appear
+    await expect(page.getByTestId('next-course-suggestion')).toBeVisible({ timeout: TIMEOUTS.LONG })
+
+    // Verify the suggested course is confidence-reboot (higher momentum wins)
+    const suggestionCard = page.getByTestId('next-course-suggestion')
+    const suggestedTitle = await suggestionCard.locator('h2').textContent()
+    expect(suggestedTitle?.toLowerCase()).toMatch(/(confidence|reboot)/)
   })
 })
