@@ -36,6 +36,7 @@ describe('ScoreSummary', () => {
     expect(screen.getByText('33%')).toBeInTheDocument()
     expect(screen.getByText('1 of 3 correct')).toBeInTheDocument()
     expect(screen.getByText(/Keep Going! You got 1 of 3 correct/)).toBeInTheDocument()
+    expect(screen.getByText('70% required to pass')).toBeInTheDocument()
   })
 
   it('never renders "Failed" in any state', () => {

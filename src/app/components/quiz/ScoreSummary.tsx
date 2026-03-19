@@ -112,11 +112,9 @@ export function ScoreSummary({
         )}
       </div>
 
-      {passed && (
-        <p className="text-sm text-muted-foreground">
-          {passingScore}% required to pass
-        </p>
-      )}
+      <p className="text-sm text-muted-foreground">
+        {passingScore}% required to pass
+      </p>
 
       <p className="text-sm text-muted-foreground italic">
         {getEncouragingMessage(percentage)}

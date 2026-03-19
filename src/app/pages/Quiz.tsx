@@ -332,7 +332,10 @@ export function Quiz() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Continue Reviewing</AlertDialogCancel>
-              <AlertDialogAction onClick={handleSubmitConfirm}>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={handleSubmitConfirm}
+              >
                 Submit Anyway
               </AlertDialogAction>
             </AlertDialogFooter>
