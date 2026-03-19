@@ -1,7 +1,8 @@
 # Story 2.10: Caption and Subtitle Support
 
-Status: in-progress
+Status: done
 Started: 2026-03-18
+Completed: 2026-03-18
 Reviewed: true
 review_started: 2026-03-18
 review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
