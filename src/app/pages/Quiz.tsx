@@ -49,6 +49,17 @@ function loadSavedProgress(quizId: string): QuizProgress | null {
   }
 }
 
+/** Count questions with no answer recorded */
+function countUnanswered(
+  questions: QuizType['questions'],
+  answers: Record<string, string | string[]>
+): number {
+  return questions.filter(q => {
+    const a = answers[q.id]
+    return a === undefined || a === ''
+  }).length
+}
+
 // ---------------------------------------------------------------------------
 // Quiz page
 // ---------------------------------------------------------------------------
@@ -70,6 +81,8 @@ export function Quiz() {
   const startQuiz = useQuizStore(s => s.startQuiz)
   const submitAnswer = useQuizStore(s => s.submitAnswer)
   const submitQuiz = useQuizStore(s => s.submitQuiz)
+  const goToNextQuestion = useQuizStore(s => s.goToNextQuestion)
+  const goToPrevQuestion = useQuizStore(s => s.goToPrevQuestion)
   const navigate = useNavigate()
   const [showSubmitDialog, setShowSubmitDialog] = useState(false)
 
@@ -134,35 +147,10 @@ export function Quiz() {
     localStorage.removeItem(`quiz-progress-${quiz.id}`)
   }, [quiz, savedProgress])
 
-  const handlePrevQuestion = useCallback(() => {
-    const progress = useQuizStore.getState().currentProgress
-    if (!progress || progress.currentQuestionIndex <= 0) return
-    useQuizStore.setState({
-      currentProgress: {
-        ...progress,
-        currentQuestionIndex: progress.currentQuestionIndex - 1,
-      },
-    })
-  }, [])
-
-  const handleNextQuestion = useCallback(() => {
-    const state = useQuizStore.getState()
-    const progress = state.currentProgress
-    const q = state.currentQuiz
-    if (!progress || !q) return
-    if (progress.currentQuestionIndex >= q.questions.length - 1) return
-    useQuizStore.setState({
-      currentProgress: {
-        ...progress,
-        currentQuestionIndex: progress.currentQuestionIndex + 1,
-      },
-    })
-  }, [])
-
   const handleSubmitConfirm = useCallback(async () => {
     setShowSubmitDialog(false)
     try {
-      await submitQuiz(courseId, [])
+      await submitQuiz(courseId)
       navigate(`/courses/${courseId}/lessons/${lessonId}/quiz/results`)
     } catch {
       // Store already shows error toast; stay on quiz page with answers preserved
@@ -175,16 +163,7 @@ export function Quiz() {
     const q = state.currentQuiz
     if (!progress || !q) return
 
-    // Count unanswered questions
-    const answeredCount = q.questions.filter(
-      question => {
-        const answer = progress.answers[question.id]
-        return answer !== undefined && answer !== ''
-      }
-    ).length
-    const unansweredCount = q.questions.length - answeredCount
-
-    if (unansweredCount > 0) {
+    if (countUnanswered(q.questions, progress.answers) > 0) {
       setShowSubmitDialog(true)
     } else {
       handleSubmitConfirm()
@@ -257,14 +236,7 @@ export function Quiz() {
     const isFirstQuestion = currentProgress.currentQuestionIndex === 0
     const isLastQuestion =
       currentProgress.currentQuestionIndex === currentQuiz.questions.length - 1
-    const totalQuestions = currentQuiz.questions.length
-    const answeredCount = currentQuiz.questions.filter(
-      q => {
-        const a = currentProgress.answers[q.id]
-        return a !== undefined && a !== ''
-      }
-    ).length
-    const unansweredCount = totalQuestions - answeredCount
+    const unansweredCount = countUnanswered(currentQuiz.questions, currentProgress.answers)
 
     return (
       <div className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm">
@@ -291,7 +263,7 @@ export function Quiz() {
             variant="outline"
             className="rounded-xl min-h-[44px]"
             disabled={isFirstQuestion}
-            onClick={handlePrevQuestion}
+            onClick={goToPrevQuestion}
           >
             <ChevronLeft className="size-4 mr-1" aria-hidden="true" />
             Previous
@@ -302,7 +274,7 @@ export function Quiz() {
               <Button
                 variant="outline"
                 className="rounded-xl min-h-[44px]"
-                onClick={handleNextQuestion}
+                onClick={goToNextQuestion}
               >
                 Next
                 <ChevronRight className="size-4 ml-1" aria-hidden="true" />
@@ -312,8 +284,9 @@ export function Quiz() {
               <Button
                 className="bg-brand text-brand-foreground rounded-xl min-h-[44px]"
                 onClick={handleSubmitClick}
+                disabled={isStoreLoading}
               >
-                Submit Quiz
+                {isStoreLoading ? 'Submitting…' : 'Submit Quiz'}
               </Button>
             )}
           </div>
@@ -335,8 +308,9 @@ export function Quiz() {
               <AlertDialogAction
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 onClick={handleSubmitConfirm}
+                disabled={isStoreLoading}
               >
-                Submit Anyway
+                {isStoreLoading ? 'Submitting…' : 'Submit Anyway'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

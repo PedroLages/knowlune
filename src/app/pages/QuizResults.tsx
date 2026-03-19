@@ -112,7 +112,7 @@ export function QuizResults() {
         </div>
 
         <Link
-          to={`/courses/${courseId}/${lessonId}`}
+          to={`/courses/${courseId}/lessons/${lessonId}`}
           className="text-brand hover:underline text-sm font-medium inline-flex items-center gap-1 min-h-[44px]"
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
