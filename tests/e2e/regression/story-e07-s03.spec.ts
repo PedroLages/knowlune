@@ -64,6 +64,7 @@ async function closeCompletionModal(page: import('@playwright/test').Page) {
   // The Dialog also has an X icon button with aria-label "Close"
   // Scope to the dialog to avoid matching PDF viewer toolbar buttons
   const dialog = page.getByRole('dialog')
+  await dialog.waitFor({ state: 'visible', timeout: TIMEOUTS.EXTENDED })
   await dialog.locator('button', { hasText: 'Close' }).first().click()
 }
 
@@ -427,15 +428,14 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
     const startButton = page.getByRole('button', { name: /start course/i })
     await startButton.click()
 
-    // Validate that tiebreaker logic selected a valid course
+    // Validate that scoring selected the correct winner
     // With seeded data:
-    // - confidence-reboot: tagScore=0.286, momentum=0.5, final=0.372
-    // - operative-six: tagScore=0.143, momentum≈0.706, final≈0.368
-    // - 6mx: tagScore=0.143, momentum≈0.627, final≈0.337
+    // - confidence-reboot: tagScore=0.286 (2 shared tags), momentum=0.5, final=0.372
+    // - operative-six: tagScore=0.143 (1 shared tag), momentum≈0.706, final≈0.368
+    // - 6mx: tagScore=0.143 (1 shared tag), momentum≈0.627, final≈0.337
     //
-    // Confidence-reboot wins due to higher tag overlap (2 vs 1)
-    // This validates that the 3-level tiebreaker sort works correctly
-    await expect(page).toHaveURL(/\/courses\/(confidence-reboot|6mx|operative-six)/, {
+    // Confidence-reboot wins due to higher tag overlap (2 vs 1) — primary sort, not tiebreaker
+    await expect(page).toHaveURL(/\/courses\/confidence-reboot/, {
       timeout: TIMEOUTS.LONG,
     })
   })
