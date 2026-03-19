@@ -53,6 +53,9 @@ const InterleavedReview = React.lazy(() =>
   import('./pages/InterleavedReview').then(m => ({ default: m.InterleavedReview }))
 )
 const Quiz = React.lazy(() => import('./pages/Quiz').then(m => ({ default: m.Quiz })))
+const QuizResults = React.lazy(() =>
+  import('./pages/QuizResults').then(m => ({ default: m.QuizResults }))
+)
 
 // Default exports work directly with React.lazy
 const MyClass = React.lazy(() => import('./pages/MyClass'))
@@ -131,6 +134,14 @@ export const router = createBrowserRouter([
         element: (
           <SuspensePage>
             <Quiz />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'courses/:courseId/lessons/:lessonId/quiz/results',
+        element: (
+          <SuspensePage>
+            <QuizResults />
           </SuspensePage>
         ),
       },
