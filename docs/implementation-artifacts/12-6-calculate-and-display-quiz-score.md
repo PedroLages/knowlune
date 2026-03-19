@@ -190,6 +190,10 @@ The store's `submitQuiz(courseId, modules)` requires a `Module[]` array for cros
 - [AlertDialog](../../src/app/components/ui/alert-dialog.tsx) — shadcn/ui component
 - [Quiz factory](../../tests/support/fixtures/factories/quiz-factory.ts) — test data
 
+## Implementation Plan
+
+See [plan](plans/e12-s06-calculate-display-quiz-score.md) for implementation approach.
+
 ## Dev Agent Record
 
 ### Agent Model Used
