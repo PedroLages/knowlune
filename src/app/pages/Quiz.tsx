@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { db } from '@/db'
 import type { Quiz as QuizType, QuizProgress } from '@/types/quiz'
 import { QuizProgressSchema } from '@/types/quiz'
@@ -15,7 +15,7 @@ import { QuizStartScreen } from '@/app/components/quiz/QuizStartScreen'
 import { QuizHeader } from '@/app/components/quiz/QuizHeader'
 import { QuestionDisplay } from '@/app/components/quiz/QuestionDisplay'
 import { QuestionHint } from '@/app/components/quiz/QuestionHint'
-import { Button } from '@/app/components/ui/button'
+import { QuizNavigation } from '@/app/components/quiz/QuizNavigation'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import {
   AlertDialog,
@@ -84,6 +84,7 @@ export function Quiz() {
   const submitQuiz = useQuizStore(s => s.submitQuiz)
   const goToNextQuestion = useQuizStore(s => s.goToNextQuestion)
   const goToPrevQuestion = useQuizStore(s => s.goToPrevQuestion)
+  const navigateToQuestion = useQuizStore(s => s.navigateToQuestion)
   const navigate = useNavigate()
   const [showSubmitDialog, setShowSubmitDialog] = useState(false)
   const nextBtnRef = useRef<HTMLButtonElement>(null)
@@ -161,6 +162,13 @@ export function Quiz() {
     }
   }, [submitQuiz, courseId, lessonId, navigate])
 
+  const handleQuestionClick = useCallback(
+    (index: number) => {
+      navigateToQuestion(index)
+    },
+    [navigateToQuestion]
+  )
+
   const handleSubmitClick = useCallback(() => {
     const state = useQuizStore.getState()
     const progress = state.currentProgress
@@ -237,8 +245,6 @@ export function Quiz() {
       ? (currentProgress.answers[currentQuestionId] as string | undefined)
       : undefined
 
-    const isFirstQuestion = currentProgress.currentQuestionIndex === 0
-    const isLastQuestion = currentProgress.currentQuestionIndex === currentQuiz.questions.length - 1
     const unansweredCount = countUnanswered(currentQuiz.questions, currentProgress.answers)
 
     return (
@@ -265,43 +271,15 @@ export function Quiz() {
           </div>
         )}
 
-        {/* Navigation footer */}
-        <nav aria-label="Quiz navigation" className="mt-6 flex items-center justify-between gap-3">
-          <Button
-            variant="outline"
-            className="rounded-xl min-h-[44px]"
-            disabled={isFirstQuestion}
-            onClick={goToPrevQuestion}
-          >
-            <ChevronLeft className="size-4 mr-1" aria-hidden="true" />
-            Previous
-          </Button>
-
-          <div className="flex gap-3">
-            {!isLastQuestion && (
-              <Button
-                ref={nextBtnRef}
-                variant="outline"
-                className="rounded-xl min-h-[44px]"
-                onClick={goToNextQuestion}
-              >
-                Next
-                <ChevronRight className="size-4 ml-1" aria-hidden="true" />
-              </Button>
-            )}
-            {isLastQuestion && (
-              <Button
-                ref={nextBtnRef}
-                variant="brand"
-                className="rounded-xl min-h-[44px]"
-                onClick={handleSubmitClick}
-                disabled={isStoreLoading}
-              >
-                {isStoreLoading ? 'Submitting…' : 'Submit Quiz'}
-              </Button>
-            )}
-          </div>
-        </nav>
+        <QuizNavigation
+          quiz={currentQuiz}
+          progress={currentProgress}
+          onPrevious={goToPrevQuestion}
+          onNext={goToNextQuestion}
+          onSubmit={handleSubmitClick}
+          onQuestionClick={handleQuestionClick}
+          isSubmitting={isStoreLoading}
+        />
 
         {/* Confirmation dialog for unanswered questions */}
         <AlertDialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
