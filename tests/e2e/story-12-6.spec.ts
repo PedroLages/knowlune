@@ -165,13 +165,13 @@ test.describe('E12-S06: Quiz Score Display', () => {
     await expect(page).toHaveURL(/\/quiz\/results/)
 
     // Score percentage should be visible (100%)
-    await expect(page.getByText('100%')).toBeVisible()
+    await expect(page.locator('[data-testid="main-scroll-container"]').getByText('100%')).toBeVisible()
 
-    // "X of Y correct" text
-    await expect(page.getByText(/3 of 3 correct/i)).toBeVisible()
+    // "X of Y correct" text (exact match to avoid aria-live + encouraging message)
+    await expect(page.getByText('3 of 3 correct', { exact: true })).toBeVisible()
 
     // Pass message
-    await expect(page.getByText(/Congratulations|Excellent work|Great job/i)).toBeVisible()
+    await expect(page.getByText(/Congratulations! You passed!/)).toBeVisible()
   })
 
   test('AC2: submit with unanswered shows confirmation dialog, Continue Reviewing returns', async ({ page }) => {
@@ -219,8 +219,8 @@ test.describe('E12-S06: Quiz Score Display', () => {
     // Should navigate to results
     await expect(page).toHaveURL(/\/quiz\/results/)
 
-    // Score should reflect 1 of 3 correct (33.3%)
-    await expect(page.getByText(/1 of 3 correct/i)).toBeVisible()
+    // Score should reflect 1 of 3 correct (exact match avoids aria-live + message dupes)
+    await expect(page.getByText('1 of 3 correct', { exact: true })).toBeVisible()
   })
 
   test('AC4: results page shows Retake, Review Answers, and Back to Lesson', async ({ page }) => {
@@ -263,11 +263,11 @@ test.describe('E12-S06: Quiz Score Display', () => {
     // Results page
     await expect(page).toHaveURL(/\/quiz\/results/)
 
-    // Score should show 0%
-    await expect(page.getByText(/0 of 3 correct/i)).toBeVisible()
+    // Score should show 0 of 3 (exact match avoids aria-live + message dupes)
+    await expect(page.getByText('0 of 3 correct', { exact: true })).toBeVisible()
 
     // Should show encouraging not-pass message
-    await expect(page.getByText(/Keep/i)).toBeVisible()
+    await expect(page.getByText(/Keep Going!/)).toBeVisible()
 
     // "Failed" MUST NOT appear anywhere on the page
     const bodyText = await page.locator('body').textContent()
