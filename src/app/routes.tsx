@@ -63,7 +63,7 @@ const Settings = React.lazy(() => import('./pages/Settings'))
 function PageLoader() {
   return (
     <DelayedFallback>
-      <div className="space-y-6 p-1" aria-busy="true" aria-label="Loading page">
+      <div role="status" className="space-y-6 p-1" aria-busy="true" aria-label="Loading page">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-10 w-full" />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

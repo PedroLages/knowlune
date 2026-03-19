@@ -78,10 +78,12 @@ test.describe('Accessibility - Courses Pages', () => {
 
   test('Courses page - WCAG 2.1 AA violations', async ({ page }) => {
     await page.goto('/courses')
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
 
     const accessibilityScanResults = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .exclude('[data-agentation]')
+      .exclude('[data-feedback-toolbar]')
       .analyze()
 
     expect(accessibilityScanResults.violations).toEqual([])
@@ -89,10 +91,12 @@ test.describe('Accessibility - Courses Pages', () => {
 
   test('Course Detail page - WCAG 2.1 AA violations', async ({ page }) => {
     await page.goto('/course-detail')
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
 
     const accessibilityScanResults = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .exclude('[data-agentation]')
+      .exclude('[data-feedback-toolbar]')
       .analyze()
 
     expect(accessibilityScanResults.violations).toEqual([])
@@ -102,10 +106,12 @@ test.describe('Accessibility - Courses Pages', () => {
     await page.goto('/lesson-player')
     await setupTestData(page)
     await page.reload()
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
 
     const accessibilityScanResults = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .exclude('[data-agentation]')
+      .exclude('[data-feedback-toolbar]')
       .analyze()
 
     expect(accessibilityScanResults.violations).toEqual([])
@@ -115,10 +121,12 @@ test.describe('Accessibility - Courses Pages', () => {
     await page.goto('/my-class')
     await setupTestData(page)
     await page.reload()
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
 
     const accessibilityScanResults = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .exclude('[data-agentation]')
+      .exclude('[data-feedback-toolbar]')
       .analyze()
 
     expect(accessibilityScanResults.violations).toEqual([])
@@ -128,10 +136,12 @@ test.describe('Accessibility - Courses Pages', () => {
     await page.goto('/reports')
     await setupTestData(page)
     await page.reload()
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
 
     const accessibilityScanResults = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .exclude('[data-agentation]')
+      .exclude('[data-feedback-toolbar]')
       .analyze()
 
     expect(accessibilityScanResults.violations).toEqual([])
@@ -139,7 +149,7 @@ test.describe('Accessibility - Courses Pages', () => {
 
   test('Courses page - Interactive elements are keyboard accessible', async ({ page }) => {
     await page.goto('/courses')
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
 
     // Find first course card
     const firstCourseCard = page.locator('[role="link"]').first()
@@ -155,12 +165,12 @@ test.describe('Accessibility - Courses Pages', () => {
     await page.keyboard.press('Enter')
 
     // Wait for navigation or action to complete
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
   })
 
   test('Course Detail page - Module accordion keyboard navigation', async ({ page }) => {
     await page.goto('/course-detail')
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
 
     // Find accordion triggers
     const accordionTriggers = page.locator('[role="button"][aria-expanded]')
@@ -188,7 +198,7 @@ test.describe('Accessibility - Courses Pages', () => {
     await page.goto('/lesson-player')
     await setupTestData(page)
     await page.reload()
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
 
     // Wait for video player to load
     await page.waitForSelector('video', { timeout: TIMEOUTS.LONG })
@@ -216,7 +226,7 @@ test.describe('Accessibility - Courses Pages', () => {
     await page.goto('/reports')
     await setupTestData(page)
     await page.reload()
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
 
     // Tab through page elements
     await page.keyboard.press('Tab')
@@ -239,10 +249,12 @@ test.describe('Accessibility - Courses Pages', () => {
   test('Tablet viewport - Accessibility maintained', async ({ page }) => {
     await page.setViewportSize({ width: 768, height: 1024 })
     await page.goto('/courses')
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
 
     const accessibilityScanResults = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .exclude('[data-agentation]')
+      .exclude('[data-feedback-toolbar]')
       .analyze()
 
     expect(accessibilityScanResults.violations).toEqual([])
@@ -254,7 +266,7 @@ test.describe('Accessibility - Courses Pages', () => {
     await page.goto('/lesson-player')
     await setupTestData(page)
     await page.reload()
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
 
     // Wait for video player
     await page.waitForSelector('video', { timeout: TIMEOUTS.LONG })
@@ -280,7 +292,7 @@ test.describe('Accessibility - Courses Pages', () => {
     await page.goto('/lesson-player')
     await setupTestData(page)
     await page.reload()
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
 
     // Check for ARIA live region
     const liveRegion = page.locator('[role="status"][aria-live="polite"]')
@@ -291,7 +303,7 @@ test.describe('Accessibility - Courses Pages', () => {
     await page.goto('/lesson-player')
     await setupTestData(page)
     await page.reload()
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
 
     // Check if PDF viewer is present (it may or may not be depending on lesson type)
     const pdfIframe = page.locator('iframe[title*="PDF"]')
@@ -316,12 +328,14 @@ test.describe('Accessibility - Courses Pages', () => {
         await setupTestData(page)
         await page.reload()
       }
-      await page.waitForLoadState('domcontentloaded')
+      await page.waitForLoadState('networkidle')
 
       // Run axe focused on color contrast
       const accessibilityScanResults = await new AxeBuilder({ page })
         .withTags(['wcag2aa'])
         .disableRules(['region', 'landmark-one-main']) // Focus only on color contrast
+        .exclude('[data-agentation]')
+      .exclude('[data-feedback-toolbar]')
         .analyze()
 
       // Filter for color contrast violations

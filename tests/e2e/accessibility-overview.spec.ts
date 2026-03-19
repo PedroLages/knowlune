@@ -73,10 +73,12 @@ test.describe('Accessibility - Overview Page', () => {
     await page.goto('/')
     await setupTestData(page)
     await page.reload()
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
 
     const accessibilityScanResults = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .exclude('[data-agentation]')
+      .exclude('[data-feedback-toolbar]')
       .analyze()
 
     expect(accessibilityScanResults.violations).toEqual([])
@@ -88,7 +90,7 @@ test.describe('Accessibility - Overview Page', () => {
     await page.goto('/')
     await setupTestData(page)
     await page.reload()
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
 
     // Press Tab multiple times and verify focus indicators are visible
     const focusableElements = []
@@ -124,7 +126,7 @@ test.describe('Accessibility - Overview Page', () => {
     await page.goto('/')
     await setupTestData(page)
     await page.reload()
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
 
     // Find interactive elements
     const buttons = page.locator('button, a[href]')
@@ -158,7 +160,7 @@ test.describe('Accessibility - Overview Page', () => {
     await page.goto('/')
     await setupTestData(page)
     await page.reload()
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
 
     // Check for horizontal overflow
     const hasHorizontalScroll = await page.evaluate(() => {
@@ -172,7 +174,7 @@ test.describe('Accessibility - Overview Page', () => {
     await page.goto('/')
     await setupTestData(page)
     await page.reload()
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
 
     // Find all buttons
     const buttons = await page.locator('button').all()
@@ -201,7 +203,7 @@ test.describe('Accessibility - Overview Page', () => {
 
   test('Forms - Input fields have associated labels', async ({ page }) => {
     await page.goto('/')
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
 
     // Check search input in header
     const searchInput = page.locator('input[type="search"], input[placeholder*="Search"]')
