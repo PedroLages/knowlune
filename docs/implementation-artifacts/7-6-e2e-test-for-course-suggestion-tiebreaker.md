@@ -55,15 +55,15 @@ See [plan](plans/e07-s06-plan.md) for implementation approach.
 
 Before requesting `/review-story`, verify:
 
-- [ ] All changes committed (`git status` clean)
-- [ ] No error swallowing — catch blocks log AND surface errors
-- [ ] useEffect hooks have cleanup functions (ignore flags for async, event listener removal)
-- [ ] No optimistic UI updates before persistence — state updates after DB write succeeds
-- [ ] Type guards on all dynamic lookups (e.g., `LABELS[type]` when type can be empty)
-- [ ] E2E afterEach cleanup uses `await` (not fire-and-forget)
-- [ ] Date handling uses `toLocaleDateString('sv-SE')` pattern (not `toISOString().split('T')[0]`)
-- [ ] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
-- [ ] If story calls external APIs: CSP allowlist configured (see engineering-patterns.md § CSP Configuration)
+- [x] All changes committed (`git status` clean)
+- N/A No error swallowing — test-only story, no catch blocks
+- N/A useEffect hooks — test-only story, no React components
+- N/A No optimistic UI updates — test-only story, no state management
+- N/A Type guards on dynamic lookups — test-only story
+- [x] E2E afterEach cleanup uses `await` (not fire-and-forget)
+- N/A Date handling — uses `getRelativeDate()` helper from test-time.ts
+- [x] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
+- N/A No external API calls in this story
 
 ## Design Review Feedback
 

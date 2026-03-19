@@ -355,16 +355,14 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
 
     await page.goto('/')
 
-    // Seed 3 courses with identical tag overlap (1 tag each) but different momentum
-    // to validate tiebreaker logic
+    // Seed 3 courses with different tag overlap and momentum to validate scoring
     //
-    // All candidates share 1 tag with authority:
-    // - confidence-reboot: 1 tag ('confidence'), low momentum (old recency)
-    // - operative-six: 1 tag ('influence'), medium momentum
-    // - 6mx: 1 tag ('influence'), high momentum (recent recency)
+    // Tag overlap with authority (7 tags):
+    // - confidence-reboot: 2 tags ('confidence', 'composure'), tagScore = 2/7 = 0.286
+    // - operative-six: 1 tag ('influence'), tagScore = 1/7 = 0.143
+    // - 6mx: 1 tag ('influence'), tagScore = 1/7 = 0.143
     //
-    // All have same tagScore = 1/7 = 0.143
-    // Tiebreaker should rank by momentum proxy (recency * 0.5 + progress * 0.5)
+    // confidence-reboot wins by primary sort (higher tagScore), not tiebreaker
 
     const progress: Record<string, unknown> = {
       authority: {
@@ -476,14 +474,10 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
     // Margin: 0.457 vs 0.275 — momentum decides the winner.
 
     // Mark all courses except authority, confidence-reboot, and behavior-skills-breakthrough
-    // as 100% complete so they are excluded from candidates
-    const excludedCourseIds = [
-      'nci-access',
-      '6mx',
-      'operative-six',
-      'ops-manual',
-      'study-materials',
-    ]
+    // as 100% complete so they are excluded from candidates.
+    // Derived from ALL_COURSE_IDS to avoid breakage when new courses are added.
+    const candidateIds = ['authority', 'confidence-reboot', 'behavior-skills-breakthrough']
+    const excludedCourseIds = ALL_COURSE_IDS.filter(id => !candidateIds.includes(id))
     const progress: Record<string, unknown> = {}
 
     for (const courseId of excludedCourseIds) {
