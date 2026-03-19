@@ -31,11 +31,7 @@ export function QuizActions({
       </Button>
 
       {!isLast && (
-        <Button
-          variant="outline"
-          className="rounded-xl min-h-[44px]"
-          onClick={onNext}
-        >
+        <Button variant="outline" className="rounded-xl min-h-[44px]" onClick={onNext}>
           Next
           <ChevronRight className="size-4 ml-1" aria-hidden="true" />
         </Button>

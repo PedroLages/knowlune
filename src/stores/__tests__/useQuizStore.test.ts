@@ -275,7 +275,7 @@ describe('submitQuiz', () => {
       title: 'Test Course',
       shortTitle: 'TC',
       description: '',
-      category: 'development',
+      category: 'operative-training',
       difficulty: 'beginner',
       totalLessons: 1,
       totalVideos: 0,
@@ -757,9 +757,36 @@ describe('navigateToQuestion', () => {
     title: 'Nav Quiz',
     description: '',
     questions: [
-      { id: 'q1', order: 1, type: 'multiple-choice' as const, text: 'Q1', options: ['A'], correctAnswer: 'A', explanation: '', points: 1 },
-      { id: 'q2', order: 2, type: 'multiple-choice' as const, text: 'Q2', options: ['A'], correctAnswer: 'A', explanation: '', points: 1 },
-      { id: 'q3', order: 3, type: 'multiple-choice' as const, text: 'Q3', options: ['A'], correctAnswer: 'A', explanation: '', points: 1 },
+      {
+        id: 'q1',
+        order: 1,
+        type: 'multiple-choice' as const,
+        text: 'Q1',
+        options: ['A'],
+        correctAnswer: 'A',
+        explanation: '',
+        points: 1,
+      },
+      {
+        id: 'q2',
+        order: 2,
+        type: 'multiple-choice' as const,
+        text: 'Q2',
+        options: ['A'],
+        correctAnswer: 'A',
+        explanation: '',
+        points: 1,
+      },
+      {
+        id: 'q3',
+        order: 3,
+        type: 'multiple-choice' as const,
+        text: 'Q3',
+        options: ['A'],
+        correctAnswer: 'A',
+        explanation: '',
+        points: 1,
+      },
     ],
     timeLimit: null,
     passingScore: 70,
@@ -777,13 +804,19 @@ describe('navigateToQuestion', () => {
   })
 
   it('is a no-op when index < 0', () => {
-    useQuizStore.setState({ currentQuiz: baseQuiz, currentProgress: { ...baseProgress, currentQuestionIndex: 1 } })
+    useQuizStore.setState({
+      currentQuiz: baseQuiz,
+      currentProgress: { ...baseProgress, currentQuestionIndex: 1 },
+    })
     useQuizStore.getState().navigateToQuestion(-1)
     expect(useQuizStore.getState().currentProgress?.currentQuestionIndex).toBe(1)
   })
 
   it('is a no-op when index >= questions.length', () => {
-    useQuizStore.setState({ currentQuiz: baseQuiz, currentProgress: { ...baseProgress, currentQuestionIndex: 1 } })
+    useQuizStore.setState({
+      currentQuiz: baseQuiz,
+      currentProgress: { ...baseProgress, currentQuestionIndex: 1 },
+    })
     useQuizStore.getState().navigateToQuestion(3)
     expect(useQuizStore.getState().currentProgress?.currentQuestionIndex).toBe(1)
   })

@@ -29,13 +29,7 @@ describe('QuestionGrid', () => {
   })
 
   it('answered questions get answered class (bg-brand-soft)', () => {
-    render(
-      <QuestionGrid
-        {...defaultProps}
-        answers={{ q1: 'A', q2: '' }}
-        currentIndex={2}
-      />
-    )
+    render(<QuestionGrid {...defaultProps} answers={{ q1: 'A', q2: '' }} currentIndex={2} />)
     // q1 answered — has bg-brand-soft
     expect(screen.getByLabelText('Question 1').className).toContain('bg-brand-soft')
     // q2 empty string — treated as unanswered

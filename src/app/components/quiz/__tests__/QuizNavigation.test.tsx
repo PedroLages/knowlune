@@ -1,7 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { QuizNavigation } from '../QuizNavigation'
-import { makeQuiz, makeQuestion, makeProgress } from '../../../../../tests/support/fixtures/factories/quiz-factory'
+import {
+  makeQuiz,
+  makeQuestion,
+  makeProgress,
+} from '../../../../../tests/support/fixtures/factories/quiz-factory'
 
 const q1 = makeQuestion({ id: 'q1', order: 1 })
 const q2 = makeQuestion({ id: 'q2', order: 2 })
