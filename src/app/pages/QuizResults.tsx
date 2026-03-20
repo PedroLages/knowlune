@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { useParams, Navigate, Link } from 'react-router'
+import { useParams, useNavigate, Navigate, Link } from 'react-router'
 import { ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -10,6 +10,7 @@ import {
 } from '@/stores/useQuizStore'
 import { ScoreSummary } from '@/app/components/quiz/ScoreSummary'
 import { QuestionBreakdown } from '@/app/components/quiz/QuestionBreakdown'
+import { AreasForGrowth } from '@/app/components/quiz/AreasForGrowth'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
 
@@ -21,6 +22,7 @@ export function QuizResults() {
   const isLoading = useQuizStore(selectIsLoading)
   const loadAttempts = useQuizStore(s => s.loadAttempts)
   const retakeQuiz = useQuizStore(s => s.retakeQuiz)
+  const navigate = useNavigate()
 
   const [attemptsLoaded, setAttemptsLoaded] = useState(false)
 
@@ -38,14 +40,31 @@ export function QuizResults() {
     [lastAttempt]
   )
 
+  const incorrectItems = useMemo(() => {
+    if (!lastAttempt || !currentQuiz) return []
+    return lastAttempt.answers
+      .filter(a => !a.isCorrect)
+      .map(a => {
+        const question = currentQuiz.questions.find(q => q.id === a.questionId)
+        const correctAnswer = question?.correctAnswer
+        return {
+          questionId: a.questionId,
+          questionText: question?.text ?? 'Unknown question',
+          correctAnswer: Array.isArray(correctAnswer)
+            ? `All of: ${correctAnswer.join(', ')}`
+            : correctAnswer ?? 'N/A',
+        }
+      })
+  }, [lastAttempt, currentQuiz])
+
   const handleRetake = useCallback(async () => {
     try {
       await retakeQuiz(lessonId)
-      window.location.href = `/courses/${courseId}/lessons/${lessonId}/quiz`
+      navigate(`/courses/${courseId}/lessons/${lessonId}/quiz`)
     } catch {
       // Store shows error toast internally
     }
-  }, [retakeQuiz, lessonId, courseId])
+  }, [retakeQuiz, lessonId, courseId, navigate])
 
   const handleReviewAnswers = useCallback(() => {
     toast.info('Answer review is coming in a future update.')
@@ -100,6 +119,8 @@ export function QuizResults() {
           answers={lastAttempt.answers}
           questions={currentQuiz.questions}
         />
+
+        <AreasForGrowth incorrectItems={incorrectItems} />
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
           <Button
