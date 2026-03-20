@@ -19,8 +19,8 @@ export function ReviewSummary({
   return (
     <div className="mt-3" aria-label="Questions marked for review">
       <p className="text-sm font-medium mb-1.5">
-        {markedForReview.length}{' '}
-        {markedForReview.length === 1 ? 'question' : 'questions'} marked for review:
+        {markedForReview.length} {markedForReview.length === 1 ? 'question' : 'questions'} marked
+        for review:
       </p>
       <ul className="flex flex-wrap gap-2" role="list">
         {markedIndices.map(i => (

@@ -8,7 +8,11 @@ const questionOrder = ['q1', 'q2', 'q3', 'q4']
 describe('ReviewSummary', () => {
   it('returns null when markedForReview is empty', () => {
     const { container } = render(
-      <ReviewSummary markedForReview={[]} questionOrder={questionOrder} onJumpToQuestion={vi.fn()} />
+      <ReviewSummary
+        markedForReview={[]}
+        questionOrder={questionOrder}
+        onJumpToQuestion={vi.fn()}
+      />
     )
     expect(container.firstChild).toBeNull()
   })
