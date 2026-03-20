@@ -69,7 +69,7 @@ describe('QuestionBreakdown', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it('truncates long question text', async () => {
+  it('renders full question text (CSS truncation handles overflow)', async () => {
     const user = userEvent.setup()
     const longQuestions = [
       {
@@ -85,9 +85,8 @@ describe('QuestionBreakdown', () => {
     render(<QuestionBreakdown answers={singleAnswer} questions={longQuestions} />)
     await user.click(screen.getByRole('button', { name: /question breakdown/i }))
 
-    // The displayed text should end with an ellipsis
-    const textElement = screen.getByText(/\u2026$/)
-    expect(textElement).toBeInTheDocument()
+    // Full text is in the DOM; CSS `truncate` class handles visual overflow
+    expect(screen.getByText(longQuestions[0].text)).toBeInTheDocument()
   })
 
   it('displays points for each question', async () => {

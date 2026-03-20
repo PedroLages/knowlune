@@ -21,11 +21,6 @@ interface QuestionBreakdownProps {
   }>
 }
 
-function truncateText(text: string, maxLength = 50): string {
-  if (text.length <= maxLength) return text
-  return text.slice(0, maxLength).trimEnd() + '\u2026'
-}
-
 export function QuestionBreakdown({
   answers,
   questions,
@@ -36,7 +31,10 @@ export function QuestionBreakdown({
     return null
   }
 
-  // Match questions to answers and sort by question order
+  // Match questions to answers and sort by canonical question order.
+  // This intentionally shows the original authoring order, not any
+  // per-attempt shuffle order. Threading shuffle order through
+  // QuizAttempt would be a larger change suited for a future story.
   const rows = questions
     .map((question) => {
       const answer = answers.find((a) => a.questionId === question.id)
@@ -86,20 +84,22 @@ export function QuestionBreakdown({
                 'bg-card'
               )}
             >
-              <span className="text-sm font-medium text-muted-foreground w-6 shrink-0">
-                {row.question.order}
+              <span className="text-sm font-medium text-muted-foreground w-8 shrink-0">
+                Q{row.question.order}
               </span>
               <span className="text-sm text-foreground flex-1 truncate" title={row.question.text}>
-                {truncateText(row.question.text)}
+                {row.question.text}
               </span>
               {row.answer.isCorrect ? (
                 <CheckCircle2
                   className="size-5 text-success shrink-0"
+                  role="img"
                   aria-label="Correct"
                 />
               ) : (
                 <XCircle
                   className="size-5 text-destructive shrink-0"
+                  role="img"
                   aria-label="Incorrect"
                 />
               )}
