@@ -9,6 +9,7 @@ import {
   selectIsLoading,
 } from '@/stores/useQuizStore'
 import { ScoreSummary } from '@/app/components/quiz/ScoreSummary'
+import { QuestionBreakdown } from '@/app/components/quiz/QuestionBreakdown'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
 
@@ -93,6 +94,11 @@ export function QuizResults() {
           passed={lastAttempt.passed}
           passingScore={currentQuiz.passingScore}
           timeSpent={lastAttempt.timeSpent}
+        />
+
+        <QuestionBreakdown
+          answers={lastAttempt.answers}
+          questions={currentQuiz.questions}
         />
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
