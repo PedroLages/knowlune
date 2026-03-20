@@ -4,8 +4,8 @@ story_name: "Mark Questions For Review"
 status: in-progress
 started: 2026-03-20
 completed:
-reviewed: false
-review_started:
+reviewed: in-progress
+review_started: 2026-03-20
 review_gates_passed: []
 burn_in_validated: false
 ---
@@ -177,4 +177,8 @@ Pending — run /review-story to populate.
 
 ## Challenges and Lessons Learned
 
-Story started 2026-03-20. To be populated after implementation.
+1. **Stacked branch rebase pain**: E13-S02 was branched from E13-S01 (pre-rebase). When E13-S01 was rebased and merged to main, E13-S02 inherited all old E13-S01 commits, causing extensive conflicts during rebase. Lesson: branch new stories from main unless using dedicated stacked PR tooling.
+
+2. **ScoreSummary evolution conflict**: Main had evolved ScoreSummary with a tier system (EXCELLENT/PASSED/NEEDS REVIEW/NEEDS WORK) while E13-S02 branch still had the older simpler version. Resolved by keeping main's improved tier approach. Lesson: check for upstream UI enhancements before rebasing.
+
+3. **Pre-existing state layer**: `QuizProgress.markedForReview` and `toggleReviewMark` store action were already in place from E13-S01's type definitions, making the E13-S02 implementation focused purely on UI components (MarkForReview, ReviewSummary) and integration.
