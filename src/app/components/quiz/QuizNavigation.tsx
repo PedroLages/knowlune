@@ -36,6 +36,7 @@ export function QuizNavigation({
         answers={progress.answers}
         questionOrder={progress.questionOrder}
         currentIndex={progress.currentQuestionIndex}
+        markedForReview={progress.markedForReview}
         onQuestionClick={onQuestionClick}
       />
     </nav>

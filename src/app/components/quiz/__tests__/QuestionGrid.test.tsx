@@ -8,6 +8,7 @@ const defaultProps = {
   answers: {},
   questionOrder: ['q1', 'q2', 'q3'],
   currentIndex: 0,
+  markedForReview: [],
   onQuestionClick: vi.fn(),
 }
 
@@ -53,5 +54,33 @@ describe('QuestionGrid', () => {
 
     await userEvent.click(screen.getByLabelText('Question 1'))
     expect(onQuestionClick).toHaveBeenCalledWith(0)
+  })
+
+  describe('review indicator', () => {
+    it('renders a Bookmark icon for marked questions', () => {
+      render(<QuestionGrid {...defaultProps} markedForReview={['q2']} />)
+      // q2 is marked — its button aria-label includes "marked for review"
+      expect(screen.getByLabelText('Question 2, marked for review')).toBeInTheDocument()
+    })
+
+    it('does not render Bookmark icon for unmarked questions', () => {
+      render(<QuestionGrid {...defaultProps} markedForReview={['q2']} />)
+      expect(screen.getByLabelText('Question 1')).toBeInTheDocument()
+      expect(screen.getByLabelText('Question 3')).toBeInTheDocument()
+    })
+
+    it('aria-label includes "marked for review" when question is marked', () => {
+      render(<QuestionGrid {...defaultProps} markedForReview={['q1', 'q3']} />)
+      expect(screen.getByLabelText('Question 1, marked for review')).toBeInTheDocument()
+      expect(screen.getByLabelText('Question 2')).toBeInTheDocument()
+      expect(screen.getByLabelText('Question 3, marked for review')).toBeInTheDocument()
+    })
+
+    it('shows no indicators when markedForReview is empty', () => {
+      render(<QuestionGrid {...defaultProps} markedForReview={[]} />)
+      expect(screen.getByLabelText('Question 1')).toBeInTheDocument()
+      expect(screen.getByLabelText('Question 2')).toBeInTheDocument()
+      expect(screen.getByLabelText('Question 3')).toBeInTheDocument()
+    })
   })
 })

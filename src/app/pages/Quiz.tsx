@@ -16,6 +16,8 @@ import { QuizHeader } from '@/app/components/quiz/QuizHeader'
 import { QuestionDisplay } from '@/app/components/quiz/QuestionDisplay'
 import { QuestionHint } from '@/app/components/quiz/QuestionHint'
 import { QuizNavigation } from '@/app/components/quiz/QuizNavigation'
+import { MarkForReview } from '@/app/components/quiz/MarkForReview'
+import { ReviewSummary } from '@/app/components/quiz/ReviewSummary'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import {
   AlertDialog,
@@ -85,6 +87,7 @@ export function Quiz() {
   const goToNextQuestion = useQuizStore(s => s.goToNextQuestion)
   const goToPrevQuestion = useQuizStore(s => s.goToPrevQuestion)
   const navigateToQuestion = useQuizStore(s => s.navigateToQuestion)
+  const toggleReviewMark = useQuizStore(s => s.toggleReviewMark)
   const navigate = useNavigate()
   const [showSubmitDialog, setShowSubmitDialog] = useState(false)
   const nextBtnRef = useRef<HTMLButtonElement>(null)
@@ -272,6 +275,14 @@ export function Quiz() {
           </div>
         )}
 
+        {currentQuestionId && (
+          <MarkForReview
+            questionId={currentQuestionId}
+            isMarked={currentProgress.markedForReview.includes(currentQuestionId)}
+            onToggle={() => toggleReviewMark(currentQuestionId)}
+          />
+        )}
+
         <QuizNavigation
           quiz={currentQuiz}
           progress={currentProgress}
@@ -292,6 +303,14 @@ export function Quiz() {
                 {unansweredCount === 1 ? 'question' : 'questions'}. Submit anyway? Unanswered
                 questions will be scored as incorrect.
               </AlertDialogDescription>
+              <ReviewSummary
+                markedForReview={currentProgress.markedForReview}
+                questionOrder={currentProgress.questionOrder}
+                onJumpToQuestion={idx => {
+                  navigateToQuestion(idx)
+                  setShowSubmitDialog(false)
+                }}
+              />
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Continue Reviewing</AlertDialogCancel>

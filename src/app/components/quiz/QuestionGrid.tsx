@@ -1,3 +1,4 @@
+import { Bookmark } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 
 interface QuestionGridProps {
@@ -5,6 +6,7 @@ interface QuestionGridProps {
   answers: Record<string, string | string[]>
   questionOrder: string[]
   currentIndex: number
+  markedForReview: string[]
   onQuestionClick: (index: number) => void
 }
 
@@ -13,6 +15,7 @@ export function QuestionGrid({
   answers,
   questionOrder,
   currentIndex,
+  markedForReview,
   onQuestionClick,
 }: QuestionGridProps) {
   return (
@@ -23,15 +26,16 @@ export function QuestionGrid({
         const isAnswered =
           a !== undefined && a !== '' && !(Array.isArray(a) && a.length === 0)
         const isCurrent = i === currentIndex
+        const isMarked = questionId ? markedForReview.includes(questionId) : false
 
         return (
           <button
             key={i}
             onClick={() => onQuestionClick(i)}
-            aria-label={`Question ${i + 1}`}
+            aria-label={`Question ${i + 1}${isMarked ? ', marked for review' : ''}`}
             aria-current={isCurrent ? 'step' : undefined}
             className={cn(
-              'flex items-center justify-center size-11 rounded-full text-sm font-medium',
+              'relative flex items-center justify-center size-11 rounded-full text-sm font-medium',
               isCurrent
                 ? 'bg-brand text-brand-foreground'
                 : isAnswered
@@ -40,6 +44,11 @@ export function QuestionGrid({
             )}
           >
             {i + 1}
+            {isMarked && (
+              <span className="absolute -top-1 -right-1" aria-hidden="true">
+                <Bookmark className="size-3 fill-warning text-warning" />
+              </span>
+            )}
           </button>
         )
       })}

@@ -44,4 +44,16 @@ describe('QuizNavigation', () => {
     expect(screen.getByLabelText('Question 2')).toBeInTheDocument()
     expect(screen.getByLabelText('Question 3')).toBeInTheDocument()
   })
+
+  it('passes markedForReview from progress to QuestionGrid', () => {
+    const progressWithMarked = makeProgress('quiz-1', {
+      questionOrder: ['q1', 'q2', 'q3'],
+      currentQuestionIndex: 0,
+      markedForReview: ['q2'],
+    })
+    render(<QuizNavigation {...defaultProps} progress={progressWithMarked} />)
+    expect(screen.getByLabelText('Question 2, marked for review')).toBeInTheDocument()
+    expect(screen.getByLabelText('Question 1')).toBeInTheDocument()
+    expect(screen.getByLabelText('Question 3')).toBeInTheDocument()
+  })
 })
