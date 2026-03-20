@@ -393,7 +393,6 @@ Finish story {story_id}:
 5. Commit the archive: "chore: archive {story_id} spec to regression"
 6. Push: git push -u origin HEAD
 7. Create PR via: gh pr create --title "feat({story_id}): [story name]" --body "[summary of changes, verification table]"
-8. git checkout main && git pull
 
 Output the PR URL on its own line as: PR_URL: <url>
 """
@@ -684,6 +683,16 @@ async def run_review_fix_session(
                     f"FINISH incomplete after retry: {', '.join(still_missing)}"
                 )
 
+    # Return to main for next story (after verification passes on feature branch)
+    subprocess.run(
+        ["git", "checkout", "main"],
+        capture_output=True, cwd=PROJECT_DIR,
+    )
+    subprocess.run(
+        ["git", "pull", "--ff-only"],
+        capture_output=True, cwd=PROJECT_DIR,
+    )
+
     return result, all_text, total_cost
 
 
@@ -772,6 +781,12 @@ async def run_story(story: StoryInfo, config: RunConfig) -> StoryResult:
     except Exception as e:
         result.error = f"{type(e).__name__}: {e}"
         log.error(f"[{story.key}] Unexpected error at {result.phase_reached}: {e}")
+    finally:
+        # Always return to main for next story, even on failure
+        subprocess.run(
+            ["git", "checkout", "main"],
+            capture_output=True, cwd=PROJECT_DIR,
+        )
 
     result.duration_secs = time.monotonic() - start_time
     return result
