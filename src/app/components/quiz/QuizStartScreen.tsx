@@ -39,7 +39,7 @@ export function QuizStartScreen({ quiz, savedProgress, onStart, onResume }: Quiz
           {questionCount} {questionLabel}
         </span>
         <span className="bg-muted text-muted-foreground rounded-full px-3 py-1 text-sm">
-          {quiz.timeLimit !== null ? `${quiz.timeLimit} min` : 'Untimed'}
+          {quiz.timeLimit != null ? `${quiz.timeLimit} min` : 'Untimed'}
         </span>
         <span className="bg-muted text-muted-foreground rounded-full px-3 py-1 text-sm">
           {quiz.passingScore}% to pass

@@ -58,4 +58,11 @@ describe('QuizActions', () => {
     await userEvent.click(screen.getByRole('button', { name: /submit quiz/i }))
     expect(onSubmit).toHaveBeenCalledOnce()
   })
+
+  it('shows "Submitting..." and disables button when isSubmitting is true', () => {
+    renderActions({ isLast: true, isSubmitting: true })
+    const btn = screen.getByRole('button', { name: /submitting/i })
+    expect(btn).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /submit quiz/i })).not.toBeInTheDocument()
+  })
 })

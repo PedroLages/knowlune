@@ -206,6 +206,7 @@ export const useQuizStore = create<QuizState>()(
       },
 
       navigateToQuestion: (index: number) => {
+        if (!Number.isInteger(index)) return
         const { currentProgress, currentQuiz } = get()
         if (!currentProgress || !currentQuiz) return
         if (!Number.isFinite(index) || index < 0 || index >= currentQuiz.questions.length) return
@@ -235,6 +236,32 @@ export const useQuizStore = create<QuizState>()(
         currentProgress: state.currentProgress,
         currentQuiz: state.currentQuiz,
       }),
+      onRehydrateStorage: () => state => {
+        if (!state?.currentProgress || !state?.currentQuiz) return
+        const maxIndex = state.currentQuiz.questions.length - 1
+        if (maxIndex < 0) {
+          state.currentProgress = null
+          return
+        }
+        // Ensure markedForReview exists (pre-E13-S02 persisted state may lack it)
+        if (!Array.isArray(state.currentProgress.markedForReview)) {
+          state.currentProgress = {
+            ...state.currentProgress,
+            markedForReview: [],
+          }
+        }
+        if (state.currentProgress.currentQuestionIndex > maxIndex) {
+          state.currentProgress = {
+            ...state.currentProgress,
+            currentQuestionIndex: maxIndex,
+          }
+        } else if (state.currentProgress.currentQuestionIndex < 0) {
+          state.currentProgress = {
+            ...state.currentProgress,
+            currentQuestionIndex: 0,
+          }
+        }
+      },
     }
   )
 )

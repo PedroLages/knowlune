@@ -272,3 +272,14 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M2: `parseTime` returns NaN for garbled timestamps without validation -- NaN propagates to cues
 - M3: Track `key` uses array index -- React may reuse DOM element without updating src on caption replacement
 - Positive: Thorough blob URL lifecycle management, clean cancellation pattern, good separation of concerns (VideoPlayer stays presentational)
+
+## E13-S02: Mark Questions for Review
+- H1: Submit dialog gate only opens on unanswered > 0 -- skips ReviewSummary when all answered but some marked
+- H2: ReviewSummary count uses `markedForReview.length` but buttons use filtered `markedIndices.length` -- count/button mismatch on orphaned IDs
+- H3 (RECURRING): MarkForReview touch target ~20px tall, needs `min-h-[44px]`
+- H4: Bookmark icon `fill-warning` CSS class ineffective on Lucide SVG -- needs `fill="currentColor"` JSX prop
+- M1: `onCheckedChange` type mismatch -- `() => void` assigned where `(boolean | 'indeterminate') => void` expected
+- M2 (RECURRING): Manual IDB seeding in E2E spec instead of shared helper
+- M3: `aria-label` on plain `<div>` in ReviewSummary -- needs `role="region"` or `<section>`
+- M4: ReviewSummary jump buttons lack `min-w-[44px]`
+- Positive: Clean component decomposition, solid ARIA (aria-current="step", dynamic aria-labels), defensive store guards, correct array answer handling in QuestionGrid

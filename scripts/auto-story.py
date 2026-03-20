@@ -393,7 +393,6 @@ Finish story {story_id}:
 5. Commit the archive: "chore: archive {story_id} spec to regression"
 6. Push: git push -u origin HEAD
 7. Create PR via: gh pr create --title "feat({story_id}): [story name]" --body "[summary of changes, verification table]"
-8. git checkout main && git pull
 
 Output the PR URL on its own line as: PR_URL: <url>
 """
@@ -515,6 +514,28 @@ def write_progress(story_key: str, phase: str, detail: str = "") -> None:
     log.info(line)
     with open(PROGRESS_FILE, "a") as f:
         f.write(line + "\n")
+
+
+def _checkout_main_and_pull(force: bool = False) -> None:
+    """Switch to main and pull latest. Logs warnings on failure instead of crashing."""
+    checkout_cmd = ["git", "checkout"]
+    if force:
+        checkout_cmd.append("-f")
+    checkout_cmd.append("main")
+
+    checkout = subprocess.run(
+        checkout_cmd, capture_output=True, text=True, cwd=PROJECT_DIR,
+    )
+    if checkout.returncode != 0:
+        log.warning(f"git checkout main failed: {checkout.stderr.strip()}")
+        return  # Don't attempt pull if checkout failed
+
+    pull = subprocess.run(
+        ["git", "pull", "--ff-only"],
+        capture_output=True, text=True, cwd=PROJECT_DIR,
+    )
+    if pull.returncode != 0:
+        log.warning(f"git pull --ff-only failed (main diverged?): {pull.stderr.strip()}")
 
 
 async def collect_response(
@@ -684,6 +705,9 @@ async def run_review_fix_session(
                     f"FINISH incomplete after retry: {', '.join(still_missing)}"
                 )
 
+    # Return to main for next story (runs after verify_finish on feature branch)
+    _checkout_main_and_pull()
+
     return result, all_text, total_cost
 
 
@@ -772,6 +796,10 @@ async def run_story(story: StoryInfo, config: RunConfig) -> StoryResult:
     except Exception as e:
         result.error = f"{type(e).__name__}: {e}"
         log.error(f"[{story.key}] Unexpected error at {result.phase_reached}: {e}")
+    finally:
+        # Always return to main for next story, even on failure.
+        # Uses -f to handle dirty trees left by LLM (last line of defense).
+        _checkout_main_and_pull(force=True)
 
     result.duration_secs = time.monotonic() - start_time
     return result

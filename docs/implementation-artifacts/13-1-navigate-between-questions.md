@@ -16,6 +16,7 @@ review_gates_passed:
   - design-review
   - code-review
   - code-review-testing
+  - web-design-guidelines
 burn_in_validated: false
 ---
 
@@ -165,19 +166,35 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-Re-review 2026-03-20: All 9 ACs pass. 1 high (RadioGroup controlled/uncontrolled warning — fixed), 3 medium (aria-current="step" — fixed, Submit Quiz aria-label — fixed, "undefined min" in QuizStartScreen — out of scope). Report: docs/reviews/design/design-review-2026-03-20-e13-s01.md
+Re-reviewed 2026-03-20. Report: `docs/reviews/design/design-review-2026-03-20-E13-S01-rerun.md`
+
+- **B1**: Current bubble contrast fails in dark mode (2.91:1 vs 4.5:1 required) — needs `dark:text-[#1a1b26]`
+- **H1**: Bubble buttons lack hover/focus-visible styles
+- **H2**: Submit Quiz hover flashes near-white in dark mode (`hover:bg-primary/90` overrides `bg-brand`)
+- **H3**: RadioGroup controlled/uncontrolled warning on navigation (`value` flips undefined→string)
+- **M1**: "undefined min" in start screen time badge
+- **M2**: Mobile column stack centering looks ragged on longer quizzes
 
 ## Code Review Feedback
 
-Re-review 2026-03-20: 0 blockers, 4 high (array answer bug — fixed, size-8 shorthand — fixed, bubble sizing conflict — fixed, layout justify-between — fixed), 3 medium (silent fallback logging — fixed, pass-through callback — removed, explicit length guard — fixed). Report: docs/reviews/code/code-review-2026-03-20-E13-S01.md
+Re-reviewed 2026-03-20. Reports:
+- Code: `docs/reviews/code/code-review-2026-03-20-E13-S01-rerun.md`
+- Testing: `docs/reviews/code/code-review-testing-2026-03-20-E13-S01-rerun.md`
+- Edge cases: `docs/reviews/code/edge-case-review-2026-03-20-E13-S01-rerun.md`
 
-Edge case review: 9 findings, all addressed via code review fixes. Report: docs/reviews/code/edge-case-review-2026-03-20-e13-s01.md
-
-Test coverage: 5/5 ACs covered (100%), 0 blockers. Report: docs/reviews/code/code-review-testing-2026-03-20-e13-s01.md
+**Architecture**: Clean component decomposition, solid accessibility foundation, defensive store guards.
+**High findings**: `w-8 h-8` → `size-8` (Tailwind v4), multi-select answer detection incomplete, manual IDB seeding in E2E spec.
+**Testing**: 4/4 ACs covered. Gaps: `isSubmitting` prop untested, `QuizNavigation` boundary wiring untested.
+**Edge cases**: `navigateToQuestion` accepts NaN/floats (bypasses guards), empty array answers show as "answered", rehydrated index can exceed bounds.
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+Covered by design review (2026-03-20 rerun). Key compliance findings:
+- Touch targets meet 44px minimum
+- Semantic HTML: `<nav>`, `<button>`, proper ARIA attributes
+- Design tokens used correctly (no hardcoded colors)
+- Responsive layout stacks on mobile (<640px)
+- Contrast issue flagged on current-question bubble in dark mode (B1)
 
 ## Challenges and Lessons Learned
 

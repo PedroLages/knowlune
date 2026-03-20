@@ -115,8 +115,8 @@ test.describe('E13-S01: Navigate Between Questions', () => {
     await page.getByRole('button', { name: /next/i }).click()
     await expect(page.getByText(/question 3 of 3/i)).toBeVisible()
 
-    // Next button should be gone, Submit Quiz visible
-    await expect(page.getByRole('button', { name: /next/i })).not.toBeVisible()
+    // Next button should be removed from DOM, Submit Quiz visible
+    await expect(page.getByRole('button', { name: /next/i })).toHaveCount(0)
     await expect(page.getByRole('button', { name: /submit quiz/i })).toBeVisible()
 
     // Previous is still enabled
@@ -136,7 +136,7 @@ test.describe('E13-S01: Navigate Between Questions', () => {
     // Should jump to Q3
     await expect(page.getByText(/question 3 of 3/i)).toBeVisible()
 
-    // Bubble 3 has aria-current="step"
+    // Bubble 3 has aria-current="step" (sequential quiz semantics)
     await expect(page.getByRole('button', { name: 'Question 3' })).toHaveAttribute(
       'aria-current',
       'step'

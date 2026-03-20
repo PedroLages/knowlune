@@ -127,18 +127,14 @@ export function QuizResults() {
           <Button variant="outline" className="rounded-xl min-h-[44px]" onClick={handleRetake}>
             Retake Quiz
           </Button>
-          <Button
-            variant="brand"
-            className="rounded-xl min-h-[44px]"
-            onClick={handleReviewAnswers}
-          >
+          <Button variant="brand" className="rounded-xl min-h-[44px]" onClick={handleReviewAnswers}>
             Review Answers
           </Button>
         </div>
 
         <Link
           to={`/courses/${courseId}/lessons/${lessonId}`}
-          className="text-brand hover:underline text-sm font-medium inline-flex items-center gap-1 min-h-[44px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:rounded-lg"
+          className="text-brand hover:underline text-sm font-medium inline-flex items-center gap-1 min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded-sm"
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
           Back to Lesson

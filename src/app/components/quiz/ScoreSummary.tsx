@@ -72,7 +72,7 @@ function ScoreRing({ percentage, tier }: { percentage: number; tier: ScoreTier }
           fill="none"
           stroke="currentColor"
           strokeWidth={strokeWidth}
-          className="text-muted/30"
+          className="text-muted-foreground/30"
         />
         {/* Progress arc */}
         <circle
