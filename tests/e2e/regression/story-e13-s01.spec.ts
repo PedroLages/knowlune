@@ -136,10 +136,10 @@ test.describe('E13-S01: Navigate Between Questions', () => {
     // Should jump to Q3
     await expect(page.getByText(/question 3 of 3/i)).toBeVisible()
 
-    // Bubble 3 has aria-current="true"
+    // Bubble 3 has aria-current="step"
     await expect(page.getByRole('button', { name: 'Question 3' })).toHaveAttribute(
       'aria-current',
-      'true'
+      'step'
     )
   })
 

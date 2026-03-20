@@ -29,7 +29,7 @@ export function QuestionGrid({
             key={i}
             onClick={() => onQuestionClick(i)}
             aria-label={`Question ${i + 1}`}
-            aria-current={isCurrent ? 'true' : undefined}
+            aria-current={isCurrent ? 'step' : undefined}
             className={cn(
               'flex items-center justify-center size-11 rounded-full text-sm font-medium',
               isCurrent

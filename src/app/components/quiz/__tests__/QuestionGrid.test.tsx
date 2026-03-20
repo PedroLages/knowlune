@@ -21,10 +21,10 @@ describe('QuestionGrid', () => {
     expect(screen.getByLabelText('Question 3')).toBeInTheDocument()
   })
 
-  it('current question has aria-current="true", others do not', () => {
+  it('current question has aria-current="step", others do not', () => {
     render(<QuestionGrid {...defaultProps} currentIndex={1} />)
     expect(screen.getByLabelText('Question 1')).not.toHaveAttribute('aria-current')
-    expect(screen.getByLabelText('Question 2')).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByLabelText('Question 2')).toHaveAttribute('aria-current', 'step')
     expect(screen.getByLabelText('Question 3')).not.toHaveAttribute('aria-current')
   })
 
