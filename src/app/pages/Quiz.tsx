@@ -178,6 +178,23 @@ export function Quiz() {
     }
   }, [handleSubmitConfirm])
 
+  // Safety net: sync progress to per-quiz localStorage on tab close/crash.
+  // The subscribe listener in useQuizStore handles normal state changes, but
+  // beforeunload catches edge cases where the tab closes before Zustand updates.
+  const isQuizActive = currentProgress !== null && quiz !== null && currentProgress.quizId === quiz.id
+  useEffect(() => {
+    if (!isQuizActive) return
+    const handleBeforeUnload = () => {
+      const progress = useQuizStore.getState().currentProgress
+      const currentQuizState = useQuizStore.getState().currentQuiz
+      if (progress && currentQuizState) {
+        localStorage.setItem(`quiz-progress-${currentQuizState.id}`, JSON.stringify(progress))
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [isQuizActive])
+
   // ---------------------------------------------------------------------------
   // Loading state
   // ---------------------------------------------------------------------------
@@ -225,8 +242,6 @@ export function Quiz() {
   // ---------------------------------------------------------------------------
   // Active quiz state — show header + question display stub
   // ---------------------------------------------------------------------------
-  const isQuizActive = currentProgress !== null && currentProgress.quizId === quiz.id
-
   if (isQuizActive && currentQuiz) {
     // Resolve current question via questionOrder (supports shuffled order)
     const orderedId = currentProgress.questionOrder[currentProgress.currentQuestionIndex]

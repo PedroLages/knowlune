@@ -55,6 +55,7 @@ export function QuizStartScreen({ quiz, savedProgress, onStart, onResume }: Quiz
               onClick={onResume}
               variant="brand"
               className="rounded-xl h-12 px-8 w-full sm:w-auto"
+              autoFocus
             >
               Resume Quiz ({answeredCount} of {questionCount} answered)
             </Button>

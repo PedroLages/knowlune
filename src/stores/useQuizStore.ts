@@ -141,6 +141,9 @@ export const useQuizStore = create<QuizState>()(
             }
           }
 
+          // Clear per-quiz localStorage backup before clearing store state
+          localStorage.removeItem(`quiz-progress-${currentQuiz.id}`)
+
           set({
             attempts: [...get().attempts, attempt],
             currentProgress: null,
@@ -179,6 +182,8 @@ export const useQuizStore = create<QuizState>()(
       },
 
       clearQuiz: () => {
+        const quizId = get().currentProgress?.quizId
+        if (quizId) localStorage.removeItem(`quiz-progress-${quizId}`)
         set({ currentQuiz: null, currentProgress: null, attempts: [], error: null })
       },
 
@@ -265,6 +270,17 @@ export const useQuizStore = create<QuizState>()(
     }
   )
 )
+
+// Per-quiz localStorage backup — syncs currentProgress to a quiz-specific key
+// on every state change. This provides crash recovery independent of Zustand's
+// debounced persist middleware. Quiz.tsx reads this key via loadSavedProgress().
+useQuizStore.subscribe(state => {
+  const progress = state.currentProgress
+  const quiz = state.currentQuiz
+  if (progress && quiz) {
+    localStorage.setItem(`quiz-progress-${quiz.id}`, JSON.stringify(progress))
+  }
+})
 
 // Individual selectors — usage: const quiz = useQuizStore(selectCurrentQuiz)
 export const selectCurrentQuiz = (state: QuizState) => state.currentQuiz
