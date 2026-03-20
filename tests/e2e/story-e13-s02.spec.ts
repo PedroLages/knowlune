@@ -234,9 +234,7 @@ test.describe('E13-S02: Mark Questions for Review', () => {
     await expect(page.getByRole('alertdialog')).not.toBeVisible()
   })
 
-  test('AC5b: submit dialog does NOT show review summary when nothing marked', async ({
-    page,
-  }) => {
+  test('AC5b: submit dialog does NOT show review summary when nothing marked', async ({ page }) => {
     await navigateToQuiz(page)
     await startQuiz(page)
 
