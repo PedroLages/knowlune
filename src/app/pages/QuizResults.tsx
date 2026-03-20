@@ -29,7 +29,9 @@ export function QuizResults() {
   // Load attempts from Dexie on mount
   useEffect(() => {
     if (currentQuiz?.id) {
-      loadAttempts(currentQuiz.id).then(() => setAttemptsLoaded(true))
+      loadAttempts(currentQuiz.id)
+        .then(() => setAttemptsLoaded(true))
+        .catch(() => setAttemptsLoaded(true))
     }
   }, [currentQuiz?.id, loadAttempts])
 
