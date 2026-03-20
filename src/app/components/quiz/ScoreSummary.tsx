@@ -132,7 +132,9 @@ export function ScoreSummary({
 
       <p className={cn('text-lg font-medium', tier.textClass)}>{tier.message}</p>
 
-      <p className="text-sm text-muted-foreground">Completed in {formatDuration(timeSpent)}</p>
+      <p className="text-sm text-muted-foreground">
+        Completed in {formatDuration(Math.max(timeSpent, 1000))}
+      </p>
     </div>
   )
 }

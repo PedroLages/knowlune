@@ -35,21 +35,16 @@ export function AreasForGrowth({ incorrectItems }: AreasForGrowthProps) {
           Review these topics to strengthen your understanding
         </p>
 
-        <ul className="space-y-3">
-          {visibleItems.map((item, index) => (
-            <li key={item.questionId} className="flex gap-3">
-              <span className="text-sm font-medium text-muted-foreground mt-0.5 shrink-0">
-                {index + 1}.
-              </span>
-              <div className="space-y-1 min-w-0">
-                <p className="text-sm font-medium text-foreground">{item.questionText}</p>
-                <p className="text-sm text-muted-foreground">
-                  Correct answer: {item.correctAnswer}
-                </p>
-              </div>
+        <ol className="space-y-3 list-decimal list-inside">
+          {visibleItems.map((item) => (
+            <li key={item.questionId} className="space-y-1">
+              <span className="text-sm font-medium text-foreground">{item.questionText}</span>
+              <p className="text-sm text-muted-foreground ml-5">
+                Correct answer: {item.correctAnswer}
+              </p>
             </li>
           ))}
-        </ul>
+        </ol>
 
         {hasMore && !showAll && (
           <Button

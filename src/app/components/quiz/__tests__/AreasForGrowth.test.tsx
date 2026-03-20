@@ -46,13 +46,13 @@ describe('AreasForGrowth', () => {
     expect(screen.getByText('Correct answer: JavaScript XML syntax')).toBeInTheDocument()
   })
 
-  it('shows numbered list items', () => {
+  it('renders as an ordered list', () => {
     const items = makeItems(3)
-    render(<AreasForGrowth incorrectItems={items} />)
+    const { container } = render(<AreasForGrowth incorrectItems={items} />)
 
-    expect(screen.getByText('1.')).toBeInTheDocument()
-    expect(screen.getByText('2.')).toBeInTheDocument()
-    expect(screen.getByText('3.')).toBeInTheDocument()
+    const ol = container.querySelector('ol')
+    expect(ol).toBeInTheDocument()
+    expect(ol?.querySelectorAll('li')).toHaveLength(3)
   })
 
   it('shows "Show all" button when more than 5 items', () => {
