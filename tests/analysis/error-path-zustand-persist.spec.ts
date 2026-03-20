@@ -195,10 +195,6 @@ test.describe('Error Path: Zustand Persist Failure', () => {
     await expect(page).toHaveURL(/\/myclass/)
     await expect(page.getByRole('heading', { name: /my progress/i })).toBeVisible()
 
-    await page.getByRole('link', { name: /messages/i }).click()
-    await expect(page).toHaveURL(/\/messages/)
-    await expect(page.getByRole('heading', { name: /study journal/i })).toBeVisible()
-
     // All navigation should work despite storage errors
   })
 

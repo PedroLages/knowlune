@@ -13,7 +13,6 @@ import {
   goToOverview,
   goToCourses,
   goToMyClass,
-  goToMessages,
   goToReports,
   goToSettings,
 } from '../support/helpers/navigation'
@@ -39,13 +38,7 @@ test.describe('App Navigation', () => {
     await expect(page.getByRole('heading', { name: 'My Progress', level: 1 })).toBeVisible()
   })
 
-  test('should navigate to Messages page', async ({ page }) => {
-    await goToMessages(page)
-
-    await expect(page.getByRole('heading', { name: 'Study Journal', level: 1 })).toBeVisible()
-  })
-
-  test('should navigate to Reports page', async ({ page }) => {
+test('should navigate to Reports page', async ({ page }) => {
     await goToReports(page)
 
     await expect(page.getByRole('heading', { name: /reports/i })).toBeVisible()

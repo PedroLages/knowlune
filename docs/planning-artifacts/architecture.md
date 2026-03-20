@@ -139,7 +139,7 @@ The platform encompasses **93 functional requirements** organized into 13 major 
 - **Primary domain**: Full-stack web application (client-only SPA)
 - **Complexity level**: Medium-High
 - **Estimated architectural components**:
-  - 7 major page components (Overview, Courses, Lesson Player, Library, Reports, Settings, Messages)
+  - 6 major page components (Overview, Courses, Lesson Player, Library, Reports, Settings)
   - 50+ shadcn/ui components (already implemented)
   - Custom Figma components for domain-specific UI
   - IndexedDB data layer (courses, videos, notes, progress, streaks, challenges)
@@ -1282,12 +1282,12 @@ function VideoPlayerToolbar() {
 
 **Utility Files:**
 - **Rule:** camelCase for utility/library files
-- **Examples:** `progress.ts`, `studyLog.ts`, `journal.ts`, `settings.ts`, `api.ts`
+- **Examples:** `progress.ts`, `studyLog.ts`, `settings.ts`, `api.ts`
 - **Rationale:** Distinguishes utilities from components at a glance
 
 **Test Files:**
 - **Rule:** `[filename].test.ts` pattern, co-located in `__tests__/` directories
-- **Examples:** `src/lib/__tests__/progress.test.ts`, `src/lib/__tests__/journal.test.ts`
+- **Examples:** `src/lib/__tests__/progress.test.ts`, `src/lib/__tests__/studyLog.test.ts`
 - **Rationale:** Vitest convention, existing pattern in codebase
 
 **Type Definition Files:**
@@ -1405,7 +1405,6 @@ src/lib/
   ├── __tests__/          # Unit tests co-located with utilities
   ├── progress.ts         # Progress tracking utilities
   ├── studyLog.ts         # Study logging utilities
-  ├── journal.ts          # Journal/notes utilities
   ├── settings.ts         # Settings management
   ├── api.ts              # API client (future)
   └── [feature].ts        # Feature-specific utilities
@@ -1435,7 +1434,6 @@ src/app/pages/
   ├── CourseDetail.tsx
   ├── LessonPlayer.tsx
   ├── Library.tsx
-  ├── Messages.tsx
   ├── Reports.tsx
   └── Settings.tsx
 ```
@@ -2359,7 +2357,6 @@ Elearningplatformwireframes/
 │   │       ├── CourseDetail.tsx
 │   │       ├── LessonPlayer.tsx
 │   │       ├── Library.tsx
-│   │       ├── Messages.tsx
 │   │       ├── Instructors.tsx
 │   │       ├── Reports.tsx
 │   │       └── Settings.tsx
@@ -2381,11 +2378,9 @@ Elearningplatformwireframes/
 │   ├── lib/                 # Utilities & libraries
 │   │   ├── __tests__/
 │   │   │   ├── progress.test.ts
-│   │   │   ├── journal.test.ts
 │   │   │   └── studyLog.test.ts
 │   │   ├── progress.ts      # Progress tracking utilities
 │   │   ├── studyLog.ts      # Study logging utilities
-│   │   ├── journal.ts       # Journal/notes utilities
 │   │   ├── settings.ts      # Settings management
 │   │   ├── api.ts           # API client (FUTURE)
 │   │   ├── fileSystem.ts    # File System Access API (FUTURE)
