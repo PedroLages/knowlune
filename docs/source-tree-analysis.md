@@ -177,7 +177,6 @@ src/
 │       ├── CourseDetail.tsx    # Course detail (/courses/:id)
 │       ├── LessonPlayer.tsx   # Lesson player (/courses/:id/lessons/:lessonId)
 │       ├── Library.tsx         # Personal library (/library)
-│       ├── Messages.tsx        # Messages (/messages)
 │       ├── Instructors.tsx     # Instructors (/instructors)
 │       ├── Reports.tsx         # Reports (/reports)
 │       └── Settings.tsx        # Settings (/settings)
@@ -206,7 +205,6 @@ src/
 │   ├── bookmarks.ts           # Bookmark management
 │   ├── courseImport.ts        # Course folder import logic
 │   ├── fileSystem.ts          # File system access (File System Access API)
-│   ├── journal.ts             # Study journal functions
 │   ├── media.ts               # Media file utilities
 │   ├── progress.ts            # Progress tracking logic
 │   ├── settings.ts            # Settings persistence
@@ -216,7 +214,6 @@ src/
 │       ├── courseImport.test.ts
 │       ├── courseImport.integration.test.ts
 │       ├── fileSystem.test.ts
-│       ├── journal.test.ts
 │       ├── progress.test.ts
 │       ├── settings.test.ts
 │       └── studyLog.test.ts

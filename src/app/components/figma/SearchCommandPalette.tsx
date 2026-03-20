@@ -7,7 +7,6 @@ import {
   BarChart3,
   Settings,
   Info,
-  Notebook,
   FileText,
   PlayCircle,
   StickyNote,
@@ -69,14 +68,6 @@ const navigationPages: SearchItem[] = [
     group: 'Pages',
     icon: StickyNote,
     keywords: ['notes', 'bookmarks', 'library', 'resources', 'files'],
-  },
-  {
-    id: 'page-journal',
-    label: 'Journal',
-    path: '/messages',
-    group: 'Pages',
-    icon: Notebook,
-    keywords: ['journal', 'messages', 'notes'],
   },
   {
     id: 'page-about',

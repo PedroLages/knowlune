@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-LevelUp is a personal learning platform featuring progress tracking, study streaks, course management, and achievement analytics. Originally designed from Figma wireframes, it's evolved into a comprehensive learning dashboard with seven main sections: Overview, My Class, Courses, Messages, Instructors, Reports, and Settings.
+LevelUp is a personal learning platform featuring progress tracking, study streaks, course management, and achievement analytics. Originally designed from Figma wireframes, it's evolved into a comprehensive learning dashboard with six main sections: Overview, My Class, Courses, Instructors, Reports, and Settings.
 
 Original Figma design: https://www.figma.com/design/q4x6ttJD11avObQNFoeQ2D/E-learning-platform-wireframes (design foundation)
 
@@ -43,7 +43,6 @@ src/
 │       ├── Overview.tsx
 │       ├── MyClass.tsx
 │       ├── Courses.tsx
-│       ├── Messages.tsx
 │       ├── Instructors.tsx
 │       ├── Reports.tsx
 │       └── Settings.tsx

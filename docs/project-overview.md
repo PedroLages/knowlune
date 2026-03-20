@@ -105,7 +105,6 @@ The application serves as a personal course library manager where users can impo
 | Course Detail | `/courses/:id` | Individual course view with lessons |
 | Lesson Player | `/courses/:id/lessons/:lessonId` | Video player, PDF viewer, note-taking |
 | Library | `/library` | Personal course library |
-| Messages | `/messages` | Communication interface |
 | Instructors | `/instructors` | Instructor directory |
 | Reports | `/reports` | Analytics and progress reports |
 | Settings | `/settings` | App configuration and AI provider settings |

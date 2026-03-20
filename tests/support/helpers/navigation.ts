@@ -46,13 +46,6 @@ export async function goToMyClass(page: Page): Promise<void> {
     .catch(() => {})
 }
 
-/** Navigate to the Messages page. */
-export async function goToMessages(page: Page): Promise<void> {
-  await navigateAndWait(page, '/messages')
-  // Wait for page heading to confirm render
-  await page.waitForSelector('h1', { state: 'visible', timeout: 10000 }).catch(() => {})
-}
-
 /** Navigate to the Reports page. */
 export async function goToReports(page: Page): Promise<void> {
   await navigateAndWait(page, '/reports')

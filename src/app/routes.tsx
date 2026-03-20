@@ -59,7 +59,6 @@ const QuizResults = React.lazy(() =>
 
 // Default exports work directly with React.lazy
 const MyClass = React.lazy(() => import('./pages/MyClass'))
-const Messages = React.lazy(() => import('./pages/Messages'))
 const Reports = React.lazy(() => import('./pages/Reports'))
 const Settings = React.lazy(() => import('./pages/Settings'))
 
@@ -178,14 +177,6 @@ export const router = createBrowserRouter([
         element: (
           <SuspensePage>
             <ChatQA />
-          </SuspensePage>
-        ),
-      },
-      {
-        path: 'messages',
-        element: (
-          <SuspensePage>
-            <Messages />
           </SuspensePage>
         ),
       },

@@ -5,7 +5,6 @@ import {
   StickyNote,
   RotateCcw,
   ShieldCheck,
-  MessageSquare,
   Users,
   Target,
   History,
@@ -45,7 +44,6 @@ export const navigationGroups: NavigationGroup[] = [
   {
     label: 'Connect',
     items: [
-      { name: 'Messages', path: '/messages', icon: MessageSquare },
       { name: 'Instructors', path: '/instructors', icon: Users },
     ],
   },
