@@ -4,19 +4,9 @@ story_name: "Navigate Between Questions"
 status: done
 started: 2026-03-19
 completed: 2026-03-20
-reviewed: true
+reviewed: in-progress
 review_started: 2026-03-20
-review_gates_passed:
-  - build
-  - lint
-  - typecheck
-  - prettier
-  - unit-tests
-  - e2e-smoke
-  - e2e-story
-  - code-review
-  - code-review-testing
-  - design-review
+review_gates_passed: []
 burn_in_validated: false
 ---
 
