@@ -5,6 +5,7 @@ import { AreasForGrowth } from '../AreasForGrowth'
 
 const makeItems = (count: number) =>
   Array.from({ length: count }, (_, i) => ({
+    questionId: `q-${i + 1}`,
     questionText: `Question ${i + 1} text`,
     correctAnswer: `Answer ${i + 1}`,
   }))
@@ -30,8 +31,8 @@ describe('AreasForGrowth', () => {
 
   it('displays correct answer for each missed question', () => {
     const items = [
-      { questionText: 'What is React?', correctAnswer: 'A JavaScript library' },
-      { questionText: 'What is JSX?', correctAnswer: 'JavaScript XML syntax' },
+      { questionId: 'q-react', questionText: 'What is React?', correctAnswer: 'A JavaScript library' },
+      { questionId: 'q-jsx', questionText: 'What is JSX?', correctAnswer: 'JavaScript XML syntax' },
     ]
     render(<AreasForGrowth incorrectItems={items} />)
 
@@ -71,6 +72,15 @@ describe('AreasForGrowth', () => {
     expect(screen.getByText('Question 6 text')).toBeInTheDocument()
     expect(screen.getByText('Question 7 text')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Show all/i })).not.toBeInTheDocument()
+  })
+
+  it('displays pre-joined multi-select correct answer with "All of:" prefix', () => {
+    const items = [
+      { questionId: 'q-multi', questionText: 'Which are JavaScript frameworks?', correctAnswer: 'All of: React, Vue, Angular' },
+    ]
+    render(<AreasForGrowth incorrectItems={items} />)
+
+    expect(screen.getByText('Correct answer: All of: React, Vue, Angular')).toBeInTheDocument()
   })
 
   it('does not show "Show all" button when 5 or fewer items', () => {

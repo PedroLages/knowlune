@@ -57,6 +57,8 @@ export function QuizResults() {
       })
   }, [lastAttempt, currentQuiz])
 
+  const navigate = useNavigate()
+
   const handleRetake = useCallback(async () => {
     try {
       await retakeQuiz(lessonId)

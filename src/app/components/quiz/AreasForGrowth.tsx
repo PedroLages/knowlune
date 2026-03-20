@@ -6,6 +6,7 @@ const DEFAULT_VISIBLE_COUNT = 5
 
 interface AreasForGrowthProps {
   incorrectItems: Array<{
+    questionId: string
     questionText: string
     correctAnswer: string
   }>
@@ -38,7 +39,7 @@ export function AreasForGrowth({ incorrectItems }: AreasForGrowthProps) {
 
         <ol className="space-y-3">
           {visibleItems.map((item, index) => (
-            <li key={index} className="flex gap-3">
+            <li key={item.questionId} className="flex gap-3">
               <span className="text-sm font-medium text-muted-foreground mt-0.5 shrink-0">
                 {index + 1}.
               </span>
