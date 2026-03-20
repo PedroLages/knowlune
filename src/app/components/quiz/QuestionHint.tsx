@@ -5,7 +5,7 @@ interface QuestionHintProps {
 }
 
 export function QuestionHint({ hint }: QuestionHintProps) {
-  if (!hint) return null
+  if (!hint?.trim()) return null
 
   return (
     <div

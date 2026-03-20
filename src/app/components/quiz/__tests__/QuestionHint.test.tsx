@@ -13,6 +13,11 @@ describe('QuestionHint', () => {
     expect(container.innerHTML).toBe('')
   })
 
+  it('renders nothing when hint is whitespace-only', () => {
+    const { container } = render(<QuestionHint hint="   " />)
+    expect(container.innerHTML).toBe('')
+  })
+
   it('renders hint text when hint is provided', () => {
     render(<QuestionHint hint="Think about European geography." />)
 
