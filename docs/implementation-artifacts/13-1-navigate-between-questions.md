@@ -4,9 +4,18 @@ story_name: "Navigate Between Questions"
 status: done
 started: 2026-03-19
 completed: 2026-03-20
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-20
-review_gates_passed: []
+review_gates_passed:
+  - build
+  - lint
+  - type-check
+  - format-check
+  - unit-tests
+  - e2e-tests
+  - design-review
+  - code-review
+  - code-review-testing
 burn_in_validated: false
 ---
 
@@ -156,11 +165,15 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+Re-review 2026-03-20: All 9 ACs pass. 1 high (RadioGroup controlled/uncontrolled warning — fixed), 3 medium (aria-current="step" — fixed, Submit Quiz aria-label — fixed, "undefined min" in QuizStartScreen — out of scope). Report: docs/reviews/design/design-review-2026-03-20-e13-s01.md
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+Re-review 2026-03-20: 0 blockers, 4 high (array answer bug — fixed, size-8 shorthand — fixed, bubble sizing conflict — fixed, layout justify-between — fixed), 3 medium (silent fallback logging — fixed, pass-through callback — removed, explicit length guard — fixed). Report: docs/reviews/code/code-review-2026-03-20-E13-S01.md
+
+Edge case review: 9 findings, all addressed via code review fixes. Report: docs/reviews/code/edge-case-review-2026-03-20-e13-s01.md
+
+Test coverage: 5/5 ACs covered (100%), 0 blockers. Report: docs/reviews/code/code-review-testing-2026-03-20-e13-s01.md
 
 ## Web Design Guidelines Review
 
