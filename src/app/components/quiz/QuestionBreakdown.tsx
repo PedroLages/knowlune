@@ -79,7 +79,10 @@ export function QuestionBreakdown({ answers, questions }: QuestionBreakdownProps
               <span className="text-sm font-medium text-muted-foreground w-8 shrink-0">
                 Q{row.question.order}
               </span>
-              <span className="text-sm text-foreground flex-1 min-w-0 truncate" title={row.question.text}>
+              <span
+                className="text-sm text-foreground flex-1 min-w-0 truncate"
+                title={row.question.text}
+              >
                 {row.question.text}
               </span>
               {row.answer.isCorrect ? (

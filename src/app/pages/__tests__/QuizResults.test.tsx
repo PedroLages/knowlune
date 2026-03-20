@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { useQuizStore } from '@/stores/useQuizStore'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
@@ -27,6 +27,7 @@ const testQuiz: Quiz = {
       text: 'Question 1?',
       options: ['A', 'B', 'C', 'D'],
       correctAnswer: 'A',
+      explanation: 'A is the correct answer.',
       points: 10,
       order: 1,
     },
@@ -35,7 +36,9 @@ const testQuiz: Quiz = {
   allowRetakes: true,
   shuffleQuestions: false,
   shuffleAnswers: false,
-  timeLimit: 0,
+  timeLimit: null,
+  createdAt: '2026-03-20T00:00:00Z',
+  updatedAt: '2026-03-20T00:00:00Z',
 }
 
 const testAttempt: QuizAttempt = {
@@ -46,7 +49,7 @@ const testAttempt: QuizAttempt = {
   answers: [
     {
       questionId: 'q1',
-      selectedAnswer: 'A',
+      userAnswer: 'A',
       isCorrect: true,
       pointsEarned: 10,
       pointsPossible: 10,
@@ -56,6 +59,7 @@ const testAttempt: QuizAttempt = {
   percentage: 100,
   passed: true,
   timeSpent: 300000,
+  timerAccommodation: 'standard',
 }
 
 describe('QuizResults — error paths', () => {
