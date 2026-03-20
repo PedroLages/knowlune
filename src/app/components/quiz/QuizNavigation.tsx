@@ -22,7 +22,7 @@ export function QuizNavigation({
   isSubmitting,
 }: QuizNavigationProps) {
   return (
-    <nav aria-label="Quiz navigation" className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+    <nav aria-label="Quiz navigation" className="mt-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
       <QuizActions
         onPrevious={onPrevious}
         onNext={onNext}

@@ -22,9 +22,10 @@ export function QuestionGrid({
     <div className="flex flex-wrap gap-2">
       {Array.from({ length: total }, (_, i) => {
         const questionId = questionOrder[i]
-        const a = questionId ? answers[questionId] : undefined
-        const isAnswered =
-          a !== undefined && a !== '' && !(Array.isArray(a) && a.length === 0)
+        const answer = questionId ? answers[questionId] : undefined
+        const isAnswered = Array.isArray(answer)
+          ? answer.length > 0
+          : answer !== undefined && answer !== ''
         const isCurrent = i === currentIndex
         const isMarked = questionId ? markedForReview.includes(questionId) : false
 
@@ -36,8 +37,9 @@ export function QuestionGrid({
             aria-current={isCurrent ? 'step' : undefined}
             className={cn(
               'relative flex items-center justify-center size-11 rounded-full text-sm font-medium',
+              'hover:opacity-80 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
               isCurrent
-                ? 'bg-brand text-brand-foreground'
+                ? 'bg-brand text-brand-foreground dark:text-[#1a1b26]'
                 : isAnswered
                   ? 'bg-brand-soft text-brand border border-brand'
                   : 'bg-card text-muted-foreground border border-border'

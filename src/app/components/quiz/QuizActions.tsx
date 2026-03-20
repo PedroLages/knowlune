@@ -39,7 +39,7 @@ export function QuizActions({
 
       {isLast && (
         <Button
-          className="bg-brand text-brand-foreground rounded-xl min-h-[44px]"
+          className="bg-brand text-brand-foreground hover:bg-brand-hover rounded-xl min-h-[44px]"
           aria-label="Submit Quiz — ends the quiz and shows your results"
           onClick={onSubmit}
           disabled={isSubmitting}
