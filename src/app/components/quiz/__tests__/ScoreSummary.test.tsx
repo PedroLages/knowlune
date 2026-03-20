@@ -88,9 +88,44 @@ describe('ScoreSummary', () => {
     expect(liveRegion).toHaveAttribute('aria-live', 'polite')
   })
 
-  it('renders SVG score ring', () => {
-    const { container } = render(<ScoreSummary {...passProps} />)
+  it('renders SVG score ring with tier-specific color class', () => {
+    const { container } = render(<ScoreSummary {...passProps} percentage={95} />)
     expect(container.querySelector('svg')).toBeInTheDocument()
-    expect(container.querySelector('circle')).toBeInTheDocument()
+    const circles = container.querySelectorAll('circle')
+    expect(circles).toHaveLength(2)
+    // Second circle is the progress arc — should carry success color for 95%
+    expect(circles[1].getAttribute('class')).toContain('text-success')
+  })
+
+  it('ring uses warning color for NEEDS REVIEW tier', () => {
+    const { container } = render(<ScoreSummary {...failProps} percentage={55} />)
+    const circles = container.querySelectorAll('circle')
+    expect(circles[1].getAttribute('class')).toContain('text-warning')
+  })
+
+  it('ring uses destructive color for NEEDS WORK tier', () => {
+    const { container } = render(<ScoreSummary {...failProps} percentage={30} />)
+    const circles = container.querySelectorAll('circle')
+    expect(circles[1].getAttribute('class')).toContain('text-destructive')
+  })
+
+  it('exactly 90% with passed=true yields EXCELLENT, not PASSED', () => {
+    render(<ScoreSummary {...passProps} percentage={90} />)
+    expect(screen.getByText('EXCELLENT')).toBeInTheDocument()
+  })
+
+  it('89% with passed=true yields PASSED, not EXCELLENT', () => {
+    render(<ScoreSummary {...passProps} percentage={89} />)
+    expect(screen.getByText('PASSED')).toBeInTheDocument()
+  })
+
+  it('exactly 50% yields NEEDS REVIEW', () => {
+    render(<ScoreSummary {...failProps} percentage={50} />)
+    expect(screen.getByText('NEEDS REVIEW')).toBeInTheDocument()
+  })
+
+  it('49% yields NEEDS WORK', () => {
+    render(<ScoreSummary {...failProps} percentage={49} />)
+    expect(screen.getByText('NEEDS WORK')).toBeInTheDocument()
   })
 })
