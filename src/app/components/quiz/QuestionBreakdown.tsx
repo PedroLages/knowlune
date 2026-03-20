@@ -32,9 +32,10 @@ export function QuestionBreakdown({ answers, questions }: QuestionBreakdownProps
   // This intentionally shows the original authoring order, not any
   // per-attempt shuffle order. Threading shuffle order through
   // QuizAttempt would be a larger change suited for a future story.
+  const answerMap = new Map(answers.map(a => [a.questionId, a]))
   const rows = questions
     .map(question => {
-      const answer = answers.find(a => a.questionId === question.id)
+      const answer = answerMap.get(question.id)
       return answer ? { question, answer } : null
     })
     .filter(
@@ -48,8 +49,8 @@ export function QuestionBreakdown({ answers, questions }: QuestionBreakdownProps
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full text-left">
       <CollapsibleTrigger
         className={cn(
-          'flex w-full items-center justify-between rounded-xl px-4 min-h-[44px]',
-          'bg-muted hover:bg-accent transition-colors',
+          'flex w-full items-center justify-between rounded-xl px-4 py-2 min-h-[44px]',
+          'bg-muted hover:bg-accent transition-colors motion-reduce:transition-none',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
         )}
       >
@@ -78,7 +79,7 @@ export function QuestionBreakdown({ answers, questions }: QuestionBreakdownProps
               <span className="text-sm font-medium text-muted-foreground w-8 shrink-0">
                 Q{row.question.order}
               </span>
-              <span className="text-sm text-foreground flex-1 truncate" title={row.question.text}>
+              <span className="text-sm text-foreground flex-1 min-w-0 truncate" title={row.question.text}>
                 {row.question.text}
               </span>
               {row.answer.isCorrect ? (
@@ -94,7 +95,7 @@ export function QuestionBreakdown({ answers, questions }: QuestionBreakdownProps
                   aria-label="Incorrect"
                 />
               )}
-              <span className="text-sm text-muted-foreground shrink-0 w-12 text-right">
+              <span className="text-sm text-muted-foreground shrink-0 w-12 text-right tabular-nums">
                 {`${row.answer.pointsEarned}/${row.answer.pointsPossible}`}
               </span>
             </li>

@@ -77,7 +77,22 @@ describe('AreasForGrowth', () => {
 
     expect(screen.getByText('Question 6 text')).toBeInTheDocument()
     expect(screen.getByText('Question 7 text')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Show all/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Show fewer/i })).toBeInTheDocument()
+  })
+
+  it('collapses back to 5 items when "Show fewer" is clicked', async () => {
+    const user = userEvent.setup()
+    const items = makeItems(7)
+    render(<AreasForGrowth incorrectItems={items} />)
+
+    // Expand
+    await user.click(screen.getByRole('button', { name: /Show all/i }))
+    expect(screen.getByText('Question 7 text')).toBeInTheDocument()
+
+    // Collapse
+    await user.click(screen.getByRole('button', { name: /Show fewer/i }))
+    expect(screen.queryByText('Question 6 text')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Show all/i })).toBeInTheDocument()
   })
 
   it('displays pre-joined multi-select correct answer with "All of:" prefix', () => {

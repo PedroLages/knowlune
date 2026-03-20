@@ -31,7 +31,11 @@ export function QuizResults() {
     if (currentQuiz?.id) {
       loadAttempts(currentQuiz.id)
         .then(() => setAttemptsLoaded(true))
-        .catch(() => setAttemptsLoaded(true))
+        .catch((err: unknown) => {
+          console.error('[QuizResults] Failed to load attempts:', err)
+          toast.error('Could not load quiz results. Please try again.')
+          setAttemptsLoaded(true)
+        })
     }
   }, [currentQuiz?.id, loadAttempts])
 
@@ -63,8 +67,8 @@ export function QuizResults() {
     try {
       await retakeQuiz(lessonId)
       navigate(`/courses/${courseId}/lessons/${lessonId}/quiz`)
-    } catch {
-      // Store shows error toast internally
+    } catch (err: unknown) {
+      console.error('[QuizResults] Failed to retake quiz:', err)
     }
   }, [retakeQuiz, lessonId, courseId, navigate])
 
@@ -133,7 +137,7 @@ export function QuizResults() {
 
         <Link
           to={`/courses/${courseId}/lessons/${lessonId}`}
-          className="text-brand hover:underline text-sm font-medium inline-flex items-center gap-1 min-h-[44px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded-lg"
+          className="text-brand hover:underline text-sm font-medium inline-flex items-center gap-1 min-h-[44px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:rounded-lg"
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
           Back to Lesson

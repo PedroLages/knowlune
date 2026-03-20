@@ -168,11 +168,11 @@ test.describe('E12-S06: Quiz Score Display', () => {
       page.locator('[data-testid="main-scroll-container"]').getByText('100%')
     ).toBeVisible()
 
-    // "X of Y correct" text (exact match to avoid aria-live + encouraging message)
-    await expect(page.getByText('3 of 3 correct', { exact: true })).toBeVisible()
+    // "X of Y correct" subtitle (scoped to avoid matching sr-only aria-live region)
+    await expect(page.locator('p').getByText(/3 of 3 correct/)).toBeVisible()
 
-    // Pass message
-    await expect(page.getByText(/Congratulations! You passed!/)).toBeVisible()
+    // Pass message (tier redesign: EXCELLENT tier for 100%)
+    await expect(page.getByText(/mastered this material/)).toBeVisible()
   })
 
   test('AC2: submit with unanswered shows confirmation dialog, Continue Reviewing returns', async ({
@@ -222,8 +222,8 @@ test.describe('E12-S06: Quiz Score Display', () => {
     // Should navigate to results
     await expect(page).toHaveURL(/\/quiz\/results/)
 
-    // Score should reflect 1 of 3 correct (exact match avoids aria-live + message dupes)
-    await expect(page.getByText('1 of 3 correct', { exact: true })).toBeVisible()
+    // Score should reflect 1 of 3 correct (scoped to avoid matching sr-only aria-live region)
+    await expect(page.locator('p').getByText(/1 of 3 correct/)).toBeVisible()
   })
 
   test('AC4: results page shows Retake, Review Answers, and Back to Lesson', async ({ page }) => {
@@ -266,11 +266,11 @@ test.describe('E12-S06: Quiz Score Display', () => {
     // Results page
     await expect(page).toHaveURL(/\/quiz\/results/)
 
-    // Score should show 0 of 3 (exact match avoids aria-live + message dupes)
-    await expect(page.getByText('0 of 3 correct', { exact: true })).toBeVisible()
+    // Score should show 0 of 3 (scoped to avoid matching sr-only aria-live region)
+    await expect(page.locator('p').getByText(/0 of 3 correct/)).toBeVisible()
 
-    // Should show encouraging not-pass message
-    await expect(page.getByText(/Keep Going!/)).toBeVisible()
+    // Should show encouraging not-pass message (tier redesign: NEEDS WORK tier)
+    await expect(page.getByText(/Keep practicing/)).toBeVisible()
 
     // "Failed" MUST NOT appear anywhere on the page
     const bodyText = await page.locator('body').textContent()

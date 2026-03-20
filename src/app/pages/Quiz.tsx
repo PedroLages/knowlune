@@ -87,6 +87,7 @@ export function Quiz() {
   const navigate = useNavigate()
   const [showSubmitDialog, setShowSubmitDialog] = useState(false)
   const nextBtnRef = useRef<HTMLButtonElement>(null)
+  const rafRef = useRef<number>(0)
 
   // Fetch quiz from Dexie on mount
   useEffect(() => {
@@ -119,6 +120,7 @@ export function Quiz() {
     return () => {
       ignore = true
       clearError()
+      cancelAnimationFrame(rafRef.current)
     }
   }, [lessonId, clearError])
 
@@ -207,7 +209,7 @@ export function Quiz() {
         <p className="text-muted-foreground">{storeError || 'No quiz found for this lesson.'}</p>
         <Link
           to={`/courses/${courseId}`}
-          className="text-brand hover:underline mt-4 inline-flex items-center gap-1 text-sm min-h-[44px]"
+          className="text-brand hover:underline mt-4 inline-flex items-center gap-1 text-sm min-h-[44px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:rounded-lg"
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
           Back to course
@@ -250,7 +252,8 @@ export function Quiz() {
               onChange={answer => {
                 submitAnswer(currentQuestionId, answer)
                 // Auto-focus Next/Submit button after answering for quick Enter key advancement
-                requestAnimationFrame(() => nextBtnRef.current?.focus())
+                cancelAnimationFrame(rafRef.current)
+                rafRef.current = requestAnimationFrame(() => nextBtnRef.current?.focus())
               }}
               mode="active"
             />

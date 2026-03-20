@@ -46,14 +46,14 @@ export function AreasForGrowth({ incorrectItems }: AreasForGrowthProps) {
           ))}
         </ol>
 
-        {hasMore && !showAll && (
+        {hasMore && (
           <Button
             variant="ghost"
             size="sm"
             className="text-brand hover:text-brand min-h-[44px]"
-            onClick={() => setShowAll(true)}
+            onClick={() => setShowAll(prev => !prev)}
           >
-            Show all ({incorrectItems.length} items)
+            {showAll ? 'Show fewer' : `Show all (${incorrectItems.length} items)`}
           </Button>
         )}
       </div>

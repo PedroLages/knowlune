@@ -128,4 +128,24 @@ describe('ScoreSummary', () => {
     render(<ScoreSummary {...failProps} percentage={49} />)
     expect(screen.getByText('NEEDS WORK')).toBeInTheDocument()
   })
+
+  it('clamps percentage > 100 to 100 in display', () => {
+    render(<ScoreSummary {...passProps} percentage={150} />)
+    expect(screen.getByText('100')).toBeInTheDocument()
+  })
+
+  it('clamps negative percentage to 0 in display', () => {
+    render(<ScoreSummary {...failProps} percentage={-10} />)
+    expect(screen.getByText('0')).toBeInTheDocument()
+  })
+
+  it('floors timeSpent to 1s when 0ms', () => {
+    render(<ScoreSummary {...passProps} timeSpent={0} />)
+    expect(screen.getByText('Completed in 1s')).toBeInTheDocument()
+  })
+
+  it('floors timeSpent to 1s when sub-second (500ms)', () => {
+    render(<ScoreSummary {...passProps} timeSpent={500} />)
+    expect(screen.getByText('Completed in 1s')).toBeInTheDocument()
+  })
 })
