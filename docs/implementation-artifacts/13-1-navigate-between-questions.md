@@ -4,7 +4,7 @@ story_name: "Navigate Between Questions"
 status: done
 started: 2026-03-19
 completed: 2026-03-20
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-20
 review_gates_passed:
   - build
@@ -13,6 +13,10 @@ review_gates_passed:
   - format-check
   - unit-tests
   - e2e-tests
+  - design-review
+  - code-review
+  - code-review-testing
+  - web-design-guidelines
 burn_in_validated: false
 ---
 
@@ -162,15 +166,35 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+Re-reviewed 2026-03-20. Report: `docs/reviews/design/design-review-2026-03-20-E13-S01-rerun.md`
+
+- **B1**: Current bubble contrast fails in dark mode (2.91:1 vs 4.5:1 required) — needs `dark:text-[#1a1b26]`
+- **H1**: Bubble buttons lack hover/focus-visible styles
+- **H2**: Submit Quiz hover flashes near-white in dark mode (`hover:bg-primary/90` overrides `bg-brand`)
+- **H3**: RadioGroup controlled/uncontrolled warning on navigation (`value` flips undefined→string)
+- **M1**: "undefined min" in start screen time badge
+- **M2**: Mobile column stack centering looks ragged on longer quizzes
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+Re-reviewed 2026-03-20. Reports:
+- Code: `docs/reviews/code/code-review-2026-03-20-E13-S01-rerun.md`
+- Testing: `docs/reviews/code/code-review-testing-2026-03-20-E13-S01-rerun.md`
+- Edge cases: `docs/reviews/code/edge-case-review-2026-03-20-E13-S01-rerun.md`
+
+**Architecture**: Clean component decomposition, solid accessibility foundation, defensive store guards.
+**High findings**: `w-8 h-8` → `size-8` (Tailwind v4), multi-select answer detection incomplete, manual IDB seeding in E2E spec.
+**Testing**: 4/4 ACs covered. Gaps: `isSubmitting` prop untested, `QuizNavigation` boundary wiring untested.
+**Edge cases**: `navigateToQuestion` accepts NaN/floats (bypasses guards), empty array answers show as "answered", rehydrated index can exceed bounds.
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+Covered by design review (2026-03-20 rerun). Key compliance findings:
+- Touch targets meet 44px minimum
+- Semantic HTML: `<nav>`, `<button>`, proper ARIA attributes
+- Design tokens used correctly (no hardcoded colors)
+- Responsive layout stacks on mobile (<640px)
+- Contrast issue flagged on current-question bubble in dark mode (B1)
 
 ## Challenges and Lessons Learned
 
