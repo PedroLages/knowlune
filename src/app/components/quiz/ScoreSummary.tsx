@@ -19,8 +19,7 @@ type ScoreTier = {
 function getScoreTier(percentage: number, passed: boolean): ScoreTier {
   if (percentage >= 90)
     return { label: 'EXCELLENT', ringClass: 'text-success', textClass: 'text-success' }
-  if (passed)
-    return { label: 'PASSED', ringClass: 'text-brand', textClass: 'text-brand' }
+  if (passed) return { label: 'PASSED', ringClass: 'text-brand', textClass: 'text-brand' }
   if (percentage >= 50)
     return { label: 'NEEDS REVIEW', ringClass: 'text-warning', textClass: 'text-warning' }
   return { label: 'NEEDS WORK', ringClass: 'text-destructive', textClass: 'text-destructive' }
@@ -33,13 +32,7 @@ function getEncouragingMessage(percentage: number): string {
   return 'Keep practicing! Focus on the topics below.'
 }
 
-function ScoreRing({
-  percentage,
-  passed,
-}: {
-  percentage: number
-  passed: boolean
-}) {
+function ScoreRing({ percentage, passed }: { percentage: number; passed: boolean }) {
   const size = 180
   const strokeWidth = 12
   const radius = (size - strokeWidth) / 2
@@ -130,9 +123,7 @@ export function ScoreSummary({
         {getEncouragingMessage(percentage)}
       </p>
 
-      <p className="text-sm text-muted-foreground">
-        Completed in {formatDuration(timeSpent)}
-      </p>
+      <p className="text-sm text-muted-foreground">Completed in {formatDuration(timeSpent)}</p>
     </div>
   )
 }

@@ -21,7 +21,9 @@ describe('AreasForGrowth', () => {
     render(<AreasForGrowth incorrectItems={items} />)
 
     expect(screen.getByText('Areas to Review')).toBeInTheDocument()
-    expect(screen.getByText('Review these topics to strengthen your understanding')).toBeInTheDocument()
+    expect(
+      screen.getByText('Review these topics to strengthen your understanding')
+    ).toBeInTheDocument()
 
     for (const item of items) {
       expect(screen.getByText(item.questionText)).toBeInTheDocument()
@@ -31,7 +33,11 @@ describe('AreasForGrowth', () => {
 
   it('displays correct answer for each missed question', () => {
     const items = [
-      { questionId: 'q-react', questionText: 'What is React?', correctAnswer: 'A JavaScript library' },
+      {
+        questionId: 'q-react',
+        questionText: 'What is React?',
+        correctAnswer: 'A JavaScript library',
+      },
       { questionId: 'q-jsx', questionText: 'What is JSX?', correctAnswer: 'JavaScript XML syntax' },
     ]
     render(<AreasForGrowth incorrectItems={items} />)
@@ -76,7 +82,11 @@ describe('AreasForGrowth', () => {
 
   it('displays pre-joined multi-select correct answer with "All of:" prefix', () => {
     const items = [
-      { questionId: 'q-multi', questionText: 'Which are JavaScript frameworks?', correctAnswer: 'All of: React, Vue, Angular' },
+      {
+        questionId: 'q-multi',
+        questionText: 'Which are JavaScript frameworks?',
+        correctAnswer: 'All of: React, Vue, Angular',
+      },
     ]
     render(<AreasForGrowth incorrectItems={items} />)
 

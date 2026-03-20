@@ -25,10 +25,7 @@ export function AreasForGrowth({ incorrectItems }: AreasForGrowthProps) {
       <div className="bg-muted rounded-xl p-5 sm:p-6 space-y-4">
         <div className="flex items-center gap-2">
           <BookOpen className="size-5 text-brand" aria-hidden="true" />
-          <h2
-            id="areas-for-growth-heading"
-            className="text-lg font-semibold text-foreground"
-          >
+          <h2 id="areas-for-growth-heading" className="text-lg font-semibold text-foreground">
             Areas to Review
           </h2>
         </div>

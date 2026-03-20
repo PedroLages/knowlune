@@ -21,10 +21,7 @@ interface QuestionBreakdownProps {
   }>
 }
 
-export function QuestionBreakdown({
-  answers,
-  questions,
-}: QuestionBreakdownProps) {
+export function QuestionBreakdown({ answers, questions }: QuestionBreakdownProps) {
   const [isOpen, setIsOpen] = useState(false)
 
   if (answers.length === 0) {
@@ -36,17 +33,16 @@ export function QuestionBreakdown({
   // per-attempt shuffle order. Threading shuffle order through
   // QuizAttempt would be a larger change suited for a future story.
   const rows = questions
-    .map((question) => {
-      const answer = answers.find((a) => a.questionId === question.id)
+    .map(question => {
+      const answer = answers.find(a => a.questionId === question.id)
       return answer ? { question, answer } : null
     })
     .filter(
-      (row): row is { question: (typeof questions)[0]; answer: (typeof answers)[0] } =>
-        row !== null
+      (row): row is { question: (typeof questions)[0]; answer: (typeof answers)[0] } => row !== null
     )
     .sort((a, b) => a.question.order - b.question.order)
 
-  const correctCount = rows.filter((r) => r.answer.isCorrect).length
+  const correctCount = rows.filter(r => r.answer.isCorrect).length
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full text-left">
@@ -57,9 +53,7 @@ export function QuestionBreakdown({
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
         )}
       >
-        <span className="text-sm font-medium text-foreground">
-          Question Breakdown
-        </span>
+        <span className="text-sm font-medium text-foreground">Question Breakdown</span>
         <span className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">
             {correctCount}/{rows.length} correct
@@ -76,13 +70,10 @@ export function QuestionBreakdown({
 
       <CollapsibleContent>
         <ul className="mt-2 space-y-1" role="list">
-          {rows.map((row) => (
+          {rows.map(row => (
             <li
               key={row.question.id}
-              className={cn(
-                'flex items-center gap-3 rounded-xl px-4 py-2 min-h-[44px]',
-                'bg-card'
-              )}
+              className={cn('flex items-center gap-3 rounded-xl px-4 py-2 min-h-[44px]', 'bg-card')}
             >
               <span className="text-sm font-medium text-muted-foreground w-8 shrink-0">
                 Q{row.question.order}

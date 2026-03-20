@@ -61,9 +61,7 @@ describe('QuestionBreakdown', () => {
   })
 
   it('handles empty answers array gracefully', () => {
-    const { container } = render(
-      <QuestionBreakdown answers={[]} questions={questions} />
-    )
+    const { container } = render(<QuestionBreakdown answers={[]} questions={questions} />)
 
     // Should render nothing
     expect(container.firstChild).toBeNull()

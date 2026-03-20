@@ -52,7 +52,7 @@ export function QuizResults() {
           questionText: question?.text ?? 'Unknown question',
           correctAnswer: Array.isArray(correctAnswer)
             ? `All of: ${correctAnswer.join(', ')}`
-            : correctAnswer ?? 'N/A',
+            : (correctAnswer ?? 'N/A'),
         }
       })
   }, [lastAttempt, currentQuiz])
@@ -102,9 +102,7 @@ export function QuizResults() {
   return (
     <div className="py-6">
       <div className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm text-center space-y-6">
-        <h1 className="text-2xl font-bold text-foreground">
-          {currentQuiz.title} — Results
-        </h1>
+        <h1 className="text-2xl font-bold text-foreground">{currentQuiz.title} — Results</h1>
 
         <ScoreSummary
           percentage={lastAttempt.percentage}
@@ -115,19 +113,12 @@ export function QuizResults() {
           timeSpent={lastAttempt.timeSpent}
         />
 
-        <QuestionBreakdown
-          answers={lastAttempt.answers}
-          questions={currentQuiz.questions}
-        />
+        <QuestionBreakdown answers={lastAttempt.answers} questions={currentQuiz.questions} />
 
         <AreasForGrowth incorrectItems={incorrectItems} />
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-          <Button
-            variant="outline"
-            className="rounded-xl min-h-[44px]"
-            onClick={handleRetake}
-          >
+          <Button variant="outline" className="rounded-xl min-h-[44px]" onClick={handleRetake}>
             Retake Quiz
           </Button>
           <Button

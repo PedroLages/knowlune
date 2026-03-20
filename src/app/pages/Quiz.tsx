@@ -235,8 +235,7 @@ export function Quiz() {
       : undefined
 
     const isFirstQuestion = currentProgress.currentQuestionIndex === 0
-    const isLastQuestion =
-      currentProgress.currentQuestionIndex === currentQuiz.questions.length - 1
+    const isLastQuestion = currentProgress.currentQuestionIndex === currentQuiz.questions.length - 1
     const unansweredCount = countUnanswered(currentQuiz.questions, currentProgress.answers)
 
     return (
@@ -259,10 +258,7 @@ export function Quiz() {
         )}
 
         {/* Navigation footer */}
-        <nav
-          aria-label="Quiz navigation"
-          className="mt-6 flex items-center justify-between gap-3"
-        >
+        <nav aria-label="Quiz navigation" className="mt-6 flex items-center justify-between gap-3">
           <Button
             variant="outline"
             className="rounded-xl min-h-[44px]"
@@ -303,8 +299,8 @@ export function Quiz() {
               <AlertDialogTitle>Submit quiz?</AlertDialogTitle>
               <AlertDialogDescription>
                 You have {unansweredCount} unanswered{' '}
-                {unansweredCount === 1 ? 'question' : 'questions'}. Submit anyway?
-                Unanswered questions will be scored as incorrect.
+                {unansweredCount === 1 ? 'question' : 'questions'}. Submit anyway? Unanswered
+                questions will be scored as incorrect.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
