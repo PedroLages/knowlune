@@ -171,7 +171,7 @@ export function Quiz() {
     const q = state.currentQuiz
     if (!progress || !q) return
 
-    if (countUnanswered(q.questions, progress.answers) > 0) {
+    if (countUnanswered(q.questions, progress.answers) > 0 || progress.markedForReview.length > 0) {
       setShowSubmitDialog(true)
     } else {
       handleSubmitConfirm()

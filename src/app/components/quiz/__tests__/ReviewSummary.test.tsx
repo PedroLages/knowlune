@@ -78,7 +78,7 @@ describe('ReviewSummary', () => {
     expect(onJumpToQuestion).toHaveBeenCalledWith(2)
   })
 
-  it('filters out question IDs not found in questionOrder', () => {
+  it('filters out question IDs not found in questionOrder and shows correct count', () => {
     render(
       <ReviewSummary
         markedForReview={['q-unknown', 'q2']}
@@ -89,5 +89,19 @@ describe('ReviewSummary', () => {
     // Only q2 should appear since q-unknown is not in questionOrder
     expect(screen.getByRole('button', { name: 'Q2' })).toBeInTheDocument()
     expect(screen.getAllByRole('button')).toHaveLength(1)
+    // Count uses filtered markedIndices, not raw markedForReview
+    expect(screen.getByText(/1 question marked for review/i)).toBeInTheDocument()
+  })
+
+  it('has accessible group role with aria-label', () => {
+    render(
+      <ReviewSummary
+        markedForReview={['q1']}
+        questionOrder={questionOrder}
+        onJumpToQuestion={vi.fn()}
+      />
+    )
+    expect(screen.getByRole('group', { name: 'Questions marked for review' })).toBeInTheDocument()
+    expect(screen.getByRole('list')).toBeInTheDocument()
   })
 })

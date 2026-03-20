@@ -11,12 +11,12 @@ interface MarkForReviewProps {
 export function MarkForReview({ questionId, isMarked, onToggle }: MarkForReviewProps) {
   const id = `mark-review-${questionId}`
   return (
-    <div className="flex items-center gap-2 mt-4">
+    <div className="flex items-center gap-2 mt-4 min-h-[44px]">
       <Checkbox
         id={id}
         checked={isMarked}
-        onCheckedChange={onToggle}
-        aria-describedby={`${id}-label`}
+        onCheckedChange={() => onToggle()}
+        aria-labelledby={`${id}-label`}
       />
       <Label
         id={`${id}-label`}

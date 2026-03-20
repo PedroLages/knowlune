@@ -4,9 +4,18 @@ story_name: "Mark Questions For Review"
 status: in-progress
 started: 2026-03-20
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-20
-review_gates_passed: []
+review_gates_passed:
+  - build
+  - lint
+  - type-check
+  - format-check
+  - unit-tests
+  - e2e-tests
+  - design-review
+  - code-review
+  - code-review-testing
 burn_in_validated: false
 ---
 
@@ -165,15 +174,15 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-Pending — run /review-story to populate.
+See [design-review-2026-03-20-E13-S02.md](../reviews/design/design-review-2026-03-20-E13-S02.md). All blockers and high-priority findings fixed: WCAG contrast (variant="brand"), accessible name (aria-labelledby), touch targets (min-h-[44px]), bookmark indicator (solid dot badge), hardcoded color removed.
 
 ## Code Review Feedback
 
-Pending — run /review-story to populate.
+See [code-review-2026-03-20-E13-S02.md](../reviews/code/code-review-2026-03-20-E13-S02.md). All findings fixed: submit dialog now opens for marked questions (AC5 gap), ReviewSummary count uses filtered indices, rehydration guard for pre-E13-S02 state, ARIA roles added.
 
 ## Web Design Guidelines Review
 
-Pending — run /review-story to populate.
+Covered by design review and code review agents. Key improvements: variant="brand" for consistent button styling, role="group" on ReviewSummary, min-w-[44px] on jump buttons.
 
 ## Challenges and Lessons Learned
 

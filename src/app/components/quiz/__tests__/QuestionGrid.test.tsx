@@ -61,13 +61,13 @@ describe('QuestionGrid', () => {
   })
 
   describe('review indicator', () => {
-    it('renders a Bookmark icon for marked questions', () => {
+    it('renders a review indicator for marked questions', () => {
       render(<QuestionGrid {...defaultProps} markedForReview={['q2']} />)
       // q2 is marked — its button aria-label includes "marked for review"
       expect(screen.getByLabelText('Question 2, marked for review')).toBeInTheDocument()
     })
 
-    it('does not render Bookmark icon for unmarked questions', () => {
+    it('does not render review indicator for unmarked questions', () => {
       render(<QuestionGrid {...defaultProps} markedForReview={['q2']} />)
       expect(screen.getByLabelText('Question 1')).toBeInTheDocument()
       expect(screen.getByLabelText('Question 3')).toBeInTheDocument()

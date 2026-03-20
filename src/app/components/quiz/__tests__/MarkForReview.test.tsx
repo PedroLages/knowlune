@@ -40,4 +40,20 @@ describe('MarkForReview', () => {
     render(<MarkForReview {...defaultProps} />)
     expect(screen.getByText('Mark for Review')).toBeInTheDocument()
   })
+
+  it('toggles via keyboard interaction', async () => {
+    const onToggle = vi.fn()
+    render(<MarkForReview {...defaultProps} onToggle={onToggle} />)
+    // Tab to the checkbox and press Space (Radix Checkbox = button role=checkbox)
+    await userEvent.tab()
+    expect(screen.getByRole('checkbox')).toHaveFocus()
+    await userEvent.keyboard(' ')
+    expect(onToggle).toHaveBeenCalledTimes(1)
+  })
+
+  it('has accessible name via aria-labelledby', () => {
+    render(<MarkForReview {...defaultProps} />)
+    const checkbox = screen.getByRole('checkbox')
+    expect(checkbox).toHaveAttribute('aria-labelledby', 'mark-review-q1-label')
+  })
 })

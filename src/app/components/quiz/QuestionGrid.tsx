@@ -1,4 +1,3 @@
-import { Bookmark } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 
 interface QuestionGridProps {
@@ -39,7 +38,7 @@ export function QuestionGrid({
               'relative flex items-center justify-center size-11 rounded-full text-sm font-medium',
               'hover:opacity-80 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
               isCurrent
-                ? 'bg-brand text-brand-foreground dark:text-[#1a1b26]'
+                ? 'bg-brand text-brand-foreground'
                 : isAnswered
                   ? 'bg-brand-soft text-brand border border-brand'
                   : 'bg-card text-muted-foreground border border-border'
@@ -48,7 +47,7 @@ export function QuestionGrid({
             {i + 1}
             {isMarked && (
               <span className="absolute -top-1 -right-1" aria-hidden="true">
-                <Bookmark className="size-3 fill-warning text-warning" />
+                <span className="size-3 rounded-full bg-warning" />
               </span>
             )}
           </button>

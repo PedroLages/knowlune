@@ -1,33 +1,36 @@
-# Design Review: E13-S02 — Mark Questions for Review
+# Design Review Report — E13-S02: Mark Questions for Review
 
 **Review Date**: 2026-03-20
-**Reviewed By**: Claude (design-review agent via Playwright MCP)
+**Reviewed By**: Claude Code (design-review agent via Playwright MCP)
 **Story**: E13-S02 — Mark Questions for Review
-**Branch**: `feature/e13-s02-mark-questions-for-review`
-**Changed Files** (UI-relevant):
-- `src/app/components/quiz/MarkForReview.tsx`
-- `src/app/components/quiz/QuestionGrid.tsx`
-- `src/app/components/quiz/QuizActions.tsx`
-- `src/app/components/quiz/QuizNavigation.tsx`
-- `src/app/components/quiz/ReviewSummary.tsx`
-- `src/app/pages/Quiz.tsx`
+**Changed Files**:
+- `src/app/components/quiz/MarkForReview.tsx` (new)
+- `src/app/components/quiz/ReviewSummary.tsx` (new)
+- `src/app/components/quiz/QuestionGrid.tsx` (modified — review indicators)
+- `src/app/components/quiz/QuizActions.tsx` (modified — aria-label)
+- `src/app/components/quiz/QuizNavigation.tsx` (modified — passes markedForReview)
+- `src/app/pages/Quiz.tsx` (modified — integrates MarkForReview + ReviewSummary)
+
+**Affected Routes**: `/courses/:courseId/lessons/:lessonId/quiz`
+**Test Viewports**: 1440px (desktop), 640px (tablet), 375px (mobile)
 
 ---
 
 ## Executive Summary
 
-E13-S02 delivers a mark-for-review toggle, a bookmark indicator on the question navigation grid, and a ReviewSummary section in the submit confirmation dialog. The implementation is architecturally sound with excellent token hygiene, semantic HTML, and ARIA coverage. All WCAG AA contrast ratios pass. The primary issues are a bookmark fill rendering bug that makes the amber indicator invisible, a significant touch target deficiency on the "Mark for Review" checkbox row, and a minor `undefined min` display bug on the quiz start screen.
+E13-S02 adds a bookmark-based "Mark for Review" workflow to the quiz experience: a checkbox below each question, bookmark icons on the question grid, and a ReviewSummary with jump links in the submit confirmation dialog. The overall interaction model is well-conceived and the component structure is clean. Two issues require resolution before merge: a WCAG contrast failure on the Submit Quiz button in dark mode (2.91:1 vs the 4.5:1 requirement), and a missing accessible name on the Radix Checkbox that leaves screen readers without a meaningful label for the control.
 
 ---
 
 ## What Works Well
 
-- **Zero hardcoded colors** — all styling uses design tokens (`bg-brand`, `text-warning`, `bg-brand-soft`, `text-muted-foreground`, `bg-destructive`, etc.). The ESLint enforcement is clearly working.
-- **Semantic HTML and ARIA are thorough** — `nav[aria-label="Quiz navigation"]`, `role="list"` on the jump-link `<ul>`, `aria-label` on every question grid button (including the marked-for-review variant), `aria-hidden` on all decorative icons, `aria-describedby` wiring on the checkbox, `role="alertdialog"` on the submit dialog. This is well above the baseline for this codebase.
-- **All WCAG AA contrast ratios pass in dark mode** — H1 quiz title: 12.45:1, "Mark for Review" label: 7.42:1, warning amber bookmark vs card: 7.00:1, brand jump links vs dialog bg: 5.88:1.
-- **Navigation button touch targets all meet 44px minimum** — Previous, Next, Submit Quiz, and all question grid buttons verified at 44×44px across all three viewports.
-- **Responsive layout is correct** — no horizontal overflow at any viewport. Navigation stacks vertically at mobile (flex-col) and goes inline at tablet+ (sm:flex-row). Card padding correctly shifts from 16px (mobile) to 32px (tablet+).
-- **State management and interaction are correct** — mark toggle updates the checkbox, grid button aria-label, and bookmark icon atomically. The marked state persists across question navigation. The ReviewSummary conditionally renders only when marks exist.
+- **Interaction model is learner-friendly.** The bookmark icon appearing on the question grid immediately after marking is responsive and reassuring — learners get clear visual confirmation that their mark was recorded without leaving the question.
+- **QuestionGrid touch targets pass everywhere.** All question grid buttons measure exactly 44x44px at every tested viewport, satisfying the WCAG 2.5.5 minimum.
+- **ReviewSummary placement is contextually appropriate.** Surfacing marked questions inside the submit confirmation dialog — precisely when a learner is deciding whether to submit — is the right moment. It provides a low-friction escape hatch back to those questions.
+- **Dynamic aria-label on Submit Quiz button.** Switching the label to `"Submitting quiz…"` during the submitting state keeps screen reader users informed without relying on visual change alone. This is a well-considered detail.
+- **No horizontal scroll at any breakpoint.** Tested at 375px, 640px, and 1440px — no overflow.
+- **No console errors.** The page is clean at runtime.
+- **QuizNavigation responsive stacking.** `flex-col` at mobile / `sm:flex-row` at tablet and above is correct and verified.
 
 ---
 
@@ -35,132 +38,235 @@ E13-S02 delivers a mark-for-review toggle, a bookmark indicator on the question 
 
 ### Blockers (Must fix before merge)
 
-None.
+**B1 — Submit Quiz button contrast fails WCAG AA in dark mode**
+
+In dark mode, the Submit Quiz button renders white text (`rgb(255, 255, 255)`) on a medium-blue background (`rgb(139, 146, 218)`), yielding a contrast ratio of **2.91:1** — below the WCAG AA minimum of 4.5:1 for normal-weight text.
+
+- **Location**: `src/app/components/quiz/QuizActions.tsx:42`
+- **Evidence**: `submitTextColor: "rgb(255, 255, 255)"`, `submitBgColor: "rgb(139, 146, 218)"`, `submitContrast: "2.91"` (computed live)
+- **Root cause**: The button uses manual class composition (`bg-brand text-brand-foreground hover:bg-brand-hover`) instead of `variant="brand"`. The `brand-foreground` token resolves to white in dark mode, but the `bg-brand` dark-mode hue is too light for white text to pass contrast.
+- **Impact**: Learners with low vision who use dark mode cannot reliably read the most consequential action button on the quiz — the one that ends their attempt and locks in their score.
+- **Suggestion**: Replace the manual color classes with `variant="brand"` per the project's brand button variant system (see `styling.md`). The variant already handles correct dark/light foreground pairing. If a custom overrideis truly needed, verify the resulting contrast with the computed values before shipping.
+
+```tsx
+// Before
+<Button
+  className="bg-brand text-brand-foreground hover:bg-brand-hover rounded-xl min-h-[44px]"
+  ...
+>
+
+// After
+<Button
+  variant="brand"
+  className="rounded-xl min-h-[44px]"
+  ...
+>
+```
+
+---
+
+**B2 — MarkForReview checkbox has no accessible name for screen readers**
+
+The Radix UI `Checkbox` component renders as `role="checkbox" type="button"`. The native `<label htmlFor={id}>` association provides click-forwarding behavior and visual association, but because this is a button element (not `<input>`), the `htmlFor` link does not supply an accessible name. The checkbox also uses `aria-describedby` pointing to the label element, which makes the label text a *supplementary description* rather than the *primary name*. Screen readers announce the control without a name.
+
+- **Location**: `src/app/components/quiz/MarkForReview.tsx:15-20`
+- **Evidence**: Live DOM shows `aria-label: null`, `aria-labelledby: null`, `aria-describedby: "mark-review-q3-label"` on the checkbox button. Accessibility snapshot shows `checkbox ""` (empty name).
+- **Impact**: Screen reader users (NVDA, VoiceOver) hear "checkbox, unchecked" with no indication of what is being marked for review. This is a WCAG 1.3.1 (Info and Relationships) and 4.1.2 (Name, Role, Value) failure.
+- **Suggestion**: Replace `aria-describedby` with `aria-labelledby` on the `Checkbox` component. The label element already has the correct `id`. Alternatively, add an explicit `aria-label="Mark for Review"` directly on the Checkbox.
+
+```tsx
+// Before
+<Checkbox
+  id={id}
+  checked={isMarked}
+  onCheckedChange={onToggle}
+  aria-describedby={`${id}-label`}
+/>
+<Label id={`${id}-label`} htmlFor={id} ...>
+
+// After (option A — labelledby)
+<Checkbox
+  id={id}
+  checked={isMarked}
+  onCheckedChange={onToggle}
+  aria-labelledby={`${id}-label`}
+/>
+
+// After (option B — explicit label)
+<Checkbox
+  id={id}
+  checked={isMarked}
+  onCheckedChange={onToggle}
+  aria-label="Mark for Review"
+/>
+```
 
 ---
 
 ### High Priority (Should fix before merge)
 
-#### H1 — Bookmark indicator does not visually fill
+**H1 — MarkForReview touch target row is 20px tall on mobile**
 
-**Location**: `src/app/components/quiz/QuestionGrid.tsx:50`
+The MarkForReview checkbox+label row has a computed height of 20px at 375px viewport. While the label text is clickable, 20px is less than half the 44px minimum touch target height recommended by WCAG 2.5.5 and the design system. The checkbox itself is 16x16px.
 
-**Evidence**: The Lucide `<Bookmark>` SVG element has `fill="none"` as a presentational attribute on the SVG root. The CSS class `fill-warning` sets `fill: var(--warning)` on the element, but the SVG's path child inherits the `fill="none"` from the parent's presentational attribute context rather than the CSS cascade at the path level. Computed fill on both the SVG and its path resolves to `none` in the browser. Forcing `el.style.fill = 'red'` inline also failed to change the computed value, confirming the SVG structure is overriding the CSS approach.
-
-```tsx
-// Current — bookmark renders as an outline-only icon, not filled amber
-<Bookmark className="size-3 fill-warning text-warning" />
-```
-
-**Impact**: The entire semantic purpose of the bookmark indicator is to be a filled amber badge that pops visually against the question grid button. As an outline-only icon at `size-3` (12×12px), it is nearly invisible — learners relying on the visual bookmark to track flagged questions will miss it.
-
-**Suggestion**: Apply the fill directly to the SVG path via the `stroke` override pattern that Lucide provides, or use a filled variant. The simplest fix is to use `stroke="currentColor" fill="currentColor"` via an inline override, or swap to a filled icon. Two concrete options:
-
-Option A — Inline fill override:
-```tsx
-<Bookmark
-  className="size-3 text-warning"
-  fill="currentColor"
-/>
-```
-This works because `fill="currentColor"` as a JSX prop sets the presentational attribute to `currentColor`, which then inherits the CSS `color` value (`text-warning` → `--warning`).
-
-Option B — Use `BookmarkCheck` or a filled Lucide variant if one exists in the icon set.
-
----
-
-#### H2 — "Mark for Review" touch target is insufficient on mobile
-
-**Location**: `src/app/components/quiz/MarkForReview.tsx:14-29`
-
-**Evidence**: At both 375px and 1440px viewports:
-- The checkbox element itself: 16×16px
-- The label element: 126×20px
-- The parent `<div className="flex items-center gap-2 mt-4">`: 608×20px (desktop), ~316×20px (mobile)
-
-The clickable row height is only 20px — well below the 44px minimum. While the `<Label htmlFor={id}>` association means clicking the label text also toggles the checkbox (good), the combined interactive zone is still only 20px tall. On a touch device, a learner tapping the "Mark for Review" area has less than half the required target height.
-
-**Impact**: On mobile, learners wanting to flag a question for review will frequently mis-tap and either miss the control or activate an adjacent element (the quiz question answers are just above). This is a frustrating interaction for exam-style workflows where rapid flagging is expected.
-
-**Suggestion**: Wrap the entire row in a `<label>` or add `min-h-[44px]` to the outer `<div>` with `cursor-pointer`. The Label component already sets `cursor-pointer`, so extending the hit area is the primary fix:
+- **Location**: `src/app/components/quiz/MarkForReview.tsx:14` (`div` container, `mt-4`)
+- **Evidence**: `markRowHeight: 20` at 375px viewport (measured live). Checkbox reports 16x16px.
+- **Impact**: On touch devices, learners are likely to miss the tap target, especially when moving quickly through a quiz. A misfire could accidentally mark or unmark a question without the learner noticing.
+- **Suggestion**: Add `min-h-[44px]` to the container `div` and use `items-center` (already present) to vertically center. This gives the full row a proper touch target without changing the visual appearance on desktop:
 
 ```tsx
 <div className="flex items-center gap-2 mt-4 min-h-[44px]">
 ```
 
-Alternatively, add padding to the container to expand the tappable area:
+---
+
+**H2 — Bookmark indicator renders as outline-only stroke, not filled**
+
+The bookmark icon in the QuestionGrid uses `fill-warning text-warning` on the Lucide `Bookmark` SVG element. However, the Bookmark icon's internal `<path>` has an explicit `fill="none"` attribute that takes precedence over the Tailwind `fill-warning` class applied to the SVG container. The computed `fill` on the path is `none` — the icon renders as a thin amber outline stroke at `size-3` (12px).
+
+- **Location**: `src/app/components/quiz/QuestionGrid.tsx:51`
+- **Evidence**: `pathFills: [{ fill: null, computedFill: "none" }]` — the path inherits `none` not the warning fill token. The icon `svgColor` is `rgb(218, 168, 96)` (stroke only).
+- **Impact**: A 12px outlined bookmark on a 44px circle button is very small. At a glance during a timed quiz, the indicator may not be salient enough — learners might miss that a question is marked. The design intent (yellow warning indicator) is only partially achieved.
+- **Suggestion**: Use `BookmarkCheck` or ensure the Bookmark icon is explicitly filled. Lucide's `Bookmark` filled variant requires the `fill` attribute on the path, which Tailwind's `fill-*` utilities do not override when the SVG child has an explicit `fill="none"`. The most reliable fix is to use the filled variant via inline style, or switch to `BookmarkCheck` which has a visible filled state. Alternatively, wrap the icon in a small badge `span` with a solid `bg-warning` background so the indicator is visible regardless of SVG fill behavior:
+
 ```tsx
-<div className="flex items-center gap-2 mt-2 py-3">
+// Option A: solid background badge (most robust)
+<span className="absolute -top-1 -right-1 size-3 rounded-full bg-warning" aria-hidden="true" />
+
+// Option B: use style prop to force SVG fill
+<Bookmark
+  className="size-3 text-warning"
+  style={{ fill: 'currentColor' }}
+  aria-hidden="true"
+/>
 ```
+
+---
+
+**H3 — Hardcoded dark-mode color in QuestionGrid**
+
+The current question button uses `dark:text-[#1a1b26]` — a hardcoded hex value for the dark background color intended to ensure dark text on the brand-colored button.
+
+- **Location**: `src/app/components/quiz/QuestionGrid.tsx:42`
+- **Evidence**: `'bg-brand text-brand-foreground dark:text-[#1a1b26]'`
+- **Impact**: This hardcodes a specific dark theme color that will drift out of sync if the dark theme background is updated. It also triggers the project's `design-tokens/no-hardcoded-colors` ESLint rule. The intent (dark text on the brand button in dark mode) is already handled by the `brand-foreground` token in dark mode — but the live contrast measurement showed `q3TextColor: "rgb(26, 27, 38)"` which matches `#1a1b26`, suggesting the token isn't resolving to the expected value.
+- **Suggestion**: Remove `dark:text-[#1a1b26]` and rely solely on `text-brand-foreground`. If the token is resolving incorrectly in dark mode, investigate `theme.css` to ensure `--color-brand-foreground` has a proper dark-mode override. Do not patch token resolution issues with hardcoded hex values.
 
 ---
 
 ### Medium Priority (Fix when possible)
 
-#### M1 — `undefined min` renders on quiz start screen when timeLimit is undefined
+**M1 — ReviewSummary placed inside AlertDialogHeader, causing semantic mismatch**
 
-**Location**: `src/app/components/quiz/QuizStartScreen.tsx:42`
+`ReviewSummary` is rendered as a child of `AlertDialogHeader` in `Quiz.tsx` (lines 307-314). The `AlertDialogHeader` is a presentational grouping that typically contains only the title and description. Adding interactive content (the Q-number jump link buttons) inside the description region creates an unexpected pattern — some screen readers may not announce interactive content within `aria-describedby` regions correctly.
 
-**Evidence**: Live browser inspection confirmed the start screen renders `"undefined min"` in the metadata badges. The guard is `quiz.timeLimit !== null`, but the quiz type allows `timeLimit` to be `undefined` (not present in the object). The check passes `undefined`, and template literal coercion produces `"undefined min"`.
+- **Location**: `src/app/pages/Quiz.tsx:307-314`
+- **Evidence**: `headerContainsReview: true` (confirmed via live DOM traversal). The `ReviewSummary` contains `<button>` elements inside what is semantically the dialog's description area.
+- **Suggestion**: Move `ReviewSummary` between `AlertDialogHeader` and `AlertDialogFooter` as a sibling, not a child of the header. This keeps the header clean (title + description only) and lets the review links exist in their own properly-announced region.
 
 ```tsx
-// Current — fails when timeLimit is undefined (not just null)
-{quiz.timeLimit !== null ? `${quiz.timeLimit} min` : 'Untimed'}
+// Before (ReviewSummary inside AlertDialogHeader)
+<AlertDialogHeader>
+  <AlertDialogTitle>Submit quiz?</AlertDialogTitle>
+  <AlertDialogDescription>...</AlertDialogDescription>
+  <ReviewSummary ... />   {/* inside header */}
+</AlertDialogHeader>
 
-// Safer — handles both null and undefined
-{quiz.timeLimit != null ? `${quiz.timeLimit} min` : 'Untimed'}
-//                    ^^ loose equality catches both
-```
-
-**Impact**: Learners see "undefined min" instead of "Untimed" on the quiz start screen. While not a functional breakage, it erodes trust and looks like a bug — which it is. This is particularly visible on first impression before the learner starts.
-
----
-
-#### M2 — `aria-current="true"` string value is non-standard
-
-**Location**: `src/app/components/quiz/QuestionGrid.tsx:36`
-
-**Evidence**:
-```tsx
-aria-current={isCurrent ? 'true' : undefined}
-```
-
-The ARIA spec for `aria-current` accepts specific token values: `page`, `step`, `location`, `date`, `time`, or the boolean `true`. Passing the string `"true"` is technically valid (it maps to the boolean state), but the semantically correct value for "this is the current step in a sequence" is `"step"`.
-
-**Impact**: Screen readers that consume `aria-current` may announce "true" literally rather than "current step" with `aria-current="step"`. Using `"step"` also correctly conveys the sequential navigation context to assistive technology.
-
-**Suggestion**:
-```tsx
-aria-current={isCurrent ? 'step' : undefined}
+// After (ReviewSummary between header and footer)
+<AlertDialogHeader>
+  <AlertDialogTitle>Submit quiz?</AlertDialogTitle>
+  <AlertDialogDescription>...</AlertDialogDescription>
+</AlertDialogHeader>
+<ReviewSummary ... />   {/* standalone, before footer */}
+<AlertDialogFooter>
 ```
 
 ---
 
-#### M3 — ReviewSummary jump buttons are 33px wide — narrow for touch
+**M2 — ReviewSummary `aria-label` on a `div` provides no announced region landmark**
 
-**Location**: `src/app/components/quiz/ReviewSummary.tsx:28-33`
+`ReviewSummary` wraps its content in `<div aria-label="Questions marked for review">`. A `div` with `aria-label` does not create an announced landmark unless it also has an appropriate `role`. Screen readers will not announce the label when entering this section.
 
-**Evidence**: Measured at desktop: Q1 jump button is 33×44px. The `min-h-[44px]` is correctly applied but there is no `min-w-[44px]`. At 33px wide, single-character labels like "Q1" are at the low end of touch-friendly width. With multiple marked questions (e.g., Q1 through Q9), the buttons stay narrow while the spacing between them (gap-2 = 8px) makes adjacent taps feasible but not ideal.
+- **Location**: `src/app/components/quiz/ReviewSummary.tsx:20`
+- **Evidence**: `<div className="mt-3" aria-label="Questions marked for review">` — no `role` attribute.
+- **Suggestion**: Add `role="region"` to make it an announced landmark, or use `role="group"` if a region is semantically too strong for this context:
 
-**Impact**: Low risk for typical quiz lengths (under 20 questions). Higher risk if a learner has many questions marked and the buttons are packed closely. The 44×44px minimum is a guideline — `min-w-[44px]` would eliminate ambiguity.
+```tsx
+<div className="mt-3" role="group" aria-label="Questions marked for review">
+```
 
-**Suggestion**: Add `min-w-[44px]` to the jump button class alongside the existing `min-h-[44px]`.
+---
+
+**M3 — QuizActions Submit button uses manual brand classes instead of `variant="brand"`**
+
+Beyond the contrast issue (B1), the pattern itself diverges from the project convention documented in `styling.md`: "Use `variant="brand"` instead of manual `bg-brand` className overrides on `<Button>`."
+
+- **Location**: `src/app/components/quiz/QuizActions.tsx:42`
+- **Impact**: Design-token divergence accumulates technical debt. When the brand color system updates, manual overrides must be hunted down rather than being automatically inherited.
+- **Suggestion**: This is resolved by fixing B1 (switching to `variant="brand"`).
 
 ---
 
 ### Nitpicks (Optional)
 
-#### N1 — MarkForReview bookmark icon in label is slightly large
+**N1 — Bookmark icon size (12px) may be too small for peripheral vision during timed quizzes**
 
-**Location**: `src/app/components/quiz/MarkForReview.tsx:26`
+`size-3` on the bookmark renders as a 12x12px icon overlaid at `-top-1 -right-1` of the 44px question button. This is a fine size for a decorative badge but may be too subtle for learners in a time-pressured state. Consider `size-3.5` (14px) or a small filled dot badge instead for stronger salience.
 
-The label bookmark icon uses `size-3.5` (14×14px) which is the same visual size as the text label. The grid bookmark uses `size-3` (12×12px). Both are fine — no action needed — but if a visual audit pass happens, the label icon could go down to `size-3` for tighter optical alignment with the `text-sm` label text.
+**N2 — `MarkForReview` label icon (Bookmark `size-3.5`) and checkbox `size-4` create slight vertical misalignment**
 
-#### N2 — Start screen CTA button height hardcoded as h-12
+The label includes a `size-3.5` Bookmark icon alongside 14px label text. The checkbox is Radix's default `size-4` (16px). The combination can produce a subtle one-pixel vertical baseline difference. `items-center` on the container should handle this, but worth verifying visually across platforms.
 
-**Location**: `src/app/components/quiz/QuizStartScreen.tsx:56, 65, 94`
+**N3 — ReviewSummary Q-number buttons have no hover background state**
 
-The Start/Resume buttons use `h-12` (48px) rather than `min-h-[44px]`. This is a slightly different pattern than the quiz nav buttons which use `min-h-[44px]`. Not wrong, but inconsistent across the quiz component family.
+The Q-link buttons rely solely on `hover:underline` for their hover feedback. Adding a subtle `hover:bg-brand-soft` or `hover:bg-muted` would make the interactive affordance clearer, especially for learners who might not expect a link-style button inside a dialog.
+
+---
+
+## Detailed Findings
+
+### Finding B1: Submit Button Contrast (Dark Mode)
+
+| Attribute | Value |
+|-----------|-------|
+| Element | `<Button>` "Submit Quiz" |
+| File | `src/app/components/quiz/QuizActions.tsx:42` |
+| Text color | `rgb(255, 255, 255)` (white) |
+| Background | `rgb(139, 146, 218)` (brand blue in dark mode) |
+| Contrast ratio | **2.91:1** |
+| Required | 4.5:1 (WCAG AA normal text) |
+| Failure type | WCAG 1.4.3 Contrast (Minimum) |
+
+### Finding B2: Checkbox Accessible Name
+
+| Attribute | Value |
+|-----------|-------|
+| Element | Radix `Checkbox` (renders as `role="checkbox" type="button"`) |
+| File | `src/app/components/quiz/MarkForReview.tsx:15` |
+| aria-label | `null` |
+| aria-labelledby | `null` |
+| aria-describedby | `"mark-review-q3-label"` |
+| Associated label text | "Mark for Review" (via `htmlFor`, not announced as name) |
+| Screen reader output | "checkbox, unchecked" (no name) |
+| Failure type | WCAG 4.1.2 Name, Role, Value |
+
+### Finding H1: Touch Target Measurements
+
+| Breakpoint | Checkbox size | Row height | Pass 44px? |
+|------------|--------------|------------|------------|
+| 1440px desktop | 16x16px | 20px | No |
+| 640px tablet | 16x16px | 20px | No |
+| 375px mobile | 16x16px | 20px | No |
+
+Note: The `<Label>` click area is 126x20px, which helps on desktop where precision pointing is available. On touch devices the 20px height is the primary concern.
+
+### Finding H3: Hardcoded Color
+
+| Attribute | Value |
+|-----------|-------|
+| File | `src/app/components/quiz/QuestionGrid.tsx:42` |
+| Value | `dark:text-[#1a1b26]` |
+| ESLint rule | `design-tokens/no-hardcoded-colors` (ERROR) |
 
 ---
 
@@ -168,68 +274,37 @@ The Start/Resume buttons use `h-12` (48px) rather than `min-h-[44px]`. This is a
 
 | Check | Status | Notes |
 |-------|--------|-------|
-| Text contrast ≥4.5:1 | Pass | H1: 12.45:1 / Label: 7.42:1 / Para: 7.42:1 / all exceed AA |
-| Keyboard navigation | Pass | Tab order: skip link → sidebar links → search → quiz content → checkbox → nav buttons → grid buttons |
-| Focus indicators visible | Pass | Global `*:focus-visible` rule applies 2px brand-color outline with 2px offset |
-| Heading hierarchy | Pass | Single H1 (quiz title) in quiz card; no heading hierarchy issues |
-| ARIA labels on icon buttons | Pass | All grid buttons have descriptive aria-label; all decorative icons are aria-hidden |
-| Semantic HTML | Pass | nav, radiogroup, fieldset, ul/li for jump links; button not div for all interactive elements |
-| Form labels associated | Pass | Checkbox id + Label htmlFor correctly wired; aria-describedby on checkbox |
-| prefers-reduced-motion | Not tested | No animations found in new components; existing quiz animations should be verified separately |
-| aria-current on grid button | Partial | Uses `"true"` string — prefer `"step"` (see M2) |
-| Dialog accessibility | Pass | AlertDialog uses Radix primitives with correct alertdialog role, focus trap, and Escape key dismiss |
+| Text contrast ≥4.5:1 | Fail | Submit Quiz button: 2.91:1 in dark mode (B1) |
+| Keyboard navigation | Pass | All quiz controls reachable via Tab |
+| Focus indicators visible | Pass | `focus-visible:ring-[3px]` present on all interactive elements |
+| Heading hierarchy | Pass | H1 for quiz title, no skipped levels |
+| ARIA labels on icon buttons | Pass | QuestionGrid buttons have descriptive `aria-label` including marked state |
+| Semantic HTML | Pass | `<nav>`, `<button>`, `<checkbox>` used correctly |
+| Form labels associated | Fail | Checkbox accessible name not provided (B2) |
+| prefers-reduced-motion | Not checked | No motion-specific code found in changed files; inherits from app-level CSS |
+| Touch targets ≥44px (interactive) | Partial | QuestionGrid buttons: pass (44x44px). MarkForReview row: fail (20px height, H1) |
+| Color as sole indicator | Pass | Question status uses both color and aria-label; marked state uses both bookmark icon and aria-label |
+| Live regions for dynamic content | Pass | QuestionGrid uses `aria-current="step"` and `aria-label` updates on mark |
 
 ---
 
 ## Responsive Design Verification
 
-| Viewport | Status | Notes |
-|----------|--------|-------|
-| Mobile (375px) | Pass | No horizontal overflow. Nav stacks vertically. Card padding 16px. All nav buttons 44×44px. Checkbox touch target deficiency (H2) present at all viewports. |
-| Tablet (768px) | Pass | Nav switches to row layout (flex-direction: row). Card padding 32px. Full-width card at 672px. No overflow. |
-| Desktop (1440px) | Pass | Card max-w-2xl correctly constrains to ~672px. Sidebar icon-only mode. All elements well-proportioned. |
+| Viewport | Horizontal Scroll | Nav Layout | QuestionGrid | MarkForReview row |
+|----------|------------------|------------|--------------|-------------------|
+| 375px mobile | None (pass) | `flex-col` (correct) | 44x44px buttons (pass) | 20px height (fail — H1) |
+| 640px tablet | None (pass) | `flex-row` (correct) | 44x44px buttons (pass) | 20px height (fail — H1) |
+| 1440px desktop | None (pass) | `flex-row` (correct) | 44x44px buttons (pass) | 20px height (fail — H1) |
 
 ---
 
-## Code Health Analysis
+## Recommendations
 
-| Check | Status | Notes |
-|-------|--------|-------|
-| Hardcoded hex colors | Pass | Zero instances in quiz component files |
-| Hardcoded Tailwind colors (bg-blue-*, etc.) | Pass | Zero instances — all use design tokens |
-| Inline style attributes | Pass | None found |
-| TypeScript `any` types | Pass | None found in changed files |
-| Import alias usage (@/) | Pass | All imports use @/ alias correctly |
-| cn() import path | Pass | Imported from @/app/components/ui/utils |
-| ARIA patterns | Pass | Consistent and complete across all five new components |
-| Token alignment | Pass | `fill-warning`, `text-warning`, `bg-brand`, `text-brand`, `bg-destructive` all used correctly |
+1. **Fix the Submit button contrast before merge** (B1). Switch to `variant="brand"` — this is a one-line change that also resolves M3 and aligns with the existing brand button system. Verify dark-mode contrast is ≥4.5:1 after the change.
 
----
+2. **Fix the Checkbox accessible name before merge** (B2). Replace `aria-describedby` with `aria-labelledby` pointing to the label element, or add an explicit `aria-label="Mark for Review"`. This is a two-character change with no visual impact.
 
-## Detailed Finding: Bookmark SVG Fill Rendering
+3. **Add `min-h-[44px]` to the MarkForReview container** (H1). This is a one-property addition that has no desktop visual impact and eliminates the mobile touch target deficiency.
 
-This deserves expanded explanation because it's a subtle SVG + CSS interaction that may recur.
-
-Lucide React generates SVGs with `fill="none"` as a presentational attribute on the root `<svg>` element. This attribute cascades to child `<path>` elements as an inherited SVG property. CSS classes like `.fill-warning { fill: var(--warning) }` target the SVG root — which should override the presentational attribute per the CSS cascade (author stylesheets outrank presentational attributes). However, browser implementations of SVG fill inheritance are inconsistent: some browsers do not propagate the CSS-overridden fill from SVG root to its paths via inheritance.
-
-The correct pattern for filled Lucide icons is to use `fill="currentColor"` as a JSX prop (setting the SVG presentational attribute directly) combined with a `text-*` color class:
-
-```tsx
-// This works reliably across all browsers
-<Bookmark className="size-3 text-warning" fill="currentColor" />
-```
-
-This bypasses CSS fill inheritance entirely and uses `currentColor` which reliably reads from the element's `color` CSS property (set by `text-warning`).
-
----
-
-## Recommendations (Prioritized)
-
-1. **Fix the bookmark fill** (H1) — use `fill="currentColor"` JSX prop + `text-warning` class. This is a one-line change that makes the feature's core visual indicator functional.
-
-2. **Fix the touch target** (H2) — add `min-h-[44px]` to the MarkForReview outer `<div>`. Single-line fix that brings the mobile interaction up to standard.
-
-3. **Fix `undefined min`** (M1) — change `!== null` to `!= null` in `QuizStartScreen.tsx:42`. Two-character change.
-
-4. **Upgrade `aria-current`** (M2) — change `'true'` to `'step'` in `QuestionGrid.tsx:36`. One-word change with real screen reader benefit.
+4. **Fix the bookmark fill rendering** (H2). The outlined-only bookmark at 12px may not be salient enough in practice. A solid color indicator — whether a filled SVG or a dot badge — provides stronger at-a-glance confirmation that a question is marked. Consider `style={{ fill: 'currentColor' }}` on the Bookmark icon as the lowest-effort fix.
 

@@ -243,6 +243,13 @@ export const useQuizStore = create<QuizState>()(
           state.currentProgress = null
           return
         }
+        // Ensure markedForReview exists (pre-E13-S02 persisted state may lack it)
+        if (!Array.isArray(state.currentProgress.markedForReview)) {
+          state.currentProgress = {
+            ...state.currentProgress,
+            markedForReview: [],
+          }
+        }
         if (state.currentProgress.currentQuestionIndex > maxIndex) {
           state.currentProgress = {
             ...state.currentProgress,
