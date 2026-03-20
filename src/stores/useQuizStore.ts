@@ -23,6 +23,7 @@ interface QuizState {
   clearQuiz: () => void
   goToNextQuestion: () => void
   goToPrevQuestion: () => void
+  navigateToQuestion: (index: number) => void
   toggleReviewMark: (questionId: string) => void
   clearError: () => void
 }
@@ -201,6 +202,15 @@ export const useQuizStore = create<QuizState>()(
             ...currentProgress,
             currentQuestionIndex: currentProgress.currentQuestionIndex - 1,
           },
+        })
+      },
+
+      navigateToQuestion: (index: number) => {
+        const { currentProgress, currentQuiz } = get()
+        if (!currentProgress || !currentQuiz) return
+        if (!Number.isFinite(index) || index < 0 || index >= currentQuiz.questions.length) return
+        set({
+          currentProgress: { ...currentProgress, currentQuestionIndex: index },
         })
       },
 

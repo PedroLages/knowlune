@@ -46,7 +46,7 @@ export function MultipleChoiceQuestion({
       </legend>
 
       <RadioGroup
-        value={value}
+        value={value ?? ''}
         onValueChange={isActive ? onChange : undefined}
         disabled={!isActive}
         aria-labelledby={legendId}
