@@ -144,15 +144,15 @@ export function Quiz() {
       localStorage.removeItem(`quiz-progress-${quiz.id}`)
       return
     }
-    // Restore saved progress directly into the store
+    // Restore saved progress directly into the store.
+    // The subscribe listener will keep the per-quiz localStorage key in sync
+    // as the active quiz progresses — no need to remove it here.
     useQuizStore.setState({
       currentQuiz: quiz,
       currentProgress: savedProgress,
       isLoading: false,
       error: null,
     })
-    // Clear per-quiz localStorage key — the Zustand persist middleware now owns the state
-    localStorage.removeItem(`quiz-progress-${quiz.id}`)
   }, [quiz, savedProgress])
 
   const handleSubmitConfirm = useCallback(async () => {
@@ -179,17 +179,23 @@ export function Quiz() {
   }, [handleSubmitConfirm])
 
   // Safety net: sync progress to per-quiz localStorage on tab close/crash.
-  // The subscribe listener in useQuizStore handles normal state changes, but
-  // beforeunload catches edge cases where the tab closes before Zustand updates.
+  // The subscribe listener in useQuizStore fires synchronously on every state change,
+  // so the per-quiz key is always up-to-date. This beforeunload handler provides
+  // defense-in-depth for edge cases where the browser terminates before Zustand
+  // flushes (e.g., process kill, OOM).
   const isQuizActive =
     currentProgress !== null && quiz !== null && currentProgress.quizId === quiz.id
   useEffect(() => {
     if (!isQuizActive) return
     const handleBeforeUnload = () => {
-      const progress = useQuizStore.getState().currentProgress
-      const currentQuizState = useQuizStore.getState().currentQuiz
-      if (progress && currentQuizState) {
-        localStorage.setItem(`quiz-progress-${currentQuizState.id}`, JSON.stringify(progress))
+      try {
+        const progress = useQuizStore.getState().currentProgress
+        const currentQuizState = useQuizStore.getState().currentQuiz
+        if (progress && currentQuizState) {
+          localStorage.setItem(`quiz-progress-${currentQuizState.id}`, JSON.stringify(progress))
+        }
+      } catch {
+        // QuotaExceededError during unload — nothing we can do, best effort
       }
     }
     window.addEventListener('beforeunload', handleBeforeUnload)

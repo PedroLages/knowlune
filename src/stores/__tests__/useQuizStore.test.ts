@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act } from 'react'
 import Dexie from 'dexie'
 import type { Module, Course } from '@/data/types'
+import { makeQuiz, makeQuestion } from '../../../tests/support/fixtures/factories/quiz-factory'
 
 // Mock persistWithRetry to run operation once (no retries).
 // Retry logic is tested in persistWithRetry's own tests.
@@ -833,31 +834,12 @@ describe('navigateToQuestion', () => {
 // ---------------------------------------------------------------------------
 
 describe('per-quiz localStorage sync', () => {
-  const quizForSync = {
+  const syncQuestion = makeQuestion({ id: 'q1' })
+  const quizForSync = makeQuiz({
     id: 'quiz-sync',
     lessonId: 'les-sync',
-    title: 'Sync Quiz',
-    description: '',
-    questions: [
-      {
-        id: 'q1',
-        order: 1,
-        type: 'multiple-choice' as const,
-        text: 'Q1',
-        options: ['A', 'B'],
-        correctAnswer: 'A',
-        explanation: '',
-        points: 1,
-      },
-    ],
-    timeLimit: null,
-    passingScore: 70,
-    allowRetakes: true,
-    shuffleQuestions: false,
-    shuffleAnswers: false,
-    createdAt: '2025-01-15T12:00:00.000Z',
-    updatedAt: '2025-01-15T12:00:00.000Z',
-  }
+    questions: [syncQuestion],
+  })
 
   it('writes currentProgress to per-quiz localStorage key on submitAnswer', async () => {
     await db.quizzes.add(quizForSync)

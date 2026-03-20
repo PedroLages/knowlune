@@ -111,6 +111,14 @@ async function answerQuestion(page: import('@playwright/test').Page, optionText:
 // ---------------------------------------------------------------------------
 
 test.describe('E13-S03: Pause and Resume Quiz', () => {
+  // Clean up quiz-specific localStorage keys to prevent state bleeding between tests
+  test.afterEach(async ({ page }) => {
+    await page.evaluate(quizId => {
+      localStorage.removeItem(`quiz-progress-${quizId}`)
+      localStorage.removeItem('levelup-quiz-store')
+    }, QUIZ_ID)
+  })
+
   test('AC1: quiz progress auto-saves to per-quiz localStorage on every answer', async ({
     page,
   }) => {
@@ -217,14 +225,11 @@ test.describe('E13-S03: Pause and Resume Quiz', () => {
     await clickNext(page)
     await answerQuestion(page, '3')
 
-    // Submit quiz
+    // Submit quiz — all questions answered, no marked-for-review, so dialog should NOT appear
     await page.getByRole('button', { name: /submit quiz/i }).click()
 
-    // Handle confirmation dialog if present
-    const confirmBtn = page.getByRole('button', { name: /submit anyway/i })
-    if (await confirmBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await confirmBtn.click()
-    }
+    // Assert the confirmation dialog was NOT triggered (direct submit path)
+    await expect(page.getByRole('dialog')).not.toBeVisible()
 
     // Wait for results page (navigation happens after successful submit)
     await page.waitForURL(/\/quiz\/results/, { timeout: 10000 })

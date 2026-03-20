@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import type { Quiz, QuizProgress } from '@/types/quiz'
 import { Button } from '@/app/components/ui/button'
 import {
@@ -25,6 +26,16 @@ export function QuizStartScreen({ quiz, savedProgress, onStart, onResume }: Quiz
   const hasResume = answeredCount > 0
   const questionCount = quiz.questions.length
   const questionLabel = questionCount === 1 ? 'question' : 'questions'
+  const resumeBtnRef = useRef<HTMLButtonElement>(null)
+
+  // Deferred focus — gives assistive technology time to announce the page
+  // before moving focus to the resume button
+  useEffect(() => {
+    if (hasResume) {
+      const id = requestAnimationFrame(() => resumeBtnRef.current?.focus())
+      return () => cancelAnimationFrame(id)
+    }
+  }, [hasResume])
 
   return (
     <div className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm">
@@ -46,16 +57,24 @@ export function QuizStartScreen({ quiz, savedProgress, onStart, onResume }: Quiz
         </span>
       </div>
 
+      {/* Screen reader announcement for saved progress */}
+      {hasResume && (
+        <div className="sr-only" aria-live="polite">
+          Saved progress found: {answeredCount} of {questionCount} answered. Resume button
+          available.
+        </div>
+      )}
+
       {/* CTA area */}
       <div className="mt-8 flex flex-col sm:flex-row gap-3">
         {hasResume ? (
           <>
             <Button
+              ref={resumeBtnRef}
               type="button"
               onClick={onResume}
               variant="brand"
               className="rounded-xl h-12 px-8 w-full sm:w-auto"
-              autoFocus
             >
               Resume Quiz ({answeredCount} of {questionCount} answered)
             </Button>

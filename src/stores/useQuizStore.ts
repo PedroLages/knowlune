@@ -48,6 +48,16 @@ export const useQuizStore = create<QuizState>()(
       error: null,
 
       startQuiz: async (lessonId: string) => {
+        // Clean up orphaned per-quiz localStorage key from previous quiz (if any)
+        const prevQuizId = get().currentProgress?.quizId
+        if (prevQuizId) {
+          try {
+            localStorage.removeItem(`quiz-progress-${prevQuizId}`)
+          } catch {
+            // Best-effort cleanup — storage errors are non-fatal
+          }
+        }
+
         set({ isLoading: true, error: null })
 
         try {
@@ -141,14 +151,19 @@ export const useQuizStore = create<QuizState>()(
             }
           }
 
-          // Clear per-quiz localStorage backup before clearing store state
-          localStorage.removeItem(`quiz-progress-${currentQuiz.id}`)
-
           set({
             attempts: [...get().attempts, attempt],
             currentProgress: null,
             isLoading: false,
           })
+
+          // Clear per-quiz localStorage backup after successful state update.
+          // Done after set() so if set() throws, the backup key is preserved for crash recovery.
+          try {
+            localStorage.removeItem(`quiz-progress-${currentQuiz.id}`)
+          } catch {
+            // Best-effort cleanup — storage errors are non-fatal
+          }
         } catch (err) {
           console.error('[useQuizStore] submitQuiz failed:', err)
           set({ ...snapshot, isLoading: false, error: 'Failed to save quiz attempt' })
@@ -182,8 +197,16 @@ export const useQuizStore = create<QuizState>()(
       },
 
       clearQuiz: () => {
-        const quizId = get().currentProgress?.quizId
-        if (quizId) localStorage.removeItem(`quiz-progress-${quizId}`)
+        // Read quizId from both currentProgress and currentQuiz for robustness —
+        // currentProgress may already be null if clearQuiz is called after submitQuiz
+        const quizId = get().currentProgress?.quizId ?? get().currentQuiz?.id
+        if (quizId) {
+          try {
+            localStorage.removeItem(`quiz-progress-${quizId}`)
+          } catch {
+            // Best-effort cleanup — storage errors are non-fatal
+          }
+        }
         set({ currentQuiz: null, currentProgress: null, attempts: [], error: null })
       },
 
@@ -271,14 +294,28 @@ export const useQuizStore = create<QuizState>()(
   )
 )
 
-// Per-quiz localStorage backup — syncs currentProgress to a quiz-specific key
-// on every state change. This provides crash recovery independent of Zustand's
-// debounced persist middleware. Quiz.tsx reads this key via loadSavedProgress().
+// Per-quiz localStorage backup — syncs currentProgress to a quiz-specific key.
+// Provides crash recovery independent of Zustand's persist middleware.
+// Quiz.tsx reads this key via loadSavedProgress().
+let prevProgress: QuizProgress | null = null
 useQuizStore.subscribe(state => {
   const progress = state.currentProgress
   const quiz = state.currentQuiz
-  if (progress && quiz) {
-    localStorage.setItem(`quiz-progress-${quiz.id}`, JSON.stringify(progress))
+
+  // Skip redundant writes when progress reference hasn't changed
+  if (progress === prevProgress) return
+  prevProgress = progress
+
+  try {
+    if (progress && quiz) {
+      localStorage.setItem(`quiz-progress-${quiz.id}`, JSON.stringify(progress))
+    } else if (!progress && quiz) {
+      // Progress cleared (submission/clear) — remove orphaned key
+      localStorage.removeItem(`quiz-progress-${quiz.id}`)
+    }
+  } catch (err) {
+    // QuotaExceededError or SecurityError — log but don't break the subscription chain
+    console.error('[useQuizStore] localStorage sync failed:', err)
   }
 })
 

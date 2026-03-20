@@ -28,7 +28,7 @@
   --font-heading: 'Space Grotesk Variable', 'Space Grotesk', system-ui, -apple-system, sans-serif;
 
   /* Surface depth tokens */
-  --brand-soft: #e4e5f4;
+  --brand-soft: #d0d2ee;
   --brand-muted: #c8c9e4;
   --success-soft: #eef5f0;
   --surface-elevated: #ffffff;
@@ -157,8 +157,8 @@
   --scrollbar-thumb: oklch(0.4 0.03 270);
   --scrollbar-thumb-hover: oklch(0.55 0.03 270);
   --scrollbar-track: #1a1b26;
-  --brand: #8b92da;
-  --brand-hover: #7a82d0;
+  --brand: #6b72c4;
+  --brand-hover: #5d64b5;
   --brand-foreground: #ffffff;
   --success: #6ab888;
   --success-foreground: #ffffff;
