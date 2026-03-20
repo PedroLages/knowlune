@@ -1,9 +1,9 @@
 ---
 story_id: E13-S02
 story_name: "Mark Questions For Review"
-status: in-progress
+status: done
 started: 2026-03-20
-completed:
+completed: 2026-03-20
 reviewed: true
 review_started: 2026-03-20
 review_gates_passed:
