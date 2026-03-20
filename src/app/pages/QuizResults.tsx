@@ -127,11 +127,7 @@ export function QuizResults() {
           <Button variant="outline" className="rounded-xl min-h-[44px]" onClick={handleRetake}>
             Retake Quiz
           </Button>
-          <Button
-            variant="brand"
-            className="rounded-xl min-h-[44px]"
-            onClick={handleReviewAnswers}
-          >
+          <Button variant="brand" className="rounded-xl min-h-[44px]" onClick={handleReviewAnswers}>
             Review Answers
           </Button>
         </div>

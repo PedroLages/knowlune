@@ -127,11 +127,7 @@ export function InterleavedSummary({
               <Button variant="outline" className="flex-1" onClick={onReturnToQueue}>
                 Back to Queue
               </Button>
-              <Button
-                variant="brand"
-                className="flex-1"
-                onClick={onStartNew}
-              >
+              <Button variant="brand" className="flex-1" onClick={onStartNew}>
                 <RotateCcw className="mr-2 size-4" />
                 Review More
               </Button>

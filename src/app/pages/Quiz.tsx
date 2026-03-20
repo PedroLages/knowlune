@@ -242,7 +242,8 @@ export function Quiz() {
     if (questionId && !foundQuestion) {
       console.warn('[Quiz] Question ID not found in quiz:', questionId)
     }
-    const currentQuestion = foundQuestion ?? currentQuiz.questions[currentProgress.currentQuestionIndex]
+    const currentQuestion =
+      foundQuestion ?? currentQuiz.questions[currentProgress.currentQuestionIndex]
 
     const currentQuestionId = currentQuestion?.id
     const currentAnswer = currentQuestionId
