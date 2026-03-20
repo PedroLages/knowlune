@@ -222,7 +222,7 @@ test.describe('E02-S10: Caption and Subtitle Support', () => {
         const blobTrack = Array.from(tracks).find(t => t.src.startsWith('blob:'))
         return blobTrack?.label || null
       },
-      { timeout: 10000 },
+      { timeout: 10000 }
     )
     expect(await trackLabel.jsonValue()).toBe('test-captions.vtt')
   })

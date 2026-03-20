@@ -306,10 +306,7 @@ describe('createCaptionBlobUrl', () => {
   })
 
   it('creates a blob: URL for SRT content (converts to VTT)', () => {
-    const url = createCaptionBlobUrl(
-      '1\n00:00:01,000 --> 00:00:04,000\nHello',
-      'srt'
-    )
+    const url = createCaptionBlobUrl('1\n00:00:01,000 --> 00:00:04,000\nHello', 'srt')
     expect(url).toMatch(/^blob:/)
     URL.revokeObjectURL(url)
   })

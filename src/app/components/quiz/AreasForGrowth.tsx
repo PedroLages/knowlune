@@ -36,7 +36,7 @@ export function AreasForGrowth({ incorrectItems }: AreasForGrowthProps) {
         </p>
 
         <ol className="space-y-3 list-decimal list-inside">
-          {visibleItems.map((item) => (
+          {visibleItems.map(item => (
             <li key={item.questionId} className="space-y-1">
               <span className="text-sm font-medium text-foreground">{item.questionText}</span>
               <p className="text-sm text-muted-foreground ml-5">

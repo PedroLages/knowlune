@@ -96,9 +96,7 @@ function ScoreRing({ percentage, tier }: { percentage: number; tier: ScoreTier }
           {Math.round(percentage)}
           <span className="text-xl sm:text-2xl">%</span>
         </span>
-        <span
-          className={cn('text-xs font-semibold tracking-widest mt-1', tier.textClass)}
-        >
+        <span className={cn('text-xs font-semibold tracking-widest mt-1', tier.textClass)}>
           {tier.label}
         </span>
       </div>

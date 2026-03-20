@@ -157,9 +157,7 @@ test.describe('Accessibility - Courses Pages', () => {
     const searchInput = page.locator('input[aria-label="Search courses"]')
     await searchInput.focus()
 
-    const isSearchFocused = await searchInput.evaluate(
-      el => el === document.activeElement
-    )
+    const isSearchFocused = await searchInput.evaluate(el => el === document.activeElement)
     expect(isSearchFocused).toBeTruthy()
 
     // Tab to the search/clear button and verify focus moves
@@ -174,9 +172,7 @@ test.describe('Accessibility - Courses Pages', () => {
     const firstTab = page.locator('[role="tab"]').first()
     await firstTab.focus()
 
-    const isTabFocused = await firstTab.evaluate(
-      el => el === document.activeElement
-    )
+    const isTabFocused = await firstTab.evaluate(el => el === document.activeElement)
     expect(isTabFocused).toBeTruthy()
 
     // Press ArrowRight to move to next tab
@@ -355,7 +351,7 @@ test.describe('Accessibility - Courses Pages', () => {
         .withTags(['wcag2aa'])
         .disableRules(['region', 'landmark-one-main']) // Focus only on color contrast
         .exclude('[data-agentation]')
-      .exclude('[data-feedback-toolbar]')
+        .exclude('[data-feedback-toolbar]')
         .analyze()
 
       // Filter for color contrast violations

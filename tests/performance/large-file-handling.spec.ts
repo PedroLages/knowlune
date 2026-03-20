@@ -48,8 +48,8 @@ test.describe('NFR33: Large file memory efficiency', () => {
 
     console.log(
       `Blob test: heap growth=${growthMB.toFixed(2)}MB ` +
-      `(baseline=${(baseline.usedSize / 1024 / 1024).toFixed(2)}MB, ` +
-      `after=${(afterBlob.usedSize / 1024 / 1024).toFixed(2)}MB)`
+        `(baseline=${(baseline.usedSize / 1024 / 1024).toFixed(2)}MB, ` +
+        `after=${(afterBlob.usedSize / 1024 / 1024).toFixed(2)}MB)`
     )
 
     // Blob URL pattern should NOT buffer entire file

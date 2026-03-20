@@ -114,10 +114,9 @@ async function navigateToQuiz(page: import('@playwright/test').Page) {
   await seedQuizData(page, [quiz])
 
   // Navigate to quiz page
-  await page.goto(
-    `/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz`,
-    { waitUntil: 'domcontentloaded' }
-  )
+  await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz`, {
+    waitUntil: 'domcontentloaded',
+  })
 }
 
 /** Start the quiz from the start screen */
@@ -165,7 +164,9 @@ test.describe('E12-S06: Quiz Score Display', () => {
     await expect(page).toHaveURL(/\/quiz\/results/)
 
     // Score percentage should be visible (100%)
-    await expect(page.locator('[data-testid="main-scroll-container"]').getByText('100%')).toBeVisible()
+    await expect(
+      page.locator('[data-testid="main-scroll-container"]').getByText('100%')
+    ).toBeVisible()
 
     // "X of Y correct" text (exact match to avoid aria-live + encouraging message)
     await expect(page.getByText('3 of 3 correct', { exact: true })).toBeVisible()
@@ -174,7 +175,9 @@ test.describe('E12-S06: Quiz Score Display', () => {
     await expect(page.getByText(/Congratulations! You passed!/)).toBeVisible()
   })
 
-  test('AC2: submit with unanswered shows confirmation dialog, Continue Reviewing returns', async ({ page }) => {
+  test('AC2: submit with unanswered shows confirmation dialog, Continue Reviewing returns', async ({
+    page,
+  }) => {
     await navigateToQuiz(page)
     await startQuiz(page)
 
@@ -290,7 +293,9 @@ test.describe('E12-S06: Quiz Score Display', () => {
     await expect(page).toHaveURL(/\/quiz\/results/)
 
     // Time spent should be visible in valid formatDuration output (e.g. "8m 32s", "45s", "1m")
-    await expect(page.getByText(/Completed in (\d+h\s?)?\d+m\s?\d+s|Completed in \d+s|Completed in \d+m/)).toBeVisible()
+    await expect(
+      page.getByText(/Completed in (\d+h\s?)?\d+m\s?\d+s|Completed in \d+s|Completed in \d+m/)
+    ).toBeVisible()
   })
 
   test('AC4b: Retake Quiz navigates back to quiz start screen', async ({ page }) => {
