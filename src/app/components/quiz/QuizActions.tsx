@@ -19,7 +19,7 @@ export function QuizActions({
   isSubmitting,
 }: QuizActionsProps) {
   return (
-    <div className="flex gap-3 items-center">
+    <div role="group" aria-label="Quiz controls" className="flex gap-3 items-center">
       <Button
         variant="outline"
         className="rounded-xl min-h-[44px]"

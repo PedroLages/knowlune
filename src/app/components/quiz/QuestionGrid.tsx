@@ -19,9 +19,9 @@ export function QuestionGrid({
     <div className="flex flex-wrap gap-2">
       {Array.from({ length: total }, (_, i) => {
         const questionId = questionOrder[i]
-        const isAnswered = questionId
-          ? answers[questionId] !== undefined && answers[questionId] !== ''
-          : false
+        const a = questionId ? answers[questionId] : undefined
+        const isAnswered =
+          a !== undefined && a !== '' && !(Array.isArray(a) && a.length === 0)
         const isCurrent = i === currentIndex
 
         return (
@@ -31,8 +31,7 @@ export function QuestionGrid({
             aria-label={`Question ${i + 1}`}
             aria-current={isCurrent ? 'true' : undefined}
             className={cn(
-              'flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium',
-              'min-w-[44px] min-h-[44px]',
+              'flex items-center justify-center size-11 rounded-full text-sm font-medium',
               isCurrent
                 ? 'bg-brand text-brand-foreground'
                 : isAnswered

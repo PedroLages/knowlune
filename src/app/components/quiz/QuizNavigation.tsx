@@ -22,7 +22,7 @@ export function QuizNavigation({
   isSubmitting,
 }: QuizNavigationProps) {
   return (
-    <nav aria-label="Quiz navigation" className="mt-6 flex flex-col sm:flex-row items-center gap-4">
+    <nav aria-label="Quiz navigation" className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
       <QuizActions
         onPrevious={onPrevious}
         onNext={onNext}
@@ -32,7 +32,7 @@ export function QuizNavigation({
         isSubmitting={isSubmitting}
       />
       <QuestionGrid
-        total={progress.questionOrder.length || quiz.questions.length}
+        total={progress.questionOrder.length > 0 ? progress.questionOrder.length : quiz.questions.length}
         answers={progress.answers}
         questionOrder={progress.questionOrder}
         currentIndex={progress.currentQuestionIndex}

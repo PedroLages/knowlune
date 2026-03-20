@@ -57,7 +57,7 @@ function countUnanswered(
 ): number {
   return questions.filter(q => {
     const a = answers[q.id]
-    return a === undefined || a === ''
+    return a === undefined || a === '' || (Array.isArray(a) && a.length === 0)
   }).length
 }
 
@@ -162,13 +162,6 @@ export function Quiz() {
     }
   }, [submitQuiz, courseId, lessonId, navigate])
 
-  const handleQuestionClick = useCallback(
-    (index: number) => {
-      navigateToQuestion(index)
-    },
-    [navigateToQuestion]
-  )
-
   const handleSubmitClick = useCallback(() => {
     const state = useQuizStore.getState()
     const progress = state.currentProgress
@@ -233,12 +226,20 @@ export function Quiz() {
 
   if (isQuizActive && currentQuiz) {
     // Resolve current question via questionOrder (supports shuffled order)
-    const questionId =
-      currentProgress.questionOrder[currentProgress.currentQuestionIndex] ??
-      currentQuiz.questions[currentProgress.currentQuestionIndex]?.id
-    const currentQuestion =
-      currentQuiz.questions.find(q => q.id === questionId) ??
-      currentQuiz.questions[currentProgress.currentQuestionIndex]
+    const orderedId = currentProgress.questionOrder[currentProgress.currentQuestionIndex]
+    const questionId = orderedId ?? currentQuiz.questions[currentProgress.currentQuestionIndex]?.id
+    if (!orderedId) {
+      console.warn(
+        '[Quiz] questionOrder missing index',
+        currentProgress.currentQuestionIndex,
+        '— falling back to questions array'
+      )
+    }
+    const foundQuestion = currentQuiz.questions.find(q => q.id === questionId)
+    if (questionId && !foundQuestion) {
+      console.warn('[Quiz] Question ID not found in quiz:', questionId)
+    }
+    const currentQuestion = foundQuestion ?? currentQuiz.questions[currentProgress.currentQuestionIndex]
 
     const currentQuestionId = currentQuestion?.id
     const currentAnswer = currentQuestionId
@@ -277,7 +278,7 @@ export function Quiz() {
           onPrevious={goToPrevQuestion}
           onNext={goToNextQuestion}
           onSubmit={handleSubmitClick}
-          onQuestionClick={handleQuestionClick}
+          onQuestionClick={navigateToQuestion}
           isSubmitting={isStoreLoading}
         />
 

@@ -208,7 +208,7 @@ export const useQuizStore = create<QuizState>()(
       navigateToQuestion: (index: number) => {
         const { currentProgress, currentQuiz } = get()
         if (!currentProgress || !currentQuiz) return
-        if (index < 0 || index >= currentQuiz.questions.length) return
+        if (!Number.isFinite(index) || index < 0 || index >= currentQuiz.questions.length) return
         set({
           currentProgress: { ...currentProgress, currentQuestionIndex: index },
         })
