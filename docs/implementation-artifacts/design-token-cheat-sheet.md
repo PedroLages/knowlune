@@ -88,8 +88,13 @@
   Click me
 </button>
 
-// ✅ CORRECT - Token with opacity for state
-<button className="bg-brand hover:bg-brand/90 active:bg-brand/80">
+// ✅ CORRECT - Use Button variant (preferred)
+<Button variant="brand">Click me</Button>
+<Button variant="brand-outline">Secondary</Button>
+<Button variant="brand-ghost">Tertiary</Button>
+
+// ✅ CORRECT - Token classes (for non-Button elements)
+<button className="bg-brand hover:bg-brand-hover text-brand-foreground">
   Click me
 </button>
 
@@ -211,9 +216,11 @@ text-accent-violet        // Violet text (#7c3aed)
    - Warning → `bg-warning` / `text-warning`
 
 2. **Is this brand-related?**
-   - Primary CTA → `bg-brand`
+   - Primary CTA → `<Button variant="brand">` (or `bg-brand` for non-Button elements)
+   - Secondary brand → `<Button variant="brand-outline">` (or `border-brand text-brand`)
+   - Tertiary brand → `<Button variant="brand-ghost">` (or `text-brand`)
    - Brand accents → `bg-brand-soft`
-   - Hover states → `bg-brand-hover`
+   - Hover states → `hover:bg-brand-hover` (built into variants)
 
 3. **Is this neutral/muted?**
    - Gray backgrounds → `bg-muted`

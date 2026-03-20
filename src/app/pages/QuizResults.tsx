@@ -73,7 +73,7 @@ export function QuizResults() {
   }, [retakeQuiz, lessonId, courseId, navigate])
 
   const handleReviewAnswers = useCallback(() => {
-    toast.info('Answer review is coming in a future update.')
+    toast.info('Answer review is coming soon. Use Question Breakdown below to see your results.')
   }, [])
 
   // No quiz data — declarative redirect back (not imperative navigate during render)
@@ -128,7 +128,8 @@ export function QuizResults() {
             Retake Quiz
           </Button>
           <Button
-            className="bg-brand text-brand-foreground rounded-xl min-h-[44px]"
+            variant="brand"
+            className="rounded-xl min-h-[44px]"
             onClick={handleReviewAnswers}
           >
             Review Answers

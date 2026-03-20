@@ -53,7 +53,8 @@ export function QuizStartScreen({ quiz, savedProgress, onStart, onResume }: Quiz
             <Button
               type="button"
               onClick={onResume}
-              className="bg-brand text-brand-foreground hover:bg-brand-hover rounded-xl h-12 px-8 w-full sm:w-auto"
+              variant="brand"
+              className="rounded-xl h-12 px-8 w-full sm:w-auto"
             >
               Resume Quiz ({answeredCount} of {questionCount} answered)
             </Button>
@@ -91,7 +92,8 @@ export function QuizStartScreen({ quiz, savedProgress, onStart, onResume }: Quiz
           <Button
             type="button"
             onClick={onStart}
-            className="bg-brand text-brand-foreground hover:bg-brand-hover rounded-xl h-12 px-8 w-full sm:w-auto"
+            variant="brand"
+            className="rounded-xl h-12 px-8 w-full sm:w-auto"
           >
             Start Quiz
           </Button>

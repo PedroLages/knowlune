@@ -128,7 +128,8 @@ export function InterleavedSummary({
                 Back to Queue
               </Button>
               <Button
-                className="flex-1 bg-brand text-brand-foreground hover:bg-brand-hover"
+                variant="brand"
+                className="flex-1"
                 onClick={onStartNew}
               >
                 <RotateCcw className="mr-2 size-4" />

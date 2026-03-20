@@ -2,49 +2,61 @@
 
 ### Unhandled Edge Cases
 
-**ScoreSummary.tsx:getScoreTier** — `percentage is NaN (e.g., 0/0 score division upstream)`
-> Consequence: NaN >= 90 is false, NaN >= 50 is false — falls through to NEEDS WORK tier incorrectly
+**Quiz.tsx:54-61 countUnanswered()** — `multiple-select answer is an empty array []`
+> Consequence: Empty array is truthy and not `=== ''`, so question counted as "answered" — submit dialog shows wrong unanswered count
+> Guard: `return a === undefined || a === '' || (Array.isArray(a) && a.length === 0)`
+
+**Quiz.tsx:236-238 currentAnswer cast** — `multiple-select question stores string[] but cast to string | undefined`
+> Consequence: QuestionDisplay receives a string[] coerced to string type — checkboxes may not reflect selected state
+> Guard: `const currentAnswer = currentQuestionId ? currentProgress.answers[currentQuestionId] : undefined` (remove `as string | undefined` cast)
+
+**Quiz.tsx:228-233 questionId fallback** — `questionOrder is shorter than questions array (quiz updated after progress saved)`
+> Consequence: Both `questionOrder[index]` and fallback `questions[index]?.id` could yield undefined, making currentQuestion undefined despite valid quiz
+> Guard: `if (!questionId) { goToNextQuestion(); return }` or clamp index to `Math.min(index, questionOrder.length - 1)`
+
+**Quiz.tsx:132-152 handleResume()** — `savedProgress.answers contains keys for removed question IDs`
+> Consequence: Stale answer keys persist in store — scoring may process orphaned answers or skip validation
+> Guard: `const validAnswers = Object.fromEntries(Object.entries(savedProgress.answers).filter(([k]) => currentQuestionIds.has(k)))`
+
+**Quiz.tsx:254-257 rAF auto-focus** — `requestAnimationFrame fires after unmount during rapid navigation`
+> Consequence: rAF callback executes after cleanup; ref optional chaining prevents crash but the rAF ID leaks
+> Guard: `cancelAnimationFrame(rafRef.current)` in effect cleanup already exists, but onChange callback can schedule new rAF after cleanup runs — add a `mountedRef` guard
+
+**QuizResults.tsx:44-47 maxScore** — `lastAttempt.answers is empty array (zero-question quiz edge case)`
+> Consequence: reduce returns 0, displays "0 of 0 correct" and "0% to pass" — cosmetically misleading
+> Guard: `if (maxScore === 0) return <EmptyState message="No questions were scored" />`
+
+**QuizResults.tsx:30-39 loadAttempts error** — `Dexie read failure sets attemptsLoaded=true with empty attempts`
+> Consequence: Error triggers redirect to quiz page via line 85-86 condition — user sees no error explanation, toast may flash briefly
+> Guard: `Add error state; show error UI instead of redirecting on load failure`
+
+**QuizResults.tsx:80-81 redirect loop** — `currentQuiz is null and quiz page also can't find quiz`
+> Consequence: Quiz page shows error state (no redirect back), so no infinite loop — but user lands on quiz error with no results context
+> Guard: `Navigate to course page instead: /courses/${courseId}`
+
+**ScoreSummary.tsx:20-21 getScoreTier** — `percentage is NaN (0/0 division upstream)`
+> Consequence: NaN fails all >= comparisons, falls through to NEEDS WORK tier incorrectly
 > Guard: `if (Number.isNaN(percentage)) return { label: 'NO SCORE', message: 'No score available.', ringClass: 'text-muted-foreground', textClass: 'text-muted-foreground' }`
 
-**ScoreSummary.tsx:getScoreTier** — `percentage is negative (e.g., upstream scoring bug yields -5)`
-> Consequence: Negative percentage renders NEEDS WORK and a broken SVG ring with offset exceeding circumference
-> Guard: `const clamped = Math.max(0, Math.min(100, percentage))`
+**ScoreSummary.tsx:20-28 getScoreTier** — `percentage >= 90 but passed is false (passingScore is 95)`
+> Consequence: EXCELLENT tier shown but passed=false — "Outstanding! You've mastered this material" conflicts with failing status
+> Guard: `if (percentage >= 90 && passed)` or show a qualified message when percentage >= 90 but not passed
 
-**ScoreSummary.tsx:getScoreTier** — `passed=true but percentage < 50 (stale passingScore vs score mismatch)`
-> Consequence: PASSED tier shown for very low scores (e.g., 30%) since the passed check precedes the 50% check
-> Guard: `if (passed && percentage >= 50) return { label: 'PASSED', ... }` — add percentage floor to the passed branch
+**ScoreSummary.tsx:121 sr-only announcement** — `percentage is NaN`
+> Consequence: Screen reader announces "Quiz score: NaN percent" — confusing for assistive technology users
+> Guard: `const displayPct = Number.isFinite(percentage) ? Math.round(clampedPct) : 0`
 
-**ScoreSummary.tsx:ScoreRing** — `percentage > 100 (scoring bug or extra credit)`
-> Consequence: SVG strokeDashoffset goes negative — arc wraps past full circle, visual glitch
-> Guard: `const clampedPct = Math.min(100, Math.max(0, percentage))`
+**QuestionBreakdown.tsx:36-44 rows mapping** — `answers contains questionId not present in questions array`
+> Consequence: Orphaned answers silently dropped — correctCount/total diverges from ScoreSummary totals
+> Guard: `const orphaned = answers.filter(a => !questions.some(q => q.id === a.questionId)); if (orphaned.length) console.warn('[QuestionBreakdown] Orphaned answers:', orphaned)`
 
-**QuestionBreakdown.tsx:rows mapping** — `answers contains questionId not present in questions array`
-> Consequence: Orphaned answers silently dropped — correctCount understates actual answers given
-> Guard: `const orphaned = answers.filter(a => !questions.some(q => q.id === a.questionId)); if (orphaned.length) console.warn('Orphaned answers:', orphaned)`
+**QuestionBreakdown.tsx:44 sort** — `multiple questions share the same order value`
+> Consequence: Sort is unstable across browsers for equal elements — row order may vary per render
+> Guard: `.sort((a, b) => a.question.order - b.question.order || a.question.id.localeCompare(b.question.id))`
 
-**QuestionBreakdown.tsx:rows mapping** — `questions array has duplicate order values`
-> Consequence: Questions with the same order value appear in unpredictable sequence
-> Guard: `Sort tiebreaker: .sort((a, b) => a.question.order - b.question.order || a.question.id.localeCompare(b.question.id))`
-
-**QuestionBreakdown.tsx:rows mapping** — `questions array is empty but answers is non-empty`
-> Consequence: rows becomes empty after filter, header shows "0/0 correct" — misleading summary
-> Guard: `if (questions.length === 0) return null` — add alongside the existing `answers.length === 0` check
-
-**QuizResults.tsx:handleRetake** — `courseId or lessonId is undefined (missing route params)`
-> Consequence: Navigates to /courses/undefined/lessons/undefined/quiz — 404 or blank page
-> Guard: `if (!courseId || !lessonId) { toast.error('Missing course information'); return }`
-
-**AreasForGrowth.tsx** — `incorrectItems has duplicate questionId values`
-> Consequence: React key collision warning in console, potential DOM reconciliation bugs
-> Guard: `Deduplicate upstream or use index-based fallback key: key={item.questionId + '-' + i}`
-
-**Quiz.tsx:nextBtnRef auto-focus** — `requestAnimationFrame callback fires after component unmount during rapid navigation`
-> Consequence: rAF callback executes after React cleanup; optional chaining on ref prevents crash but rAF itself is a leak
-> Guard: `const rafId = requestAnimationFrame(() => nextBtnRef.current?.focus()); return () => cancelAnimationFrame(rafId)` — or guard with a mounted ref
-
-**ScoreSummary.tsx:ScoreSummary** — `timeSpent is 0 — Math.max(timeSpent, 1000) clamps to 1s`
-> Consequence: Displays "Completed in 1s" for instant or zero-duration attempts, which is misleading but not broken
-> Guard: `Consider showing "< 1s" or omitting the line when timeSpent === 0`
+**AreasForGrowth.tsx:39** — `incorrectItems has duplicate questionId values`
+> Consequence: React key collision warning, potential DOM reconciliation issues
+> Guard: `key={`${item.questionId}-${index}`}`
 
 ---
-**Total:** 11 unhandled edge cases found.
+**Total:** 14 unhandled edge cases found.

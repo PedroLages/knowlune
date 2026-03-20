@@ -55,6 +55,12 @@
 
 All components follow shadcn/ui patterns with Radix UI primitives and class-variance-authority for variants.
 
+**Brand Button Variants**: Use `variant="brand"` instead of manual `bg-brand` className overrides on `<Button>`:
+- `variant="brand"` — solid brand CTA (Submit, Start, primary actions)
+- `variant="brand-outline"` — outlined brand (secondary actions paired with brand CTA)
+- `variant="brand-ghost"` — ghost brand (tertiary actions)
+- For non-Button elements, use classes directly: `bg-brand text-brand-foreground hover:bg-brand-hover`
+
 ## Design Principles
 
 **Core spacing and styling:**

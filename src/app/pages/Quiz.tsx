@@ -292,7 +292,8 @@ export function Quiz() {
             {isLastQuestion && (
               <Button
                 ref={nextBtnRef}
-                className="bg-brand text-brand-foreground rounded-xl min-h-[44px]"
+                variant="brand"
+                className="rounded-xl min-h-[44px]"
                 onClick={handleSubmitClick}
                 disabled={isStoreLoading}
               >

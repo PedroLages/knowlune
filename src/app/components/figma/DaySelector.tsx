@@ -56,7 +56,7 @@ export function DaySelector({
               'min-h-[44px] min-w-[44px] px-3 py-1.5 rounded-full text-sm font-medium',
               'transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand',
               isSelected
-                ? 'bg-brand text-brand-foreground'
+                ? 'bg-brand text-brand-foreground hover:bg-brand-hover'
                 : 'bg-background border border-border text-muted-foreground hover:border-brand/50',
               disabled && 'opacity-50 cursor-not-allowed'
             )}
