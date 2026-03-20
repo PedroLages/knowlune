@@ -21,22 +21,32 @@ const failProps = {
 }
 
 describe('ScoreSummary', () => {
-  it('renders pass message correctly', () => {
+  it('renders pass state correctly', () => {
     render(<ScoreSummary {...passProps} />)
 
-    expect(screen.getByText('85%')).toBeInTheDocument()
-    expect(screen.getByText('10 of 12 correct')).toBeInTheDocument()
-    expect(screen.getByText(/Congratulations! You passed!/)).toBeInTheDocument()
-    expect(screen.getByText('70% required to pass')).toBeInTheDocument()
+    // Percentage is split across elements (85 + %)
+    expect(screen.getByText('85')).toBeInTheDocument()
+    expect(screen.getAllByText(/10 of 12 correct/).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText('PASSED')).toBeInTheDocument()
+    expect(screen.getByText(/70% to pass/)).toBeInTheDocument()
   })
 
-  it('renders not-pass message correctly', () => {
+  it('renders not-pass state correctly', () => {
     render(<ScoreSummary {...failProps} />)
 
-    expect(screen.getByText('33%')).toBeInTheDocument()
-    expect(screen.getByText('1 of 3 correct')).toBeInTheDocument()
-    expect(screen.getByText(/Keep Going! You got 1 of 3 correct/)).toBeInTheDocument()
-    expect(screen.getByText('70% required to pass')).toBeInTheDocument()
+    expect(screen.getByText('33')).toBeInTheDocument()
+    expect(screen.getAllByText(/1 of 3 correct/).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText('NEEDS WORK')).toBeInTheDocument()
+  })
+
+  it('shows NEEDS REVIEW tier for 50-69%', () => {
+    render(<ScoreSummary {...failProps} percentage={55} />)
+    expect(screen.getByText('NEEDS REVIEW')).toBeInTheDocument()
+  })
+
+  it('shows EXCELLENT tier for >= 90%', () => {
+    render(<ScoreSummary {...passProps} percentage={95} />)
+    expect(screen.getByText('EXCELLENT')).toBeInTheDocument()
   })
 
   it('never renders "Failed" in any state', () => {
