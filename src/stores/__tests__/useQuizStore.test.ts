@@ -827,3 +827,92 @@ describe('navigateToQuestion', () => {
     expect(useQuizStore.getState().currentProgress).toBeNull()
   })
 })
+
+// ---------------------------------------------------------------------------
+// E13-S03: Per-quiz localStorage sync (pause/resume crash recovery)
+// ---------------------------------------------------------------------------
+
+describe('per-quiz localStorage sync', () => {
+  const quizForSync = {
+    id: 'quiz-sync',
+    lessonId: 'les-sync',
+    title: 'Sync Quiz',
+    description: '',
+    questions: [
+      {
+        id: 'q1',
+        order: 1,
+        type: 'multiple-choice' as const,
+        text: 'Q1',
+        options: ['A', 'B'],
+        correctAnswer: 'A',
+        explanation: '',
+        points: 1,
+      },
+    ],
+    timeLimit: null,
+    passingScore: 70,
+    allowRetakes: true,
+    shuffleQuestions: false,
+    shuffleAnswers: false,
+    createdAt: '2025-01-15T12:00:00.000Z',
+    updatedAt: '2025-01-15T12:00:00.000Z',
+  }
+
+  it('writes currentProgress to per-quiz localStorage key on submitAnswer', async () => {
+    await db.quizzes.add(quizForSync)
+    await act(async () => {
+      await useQuizStore.getState().startQuiz('les-sync')
+    })
+
+    useQuizStore.getState().submitAnswer('q1', 'A')
+
+    const raw = localStorage.getItem('quiz-progress-quiz-sync')
+    expect(raw).not.toBeNull()
+    const parsed = JSON.parse(raw!)
+    expect(parsed.answers.q1).toBe('A')
+    expect(parsed.quizId).toBe('quiz-sync')
+  })
+
+  it('clears per-quiz localStorage key on submitQuiz success', async () => {
+    await db.quizzes.add({ ...quizForSync, id: 'quiz-sync-2', lessonId: 'les-sync-2' })
+    await act(async () => {
+      await useQuizStore.getState().startQuiz('les-sync-2')
+    })
+    useQuizStore.getState().submitAnswer('q1', 'A')
+
+    // Verify key exists before submit
+    expect(localStorage.getItem('quiz-progress-quiz-sync-2')).not.toBeNull()
+
+    await act(async () => {
+      await useQuizStore.getState().submitQuiz('course-1')
+    })
+
+    // Key should be cleared after successful submission
+    expect(localStorage.getItem('quiz-progress-quiz-sync-2')).toBeNull()
+  })
+
+  it('clears per-quiz localStorage key on clearQuiz', async () => {
+    useQuizStore.setState({
+      currentQuiz: quizForSync,
+      currentProgress: {
+        quizId: 'quiz-sync',
+        currentQuestionIndex: 0,
+        answers: { q1: 'A' },
+        startTime: 1000,
+        timeRemaining: null,
+        isPaused: false,
+        markedForReview: [],
+        questionOrder: ['q1'],
+        timerAccommodation: 'standard',
+      },
+    })
+
+    // Subscribe listener should have written the key
+    expect(localStorage.getItem('quiz-progress-quiz-sync')).not.toBeNull()
+
+    useQuizStore.getState().clearQuiz()
+
+    expect(localStorage.getItem('quiz-progress-quiz-sync')).toBeNull()
+  })
+})
