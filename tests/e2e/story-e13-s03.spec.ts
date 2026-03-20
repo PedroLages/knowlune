@@ -10,11 +10,7 @@
  * - Completed quizzes do NOT show resume option
  */
 import { test, expect } from '../support/fixtures'
-import {
-  makeQuiz,
-  makeQuestion,
-  makeProgress,
-} from '../support/fixtures/factories/quiz-factory'
+import { makeQuiz, makeQuestion, makeProgress } from '../support/fixtures/factories/quiz-factory'
 
 // ---------------------------------------------------------------------------
 // Test data

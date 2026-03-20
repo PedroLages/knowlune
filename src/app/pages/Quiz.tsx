@@ -181,7 +181,8 @@ export function Quiz() {
   // Safety net: sync progress to per-quiz localStorage on tab close/crash.
   // The subscribe listener in useQuizStore handles normal state changes, but
   // beforeunload catches edge cases where the tab closes before Zustand updates.
-  const isQuizActive = currentProgress !== null && quiz !== null && currentProgress.quizId === quiz.id
+  const isQuizActive =
+    currentProgress !== null && quiz !== null && currentProgress.quizId === quiz.id
   useEffect(() => {
     if (!isQuizActive) return
     const handleBeforeUnload = () => {
