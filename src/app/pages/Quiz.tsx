@@ -14,6 +14,7 @@ import {
 import { QuizStartScreen } from '@/app/components/quiz/QuizStartScreen'
 import { QuizHeader } from '@/app/components/quiz/QuizHeader'
 import { QuestionDisplay } from '@/app/components/quiz/QuestionDisplay'
+import { QuestionHint } from '@/app/components/quiz/QuestionHint'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import {
@@ -242,12 +243,15 @@ export function Quiz() {
       <div className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm">
         <QuizHeader quiz={currentQuiz} progress={currentProgress} />
         {currentQuestion && currentQuestionId ? (
-          <QuestionDisplay
-            question={currentQuestion}
-            value={currentAnswer}
-            onChange={answer => submitAnswer(currentQuestionId, answer)}
-            mode="active"
-          />
+          <>
+            <QuestionDisplay
+              question={currentQuestion}
+              value={currentAnswer}
+              onChange={answer => submitAnswer(currentQuestionId, answer)}
+              mode="active"
+            />
+            <QuestionHint hint={currentQuestion.hint} />
+          </>
         ) : (
           <div className="mt-6 rounded-xl border border-border p-6 text-center text-muted-foreground text-sm">
             No question found at index {currentProgress.currentQuestionIndex}

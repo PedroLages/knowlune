@@ -19,6 +19,7 @@ export function makeQuestion(overrides: Partial<Question> = {}): Question {
     correctAnswer: 'Paris',
     explanation: 'Paris is the capital of France.',
     points: 1,
+    hint: overrides.hint ?? undefined,
     ...overrides,
   }
 }

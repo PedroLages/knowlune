@@ -86,6 +86,8 @@ const BaseQuestionSchema = z.object({
   points: z.number().positive(),
   /** Optional media attachment */
   media: QuestionMediaSchema.optional(),
+  /** Optional hint shown during quiz-taking */
+  hint: z.string().optional(),
 })
 
 // TODO(E13): Replace .refine() with .superRefine() + ctx.addIssue() per case to
