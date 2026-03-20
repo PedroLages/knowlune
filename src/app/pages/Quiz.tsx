@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 import { db } from '@/db'
@@ -86,6 +86,7 @@ export function Quiz() {
   const goToPrevQuestion = useQuizStore(s => s.goToPrevQuestion)
   const navigate = useNavigate()
   const [showSubmitDialog, setShowSubmitDialog] = useState(false)
+  const nextBtnRef = useRef<HTMLButtonElement>(null)
 
   // Fetch quiz from Dexie on mount
   useEffect(() => {
@@ -246,7 +247,11 @@ export function Quiz() {
             <QuestionDisplay
               question={currentQuestion}
               value={currentAnswer}
-              onChange={answer => submitAnswer(currentQuestionId, answer)}
+              onChange={answer => {
+                submitAnswer(currentQuestionId, answer)
+                // Auto-focus Next/Submit button after answering for quick Enter key advancement
+                requestAnimationFrame(() => nextBtnRef.current?.focus())
+              }}
               mode="active"
             />
             <QuestionHint hint={currentQuestion.hint} />
@@ -272,6 +277,7 @@ export function Quiz() {
           <div className="flex gap-3">
             {!isLastQuestion && (
               <Button
+                ref={nextBtnRef}
                 variant="outline"
                 className="rounded-xl min-h-[44px]"
                 onClick={goToNextQuestion}
@@ -282,6 +288,7 @@ export function Quiz() {
             )}
             {isLastQuestion && (
               <Button
+                ref={nextBtnRef}
                 className="bg-brand text-brand-foreground rounded-xl min-h-[44px]"
                 onClick={handleSubmitClick}
                 disabled={isStoreLoading}
