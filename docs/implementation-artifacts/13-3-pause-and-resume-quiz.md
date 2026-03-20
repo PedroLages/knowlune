@@ -1,9 +1,9 @@
 ---
 story_id: E13-S03
 story_name: "Pause and Resume Quiz"
-status: in-progress
+status: done
 started: 2026-03-20
-completed:
+completed: 2026-03-21
 reviewed: true
 review_started: 2026-03-21
 review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines-skipped]
