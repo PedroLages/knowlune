@@ -1,12 +1,22 @@
 ---
 story_id: E13-S01
 story_name: "Navigate Between Questions"
-status: in-progress
+status: reviewed
 started: 2026-03-19
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-03-19
+reviewed: true
+review_started: 2026-03-20
+review_gates_passed:
+  - build
+  - lint
+  - typecheck
+  - prettier
+  - unit-tests
+  - e2e-smoke
+  - e2e-story
+  - code-review
+  - code-review-testing
+  - design-review
 burn_in_validated: false
 ---
 
