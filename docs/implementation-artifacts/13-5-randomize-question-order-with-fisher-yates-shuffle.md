@@ -55,7 +55,7 @@ so that I cannot rely on memorizing question positions.
 - [ ] Task 3: Write unit tests for `fisherYatesShuffle` (AC: 4)
   - [ ] 3.1 Valid permutation test (all elements present)
   - [ ] 3.2 Immutability test (original not mutated)
-  - [ ] 3.3 Distribution test (uniform distribution over 10,000 runs)
+  - [ ] 3.3 Distribution test (uniform distribution over 50,000 runs)
 - [ ] Task 4: Write E2E tests (AC: 1, 2, 3)
   - [ ] 4.1 Shuffle enabled → questions in random order
   - [ ] 4.2 Retake → different order
