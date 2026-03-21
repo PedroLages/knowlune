@@ -131,10 +131,9 @@ describe('useQuizTimer', () => {
   it('uses latest onExpire callback via ref', () => {
     const firstCallback = vi.fn()
     const secondCallback = vi.fn()
-    const { rerender } = renderHook(
-      ({ cb }) => useQuizTimer(3, cb),
-      { initialProps: { cb: firstCallback } }
-    )
+    const { rerender } = renderHook(({ cb }) => useQuizTimer(3, cb), {
+      initialProps: { cb: firstCallback },
+    })
 
     // Update callback before timer expires
     rerender({ cb: secondCallback })
