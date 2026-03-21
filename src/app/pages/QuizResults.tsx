@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useNavigate, Navigate, Link } from 'react-router'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, History } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   useQuizStore,
@@ -45,6 +45,11 @@ export function QuizResults() {
     () => lastAttempt?.answers.reduce((sum, a) => sum + a.pointsPossible, 0) ?? 0,
     [lastAttempt]
   )
+
+  const previousBestPercentage = useMemo(() => {
+    if (attempts.length <= 1) return undefined
+    return Math.max(...attempts.slice(0, -1).map(a => a.percentage))
+  }, [attempts])
 
   const incorrectItems = useMemo(() => {
     if (!lastAttempt || !currentQuiz) return []
@@ -117,6 +122,7 @@ export function QuizResults() {
           passed={lastAttempt.passed}
           passingScore={currentQuiz.passingScore}
           timeSpent={lastAttempt.timeSpent}
+          previousBestPercentage={previousBestPercentage}
         />
 
         <QuestionBreakdown answers={lastAttempt.answers} questions={currentQuiz.questions} />
@@ -124,21 +130,30 @@ export function QuizResults() {
         <AreasForGrowth incorrectItems={incorrectItems} />
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-          <Button variant="outline" className="rounded-xl min-h-[44px]" onClick={handleRetake}>
+          <Button variant="brand" className="rounded-xl min-h-[44px]" onClick={handleRetake}>
             Retake Quiz
           </Button>
-          <Button variant="brand" className="rounded-xl min-h-[44px]" onClick={handleReviewAnswers}>
+          <Button variant="brand-outline" className="rounded-xl min-h-[44px]" onClick={handleReviewAnswers}>
             Review Answers
           </Button>
         </div>
 
-        <Link
-          to={`/courses/${courseId}/lessons/${lessonId}`}
-          className="text-brand hover:underline text-sm font-medium inline-flex items-center gap-1 min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded-sm"
-        >
-          <ArrowLeft className="size-4" aria-hidden="true" />
-          Back to Lesson
-        </Link>
+        <div className="flex flex-col items-center gap-2">
+          <span
+            className="text-muted-foreground text-sm inline-flex items-center gap-1 min-h-[44px] cursor-default"
+            aria-disabled="true"
+          >
+            <History className="size-4" aria-hidden="true" />
+            View All Attempts (Coming Soon)
+          </span>
+          <Link
+            to={`/courses/${courseId}/lessons/${lessonId}`}
+            className="text-brand hover:underline text-sm font-medium inline-flex items-center gap-1 min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded-sm"
+          >
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            Back to Lesson
+          </Link>
+        </div>
       </div>
     </div>
   )
