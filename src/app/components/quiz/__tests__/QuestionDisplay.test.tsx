@@ -16,9 +16,9 @@ describe('QuestionDisplay', () => {
     )
 
     expect(screen.getByRole('radiogroup')).toBeInTheDocument()
-    expect(screen.getByText('3')).toBeInTheDocument()
-    expect(screen.getByText('4')).toBeInTheDocument()
-    expect(screen.getByText('5')).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: '3' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: '4' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: '5' })).toBeInTheDocument()
   })
 
   it('dispatches true-false questions to TrueFalseQuestion', () => {

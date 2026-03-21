@@ -47,8 +47,11 @@ function calculatePointsForQuestion(
 
   if (question.type === 'multiple-select') {
     // Partial Credit Model (PCM): (correct - incorrect) / total_correct, clamped to 0
-    const correctSet = new Set(question.correctAnswer as string[])
-    const userSet = new Set(userAnswer as string[])
+    if (!Array.isArray(question.correctAnswer) || !Array.isArray(userAnswer)) {
+      return { pointsEarned: 0, isCorrect: false }
+    }
+    const correctSet = new Set(question.correctAnswer)
+    const userSet = new Set(userAnswer)
     const correctSelections = [...userSet].filter(a => correctSet.has(a)).length
     const incorrectSelections = [...userSet].filter(a => !correctSet.has(a)).length
     const rawScore =

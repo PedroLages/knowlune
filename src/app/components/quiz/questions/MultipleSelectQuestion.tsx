@@ -1,4 +1,4 @@
-import { useId, useMemo } from 'react'
+import { useCallback, useEffect, useId } from 'react'
 import Markdown from 'react-markdown'
 import { Checkbox } from '@/app/components/ui/checkbox'
 import { cn } from '@/app/components/ui/utils'
@@ -22,14 +22,13 @@ export function MultipleSelectQuestion({
   const options = question.options ?? []
   const isActive = mode === 'active'
   const legendId = useId()
+  const hintId = useId()
 
-  useMemo(() => {
-    if (options.length < 2) {
-      console.warn(
-        `[MultipleSelectQuestion] Question "${question.id}" has ${options.length} options (expected ≥2)`
-      )
-    }
-  }, [question.id, options.length])
+  if (process.env.NODE_ENV !== 'production' && options.length < 2) {
+    console.warn(
+      `[MultipleSelectQuestion] Question "${question.id}" has ${options.length} options (expected ≥2)`
+    )
+  }
 
   function handleToggle(option: string) {
     if (!isActive) return
@@ -37,20 +36,41 @@ export function MultipleSelectQuestion({
     onChange(newValue)
   }
 
+  // Number key shortcuts: press 1-9 to toggle the corresponding option
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (!isActive) return
+      const num = parseInt(e.key, 10)
+      if (num >= 1 && num <= options.length) {
+        e.preventDefault()
+        handleToggle(options[num - 1])
+      }
+    },
+    [isActive, options, value, onChange]
+  )
+
+  useEffect(() => {
+    if (!isActive) return
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isActive, handleKeyDown])
+
   return (
-    <fieldset className="mt-6">
+    <fieldset className="mt-6" aria-describedby={hintId}>
       <legend
         id={legendId}
         data-testid="question-text"
-        className="text-lg lg:text-xl text-foreground leading-relaxed pb-1"
+        className="text-lg lg:text-xl text-foreground leading-relaxed pb-2"
       >
         <Markdown remarkPlugins={REMARK_PLUGINS} components={MARKDOWN_COMPONENTS}>
           {question.text}
         </Markdown>
       </legend>
-      <span className="text-sm text-muted-foreground italic block mb-4">Select all that apply</span>
+      <span id={hintId} className="text-sm text-muted-foreground italic block mb-4">
+        Select all that apply
+      </span>
 
-      <div className="space-y-3" role="group" aria-labelledby={legendId}>
+      <div className="space-y-3">
         {options.map((option, index) => {
           const isSelected = value.includes(option)
 
@@ -58,7 +78,7 @@ export function MultipleSelectQuestion({
             <label
               key={`${index}-${option}`}
               className={cn(
-                'flex items-start gap-3 rounded-xl p-4 min-h-12 cursor-pointer transition-colors duration-150 motion-reduce:transition-none border-2',
+                'flex items-center gap-3 rounded-xl p-4 min-h-12 cursor-pointer transition-colors duration-150 motion-reduce:transition-none border-2',
                 isSelected
                   ? 'border-brand bg-brand-soft'
                   : cn('border-border bg-card', isActive && 'hover:bg-accent'),
@@ -66,12 +86,16 @@ export function MultipleSelectQuestion({
                 'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2'
               )}
             >
+              {isActive && (
+                <kbd aria-hidden="true" className="inline-flex items-center justify-center w-5 h-5 shrink-0 rounded border border-border bg-muted text-muted-foreground text-xs font-mono">
+                  {index + 1}
+                </kbd>
+              )}
               <Checkbox
                 checked={isSelected}
                 onCheckedChange={() => handleToggle(option)}
                 disabled={!isActive}
-                aria-label={option}
-                className="mt-0.5 shrink-0"
+                className="shrink-0"
               />
               <span className="text-base text-foreground leading-relaxed">{option}</span>
             </label>

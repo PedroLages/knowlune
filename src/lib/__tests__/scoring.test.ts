@@ -166,6 +166,11 @@ describe('calculateQuizScore — multiple-select', () => {
     expect(calculateQuizScore(quiz, { q1: ['A', 'B', 'C'] }).score).toBe(1)
   })
 
+  it('clamps to 0 when incorrect outnumber correct (AC5: 1C/2I scenario)', () => {
+    // PCM: (1 correct - 2 incorrect) / 2 total correct = -0.5, clamped to 0
+    expect(calculateQuizScore(quiz, { q1: ['A', 'B', 'D'] }).score).toBe(0)
+  })
+
   it('awards zero for completely wrong selection', () => {
     expect(calculateQuizScore(quiz, { q1: ['B', 'D'] }).score).toBe(0)
   })
