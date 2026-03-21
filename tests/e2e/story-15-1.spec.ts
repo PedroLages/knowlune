@@ -151,11 +151,12 @@ test.describe('E15-S01: Countdown Timer Display', () => {
     const timer = page.getByRole('timer')
     const initialText = await timer.textContent()
 
-    // Wait ~3 seconds and verify timer has decreased
-    await page.waitForTimeout(3500) // hard-wait-ok: testing real-time countdown behavior
+    // Poll until timer text changes (auto-retries for up to 5s)
+    await expect
+      .poll(() => timer.textContent(), { timeout: 5000, message: 'Timer should count down' })
+      .not.toBe(initialText)
 
     const laterText = await timer.textContent()
-    expect(laterText).not.toBe(initialText)
 
     // Parse times and verify decrease
     const parseTime = (t: string | null) => {
@@ -200,7 +201,11 @@ test.describe('E15-S01: Timer Accuracy', () => {
 
     const initialSeconds = parseTime(initialText)
 
-    // Simulate tab becoming hidden then visible after ~5 seconds
+    // Save real Date.now, then shift forward 7 seconds to simulate tab-away
+    await saveRealDateNow(page)
+    await shiftDateNow(page, 7000)
+
+    // Simulate tab hidden → visible cycle to trigger timer recalculation
     await page.evaluate(() => {
       Object.defineProperty(document, 'visibilityState', {
         value: 'hidden',
@@ -209,9 +214,6 @@ test.describe('E15-S01: Timer Accuracy', () => {
       })
       document.dispatchEvent(new Event('visibilitychange'))
     })
-
-    await page.waitForTimeout(5000) // hard-wait-ok: simulating tab-away duration
-
     await page.evaluate(() => {
       Object.defineProperty(document, 'visibilityState', {
         value: 'visible',
@@ -221,13 +223,18 @@ test.describe('E15-S01: Timer Accuracy', () => {
       document.dispatchEvent(new Event('visibilitychange'))
     })
 
-    // Allow one tick for state update
-    await page.waitForTimeout(1200) // hard-wait-ok: waiting for React re-render after visibility
+    // Wait for timer to reflect the shifted time (auto-retries)
+    await expect
+      .poll(() => timer.textContent().then(t => parseTime(t)), {
+        timeout: 5000,
+        message: 'Timer should reflect elapsed time after tab switch',
+      })
+      .toBeLessThanOrEqual(initialSeconds - 5)
 
     const afterSwitchText = await timer.textContent()
     const afterSwitchSeconds = parseTime(afterSwitchText)
 
-    // Timer should have decreased by approximately 6-7 seconds (5s hidden + overhead)
+    // Timer should have decreased by approximately 7 seconds
     const elapsed = initialSeconds - afterSwitchSeconds
     expect(elapsed).toBeGreaterThanOrEqual(5)
     expect(elapsed).toBeLessThanOrEqual(10)
@@ -252,18 +259,16 @@ test.describe('E15-S01: Timer Color Transitions', () => {
     // Fast-forward clock to ~25% remaining (11.25 min elapsed of 15 min = 3:45 remaining)
     await shiftDateNow(page, 11.25 * 60 * 1000)
     await triggerVisibilityChange(page)
-    await page.waitForTimeout(1200) // hard-wait-ok: waiting for React re-render
 
-    // Timer should have warning (amber) color — check for text-warning class
+    // Timer should have warning (amber) color — expect auto-retries until class appears
     await expect(timer).toHaveClass(/warning/)
 
     // Fast-forward to ~10% remaining (13.5 min elapsed of 15 min = 1:30 remaining)
     // Uses same real Date.now reference — no stacking
     await shiftDateNow(page, 13.5 * 60 * 1000)
     await triggerVisibilityChange(page)
-    await page.waitForTimeout(1200) // hard-wait-ok: waiting for React re-render
 
-    // Timer should have urgent (red) color — check for text-destructive class
+    // Timer should have urgent (red) color — expect auto-retries until class appears
     await expect(timer).toHaveClass(/destructive/)
   })
 })
@@ -285,10 +290,7 @@ test.describe('E15-S01: Timer Expiry', () => {
     await shiftDateNow(page, 61 * 1000)
     await triggerVisibilityChange(page)
 
-    // Wait for expiry handling (submit + navigation)
-    await page.waitForTimeout(3000) // hard-wait-ok: waiting for async submit + navigation
-
-    // Should see "Time's up!" toast message
+    // Should see "Time's up!" toast message (auto-retries until visible)
     await expect(page.getByText(/time'?s up/i)).toBeVisible()
 
     // Quiz should be auto-submitted — results page heading visible
@@ -309,10 +311,7 @@ test.describe('E15-S01: Timer Expiry', () => {
     await shiftDateNow(page, 61 * 1000)
     await triggerVisibilityChange(page)
 
-    // Wait for expiry handling (submit + navigation)
-    await page.waitForTimeout(3000) // hard-wait-ok: waiting for async submit + navigation
-
-    // Should land on results page
+    // Should land on results page (auto-retries until visible)
     await expect(page.getByRole('heading', { name: /results/i })).toBeVisible()
 
     // Score should be 0% — verify via the visible score paragraph
