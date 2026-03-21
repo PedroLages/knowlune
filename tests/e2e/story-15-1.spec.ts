@@ -92,6 +92,37 @@ async function startQuiz(page: import('@playwright/test').Page) {
   await startBtn.click()
 }
 
+/**
+ * Save the real Date.now reference before any overrides.
+ * Must be called via addInitScript BEFORE navigating to the quiz page
+ * so the reference is available across all evaluate calls.
+ */
+async function saveRealDateNow(page: import('@playwright/test').Page) {
+  await page.evaluate(() => {
+    ;(window as unknown as Record<string, unknown>).__realDateNow = Date.now
+  })
+}
+
+/**
+ * Override Date.now() to shift time forward by the given offset.
+ * Uses the saved real Date.now reference to avoid stacking offsets.
+ */
+async function shiftDateNow(page: import('@playwright/test').Page, offsetMs: number) {
+  await page.evaluate(offset => {
+    const realNow = (window as unknown as Record<string, () => number>).__realDateNow
+    ;(Date as { now: () => number }).now = () => realNow() + offset
+  }, offsetMs)
+}
+
+/**
+ * Trigger visibilitychange event to force timer recalculation.
+ */
+async function triggerVisibilityChange(page: import('@playwright/test').Page) {
+  await page.evaluate(() => {
+    document.dispatchEvent(new Event('visibilitychange'))
+  })
+}
+
 // ---------------------------------------------------------------------------
 // AC1: Timer displays in MM:SS format and counts down
 // ---------------------------------------------------------------------------
@@ -121,7 +152,7 @@ test.describe('E15-S01: Countdown Timer Display', () => {
     const initialText = await timer.textContent()
 
     // Wait ~3 seconds and verify timer has decreased
-    await page.waitForTimeout(3500)
+    await page.waitForTimeout(3500) // hard-wait-ok: testing real-time countdown behavior
 
     const laterText = await timer.textContent()
     expect(laterText).not.toBe(initialText)
@@ -179,7 +210,7 @@ test.describe('E15-S01: Timer Accuracy', () => {
       document.dispatchEvent(new Event('visibilitychange'))
     })
 
-    await page.waitForTimeout(5000)
+    await page.waitForTimeout(5000) // hard-wait-ok: simulating tab-away duration
 
     await page.evaluate(() => {
       Object.defineProperty(document, 'visibilityState', {
@@ -191,7 +222,7 @@ test.describe('E15-S01: Timer Accuracy', () => {
     })
 
     // Allow one tick for state update
-    await page.waitForTimeout(1200)
+    await page.waitForTimeout(1200) // hard-wait-ok: waiting for React re-render after visibility
 
     const afterSwitchText = await timer.textContent()
     const afterSwitchSeconds = parseTime(afterSwitchText)
@@ -209,44 +240,28 @@ test.describe('E15-S01: Timer Accuracy', () => {
 
 test.describe('E15-S01: Timer Color Transitions', () => {
   test('AC3: timer shows amber at 25% and red at 10% remaining', async ({ page }) => {
-    // Use a very short quiz to test color transitions via clock manipulation
-    // We'll use page.clock to fast-forward time
     await navigateToQuiz(page, timedQuiz.id)
     await startQuiz(page)
 
     const timer = page.getByRole('timer')
-
-    // Initially, timer should have default text color (not amber, not red)
     await expect(timer).toBeVisible()
 
-    // Fast-forward clock to ~25% remaining (11.25 min elapsed of 15 min = 3:45 remaining)
-    // We manipulate Date.now() to simulate elapsed time
-    await page.evaluate(() => {
-      const offset = 11.25 * 60 * 1000 // 11.25 minutes in ms
-      const originalNow = Date.now
-      ;(Date as { now: () => number }).now = () => originalNow() + offset
-    })
+    // Save real Date.now before any overrides
+    await saveRealDateNow(page)
 
-    // Trigger visibility change to force recalculation
-    await page.evaluate(() => {
-      document.dispatchEvent(new Event('visibilitychange'))
-    })
-    await page.waitForTimeout(1200)
+    // Fast-forward clock to ~25% remaining (11.25 min elapsed of 15 min = 3:45 remaining)
+    await shiftDateNow(page, 11.25 * 60 * 1000)
+    await triggerVisibilityChange(page)
+    await page.waitForTimeout(1200) // hard-wait-ok: waiting for React re-render
 
     // Timer should have warning (amber) color — check for text-warning class
     await expect(timer).toHaveClass(/warning/)
 
     // Fast-forward to ~10% remaining (13.5 min elapsed of 15 min = 1:30 remaining)
-    await page.evaluate(() => {
-      const offset = 13.5 * 60 * 1000
-      const originalNow = Date.now
-      ;(Date as { now: () => number }).now = () => originalNow() + offset
-    })
-
-    await page.evaluate(() => {
-      document.dispatchEvent(new Event('visibilitychange'))
-    })
-    await page.waitForTimeout(1200)
+    // Uses same real Date.now reference — no stacking
+    await shiftDateNow(page, 13.5 * 60 * 1000)
+    await triggerVisibilityChange(page)
+    await page.waitForTimeout(1200) // hard-wait-ok: waiting for React re-render
 
     // Timer should have urgent (red) color — check for text-destructive class
     await expect(timer).toHaveClass(/destructive/)
@@ -265,46 +280,43 @@ test.describe('E15-S01: Timer Expiry', () => {
     const timer = page.getByRole('timer')
     await expect(timer).toBeVisible()
 
-    // Fast-forward past the 1-minute time limit
-    await page.evaluate(() => {
-      const offset = 61 * 1000 // 61 seconds — past the 1-minute limit
-      const originalNow = Date.now
-      ;(Date as { now: () => number }).now = () => originalNow() + offset
-    })
+    // Save real Date.now then fast-forward past the 1-minute limit
+    await saveRealDateNow(page)
+    await shiftDateNow(page, 61 * 1000)
+    await triggerVisibilityChange(page)
 
-    // Trigger visibility change to force recalculation
-    await page.evaluate(() => {
-      document.dispatchEvent(new Event('visibilitychange'))
-    })
+    // Wait for expiry handling (submit + navigation)
+    await page.waitForTimeout(3000) // hard-wait-ok: waiting for async submit + navigation
 
-    // Wait for expiry handling
-    await page.waitForTimeout(2000)
-
-    // Should see "Time's up!" message
+    // Should see "Time's up!" toast message
     await expect(page.getByText(/time'?s up/i)).toBeVisible()
 
-    // Quiz should be auto-submitted — score/results should be visible
-    await expect(page.getByText(/submitted/i).or(page.getByText(/score/i))).toBeVisible()
+    // Quiz should be auto-submitted — results page heading visible
+    await expect(page.getByRole('heading', { name: /results/i })).toBeVisible()
   })
 
   test('AC4: unanswered questions score 0 points on auto-submit', async ({ page }) => {
     await navigateToQuiz(page, shortTimedQuiz.id)
     await startQuiz(page)
 
+    // Wait for timer to initialize before overriding Date.now
+    // Otherwise the hook captures the shifted time and the offset is nullified
+    const timer = page.getByRole('timer')
+    await expect(timer).toBeVisible()
+
     // Don't answer any questions — let timer expire
-    await page.evaluate(() => {
-      const offset = 61 * 1000
-      const originalNow = Date.now
-      ;(Date as { now: () => number }).now = () => originalNow() + offset
-    })
+    await saveRealDateNow(page)
+    await shiftDateNow(page, 61 * 1000)
+    await triggerVisibilityChange(page)
 
-    await page.evaluate(() => {
-      document.dispatchEvent(new Event('visibilitychange'))
-    })
+    // Wait for expiry handling (submit + navigation)
+    await page.waitForTimeout(3000) // hard-wait-ok: waiting for async submit + navigation
 
-    await page.waitForTimeout(2000)
+    // Should land on results page
+    await expect(page.getByRole('heading', { name: /results/i })).toBeVisible()
 
-    // Score should be 0% since no questions were answered
-    await expect(page.getByText(/0%/).or(page.getByText(/0 of/i))).toBeVisible()
+    // Score should be 0% — verify via the visible score paragraph
+    // (exclude the sr-only element which also contains this text)
+    await expect(page.locator('p').filter({ hasText: '0 of 1 correct' })).toBeVisible()
   })
 })

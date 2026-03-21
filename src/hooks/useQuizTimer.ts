@@ -34,6 +34,10 @@ export function useQuizTimer(initialSeconds: number, onExpire: () => void): numb
   useEffect(() => {
     if (initialSeconds <= 0) return
 
+    // Reset displayed time when initialSeconds changes (e.g., quiz starts
+    // and hook transitions from 0 → 900). useState only uses its initial
+    // value on first mount, so we must sync explicitly.
+    setTimeRemaining(initialSeconds)
     hasFiredRef.current = false
     const startTime = Date.now()
     const endTime = startTime + initialSeconds * 1000
