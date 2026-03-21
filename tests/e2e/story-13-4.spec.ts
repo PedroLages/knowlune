@@ -9,7 +9,7 @@
  */
 import { test, expect } from '../support/fixtures'
 import { makeQuiz, makeQuestion, makeAttempt } from '../support/fixtures/factories/quiz-factory'
-// Note: quiz timing uses live Date.now() — no FIXED_DATE mocking needed
+import { seedIndexedDBStore } from '../support/helpers/indexeddb-seed'
 
 // ---------------------------------------------------------------------------
 // Test data
@@ -61,82 +61,20 @@ const quiz = makeQuiz({
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Seed quiz data into IndexedDB 'quizzes' store via page.evaluate */
-async function seedQuizData(page: import('@playwright/test').Page, quizData: unknown[]) {
-  await page.evaluate(
-    async ({ data, maxRetries, retryDelay }) => {
-      for (let attempt = 0; attempt < maxRetries; attempt++) {
-        const result = await new Promise<'ok' | 'store-missing'>((resolve, reject) => {
-          const request = indexedDB.open('ElearningDB')
-          request.onsuccess = () => {
-            const db = request.result
-            if (!db.objectStoreNames.contains('quizzes')) {
-              db.close()
-              resolve('store-missing')
-              return
-            }
-            const tx = db.transaction('quizzes', 'readwrite')
-            const store = tx.objectStore('quizzes')
-            for (const item of data) {
-              store.put(item)
-            }
-            tx.oncomplete = () => {
-              db.close()
-              resolve('ok')
-            }
-            tx.onerror = () => {
-              db.close()
-              reject(tx.error)
-            }
-          }
-          request.onerror = () => reject(request.error)
-        })
-        if (result === 'ok') return
-        await new Promise(r => setTimeout(r, retryDelay))
-      }
-      throw new Error('Store "quizzes" not found after retries')
-    },
-    { data: quizData, maxRetries: 10, retryDelay: 200 }
-  )
+/** Seed quiz data into IndexedDB 'quizzes' store */
+async function seedQuizData(
+  page: import('@playwright/test').Page,
+  quizData: Record<string, unknown>[],
+) {
+  await seedIndexedDBStore(page, 'ElearningDB', 'quizzes', quizData)
 }
 
 /** Seed quiz attempt history into IndexedDB 'quizAttempts' store */
-async function seedAttemptData(page: import('@playwright/test').Page, attemptData: unknown[]) {
-  await page.evaluate(
-    async ({ data, maxRetries, retryDelay }) => {
-      for (let attempt = 0; attempt < maxRetries; attempt++) {
-        const result = await new Promise<'ok' | 'store-missing'>((resolve, reject) => {
-          const request = indexedDB.open('ElearningDB')
-          request.onsuccess = () => {
-            const db = request.result
-            if (!db.objectStoreNames.contains('quizAttempts')) {
-              db.close()
-              resolve('store-missing')
-              return
-            }
-            const tx = db.transaction('quizAttempts', 'readwrite')
-            const store = tx.objectStore('quizAttempts')
-            for (const item of data) {
-              store.put(item)
-            }
-            tx.oncomplete = () => {
-              db.close()
-              resolve('ok')
-            }
-            tx.onerror = () => {
-              db.close()
-              reject(tx.error)
-            }
-          }
-          request.onerror = () => reject(request.error)
-        })
-        if (result === 'ok') return
-        await new Promise(r => setTimeout(r, retryDelay))
-      }
-      throw new Error('Store "quizAttempts" not found after retries')
-    },
-    { data: attemptData, maxRetries: 10, retryDelay: 200 }
-  )
+async function seedAttemptData(
+  page: import('@playwright/test').Page,
+  attemptData: Record<string, unknown>[],
+) {
+  await seedIndexedDBStore(page, 'ElearningDB', 'quizAttempts', attemptData)
 }
 
 /** Navigate to quiz page with seeded data and sidebar closed */
