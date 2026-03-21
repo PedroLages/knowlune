@@ -1,6 +1,6 @@
-import { test, expect } from './support/fixtures'
-import { seedQuizzes } from './support/helpers/indexeddb-seed'
-import { makeQuiz, makeQuestion } from './support/fixtures/factories/quiz-factory'
+import { test, expect } from '../support/fixtures'
+import { seedQuizzes } from '../support/helpers/indexeddb-seed'
+import { makeQuiz, makeQuestion } from '../support/fixtures/factories/quiz-factory'
 
 /**
  * E14-S03: Display Fill-in-Blank Questions
