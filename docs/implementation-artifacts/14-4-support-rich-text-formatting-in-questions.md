@@ -6,7 +6,7 @@ started: 2026-03-21
 completed:
 reviewed: in-progress
 review_started: 2026-03-21
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
 burn_in_validated: false
 ---
 
@@ -123,11 +123,18 @@ See [plan](plans/e14-s04-rich-text-formatting.md) for implementation approach.
 
 ## Implementation Notes
 
-[Architecture decisions, patterns used, dependencies added]
+- Created shared `MarkdownRenderer` component at `src/app/components/quiz/MarkdownRenderer.tsx` with two modes: `inline` (phrasing content for legends) and `block` (full Markdown with code blocks/lists)
+- Refactored all 4 question components (MultipleChoice, TrueFalse, MultipleSelect, FillInBlank) to use `MarkdownRenderer` instead of direct `<Markdown>` usage
+- Implemented `aria-labelledby` pattern: Markdown renders in a `<div id={labelId}>` outside `<legend>`, with `<fieldset aria-labelledby={labelId}>` for HTML validity and screen reader accessibility
+- Used design tokens throughout: `bg-surface-sunken` for code blocks, `bg-muted` for inline code, `text-foreground` for text
+- No new dependencies — `react-markdown` and `remark-gfm` were already installed
 
 ## Testing Notes
 
-[Test strategy, edge cases discovered, coverage notes]
+- 92-line unit test file for MarkdownRenderer covering code blocks, inline code, lists, bold/italic rendering, and inline vs block modes
+- Updated existing MultipleChoiceQuestion and TrueFalseQuestion unit tests for new legend/aria-labelledby structure
+- 9 E2E tests covering all 4 ACs: code block styling, inline code distinction, list indentation, bold/italic rendering, horizontal scroll, contrast ratio verification (≥4.5:1), mobile text wrapping (375px), mobile code block independent scroll, and aria-labelledby associations
+- Contrast test computes actual luminance from computed styles and verifies WCAG AA ratio
 
 ## Pre-Review Checklist
 
@@ -157,4 +164,7 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-(To be filled during implementation)
+- **HTML validity vs accessibility trade-off**: `<legend>` elements only allow phrasing content, but Markdown renders block elements (`<pre>`, `<ul>`, `<ol>`). Solution: move Markdown rendering outside `<legend>` into a `<div>` with `aria-labelledby` on the `<fieldset>`. This maintains both HTML validity and screen reader accessibility.
+- **Existing infrastructure reuse**: The project already had `react-markdown` and `remark-gfm` installed, plus a basic `markdown-config.tsx` for `<p>` → `<span>` conversion. Expanding this into a full `MarkdownRenderer` with two modes (inline/block) leveraged existing patterns rather than introducing new dependencies.
+- **Design token consistency**: All color choices came from theme.css tokens (`bg-surface-sunken`, `bg-muted`, `text-foreground`, `border-border`), ensuring automatic light/dark mode support without any hardcoded colors.
+- **E2E contrast verification**: Built a contrast ratio test that computes actual WCAG luminance from computed RGB styles, verifying ≥4.5:1 ratio programmatically rather than relying on visual inspection.
