@@ -158,9 +158,9 @@ async function navigateToQuiz(page: import('@playwright/test').Page) {
   })
 }
 
-/** Start the quiz from the start screen */
+/** Start the quiz from the start screen (matches both "Start Quiz" and "Retake Quiz") */
 async function startQuiz(page: import('@playwright/test').Page) {
-  const startBtn = page.getByRole('button', { name: /start quiz/i })
+  const startBtn = page.getByRole('button', { name: /start quiz|retake quiz/i })
   await expect(startBtn).toBeVisible()
   await startBtn.click()
 }
@@ -180,9 +180,8 @@ async function clickSubmit(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: /submit quiz/i }).click()
 }
 
-/** Complete a quiz with all correct answers and submit */
-async function completeQuizAllCorrect(page: import('@playwright/test').Page) {
-  await startQuiz(page)
+/** Answer all questions correctly and submit (assumes quiz is already on question view) */
+async function answerAllCorrectAndSubmit(page: import('@playwright/test').Page) {
   await answerQuestion(page, 'Rome')
   await clickNext(page)
   await answerQuestion(page, 'Pacific')
@@ -192,9 +191,8 @@ async function completeQuizAllCorrect(page: import('@playwright/test').Page) {
   await expect(page).toHaveURL(/\/quiz\/results/)
 }
 
-/** Complete a quiz with some wrong answers and submit */
-async function completeQuizPartial(page: import('@playwright/test').Page) {
-  await startQuiz(page)
+/** Answer with some wrong and submit (assumes quiz is already on question view) */
+async function answerPartialAndSubmit(page: import('@playwright/test').Page) {
   await answerQuestion(page, 'Milan') // wrong
   await clickNext(page)
   await answerQuestion(page, 'Pacific') // correct
@@ -202,6 +200,18 @@ async function completeQuizPartial(page: import('@playwright/test').Page) {
   await answerQuestion(page, 'Green') // wrong
   await clickSubmit(page)
   await expect(page).toHaveURL(/\/quiz\/results/)
+}
+
+/** Complete a quiz with all correct answers from start screen */
+async function completeQuizAllCorrect(page: import('@playwright/test').Page) {
+  await startQuiz(page)
+  await answerAllCorrectAndSubmit(page)
+}
+
+/** Complete a quiz with some wrong answers from start screen */
+async function completeQuizPartial(page: import('@playwright/test').Page) {
+  await startQuiz(page)
+  await answerPartialAndSubmit(page)
 }
 
 // ---------------------------------------------------------------------------
@@ -252,17 +262,14 @@ test.describe('E13-S04: Unlimited Quiz Retakes', () => {
     // Score should show 1 of 3 correct
     await expect(page.locator('p').getByText(/1 of 3 correct/)).toBeVisible()
 
-    // Click retake
+    // Click retake — retakeQuiz() starts quiz immediately (no start screen)
     await page.getByRole('button', { name: /retake quiz/i }).click()
     await expect(page).toHaveURL(/\/quiz$/)
 
-    // Start the retake — answers should be cleared (fresh attempt)
-    await startQuiz(page)
-
-    // First question should show with no pre-selected answer
+    // Quiz is already active after retake — first question should show
     await expect(page.getByText(q1.text).or(page.getByText(q2.text)).or(page.getByText(q3.text))).toBeVisible()
 
-    // No radio should be checked (fresh attempt)
+    // No radio should be checked (fresh attempt — answers cleared)
     const checkedRadios = page.locator('input[type="radio"]:checked')
     await expect(checkedRadios).toHaveCount(0)
   })
@@ -273,18 +280,18 @@ test.describe('E13-S04: Unlimited Quiz Retakes', () => {
     // Complete first attempt with partial score (1/3 = 33%)
     await completeQuizPartial(page)
 
-    // Click retake
+    // Click retake — quiz starts immediately (no start screen)
     await page.getByRole('button', { name: /retake quiz/i }).click()
     await expect(page).toHaveURL(/\/quiz$/)
 
-    // Complete second attempt with all correct (3/3 = 100%)
-    await completeQuizAllCorrect(page)
+    // Complete second attempt with all correct (already on question view)
+    await answerAllCorrectAndSubmit(page)
 
     // Should show improvement summary comparing to previous best
-    await expect(page.getByText(/previous best/i)).toBeVisible()
+    await expect(page.getByTestId('improvement-summary')).toBeVisible()
   })
 
-  test('AC4: lesson page shows "Retake Quiz" for completed quizzes', async ({ page }) => {
+  test('AC4: quiz start screen shows "Retake Quiz" for completed quizzes', async ({ page }) => {
     // Close sidebar
     await page.addInitScript(() => {
       localStorage.setItem('eduvi-sidebar-v1', 'false')
@@ -303,14 +310,15 @@ test.describe('E13-S04: Unlimited Quiz Retakes', () => {
     })
     await seedAttemptData(page, [previousAttempt])
 
-    // Navigate to lesson page
-    await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}`, {
+    // Navigate to quiz start screen (the entry point for quizzes)
+    await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz`, {
       waitUntil: 'domcontentloaded',
     })
 
-    // Should show "Retake Quiz" instead of "Take Quiz"
-    await expect(page.getByRole('button', { name: /retake quiz/i }).or(
-      page.getByRole('link', { name: /retake quiz/i })
-    )).toBeVisible()
+    // Should show "Retake Quiz" instead of "Start Quiz"
+    await expect(page.getByRole('button', { name: /retake quiz/i })).toBeVisible()
+
+    // "Start Quiz" should NOT be visible
+    await expect(page.getByRole('button', { name: /^start quiz$/i })).not.toBeVisible()
   })
 })
