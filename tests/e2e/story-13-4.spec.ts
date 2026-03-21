@@ -267,7 +267,9 @@ test.describe('E13-S04: Unlimited Quiz Retakes', () => {
     await expect(page).toHaveURL(/\/quiz$/)
 
     // Quiz is already active after retake — first question should show
-    await expect(page.getByText(q1.text).or(page.getByText(q2.text)).or(page.getByText(q3.text))).toBeVisible()
+    await expect(
+      page.getByText(q1.text).or(page.getByText(q2.text)).or(page.getByText(q3.text))
+    ).toBeVisible()
 
     // No radio should be checked (fresh attempt — answers cleared)
     const checkedRadios = page.locator('input[type="radio"]:checked')

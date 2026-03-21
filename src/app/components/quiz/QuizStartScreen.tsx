@@ -23,7 +23,13 @@ interface QuizStartScreenProps {
   onResume: () => void
 }
 
-export function QuizStartScreen({ quiz, savedProgress, hasCompletedBefore, onStart, onResume }: QuizStartScreenProps) {
+export function QuizStartScreen({
+  quiz,
+  savedProgress,
+  hasCompletedBefore,
+  onStart,
+  onResume,
+}: QuizStartScreenProps) {
   const answeredCount = savedProgress ? Object.keys(savedProgress.answers).length : 0
   const hasResume = answeredCount > 0
   const questionCount = quiz.questions.length
