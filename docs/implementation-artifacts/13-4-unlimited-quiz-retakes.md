@@ -1,9 +1,9 @@
 ---
 story_id: E13-S04
 story_name: "Unlimited Quiz Retakes"
-status: in-progress
+status: done
 started: 2026-03-21
-completed:
+completed: 2026-03-21
 reviewed: true
 review_started: 2026-03-21
 review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
