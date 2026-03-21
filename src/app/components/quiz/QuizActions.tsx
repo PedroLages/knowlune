@@ -1,8 +1,9 @@
-import { forwardRef } from 'react'
+import { type Ref } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 
 interface QuizActionsProps {
+  ref?: Ref<HTMLButtonElement>
   onPrevious: () => void
   onNext: () => void
   onSubmit: () => void
@@ -11,10 +12,15 @@ interface QuizActionsProps {
   isSubmitting?: boolean
 }
 
-export const QuizActions = forwardRef<HTMLButtonElement, QuizActionsProps>(function QuizActions(
-  { onPrevious, onNext, onSubmit, isFirst, isLast, isSubmitting },
-  ref
-) {
+export function QuizActions({
+  ref,
+  onPrevious,
+  onNext,
+  onSubmit,
+  isFirst,
+  isLast,
+  isSubmitting,
+}: QuizActionsProps) {
   return (
     <div role="group" aria-label="Quiz controls" className="flex gap-3 items-center">
       <Button
@@ -50,4 +56,4 @@ export const QuizActions = forwardRef<HTMLButtonElement, QuizActionsProps>(funct
       )}
     </div>
   )
-})
+}
