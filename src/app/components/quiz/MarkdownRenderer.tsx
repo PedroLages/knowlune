@@ -28,7 +28,7 @@ const markdownComponents: Components = {
     <code
       className={cn(
         'text-foreground font-mono',
-        className ? `text-sm ${className}` : 'bg-muted text-[0.875em] px-1.5 py-0.5 rounded'
+        className ? ['text-sm', className] : 'bg-muted text-[0.875em] px-1.5 py-0.5 rounded'
       )}
     >
       {children}
