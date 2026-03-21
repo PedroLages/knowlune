@@ -283,41 +283,27 @@ Mark the first todo as `in_progress` and proceed:
       - `[Architecture decisions, patterns used, dependencies added]`
       - Any other bracketed placeholder text in this section
 
-   c. If placeholders found:
-      - STOP the review and display clear error:
-        ```
-        ❌ Lessons Learned Gate FAILED
+   c. If placeholders found — **auto-populate** from implementation context:
 
-        The "Challenges and Lessons Learned" section in your story file has placeholder text.
-
-        Placeholder text found:
-        - [Document issues, solutions, and patterns worth remembering]
-
-        Why this matters:
-        - Epic 8 retrospective showed only 2/5 stories documented lessons learned
-        - Undocumented lessons lead to repeated mistakes across stories
-        - This gate enforces the 100% compliance that manual reminders failed to achieve
-
-        What to do:
-        1. Open ${BASE_PATH}/docs/implementation-artifacts/{story-id}.md
-        2. Replace placeholder text with actual lessons learned:
-           - Implementation challenges you faced
-           - Solutions you discovered
-           - Patterns worth remembering for future stories
-        3. Commit your changes
-        4. Re-run /review-story
-
-        See story 8-1-study-time-analytics.md for excellent examples of lessons learned documentation.
-        ```
-      - Do NOT proceed to review agents
-      - Keep `reviewed: in-progress`
-      - Do NOT add any review gates to `review_gates_passed` (pre-checks passed but review didn't start)
+      1. Gather context by running:
+         - `git log main...HEAD --oneline` (commit history for the story branch)
+         - `git diff main...HEAD --stat` (files changed, scope of work)
+         - Read the story file's acceptance criteria and technical notes
+      2. Generate lessons learned content covering (use bullet points, match the style of `8-1-study-time-analytics.md`):
+         - **Implementation challenges faced** — what was harder than expected, what broke
+         - **Solutions discovered** — how challenges were resolved, workarounds applied
+         - **Patterns worth remembering** — reusable approaches for future stories
+         - **Decisions and trade-offs** — choices made and their rationale
+      3. Replace ALL placeholder text in the "Challenges and Lessons Learned" section with the generated content
+      4. Commit the change: `docs: populate lessons learned for {story-id}`
+      5. Output: `✅ Lessons Learned Gate — auto-populated from implementation context`
+      6. Continue to step 7 (review agent swarm)
 
    d. If no placeholders (lessons learned properly filled):
       - Continue to step 7 (review agent swarm)
       - Note in output: "✅ Lessons Learned Gate passed — documentation complete"
 
-   **Rationale**: This automated gate addresses Epic 8 retrospective finding that only 2/5 stories documented lessons learned despite manual reminders. Automated enforcement achieves 100% compliance where manual processes achieved 40%.
+   **Rationale**: This automated gate addresses Epic 8 retrospective finding that only 2/5 stories documented lessons learned despite manual reminders. Since Claude Code performs the implementation, it has full context to auto-generate meaningful lessons learned — achieving 100% compliance without blocking the review workflow.
 
 7. **Review agent swarm** (parallel dispatch — design + code + testing):
 
