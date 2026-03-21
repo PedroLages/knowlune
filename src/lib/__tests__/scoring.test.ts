@@ -156,12 +156,14 @@ describe('calculateQuizScore — multiple-select', () => {
     expect(calculateQuizScore(quiz, { q1: ['C', 'A'] }).score).toBe(2)
   })
 
-  it('awards zero for partial selection', () => {
-    expect(calculateQuizScore(quiz, { q1: ['A'] }).score).toBe(0)
+  it('awards partial credit for partial selection (PCM)', () => {
+    // PCM: (1 correct - 0 incorrect) / 2 total correct × 2 points = 1
+    expect(calculateQuizScore(quiz, { q1: ['A'] }).score).toBe(1)
   })
 
-  it('awards zero for extra selection', () => {
-    expect(calculateQuizScore(quiz, { q1: ['A', 'B', 'C'] }).score).toBe(0)
+  it('awards partial credit for extra selection (PCM)', () => {
+    // PCM: (2 correct - 1 incorrect) / 2 total correct × 2 points = 1
+    expect(calculateQuizScore(quiz, { q1: ['A', 'B', 'C'] }).score).toBe(1)
   })
 
   it('awards zero for completely wrong selection', () => {

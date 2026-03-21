@@ -49,8 +49,8 @@ function calculatePointsForQuestion(
     // Partial Credit Model (PCM): (correct - incorrect) / total_correct, clamped to 0
     const correctSet = new Set(question.correctAnswer as string[])
     const userSet = new Set(userAnswer as string[])
-    const correctSelections = [...userSet].filter((a) => correctSet.has(a)).length
-    const incorrectSelections = [...userSet].filter((a) => !correctSet.has(a)).length
+    const correctSelections = [...userSet].filter(a => correctSet.has(a)).length
+    const incorrectSelections = [...userSet].filter(a => !correctSet.has(a)).length
     const rawScore =
       correctSet.size > 0 ? (correctSelections - incorrectSelections) / correctSet.size : 0
     const pointsEarned = Math.max(0, Math.round(rawScore * question.points * 100) / 100)

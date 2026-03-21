@@ -308,7 +308,7 @@ test.describe('E13-S03: Pause and Resume Quiz', () => {
     // Verify the timer was synced to per-quiz localStorage before navigating
     const savedProgress = await page.evaluate(
       quizId => localStorage.getItem(`quiz-progress-${quizId}`),
-      QUIZ_ID,
+      QUIZ_ID
     )
     expect(savedProgress).not.toBeNull()
     const parsed = JSON.parse(savedProgress!)

@@ -33,9 +33,7 @@ export function MultipleSelectQuestion({
 
   function handleToggle(option: string) {
     if (!isActive) return
-    const newValue = value.includes(option)
-      ? value.filter((v) => v !== option)
-      : [...value, option]
+    const newValue = value.includes(option) ? value.filter(v => v !== option) : [...value, option]
     onChange(newValue)
   }
 
@@ -50,9 +48,7 @@ export function MultipleSelectQuestion({
           {question.text}
         </Markdown>
       </legend>
-      <span className="text-sm text-muted-foreground italic block mb-4">
-        Select all that apply
-      </span>
+      <span className="text-sm text-muted-foreground italic block mb-4">Select all that apply</span>
 
       <div className="space-y-3" role="group" aria-labelledby={legendId}>
         {options.map((option, index) => {
