@@ -53,6 +53,16 @@ export const useQuizStore = create<QuizState>()(
             return
           }
 
+          if (quiz.questions.length === 0) {
+            set({
+              currentQuiz: null,
+              currentProgress: null,
+              isLoading: false,
+              error: 'Quiz has no questions',
+            })
+            return
+          }
+
           const questionOrder = quiz.shuffleQuestions
             ? fisherYatesShuffle(quiz.questions.map(q => q.id))
             : quiz.questions.map(q => q.id)

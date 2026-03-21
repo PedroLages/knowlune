@@ -5,10 +5,13 @@
  * - Shuffle enabled → questions appear in random order
  * - Retake → different order on each attempt
  * - Shuffle disabled → original order preserved
+ *
+ * AC1/AC2 mock Math.random to produce deterministic shuffles,
+ * eliminating the 1/120 false-failure probability of random assertions.
  */
 import { test, expect } from '../support/fixtures'
 import { makeQuiz, makeQuestion } from '../support/fixtures/factories/quiz-factory'
-import { seedIndexedDBStore } from '../support/helpers/indexeddb-seed'
+import { seedQuizzes } from '../support/helpers/indexeddb-seed'
 
 // ---------------------------------------------------------------------------
 // Test data — 5 questions to make randomization observable
@@ -25,7 +28,7 @@ const questions = Array.from({ length: 5 }, (_, i) =>
     options: ['A', 'B', 'C', 'D'],
     correctAnswer: 'A',
     points: 1,
-  }),
+  })
 )
 
 const shuffledQuiz = makeQuiz({
@@ -53,27 +56,62 @@ const unshuffledQuiz = makeQuiz({
 })
 
 // ---------------------------------------------------------------------------
+// Deterministic Math.random sequences for shuffle testing
+// ---------------------------------------------------------------------------
+
+// Fisher-Yates iterates i from 4→1, calling Math.random() once per iteration.
+// Each call produces j = floor(random * (i + 1)) where j ∈ [0, i].
+// Sequence A: [0.1, 0.9, 0.3, 0.7] → swaps (4,0)(3,2)(2,0)(1,1) → [5,2,4,3,1]
+// Sequence B: [0.5, 0.4, 0.8, 0.2] → swaps (4,2)(3,1)(2,1)(1,0) → [4,3,1,5,2]
+const RANDOM_SEQUENCE_A = [0.1, 0.9, 0.3, 0.7]
+const RANDOM_SEQUENCE_B = [0.5, 0.4, 0.8, 0.2]
+
+/**
+ * Inject a deterministic Math.random via addInitScript.
+ * The mock replaces Math.random with a sequence-based generator
+ * that returns values from the provided array, then falls back
+ * to the next sequence (for retake tests) or to 0.5.
+ */
+function mockMathRandom(sequences: number[][]) {
+  return (sequences: number[][]) => {
+    let seqIndex = 0
+    let callIndex = 0
+    const originalRandom = Math.random.bind(Math)
+
+    Math.random = () => {
+      if (seqIndex < sequences.length) {
+        const seq = sequences[seqIndex]
+        if (callIndex < seq.length) {
+          return seq[callIndex++]
+        }
+        // Sequence exhausted — move to next
+        seqIndex++
+        callIndex = 0
+        if (seqIndex < sequences.length) {
+          return sequences[seqIndex][callIndex++]
+        }
+      }
+      // All sequences exhausted — fall back to real random for non-shuffle calls
+      return originalRandom()
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-async function seedQuizData(
-  page: import('@playwright/test').Page,
-  quizData: Record<string, unknown>[],
-) {
-  await seedIndexedDBStore(page, 'ElearningDB', 'quizzes', quizData)
-}
-
-/** Read the current question text from the fieldset legend */
+/** Read the current question text via data-testid */
 async function getCurrentQuestionText(page: import('@playwright/test').Page): Promise<string> {
-  const legend = page.locator('fieldset legend')
-  await expect(legend).toBeVisible()
-  return (await legend.textContent()) ?? ''
+  const el = page.getByTestId('question-text')
+  await expect(el).toBeVisible()
+  return (await el.textContent()) ?? ''
 }
 
 /** Collect the order of all questions by navigating through them */
 async function collectQuestionOrder(
   page: import('@playwright/test').Page,
-  count: number,
+  count: number
 ): Promise<string[]> {
   const order: string[] = []
   for (let i = 0; i < count; i++) {
@@ -92,17 +130,21 @@ async function collectQuestionOrder(
 
 test.describe('E13-S05: Randomize Question Order', () => {
   test.beforeEach(async ({ page }) => {
-    // Seed sidebar closed for tablet viewports (addInitScript runs before page load,
-    // avoiding SecurityError on about:blank where localStorage is inaccessible)
+    // Seed sidebar closed for tablet viewports
     await page.addInitScript(() => {
       localStorage.setItem('eduvi-sidebar-v1', 'false')
     })
   })
 
-  test('AC1: shuffle enabled → questions appear in randomized order', async ({ page }) => {
+  test('AC1: shuffle enabled → questions appear in deterministic shuffled order', async ({
+    page,
+  }) => {
+    // Mock Math.random to produce a known shuffle: [5,2,4,3,1]
+    await page.addInitScript(mockMathRandom([RANDOM_SEQUENCE_A]), [RANDOM_SEQUENCE_A])
+
     // Navigate to app first so IndexedDB schema is initialized, then seed quiz data
     await page.goto('/')
-    await seedQuizData(page, [shuffledQuiz as unknown as Record<string, unknown>])
+    await seedQuizzes(page, [shuffledQuiz as unknown as Record<string, unknown>])
 
     // Navigate directly to the quiz route
     await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz`)
@@ -111,16 +153,21 @@ test.describe('E13-S05: Randomize Question Order', () => {
     await page.getByRole('button', { name: /start quiz/i }).click()
 
     const order = await collectQuestionOrder(page, 5)
-    const originalOrder = questions.map((q) => q.text)
+    const originalOrder = questions.map(q => q.text)
 
-    // With 5 questions, probability of getting original order by chance is 1/120 (0.83%)
-    // This is an acceptable flakiness rate for verifying randomization
+    // Deterministic mock guarantees shuffled order differs from original
     expect(order).not.toEqual(originalOrder)
   })
 
   test('AC2: retake quiz → different order on each attempt', async ({ page }) => {
+    // Mock Math.random with two different sequences — one per attempt
+    await page.addInitScript(mockMathRandom([RANDOM_SEQUENCE_A, RANDOM_SEQUENCE_B]), [
+      RANDOM_SEQUENCE_A,
+      RANDOM_SEQUENCE_B,
+    ])
+
     await page.goto('/')
-    await seedQuizData(page, [shuffledQuiz as unknown as Record<string, unknown>])
+    await seedQuizzes(page, [shuffledQuiz as unknown as Record<string, unknown>])
 
     await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz`)
 
@@ -146,24 +193,24 @@ test.describe('E13-S05: Randomize Question Order', () => {
     await page.getByRole('button', { name: /retake quiz/i }).click()
 
     // Wait for quiz to restart
-    await expect(page.locator('fieldset legend')).toBeVisible()
+    await expect(page.getByTestId('question-text')).toBeVisible()
 
     const secondOrder = await collectQuestionOrder(page, 5)
 
-    // Two independent shuffles of 5 items — probability of same order is 1/120
+    // Deterministic mock: sequence A produces different order than sequence B
     expect(secondOrder).not.toEqual(firstOrder)
   })
 
   test('AC3: shuffle disabled → original order preserved', async ({ page }) => {
     await page.goto('/')
-    await seedQuizData(page, [unshuffledQuiz as unknown as Record<string, unknown>])
+    await seedQuizzes(page, [unshuffledQuiz as unknown as Record<string, unknown>])
 
     await page.goto(`/courses/${COURSE_ID}/lessons/test-lesson-e13s05-noshuffle/quiz`)
 
     await page.getByRole('button', { name: /start quiz/i }).click()
 
     const order = await collectQuestionOrder(page, 5)
-    const originalOrder = questions.map((q) => q.text)
+    const originalOrder = questions.map(q => q.text)
 
     expect(order).toEqual(originalOrder)
   })
