@@ -1,94 +1,121 @@
-# Web Interface Guidelines Review: E14-S04
+# Web Design Guidelines Review: E14-S04 (Re-validation)
 
-**Story:** E14-S04 — Support Rich Text Formatting in Questions
+**Story:** E14-S04 Rich Text Formatting Questions
 **Date:** 2026-03-21
-**Reviewer:** Web Interface Guidelines automated check
-**Scope:** MarkdownRenderer + 4 question components
+**Reviewer:** Claude (Web Interface Guidelines compliance check)
+**Type:** Re-validation (all previous findings fixed)
+**Status:** PASS
 
 ---
 
-## src/app/components/quiz/MarkdownRenderer.tsx
+## Files Reviewed
 
-src/app/components/quiz/MarkdownRenderer.tsx:17 - `<pre>` overflow handling good (`overflow-x-auto`) — pass
-src/app/components/quiz/MarkdownRenderer.tsx:15 - `<p>` component: no `text-wrap: pretty` or `text-wrap: balance` on paragraph text (Typography rule: use `text-pretty` on headings/body to prevent widows)
-src/app/components/quiz/MarkdownRenderer.tsx:26 - inline `<code>` handles long content via parent wrapping — pass
-src/app/components/quiz/MarkdownRenderer.tsx:32-33 - `<ul>`/`<ol>` use semantic HTML with proper list styles — pass
+- `src/app/components/quiz/MarkdownRenderer.tsx` (new)
+- `src/app/components/quiz/questions/MultipleChoiceQuestion.tsx`
+- `src/app/components/quiz/questions/TrueFalseQuestion.tsx`
+- `src/app/components/quiz/questions/MultipleSelectQuestion.tsx`
+- `src/app/components/quiz/questions/FillInBlankQuestion.tsx`
 
-## src/app/components/quiz/questions/MultipleChoiceQuestion.tsx
+## Previous Findings (All Fixed)
 
-src/app/components/quiz/questions/MultipleChoiceQuestion.tsx:41 - `<fieldset>` with `aria-labelledby` — correct semantic HTML, pass
-src/app/components/quiz/questions/MultipleChoiceQuestion.tsx:63 - `transition-colors duration-150` — explicitly lists property (not `transition: all`) — pass
-src/app/components/quiz/questions/MultipleChoiceQuestion.tsx:63 - `motion-reduce:transition-none` — honors `prefers-reduced-motion` — pass
-src/app/components/quiz/questions/MultipleChoiceQuestion.tsx:68 - `focus-within:ring-2` — visible focus state on compound control — pass
-src/app/components/quiz/questions/MultipleChoiceQuestion.tsx:66 - `hover:bg-accent` — hover state present on interactive labels — pass
-src/app/components/quiz/questions/MultipleChoiceQuestion.tsx:73 - `<kbd>` with `aria-hidden="true"` — decorative element correctly hidden — pass
-src/app/components/quiz/questions/MultipleChoiceQuestion.tsx:79 - `<RadioGroupItem>` inside `<label>` — shared hit target, no dead zones — pass
-src/app/components/quiz/questions/MultipleChoiceQuestion.tsx:31 - `handleKeyDown` — keyboard handler present — pass
-src/app/components/quiz/questions/MultipleChoiceQuestion.tsx:50-53 - `<RadioGroup>` disabled state handled, `onValueChange` conditional — pass
+| # | Finding | Status | Evidence |
+|---|---------|--------|----------|
+| 1 | FillInBlankQuestion: missing `autocomplete="off"` | FIXED | Line 82: `autoComplete="off"` |
+| 2 | FillInBlankQuestion: missing `spellCheck={false}` | FIXED | Line 83: `spellCheck={false}` |
+| 3 | FillInBlankQuestion: missing `name` attribute | FIXED | Line 75: `name="quiz-answer"` |
+| 4 | FillInBlankQuestion: placeholder missing ellipsis | FIXED | Line 79: `"Type your answer here..."` |
+| 5 | MarkdownRenderer: `text-pretty` on paragraphs | FIXED | Line 21: `<p className="my-2 text-pretty">` |
 
-## src/app/components/quiz/questions/TrueFalseQuestion.tsx
+## Compliance Checklist
 
-src/app/components/quiz/questions/TrueFalseQuestion.tsx:36 - `<fieldset>` with `aria-labelledby` — pass
-src/app/components/quiz/questions/TrueFalseQuestion.tsx:59 - `transition-colors duration-150` + `motion-reduce:transition-none` — pass
-src/app/components/quiz/questions/TrueFalseQuestion.tsx:64 - `focus-within:ring-2` — pass
-src/app/components/quiz/questions/TrueFalseQuestion.tsx:62 - `hover:bg-accent` — pass
-src/app/components/quiz/questions/TrueFalseQuestion.tsx:69 - `<kbd aria-hidden="true">` — pass
-src/app/components/quiz/questions/TrueFalseQuestion.tsx:75 - `<RadioGroupItem>` inside `<label>` — pass
-src/app/components/quiz/questions/TrueFalseQuestion.tsx:26 - keyboard handler present — pass
+### Accessibility
 
-## src/app/components/quiz/questions/MultipleSelectQuestion.tsx
+| Guideline | Status | Notes |
+|-----------|--------|-------|
+| Fieldset + accessible name | PASS | All 4 question types use `<fieldset aria-labelledby={labelId}>` with corresponding `<div id={labelId}>` |
+| ARIA references resolve | PASS | `aria-labelledby` IDs generated via `useId()` match `id` attributes on question text divs |
+| Keyboard navigation | PASS | Number key shortcuts (1-9) for option selection; `e.nativeEvent.isComposing` guard for IME |
+| Modifier key guards | PASS | All `handleKeyDown` handlers check `metaKey`, `ctrlKey`, `altKey` before acting |
+| Focus visible indicators | PASS | `focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2` on option labels |
+| Motion reduction | PASS | `motion-reduce:transition-none` on all option labels |
+| Touch targets | PASS | `min-h-12` (48px) on option labels; `min-h-[44px]` on FillInBlank input |
+| Live region for char count | PASS | `aria-live="polite" aria-atomic="true"` on character counter |
+| Disabled state | PASS | All inputs/radio groups respect `disabled={!isActive}` with `opacity-60 cursor-default` |
 
-src/app/components/quiz/questions/MultipleSelectQuestion.tsx:48 - `<fieldset>` with `aria-labelledby` + `aria-describedby` — pass
-src/app/components/quiz/questions/MultipleSelectQuestion.tsx:61 - hint text "Select all that apply" associated via `aria-describedby` — pass
-src/app/components/quiz/questions/MultipleSelectQuestion.tsx:74 - `transition-colors duration-150` + `motion-reduce:transition-none` — pass
-src/app/components/quiz/questions/MultipleSelectQuestion.tsx:79 - `focus-within:ring-2` — pass
-src/app/components/quiz/questions/MultipleSelectQuestion.tsx:77 - `hover:bg-accent` — pass
-src/app/components/quiz/questions/MultipleSelectQuestion.tsx:83 - `<kbd aria-hidden="true">` — pass
-src/app/components/quiz/questions/MultipleSelectQuestion.tsx:90-93 - `<Checkbox>` inside `<label>` with shared hit target — pass
-src/app/components/quiz/questions/MultipleSelectQuestion.tsx:38 - keyboard handler present — pass
+### Forms & Input
 
-## src/app/components/quiz/questions/FillInBlankQuestion.tsx
+| Guideline | Status | Notes |
+|-----------|--------|-------|
+| `autocomplete="off"` | PASS | FillInBlank input — prevents password manager interference |
+| `spellCheck={false}` | PASS | FillInBlank input — quiz answers may include code/technical terms |
+| `name` attribute | PASS | `name="quiz-answer"` on FillInBlank input |
+| `maxLength` constraint | PASS | 500 char limit with visible counter |
+| Debounced input | PASS | 300ms debounce with immediate flush on blur |
+| Placeholder text | PASS | Uses ellipsis convention (`"Type your answer here..."`) |
 
-src/app/components/quiz/questions/FillInBlankQuestion.tsx:63 - `<fieldset>` with `aria-labelledby` — pass
-src/app/components/quiz/questions/FillInBlankQuestion.tsx:73-83 - `<Input>` with `type="text"`, `aria-labelledby`, `aria-describedby`, `maxLength` — pass
-src/app/components/quiz/questions/FillInBlankQuestion.tsx:83 - `min-h-[44px]` — meets 44px touch target requirement — pass
-src/app/components/quiz/questions/FillInBlankQuestion.tsx:88 - `aria-live="polite"` on character counter — async update announced — pass
-src/app/components/quiz/questions/FillInBlankQuestion.tsx:89 - `aria-atomic="true"` on live region — full content re-announced — pass
-src/app/components/quiz/questions/FillInBlankQuestion.tsx:78 - placeholder `"Type your answer here"` — missing trailing ellipsis (Forms rule: placeholders end with `...` / `\u2026`)
-src/app/components/quiz/questions/FillInBlankQuestion.tsx:73 - `<Input>` missing `autocomplete="off"` (Forms rule: non-auth fields should set `autocomplete="off"` to avoid password manager triggers)
-src/app/components/quiz/questions/FillInBlankQuestion.tsx:73 - `<Input>` missing `name` attribute (Forms rule: inputs need meaningful `name`)
-src/app/components/quiz/questions/FillInBlankQuestion.tsx:73 - `<Input>` missing `spellCheck` attribute — quiz answers may include code/technical terms; consider `spellCheck={false}`
+### Typography & Layout
+
+| Guideline | Status | Notes |
+|-----------|--------|-------|
+| `text-pretty` on paragraphs | PASS | MarkdownRenderer `<p>` component includes `text-pretty` |
+| Responsive text sizing | PASS | `text-lg lg:text-xl` on question text |
+| Line height | PASS | `leading-relaxed` throughout |
+| Design tokens (no hardcoded colors) | PASS | All colors use tokens: `text-foreground`, `bg-muted`, `bg-surface-sunken`, `border-brand`, `bg-brand-soft`, etc. |
+
+### Transitions & Animation
+
+| Guideline | Status | Notes |
+|-----------|--------|-------|
+| Explicit transition properties | PASS | `transition-colors duration-150` (not `transition: all`) |
+| Reduced motion | PASS | `motion-reduce:transition-none` on all animated elements |
+
+### Security
+
+| Guideline | Status | Notes |
+|-----------|--------|-------|
+| No raw HTML in Markdown | PASS | `rehype-raw` intentionally excluded (documented in comment) |
+| Links neutered in quiz context | PASS | `<a>` rendered as `<span>` to prevent navigation away |
+| XSS via Markdown | PASS | react-markdown sanitizes by default; no HTML injection vector |
+
+### Semantic HTML
+
+| Guideline | Status | Notes |
+|-----------|--------|-------|
+| Fieldset grouping | PASS | All question types wrapped in `<fieldset>` |
+| Legend replacement | PASS | `<div>` + `aria-labelledby` instead of `<legend>` (allows block Markdown content) |
+| Proper list markup | PASS | `<ul>` with `list-disc` and `<ol>` with `list-decimal` |
+| Code blocks | PASS | Inline `<code>` with `bg-muted`, block `<pre>` with `bg-surface-sunken` and overflow scroll |
+| Decorative elements hidden | PASS | `<kbd aria-hidden="true">` on keyboard shortcut badges |
+
+### Responsive & Mobile
+
+| Guideline | Status | Notes |
+|-----------|--------|-------|
+| Overflow handling | PASS | `overflow-x-auto` on `<pre>` and table wrapper |
+| Image constraints | PASS | `max-w-full h-auto` on images |
+| Table scroll | PASS | Tables wrapped in `overflow-x-auto` container |
+| Input max-width | PASS | `max-w-lg` prevents full-width stretch on desktop |
+
+### Anti-Pattern Check
+
+| Anti-Pattern | Status |
+|--------------|--------|
+| `outline-none` without replacement | Not found |
+| `div onClick` instead of `button` | Not found |
+| `transition: all` | Not found |
+| Zoom-disabling meta tag | Not found |
+| Hardcoded colors | Not found |
+| Inline styles | Not found |
 
 ---
 
-## Summary
+## Architecture Note
 
-| Severity | Count | Details |
-|----------|-------|---------|
-| **Issues** | 4 | Placeholder missing ellipsis, missing `autocomplete`, missing `name`, missing `spellCheck` |
-| **Suggestions** | 1 | `text-pretty` on paragraph text in MarkdownRenderer |
-| **Pass** | 30+ | Semantic HTML, focus states, motion, hover, ARIA, keyboard, touch targets |
+The refactor from `<legend>` + inline Markdown to `<div>` + `aria-labelledby` is a well-motivated trade-off:
+- **Before:** `<legend>` only permits phrasing content (no `<p>`, `<pre>`, `<ul>`, etc.), forcing all Markdown into `<span>` wrappers
+- **After:** `<div aria-labelledby>` allows full block-level Markdown rendering while maintaining the accessible name association
+- The deleted `markdown-config.tsx` is replaced by the centralized `MarkdownRenderer` component
 
-### Issues to Fix
+## Verdict
 
-1. **FillInBlankQuestion.tsx:78** — Placeholder should end with ellipsis: `"Type your answer here\u2026"` or `"Type your answer here..."` per guidelines (`...` acceptable, `\u2026` preferred)
-2. **FillInBlankQuestion.tsx:73** — Add `autocomplete="off"` to prevent password manager interference on quiz answer input
-3. **FillInBlankQuestion.tsx:73** — Add `name="answer"` (or similar meaningful name) per forms guideline
-4. **FillInBlankQuestion.tsx:73** — Consider `spellCheck={false}` since quiz answers may include technical terms, code, or proper nouns
-
-### Suggestion (Low Priority)
-
-5. **MarkdownRenderer.tsx:15** — Consider adding `text-pretty` class to `<p>` component for better text wrapping (prevents orphaned words on last line)
-
-### Notable Compliance
-
-- All components use `<fieldset>` + `aria-labelledby` (semantic HTML over ARIA)
-- All interactive labels have `focus-within:ring-2` visible focus (`:focus-visible` equivalent via Radix)
-- All transitions explicitly list `transition-colors` (no `transition: all`)
-- All transitions respect `motion-reduce:transition-none` (`prefers-reduced-motion`)
-- All decorative elements (`<kbd>`) have `aria-hidden="true"`
-- Hover states present on all interactive option labels
-- Character counter uses `aria-live="polite"` for screen reader updates
-- Touch target meets 44px minimum on fill-in-blank input
-- Code blocks use `overflow-x-auto` (independent scroll, no page-level overflow)
-- No anti-patterns detected (no `outline-none`, no `div onClick`, no `transition: all`, no zoom-disabling)
+**PASS** — All 5 previous findings have been addressed. No new Web Interface Guidelines violations detected. The implementation demonstrates strong compliance across accessibility, form handling, typography, transitions, responsive design, and security.

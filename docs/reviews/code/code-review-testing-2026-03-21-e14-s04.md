@@ -2,20 +2,22 @@
 
 ### AC Coverage Summary
 
-**Acceptance Criteria Coverage:** 3.5/4 ACs tested (**88%**)
+**Acceptance Criteria Coverage:** 4/4 ACs tested (**100%**)
 
 **COVERAGE GATE:** PASS (>=80%)
+
+---
 
 ### AC Coverage Table
 
 | AC# | Description | Unit Test | E2E Test | Verdict |
 |-----|-------------|-----------|----------|---------|
-| 1 | Code blocks (monospace, bg highlighting), inline code distinguished, lists with indentation, bold/italic | `MarkdownRenderer.test.tsx:6-64` (code blocks, inline code, lists, bold, italic); `MultipleChoiceQuestion.test.tsx:123-163` (bold, inline code, GFM strikethrough) | `story-14-4.spec.ts:107-154` (4 discrete tests) | Covered |
-| 2 | Code blocks horizontal scroll, contrast >=4.5:1, light/dark themes using design tokens | `MarkdownRenderer.test.tsx:6-16` (overflow-x-auto class present); `MarkdownRenderer.test.tsx:83-91` (pre resets inner code styles) | `story-14-4.spec.ts:160-187` (horizontal scroll computed style; background color non-transparent) | Partial |
-| 3 | Mobile 375px — text wraps, code blocks scroll independently, content readable | None | `story-14-4.spec.ts:193-218` (no page horizontal scroll; code block overflow-x: auto) | Partial |
-| 4 | Markdown in legends uses aria-labelledby pattern | `MultipleChoiceQuestion.test.tsx:241-277` (fieldset + aria-labelledby present, referenced element exists); `TrueFalseQuestion.test.tsx:118-147` (fieldset + aria-labelledby present) | `story-14-4.spec.ts:224-237` (fieldset aria-labelledby, referenced element visible and contains text) | Covered |
+| 1 | Code blocks, inline code, lists, bold/italic render correctly | `MarkdownRenderer.test.tsx:6-91` (code block, inline code, ul, ol, bold, italic); `MultipleChoiceQuestion.test.tsx:123-163`; `MultipleSelectQuestion.test.tsx:17-43`; `FillInBlankQuestion.test.tsx:17-43` | `story-14-4.spec.ts:107-154` (4 tests) | Covered |
+| 2 | Code block scrolls horizontally; contrast >=4.5:1; light+dark theme tokens | `MarkdownRenderer.test.tsx:6-16` (overflow-x-auto class); `MarkdownRenderer.test.tsx:83-91` (pre reset styles) | `story-14-4.spec.ts:160-264` (horizontal scroll, real WCAG luminance ratio light, real WCAG luminance ratio dark) | Covered |
+| 3 | Mobile 375px — text wraps, code blocks scroll independently, content readable | None (no mobile unit test possible in JSDOM) | `story-14-4.spec.ts:270-301` (no horizontal scroll on page, questionText does not overflow, code block overflow-x:auto at 375px) | Covered |
+| 4 | Markdown rendered outside `<legend>` via `aria-labelledby`; visual association preserved | `MultipleChoiceQuestion.test.tsx:241-277`; `TrueFalseQuestion.test.tsx:118-153`; `MultipleSelectQuestion.test.tsx:45-63`; `FillInBlankQuestion.test.tsx:45-63` | `story-14-4.spec.ts:307-320` (fieldset aria-labelledby present and references element containing question text) | Covered |
 
-**Coverage**: 2 ACs fully covered | 0 gaps | 2 partial
+**Coverage**: 4/4 ACs fully covered | 0 gaps | 0 partial
 
 ---
 
@@ -23,66 +25,46 @@
 
 #### Blockers (untested ACs)
 
-None. All four ACs have at least one test.
-
----
+None.
 
 #### High Priority
 
-- **`tests/e2e/story-14-4.spec.ts:176-187` (confidence: 85)**: The AC2 contrast test does not verify a >=4.5:1 WCAG ratio. It only asserts `bgColor !== ''` and `bgColor !== 'rgba(0, 0, 0, 0)'`. A non-transparent background is necessary but not sufficient to satisfy "contrast >=4.5:1". The story notes explicitly call out a luminance computation approach ("computed actual luminance from computed RGB styles, verifying >=4.5:1 ratio programmatically"), which the test does not implement. The assertion is a presence check, not a contrast check.
+- **`tests/e2e/story-14-4.spec.ts:160-174` (confidence: 75)**: The horizontal-scroll test for AC2 verifies `overflow-x: auto` on the `<pre>` computed style, which confirms the CSS property is applied but does not confirm that the code block actually requires scrolling (i.e., that `scrollWidth > clientWidth`). The long-code question (q2) does not guarantee overflow at the default Chromium viewport. A test that explicitly asserts `pre.scrollWidth > pre.clientWidth` after navigating to question 2 would make the "scrolls horizontally when too wide" AC bullet testable as behavior rather than CSS property. Fix: add `await expect(pre.evaluate(el => el.scrollWidth > el.clientWidth)).resolves.toBe(true)` after navigating to q2.
 
-  Fix: Extend the E2E test to extract both the `backgroundColor` of `pre` and the `color` of the inner `code` element, compute relative luminance for each channel, and assert the contrast ratio is >=4.5. A helper for this is straightforward with `page.evaluate`.
-
-- **`tests/e2e/story-14-4.spec.ts` (confidence: 80)**: AC2 explicitly requires that "code blocks and inline code render correctly in both light and dark themes using design tokens." No test exercises dark mode. Toggling the app's color scheme (via `prefers-color-scheme` media feature emulation or adding the `dark` class to `<html>`) and verifying that `bg-surface-sunken` / `bg-muted` resolve to the dark-mode token values is entirely absent. The unit tests only check class names, not resolved CSS custom property values.
-
-  Fix: Add an E2E test that calls `page.emulateMedia({ colorScheme: 'dark' })` before navigating, then asserts that the `pre` element's computed `backgroundColor` differs from the light-mode value and remains non-transparent.
-
-- **`src/app/components/quiz/__tests__/` (confidence: 78)**: `MultipleSelectQuestion` and `FillInBlankQuestion` are both refactored to use `MarkdownRenderer` (confirmed in source), but neither component has a dedicated unit test file for its new Markdown behaviour. The only coverage for these two components comes from `QuestionDisplay.test.tsx`, which dispatches to them without exercising any Markdown content in either. AC1 states that bold/italic, inline code, and code blocks should work "in questions" — implying all four question types. Two of four question types have no Markdown unit test.
-
-  Fix: Add `MultipleSelectQuestion.test.tsx` and `FillInBlankQuestion.test.tsx` (or extend `QuestionDisplay.edge-cases.test.tsx`) with at least one Markdown rendering assertion each — e.g., `makeQuestion({ type: 'multiple-select', text: 'What does `Array.map` return?' })` and asserting the `<code>` element is present with correct class names.
-
----
+- **`tests/e2e/story-14-4.spec.ts:220-264` (confidence: 72)**: The dark mode E2E test calls `page.emulateMedia({ colorScheme: 'dark' })` before `navigateToQuiz`, which correctly activates dark mode. However the contrast assertion uses the same canvas-readback helper duplicated verbatim from the light mode test (lines 187-215). This duplication means future changes to the helper will need to be applied in two places. Confidence is moderate because this is a maintainability concern, not a correctness gap. Fix: extract the WCAG ratio computation into a shared Playwright helper function (e.g., `tests/support/helpers/wcag-contrast.ts`) used by both tests.
 
 #### Medium
 
-- **`src/app/components/quiz/__tests__/MarkdownRenderer.test.tsx:83-91` (confidence: 72)**: The test for "resets inline code styles inside `<pre>` blocks" asserts that `pre.className` contains `[&>code]:bg-transparent` and `[&>code]:p-0`. These are Tailwind arbitrary-variant class strings — they verify what class strings are in the DOM, not whether the CSS actually resets the `<code>` background inside `<pre>`. In jsdom (the Vitest environment), Tailwind classes are not processed, so the assertions confirm only that the class string was written, not that the visual reset occurs. This is an inherent jsdom limitation, but the test name implies behavioral verification. It is acceptable given the environment, but should be annotated to set expectations.
+- **`src/app/components/quiz/__tests__/MarkdownRenderer.test.tsx` (confidence: 65)**: The `MarkdownRenderer` source handles three additional element types — links (`a`), images (`img`), and tables (`table`) — none of which have unit test coverage. Links are intentionally rendered as `<span>` (navigation prevention), images get `max-w-full`, and tables get an `overflow-x-auto` wrapper. These are real behaviors described in the XSS/safety documentation comment. While they are not explicitly called out in any AC, they are part of the component's public contract. Suggested additions in `MarkdownRenderer.test.tsx`:
+  - `it('renders links as plain text span (no navigation)')` — assert `<a>` is not present, `<span>` is.
+  - `it('wraps tables in overflow-x-auto container')` — assert outer `div.overflow-x-auto` wraps `<table>`.
 
-  Fix: Add a comment to the test noting it verifies class presence, not computed styles, and that the visual reset is verified by the E2E contrast test.
+- **`src/app/components/quiz/__tests__/MarkdownRenderer.test.tsx` (confidence: 62)**: The component handles `content ?? ''` defensively for a `null`/`undefined` prop, but no unit test exercises this path. Given the prop type is `string` (not `string | null | undefined`), this guard is purely defensive; however it indicates a real concern the author anticipated. A test for `content=""` (empty string) would also confirm the component renders without error or layout shift. Fix: add `it('renders empty content without error', ...)` with `render(<MarkdownRenderer content="" />)` asserting no throw and an empty wrapper div.
 
-- **`tests/e2e/story-14-4.spec.ts:193-204` (confidence: 70)**: The AC3 "text wraps without horizontal scroll" test checks `document.documentElement.scrollWidth > clientWidth` at the page level. This detects page-level horizontal overflow but does not verify that text within the question container wraps naturally (i.e., that `word-break` or `overflow-wrap` is applied). A wide word that causes layout shift but does not trigger document scroll (e.g., because the quiz container itself clips overflow) would pass the test while failing the AC.
+- **`src/app/components/quiz/__tests__/MultipleSelectQuestion.test.tsx` (confidence: 68)**: The `MultipleSelectQuestion` tests cover only Markdown rendering and the `aria-labelledby` pattern (3 tests). Unlike the `MultipleChoiceQuestion` tests (19 tests), there is no coverage for: checkbox interaction (toggle on/off), pre-selected state rendering, disabled state in review modes, touch target class (`min-h-12`), or keyboard shortcut toggling. These are not AC1-4 concerns for E14-S04 specifically, but the component has no prior test file — this story introduced the first tests for it. The gap should be remedied, ideally in a follow-up story or as a separate task. Confidence is moderate because the missing tests do not block AC coverage.
 
-  Fix: Add a secondary assertion that checks the question text container's `scrollWidth <= clientWidth` directly: `page.locator('[data-testid="question-text"]').evaluate(el => el.scrollWidth <= el.clientWidth)`.
-
-- **`src/app/components/quiz/__tests__/TrueFalseQuestion.test.tsx:118-131` (confidence: 68)**: The `aria-labelledby` test for `TrueFalseQuestion` asserts only that `fieldset` has a truthy `aria-labelledby` attribute. It does not verify that the referenced element actually exists in the DOM (unlike `MultipleChoiceQuestion.test.tsx:241-258` which resolves the `labelId` and queries `#${labelId}`). If the `id` were generated but the `<div>` with that id were removed, the TrueFalseQuestion test would still pass.
-
-  Fix: Extend the TrueFalseQuestion `aria-labelledby` test to resolve the `labelId` and assert `container.querySelector('#${labelId}')` is present, mirroring the MultipleChoiceQuestion pattern.
-
----
+- **`src/app/components/quiz/__tests__/FillInBlankQuestion.test.tsx` (confidence: 68)**: Same pattern as `MultipleSelectQuestion` — only 3 tests introduced by this story (Markdown rendering + aria-labelledby). The debounced `onChange` behavior, `handleBlur` flush, character counter (`counterId`), `maxLength` enforcement, and disabled state in review mode are all untested. The debounce logic in particular (`DEBOUNCE_MS = 300`, `userEdited` ref, `timerRef` cleanup) is non-trivial and has no test exercising the timing path or the cleanup return. Fix: expand `FillInBlankQuestion.test.tsx` with at least: input renders with `aria-describedby` counter, disabled state in review mode, and `handleBlur` triggers `onChange` synchronously.
 
 #### Nits
 
-- **Nit** `tests/e2e/story-14-4.spec.ts:112-113` (confidence: 55)**: `page.locator('pre')` and `page.locator('code')` are unscoped element selectors. If the quiz page ever renders `<pre>` or `<code>` elements outside the question area (e.g., in debug panels or help text), these selectors would silently match the wrong element. Prefer scoping to the question container: `page.locator('[data-testid="question-text"] pre')`.
+- **Nit `tests/e2e/story-14-4.spec.ts:307-320` (confidence: 55)**: The AC4 E2E test asserts `labelledBy` is truthy and the referenced element is visible and contains "JavaScript". It only tests the `multiple-choice` question (q1). The `true-false` question (q2 in the E2E data) also uses the same `aria-labelledby` pattern and would give broader coverage. Since unit tests for `TrueFalseQuestion`, `MultipleSelectQuestion`, and `FillInBlankQuestion` all verify the pattern, the E2E spot-check on one question type is acceptable. No action required.
 
-- **Nit** `src/app/components/quiz/__tests__/MarkdownRenderer.test.tsx:66-74` (confidence: 50)**: The paragraph spacing test asserts `paragraphs.length >= 2` rather than exactly 2. This is intentionally permissive but could hide a regression where extra `<p>` elements are emitted unexpectedly. Consider asserting `toHaveLength(2)` and documenting why if react-markdown emits trailing paragraphs.
+- **Nit `src/app/components/quiz/__tests__/MarkdownRenderer.test.tsx:83-91` (confidence: 50)**: The test for "resets inline code styles inside `<pre>` blocks" checks for `[&>code]:bg-transparent` and `[&>code]:p-0` class strings on the `<pre>` element. These are Tailwind arbitrary-value classes and the assertion is checking className strings, which is an implementation detail. If Tailwind purges or renames these classes, the test could fail without the behavior changing. A stronger assertion would use `getComputedStyle` in JSDOM (which won't resolve Tailwind) or accept this as a class-contract test. Low impact since the class approach is consistent with the rest of the unit test suite.
 
-- **Nit** `tests/e2e/story-14-4.spec.ts:80-94` (confidence: 50)**: `seedQuizData` is called inside `navigateToQuiz` after the first `page.goto('/')`. Because `seedIndexedDBStore` seeds data into the live page context after navigation, any race between the seed write and the quiz page rendering could cause intermittent failures if the quiz page loads before the seed resolves. The established project pattern seeds data before navigation. Consider seeding before `page.goto('/')` or using `addInitScript` for deterministic ordering.
+- **Nit `tests/e2e/story-14-4.spec.ts:86-88` (confidence: 50)**: `localStorage.setItem('eduvi-sidebar-v1', 'false')` is seeded inside `addInitScript` correctly. This is good practice per the project memory rule. No action required.
 
 ---
 
 ### Edge Cases to Consider
 
-- **Empty Markdown string**: `MarkdownRenderer` is never tested with `content=""`. An empty string is a valid edge case (question with no text) — the component should render nothing or a minimal wrapper without throwing.
+1. **`MarkdownRenderer` with content containing raw HTML** — the component intentionally strips raw HTML by not using `rehype-raw`. No test currently confirms that injected HTML (e.g., `<script>alert(1)</script>`) is rendered as escaped text rather than executed. A unit test asserting no `<script>` element appears in the rendered output would provide regression protection for the XSS safety comment at `MarkdownRenderer.tsx:19`.
 
-- **Markdown with only whitespace**: Related to above — `content="   "` or `content="\n\n"` would render blank paragraphs. The question components do not guard against this before passing to `MarkdownRenderer`.
+2. **Very long inline code strings** — `inline code` inside a paragraph does not get `overflow-x-auto` (only `<pre>` blocks do). A very long inline code token on mobile could cause horizontal overflow of the paragraph. This is an edge case not covered by any mobile test. Worth a manual smoke-test at 375px with a long inline code string.
 
-- **Very long unbroken inline code**: An inline `code` element containing a 200-character variable name with no spaces would not wrap and could overflow its container on mobile. Neither unit nor E2E tests cover this boundary.
+3. **Markdown in question option text** — the question `options` array strings are rendered as plain text (not via `MarkdownRenderer`) in `MultipleChoiceQuestion` and `TrueFalseQuestion`. If a quiz author puts Markdown in an option label, it will not render. This is likely intentional but is not documented or tested as a boundary. No test verifies that option text is NOT parsed as Markdown.
 
-- **Nested Markdown in list items**: None of the unit tests verify that a list item containing inline code (e.g., `- Use \`Array.map\` here`) renders correctly — specifically that the inline code inside `<li>` gets `bg-muted` styling rather than inheriting `<pre>` resets.
-
-- **GFM table rendering**: `remarkGfm` is enabled, which supports tables. No styling override is defined in `markdownComponents` for `table`, `thead`, `tbody`, `tr`, `th`, `td`. A question containing a Markdown table would render with browser-default unstyled table markup. This is an unguarded extension point in the implementation.
-
-- **AC4 coverage for MultipleSelectQuestion and FillInBlankQuestion**: The E2E `aria-labelledby` test (AC4) uses only the first `fieldset` on the page, which is the `multiple-choice` question. There is no unit or E2E test verifying that `MultipleSelectQuestion` and `FillInBlankQuestion` also implement the `aria-labelledby` pattern. Both components do implement it (confirmed in source), but the pattern is untested for them.
+4. **`aria-labelledby` with dynamically generated `useId()` values** — the E2E test at `story-14-4.spec.ts:313-318` constructs the selector as `page.locator('[id="${labelledBy}"]')`. React's `useId()` generates IDs like `:r0:` that contain colons. The `locator` string interpolation may fail to match if the `:` characters are not properly escaped for CSS selectors. The test currently passes (per testing notes), which means Playwright's `locator` handles the raw `id` attribute match without CSS escaping. This is worth noting as a fragile pattern if the selector were ever changed to `#${labelledBy}` (which would require `CSS.escape()`). The unit tests use `CSS.escape()` correctly at `MultipleChoiceQuestion.test.tsx:256`.
 
 ---
 
-ACs: 3.5 covered / 4 total | Findings: 9 | Blockers: 0 | High: 3 | Medium: 3 | Nits: 3
+ACs: 4 covered / 4 total | Findings: 8 | Blockers: 0 | High: 2 | Medium: 4 | Nits: 2
