@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId } from 'react'
+import { useId } from 'react'
 import Markdown from 'react-markdown'
 import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group'
 import { cn } from '@/app/components/ui/utils'
@@ -29,27 +29,17 @@ export function MultipleChoiceQuestion({
     )
   }
 
-  // Number key shortcuts: press 1-9 to select the corresponding option
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (!isActive) return
-      const num = parseInt(e.key, 10)
-      if (num >= 1 && num <= options.length) {
-        e.preventDefault()
-        onChange(options[num - 1])
-      }
-    },
-    [isActive, options, onChange]
-  )
-
-  useEffect(() => {
-    if (!isActive) return
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isActive, handleKeyDown])
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (!isActive || e.isComposing || e.metaKey || e.ctrlKey || e.altKey) return
+    const num = parseInt(e.key, 10)
+    if (num >= 1 && num <= Math.min(options.length, 9)) {
+      e.preventDefault()
+      onChange(options[num - 1])
+    }
+  }
 
   return (
-    <fieldset className="mt-6">
+    <fieldset className="mt-6" onKeyDown={handleKeyDown}>
       <legend
         id={legendId}
         data-testid="question-text"
@@ -68,6 +58,7 @@ export function MultipleChoiceQuestion({
       >
         {options.map((option, index) => {
           const isSelected = value === option
+          const shortcutNum = index + 1
 
           return (
             <label
@@ -81,12 +72,12 @@ export function MultipleChoiceQuestion({
                 'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2'
               )}
             >
-              {isActive && (
+              {isActive && shortcutNum <= 9 && (
                 <kbd
                   aria-hidden="true"
                   className="inline-flex items-center justify-center w-5 h-5 shrink-0 rounded border border-border bg-muted text-muted-foreground text-xs font-mono"
                 >
-                  {index + 1}
+                  {shortcutNum}
                 </kbd>
               )}
               <RadioGroupItem value={option} className="shrink-0" />

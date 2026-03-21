@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId } from 'react'
+import { useId } from 'react'
 import Markdown from 'react-markdown'
 import { Checkbox } from '@/app/components/ui/checkbox'
 import { cn } from '@/app/components/ui/utils'
@@ -36,27 +36,17 @@ export function MultipleSelectQuestion({
     onChange(newValue)
   }
 
-  // Number key shortcuts: press 1-9 to toggle the corresponding option
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (!isActive) return
-      const num = parseInt(e.key, 10)
-      if (num >= 1 && num <= options.length) {
-        e.preventDefault()
-        handleToggle(options[num - 1])
-      }
-    },
-    [isActive, options, value, onChange]
-  )
-
-  useEffect(() => {
-    if (!isActive) return
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isActive, handleKeyDown])
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (!isActive || e.isComposing || e.metaKey || e.ctrlKey || e.altKey) return
+    const num = parseInt(e.key, 10)
+    if (num >= 1 && num <= Math.min(options.length, 9)) {
+      e.preventDefault()
+      handleToggle(options[num - 1])
+    }
+  }
 
   return (
-    <fieldset className="mt-6" aria-describedby={hintId}>
+    <fieldset className="mt-6" aria-describedby={hintId} onKeyDown={handleKeyDown}>
       <legend
         id={legendId}
         data-testid="question-text"
@@ -73,6 +63,7 @@ export function MultipleSelectQuestion({
       <div className="space-y-3">
         {options.map((option, index) => {
           const isSelected = value.includes(option)
+          const shortcutNum = index + 1
 
           return (
             <label
@@ -86,12 +77,12 @@ export function MultipleSelectQuestion({
                 'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2'
               )}
             >
-              {isActive && (
+              {isActive && shortcutNum <= 9 && (
                 <kbd
                   aria-hidden="true"
                   className="inline-flex items-center justify-center w-5 h-5 shrink-0 rounded border border-border bg-muted text-muted-foreground text-xs font-mono"
                 >
-                  {index + 1}
+                  {shortcutNum}
                 </kbd>
               )}
               <Checkbox
