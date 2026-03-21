@@ -41,7 +41,7 @@ function loadSavedProgress(quizId: string): QuizProgress | null {
     if (!raw) return null
     const result = QuizProgressSchema.safeParse(JSON.parse(raw))
     if (!result.success) {
-      console.warn('[Quiz] Corrupted progress in localStorage, ignoring:', result.error.format())
+      console.warn('[Quiz] Corrupted progress in storage, ignoring:', result.error.format())
       return null
     }
     // Only treat as valid resume state if there are recorded answers
@@ -211,8 +211,9 @@ export function Quiz() {
             sessionStorage.setItem(key, value)
           }
         }
-      } catch {
+      } catch (e) {
         // Storage completely inaccessible during unload — best effort
+        console.warn('[Quiz] beforeunload storage save failed:', e)
       }
     }
     window.addEventListener('beforeunload', handleBeforeUnload)

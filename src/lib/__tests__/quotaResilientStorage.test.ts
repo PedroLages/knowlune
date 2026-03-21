@@ -13,10 +13,16 @@ vi.mock('sonner', () => {
 })
 
 import { toast } from 'sonner'
-import { quotaResilientStorage, _resetWarningThrottle } from '@/lib/quotaResilientStorage'
+import {
+  quotaResilientStorage,
+  _resetWarningThrottle,
+  isQuotaExceeded,
+  showThrottledWarning,
+} from '@/lib/quotaResilientStorage'
 
 const mockedToast = toast as unknown as ReturnType<typeof vi.fn> & {
   warning: ReturnType<typeof vi.fn>
+  error: ReturnType<typeof vi.fn>
 }
 
 function makeQuotaError(name = 'QuotaExceededError'): DOMException {
@@ -100,6 +106,30 @@ describe('quotaResilientStorage', () => {
       expect(localStorage.getItem('quiz-progress-old-quiz')).toBeNull()
       // Non-quiz keys preserved
       expect(localStorage.getItem('other-key')).toBe('keep-me')
+      // Retry succeeded — value written to localStorage
+      expect(localStorage.getItem('target-key')).toBe('data')
+    })
+
+    it('preserves the active quiz key during stale key cleanup', () => {
+      // The key being written matches quiz-progress-* pattern — it should NOT be deleted
+      origSetItem.call(localStorage, 'quiz-progress-active', 'existing-progress')
+      origSetItem.call(localStorage, 'quiz-progress-old', '{}')
+
+      let callCount = 0
+      Storage.prototype.setItem = function (key: string, value: string) {
+        if (key === 'quiz-progress-active' && callCount === 0) {
+          callCount++
+          throw makeQuotaError()
+        }
+        origSetItem.call(this, key, value)
+      }
+
+      quotaResilientStorage.setItem('quiz-progress-active', 'updated-progress')
+
+      // Old quiz key cleaned up
+      expect(localStorage.getItem('quiz-progress-old')).toBeNull()
+      // Active quiz key preserved during cleanup, then overwritten by retry
+      expect(localStorage.getItem('quiz-progress-active')).toBe('updated-progress')
     })
 
     it('falls back to sessionStorage when localStorage always throws quota error', () => {
@@ -115,7 +145,7 @@ describe('quotaResilientStorage', () => {
       expect(sessionWrites).toContainEqual(['key', 'value'])
     })
 
-    it('shows throttled warning toast on fallback', () => {
+    it('shows throttled warning toast on fallback with correct message', () => {
       Storage.prototype.setItem = function (this: Storage, key: string, value: string) {
         if (this === localStorage) throw makeQuotaError()
         origSetItem.call(this, key, value)
@@ -123,10 +153,18 @@ describe('quotaResilientStorage', () => {
 
       quotaResilientStorage.setItem('k1', 'v1')
       expect(mockedToast.warning).toHaveBeenCalledTimes(1)
+      expect(mockedToast.warning).toHaveBeenCalledWith(
+        'Storage limit reached. Quiz progress will be saved for this session only. Try clearing browser data to fix this.',
+        expect.objectContaining({ duration: expect.any(Number) })
+      )
+
+      // Verify sessionStorage received the data
+      expect(sessionStorage.getItem('k1')).toBe('v1')
 
       // Second call within throttle window — no new toast
       quotaResilientStorage.setItem('k2', 'v2')
       expect(mockedToast.warning).toHaveBeenCalledTimes(1)
+      expect(sessionStorage.getItem('k2')).toBe('v2')
     })
 
     it('shows toast again after throttle expires', () => {
@@ -166,6 +204,28 @@ describe('quotaResilientStorage', () => {
         expect.any(Error)
       )
       expect(mockedToast.warning).not.toHaveBeenCalled()
+      // Value was not written to either storage
+      expect(localStorage.getItem('key')).toBeNull()
+      expect(sessionStorage.getItem('key')).toBeNull()
+    })
+
+    it('shows error toast when both storages fail', () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      Storage.prototype.setItem = () => {
+        throw makeQuotaError()
+      }
+
+      quotaResilientStorage.setItem('key', 'value')
+
+      // Warning toast should NOT fire (sessionStorage also failed)
+      expect(mockedToast.warning).not.toHaveBeenCalled()
+      // Error toast should fire instead
+      expect(mockedToast.error).toHaveBeenCalledTimes(1)
+      // sessionStorage failure logged
+      expect(consoleSpy).toHaveBeenCalledWith(
+        '[quotaResilientStorage] sessionStorage fallback failed:',
+        expect.any(DOMException)
+      )
     })
   })
 
@@ -190,6 +250,50 @@ describe('quotaResilientStorage', () => {
       }
 
       expect(() => quotaResilientStorage.removeItem('key')).not.toThrow()
+    })
+  })
+
+  describe('isQuotaExceeded', () => {
+    it('returns true for QuotaExceededError', () => {
+      expect(isQuotaExceeded(makeQuotaError())).toBe(true)
+    })
+
+    it('returns true for Firefox NS_ERROR_DOM_QUOTA_REACHED', () => {
+      expect(isQuotaExceeded(makeQuotaError('NS_ERROR_DOM_QUOTA_REACHED'))).toBe(true)
+    })
+
+    it('returns false for non-DOMException errors', () => {
+      expect(isQuotaExceeded(new Error('SecurityError'))).toBe(false)
+    })
+
+    it('returns false for non-quota DOMException', () => {
+      expect(isQuotaExceeded(new DOMException('Not found', 'NotFoundError'))).toBe(false)
+    })
+
+    it('returns false for non-error values', () => {
+      expect(isQuotaExceeded(null)).toBe(false)
+      expect(isQuotaExceeded(undefined)).toBe(false)
+      expect(isQuotaExceeded('string')).toBe(false)
+    })
+  })
+
+  describe('showThrottledWarning', () => {
+    it('fires toast on first call', () => {
+      showThrottledWarning()
+      expect(mockedToast.warning).toHaveBeenCalledTimes(1)
+    })
+
+    it('suppresses within throttle window', () => {
+      showThrottledWarning()
+      showThrottledWarning()
+      expect(mockedToast.warning).toHaveBeenCalledTimes(1)
+    })
+
+    it('fires again after throttle reset', () => {
+      showThrottledWarning()
+      _resetWarningThrottle()
+      showThrottledWarning()
+      expect(mockedToast.warning).toHaveBeenCalledTimes(2)
     })
   })
 })

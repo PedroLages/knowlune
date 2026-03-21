@@ -78,6 +78,24 @@ export const toastSuccess = {
 }
 
 /**
+ * Warning toast variants for non-blocking advisories.
+ * All use LONG duration (8s) to give users time to read.
+ */
+export const toastWarning = {
+  /**
+   * Displays a warning toast when localStorage quota is exceeded.
+   * Advises the user that progress is session-only and suggests clearing data.
+   * Non-blocking — does not interrupt quiz functionality.
+   */
+  storageQuota: () => {
+    toast.warning(
+      'Storage limit reached. Quiz progress will be saved for this session only. Try clearing browser data to fix this.',
+      { duration: TOAST_DURATION.LONG }
+    )
+  },
+}
+
+/**
  * Error toast variants with actionable guidance.
  * All use LONG duration (8s) to give users time to read and act.
  */
@@ -140,23 +158,13 @@ export const toastError = {
       console.error('Delete error details:', details)
     }
   },
-}
 
-/**
- * Warning toast variants for non-blocking advisories.
- * Use LONG duration (8s) to give users time to read.
- */
-export const toastWarning = {
   /**
-   * Displays a warning toast when localStorage quota is exceeded.
-   * Advises the user that progress is session-only and suggests clearing data.
-   * Non-blocking — does not interrupt quiz functionality.
+   * Displays a generic error toast.
+   * @param message Custom error message
    */
-  storageQuota: () => {
-    toast.warning(
-      'Storage limit reached. Quiz progress will be saved for this session only. Try clearing browser data to fix this.',
-      { duration: TOAST_DURATION.LONG }
-    )
+  generic: (message: string) => {
+    toast.error(message, { duration: TOAST_DURATION.LONG })
   },
 }
 

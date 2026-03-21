@@ -1,8 +1,14 @@
 import type { StateStorage } from 'zustand/middleware'
-import { toastWarning } from '@/lib/toastHelpers'
+import { toastWarning, toastError } from '@/lib/toastHelpers'
 
 const THROTTLE_MS = 30_000
 
+/**
+ * Module-level mutable state for throttle tracking.
+ * Intentionally module-scoped: each import of this module shares the same
+ * throttle timer, preventing duplicate toasts across Zustand persist and
+ * subscriber write paths within the same tab.
+ */
 let lastWarningAt = 0
 
 /**
@@ -10,7 +16,7 @@ let lastWarningAt = 0
  * Handles the standard `QuotaExceededError` name and the Firefox-specific
  * `NS_ERROR_DOM_QUOTA_REACHED` variant.
  */
-function isQuotaExceeded(error: unknown): boolean {
+export function isQuotaExceeded(error: unknown): boolean {
   return (
     error instanceof DOMException &&
     (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')
@@ -21,9 +27,16 @@ function isQuotaExceeded(error: unknown): boolean {
  * Shows the storage-quota toast at most once every {@link THROTTLE_MS}.
  * Zustand persist triggers setItem on every state update, so without
  * throttling the user would see a toast flood.
+ *
+ * Uses absolute comparison (`lastWarningAt > now`) to handle backward
+ * system clock jumps — resets the timer instead of suppressing indefinitely.
  */
-function showThrottledWarning(): void {
+export function showThrottledWarning(): void {
   const now = Date.now()
+  if (lastWarningAt > now) {
+    // Clock jumped backward — reset to avoid permanent suppression
+    lastWarningAt = 0
+  }
   if (now - lastWarningAt < THROTTLE_MS) return
   lastWarningAt = now
   toastWarning.storageQuota()
@@ -33,12 +46,20 @@ function showThrottledWarning(): void {
  * Attempts to free localStorage space by removing orphaned quiz-progress
  * backup keys. These are per-quiz snapshots written by the useQuizStore
  * subscriber; stale ones accumulate when quizzes are abandoned.
+ *
+ * @param preserveKey Key to skip during cleanup (typically the active quiz's key)
  */
-function clearStaleQuizKeys(): void {
+function clearStaleQuizKeys(preserveKey?: string): void {
   try {
-    for (let i = localStorage.length - 1; i >= 0; i--) {
+    // Snapshot keys first to avoid index-shifting during removal
+    // and multi-tab race conditions with concurrent localStorage writes
+    const keys: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
-      if (key?.startsWith('quiz-progress-')) {
+      if (key) keys.push(key)
+    }
+    for (const key of keys) {
+      if (key.startsWith('quiz-progress-') && key !== preserveKey) {
         localStorage.removeItem(key)
       }
     }
@@ -76,8 +97,8 @@ export const quotaResilientStorage: StateStorage = {
         return
       }
 
-      // Phase 1: reclaim space and retry
-      clearStaleQuizKeys()
+      // Phase 1: reclaim space and retry (preserve the key being written)
+      clearStaleQuizKeys(name)
       try {
         localStorage.setItem(name, value)
         return // success after cleanup
@@ -89,13 +110,19 @@ export const quotaResilientStorage: StateStorage = {
       }
 
       // Phase 2: fall back to sessionStorage
+      let sessionSucceeded = false
       try {
         sessionStorage.setItem(name, value)
+        sessionSucceeded = true
       } catch (sessionError) {
         console.error('[quotaResilientStorage] sessionStorage fallback failed:', sessionError)
       }
 
-      showThrottledWarning()
+      if (sessionSucceeded) {
+        showThrottledWarning()
+      } else {
+        toastError.saveFailed('Both localStorage and sessionStorage are full')
+      }
     }
   },
 
