@@ -6,8 +6,8 @@ started: 2026-03-21
 completed:
 reviewed: in-progress
 review_started: 2026-03-22
-review_gates_passed: []
-burn_in_validated: false
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
+burn_in_validated: true
 ---
 
 # Story 15.1: Display Countdown Timer with Accuracy
@@ -125,11 +125,18 @@ See [plan](plans/e15-s01-display-countdown-timer-accuracy.md) for implementation
 
 ## Implementation Notes
 
-[Architecture decisions, patterns used, dependencies added]
+- **Extracted `useQuizTimer` hook** (`src/hooks/useQuizTimer.ts`, 115 lines) — pure logic hook using `Date.now()` anchor pattern instead of `setInterval` decrement to prevent drift. Handles `visibilitychange` events for tab-switch accuracy.
+- **Created `QuizTimer` component** (`src/app/components/quiz/QuizTimer.tsx`, 70 lines) — presentation component with `role="timer"`, `aria-label`, color transitions via design tokens (`text-muted-foreground` → `text-warning` → `text-destructive`), and `font-mono tabular-nums` for layout stability.
+- **Simplified `QuizHeader`** — removed ~114 lines of inline timer logic, replaced with `QuizTimer` composition. Header went from managing timer state to just passing `timeLimitSeconds` and `onExpire` props.
+- **Auto-submit on expiry** — `onExpire` callback in `Quiz.tsx` calls `submitQuiz()` from `useQuizStore` and shows toast notification via sonner.
+- **No new dependencies** — all changes use existing React, Tailwind, and sonner APIs.
 
 ## Testing Notes
 
-[Test strategy, edge cases discovered, coverage notes]
+- **Unit tests** (`src/hooks/__tests__/useQuizTimer.test.ts`, 191 lines) — 15 tests covering hook lifecycle, drift correction, visibility change handling, threshold callbacks, and edge cases (zero time limit, negative remaining).
+- **E2E tests** (`tests/e2e/story-15-1.spec.ts`, 322 lines) — 7 tests covering all 4 ACs. Uses `shiftDateNow()` + `triggerVisibilityChange()` helpers to simulate time passage deterministically instead of real-time waits.
+- **Burn-in validated** — 70/70 tests passed (10 iterations × 7 tests) with zero flakiness.
+- **Key pattern**: `expect.poll()` for verifying timer text changes instead of `waitForTimeout()` — Playwright auto-retries until assertion passes, making tests both faster and more reliable.
 
 ## Pre-Review Checklist
 
