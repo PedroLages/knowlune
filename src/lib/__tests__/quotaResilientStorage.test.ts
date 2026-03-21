@@ -57,12 +57,12 @@ describe('quotaResilientStorage', () => {
 
     it('falls back to sessionStorage when localStorage returns null', () => {
       // sessionStorage and localStorage share the same Map in tests,
-      // so we override getItem to simulate per-storage behavior
-      const origGet = Storage.prototype.getItem
+      // so we override getItem to simulate per-storage behavior.
+      // Use the module-level origGetItem to avoid capturing a dirty prototype.
       Storage.prototype.getItem = function (this: Storage, key: string) {
         if (this === localStorage) return null
         if (key === 'test-key') return 'value-from-session'
-        return origGet.call(this, key)
+        return origGetItem.call(this, key)
       }
 
       expect(quotaResilientStorage.getItem('test-key')).toBe('value-from-session')
@@ -99,6 +99,12 @@ describe('quotaResilientStorage', () => {
         }
         origSetItem.call(this, key, value)
       }
+      // Override removeItem to be per-storage aware — jsdom shares a single
+      // backing Map so sessionStorage.removeItem would nuke localStorage values.
+      Storage.prototype.removeItem = function (this: Storage, key: string) {
+        if (this === localStorage) origRemoveItem.call(this, key)
+        // Ignore sessionStorage.removeItem to prevent cross-storage deletion
+      }
 
       quotaResilientStorage.setItem('target-key', 'data')
 
@@ -122,6 +128,10 @@ describe('quotaResilientStorage', () => {
           throw makeQuotaError()
         }
         origSetItem.call(this, key, value)
+      }
+      // Per-storage removeItem — prevent jsdom shared-Map cross-deletion
+      Storage.prototype.removeItem = function (this: Storage, key: string) {
+        if (this === localStorage) origRemoveItem.call(this, key)
       }
 
       quotaResilientStorage.setItem('quiz-progress-active', 'updated-progress')
@@ -150,11 +160,17 @@ describe('quotaResilientStorage', () => {
         if (this === localStorage) throw makeQuotaError()
         origSetItem.call(this, key, value)
       }
+      // Per-storage removeItem — adapter removes stale localStorage entry after
+      // fallback; prevent jsdom shared-Map from nuking the sessionStorage value.
+      Storage.prototype.removeItem = function (this: Storage, key: string) {
+        if (this === sessionStorage) origRemoveItem.call(this, key)
+        // Ignore localStorage.removeItem — it's inaccessible in this scenario anyway
+      }
 
       quotaResilientStorage.setItem('k1', 'v1')
       expect(mockedToast.warning).toHaveBeenCalledTimes(1)
       expect(mockedToast.warning).toHaveBeenCalledWith(
-        'Storage limit reached. Quiz progress will be saved for this session only. Try clearing browser data to fix this.',
+        'Storage limit reached. Quiz progress will be saved for this session only. Try clearing browser data or using a different browser.',
         expect.objectContaining({ duration: expect.any(Number) })
       )
 
@@ -205,8 +221,11 @@ describe('quotaResilientStorage', () => {
       )
       expect(mockedToast.warning).not.toHaveBeenCalled()
       // Value was not written to either storage
+      Storage.prototype.getItem = origGetItem
       expect(localStorage.getItem('key')).toBeNull()
       expect(sessionStorage.getItem('key')).toBeNull()
+
+      consoleSpy.mockRestore()
     })
 
     it('shows error toast when both storages fail', () => {
@@ -226,6 +245,12 @@ describe('quotaResilientStorage', () => {
         '[quotaResilientStorage] sessionStorage fallback failed:',
         expect.any(DOMException)
       )
+      // Both storages should remain empty after double failure
+      Storage.prototype.getItem = origGetItem
+      expect(localStorage.getItem('key')).toBeNull()
+      expect(sessionStorage.getItem('key')).toBeNull()
+
+      consoleSpy.mockRestore()
     })
   })
 

@@ -1,6 +1,8 @@
 import type { StateStorage } from 'zustand/middleware'
 import { toastWarning, toastError } from '@/lib/toastHelpers'
 
+// 30 seconds — Zustand persist calls setItem on every state change, so
+// without throttling a full quiz session would flood the user with toasts.
 const THROTTLE_MS = 30_000
 
 /**
@@ -47,9 +49,13 @@ export function showThrottledWarning(): void {
  * backup keys. These are per-quiz snapshots written by the useQuizStore
  * subscriber; stale ones accumulate when quizzes are abandoned.
  *
+ * Note: Only clears `quiz-progress-*` keys, not the larger Zustand persist
+ * key (`levelup-quiz-store`). If the persist key itself is bloating storage,
+ * this cleanup won't help — the user must clear browser data manually.
+ *
  * @param preserveKey Key to skip during cleanup (typically the active quiz's key)
  */
-function clearStaleQuizKeys(preserveKey?: string): void {
+export function clearStaleQuizKeys(preserveKey?: string): void {
   try {
     // Snapshot keys first to avoid index-shifting during removal
     // and multi-tab race conditions with concurrent localStorage writes
@@ -101,6 +107,13 @@ export const quotaResilientStorage: StateStorage = {
       clearStaleQuizKeys(name)
       try {
         localStorage.setItem(name, value)
+        // Retry succeeded — clean up any orphaned sessionStorage copy
+        // from a previous fallback write, so getItem's ?? chain stays correct.
+        try {
+          sessionStorage.removeItem(name)
+        } catch {
+          // best-effort
+        }
         return // success after cleanup
       } catch (retryError) {
         if (!isQuotaExceeded(retryError)) {
@@ -114,6 +127,13 @@ export const quotaResilientStorage: StateStorage = {
       try {
         sessionStorage.setItem(name, value)
         sessionSucceeded = true
+        // Remove stale localStorage entry so getItem's ?? chain returns
+        // the newer sessionStorage value instead of the old localStorage one.
+        try {
+          localStorage.removeItem(name)
+        } catch {
+          // best-effort — localStorage may be inaccessible
+        }
       } catch (sessionError) {
         console.error('[quotaResilientStorage] sessionStorage fallback failed:', sessionError)
       }
@@ -121,7 +141,7 @@ export const quotaResilientStorage: StateStorage = {
       if (sessionSucceeded) {
         showThrottledWarning()
       } else {
-        toastError.saveFailed('Both localStorage and sessionStorage are full')
+        toastError.storageFull()
       }
     }
   },

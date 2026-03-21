@@ -89,7 +89,7 @@ export const toastWarning = {
    */
   storageQuota: () => {
     toast.warning(
-      'Storage limit reached. Quiz progress will be saved for this session only. Try clearing browser data to fix this.',
+      'Storage limit reached. Quiz progress will be saved for this session only. Try clearing browser data or using a different browser.',
       { duration: TOAST_DURATION.LONG }
     )
   },
@@ -160,11 +160,14 @@ export const toastError = {
   },
 
   /**
-   * Displays a generic error toast.
-   * @param message Custom error message
+   * Displays an error toast when all storage mechanisms are exhausted.
+   * Both localStorage and sessionStorage are full — progress cannot be saved.
    */
-  generic: (message: string) => {
-    toast.error(message, { duration: TOAST_DURATION.LONG })
+  storageFull: () => {
+    toast.error(
+      'Storage is full. Quiz progress cannot be saved. Try clearing browser data or using a different browser.',
+      { duration: TOAST_DURATION.LONG }
+    )
   },
 }
 

@@ -2,29 +2,52 @@
 
 ### Unhandled Edge Cases
 
-**src/lib/quotaResilientStorage.ts:88-93** — `sessionStorage also at quota limit during fallback`
-> Consequence: Toast says 'saved for this session' but data was not saved anywhere
-> Guard: `catch (sessionError) { if (isQuotaExceeded(sessionError)) showThrottledWarning(); console.error(...); return; }`
-
-**src/lib/quotaResilientStorage.ts:43-51** — `clearStaleQuizKeys removes active quiz's in-progress backup key`
-> Consequence: Active quiz progress backup deleted during space reclamation
-> Guard: `if (key?.startsWith('quiz-progress-') && key !== name) localStorage.removeItem(key)`
-
-**src/stores/useQuizStore.ts:318-332** — `Subscriber toast fires unthrottled while adapter toast is throttled`
-> Consequence: Duplicate warning toasts on same state change (subscriber + adapter)
-> Guard: `Import and call showThrottledWarning() instead of toastWarning.storageQuota() directly`
-
-**src/stores/useQuizStore.ts:318-332** — `Subscriber skips stale-key cleanup before sessionStorage fallback`
-> Consequence: Missed opportunity to recover localStorage space and avoid fallback
-> Guard: `Call clearStaleQuizKeys() before sessionStorage.setItem fallback in subscriber`
-
-**src/app/pages/Quiz.tsx:205-211** — `Both localStorage and sessionStorage throw during beforeunload`
-> Consequence: Quiz progress silently lost on tab close with no recovery path
-> Guard: `Inner catch: try { sessionStorage.setItem(key, value) } catch { /* already in outer try */ }`
-
-**src/lib/quotaResilientStorage.ts:27-30** — `System clock jumps backward after lastWarningAt is set`
-> Consequence: Warning toast suppressed indefinitely until clock catches up
-> Guard: `if (now - lastWarningAt < THROTTLE_MS && now >= lastWarningAt) return`
+**src/stores/useQuizStore.ts:332-335** — `sessionStorage fallback throws but showThrottledWarning still fires`
+> Consequence: Toast says "saved for this session" when data was not saved anywhere
+> Guard: `const ok = tryCatch(() => sessionStorage.setItem(key, val)); if (ok) showThrottledWarning(); else toastError.generic('Unable to save quiz progress')`
 
 ---
-**Total:** 6 unhandled edge cases found.
+
+**src/app/pages/Quiz.tsx:153-154** — `localStorage.removeItem throws SecurityError in private browsing`
+> Consequence: sessionStorage.removeItem skipped; stale progress restored on next load
+> Guard: `try { localStorage.removeItem(key) } catch {} try { sessionStorage.removeItem(key) } catch {}`
+
+---
+
+**src/app/pages/Quiz.tsx:207-212** — `inner catch does not distinguish quota from non-quota errors`
+> Consequence: SecurityError silently triggers sessionStorage fallback instead of being logged
+> Guard: `catch (e) { if (!isQuotaExceeded(e)) console.warn('[Quiz] beforeunload localStorage error:', e); try { sessionStorage.setItem(key, value) } catch {} }`
+
+---
+
+**src/app/pages/Quiz.tsx:40** — `localStorage returns stale data when sessionStorage has newer fallback data`
+> Consequence: loadSavedProgress returns outdated localStorage version, ignoring newer sessionStorage write
+> Guard: `const raw = sessionStorage.getItem(key) ?? localStorage.getItem(key)` (prefer sessionStorage when present, as it indicates active fallback)
+
+---
+
+**src/lib/quotaResilientStorage.ts:85** — `setItem succeeds on localStorage retry after cleanup but stale sessionStorage copy remains`
+> Consequence: Next getItem returns localStorage data (correct), but orphaned sessionStorage copy wastes space and may confuse debugging
+> Guard: `try { sessionStorage.removeItem(name) } catch {}` after successful localStorage retry at line 104
+
+---
+
+**src/lib/quotaResilientStorage.ts:101** — `clearStaleQuizKeys preserveKey is 'levelup-quiz-store' when called from persist middleware path`
+> Consequence: Active quiz backup key (quiz-progress-{id}) deleted during cleanup; brief data loss window before subscriber re-creates it
+> Guard: Accept as known race (subscriber re-creates on same tick) or pass active quiz ID as additional preserve target
+
+---
+
+**src/stores/useQuizStore.ts:322** — `localStorage.removeItem throws SecurityError in subscriber`
+> Consequence: Caught by outer catch, reaches non-quota branch, logged as "localStorage sync failed" for a remove — misleading diagnostic
+> Guard: `try { localStorage.removeItem(key); sessionStorage.removeItem(key) } catch (e) { console.warn('[useQuizStore] cleanup failed:', e) }` in a separate pre-check before setItem
+
+---
+
+**src/stores/useQuizStore.ts:317-324** — `subscriber does not attempt stale-key cleanup before sessionStorage fallback`
+> Consequence: Missed opportunity to reclaim localStorage space and avoid session-only fallback
+> Guard: Export `clearStaleQuizKeys` and call before sessionStorage.setItem in subscriber catch block
+
+---
+
+**Total:** 8 unhandled edge cases found.

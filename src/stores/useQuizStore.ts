@@ -7,6 +7,7 @@ import {
   quotaResilientStorage,
   isQuotaExceeded,
   showThrottledWarning,
+  clearStaleQuizKeys,
 } from '@/lib/quotaResilientStorage'
 import { calculateQuizScore } from '@/lib/scoring'
 import { fisherYatesShuffle } from '@/lib/shuffle'
@@ -324,17 +325,20 @@ useQuizStore.subscribe(state => {
     }
   } catch (err) {
     if (isQuotaExceeded(err)) {
+      // Attempt to reclaim space before falling back
+      clearStaleQuizKeys(progress && quiz ? `quiz-progress-${quiz.id}` : undefined)
       // Fall back to sessionStorage for per-quiz backup
       try {
         if (progress && quiz) {
           sessionStorage.setItem(`quiz-progress-${quiz.id}`, JSON.stringify(progress))
         }
+        showThrottledWarning()
       } catch {
-        // sessionStorage also failed — nothing more we can do
+        // sessionStorage also failed — toast would be misleading
+        toastError.storageFull()
       }
-      showThrottledWarning()
     } else {
-      console.error('[useQuizStore] localStorage sync failed:', err)
+      console.error('[useQuizStore] storage sync failed:', err)
     }
   }
 })

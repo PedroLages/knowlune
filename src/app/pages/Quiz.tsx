@@ -11,6 +11,7 @@ import {
   selectIsLoading,
   selectError,
 } from '@/stores/useQuizStore'
+import { isQuotaExceeded } from '@/lib/quotaResilientStorage'
 import { QuizStartScreen } from '@/app/components/quiz/QuizStartScreen'
 import { QuizHeader } from '@/app/components/quiz/QuizHeader'
 import { QuestionDisplay } from '@/app/components/quiz/QuestionDisplay'
@@ -37,7 +38,10 @@ import {
 function loadSavedProgress(quizId: string): QuizProgress | null {
   try {
     const key = `quiz-progress-${quizId}`
-    const raw = localStorage.getItem(key) ?? sessionStorage.getItem(key)
+    // Prefer sessionStorage — if present, it means we're in fallback mode
+    // and the adapter cleared the stale localStorage entry. Check localStorage
+    // only as a fallback for the normal (non-quota-exceeded) path.
+    const raw = sessionStorage.getItem(key) ?? localStorage.getItem(key)
     if (!raw) return null
     const result = QuizProgressSchema.safeParse(JSON.parse(raw))
     if (!result.success) {
@@ -206,9 +210,12 @@ export function Quiz() {
           const value = JSON.stringify(progress)
           try {
             localStorage.setItem(key, value)
-          } catch {
-            // QuotaExceededError — fall back to sessionStorage
-            sessionStorage.setItem(key, value)
+          } catch (storageErr) {
+            if (isQuotaExceeded(storageErr)) {
+              // QuotaExceededError — fall back to sessionStorage
+              sessionStorage.setItem(key, value)
+            }
+            // Non-quota errors (SecurityError, etc.) — skip silently during unload
           }
         }
       } catch (e) {

@@ -48,6 +48,8 @@ beforeEach(async () => {
   toast = sonnerMod.toast as unknown as typeof toast
 
   _resetWarningThrottle()
+  // vi.clearAllMocks() must come AFTER dynamic imports complete above —
+  // otherwise it would clear the freshly-re-imported mock's call tracking.
   vi.clearAllMocks()
 })
 
@@ -115,8 +117,14 @@ describe('useQuizStore subscriber quota handling', () => {
   it('shows throttled warning toast on subscriber quota error', async () => {
     await seedAndStartQuiz()
 
+    // Block both subscriber keys (quiz-progress-*) AND adapter key (levelup-quiz-store)
+    // from localStorage writes, so toast calls are definitively attributable to the
+    // subscriber path rather than the adapter.
     Storage.prototype.setItem = function (this: Storage, key: string, value: string) {
-      if (this === localStorage && key.startsWith('quiz-progress-')) {
+      if (
+        this === localStorage &&
+        (key.startsWith('quiz-progress-') || key === 'levelup-quiz-store')
+      ) {
         throw new DOMException('Quota exceeded', 'QuotaExceededError')
       }
       origSetItem.call(this, key, value)
@@ -126,8 +134,6 @@ describe('useQuizStore subscriber quota handling', () => {
     await act(async () => {
       useQuizStore.getState().submitAnswer('q1', 'a')
     })
-    // toast.warning may have been called by persist middleware too (via adapter),
-    // so check it was called at least once
     expect(toast.warning).toHaveBeenCalled()
     const callCountAfterFirst = (toast.warning as ReturnType<typeof vi.fn>).mock.calls.length
 
