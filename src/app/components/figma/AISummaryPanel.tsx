@@ -177,7 +177,8 @@ export function AISummaryPanel({ transcriptSrc }: AISummaryPanelProps) {
         </p>
         <Button
           onClick={handleGenerate}
-          className="gap-2 bg-brand hover:bg-brand-hover"
+          variant="brand"
+          className="gap-2"
           data-testid="generate-summary-button"
         >
           <Sparkles className="size-4" aria-hidden="true" />
@@ -241,7 +242,7 @@ export function AISummaryPanel({ transcriptSrc }: AISummaryPanelProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h3 className="text-base font-semibold text-foreground">AI Summary</h3>
-            <Badge className="bg-brand-soft text-brand" data-testid="summary-word-count">
+            <Badge className="bg-brand-soft text-brand-soft-foreground" data-testid="summary-word-count">
               {wordCount} words
             </Badge>
           </div>

@@ -120,7 +120,7 @@ export default function MyClass() {
           <p className="text-muted-foreground mb-6 max-w-md">
             Browse our course catalog to find the perfect course to kickstart your learning journey.
           </p>
-          <Button asChild className="bg-brand hover:bg-brand-hover">
+          <Button variant="brand" asChild>
             <Link to="/courses">
               Browse All Courses
               <ArrowRight className="w-4 h-4 ml-2" />
@@ -242,7 +242,7 @@ export default function MyClass() {
                   <p className="text-muted-foreground mb-6 max-w-md">
                     Start a new course to begin learning!
                   </p>
-                  <Button asChild className="bg-brand hover:bg-brand-hover">
+                  <Button variant="brand" asChild>
                     <Link to="/courses">
                       Browse Courses
                       <ArrowRight className="w-4 h-4 ml-2" />

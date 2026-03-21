@@ -190,7 +190,7 @@ export function AILearningPath() {
               size="lg"
               onClick={handleGenerate}
               disabled={!canGenerate}
-              className="bg-brand hover:bg-brand-hover"
+              variant="brand"
               data-testid="generate-learning-path-button"
             >
               {isGenerating ? (

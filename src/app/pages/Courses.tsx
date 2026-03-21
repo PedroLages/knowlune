@@ -215,9 +215,10 @@ export function Courses() {
           </p>
         </div>
         <Button
+          variant="brand"
           onClick={handleImportCourse}
           disabled={isImporting}
-          className="bg-brand hover:bg-brand-hover hover:scale-[1.02] hover:shadow-md rounded-xl transition-all duration-200 focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+          className="hover:scale-[1.02] hover:shadow-md rounded-xl transition-all duration-200"
         >
           {isImporting ? (
             <>
@@ -247,7 +248,7 @@ export function Courses() {
             />
           </div>
           <Button
-            className="bg-brand hover:bg-brand-hover"
+            variant="brand"
             onClick={() => setSearchQuery('')}
             aria-label={searchQuery ? 'Clear search' : 'Search courses'}
           >
@@ -287,10 +288,11 @@ export function Courses() {
               />
               <p className="text-muted-foreground mb-4">Import your first course to get started</p>
               <Button
+                variant="brand"
                 data-testid="import-first-course-cta"
                 onClick={handleImportCourse}
                 disabled={isImporting}
-                className="bg-brand hover:bg-brand-hover rounded-xl focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+                className="rounded-xl"
               >
                 {isImporting ? (
                   <>

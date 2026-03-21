@@ -452,7 +452,7 @@ export function Layout() {
                     className="object-cover"
                   />
                 ) : (
-                  <AvatarFallback className="bg-brand-soft text-brand font-semibold transition-colors duration-200 hover:bg-brand hover:text-white">
+                  <AvatarFallback className="bg-brand-soft text-brand-soft-foreground font-semibold transition-colors duration-200 hover:bg-brand hover:text-white">
                     {getInitials(settings.displayName)}
                   </AvatarFallback>
                 )}

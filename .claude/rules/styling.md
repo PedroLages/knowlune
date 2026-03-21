@@ -29,6 +29,12 @@
 | Error states | `text-red-500` | `text-destructive` |
 | Muted text | `text-gray-500` | `text-muted-foreground` |
 | Warning states | `text-orange-500` | `text-warning` |
+| Brand text on soft bg | `text-brand` on `bg-brand-soft` | `text-brand-soft-foreground` on `bg-brand-soft` |
+
+**Brand Color Contrast Rules (WCAG AA):**
+- **Buttons**: Use `variant="brand"` — never `className="bg-brand"` on `<Button>` (missing foreground token)
+- **Soft badges/labels**: Use `text-brand-soft-foreground` (not `text-brand`) on `bg-brand-soft` backgrounds
+- **Why separate tokens**: `--brand` is dark enough for white text buttons but too dark for text-on-dark-soft backgrounds. `--brand-soft-foreground` is a lighter variant that passes 4.5:1 contrast on `bg-brand-soft` in dark mode.
 
 **Why Design Tokens Matter:**
 - Support automatic light/dark mode switching

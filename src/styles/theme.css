@@ -29,6 +29,7 @@
 
   /* Surface depth tokens */
   --brand-soft: #d0d2ee;
+  --brand-soft-foreground: #5e6ad2;
   --brand-muted: #c8c9e4;
   --success-soft: #eef5f0;
   --surface-elevated: #ffffff;
@@ -134,6 +135,7 @@
 
   /* Surface depth tokens (dark) */
   --brand-soft: #2a2c48;
+  --brand-soft-foreground: #8b92da;
   --brand-muted: #3a3c60;
   --success-soft: #1a2e22;
   --surface-elevated: #2a2b3e;
@@ -157,8 +159,8 @@
   --scrollbar-thumb: oklch(0.4 0.03 270);
   --scrollbar-thumb-hover: oklch(0.55 0.03 270);
   --scrollbar-track: #1a1b26;
-  --brand: #6b72c4;
-  --brand-hover: #5d64b5;
+  --brand: #6069c0;
+  --brand-hover: #5660b3;
   --brand-foreground: #ffffff;
   --success: #6ab888;
   --success-foreground: #ffffff;
@@ -266,6 +268,7 @@
   --color-study-day-text: var(--study-day-text);
   --color-freeze-day-text: var(--freeze-day-text);
   --color-brand-soft: var(--brand-soft);
+  --color-brand-soft-foreground: var(--brand-soft-foreground);
   --color-brand-muted: var(--brand-muted);
   --color-success-soft: var(--success-soft);
   --color-surface-elevated: var(--surface-elevated);

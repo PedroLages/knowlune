@@ -826,8 +826,8 @@ export function LessonPlayer() {
         )}
         {nextLesson ? (
           <Button
+            variant="brand"
             onClick={() => navigate(`/courses/${courseId}/${nextLesson.id}`)}
-            className="bg-brand hover:bg-brand-hover"
           >
             Next
             <ChevronRight className="ml-1 h-4 w-4" />
