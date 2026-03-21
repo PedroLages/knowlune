@@ -1,9 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import Markdown from 'react-markdown'
 import { Input } from '@/app/components/ui/input'
 import type { Question } from '@/types/quiz'
 import type { QuestionDisplayMode } from '../QuestionDisplay'
-import { REMARK_PLUGINS, MARKDOWN_COMPONENTS } from './markdown-config'
+import { MarkdownRenderer } from '../MarkdownRenderer'
 
 const MAX_LENGTH = 500
 const DEBOUNCE_MS = 300
@@ -17,7 +16,7 @@ interface FillInBlankQuestionProps {
 
 export function FillInBlankQuestion({ question, value, onChange, mode }: FillInBlankQuestionProps) {
   const isActive = mode === 'active'
-  const legendId = useId()
+  const labelId = useId()
   const counterId = useId()
 
   // Local state for debounced input
@@ -61,27 +60,28 @@ export function FillInBlankQuestion({ question, value, onChange, mode }: FillInB
   }
 
   return (
-    <fieldset className="mt-6">
-      <legend
-        id={legendId}
+    <fieldset className="mt-6 min-w-0" aria-labelledby={labelId}>
+      <div
+        id={labelId}
         data-testid="question-text"
         className="text-lg lg:text-xl text-foreground leading-relaxed pb-4"
       >
-        <Markdown remarkPlugins={REMARK_PLUGINS} components={MARKDOWN_COMPONENTS}>
-          {question.text}
-        </Markdown>
-      </legend>
+        <MarkdownRenderer content={question.text} />
+      </div>
 
       <div className="space-y-2">
         <Input
           type="text"
+          name="quiz-answer"
           value={inputValue}
           onChange={handleInput}
           onBlur={handleBlur}
-          placeholder="Type your answer here"
+          placeholder="Type your answer here..."
           maxLength={MAX_LENGTH}
           disabled={!isActive}
-          aria-labelledby={legendId}
+          autoComplete="off"
+          spellCheck={false}
+          aria-labelledby={labelId}
           aria-describedby={counterId}
           className="w-full max-w-lg min-h-[44px]"
         />

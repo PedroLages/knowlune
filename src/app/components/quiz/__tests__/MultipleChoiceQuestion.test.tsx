@@ -162,7 +162,7 @@ describe('MultipleChoiceQuestion', () => {
     expect(del.tagName).toBe('DEL')
   })
 
-  it('renders Markdown as inline content inside legend (no block p tags)', () => {
+  it('renders question text via MarkdownRenderer (no legend needed)', () => {
     const { container } = render(
       <MultipleChoiceQuestion
         question={makeQuestion({ text: 'Simple question text' })}
@@ -172,10 +172,10 @@ describe('MultipleChoiceQuestion', () => {
       />
     )
 
-    const legend = container.querySelector('legend')
-    // Should contain <span> not <p> (legend only allows phrasing content)
-    expect(legend?.querySelector('p')).toBeNull()
-    expect(legend?.querySelector('span')).not.toBeNull()
+    // Question text is in a div (not legend) — block content is valid
+    const questionText = container.querySelector('[data-testid="question-text"]')
+    expect(questionText).toBeInTheDocument()
+    expect(questionText?.tagName).toBe('DIV')
   })
 
   it('warns on console when fewer than 2 options', () => {
@@ -238,7 +238,7 @@ describe('MultipleChoiceQuestion', () => {
     warnSpy.mockRestore()
   })
 
-  it('renders with fieldset semantic structure', () => {
+  it('renders with fieldset semantic structure and aria-labelledby', () => {
     const { container } = render(
       <MultipleChoiceQuestion
         question={makeQuestion()}
@@ -250,12 +250,14 @@ describe('MultipleChoiceQuestion', () => {
 
     const fieldset = container.querySelector('fieldset')
     expect(fieldset).toBeInTheDocument()
+    expect(fieldset?.getAttribute('aria-labelledby')).toBeTruthy()
 
-    const legend = container.querySelector('legend')
-    expect(legend).toBeInTheDocument()
+    const labelId = fieldset?.getAttribute('aria-labelledby')
+    const label = container.querySelector(`#${CSS.escape(labelId!)}`)
+    expect(label).toBeInTheDocument()
   })
 
-  it('has radiogroup inside fieldset with legend (fieldset provides accessible name)', () => {
+  it('has radiogroup inside fieldset with aria-labelledby (fieldset provides accessible name)', () => {
     const { container } = render(
       <MultipleChoiceQuestion
         question={makeQuestion()}

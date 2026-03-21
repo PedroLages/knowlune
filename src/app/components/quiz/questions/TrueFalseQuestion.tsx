@@ -1,10 +1,9 @@
 import { useId } from 'react'
-import Markdown from 'react-markdown'
 import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group'
 import { cn } from '@/app/components/ui/utils'
 import type { Question } from '@/types/quiz'
 import type { QuestionDisplayMode } from '../QuestionDisplay'
-import { REMARK_PLUGINS, MARKDOWN_COMPONENTS } from './markdown-config'
+import { MarkdownRenderer } from '../MarkdownRenderer'
 
 interface TrueFalseQuestionProps {
   question: Question
@@ -16,7 +15,7 @@ interface TrueFalseQuestionProps {
 export function TrueFalseQuestion({ question, value, onChange, mode }: TrueFalseQuestionProps) {
   const options = question.options ?? []
   const isActive = mode === 'active'
-  const legendId = useId()
+  const labelId = useId()
 
   if (process.env.NODE_ENV !== 'production' && options.length !== 2) {
     console.warn(
@@ -34,16 +33,14 @@ export function TrueFalseQuestion({ question, value, onChange, mode }: TrueFalse
   }
 
   return (
-    <fieldset className="mt-6" onKeyDown={handleKeyDown}>
-      <legend
-        id={legendId}
+    <fieldset className="mt-6 min-w-0" aria-labelledby={labelId} onKeyDown={handleKeyDown}>
+      <div
+        id={labelId}
         data-testid="question-text"
         className="text-lg lg:text-xl text-foreground leading-relaxed pb-4"
       >
-        <Markdown remarkPlugins={REMARK_PLUGINS} components={MARKDOWN_COMPONENTS}>
-          {question.text}
-        </Markdown>
-      </legend>
+        <MarkdownRenderer content={question.text} />
+      </div>
 
       <RadioGroup
         value={value ?? ''}

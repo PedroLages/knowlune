@@ -1,10 +1,9 @@
 import { useId } from 'react'
-import Markdown from 'react-markdown'
 import { Checkbox } from '@/app/components/ui/checkbox'
 import { cn } from '@/app/components/ui/utils'
 import type { Question } from '@/types/quiz'
 import type { QuestionDisplayMode } from '../QuestionDisplay'
-import { REMARK_PLUGINS, MARKDOWN_COMPONENTS } from './markdown-config'
+import { MarkdownRenderer } from '../MarkdownRenderer'
 
 interface MultipleSelectQuestionProps {
   question: Question
@@ -21,7 +20,7 @@ export function MultipleSelectQuestion({
 }: MultipleSelectQuestionProps) {
   const options = question.options ?? []
   const isActive = mode === 'active'
-  const legendId = useId()
+  const labelId = useId()
   const hintId = useId()
 
   if (process.env.NODE_ENV !== 'production' && options.length < 2) {
@@ -46,16 +45,19 @@ export function MultipleSelectQuestion({
   }
 
   return (
-    <fieldset className="mt-6" aria-describedby={hintId} onKeyDown={handleKeyDown}>
-      <legend
-        id={legendId}
+    <fieldset
+      className="mt-6 min-w-0"
+      aria-labelledby={labelId}
+      aria-describedby={hintId}
+      onKeyDown={handleKeyDown}
+    >
+      <div
+        id={labelId}
         data-testid="question-text"
         className="text-lg lg:text-xl text-foreground leading-relaxed pb-2"
       >
-        <Markdown remarkPlugins={REMARK_PLUGINS} components={MARKDOWN_COMPONENTS}>
-          {question.text}
-        </Markdown>
-      </legend>
+        <MarkdownRenderer content={question.text} />
+      </div>
       <span id={hintId} className="text-sm text-muted-foreground italic block mb-4">
         Select all that apply
       </span>
