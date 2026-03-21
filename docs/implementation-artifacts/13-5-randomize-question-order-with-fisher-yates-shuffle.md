@@ -108,3 +108,6 @@ Skipped — no UI changes in this story.
 - **Existing implementation found**: Fisher-Yates was already implemented inline in `useQuizStore.ts` — the story became an extraction refactor rather than new algorithm work. Always check for existing code before implementing.
 - **Distribution testing**: The 10K-run uniformity test validates statistical correctness that E2E tests can't cover. Each element must appear in each position ~20% ±5% of the time for an unbiased shuffle.
 - **Immutability matters**: The spread-copy-then-swap pattern ensures callers can safely pass arrays without defensive copies.
+- **Deterministic mock design**: The `mockMathRandom` helper needed two review rounds to simplify — avoid shadowing parameter names with inner variables, and prefer flat sequence arrays over wrapper functions.
+- **E2E shuffle assertions are inherently probabilistic**: `not.toEqual` for randomness has a 1/n! false-failure rate. For a 5-element array that's 1/120 per assertion — acceptable for E2E, but unit distribution tests are the real correctness gate.
+- **Review-driven refactoring pays off**: Two review cycles caught a shadowed parameter, missing defensive guard on `quiz.questions`, and `.sort()` mutating the array under test — all subtle bugs that manual testing wouldn't surface.
