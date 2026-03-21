@@ -155,8 +155,12 @@ test.describe('E13-S05: Randomize Question Order', () => {
     const order = await collectQuestionOrder(page, 5)
     const originalOrder = questions.map(q => q.text)
 
-    // Deterministic mock guarantees shuffled order differs from original
+    // Deterministic mock guarantees a consistent shuffled order that differs from original.
+    // Exact output depends on how many Math.random() calls occur before the shuffle
+    // (React internals, UUID generation, etc.), so we assert inequality rather than exact order.
     expect(order).not.toEqual(originalOrder)
+    // Verify all questions are present (valid permutation)
+    expect([...order].sort()).toEqual([...originalOrder].sort())
   })
 
   test('AC2: retake quiz → different order on each attempt', async ({ page }) => {
@@ -178,7 +182,7 @@ test.describe('E13-S05: Randomize Question Order', () => {
       await page.getByRole('button', { name: 'Previous' }).click()
     }
     for (let i = 0; i < 5; i++) {
-      await page.getByRole('radio', { name: 'A' }).click()
+      await page.getByRole('radio').first().click()
       if (i < 4) await page.getByRole('button', { name: 'Next' }).click()
     }
     await page.getByRole('button', { name: /submit quiz/i }).click()

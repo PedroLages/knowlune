@@ -6,7 +6,7 @@ describe('fisherYatesShuffle', () => {
     const input = [1, 2, 3, 4, 5]
     const result = fisherYatesShuffle(input)
     expect(result).toHaveLength(5)
-    expect([...result].sort()).toEqual([1, 2, 3, 4, 5])
+    expect([...result].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))).toEqual([1, 2, 3, 4, 5])
   })
 
   it('does not mutate the original array', () => {
@@ -20,7 +20,7 @@ describe('fisherYatesShuffle', () => {
     const input: readonly number[] = [1, 2, 3] as const
     const result = fisherYatesShuffle(input)
     expect(result).toHaveLength(3)
-    expect([...result].sort()).toEqual([1, 2, 3])
+    expect([...result].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))).toEqual([1, 2, 3])
   })
 
   it('returns empty array for empty input', () => {
@@ -35,7 +35,7 @@ describe('fisherYatesShuffle', () => {
     const input = ['a', 'b', 'c']
     const result = fisherYatesShuffle(input)
     expect(result).toHaveLength(3)
-    expect([...result].sort()).toEqual(['a', 'b', 'c'])
+    expect([...result].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))).toEqual(['a', 'b', 'c'])
   })
 
   it('produces uniform distribution across 50,000 shuffles', () => {
