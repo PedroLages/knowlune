@@ -4,9 +4,9 @@ story_name: "Unlimited Quiz Retakes"
 status: in-progress
 started: 2026-03-21
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-21
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -150,15 +150,35 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+**Verdict: PASS** — Design token discipline perfect, button hierarchy correct, improvement summary tone learner-positive. All findings addressed:
+- Replaced `aria-disabled` span with `<button disabled>` for "View All Attempts"
+- Added `role="group"` with `aria-label` to action button group
+- Added "Keep practicing!" indicator for negative delta (was blank)
+
+Report: `docs/reviews/design/design-review-2026-03-21-e13-s04.md`
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**Verdict: PASS** — 0 blockers. All high/medium findings addressed:
+- Added toast.error to handleRetake catch (was silent failure)
+- Fixed label flicker by delaying setFetchState until after attempt count resolves
+- Added NaN/range guards on previousBestPercentage computation
+- Extracted non-null assertions into typed variables
+- Replaced fragile .then(async) with async IIFE
+- Reset hasCompletedBefore on lessonId change
+
+Test coverage: 4/4 ACs covered (100%). Added timeRemaining assertion, scoped assertions, content checks.
+
+Reports:
+- `docs/reviews/code/code-review-2026-03-21-e13-s04.md`
+- `docs/reviews/code/code-review-testing-2026-03-21-e13-s04.md`
+- `docs/reviews/code/edge-case-review-2026-03-21-e13-s04.md`
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+**Verdict: PASS** — Accessibility, semantic HTML, responsive design all compliant. All findings addressed (overlapping with design/code review fixes).
+
+Report: `docs/reviews/code/web-design-guidelines-2026-03-21-e13-s04.md`
 
 ## Challenges and Lessons Learned
 
