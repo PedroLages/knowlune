@@ -8,6 +8,7 @@ interface ScoreSummaryProps {
   passed: boolean
   passingScore: number
   timeSpent: number
+  previousBestPercentage?: number
 }
 
 type ScoreTier = {
@@ -112,15 +113,35 @@ export function ScoreSummary({
   passed,
   passingScore,
   timeSpent,
+  previousBestPercentage,
 }: ScoreSummaryProps) {
   const tier = getScoreTier(percentage, passed)
+  const roundedPct = Math.round(Math.min(100, Math.max(0, percentage)))
+
+  // Guard: clamp and validate previousBest before computing delta
+  const clampedPrevBest =
+    previousBestPercentage != null && Number.isFinite(previousBestPercentage)
+      ? Math.min(100, Math.max(0, previousBestPercentage))
+      : null
+  const roundedPrevBest = clampedPrevBest != null ? Math.round(clampedPrevBest) : null
+
+  const delta = roundedPrevBest != null ? roundedPct - roundedPrevBest : null
+
+  const improvementSrText =
+    delta != null && delta > 0
+      ? ` Improved by ${delta} percentage points from previous best of ${roundedPrevBest} percent.`
+      : delta != null && delta === 0
+        ? ` Same as previous best of ${roundedPrevBest} percent.`
+        : delta != null
+          ? ` Previous best was ${roundedPrevBest} percent.`
+          : ''
 
   return (
     <div className="flex flex-col items-center gap-4">
       <div aria-live="polite" aria-atomic="true" className="sr-only">
-        {`Quiz score: ${Math.round(Math.min(100, Math.max(0, percentage)))} percent. ${score} of ${maxScore} correct. ${
+        {`Quiz score: ${roundedPct} percent. ${score} of ${maxScore} correct. ${
           passed ? 'Passed' : 'Not passed'
-        }.`}
+        }.${improvementSrText}`}
       </div>
 
       <ScoreRing percentage={percentage} tier={tier} />
@@ -134,6 +155,21 @@ export function ScoreSummary({
       <p className="text-sm text-muted-foreground">
         Completed in {formatDuration(Math.max(timeSpent, 1000))}
       </p>
+
+      {roundedPrevBest != null && (
+        <p className="text-sm tabular-nums" data-testid="improvement-summary">
+          <span className="text-muted-foreground">Previous best: {roundedPrevBest}%</span>
+          {delta != null && delta > 0 && (
+            <span className="text-success font-semibold ml-1.5">(+{delta}%)</span>
+          )}
+          {delta === 0 && (
+            <span className="text-muted-foreground ml-1.5">&middot; Same as best</span>
+          )}
+          {delta != null && delta < 0 && (
+            <span className="text-muted-foreground ml-1.5">&middot; Keep practicing!</span>
+          )}
+        </p>
+      )}
     </div>
   )
 }

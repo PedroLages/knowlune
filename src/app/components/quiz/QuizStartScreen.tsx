@@ -17,11 +17,19 @@ interface QuizStartScreenProps {
   quiz: Quiz
   /** Saved in-progress state from localStorage, or null if not started */
   savedProgress: QuizProgress | null
+  /** Whether the user has completed this quiz at least once before */
+  hasCompletedBefore?: boolean
   onStart: () => void
   onResume: () => void
 }
 
-export function QuizStartScreen({ quiz, savedProgress, onStart, onResume }: QuizStartScreenProps) {
+export function QuizStartScreen({
+  quiz,
+  savedProgress,
+  hasCompletedBefore,
+  onStart,
+  onResume,
+}: QuizStartScreenProps) {
   const answeredCount = savedProgress ? Object.keys(savedProgress.answers).length : 0
   const hasResume = answeredCount > 0
   const questionCount = quiz.questions.length
@@ -115,7 +123,7 @@ export function QuizStartScreen({ quiz, savedProgress, onStart, onResume }: Quiz
             variant="brand"
             className="rounded-xl h-12 px-8 w-full sm:w-auto"
           >
-            Start Quiz
+            {hasCompletedBefore ? 'Retake Quiz' : 'Start Quiz'}
           </Button>
         )}
       </div>

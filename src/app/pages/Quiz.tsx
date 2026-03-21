@@ -74,6 +74,7 @@ export function Quiz() {
   const [quiz, setQuiz] = useState<QuizType | null>(null)
   const [fetchState, setFetchState] = useState<'loading' | 'found' | 'error'>('loading')
   const [savedProgress, setSavedProgress] = useState<QuizProgress | null>(null)
+  const [hasCompletedBefore, setHasCompletedBefore] = useState(false)
 
   // Store selectors — drives the active quiz view after startQuiz()
   const currentQuiz = useQuizStore(selectCurrentQuiz)
@@ -101,12 +102,10 @@ export function Quiz() {
     }
 
     let ignore = false
-
-    db.quizzes
-      .where('lessonId')
-      .equals(lessonId)
-      .first()
-      .then(found => {
+    setHasCompletedBefore(false)
+    ;(async () => {
+      try {
+        const found = await db.quizzes.where('lessonId').equals(lessonId).first()
         if (ignore) return
         if (!found) {
           setFetchState('error')
@@ -114,12 +113,21 @@ export function Quiz() {
         }
         setQuiz(found)
         setSavedProgress(loadSavedProgress(found.id))
-        setFetchState('found')
-      })
-      .catch((err: unknown) => {
+
+        // Check attempt history before showing start screen to avoid label flicker
+        try {
+          const attemptCount = await db.quizAttempts.where('quizId').equals(found.id).count()
+          if (!ignore) setHasCompletedBefore(attemptCount > 0)
+        } catch (err) {
+          console.warn('[Quiz] Failed to check attempt history:', err)
+        }
+
+        if (!ignore) setFetchState('found')
+      } catch (err: unknown) {
         console.error('[Quiz] Failed to load quiz:', err)
         if (!ignore) setFetchState('error')
-      })
+      }
+    })()
 
     return () => {
       ignore = true
@@ -359,6 +367,7 @@ export function Quiz() {
       <QuizStartScreen
         quiz={quiz}
         savedProgress={savedProgress}
+        hasCompletedBefore={hasCompletedBefore}
         onStart={handleStart}
         onResume={handleResume}
       />
