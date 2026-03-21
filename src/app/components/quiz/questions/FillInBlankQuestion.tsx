@@ -72,12 +72,15 @@ export function FillInBlankQuestion({ question, value, onChange, mode }: FillInB
       <div className="space-y-2">
         <Input
           type="text"
+          name="quiz-answer"
           value={inputValue}
           onChange={handleInput}
           onBlur={handleBlur}
-          placeholder="Type your answer here"
+          placeholder="Type your answer here..."
           maxLength={MAX_LENGTH}
           disabled={!isActive}
+          autoComplete="off"
+          spellCheck={false}
           aria-labelledby={labelId}
           aria-describedby={counterId}
           className="w-full max-w-lg min-h-[44px]"

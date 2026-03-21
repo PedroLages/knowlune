@@ -177,13 +177,90 @@ test.describe('E14-S04: Rich Text Formatting', () => {
     await navigateToQuiz(page)
     await startQuiz(page)
 
-    const pre = page.locator('pre').first()
+    // Scope to question text container to avoid matching unrelated elements
+    const questionText = page.locator('[data-testid="question-text"]').first()
+    const pre = questionText.locator('pre').first()
     await expect(pre).toBeVisible()
 
-    // Verify background color exists (design token bg-surface-sunken)
-    const bgColor = await pre.evaluate(el => getComputedStyle(el).backgroundColor)
-    expect(bgColor).not.toBe('')
-    expect(bgColor).not.toBe('rgba(0, 0, 0, 0)')
+    // Compute actual WCAG contrast ratio from resolved CSS colors.
+    // Uses canvas to resolve oklch/lab/etc to RGB (Chromium may return oklch).
+    const ratio = await pre.evaluate(el => {
+      function colorToRgb(color: string): number[] {
+        const m = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
+        if (m) return [+m[1], +m[2], +m[3]]
+        // Resolve non-rgb colors (oklch, lab, etc) via canvas
+        const canvas = document.createElement('canvas')
+        canvas.width = canvas.height = 1
+        const ctx = canvas.getContext('2d')!
+        ctx.fillStyle = color
+        ctx.fillRect(0, 0, 1, 1)
+        const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data
+        return [r, g, b]
+      }
+      function luminance(rgb: number[]) {
+        const [r, g, b] = rgb.map(c => {
+          const s = c / 255
+          return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
+        })
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+      }
+      const cs = getComputedStyle(el)
+      const code = el.querySelector('code')
+      const fgColor = code ? getComputedStyle(code).color : cs.color
+      const bgL = luminance(colorToRgb(cs.backgroundColor))
+      const fgL = luminance(colorToRgb(fgColor))
+      const lighter = Math.max(bgL, fgL)
+      const darker = Math.min(bgL, fgL)
+      return (lighter + 0.05) / (darker + 0.05)
+    })
+
+    expect(ratio).toBeGreaterThanOrEqual(4.5)
+  })
+
+  test('AC2: code blocks render correctly in dark mode', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'dark' })
+    await navigateToQuiz(page)
+    await startQuiz(page)
+
+    const questionText = page.locator('[data-testid="question-text"]').first()
+    const pre = questionText.locator('pre').first()
+    await expect(pre).toBeVisible()
+
+    // Verify dark mode contrast also meets WCAG AA (≥4.5:1)
+    const ratio = await pre.evaluate(el => {
+      function colorToRgb(color: string): number[] {
+        const m = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
+        if (m) return [+m[1], +m[2], +m[3]]
+        const canvas = document.createElement('canvas')
+        canvas.width = canvas.height = 1
+        const ctx = canvas.getContext('2d')!
+        ctx.fillStyle = color
+        ctx.fillRect(0, 0, 1, 1)
+        const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data
+        return [r, g, b]
+      }
+      function luminance(rgb: number[]) {
+        const [r, g, b] = rgb.map(c => {
+          const s = c / 255
+          return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
+        })
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+      }
+      const cs = getComputedStyle(el)
+      const code = el.querySelector('code')
+      const fgColor = code ? getComputedStyle(code).color : cs.color
+      const bgL = luminance(colorToRgb(cs.backgroundColor))
+      const fgL = luminance(colorToRgb(fgColor))
+      const lighter = Math.max(bgL, fgL)
+      const darker = Math.min(bgL, fgL)
+      return (lighter + 0.05) / (darker + 0.05)
+    })
+
+    expect(ratio).toBeGreaterThanOrEqual(4.5)
+
+    // Verify inline code also has distinct styling in dark mode
+    const inlineCode = page.locator('code').filter({ hasText: 'greet("World")' })
+    await expect(inlineCode).toBeVisible()
   })
 
   // ---------------------------------------------------------------------------
@@ -202,6 +279,14 @@ test.describe('E14-S04: Rich Text Formatting', () => {
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth
     )
     expect(hasHorizontalScroll).toBe(false)
+
+    // Question text container should not overflow either
+    const questionText = page.locator('[data-testid="question-text"]').first()
+    await expect(questionText).toBeVisible()
+    const textOverflows = await questionText.evaluate(
+      el => el.scrollWidth > el.clientWidth,
+    )
+    expect(textOverflows).toBe(false)
   })
 
   test('AC3: code blocks scroll independently on mobile', async ({ page }) => {

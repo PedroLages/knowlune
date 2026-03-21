@@ -115,7 +115,7 @@ describe('TrueFalseQuestion', () => {
     })
   })
 
-  it('renders with fieldset semantic structure', () => {
+  it('renders with fieldset semantic structure and aria-labelledby references existing element', () => {
     const { container } = render(
       <TrueFalseQuestion
         question={makeTrueFalseQuestion()}
@@ -127,7 +127,13 @@ describe('TrueFalseQuestion', () => {
 
     const fieldset = container.querySelector('fieldset')
     expect(fieldset).toBeInTheDocument()
-    expect(fieldset?.getAttribute('aria-labelledby')).toBeTruthy()
+    const labelId = fieldset?.getAttribute('aria-labelledby')
+    expect(labelId).toBeTruthy()
+
+    // Verify the referenced element exists and contains question text
+    const labelElement = container.querySelector(`#${labelId}`)
+    expect(labelElement).toBeInTheDocument()
+    expect(labelElement?.textContent).toContain('Photosynthesis')
   })
 
   it('has radiogroup inside fieldset with legend (fieldset provides accessible name)', () => {
