@@ -255,7 +255,7 @@ describe('MultipleChoiceQuestion', () => {
     expect(legend).toBeInTheDocument()
   })
 
-  it('has radiogroup role with aria-labelledby pointing to legend', () => {
+  it('has radiogroup inside fieldset with legend (fieldset provides accessible name)', () => {
     const { container } = render(
       <MultipleChoiceQuestion
         question={makeQuestion()}
@@ -268,10 +268,10 @@ describe('MultipleChoiceQuestion', () => {
     const radioGroup = screen.getByRole('radiogroup')
     expect(radioGroup).toBeInTheDocument()
 
-    const legend = container.querySelector('legend')
-    const legendId = legend?.getAttribute('id')
-    expect(legendId).toBeTruthy()
-    expect(radioGroup).toHaveAttribute('aria-labelledby', legendId)
+    // RadioGroup is inside fieldset — fieldset/legend provides the accessible name
+    const fieldset = container.querySelector('fieldset')
+    expect(fieldset).toBeInTheDocument()
+    expect(fieldset?.contains(radioGroup)).toBe(true)
   })
 
   it('option labels have min-h-12 class for touch targets', () => {

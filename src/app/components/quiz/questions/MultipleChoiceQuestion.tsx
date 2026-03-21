@@ -54,7 +54,6 @@ export function MultipleChoiceQuestion({
         value={value ?? ''}
         onValueChange={isActive ? onChange : undefined}
         disabled={!isActive}
-        aria-labelledby={legendId}
       >
         {options.map((option, index) => {
           const isSelected = value === option

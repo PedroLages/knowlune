@@ -49,7 +49,6 @@ export function TrueFalseQuestion({ question, value, onChange, mode }: TrueFalse
         value={value ?? ''}
         onValueChange={isActive ? onChange : undefined}
         disabled={!isActive}
-        aria-labelledby={legendId}
         className="grid grid-cols-1 lg:grid-cols-2 gap-3"
       >
         {options.map((option, index) => {
