@@ -225,13 +225,13 @@ test.describe('E14-S04: Rich Text Formatting', () => {
     await navigateToQuiz(page)
     await startQuiz(page)
 
-    // The fieldset/radiogroup should have aria-labelledby pointing to the question text
-    const radioGroup = page.getByRole('radiogroup')
-    const labelledBy = await radioGroup.getAttribute('aria-labelledby')
+    // The fieldset should have aria-labelledby pointing to the question text div
+    const fieldset = page.locator('fieldset')
+    const labelledBy = await fieldset.first().getAttribute('aria-labelledby')
     expect(labelledBy).toBeTruthy()
 
     // The referenced element should contain the question text
-    const labelElement = page.locator(`#${labelledBy}`)
+    const labelElement = page.locator(`[id="${labelledBy}"]`)
     await expect(labelElement).toBeVisible()
     await expect(labelElement).toContainText('JavaScript')
   })
