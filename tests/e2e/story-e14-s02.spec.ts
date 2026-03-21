@@ -95,12 +95,13 @@ test.describe('E14-S02: Display Multiple Select Questions', () => {
     // Verify "Select all that apply" indicator
     await expect(page.getByText('Select all that apply')).toBeVisible()
 
-    // Verify checkboxes (not radio buttons)
-    const checkboxes = page.getByRole('checkbox')
+    // Verify checkboxes within the question fieldset (not radio buttons)
+    const fieldset = page.locator('fieldset')
+    const checkboxes = fieldset.getByRole('checkbox')
     await expect(checkboxes).toHaveCount(4)
 
     // Verify no radios present for this question type
-    await expect(page.getByRole('radio')).toHaveCount(0)
+    await expect(fieldset.getByRole('radio')).toHaveCount(0)
 
     // Verify option labels
     await expect(page.getByText('Red')).toBeVisible()
@@ -238,8 +239,8 @@ test.describe('E14-S02: Display Multiple Select Questions', () => {
       await confirmButton.click()
     }
 
-    // Verify feedback text shows "X of Y correct" for multiple select questions
-    await expect(page.getByText(/\d+ of \d+ correct/)).toBeVisible()
+    // Verify feedback text shows "X of Y correct" (target visible <p>, not sr-only div)
+    await expect(page.locator('p').filter({ hasText: /\d+ of \d+ correct/ })).toBeVisible()
   })
 
   test('AC7: Accessibility — fieldset/legend structure and keyboard navigation', async ({
@@ -255,8 +256,8 @@ test.describe('E14-S02: Display Multiple Select Questions', () => {
     const legend = fieldset.locator('legend')
     await expect(legend).toBeVisible()
 
-    // Verify checkboxes have accessible names
-    const checkboxes = page.getByRole('checkbox')
+    // Verify checkboxes within the question fieldset have accessible names
+    const checkboxes = fieldset.getByRole('checkbox')
     const count = await checkboxes.count()
     expect(count).toBeGreaterThanOrEqual(2)
 
