@@ -125,8 +125,9 @@ describe('TrueFalseQuestion', () => {
       />
     )
 
-    expect(container.querySelector('fieldset')).toBeInTheDocument()
-    expect(container.querySelector('legend')).toBeInTheDocument()
+    const fieldset = container.querySelector('fieldset')
+    expect(fieldset).toBeInTheDocument()
+    expect(fieldset?.getAttribute('aria-labelledby')).toBeTruthy()
   })
 
   it('has radiogroup inside fieldset with legend (fieldset provides accessible name)', () => {
