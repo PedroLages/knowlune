@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import type { Question } from '@/types/quiz'
 import { MultipleChoiceQuestion } from './questions/MultipleChoiceQuestion'
+import { MultipleSelectQuestion } from './questions/MultipleSelectQuestion'
 import { TrueFalseQuestion } from './questions/TrueFalseQuestion'
 
 /**
@@ -32,7 +33,9 @@ export function QuestionDisplay({
   mode = 'active',
 }: QuestionDisplayProps) {
   const stringOnChange = useCallback((answer: string) => onChange(answer), [onChange])
+  const arrayOnChange = useCallback((answer: string[]) => onChange(answer), [onChange])
   const stringValue = typeof value === 'string' ? value : undefined
+  const arrayValue = Array.isArray(value) ? value : undefined
 
   switch (question.type) {
     case 'multiple-choice':
@@ -50,6 +53,15 @@ export function QuestionDisplay({
           question={question}
           value={stringValue}
           onChange={stringOnChange}
+          mode={mode}
+        />
+      )
+    case 'multiple-select':
+      return (
+        <MultipleSelectQuestion
+          question={question}
+          value={arrayValue}
+          onChange={arrayOnChange}
           mode={mode}
         />
       )

@@ -39,6 +39,30 @@ function isCorrectAnswer(question: Question, userAnswer: string | string[]): boo
   }
 }
 
+function calculatePointsForQuestion(
+  question: Question,
+  userAnswer: string | string[] | undefined
+): { pointsEarned: number; isCorrect: boolean } {
+  if (userAnswer === undefined) return { pointsEarned: 0, isCorrect: false }
+
+  if (question.type === 'multiple-select') {
+    // Partial Credit Model (PCM): (correct - incorrect) / total_correct, clamped to 0
+    const correctSet = new Set(question.correctAnswer as string[])
+    const userSet = new Set(userAnswer as string[])
+    const correctSelections = [...userSet].filter((a) => correctSet.has(a)).length
+    const incorrectSelections = [...userSet].filter((a) => !correctSet.has(a)).length
+    const rawScore =
+      correctSet.size > 0 ? (correctSelections - incorrectSelections) / correctSet.size : 0
+    const pointsEarned = Math.max(0, Math.round(rawScore * question.points * 100) / 100)
+    const isCorrect = correctSelections === correctSet.size && incorrectSelections === 0
+    return { pointsEarned, isCorrect }
+  }
+
+  // All other types: all-or-nothing
+  const isCorrect = isCorrectAnswer(question, userAnswer)
+  return { pointsEarned: isCorrect ? question.points : 0, isCorrect }
+}
+
 export function calculateQuizScore(
   quiz: Quiz,
   userAnswers: Record<string, string | string[]>
@@ -52,10 +76,7 @@ export function calculateQuizScore(
     const pointsPossible = question.points
     maxScore += pointsPossible
 
-    // Treat unanswered questions as incorrect
-    const answered = userAnswer !== undefined
-    const isCorrect = answered ? isCorrectAnswer(question, userAnswer) : false
-    const pointsEarned = isCorrect ? pointsPossible : 0
+    const { pointsEarned, isCorrect } = calculatePointsForQuestion(question, userAnswer)
     score += pointsEarned
 
     answers.push({
