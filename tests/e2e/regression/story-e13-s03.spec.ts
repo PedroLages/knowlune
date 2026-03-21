@@ -9,9 +9,9 @@
  * - Within same session, quiz auto-resumes directly (Zustand rehydration)
  * - Completed quizzes do NOT show resume option
  */
-import { test, expect } from '../support/fixtures'
-import { makeQuiz, makeQuestion, makeProgress } from '../support/fixtures/factories/quiz-factory'
-import { seedQuizzes } from '../support/helpers/indexeddb-seed'
+import { test, expect } from '../../support/fixtures'
+import { makeQuiz, makeQuestion, makeProgress } from '../../support/fixtures/factories/quiz-factory'
+import { seedQuizzes } from '../../support/helpers/indexeddb-seed'
 
 // ---------------------------------------------------------------------------
 // Test data
@@ -244,6 +244,107 @@ test.describe('E13-S03: Pause and Resume Quiz', () => {
 
     // Should see Start Quiz
     await expect(page.getByRole('button', { name: /start quiz/i })).toBeVisible()
+  })
+
+  test('AC4: timed quiz timer state preserved across navigation', async ({ page }) => {
+    // Create a timed quiz (10 minutes = 600 seconds)
+    const timedQuiz = makeQuiz({
+      id: QUIZ_ID,
+      lessonId: LESSON_ID,
+      title: 'Timed Pause Resume Quiz',
+      description: 'A timed quiz for AC4 timer restoration testing',
+      questions: [q1, q2, q3],
+      passingScore: 70,
+      allowRetakes: true,
+      shuffleQuestions: false,
+      shuffleAnswers: false,
+      timeLimit: 10, // 10 minutes
+    })
+
+    // Seed and navigate
+    await page.addInitScript(() => {
+      localStorage.setItem('eduvi-sidebar-v1', 'false')
+    })
+    await page.goto('/', { waitUntil: 'domcontentloaded' })
+    await seedQuizzes(page, [timedQuiz])
+    await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz`, {
+      waitUntil: 'domcontentloaded',
+    })
+
+    // Start the quiz
+    await startQuiz(page)
+
+    // Timer should be visible and showing ~10:00
+    // The timer span uses font-mono class and aria-hidden="true"
+    const timerSpan = page.locator('span.font-mono[aria-hidden="true"]')
+    await expect(timerSpan).toBeVisible()
+    const initialTime = await timerSpan.textContent()
+    expect(initialTime).toMatch(/^\d{2}:\d{2}$/)
+    // Should start at 10:00 or 09:59 (timer may tick once before we read)
+    expect(initialTime === '10:00' || initialTime === '09:59').toBe(true)
+
+    // Answer Q1 to create progress
+    await answerQuestion(page, '4')
+
+    // Wait for timer to tick down at least 2 seconds
+    await expect(timerSpan).not.toHaveText('10:00')
+    await expect(timerSpan).not.toHaveText('09:59')
+
+    // Record the timer value before navigating away
+    const timeBeforeNav = await timerSpan.textContent()
+    expect(timeBeforeNav).toMatch(/^\d{2}:\d{2}$/)
+    expect(timeBeforeNav).not.toBe('10:00')
+    expect(timeBeforeNav).not.toBe('00:00')
+
+    // Trigger visibilitychange to force QuizHeader to sync timer to Zustand store.
+    // The store subscriber then persists currentProgress (including timeRemaining)
+    // to quiz-progress-{quizId} in localStorage. Without this, page.goto() would
+    // cause a full page load before React cleanup effects can fire.
+    await page.evaluate(() => {
+      Object.defineProperty(document, 'visibilityState', { value: 'hidden', writable: true })
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+
+    // Verify the timer was synced to per-quiz localStorage before navigating
+    const savedProgress = await page.evaluate(
+      quizId => localStorage.getItem(`quiz-progress-${quizId}`),
+      QUIZ_ID,
+    )
+    expect(savedProgress).not.toBeNull()
+    const parsed = JSON.parse(savedProgress!)
+    expect(parsed.timeRemaining).toBeDefined()
+    expect(parsed.timeRemaining).toBeLessThan(10) // less than original 10 minutes
+
+    // Navigate away (full page load — destroys React tree)
+    await page.goto(`/courses/${COURSE_ID}`, { waitUntil: 'domcontentloaded' })
+
+    // Navigate back to quiz
+    await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz`, {
+      waitUntil: 'domcontentloaded',
+    })
+
+    // Zustand rehydrates — quiz auto-resumes (same session, no Resume button needed)
+    // Timer should be visible again
+    const resumedTimer = page.locator('span.font-mono[aria-hidden="true"]')
+    await expect(resumedTimer).toBeVisible()
+
+    const resumedTime = await resumedTimer.textContent()
+    expect(resumedTime).toMatch(/^\d{2}:\d{2}$/)
+
+    // Timer should NOT be reset to 10:00 — it was restored from saved state
+    expect(resumedTime).not.toBe('10:00')
+
+    // Timer should not be 00:00 — paused time did not count
+    expect(resumedTime).not.toBe('00:00')
+
+    // The resumed time should be ≤ the time before navigation
+    // (could be slightly less due to unmount sync timing, but not more)
+    const [beforeMin, beforeSec] = timeBeforeNav!.split(':').map(Number)
+    const [resumeMin, resumeSec] = resumedTime!.split(':').map(Number)
+    const beforeTotal = beforeMin * 60 + beforeSec
+    const resumeTotal = resumeMin * 60 + resumeSec
+    expect(resumeTotal).toBeLessThanOrEqual(beforeTotal)
+    expect(resumeTotal).toBeGreaterThan(0)
   })
 
   test('AC2-a11y: Resume button has autoFocus and shows answer count', async ({ page }) => {
