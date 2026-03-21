@@ -11,6 +11,7 @@ import {
   selectIsLoading,
   selectError,
 } from '@/stores/useQuizStore'
+import { isQuotaExceeded } from '@/lib/quotaResilientStorage'
 import { QuizStartScreen } from '@/app/components/quiz/QuizStartScreen'
 import { QuizHeader } from '@/app/components/quiz/QuizHeader'
 import { QuestionDisplay } from '@/app/components/quiz/QuestionDisplay'
@@ -36,11 +37,15 @@ import {
 
 function loadSavedProgress(quizId: string): QuizProgress | null {
   try {
-    const raw = localStorage.getItem(`quiz-progress-${quizId}`)
+    const key = `quiz-progress-${quizId}`
+    // Prefer sessionStorage — if present, it means we're in fallback mode
+    // and the adapter cleared the stale localStorage entry. Check localStorage
+    // only as a fallback for the normal (non-quota-exceeded) path.
+    const raw = sessionStorage.getItem(key) ?? localStorage.getItem(key)
     if (!raw) return null
     const result = QuizProgressSchema.safeParse(JSON.parse(raw))
     if (!result.success) {
-      console.warn('[Quiz] Corrupted progress in localStorage, ignoring:', result.error.format())
+      console.warn('[Quiz] Corrupted progress in storage, ignoring:', result.error.format())
       return null
     }
     // Only treat as valid resume state if there are recorded answers
@@ -150,6 +155,7 @@ export function Quiz() {
       console.warn('[Quiz] Saved questionOrder references removed questions, discarding progress')
       setSavedProgress(null)
       localStorage.removeItem(`quiz-progress-${quiz.id}`)
+      sessionStorage.removeItem(`quiz-progress-${quiz.id}`)
       return
     }
     // Restore saved progress directly into the store.
@@ -200,10 +206,21 @@ export function Quiz() {
         const progress = useQuizStore.getState().currentProgress
         const currentQuizState = useQuizStore.getState().currentQuiz
         if (progress && currentQuizState) {
-          localStorage.setItem(`quiz-progress-${currentQuizState.id}`, JSON.stringify(progress))
+          const key = `quiz-progress-${currentQuizState.id}`
+          const value = JSON.stringify(progress)
+          try {
+            localStorage.setItem(key, value)
+          } catch (storageErr) {
+            if (isQuotaExceeded(storageErr)) {
+              // QuotaExceededError — fall back to sessionStorage
+              sessionStorage.setItem(key, value)
+            }
+            // Non-quota errors (SecurityError, etc.) — skip silently during unload
+          }
         }
-      } catch {
-        // QuotaExceededError during unload — nothing we can do, best effort
+      } catch (e) {
+        // Storage completely inaccessible during unload — best effort
+        console.warn('[Quiz] beforeunload storage save failed:', e)
       }
     }
     window.addEventListener('beforeunload', handleBeforeUnload)

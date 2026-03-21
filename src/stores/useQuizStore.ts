@@ -1,8 +1,14 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { createJSONStorage, persist } from 'zustand/middleware'
 import type { Quiz, QuizProgress, QuizAttempt } from '@/types/quiz'
 import { db } from '@/db'
 import { persistWithRetry } from '@/lib/persistWithRetry'
+import {
+  quotaResilientStorage,
+  isQuotaExceeded,
+  showThrottledWarning,
+  clearStaleQuizKeys,
+} from '@/lib/quotaResilientStorage'
 import { calculateQuizScore } from '@/lib/scoring'
 import { fisherYatesShuffle } from '@/lib/shuffle'
 import { toastError } from '@/lib/toastHelpers'
@@ -261,6 +267,7 @@ export const useQuizStore = create<QuizState>()(
     }),
     {
       name: 'levelup-quiz-store',
+      storage: createJSONStorage(() => quotaResilientStorage),
       partialize: state => ({
         currentProgress: state.currentProgress,
         currentQuiz: state.currentQuiz,
@@ -295,8 +302,9 @@ export const useQuizStore = create<QuizState>()(
   )
 )
 
-// Per-quiz localStorage backup — syncs currentProgress to a quiz-specific key.
-// Provides crash recovery independent of Zustand's persist middleware.
+// Per-quiz storage backup (localStorage with sessionStorage fallback) —
+// syncs currentProgress to a quiz-specific key. Provides crash recovery
+// independent of Zustand's persist middleware.
 // Quiz.tsx reads this key via loadSavedProgress().
 let prevProgress: QuizProgress | null = null
 useQuizStore.subscribe(state => {
@@ -313,10 +321,25 @@ useQuizStore.subscribe(state => {
     } else if (!progress && quiz) {
       // Progress cleared (submission/clear) — remove orphaned key
       localStorage.removeItem(`quiz-progress-${quiz.id}`)
+      sessionStorage.removeItem(`quiz-progress-${quiz.id}`)
     }
   } catch (err) {
-    // QuotaExceededError or SecurityError — log but don't break the subscription chain
-    console.error('[useQuizStore] localStorage sync failed:', err)
+    if (isQuotaExceeded(err)) {
+      // Attempt to reclaim space before falling back
+      clearStaleQuizKeys(progress && quiz ? `quiz-progress-${quiz.id}` : undefined)
+      // Fall back to sessionStorage for per-quiz backup
+      try {
+        if (progress && quiz) {
+          sessionStorage.setItem(`quiz-progress-${quiz.id}`, JSON.stringify(progress))
+        }
+        showThrottledWarning()
+      } catch {
+        // sessionStorage also failed — toast would be misleading
+        toastError.storageFull()
+      }
+    } else {
+      console.error('[useQuizStore] storage sync failed:', err)
+    }
   }
 })
 
