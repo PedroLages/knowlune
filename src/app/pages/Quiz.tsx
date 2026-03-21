@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
 import { ArrowLeft } from 'lucide-react'
+import { toast } from 'sonner'
 import { db } from '@/db'
 import type { Quiz as QuizType, QuizProgress } from '@/types/quiz'
 import { QuizProgressSchema } from '@/types/quiz'
@@ -11,6 +12,7 @@ import {
   selectIsLoading,
   selectError,
 } from '@/stores/useQuizStore'
+import { useQuizTimer } from '@/hooks/useQuizTimer'
 import { isQuotaExceeded } from '@/lib/quotaResilientStorage'
 import { QuizStartScreen } from '@/app/components/quiz/QuizStartScreen'
 import { QuizHeader } from '@/app/components/quiz/QuizHeader'
@@ -192,6 +194,29 @@ export function Quiz() {
     }
   }, [handleSubmitConfirm])
 
+  // ---------------------------------------------------------------------------
+  // Timer — Date.now()-anchored countdown with auto-submit on expiry
+  // ---------------------------------------------------------------------------
+  const handleTimerExpiry = useCallback(async () => {
+    toast.error("Time's up! Your quiz has been submitted.")
+    try {
+      await submitQuiz(courseId)
+      navigate(`/courses/${courseId}/lessons/${lessonId}/quiz/results`)
+    } catch {
+      // Store already shows error toast; stay on quiz page with answers preserved
+    }
+  }, [submitQuiz, courseId, lessonId, navigate])
+
+  // Compute initial seconds from quiz time limit or resumed progress
+  const timerInitialSeconds =
+    currentProgress && currentQuiz?.timeLimit != null
+      ? Math.round((currentProgress.timeRemaining ?? currentQuiz.timeLimit) * 60)
+      : 0
+
+  const totalTimeSeconds = currentQuiz?.timeLimit != null ? currentQuiz.timeLimit * 60 : 0
+
+  const timerRemaining = useQuizTimer(timerInitialSeconds, handleTimerExpiry)
+
   // Safety net: sync progress to per-quiz localStorage on tab close/crash.
   // The subscribe listener in useQuizStore fires synchronously on every state change,
   // so the per-quiz key is always up-to-date. This beforeunload handler provides
@@ -301,7 +326,12 @@ export function Quiz() {
 
     return (
       <div className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm">
-        <QuizHeader quiz={currentQuiz} progress={currentProgress} />
+        <QuizHeader
+          quiz={currentQuiz}
+          progress={currentProgress}
+          timeRemaining={timerInitialSeconds > 0 ? timerRemaining : null}
+          totalTimeSeconds={totalTimeSeconds > 0 ? totalTimeSeconds : null}
+        />
         {currentQuestion && currentQuestionId ? (
           <>
             <QuestionDisplay
