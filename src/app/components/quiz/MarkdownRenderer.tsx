@@ -40,7 +40,9 @@ const markdownComponents: Components = {
   strong: ({ children }) => <strong className="font-bold">{children}</strong>,
   em: ({ children }) => <em className="italic">{children}</em>,
   // Render links as plain text to prevent navigating away from quiz
-  a: ({ children }) => <span className="text-foreground underline">{children}</span>,
+  a: ({ children }) => <span className="text-foreground">{children}</span>,
+  // Disable GFM task list checkboxes in read-only quiz context
+  input: props => <input {...props} disabled />,
   // Constrain images to container width
   img: ({ src, alt }) => (
     <img src={src} alt={alt ?? ''} className="max-w-full h-auto rounded my-2" />
