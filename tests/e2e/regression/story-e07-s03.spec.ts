@@ -25,15 +25,15 @@ const AUTHORITY_LESSONS = [
 const LAST_LESSON = AUTHORITY_LESSONS[AUTHORITY_LESSONS.length - 1]
 const LAST_LESSON_URL = `/courses/authority/${LAST_LESSON}`
 
-// All 8 course IDs (for "all done" seeding)
+// All course IDs (for "all done" seeding)
 const ALL_COURSE_IDS = [
   'nci-access',
   'authority',
   'confidence-reboot',
   '6mx',
   'operative-six',
-  'behavior-skills',
-  'ops-manual',
+  'behavior-skills-breakthrough',
+  'ops-manual-resources',
   'study-materials',
 ]
 
@@ -62,8 +62,10 @@ async function seedAuthorityAlmostComplete(
 async function closeCompletionModal(page: import('@playwright/test').Page) {
   // The CompletionModal renders a <Button variant="outline">Close</Button>
   // The Dialog also has an X icon button with aria-label "Close"
-  // We want the explicit text button — use a data-testid-independent locator
-  await page.locator('button', { hasText: 'Close' }).first().click()
+  // Scope to the dialog to avoid matching PDF viewer toolbar buttons
+  const dialog = page.getByRole('dialog')
+  await dialog.waitFor({ state: 'visible', timeout: TIMEOUTS.EXTENDED })
+  await dialog.locator('button', { hasText: 'Close' }).first().click()
 }
 
 test.describe('E07-S03: Next Course Suggestion After Completion', () => {
@@ -331,17 +333,15 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
 
     // Verify the suggested course title appears (validates 60/40 weighting was applied)
     // The NextCourseSuggestion component has an <h2> with the course title
-    const suggestionCard = page.getByTestId('next-course-suggestion')
-    const suggestedTitle = await suggestionCard.locator('h2').textContent()
-
     // Mathematical proof (see test setup comments):
     // confidence-reboot: (0.286 * 0.6) + (0.679 * 0.4) = 0.444
     // 6mx:               (0.143 * 0.6) + (0.687 * 0.4) = 0.361
     // Expected winner: confidence-reboot due to extra shared tag (2 vs 1)
-    expect(suggestedTitle?.toLowerCase()).toMatch(/(confidence|reboot)/)
+    const suggestionCard = page.getByTestId('next-course-suggestion')
+    await expect(suggestionCard.locator('h2')).toHaveText(/confidence reboot/i)
   })
 
-  test('AC3: tiebreaker applies momentum when courses have identical tag overlap', async ({
+  test('scoring: higher tag overlap wins via primary sort despite lower momentum', async ({
     page,
     localStorage,
   }) => {
@@ -355,16 +355,14 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
 
     await page.goto('/')
 
-    // Seed 3 courses with identical tag overlap (1 tag each) but different momentum
-    // to validate tiebreaker logic
+    // Seed 3 courses with different tag overlap and momentum to validate scoring
     //
-    // All candidates share 1 tag with authority:
-    // - confidence-reboot: 1 tag ('confidence'), low momentum (old recency)
-    // - operative-six: 1 tag ('influence'), medium momentum
-    // - 6mx: 1 tag ('influence'), high momentum (recent recency)
+    // Tag overlap with authority (7 tags):
+    // - confidence-reboot: 2 tags ('confidence', 'composure'), tagScore = 2/7 = 0.286
+    // - operative-six: 1 tag ('influence'), tagScore = 1/7 = 0.143
+    // - 6mx: 1 tag ('influence'), tagScore = 1/7 = 0.143
     //
-    // All have same tagScore = 1/7 = 0.143
-    // Tiebreaker should rank by momentum proxy (recency * 0.5 + progress * 0.5)
+    // confidence-reboot wins by primary sort (higher tagScore), not tiebreaker
 
     const progress: Record<string, unknown> = {
       authority: {
@@ -428,16 +426,134 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
     const startButton = page.getByRole('button', { name: /start course/i })
     await startButton.click()
 
-    // Validate that tiebreaker logic selected a valid course
+    // Validate that scoring selected the correct winner
     // With seeded data:
-    // - confidence-reboot: tagScore=0.286, momentum=0.5, final=0.372
-    // - operative-six: tagScore=0.143, momentum≈0.706, final≈0.368
-    // - 6mx: tagScore=0.143, momentum≈0.627, final≈0.337
+    // - confidence-reboot: tagScore=0.286 (2 shared tags), momentum=0.5, final=0.372
+    // - operative-six: tagScore=0.143 (1 shared tag), momentum≈0.706, final≈0.368
+    // - 6mx: tagScore=0.143 (1 shared tag), momentum≈0.627, final≈0.337
     //
-    // Confidence-reboot wins due to higher tag overlap (2 vs 1)
-    // This validates that the 3-level tiebreaker sort works correctly
-    await expect(page).toHaveURL(/\/courses\/(confidence-reboot|6mx|operative-six)/, {
+    // Confidence-reboot wins due to higher tag overlap (2 vs 1) — primary sort, not tiebreaker
+    await expect(page).toHaveURL(/\/courses\/confidence-reboot/, {
       timeout: TIMEOUTS.LONG,
     })
+  })
+
+  test('AC1 (E07-S06): momentum decides winner when equal tag overlap produces different finalScores', async ({
+    page,
+    localStorage,
+  }) => {
+    // Mock Date.now() for deterministic recency calculations
+    await page.addInitScript(
+      ({ fixedTimestamp }) => {
+        Date.now = () => fixedTimestamp
+      },
+      { fixedTimestamp: new Date(FIXED_DATE).getTime() }
+    )
+
+    await page.goto('/')
+
+    // Both candidates share exactly 2 tags with authority (7 tags):
+    //   confidence-reboot:            'confidence', 'composure'
+    //   behavior-skills-breakthrough: 'influence', 'authority'
+    //
+    // Both have identical tagScore = 2/7 ≈ 0.286
+    // With equal tag overlap, momentum difference produces different finalScores.
+    // Note: The primary sort (finalScore comparison at suggestions.ts:69) resolves
+    // the ordering — the literal tiebreaker at line 72 is not reached because
+    // momentum is already embedded in finalScore via the 60/40 weighted formula.
+    //
+    // confidence-reboot (EXPECTED WINNER — high momentum):
+    //   progress = 10/20 = 50%
+    //   recency  = 1 day ago → recencyScore = 1 - 1/14 ≈ 0.929
+    //   momentumProxy = (0.929 × 0.5) + (0.5 × 0.5) = 0.714
+    //   finalScore = (0.286 × 0.6) + (0.714 × 0.4) = 0.457
+    //
+    // behavior-skills-breakthrough (EXPECTED LOSER — low momentum):
+    //   progress = 3/13 ≈ 23% (13 = module-derived lesson count, matches totalLessons field)
+    //   recency  = 10 days ago → recencyScore = 1 - 10/14 ≈ 0.286
+    //   momentumProxy = (0.286 × 0.5) + (0.231 × 0.5) = 0.258
+    //   finalScore = (0.286 × 0.6) + (0.258 × 0.4) = 0.275
+    //
+    // Margin: 0.457 vs 0.275 — momentum decides the winner.
+
+    // Mark all courses except authority, confidence-reboot, and behavior-skills-breakthrough
+    // as 100% complete so they are excluded from candidates.
+    // Derived from ALL_COURSE_IDS to avoid breakage when new courses are added.
+    const candidateIds = ['authority', 'confidence-reboot', 'behavior-skills-breakthrough']
+    const excludedCourseIds = ALL_COURSE_IDS.filter(id => !candidateIds.includes(id))
+    const progress: Record<string, unknown> = {}
+
+    for (const courseId of excludedCourseIds) {
+      progress[courseId] = {
+        courseId,
+        completedLessons: Array.from({ length: 1000 }, (_, i) => `${courseId}-lesson-${i + 1}`),
+        lastAccessedAt: FIXED_DATE,
+        startedAt: getRelativeDate(-30),
+        notes: {},
+      }
+    }
+
+    // Authority: N-1 lessons complete (completing the last triggers suggestion)
+    progress.authority = {
+      courseId: 'authority',
+      completedLessons: AUTHORITY_LESSONS.slice(0, 6),
+      lastWatchedLesson: AUTHORITY_LESSONS[5],
+      lastAccessedAt: FIXED_DATE,
+      startedAt: getRelativeDate(-7),
+      notes: {},
+    }
+
+    // confidence-reboot: HIGH momentum (recent + 50% progress)
+    // 20 total lessons (module-derived count used by algorithm, not totalLessons:18 field), seed 10 as complete
+    // Assumption (2026-03): confidence-reboot has 20 module-derived lessons.
+    // If lessons are added/removed, re-verify score margin remains decisive (>0.05).
+    progress['confidence-reboot'] = {
+      courseId: 'confidence-reboot',
+      completedLessons: Array.from(
+        { length: 10 },
+        (_, i) => `confidence-reboot-lesson-${String(i + 1).padStart(2, '0')}`
+      ),
+      lastAccessedAt: getRelativeDate(-1), // 1 day ago → high recency
+      startedAt: getRelativeDate(-14),
+      notes: {},
+    }
+
+    // behavior-skills-breakthrough: LOW momentum (old + 23% progress)
+    // 13 total lessons (module-derived count matches totalLessons field), seed 3 as complete
+    progress['behavior-skills-breakthrough'] = {
+      courseId: 'behavior-skills-breakthrough',
+      completedLessons: Array.from(
+        { length: 3 },
+        (_, i) => `behavior-skills-breakthrough-lesson-${String(i + 1).padStart(2, '0')}`
+      ),
+      lastAccessedAt: getRelativeDate(-10), // 10 days ago → low recency
+      startedAt: getRelativeDate(-30),
+      notes: {},
+    }
+
+    await localStorage.seed('course-progress', progress)
+
+    // Navigate to last lesson and complete it
+    await page.goto(LAST_LESSON_URL)
+    await page.waitForLoadState('domcontentloaded')
+
+    const markCompleteBtn = page.locator('button[aria-label="Mark lesson complete"]')
+    await markCompleteBtn.waitFor({ state: 'visible', timeout: TIMEOUTS.EXTENDED })
+    await markCompleteBtn.click()
+
+    // Close completion modal
+    await expect(page.getByText('🎉 Course Completed!')).toBeVisible({ timeout: TIMEOUTS.EXTENDED })
+    await closeCompletionModal(page)
+
+    // Suggestion card should appear
+    await expect(page.getByTestId('next-course-suggestion')).toBeVisible({ timeout: TIMEOUTS.LONG })
+
+    // Verify the suggested course is confidence-reboot (higher momentum wins)
+    const suggestionCard = page.getByTestId('next-course-suggestion')
+    await expect(suggestionCard.locator('h2')).toHaveText(/confidence reboot/i)
+
+    // Verify "Start Course" navigates to the correct course URL
+    await page.getByRole('button', { name: /start course/i }).click()
+    await expect(page).toHaveURL(/\/courses\/confidence-reboot/, { timeout: TIMEOUTS.LONG })
   })
 })
