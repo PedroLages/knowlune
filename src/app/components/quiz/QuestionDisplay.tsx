@@ -1,5 +1,7 @@
+import { useCallback } from 'react'
 import type { Question } from '@/types/quiz'
 import { MultipleChoiceQuestion } from './questions/MultipleChoiceQuestion'
+import { TrueFalseQuestion } from './questions/TrueFalseQuestion'
 
 /**
  * Visual mode for question rendering.
@@ -29,19 +31,28 @@ export function QuestionDisplay({
   onChange,
   mode = 'active',
 }: QuestionDisplayProps) {
+  const stringOnChange = useCallback((answer: string) => onChange(answer), [onChange])
+  const stringValue = typeof value === 'string' ? value : undefined
+
   switch (question.type) {
-    case 'multiple-choice': {
-      const mcValue = typeof value === 'string' ? value : undefined
-      const mcOnChange = (answer: string) => onChange(answer)
+    case 'multiple-choice':
       return (
         <MultipleChoiceQuestion
           question={question}
-          value={mcValue}
-          onChange={mcOnChange}
+          value={stringValue}
+          onChange={stringOnChange}
           mode={mode}
         />
       )
-    }
+    case 'true-false':
+      return (
+        <TrueFalseQuestion
+          question={question}
+          value={stringValue}
+          onChange={stringOnChange}
+          mode={mode}
+        />
+      )
     default:
       return (
         <div

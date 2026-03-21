@@ -2,7 +2,7 @@
 
 **This file is always loaded (universal rule - no path restrictions).**
 
-LevelUp uses 10 automated mechanisms to enforce code quality and process compliance at three stages: **save-time** (IDE feedback), **commit-time** (git hooks), and **review-time** (AI agents). These catch issues early, reducing review rounds from 2-3 (Epic 7 baseline) to 1-2 (Epic 8+ target).
+LevelUp uses 11 automated mechanisms to enforce code quality and process compliance at three stages: **save-time** (IDE feedback), **commit-time** (git hooks), and **review-time** (AI agents). These catch issues early, reducing review rounds from 2-3 (Epic 7 baseline) to 1-2 (Epic 8+ target).
 
 **Status Report:** See [automation-infrastructure-status-2026-03-13.md](../../../docs/implementation-artifacts/automation-infrastructure-status-2026-03-13.md) for verification, test results, and effectiveness metrics.
 
@@ -19,6 +19,7 @@ These rules provide **instant feedback** as you type/save — catching issues be
 | `react-hooks-async/async-cleanup` | Missing `await` in useEffect cleanup functions | ERROR | [eslint-plugin-react-hooks-async.js](../../../eslint-plugin-react-hooks-async.js) |
 | `import-paths/correct-utils-import` | Wrong import path for `cn()` utility | ERROR | [eslint-plugin-import-paths.js](../../../eslint-plugin-import-paths.js) |
 | `react-best-practices/no-inline-styles` | Inline style objects → suggests Tailwind utilities | WARNING | [eslint-plugin-react-best-practices.js](../../../eslint-plugin-react-best-practices.js) |
+| `error-handling/no-silent-catch` | Catch blocks without `toast.error()` or visible user feedback | WARNING | [eslint-plugin-error-handling.js](../../../eslint-plugin-error-handling.js) |
 
 **Configuration:** [eslint.config.js](../../../eslint.config.js)
 
@@ -97,10 +98,10 @@ These agents provide **deep analysis** during `/review-story` — catching issue
 
 | Stage | Rules | Catches | When |
 |-------|-------|---------|------|
-| **Save-Time** | 7 ESLint rules | Hardcoded colors, test anti-patterns, async cleanup, imports | As you type/save in IDE |
+| **Save-Time** | 8 ESLint rules | Hardcoded colors, test anti-patterns, async cleanup, imports, silent catches | As you type/save in IDE |
 | **Commit-Time** | 2 git hooks | Dirty working tree, uncommitted changes | Before `/review-story` or `git push` |
 | **Review-Time** | 3 Claude agents | Architecture, UX, accessibility, edge cases, AC coverage | During `/review-story` workflow |
-| **Total** | **12 mechanisms** | 10 automated + 2 agent-based | Multi-layered enforcement |
+| **Total** | **13 mechanisms** | 11 automated + 2 agent-based | Multi-layered enforcement |
 
 ## 🎯 Effectiveness Metrics (Research-Backed)
 

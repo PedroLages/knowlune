@@ -249,7 +249,7 @@ Mark the first todo as `in_progress` and proceed:
 
 9. **Launch 3 parallel Explore agents** via Task tool (dispatch all in a single message):
    - **Agent 1 — Story context**: Read story ACs, dependencies, related stories in `docs/planning-artifacts/epics.md`. Check if dependent stories are `done` in sprint-status.
-   - **Agent 2 — Existing code patterns**: Search affected source directories (`src/app/pages/`, `src/app/components/`, `src/stores/`, `src/db/`, `src/lib/`) for relevant patterns, types, and utilities.
+   - **Agent 2 — Existing code audit + patterns**: Search affected source directories (`src/app/pages/`, `src/app/components/`, `src/stores/`, `src/db/`, `src/lib/`) for relevant patterns, types, and utilities. **Important: explicitly identify pre-existing code that already implements parts of the story** — search for store actions, type definitions, and components that overlap with the story's tasks. Report what already exists vs. what needs building. (See `docs/engineering-patterns.md` § "Inventory Existing Code Before Story Planning".)
    - **Agent 3 — Test patterns + UX specs**: Read test patterns from `tests/` and `tests/support/`, plus UX design specs from `docs/planning-artifacts/ux-design-specification.md` for relevant sections.
 
    As each agent returns, mark its corresponding todo → `completed`. Wait for all 3 to complete before proceeding.

@@ -201,6 +201,70 @@ Content Security Policy violations fail **silently** in the browser but **clearl
 2. Verify in both browser console (check for CSP violation warnings) and E2E tests
 3. Document the CSP change in the story's implementation notes
 
+## Branch From Main Always
+
+Never branch a feature branch from another feature branch. Always branch from `main`.
+
+Stacked branches (feature-on-feature) cause painful rebase conflicts when the base branch is rebased and merged. Without dedicated stacked PR tooling (e.g., Graphite, ghstack), the conflict resolution cost exceeds any parallelism benefit.
+
+**Rule:** `git checkout main && git pull && git checkout -b feature/e##-s##-slug`
+
+**Case Study — Epic 13 (E13-S02):**
+E13-S02 was branched from E13-S01's feature branch. When E13-S01 was rebased and merged to main, E13-S02 inherited all old E13-S01 commits plus extensive conflicts during rebase. Sequential stories branching from main would have avoided the issue entirely.
+
+## Catch Blocks Must Surface Errors
+
+Every `catch` block in an event handler or user-triggered function must include visible user feedback (e.g., `toast.error()`). Console logging alone is a **silent failure** — the user has no idea something went wrong.
+
+This pattern has recurred across 3+ epics (E03-S03, E12-S06, E13-S04) and is now enforced by the `error-handling/no-silent-catch` ESLint rule.
+
+```typescript
+// WRONG — silent failure (user sees nothing)
+catch (error) {
+  console.error('Failed:', error)
+}
+
+// WRONG — completely empty catch
+catch { }
+
+// CORRECT — log + notify user
+catch (error) {
+  console.error('[ComponentName] operation failed:', error)
+  toast.error('Something went wrong. Please try again.')
+}
+```
+
+**Exceptions** (where silent catch is acceptable):
+- `beforeunload` handlers (no UI available)
+- Background telemetry/analytics (fire-and-forget pattern — see "Fire-and-Forget Error Boundaries" above)
+- Cleanup/dispose functions where failure is inconsequential
+
+## Inventory Existing Code Before Story Planning
+
+Before writing task breakdowns for a new story, audit the codebase for pre-existing code that's relevant. In Epic 13, 3 of 6 stories (50%) discovered that significant functionality already existed, making task lists overestimate effort.
+
+**Audit checklist:**
+1. Search stores (`src/stores/`) for actions/selectors related to the story's domain
+2. Search types (`src/types/`) for interfaces the story needs
+3. Search components (`src/app/components/`) for UI primitives that can be reused
+4. Check if the story's primary data flow is already wired
+
+**Case Study — Epic 13:**
+- E13-S03 (Pause/Resume): ~80% already built in E12-S03 (Zustand persist) and E13-S01 (resume button)
+- E13-S05 (Shuffle): Fisher-Yates was already inline in `useQuizStore.ts` — story became an extraction refactor
+- E13-S01 (Navigation): `goToNextQuestion`/`goToPrevQuestion` already existed in the store
+
+## Retro Commitment Enforcement Principle
+
+Only commit to retro action items that can be enforced automatically (ESLint rules, git hooks, review gates). Items requiring voluntary initiative without enforcement should be labeled "aspirational" and deprioritized.
+
+**Evidence (Epics 11-13):**
+- Automated items (ESLint design-token rule, review gates): ~100% compliance
+- Documentation-only items (conventions, pattern docs): <20% follow-through
+- Items with enforcement attached (contrast fix blocking a story): 100% completion
+
+**Rule:** If it can't be enforced, it won't get done consistently. Attach automation or accept it's aspirational.
+
 ## Playwright addInitScript
 
 `addInitScript` runs on every page load, including `page.reload()`. If you use `localStorage.clear()` inside it, reloads will wipe seeded test data.

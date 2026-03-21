@@ -43,7 +43,7 @@
 # - Deferred stories retained: 1-5 (file detection), 2-10 (captions)
 
 generated: 2026-03-15
-last_updated: 2026-03-21
+last_updated: 2026-03-21  # E14-S01 completed
 project: Elearningplatformwireframes
 project_key: NOKEY
 tracking_system: file-system
@@ -216,13 +216,13 @@ development_status:
   13-4-unlimited-quiz-retakes: done
   13-5-randomize-question-order-with-fisher-yates-shuffle: done
   13-6-handle-localstorage-quota-exceeded-gracefully: done
-  epic-13-retrospective: optional
+  epic-13-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 14: Practice with Diverse Question Types
   # ──────────────────────────────────────────────────
-  epic-14: backlog
-  14-1-display-truefalse-questions: backlog
+  epic-14: in-progress
+  14-1-display-truefalse-questions: done
   14-2-display-multiple-select-questions-with-partial-credit: backlog
   14-3-display-fill-in-blank-questions: backlog
   14-4-support-rich-text-formatting-in-questions: backlog

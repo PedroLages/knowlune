@@ -5,6 +5,7 @@ import reactHooksAsync from './eslint-plugin-react-hooks-async.js'
 import importPaths from './eslint-plugin-import-paths.js'
 import reactBestPractices from './eslint-plugin-react-best-practices.js'
 import testPatterns from './eslint-plugin-test-patterns.js'
+import errorHandling from './eslint-plugin-error-handling.js'
 
 export default tseslint.config(eslint.configs.recommended, ...tseslint.configs.recommended, {
   ignores: [
@@ -27,6 +28,7 @@ export default tseslint.config(eslint.configs.recommended, ...tseslint.configs.r
     'import-paths': importPaths,
     'react-best-practices': reactBestPractices,
     'test-patterns': testPatterns,
+    'error-handling': errorHandling,
   },
   rules: {
     '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
@@ -35,6 +37,7 @@ export default tseslint.config(eslint.configs.recommended, ...tseslint.configs.r
     'react-hooks-async/async-cleanup': 'error',
     'import-paths/correct-utils-import': 'error',
     'react-best-practices/no-inline-styles': 'warn',
+    'error-handling/no-silent-catch': 'warn',
   },
 }, {
   // Test files - enable test anti-pattern rules

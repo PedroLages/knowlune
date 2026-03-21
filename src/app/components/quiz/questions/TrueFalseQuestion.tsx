@@ -6,27 +6,22 @@ import type { Question } from '@/types/quiz'
 import type { QuestionDisplayMode } from '../QuestionDisplay'
 import { REMARK_PLUGINS, MARKDOWN_COMPONENTS } from './markdown-config'
 
-interface MultipleChoiceQuestionProps {
+interface TrueFalseQuestionProps {
   question: Question
   value: string | undefined
   onChange: (answer: string) => void
   mode: QuestionDisplayMode
 }
 
-export function MultipleChoiceQuestion({
-  question,
-  value,
-  onChange,
-  mode,
-}: MultipleChoiceQuestionProps) {
+export function TrueFalseQuestion({ question, value, onChange, mode }: TrueFalseQuestionProps) {
   const options = question.options ?? []
   const isActive = mode === 'active'
   const legendId = useId()
 
   useMemo(() => {
-    if (options.length < 2 || options.length > 6) {
+    if (options.length !== 2) {
       console.warn(
-        `[MultipleChoiceQuestion] Question "${question.id}" has ${options.length} options (expected 2-6)`
+        `[TrueFalseQuestion] Question "${question.id}" has ${options.length} options (expected 2)`
       )
     }
   }, [question.id, options.length])
@@ -48,6 +43,7 @@ export function MultipleChoiceQuestion({
         onValueChange={isActive ? onChange : undefined}
         disabled={!isActive}
         aria-labelledby={legendId}
+        className="grid grid-cols-1 lg:grid-cols-2 gap-3"
       >
         {options.map((option, index) => {
           const isSelected = value === option

@@ -21,6 +21,45 @@ describe('QuestionDisplay', () => {
     expect(screen.getByText('5')).toBeInTheDocument()
   })
 
+  it('dispatches true-false questions to TrueFalseQuestion', () => {
+    render(
+      <QuestionDisplay
+        question={makeQuestion({
+          type: 'true-false',
+          options: ['True', 'False'],
+        })}
+        value={undefined}
+        onChange={vi.fn()}
+        mode="active"
+      />
+    )
+
+    expect(screen.getByRole('radiogroup')).toBeInTheDocument()
+    expect(screen.getByText('True')).toBeInTheDocument()
+    expect(screen.getByText('False')).toBeInTheDocument()
+    // Should only have 2 options (not 3+ like MC)
+    expect(screen.getAllByRole('radio')).toHaveLength(2)
+  })
+
+  it('narrows array value to undefined for true-false questions', () => {
+    render(
+      <QuestionDisplay
+        question={makeQuestion({
+          type: 'true-false',
+          options: ['True', 'False'],
+        })}
+        value={['True', 'False']}
+        onChange={vi.fn()}
+        mode="active"
+      />
+    )
+
+    const radios = screen.getAllByRole('radio')
+    radios.forEach(radio => {
+      expect(radio).not.toBeChecked()
+    })
+  })
+
   it('shows unsupported type fallback for unknown question types', () => {
     render(
       <QuestionDisplay
