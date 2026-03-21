@@ -72,7 +72,7 @@ const RANDOM_SEQUENCE_B = [0.5, 0.4, 0.8, 0.2]
  * that returns values from the provided array, then falls back
  * to the next sequence (for retake tests) or to 0.5.
  */
-function mockMathRandom(sequences: number[][]) {
+function mockMathRandom() {
   return (sequences: number[][]) => {
     let seqIndex = 0
     let callIndex = 0
@@ -140,7 +140,7 @@ test.describe('E13-S05: Randomize Question Order', () => {
     page,
   }) => {
     // Mock Math.random to produce a known shuffle: [5,2,4,3,1]
-    await page.addInitScript(mockMathRandom([RANDOM_SEQUENCE_A]), [RANDOM_SEQUENCE_A])
+    await page.addInitScript(mockMathRandom(), [RANDOM_SEQUENCE_A])
 
     // Navigate to app first so IndexedDB schema is initialized, then seed quiz data
     await page.goto('/')
@@ -161,10 +161,7 @@ test.describe('E13-S05: Randomize Question Order', () => {
 
   test('AC2: retake quiz → different order on each attempt', async ({ page }) => {
     // Mock Math.random with two different sequences — one per attempt
-    await page.addInitScript(mockMathRandom([RANDOM_SEQUENCE_A, RANDOM_SEQUENCE_B]), [
-      RANDOM_SEQUENCE_A,
-      RANDOM_SEQUENCE_B,
-    ])
+    await page.addInitScript(mockMathRandom(), [RANDOM_SEQUENCE_A, RANDOM_SEQUENCE_B])
 
     await page.goto('/')
     await seedQuizzes(page, [shuffledQuiz as unknown as Record<string, unknown>])

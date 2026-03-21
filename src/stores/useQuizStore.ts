@@ -53,7 +53,7 @@ export const useQuizStore = create<QuizState>()(
             return
           }
 
-          if (quiz.questions.length === 0) {
+          if (!quiz.questions?.length) {
             set({
               currentQuiz: null,
               currentProgress: null,
