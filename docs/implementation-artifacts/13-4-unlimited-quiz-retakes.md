@@ -182,4 +182,8 @@ Report: `docs/reviews/code/web-design-guidelines-2026-03-21-e13-s04.md`
 
 ## Challenges and Lessons Learned
 
-- Story setup phase — no implementation challenges yet. Will be updated during/after implementation.
+- **Silent failure pattern recurs**: `handleRetake` catch block logged to console but never surfaced feedback to the user. Same pattern flagged in E03-S03 and E12-S06. Rule: every catch block in an event handler needs a `toast.error()` or visible UI feedback.
+- **Label flicker from sequential async**: Setting `fetchState('found')` before the attempt-count query resolved caused "Start Quiz" to flash then change to "Retake Quiz". Fix: delay state transitions until all dependent queries complete.
+- **`aria-disabled` on non-interactive elements is meaningless**: Used `aria-disabled="true"` on a `<span>` for the "View All Attempts" placeholder. Screen readers ignore this — use `<button disabled>` for proper semantics.
+- **Fragile `.then(async)` chaining**: Converting a `.then()` callback to async creates a nested promise that breaks the outer `.catch()` chain. Prefer async IIFE or full async/await refactor.
+- **NaN guard on computed percentages**: `previousBestPercentage` derived from Dexie data can produce NaN if the quiz has zero questions. Always guard computed values at the boundary.
