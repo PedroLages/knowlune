@@ -242,8 +242,8 @@ test.describe('E13-S03: Pause and Resume Quiz', () => {
     // Should NOT see Resume button
     await expect(page.getByRole('button', { name: /resume quiz/i })).not.toBeVisible()
 
-    // Should see Start Quiz
-    await expect(page.getByRole('button', { name: /start quiz/i })).toBeVisible()
+    // Should see Retake Quiz (not Resume) — quiz was completed so hasCompletedBefore=true
+    await expect(page.getByRole('button', { name: /retake quiz/i })).toBeVisible()
   })
 
   test('AC4: timed quiz timer state preserved across navigation', async ({ page }) => {

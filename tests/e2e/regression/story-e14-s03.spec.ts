@@ -1,6 +1,6 @@
-import { test, expect } from '../support/fixtures'
-import { seedQuizzes } from '../support/helpers/indexeddb-seed'
-import { makeQuiz, makeQuestion } from '../support/fixtures/factories/quiz-factory'
+import { test, expect } from '../../support/fixtures'
+import { seedQuizzes } from '../../support/helpers/indexeddb-seed'
+import { makeQuiz, makeQuestion } from '../../support/fixtures/factories/quiz-factory'
 
 /**
  * E14-S03: Display Fill-in-Blank Questions
@@ -209,14 +209,16 @@ test.describe('E14-S03: Display Fill-in-Blank Questions', () => {
     await seedAndNavigateToQuiz(page)
     await startQuiz(page)
 
-    // Verify fieldset exists
+    // Verify fieldset with aria-labelledby linking to question text
     const fieldset = page.locator('fieldset')
     await expect(fieldset).toBeVisible()
 
-    // Verify legend contains question text
-    const legend = fieldset.locator('legend')
-    await expect(legend).toBeVisible()
-    await expect(legend).toContainText('Meta')
+    // Verify question text is accessible via aria-labelledby
+    const ariaLabelledBy = await fieldset.getAttribute('aria-labelledby')
+    expect(ariaLabelledBy).toBeTruthy()
+    const questionText = page.locator(`[id="${ariaLabelledBy}"]`)
+    await expect(questionText).toBeVisible()
+    await expect(questionText).toContainText('Meta')
 
     // Verify input is inside the fieldset
     await expect(fieldset.getByRole('textbox')).toBeVisible()

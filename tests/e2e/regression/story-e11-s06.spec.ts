@@ -8,14 +8,14 @@
  *   - AC5: Edit and disable reminders
  *   - AC6: Multi-course reminder overview
  */
-import { test, expect } from '../support/fixtures'
-import { goToSettings } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { goToSettings } from '../../support/helpers/navigation'
 import {
   seedImportedCourses,
   seedIndexedDBStore,
   clearIndexedDBStore,
-} from '../support/helpers/indexeddb-seed'
-import { FIXED_DATE } from '../utils/test-time'
+} from '../../support/helpers/indexeddb-seed'
+import { FIXED_DATE } from '../../utils/test-time'
 
 /**
  * Helper: create an ImportedCourse record for seeding.

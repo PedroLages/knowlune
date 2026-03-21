@@ -1,6 +1,6 @@
-import { test, expect } from '../support/fixtures'
-import { seedQuizzes } from '../support/helpers/indexeddb-seed'
-import { makeQuiz, makeQuestion } from '../support/fixtures/factories/quiz-factory'
+import { test, expect } from '../../support/fixtures'
+import { seedQuizzes } from '../../support/helpers/indexeddb-seed'
+import { makeQuiz, makeQuestion } from '../../support/fixtures/factories/quiz-factory'
 
 /**
  * E14-S01: Display True/False Questions
@@ -227,15 +227,15 @@ test.describe('E14-S01: Display True/False Questions', () => {
     await seedAndNavigateToQuiz(page)
     await startQuiz(page)
 
-    // Verify radiogroup role with aria-labelledby
-    const radioGroup = page.getByRole('radiogroup')
-    await expect(radioGroup).toBeVisible()
-    const ariaLabelledBy = await radioGroup.getAttribute('aria-labelledby')
+    // Verify fieldset with aria-labelledby linking to question text
+    const fieldset = page.locator('fieldset')
+    await expect(fieldset).toBeVisible()
+    const ariaLabelledBy = await fieldset.getAttribute('aria-labelledby')
     expect(ariaLabelledBy).toBeTruthy()
 
-    // Verify legend is accessible (use attribute selector — useId() generates colon-containing IDs)
-    const legend = page.locator(`[id="${ariaLabelledBy}"]`)
-    await expect(legend).toBeVisible()
+    // Verify question text element is accessible via the linked ID
+    const questionText = page.locator(`[id="${ariaLabelledBy}"]`)
+    await expect(questionText).toBeVisible()
 
     // Keyboard focus: Tab to first radio, verify focus
     const firstRadio = page.getByRole('radio', { name: 'True' })

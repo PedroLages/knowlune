@@ -1,6 +1,6 @@
-import { test, expect } from '../support/fixtures'
-import { seedQuizzes } from '../support/helpers/indexeddb-seed'
-import { makeQuiz, makeQuestion } from '../support/fixtures/factories/quiz-factory'
+import { test, expect } from '../../support/fixtures'
+import { seedQuizzes } from '../../support/helpers/indexeddb-seed'
+import { makeQuiz, makeQuestion } from '../../support/fixtures/factories/quiz-factory'
 
 /**
  * E12-S05: Display Multiple Choice Questions
@@ -186,15 +186,17 @@ test.describe('E12-S05: Display Multiple Choice Questions', () => {
     await seedAndNavigateToQuiz(page)
     await startQuiz(page)
 
-    // Verify radiogroup role exists
-    const radioGroup = page.getByRole('radiogroup')
-    await expect(radioGroup).toBeVisible()
-
-    // Verify radiogroup has aria-labelledby pointing to the legend
-    const ariaLabelledBy = await radioGroup.getAttribute('aria-labelledby')
+    // Verify fieldset with aria-labelledby pointing to question text
+    const fieldset = page.locator('fieldset')
+    await expect(fieldset).toBeVisible()
+    const ariaLabelledBy = await fieldset.getAttribute('aria-labelledby')
     expect(ariaLabelledBy).toBeTruthy()
-    const legend = page.locator(`#${ariaLabelledBy}`)
-    await expect(legend).toBeVisible()
+    const questionText = page.locator(`[id="${ariaLabelledBy}"]`)
+    await expect(questionText).toBeVisible()
+
+    // Verify radiogroup role exists within fieldset
+    const radioGroup = fieldset.getByRole('radiogroup')
+    await expect(radioGroup).toBeVisible()
 
     // Verify individual radio items are focusable
     const firstRadio = page.getByRole('radio').first()

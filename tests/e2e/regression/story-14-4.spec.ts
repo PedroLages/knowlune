@@ -7,9 +7,9 @@
  * - AC3: Mobile (375px) — text wraps, code blocks scroll independently
  * - AC4: Markdown outside <legend>, aria-labelledby preserves association
  */
-import { test, expect } from '../support/fixtures'
-import { makeQuiz, makeQuestion } from '../support/fixtures/factories/quiz-factory'
-import { seedIndexedDBStore } from '../support/helpers/indexeddb-seed'
+import { test, expect } from '../../support/fixtures'
+import { makeQuiz, makeQuestion } from '../../support/fixtures/factories/quiz-factory'
+import { seedIndexedDBStore } from '../../support/helpers/indexeddb-seed'
 
 // ---------------------------------------------------------------------------
 // Test data — questions with various Markdown formatting
