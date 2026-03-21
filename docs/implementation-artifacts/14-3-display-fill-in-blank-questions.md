@@ -4,9 +4,9 @@ story_name: "Display Fill-in-Blank Questions"
 status: in-progress
 started: 2026-03-21
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-21
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -99,15 +99,24 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+- **M1 (MEDIUM)**: Character counter missing `aria-live="polite"` — screen readers silent during typing
+- **M2 (MEDIUM)**: Input height 36px below 44px touch target — add `min-h-[44px]`
+- All contrast ratios pass (12.45:1 text, 7.42:1 counter). Keyboard nav, fieldset/legend, ARIA labeling all pass.
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+- **HIGH**: `handleBlur` + debounce timer double-fire `onChange` — clear timer ref in handleBlur
+- **HIGH**: Debounce effect fires on prop-driven value sync (navigation back) — guard with userEdited ref
+- **MEDIUM**: No unit test for fill-in-blank dispatch in QuestionDisplay.test.tsx
+- **MEDIUM**: Compounding opacity (wrapper 60% + input 50% = ~30%) in disabled state
+- **MEDIUM**: `inputId` generated but no `<label htmlFor>` references it
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+- **HIGH**: Character counter needs `aria-describedby` link to input + `aria-live="polite"` (duplicates Design M1)
+- **MEDIUM**: Placeholder-only instruction — visible label would improve clarity (WCAG 3.3.2)
+- **MEDIUM**: `max-w-md` may be too narrow for sentence-length answers
+- **LOW**: No visual warning as user approaches 500-char limit
 
 ## Challenges and Lessons Learned
 
