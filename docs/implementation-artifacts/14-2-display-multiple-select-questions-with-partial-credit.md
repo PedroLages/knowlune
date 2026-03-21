@@ -4,9 +4,9 @@ story_name: "Display Multiple Select Questions with Partial Credit"
 status: in-progress
 started: 2026-03-21
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-21
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -181,15 +181,37 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+Reviewed 2026-03-21 via Playwright MCP at mobile/tablet/desktop viewports.
+
+**Passed**: Touch targets (61px), keyboard nav (Tab/Space), zero hardcoded colors, motion-reduce, focus rings, no console errors, no horizontal scroll.
+
+**High**: (H1) "Select all that apply" hint not programmatically associated via `aria-describedby`. (H2) Redundant `role="group"` on inner div doubles fieldset landmark.
+
+**Medium**: (M1) Legend `pb-1` cramped before hint. (M2) `useMemo` side-effect (pre-existing pattern). (M3) Raw Markdown in AreasForGrowth (pre-existing). (M4) AC6 per-option feedback deferred to Epic 16 (consistent with all question types).
+
+Report: `docs/reviews/design/design-review-2026-03-21-e14-s02.md`
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+Reviewed 2026-03-21 via adversarial code review + edge case hunting.
+
+**High**: Unsafe `as string[]` cast in scoring.ts:50-51 (no `Array.isArray` guard). `userAnswer ?? ''` coerces unanswered multiple-select to string instead of array. "Select all that apply" not screen-reader-associated.
+
+**Medium**: Redundant `role="group"`. Index-prefixed keys. Missing PCM clamping unit test (1C/2I scenario). Empty `correctAnswer` array edge case. Duplicate option strings.
+
+**Nits**: Redundant `aria-label` on Checkbox inside `<label>`. Formatting-only changes in unrelated files.
+
+Reports: `docs/reviews/code/code-review-2026-03-21-e14-s02.md`, `docs/reviews/code/edge-case-review-2026-03-21-e14-s02.md`
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+Reviewed 2026-03-21 for WCAG 2.1 AA compliance.
+
+**Passed**: All design tokens used (zero hardcoded colors), semantic HTML, focus indicators, touch targets, `prefers-reduced-motion` respected.
+
+**Medium**: Redundant `role="group"` (double announcement). "Select all" hint outside legend (not `aria-describedby`). `useMemo` for side-effect.
+
+Report: `docs/reviews/design/web-design-guidelines-2026-03-21-e14-s02.md`
 
 ## Challenges and Lessons Learned
 
