@@ -4,9 +4,9 @@ story_name: "Randomize Question Order with Fisher-Yates Shuffle"
 status: in-progress
 started: 2026-03-21
 completed:
-reviewed: true
+reviewed: in-progress
 review_started: 2026-03-21
-review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review-skipped, web-design-guidelines-skipped, code-review, code-review-testing]
+review_gates_passed: []
 burn_in_validated: false
 ---
 
