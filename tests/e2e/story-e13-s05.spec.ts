@@ -8,6 +8,7 @@
  */
 import { test, expect } from '../support/fixtures'
 import { makeQuiz, makeQuestion } from '../support/fixtures/factories/quiz-factory'
+import { seedIndexedDBStore } from '../support/helpers/indexeddb-seed'
 
 // ---------------------------------------------------------------------------
 // Test data — 5 questions to make randomization observable
@@ -55,42 +56,11 @@ const unshuffledQuiz = makeQuiz({
 // Helpers
 // ---------------------------------------------------------------------------
 
-async function seedQuizData(page: import('@playwright/test').Page, quizData: unknown[]) {
-  await page.evaluate(
-    async ({ data, maxRetries, retryDelay }) => {
-      for (let attempt = 0; attempt < maxRetries; attempt++) {
-        const result = await new Promise<'ok' | 'store-missing'>((resolve, reject) => {
-          const request = indexedDB.open('ElearningDB')
-          request.onsuccess = () => {
-            const db = request.result
-            if (!db.objectStoreNames.contains('quizzes')) {
-              db.close()
-              resolve('store-missing')
-              return
-            }
-            const tx = db.transaction('quizzes', 'readwrite')
-            const store = tx.objectStore('quizzes')
-            for (const item of data) {
-              store.put(item)
-            }
-            tx.oncomplete = () => {
-              db.close()
-              resolve('ok')
-            }
-            tx.onerror = () => {
-              db.close()
-              reject(tx.error)
-            }
-          }
-          request.onerror = () => reject(request.error)
-        })
-        if (result === 'ok') return
-        await new Promise((r) => setTimeout(r, retryDelay))
-      }
-      throw new Error('quizzes store not found after retries')
-    },
-    { data: quizData, maxRetries: 10, retryDelay: 200 },
-  )
+async function seedQuizData(
+  page: import('@playwright/test').Page,
+  quizData: Record<string, unknown>[],
+) {
+  await seedIndexedDBStore(page, 'ElearningDB', 'quizzes', quizData)
 }
 
 /** Read the current question text from the fieldset legend */
@@ -132,7 +102,7 @@ test.describe('E13-S05: Randomize Question Order', () => {
   test('AC1: shuffle enabled → questions appear in randomized order', async ({ page }) => {
     // Navigate to app first so IndexedDB schema is initialized, then seed quiz data
     await page.goto('/')
-    await seedQuizData(page, [shuffledQuiz])
+    await seedQuizData(page, [shuffledQuiz as unknown as Record<string, unknown>])
 
     // Navigate directly to the quiz route
     await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz`)
@@ -150,7 +120,7 @@ test.describe('E13-S05: Randomize Question Order', () => {
 
   test('AC2: retake quiz → different order on each attempt', async ({ page }) => {
     await page.goto('/')
-    await seedQuizData(page, [shuffledQuiz])
+    await seedQuizData(page, [shuffledQuiz as unknown as Record<string, unknown>])
 
     await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz`)
 
@@ -186,7 +156,7 @@ test.describe('E13-S05: Randomize Question Order', () => {
 
   test('AC3: shuffle disabled → original order preserved', async ({ page }) => {
     await page.goto('/')
-    await seedQuizData(page, [unshuffledQuiz])
+    await seedQuizData(page, [unshuffledQuiz as unknown as Record<string, unknown>])
 
     await page.goto(`/courses/${COURSE_ID}/lessons/test-lesson-e13s05-noshuffle/quiz`)
 
