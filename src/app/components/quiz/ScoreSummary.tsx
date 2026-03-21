@@ -118,18 +118,22 @@ export function ScoreSummary({
   const tier = getScoreTier(percentage, passed)
   const roundedPct = Math.round(Math.min(100, Math.max(0, percentage)))
 
-  const delta =
-    previousBestPercentage != null
-      ? Math.round(percentage) - Math.round(previousBestPercentage)
+  // Guard: clamp and validate previousBest before computing delta
+  const clampedPrevBest =
+    previousBestPercentage != null && Number.isFinite(previousBestPercentage)
+      ? Math.min(100, Math.max(0, previousBestPercentage))
       : null
+  const roundedPrevBest = clampedPrevBest != null ? Math.round(clampedPrevBest) : null
+
+  const delta = roundedPrevBest != null ? roundedPct - roundedPrevBest : null
 
   const improvementSrText =
     delta != null && delta > 0
-      ? ` Improved by ${delta} percentage points from previous best of ${Math.round(previousBestPercentage!)} percent.`
+      ? ` Improved by ${delta} percentage points from previous best of ${roundedPrevBest} percent.`
       : delta != null && delta === 0
-        ? ` Same as previous best of ${Math.round(previousBestPercentage!)} percent.`
+        ? ` Same as previous best of ${roundedPrevBest} percent.`
         : delta != null
-          ? ` Previous best was ${Math.round(previousBestPercentage!)} percent.`
+          ? ` Previous best was ${roundedPrevBest} percent.`
           : ''
 
   return (
@@ -152,16 +156,17 @@ export function ScoreSummary({
         Completed in {formatDuration(Math.max(timeSpent, 1000))}
       </p>
 
-      {previousBestPercentage != null && (
+      {roundedPrevBest != null && (
         <p className="text-sm tabular-nums" data-testid="improvement-summary">
-          <span className="text-muted-foreground">
-            Previous best: {Math.round(previousBestPercentage)}%
-          </span>
+          <span className="text-muted-foreground">Previous best: {roundedPrevBest}%</span>
           {delta != null && delta > 0 && (
             <span className="text-success font-semibold ml-1.5">(+{delta}%)</span>
           )}
           {delta === 0 && (
             <span className="text-muted-foreground ml-1.5">&middot; Same as best</span>
+          )}
+          {delta != null && delta < 0 && (
+            <span className="text-muted-foreground ml-1.5">&middot; Keep practicing!</span>
           )}
         </p>
       )}

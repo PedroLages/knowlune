@@ -84,7 +84,7 @@ describe('QuizResults — error paths', () => {
     })
   })
 
-  it('AC7: shows error toast when loadAttempts fails', async () => {
+  it('shows error toast when loadAttempts fails', async () => {
     // Set up store with a quiz but no pre-loaded attempts
     useQuizStore.setState({
       currentQuiz: testQuiz,
@@ -124,9 +124,10 @@ function makeAttemptWith(percentage: number, id: string): QuizAttempt {
   return {
     ...testAttempt,
     id,
+    quizId: testQuiz.id,
     percentage,
-    score: Math.round((percentage / 100) * 10),
-    passed: percentage >= 70,
+    score: Math.round((percentage / 100) * testQuiz.questions.length),
+    passed: percentage >= testQuiz.passingScore,
   }
 }
 
@@ -220,9 +221,11 @@ describe('QuizResults — improvement summary', () => {
 
     const summary = screen.getByTestId('improvement-summary')
     expect(summary).toHaveTextContent('Previous best: 90%')
-    // Should NOT contain any negative delta or "Same as best"
+    // Should NOT contain any negative delta number
     expect(summary.textContent).not.toMatch(/\(-/)
     expect(summary).not.toHaveTextContent('Same as best')
+    // Should show encouraging message instead
+    expect(summary).toHaveTextContent('Keep practicing!')
   })
 
   it('uses max of all previous attempts (not just the last one)', async () => {

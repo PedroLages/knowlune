@@ -394,6 +394,47 @@ describe('retakeQuiz', () => {
     expect(progress?.answers).toEqual({})
     expect(progress?.quizId).toBe('quiz-rt')
   })
+
+  it('resets timeRemaining to quiz timeLimit on retake', async () => {
+    const timedQuiz = {
+      id: 'quiz-rt-timed',
+      lessonId: 'les-rt-timed',
+      title: 'Timed Retake Quiz',
+      description: '',
+      questions: [
+        {
+          id: 'q1',
+          order: 1,
+          type: 'multiple-choice' as const,
+          text: 'Q1',
+          options: ['A', 'B'],
+          correctAnswer: 'A',
+          explanation: '',
+          points: 1,
+        },
+      ],
+      timeLimit: 30,
+      passingScore: 70,
+      allowRetakes: true,
+      shuffleQuestions: false,
+      shuffleAnswers: false,
+      createdAt: '2025-01-15T12:00:00.000Z',
+      updatedAt: '2025-01-15T12:00:00.000Z',
+    }
+    await db.quizzes.add(timedQuiz)
+
+    // Start and partially use time
+    await act(async () => {
+      await useQuizStore.getState().startQuiz('les-rt-timed')
+    })
+    expect(useQuizStore.getState().currentProgress?.timeRemaining).toBe(30)
+
+    // Retake should reset timer
+    await act(async () => {
+      await useQuizStore.getState().retakeQuiz('les-rt-timed')
+    })
+    expect(useQuizStore.getState().currentProgress?.timeRemaining).toBe(30)
+  })
 })
 
 // ---------------------------------------------------------------------------

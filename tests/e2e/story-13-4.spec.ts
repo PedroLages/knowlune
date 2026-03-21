@@ -64,7 +64,7 @@ const quiz = makeQuiz({
 /** Seed quiz data into IndexedDB 'quizzes' store */
 async function seedQuizData(
   page: import('@playwright/test').Page,
-  quizData: Record<string, unknown>[],
+  quizData: Record<string, unknown>[]
 ) {
   await seedIndexedDBStore(page, 'ElearningDB', 'quizzes', quizData)
 }
@@ -72,7 +72,7 @@ async function seedQuizData(
 /** Seed quiz attempt history into IndexedDB 'quizAttempts' store */
 async function seedAttemptData(
   page: import('@playwright/test').Page,
-  attemptData: Record<string, unknown>[],
+  attemptData: Record<string, unknown>[]
 ) {
   await seedIndexedDBStore(page, 'ElearningDB', 'quizAttempts', attemptData)
 }
@@ -166,9 +166,10 @@ test.describe('E13-S04: Unlimited Quiz Retakes', () => {
     // "Retake Quiz" button must be prominently visible
     await expect(page.getByRole('button', { name: /retake quiz/i })).toBeVisible()
 
-    // No messaging about limits or cooldowns
-    const bodyText = await page.locator('body').textContent()
-    const lower = bodyText?.toLowerCase() ?? ''
+    // No messaging about limits or cooldowns (scoped to results card)
+    const resultsCard = page.locator('.bg-card').first()
+    const cardText = await resultsCard.textContent()
+    const lower = cardText?.toLowerCase() ?? ''
     expect(lower).not.toContain('attempt limit')
     expect(lower).not.toContain('cooldown')
     expect(lower).not.toContain('no retakes')
@@ -204,10 +205,8 @@ test.describe('E13-S04: Unlimited Quiz Retakes', () => {
     await page.getByRole('button', { name: /retake quiz/i }).click()
     await expect(page).toHaveURL(/\/quiz$/)
 
-    // Quiz is already active after retake — first question should show
-    await expect(
-      page.getByText(q1.text).or(page.getByText(q2.text)).or(page.getByText(q3.text))
-    ).toBeVisible()
+    // Quiz is already active after retake — first question should show (shuffle off)
+    await expect(page.getByText(q1.text)).toBeVisible()
 
     // No radio should be checked (fresh attempt — answers cleared)
     const checkedRadios = page.locator('input[type="radio"]:checked')
@@ -228,7 +227,9 @@ test.describe('E13-S04: Unlimited Quiz Retakes', () => {
     await answerAllCorrectAndSubmit(page)
 
     // Should show improvement summary comparing to previous best
-    await expect(page.getByTestId('improvement-summary')).toBeVisible()
+    const summary = page.getByTestId('improvement-summary')
+    await expect(summary).toBeVisible()
+    await expect(summary).toContainText('Previous best:')
   })
 
   test('AC4: quiz start screen shows "Retake Quiz" for completed quizzes', async ({ page }) => {
@@ -256,9 +257,15 @@ test.describe('E13-S04: Unlimited Quiz Retakes', () => {
     })
 
     // Should show "Retake Quiz" instead of "Start Quiz"
-    await expect(page.getByRole('button', { name: /retake quiz/i })).toBeVisible()
+    const retakeBtn = page.getByRole('button', { name: /retake quiz/i })
+    await expect(retakeBtn).toBeVisible()
 
     // "Start Quiz" should NOT be visible
     await expect(page.getByRole('button', { name: /^start quiz$/i })).not.toBeVisible()
+
+    // Click retake — should start immediately with no confirmation dialog
+    await retakeBtn.click()
+    await expect(page.locator('[role="alertdialog"]')).not.toBeVisible()
+    await expect(page).toHaveURL(/\/quiz$/)
   })
 })

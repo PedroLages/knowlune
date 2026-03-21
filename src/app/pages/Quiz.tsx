@@ -102,12 +102,10 @@ export function Quiz() {
     }
 
     let ignore = false
-
-    db.quizzes
-      .where('lessonId')
-      .equals(lessonId)
-      .first()
-      .then(async found => {
+    setHasCompletedBefore(false)
+    ;(async () => {
+      try {
+        const found = await db.quizzes.where('lessonId').equals(lessonId).first()
         if (ignore) return
         if (!found) {
           setFetchState('error')
@@ -115,20 +113,21 @@ export function Quiz() {
         }
         setQuiz(found)
         setSavedProgress(loadSavedProgress(found.id))
-        setFetchState('found')
 
-        // Check if quiz has been completed before (lightweight count query)
+        // Check attempt history before showing start screen to avoid label flicker
         try {
           const attemptCount = await db.quizAttempts.where('quizId').equals(found.id).count()
           if (!ignore) setHasCompletedBefore(attemptCount > 0)
         } catch (err) {
           console.warn('[Quiz] Failed to check attempt history:', err)
         }
-      })
-      .catch((err: unknown) => {
+
+        if (!ignore) setFetchState('found')
+      } catch (err: unknown) {
         console.error('[Quiz] Failed to load quiz:', err)
         if (!ignore) setFetchState('error')
-      })
+      }
+    })()
 
     return () => {
       ignore = true
