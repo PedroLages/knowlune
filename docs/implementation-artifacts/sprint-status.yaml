@@ -43,6 +43,7 @@
 # - Deferred stories retained: 1-5 (file detection), 2-10 (captions)
 
 generated: 2026-03-15
+last_updated: 2026-03-21
 project: Elearningplatformwireframes
 project_key: NOKEY
 tracking_system: file-system
@@ -133,7 +134,7 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 7: Course Momentum & Learning Intelligence
   # ──────────────────────────────────────────────────
-  epic-7: in-progress
+  epic-7: done  # approved for production (PASS gate), retro done; stories 7-8..7-11 are deferred gap coverage
   7-1-momentum-score-calculation-and-display: done
   7-2-recommended-next-dashboard-section: done
   7-3-next-course-suggestion-after-completion: done
@@ -196,7 +197,7 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 12: Take Basic Quizzes (Quiz & Assessment System)
   # ──────────────────────────────────────────────────
-  epic-12: in-progress
+  epic-12: done  # all 6 stories completed
   12-1-create-quiz-type-definitions: done
   12-2-set-up-dexie-schema-v15-migration: done
   12-3-create-usequizstore-with-zustand: done
