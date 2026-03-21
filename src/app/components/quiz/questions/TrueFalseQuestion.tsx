@@ -25,7 +25,7 @@ export function TrueFalseQuestion({ question, value, onChange, mode }: TrueFalse
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (!isActive || e.isComposing || e.metaKey || e.ctrlKey || e.altKey) return
+    if (!isActive || e.nativeEvent.isComposing || e.metaKey || e.ctrlKey || e.altKey) return
     const num = parseInt(e.key, 10)
     if (num >= 1 && num <= options.length) {
       e.preventDefault()

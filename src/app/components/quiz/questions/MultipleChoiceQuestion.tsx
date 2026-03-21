@@ -30,7 +30,7 @@ export function MultipleChoiceQuestion({
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (!isActive || e.isComposing || e.metaKey || e.ctrlKey || e.altKey) return
+    if (!isActive || e.nativeEvent.isComposing || e.metaKey || e.ctrlKey || e.altKey) return
     const num = parseInt(e.key, 10)
     if (num >= 1 && num <= Math.min(options.length, 9)) {
       e.preventDefault()
