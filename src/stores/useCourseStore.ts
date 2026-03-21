@@ -13,8 +13,9 @@ export const useCourseStore = create<CourseStoreState>((set, get) => ({
   isLoaded: false,
 
   loadCourses: async () => {
-    if (get().isLoaded) return
     const courses = await db.courses.toArray()
-    set({ courses, isLoaded: true })
+    if (courses.length > 0 || !get().isLoaded) {
+      set({ courses, isLoaded: true })
+    }
   },
 }))

@@ -33,7 +33,7 @@ const ALL_COURSE_IDS = [
   '6mx',
   'operative-six',
   'behavior-skills-breakthrough',
-  'ops-manual',
+  'ops-manual-resources',
   'study-materials',
 ]
 
