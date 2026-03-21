@@ -265,6 +265,44 @@ Only commit to retro action items that can be enforced automatically (ESLint rul
 
 **Rule:** If it can't be enforced, it won't get done consistently. Attach automation or accept it's aspirational.
 
+## Scoring Dual-Path: `isCorrect` vs `pointsEarned`
+
+For multiple-select questions, `isCorrect` and `pointsEarned` follow **different logic paths** in `src/lib/scoring.ts`:
+
+- **`isCorrect`** (boolean): Exact set-match — `true` only when the user selects every correct option and no incorrect ones. Used for "correct/incorrect" status display.
+- **`pointsEarned`** (number): Partial Credit Model (PCM) — awards fractional points based on `max(0, (correct_selections - incorrect_selections) / total_correct) * points`. Used for score calculation.
+
+This means a partially correct answer returns `isCorrect: false` but `pointsEarned > 0`. For example, selecting 2 of 3 correct options (no wrong picks) yields `isCorrect: false, pointsEarned: 6.67` on a 10-point question.
+
+**Why two paths:** Quiz results need both a binary status badge ("Correct" / "Incorrect") and a nuanced score. PCM rewards partial knowledge without labeling incomplete answers as fully correct.
+
+**Testing guidance:** Write scoring test expectations directly from the AC formulas, not from intuition about how "correct" should work. The most common mistake (E14-S02) is assuming all-or-nothing points for multiple-select because `isCorrect` is all-or-nothing. Always check both fields independently.
+
+**Reference:** `calculatePointsForQuestion()` in [src/lib/scoring.ts](../src/lib/scoring.ts)
+
+## Quiz/Question Component Accessibility Checklist
+
+Recurring ARIA mistakes from Epic 14 retrospective. Check every item when building question or quiz UI.
+
+**Structure:**
+- [ ] `<fieldset>` + `<legend>` wraps each question group
+- [ ] `<legend>` uses `aria-labelledby` pointing to question text element
+- [ ] No redundant `role="group"` on `<fieldset>` (it's implicit)
+
+**ARIA associations:**
+- [ ] `aria-describedby` links inputs to hint/instruction text
+- [ ] `aria-live="polite"` on dynamically updating content (counters, timers, validation status)
+- [ ] `aria-invalid` + `aria-errormessage` on inputs with validation errors
+
+**Interaction:**
+- [ ] RadioGroup: Arrow keys navigate options (Radix default — don't override)
+- [ ] Checkboxes: Tab key moves between options (not arrow keys)
+- [ ] Focus indicators: `ring-2 ring-ring ring-offset-2` on all interactive elements
+
+**Touch & sizing:**
+- [ ] Touch targets ≥44px (`min-h-12` on clickable elements)
+- [ ] Label text clickable (wraps or `htmlFor` on associated input)
+
 ## Playwright addInitScript
 
 `addInitScript` runs on every page load, including `page.reload()`. If you use `localStorage.clear()` inside it, reloads will wipe seeded test data.
