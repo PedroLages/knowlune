@@ -211,7 +211,7 @@ development_status:
   epic-13: in-progress
   13-1-navigate-between-questions: done
   13-2-mark-questions-for-review: done
-  13-3-pause-and-resume-quiz: backlog
+  13-3-pause-and-resume-quiz: done
   13-4-unlimited-quiz-retakes: backlog
   13-5-randomize-question-order-with-fisher-yates-shuffle: done
   13-6-handle-localstorage-quota-exceeded-gracefully: backlog
