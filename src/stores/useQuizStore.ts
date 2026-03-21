@@ -1,11 +1,12 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { createJSONStorage, persist } from 'zustand/middleware'
 import type { Quiz, QuizProgress, QuizAttempt } from '@/types/quiz'
 import { db } from '@/db'
 import { persistWithRetry } from '@/lib/persistWithRetry'
+import { quotaResilientStorage } from '@/lib/quotaResilientStorage'
 import { calculateQuizScore } from '@/lib/scoring'
 import { fisherYatesShuffle } from '@/lib/shuffle'
-import { toastError } from '@/lib/toastHelpers'
+import { toastError, toastWarning } from '@/lib/toastHelpers'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 
 interface QuizState {
@@ -261,6 +262,7 @@ export const useQuizStore = create<QuizState>()(
     }),
     {
       name: 'levelup-quiz-store',
+      storage: createJSONStorage(() => quotaResilientStorage),
       partialize: state => ({
         currentProgress: state.currentProgress,
         currentQuiz: state.currentQuiz,
@@ -313,10 +315,25 @@ useQuizStore.subscribe(state => {
     } else if (!progress && quiz) {
       // Progress cleared (submission/clear) — remove orphaned key
       localStorage.removeItem(`quiz-progress-${quiz.id}`)
+      sessionStorage.removeItem(`quiz-progress-${quiz.id}`)
     }
   } catch (err) {
-    // QuotaExceededError or SecurityError — log but don't break the subscription chain
-    console.error('[useQuizStore] localStorage sync failed:', err)
+    if (
+      err instanceof DOMException &&
+      (err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED')
+    ) {
+      // Fall back to sessionStorage for per-quiz backup
+      try {
+        if (progress && quiz) {
+          sessionStorage.setItem(`quiz-progress-${quiz.id}`, JSON.stringify(progress))
+        }
+      } catch {
+        // sessionStorage also failed — nothing more we can do
+      }
+      toastWarning.storageQuota()
+    } else {
+      console.error('[useQuizStore] localStorage sync failed:', err)
+    }
   }
 })
 

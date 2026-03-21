@@ -36,7 +36,8 @@ import {
 
 function loadSavedProgress(quizId: string): QuizProgress | null {
   try {
-    const raw = localStorage.getItem(`quiz-progress-${quizId}`)
+    const key = `quiz-progress-${quizId}`
+    const raw = localStorage.getItem(key) ?? sessionStorage.getItem(key)
     if (!raw) return null
     const result = QuizProgressSchema.safeParse(JSON.parse(raw))
     if (!result.success) {
@@ -150,6 +151,7 @@ export function Quiz() {
       console.warn('[Quiz] Saved questionOrder references removed questions, discarding progress')
       setSavedProgress(null)
       localStorage.removeItem(`quiz-progress-${quiz.id}`)
+      sessionStorage.removeItem(`quiz-progress-${quiz.id}`)
       return
     }
     // Restore saved progress directly into the store.
@@ -200,10 +202,17 @@ export function Quiz() {
         const progress = useQuizStore.getState().currentProgress
         const currentQuizState = useQuizStore.getState().currentQuiz
         if (progress && currentQuizState) {
-          localStorage.setItem(`quiz-progress-${currentQuizState.id}`, JSON.stringify(progress))
+          const key = `quiz-progress-${currentQuizState.id}`
+          const value = JSON.stringify(progress)
+          try {
+            localStorage.setItem(key, value)
+          } catch {
+            // QuotaExceededError — fall back to sessionStorage
+            sessionStorage.setItem(key, value)
+          }
         }
       } catch {
-        // QuotaExceededError during unload — nothing we can do, best effort
+        // Storage completely inaccessible during unload — best effort
       }
     }
     window.addEventListener('beforeunload', handleBeforeUnload)
