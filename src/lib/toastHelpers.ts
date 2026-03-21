@@ -143,6 +143,24 @@ export const toastError = {
 }
 
 /**
+ * Warning toast variants for non-blocking advisories.
+ * Use LONG duration (8s) to give users time to read.
+ */
+export const toastWarning = {
+  /**
+   * Displays a warning toast when localStorage quota is exceeded.
+   * Advises the user that progress is session-only and suggests clearing data.
+   * Non-blocking — does not interrupt quiz functionality.
+   */
+  storageQuota: () => {
+    toast.warning(
+      'Storage limit reached. Quiz progress will be saved for this session only. Try clearing browser data to fix this.',
+      { duration: TOAST_DURATION.LONG }
+    )
+  },
+}
+
+/**
  * Displays a promise-based toast that updates based on async operation state.
  * Automatically handles loading → success/error transitions.
  *
