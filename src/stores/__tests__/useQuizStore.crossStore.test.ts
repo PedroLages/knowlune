@@ -34,9 +34,21 @@ const testModules: Module[] = [
   {
     id: 'mod-1',
     title: 'Module 1',
-    lessons: [{ id: LESSON_ID, title: 'Lesson 1', type: 'video', duration: '10:00' }],
+    description: 'Test module',
+    order: 0,
+    lessons: [
+      {
+        id: LESSON_ID,
+        title: 'Lesson 1',
+        description: 'Test lesson',
+        order: 0,
+        resources: [],
+        keyTopics: [],
+        duration: '10:00',
+      },
+    ],
   },
-] as Module[]
+]
 
 beforeEach(async () => {
   await Dexie.delete('ElearningDB')
@@ -70,7 +82,7 @@ describe('useQuizStore cross-store integration (E12-S03-AC5)', () => {
       title: 'Test Course',
       shortTitle: 'TC',
       description: 'A test course',
-      category: 'development',
+      category: 'research-library',
       difficulty: 'beginner',
       totalLessons: 1,
       totalVideos: 1,
@@ -80,6 +92,7 @@ describe('useQuizStore cross-store integration (E12-S03-AC5)', () => {
       modules: testModules,
       isSequential: false,
       basePath: '/courses/test',
+      instructorId: 'instructor-1',
     } as import('@/data/types').Course)
 
     await act(async () => {
@@ -106,12 +119,7 @@ describe('useQuizStore cross-store integration (E12-S03-AC5)', () => {
     })
 
     expect(setItemStatusSpy).toHaveBeenCalledOnce()
-    expect(setItemStatusSpy).toHaveBeenCalledWith(
-      COURSE_ID,
-      LESSON_ID,
-      'completed',
-      testModules
-    )
+    expect(setItemStatusSpy).toHaveBeenCalledWith(COURSE_ID, LESSON_ID, 'completed', testModules)
 
     setItemStatusSpy.mockRestore()
   })

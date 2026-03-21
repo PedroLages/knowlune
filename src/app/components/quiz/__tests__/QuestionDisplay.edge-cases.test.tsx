@@ -24,12 +24,7 @@ describe('QuestionDisplay — edge-case option counts (E12-S05-AC5)', () => {
     const question = makeQuestion({ options: [] })
 
     render(
-      <QuestionDisplay
-        question={question}
-        value={undefined}
-        onChange={vi.fn()}
-        mode="active"
-      />
+      <QuestionDisplay question={question} value={undefined} onChange={vi.fn()} mode="active" />
     )
 
     // Question text still renders
@@ -39,9 +34,7 @@ describe('QuestionDisplay — edge-case option counts (E12-S05-AC5)', () => {
     expect(screen.queryAllByRole('radio')).toHaveLength(0)
 
     // Warning logged for out-of-range option count
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('has 0 options (expected 2-6)')
-    )
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('has 0 options (expected 2-6)'))
   })
 
   it('renders with 1 option without crashing', () => {
@@ -50,12 +43,7 @@ describe('QuestionDisplay — edge-case option counts (E12-S05-AC5)', () => {
     const question = makeQuestion({ options: ['Only option'] })
 
     render(
-      <QuestionDisplay
-        question={question}
-        value={undefined}
-        onChange={vi.fn()}
-        mode="active"
-      />
+      <QuestionDisplay question={question} value={undefined} onChange={vi.fn()} mode="active" />
     )
 
     // The single option renders
@@ -63,9 +51,7 @@ describe('QuestionDisplay — edge-case option counts (E12-S05-AC5)', () => {
     expect(screen.getAllByRole('radio')).toHaveLength(1)
 
     // Warning logged for fewer than 2 options
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('has 1 options (expected 2-6)')
-    )
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('has 1 options (expected 2-6)'))
   })
 
   it('renders with 7 options (more than max 6)', () => {
@@ -75,12 +61,7 @@ describe('QuestionDisplay — edge-case option counts (E12-S05-AC5)', () => {
     const question = makeQuestion({ options: sevenOptions })
 
     render(
-      <QuestionDisplay
-        question={question}
-        value={undefined}
-        onChange={vi.fn()}
-        mode="active"
-      />
+      <QuestionDisplay question={question} value={undefined} onChange={vi.fn()} mode="active" />
     )
 
     // All 7 options render
@@ -90,9 +71,7 @@ describe('QuestionDisplay — edge-case option counts (E12-S05-AC5)', () => {
     expect(screen.getAllByRole('radio')).toHaveLength(7)
 
     // Warning logged for more than 6 options
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('has 7 options (expected 2-6)')
-    )
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('has 7 options (expected 2-6)'))
   })
 
   it('renders normally with 4 options (within range) — no warning', () => {
@@ -103,12 +82,7 @@ describe('QuestionDisplay — edge-case option counts (E12-S05-AC5)', () => {
     })
 
     render(
-      <QuestionDisplay
-        question={question}
-        value={undefined}
-        onChange={vi.fn()}
-        mode="active"
-      />
+      <QuestionDisplay question={question} value={undefined} onChange={vi.fn()} mode="active" />
     )
 
     // All 4 options render

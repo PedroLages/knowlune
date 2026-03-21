@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act } from 'react'
 import Dexie from 'dexie'
-import { makeQuiz, makeQuestion, makeProgress } from '../../../tests/support/fixtures/factories/quiz-factory'
+import { makeQuiz, makeQuestion } from '../../../tests/support/fixtures/factories/quiz-factory'
 
 // Mock persistWithRetry to reject — overridden per-test via mockImplementation
 const mockPersistWithRetry = vi.fn()
