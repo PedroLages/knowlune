@@ -24,7 +24,7 @@ const questions = Array.from({ length: 5 }, (_, i) =>
     options: ['A', 'B', 'C', 'D'],
     correctAnswer: 'A',
     points: 1,
-  })
+  }),
 )
 
 const shuffledQuiz = makeQuiz({
@@ -85,31 +85,32 @@ async function seedQuizData(page: import('@playwright/test').Page, quizData: unk
           request.onerror = () => reject(request.error)
         })
         if (result === 'ok') return
-        await new Promise(r => setTimeout(r, retryDelay))
+        await new Promise((r) => setTimeout(r, retryDelay))
       }
       throw new Error('quizzes store not found after retries')
     },
-    { data: quizData, maxRetries: 10, retryDelay: 200 }
+    { data: quizData, maxRetries: 10, retryDelay: 200 },
   )
 }
 
-/** Read the current question text displayed on the quiz page */
+/** Read the current question text from the fieldset legend */
 async function getCurrentQuestionText(page: import('@playwright/test').Page): Promise<string> {
-  const heading = page.locator('[data-testid="question-text"]')
-  return heading.textContent() as Promise<string>
+  const legend = page.locator('fieldset legend')
+  await expect(legend).toBeVisible()
+  return (await legend.textContent()) ?? ''
 }
 
 /** Collect the order of all questions by navigating through them */
 async function collectQuestionOrder(
   page: import('@playwright/test').Page,
-  count: number
+  count: number,
 ): Promise<string[]> {
   const order: string[] = []
   for (let i = 0; i < count; i++) {
     const text = await getCurrentQuestionText(page)
     order.push(text)
     if (i < count - 1) {
-      await page.getByRole('button', { name: /next/i }).click()
+      await page.getByRole('button', { name: 'Next' }).click()
     }
   }
   return order
@@ -121,23 +122,26 @@ async function collectQuestionOrder(
 
 test.describe('E13-S05: Randomize Question Order', () => {
   test.beforeEach(async ({ page }) => {
-    // Seed sidebar closed for tablet viewports
-    await page.evaluate(() => {
+    // Seed sidebar closed for tablet viewports (addInitScript runs before page load,
+    // avoiding SecurityError on about:blank where localStorage is inaccessible)
+    await page.addInitScript(() => {
       localStorage.setItem('eduvi-sidebar-v1', 'false')
     })
   })
 
   test('AC1: shuffle enabled → questions appear in randomized order', async ({ page }) => {
+    // Navigate to app first so IndexedDB schema is initialized, then seed quiz data
     await page.goto('/')
     await seedQuizData(page, [shuffledQuiz])
 
-    await page.goto(`/courses/${COURSE_ID}/${LESSON_ID}`)
+    // Navigate directly to the quiz route
+    await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz`)
 
     // Start the quiz
     await page.getByRole('button', { name: /start quiz/i }).click()
 
     const order = await collectQuestionOrder(page, 5)
-    const originalOrder = questions.map(q => q.text)
+    const originalOrder = questions.map((q) => q.text)
 
     // With 5 questions, probability of getting original order by chance is 1/120 (0.83%)
     // This is an acceptable flakiness rate for verifying randomization
@@ -148,21 +152,32 @@ test.describe('E13-S05: Randomize Question Order', () => {
     await page.goto('/')
     await seedQuizData(page, [shuffledQuiz])
 
-    await page.goto(`/courses/${COURSE_ID}/${LESSON_ID}`)
+    await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz`)
 
     // First attempt
     await page.getByRole('button', { name: /start quiz/i }).click()
     const firstOrder = await collectQuestionOrder(page, 5)
 
     // Answer all and submit to complete first attempt
-    for (let i = 0; i < 5; i++) {
-      await page.getByRole('radio', { name: 'A' }).first().click()
-      if (i < 4) await page.getByRole('button', { name: /next/i }).click()
+    // Navigate back to first question to answer from there
+    for (let i = 3; i >= 0; i--) {
+      await page.getByRole('button', { name: 'Previous' }).click()
     }
-    await page.getByRole('button', { name: /submit/i }).click()
+    for (let i = 0; i < 5; i++) {
+      await page.getByRole('radio', { name: 'A' }).click()
+      if (i < 4) await page.getByRole('button', { name: 'Next' }).click()
+    }
+    await page.getByRole('button', { name: /submit quiz/i }).click()
+
+    // Wait for results page
+    await expect(page.getByRole('button', { name: /retake quiz/i })).toBeVisible()
 
     // Retake
-    await page.getByRole('button', { name: /retake/i }).click()
+    await page.getByRole('button', { name: /retake quiz/i }).click()
+
+    // Wait for quiz to restart
+    await expect(page.locator('fieldset legend')).toBeVisible()
+
     const secondOrder = await collectQuestionOrder(page, 5)
 
     // Two independent shuffles of 5 items — probability of same order is 1/120
@@ -173,12 +188,12 @@ test.describe('E13-S05: Randomize Question Order', () => {
     await page.goto('/')
     await seedQuizData(page, [unshuffledQuiz])
 
-    await page.goto(`/courses/${COURSE_ID}/test-lesson-e13s05-noshuffle`)
+    await page.goto(`/courses/${COURSE_ID}/lessons/test-lesson-e13s05-noshuffle/quiz`)
 
     await page.getByRole('button', { name: /start quiz/i }).click()
 
     const order = await collectQuestionOrder(page, 5)
-    const originalOrder = questions.map(q => q.text)
+    const originalOrder = questions.map((q) => q.text)
 
     expect(order).toEqual(originalOrder)
   })
