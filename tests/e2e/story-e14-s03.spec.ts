@@ -173,14 +173,8 @@ test.describe('E14-S03: Display Fill-in-Blank Questions', () => {
     // Trigger onBlur to save immediately (bypasses debounce)
     await input2.blur()
 
-    // Submit quiz
+    // Submit quiz — all questions answered, so no confirmation dialog
     await page.getByRole('button', { name: /submit/i }).click()
-
-    // Handle confirmation dialog if present
-    const confirmButton = page.getByRole('button', { name: /confirm|submit|yes/i })
-    if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await confirmButton.click()
-    }
 
     // Verify perfect score (2 + 3 = 5 points)
     await expect(page.locator('p').filter({ hasText: '5 of 5 correct' })).toBeVisible()
@@ -200,14 +194,12 @@ test.describe('E14-S03: Display Fill-in-Blank Questions', () => {
     // Navigate to Q2
     await page.getByRole('button', { name: /next/i }).click()
 
-    // Q2: Leave blank
+    // Q2: Leave blank — submit triggers confirmation dialog
     await page.getByRole('button', { name: /submit/i }).click()
 
-    // Handle confirmation dialog if present
-    const confirmButton = page.getByRole('button', { name: /confirm|submit|yes/i })
-    if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await confirmButton.click()
-    }
+    // Dialog appears because Q2 is unanswered
+    await expect(page.getByRole('alertdialog')).toBeVisible()
+    await page.getByRole('button', { name: /submit anyway/i }).click()
 
     // Verify 0 score
     await expect(page.locator('p').filter({ hasText: '0 of 5 correct' })).toBeVisible()

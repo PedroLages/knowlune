@@ -1,7 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import Markdown from 'react-markdown'
 import { Input } from '@/app/components/ui/input'
-import { cn } from '@/app/components/ui/utils'
 import type { Question } from '@/types/quiz'
 import type { QuestionDisplayMode } from '../QuestionDisplay'
 import { REMARK_PLUGINS, MARKDOWN_COMPONENTS } from './markdown-config'
@@ -19,36 +18,46 @@ interface FillInBlankQuestionProps {
 export function FillInBlankQuestion({ question, value, onChange, mode }: FillInBlankQuestionProps) {
   const isActive = mode === 'active'
   const legendId = useId()
-  const inputId = useId()
+  const counterId = useId()
 
   // Local state for debounced input
   const [inputValue, setInputValue] = useState(value ?? '')
 
-  // Track whether this is the initial mount to avoid triggering onChange
-  const isInitialMount = useRef(true)
+  // Tracks whether the change was user-initiated (not a prop sync)
+  const userEdited = useRef(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Sync external value when navigating back to this question
   useEffect(() => {
     setInputValue(value ?? '')
   }, [value])
 
-  // Debounced save to store (300ms)
+  // Debounced save to store (300ms) — only fires for user edits
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false
-      return
-    }
+    if (!userEdited.current) return
 
-    const timer = setTimeout(() => {
+    timerRef.current = setTimeout(() => {
       onChange(inputValue)
+      userEdited.current = false
     }, DEBOUNCE_MS)
 
-    return () => clearTimeout(timer)
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
   }, [inputValue, onChange])
 
+  function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
+    userEdited.current = true
+    setInputValue(e.target.value)
+  }
+
   function handleBlur() {
-    // Save immediately on blur (no debounce wait)
-    onChange(inputValue)
+    // Cancel pending debounce and save immediately
+    if (timerRef.current) clearTimeout(timerRef.current)
+    if (userEdited.current) {
+      onChange(inputValue)
+      userEdited.current = false
+    }
   }
 
   return (
@@ -63,20 +72,25 @@ export function FillInBlankQuestion({ question, value, onChange, mode }: FillInB
         </Markdown>
       </legend>
 
-      <div className={cn('space-y-2', !isActive && 'opacity-60')}>
+      <div className="space-y-2">
         <Input
-          id={inputId}
           type="text"
           value={inputValue}
-          onChange={e => setInputValue(e.target.value)}
+          onChange={handleInput}
           onBlur={handleBlur}
           placeholder="Type your answer here"
           maxLength={MAX_LENGTH}
           disabled={!isActive}
           aria-labelledby={legendId}
-          className="w-full max-w-md"
+          aria-describedby={counterId}
+          className="w-full max-w-lg min-h-[44px]"
         />
-        <span className="text-sm text-muted-foreground block">
+        <span
+          id={counterId}
+          className="text-sm text-muted-foreground block"
+          aria-live="polite"
+          aria-atomic="true"
+        >
           {inputValue.length} / {MAX_LENGTH}
         </span>
       </div>
