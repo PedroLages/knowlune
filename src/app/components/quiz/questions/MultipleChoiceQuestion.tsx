@@ -82,7 +82,10 @@ export function MultipleChoiceQuestion({
               )}
             >
               {isActive && (
-                <kbd aria-hidden="true" className="inline-flex items-center justify-center w-5 h-5 shrink-0 rounded border border-border bg-muted text-muted-foreground text-xs font-mono">
+                <kbd
+                  aria-hidden="true"
+                  className="inline-flex items-center justify-center w-5 h-5 shrink-0 rounded border border-border bg-muted text-muted-foreground text-xs font-mono"
+                >
                   {index + 1}
                 </kbd>
               )}
