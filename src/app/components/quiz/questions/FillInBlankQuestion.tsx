@@ -16,12 +16,7 @@ interface FillInBlankQuestionProps {
   mode: QuestionDisplayMode
 }
 
-export function FillInBlankQuestion({
-  question,
-  value,
-  onChange,
-  mode,
-}: FillInBlankQuestionProps) {
+export function FillInBlankQuestion({ question, value, onChange, mode }: FillInBlankQuestionProps) {
   const isActive = mode === 'active'
   const legendId = useId()
   const inputId = useId()
@@ -73,7 +68,7 @@ export function FillInBlankQuestion({
           id={inputId}
           type="text"
           value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
+          onChange={e => setInputValue(e.target.value)}
           onBlur={handleBlur}
           placeholder="Type your answer here"
           maxLength={MAX_LENGTH}

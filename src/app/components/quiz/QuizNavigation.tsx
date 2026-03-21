@@ -40,9 +40,7 @@ export function QuizNavigation({
       />
       <QuestionGrid
         total={
-          progress.questionOrder.length > 0
-            ? progress.questionOrder.length
-            : quiz.questions.length
+          progress.questionOrder.length > 0 ? progress.questionOrder.length : quiz.questions.length
         }
         answers={progress.answers}
         questionOrder={progress.questionOrder}
