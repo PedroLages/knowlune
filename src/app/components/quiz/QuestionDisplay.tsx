@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import type { Question } from '@/types/quiz'
 import { MultipleChoiceQuestion } from './questions/MultipleChoiceQuestion'
 import { MultipleSelectQuestion } from './questions/MultipleSelectQuestion'
+import { FillInBlankQuestion } from './questions/FillInBlankQuestion'
 import { TrueFalseQuestion } from './questions/TrueFalseQuestion'
 
 /**
@@ -62,6 +63,15 @@ export function QuestionDisplay({
           question={question}
           value={arrayValue}
           onChange={arrayOnChange}
+          mode={mode}
+        />
+      )
+    case 'fill-in-blank':
+      return (
+        <FillInBlankQuestion
+          question={question}
+          value={stringValue}
+          onChange={stringOnChange}
           mode={mode}
         />
       )
