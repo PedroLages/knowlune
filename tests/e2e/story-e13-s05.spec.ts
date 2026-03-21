@@ -100,7 +100,10 @@ async function getCurrentQuestionText(page: import('@playwright/test').Page): Pr
 }
 
 /** Collect the order of all questions by navigating through them */
-async function collectQuestionOrder(page: import('@playwright/test').Page, count: number): Promise<string[]> {
+async function collectQuestionOrder(
+  page: import('@playwright/test').Page,
+  count: number
+): Promise<string[]> {
   const order: string[] = []
   for (let i = 0; i < count; i++) {
     const text = await getCurrentQuestionText(page)
