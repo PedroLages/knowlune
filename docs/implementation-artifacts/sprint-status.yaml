@@ -43,7 +43,7 @@
 # - Deferred stories retained: 1-5 (file detection), 2-10 (captions)
 
 generated: 2026-03-15
-last_updated: 2026-03-21  # E14-S03 in-progress
+last_updated: 2026-03-21  # E14-S03 done
 project: Elearningplatformwireframes
 project_key: NOKEY
 tracking_system: file-system
@@ -224,7 +224,7 @@ development_status:
   epic-14: in-progress
   14-1-display-truefalse-questions: done
   14-2-display-multiple-select-questions-with-partial-credit: done
-  14-3-display-fill-in-blank-questions: in-progress
+  14-3-display-fill-in-blank-questions: done
   14-4-support-rich-text-formatting-in-questions: backlog
   epic-14-retrospective: optional
 
