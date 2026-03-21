@@ -1,7 +1,9 @@
+import { type Ref } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 
 interface QuizActionsProps {
+  ref?: Ref<HTMLButtonElement>
   onPrevious: () => void
   onNext: () => void
   onSubmit: () => void
@@ -11,6 +13,7 @@ interface QuizActionsProps {
 }
 
 export function QuizActions({
+  ref,
   onPrevious,
   onNext,
   onSubmit,
@@ -31,7 +34,7 @@ export function QuizActions({
       </Button>
 
       {!isLast && (
-        <Button variant="outline" className="rounded-xl min-h-[44px]" onClick={onNext}>
+        <Button ref={ref} variant="outline" className="rounded-xl min-h-[44px]" onClick={onNext}>
           Next
           <ChevronRight className="size-4 ml-1" aria-hidden="true" />
         </Button>
@@ -39,6 +42,7 @@ export function QuizActions({
 
       {isLast && (
         <Button
+          ref={ref}
           variant="brand"
           className="rounded-xl min-h-[44px]"
           aria-label={

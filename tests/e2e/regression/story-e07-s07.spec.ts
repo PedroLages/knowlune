@@ -71,9 +71,9 @@ async function seedCorruptedSessions(
           // Construct NaN/Infinity in-browser (survives IDB but not structured-clone)
           if (specials) {
             for (const { id, field, expr } of specials) {
-              const found = corruptedSessions.find(
-                (s: Record<string, unknown>) => s.id === id
-              ) as Record<string, unknown> | undefined
+              const found = corruptedSessions.find((s: Record<string, unknown>) => s.id === id) as
+                | Record<string, unknown>
+                | undefined
               if (found) {
                 const clone = { ...found }
                 if (expr === 'NaN') clone[field] = Number('not-a-number')

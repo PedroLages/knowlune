@@ -1,8 +1,10 @@
+import { type Ref } from 'react'
 import type { Quiz, QuizProgress } from '@/types/quiz'
 import { QuizActions } from './QuizActions'
 import { QuestionGrid } from './QuestionGrid'
 
 interface QuizNavigationProps {
+  ref?: Ref<HTMLButtonElement>
   quiz: Quiz
   progress: QuizProgress
   onPrevious: () => void
@@ -13,6 +15,7 @@ interface QuizNavigationProps {
 }
 
 export function QuizNavigation({
+  ref,
   quiz,
   progress,
   onPrevious,
@@ -27,6 +30,7 @@ export function QuizNavigation({
       className="mt-6 flex flex-col sm:flex-row items-start sm:items-center gap-4"
     >
       <QuizActions
+        ref={ref}
         onPrevious={onPrevious}
         onNext={onNext}
         onSubmit={onSubmit}
@@ -36,7 +40,9 @@ export function QuizNavigation({
       />
       <QuestionGrid
         total={
-          progress.questionOrder.length > 0 ? progress.questionOrder.length : quiz.questions.length
+          progress.questionOrder.length > 0
+            ? progress.questionOrder.length
+            : quiz.questions.length
         }
         answers={progress.answers}
         questionOrder={progress.questionOrder}

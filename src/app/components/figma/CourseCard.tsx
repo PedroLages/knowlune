@@ -552,7 +552,10 @@ export function CourseCard({
       case 'overview':
         return (
           <div className="p-5 flex-1 flex flex-col">
-            <Badge variant="secondary" className="mb-2 bg-brand-soft text-brand-soft-foreground w-fit">
+            <Badge
+              variant="secondary"
+              className="mb-2 bg-brand-soft text-brand-soft-foreground w-fit"
+            >
               {formatCategory(course.category)}
             </Badge>
             <h3 className="font-semibold text-base line-clamp-2 mb-1 group-hover:text-brand transition-colors">

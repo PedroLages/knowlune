@@ -825,10 +825,7 @@ export function LessonPlayer() {
           <div />
         )}
         {nextLesson ? (
-          <Button
-            variant="brand"
-            onClick={() => navigate(`/courses/${courseId}/${nextLesson.id}`)}
-          >
+          <Button variant="brand" onClick={() => navigate(`/courses/${courseId}/${nextLesson.id}`)}>
             Next
             <ChevronRight className="ml-1 h-4 w-4" />
           </Button>

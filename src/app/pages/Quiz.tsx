@@ -309,9 +309,12 @@ export function Quiz() {
               value={currentAnswer}
               onChange={answer => {
                 submitAnswer(currentQuestionId, answer)
-                // Auto-focus Next/Submit button after answering for quick Enter key advancement
-                cancelAnimationFrame(rafRef.current)
-                rafRef.current = requestAnimationFrame(() => nextBtnRef.current?.focus())
+                // Auto-focus Next/Submit button for single-answer types (MC, TF, FIB)
+                // Skip for multiple-select — user needs to toggle multiple checkboxes
+                if (currentQuestion.type !== 'multiple-select') {
+                  cancelAnimationFrame(rafRef.current)
+                  rafRef.current = requestAnimationFrame(() => nextBtnRef.current?.focus())
+                }
               }}
               mode="active"
             />
@@ -332,6 +335,7 @@ export function Quiz() {
         )}
 
         <QuizNavigation
+          ref={nextBtnRef}
           quiz={currentQuiz}
           progress={currentProgress}
           onPrevious={goToPrevQuestion}

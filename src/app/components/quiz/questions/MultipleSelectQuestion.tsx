@@ -1,58 +1,68 @@
 import { useId } from 'react'
 import Markdown from 'react-markdown'
-import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group'
+import { Checkbox } from '@/app/components/ui/checkbox'
 import { cn } from '@/app/components/ui/utils'
 import type { Question } from '@/types/quiz'
 import type { QuestionDisplayMode } from '../QuestionDisplay'
 import { REMARK_PLUGINS, MARKDOWN_COMPONENTS } from './markdown-config'
 
-interface TrueFalseQuestionProps {
+interface MultipleSelectQuestionProps {
   question: Question
-  value: string | undefined
-  onChange: (answer: string) => void
+  value: string[] | undefined
+  onChange: (answer: string[]) => void
   mode: QuestionDisplayMode
 }
 
-export function TrueFalseQuestion({ question, value, onChange, mode }: TrueFalseQuestionProps) {
+export function MultipleSelectQuestion({
+  question,
+  value = [],
+  onChange,
+  mode,
+}: MultipleSelectQuestionProps) {
   const options = question.options ?? []
   const isActive = mode === 'active'
   const legendId = useId()
+  const hintId = useId()
 
-  if (process.env.NODE_ENV !== 'production' && options.length !== 2) {
+  if (process.env.NODE_ENV !== 'production' && options.length < 2) {
     console.warn(
-      `[TrueFalseQuestion] Question "${question.id}" has ${options.length} options (expected 2)`
+      `[MultipleSelectQuestion] Question "${question.id}" has ${options.length} options (expected ≥2)`
     )
+  }
+
+  function handleToggle(option: string) {
+    if (!isActive) return
+    const newValue = value.includes(option) ? value.filter(v => v !== option) : [...value, option]
+    onChange(newValue)
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (!isActive || e.nativeEvent.isComposing || e.metaKey || e.ctrlKey || e.altKey) return
     const num = parseInt(e.key, 10)
-    if (num >= 1 && num <= options.length) {
+    if (num >= 1 && num <= Math.min(options.length, 9)) {
       e.preventDefault()
-      onChange(options[num - 1])
+      handleToggle(options[num - 1])
     }
   }
 
   return (
-    <fieldset className="mt-6" onKeyDown={handleKeyDown}>
+    <fieldset className="mt-6" aria-describedby={hintId} onKeyDown={handleKeyDown}>
       <legend
         id={legendId}
         data-testid="question-text"
-        className="text-lg lg:text-xl text-foreground leading-relaxed pb-4"
+        className="text-lg lg:text-xl text-foreground leading-relaxed pb-2"
       >
         <Markdown remarkPlugins={REMARK_PLUGINS} components={MARKDOWN_COMPONENTS}>
           {question.text}
         </Markdown>
       </legend>
+      <span id={hintId} className="text-sm text-muted-foreground italic block mb-4">
+        Select all that apply
+      </span>
 
-      <RadioGroup
-        value={value ?? ''}
-        onValueChange={isActive ? onChange : undefined}
-        disabled={!isActive}
-        className="grid grid-cols-1 lg:grid-cols-2 gap-3"
-      >
+      <div className="space-y-3">
         {options.map((option, index) => {
-          const isSelected = value === option
+          const isSelected = value.includes(option)
           const shortcutNum = index + 1
 
           return (
@@ -67,7 +77,7 @@ export function TrueFalseQuestion({ question, value, onChange, mode }: TrueFalse
                 'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2'
               )}
             >
-              {isActive && (
+              {isActive && shortcutNum <= 9 && (
                 <kbd
                   aria-hidden="true"
                   className="inline-flex items-center justify-center size-5 shrink-0 rounded border border-border bg-muted text-muted-foreground text-xs font-mono"
@@ -75,12 +85,17 @@ export function TrueFalseQuestion({ question, value, onChange, mode }: TrueFalse
                   {shortcutNum}
                 </kbd>
               )}
-              <RadioGroupItem value={option} className="shrink-0" />
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={() => handleToggle(option)}
+                disabled={!isActive}
+                className="shrink-0"
+              />
               <span className="text-base text-foreground leading-relaxed">{option}</span>
             </label>
           )
         })}
-      </RadioGroup>
+      </div>
     </fieldset>
   )
 }

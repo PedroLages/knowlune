@@ -1,4 +1,4 @@
-import { useId, useMemo } from 'react'
+import { useId } from 'react'
 import Markdown from 'react-markdown'
 import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group'
 import { cn } from '@/app/components/ui/utils'
@@ -23,16 +23,23 @@ export function MultipleChoiceQuestion({
   const isActive = mode === 'active'
   const legendId = useId()
 
-  useMemo(() => {
-    if (options.length < 2 || options.length > 6) {
-      console.warn(
-        `[MultipleChoiceQuestion] Question "${question.id}" has ${options.length} options (expected 2-6)`
-      )
+  if (process.env.NODE_ENV !== 'production' && (options.length < 2 || options.length > 6)) {
+    console.warn(
+      `[MultipleChoiceQuestion] Question "${question.id}" has ${options.length} options (expected 2-6)`
+    )
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (!isActive || e.nativeEvent.isComposing || e.metaKey || e.ctrlKey || e.altKey) return
+    const num = parseInt(e.key, 10)
+    if (num >= 1 && num <= Math.min(options.length, 9)) {
+      e.preventDefault()
+      onChange(options[num - 1])
     }
-  }, [question.id, options.length])
+  }
 
   return (
-    <fieldset className="mt-6">
+    <fieldset className="mt-6" onKeyDown={handleKeyDown}>
       <legend
         id={legendId}
         data-testid="question-text"
@@ -47,16 +54,16 @@ export function MultipleChoiceQuestion({
         value={value ?? ''}
         onValueChange={isActive ? onChange : undefined}
         disabled={!isActive}
-        aria-labelledby={legendId}
       >
         {options.map((option, index) => {
           const isSelected = value === option
+          const shortcutNum = index + 1
 
           return (
             <label
               key={`${index}-${option}`}
               className={cn(
-                'flex items-start gap-3 rounded-xl p-4 min-h-12 cursor-pointer transition-colors duration-150 motion-reduce:transition-none border-2',
+                'flex items-center gap-3 rounded-xl p-4 min-h-12 cursor-pointer transition-colors duration-150 motion-reduce:transition-none border-2',
                 isSelected
                   ? 'border-brand bg-brand-soft'
                   : cn('border-border bg-card', isActive && 'hover:bg-accent'),
@@ -64,7 +71,15 @@ export function MultipleChoiceQuestion({
                 'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2'
               )}
             >
-              <RadioGroupItem value={option} className="mt-0.5 shrink-0" />
+              {isActive && shortcutNum <= 9 && (
+                <kbd
+                  aria-hidden="true"
+                  className="inline-flex items-center justify-center size-5 shrink-0 rounded border border-border bg-muted text-muted-foreground text-xs font-mono"
+                >
+                  {shortcutNum}
+                </kbd>
+              )}
+              <RadioGroupItem value={option} className="shrink-0" />
               <span className="text-base text-foreground leading-relaxed">{option}</span>
             </label>
           )
