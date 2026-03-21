@@ -78,10 +78,25 @@ describe('QuestionDisplay', () => {
     })
   })
 
+  it('dispatches fill-in-blank questions to FillInBlankQuestion', () => {
+    render(
+      <QuestionDisplay
+        question={makeQuestion({ type: 'fill-in-blank', correctAnswer: 'React' })}
+        value={undefined}
+        onChange={vi.fn()}
+        mode="active"
+      />
+    )
+
+    expect(screen.getByRole('textbox')).toBeInTheDocument()
+    expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument()
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+  })
+
   it('shows unsupported type fallback for unknown question types', () => {
     render(
       <QuestionDisplay
-        question={makeQuestion({ type: 'fill-in-blank' as Question['type'] })}
+        question={makeQuestion({ type: 'essay' as Question['type'] })}
         value={undefined}
         onChange={vi.fn()}
         mode="active"
@@ -94,7 +109,7 @@ describe('QuestionDisplay', () => {
   it('unsupported type fallback has role="status"', () => {
     render(
       <QuestionDisplay
-        question={makeQuestion({ type: 'fill-in-blank' as Question['type'] })}
+        question={makeQuestion({ type: 'essay' as Question['type'] })}
         value={undefined}
         onChange={vi.fn()}
         mode="active"
