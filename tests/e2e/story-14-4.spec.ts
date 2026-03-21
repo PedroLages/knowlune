@@ -169,7 +169,7 @@ test.describe('E14-S04: Rich Text Formatting', () => {
     await expect(pre).toBeVisible()
 
     // The pre element should have overflow-x: auto (scrollable)
-    const overflowX = await pre.evaluate((el) => getComputedStyle(el).overflowX)
+    const overflowX = await pre.evaluate(el => getComputedStyle(el).overflowX)
     expect(overflowX).toBe('auto')
   })
 
@@ -181,7 +181,7 @@ test.describe('E14-S04: Rich Text Formatting', () => {
     await expect(pre).toBeVisible()
 
     // Verify background color exists (design token bg-surface-sunken)
-    const bgColor = await pre.evaluate((el) => getComputedStyle(el).backgroundColor)
+    const bgColor = await pre.evaluate(el => getComputedStyle(el).backgroundColor)
     expect(bgColor).not.toBe('')
     expect(bgColor).not.toBe('rgba(0, 0, 0, 0)')
   })
@@ -213,7 +213,7 @@ test.describe('E14-S04: Rich Text Formatting', () => {
     await expect(pre).toBeVisible()
 
     // Code block should scroll independently (overflow-x: auto)
-    const overflowX = await pre.evaluate((el) => getComputedStyle(el).overflowX)
+    const overflowX = await pre.evaluate(el => getComputedStyle(el).overflowX)
     expect(overflowX).toBe('auto')
   })
 

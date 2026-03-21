@@ -4,9 +4,7 @@ import { MarkdownRenderer } from '../MarkdownRenderer'
 
 describe('MarkdownRenderer', () => {
   it('renders fenced code blocks in <pre> with bg-surface-sunken', () => {
-    const { container } = render(
-      <MarkdownRenderer content={'```\nconst x = 1;\n```'} />
-    )
+    const { container } = render(<MarkdownRenderer content={'```\nconst x = 1;\n```'} />)
 
     const pre = container.querySelector('pre')
     expect(pre).toBeInTheDocument()
@@ -18,9 +16,7 @@ describe('MarkdownRenderer', () => {
   })
 
   it('renders inline code with bg-muted styling', () => {
-    const { container } = render(
-      <MarkdownRenderer content="Use `console.log` to debug" />
-    )
+    const { container } = render(<MarkdownRenderer content="Use `console.log` to debug" />)
 
     const code = container.querySelector('code')
     expect(code).toBeInTheDocument()
@@ -31,9 +27,7 @@ describe('MarkdownRenderer', () => {
   })
 
   it('renders unordered lists with list-disc', () => {
-    const { container } = render(
-      <MarkdownRenderer content={'- Item one\n- Item two'} />
-    )
+    const { container } = render(<MarkdownRenderer content={'- Item one\n- Item two'} />)
 
     const ul = container.querySelector('ul')
     expect(ul).toBeInTheDocument()
@@ -45,9 +39,7 @@ describe('MarkdownRenderer', () => {
   })
 
   it('renders ordered lists with list-decimal', () => {
-    const { container } = render(
-      <MarkdownRenderer content={'1. First\n2. Second'} />
-    )
+    const { container } = render(<MarkdownRenderer content={'1. First\n2. Second'} />)
 
     const ol = container.querySelector('ol')
     expect(ol).toBeInTheDocument()
@@ -56,9 +48,7 @@ describe('MarkdownRenderer', () => {
   })
 
   it('renders bold text as <strong>', () => {
-    const { container } = render(
-      <MarkdownRenderer content="This is **bold** text" />
-    )
+    const { container } = render(<MarkdownRenderer content="This is **bold** text" />)
 
     const strong = container.querySelector('strong')
     expect(strong).toBeInTheDocument()
@@ -66,9 +56,7 @@ describe('MarkdownRenderer', () => {
   })
 
   it('renders italic text as <em>', () => {
-    const { container } = render(
-      <MarkdownRenderer content="This is *italic* text" />
-    )
+    const { container } = render(<MarkdownRenderer content="This is *italic* text" />)
 
     const em = container.querySelector('em')
     expect(em).toBeInTheDocument()
@@ -76,9 +64,7 @@ describe('MarkdownRenderer', () => {
   })
 
   it('renders paragraphs with my-2 spacing', () => {
-    const { container } = render(
-      <MarkdownRenderer content={'Paragraph one\n\nParagraph two'} />
-    )
+    const { container } = render(<MarkdownRenderer content={'Paragraph one\n\nParagraph two'} />)
 
     const paragraphs = container.querySelectorAll('p')
     expect(paragraphs.length).toBeGreaterThanOrEqual(2)
@@ -88,18 +74,14 @@ describe('MarkdownRenderer', () => {
   })
 
   it('applies className prop to wrapper div', () => {
-    const { container } = render(
-      <MarkdownRenderer content="Hello" className="custom-class" />
-    )
+    const { container } = render(<MarkdownRenderer content="Hello" className="custom-class" />)
 
     const wrapper = container.firstElementChild
     expect(wrapper?.className).toContain('custom-class')
   })
 
   it('resets inline code styles inside <pre> blocks', () => {
-    const { container } = render(
-      <MarkdownRenderer content={'```javascript\nconst x = 1;\n```'} />
-    )
+    const { container } = render(<MarkdownRenderer content={'```javascript\nconst x = 1;\n```'} />)
 
     const pre = container.querySelector('pre')
     expect(pre).toBeInTheDocument()

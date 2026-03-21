@@ -45,7 +45,12 @@ export function MultipleSelectQuestion({
   }
 
   return (
-    <fieldset className="mt-6" aria-labelledby={labelId} aria-describedby={hintId} onKeyDown={handleKeyDown}>
+    <fieldset
+      className="mt-6"
+      aria-labelledby={labelId}
+      aria-describedby={hintId}
+      onKeyDown={handleKeyDown}
+    >
       <div
         id={labelId}
         data-testid="question-text"
