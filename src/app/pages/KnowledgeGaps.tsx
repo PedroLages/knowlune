@@ -199,7 +199,8 @@ export function KnowledgeGaps() {
           size="lg"
           onClick={handleAnalyze}
           disabled={!hasCourses || pageState === 'analyzing'}
-          className="bg-brand hover:bg-brand-hover min-w-44"
+          variant="brand"
+          className="min-w-44"
           data-testid="analyze-gaps-button"
         >
           {pageState === 'analyzing' ? (

@@ -130,7 +130,7 @@ export function CourseDetail() {
             </div>
 
             {resumeLesson && (
-              <Button asChild className="bg-brand hover:bg-brand-hover">
+              <Button variant="brand" asChild>
                 <Link to={`/courses/${course.id}/${resumeLesson}`}>
                   <Play className="mr-2 h-4 w-4" />
                   {lastWatchedLesson ? 'Continue Learning' : 'Start Course'}

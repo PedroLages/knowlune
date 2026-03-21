@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { calculateMomentumScore, getMomentumTier } from '@/lib/momentum'
+import type { StudySession } from '@/data/types'
 import { createStudySession } from '../../../tests/support/fixtures/factories/session-factory'
 
 function makeSession(daysAgo: number, courseId = 'course-1') {
@@ -211,3 +212,92 @@ describe('calculateMomentumScore — score clamping', () => {
     expect(result.score).toBeLessThanOrEqual(100)
   })
 })
+
+// ── corrupted session filtering ─────────────────────────────────────
+
+describe('calculateMomentumScore — corrupted session filtering', () => {
+  const base = {
+    courseId: 'c1',
+    totalLessons: 10,
+    completionPercent: 0,
+  }
+
+  it('returns score 0, tier cold when all sessions are corrupted', () => {
+    const corrupted = [
+      { courseId: 123, startTime: FIXED_DATE, duration: 1800 }, // non-string courseId
+      { courseId: 'c1', startTime: 'not-a-date', duration: 1800 }, // bad timestamp
+      { courseId: 'c1', startTime: FIXED_DATE, duration: -100 }, // negative duration
+    ] as unknown as StudySession[]
+
+    const result = calculateMomentumScore({ ...base, sessions: corrupted })
+    expect(result.score).toBe(0)
+    expect(result.tier).toBe('cold')
+  })
+
+  it('filters null/undefined entries without crashing', () => {
+    const sessions = [null, undefined, makeSession(0)] as unknown as StudySession[]
+    const result = calculateMomentumScore({ ...base, sessions })
+    // Only the valid session should contribute
+    expect(result.score).toBeGreaterThan(0)
+  })
+
+  it('filters sessions with non-string courseId', () => {
+    const sessions = [
+      { courseId: 42, startTime: FIXED_DATE, duration: 1800 },
+      { courseId: '', startTime: FIXED_DATE, duration: 1800 },
+    ] as unknown as StudySession[]
+    const result = calculateMomentumScore({ ...base, sessions })
+    expect(result.score).toBe(0)
+    expect(result.tier).toBe('cold')
+  })
+
+  it('filters sessions with unparseable startTime', () => {
+    const sessions = [
+      { courseId: 'c1', startTime: 'garbage', duration: 1800 },
+      { courseId: 'c1', startTime: '', duration: 1800 },
+    ] as unknown as StudySession[]
+    const result = calculateMomentumScore({ ...base, sessions })
+    expect(result.score).toBe(0)
+  })
+
+  it('filters sessions with NaN duration', () => {
+    const sessions = [
+      { courseId: 'c1', startTime: FIXED_DATE, duration: NaN },
+    ] as unknown as StudySession[]
+    const result = calculateMomentumScore({ ...base, sessions })
+    expect(result.score).toBe(0)
+  })
+
+  it('filters sessions with Infinity duration', () => {
+    const sessions = [
+      { courseId: 'c1', startTime: FIXED_DATE, duration: Infinity },
+    ] as unknown as StudySession[]
+    const result = calculateMomentumScore({ ...base, sessions })
+    expect(result.score).toBe(0)
+  })
+
+  it('valid sessions still contribute when mixed with corrupted ones', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const sessions = [
+      makeSession(0), // valid — recent session
+      { courseId: 123 } as unknown as StudySession, // corrupted
+      null as unknown as StudySession, // corrupted
+    ]
+    const result = calculateMomentumScore({ ...base, sessions })
+    expect(result.score).toBeGreaterThan(0)
+    // console.warn should fire for 2 corrupted sessions
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Skipped 2 corrupted session(s)'))
+    warnSpy.mockRestore()
+  })
+
+  it('handles undefined sessions input gracefully', () => {
+    const result = calculateMomentumScore({
+      ...base,
+      sessions: undefined as unknown as StudySession[],
+    })
+    expect(result.score).toBe(0)
+    expect(result.tier).toBe('cold')
+  })
+})
+
+const FIXED_DATE = '2026-03-15T10:00:00.000Z'
