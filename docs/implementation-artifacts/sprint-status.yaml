@@ -158,7 +158,7 @@ development_status:
   8-3-learning-velocity-and-trends: done
   8-4-retention-insights-and-activity-heatmap: done
   8-5-actionable-study-insights: done
-  epic-8-retrospective: done
+  epic-8-retrospective: optional  # was incorrectly marked done — no retrospective file exists
 
   # ──────────────────────────────────────────────────
   # Epic 9: AI Infrastructure & Platform
