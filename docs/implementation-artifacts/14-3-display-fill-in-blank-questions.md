@@ -4,8 +4,8 @@ story_name: "Display Fill-in-Blank Questions"
 status: in-progress
 started: 2026-03-21
 completed:
-reviewed: false
-review_started:
+reviewed: in-progress
+review_started: 2026-03-21
 review_gates_passed: []
 burn_in_validated: false
 ---
@@ -70,11 +70,18 @@ See [plan](plans/e14-s03-fill-in-blank-questions.md) for implementation approach
 
 ## Implementation Notes
 
-[Architecture decisions, patterns used, dependencies added]
+- Created `FillInBlankQuestion` component (~85 lines) with `useEffect` + `setTimeout` debounce pattern
+- Reused existing scoring logic from `src/lib/scoring.ts` (case-insensitive, trim comparison already scaffolded in E12-S06)
+- Added `fill-in-blank` case to `QuestionDisplay.tsx` switch — minimal integration (10 lines)
+- `onBlur` handler provides immediate save as safety net before debounce timer fires
+- `isInitialMount` ref prevents unnecessary store update on first render
 
 ## Testing Notes
 
-[Test strategy, edge cases discovered, coverage notes]
+- 7 E2E tests covering all 4 ACs, 8 unit tests in QuestionDisplay.test.tsx
+- Used `input.blur()` instead of `waitForTimeout(500)` to trigger immediate save — deterministic, no timing dependency
+- Updated "unsupported type" unit tests from `fill-in-blank` to `essay` since fill-in-blank is now supported
+- Quiz seeding uses `makeQuiz`/`makeQuestion` factories with `fill-in-blank` type
 
 ## Pre-Review Checklist
 
