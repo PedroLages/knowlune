@@ -283,9 +283,7 @@ test.describe('E14-S04: Rich Text Formatting', () => {
     // Question text container should not overflow either
     const questionText = page.locator('[data-testid="question-text"]').first()
     await expect(questionText).toBeVisible()
-    const textOverflows = await questionText.evaluate(
-      el => el.scrollWidth > el.clientWidth,
-    )
+    const textOverflows = await questionText.evaluate(el => el.scrollWidth > el.clientWidth)
     expect(textOverflows).toBe(false)
   })
 
