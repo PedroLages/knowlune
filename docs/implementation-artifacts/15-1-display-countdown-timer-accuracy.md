@@ -6,7 +6,7 @@ started: 2026-03-21
 completed:
 reviewed: in-progress
 review_started: 2026-03-22
-review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: true
 ---
 
@@ -154,15 +154,24 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+Reviewed 2026-03-22 via Playwright MCP. **No blockers.** All design tokens correct, WCAG AA contrast passes (muted 7.42:1, warning 7.00:1, destructive 4.85:1). Two MEDIUM findings:
+1. SR announces "0 minutes" below 60s — needs seconds branch in `formatMinuteAnnouncement`
+2. Near-zero timer on quiz revisit after expiry — clear `timeRemaining` on successful submit
+
+Full report: [design-review-2026-03-22-e15-s01.md](../reviews/design/design-review-2026-03-22-e15-s01.md)
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+Reviewed 2026-03-22. **1 BLOCKER**: Circular dependency between store sync (every 60s) and `useQuizTimer` effect dependency on `initialSeconds` causes timer to reset/jump every 60 seconds. Fix: memoize `timerInitialSeconds` with `useRef` to capture once on quiz start. 3 HIGH: unhandled async rejection in onExpire, syncToStore skips final 0, formatTime negative input. 3 MEDIUM: toast before submit, no expired state, "0 minutes" SR announcement.
+
+Full reports:
+- [code-review-2026-03-22-e15-s01.md](../reviews/code/code-review-2026-03-22-e15-s01.md)
+- [code-review-testing-2026-03-22-e15-s01.md](../reviews/code/code-review-testing-2026-03-22-e15-s01.md)
+- [edge-case-review-2026-03-22-e15-s01.md](../reviews/code/edge-case-review-2026-03-22-e15-s01.md)
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+Covered by the design review above — all Web Interface Guidelines checks (contrast, responsive, accessibility, tokens) passed.
 
 ## Challenges and Lessons Learned
 
