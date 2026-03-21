@@ -121,8 +121,8 @@ test.describe('E14-S03: Display Fill-in-Blank Questions', () => {
     const input = page.locator('fieldset').getByRole('textbox')
     await input.fill('React')
 
-    // Wait for debounce to save (300ms + buffer)
-    await page.waitForTimeout(500) // justified: waiting for 300ms debounce
+    // Trigger onBlur to save immediately (bypasses 300ms debounce)
+    await input.blur()
 
     // Navigate to next question
     await page.getByRole('button', { name: /next/i }).click()
@@ -160,8 +160,8 @@ test.describe('E14-S03: Display Fill-in-Blank Questions', () => {
     const input = page.locator('fieldset').getByRole('textbox')
     await input.fill('react')
 
-    // Wait for debounce
-    await page.waitForTimeout(500) // justified: waiting for 300ms debounce
+    // Trigger onBlur to save immediately (bypasses debounce)
+    await input.blur()
 
     // Navigate to Q2
     await page.getByRole('button', { name: /next/i }).click()
@@ -170,8 +170,8 @@ test.describe('E14-S03: Display Fill-in-Blank Questions', () => {
     const input2 = page.locator('fieldset').getByRole('textbox')
     await input2.fill('  Cascading Style Sheets  ')
 
-    // Wait for debounce
-    await page.waitForTimeout(500) // justified: waiting for 300ms debounce
+    // Trigger onBlur to save immediately (bypasses debounce)
+    await input2.blur()
 
     // Submit quiz
     await page.getByRole('button', { name: /submit/i }).click()
@@ -194,7 +194,8 @@ test.describe('E14-S03: Display Fill-in-Blank Questions', () => {
     const input = page.locator('fieldset').getByRole('textbox')
     await input.fill('Angular')
 
-    await page.waitForTimeout(500) // justified: waiting for 300ms debounce
+    // Trigger onBlur to save immediately (bypasses debounce)
+    await input.blur()
 
     // Navigate to Q2
     await page.getByRole('button', { name: /next/i }).click()
