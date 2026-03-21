@@ -4,9 +4,9 @@ story_name: "Support Rich Text Formatting in Questions"
 status: in-progress
 started: 2026-03-21
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-21
-review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -152,15 +152,25 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+- **H1 (FIXED)**: Code blocks overflowed card container on mobile — added `max-w-full` to `<pre>`
+- **M1 (FIXED)**: Added explicit `strong`/`em` component overrides to prevent silent regression
+- **M2 (NOTED)**: Keyboard tab order after Start Quiz — pre-existing UX pattern, not E14-S04 scope
+- Full report: `docs/reviews/design/design-review-2026-03-21-e14-s04.md`
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+- **HIGH (FIXED)**: Contrast E2E test was only checking bg non-empty — now computes actual WCAG luminance ratio using canvas pixel readback (handles oklch colors)
+- **HIGH (FIXED)**: Added dark mode E2E test for AC2 coverage
+- **MEDIUM (FIXED)**: Replaced string template with `cn()` for className conflict resolution
+- **MEDIUM (FIXED)**: Deleted dead `markdown-config.tsx`
+- **MEDIUM (FIXED)**: Added XSS safety documentation comment
+- Full report: `docs/reviews/code/code-review-2026-03-21-e14-s04.md`
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+- **FIXED**: FillInBlankQuestion input — added `autocomplete="off"`, `spellCheck={false}`, `name="quiz-answer"`, trailing ellipsis on placeholder
+- **FIXED**: Added `text-pretty` to `<p>` elements for better text wrapping
+- Full report: `docs/reviews/code/web-design-guidelines-2026-03-21-e14-s04.md`
 
 ## Challenges and Lessons Learned
 
