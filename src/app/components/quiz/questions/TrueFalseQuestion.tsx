@@ -33,7 +33,7 @@ export function TrueFalseQuestion({ question, value, onChange, mode }: TrueFalse
   }
 
   return (
-    <fieldset className="mt-6" aria-labelledby={labelId} onKeyDown={handleKeyDown}>
+    <fieldset className="mt-6 min-w-0" aria-labelledby={labelId} onKeyDown={handleKeyDown}>
       <div
         id={labelId}
         data-testid="question-text"

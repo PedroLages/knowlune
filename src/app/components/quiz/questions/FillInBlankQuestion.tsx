@@ -60,7 +60,7 @@ export function FillInBlankQuestion({ question, value, onChange, mode }: FillInB
   }
 
   return (
-    <fieldset className="mt-6" aria-labelledby={labelId}>
+    <fieldset className="mt-6 min-w-0" aria-labelledby={labelId}>
       <div
         id={labelId}
         data-testid="question-text"

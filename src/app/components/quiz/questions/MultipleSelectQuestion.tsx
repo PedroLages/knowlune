@@ -46,7 +46,7 @@ export function MultipleSelectQuestion({
 
   return (
     <fieldset
-      className="mt-6"
+      className="mt-6 min-w-0"
       aria-labelledby={labelId}
       aria-describedby={hintId}
       onKeyDown={handleKeyDown}
