@@ -81,7 +81,7 @@ describe('QuestionDisplay', () => {
   it('shows unsupported type fallback for unknown question types', () => {
     render(
       <QuestionDisplay
-        question={makeQuestion({ type: 'fill-in-blank' as Question['type'] })}
+        question={makeQuestion({ type: 'essay' as Question['type'] })}
         value={undefined}
         onChange={vi.fn()}
         mode="active"
@@ -94,7 +94,7 @@ describe('QuestionDisplay', () => {
   it('unsupported type fallback has role="status"', () => {
     render(
       <QuestionDisplay
-        question={makeQuestion({ type: 'fill-in-blank' as Question['type'] })}
+        question={makeQuestion({ type: 'essay' as Question['type'] })}
         value={undefined}
         onChange={vi.fn()}
         mode="active"
