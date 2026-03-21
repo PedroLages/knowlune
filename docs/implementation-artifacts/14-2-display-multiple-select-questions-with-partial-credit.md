@@ -4,8 +4,8 @@ story_name: "Display Multiple Select Questions with Partial Credit"
 status: in-progress
 started: 2026-03-21
 completed:
-reviewed: false
-review_started:
+reviewed: in-progress
+review_started: 2026-03-21
 review_gates_passed: []
 burn_in_validated: false
 ---
@@ -154,11 +154,16 @@ See [plan](plans/e14-s02-multiple-select-questions.md) for implementation approa
 
 ## Implementation Notes
 
-[Architecture decisions, patterns used, dependencies added]
+- **Component**: `MultipleSelectQuestion` follows the same structural pattern as `TrueFalseQuestion` and `MultipleChoiceQuestion` — fieldset/legend with card-style option wrappers. Uses shadcn/ui `Checkbox` (Radix) for native keyboard behavior (Tab between, Space to toggle).
+- **Scoring dual-path**: `isCorrectAnswer()` uses exact set-match (all-or-nothing boolean for `isCorrect`), while `calculatePointsForQuestion()` uses PCM formula for `pointsEarned`. This lets quiz results show "partially correct" status while awarding fractional points.
+- **No new dependencies**: Reuses existing Checkbox component, Markdown rendering, and quiz-factory patterns.
+- **QuestionDisplay integration**: Added `multiple-select` case with array-typed value/onChange, maintaining polymorphic dispatch pattern.
 
 ## Testing Notes
 
-[Test strategy, edge cases discovered, coverage notes]
+- **Unit tests**: Extended `scoring.test.ts` with `multiple-select` describe block covering PCM formula, clamping to 0, and all-correct case. Initially wrote tests with all-or-nothing expectations — corrected during review to match PCM ACs.
+- **E2E tests**: 7 specs covering all ACs — selection toggling, PCM scoring at 100%/33%/0%, zero-selection handling, per-option feedback indicators, and accessibility (fieldset/legend + keyboard nav). Uses `quiz-factory` for deterministic quiz seeding.
+- **Selector scoping**: Used `fieldset` scope for `data-testid="question-text"` selectors to avoid collision with the `MarkForReview` checkbox in the quiz chrome.
 
 ## Pre-Review Checklist
 
@@ -188,4 +193,6 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-(To be filled during implementation)
+- **PCM vs all-or-nothing test confusion**: Initial unit tests assumed all-or-nothing scoring for multiple-select (partial selection = 0 points). The story ACs explicitly require Partial Credit Model. Lesson: always write test expectations from the ACs, not from intuition about "how checkboxes should score."
+- **Selector collision with MarkForReview**: E2E tests for `data-testid="question-text"` initially matched both the question legend and the MarkForReview checkbox label. Fixed by scoping selectors to `fieldset` — a pattern worth reusing for future question type stories.
+- **Checkbox vs RadioGroup keyboard model**: Checkboxes use Tab to move between options (each is a separate tab stop), while RadioGroups use Arrow keys (single tab stop, arrows within group). This is a common accessibility mistake — the correct behavior comes for free from Radix primitives, but tests must verify Tab (not Arrow) navigation for checkboxes.
