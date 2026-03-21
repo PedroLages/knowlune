@@ -13,9 +13,14 @@ export const useCourseStore = create<CourseStoreState>((set, get) => ({
   isLoaded: false,
 
   loadCourses: async () => {
-    const courses = await db.courses.toArray()
-    if (courses.length > 0 || !get().isLoaded) {
-      set({ courses, isLoaded: true })
+    if (get().isLoaded && get().courses.length > 0) return
+    try {
+      const courses = await db.courses.toArray()
+      if (courses.length > 0 || !get().isLoaded) {
+        set({ courses, isLoaded: true })
+      }
+    } catch (error) {
+      console.error('[CourseStore] Failed to load courses:', error)
     }
   },
 }))

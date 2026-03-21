@@ -25,7 +25,7 @@ const AUTHORITY_LESSONS = [
 const LAST_LESSON = AUTHORITY_LESSONS[AUTHORITY_LESSONS.length - 1]
 const LAST_LESSON_URL = `/courses/authority/${LAST_LESSON}`
 
-// All 8 course IDs (for "all done" seeding)
+// All course IDs (for "all done" seeding)
 const ALL_COURSE_IDS = [
   'nci-access',
   'authority',
@@ -341,7 +341,7 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
     await expect(suggestionCard.locator('h2')).toHaveText(/confidence reboot/i)
   })
 
-  test('AC3: tiebreaker applies momentum when courses have identical tag overlap', async ({
+  test('scoring: higher tag overlap wins via primary sort despite lower momentum', async ({
     page,
     localStorage,
   }) => {
@@ -438,7 +438,7 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
     })
   })
 
-  test('E07-S06: tiebreaker selects highest momentum when tag overlap counts match', async ({
+  test('AC1 (E07-S06): momentum decides winner when equal tag overlap produces different finalScores', async ({
     page,
     localStorage,
   }) => {
@@ -457,7 +457,10 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
     //   behavior-skills-breakthrough: 'influence', 'authority'
     //
     // Both have identical tagScore = 2/7 ≈ 0.286
-    // With equal tag overlap, momentum proxy becomes the deciding factor.
+    // With equal tag overlap, momentum difference produces different finalScores.
+    // Note: The primary sort (finalScore comparison at suggestions.ts:69) resolves
+    // the ordering — the literal tiebreaker at line 72 is not reached because
+    // momentum is already embedded in finalScore via the 60/40 weighted formula.
     //
     // confidence-reboot (EXPECTED WINNER — high momentum):
     //   progress = 10/20 = 50%
@@ -502,6 +505,8 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
 
     // confidence-reboot: HIGH momentum (recent + 50% progress)
     // 20 total lessons (module-derived count used by algorithm, not totalLessons:18 field), seed 10 as complete
+    // Assumption (2026-03): confidence-reboot has 20 module-derived lessons.
+    // If lessons are added/removed, re-verify score margin remains decisive (>0.05).
     progress['confidence-reboot'] = {
       courseId: 'confidence-reboot',
       completedLessons: Array.from(
@@ -546,5 +551,9 @@ test.describe('E07-S03: Next Course Suggestion After Completion', () => {
     // Verify the suggested course is confidence-reboot (higher momentum wins)
     const suggestionCard = page.getByTestId('next-course-suggestion')
     await expect(suggestionCard.locator('h2')).toHaveText(/confidence reboot/i)
+
+    // Verify "Start Course" navigates to the correct course URL
+    await page.getByRole('button', { name: /start course/i }).click()
+    await expect(page).toHaveURL(/\/courses\/confidence-reboot/, { timeout: TIMEOUTS.LONG })
   })
 })

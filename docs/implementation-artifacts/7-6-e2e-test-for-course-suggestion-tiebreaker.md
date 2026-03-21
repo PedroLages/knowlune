@@ -5,7 +5,7 @@ status: done
 started: 2026-03-19
 completed: 2026-03-19
 reviewed: true
-review_started: 2026-03-19
+review_started: 2026-03-21
 review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review-skipped, web-design-guidelines-skipped, code-review, code-review-testing]
 burn_in_validated: false
 ---
@@ -71,15 +71,27 @@ Skipped — no UI changes in this story (test-only).
 
 ## Code Review Feedback
 
-**BLOCKER (confidence 95):** Wrong course ID `'behavior-skills'` used for seeding progress data — actual ID is `'behavior-skills-breakthrough'`. The seeded progress is never found by the algorithm, so the test passes via primary score sort, not the tiebreaker path. Fix: change all `'behavior-skills'` references to `'behavior-skills-breakthrough'`.
+### Review 2 (2026-03-21) — All prior blockers resolved
 
-**HIGH (confidence 80):** `textContent()` call without Playwright auto-retry at line 556. Replace with `await expect(suggestionCard.locator('h2')).toHaveText(/confidence reboot/i)`.
+**Prior findings (2026-03-19) — all resolved:**
+- ~~BLOCKER: Wrong course ID `'behavior-skills'`~~ → Fixed to `'behavior-skills-breakthrough'`
+- ~~HIGH: `textContent()` without auto-retry~~ → Replaced with `toHaveText()` assertion
+- ~~HIGH: `ALL_COURSE_IDS` wrong ID~~ → Corrected
+- ~~MEDIUM: Test name "AC2" collision~~ → Renamed with `E07-S06:` prefix
 
-**HIGH (confidence 92):** Pre-existing `ALL_COURSE_IDS` includes `'behavior-skills'` instead of `'behavior-skills-breakthrough'` — likely root cause of AC5 pre-existing failure.
+**New findings (2026-03-21):**
 
-**MEDIUM:** Test name "AC2" collides with existing AC2 test at line 244. Rename for clarity.
+**HIGH (confidence 82, pre-existing):** `loadCourses()` in `useCourseStore.ts:15-19` lost its idempotency guard — every component mount now performs an unnecessary IndexedDB read. Not introduced by this story but amplified by the fix.
 
-Full report: docs/reviews/code/code-review-2026-03-19-e07-s06.md
+**HIGH (confidence 95, naming):** Test claims to exercise tiebreaker code path (`suggestions.ts:72`) but momentum difference produces different `finalScore` values — primary sort at line 69 resolves before tiebreaker fires. Correct behavior is asserted, but test name is imprecise.
+
+**MEDIUM (confidence 78):** AC3 label collision — two tests carry "AC3" label in CI output. Minor traceability ambiguity.
+
+**MEDIUM (confidence 68):** New test doesn't verify "Start Course" navigation to the correct URL (AC3 pattern includes this stronger assertion).
+
+Full report: docs/reviews/code/code-review-2026-03-21-e07-s06.md
+Test coverage report: docs/reviews/code/code-review-testing-2026-03-21-e07-s06.md
+Edge case report: docs/reviews/code/edge-case-review-2026-03-21-e07-s06.md
 
 ## Web Design Guidelines Review
 
