@@ -7,9 +7,9 @@
  * - AC3: Improvement summary (current vs. previous best)
  * - AC4: Lesson page shows "Retake Quiz" for completed quizzes
  */
-import { test, expect } from '../support/fixtures'
-import { makeQuiz, makeQuestion, makeAttempt } from '../support/fixtures/factories/quiz-factory'
-import { seedIndexedDBStore } from '../support/helpers/indexeddb-seed'
+import { test, expect } from '../../support/fixtures'
+import { makeQuiz, makeQuestion, makeAttempt } from '../../support/fixtures/factories/quiz-factory'
+import { seedIndexedDBStore } from '../../support/helpers/indexeddb-seed'
 
 // ---------------------------------------------------------------------------
 // Test data
