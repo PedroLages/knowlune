@@ -43,9 +43,7 @@ export const navigationGroups: NavigationGroup[] = [
   },
   {
     label: 'Connect',
-    items: [
-      { name: 'Instructors', path: '/instructors', icon: Users },
-    ],
+    items: [{ name: 'Instructors', path: '/instructors', icon: Users }],
   },
   {
     label: 'Track',

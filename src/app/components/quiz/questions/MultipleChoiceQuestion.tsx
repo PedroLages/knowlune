@@ -39,7 +39,11 @@ export function MultipleChoiceQuestion({
 
   return (
     <fieldset className="mt-6">
-      <legend id={legendId} className="text-lg lg:text-xl text-foreground leading-relaxed pb-4">
+      <legend
+        id={legendId}
+        data-testid="question-text"
+        className="text-lg lg:text-xl text-foreground leading-relaxed pb-4"
+      >
         <Markdown remarkPlugins={REMARK_PLUGINS} components={MARKDOWN_COMPONENTS}>
           {question.text}
         </Markdown>

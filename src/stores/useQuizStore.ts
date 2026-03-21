@@ -4,6 +4,7 @@ import type { Quiz, QuizProgress, QuizAttempt } from '@/types/quiz'
 import { db } from '@/db'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { calculateQuizScore } from '@/lib/scoring'
+import { fisherYatesShuffle } from '@/lib/shuffle'
 import { toastError } from '@/lib/toastHelpers'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 
@@ -26,16 +27,6 @@ interface QuizState {
   navigateToQuestion: (index: number) => void
   toggleReviewMark: (questionId: string) => void
   clearError: () => void
-}
-
-/** Fisher-Yates shuffle — returns a new array */
-function shuffleArray<T>(arr: T[]): T[] {
-  const result = [...arr]
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[result[i], result[j]] = [result[j], result[i]]
-  }
-  return result
 }
 
 export const useQuizStore = create<QuizState>()(
@@ -62,8 +53,18 @@ export const useQuizStore = create<QuizState>()(
             return
           }
 
+          if (!quiz.questions?.length) {
+            set({
+              currentQuiz: null,
+              currentProgress: null,
+              isLoading: false,
+              error: 'Quiz has no questions',
+            })
+            return
+          }
+
           const questionOrder = quiz.shuffleQuestions
-            ? shuffleArray(quiz.questions.map(q => q.id))
+            ? fisherYatesShuffle(quiz.questions.map(q => q.id))
             : quiz.questions.map(q => q.id)
 
           const progress: QuizProgress = {
