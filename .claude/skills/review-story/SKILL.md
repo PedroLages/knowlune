@@ -131,6 +131,19 @@ Mark the first todo as `in_progress` and proceed:
 
    **TodoWrite**: Mark "Identify story and detect resumption" → `completed`. Mark "Pre-checks: build" → `in_progress`.
 
+   **Carried debt reminder** (Epic 16 retro — make debt visible during reviews):
+
+   Extract the epic number from the story ID (e.g., E16-S03 → epic 16). Find the most recent retrospective file matching `${BASE_PATH}/docs/implementation-artifacts/epic-*-retro-*.md` for the PREVIOUS epic (epic number - 1). If found, scan the "Technical Debt" or "Technical Debt Resolution" section for items marked HIGH or MEDIUM priority. If any exist, display a non-blocking reminder:
+
+   ```
+   📋 Carried Debt Reminder (from Epic {N-1} retro):
+   - [HIGH] {debt item description}
+   - [MEDIUM] {debt item description}
+   Tip: If this story touches related files, consider addressing these items.
+   ```
+
+   This is informational only — it does NOT block the review. Its purpose is to keep debt visible so it doesn't silently accumulate across epics.
+
 5. **Pre-checks** (always run — fast, validates current state):
 
    **Pre-review commit gate:** Before running any checks, verify working tree is clean:
@@ -202,12 +215,14 @@ Mark the first todo as `in_progress` and proceed:
         - Validator reported LOW severity issues (testFileSize, missingTestTimeImport, todoComments, debugConsole)
         - These suggest complexity or timing-sensitive patterns worth validating
 
-      - 🟡 **Timing-sensitive features** (MEDIUM confidence — offer burn-in):
+      - 🟡 **Timing-sensitive or state-injection features** (MEDIUM confidence — offer burn-in):
         - Imports from `test-time.ts` (indicates date/time calculations)
         - Uses `page.addInitScript()` for Date mocking (e.g., momentum calculations)
         - Contains `requestAnimationFrame` or animation-related waits
         - Story acceptance criteria mention "real-time", "polling", "debounce", "throttle"
         - This is the first story in the epic (E##-S01)
+        - Tests seed IndexedDB directly (calls to `db.`, `dexie`, `indexedDB`, or imports from `*factory*` files) — IDB seeding + Zustand state injection patterns are flaky-prone under load (Epic 16 retro finding)
+        - Tests set `localStorage` keys for Zustand persist state (e.g., `levelup-quiz-store`)
 
       - ✅ **Low-risk patterns** (do NOT suggest burn-in):
         - Simple UI-only tests (clicks, form fills, navigation)
@@ -299,11 +314,26 @@ Mark the first todo as `in_progress` and proceed:
       5. Output: `✅ Lessons Learned Gate — auto-populated from implementation context`
       6. Continue to step 7 (review agent swarm)
 
-   d. If no placeholders (lessons learned properly filled):
-      - Continue to step 7 (review agent swarm)
-      - Note in output: "✅ Lessons Learned Gate passed — documentation complete"
+   d. If no placeholders found — **substance validation** (Epic 16 retro finding):
 
-   **Rationale**: This automated gate addresses Epic 8 retrospective finding that only 2/5 stories documented lessons learned despite manual reminders. Since Claude Code performs the implementation, it has full context to auto-generate meaningful lessons learned — achieving 100% compliance without blocking the review workflow.
+      Count the words in the "Challenges and Lessons Learned" section, excluding:
+      - Section headers (lines starting with `#` or `**`)
+      - Empty lines
+      - Lines that are only bold labels (e.g., `**Planning phase observations:**`)
+
+      **If fewer than 50 words of substantive content:**
+      - Treat as insufficient — auto-enrich using the same process as step (c):
+        1. Gather git context and story file details
+        2. Generate additional lessons learned content to supplement existing thin content
+        3. Append (do not replace) new content below existing content
+        4. Commit: `docs: enrich lessons learned for {story-id}`
+        5. Output: `✅ Lessons Learned Gate — enriched (was ${wordCount} words, now substantive)`
+
+      **If 50+ words of substantive content:**
+      - Continue to step 7 (review agent swarm)
+      - Note in output: "✅ Lessons Learned Gate passed — documentation complete (${wordCount} words)"
+
+   **Rationale**: This automated gate addresses Epic 8 retrospective finding that only 2/5 stories documented lessons learned despite manual reminders, and Epic 16 retrospective finding that thin/placeholder content passed the gate unchecked. The 50-word minimum ensures substantive reflection, not just section existence. Since Claude Code performs the implementation, it has full context to auto-generate meaningful lessons learned — achieving 100% compliance without blocking the review workflow.
 
 7. **Review agent swarm** (parallel dispatch — design + code + testing):
 
