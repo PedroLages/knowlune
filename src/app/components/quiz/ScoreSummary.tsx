@@ -9,6 +9,7 @@ interface ScoreSummaryProps {
   passingScore: number
   timeSpent: number
   previousBestPercentage?: number
+  showTimeSpent?: boolean
 }
 
 type ScoreTier = {
@@ -114,6 +115,7 @@ export function ScoreSummary({
   passingScore,
   timeSpent,
   previousBestPercentage,
+  showTimeSpent = true,
 }: ScoreSummaryProps) {
   const tier = getScoreTier(percentage, passed)
   const roundedPct = Math.round(Math.min(100, Math.max(0, percentage)))
@@ -152,9 +154,11 @@ export function ScoreSummary({
 
       <p className={cn('text-lg font-medium', tier.textClass)}>{tier.message}</p>
 
-      <p className="text-sm text-muted-foreground">
-        Completed in {formatDuration(Math.max(timeSpent, 1000))}
-      </p>
+      {showTimeSpent && (
+        <p className="text-sm text-muted-foreground">
+          Completed in {formatDuration(Math.max(timeSpent, 1000))}
+        </p>
+      )}
 
       {roundedPrevBest != null && (
         <p className="text-sm tabular-nums" data-testid="improvement-summary">
