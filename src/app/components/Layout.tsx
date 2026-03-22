@@ -14,7 +14,7 @@ import { useCourseReminders } from '@/app/hooks/useCourseReminders'
 import { useIsMobile, useIsTablet, useIsDesktop } from '@/app/hooks/useMediaQuery'
 import { Sheet, SheetContent } from './ui/sheet'
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip'
-import { navigationGroups, settingsItem } from '@/app/config/navigation'
+import { navigationGroups, settingsItem, getIsActive } from '@/app/config/navigation'
 import type { NavigationItem } from '@/app/config/navigation'
 import { getSettings } from '@/lib/settings'
 import { getInitials } from '@/lib/avatarUpload'
@@ -35,13 +35,12 @@ function NavLink({
   onNavigate?: () => void
 }) {
   const location = useLocation()
-  const isActive =
-    item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path)
+  const isActive = getIsActive(item, location.pathname, location.search)
   const Icon = item.icon
 
   const link = (
     <Link
-      to={item.path}
+      to={item.tab ? `${item.path}?tab=${item.tab}` : item.path}
       onClick={onNavigate}
       aria-current={isActive ? 'page' : undefined}
       className={`flex items-center rounded-xl transition-colors duration-150 ${
