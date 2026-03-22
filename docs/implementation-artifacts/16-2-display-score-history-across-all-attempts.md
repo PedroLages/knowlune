@@ -1,7 +1,7 @@
 ---
 story_id: E16-S02
 story_name: "Display Score History Across All Attempts"
-status: in-progress
+status: review
 started: 2026-03-22
 completed:
 reviewed: false
@@ -46,39 +46,39 @@ so that I can track my improvement over time.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Fix `loadAttempts` sort order — reverse to most-recent-first (AC: sorted by date)
-  - [ ] 1.1 Update `useQuizStore.loadAttempts` to call `.reverse()` after `.sortBy('completedAt')`
-  - [ ] 1.2 Add unit test: `loadAttempts` returns attempts in descending order
+- [x] Task 1: Fix `loadAttempts` sort order — reverse to most-recent-first (AC: sorted by date)
+  - [x] 1.1 Update `useQuizStore.loadAttempts` to call `.reverse()` after `.sortBy('completedAt')`
+  - [x] 1.2 Add unit test: `loadAttempts` returns attempts in descending order
 
-- [ ] Task 2: Create `AttemptHistory` component with collapsible table (AC: expand section, all fields, current highlighted)
-  - [ ] 2.1 Create `src/app/components/quiz/AttemptHistory.tsx`
-  - [ ] 2.2 Use `Collapsible` / `CollapsibleTrigger` / `CollapsibleContent` from shadcn/ui
-  - [ ] 2.3 Render trigger button: "View Attempt History (N attempt[s])" with `variant="link"`
-  - [ ] 2.4 Desktop (≥640px): render `Table` with columns: Attempt #, Date, Score, Time, Status, Review
-  - [ ] 2.5 Mobile (<640px): render stacked card layout instead of table (avoid horizontal scroll)
-  - [ ] 2.6 Highlight current attempt row with `bg-brand-soft` class
-  - [ ] 2.7 Mark current attempt with "Current" badge
-  - [ ] 2.8 Passed/not-passed status badges (design token classes, no hardcoded colors)
-  - [ ] 2.9 "Review" button per row — navigates to review route (stub toast since E16-S01 not done)
-  - [ ] 2.10 Accessibility: `<table>` with `scope` headers, collapsible keyboard-accessible, ARIA labels
+- [x] Task 2: Create `AttemptHistory` component with collapsible table (AC: expand section, all fields, current highlighted)
+  - [x] 2.1 Create `src/app/components/quiz/AttemptHistory.tsx`
+  - [x] 2.2 Use `Collapsible` / `CollapsibleTrigger` / `CollapsibleContent` from shadcn/ui
+  - [x] 2.3 Render trigger button: "View Attempt History (N attempt[s])" with `variant="link"`
+  - [x] 2.4 Desktop (≥640px): render `Table` with columns: Attempt #, Date, Score, Time, Status, Review
+  - [x] 2.5 Mobile (<640px): render stacked card layout instead of table (avoid horizontal scroll)
+  - [x] 2.6 Highlight current attempt row with `bg-brand-soft` class
+  - [x] 2.7 Mark current attempt with "Current" badge
+  - [x] 2.8 Passed/not-passed status badges (design token classes, no hardcoded colors)
+  - [x] 2.9 "Review" button per row — navigates to review route (stub toast since E16-S01 not done)
+  - [x] 2.10 Accessibility: `<table>` with `scope` headers, collapsible keyboard-accessible, ARIA labels
 
-- [ ] Task 3: Integrate `AttemptHistory` into `QuizResults` page (AC: trigger visible on results screen)
-  - [ ] 3.1 Replace the disabled "View All Attempts (Coming Soon)" placeholder with `<AttemptHistory>`
-  - [ ] 3.2 Pass `attempts`, `currentAttemptId` (= last attempt's id), `courseId`, `lessonId` as props
-  - [ ] 3.3 Remove `History` icon import if no longer used
+- [x] Task 3: Integrate `AttemptHistory` into `QuizResults` page (AC: trigger visible on results screen)
+  - [x] 3.1 Replace the disabled "View All Attempts (Coming Soon)" placeholder with `<AttemptHistory>`
+  - [x] 3.2 Pass `attempts`, `currentAttemptId` (= last attempt's id), `courseId`, `lessonId` as props
+  - [x] 3.3 Remove `History` icon import if no longer used
 
-- [ ] Task 4: Unit tests for `AttemptHistory` component
-  - [ ] 4.1 Singular label "(1 attempt)" renders correctly
-  - [ ] 4.2 Plural label "(3 attempts)" renders correctly
-  - [ ] 4.3 All attempt data fields visible (attempt #, date, score, time, status)
-  - [ ] 4.4 Current attempt row has `bg-brand-soft` class or "Current" marker
-  - [ ] 4.5 Collapsible is closed by default and opens on click
+- [x] Task 4: Unit tests for `AttemptHistory` component
+  - [x] 4.1 Singular label "(1 attempt)" renders correctly
+  - [x] 4.2 Plural label "(3 attempts)" renders correctly
+  - [x] 4.3 All attempt data fields visible (attempt #, date, score, time, status)
+  - [x] 4.4 Current attempt row has `bg-brand-soft` class or "Current" marker
+  - [x] 4.5 Collapsible is closed by default and opens on click
 
-- [ ] Task 5: E2E tests (story spec)
-  - [ ] 5.1 Complete quiz 3 times → click "View Attempt History" → see 3 attempts in table
-  - [ ] 5.2 Attempts are sorted most-recent-first (attempt #3 appears at top)
-  - [ ] 5.3 Current attempt is highlighted/marked "Current"
-  - [ ] 5.4 Review button is visible per attempt (stub — navigates to coming-soon route)
+- [x] Task 5: E2E tests (story spec)
+  - [x] 5.1 Complete quiz 3 times → click "View Attempt History" → see 3 attempts in table
+  - [x] 5.2 Attempts are sorted most-recent-first (attempt #3 appears at top)
+  - [x] 5.3 Current attempt is highlighted/marked "Current"
+  - [x] 5.4 Review button is visible per attempt (stub — navigates to coming-soon route)
 
 ## Design Guidance
 
