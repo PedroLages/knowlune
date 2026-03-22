@@ -87,6 +87,7 @@ class RunConfig:
     skip_adversarial: bool = False
     epic_only: str | None = None  # e.g., "15" — skip stories, run only epic finish
     epic_phases: list[str] | None = None  # e.g., ["retrospective"] — run only specific phases
+    skip_epics: list[int] | None = None  # e.g., [19] — skip stories from these epics in --next
 
 
 @dataclass
@@ -197,6 +198,10 @@ def parse_args() -> RunConfig:
         choices=all_phase_names,
         help=f"Run only specific epic-finish phases (choices: {', '.join(all_phase_names)})",
     )
+    parser.add_argument(
+        "--skip-epic", nargs="+", type=int, metavar="N", dest="skip_epics",
+        help="Skip stories from these epic numbers in --next discovery (e.g., --skip-epic 19)",
+    )
 
     args = parser.parse_args()
 
@@ -209,7 +214,7 @@ def parse_args() -> RunConfig:
     if args.next:
         # Deduplicate: --next skips stories already listed explicitly
         existing = {s.upper() for s in stories_raw}
-        for key in find_next_backlog_keys(args.next + len(existing)):
+        for key in find_next_backlog_keys(args.next + len(existing), args.skip_epics):
             if key.upper() not in existing:
                 stories_raw.append(key)
                 existing.add(key.upper())
@@ -230,6 +235,7 @@ def parse_args() -> RunConfig:
         skip_adversarial=args.skip_adversarial,
         epic_only=args.epic_only,
         epic_phases=args.epic_phases,
+        skip_epics=args.skip_epics,
     )
 
 
@@ -358,7 +364,7 @@ def detect_completed_epics(
     return completed
 
 
-def find_next_backlog_keys(n: int) -> list[str]:
+def find_next_backlog_keys(n: int, skip_epics: list[int] | None = None) -> list[str]:
     data = load_sprint_status()
     dev_status = data.get("development_status", {})
 
@@ -385,8 +391,8 @@ def find_next_backlog_keys(n: int) -> list[str]:
                 epic_n, story_n = int(parts[0]), int(parts[1])
             except ValueError:
                 continue
-            # Skip stories from already-done epics (deferred gap coverage)
-            if epic_n in done_epics:
+            # Skip stories from done epics or explicitly skipped epics
+            if epic_n in done_epics or (skip_epics and epic_n in skip_epics):
                 continue
             keys.append(f"E{epic_n:02d}-S{story_n:02d}")
         if len(keys) >= n:

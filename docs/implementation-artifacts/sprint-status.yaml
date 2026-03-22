@@ -283,16 +283,19 @@ development_status:
   epic-18-retrospective: optional
 
   # ──────────────────────────────────────────────────
-  # Epic 19: Engagement & Adaptive Experience
+  # Epic 19: Platform & Entitlement (Supabase Auth + Stripe)
+  # NOTE: Requires Supabase + Stripe infrastructure — not suitable for auto-story
   # ──────────────────────────────────────────────────
   epic-19: backlog
-  19-1-ab-loop-video-controls: backlog
-  19-2-enhanced-video-keyboard-shortcuts: backlog
-  19-3-pomodoro-focus-timer: backlog
-  19-4-visual-energy-boost: backlog
-  19-5-user-engagement-preference-controls: backlog
-  19-6-smart-dashboard-reordering: backlog
-  19-7-age-appropriate-defaults-and-font-scaling: backlog
+  19-1-authentication-setup: backlog
+  19-2-stripe-subscription-integration: backlog
+  19-3-entitlement-system-and-offline-caching: backlog
+  19-4-subscription-management: backlog
+  19-5-premium-feature-gating-and-upgrade-ctas: backlog
+  19-6-premium-code-boundary-and-build-separation: backlog
+  19-7-legal-pages-and-compliance: backlog
+  19-8-free-trial-flow: backlog
+  19-9-gdpr-compliance-and-account-lifecycle: backlog
   epic-19-retrospective: optional
 
   # ──────────────────────────────────────────────────
@@ -304,3 +307,16 @@ development_status:
   20-3-365-day-activity-heatmap: backlog
   20-4-skill-proficiency-radar-chart: backlog
   epic-20-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 21: Engagement & Adaptive Experience
+  # ──────────────────────────────────────────────────
+  epic-21: backlog
+  21-1-ab-loop-video-controls: backlog
+  21-2-enhanced-video-keyboard-shortcuts: backlog
+  21-3-pomodoro-focus-timer: backlog
+  21-4-visual-energy-boost: backlog
+  21-5-user-engagement-preference-controls: backlog
+  21-6-smart-dashboard-reordering: backlog
+  21-7-age-appropriate-defaults-and-font-scaling: backlog
+  epic-21-retrospective: optional
