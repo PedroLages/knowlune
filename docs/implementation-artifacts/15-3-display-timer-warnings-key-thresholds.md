@@ -6,7 +6,7 @@ started: 2026-03-22
 completed:
 reviewed: in-progress
 review_started: 2026-03-22
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
 burn_in_validated: false
 ---
 
@@ -121,11 +121,17 @@ See [plan](plans/e15-s03-timer-warnings.md) for implementation approach.
 
 ## Implementation Notes
 
-[Architecture decisions, patterns used, dependencies added]
+- **Callback pattern over useState**: `onWarning` callback avoids re-render cascade through all timer consumers. `warningsFiredRef` prevents re-firing thresholds.
+- **Renderless component**: `TimerWarnings.tsx` has no visible DOM — only `sr-only` ARIA regions. Toast rendering delegated to Sonner's global `<Toaster />`.
+- **Dual ARIA strategy**: `aria-live="polite"` for 25% (non-interrupting) and `aria-live="assertive"` for 10%/1min (interrupting) with `aria-atomic="true"`.
+- **No new dependencies**: Leveraged existing Sonner installation for toasts.
 
 ## Testing Notes
 
-[Test strategy, edge cases discovered, coverage notes]
+- **Date.now shifting pattern**: Reused from E15-S01 — `saveRealDateNow` → `shiftDateNow` → `triggerVisibilityChange` to simulate time passage without real waits.
+- **Flexible regex for time assertions**: Exact time in toasts varies by ~1-3s due to real time elapsed during test setup. Use `/00:\d+ remaining/` not `/01:00 remaining/`.
+- **Justified waitForTimeout**: 3 intentional hard waits for absence/persistence verification — can't assert "toast never appeared" without waiting.
+- **9 E2E tests**: 6 ACs covered across timed, untimed, ARIA, and accommodation scenarios.
 
 ## Pre-Review Checklist
 
@@ -155,4 +161,7 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-(To be filled during implementation)
+- **E2E test flakiness from exact time assertions**: The 1-minute warning test initially used `/01:00 remaining/` which failed because ~1-3 seconds of real time elapse during test setup (navigation, button clicks). Fixed by using flexible regex `/00:\d+ remaining/`. Lesson: when Date.now shifting, always account for real elapsed time in assertions.
+- **Callback vs state for cross-component communication**: `onWarning` callback was the right choice over a shared state approach — it keeps the timer hook decoupled from the presentation layer and avoids re-render cascades in components that only need `timeRemaining`.
+- **Sonner toast selectors**: `[data-sonner-toast]` is the reliable selector for Sonner toasts in E2E tests. The `.filter({ hasText: ... })` pattern works well for distinguishing between threshold-specific toasts.
+- **Renderless component pattern**: `TimerWarnings` has zero visible DOM footprint — only sr-only ARIA regions. This clean separation (hook detects → component presents) made testing straightforward.
