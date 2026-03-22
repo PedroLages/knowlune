@@ -9,6 +9,7 @@ import {
   selectAttempts,
   selectIsLoading,
 } from '@/stores/useQuizStore'
+import { calculateNormalizedGain } from '@/lib/analytics'
 import { ScoreSummary } from '@/app/components/quiz/ScoreSummary'
 import { ScoreTrajectoryChart } from '@/app/components/quiz/ScoreTrajectoryChart'
 import { QuestionBreakdown } from '@/app/components/quiz/QuestionBreakdown'
