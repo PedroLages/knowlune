@@ -5,7 +5,6 @@ import {
   YAxis,
   CartesianGrid,
   ReferenceLine,
-  ResponsiveContainer,
   type DotProps,
 } from 'recharts'
 import {
