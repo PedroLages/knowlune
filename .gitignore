@@ -7,8 +7,9 @@ dist/
 .vite/
 
 
-# Tests (run locally, not tracked)
-tests/
+# Tests — only ignore generated artifacts, not source specs
+tests/**/test-results/
+tests/**/*.png
 
 # Test artifacts
 playwright-report/
