@@ -58,6 +58,15 @@ export function QuizResults() {
     return Math.min(100, Math.max(0, Math.max(...validPcts)))
   }, [attempts])
 
+  const previousAttemptTimeSpent = useMemo(() => {
+    if (attempts.length <= 1) return undefined
+    const priorAttempt = attempts[attempts.length - 2]
+    if (priorAttempt?.timeSpent != null && Number.isFinite(priorAttempt.timeSpent)) {
+      return priorAttempt.timeSpent
+    }
+    return undefined
+  }, [attempts])
+
   const incorrectItems = useMemo(() => {
     if (!lastAttempt || !currentQuiz) return []
     return (lastAttempt.answers ?? [])
@@ -132,6 +141,8 @@ export function QuizResults() {
           passingScore={currentQuiz.passingScore}
           timeSpent={lastAttempt.timeSpent}
           previousBestPercentage={previousBestPercentage}
+          showTimeSpent={lastAttempt.timerAccommodation !== 'untimed'}
+          previousAttemptTimeSpent={previousAttemptTimeSpent}
         />
 
         <QuestionBreakdown answers={lastAttempt.answers} questions={currentQuiz.questions} />
