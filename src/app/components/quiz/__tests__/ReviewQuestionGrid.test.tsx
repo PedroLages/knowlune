@@ -2,7 +2,11 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ReviewQuestionGrid } from '../ReviewQuestionGrid'
-import { makeQuestion, makeCorrectAnswer, makeWrongAnswer } from '../../../../../tests/support/fixtures/factories/quiz-factory'
+import {
+  makeQuestion,
+  makeCorrectAnswer,
+  makeWrongAnswer,
+} from '../../../../../tests/support/fixtures/factories/quiz-factory'
 
 const q1 = makeQuestion({ id: 'q1', order: 1 })
 const q2 = makeQuestion({ id: 'q2', order: 2 })

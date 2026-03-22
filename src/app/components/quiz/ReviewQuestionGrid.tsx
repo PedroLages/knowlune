@@ -20,11 +20,7 @@ export function ReviewQuestionGrid({
         const answer = answers.find(a => a.questionId === q.id)
         const isCurrent = i === currentIndex
 
-        const statusLabel = answer
-          ? answer.isCorrect
-            ? 'correct'
-            : 'incorrect'
-          : 'unanswered'
+        const statusLabel = answer ? (answer.isCorrect ? 'correct' : 'incorrect') : 'unanswered'
 
         return (
           <button

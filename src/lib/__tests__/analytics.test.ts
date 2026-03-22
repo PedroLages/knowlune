@@ -196,7 +196,7 @@ describe('analyzeTopicPerformance', () => {
 
     const result = analyzeTopicPerformance(questions, answers)
 
-    expect(result.strengths.map((s) => s.name)).toEqual(['B', 'C'])
+    expect(result.strengths.map(s => s.name)).toEqual(['B', 'C'])
     expect(result.strengths[0].percentage).toBe(100)
     expect(result.strengths[1].percentage).toBe(75)
   })
@@ -212,7 +212,7 @@ describe('analyzeTopicPerformance', () => {
 
     const result = analyzeTopicPerformance(questions, answers)
 
-    expect(result.growthAreas.map((g) => g.name)).toEqual(['B', 'A'])
+    expect(result.growthAreas.map(g => g.name)).toEqual(['B', 'A'])
     expect(result.growthAreas[0].percentage).toBe(0)
     expect(result.growthAreas[1].percentage).toBe(50)
   })
@@ -242,8 +242,8 @@ describe('analyzeTopicPerformance', () => {
     // 7/10 = 70% exactly → strength
     const questions = Array.from({ length: 10 }, (_, i) => q(`q${i}`, i + 1, 'X'))
     const answers = [
-      ...questions.slice(0, 7).map((q) => correct(q.id)),
-      ...questions.slice(7).map((q) => wrong(q.id)),
+      ...questions.slice(0, 7).map(q => correct(q.id)),
+      ...questions.slice(7).map(q => wrong(q.id)),
     ]
 
     const result = analyzeTopicPerformance(questions, answers)
@@ -257,8 +257,8 @@ describe('analyzeTopicPerformance', () => {
     // 69/100 = 69% exactly → growth area (not promoted to 70% by rounding)
     const questions = Array.from({ length: 100 }, (_, i) => q(`q${i}`, i + 1, 'X'))
     const answers = [
-      ...questions.slice(0, 69).map((q) => correct(q.id)),
-      ...questions.slice(69).map((q) => wrong(q.id)),
+      ...questions.slice(0, 69).map(q => correct(q.id)),
+      ...questions.slice(69).map(q => wrong(q.id)),
     ]
 
     const result = analyzeTopicPerformance(questions, answers)

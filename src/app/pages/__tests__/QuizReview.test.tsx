@@ -4,7 +4,12 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 import { QuizReview } from '../QuizReview'
-import { makeQuestion, makeAttempt, makeCorrectAnswer, makeWrongAnswer } from '../../../../tests/support/fixtures/factories/quiz-factory'
+import {
+  makeQuestion,
+  makeAttempt,
+  makeCorrectAnswer,
+  makeWrongAnswer,
+} from '../../../../tests/support/fixtures/factories/quiz-factory'
 
 // Mock sonner
 vi.mock('sonner', () => ({
@@ -28,8 +33,20 @@ vi.mock('@/db', () => ({
 // Fixtures
 // ---------------------------------------------------------------------------
 
-const q1 = makeQuestion({ id: 'q1', order: 1, text: 'First question?', options: ['A', 'B', 'C', 'D'], correctAnswer: 'A' })
-const q2 = makeQuestion({ id: 'q2', order: 2, text: 'Second question?', options: ['A', 'B', 'C', 'D'], correctAnswer: 'B' })
+const q1 = makeQuestion({
+  id: 'q1',
+  order: 1,
+  text: 'First question?',
+  options: ['A', 'B', 'C', 'D'],
+  correctAnswer: 'A',
+})
+const q2 = makeQuestion({
+  id: 'q2',
+  order: 2,
+  text: 'Second question?',
+  options: ['A', 'B', 'C', 'D'],
+  correctAnswer: 'B',
+})
 
 const testQuiz: Quiz = {
   id: 'quiz-review-1',
@@ -64,9 +81,7 @@ const testAttempt: QuizAttempt = makeAttempt({
 
 function renderReview(attemptId = 'attempt-review-1') {
   return render(
-    <MemoryRouter
-      initialEntries={[`/courses/course-1/lessons/lesson-1/quiz/review/${attemptId}`]}
-    >
+    <MemoryRouter initialEntries={[`/courses/course-1/lessons/lesson-1/quiz/review/${attemptId}`]}>
       <Routes>
         <Route
           path="/courses/:courseId/lessons/:lessonId/quiz/review/:attemptId"
@@ -102,26 +117,20 @@ describe('QuizReview', () => {
 
   it('loads attempt and renders first question', async () => {
     renderReview()
-    await waitFor(() =>
-      expect(screen.getByText('First question?')).toBeInTheDocument()
-    )
+    await waitFor(() => expect(screen.getByText('First question?')).toBeInTheDocument())
     expect(screen.getByText('Question 1 of 2')).toBeInTheDocument()
   })
 
   it('shows error state when attempt ID not found', async () => {
     mockQuizAttempts.get.mockResolvedValue(undefined)
     renderReview('invalid-id')
-    await waitFor(() =>
-      expect(screen.getByText(/Quiz attempt not found/i)).toBeInTheDocument()
-    )
+    await waitFor(() => expect(screen.getByText(/Quiz attempt not found/i)).toBeInTheDocument())
   })
 
   it('shows error state when db throws', async () => {
     mockQuizAttempts.get.mockRejectedValue(new Error('IDB error'))
     renderReview()
-    await waitFor(() =>
-      expect(screen.getByText(/Quiz attempt not found/i)).toBeInTheDocument()
-    )
+    await waitFor(() => expect(screen.getByText(/Quiz attempt not found/i)).toBeInTheDocument())
   })
 
   it('Next button advances to question 2', async () => {

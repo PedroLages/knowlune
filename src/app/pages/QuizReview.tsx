@@ -36,9 +36,7 @@ interface QuizReviewErrorProps {
 
 function QuizReviewError({ courseId, lessonId }: QuizReviewErrorProps) {
   const backUrl =
-    courseId && lessonId
-      ? `/courses/${courseId}/lessons/${lessonId}/quiz`
-      : '/courses'
+    courseId && lessonId ? `/courses/${courseId}/lessons/${lessonId}/quiz` : '/courses'
 
   return (
     <div className="py-6">
@@ -109,11 +107,6 @@ export function QuizReview() {
   if (status === 'error') return <QuizReviewError courseId={courseId} lessonId={lessonId} />
 
   return (
-    <QuizReviewContent
-      quiz={quiz!}
-      attempt={attempt!}
-      courseId={courseId!}
-      lessonId={lessonId!}
-    />
+    <QuizReviewContent quiz={quiz!} attempt={attempt!} courseId={courseId!} lessonId={lessonId!} />
   )
 }

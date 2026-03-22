@@ -45,7 +45,7 @@ export function QuizResults() {
 
   const maxScore = useMemo(
     () => lastAttempt?.answers?.reduce((sum, a) => sum + a.pointsPossible, 0) ?? 0,
-    [lastAttempt],
+    [lastAttempt]
   )
 
   const previousBestPercentage = useMemo(() => {
@@ -137,7 +137,10 @@ export function QuizResults() {
 
         <QuestionBreakdown answers={lastAttempt.answers} questions={currentQuiz.questions} />
 
-        <PerformanceInsights questions={currentQuiz.questions} answers={lastAttempt.answers ?? []} />
+        <PerformanceInsights
+          questions={currentQuiz.questions}
+          answers={lastAttempt.answers ?? []}
+        />
 
         <AreasForGrowth incorrectItems={incorrectItems} />
 

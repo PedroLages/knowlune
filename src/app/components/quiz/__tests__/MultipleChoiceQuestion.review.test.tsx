@@ -11,13 +11,8 @@ const q = makeQuestion({
 
 describe('MultipleChoiceQuestion — review modes', () => {
   it('review-correct: selected correct option shows success styling', () => {
-    const { container } = render(
-      <MultipleChoiceQuestion
-        question={q}
-        value="Paris"
-        onChange={vi.fn()}
-        mode="review-correct"
-      />
+    render(
+      <MultipleChoiceQuestion question={q} value="Paris" onChange={vi.fn()} mode="review-correct" />
     )
     const parisLabel = screen.getByText('Paris').closest('label')!
     expect(parisLabel.className).toMatch(/border-success/)
@@ -71,12 +66,7 @@ describe('MultipleChoiceQuestion — review modes', () => {
 
   it('radio buttons are all disabled in review mode', () => {
     render(
-      <MultipleChoiceQuestion
-        question={q}
-        value="Paris"
-        onChange={vi.fn()}
-        mode="review-correct"
-      />
+      <MultipleChoiceQuestion question={q} value="Paris" onChange={vi.fn()} mode="review-correct" />
     )
     const radios = screen.getAllByRole('radio')
     radios.forEach(radio => {
