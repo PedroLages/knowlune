@@ -8,7 +8,7 @@ export interface QuizScoreResult {
   answers: Answer[] // with isCorrect and pointsEarned filled in
 }
 
-function isCorrectAnswer(question: Question, userAnswer: string | string[]): boolean {
+export function isCorrectAnswer(question: Question, userAnswer: string | string[]): boolean {
   const correct = question.correctAnswer
 
   switch (question.type) {
@@ -39,7 +39,7 @@ function isCorrectAnswer(question: Question, userAnswer: string | string[]): boo
   }
 }
 
-function calculatePointsForQuestion(
+export function calculatePointsForQuestion(
   question: Question,
   userAnswer: string | string[] | undefined
 ): { pointsEarned: number; isCorrect: boolean } {
