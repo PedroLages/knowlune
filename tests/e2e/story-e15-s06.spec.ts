@@ -103,7 +103,7 @@ async function answerQuestions(page: import('@playwright/test').Page) {
 async function submitQuiz(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: /submit quiz/i }).click()
   const confirmBtn = page.getByRole('button', { name: /submit anyway/i })
-  if (await confirmBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
+  if ((await confirmBtn.count()) > 0) {
     await confirmBtn.click()
   }
 }

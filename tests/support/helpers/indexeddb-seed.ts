@@ -154,20 +154,24 @@ export async function seedVectorEmbeddings(
 
 /**
  * Clears all records from an IndexedDB object store.
- * Uses frame-accurate delays via requestAnimationFrame instead of Date.now().
+ * Uses setTimeout-based delays for reliable timing in headless Chromium.
  *
  * @param page - Playwright Page instance
  * @param dbName - IndexedDB database name
  * @param storeName - Object store name to clear
- * @throws Error if store not found after MAX_RETRIES attempts
+ * @param throwOnMissing - Whether to throw if the store is not found (default: false).
+ *   Set to false (default) in afterEach cleanup to avoid masking real test failures
+ *   when the DB was never initialised. Set to true in test setup to catch misconfiguration.
+ * @throws Error if store not found after MAX_RETRIES attempts and throwOnMissing is true
  */
 export async function clearIndexedDBStore(
   page: Page,
   dbName: string,
-  storeName: string
+  storeName: string,
+  { throwOnMissing = false }: { throwOnMissing?: boolean } = {}
 ): Promise<void> {
   await page.evaluate(
-    async ({ dbName, storeName, retryDelay, maxRetries }) => {
+    async ({ dbName, storeName, retryDelay, maxRetries, throwOnMissing }) => {
       for (let attempt = 0; attempt < maxRetries; attempt++) {
         const result = await new Promise<'ok' | 'store-missing'>((resolve, reject) => {
           const request = indexedDB.open(dbName)
@@ -195,23 +199,21 @@ export async function clearIndexedDBStore(
 
         if (result === 'ok') return
 
-        // Frame-accurate wait using requestAnimationFrame tick counting
-        await new Promise<void>(resolve => {
-          let ticks = 0
-          const targetTicks = Math.ceil(retryDelay / 16.67)
-          const tick = () => {
-            ticks++
-            if (ticks >= targetTicks) resolve()
-            else requestAnimationFrame(tick)
-          }
-          requestAnimationFrame(tick)
-        })
+        // Store missing on first attempt — if not throwing, return silently.
+        // Retrying won't help because indexedDB.open() on a non-existent DB creates
+        // an empty database (version 1, no stores), so the store will never appear.
+        if (!throwOnMissing) return
+
+        // throwOnMissing=true: retry with setTimeout delay (more reliable than rAF in headless)
+        await new Promise<void>(resolve => setTimeout(resolve, retryDelay))
       }
-      throw new Error(
-        `Store "${storeName}" not found in database "${dbName}" after ${maxRetries} retries`
-      )
+      if (throwOnMissing) {
+        throw new Error(
+          `Store "${storeName}" not found in database "${dbName}" after ${maxRetries} retries`
+        )
+      }
     },
-    { dbName, storeName, retryDelay: RETRY_DELAY_MS, maxRetries: MAX_RETRIES }
+    { dbName, storeName, retryDelay: RETRY_DELAY_MS, maxRetries: MAX_RETRIES, throwOnMissing }
   )
 }
 
