@@ -36,29 +36,9 @@ test.describe('AC2: Empty state for no courses', () => {
     // Navigate first so Dexie creates the database
     await goToCourses(page)
 
-    // Clear all course data from IndexedDB
+    // Clear all course data from IndexedDB using the fixture helper
     await indexedDB.clearStore('courses')
     await indexedDB.clearStore('importedCourses')
-
-    // Clear Zustand stores by dispatching a custom event the component can react to,
-    // and directly update the DOM by triggering a re-render via navigation
-    // Simplest: navigate away and back with a clean DB, but block the seed
-    await page.evaluate(async () => {
-      // Clear the Dexie courses table
-      const db = await new Promise<IDBDatabase>((resolve, reject) => {
-        const req = indexedDB.open('ElearningDB')
-        req.onsuccess = () => resolve(req.result)
-        req.onerror = () => reject(req.error)
-      })
-      const tx = db.transaction(['courses', 'importedCourses'], 'readwrite')
-      tx.objectStore('courses').clear()
-      tx.objectStore('importedCourses').clear()
-      await new Promise<void>((resolve, reject) => {
-        tx.oncomplete = () => resolve()
-        tx.onerror = () => reject(tx.error)
-      })
-      db.close()
-    })
 
     // Navigate away, then back — this forces a fresh component mount
     // Use addInitScript to block seed on next navigation
