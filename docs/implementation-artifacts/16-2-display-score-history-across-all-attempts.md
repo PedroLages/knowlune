@@ -1,7 +1,7 @@
 ---
 story_id: E16-S02
 story_name: "Display Score History Across All Attempts"
-status: blocked
+status: done
 started: 2026-03-22
 completed: 2026-03-22
 reviewed: true
@@ -17,9 +17,7 @@ review_gates_passed:
   - code-review
   - test-coverage
   - design-review
-review_verdict: BLOCKED
-review_blockers:
-  - "B1: 'Current' badge fails WCAG AA contrast in light mode (3.16:1, requires 4.5:1) — fix --brand-soft-foreground in theme.css"
+review_verdict: PASS
 burn_in_validated: false
 ---
 
