@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { analyzeTopicPerformance } from '@/lib/analytics'
+import { analyzeTopicPerformance, calculateImprovement } from '@/lib/analytics'
 import {
   makeQuestion,
+  makeAttempt,
   makeCorrectAnswer,
   makeWrongAnswer,
   makeSkippedAnswer,
@@ -266,5 +267,105 @@ describe('analyzeTopicPerformance', () => {
     expect(result.growthAreas).toHaveLength(1)
     expect(result.growthAreas[0].percentage).toBe(69)
     expect(result.strengths).toHaveLength(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// calculateImprovement
+// ---------------------------------------------------------------------------
+
+describe('calculateImprovement', () => {
+  it('returns all nulls for empty attempts array', () => {
+    const result = calculateImprovement([])
+    expect(result.firstScore).toBeNull()
+    expect(result.bestScore).toBeNull()
+    expect(result.bestAttemptNumber).toBeNull()
+    expect(result.currentScore).toBe(0)
+    expect(result.improvement).toBeNull()
+    expect(result.isNewBest).toBe(false)
+  })
+
+  it('single attempt: improvement null, isNewBest false', () => {
+    const attempt = makeAttempt({ percentage: 70, completedAt: '2026-01-01T10:00:00.000Z' })
+    const result = calculateImprovement([attempt])
+    expect(result.currentScore).toBe(70)
+    expect(result.firstScore).toBeNull()
+    expect(result.improvement).toBeNull()
+    expect(result.isNewBest).toBe(false)
+    expect(result.bestScore).toBe(70)
+    expect(result.bestAttemptNumber).toBe(1)
+  })
+
+  it('two attempts, score improved: isNewBest true, correct delta', () => {
+    const a1 = makeAttempt({ percentage: 60, completedAt: '2026-01-01T10:00:00.000Z' })
+    const a2 = makeAttempt({ percentage: 85, completedAt: '2026-01-02T10:00:00.000Z' })
+    const result = calculateImprovement([a1, a2])
+    expect(result.firstScore).toBe(60)
+    expect(result.currentScore).toBe(85)
+    expect(result.improvement).toBe(25)
+    expect(result.isNewBest).toBe(true)
+    expect(result.bestScore).toBe(85)
+  })
+
+  it('two attempts, same score: isNewBest false (strict greater than)', () => {
+    const a1 = makeAttempt({ percentage: 80, completedAt: '2026-01-01T10:00:00.000Z' })
+    const a2 = makeAttempt({ percentage: 80, completedAt: '2026-01-02T10:00:00.000Z' })
+    const result = calculateImprovement([a1, a2])
+    expect(result.isNewBest).toBe(false)
+    expect(result.improvement).toBe(0)
+  })
+
+  it('three attempts, current is new best: isNewBest true', () => {
+    const a1 = makeAttempt({ percentage: 60, completedAt: '2026-01-01T10:00:00.000Z' })
+    const a2 = makeAttempt({ percentage: 75, completedAt: '2026-01-02T10:00:00.000Z' })
+    const a3 = makeAttempt({ percentage: 90, completedAt: '2026-01-03T10:00:00.000Z' })
+    const result = calculateImprovement([a1, a2, a3])
+    expect(result.isNewBest).toBe(true)
+    expect(result.firstScore).toBe(60)
+    expect(result.currentScore).toBe(90)
+    expect(result.improvement).toBe(30)
+  })
+
+  it('three attempts, current is NOT best: isNewBest false, bestAttemptNumber correct', () => {
+    const a1 = makeAttempt({ percentage: 60, completedAt: '2026-01-01T10:00:00.000Z' })
+    const a2 = makeAttempt({ percentage: 90, completedAt: '2026-01-02T10:00:00.000Z' })
+    const a3 = makeAttempt({ percentage: 75, completedAt: '2026-01-03T10:00:00.000Z' })
+    const result = calculateImprovement([a1, a2, a3])
+    expect(result.isNewBest).toBe(false)
+    expect(result.currentScore).toBe(75)
+    expect(result.bestScore).toBe(90)
+    // bestAttemptNumber is 1-based index in the original (unsorted) array
+    expect(result.bestAttemptNumber).toBe(2)
+  })
+
+  it('bestAttemptNumber = 3 when 3rd attempt is best', () => {
+    const a1 = makeAttempt({ percentage: 50, completedAt: '2026-01-01T10:00:00.000Z' })
+    const a2 = makeAttempt({ percentage: 60, completedAt: '2026-01-02T10:00:00.000Z' })
+    const a3 = makeAttempt({ percentage: 95, completedAt: '2026-01-03T10:00:00.000Z' })
+    // Pass in insertion order (a1, a2, a3) — bestAttemptNumber should be 3
+    const result = calculateImprovement([a1, a2, a3])
+    expect(result.bestAttemptNumber).toBe(3)
+    expect(result.bestScore).toBe(95)
+  })
+
+  it('out-of-order completedAt: sort produces correct first/current', () => {
+    // a2 has earlier completedAt, a1 is later — sort should pick a2 as first, a1 as current
+    const a1 = makeAttempt({ percentage: 85, completedAt: '2026-01-03T10:00:00.000Z' })
+    const a2 = makeAttempt({ percentage: 60, completedAt: '2026-01-01T10:00:00.000Z' })
+    const result = calculateImprovement([a1, a2])
+    expect(result.firstScore).toBe(60)
+    expect(result.currentScore).toBe(85)
+    expect(result.improvement).toBe(25)
+    expect(result.isNewBest).toBe(true)
+  })
+
+  it('regression: current < first → improvement is negative, isNewBest false', () => {
+    const a1 = makeAttempt({ percentage: 80, completedAt: '2026-01-01T10:00:00.000Z' })
+    const a2 = makeAttempt({ percentage: 65, completedAt: '2026-01-02T10:00:00.000Z' })
+    const result = calculateImprovement([a1, a2])
+    expect(result.improvement).toBe(-15)
+    expect(result.isNewBest).toBe(false)
+    expect(result.bestScore).toBe(80)
+    expect(result.currentScore).toBe(65)
   })
 })

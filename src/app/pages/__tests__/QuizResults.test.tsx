@@ -188,7 +188,8 @@ describe('QuizResults — improvement summary', () => {
       </MemoryRouter>
     )
 
-    expect(screen.queryByTestId('improvement-summary')).not.toBeInTheDocument()
+    const summary = screen.getByTestId('improvement-summary')
+    expect(summary).toHaveTextContent('First attempt complete! Retake to track improvement.')
   })
 
   it('shows positive improvement delta when current > previous best', async () => {
@@ -208,11 +209,15 @@ describe('QuizResults — improvement summary', () => {
     )
 
     const summary = screen.getByTestId('improvement-summary')
-    expect(summary).toHaveTextContent('Previous best: 60%')
-    expect(summary).toHaveTextContent('(+25%)')
+    expect(summary).toHaveTextContent('First attempt:')
+    expect(summary).toHaveTextContent('60%')
+    expect(summary).toHaveTextContent('Current attempt:')
+    expect(summary).toHaveTextContent('85%')
+    expect(summary).toHaveTextContent('+25%')
+    expect(summary).toHaveTextContent('New personal best!')
   })
 
-  it('shows "Same as best" when current equals previous best', async () => {
+  it('shows regression panel (no trophy) when current score equals previous best', async () => {
     useQuizStore.setState({
       currentQuiz: testQuiz,
       attempts: [makeAttemptWith(80, 'a1'), makeAttemptWith(80, 'a2')],
@@ -228,8 +233,11 @@ describe('QuizResults — improvement summary', () => {
     )
 
     const summary = screen.getByTestId('improvement-summary')
-    expect(summary).toHaveTextContent('Previous best: 80%')
-    expect(summary).toHaveTextContent('Same as best')
+    expect(summary).toHaveTextContent('First attempt:')
+    expect(summary).toHaveTextContent('80%')
+    expect(summary).toHaveTextContent('+0%')
+    expect(summary).not.toHaveTextContent('New personal best!')
+    expect(summary).toHaveTextContent('Keep practicing to beat your best!')
   })
 
   it('shows previous best only (no negative delta) when current < previous best', async () => {
@@ -249,12 +257,14 @@ describe('QuizResults — improvement summary', () => {
     )
 
     const summary = screen.getByTestId('improvement-summary')
-    expect(summary).toHaveTextContent('Previous best: 90%')
-    // Should NOT contain any negative delta number
-    expect(summary.textContent).not.toMatch(/\(-/)
-    expect(summary).not.toHaveTextContent('Same as best')
-    // Should show encouraging message instead
-    expect(summary).toHaveTextContent('Keep practicing!')
+    expect(summary).toHaveTextContent('First attempt:')
+    expect(summary).toHaveTextContent('90%')
+    expect(summary).toHaveTextContent('Current attempt:')
+    expect(summary).toHaveTextContent('70%')
+    // Should NOT show trophy or new-best message
+    expect(summary).not.toHaveTextContent('New personal best!')
+    // Should show neutral encouragement
+    expect(summary).toHaveTextContent('Keep practicing to beat your best!')
   })
 
   it('uses max of all previous attempts (not just the last one)', async () => {
@@ -279,9 +289,14 @@ describe('QuizResults — improvement summary', () => {
     )
 
     const summary = screen.getByTestId('improvement-summary')
-    // Should compare against best of previous (90%), not last previous (70%)
-    expect(summary).toHaveTextContent('Previous best: 90%')
-    expect(summary).toHaveTextContent('(+5%)')
+    // Current (95%) beats max previous (90%), so isNewBest = true
+    expect(summary).toHaveTextContent('New personal best!')
+    // Shows first attempt (50%) vs current (95%), improvement = +45%
+    expect(summary).toHaveTextContent('First attempt:')
+    expect(summary).toHaveTextContent('50%')
+    expect(summary).toHaveTextContent('Current attempt:')
+    expect(summary).toHaveTextContent('95%')
+    expect(summary).toHaveTextContent('+45%')
   })
 })
 

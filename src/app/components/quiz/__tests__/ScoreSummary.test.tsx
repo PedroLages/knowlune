@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ScoreSummary } from '../ScoreSummary'
+import type { ImprovementData } from '@/lib/analytics'
 
 const passProps = {
   percentage: 85,
@@ -19,6 +20,41 @@ const failProps = {
   passingScore: 70,
   timeSpent: 45000, // 45s
 }
+
+// ---------------------------------------------------------------------------
+// ImprovementData fixtures
+// ---------------------------------------------------------------------------
+
+const firstAttemptData: ImprovementData = {
+  firstScore: null,
+  bestScore: 85,
+  bestAttemptNumber: 1,
+  currentScore: 85,
+  improvement: null,
+  isNewBest: false,
+}
+
+const newBestData: ImprovementData = {
+  firstScore: 60,
+  bestScore: 85,
+  bestAttemptNumber: 2,
+  currentScore: 85,
+  improvement: 25,
+  isNewBest: true,
+}
+
+const regressionData: ImprovementData = {
+  firstScore: 60,
+  bestScore: 90,
+  bestAttemptNumber: 2,
+  currentScore: 75,
+  improvement: 15,
+  isNewBest: false,
+}
+
+// ---------------------------------------------------------------------------
+// Tests: Score tier / ring (unchanged behavior)
+// ---------------------------------------------------------------------------
 
 describe('ScoreSummary', () => {
   it('renders pass state correctly', () => {
