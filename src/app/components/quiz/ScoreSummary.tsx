@@ -162,7 +162,7 @@ export function ScoreSummary({
             Completed in {formatDuration(Math.max(timeSpent, 1000))}
           </p>
           {previousAttemptTimeSpent != null && (
-            <p className="text-xs text-muted-foreground/70 tabular-nums">
+            <p className="text-xs text-muted-foreground tabular-nums">
               Previous: {formatDuration(Math.max(previousAttemptTimeSpent, 1000))}
             </p>
           )}
