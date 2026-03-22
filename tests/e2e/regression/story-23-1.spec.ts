@@ -6,8 +6,8 @@
  * AC3: Design tokens used (no hardcoded colors) — verified by ESLint
  * AC4: Responsive layout on mobile, tablet, desktop
  */
-import { test, expect } from '../support/fixtures'
-import { goToCourses } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { goToCourses } from '../../support/helpers/navigation'
 
 // ---------------------------------------------------------------------------
 // AC1: No hardcoded branding in page header
