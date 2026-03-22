@@ -4,6 +4,7 @@ import {
   calculateImprovement,
   calculateNormalizedGain,
   calculateItemDifficulty,
+  calculateDiscriminationIndices,
 } from '@/lib/analytics'
 import {
   makeQuestion,
@@ -561,5 +562,201 @@ describe('calculateItemDifficulty', () => {
     const result = calculateItemDifficulty(quiz, attempts)
     expect(result).toHaveLength(2)
     expect(result.every(r => r.difficulty === 'Easy')).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// calculateDiscriminationIndices (E17-S04)
+// ---------------------------------------------------------------------------
+
+describe('calculateDiscriminationIndices', () => {
+  // Helper: build a quiz with N questions (ids: 'q1', 'q2', ...)
+  function makeTestQuiz(numQuestions: number): import('@/types/quiz').Quiz {
+    const questions = Array.from({ length: numQuestions }, (_, i) =>
+      makeQuestion({ id: `q${i + 1}`, order: i + 1, text: `Question ${i + 1}` })
+    )
+    return {
+      id: 'quiz-disc-test',
+      lessonId: 'lesson-disc-test',
+      title: 'Discrimination Test Quiz',
+      description: '',
+      questions,
+      timeLimit: null,
+      passingScore: 70,
+      allowRetakes: true,
+      shuffleQuestions: false,
+      shuffleAnswers: false,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    }
+  }
+
+  it('returns null when fewer than 5 attempts', () => {
+    const quiz = makeTestQuiz(2)
+    const attempts = [
+      makeAttempt({ quizId: 'quiz-disc-test' }),
+      makeAttempt({ quizId: 'quiz-disc-test' }),
+    ]
+    expect(calculateDiscriminationIndices(quiz, attempts)).toBeNull()
+  })
+
+  it('returns null for exactly 4 attempts (boundary)', () => {
+    const quiz = makeTestQuiz(2)
+    const attempts = Array.from({ length: 4 }, () =>
+      makeAttempt({ quizId: 'quiz-disc-test' })
+    )
+    expect(calculateDiscriminationIndices(quiz, attempts)).toBeNull()
+  })
+
+  it('returns results array for exactly 5 attempts (minimum boundary)', () => {
+    const quiz = makeTestQuiz(1)
+    const attempts = Array.from({ length: 5 }, (_, i) =>
+      makeAttempt({
+        id: `a${i}`,
+        quizId: 'quiz-disc-test',
+        score: i,
+        answers: [makeCorrectAnswer('q1', { isCorrect: i > 2, pointsEarned: i > 2 ? 1 : 0 })],
+      })
+    )
+    const result = calculateDiscriminationIndices(quiz, attempts)
+    expect(result).not.toBeNull()
+    expect(result).toHaveLength(1)
+  })
+
+  it('calculates known rpb value correctly', () => {
+    // Manually verified scenario:
+    // 5 attempts, q1 correct in last 3 (high scorers), incorrect in first 2 (low scorers)
+    // Scores: [0, 0, 1, 1, 1] for q1; total scores: [0, 0, 1, 1, 1]
+    // group1 (correct) scores: [1, 1, 1], mean1 = 1.0
+    // group0 (incorrect) scores: [0, 0], mean0 = 0.0
+    // allScores = [0, 0, 1, 1, 1], meanAll = 0.6
+    // variance = ((0.36 + 0.36 + 0.16 + 0.16 + 0.16) / 4) = 1.2/4 = 0.3
+    // sd = sqrt(0.3) ≈ 0.5477
+    // p = 3/5 = 0.6, pComplement = 0.4
+    // rpb = (1.0 - 0.0) / 0.5477 * sqrt(0.6 * 0.4)
+    //     = 1.826 * 0.4899 ≈ 0.894
+    const quiz = makeTestQuiz(1)
+    const attempts = [
+      makeAttempt({ id: 'a1', quizId: 'quiz-disc-test', score: 0, answers: [makeWrongAnswer('q1')] }),
+      makeAttempt({ id: 'a2', quizId: 'quiz-disc-test', score: 0, answers: [makeWrongAnswer('q1')] }),
+      makeAttempt({ id: 'a3', quizId: 'quiz-disc-test', score: 1, answers: [makeCorrectAnswer('q1')] }),
+      makeAttempt({ id: 'a4', quizId: 'quiz-disc-test', score: 1, answers: [makeCorrectAnswer('q1')] }),
+      makeAttempt({ id: 'a5', quizId: 'quiz-disc-test', score: 1, answers: [makeCorrectAnswer('q1')] }),
+    ]
+    const result = calculateDiscriminationIndices(quiz, attempts)!
+    expect(result).toHaveLength(1)
+    expect(result[0].questionId).toBe('q1')
+    expect(result[0].discriminationIndex).toBeCloseTo(0.894, 2)
+  })
+
+  it('returns discriminationIndex 0 and special interpretation when sd === 0 (all scores identical)', () => {
+    const quiz = makeTestQuiz(1)
+    // All attempts score 1 (identical) — some q1 correct, some not
+    const attempts = [
+      makeAttempt({ id: 'a1', quizId: 'quiz-disc-test', score: 1, answers: [makeCorrectAnswer('q1')] }),
+      makeAttempt({ id: 'a2', quizId: 'quiz-disc-test', score: 1, answers: [makeWrongAnswer('q1')] }),
+      makeAttempt({ id: 'a3', quizId: 'quiz-disc-test', score: 1, answers: [makeCorrectAnswer('q1')] }),
+      makeAttempt({ id: 'a4', quizId: 'quiz-disc-test', score: 1, answers: [makeWrongAnswer('q1')] }),
+      makeAttempt({ id: 'a5', quizId: 'quiz-disc-test', score: 1, answers: [makeCorrectAnswer('q1')] }),
+    ]
+    const result = calculateDiscriminationIndices(quiz, attempts)!
+    expect(result[0].discriminationIndex).toBe(0)
+    expect(result[0].interpretation).toContain('identical')
+  })
+
+  it('returns discriminationIndex 0 and "Not enough data" when all attempts got question correct', () => {
+    const quiz = makeTestQuiz(1)
+    // All correct — group0 is empty
+    const attempts = Array.from({ length: 5 }, (_, i) =>
+      makeAttempt({
+        id: `a${i}`,
+        quizId: 'quiz-disc-test',
+        score: i + 1,
+        answers: [makeCorrectAnswer('q1')],
+      })
+    )
+    const result = calculateDiscriminationIndices(quiz, attempts)!
+    expect(result[0].discriminationIndex).toBe(0)
+    expect(result[0].interpretation).toBe('Not enough data')
+  })
+
+  it('returns discriminationIndex 0 and "Not enough data" when all attempts got question wrong', () => {
+    const quiz = makeTestQuiz(1)
+    // All wrong — group1 is empty
+    const attempts = Array.from({ length: 5 }, (_, i) =>
+      makeAttempt({
+        id: `a${i}`,
+        quizId: 'quiz-disc-test',
+        score: i,
+        answers: [makeWrongAnswer('q1')],
+      })
+    )
+    const result = calculateDiscriminationIndices(quiz, attempts)!
+    expect(result[0].discriminationIndex).toBe(0)
+    expect(result[0].interpretation).toBe('Not enough data')
+  })
+
+  it('high discriminator (rpb > 0.3) gets correct interpretation text', () => {
+    // Use the known-rpb scenario above (rpb ≈ 0.894 > 0.3)
+    const quiz = makeTestQuiz(1)
+    const attempts = [
+      makeAttempt({ id: 'a1', quizId: 'quiz-disc-test', score: 0, answers: [makeWrongAnswer('q1')] }),
+      makeAttempt({ id: 'a2', quizId: 'quiz-disc-test', score: 0, answers: [makeWrongAnswer('q1')] }),
+      makeAttempt({ id: 'a3', quizId: 'quiz-disc-test', score: 1, answers: [makeCorrectAnswer('q1')] }),
+      makeAttempt({ id: 'a4', quizId: 'quiz-disc-test', score: 1, answers: [makeCorrectAnswer('q1')] }),
+      makeAttempt({ id: 'a5', quizId: 'quiz-disc-test', score: 1, answers: [makeCorrectAnswer('q1')] }),
+    ]
+    const result = calculateDiscriminationIndices(quiz, attempts)!
+    expect(result[0].interpretation).toContain('High discriminator')
+    expect(result[0].interpretation).toContain('strong attempts')
+  })
+
+  it('low discriminator (rpb < 0.2) gets correct interpretation text', () => {
+    const quiz = makeTestQuiz(1)
+    const attempts = [
+      makeAttempt({ id: 'a1', quizId: 'quiz-disc-test', score: 2, answers: [makeWrongAnswer('q1')] }),
+      makeAttempt({ id: 'a2', quizId: 'quiz-disc-test', score: 2, answers: [makeWrongAnswer('q1')] }),
+      makeAttempt({ id: 'a3', quizId: 'quiz-disc-test', score: 3, answers: [makeCorrectAnswer('q1')] }),
+      makeAttempt({ id: 'a4', quizId: 'quiz-disc-test', score: 3, answers: [makeCorrectAnswer('q1')] }),
+      makeAttempt({ id: 'a5', quizId: 'quiz-disc-test', score: 4, answers: [makeWrongAnswer('q1')] }),
+    ]
+    const result = calculateDiscriminationIndices(quiz, attempts)!
+    expect(result[0].interpretation).toContain('Low discriminator')
+  })
+
+  it('returns one result per quiz question', () => {
+    const quiz = makeTestQuiz(3)
+    const attempts = Array.from({ length: 5 }, (_, i) =>
+      makeAttempt({
+        id: `a${i}`,
+        quizId: 'quiz-disc-test',
+        score: i,
+        answers: [
+          makeCorrectAnswer('q1', { isCorrect: i >= 3, pointsEarned: i >= 3 ? 1 : 0 }),
+          makeCorrectAnswer('q2', { isCorrect: i >= 2, pointsEarned: i >= 2 ? 1 : 0 }),
+          makeCorrectAnswer('q3', { isCorrect: true }),
+        ],
+      })
+    )
+    const result = calculateDiscriminationIndices(quiz, attempts)!
+    expect(result).toHaveLength(3)
+    expect(result.map(r => r.questionId)).toEqual(['q1', 'q2', 'q3'])
+  })
+
+  it('uses sample standard deviation (n-1 denominator)', () => {
+    // Verify by checking a known calculation uses n-1:
+    // n-1 sample SD: sqrt(1.2/4) = sqrt(0.3) ≈ 0.5477 → rpb ≈ 0.894
+    // n population SD: sqrt(1.2/5) = sqrt(0.24) ≈ 0.4899 → rpb ≈ 1.0 (different)
+    const quiz = makeTestQuiz(1)
+    const attempts = [
+      makeAttempt({ id: 'a1', quizId: 'quiz-disc-test', score: 0, answers: [makeWrongAnswer('q1')] }),
+      makeAttempt({ id: 'a2', quizId: 'quiz-disc-test', score: 0, answers: [makeWrongAnswer('q1')] }),
+      makeAttempt({ id: 'a3', quizId: 'quiz-disc-test', score: 1, answers: [makeCorrectAnswer('q1')] }),
+      makeAttempt({ id: 'a4', quizId: 'quiz-disc-test', score: 1, answers: [makeCorrectAnswer('q1')] }),
+      makeAttempt({ id: 'a5', quizId: 'quiz-disc-test', score: 1, answers: [makeCorrectAnswer('q1')] }),
+    ]
+    const result = calculateDiscriminationIndices(quiz, attempts)!
+    // only passes if n-1
+    expect(result[0].discriminationIndex).toBeCloseTo(0.894, 2)
   })
 })
