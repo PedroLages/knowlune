@@ -329,5 +329,5 @@ development_status:
   22-2-model-auto-discovery: backlog
   22-3-connection-testing-health-check: backlog
   22-4-auto-categorize-courses-on-import: backlog
-  22-5-dynamic-filter-chips-from-ai-tags: backlog
+  22-5-dynamic-filter-chips-from-ai-tags: in-progress
   epic-22-retrospective: optional

@@ -1,8 +1,8 @@
 ---
 story_id: E22-S05
 story_name: "Dynamic Filter Chips from AI Tags"
-status: draft
-started:
+status: in-progress
+started: 2026-03-22
 completed:
 reviewed: false
 review_started:
@@ -70,6 +70,10 @@ so that I can quickly find courses by topic across my entire library.
 - E2E: Clicking a tag filters both course types
 - E2E: New import triggers chip list update without refresh
 - Edge case: No imported courses (only pre-seeded chips), no pre-seeded courses (only AI chips), both empty
+
+## Implementation Plan
+
+[2026-03-22-e22-s05-dynamic-filter-chips-from-ai-tags.md](plans/2026-03-22-e22-s05-dynamic-filter-chips-from-ai-tags.md)
 
 ## Pre-Review Checklist
 
