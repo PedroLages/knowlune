@@ -49,6 +49,9 @@ const FEATURE_LABELS: Record<keyof ConsentSettings, string> = {
 export function AIConfigurationSettings() {
   const [settings, setSettings] = useState<AIConfigurationSettings>(getAIConfiguration)
   const [apiKey, setApiKey] = useState('')
+  const [ollamaModelInput, setOllamaModelInput] = useState(
+    () => getAIConfiguration().ollamaModel || 'llama3.2'
+  )
   const [isValidating, setIsValidating] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -90,7 +93,11 @@ export function AIConfigurationSettings() {
     await saveAIConfiguration({ provider, connectionStatus: 'unconfigured' })
     setApiKey('')
     setShowAdvanced(false)
-    setSettings(getAIConfiguration())
+    const updated = getAIConfiguration()
+    setSettings(updated)
+    if (provider === 'ollama') {
+      setOllamaModelInput(updated.ollamaModel || 'llama3.2')
+    }
   }
 
   /**
@@ -122,8 +129,13 @@ export function AIConfigurationSettings() {
 
     try {
       if (isOllama) {
-        // Ollama: store URL as plaintext (no encryption), apply CSP update
-        await saveAIConfiguration({ ollamaBaseUrl: apiKey.trim(), connectionStatus: 'connected' })
+        // Ollama: store URL and model as plaintext (no encryption), apply CSP update
+        const model = ollamaModelInput.trim() || 'llama3.2'
+        await saveAIConfiguration({
+          ollamaBaseUrl: apiKey.trim(),
+          ollamaModel: model,
+          connectionStatus: 'connected',
+        })
         applyOllamaCSP(apiKey.trim())
       } else {
         // Test connection for API-key providers
@@ -234,6 +246,22 @@ export function AIConfigurationSettings() {
           />
         </div>
 
+        {/* Ollama Model Selection */}
+        {isOllama && (
+          <div>
+            <Label htmlFor="ollama-model">Model</Label>
+            <Input
+              id="ollama-model"
+              type="text"
+              value={ollamaModelInput}
+              onChange={e => setOllamaModelInput(e.target.value)}
+              placeholder="llama3.2"
+              className="mt-1"
+              data-testid="ollama-model-input"
+            />
+          </div>
+        )}
+
         {/* Ollama Advanced Settings */}
         {isOllama && (
           <div className="rounded-lg border border-border">
@@ -309,6 +337,7 @@ export function AIConfigurationSettings() {
 
         {/* Save Button */}
         <Button
+          variant="brand"
           onClick={handleSave}
           disabled={isValidating || !apiKey.trim()}
           data-testid="save-ai-config-button"

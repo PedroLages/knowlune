@@ -64,8 +64,8 @@ export async function getLLMClient(): Promise<LLMClient> {
 export function getLLMClientForProvider(providerId: AIProviderId, apiKey: string): LLMClient {
   if (providerId === 'ollama') {
     const config = getAIConfiguration()
-    const baseUrl = apiKey || 'http://localhost:11434'
-    const model = 'llama3.2'
+    const baseUrl = apiKey // URL is required — getLLMClient() validates before calling here
+    const model = config.ollamaModel || 'llama3.2'
     if (config.ollamaDirectConnection) {
       return new OllamaDirectClient(baseUrl, model)
     }

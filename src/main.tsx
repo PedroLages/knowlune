@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client'
 import App from './app/App.tsx'
 import './styles/index.css'
+import { applyOllamaCSP } from '@/lib/aiConfiguration'
 
 // Apply Ollama CSP before first render so direct-connection requests are allowed immediately
 // Re-applied each session since meta tag changes are not persisted to index.html
@@ -10,20 +11,11 @@ import './styles/index.css'
     if (stored) {
       const config = JSON.parse(stored) as { provider?: string; ollamaBaseUrl?: string }
       if (config.provider === 'ollama' && config.ollamaBaseUrl) {
-        const metaCSP = document.querySelector('meta[http-equiv="Content-Security-Policy"]')
-        if (metaCSP) {
-          const content = metaCSP.getAttribute('content') ?? ''
-          if (!content.includes(config.ollamaBaseUrl)) {
-            metaCSP.setAttribute(
-              'content',
-              content.replace('connect-src', `connect-src ${config.ollamaBaseUrl}`)
-            )
-          }
-        }
+        applyOllamaCSP(config.ollamaBaseUrl)
       }
     }
-  } catch {
-    // Non-critical — silently skip if localStorage is unavailable or CSP meta tag is absent
+  } catch (error) {
+    console.warn('[CSP] Failed to apply Ollama CSP on startup:', error)
   }
 })()
 
