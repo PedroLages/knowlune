@@ -251,7 +251,7 @@ development_status:
   16-2-display-score-history-across-all-attempts: backlog
   16-3-calculate-and-display-score-improvement: backlog
   16-4-calculate-normalized-gain-hakes-formula: backlog
-  16-5-display-score-improvement-trajectory-chart: in-progress
+  16-5-display-score-improvement-trajectory-chart: review  # reviewed 2026-03-22 — blocked: 2 WCAG AA blockers, 5 highs
   epic-16-retrospective: optional
 
   # ──────────────────────────────────────────────────
