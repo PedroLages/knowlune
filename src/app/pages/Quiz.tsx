@@ -269,17 +269,14 @@ export function Quiz() {
     remaining: number
   } | null>(null)
 
-  const handleTimerWarning = useCallback(
-    (level: WarningLevel, remaining: number) => {
-      setWarningState({ level, remaining })
-    },
-    [],
-  )
+  const handleTimerWarning = useCallback((level: WarningLevel, remaining: number) => {
+    setWarningState({ level, remaining })
+  }, [])
 
   const timerRemaining = useQuizTimer(
     timerInitialSecondsRef.current,
     handleTimerExpiry,
-    handleTimerWarning,
+    handleTimerWarning
   )
 
   // Safety net: sync progress to per-quiz localStorage on tab close/crash.

@@ -70,14 +70,14 @@ const untimedQuiz = makeQuiz({
 
 async function seedQuizData(
   page: import('@playwright/test').Page,
-  quiz: ReturnType<typeof makeQuiz>,
+  quiz: ReturnType<typeof makeQuiz>
 ) {
   await seedIndexedDBStore(page, 'ElearningDB', 'quizzes', [quiz])
 }
 
 async function navigateToQuiz(
   page: import('@playwright/test').Page,
-  quiz: ReturnType<typeof makeQuiz>,
+  quiz: ReturnType<typeof makeQuiz>
 ) {
   await page.addInitScript(() => {
     localStorage.setItem('eduvi-sidebar-v1', 'false')
@@ -103,7 +103,7 @@ async function saveRealDateNow(page: import('@playwright/test').Page) {
 }
 
 async function shiftDateNow(page: import('@playwright/test').Page, offsetMs: number) {
-  await page.evaluate((offset) => {
+  await page.evaluate(offset => {
     const realNow = (window as unknown as Record<string, () => number>).__realDateNow
     ;(Date as { now: () => number }).now = () => realNow() + offset
   }, offsetMs)

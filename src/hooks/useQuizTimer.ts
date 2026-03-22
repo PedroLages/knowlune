@@ -30,7 +30,7 @@ export type WarningLevel = '25%' | '10%' | '1min'
 export function useQuizTimer(
   initialSeconds: number,
   onExpire: () => void,
-  onWarning?: (level: WarningLevel, remainingSeconds: number) => void,
+  onWarning?: (level: WarningLevel, remainingSeconds: number) => void
 ): number {
   const [timeRemaining, setTimeRemaining] = useState(initialSeconds)
   const onExpireRef = useRef(onExpire)
@@ -85,7 +85,7 @@ export function useQuizTimer(
           warningsFiredRef.current.twentyFivePercent = true
           onWarningRef.current('25%', remaining)
         }
-        if (pct <= 0.10 && !warningsFiredRef.current.tenPercent) {
+        if (pct <= 0.1 && !warningsFiredRef.current.tenPercent) {
           warningsFiredRef.current.tenPercent = true
           onWarningRef.current('10%', remaining)
         }
