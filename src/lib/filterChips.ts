@@ -36,15 +36,11 @@ export function buildUnifiedFilterChips(
   return [...chipMap.entries()]
     .map(([value, label]) => {
       const preCount = preseededCourses.filter(
-        c =>
-          c.category.toLowerCase() === value ||
-          c.tags.some(t => t.toLowerCase() === value)
+        c => c.category.toLowerCase() === value || c.tags.some(t => t.toLowerCase() === value)
       ).length
 
       const importCount = importedCourses.filter(
-        c =>
-          c.tags.some(t => t.toLowerCase() === value) ||
-          c.category.toLowerCase() === value
+        c => c.tags.some(t => t.toLowerCase() === value) || c.category.toLowerCase() === value
       ).length
 
       return { value, label, count: preCount + importCount }

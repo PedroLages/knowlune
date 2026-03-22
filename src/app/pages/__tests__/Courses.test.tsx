@@ -317,7 +317,9 @@ describe('Courses page', () => {
     it('renders a single ToggleGroup (not a separate TopicFilter)', () => {
       renderCourses()
       expect(screen.queryByTestId('topic-filter-bar')).not.toBeInTheDocument()
-      expect(screen.getByRole('group', { name: /filter by category or topic/i })).toBeInTheDocument()
+      expect(
+        screen.getByRole('group', { name: /filter by category or topic/i })
+      ).toBeInTheDocument()
     })
 
     it('shows "All Courses" chip (AC1)', () => {
