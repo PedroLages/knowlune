@@ -25,8 +25,8 @@ app.use(express.json({ limit: '1mb' }))
 
 /** Request body schema — validated on every request */
 const RequestSchema = z.object({
-  provider: z.enum(['openai', 'anthropic', 'groq', 'gemini', 'glm']),
-  apiKey: z.string().min(1, 'API key is required'),
+  provider: z.enum(['openai', 'anthropic', 'groq', 'gemini', 'glm', 'ollama']),
+  apiKey: z.string().min(1, 'API key or Ollama URL is required'),
   messages: z
     .array(
       z.object({
@@ -61,7 +61,7 @@ app.post('/api/ai/generate', async (req, res) => {
       return
     }
 
-    const providerModel = getProviderModel(provider, apiKey, model)
+    const providerModel = getProviderModel(provider as string, apiKey, model)
 
     const result = await generateText({
       model: providerModel,
@@ -100,7 +100,7 @@ app.post('/api/ai/stream', async (req, res) => {
       return
     }
 
-    const providerModel = getProviderModel(provider, apiKey, model)
+    const providerModel = getProviderModel(provider as string, apiKey, model)
 
     const result = streamText({
       model: providerModel,

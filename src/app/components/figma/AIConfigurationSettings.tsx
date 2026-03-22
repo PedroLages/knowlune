@@ -24,11 +24,12 @@ import { Input } from '@/app/components/ui/input'
 import { Label } from '@/app/components/ui/label'
 import { Switch } from '@/app/components/ui/switch'
 import { Button } from '@/app/components/ui/button'
-import { CheckCircle2, AlertTriangle, Settings } from 'lucide-react'
+import { CheckCircle2, AlertTriangle, Settings, ChevronDown, ChevronUp } from 'lucide-react'
 import {
   getAIConfiguration,
   saveAIConfiguration,
   testAIConnection,
+  applyOllamaCSP,
   AI_PROVIDERS,
   type AIConfigurationSettings,
   type AIProviderId,
@@ -50,7 +51,10 @@ export function AIConfigurationSettings() {
   const [apiKey, setApiKey] = useState('')
   const [isValidating, setIsValidating] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const successTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
+
+  const isOllama = settings.provider === 'ollama'
 
   // Cross-tab synchronization
   useEffect(() => {
@@ -83,32 +87,33 @@ export function AIConfigurationSettings() {
    * Handles provider selection change
    */
   async function handleProviderChange(provider: AIProviderId) {
-    await saveAIConfiguration({ provider })
+    await saveAIConfiguration({ provider, connectionStatus: 'unconfigured' })
+    setApiKey('')
+    setShowAdvanced(false)
     setSettings(getAIConfiguration())
   }
 
   /**
-   * Validates API key and tests connection
+   * Validates API key (or Ollama URL) and saves configuration
    */
   async function handleSave() {
     if (!apiKey.trim()) {
-      // Transient error - do NOT persist to localStorage
       setSettings({
         ...settings,
         connectionStatus: 'error',
-        errorMessage: 'API key is required',
+        errorMessage: isOllama ? 'Ollama server URL is required' : 'API key is required',
       })
       return
     }
 
-    // Validate API key format
     const provider = AI_PROVIDERS[settings.provider]
     if (!provider.validateApiKey(apiKey)) {
-      // Transient error - do NOT persist to localStorage
       setSettings({
         ...settings,
         connectionStatus: 'error',
-        errorMessage: 'Invalid API key format',
+        errorMessage: isOllama
+          ? 'Invalid URL format. Must start with http:// or https://'
+          : 'Invalid API key format',
       })
       return
     }
@@ -116,39 +121,44 @@ export function AIConfigurationSettings() {
     setIsValidating(true)
 
     try {
-      // Test connection
-      const isConnected = await testAIConnection(settings.provider, apiKey)
-
-      if (isConnected) {
-        await saveAIConfiguration({ connectionStatus: 'connected' }, apiKey)
-        setShowSuccess(true)
-        setApiKey('') // Clear input after successful save
-        // Clear any existing timeout before setting a new one
-        if (successTimeoutRef.current) {
-          clearTimeout(successTimeoutRef.current)
-        }
-        successTimeoutRef.current = setTimeout(() => setShowSuccess(false), 3000)
+      if (isOllama) {
+        // Ollama: store URL as plaintext (no encryption), apply CSP update
+        await saveAIConfiguration({ ollamaBaseUrl: apiKey.trim(), connectionStatus: 'connected' })
+        applyOllamaCSP(apiKey.trim())
       } else {
-        // Transient error - do NOT persist to localStorage
-        setSettings({
-          ...settings,
-          connectionStatus: 'error',
-          errorMessage: 'Connection test failed',
-        })
+        // Test connection for API-key providers
+        const isConnected = await testAIConnection(settings.provider, apiKey)
+        if (!isConnected) {
+          setSettings({ ...settings, connectionStatus: 'error', errorMessage: 'Connection test failed' })
+          return
+        }
+        await saveAIConfiguration({ connectionStatus: 'connected' }, apiKey)
       }
 
+      setShowSuccess(true)
+      setApiKey('')
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current)
+      }
+      successTimeoutRef.current = setTimeout(() => setShowSuccess(false), 3000)
       setSettings(getAIConfiguration())
     } catch (error) {
-      // Transient error - do NOT persist to localStorage
       setSettings({
         ...settings,
         connectionStatus: 'error',
         errorMessage: error instanceof Error ? error.message : 'Connection test failed',
       })
-      // Note: Do NOT call getAIConfiguration() here - it would overwrite the error state
     } finally {
       setIsValidating(false)
     }
+  }
+
+  /**
+   * Toggles Ollama direct connection mode
+   */
+  async function handleDirectConnectionToggle(enabled: boolean) {
+    await saveAIConfiguration({ ollamaDirectConnection: enabled })
+    setSettings(getAIConfiguration())
   }
 
   /**
@@ -204,21 +214,71 @@ export function AIConfigurationSettings() {
           </Select>
         </div>
 
-        {/* API Key Input */}
+        {/* API Key or Ollama URL Input */}
         <div>
-          <Label htmlFor="api-key">API Key</Label>
+          <Label htmlFor="api-key">{isOllama ? 'Ollama Server URL' : 'API Key'}</Label>
           <Input
             id="api-key"
-            type="password"
+            type={isOllama ? 'text' : 'password'}
             value={apiKey}
             onChange={e => setApiKey(e.target.value)}
-            placeholder="Enter your API key"
+            placeholder={isOllama ? 'http://192.168.1.x:11434' : 'Enter your API key'}
             className="mt-1"
-            data-testid="api-key-input"
+            data-testid={isOllama ? 'ollama-url-input' : 'api-key-input'}
             aria-invalid={hasError}
             aria-describedby={hasError ? 'connection-error' : undefined}
           />
         </div>
+
+        {/* Ollama Advanced Settings */}
+        {isOllama && (
+          <div className="rounded-lg border border-border">
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(v => !v)}
+              className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors rounded-lg"
+              aria-expanded={showAdvanced}
+              aria-controls="ollama-advanced"
+              data-testid="ollama-advanced-toggle"
+            >
+              Advanced
+              {showAdvanced ? (
+                <ChevronUp className="size-4 text-muted-foreground" aria-hidden="true" />
+              ) : (
+                <ChevronDown className="size-4 text-muted-foreground" aria-hidden="true" />
+              )}
+            </button>
+            {showAdvanced && (
+              <div
+                id="ollama-advanced"
+                className="border-t border-border px-4 py-3 space-y-3 animate-in fade-in-0 slide-in-from-top-1 duration-200"
+              >
+                <div className="flex items-center justify-between min-h-[44px]">
+                  <div>
+                    <Label htmlFor="ollama-direct" className="cursor-pointer">
+                      Direct Connection
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Requires CORS on Ollama server (
+                      <code className="font-mono">OLLAMA_ORIGINS=*</code>)
+                    </p>
+                  </div>
+                  <Switch
+                    id="ollama-direct"
+                    checked={settings.ollamaDirectConnection ?? false}
+                    onCheckedChange={checked =>
+                      handleDirectConnectionToggle(checked).catch(err =>
+                        console.error('Failed to update Ollama direct connection:', err)
+                      )
+                    }
+                    data-testid="ollama-direct-toggle"
+                    aria-label="Direct connection to Ollama server"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Connection Status */}
         <div aria-live="polite" aria-atomic="true">
@@ -250,7 +310,15 @@ export function AIConfigurationSettings() {
           data-testid="save-ai-config-button"
           className="min-h-[44px] rounded-lg"
         >
-          {isValidating ? 'Testing...' : showSuccess ? 'Saved!' : 'Save & Test Connection'}
+          {isValidating
+            ? isOllama
+              ? 'Saving...'
+              : 'Testing...'
+            : showSuccess
+              ? 'Saved!'
+              : isOllama
+                ? 'Save URL'
+                : 'Save & Test Connection'}
         </Button>
 
         {/* Per-Feature Consent Toggles */}

@@ -16,6 +16,9 @@ import {
   isFeatureEnabled,
   isAIAvailable,
   sanitizeAIRequestPayload,
+  getDecryptedApiKey,
+  applyOllamaCSP,
+  AI_PROVIDERS,
   DEFAULTS,
   type AIConfigurationSettings,
 } from '@/lib/aiConfiguration'
@@ -293,6 +296,110 @@ describe('aiConfiguration.ts', () => {
       const sanitized = sanitizeAIRequestPayload(content)
 
       expect(sanitized.content).toBe('My name is John and my email is john@example.com')
+    })
+  })
+
+  describe('Ollama provider (AC1, AC2)', () => {
+    it("'ollama' is a valid AIProviderId in AI_PROVIDERS", () => {
+      expect(AI_PROVIDERS.ollama).toBeDefined()
+      expect(AI_PROVIDERS.ollama.id).toBe('ollama')
+      expect(AI_PROVIDERS.ollama.name).toBe('Ollama (Local)')
+      expect(AI_PROVIDERS.ollama.requiresApiKey).toBe(false)
+    })
+
+    it('validateApiKey accepts valid http URL', () => {
+      expect(AI_PROVIDERS.ollama.validateApiKey('http://192.168.1.100:11434')).toBe(true)
+    })
+
+    it('validateApiKey accepts valid https URL', () => {
+      expect(AI_PROVIDERS.ollama.validateApiKey('https://ollama.example.com')).toBe(true)
+    })
+
+    it('validateApiKey accepts URL with non-standard port', () => {
+      expect(AI_PROVIDERS.ollama.validateApiKey('http://localhost:11435')).toBe(true)
+    })
+
+    it('validateApiKey rejects non-URL strings (API key format)', () => {
+      expect(AI_PROVIDERS.ollama.validateApiKey('sk-not-a-url')).toBe(false)
+    })
+
+    it('validateApiKey rejects empty string', () => {
+      expect(AI_PROVIDERS.ollama.validateApiKey('')).toBe(false)
+    })
+
+    it('testConnection returns true for valid URL', async () => {
+      const result = await AI_PROVIDERS.ollama.testConnection('http://localhost:11434')
+      expect(result).toBe(true)
+    })
+  })
+
+  describe('getDecryptedApiKey for Ollama', () => {
+    it('returns ollamaBaseUrl for Ollama provider without decryption', async () => {
+      const config: AIConfigurationSettings = {
+        provider: 'ollama',
+        ollamaBaseUrl: 'http://192.168.1.100:11434',
+        connectionStatus: 'connected',
+        consentSettings: DEFAULTS.consentSettings,
+      }
+      localStorage.setItem('ai-configuration', JSON.stringify(config))
+
+      const key = await getDecryptedApiKey()
+      expect(key).toBe('http://192.168.1.100:11434')
+    })
+
+    it('returns null for Ollama provider with no URL configured', async () => {
+      const config: AIConfigurationSettings = {
+        provider: 'ollama',
+        connectionStatus: 'unconfigured',
+        consentSettings: DEFAULTS.consentSettings,
+      }
+      localStorage.setItem('ai-configuration', JSON.stringify(config))
+
+      const key = await getDecryptedApiKey()
+      expect(key).toBeNull()
+    })
+  })
+
+  describe('applyOllamaCSP (AC5)', () => {
+    it('adds Ollama URL to connect-src in meta CSP tag', () => {
+      // Create a mock meta CSP tag
+      const meta = document.createElement('meta')
+      meta.setAttribute('http-equiv', 'Content-Security-Policy')
+      meta.setAttribute('content', "default-src 'self'; connect-src 'self' ws: wss:")
+      document.head.appendChild(meta)
+
+      applyOllamaCSP('http://192.168.1.100:11434')
+
+      const content = meta.getAttribute('content') ?? ''
+      expect(content).toContain('http://192.168.1.100:11434')
+      expect(content).toMatch(/connect-src http:\/\/192\.168\.1\.100:11434/)
+
+      document.head.removeChild(meta)
+    })
+
+    it('does not duplicate URL if already present', () => {
+      const url = 'http://192.168.1.100:11434'
+      const meta = document.createElement('meta')
+      meta.setAttribute('http-equiv', 'Content-Security-Policy')
+      meta.setAttribute('content', `default-src 'self'; connect-src 'self' ${url}`)
+      document.head.appendChild(meta)
+
+      applyOllamaCSP(url)
+
+      const content = meta.getAttribute('content') ?? ''
+      // Should appear exactly once
+      expect(content.split(url).length - 1).toBe(1)
+
+      document.head.removeChild(meta)
+    })
+
+    it('is a no-op when no meta CSP tag exists', () => {
+      // Should not throw
+      expect(() => applyOllamaCSP('http://localhost:11434')).not.toThrow()
+    })
+
+    it('is a no-op for empty URL', () => {
+      expect(() => applyOllamaCSP('')).not.toThrow()
     })
   })
 })

@@ -13,7 +13,7 @@
 import { encryptData, decryptData, type EncryptedData } from './crypto'
 
 /** Supported AI provider IDs */
-export type AIProviderId = 'openai' | 'anthropic' | 'groq' | 'glm' | 'gemini'
+export type AIProviderId = 'openai' | 'anthropic' | 'groq' | 'glm' | 'gemini' | 'ollama'
 
 /** AI provider configuration and validation */
 export interface AIProvider {
@@ -21,7 +21,9 @@ export interface AIProvider {
   id: AIProviderId
   /** Display name for UI */
   name: string
-  /** Validates API key format without making network calls */
+  /** Whether this provider uses an API key (false for Ollama which uses a URL) */
+  requiresApiKey?: boolean
+  /** Validates API key (or URL for Ollama) format without making network calls */
   validateApiKey: (key: string) => boolean
   /** Tests provider connectivity (stub for S01, real implementation in S02-S07) */
   testConnection: (key: string) => Promise<boolean>
@@ -62,6 +64,10 @@ export interface AIConfigurationSettings {
   errorMessage?: string
   /** Per-feature consent toggles */
   consentSettings: ConsentSettings
+  /** Ollama server base URL (e.g. http://192.168.1.x:11434) — stored plaintext, no API key needed */
+  ollamaBaseUrl?: string
+  /** When true, browser connects directly to Ollama (requires CORS on server); default is proxy mode */
+  ollamaDirectConnection?: boolean
   /**
    * E2E test-only plaintext API key bypass (DEV mode only)
    * @internal Only works when import.meta.env.DEV = true
@@ -148,6 +154,16 @@ export const AI_PROVIDERS: Record<AIProviderId, AIProvider> = {
       return Promise.resolve(key.startsWith('AIza'))
     },
   },
+  ollama: {
+    id: 'ollama',
+    name: 'Ollama (Local)',
+    requiresApiKey: false,
+    validateApiKey: key => /^https?:\/\/.+/.test(key.trim()),
+    testConnection: async key => {
+      // Stub: validates URL format only — real Ollama server not required for configuration
+      return Promise.resolve(/^https?:\/\/.+/.test(key.trim()))
+    },
+  },
 }
 
 /**
@@ -229,6 +245,11 @@ export async function saveAIConfiguration(
 export async function getDecryptedApiKey(): Promise<string | null> {
   const config = getAIConfiguration()
 
+  // Ollama uses a base URL instead of an API key — return it directly (no encryption)
+  if (config.provider === 'ollama') {
+    return config.ollamaBaseUrl ?? null
+  }
+
   // E2E test escape hatch (DEV mode only) - bypasses encryption for tests
   // Tests mock API endpoints so keys never reach real servers
   if (import.meta.env.DEV && config._testApiKey) {
@@ -304,4 +325,26 @@ export function isAIAvailable(): boolean {
 export function sanitizeAIRequestPayload(content: string): { content: string } {
   // Only include content being analyzed — no metadata
   return { content }
+}
+
+/**
+ * Dynamically adds the Ollama base URL to the CSP connect-src directive
+ *
+ * Required for direct connection mode where the browser calls Ollama directly.
+ * In proxy mode this is unnecessary — traffic goes through 'self'.
+ *
+ * This update is session-scoped (not persisted to index.html).
+ * Must be called on startup (main.tsx) and after saving a new Ollama URL.
+ *
+ * @param baseUrl - The Ollama server URL (e.g. http://192.168.1.x:11434)
+ */
+export function applyOllamaCSP(baseUrl: string): void {
+  if (!baseUrl) return
+  const metaCSP = document.querySelector('meta[http-equiv="Content-Security-Policy"]')
+  if (!metaCSP) return
+  const content = metaCSP.getAttribute('content') ?? ''
+  if (!content.includes(baseUrl)) {
+    const updated = content.replace('connect-src', `connect-src ${baseUrl}`)
+    metaCSP.setAttribute('content', updated)
+  }
 }

@@ -11,7 +11,7 @@ import { createGroq } from '@ai-sdk/groq'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 
 /** Provider IDs matching the frontend AIProviderId type */
-export type ProviderId = 'openai' | 'anthropic' | 'groq' | 'glm' | 'gemini'
+export type ProviderId = 'openai' | 'anthropic' | 'groq' | 'glm' | 'gemini' | 'ollama'
 
 /** Default models per provider */
 const DEFAULT_MODELS: Record<string, string> = {
@@ -42,6 +42,16 @@ export function getProviderModel(providerId: string, apiKey: string, model?: str
 
     case 'gemini':
       return createGoogleGenerativeAI({ apiKey })(model || DEFAULT_MODELS.gemini)
+
+    case 'ollama': {
+      // apiKey field carries the Ollama base URL (e.g. 'http://192.168.1.x:11434')
+      // Ollama exposes an OpenAI-compatible /v1/ API — use createOpenAI with custom baseURL
+      const ollamaUrl = apiKey || 'http://localhost:11434'
+      return createOpenAI({
+        baseURL: `${ollamaUrl.replace(/\/$/, '')}/v1`,
+        apiKey: 'ollama', // Ollama ignores auth but SDK requires non-empty value
+      })(model || 'llama3.2')
+    }
 
     default:
       throw new Error(`Unsupported provider: ${providerId}`)

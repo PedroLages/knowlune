@@ -7,6 +7,7 @@
 import type { AIProviderId } from '@/lib/aiConfiguration'
 import { getAIConfiguration, getDecryptedApiKey } from '@/lib/aiConfiguration'
 import type { LLMClient } from './client'
+import { OllamaDirectClient } from './ollama-client'
 import { ProxyLLMClient } from './proxy-client'
 import { LLMError } from './types'
 
@@ -35,9 +36,12 @@ export async function getLLMClient(): Promise<LLMClient> {
   const config = getAIConfiguration()
   const apiKey = await getDecryptedApiKey()
 
+  // Ollama uses a URL as its "credential" — already handled in getDecryptedApiKey
   if (!apiKey) {
     throw new LLMError(
-      'No API key configured. Please configure an AI provider in Settings.',
+      config.provider === 'ollama'
+        ? 'No Ollama URL configured. Please enter your Ollama server URL in Settings.'
+        : 'No API key configured. Please configure an AI provider in Settings.',
       'AUTH_ERROR',
       config.provider
     )
@@ -58,6 +62,17 @@ export async function getLLMClient(): Promise<LLMClient> {
  * const client = getLLMClientForProvider('openai', 'sk-...')
  */
 export function getLLMClientForProvider(providerId: AIProviderId, apiKey: string): LLMClient {
+  if (providerId === 'ollama') {
+    const config = getAIConfiguration()
+    const baseUrl = apiKey || 'http://localhost:11434'
+    const model = 'llama3.2'
+    if (config.ollamaDirectConnection) {
+      return new OllamaDirectClient(baseUrl, model)
+    }
+    // Proxy mode: pass Ollama base URL in the apiKey field (server interprets it as baseURL)
+    return new ProxyLLMClient('ollama', baseUrl, model)
+  }
+
   const supported: AIProviderId[] = ['openai', 'anthropic', 'groq', 'gemini']
   if (!supported.includes(providerId)) {
     throw new LLMError(`Unsupported AI provider: ${providerId}`, 'UNKNOWN', providerId)

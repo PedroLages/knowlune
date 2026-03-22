@@ -2,6 +2,31 @@ import { createRoot } from 'react-dom/client'
 import App from './app/App.tsx'
 import './styles/index.css'
 
+// Apply Ollama CSP before first render so direct-connection requests are allowed immediately
+// Re-applied each session since meta tag changes are not persisted to index.html
+;(() => {
+  try {
+    const stored = localStorage.getItem('ai-configuration')
+    if (stored) {
+      const config = JSON.parse(stored) as { provider?: string; ollamaBaseUrl?: string }
+      if (config.provider === 'ollama' && config.ollamaBaseUrl) {
+        const metaCSP = document.querySelector('meta[http-equiv="Content-Security-Policy"]')
+        if (metaCSP) {
+          const content = metaCSP.getAttribute('content') ?? ''
+          if (!content.includes(config.ollamaBaseUrl)) {
+            metaCSP.setAttribute(
+              'content',
+              content.replace('connect-src', `connect-src ${config.ollamaBaseUrl}`)
+            )
+          }
+        }
+      }
+    }
+  } catch {
+    // Non-critical — silently skip if localStorage is unavailable or CSP meta tag is absent
+  }
+})()
+
 // Render first, initialize data after — improves FCP/LCP by deferring heavy work
 createRoot(document.getElementById('root')!).render(<App />)
 
