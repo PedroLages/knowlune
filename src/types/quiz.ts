@@ -101,6 +101,8 @@ const BaseQuestionSchema = z.object({
   media: QuestionMediaSchema.optional(),
   /** Optional hint shown during quiz-taking */
   hint: z.string().optional(),
+  /** Optional topic tag for performance analysis grouping (E15-S05) */
+  topic: z.string().optional(),
 })
 
 // TODO(E13): Replace .refine() with .superRefine() + ctx.addIssue() per case to

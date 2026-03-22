@@ -6,7 +6,7 @@
  *
  * Pattern: factory function with Partial<T> overrides
  */
-import type { Quiz, Question, QuizAttempt, QuizProgress } from '../../../../src/types/quiz'
+import type { Quiz, Question, QuizAttempt, QuizProgress, Answer } from '../../../../src/types/quiz'
 import { FIXED_DATE, FIXED_TIMESTAMP } from '../../../utils/test-time'
 
 export function makeQuestion(overrides: Partial<Question> = {}): Question {
@@ -69,6 +69,52 @@ export function makeProgress(quizId: string, overrides: Partial<QuizProgress> = 
     markedForReview: [],
     questionOrder: [],
     timerAccommodation: 'standard',
+    ...overrides,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Answer helpers — quick factories for unit/component tests
+// ---------------------------------------------------------------------------
+
+export function makeCorrectAnswer(
+  questionId: string,
+  overrides: Partial<Answer> = {},
+): Answer {
+  return {
+    questionId,
+    userAnswer: 'A',
+    isCorrect: true,
+    pointsEarned: 1,
+    pointsPossible: 1,
+    ...overrides,
+  }
+}
+
+export function makeWrongAnswer(
+  questionId: string,
+  overrides: Partial<Answer> = {},
+): Answer {
+  return {
+    questionId,
+    userAnswer: 'B',
+    isCorrect: false,
+    pointsEarned: 0,
+    pointsPossible: 1,
+    ...overrides,
+  }
+}
+
+export function makeSkippedAnswer(
+  questionId: string,
+  overrides: Partial<Answer> = {},
+): Answer {
+  return {
+    questionId,
+    userAnswer: '',
+    isCorrect: false,
+    pointsEarned: 0,
+    pointsPossible: 1,
     ...overrides,
   }
 }

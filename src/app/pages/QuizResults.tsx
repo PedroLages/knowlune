@@ -12,6 +12,7 @@ import {
 import { ScoreSummary } from '@/app/components/quiz/ScoreSummary'
 import { QuestionBreakdown } from '@/app/components/quiz/QuestionBreakdown'
 import { AreasForGrowth } from '@/app/components/quiz/AreasForGrowth'
+import { PerformanceInsights } from '@/app/components/quiz/PerformanceInsights'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
 
@@ -43,8 +44,8 @@ export function QuizResults() {
   const lastAttempt = attempts.length > 0 ? attempts[attempts.length - 1] : null
 
   const maxScore = useMemo(
-    () => lastAttempt?.answers.reduce((sum, a) => sum + a.pointsPossible, 0) ?? 0,
-    [lastAttempt]
+    () => lastAttempt?.answers?.reduce((sum, a) => sum + a.pointsPossible, 0) ?? 0,
+    [lastAttempt],
   )
 
   const previousBestPercentage = useMemo(() => {
@@ -59,7 +60,7 @@ export function QuizResults() {
 
   const incorrectItems = useMemo(() => {
     if (!lastAttempt || !currentQuiz) return []
-    return lastAttempt.answers
+    return (lastAttempt.answers ?? [])
       .filter(a => !a.isCorrect)
       .map(a => {
         const question = currentQuiz.questions.find(q => q.id === a.questionId)
@@ -134,6 +135,8 @@ export function QuizResults() {
         />
 
         <QuestionBreakdown answers={lastAttempt.answers} questions={currentQuiz.questions} />
+
+        <PerformanceInsights questions={currentQuiz.questions} answers={lastAttempt.answers ?? []} />
 
         <AreasForGrowth incorrectItems={incorrectItems} />
 
