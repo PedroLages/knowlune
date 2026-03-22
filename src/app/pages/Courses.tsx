@@ -243,159 +243,159 @@ export function Courses() {
         />
       ) : (
         <>
-      <Card className="bg-card rounded-[24px] border-0 shadow-sm p-6 mb-6">
-        <div className="flex gap-4 items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search for courses..."
-              aria-label="Search courses"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="pl-10 bg-muted border-0"
-            />
-          </div>
-          <Button
-            variant="brand"
-            onClick={() => setSearchQuery('')}
-            aria-label={searchQuery ? 'Clear search' : 'Search courses'}
-          >
-            {searchQuery ? 'Clear' : 'Search'}
-          </Button>
-        </div>
-      </Card>
-
-      {importedCourses.length > 0 && (
-        <div className="flex flex-wrap gap-x-6 gap-y-2 items-start">
-          <TopicFilter
-            availableTags={allTags}
-            selectedTags={selectedTopics}
-            onSelectedTagsChange={setSelectedTopics}
-          />
-          <StatusFilter
-            selectedStatuses={selectedStatuses}
-            onSelectedStatusesChange={setSelectedStatuses}
-          />
-        </div>
-      )}
-
-      {/* Imported Courses Section */}
-      {(importedCourses.length > 0 || !searchQuery.trim()) && (
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Imported Courses</h2>
-          {importedCourses.length === 0 ? (
-            <div
-              data-testid="imported-courses-empty-state"
-              className="flex items-center gap-3 rounded-xl bg-muted/50 px-4 py-3 text-sm text-muted-foreground"
-              role="region"
-              aria-label="Import courses"
-            >
-              <FolderOpen className="size-5 shrink-0" aria-hidden="true" />
-              <span>No imported courses yet.</span>
+          <Card className="bg-card rounded-[24px] border-0 shadow-sm p-6 mb-6">
+            <div className="flex gap-4 items-center">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Search for courses..."
+                  aria-label="Search courses"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-muted border-0"
+                />
+              </div>
               <Button
-                variant="link"
-                size="sm"
-                data-testid="import-first-course-cta"
-                aria-label="Import your first course"
-                onClick={handleImportCourse}
-                disabled={isImporting}
-                className="text-brand-soft-foreground h-auto p-0"
+                variant="brand"
+                onClick={() => setSearchQuery('')}
+                aria-label={searchQuery ? 'Clear search' : 'Search courses'}
               >
-                {isImporting ? (
-                  <>
-                    <Loader2 className="size-4 mr-1 animate-spin" />
-                    Scanning...
-                  </>
-                ) : (
-                  'Import a course \u2192'
-                )}
+                {searchQuery ? 'Clear' : 'Search'}
               </Button>
             </div>
-          ) : filteredImportedCourses.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No imported courses match your{' '}
-              {selectedTopics.length > 0 || selectedStatuses.length > 0 ? 'filters' : 'search'}
-            </div>
-          ) : (
-            <div
-              data-testid="imported-courses-grid"
-              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
-            >
-              {sortedImportedCourses.map(course => (
-                <ImportedCourseCard
-                  key={course.id}
-                  course={course}
-                  allTags={allTags}
-                  momentumScore={momentumMap.get(course.id)}
-                />
-              ))}
+          </Card>
+
+          {importedCourses.length > 0 && (
+            <div className="flex flex-wrap gap-x-6 gap-y-2 items-start">
+              <TopicFilter
+                availableTags={allTags}
+                selectedTags={selectedTopics}
+                onSelectedTagsChange={setSelectedTopics}
+              />
+              <StatusFilter
+                selectedStatuses={selectedStatuses}
+                onSelectedStatusesChange={setSelectedStatuses}
+              />
             </div>
           )}
-        </div>
-      )}
 
-      <div className="mb-6">
-        <div className="flex items-center gap-4 mb-4 flex-wrap">
-          <div className="flex flex-wrap gap-2 items-center flex-1">
-            <ToggleGroup
-              type="single"
-              value={selectedCategory}
-              onValueChange={v => setSelectedCategory(v || 'all')}
-              aria-label="Filter by category"
-              className="flex flex-wrap gap-2"
-            >
-              {[
-                { value: 'all', label: 'All Courses' },
-                ...availableCategories.map(cat => ({
-                  value: cat,
-                  label: categoryLabels[cat] ?? cat,
-                })),
-              ].map((chip, i) => (
-                <ToggleGroupItem
-                  key={chip.value}
-                  value={chip.value}
-                  className={`h-auto rounded-full! border px-4 py-3 sm:py-1.5 text-sm font-medium transition-colors data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-card data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-accent data-[state=off]:hover:text-foreground data-[state=off]:border-border cursor-pointer shadow-none${i === 0 ? ' mr-1' : ''}`}
+          {/* Imported Courses Section */}
+          {(importedCourses.length > 0 || !searchQuery.trim()) && (
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold mb-4">Imported Courses</h2>
+              {importedCourses.length === 0 ? (
+                <div
+                  data-testid="imported-courses-empty-state"
+                  className="flex items-center gap-3 rounded-xl bg-muted/50 px-4 py-3 text-sm text-muted-foreground"
+                  role="region"
+                  aria-label="Import courses"
                 >
-                  {chip.label}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-          </div>
-          <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
-            <SelectTrigger
-              data-testid="sort-select"
-              aria-label="Sort courses"
-              className="w-[180px] rounded-xl"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="recent">Most Recent</SelectItem>
-              <SelectItem value="momentum">Sort by Momentum</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+                  <FolderOpen className="size-5 shrink-0" aria-hidden="true" />
+                  <span>No imported courses yet.</span>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    data-testid="import-first-course-cta"
+                    aria-label="Import your first course"
+                    onClick={handleImportCourse}
+                    disabled={isImporting}
+                    className="text-brand-soft-foreground h-auto p-0"
+                  >
+                    {isImporting ? (
+                      <>
+                        <Loader2 className="size-4 mr-1 animate-spin" />
+                        Scanning...
+                      </>
+                    ) : (
+                      'Import a course \u2192'
+                    )}
+                  </Button>
+                </div>
+              ) : filteredImportedCourses.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No imported courses match your{' '}
+                  {selectedTopics.length > 0 || selectedStatuses.length > 0 ? 'filters' : 'search'}
+                </div>
+              ) : (
+                <div
+                  data-testid="imported-courses-grid"
+                  className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
+                >
+                  {sortedImportedCourses.map(course => (
+                    <ImportedCourseCard
+                      key={course.id}
+                      course={course}
+                      allTags={allTags}
+                      momentumScore={momentumMap.get(course.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
-        {sortedCourses.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            No courses match your search
+          <div className="mb-6">
+            <div className="flex items-center gap-4 mb-4 flex-wrap">
+              <div className="flex flex-wrap gap-2 items-center flex-1">
+                <ToggleGroup
+                  type="single"
+                  value={selectedCategory}
+                  onValueChange={v => setSelectedCategory(v || 'all')}
+                  aria-label="Filter by category"
+                  className="flex flex-wrap gap-2"
+                >
+                  {[
+                    { value: 'all', label: 'All Courses' },
+                    ...availableCategories.map(cat => ({
+                      value: cat,
+                      label: categoryLabels[cat] ?? cat,
+                    })),
+                  ].map((chip, i) => (
+                    <ToggleGroupItem
+                      key={chip.value}
+                      value={chip.value}
+                      className={`h-auto rounded-full! border px-4 py-3 sm:py-1.5 text-sm font-medium transition-colors data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-card data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-accent data-[state=off]:hover:text-foreground data-[state=off]:border-border cursor-pointer shadow-none${i === 0 ? ' mr-1' : ''}`}
+                    >
+                      {chip.label}
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
+              </div>
+              <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
+                <SelectTrigger
+                  data-testid="sort-select"
+                  aria-label="Sort courses"
+                  className="w-[180px] rounded-xl"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="recent">Most Recent</SelectItem>
+                  <SelectItem value="momentum">Sort by Momentum</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {sortedCourses.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                No courses match your search
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                {sortedCourses.map(course => (
+                  <CourseCard
+                    key={course.id}
+                    course={course}
+                    completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
+                    momentumScore={momentumMap.get(course.id)}
+                    atRiskStatus={atRiskMap.get(course.id)}
+                    completionEstimate={estimateMap.get(course.id)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            {sortedCourses.map(course => (
-              <CourseCard
-                key={course.id}
-                course={course}
-                completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
-                momentumScore={momentumMap.get(course.id)}
-                atRiskStatus={atRiskMap.get(course.id)}
-                completionEstimate={estimateMap.get(course.id)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
         </>
       )}
     </div>

@@ -93,10 +93,7 @@ type AttemptData = typeof attempt1Low
  * Set up page for results: seed quiz + attempts into Dexie, seed Zustand
  * store's currentQuiz in localStorage, then navigate to results URL.
  */
-async function setupResultsPage(
-  page: import('@playwright/test').Page,
-  attempts: AttemptData[]
-) {
+async function setupResultsPage(page: import('@playwright/test').Page, attempts: AttemptData[]) {
   // Seed Zustand persist store + sidebar state before page load
   const quizStoreState = JSON.stringify({
     state: { currentQuiz: quiz, currentProgress: null },
@@ -152,7 +149,9 @@ test.describe('E16-S03: Score Improvement Panel', () => {
     await expect(page.getByText('Improvement:')).not.toBeVisible()
 
     // No "New personal best!" trophy in the visible panel
-    await expect(page.getByTestId('improvement-summary').getByText(/New personal best/)).not.toBeVisible()
+    await expect(
+      page.getByTestId('improvement-summary').getByText(/New personal best/)
+    ).not.toBeVisible()
   })
 
   test('AC2: second attempt with higher score shows "+X%" improvement', async ({ page }) => {
@@ -170,7 +169,9 @@ test.describe('E16-S03: Score Improvement Panel', () => {
     await expect(panel.getByText('+25%')).toBeVisible()
 
     // "New personal best!" should appear (85 > 60) — scoped to panel to avoid sr-only region
-    await expect(page.getByTestId('improvement-summary').getByText('New personal best!')).toBeVisible()
+    await expect(
+      page.getByTestId('improvement-summary').getByText('New personal best!')
+    ).toBeVisible()
   })
 
   test('AC3: third attempt as new personal best shows trophy and "New personal best!"', async ({
@@ -180,7 +181,9 @@ test.describe('E16-S03: Score Improvement Panel', () => {
     await setupResultsPage(page, [attempt1Low, attempt2High, attempt3Best])
 
     await expect(page.getByTestId('improvement-summary')).toBeVisible()
-    await expect(page.getByTestId('improvement-summary').getByText('New personal best!')).toBeVisible()
+    await expect(
+      page.getByTestId('improvement-summary').getByText('New personal best!')
+    ).toBeVisible()
 
     // Improvement value: 90 - 60 = +30%
     await expect(page.getByTestId('improvement-summary').getByText('+30%')).toBeVisible()
@@ -201,7 +204,9 @@ test.describe('E16-S03: Score Improvement Panel', () => {
     await expect(page.getByText(/Keep practicing to beat your best!/)).toBeVisible()
 
     // No "New personal best!" in the visible panel
-    await expect(page.getByTestId('improvement-summary').getByText(/New personal best/)).not.toBeVisible()
+    await expect(
+      page.getByTestId('improvement-summary').getByText(/New personal best/)
+    ).not.toBeVisible()
 
     // No red/destructive color classes in the panel
     const panelEl = await panel.elementHandle()

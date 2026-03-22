@@ -14,9 +14,7 @@ import { goToCourses } from '../support/helpers/navigation'
 // ---------------------------------------------------------------------------
 
 test.describe('AC1: No hardcoded branding', () => {
-  test('page header subtitle does not contain hardcoded provider branding', async ({
-    page,
-  }) => {
+  test('page header subtitle does not contain hardcoded provider branding', async ({ page }) => {
     await goToCourses(page)
 
     // Check only the header area — course card data may still reference the provider
@@ -34,10 +32,7 @@ test.describe('AC1: No hardcoded branding', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('AC2: Empty state for no courses', () => {
-  test('shows empty state when IndexedDB has no courses', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('shows empty state when IndexedDB has no courses', async ({ page, indexedDB }) => {
     // Navigate first so Dexie creates the database
     await goToCourses(page)
 
