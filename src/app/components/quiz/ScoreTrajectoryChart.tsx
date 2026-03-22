@@ -25,7 +25,11 @@ const chartConfig = {
  * Receives recharts DotProps plus our custom passingScore via closure.
  */
 function makeCustomDot(passingScore: number) {
-  return function CustomDot(props: { cx?: number; cy?: number; payload?: { percentage?: number } }) {
+  return function CustomDot(props: {
+    cx?: number
+    cy?: number
+    payload?: { percentage?: number }
+  }) {
     const { cx, cy, payload } = props
     if (cx == null || cy == null) return null
     const pct = payload?.percentage ?? 0

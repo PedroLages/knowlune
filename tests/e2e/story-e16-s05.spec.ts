@@ -46,7 +46,9 @@ const attempt1 = makeAttempt({
   score: 0,
   percentage: 60,
   passed: false,
-  answers: [{ questionId: q1.id, userAnswer: '3', isCorrect: false, pointsEarned: 0, pointsPossible: 1 }],
+  answers: [
+    { questionId: q1.id, userAnswer: '3', isCorrect: false, pointsEarned: 0, pointsPossible: 1 },
+  ],
 })
 
 const attempt2 = makeAttempt({
@@ -55,7 +57,9 @@ const attempt2 = makeAttempt({
   score: 1,
   percentage: 100,
   passed: true,
-  answers: [{ questionId: q1.id, userAnswer: '4', isCorrect: true, pointsEarned: 1, pointsPossible: 1 }],
+  answers: [
+    { questionId: q1.id, userAnswer: '4', isCorrect: true, pointsEarned: 1, pointsPossible: 1 },
+  ],
 })
 
 // ---------------------------------------------------------------------------
@@ -110,7 +114,9 @@ test.describe('E16-S05: Score Trajectory Chart', () => {
   test('AC2: passing score reference line is labeled correctly', async ({ page }) => {
     await navigateToResults(page, [attempt1, attempt2])
     // Label "Passing: 70%" appears in the recharts SVG text element inside the chart section
-    await expect(page.locator('[aria-label="Score trajectory chart"]').getByText(/Passing: 70%/i)).toBeVisible()
+    await expect(
+      page.locator('[aria-label="Score trajectory chart"]').getByText(/Passing: 70%/i)
+    ).toBeVisible()
   })
 
   test('AC3: chart is hidden with only 1 attempt', async ({ page }) => {
