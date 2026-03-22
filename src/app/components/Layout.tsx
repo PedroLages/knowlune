@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router'
 import { Search, Bell, ChevronDown, ChevronLeft, ChevronRight, Sun, Moon, Menu } from 'lucide-react'
-import { KnowluneLogo } from './figma/KnowluneLogo'
+import { KnowluneLogo, KnowluneIcon } from './figma/KnowluneLogo'
 import { Button } from './ui/button'
 import { Kbd } from './ui/kbd'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
@@ -89,43 +89,17 @@ function NavLink({
 function SidebarContent({ onNavigate, iconOnly }: { onNavigate?: () => void; iconOnly?: boolean }) {
   return (
     <>
-      {/* Logo */}
+      {/* Logo + tagline */}
       <div className={iconOnly ? 'mb-6 flex justify-center' : 'mb-6'}>
         {iconOnly ? (
-          <svg
-            viewBox="0 0 40 50"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-7 h-7"
-            aria-label="Knowlune"
-          >
-            <text
-              x="0"
-              y="36"
-              fontFamily="Inter, system-ui, sans-serif"
-              fontSize="34"
-              fontWeight="900"
-              fill="currentColor"
-              letterSpacing="-1"
-            >
-              K
-            </text>
-            <text
-              x="24"
-              y="36"
-              fontFamily="Inter, system-ui, sans-serif"
-              fontSize="34"
-              fontWeight="900"
-              fill="currentColor"
-              letterSpacing="-1"
-            >
-              n
-            </text>
-            <polygon points="18,31 24,18 30,31" className="fill-background" />
-            <rect x="22.5" y="30" width="3" height="10" className="fill-background" />
-          </svg>
+          <KnowluneIcon className="w-7 h-7" />
         ) : (
-          <KnowluneLogo />
+          <div>
+            <KnowluneLogo />
+            <p className="mt-1 text-[10px] tracking-wide text-muted-foreground">
+              Illuminate Your Path
+            </p>
+          </div>
         )}
       </div>
 

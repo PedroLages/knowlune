@@ -1,4 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <rect width="100" height="100" rx="22" fill="#030213"/>
-  <text x="50" y="68" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="52" font-weight="900" fill="#FAF5EE" text-anchor="middle">Kn</text>
+  <!-- Base annulus (shadow layer) -->
+  <path
+    d="M 50 20 A 30 30 0 1 1 50 80 A 30 30 0 1 1 50 20 M 50 32 A 18 18 0 1 0 50 68 A 18 18 0 1 0 50 32 Z"
+    fill-rule="evenodd"
+    fill="#5e6ad2"
+    opacity="0.5"
+  />
+  <!-- Front lit crescent (moon shape) -->
+  <path
+    d="M 50 20 A 30 30 0 0 0 50 80 A 34 34 0 0 1 50 20 Z"
+    fill="#5e6ad2"
+  />
 </svg>

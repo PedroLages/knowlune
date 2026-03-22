@@ -103,7 +103,7 @@ export default defineConfig({
     manifest: {
       name: 'Knowlune',
       short_name: 'Knowlune',
-      description: 'Personal learning platform with progress tracking and study streaks',
+      description: 'Knowlune — Illuminate Your Path. Personal learning platform with progress tracking and study streaks.',
       theme_color: '#FAF5EE',
       background_color: '#FAF5EE',
       display: 'standalone',
