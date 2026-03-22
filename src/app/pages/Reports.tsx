@@ -408,7 +408,9 @@ export default function Reports() {
                       <p className="text-sm text-muted-foreground">No quizzes attempted yet</p>
                     ) : (
                       <>
-                        <div className="text-3xl font-bold">{retakeData.averageRetakes.toFixed(1)}</div>
+                        <div className="text-3xl font-bold">
+                          {retakeData.averageRetakes.toFixed(1)}
+                        </div>
                         <p className="text-sm text-muted-foreground mt-1">attempts per quiz</p>
                         <p className="text-sm text-muted-foreground mt-2">
                           {interpretRetakeFrequency(retakeData.averageRetakes)}

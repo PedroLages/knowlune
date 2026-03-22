@@ -13,10 +13,7 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { makeAttempt } from '../../support/fixtures/factories/quiz-factory'
-import {
-  seedQuizAttempts,
-  clearIndexedDBStore,
-} from '../../support/helpers/indexeddb-seed'
+import { seedQuizAttempts, clearIndexedDBStore } from '../../support/helpers/indexeddb-seed'
 
 const QUIZ_A = 'quiz-e17s02-a'
 const QUIZ_B = 'quiz-e17s02-b'
@@ -53,7 +50,9 @@ test.describe('E17-S02: Average Retake Frequency', () => {
     await expect(card).toContainText('Deep practice')
   })
 
-  test('AC3/AC7: two different quizzes once each → retake frequency 1.0 with No Retakes text', async ({ page }) => {
+  test('AC3/AC7: two different quizzes once each → retake frequency 1.0 with No Retakes text', async ({
+    page,
+  }) => {
     await seedQuizAttempts(page, [
       makeAttempt({ id: 'r4-e17s02', quizId: QUIZ_A }),
       makeAttempt({ id: 'r5-e17s02', quizId: QUIZ_B }),
@@ -87,7 +86,9 @@ test.describe('E17-S02: Average Retake Frequency', () => {
     await expect(card).toContainText('Active practice')
   })
 
-  test('AC: zero attempts → Reports shows empty state, retake card not visible', async ({ page }) => {
+  test('AC: zero attempts → Reports shows empty state, retake card not visible', async ({
+    page,
+  }) => {
     // No data seeded — DB is empty for quizAttempts
     await page.goto('/reports', { waitUntil: 'domcontentloaded' })
 
