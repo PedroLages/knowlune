@@ -385,8 +385,8 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 27: Analytics Consolidation
   # ──────────────────────────────────────────────────
-  epic-27: backlog
+  epic-27: in-progress
   27-1-add-analytics-tabs-to-reports-page: backlog
   27-2-route-redirects-for-legacy-paths: backlog
-  27-3-update-sidebar-links-to-reports-tabs: backlog
+  27-3-update-sidebar-links-to-reports-tabs: in-progress
   epic-27-retrospective: optional
