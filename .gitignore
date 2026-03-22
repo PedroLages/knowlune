@@ -5,6 +5,8 @@ dist/
 *.local
 *.log
 .vite/
+__pycache__/
+*.pyc
 
 
 # Tests — only ignore generated artifacts, not source specs
