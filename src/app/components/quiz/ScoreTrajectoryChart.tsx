@@ -1,12 +1,4 @@
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  ReferenceLine,
-  type DotProps,
-} from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts'
 import {
   ChartContainer,
   ChartTooltip,
@@ -32,12 +24,11 @@ const chartConfig = {
  * Receives recharts DotProps plus our custom passingScore via closure.
  */
 function makeCustomDot(passingScore: number) {
-  return function CustomDot(props: DotProps & { payload?: { percentage?: number } }) {
+  return function CustomDot(props: { cx?: number; cy?: number; payload?: { percentage?: number } }) {
     const { cx, cy, payload } = props
     if (cx == null || cy == null) return null
     const pct = payload?.percentage ?? 0
-    const color =
-      pct >= passingScore ? 'var(--color-success)' : 'var(--color-brand)'
+    const color = pct >= passingScore ? 'var(--color-success)' : 'var(--color-brand)'
     return <circle cx={cx} cy={cy} r={5} fill={color} stroke="#fff" strokeWidth={2} />
   }
 }
@@ -73,8 +64,8 @@ export function ScoreTrajectoryChart({ attempts, passingScore }: ScoreTrajectory
           <ChartTooltip
             content={
               <ChartTooltipContent
-                formatter={(value) => [`${value}%`, 'Score']}
-                labelFormatter={(label) => `Attempt ${label}`}
+                formatter={value => [`${value}%`, 'Score']}
+                labelFormatter={label => `Attempt ${label}`}
               />
             }
           />

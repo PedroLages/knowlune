@@ -158,10 +158,7 @@ export function QuizResults() {
         />
 
         {/* Score trajectory chart — only renders with 2+ attempts */}
-        <ScoreTrajectoryChart
-          attempts={trajectoryData}
-          passingScore={currentQuiz.passingScore}
-        />
+        <ScoreTrajectoryChart attempts={trajectoryData} passingScore={currentQuiz.passingScore} />
 
         <QuestionBreakdown answers={lastAttempt.answers} questions={currentQuiz.questions} />
 
