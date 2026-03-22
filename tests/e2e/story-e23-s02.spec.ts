@@ -30,9 +30,7 @@ test.describe('Sidebar navigation label', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('Mobile bottom bar label', () => {
-  test('displays "My Courses" in the mobile bottom navigation', async ({
-    page,
-  }) => {
+  test('displays "My Courses" in the mobile bottom navigation', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 })
     await navigateAndWait(page, '/')
 
@@ -88,12 +86,8 @@ test.describe('Page title', () => {
   test('MyClass page heading says "My Courses"', async ({ page }) => {
     await navigateAndWait(page, '/my-class')
 
-    await expect(
-      page.locator('h1').filter({ hasText: 'My Courses' })
-    ).toBeVisible()
+    await expect(page.locator('h1').filter({ hasText: 'My Courses' })).toBeVisible()
     // Ensure old title is gone
-    await expect(
-      page.locator('h1').filter({ hasText: 'My Classes' })
-    ).not.toBeVisible()
+    await expect(page.locator('h1').filter({ hasText: 'My Classes' })).not.toBeVisible()
   })
 })
