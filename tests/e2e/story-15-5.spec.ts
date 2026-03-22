@@ -10,6 +10,7 @@
  */
 import { test, expect } from '../support/fixtures'
 import { makeQuiz, makeQuestion } from '../support/fixtures/factories/quiz-factory'
+import { seedQuizzes } from '../support/helpers/indexeddb-seed'
 
 // ---------------------------------------------------------------------------
 // Test data
@@ -113,52 +114,16 @@ const noTopicQuiz = makeQuiz({
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Seed quiz data into IndexedDB 'quizzes' store via page.evaluate */
-async function seedQuizData(page: import('@playwright/test').Page, quizData: unknown[]) {
-  await page.evaluate(
-    async ({ data, maxRetries, retryDelay }) => {
-      for (let attempt = 0; attempt < maxRetries; attempt++) {
-        const result = await new Promise<'ok' | 'store-missing'>((resolve, reject) => {
-          const request = indexedDB.open('ElearningDB')
-          request.onsuccess = () => {
-            const db = request.result
-            if (!db.objectStoreNames.contains('quizzes')) {
-              db.close()
-              resolve('store-missing')
-              return
-            }
-            const tx = db.transaction('quizzes', 'readwrite')
-            const store = tx.objectStore('quizzes')
-            for (const item of data) {
-              store.put(item)
-            }
-            tx.oncomplete = () => {
-              db.close()
-              resolve('ok')
-            }
-            tx.onerror = () => {
-              db.close()
-              reject(tx.error)
-            }
-          }
-          request.onerror = () => reject(request.error)
-        })
-        if (result === 'ok') return
-        await new Promise(r => setTimeout(r, retryDelay))
-      }
-      throw new Error('Store "quizzes" not found after retries')
-    },
-    { data: quizData, maxRetries: 10, retryDelay: 200 }
-  )
-}
-
 /** Navigate to quiz page with seeded data and sidebar closed */
-async function navigateToQuiz(page: import('@playwright/test').Page, quizToSeed: unknown) {
+async function navigateToQuiz(
+  page: import('@playwright/test').Page,
+  quizToSeed: Record<string, unknown>,
+) {
   await page.addInitScript(() => {
     localStorage.setItem('eduvi-sidebar-v1', 'false')
   })
   await page.goto('/', { waitUntil: 'domcontentloaded' })
-  await seedQuizData(page, [quizToSeed])
+  await seedQuizzes(page, [quizToSeed])
   await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz`, {
     waitUntil: 'domcontentloaded',
   })
