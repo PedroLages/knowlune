@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { BookOpen, CheckCircle, FileText, TrendingUp, Clock } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
+import { Progress } from '@/app/components/ui/progress'
 import {
   ChartContainer,
   ChartTooltip,
@@ -27,6 +28,7 @@ import {
   getCategoryCompletionForRadar,
   computeSkillsDimensions,
 } from '@/lib/reportStats'
+import { calculateCompletionRate } from '@/lib/analytics'
 import { StatsCard } from '@/app/components/StatsCard'
 import { EmptyState } from '@/app/components/EmptyState'
 import StudyTimeAnalytics from '@/app/components/StudyTimeAnalytics'
@@ -62,6 +64,11 @@ const areaChartConfig = {
 export default function Reports() {
   const allCourses = useCourseStore(s => s.courses)
   const [studyNotes, setStudyNotes] = useState(0)
+  const [quizData, setQuizData] = useState<{
+    completionRate: number
+    completedCount: number
+    startedCount: number
+  }>({ completionRate: 0, completedCount: 0, startedCount: 0 })
 
   useEffect(() => {
     let ignore = false
@@ -70,6 +77,18 @@ export default function Reports() {
         if (!ignore) setStudyNotes(notes)
       })
       .catch(err => console.error('Failed to load study notes:', err))
+    return () => {
+      ignore = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let ignore = false
+    calculateCompletionRate()
+      .then(data => {
+        if (!ignore) setQuizData(data)
+      })
+      .catch(err => console.error('Failed to load quiz completion rate:', err))
     return () => {
       ignore = true
     }
@@ -141,7 +160,10 @@ export default function Reports() {
   const barChartHeight = Math.max(250, courseCompletionData.length * 36)
 
   const hasActivity =
-    completedLessons > 0 || studyNotes > 0 || activityData.some(d => d.activities > 0)
+    completedLessons > 0 ||
+    studyNotes > 0 ||
+    activityData.some(d => d.activities > 0) ||
+    quizData.startedCount > 0
 
   return (
     <MotionConfig reducedMotion="user">
@@ -369,7 +391,41 @@ export default function Reports() {
                 </Card>
               </motion.div>
 
-              {/* ── Row 5: Recent Activity Timeline ── */}
+              {/* ── Row 5: Quiz Completion Rate ── */}
+              <motion.div variants={fadeUp}>
+                <Card data-testid="quiz-completion-card">
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <CheckCircle className="size-4 text-muted-foreground" aria-hidden="true" />
+                      Quiz Completion Rate
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {quizData.startedCount === 0 ? (
+                      <p className="text-sm text-muted-foreground">No quizzes started yet</p>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-4">
+                          <Progress
+                            value={quizData.completionRate}
+                            className="flex-1"
+                            aria-label={`Quiz completion rate: ${Math.round(quizData.completionRate)}%`}
+                          />
+                          <span className="text-2xl font-bold tabular-nums">
+                            {Math.round(quizData.completionRate)}%
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          {quizData.completedCount} of {quizData.startedCount} started quizzes
+                          completed
+                        </p>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* ── Row 6: Recent Activity Timeline ── */}
               <motion.div variants={fadeUp}>
                 <Card>
                   <CardHeader>
