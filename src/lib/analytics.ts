@@ -302,6 +302,9 @@ export function calculateItemDifficulty(quiz: Quiz, attempts: QuizAttempt[]): It
 
   for (const attempt of attempts) {
     for (const answer of attempt.answers) {
+      // Exclude skipped/unanswered — they reflect time pressure, not knowledge gaps.
+      // Consistent with analyzeTopicPerformance which uses the same exclusion.
+      if (isUnanswered(answer.userAnswer)) continue
       const existing = statsMap.get(answer.questionId) ?? { correct: 0, total: 0 }
       statsMap.set(answer.questionId, {
         correct: existing.correct + (answer.isCorrect ? 1 : 0),

@@ -3,12 +3,17 @@
  *
  * AC1: Questions ranked by difficulty (easiest to hardest) visible in quiz analytics
  * AC3: Difficulty labels (Easy/Medium/Difficult) visible per question
- * AC4: Questions with zero attempts excluded
+ * AC4: Questions with zero attempts excluded from difficulty list
  * AC5: Suggestion text for Difficult questions
+ * AC6: QuizResults redirects when no quiz data present in store
  */
 import { test, expect } from '../../support/fixtures'
 import { makeQuiz, makeQuestion, makeAttempt } from '../../support/fixtures/factories/quiz-factory'
-import { seedQuizzes, seedQuizAttempts } from '../../support/helpers/indexeddb-seed'
+import {
+  seedQuizzes,
+  seedQuizAttempts,
+  clearIndexedDBStore,
+} from '../../support/helpers/indexeddb-seed'
 
 // ---------------------------------------------------------------------------
 // Test data
@@ -38,11 +43,22 @@ const q2 = makeQuestion({
   points: 1,
 })
 
+// q3 is never answered in any attempt — AC4 verifies it is excluded from the difficulty list
+const q3 = makeQuestion({
+  id: 'q3-e17s03',
+  order: 3,
+  text: 'What is the boiling point of water?',
+  topic: 'Chemistry',
+  options: ['90°C', '100°C', '110°C', '120°C'],
+  correctAnswer: '100°C',
+  points: 1,
+})
+
 const quiz = makeQuiz({
   id: QUIZ_ID,
   lessonId: LESSON_ID,
   title: 'Mixed Knowledge Quiz',
-  questions: [q1, q2],
+  questions: [q1, q2, q3],
   passingScore: 70,
   allowRetakes: true,
   shuffleQuestions: false,
@@ -139,6 +155,11 @@ async function navigateToResults(page: import('@playwright/test').Page) {
 // ---------------------------------------------------------------------------
 
 test.describe('E17-S03: Item Difficulty Analysis', () => {
+  test.afterEach(async ({ page }) => {
+    await clearIndexedDBStore(page, 'ElearningDB', 'quizzes')
+    await clearIndexedDBStore(page, 'ElearningDB', 'quizAttempts')
+  })
+
   test('AC1: shows Question Difficulty Analysis section', async ({ page }) => {
     await navigateToResults(page)
     await expect(page.getByText('Question Difficulty Analysis')).toBeVisible()
@@ -158,9 +179,43 @@ test.describe('E17-S03: Item Difficulty Analysis', () => {
     await expect(page.getByText(/Difficult \(33%\)/)).toBeVisible()
   })
 
+  test('AC4: excludes q3 which has zero attempts from the difficulty list', async ({ page }) => {
+    await navigateToResults(page)
+    const section = page.getByLabel('Questions ranked by difficulty')
+    // q3 was never answered in any attempt — it must not appear in the difficulty section
+    await expect(section.getByText('What is the boiling point of water?')).not.toBeVisible()
+  })
+
   test('AC5: shows suggestion text for Difficult questions', async ({ page }) => {
     await navigateToResults(page)
     // Suggestion text includes Biology topic — more specific than generic "Review question"
     await expect(page.getByText(/Review question 2 on Biology/i)).toBeVisible()
+  })
+
+  test('AC6: redirects to quiz when no quiz data in store', async ({ page }) => {
+    // Navigate directly without seeding any Zustand quiz store state
+    await page.addInitScript(() => {
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
+      // Explicitly set empty quiz store — no currentQuiz
+      localStorage.setItem(
+        'levelup-quiz-store',
+        JSON.stringify({
+          state: {
+            currentQuiz: null,
+            attempts: [],
+            isLoading: false,
+            currentAttempt: null,
+            progress: null,
+          },
+          version: 0,
+        })
+      )
+    })
+    await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz/results`, {
+      waitUntil: 'domcontentloaded',
+    })
+    // Should redirect back to the quiz page — not remain on /results
+    await expect(page).not.toHaveURL(/\/results$/)
+    await expect(page).toHaveURL(new RegExp(`/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz`))
   })
 })

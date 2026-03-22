@@ -1,6 +1,6 @@
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 import { calculateItemDifficulty, type ItemDifficulty } from '@/lib/analytics'
-import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
 
 interface ItemDifficultyAnalysisProps {
@@ -15,7 +15,7 @@ function getDifficultyBadgeClass(difficulty: ItemDifficulty['difficulty']): stri
     case 'Medium':
       return 'bg-warning/10 text-warning border-warning/20'
     case 'Difficult':
-      return 'bg-destructive/10 text-destructive border-destructive/20'
+      return 'bg-destructive/10 text-destructive-soft-foreground border-destructive/20'
   }
 }
 
@@ -57,15 +57,15 @@ export function ItemDifficultyAnalysis({ quiz, attempts }: ItemDifficultyAnalysi
   const suggestions = buildSuggestions(items)
 
   return (
-    <Card>
+    <Card className="text-left">
       <CardHeader>
-        <CardTitle className="text-base">Question Difficulty Analysis</CardTitle>
+        <h2 className="leading-none text-base font-semibold">Question Difficulty Analysis</h2>
       </CardHeader>
       <CardContent>
         <ul className="space-y-2" aria-label="Questions ranked by difficulty">
           {items.map(item => (
             <li key={item.questionId} className="flex justify-between items-center gap-2">
-              <span className="text-sm truncate flex-1" title={item.questionText}>
+              <span className="text-sm truncate min-w-0 flex-1" title={item.questionText}>
                 {item.questionText}
               </span>
               <Badge variant="outline" className={getDifficultyBadgeClass(item.difficulty)}>
@@ -76,9 +76,9 @@ export function ItemDifficultyAnalysis({ quiz, attempts }: ItemDifficultyAnalysi
         </ul>
 
         {suggestions.length > 0 && (
-          <ul className="mt-3 space-y-1">
-            {suggestions.map((suggestion, index) => (
-              <li key={index} className="text-sm text-muted-foreground">
+          <ul className="mt-3 space-y-1" aria-label="Study suggestions">
+            {suggestions.map(suggestion => (
+              <li key={suggestion} className="text-sm text-muted-foreground">
                 {suggestion}
               </li>
             ))}
