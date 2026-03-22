@@ -1,10 +1,10 @@
 ---
 story_id: E15-S01
 story_name: "Display Countdown Timer with Accuracy"
-status: in-progress
+status: done
 started: 2026-03-21
-completed:
-reviewed: in-progress
+completed: 2026-03-22
+reviewed: true
 review_started: 2026-03-22
 review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: true
