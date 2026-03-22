@@ -46,9 +46,11 @@ describe('AttemptHistory', () => {
         currentAttemptId={attempt1.id}
         courseId={COURSE_ID}
         lessonId={LESSON_ID}
-      />,
+      />
     )
-    expect(screen.getByRole('button', { name: /view attempt history \(1 attempt\)/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /view attempt history \(1 attempt\)/i })
+    ).toBeInTheDocument()
   })
 
   it('shows "(3 attempts)" for three attempts', () => {
@@ -58,9 +60,11 @@ describe('AttemptHistory', () => {
         currentAttemptId={attempt3.id}
         courseId={COURSE_ID}
         lessonId={LESSON_ID}
-      />,
+      />
     )
-    expect(screen.getByRole('button', { name: /view attempt history \(3 attempts\)/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /view attempt history \(3 attempts\)/i })
+    ).toBeInTheDocument()
   })
 
   it('is collapsed by default — content not visible before click', () => {
@@ -70,7 +74,7 @@ describe('AttemptHistory', () => {
         currentAttemptId={attempt3.id}
         courseId={COURSE_ID}
         lessonId={LESSON_ID}
-      />,
+      />
     )
     // Attempt numbers should not be visible while collapsed
     expect(screen.queryByText('#3')).not.toBeInTheDocument()
@@ -84,7 +88,7 @@ describe('AttemptHistory', () => {
         currentAttemptId={attempt3.id}
         courseId={COURSE_ID}
         lessonId={LESSON_ID}
-      />,
+      />
     )
 
     await user.click(screen.getByRole('button', { name: /view attempt history/i }))
@@ -117,7 +121,7 @@ describe('AttemptHistory', () => {
         currentAttemptId={attempt3.id}
         courseId={COURSE_ID}
         lessonId={LESSON_ID}
-      />,
+      />
     )
 
     await user.click(screen.getByRole('button', { name: /view attempt history/i }))
@@ -134,7 +138,7 @@ describe('AttemptHistory', () => {
         currentAttemptId={attempt3.id}
         courseId={COURSE_ID}
         lessonId={LESSON_ID}
-      />,
+      />
     )
 
     await user.click(screen.getByRole('button', { name: /view attempt history/i }))

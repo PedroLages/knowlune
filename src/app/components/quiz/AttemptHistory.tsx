@@ -25,10 +25,7 @@ interface AttemptHistoryProps {
   lessonId: string
 }
 
-export function AttemptHistory({
-  attempts,
-  currentAttemptId,
-}: AttemptHistoryProps) {
+export function AttemptHistory({ attempts, currentAttemptId }: AttemptHistoryProps) {
   const [open, setOpen] = useState(false)
 
   const handleReview = useCallback((_attemptId: string) => {
@@ -68,10 +65,7 @@ export function AttemptHistory({
                 const attemptNum = attempts.length - index
                 const isCurrent = attempt.id === currentAttemptId
                 return (
-                  <TableRow
-                    key={attempt.id}
-                    className={cn(isCurrent ? 'bg-brand-soft' : '')}
-                  >
+                  <TableRow key={attempt.id} className={cn(isCurrent ? 'bg-brand-soft' : '')}>
                     <TableCell className="font-medium">
                       <span className="flex items-center gap-1.5">
                         #{attemptNum}
@@ -82,9 +76,7 @@ export function AttemptHistory({
                         )}
                       </span>
                     </TableCell>
-                    <TableCell>
-                      {new Date(attempt.completedAt).toLocaleString()}
-                    </TableCell>
+                    <TableCell>{new Date(attempt.completedAt).toLocaleString()}</TableCell>
                     <TableCell>{attempt.percentage}%</TableCell>
                     <TableCell>{formatDuration(attempt.timeSpent)}</TableCell>
                     <TableCell>
@@ -99,11 +91,7 @@ export function AttemptHistory({
                       )}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleReview(attempt.id)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => handleReview(attempt.id)}>
                         Review
                       </Button>
                     </TableCell>
@@ -124,7 +112,7 @@ export function AttemptHistory({
                 key={attempt.id}
                 className={cn(
                   'rounded-xl border border-border p-3 text-sm space-y-1.5',
-                  isCurrent ? 'bg-brand-soft' : 'bg-card',
+                  isCurrent ? 'bg-brand-soft' : 'bg-card'
                 )}
               >
                 <div className="flex items-center justify-between">
@@ -136,11 +124,7 @@ export function AttemptHistory({
                       </span>
                     )}
                   </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleReview(attempt.id)}
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => handleReview(attempt.id)}>
                     Review
                   </Button>
                 </div>
