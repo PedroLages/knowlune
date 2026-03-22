@@ -10,6 +10,7 @@ import {
   selectIsLoading,
 } from '@/stores/useQuizStore'
 import { ScoreSummary } from '@/app/components/quiz/ScoreSummary'
+import { ScoreTrajectoryChart } from '@/app/components/quiz/ScoreTrajectoryChart'
 import { QuestionBreakdown } from '@/app/components/quiz/QuestionBreakdown'
 import { AreasForGrowth } from '@/app/components/quiz/AreasForGrowth'
 import { PerformanceInsights } from '@/app/components/quiz/PerformanceInsights'
@@ -66,6 +67,15 @@ export function QuizResults() {
     }
     return undefined
   }, [attempts])
+
+  const trajectoryData = useMemo(
+    () =>
+      attempts.map((attempt, index) => ({
+        attemptNumber: index + 1,
+        percentage: Math.round(Math.min(100, Math.max(0, attempt.percentage))),
+      })),
+    [attempts]
+  )
 
   const incorrectItems = useMemo(() => {
     if (!lastAttempt || !currentQuiz) return []
@@ -145,6 +155,12 @@ export function QuizResults() {
             currentQuiz.timeLimit != null && lastAttempt.timerAccommodation !== 'untimed'
           }
           previousAttemptTimeSpent={previousAttemptTimeSpent}
+        />
+
+        {/* Score trajectory chart — only renders with 2+ attempts */}
+        <ScoreTrajectoryChart
+          attempts={trajectoryData}
+          passingScore={currentQuiz.passingScore}
         />
 
         <QuestionBreakdown answers={lastAttempt.answers} questions={currentQuiz.questions} />
