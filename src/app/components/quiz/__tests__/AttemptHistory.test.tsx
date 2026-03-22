@@ -179,8 +179,14 @@ describe('AttemptHistory', () => {
     await user.click(screen.getByRole('button', { name: /view attempt history/i }))
 
     // Each attempt should have a uniquely named Review button (desktop table renders one per attempt)
-    expect(screen.getAllByRole('button', { name: /review attempt #3/i }).length).toBeGreaterThanOrEqual(1)
-    expect(screen.getAllByRole('button', { name: /review attempt #2/i }).length).toBeGreaterThanOrEqual(1)
-    expect(screen.getAllByRole('button', { name: /review attempt #1/i }).length).toBeGreaterThanOrEqual(1)
+    expect(
+      screen.getAllByRole('button', { name: /review attempt #3/i }).length
+    ).toBeGreaterThanOrEqual(1)
+    expect(
+      screen.getAllByRole('button', { name: /review attempt #2/i }).length
+    ).toBeGreaterThanOrEqual(1)
+    expect(
+      screen.getAllByRole('button', { name: /review attempt #1/i }).length
+    ).toBeGreaterThanOrEqual(1)
   })
 })

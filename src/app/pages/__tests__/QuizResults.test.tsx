@@ -162,9 +162,7 @@ describe('QuizResults — improvement summary', () => {
     )
 
     await vi.waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: /view attempt history/i })
-      ).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /view attempt history/i })).toBeInTheDocument()
     })
   })
 
