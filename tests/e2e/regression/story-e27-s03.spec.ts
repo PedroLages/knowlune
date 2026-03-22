@@ -58,13 +58,17 @@ test.describe('E27-S03: Sidebar links to Reports tabs', () => {
     await expect(page).toHaveURL(/\/reports\?tab=ai/)
   })
 
-  test('Study Analytics sidebar item has aria-current=page on /reports?tab=study', async ({ page }) => {
+  test('Study Analytics sidebar item has aria-current=page on /reports?tab=study', async ({
+    page,
+  }) => {
     await navigateAndWait(page, '/reports?tab=study')
     const studyLink = page.locator('nav').getByRole('link', { name: 'Study Analytics' })
     await expect(studyLink).toHaveAttribute('aria-current', 'page')
   })
 
-  test('Quiz Analytics sidebar item has aria-current=page on /reports?tab=quizzes', async ({ page }) => {
+  test('Quiz Analytics sidebar item has aria-current=page on /reports?tab=quizzes', async ({
+    page,
+  }) => {
     await navigateAndWait(page, '/reports?tab=quizzes')
     const quizLink = page.locator('nav').getByRole('link', { name: 'Quiz Analytics' })
     await expect(quizLink).toHaveAttribute('aria-current', 'page')
