@@ -3,9 +3,11 @@ import {
   analyzeTopicPerformance,
   calculateImprovement,
   calculateNormalizedGain,
+  calculateItemDifficulty,
 } from '@/lib/analytics'
 import {
   makeQuestion,
+  makeQuiz,
   makeAttempt,
   makeCorrectAnswer,
   makeWrongAnswer,
@@ -423,5 +425,141 @@ describe('calculateNormalizedGain', () => {
     const a2 = makeAttempt({ percentage: 50, completedAt: '2026-01-02T00:00:00Z' })
     const a3 = makeAttempt({ percentage: 70, completedAt: '2026-01-03T00:00:00Z' })
     expect(calculateNormalizedGain([a1, a2, a3])).toBeCloseTo(0.5, 2)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// calculateItemDifficulty (E17-S03)
+// ---------------------------------------------------------------------------
+
+describe('calculateItemDifficulty', () => {
+  it('returns empty array when no attempts', () => {
+    const quiz = makeQuiz({ questions: [makeQuestion({ id: 'q1', order: 1, text: 'Q1' })] })
+    expect(calculateItemDifficulty(quiz, [])).toEqual([])
+  })
+
+  it('calculates P-value correctly: 3/4 = 0.75', () => {
+    const q1 = makeQuestion({ id: 'q1', order: 1, text: 'Q1' })
+    const quiz = makeQuiz({ questions: [q1] })
+    const attempts = [
+      makeAttempt({ answers: [makeCorrectAnswer('q1')] }),
+      makeAttempt({ answers: [makeCorrectAnswer('q1')] }),
+      makeAttempt({ answers: [makeCorrectAnswer('q1')] }),
+      makeAttempt({ answers: [makeWrongAnswer('q1')] }),
+    ]
+    const result = calculateItemDifficulty(quiz, attempts)
+    expect(result).toHaveLength(1)
+    expect(result[0].pValue).toBeCloseTo(0.75)
+  })
+
+  it('categorizes P=0.8 as Easy (boundary: inclusive)', () => {
+    const q1 = makeQuestion({ id: 'q1', order: 1, text: 'Q1' })
+    const quiz = makeQuiz({ questions: [q1] })
+    // 8/10 = 0.8 exactly
+    const attempts = [
+      ...Array.from({ length: 8 }, () => makeAttempt({ answers: [makeCorrectAnswer('q1')] })),
+      ...Array.from({ length: 2 }, () => makeAttempt({ answers: [makeWrongAnswer('q1')] })),
+    ]
+    const result = calculateItemDifficulty(quiz, attempts)
+    expect(result[0].difficulty).toBe('Easy')
+  })
+
+  it('categorizes P=0.7999 as Medium (just below Easy boundary)', () => {
+    const q1 = makeQuestion({ id: 'q1', order: 1, text: 'Q1' })
+    const quiz = makeQuiz({ questions: [q1] })
+    // 79/100 = 0.79
+    const attempts = [
+      ...Array.from({ length: 79 }, () => makeAttempt({ answers: [makeCorrectAnswer('q1')] })),
+      ...Array.from({ length: 21 }, () => makeAttempt({ answers: [makeWrongAnswer('q1')] })),
+    ]
+    const result = calculateItemDifficulty(quiz, attempts)
+    expect(result[0].difficulty).toBe('Medium')
+  })
+
+  it('categorizes P=0.5 as Medium (boundary: inclusive)', () => {
+    const q1 = makeQuestion({ id: 'q1', order: 1, text: 'Q1' })
+    const quiz = makeQuiz({ questions: [q1] })
+    const attempts = [
+      makeAttempt({ answers: [makeCorrectAnswer('q1')] }),
+      makeAttempt({ answers: [makeWrongAnswer('q1')] }),
+    ]
+    const result = calculateItemDifficulty(quiz, attempts)
+    expect(result[0].difficulty).toBe('Medium')
+    expect(result[0].pValue).toBeCloseTo(0.5)
+  })
+
+  it('categorizes P=0.4999 as Difficult (just below Medium boundary)', () => {
+    const q1 = makeQuestion({ id: 'q1', order: 1, text: 'Q1' })
+    const quiz = makeQuiz({ questions: [q1] })
+    // 49/100 = 0.49
+    const attempts = [
+      ...Array.from({ length: 49 }, () => makeAttempt({ answers: [makeCorrectAnswer('q1')] })),
+      ...Array.from({ length: 51 }, () => makeAttempt({ answers: [makeWrongAnswer('q1')] })),
+    ]
+    const result = calculateItemDifficulty(quiz, attempts)
+    expect(result[0].difficulty).toBe('Difficult')
+  })
+
+  it('excludes questions with zero attempts', () => {
+    const q1 = makeQuestion({ id: 'q1', order: 1, text: 'Q1 answered' })
+    const q2 = makeQuestion({ id: 'q2', order: 2, text: 'Q2 never answered' })
+    const quiz = makeQuiz({ questions: [q1, q2] })
+    // Only q1 has answers — q2 never appears in attempts
+    const attempts = [makeAttempt({ answers: [makeCorrectAnswer('q1')] })]
+    const result = calculateItemDifficulty(quiz, attempts)
+    expect(result).toHaveLength(1)
+    expect(result[0].questionId).toBe('q1')
+  })
+
+  it('sorts easiest first (highest P-value first)', () => {
+    const q1 = makeQuestion({ id: 'q1', order: 1, text: 'Easy Q' })
+    const q2 = makeQuestion({ id: 'q2', order: 2, text: 'Hard Q' })
+    const quiz = makeQuiz({ questions: [q1, q2] })
+    const attempts = [
+      makeAttempt({
+        answers: [makeCorrectAnswer('q1'), makeWrongAnswer('q2')],
+      }),
+    ]
+    const result = calculateItemDifficulty(quiz, attempts)
+    expect(result[0].questionId).toBe('q1') // P=1.0 — easiest first
+    expect(result[1].questionId).toBe('q2') // P=0.0 — hardest last
+  })
+
+  it('aggregates across multiple attempts for the same question', () => {
+    const q1 = makeQuestion({ id: 'q1', order: 1, text: 'Q1' })
+    const quiz = makeQuiz({ questions: [q1] })
+    // Correct in attempt1, wrong in attempt2 → P = 0.5
+    const attempts = [
+      makeAttempt({ answers: [makeCorrectAnswer('q1')] }),
+      makeAttempt({ answers: [makeWrongAnswer('q1')] }),
+    ]
+    const result = calculateItemDifficulty(quiz, attempts)
+    expect(result[0].pValue).toBeCloseTo(0.5)
+  })
+
+  it('includes topic from question in result', () => {
+    const q1 = makeQuestion({ id: 'q1', order: 1, text: 'Q1', topic: 'Algebra' })
+    const quiz = makeQuiz({ questions: [q1] })
+    const attempts = [makeAttempt({ answers: [makeCorrectAnswer('q1')] })]
+    const result = calculateItemDifficulty(quiz, attempts)
+    expect(result[0].topic).toBe('Algebra')
+  })
+
+  it('defaults to "General" when question has no topic', () => {
+    const q1 = makeQuestion({ id: 'q1', order: 1, text: 'Q1' })
+    const quiz = makeQuiz({ questions: [q1] })
+    const attempts = [makeAttempt({ answers: [makeCorrectAnswer('q1')] })]
+    const result = calculateItemDifficulty(quiz, attempts)
+    expect(result[0].topic).toBe('General')
+  })
+
+  it('single attempt with all correct: all Easy', () => {
+    const q1 = makeQuestion({ id: 'q1', order: 1, text: 'Q1' })
+    const q2 = makeQuestion({ id: 'q2', order: 2, text: 'Q2' })
+    const quiz = makeQuiz({ questions: [q1, q2] })
+    const attempts = [makeAttempt({ answers: [makeCorrectAnswer('q1'), makeCorrectAnswer('q2')] })]
+    const result = calculateItemDifficulty(quiz, attempts)
+    expect(result).toHaveLength(2)
+    expect(result.every(r => r.difficulty === 'Easy')).toBe(true)
   })
 })

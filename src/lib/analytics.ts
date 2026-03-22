@@ -1,4 +1,4 @@
-import type { Question, Answer, QuizAttempt } from '@/types/quiz'
+import type { Question, Answer, QuizAttempt, Quiz } from '@/types/quiz'
 import { isUnanswered } from '@/lib/scoring'
 
 // ---------------------------------------------------------------------------
@@ -211,4 +211,75 @@ export function calculateNormalizedGain(attempts: QuizAttempt[]): number | null 
   if (pre >= 100) return null
 
   return (post - pre) / (100 - pre)
+}
+
+// ---------------------------------------------------------------------------
+// Item Difficulty — P-Values (E17-S03)
+// ---------------------------------------------------------------------------
+
+export type ItemDifficulty = {
+  /** Question ID from the quiz */
+  questionId: string
+  /** Question text for display */
+  questionText: string
+  /** 1-indexed display order (from question.order) */
+  questionOrder: number
+  /** Topic tag (defaults to "General" if unset) */
+  topic: string
+  /** Proportion of attempts answered correctly (0.0–1.0) */
+  pValue: number
+  /** Human-readable difficulty label */
+  difficulty: 'Easy' | 'Medium' | 'Difficult'
+}
+
+/**
+ * Calculate item difficulty (P-values) for each question in a quiz.
+ *
+ * P-value = proportion of attempts where the question was answered correctly.
+ * Questions with zero attempts across all attempts are excluded.
+ *
+ * Difficulty thresholds (standard psychometric convention):
+ *   - P >= 0.8  → "Easy"
+ *   - 0.5 <= P < 0.8 → "Medium"
+ *   - P < 0.5  → "Difficult"
+ *
+ * Results are sorted easiest-first (descending P-value) for display.
+ */
+export function calculateItemDifficulty(quiz: Quiz, attempts: QuizAttempt[]): ItemDifficulty[] {
+  if (attempts.length === 0) return []
+
+  // Aggregate correct/total counts per questionId across all attempts
+  const statsMap = new Map<string, { correct: number; total: number }>()
+
+  for (const attempt of attempts) {
+    for (const answer of attempt.answers) {
+      const existing = statsMap.get(answer.questionId) ?? { correct: 0, total: 0 }
+      statsMap.set(answer.questionId, {
+        correct: existing.correct + (answer.isCorrect ? 1 : 0),
+        total: existing.total + 1,
+      })
+    }
+  }
+
+  // Map quiz questions to ItemDifficulty, excluding questions with no attempts
+  return quiz.questions
+    .map((q): ItemDifficulty | null => {
+      const stats = statsMap.get(q.id)
+      if (!stats || stats.total === 0) return null
+
+      const pValue = stats.correct / stats.total
+      const difficulty: ItemDifficulty['difficulty'] =
+        pValue >= 0.8 ? 'Easy' : pValue >= 0.5 ? 'Medium' : 'Difficult'
+
+      return {
+        questionId: q.id,
+        questionText: q.text,
+        questionOrder: q.order,
+        topic: q.topic?.trim() || 'General',
+        pValue,
+        difficulty,
+      }
+    })
+    .filter((item): item is ItemDifficulty => item !== null)
+    .sort((a, b) => b.pValue - a.pValue) // Easiest first
 }
