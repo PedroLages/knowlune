@@ -205,9 +205,16 @@ def parse_args() -> RunConfig:
 
     mode = "autonomous" if args.autonomous else "supervised"
 
-    stories_raw = args.stories or []
+    stories_raw = list(args.stories or [])
     if args.next:
-        stories_raw = find_next_backlog_keys(args.next)
+        # Deduplicate: --next skips stories already listed explicitly
+        existing = {s.upper() for s in stories_raw}
+        for key in find_next_backlog_keys(args.next + len(existing)):
+            if key.upper() not in existing:
+                stories_raw.append(key)
+                existing.add(key.upper())
+            if len(stories_raw) >= len(args.stories or []) + args.next:
+                break
     if args.epic_only:
         stories_raw = []  # no stories to process in epic-only mode
 
@@ -354,20 +361,34 @@ def detect_completed_epics(
 def find_next_backlog_keys(n: int) -> list[str]:
     data = load_sprint_status()
     dev_status = data.get("development_status", {})
+
+    # Build set of done epics — skip their leftover backlog stories
+    done_epics: set[int] = set()
+    for yaml_key, status in dev_status.items():
+        if yaml_key.startswith("epic-") and str(status).strip() == "done":
+            # "epic-7" -> 7, "epic-9b" -> 9
+            num_part = yaml_key.split("-")[1]
+            try:
+                done_epics.add(int(re.match(r"(\d+)", num_part).group(1)))
+            except (ValueError, AttributeError):
+                pass
+
     keys: list[str] = []
     for yaml_key, status in dev_status.items():
         if str(status) != "backlog":
             continue
         if yaml_key.startswith("epic-") or yaml_key.endswith("-retrospective"):
             continue
-        # Skip deferred stories (they have comments but appear as backlog)
         parts = yaml_key.split("-")
         if len(parts) >= 2:
             try:
                 epic_n, story_n = int(parts[0]), int(parts[1])
-                keys.append(f"E{epic_n:02d}-S{story_n:02d}")
             except ValueError:
                 continue
+            # Skip stories from already-done epics (deferred gap coverage)
+            if epic_n in done_epics:
+                continue
+            keys.append(f"E{epic_n:02d}-S{story_n:02d}")
         if len(keys) >= n:
             break
     return keys
