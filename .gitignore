@@ -53,3 +53,4 @@ experiments/
 .claude/session-memory/current-session/
 .claude/session-memory/archived/*
 !.claude/session-memory/archived/.gitkeep
+__pycache__/
