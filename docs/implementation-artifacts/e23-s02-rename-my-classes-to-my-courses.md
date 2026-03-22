@@ -44,11 +44,16 @@ Skipped — this is a label rename story with no visual/layout changes.
 
 ## Implementation Notes
 
-[Architecture decisions, patterns used, dependencies added]
+- Changed label in 3 surfaces: sidebar navigation (`Layout.tsx`), mobile bottom bar (`Layout.tsx`), and search command palette (`SearchCommandPalette.tsx`)
+- Updated page heading in `MyClass.tsx` from "My Classes" to "My Courses"
+- Route path `/my-class` preserved for backwards compatibility — only display labels changed
+- No new dependencies added
 
 ## Testing Notes
 
-[Test strategy, edge cases discovered, coverage notes]
+- 5 E2E test cases covering all ACs: sidebar label, mobile bottom bar, command palette, route compatibility, page heading
+- ATDD test selectors required a fix commit (`33bd901d`) to handle navigation ambiguity — desktop sidebar vs mobile bottom bar both contain "My Courses", resolved with viewport-specific selectors
+- Navigation helper updated to use "My Courses" label for route matching
 
 ## Pre-Review Checklist
 
@@ -78,4 +83,6 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Selector ambiguity in E2E tests**: The rename introduced ambiguity when both desktop sidebar and mobile bottom bar render "My Courses" simultaneously. Initial ATDD tests failed because `getByRole('link', { name: 'My Courses' })` matched multiple elements. Fixed by scoping selectors to specific navigation containers (e.g., `nav[aria-label="Main navigation"]` for sidebar, viewport-based visibility for mobile bar).
+- **Worktree dev server isolation**: Running E2E tests in a worktree while the main workspace has a dev server on port 5173 requires starting a separate server on port 5174 and passing `BASE_URL=http://localhost:5174` to Playwright. Without this, `reuseExistingServer: true` silently uses the main workspace's stale code.
+- **Minimal scope discipline**: This story touched only display labels, not route paths or component file names. Keeping `MyClass.tsx` as the filename and `/my-class` as the route avoids cascading rename changes across imports, tests, and routing config — a pragmatic backwards-compatibility choice.
