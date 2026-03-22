@@ -236,7 +236,6 @@ describe('QuizResults — improvement summary', () => {
   })
 
   it('uses max of all previous attempts (not just the last one)', async () => {
-
     useQuizStore.setState({
       currentQuiz: testQuiz,
       attempts: [
