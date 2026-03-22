@@ -12,6 +12,7 @@ import {
 import { ScoreSummary } from '@/app/components/quiz/ScoreSummary'
 import { QuestionBreakdown } from '@/app/components/quiz/QuestionBreakdown'
 import { AreasForGrowth } from '@/app/components/quiz/AreasForGrowth'
+import { PerformanceInsights } from '@/app/components/quiz/PerformanceInsights'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
 
@@ -134,6 +135,8 @@ export function QuizResults() {
         />
 
         <QuestionBreakdown answers={lastAttempt.answers} questions={currentQuiz.questions} />
+
+        <PerformanceInsights questions={currentQuiz.questions} answers={lastAttempt.answers} />
 
         <AreasForGrowth incorrectItems={incorrectItems} />
 
