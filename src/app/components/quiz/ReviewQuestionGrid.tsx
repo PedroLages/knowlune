@@ -15,7 +15,7 @@ export function ReviewQuestionGrid({
   onQuestionClick,
 }: ReviewQuestionGridProps) {
   return (
-    <div className="flex flex-wrap gap-2" role="navigation" aria-label="Question navigation">
+    <div className="flex flex-wrap gap-2" role="toolbar" aria-label="Question navigation">
       {questions.map((q, i) => {
         const answer = answers.find(a => a.questionId === q.id)
         const isCurrent = i === currentIndex

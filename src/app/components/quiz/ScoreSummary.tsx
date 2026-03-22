@@ -10,7 +10,8 @@ interface ScoreSummaryProps {
   passed: boolean
   passingScore: number
   timeSpent: number
-  previousBestPercentage?: number
+  improvementData?: ImprovementData
+  normalizedGain?: number | null
   showTimeSpent?: boolean
   previousAttemptTimeSpent?: number
 }
@@ -177,7 +178,8 @@ export function ScoreSummary({
   passed,
   passingScore,
   timeSpent,
-  previousBestPercentage,
+  improvementData,
+  normalizedGain,
   showTimeSpent = true,
   previousAttemptTimeSpent,
 }: ScoreSummaryProps) {
@@ -222,6 +224,12 @@ export function ScoreSummary({
       )}
 
       {improvementData && <ScoreImprovementPanel data={improvementData} />}
+
+      {normalizedGain != null && (
+        <p className="text-xs text-muted-foreground tabular-nums" data-testid="normalized-gain">
+          Hake&apos;s normalized gain: {normalizedGain.toFixed(2)}
+        </p>
+      )}
     </div>
   )
 }

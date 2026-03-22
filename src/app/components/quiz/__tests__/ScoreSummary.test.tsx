@@ -216,4 +216,32 @@ describe('ScoreSummary', () => {
     render(<ScoreSummary {...passProps} showTimeSpent={false} previousAttemptTimeSpent={615000} />)
     expect(screen.queryByText(/Previous:/)).not.toBeInTheDocument()
   })
+
+  // ---------------------------------------------------------------------------
+  // Tests: Improvement data (E16-S03)
+  // ---------------------------------------------------------------------------
+
+  it('shows first-attempt message when improvementData.improvement is null', () => {
+    render(<ScoreSummary {...passProps} improvementData={firstAttemptData} />)
+    expect(screen.getByTestId('improvement-summary')).toHaveTextContent(
+      'First attempt complete! Retake to track improvement.'
+    )
+  })
+
+  it('shows "New personal best!" when improvementData.isNewBest is true', () => {
+    render(<ScoreSummary {...passProps} improvementData={newBestData} />)
+    expect(screen.getByText('New personal best!')).toBeInTheDocument()
+    expect(screen.getByTestId('improvement-summary')).toHaveTextContent('+25%')
+  })
+
+  it('shows best score and encouragement when not a new best', () => {
+    render(<ScoreSummary {...passProps} improvementData={regressionData} />)
+    expect(screen.getByTestId('improvement-summary')).toHaveTextContent('Your best: 90%')
+    expect(screen.getByTestId('improvement-summary')).toHaveTextContent('+15%')
+  })
+
+  it('does not render improvement panel when improvementData is undefined', () => {
+    render(<ScoreSummary {...passProps} />)
+    expect(screen.queryByTestId('improvement-summary')).not.toBeInTheDocument()
+  })
 })

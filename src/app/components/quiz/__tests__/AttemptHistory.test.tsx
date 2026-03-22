@@ -1,13 +1,16 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router'
 import { AttemptHistory } from '../AttemptHistory'
 import { makeAttempt } from '../../../../../tests/support/fixtures/factories/quiz-factory'
 import { FIXED_DATE, getRelativeDate } from '../../../../../tests/utils/test-time'
 
-vi.mock('sonner', () => ({
-  toast: { info: vi.fn(), error: vi.fn() },
-}))
+const mockNavigate = vi.fn()
+vi.mock('react-router', async () => {
+  const actual = await vi.importActual('react-router')
+  return { ...actual, useNavigate: () => mockNavigate }
+})
 
 const COURSE_ID = 'course-test'
 const LESSON_ID = 'lesson-test'
@@ -41,12 +44,14 @@ const threeAttempts = [attempt3, attempt2, attempt1]
 describe('AttemptHistory', () => {
   it('shows "(1 attempt)" for a single attempt', () => {
     render(
-      <AttemptHistory
-        attempts={[attempt1]}
-        currentAttemptId={attempt1.id}
-        courseId={COURSE_ID}
-        lessonId={LESSON_ID}
-      />
+      <MemoryRouter>
+        <AttemptHistory
+          attempts={[attempt1]}
+          currentAttemptId={attempt1.id}
+          courseId={COURSE_ID}
+          lessonId={LESSON_ID}
+        />
+      </MemoryRouter>
     )
     expect(
       screen.getByRole('button', { name: /view attempt history \(1 attempt\)/i })
@@ -55,12 +60,14 @@ describe('AttemptHistory', () => {
 
   it('shows "(3 attempts)" for three attempts', () => {
     render(
-      <AttemptHistory
-        attempts={threeAttempts}
-        currentAttemptId={attempt3.id}
-        courseId={COURSE_ID}
-        lessonId={LESSON_ID}
-      />
+      <MemoryRouter>
+        <AttemptHistory
+          attempts={threeAttempts}
+          currentAttemptId={attempt3.id}
+          courseId={COURSE_ID}
+          lessonId={LESSON_ID}
+        />
+      </MemoryRouter>
     )
     expect(
       screen.getByRole('button', { name: /view attempt history \(3 attempts\)/i })
@@ -69,12 +76,14 @@ describe('AttemptHistory', () => {
 
   it('is collapsed by default — content not visible before click', () => {
     render(
-      <AttemptHistory
-        attempts={threeAttempts}
-        currentAttemptId={attempt3.id}
-        courseId={COURSE_ID}
-        lessonId={LESSON_ID}
-      />
+      <MemoryRouter>
+        <AttemptHistory
+          attempts={threeAttempts}
+          currentAttemptId={attempt3.id}
+          courseId={COURSE_ID}
+          lessonId={LESSON_ID}
+        />
+      </MemoryRouter>
     )
     // Attempt numbers should not be visible while collapsed
     expect(screen.queryByText('#3')).not.toBeInTheDocument()
@@ -83,12 +92,14 @@ describe('AttemptHistory', () => {
   it('expands to show all attempt data fields after clicking trigger', async () => {
     const user = userEvent.setup()
     render(
-      <AttemptHistory
-        attempts={threeAttempts}
-        currentAttemptId={attempt3.id}
-        courseId={COURSE_ID}
-        lessonId={LESSON_ID}
-      />
+      <MemoryRouter>
+        <AttemptHistory
+          attempts={threeAttempts}
+          currentAttemptId={attempt3.id}
+          courseId={COURSE_ID}
+          lessonId={LESSON_ID}
+        />
+      </MemoryRouter>
     )
 
     await user.click(screen.getByRole('button', { name: /view attempt history/i }))
@@ -116,64 +127,74 @@ describe('AttemptHistory', () => {
   it('marks current attempt with "Current" badge', async () => {
     const user = userEvent.setup()
     render(
-      <AttemptHistory
-        attempts={threeAttempts}
-        currentAttemptId={attempt3.id}
-        courseId={COURSE_ID}
-        lessonId={LESSON_ID}
-      />
+      <MemoryRouter>
+        <AttemptHistory
+          attempts={threeAttempts}
+          currentAttemptId={attempt3.id}
+          courseId={COURSE_ID}
+          lessonId={LESSON_ID}
+        />
+      </MemoryRouter>
     )
 
     await user.click(screen.getByRole('button', { name: /view attempt history/i }))
 
-    // "Current" badge should appear (may appear twice due to desktop+mobile renders)
+    // "Current" badge should appear for the current attempt
     expect(screen.getAllByText('Current').length).toBeGreaterThanOrEqual(1)
   })
 
   it('renders Review buttons when expanded', async () => {
     const user = userEvent.setup()
     render(
-      <AttemptHistory
-        attempts={threeAttempts}
-        currentAttemptId={attempt3.id}
-        courseId={COURSE_ID}
-        lessonId={LESSON_ID}
-      />
+      <MemoryRouter>
+        <AttemptHistory
+          attempts={threeAttempts}
+          currentAttemptId={attempt3.id}
+          courseId={COURSE_ID}
+          lessonId={LESSON_ID}
+        />
+      </MemoryRouter>
     )
 
     await user.click(screen.getByRole('button', { name: /view attempt history/i }))
 
-    // Review button visible per attempt (may appear twice due to responsive layout)
+    // Review button visible per attempt
     expect(screen.getAllByRole('button', { name: /review/i }).length).toBeGreaterThanOrEqual(3)
   })
 
-  it('clicking a Review button shows "Review mode coming soon" toast', async () => {
-    const { toast } = await import('sonner')
+  it('navigates to review route when Review button is clicked', async () => {
+    mockNavigate.mockClear()
     const user = userEvent.setup()
     render(
-      <AttemptHistory
-        attempts={threeAttempts}
-        currentAttemptId={attempt3.id}
-        courseId={COURSE_ID}
-        lessonId={LESSON_ID}
-      />
+      <MemoryRouter>
+        <AttemptHistory
+          attempts={threeAttempts}
+          currentAttemptId={attempt3.id}
+          courseId={COURSE_ID}
+          lessonId={LESSON_ID}
+        />
+      </MemoryRouter>
     )
 
     await user.click(screen.getByRole('button', { name: /view attempt history/i }))
     await user.click(screen.getAllByRole('button', { name: /review attempt #3/i })[0])
 
-    expect(toast.info).toHaveBeenCalledWith('Review mode coming soon.')
+    expect(mockNavigate).toHaveBeenCalledWith(
+      `/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz/review/${attempt3.id}`
+    )
   })
 
   it('Review buttons have contextual aria-labels distinguishing attempts', async () => {
     const user = userEvent.setup()
     render(
-      <AttemptHistory
-        attempts={threeAttempts}
-        currentAttemptId={attempt3.id}
-        courseId={COURSE_ID}
-        lessonId={LESSON_ID}
-      />
+      <MemoryRouter>
+        <AttemptHistory
+          attempts={threeAttempts}
+          currentAttemptId={attempt3.id}
+          courseId={COURSE_ID}
+          lessonId={LESSON_ID}
+        />
+      </MemoryRouter>
     )
 
     await user.click(screen.getByRole('button', { name: /view attempt history/i }))

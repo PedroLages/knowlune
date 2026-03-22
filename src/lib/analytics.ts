@@ -160,10 +160,10 @@ export function calculateImprovement(attempts: QuizAttempt[]): ImprovementData {
       : null
 
   // Best across ALL attempts (including current) — for bestAttemptNumber display
-  // Uses the original (unsorted) attempts array index for consistent 1-based numbering
+  // Uses the chronologically sorted array for correct 1-based attempt numbering
   let bestIndex = 0
-  for (let i = 1; i < attempts.length; i++) {
-    if (attempts[i].percentage > attempts[bestIndex].percentage) {
+  for (let i = 1; i < sortedByDate.length; i++) {
+    if (sortedByDate[i].percentage > sortedByDate[bestIndex].percentage) {
       bestIndex = i
     }
   }
@@ -175,10 +175,40 @@ export function calculateImprovement(attempts: QuizAttempt[]): ImprovementData {
 
   return {
     firstScore: sortedByDate.length > 1 ? firstAttempt.percentage : null,
-    bestScore: attempts[bestIndex].percentage,
+    bestScore: sortedByDate[bestIndex].percentage,
     bestAttemptNumber: bestIndex + 1,
     currentScore: currentAttempt.percentage,
     improvement,
     isNewBest,
   }
+}
+
+// ---------------------------------------------------------------------------
+// Normalized Gain — Hake's Formula (E16-S04)
+// ---------------------------------------------------------------------------
+
+/**
+ * Calculate normalized gain (Hake's formula) across quiz attempts.
+ *
+ * Formula: g = (post% - pre%) / (100 - pre%)
+ *
+ * - pre%: percentage from the chronologically first attempt
+ * - post%: percentage from the chronologically last attempt
+ * - Returns null when < 2 attempts or pre% = 100 (ceiling effect / division by zero)
+ *
+ * Reference: Hake, R.R. (1998). "Interactive-engagement versus traditional methods"
+ */
+export function calculateNormalizedGain(attempts: QuizAttempt[]): number | null {
+  if (attempts.length < 2) return null
+
+  const sorted = [...attempts].sort(
+    (a, b) => new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime()
+  )
+
+  const pre = sorted[0].percentage
+  const post = sorted[sorted.length - 1].percentage
+
+  if (pre >= 100) return null
+
+  return (post - pre) / (100 - pre)
 }
