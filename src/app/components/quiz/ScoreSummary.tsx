@@ -10,6 +10,7 @@ interface ScoreSummaryProps {
   timeSpent: number
   previousBestPercentage?: number
   showTimeSpent?: boolean
+  previousAttemptTimeSpent?: number
 }
 
 type ScoreTier = {
@@ -116,6 +117,7 @@ export function ScoreSummary({
   timeSpent,
   previousBestPercentage,
   showTimeSpent = true,
+  previousAttemptTimeSpent,
 }: ScoreSummaryProps) {
   const tier = getScoreTier(percentage, passed)
   const roundedPct = Math.round(Math.min(100, Math.max(0, percentage)))
@@ -155,9 +157,16 @@ export function ScoreSummary({
       <p className={cn('text-lg font-medium', tier.textClass)}>{tier.message}</p>
 
       {showTimeSpent && (
-        <p className="text-sm text-muted-foreground">
-          Completed in {formatDuration(Math.max(timeSpent, 1000))}
-        </p>
+        <div className="flex flex-col items-center gap-1">
+          <p className="text-sm text-muted-foreground tabular-nums">
+            Completed in {formatDuration(Math.max(timeSpent, 1000))}
+          </p>
+          {previousAttemptTimeSpent != null && (
+            <p className="text-xs text-muted-foreground/70 tabular-nums">
+              Previous: {formatDuration(Math.max(previousAttemptTimeSpent, 1000))}
+            </p>
+          )}
+        </div>
       )}
 
       {roundedPrevBest != null && (
