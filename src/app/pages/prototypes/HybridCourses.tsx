@@ -39,7 +39,7 @@ export function HybridCourses() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-1">Courses</h1>
         {allCourses.length > 0 && (
-          <p className="text-sm text-neutral-500">{allCourses.length} courses</p>
+          <p className="text-sm text-muted-foreground">{allCourses.length} courses</p>
         )}
       </div>
 
