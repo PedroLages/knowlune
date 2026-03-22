@@ -17,7 +17,7 @@ Map changed files to routes for design review context:
 | `pages/Reports.tsx` | `/reports` | Reports & analytics |
 | `pages/Settings.tsx` | `/settings` | Settings |
 
-## EduVi Stack Patterns
+## Knowlune Stack Patterns
 
 | Story content | Pattern |
 |---|---|

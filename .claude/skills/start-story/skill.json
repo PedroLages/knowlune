@@ -2,7 +2,7 @@
   "name": "start-story",
   "version": "2.0.0",
   "description": "Automates story setup: feature branch (with optional git worktree), sprint tracking, ATDD test suggestion, design guidance, contextual research, and plan mode entry",
-  "author": "EduVi Team",
+  "author": "Knowlune Team",
   "arguments": {
     "pattern": "[E##-S##]",
     "optional": true,

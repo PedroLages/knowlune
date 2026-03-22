@@ -1,6 +1,6 @@
 # Design Review Workflow
 
-Automated design quality assurance for the EduVi e-learning platform. Uses **Playwright MCP** for live, interactive browser testing — the agent navigates pages, clicks elements, resizes viewports, and captures screenshots directly.
+Automated design quality assurance for the Knowlune e-learning platform. Uses **Playwright MCP** for live, interactive browser testing — the agent navigates pages, clicks elements, resizes viewports, and captures screenshots directly.
 
 ## Architecture
 
