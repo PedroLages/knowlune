@@ -166,6 +166,11 @@ export function Courses() {
     )
   }, [filtered, sortMode, momentumMap])
 
+  const allTags = useMemo(
+    () => [...new Set(importedCourses.flatMap(c => c.tags))].sort(),
+    [importedCourses]
+  )
+
   const filteredImportedCourses = (() => {
     let courses = importedCourses
 

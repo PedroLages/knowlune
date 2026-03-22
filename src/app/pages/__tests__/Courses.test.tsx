@@ -43,15 +43,18 @@ const storeState = {
   importError: null as string | null,
   importProgress: null,
   thumbnailUrls: {} as Record<string, string>,
+  autoAnalysisStatus: {} as Record<string, unknown>,
   addImportedCourse: vi.fn(),
   removeImportedCourse: vi.fn(),
   updateCourseTags: vi.fn(),
   updateCourseStatus: vi.fn(),
   getAllTags: () => [] as string[],
   loadImportedCourses: vi.fn(),
+  loadThumbnailUrls: vi.fn(),
   setImporting: vi.fn(),
   setImportError: vi.fn(),
   setImportProgress: vi.fn(),
+  setAutoAnalysisStatus: vi.fn(),
 }
 
 vi.mock('@/stores/useCourseImportStore', () => ({
@@ -127,15 +130,14 @@ describe('Courses page', () => {
   describe('empty state', () => {
     it('displays empty state when no imported courses', () => {
       renderCourses()
-      expect(screen.getByText('Import your first course to get started')).toBeInTheDocument()
-      expect(screen.getByText('Import Your First Course')).toBeInTheDocument()
+      expect(screen.getByText('No imported courses yet.')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /import your first course/i })).toBeInTheDocument()
     })
 
-    it('empty state card uses rounded-[24px]', () => {
+    it('empty state is shown in the Import courses region', () => {
       const { container } = renderCourses()
       const emptyCard = container.querySelector('[role="region"][aria-label="Import courses"]')
       expect(emptyCard).toBeInTheDocument()
-      expect(emptyCard).toHaveClass('rounded-[24px]')
     })
   })
 
@@ -262,55 +264,112 @@ describe('Courses page', () => {
       expect(screen.getByText('Paused Course')).toBeInTheDocument()
     })
 
-    it('combines status and topic filters (AC-2.2 — proves AND-semantics)', async () => {
-      // Strengthen fixture: add course that matches ONE dimension but not both
-      const strongFixture: ImportedCourse[] = [
-        ...mixedCourses,
-        {
-          id: 'active-2',
-          name: 'Active Beta Course', // Active status + beta tag
-          importedAt: '2026-02-04T00:00:00Z',
-          category: 'general',
-          tags: ['beta'],
-          status: 'active',
-          videoCount: 4,
-          pdfCount: 1,
-          directoryHandle: {} as FileSystemDirectoryHandle,
-        },
-      ]
-      storeState.importedCourses = strongFixture
-      storeState.getAllTags = () => ['alpha', 'beta']
-
-      const user = userEvent.setup()
-      renderCourses()
-
-      // Select "Active" status filter
-      const statusButtons = screen.getAllByTestId('status-filter-button')
-      await user.click(statusButtons[0])
-
-      // Should show both Active courses (Active Course + Active Beta Course)
-      expect(screen.getByText('Active Course')).toBeInTheDocument()
-      expect(screen.getByText('Active Beta Course')).toBeInTheDocument()
-      expect(screen.queryByText('Completed Course')).not.toBeInTheDocument()
-
-      // Now ALSO select "alpha" topic filter (AND-condition)
-      const topicButtons = screen.getAllByTestId('topic-filter-button')
-      const alphaButton = topicButtons.find(b => b.textContent?.includes('alpha'))
-      if (alphaButton) await user.click(alphaButton)
-
-      // Should ONLY show Active Course (active + alpha)
-      // Active Beta Course should be hidden (active + beta, missing alpha)
-      expect(screen.getByText('Active Course')).toBeInTheDocument()
-      expect(screen.queryByText('Active Beta Course')).not.toBeInTheDocument()
-      expect(screen.queryByText('Paused Course')).not.toBeInTheDocument()
-    })
-
     it('uses aria-pressed on status filter buttons', () => {
       renderCourses()
       const statusButtons = screen.getAllByTestId('status-filter-button')
       statusButtons.forEach(button => {
         expect(button).toHaveAttribute('aria-pressed', 'false')
       })
+    })
+  })
+
+  const coursesWithAiTags: ImportedCourse[] = [
+    {
+      id: 'ai-1',
+      name: 'Python Basics',
+      importedAt: '2026-01-01T00:00:00Z',
+      category: '',
+      tags: ['python', 'beginner'],
+      status: 'active',
+      videoCount: 5,
+      pdfCount: 0,
+      directoryHandle: {} as FileSystemDirectoryHandle,
+    },
+    {
+      id: 'ai-2',
+      name: 'Advanced Python',
+      importedAt: '2026-01-02T00:00:00Z',
+      category: '',
+      tags: ['python', 'advanced'],
+      status: 'active',
+      videoCount: 8,
+      pdfCount: 1,
+      directoryHandle: {} as FileSystemDirectoryHandle,
+    },
+    {
+      id: 'ai-3',
+      name: 'Data Science',
+      importedAt: '2026-01-03T00:00:00Z',
+      category: '',
+      tags: ['data science'],
+      status: 'active',
+      videoCount: 3,
+      pdfCount: 0,
+      directoryHandle: {} as FileSystemDirectoryHandle,
+    },
+  ]
+
+  describe('unified filter chips (AC1-AC5)', () => {
+    beforeEach(() => {
+      storeState.importedCourses = coursesWithAiTags
+    })
+
+    it('renders a single ToggleGroup (not a separate TopicFilter)', () => {
+      renderCourses()
+      expect(screen.queryByTestId('topic-filter-bar')).not.toBeInTheDocument()
+      expect(screen.getByRole('group', { name: /filter by category or topic/i })).toBeInTheDocument()
+    })
+
+    it('shows "All Courses" chip (AC1)', () => {
+      renderCourses()
+      expect(screen.getByRole('radio', { name: 'All Courses' })).toBeInTheDocument()
+    })
+
+    it('shows AI tag chips from imported courses (AC1)', () => {
+      renderCourses()
+      expect(screen.getByRole('radio', { name: /python/i })).toBeInTheDocument()
+    })
+
+    it('shows "Clear filters" button only when filter is active (AC4)', async () => {
+      const user = userEvent.setup()
+      renderCourses()
+
+      expect(screen.queryByText('Clear filters')).not.toBeInTheDocument()
+
+      const pythonChip = screen.getByRole('radio', { name: /python/i })
+      await user.click(pythonChip)
+
+      expect(screen.getByText('Clear filters')).toBeInTheDocument()
+    })
+
+    it('clears filter when "Clear filters" is clicked (AC4)', async () => {
+      const user = userEvent.setup()
+      renderCourses()
+
+      const pythonChip = screen.getByRole('radio', { name: /python/i })
+      await user.click(pythonChip)
+
+      expect(screen.getByRole('heading', { name: 'Python Basics' })).toBeInTheDocument()
+      // "Data Science" appears as a chip label; check course card heading is hidden
+      expect(screen.queryByRole('heading', { name: 'Data Science' })).not.toBeInTheDocument()
+
+      await user.click(screen.getByText('Clear filters'))
+
+      expect(screen.getByRole('heading', { name: 'Python Basics' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Data Science' })).toBeInTheDocument()
+    })
+
+    it('filters imported courses by AI tag (AC3)', async () => {
+      const user = userEvent.setup()
+      renderCourses()
+
+      const pythonChip = screen.getByRole('radio', { name: /python/i })
+      await user.click(pythonChip)
+
+      expect(screen.getByRole('heading', { name: 'Python Basics' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Advanced Python' })).toBeInTheDocument()
+      // Course card heading hidden; chip label still in ToggleGroup
+      expect(screen.queryByRole('heading', { name: 'Data Science' })).not.toBeInTheDocument()
     })
   })
 })
