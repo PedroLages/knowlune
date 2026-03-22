@@ -219,6 +219,13 @@ export default defineConfig({
         include: ['src/**/*.test.{ts,tsx}'],
         exclude: ['src/**/*.stories.*'],
       }
+    }, {
+      test: {
+        name: 'server',
+        include: ['server/**/*.test.ts'],
+        environment: 'node',
+        globals: true,
+      }
     }]
   },
   build: {
