@@ -284,6 +284,7 @@ export function Courses() {
                 variant="link"
                 size="sm"
                 data-testid="import-first-course-cta"
+                aria-label="Import your first course"
                 onClick={handleImportCourse}
                 disabled={isImporting}
                 className="text-brand-soft-foreground h-auto p-0"
