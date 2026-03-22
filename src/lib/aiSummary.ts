@@ -14,6 +14,9 @@ import type { AIProviderId } from './aiConfiguration'
 import { sanitizeAIRequestPayload } from './aiConfiguration'
 import type { TranscriptCue } from '@/data/types'
 
+/** Local proxy endpoints (same Express server used by ProxyLLMClient) */
+const PROXY_STREAM_URL = '/api/ai/stream'
+
 // ---------------------------------------------------------------------------
 // Configuration
 // ---------------------------------------------------------------------------
@@ -98,201 +101,37 @@ export async function fetchAndParseTranscript(src: string, signal?: AbortSignal)
 }
 
 // ---------------------------------------------------------------------------
-// AI Provider Configuration
+// AI Provider Model Mapping
 // ---------------------------------------------------------------------------
 
-interface ProviderConfig {
-  endpoint: string
-  headers: (apiKey: string) => Record<string, string>
-  buildPayload: (transcript: string) => unknown
-  parseStreamChunk: (line: string) => string | null
+/** Maps provider IDs to their default model names (used in proxy requests) */
+const PROVIDER_MODELS: Record<AIProviderId, string> = {
+  openai: 'gpt-4o-mini',
+  anthropic: 'claude-3-5-haiku-20241022',
+  groq: 'llama-3.3-70b-versatile',
+  glm: 'glm-4-flash',
+  gemini: 'gemini-1.5-flash',
 }
 
-const PROVIDER_CONFIGS: Record<AIProviderId, ProviderConfig> = {
-  openai: {
-    endpoint: 'https://api.openai.com/v1/chat/completions',
-    headers: (apiKey: string) => ({
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    }),
-    buildPayload: (transcript: string) => {
-      const sanitized = sanitizeAIRequestPayload(transcript)
-      return {
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are a helpful assistant that summarizes educational video content. Provide concise, informative summaries that capture key concepts and main takeaways.',
-          },
-          {
-            role: 'user',
-            content: `Summarize the following video transcript in 100-300 words. Focus on key concepts and main takeaways:\n\n${sanitized.content}`,
-          },
-        ],
-        stream: true,
-        max_tokens: 500,
-      }
+/**
+ * Builds the messages array for the summary prompt.
+ * All providers use the same unified message format through the proxy.
+ */
+function buildSummaryMessages(
+  transcript: string
+): Array<{ role: 'system' | 'user'; content: string }> {
+  const sanitized = sanitizeAIRequestPayload(transcript)
+  return [
+    {
+      role: 'system' as const,
+      content:
+        'You are a helpful assistant that summarizes educational video content. Provide concise, informative summaries that capture key concepts and main takeaways.',
     },
-    parseStreamChunk: (line: string): string | null => {
-      if (!line.startsWith('data: ')) return null
-      const data = line.slice(6).trim()
-      if (data === '[DONE]') return null
-
-      try {
-        const parsed = JSON.parse(data)
-        return parsed.choices?.[0]?.delta?.content || null
-      } catch {
-        return null
-      }
+    {
+      role: 'user' as const,
+      content: `Summarize the following video transcript in 100-300 words. Focus on key concepts and main takeaways:\n\n${sanitized.content}`,
     },
-  },
-  anthropic: {
-    endpoint: 'https://api.anthropic.com/v1/messages',
-    headers: (apiKey: string) => ({
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    }),
-    buildPayload: (transcript: string) => {
-      const sanitized = sanitizeAIRequestPayload(transcript)
-      return {
-        model: 'claude-3-5-haiku-20241022',
-        max_tokens: 500,
-        stream: true,
-        messages: [
-          {
-            role: 'user',
-            content: `Summarize the following video transcript in 100-300 words. Focus on key concepts and main takeaways:\n\n${sanitized.content}`,
-          },
-        ],
-      }
-    },
-    parseStreamChunk: (line: string): string | null => {
-      if (!line.startsWith('data: ')) return null
-      const data = line.slice(6).trim()
-
-      try {
-        const parsed = JSON.parse(data)
-        if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
-          return parsed.delta.text
-        }
-        return null
-      } catch {
-        return null
-      }
-    },
-  },
-  groq: {
-    endpoint: 'https://api.groq.com/openai/v1/chat/completions',
-    headers: (apiKey: string) => ({
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    }),
-    buildPayload: (transcript: string) => {
-      const sanitized = sanitizeAIRequestPayload(transcript)
-      return {
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are a helpful assistant that summarizes educational video content. Provide concise, informative summaries that capture key concepts and main takeaways.',
-          },
-          {
-            role: 'user',
-            content: `Summarize the following video transcript in 100-300 words. Focus on key concepts and main takeaways:\n\n${sanitized.content}`,
-          },
-        ],
-        stream: true,
-        max_tokens: 500,
-      }
-    },
-    parseStreamChunk: (line: string): string | null => {
-      if (!line.startsWith('data: ')) return null
-      const data = line.slice(6).trim()
-      if (data === '[DONE]') return null
-
-      try {
-        const parsed = JSON.parse(data)
-        return parsed.choices?.[0]?.delta?.content || null
-      } catch {
-        return null
-      }
-    },
-  },
-  glm: {
-    endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
-    headers: (apiKey: string) => ({
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    }),
-    buildPayload: (transcript: string) => {
-      const sanitized = sanitizeAIRequestPayload(transcript)
-      return {
-        model: 'glm-4-flash',
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are a helpful assistant that summarizes educational video content. Provide concise, informative summaries that capture key concepts and main takeaways.',
-          },
-          {
-            role: 'user',
-            content: `Summarize the following video transcript in 100-300 words. Focus on key concepts and main takeaways:\n\n${sanitized.content}`,
-          },
-        ],
-        stream: true,
-        max_tokens: 500,
-      }
-    },
-    parseStreamChunk: (line: string): string | null => {
-      if (!line.startsWith('data: ')) return null
-      const data = line.slice(6).trim()
-      if (data === '[DONE]') return null
-
-      try {
-        const parsed = JSON.parse(data)
-        return parsed.choices?.[0]?.delta?.content || null
-      } catch {
-        return null
-      }
-    },
-  },
-  gemini: {
-    endpoint:
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent',
-    headers: () => ({
-      'Content-Type': 'application/json',
-    }),
-    buildPayload: (transcript: string) => {
-      const sanitized = sanitizeAIRequestPayload(transcript)
-      return {
-        contents: [
-          {
-            parts: [
-              {
-                text: `You are a helpful assistant that summarizes educational video content. Provide concise, informative summaries that capture key concepts and main takeaways.\n\nSummarize the following video transcript in 100-300 words. Focus on key concepts and main takeaways:\n\n${sanitized.content}`,
-              },
-            ],
-          },
-        ],
-        generationConfig: {
-          maxOutputTokens: 500,
-        },
-      }
-    },
-    parseStreamChunk: (line: string): string | null => {
-      // Gemini uses a different streaming format - not SSE
-      try {
-        const parsed = JSON.parse(line)
-        const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text
-        return text || null
-      } catch {
-        return null
-      }
-    },
-  },
+  ]
 }
 
 // ---------------------------------------------------------------------------
@@ -300,7 +139,11 @@ const PROVIDER_CONFIGS: Record<AIProviderId, ProviderConfig> = {
 // ---------------------------------------------------------------------------
 
 /**
- * Generates AI video summary with real-time streaming
+ * Generates AI video summary with real-time streaming via the local proxy server.
+ *
+ * Routes requests through /api/ai/stream (Express proxy) instead of making direct
+ * CORS calls to provider APIs. The proxy handles provider-specific authentication
+ * and API format differences via the Vercel AI SDK.
  *
  * @param transcript - Full transcript text to summarize
  * @param provider - AI provider ID
@@ -322,8 +165,8 @@ export async function* generateVideoSummary(
   apiKey: string,
   externalSignal?: AbortSignal
 ): AsyncGenerator<string, void, undefined> {
-  const config = PROVIDER_CONFIGS[provider]
-  if (!config) {
+  const model = PROVIDER_MODELS[provider]
+  if (!model) {
     throw new Error(`Unsupported AI provider: ${provider}`)
   }
 
@@ -337,13 +180,16 @@ export async function* generateVideoSummary(
   }
 
   try {
-    // Gemini uses query parameter for API key, others use headers
-    const endpoint = provider === 'gemini' ? `${config.endpoint}?key=${apiKey}` : config.endpoint
-
-    const response = await fetch(endpoint, {
+    const response = await fetch(PROXY_STREAM_URL, {
       method: 'POST',
-      headers: config.headers(apiKey),
-      body: JSON.stringify(config.buildPayload(transcript)),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        provider,
+        apiKey,
+        messages: buildSummaryMessages(transcript),
+        model,
+        maxTokens: 500,
+      }),
       signal: abortController.signal,
     })
 
@@ -356,7 +202,7 @@ export async function* generateVideoSummary(
       throw new Error('Response body is null - streaming not supported')
     }
 
-    // Parse SSE stream
+    // Parse SSE stream from proxy (unified format: `data: {"content": "..."}\n\n`)
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
@@ -370,9 +216,23 @@ export async function* generateVideoSummary(
       buffer = lines.pop() || '' // Keep incomplete line in buffer
 
       for (const line of lines) {
-        const chunk = config.parseStreamChunk(line)
-        if (chunk) {
-          yield chunk
+        if (!line.startsWith('data: ')) continue
+        const data = line.slice(6).trim()
+        if (data === '[DONE]') continue
+
+        try {
+          const parsed = JSON.parse(data)
+          if (parsed.error) {
+            throw new Error(`AI proxy error: ${parsed.error}`)
+          }
+          if (parsed.content) {
+            yield parsed.content
+          }
+        } catch (parseError) {
+          if (parseError instanceof Error && parseError.message.startsWith('AI proxy error:')) {
+            throw parseError
+          }
+          // Skip malformed chunks
         }
       }
     }
