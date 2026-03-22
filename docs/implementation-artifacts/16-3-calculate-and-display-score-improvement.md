@@ -1,7 +1,7 @@
 ---
 story_id: E16-S03
 story_name: "Calculate and Display Score Improvement"
-status: in-progress
+status: review
 started: 2026-03-22
 completed:
 reviewed: false
@@ -46,47 +46,47 @@ so that I can measure my learning progress.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create `src/lib/analytics.ts` with `calculateImprovement` function (AC: all)
-  - [ ] 1.1 Implement the function signature exactly as specified in the epic
-  - [ ] 1.2 Handle single-attempt edge case (returns null improvement, isNewBest: false)
-  - [ ] 1.3 Sort attempts by completedAt ascending to determine chronological order
-  - [ ] 1.4 Compute firstScore, currentScore, improvement delta
-  - [ ] 1.5 Find bestAttemptNumber across ALL attempts (including current)
-  - [ ] 1.6 isNewBest: true only when current > all previous attempts (strict greater than)
+- [x] Task 1: Create `src/lib/analytics.ts` with `calculateImprovement` function (AC: all)
+  - [x] 1.1 Implement the function signature exactly as specified in the epic
+  - [x] 1.2 Handle single-attempt edge case (returns null improvement, isNewBest: false)
+  - [x] 1.3 Sort attempts by completedAt ascending to determine chronological order
+  - [x] 1.4 Compute firstScore, currentScore, improvement delta
+  - [x] 1.5 Find bestAttemptNumber across ALL attempts (including current)
+  - [x] 1.6 isNewBest: true only when current > all previous attempts (strict greater than)
 
-- [ ] Task 2: Refactor `ScoreSummary.tsx` props to accept rich improvement data (AC: all)
-  - [ ] 2.1 Add `improvementData` prop (optional, type from analytics.ts return value)
-  - [ ] 2.2 Remove `previousBestPercentage` prop — replace with improvementData (breaking change, update QuizResults.tsx call site)
-  - [ ] 2.3 Render "First attempt complete! Retake to track improvement." when attempts.length === 1
-  - [ ] 2.4 Render first/current/improvement panel when attempts.length > 1
-  - [ ] 2.5 Trophy icon + "New personal best!" for isNewBest in green (text-success)
-  - [ ] 2.6 Regression state: best score + attempt number + "Keep practicing to beat your best!" in neutral color (no red)
-  - [ ] 2.7 Update aria-live sr-text to include improvement data
+- [x] Task 2: Refactor `ScoreSummary.tsx` props to accept rich improvement data (AC: all)
+  - [x] 2.1 Add `improvementData` prop (optional, type from analytics.ts return value)
+  - [x] 2.2 Remove `previousBestPercentage` prop — replace with improvementData (breaking change, update QuizResults.tsx call site)
+  - [x] 2.3 Render "First attempt complete! Retake to track improvement." when attempts.length === 1
+  - [x] 2.4 Render first/current/improvement panel when attempts.length > 1
+  - [x] 2.5 Trophy icon + "New personal best!" for isNewBest in green (text-success)
+  - [x] 2.6 Regression state: best score + attempt number + "Keep practicing to beat your best!" in neutral color (no red)
+  - [x] 2.7 Update aria-live sr-text to include improvement data
 
-- [ ] Task 3: Update `QuizResults.tsx` to compute and pass improvement data (AC: all)
-  - [ ] 3.1 Import calculateImprovement from analytics.ts
-  - [ ] 3.2 Replace previousBestPercentage useMemo with improvementData useMemo (pass attempts)
-  - [ ] 3.3 Pass improvementData to ScoreSummary
+- [x] Task 3: Update `QuizResults.tsx` to compute and pass improvement data (AC: all)
+  - [x] 3.1 Import calculateImprovement from analytics.ts
+  - [x] 3.2 Replace previousBestPercentage useMemo with improvementData useMemo (pass attempts)
+  - [x] 3.3 Pass improvementData to ScoreSummary
 
-- [ ] Task 4: Unit tests for `calculateImprovement` (AC: all)
-  - [ ] 4.1 Single attempt → no comparison, isNewBest: false
-  - [ ] 4.2 Two attempts, improvement → correct firstScore, currentScore, improvement, isNewBest: true
-  - [ ] 4.3 New personal best (strict greater than) — correctly identified
-  - [ ] 4.4 Regression case — bestScore and bestAttemptNumber correct, isNewBest: false
-  - [ ] 4.5 bestAttemptNumber counts correctly across all attempts
+- [x] Task 4: Unit tests for `calculateImprovement` (AC: all)
+  - [x] 4.1 Single attempt → no comparison, isNewBest: false
+  - [x] 4.2 Two attempts, improvement → correct firstScore, currentScore, improvement, isNewBest: true
+  - [x] 4.3 New personal best (strict greater than) — correctly identified
+  - [x] 4.4 Regression case — bestScore and bestAttemptNumber correct, isNewBest: false
+  - [x] 4.5 bestAttemptNumber counts correctly across all attempts
 
-- [ ] Task 5: Update `ScoreSummary.test.tsx` for new prop shape (AC: all)
-  - [ ] 5.1 Add tests for first-attempt state (message shown)
-  - [ ] 5.2 Add tests for new personal best state (trophy + green)
-  - [ ] 5.3 Add tests for regression state (neutral messaging, no red)
-  - [ ] 5.4 Update existing improvement-summary test for new prop shape
-  - [ ] 5.5 Verify no negative "You did worse" text appears in regression state
+- [x] Task 5: Update `ScoreSummary.test.tsx` for new prop shape (AC: all)
+  - [x] 5.1 Add tests for first-attempt state (message shown)
+  - [x] 5.2 Add tests for new personal best state (trophy + green)
+  - [x] 5.3 Add tests for regression state (neutral messaging, no red)
+  - [x] 5.4 Update existing improvement-summary test for new prop shape
+  - [x] 5.5 Verify no negative "You did worse" text appears in regression state
 
-- [ ] Task 6: E2E test in `tests/e2e/e16-s03-score-improvement.spec.ts` (AC: all)
-  - [ ] 6.1 First attempt → no comparison section visible
-  - [ ] 6.2 Second attempt with higher score → "+X%" improvement shown in green
-  - [ ] 6.3 Third attempt as new personal best → "New personal best!" with trophy
-  - [ ] 6.4 Attempt lower than previous best → neutral best score display, no red
+- [x] Task 6: E2E test in `tests/e2e/e16-s03-score-improvement.spec.ts` (AC: all)
+  - [x] 6.1 First attempt → no comparison section visible
+  - [x] 6.2 Second attempt with higher score → "+X%" improvement shown in green
+  - [x] 6.3 Third attempt as new personal best → "New personal best!" with trophy
+  - [x] 6.4 Attempt lower than previous best → neutral best score display, no red
 
 ## Design Guidance
 
@@ -151,6 +151,27 @@ _Awaiting /review-story._
 
 _Awaiting /review-story._
 
+## Dev Agent Record
+
+### Implementation Notes
+
+- `calculateImprovement` added to existing `src/lib/analytics.ts` (file already existed with topic analysis). Co-locates all quiz analytics in one module.
+- Single-attempt: `improvement: null, isNewBest: false` — the `null` check gates the panel display cleanly without needing `attempts.length`.
+- `bestAttemptNumber` computed over the original (unsorted) `attempts` array to preserve consistent 1-based insertion-order numbering.
+- E2E seeding: seeds Zustand persist state (`levelup-quiz-store` localStorage key) with `currentQuiz` before page load, seeds Dexie `quizAttempts` after app init so `loadAttempts()` picks them up.
+- "New personal best!" text appears in both the sr-only aria-live region and the visible panel — E2E tests scope to `[data-testid="improvement-summary"]` to avoid strict mode violations.
+
+### File List
+
+- `src/lib/analytics.ts` — added `ImprovementData` type + `calculateImprovement()`
+- `src/lib/__tests__/analytics.test.ts` — added 9 `calculateImprovement` unit tests
+- `src/app/components/quiz/ScoreSummary.tsx` — replaced `previousBestPercentage` prop with `improvementData`; added `ScoreImprovementPanel` sub-component
+- `src/app/components/quiz/__tests__/ScoreSummary.test.tsx` — updated for new prop shape; added 12 improvement panel tests
+- `src/app/pages/QuizResults.tsx` — replaced previousBestPercentage useMemo with calculateImprovement
+- `tests/e2e/e16-s03-score-improvement.spec.ts` — 4 E2E scenarios (all 4 ACs)
+
 ## Challenges and Lessons Learned
 
-_Story not yet implemented. Update after implementation._
+- Zustand store's `levelup-quiz-store` localStorage key uses `partialize: state => ({ currentProgress, currentQuiz })` — only these two fields are persisted, so seeding just those fields is sufficient to make `QuizResults.tsx` skip its redirect guard.
+- Playwright strict mode fails when `getByText()` matches both sr-only aria-live regions and visible elements with the same text. Always scope improvement panel assertions to `getByTestId('improvement-summary')`.
+- `isNewBest: false` for single attempt (not `true`) avoids "New personal best!" appearing on first attempt — the `improvement !== null` check in the panel gates the comparison display.
