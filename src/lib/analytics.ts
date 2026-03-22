@@ -1,5 +1,6 @@
 import type { Question, Answer } from '@/types/quiz'
 import { isUnanswered } from '@/lib/scoring'
+import { db } from '@/db'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -103,4 +104,45 @@ export function analyzeTopicPerformance(questions: Question[], answers: Answer[]
     growthAreas,
     hasMultipleTopics,
   }
+}
+
+// ---------------------------------------------------------------------------
+// Completion Rate
+// ---------------------------------------------------------------------------
+
+export type CompletionRateResult = {
+  completionRate: number
+  completedCount: number
+  startedCount: number
+}
+
+/**
+ * Calculates quiz completion rate from Dexie quizAttempts and localStorage.
+ *
+ * - Multiple attempts for the same quizId count as 1 completed quiz.
+ * - In-progress quizzes from localStorage count toward startedCount.
+ */
+export async function calculateCompletionRate(): Promise<CompletionRateResult> {
+  const allAttempts = await db.quizAttempts.toArray()
+
+  const completedQuizIds = new Set(allAttempts.map(a => a.quizId))
+  const completedCount = completedQuizIds.size
+
+  let inProgressCount = 0
+  const quizStoreData = localStorage.getItem('levelup-quiz-store')
+  if (quizStoreData) {
+    try {
+      const parsed = JSON.parse(quizStoreData)
+      inProgressCount =
+        parsed?.state?.inProgressQuizIds?.length ??
+        (parsed?.state?.currentProgress ? 1 : 0)
+    } catch {
+      inProgressCount = 0
+    }
+  }
+
+  const startedCount = completedCount + inProgressCount
+  const completionRate = startedCount > 0 ? (completedCount / startedCount) * 100 : 0
+
+  return { completionRate, completedCount, startedCount }
 }

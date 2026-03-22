@@ -1,10 +1,13 @@
-import { describe, it, expect } from 'vitest'
-import { analyzeTopicPerformance } from '@/lib/analytics'
+import 'fake-indexeddb/auto'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { analyzeTopicPerformance, calculateCompletionRate } from '@/lib/analytics'
+import { db } from '@/db'
 import {
   makeQuestion,
   makeCorrectAnswer,
   makeWrongAnswer,
   makeSkippedAnswer,
+  makeAttempt,
 } from '../../../tests/support/fixtures/factories/quiz-factory'
 
 // ---------------------------------------------------------------------------
@@ -266,5 +269,85 @@ describe('analyzeTopicPerformance', () => {
     expect(result.growthAreas).toHaveLength(1)
     expect(result.growthAreas[0].percentage).toBe(69)
     expect(result.strengths).toHaveLength(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// calculateCompletionRate
+// ---------------------------------------------------------------------------
+
+beforeEach(async () => {
+  await db.quizAttempts.clear()
+  localStorage.clear()
+})
+
+describe('calculateCompletionRate', () => {
+  it('returns 0% with 0 started when no data', async () => {
+    const result = await calculateCompletionRate()
+    expect(result).toEqual({ completionRate: 0, completedCount: 0, startedCount: 0 })
+  })
+
+  it('returns 100% when all started quizzes are completed', async () => {
+    await db.quizAttempts.bulkAdd([
+      makeAttempt({ quizId: 'q1' }),
+      makeAttempt({ quizId: 'q2' }),
+    ])
+    const result = await calculateCompletionRate()
+    expect(result.completedCount).toBe(2)
+    expect(result.startedCount).toBe(2)
+    expect(result.completionRate).toBe(100)
+  })
+
+  it('counts multiple attempts of same quiz as 1 completed', async () => {
+    await db.quizAttempts.bulkAdd([
+      makeAttempt({ quizId: 'q1' }),
+      makeAttempt({ quizId: 'q1' }),
+      makeAttempt({ quizId: 'q1' }),
+    ])
+    const result = await calculateCompletionRate()
+    expect(result.completedCount).toBe(1)
+    expect(result.startedCount).toBe(1)
+  })
+
+  it('counts in-progress quiz from localStorage currentProgress', async () => {
+    await db.quizAttempts.bulkAdd([
+      makeAttempt({ quizId: 'q1' }),
+      makeAttempt({ quizId: 'q2' }),
+      makeAttempt({ quizId: 'q3' }),
+    ])
+    localStorage.setItem(
+      'levelup-quiz-store',
+      JSON.stringify({
+        state: {
+          currentProgress: { quizId: 'q4', currentQuestionIndex: 2 },
+          currentQuiz: { id: 'q4' },
+        },
+      })
+    )
+    const result = await calculateCompletionRate()
+    expect(result.completedCount).toBe(3)
+    expect(result.startedCount).toBe(4)
+    expect(result.completionRate).toBe(75)
+  })
+
+  it('handles malformed localStorage JSON without throwing', async () => {
+    localStorage.setItem('levelup-quiz-store', 'not-json}}}')
+    const result = await calculateCompletionRate()
+    expect(result.startedCount).toBe(0)
+    expect(result.completionRate).toBe(0)
+  })
+
+  it('uses inProgressQuizIds array if present in localStorage', async () => {
+    await db.quizAttempts.add(makeAttempt({ quizId: 'q1' }))
+    localStorage.setItem(
+      'levelup-quiz-store',
+      JSON.stringify({
+        state: { inProgressQuizIds: ['q2', 'q3'], currentProgress: null },
+      })
+    )
+    const result = await calculateCompletionRate()
+    expect(result.completedCount).toBe(1)
+    expect(result.startedCount).toBe(3)
+    expect(Math.round(result.completionRate)).toBe(33)
   })
 })
