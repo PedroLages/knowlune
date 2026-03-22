@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts'
 import {
   ChartContainer,
@@ -29,12 +30,15 @@ function makeCustomDot(passingScore: number) {
     if (cx == null || cy == null) return null
     const pct = payload?.percentage ?? 0
     const color = pct >= passingScore ? 'var(--color-success)' : 'var(--color-brand)'
-    return <circle cx={cx} cy={cy} r={5} fill={color} stroke="#fff" strokeWidth={2} />
+    return <circle cx={cx} cy={cy} r={5} fill={color} stroke="var(--color-card)" strokeWidth={2} />
   }
 }
 
 export function ScoreTrajectoryChart({ attempts, passingScore }: ScoreTrajectoryChartProps) {
   const isMobile = useIsMobile()
+  // Memoize to avoid creating a new function reference on every render,
+  // which would cause recharts to re-mount all dot elements unnecessarily.
+  const customDot = useMemo(() => makeCustomDot(passingScore), [passingScore])
 
   // AC3: Require at least 2 data points
   if (attempts.length < 2) return null
@@ -43,20 +47,37 @@ export function ScoreTrajectoryChart({ attempts, passingScore }: ScoreTrajectory
 
   return (
     <section aria-label="Score trajectory chart" className="mt-6 text-left">
-      <h4 className="font-semibold text-sm text-muted-foreground mb-3">Score Trajectory</h4>
+      <h2 className="font-semibold text-sm text-muted-foreground mb-3">Score Trajectory</h2>
       <ChartContainer config={chartConfig} className="w-full" style={{ height: chartHeight }}>
-        <LineChart data={attempts} margin={{ top: 8, right: 16, left: 0, bottom: 20 }}>
+        <LineChart
+          data={attempts}
+          margin={{ top: 8, right: 16, left: 0, bottom: 20 }}
+          aria-label="Score trajectory across attempts"
+        >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             dataKey="attemptNumber"
-            label={{ value: 'Attempt', position: 'insideBottom', offset: -10 }}
+            label={{
+              value: 'Attempt',
+              position: 'insideBottom',
+              offset: -10,
+              fill: 'var(--color-muted-foreground)',
+            }}
+            tick={{ fill: 'var(--color-muted-foreground)' }}
             tickLine={false}
             axisLine={false}
             tickMargin={8}
           />
           <YAxis
             domain={[0, 100]}
-            label={{ value: 'Score %', angle: -90, position: 'insideLeft', offset: 10 }}
+            label={{
+              value: 'Score %',
+              angle: -90,
+              position: 'insideLeft',
+              offset: 10,
+              fill: 'var(--color-muted-foreground)',
+            }}
+            tick={{ fill: 'var(--color-muted-foreground)' }}
             tickLine={false}
             axisLine={false}
             tickMargin={8}
@@ -85,7 +106,7 @@ export function ScoreTrajectoryChart({ attempts, passingScore }: ScoreTrajectory
             dataKey="percentage"
             stroke="var(--color-brand)"
             strokeWidth={2}
-            dot={makeCustomDot(passingScore)}
+            dot={customDot}
             activeDot={{ r: 7 }}
             isAnimationActive={false}
           />
