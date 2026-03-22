@@ -141,7 +141,7 @@ export function QuizResults() {
           passingScore={currentQuiz.passingScore}
           timeSpent={lastAttempt.timeSpent}
           previousBestPercentage={previousBestPercentage}
-          showTimeSpent={lastAttempt.timerAccommodation !== 'untimed'}
+          showTimeSpent={currentQuiz.timeLimit != null && lastAttempt.timerAccommodation !== 'untimed'}
           previousAttemptTimeSpent={previousAttemptTimeSpent}
         />
 
