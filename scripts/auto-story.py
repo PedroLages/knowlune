@@ -6,6 +6,7 @@ Reads stories from sprint-status.yaml and runs the full cycle:
   Session 1: START   — branch, story file, research, plan
   Session 2: IMPLEMENT — code the feature from the plan
   Session 3: REVIEW + FIX LOOP + FINISH — quality gates, fix blockers, ship PR
+  (Auto)   : EPIC FINISH — if an epic just completed: merge PRs, run 5-phase epic wrap-up
 
 Usage:
     python scripts/auto-story.py E07-S01              # single story
@@ -14,6 +15,11 @@ Usage:
     python scripts/auto-story.py --supervised E07-S01  # pause for human approval
     python scripts/auto-story.py --dry-run --next 5    # show plan without executing
     python scripts/auto-story.py --autonomous E07-S01  # auto-approve everything
+    python scripts/auto-story.py --epic-only 15        # skip stories, run epic finish only
+    python scripts/auto-story.py --skip-epic-finish --next 3  # process stories, skip epic finish
+    python scripts/auto-story.py --skip-adversarial --epic-only 15  # epic finish without adversarial review
+    python scripts/auto-story.py --epic-only 15 --phase retrospective  # run only retrospective for epic 15
+    python scripts/auto-story.py --epic-only 15 --phase testarch-trace testarch-nfr  # run specific phases
 
 Requires: pip install claude-agent-sdk pyyaml
 """
@@ -59,6 +65,7 @@ BUDGET_SESSION_START = 0  # 0 = unlimited
 BUDGET_SESSION_IMPLEMENT = 0
 BUDGET_SESSION_REVIEW = 0
 BUDGET_PER_STORY = 25.00  # estimate for dry-run display only
+BUDGET_SESSION_EPIC_FINISH = 0  # unlimited
 
 # Timing and display constants
 SERVER_STARTUP_WAIT_SECS = 5
@@ -76,6 +83,10 @@ class RunConfig:
     max_review_rounds: int
     max_turns: int
     log_file: Path
+    skip_epic_finish: bool = False
+    skip_adversarial: bool = False
+    epic_only: str | None = None  # e.g., "15" — skip stories, run only epic finish
+    epic_phases: list[str] | None = None  # e.g., ["retrospective"] — run only specific phases
 
 
 @dataclass
@@ -121,6 +132,19 @@ class StoryResult:
     session_ids: list[str] = field(default_factory=list)
 
 
+@dataclass
+class EpicFinishResult:
+    epic_num: str
+    phases_completed: list[str] = field(default_factory=list)
+    phases_failed: list[str] = field(default_factory=list)
+    merged_prs: list[str] = field(default_factory=list)
+    duration_secs: float = 0.0
+    total_cost_usd: float = 0.0
+    success: bool = False
+    error: str | None = None
+    session_id: str | None = None
+
+
 class StoryError(Exception):
     pass
 
@@ -155,17 +179,37 @@ def parse_args() -> RunConfig:
     parser.add_argument(
         "--log-file", type=Path, default=PROJECT_DIR / "scripts" / "auto-story.log"
     )
+    parser.add_argument(
+        "--skip-epic-finish", action="store_true",
+        help="Skip end-of-epic processing even if an epic just completed",
+    )
+    parser.add_argument(
+        "--skip-adversarial", action="store_true",
+        help="Skip adversarial review during epic finish (faster)",
+    )
+    parser.add_argument(
+        "--epic-only", metavar="EPIC",
+        help="Skip stories, run only epic finish for given epic (e.g., 15 or 9b)",
+    )
+    all_phase_names = [p[0] for p in EPIC_FINISH_PHASES]
+    parser.add_argument(
+        "--phase", nargs="+", metavar="PHASE", dest="epic_phases",
+        choices=all_phase_names,
+        help=f"Run only specific epic-finish phases (choices: {', '.join(all_phase_names)})",
+    )
 
     args = parser.parse_args()
 
-    if not args.stories and args.next is None:
-        parser.error("Provide story IDs or --next N")
+    if not args.stories and args.next is None and args.epic_only is None:
+        parser.error("Provide story IDs, --next N, or --epic-only EPIC")
 
     mode = "autonomous" if args.autonomous else "supervised"
 
     stories_raw = args.stories or []
     if args.next:
         stories_raw = find_next_backlog_keys(args.next)
+    if args.epic_only:
+        stories_raw = []  # no stories to process in epic-only mode
 
     return RunConfig(
         stories=stories_raw,
@@ -175,6 +219,10 @@ def parse_args() -> RunConfig:
         max_review_rounds=args.max_review_rounds,
         max_turns=args.max_turns,
         log_file=args.log_file,
+        skip_epic_finish=args.skip_epic_finish,
+        skip_adversarial=args.skip_adversarial,
+        epic_only=args.epic_only,
+        epic_phases=args.epic_phases,
     )
 
 
@@ -245,6 +293,62 @@ def find_story(sid: str) -> StoryInfo:
         story_num=story_num,
         status=str(dev_status[yaml_key]),
     )
+
+
+def detect_completed_epics(
+    stories: list[StoryInfo], results: list[StoryResult],
+) -> list[str]:
+    """Return epic numbers that just became fully done after this batch.
+
+    Combines sprint-status.yaml (on main, pre-batch state) with in-memory
+    batch results to determine completion. A story counts as done if it was
+    already 'done' in YAML OR succeeded in this batch.
+
+    Returns sorted list of epic numbers (e.g., ["15", "16"]).
+    """
+    # Collect epic numbers from successful stories in this batch
+    batch_succeeded: dict[str, set[str]] = {}  # epic_num -> set of yaml_keys
+    for story, result in zip(stories, results):
+        if result.success:
+            batch_succeeded.setdefault(story.epic_num, set()).add(story.yaml_key)
+
+    if not batch_succeeded:
+        return []
+
+    data = load_sprint_status()
+    dev_status = data.get("development_status", {})
+    completed: list[str] = []
+
+    for epic_num in sorted(batch_succeeded):
+        epic_key = f"epic-{epic_num}"
+
+        # Skip if epic is already marked done (completed before this batch)
+        if str(dev_status.get(epic_key, "")).strip() == "done":
+            continue
+
+        # Check every story for this epic: must be done in YAML or succeeded in batch
+        prefix = f"{epic_num}-"
+        has_stories = False
+        all_done = True
+        for key, status in dev_status.items():
+            if not key.startswith(prefix):
+                continue
+            if key.endswith("-retrospective"):
+                continue
+            has_stories = True
+            if str(status).strip() == "done":
+                continue  # already done on main (before batch)
+            if key in batch_succeeded.get(epic_num, set()):
+                continue  # succeeded in this batch
+            all_done = False
+            break
+        if not has_stories:
+            all_done = False
+
+        if all_done:
+            completed.append(epic_num)
+
+    return completed
 
 
 def find_next_backlog_keys(n: int) -> list[str]:
@@ -407,6 +511,139 @@ Complete ONLY the missing tasks listed above. Do not repeat already-completed ta
 When done, output: FINISH_COMPLETE
 """
 
+# ── Epic Finish Prompts (direct instructions, no slash commands) ──
+
+EPIC_SPRINT_STATUS_PROMPT = """
+Epic {epic_num} has just been completed (all stories merged to main).
+
+Verify the epic is truly complete:
+
+1. Read docs/implementation-artifacts/sprint-status.yaml
+2. Find ALL story keys starting with "{epic_num}-" (excluding retrospective entries)
+3. Confirm every story has status: done
+4. If any stories are NOT done, list them with their current status
+5. Check that "epic-{epic_num}" is set to "in-progress" or "done"
+6. If epic-{epic_num} is not yet "done", update it to "done" in sprint-status.yaml
+7. Commit if changes were made: "chore: mark Epic {epic_num} as done"
+
+Output one of:
+- SPRINT_STATUS_COMPLETE — all stories verified done, epic marked done
+- SPRINT_STATUS_ISSUES: [description of problems found]
+"""
+
+EPIC_TESTARCH_TRACE_PROMPT = """
+Generate a requirements-to-tests traceability matrix for Epic {epic_num}.
+
+Steps:
+1. Read the epic definition from docs/planning-artifacts/epics.md — find Epic {epic_num}
+2. List ALL acceptance criteria (ACs) across all stories in Epic {epic_num}
+3. For each AC, search for corresponding test coverage:
+   - E2E specs in tests/e2e/regression/ matching story patterns (e.g., story-e{epic_num_padded}*)
+   - Unit tests in tests/unit/ or src/ (*.test.ts, *.spec.ts)
+4. Build a traceability matrix table:
+   | Story | AC ID | AC Description | Test File(s) | Coverage Status |
+5. Flag any ACs with NO test coverage as gaps
+6. Save the matrix to docs/reviews/testarch-trace-{today}-epic-{epic_num}.md
+
+When complete, output: TESTARCH_TRACE_COMPLETE
+"""
+
+EPIC_TESTARCH_NFR_PROMPT = """
+Assess non-functional requirements for Epic {epic_num}.
+
+Steps:
+1. Read docs/planning-artifacts/epics.md — find Epic {epic_num} NFRs (if defined)
+2. Review all code changes for Epic {epic_num}:
+   - Run: git log --oneline --all --grep="E{epic_num_padded}" to find relevant commits
+   - Run: git log --oneline --all --grep="e{epic_num_padded}" for lowercase matches
+3. Assess these NFR categories against the code:
+   - **Performance**: Bundle size impact, render performance, memory usage
+   - **Security**: Input validation, data handling, XSS/injection vectors
+   - **Accessibility**: WCAG AA compliance, keyboard nav, screen reader support
+   - **Reliability**: Error handling, edge cases, data integrity
+4. Rate each category: PASS / NEEDS_ATTENTION / FAIL
+5. Save assessment to docs/reviews/testarch-nfr-{today}-epic-{epic_num}.md
+
+When complete, output: TESTARCH_NFR_COMPLETE
+"""
+
+EPIC_ADVERSARIAL_PROMPT = """
+Perform a cynical adversarial review of Epic {epic_num}.
+
+You are a skeptical reviewer. Assume problems exist. Find at least 10 issues.
+
+Steps:
+1. Read all story files for Epic {epic_num} in docs/implementation-artifacts/ (keys starting with {epic_num}-)
+2. Review the combined diff: git diff main~{story_count}..main (approximate — adjust range to cover epic commits)
+   Alternative: check git log for commits matching E{epic_num_padded} and review those files
+3. Read any existing review reports in docs/reviews/code/ and docs/reviews/design/ for this epic
+4. Cynically assess:
+   - Architecture decisions: over-engineering, under-engineering, wrong abstractions
+   - Code quality: duplication, naming, complexity
+   - Missing edge cases and error handling
+   - UX issues: accessibility gaps, responsive design problems
+   - Test quality: are tests actually testing the right things?
+   - Security: any new attack surfaces?
+5. Produce findings as a severity-triaged Markdown list:
+   - [Blocker]: Must fix
+   - [High]: Should fix
+   - [Medium]: Fix when possible
+   - [Low]: Minor improvements
+6. Save to docs/reviews/code/adversarial-review-{today}-epic-{epic_num}.md
+7. Commit: "chore: adversarial review for Epic {epic_num}"
+
+When complete, output: ADVERSARIAL_COMPLETE
+"""
+
+EPIC_RETROSPECTIVE_PROMPT = """
+Generate a retrospective for Epic {epic_num}.
+
+Steps:
+1. Gather data:
+   - Read all story files in docs/implementation-artifacts/ for Epic {epic_num} (keys starting with {epic_num}-)
+   - Read review reports in docs/reviews/code/ and docs/reviews/design/ for this epic
+   - Run: git log --oneline --all --grep="E{epic_num_padded}" to see commit history
+   - Count total stories, review rounds, blockers found/fixed from story file frontmatter
+2. Analyze:
+   - What went well? (patterns that worked, tools that helped)
+   - What didn't go well? (recurring blockers, slow iterations)
+   - What should change? (process improvements, new automation)
+   - Lessons learned: extract reusable patterns for engineering-patterns.md
+3. Generate retrospective document with sections:
+   - Epic Summary (scope, duration, story count)
+   - Metrics (review rounds, blocker rate, fix rate)
+   - What Went Well
+   - What Needs Improvement
+   - Action Items (specific, actionable improvements)
+   - Lessons Learned
+4. Save to docs/implementation-artifacts/retrospective-epic-{epic_num}.md
+5. Update sprint-status.yaml:
+   - Set "epic-{epic_num}-retrospective" to "done"
+6. Commit: "chore: Epic {epic_num} retrospective"
+
+When complete, output: RETROSPECTIVE_COMPLETE
+"""
+
+# Phase registry for epic finish (name, template, completion marker)
+EPIC_FINISH_PHASES = [
+    ("sprint-status", EPIC_SPRINT_STATUS_PROMPT, "SPRINT_STATUS_COMPLETE"),
+    ("testarch-trace", EPIC_TESTARCH_TRACE_PROMPT, "TESTARCH_TRACE_COMPLETE"),
+    ("testarch-nfr", EPIC_TESTARCH_NFR_PROMPT, "TESTARCH_NFR_COMPLETE"),
+    ("adversarial", EPIC_ADVERSARIAL_PROMPT, "ADVERSARIAL_COMPLETE"),
+    ("retrospective", EPIC_RETROSPECTIVE_PROMPT, "RETROSPECTIVE_COMPLETE"),
+]
+
+
+def format_epic_prompt(template: str, epic_num: str, story_count: int = 0) -> str:
+    """Fill epic-finish prompt template with epic details."""
+    epic_n, epic_suffix = parse_epic_num(epic_num)
+    return template.format(
+        epic_num=epic_num,
+        epic_num_padded=f"{epic_n:02d}{epic_suffix}",
+        today=date.today().isoformat(),
+        story_count=story_count,
+    )
+
 
 # ─────────────────────────────────────────────────
 # Section D: Phase Runners
@@ -536,6 +773,99 @@ def _checkout_main_and_pull(force: bool = False) -> None:
     )
     if pull.returncode != 0:
         log.warning(f"git pull --ff-only failed (main diverged?): {pull.stderr.strip()}")
+
+
+def merge_epic_prs(
+    epic_num: str,
+    stories: list[StoryInfo] | None = None,
+    results: list[StoryResult] | None = None,
+    supervised: bool = True,
+) -> list[str]:
+    """Merge all open PRs for an epic. Returns list of merged PR URLs.
+
+    In normal mode, uses batch stories/results to find PRs.
+    In --epic-only mode (stories=None), discovers PRs by branch prefix.
+    Checks each PR state before merge (handles already-merged/closed).
+    """
+    pr_infos: list[dict[str, Any]] = []
+
+    if stories and results:
+        # Normal mode: find PRs from batch results
+        for story, result in zip(stories, results):
+            if story.epic_num != epic_num or not result.success:
+                continue
+            if result.pr_url:
+                pr_number = result.pr_url.split("/")[-1]
+                pr_infos.append({"number": pr_number, "url": result.pr_url, "story": story.key})
+    else:
+        # --epic-only mode: discover PRs by branch prefix
+        epic_n, epic_suffix = parse_epic_num(epic_num)
+        branch_prefix = f"feature/e{epic_n:02d}{epic_suffix}-"
+        result = subprocess.run(
+            ["gh", "pr", "list", "--head", branch_prefix, "--json", "number,url,headRefName",
+             "--state", "open", "--limit", "50"],
+            capture_output=True, text=True, cwd=PROJECT_DIR,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            for pr in json.loads(result.stdout):
+                pr_infos.append({
+                    "number": str(pr["number"]),
+                    "url": pr["url"],
+                    "story": pr.get("headRefName", "?"),
+                })
+
+    if not pr_infos:
+        log.info(f"  No PRs found to merge for Epic {epic_num}")
+        return []
+
+    # Supervised: confirm before merging
+    if supervised:
+        print(f"\n  PRs to merge for Epic {epic_num}:")
+        for pr in pr_infos:
+            print(f"    #{pr['number']} — {pr['story']} ({pr['url']})")
+        approval = input(f"\n  Merge {len(pr_infos)} PR(s)? [y/n]: ").strip().lower()
+        if approval != "y":
+            log.info("  Skipping PR merge per user request")
+            return []
+
+    merged: list[str] = []
+    for pr in pr_infos:
+        pr_num = pr["number"]
+
+        # Check PR state before merge (review fix #2)
+        state_check = subprocess.run(
+            ["gh", "pr", "view", pr_num, "--json", "state"],
+            capture_output=True, text=True, cwd=PROJECT_DIR,
+        )
+        if state_check.returncode != 0:
+            log.warning(f"  PR #{pr_num}: cannot check state, skipping ({state_check.stderr.strip()})")
+            continue
+
+        state = json.loads(state_check.stdout).get("state", "UNKNOWN")
+        if state == "MERGED":
+            log.info(f"  PR #{pr_num}: already merged, skipping")
+            merged.append(pr["url"])
+            continue
+        if state != "OPEN":
+            log.warning(f"  PR #{pr_num}: state is {state}, skipping")
+            continue
+
+        # Merge
+        merge_result = subprocess.run(
+            ["gh", "pr", "merge", pr_num, "--squash", "--delete-branch"],
+            capture_output=True, text=True, cwd=PROJECT_DIR,
+        )
+        if merge_result.returncode == 0:
+            log.info(f"  PR #{pr_num}: merged successfully")
+            merged.append(pr["url"])
+        else:
+            log.error(f"  PR #{pr_num}: merge failed — {merge_result.stderr.strip()}")
+
+    # Pull merged changes to main
+    if merged:
+        _checkout_main_and_pull()
+
+    return merged
 
 
 async def collect_response(
@@ -711,6 +1041,128 @@ async def run_review_fix_session(
     return result, all_text, total_cost
 
 
+async def _run_single_epic_phase(
+    phase_name: str, template: str, marker: str,
+    epic_num: str, story_count: int,
+    config: RunConfig,
+) -> tuple[str, bool, float]:
+    """Run one epic-finish phase in its own SDK session.
+
+    Returns (phase_name, succeeded, cost).
+    """
+    epic_key = f"EPIC-{epic_num}"
+    autonomous = config.mode == "autonomous"
+    write_progress(epic_key, f"EPIC_FINISH: {phase_name}", "starting...")
+
+    prompt = format_epic_prompt(template, epic_num, story_count)
+
+    try:
+        text, _sid, cost = await run_session(
+            prompt, config.max_turns, BUDGET_SESSION_EPIC_FINISH, autonomous,
+            story_key=epic_key,
+        )
+    except StoryError as e:
+        log.error(f"  [{epic_key}] {phase_name} session error: {e}")
+        write_progress(epic_key, f"EPIC_FINISH: {phase_name}", f"FAILED: {e}")
+        return phase_name, False, 0.0
+
+    if marker in text:
+        write_progress(epic_key, f"EPIC_FINISH: {phase_name}", "DONE")
+        return phase_name, True, cost
+    else:
+        write_progress(epic_key, f"EPIC_FINISH: {phase_name}",
+                       f"WARNING: {marker} not found in output")
+        return phase_name, False, cost
+
+
+async def run_epic_finish(
+    epic_num: str, config: RunConfig, story_count: int = 0,
+) -> EpicFinishResult:
+    """Run end-of-epic workflow: each phase in its own session.
+
+    Execution order:
+      1. sprint-status (sequential — must mark epic done first)
+      2. testarch-trace + testarch-nfr + adversarial (parallel — independent analyses)
+      3. retrospective (sequential — needs all review reports as input)
+    """
+    start_time = time.monotonic()
+    result = EpicFinishResult(epic_num=epic_num)
+    epic_key = f"EPIC-{epic_num}"
+
+    # Build phase list (filter by --skip-adversarial and --phase)
+    phases = [
+        p for p in EPIC_FINISH_PHASES
+        if not (p[0] == "adversarial" and config.skip_adversarial)
+    ]
+    if config.epic_phases:
+        phases = [p for p in phases if p[0] in config.epic_phases]
+
+    if not phases:
+        log.warning(f"[{epic_key}] No phases to run (all filtered out)")
+        result.success = True
+        return result
+
+    # Ensure we're on main for epic-level analysis
+    _checkout_main_and_pull()
+
+    # Partition phases into: before-parallel, parallel, after-parallel
+    PARALLEL_PHASES = {"testarch-trace", "testarch-nfr", "adversarial"}
+    before: list[tuple[str, str, str]] = []
+    parallel: list[tuple[str, str, str]] = []
+    after: list[tuple[str, str, str]] = []
+    for p in phases:
+        if p[0] == "sprint-status":
+            before.append(p)
+        elif p[0] in PARALLEL_PHASES:
+            parallel.append(p)
+        else:  # retrospective
+            after.append(p)
+
+    async def _run_phase(phase: tuple[str, str, str]) -> tuple[str, bool, float]:
+        return await _run_single_epic_phase(
+            phase[0], phase[1], phase[2],
+            epic_num, story_count, config,
+        )
+
+    def _collect(phase_results: list[tuple[str, bool, float]]) -> None:
+        for name, succeeded, cost in phase_results:
+            result.total_cost_usd += cost
+            if succeeded:
+                result.phases_completed.append(name)
+            else:
+                result.phases_failed.append(name)
+
+    try:
+        # 1. Sequential: sprint-status (must run first)
+        for phase in before:
+            phase_result = await _run_phase(phase)
+            _collect([phase_result])
+
+        # 2. Parallel: testarch-trace + testarch-nfr + adversarial
+        if parallel:
+            log.info(f"  [{epic_key}] Running {len(parallel)} phases in parallel: "
+                     f"{', '.join(p[0] for p in parallel)}")
+            parallel_results = await asyncio.gather(
+                *[_run_phase(p) for p in parallel],
+                return_exceptions=False,
+            )
+            _collect(list(parallel_results))
+
+        # 3. Sequential: retrospective (needs all reports as input)
+        for phase in after:
+            phase_result = await _run_phase(phase)
+            _collect([phase_result])
+
+        result.success = len(result.phases_failed) == 0
+
+    except Exception as e:
+        result.error = f"{type(e).__name__}: {e}"
+        log.error(f"[{epic_key}] Epic finish failed: {e}")
+
+    result.duration_secs = time.monotonic() - start_time
+    return result
+
+
 # ─────────────────────────────────────────────────
 # Section E: Orchestration
 # ─────────────────────────────────────────────────
@@ -805,6 +1257,101 @@ async def run_story(story: StoryInfo, config: RunConfig) -> StoryResult:
     return result
 
 
+async def _run_epic_only(config: RunConfig) -> None:
+    """Standalone epic finish: merge PRs + run phases for a single epic."""
+    epic_num = config.epic_only
+    assert epic_num is not None
+
+    # Count stories for this epic from sprint-status.yaml
+    data = load_sprint_status()
+    dev_status = data.get("development_status", {})
+    prefix = f"{epic_num}-"
+    story_count = sum(
+        1 for k in dev_status
+        if k.startswith(prefix) and not k.endswith("-retrospective")
+    )
+
+    if config.dry_run:
+        print(f"\nDRY RUN — Epic-only finish for Epic {epic_num}")
+        print(f"  Stories in epic: {story_count}")
+        phases = [p[0] for p in EPIC_FINISH_PHASES
+                  if not (p[0] == "adversarial" and config.skip_adversarial)]
+        if config.epic_phases:
+            phases = [p for p in phases if p in config.epic_phases]
+        print(f"  Phases: {', '.join(phases)}")
+        # Show execution strategy
+        parallel = [p for p in phases if p in {"testarch-trace", "testarch-nfr", "adversarial"}]
+        if parallel and len(parallel) > 1:
+            print(f"  Parallel: {', '.join(parallel)}")
+        print(f"  Will discover and merge open PRs with branch prefix feature/e{epic_num}-")
+        print(f"  Mode: {config.mode}")
+        return
+
+    PROGRESS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(PROGRESS_FILE, "w") as f:
+        f.write(f"=== epic-only run: {datetime.now().isoformat()} ===\n")
+        f.write(f"Epic: {epic_num}\n")
+        f.write(f"Mode: {config.mode}\n\n")
+
+    # Start dev server (some phases may benefit from live app)
+    log.info("Starting dev server (npm run dev)...")
+    dev_server_log = PROJECT_DIR / "scripts" / "dev-server.log"
+    dev_server_log_file = open(dev_server_log, "w")
+    dev_server = subprocess.Popen(
+        ["npm", "run", "dev"],
+        cwd=PROJECT_DIR,
+        stdout=dev_server_log_file,
+        stderr=subprocess.STDOUT,
+    )
+
+    try:
+        log.info("Waiting for dev server to be ready...")
+        wait_result = subprocess.run(
+            ["./scripts/wait-for-server.sh", "http://localhost:5173", "30"],
+            cwd=PROJECT_DIR, capture_output=True, text=True,
+        )
+        if wait_result.returncode != 0:
+            log.error(f"Dev server failed to start: {wait_result.stderr}")
+            dev_server.terminate()
+            dev_server.wait(timeout=5)
+            sys.exit(1)
+        log.info("Dev server ready")
+
+        # Merge PRs (discover by branch prefix)
+        merged = merge_epic_prs(
+            epic_num, supervised=(config.mode == "supervised"),
+        )
+
+        # Run epic finish
+        ef_result = await run_epic_finish(epic_num, config, story_count)
+        ef_result.merged_prs = merged
+        log_epic_result(ef_result, config.log_file)
+
+        # Summary
+        print(f"\n{'=' * 60}")
+        print(f"EPIC {epic_num} FINISH {'COMPLETE' if ef_result.success else 'PARTIAL'}")
+        print(f"{'=' * 60}")
+        if ef_result.phases_completed:
+            print(f"  Passed: {', '.join(ef_result.phases_completed)}")
+        if ef_result.phases_failed:
+            print(f"  Failed: {', '.join(ef_result.phases_failed)}")
+        if merged:
+            print(f"  Merged PRs: {len(merged)}")
+        print(f"  Cost: ${ef_result.total_cost_usd:.2f}")
+        print(f"  Time: {ef_result.duration_secs / 60:.1f} min")
+        print(f"  Log: {config.log_file}")
+
+    finally:
+        log.info("Stopping dev server...")
+        dev_server.terminate()
+        try:
+            dev_server.wait(timeout=SERVER_SHUTDOWN_TIMEOUT_SECS)
+        except subprocess.TimeoutExpired:
+            dev_server.kill()
+            dev_server.wait()
+        dev_server_log_file.close()
+
+
 async def main() -> None:
     config = parse_args()
 
@@ -813,6 +1360,11 @@ async def main() -> None:
         format="%(asctime)s %(levelname)s %(message)s",
         datefmt="%H:%M:%S",
     )
+
+    # ── Epic-only mode: skip story processing entirely ──
+    if config.epic_only:
+        await _run_epic_only(config)
+        return
 
     # Resolve stories
     stories: list[StoryInfo] = []
@@ -872,6 +1424,17 @@ async def main() -> None:
         print(f"Mode: {config.mode}")
         print(f"Max review rounds: {config.max_review_rounds}")
         print(f"Max turns per session: {config.max_turns}")
+
+        # Preview which epics would complete (simulate all stories succeeding)
+        if not config.skip_epic_finish:
+            fake_results = [StoryResult(story=s, success=True) for s in stories]
+            would_complete = detect_completed_epics(stories, fake_results)
+            if would_complete:
+                phases = [p[0] for p in EPIC_FINISH_PHASES
+                          if not (p[0] == "adversarial" and config.skip_adversarial)]
+                print(f"\nEpic finish (if all stories pass):")
+                for e in would_complete:
+                    print(f"  Epic {e} would complete -> phases: {', '.join(phases)}")
         return
 
     # Clear progress file for this run
@@ -935,6 +1498,57 @@ async def main() -> None:
         print(f"\nTotal cost: ${total_cost:.2f}")
         print(f"Total time: {total_time / 60:.1f} min")
         print(f"Log file: {config.log_file}")
+
+        # ── End-of-Epic Processing ──
+        if not config.skip_epic_finish:
+            completed_epics = detect_completed_epics(stories, results)
+
+            if completed_epics:
+                print(f"\n{'=' * 60}")
+                print(f"EPIC FINISH — {len(completed_epics)} epic(s) newly completed: "
+                      f"{', '.join(f'E{e}' for e in completed_epics)}")
+                print(f"{'=' * 60}")
+
+                # Supervised: confirm before starting
+                if config.mode == "supervised":
+                    action = input(
+                        f"\nRun epic finish for "
+                        f"{', '.join(f'E{e}' for e in completed_epics)}? [y/n]: "
+                    ).strip().lower()
+                    if action != "y":
+                        log.info("Skipping epic finish per user request")
+                        completed_epics = []
+
+                for epic_num in completed_epics:
+                    story_count = sum(
+                        1 for s, r in zip(stories, results)
+                        if s.epic_num == epic_num and r.success
+                    )
+                    log.info(f"\n--- Epic {epic_num} finish ({story_count} stories) ---")
+
+                    # Merge PRs first
+                    merged = merge_epic_prs(
+                        epic_num, stories, results,
+                        supervised=(config.mode == "supervised"),
+                    )
+
+                    # Run epic finish phases
+                    ef_result = await run_epic_finish(epic_num, config, story_count)
+                    ef_result.merged_prs = merged
+                    log_epic_result(ef_result, config.log_file)
+
+                    status = "PASS" if ef_result.success else "PARTIAL"
+                    phases_done = ", ".join(ef_result.phases_completed) or "none"
+                    print(f"  Epic {epic_num}: {status} ({phases_done}) "
+                          f"${ef_result.total_cost_usd:.2f} {ef_result.duration_secs:.0f}s")
+                    if ef_result.phases_failed:
+                        print(f"    Failed: {', '.join(ef_result.phases_failed)}")
+
+                    total_cost += ef_result.total_cost_usd
+                    total_time += ef_result.duration_secs
+
+                if completed_epics:
+                    print(f"\nGrand total: ${total_cost:.2f} | {total_time / 60:.1f} min")
 
     finally:
         log.info("Stopping dev server...")
@@ -1087,6 +1701,24 @@ def log_result(result: StoryResult, log_file: Path) -> None:
         "blockers_found": result.blockers_found,
         "blockers_fixed": result.blockers_fixed,
         "pr_url": result.pr_url,
+        "error": result.error,
+    }
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(log_file, "a") as f:
+        f.write(json.dumps(entry) + "\n")
+
+
+def log_epic_result(result: EpicFinishResult, log_file: Path) -> None:
+    entry = {
+        "timestamp": datetime.now().isoformat(),
+        "type": "epic-finish",
+        "epic": result.epic_num,
+        "success": result.success,
+        "phases_completed": result.phases_completed,
+        "phases_failed": result.phases_failed,
+        "merged_prs": result.merged_prs,
+        "duration_secs": round(result.duration_secs, 1),
+        "cost_usd": round(result.total_cost_usd, 2),
         "error": result.error,
     }
     log_file.parent.mkdir(parents=True, exist_ok=True)
