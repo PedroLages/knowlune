@@ -49,7 +49,7 @@ export const navigationGroups: NavigationGroup[] = [
     label: 'Learn',
     items: [
       { name: 'Overview', path: '/', icon: LayoutDashboard },
-      { name: 'My Classes', path: '/my-class', icon: BookOpen },
+      { name: 'My Courses', path: '/my-class', icon: BookOpen },
       { name: 'Courses', path: '/courses', icon: GraduationCap },
       { name: 'Learning Path', path: '/ai-learning-path', icon: Sparkles },
       { name: 'Knowledge Gaps', path: '/knowledge-gaps', icon: Brain },
