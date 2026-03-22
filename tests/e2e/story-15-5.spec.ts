@@ -189,6 +189,7 @@ test.describe('E15-S05: Performance Summary After Quiz', () => {
       // Should show correctness breakdown
       await expect(page.getByText(/3 correct/)).toBeVisible()
       await expect(page.getByText(/2 incorrect/)).toBeVisible()
+      await expect(page.getByText(/0 skipped/)).toBeVisible()
     })
   })
 
@@ -244,9 +245,9 @@ test.describe('E15-S05: Performance Summary After Quiz', () => {
         page.getByTestId('main-scroll-container').getByText('100%'),
       ).toBeVisible()
 
-      // Strengths/growth sections should NOT be visible
-      await expect(page.getByText(/your strengths/i)).not.toBeVisible()
-      await expect(page.getByText(/growth opportunities/i)).not.toBeVisible()
+      // Strengths/growth sections should be absent from DOM entirely
+      await expect(page.getByRole('heading', { name: /your strengths/i })).toHaveCount(0)
+      await expect(page.getByRole('heading', { name: /growth opportunities/i })).toHaveCount(0)
     })
   })
 
@@ -272,6 +273,27 @@ test.describe('E15-S05: Performance Summary After Quiz', () => {
       await expect(page.getByText(/mastered this material/i)).toBeVisible()
     })
 
+    test('shows great job message for 70-89% score', async ({ page }) => {
+      await navigateToQuiz(page, mixedPerformanceQuiz)
+      await startQuiz(page)
+
+      // Answer 4/5 correctly (80%)
+      await answerQuestion(page, 'New length') // q1 ✓
+      await clickNext(page)
+      await answerQuestion(page, 'End') // q2 ✓
+      await clickNext(page)
+      await answerQuestion(page, 'Inner function accessing outer scope') // q3 ✓
+      await clickNext(page)
+      await answerQuestion(page, 'Dynamic this') // q4 ✗
+      await clickNext(page)
+      await answerQuestion(page, 'Array of keys') // q5 ✓
+
+      await clickSubmit(page)
+      await confirmSubmit(page)
+
+      await expect(page.getByText(/right track/i)).toBeVisible()
+    })
+
     test('shows encouraging message for 50-69% score', async ({ page }) => {
       await navigateToQuiz(page, mixedPerformanceQuiz)
       await startQuiz(page)
@@ -291,6 +313,27 @@ test.describe('E15-S05: Performance Summary After Quiz', () => {
       await confirmSubmit(page)
 
       await expect(page.getByText(/good effort/i)).toBeVisible()
+    })
+
+    test('shows keep practicing message for <50% score', async ({ page }) => {
+      await navigateToQuiz(page, mixedPerformanceQuiz)
+      await startQuiz(page)
+
+      // Answer 1/5 correctly (20%)
+      await answerQuestion(page, 'New length') // q1 ✓
+      await clickNext(page)
+      await answerQuestion(page, 'Start') // q2 ✗
+      await clickNext(page)
+      await answerQuestion(page, 'A loop') // q3 ✗
+      await clickNext(page)
+      await answerQuestion(page, 'Dynamic this') // q4 ✗
+      await clickNext(page)
+      await answerQuestion(page, 'Array of values') // q5 ✗
+
+      await clickSubmit(page)
+      await confirmSubmit(page)
+
+      await expect(page.getByText(/keep practicing/i)).toBeVisible()
     })
   })
 

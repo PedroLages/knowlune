@@ -1,40 +1,27 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { PerformanceInsights } from '../PerformanceInsights'
-import type { Question, Answer } from '@/types/quiz'
+import {
+  makeQuestion,
+  makeCorrectAnswer,
+  makeWrongAnswer,
+} from '../../../../../tests/support/fixtures/factories/quiz-factory'
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Shorthand aliases
 // ---------------------------------------------------------------------------
 
-function q(id: string, order: number, topic?: string): Question {
-  return {
-    id,
-    order,
-    type: 'multiple-choice',
-    text: `Question ${order}`,
-    options: ['A', 'B', 'C', 'D'],
-    correctAnswer: 'A',
-    explanation: '',
-    points: 1,
-    ...(topic ? { topic } : {}),
-  }
-}
-
-function correct(questionId: string): Answer {
-  return { questionId, userAnswer: 'A', isCorrect: true, pointsEarned: 1, pointsPossible: 1 }
-}
-
-function wrong(questionId: string): Answer {
-  return { questionId, userAnswer: 'B', isCorrect: false, pointsEarned: 0, pointsPossible: 1 }
-}
+const q = (id: string, order: number, topic?: string) =>
+  makeQuestion({ id, order, text: `Question ${order}`, ...(topic ? { topic } : {}) })
+const correct = (questionId: string) => makeCorrectAnswer(questionId)
+const wrong = (questionId: string) => makeWrongAnswer(questionId)
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 describe('PerformanceInsights', () => {
-  it('renders correctness summary bar', () => {
+  it('renders correctness summary bar with all three counts', () => {
     const questions = [q('q1', 1, 'A'), q('q2', 2, 'B')]
     const answers = [correct('q1'), wrong('q2')]
 
@@ -42,6 +29,7 @@ describe('PerformanceInsights', () => {
 
     expect(screen.getByText('1 correct')).toBeInTheDocument()
     expect(screen.getByText('1 incorrect')).toBeInTheDocument()
+    expect(screen.getByText('0 skipped')).toBeInTheDocument()
   })
 
   it('shows skipped count when questions are skipped', () => {
@@ -51,15 +39,6 @@ describe('PerformanceInsights', () => {
     render(<PerformanceInsights questions={questions} answers={answers} />)
 
     expect(screen.getByText('1 skipped')).toBeInTheDocument()
-  })
-
-  it('hides skipped count when no questions are skipped', () => {
-    const questions = [q('q1', 1, 'A'), q('q2', 2, 'B')]
-    const answers = [correct('q1'), correct('q2')]
-
-    render(<PerformanceInsights questions={questions} answers={answers} />)
-
-    expect(screen.queryByText(/skipped/)).not.toBeInTheDocument()
   })
 
   it('shows strengths section when topics have ≥70%', () => {
@@ -99,16 +78,33 @@ describe('PerformanceInsights', () => {
     expect(screen.queryByText('Growth Opportunities')).not.toBeInTheDocument()
   })
 
-  it('uses h3 headings for section titles', () => {
+  it('uses h2 headings for section titles', () => {
     const questions = [q('q1', 1, 'A'), q('q2', 2, 'B')]
     const answers = [correct('q1'), wrong('q2')]
 
     render(<PerformanceInsights questions={questions} answers={answers} />)
 
-    const headings = screen.getAllByRole('heading', { level: 3 })
+    const headings = screen.getAllByRole('heading', { level: 2 })
     expect(headings).toHaveLength(2)
     expect(headings[0]).toHaveTextContent('Your Strengths')
     expect(headings[1]).toHaveTextContent('Growth Opportunities')
+  })
+
+  it('links sections to headings via aria-labelledby', () => {
+    const questions = [q('q1', 1, 'A'), q('q2', 2, 'B')]
+    const answers = [correct('q1'), wrong('q2')]
+
+    const { container } = render(<PerformanceInsights questions={questions} answers={answers} />)
+
+    const sections = container.querySelectorAll('section[aria-labelledby]')
+    expect(sections).toHaveLength(2)
+
+    for (const section of sections) {
+      const labelId = section.getAttribute('aria-labelledby')!
+      const heading = section.querySelector(`#${CSS.escape(labelId)}`)
+      expect(heading).not.toBeNull()
+      expect(heading!.tagName).toBe('H2')
+    }
   })
 
   it('uses semantic list elements for topics', () => {

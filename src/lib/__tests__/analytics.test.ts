@@ -1,36 +1,21 @@
 import { describe, it, expect } from 'vitest'
 import { analyzeTopicPerformance } from '@/lib/analytics'
-import type { Question, Answer } from '@/types/quiz'
+import {
+  makeQuestion,
+  makeCorrectAnswer,
+  makeWrongAnswer,
+  makeSkippedAnswer,
+} from '../../../tests/support/fixtures/factories/quiz-factory'
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Shorthand aliases
 // ---------------------------------------------------------------------------
 
-function q(id: string, order: number, topic?: string): Question {
-  return {
-    id,
-    order,
-    type: 'multiple-choice',
-    text: `Question ${order}`,
-    options: ['A', 'B', 'C', 'D'],
-    correctAnswer: 'A',
-    explanation: '',
-    points: 1,
-    ...(topic ? { topic } : {}),
-  }
-}
-
-function correct(questionId: string): Answer {
-  return { questionId, userAnswer: 'A', isCorrect: true, pointsEarned: 1, pointsPossible: 1 }
-}
-
-function wrong(questionId: string): Answer {
-  return { questionId, userAnswer: 'B', isCorrect: false, pointsEarned: 0, pointsPossible: 1 }
-}
-
-function skipped(questionId: string): Answer {
-  return { questionId, userAnswer: '', isCorrect: false, pointsEarned: 0, pointsPossible: 1 }
-}
+const q = (id: string, order: number, topic?: string) =>
+  makeQuestion({ id, order, text: `Question ${order}`, ...(topic ? { topic } : {}) })
+const correct = (questionId: string) => makeCorrectAnswer(questionId)
+const wrong = (questionId: string) => makeWrongAnswer(questionId)
+const skipped = (questionId: string) => makeSkippedAnswer(questionId)
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -103,11 +88,40 @@ describe('analyzeTopicPerformance', () => {
     const result = analyzeTopicPerformance(questions, answers)
 
     expect(result.hasMultipleTopics).toBe(false)
-    // Single "General" topic at 67% (2/3) → growth area
+    // Single "General" topic at 66% (2/3 = floor(66.67)) → growth area
     expect(result.strengths).toHaveLength(0)
     expect(result.growthAreas).toHaveLength(1)
     expect(result.growthAreas[0].name).toBe('General')
-    expect(result.growthAreas[0].percentage).toBe(67)
+    expect(result.growthAreas[0].percentage).toBe(66)
+  })
+
+  it('groups all-correct no-topic quiz under "General" as strength', () => {
+    const questions = [q('q1', 1), q('q2', 2), q('q3', 3)]
+    const answers = [correct('q1'), correct('q2'), correct('q3')]
+
+    const result = analyzeTopicPerformance(questions, answers)
+
+    expect(result.hasMultipleTopics).toBe(false)
+    expect(result.strengths).toHaveLength(1)
+    expect(result.strengths[0]).toEqual({ name: 'General', percentage: 100, questionNumbers: [] })
+  })
+
+  it('treats empty string topic as "General"', () => {
+    const questions = [makeQuestion({ id: 'q1', order: 1, topic: '' })]
+    const answers = [correct('q1')]
+
+    const result = analyzeTopicPerformance(questions, answers)
+
+    expect(result.strengths[0].name).toBe('General')
+  })
+
+  it('trims whitespace-only topic to "General"', () => {
+    const questions = [makeQuestion({ id: 'q1', order: 1, topic: '  ' })]
+    const answers = [correct('q1')]
+
+    const result = analyzeTopicPerformance(questions, answers)
+
+    expect(result.strengths[0].name).toBe('General')
   })
 
   it('sets hasMultipleTopics false when only one unique topic exists', () => {
@@ -160,7 +174,7 @@ describe('analyzeTopicPerformance', () => {
     const questions = [
       q('q1', 1, 'A'),
       q('q2', 2, 'A'),
-      q('q3', 3, 'A'), // A: 2/3 = 67% — not strength
+      q('q3', 3, 'A'), // A: 2/3 = 66% — not strength
       q('q4', 4, 'B'),
       q('q5', 5, 'B'), // B: 2/2 = 100%
       q('q6', 6, 'C'),
@@ -182,7 +196,7 @@ describe('analyzeTopicPerformance', () => {
 
     const result = analyzeTopicPerformance(questions, answers)
 
-    expect(result.strengths.map(s => s.name)).toEqual(['B', 'C'])
+    expect(result.strengths.map((s) => s.name)).toEqual(['B', 'C'])
     expect(result.strengths[0].percentage).toBe(100)
     expect(result.strengths[1].percentage).toBe(75)
   })
@@ -198,7 +212,7 @@ describe('analyzeTopicPerformance', () => {
 
     const result = analyzeTopicPerformance(questions, answers)
 
-    expect(result.growthAreas.map(g => g.name)).toEqual(['B', 'A'])
+    expect(result.growthAreas.map((g) => g.name)).toEqual(['B', 'A'])
     expect(result.growthAreas[0].percentage).toBe(0)
     expect(result.growthAreas[1].percentage).toBe(50)
   })
@@ -228,8 +242,8 @@ describe('analyzeTopicPerformance', () => {
     // 7/10 = 70% exactly → strength
     const questions = Array.from({ length: 10 }, (_, i) => q(`q${i}`, i + 1, 'X'))
     const answers = [
-      ...questions.slice(0, 7).map(q => correct(q.id)),
-      ...questions.slice(7).map(q => wrong(q.id)),
+      ...questions.slice(0, 7).map((q) => correct(q.id)),
+      ...questions.slice(7).map((q) => wrong(q.id)),
     ]
 
     const result = analyzeTopicPerformance(questions, answers)
@@ -237,5 +251,20 @@ describe('analyzeTopicPerformance', () => {
     expect(result.strengths).toHaveLength(1)
     expect(result.strengths[0].percentage).toBe(70)
     expect(result.growthAreas).toHaveLength(0)
+  })
+
+  it('treats 69% as growth area (boundary — Math.floor prevents rounding up)', () => {
+    // 69/100 = 69% exactly → growth area (not promoted to 70% by rounding)
+    const questions = Array.from({ length: 100 }, (_, i) => q(`q${i}`, i + 1, 'X'))
+    const answers = [
+      ...questions.slice(0, 69).map((q) => correct(q.id)),
+      ...questions.slice(69).map((q) => wrong(q.id)),
+    ]
+
+    const result = analyzeTopicPerformance(questions, answers)
+
+    expect(result.growthAreas).toHaveLength(1)
+    expect(result.growthAreas[0].percentage).toBe(69)
+    expect(result.strengths).toHaveLength(0)
   })
 })

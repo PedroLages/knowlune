@@ -1,5 +1,6 @@
 import { useId, useMemo } from 'react'
 import { CheckCircle2, TrendingUp } from 'lucide-react'
+import { cn } from '@/app/components/ui/utils'
 import { analyzeTopicPerformance } from '@/lib/analytics'
 import type { Question, Answer } from '@/types/quiz'
 
@@ -18,6 +19,7 @@ export function PerformanceInsights({ questions, answers }: PerformanceInsightsP
     analysis
 
   const showTopicSections = hasMultipleTopics && (strengths.length > 0 || growthAreas.length > 0)
+  const showBothSections = strengths.length > 0 && growthAreas.length > 0
 
   return (
     <div data-testid="performance-insights" className="space-y-4">
@@ -25,32 +27,33 @@ export function PerformanceInsights({ questions, answers }: PerformanceInsightsP
       <p className="text-sm text-muted-foreground text-center tabular-nums">
         <span className="text-success font-medium">{correctCount} correct</span>
         {' · '}
-        <span className="text-warning font-medium">{incorrectCount} incorrect</span>
-        {skippedCount > 0 && (
-          <>
-            {' · '}
-            <span>{skippedCount} skipped</span>
-          </>
-        )}
+        <span className="text-destructive font-medium">{incorrectCount} incorrect</span>
+        {' · '}
+        <span>{skippedCount} skipped</span>
       </p>
 
       {/* Topic-based strengths and growth areas */}
       {showTopicSections && (
-        <div className="sm:grid sm:grid-cols-2 sm:gap-4 space-y-4 sm:space-y-0">
+        <div
+          className={cn(
+            'space-y-4',
+            showBothSections && 'sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0',
+          )}
+        >
           {strengths.length > 0 && (
             <section
               aria-labelledby={strengthsHeadingId}
-              className="bg-muted rounded-xl p-5 sm:p-6 space-y-3"
+              className="bg-muted rounded-xl p-5 sm:p-6 space-y-3 text-left"
             >
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="size-5 text-success" aria-hidden="true" />
-                <h3 id={strengthsHeadingId} className="text-lg font-semibold text-foreground">
+                <h2 id={strengthsHeadingId} className="text-lg font-semibold text-foreground">
                   Your Strengths
-                </h3>
+                </h2>
               </div>
 
               <ul className="space-y-2">
-                {strengths.map(topic => (
+                {strengths.map((topic) => (
                   <li key={topic.name} className="flex items-center justify-between gap-2">
                     <span className="text-sm text-foreground">{topic.name}</span>
                     <span className="text-sm font-semibold text-success tabular-nums">
@@ -65,17 +68,17 @@ export function PerformanceInsights({ questions, answers }: PerformanceInsightsP
           {growthAreas.length > 0 && (
             <section
               aria-labelledby={growthHeadingId}
-              className="bg-muted rounded-xl p-5 sm:p-6 space-y-3"
+              className="bg-muted rounded-xl p-5 sm:p-6 space-y-3 text-left"
             >
               <div className="flex items-center gap-2">
                 <TrendingUp className="size-5 text-warning" aria-hidden="true" />
-                <h3 id={growthHeadingId} className="text-lg font-semibold text-foreground">
+                <h2 id={growthHeadingId} className="text-lg font-semibold text-foreground">
                   Growth Opportunities
-                </h3>
+                </h2>
               </div>
 
               <ul className="space-y-2">
-                {growthAreas.map(topic => (
+                {growthAreas.map((topic) => (
                   <li key={topic.name} className="space-y-0.5">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm text-foreground">{topic.name}</span>

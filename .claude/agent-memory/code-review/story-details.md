@@ -283,3 +283,13 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M3: `aria-label` on plain `<div>` in ReviewSummary -- needs `role="region"` or `<section>`
 - M4: ReviewSummary jump buttons lack `min-w-[44px]`
 - Positive: Clean component decomposition, solid ARIA (aria-current="step", dynamic aria-labels), defensive store guards, correct array answer handling in QuestionGrid
+
+## E15-S05: Display Performance Summary After Quiz (Round 1)
+- No uncommitted changes (positive)
+- H1: `text-warning` used for "incorrect" count in correctness bar -- `text-destructive` is the established convention (ScoreSummary.tsx uses it)
+- H2: Skipped questions pushed to `incorrectQuestionNumbers` -- conflates unanswered with wrong answers in growth area suggestions
+- H3: Duplicated test helpers `q()`, `correct()`, `wrong()` between analytics.test.ts and PerformanceInsights.test.tsx
+- M1: 2-column grid applied even when only one section (strengths or growth) renders -- empty column
+- M2: Redundant `new Set(topicMap.keys())` when `topicMap.size` suffices
+- M3: E2E AC3 uses `getByText` for not.toBeVisible assertions instead of `getByRole('heading')` -- fragile
+- Positive: Pure function architecture, excellent unit test coverage (14 tests, boundary conditions), proper accessibility (useId, aria-labelledby, semantic HTML), no uncommitted changes, shared E2E seeding helpers used

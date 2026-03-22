@@ -52,7 +52,7 @@ export function analyzeTopicPerformance(questions: Question[], answers: Answer[]
   let skippedCount = 0
 
   for (const question of questions) {
-    const topic = question.topic || 'General'
+    const topic = question.topic?.trim() || 'General'
     const answer = answerMap.get(question.id)
 
     if (!topicMap.has(topic)) {
@@ -63,6 +63,8 @@ export function analyzeTopicPerformance(questions: Question[], answers: Answer[]
 
     if (!answer || isUnanswered(answer.userAnswer)) {
       skippedCount++
+      // Intentional: skipped questions count toward growth areas because the learner
+      // still needs to attempt them. "Review questions X, Y" includes both wrong and skipped.
       entry.incorrectQuestionNumbers.push(question.order)
     } else if (answer.isCorrect) {
       correctCount++
@@ -77,13 +79,12 @@ export function analyzeTopicPerformance(questions: Question[], answers: Answer[]
   const topics: TopicPerformance[] = Array.from(topicMap.entries()).map(
     ([name, { correct, total, incorrectQuestionNumbers }]) => ({
       name,
-      percentage: total > 0 ? Math.round((correct / total) * 100) : 0,
+      percentage: total > 0 ? Math.floor((correct / total) * 100) : 0,
       questionNumbers: incorrectQuestionNumbers.sort((a, b) => a - b),
     })
   )
 
-  const uniqueTopics = new Set(topicMap.keys())
-  const hasMultipleTopics = uniqueTopics.size > 1
+  const hasMultipleTopics = topicMap.size > 1
 
   const strengths = topics
     .filter(t => t.percentage >= STRENGTH_THRESHOLD)
