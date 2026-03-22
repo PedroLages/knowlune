@@ -104,3 +104,41 @@ export function analyzeTopicPerformance(questions: Question[], answers: Answer[]
     hasMultipleTopics,
   }
 }
+
+// ---------------------------------------------------------------------------
+// Normalized Gain (Hake's Formula)
+// ---------------------------------------------------------------------------
+
+/**
+ * Calculate normalized learning gain using Hake's formula.
+ * Returns null when initialScore >= 100 (no room for improvement).
+ * Returns negative values for score regression (valid — displayed as "Regression").
+ *
+ * Formula: (finalScore - initialScore) / (100 - initialScore)
+ */
+export function calculateNormalizedGain(
+  initialScore: number,
+  finalScore: number
+): number | null {
+  if (initialScore >= 100) return null
+  const actualGain = finalScore - initialScore
+  const possibleGain = 100 - initialScore
+  return actualGain / possibleGain
+}
+
+export type NormalizedGainLevel = 'regression' | 'low' | 'medium' | 'high'
+
+export function interpretNormalizedGain(gain: number): {
+  level: NormalizedGainLevel
+  message: string
+} {
+  if (gain < 0) {
+    return { level: 'regression', message: "Score decreased — review the material and try again!" }
+  } else if (gain < 0.3) {
+    return { level: 'low', message: "You're making progress. Keep practicing!" }
+  } else if (gain < 0.7) {
+    return { level: 'medium', message: "Good learning progress!" }
+  } else {
+    return { level: 'high', message: "Excellent learning efficiency!" }
+  }
+}

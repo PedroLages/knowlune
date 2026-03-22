@@ -1,5 +1,6 @@
 import { cn } from '@/app/components/ui/utils'
 import { formatDuration } from '@/lib/formatDuration'
+import { interpretNormalizedGain } from '@/lib/analytics'
 
 interface ScoreSummaryProps {
   percentage: number
@@ -9,6 +10,7 @@ interface ScoreSummaryProps {
   passingScore: number
   timeSpent: number
   previousBestPercentage?: number
+  normalizedGain?: number | null
 }
 
 type ScoreTier = {
@@ -106,6 +108,13 @@ function ScoreRing({ percentage, tier }: { percentage: number; tier: ScoreTier }
   )
 }
 
+const gainColorMap: Record<string, string> = {
+  regression: 'text-muted-foreground',
+  low: 'text-muted-foreground',
+  medium: 'text-brand',
+  high: 'text-success',
+}
+
 export function ScoreSummary({
   percentage,
   score,
@@ -114,9 +123,12 @@ export function ScoreSummary({
   passingScore,
   timeSpent,
   previousBestPercentage,
+  normalizedGain,
 }: ScoreSummaryProps) {
   const tier = getScoreTier(percentage, passed)
   const roundedPct = Math.round(Math.min(100, Math.max(0, percentage)))
+
+  const gainInterpretation = normalizedGain != null ? interpretNormalizedGain(normalizedGain) : null
 
   // Guard: clamp and validate previousBest before computing delta
   const clampedPrevBest =
@@ -169,6 +181,16 @@ export function ScoreSummary({
             <span className="text-muted-foreground ml-1.5">&middot; Keep practicing!</span>
           )}
         </p>
+      )}
+
+      {gainInterpretation != null && (
+        <div className="mt-2" data-testid="normalized-gain">
+          <span className="text-sm text-muted-foreground">Normalized Gain: </span>
+          <span className={cn('font-semibold', gainColorMap[gainInterpretation.level])}>
+            {Math.round(normalizedGain! * 100)}%
+          </span>
+          <p className="text-sm text-muted-foreground mt-1">{gainInterpretation.message}</p>
+        </div>
       )}
     </div>
   )

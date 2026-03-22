@@ -9,6 +9,7 @@ import {
   selectAttempts,
   selectIsLoading,
 } from '@/stores/useQuizStore'
+import { calculateNormalizedGain } from '@/lib/analytics'
 import { ScoreSummary } from '@/app/components/quiz/ScoreSummary'
 import { QuestionBreakdown } from '@/app/components/quiz/QuestionBreakdown'
 import { AreasForGrowth } from '@/app/components/quiz/AreasForGrowth'
@@ -57,6 +58,13 @@ export function QuizResults() {
     if (validPcts.length === 0) return undefined
     return Math.min(100, Math.max(0, Math.max(...validPcts)))
   }, [attempts])
+
+  const normalizedGain = useMemo(() => {
+    if (attempts.length < 2) return null
+    const firstScore = attempts[0].percentage
+    const latestScore = lastAttempt?.percentage ?? 0
+    return calculateNormalizedGain(firstScore, latestScore)
+  }, [attempts, lastAttempt?.percentage])
 
   const incorrectItems = useMemo(() => {
     if (!lastAttempt || !currentQuiz) return []
@@ -132,6 +140,7 @@ export function QuizResults() {
           passingScore={currentQuiz.passingScore}
           timeSpent={lastAttempt.timeSpent}
           previousBestPercentage={previousBestPercentage}
+          normalizedGain={normalizedGain}
         />
 
         <QuestionBreakdown answers={lastAttempt.answers} questions={currentQuiz.questions} />
