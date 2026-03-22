@@ -165,7 +165,7 @@ export const useQuizStore = create<QuizState>()(
           }
 
           set({
-            attempts: [...get().attempts, attempt],
+            attempts: [attempt, ...get().attempts],
             currentProgress: null,
             isLoading: false,
           })

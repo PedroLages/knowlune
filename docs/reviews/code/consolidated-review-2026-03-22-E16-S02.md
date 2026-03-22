@@ -23,7 +23,12 @@
 
 ## Findings — Severity Triage
 
-### [Blocker] — None
+### [Blocker] — 1 issue
+
+**B1 — "Current" badge fails WCAG AA contrast in light mode** (design-review, confidence 95)
+- `AttemptHistory.tsx:73, 122` — `--brand-soft-foreground` (`#5e6ad2`) on `--brand-soft` (`#d0d2ee`) = **3.16:1**. Required: 4.5:1 for normal text (WCAG AA).
+- The "Current" badge is the primary visual anchor for the just-completed attempt. Contrast failure makes it inaccessible to low-contrast users — a significant population in educational contexts. Dark mode already passes (4.65:1).
+- Fix: Update `--brand-soft-foreground` in `src/styles/theme.css` light-mode block. A value around `#3d46b8` achieves ~5.2:1 within the same hue family.
 
 ---
 
@@ -107,7 +112,7 @@
 
 | Severity | Count |
 |----------|-------|
-| Blocker | 0 |
+| Blocker | 1 |
 | High | 7 |
 | Medium | 7 |
 | Nit | 4 |

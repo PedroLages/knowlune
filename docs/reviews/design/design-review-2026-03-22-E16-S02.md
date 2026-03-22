@@ -1,4 +1,4 @@
-# Design Review — E16-S02: Display Score History Across All Attempts
+# Design Review Report — E16-S02: Display Score History Across All Attempts
 
 **Review Date**: 2026-03-22
 **Reviewed By**: Claude (design-review agent via Playwright MCP)
@@ -7,112 +7,96 @@
 - `src/app/components/quiz/AttemptHistory.tsx` (new)
 - `src/app/components/quiz/PerformanceInsights.tsx` (new)
 - `src/app/pages/QuizResults.tsx` (modified)
-- `src/stores/useQuizStore.ts` (modified)
 
-**Affected Pages**: `/courses/:courseId/lessons/:lessonId/quiz/results`
+**Affected Routes**: `/courses/:courseId/lessons/:lessonId/quiz/results`
 
 ---
 
 ## Executive Summary
 
-E16-S02 introduces a collapsible `AttemptHistory` component to the `QuizResults` page, letting learners compare their score progression across all quiz attempts. The feature is functionally complete and architecturally clean. Three issues need attention before merge: "Review" buttons lack per-attempt context for screen reader users, table cells inherit `text-center` from their parent card producing a visual misalignment against left-aligned headers, and the Review buttons in both the desktop table and mobile cards fall below the 44px minimum touch target height.
+E16-S02 adds a collapsible "View Attempt History" panel to the Quiz Results page, exposing a chronological table (desktop) or stacked card list (mobile) of all prior quiz attempts with score, time, status badges, and a per-attempt Review trigger. The implementation is architecturally clean, uses design tokens correctly throughout, and introduces no console errors. One WCAG AA contrast violation on the "Current" badge in light mode requires a fix before merge. Several medium-priority UX and touch-target issues should be addressed in a follow-up.
 
 ---
 
 ## What Works Well
 
-- **Design token discipline**: Zero hardcoded colors, no inline styles. All badge colors (`bg-brand-soft`, `bg-success-soft`, `bg-muted`) and text colors (`text-brand-soft-foreground`, `text-success`, `text-muted-foreground`) resolve through the theme system and pass WCAG AA in both light and dark mode.
-- **Responsive layout strategy**: The `hidden sm:block` / `sm:hidden` breakpoint split is exactly right. The desktop table is shown at `sm`+ (640px+) and mobile stacked cards render below that — no horizontal scroll detected at any tested viewport.
-- **Collapsible trigger accessibility**: The `CollapsibleTrigger` carries `aria-expanded` ("true"/"false") and `aria-controls` pointing to the content region, giving screen reader users full disclosure-widget semantics at no extra cost.
-- **Singular/plural grammar**: `(1 attempt)` vs `(3 attempts)` is handled correctly in the trigger label — a detail that matters for screen reader announcement quality.
-- **Touch targets on key actions**: The "View Attempt History" trigger (44px), "Retake Quiz" / "Review Answers" buttons (44px), and "Back to Lesson" link (44px) all meet the minimum target size.
-- **aria-live on score summary**: The `QuizResults` page wraps the score region in `aria-live="polite"`, so screen readers announce the result without the learner needing to navigate to it.
-- **Loading skeleton**: The `isLoading` state renders a `role="status" aria-busy="true"` skeleton card — correct pattern for async states.
-- **No console errors**: Zero JS errors at runtime; only one pre-existing browser-vendor meta-tag deprecation warning unrelated to this story.
+- **Design token discipline**: no hardcoded hex colours anywhere in `AttemptHistory.tsx`. All badge colours (`bg-brand-soft`, `text-brand-soft-foreground`, `bg-success-soft`, `text-success`, `bg-muted`, `text-muted-foreground`) correctly reference theme tokens that adapt for dark mode.
+- **Dual render strategy**: the `hidden sm:block` / `sm:hidden` split correctly serves a proper `<table>` to tablet/desktop consumers and stacked cards to mobile — a thoughtful pattern that avoids trying to squeeze a six-column table onto a 375px screen.
+- **Semantic table markup**: `<TableHead scope="col">` on every column, `<span class="sr-only">Review</span>` on the icon-only Review column header, and `aria-label="Quiz attempt history"` on both the wrapping `<div>` and the `<Table>` provide solid screen reader structure.
+- **Touch target on trigger**: the "View Attempt History" trigger uses `min-h-11` (44px) and passes the WCAG 2.5.8 touch-target minimum.
+- **Responsive layout integrity**: no horizontal overflow at any tested viewport (375px, 768px, 1440px). The sidebar correctly collapses at 768px. Mobile cards stack cleanly with no clipping or overflow.
+- **Dark mode**: all three badges pass WCAG AA in dark mode (Current 4.65:1, Passed 6.05:1, Not Passed 6.05:1). The card background token (`bg-card`) resolves correctly to `rgb(36,37,54)` in dark mode.
+- **Zero console errors** across all three viewports.
+- **`prefers-reduced-motion`** media query is present in the stylesheet. The outer wrapper in QuizResults correctly uses `motion-reduce:transition-none` on the Question Breakdown trigger as a pattern — though AttemptHistory relies on Radix's built-in animation, which does respect the OS preference.
 
 ---
 
 ## Findings by Severity
 
-### High Priority (Should fix before merge)
+### Blockers (Must fix before merge)
 
-**H1 — "Review" buttons are not contextually labelled for screen readers**
-
-All "Review" buttons in both the desktop table and mobile cards render with `textContent="Review"` and no `aria-label` or `aria-describedby`. When a screen reader lists interactive elements or navigates by button, it announces three (or more) identical "Review" elements with no indication of which attempt they belong to. This breaks WCAG 2.1 SC 2.4.6 (Headings and Labels) and SC 1.3.1 (Info and Relationships).
-
-- **Location**: `src/app/components/quiz/AttemptHistory.tsx` lines 94, 127
-- **Evidence**: `reviewBtnDetails[0].btnAriaLabel === null` confirmed via DOM inspection across all 3 rows in both desktop and mobile layouts
-- **Impact**: A learner using a screen reader cannot distinguish "Review attempt #3" from "Review attempt #1" without manually navigating the surrounding cell or card text first — high friction in a results review context where comparing attempts is the core job.
-- **Suggestion**: Add a computed `aria-label` that includes the attempt number: `aria-label={`Review attempt #${attemptNum}`}`. Both the desktop `<TableCell>` and mobile card button need this — they are separate DOM subtrees.
+**1. "Current" badge fails WCAG AA contrast in light mode**
+- Text `rgb(94, 106, 210)` on background `rgb(208, 210, 238)` = **3.16:1** (required: 4.5:1 for 12px/500 text).
+- This badge is the primary differentiator for the just-completed attempt. Learners with low-contrast sensitivity will not be able to reliably read it.
+- Location: `AttemptHistory.tsx:73` and `:122` (both desktop table and mobile card).
+- The token pair `bg-brand-soft` / `text-brand-soft-foreground` is intentionally designed for this exact use case — but the light-mode value of `--brand-soft-foreground` (`#5e6ad2` = `rgb(94,106,210)`) does not achieve 4.5:1 against `--brand-soft` (`#d0d2ee`). The token itself is the root cause.
+- Suggestion: verify and fix `--brand-soft-foreground` in `theme.css` to achieve at least 4.5:1 against `--brand-soft`. The dark-mode value (`#8b92da` on `#2a2c48` = 4.65:1) already passes — only light mode needs adjustment. A value around `#3d46b8` would pass at approximately 5.2:1 without changing the visible hue family.
 
 ---
 
-**H2 — Table data cells inherit `text-center` from the card container**
+### High Priority (Should fix before merge)
 
-The `QuizResults` card uses `text-center` as a layout convenience for the score summary above the table. Table data cells (`<td>`) do not have an explicit alignment class, so they inherit `text-align: center` from the card. The shadcn `<TableHead>` (`<th>`) uses an explicit `text-left` class and renders left-aligned. This creates a visual disconnect: headers are flush-left while cell values are centered beneath them, which is contrary to the design principle ("Left-align text, right-align numbers in tables") and produces an unpolished appearance.
+**2. Collapsible trigger has no expand/collapse affordance icon**
+- The "View Attempt History (3 attempts)" trigger is rendered as `variant="link"` — a plain underlined text link with no chevron, caret, or `+`/`-` symbol. Users have no immediate visual indication that clicking will reveal content rather than navigate somewhere.
+- Compare with the QuestionBreakdown trigger on the same page, which uses a `ChevronDown` icon with `transition-transform` for a clear open/close state.
+- Location: `AttemptHistory.tsx:41–45`.
+- Impact: the collapsible pattern is a "progressive disclosure" affordance. Without an expand indicator, learners may not discover the history panel at all, defeating the story's acceptance criteria in practice even though the element exists in the DOM.
+- Suggestion: add a `ChevronDown` icon with `transition-transform duration-200 group-data-[state=open]:rotate-180` (matching the QuestionBreakdown pattern), or switch `variant="link"` to the same full-width trigger style used by QuestionBreakdown.
 
-- **Location**: `src/app/components/quiz/AttemptHistory.tsx` line 49 (the `hidden sm:block` wrapper div) and `src/app/pages/QuizResults.tsx` line 126 (`text-center` on the card)
-- **Evidence**: `getComputedStyle(td).textAlign === "center"` for all 18 data cells; `getComputedStyle(th).textAlign === "left"` for all 6 headers
-- **Impact**: The date timestamps, scores, and status badges appear visually unanchored from their column headers. For a data-comparison interface this undermines the learner's ability to scan columns quickly.
-- **Suggestion**: Add `text-left` to the `hidden sm:block` wrapper div in `AttemptHistory.tsx` (i.e. `className="hidden sm:block mt-3 text-left"`). This resets alignment for the table subtree without touching the surrounding card layout.
+**3. Review buttons are 32px tall — below 44px touch-target minimum on mobile**
+- All three "Review" buttons inside the expanded panel measure `height: 32px` (from `size="sm"` on the Button component). On mobile this falls below the WCAG 2.5.8 / Apple HIG 44px minimum.
+- Location: `AttemptHistory.tsx:94` (desktop table) and `:127` (mobile card).
+- These are the only interactive controls accessible within the history panel. A learner on a touchscreen is likely to mis-tap or miss them entirely.
+- Suggestion: remove `size="sm"` and apply `size="default"` or add `min-h-[44px]` explicitly, consistent with the "Retake Quiz" and "Review Answers" buttons in `QuizResults.tsx:153–161`.
+
+**4. `aria-label` is duplicated between wrapper `<div>` and `<Table>`**
+- `AttemptHistory.tsx:49–50`: both the `<div className="hidden sm:block">` wrapper and the `<Table>` inside it carry `aria-label="Quiz attempt history"`. Screen readers will announce the label twice as they descend into the table landmark.
+- Suggestion: remove `aria-label` from the wrapping `<div>`. The `<table>` element is the correct semantic host for the label.
 
 ---
 
 ### Medium Priority (Fix when possible)
 
-**M1 — "Review" buttons are below the 44px minimum touch target height**
+**5. No open/closed state reflected in trigger text for screen readers**
+- The Collapsible trigger announces itself as `aria-expanded="true/false"` (Radix handles this correctly) but the visible label "View Attempt History" does not change between states. Sighted users can observe the content appearing; screen reader users get the `aria-expanded` attribute, which is correct — but a complementary visible state change (e.g. "Hide Attempt History" when open) would improve usability for all learners.
+- Location: `AttemptHistory.tsx:37–45`.
+- Suggestion: derive the label from `open` state — e.g. `` `${open ? 'Hide' : 'View'} Attempt History ${label}` ``.
 
-In both the desktop table and mobile stacked cards, "Review" buttons render at approximately 32px tall (`height: 31.99px` measured). The design principles specify 44×44px minimum touch targets on all interactive elements.
+**6. `success-soft-foreground` token is absent from `theme.css`**
+- The "Passed" badge uses `text-success` directly on `bg-success-soft` (lines 84 and 140). In light mode this achieves a passing 4.92:1 contrast, but it bypasses the token naming convention that pairs every `-soft` background with a `-soft-foreground` text token (as `brand-soft` / `brand-soft-foreground` does).
+- Without a `--success-soft-foreground` token, a future theme change to `--success` could silently break the badge contrast without any lint warning.
+- Location: `src/styles/theme.css` — token not defined; `AttemptHistory.tsx:84`, `:140`.
+- Suggestion: define `--success-soft-foreground` in both light and dark blocks of `theme.css`, expose it as `--color-success-soft-foreground` in the Tailwind layer, and update the badge class to `text-success-soft-foreground`.
 
-- **Location**: `src/app/components/quiz/AttemptHistory.tsx` lines 94 and 127 — `<Button variant="ghost" size="sm">`
-- **Evidence**: `reviewBtnDimensions = { width: 71, height: 32 }` confirmed at both desktop 1440px and mobile 375px viewports
-- **Impact**: `size="sm"` is 32px tall by default. For learners on touch devices who may have motor impairments, small tap targets cause mis-taps and frustration. The "Review" action is central to the feature's purpose.
-- **Suggestion**: Change `size="sm"` to `size="default"` (36px) and add `min-h-[44px]` explicitly, or use `size="sm" className="min-h-[44px]"`. The other action buttons on this page already use `min-h-[44px]` — this one should be consistent.
-
----
-
-**M2 — Collapsible lacks `w-full`, table does not stretch to card width**
-
-The `<Collapsible>` component has no width class. It lives inside a `flex flex-col items-center` container, so it sizes to its intrinsic content width (553px) rather than the card's full inner width (672px at 1440px viewport). The table content itself is narrower than it could be, leaving ~120px of unclaimed space on each side of the card at desktop width.
-
-- **Location**: `src/app/components/quiz/AttemptHistory.tsx` line 40 — `<Collapsible open={open} onOpenChange={setOpen}>`
-- **Evidence**: `collapsibleWidth: 553.8px` vs `cardWidth: 672px` (card inner width)
-- **Impact**: The table appears inset rather than filling the available space, making the card feel partially empty when the history is expanded. This is especially visible at 1440px.
-- **Suggestion**: Add `className="w-full"` to the `<Collapsible>` element. The table already has `w-full` internally, so this propagates correctly.
+**7. Date format is locale-dependent and not context-aware**
+- `new Date(attempt.completedAt).toLocaleString()` produces output like "1/15/2025, 1:00:00 PM" — the full timestamp including seconds is noisier than necessary for a history list. Design principles call for "relative for recent, absolute for older" (Messages page guideline).
+- Location: `AttemptHistory.tsx:79` (desktop) and `:131` (mobile).
+- Suggestion: display date only for attempts older than 24 hours (e.g. `toLocaleDateString()`), or "Today at 1:00 PM" for same-day attempts. The seconds component adds no value in a quiz-history context.
 
 ---
 
-**M3 — Wrapper `<div>` carries `aria-label` without a `role`**
+### Nitpicks (Optional)
 
-The desktop table is wrapped in a `<div aria-label="Quiz attempt history">` (line 49 of `AttemptHistory.tsx`). An `aria-label` on a generic `<div>` with no explicit `role` is ignored by accessibility trees — the label is orphaned. The `<table>` immediately inside already carries the same `aria-label="Quiz attempt history"`, making the div redundant.
+**8. "Not Passed" label is wordy compared to platform conventions**
+- "Not Passed" is two words where "Failed" is the conventional single-word antonym of "Passed". Using two words causes the badge to be visually wider, which slightly disrupts the rhythm of the status column.
+- Location: `AttemptHistory.tsx:89`, `:144`.
+- Note: if "Not Passed" is a deliberate pedagogical tone choice (avoiding the word "failed" to reduce anxiety), the current wording is defensible. Flag for product/content review.
 
-- **Location**: `src/app/components/quiz/AttemptHistory.tsx` line 49
-- **Evidence**: `wrapperDivRole === null` confirmed via DOM inspection; `tableAriaLabel === "Quiz attempt history"` is a valid and sufficient label on the `<table>` element
-- **Impact**: Minor — the table label is correctly carried by the `<table>` itself. The div wrapper label is simply dead markup. Screen readers use the table's own label, not the div's. However, the extraneous `aria-label` could confuse automated accessibility audits.
-- **Suggestion**: Remove `aria-label` from the wrapper `<div>` at line 49 — the `<table aria-label="Quiz attempt history">` at line 50 is sufficient.
+**9. Wrapper `<div>` + `<Table>` both labeled "Quiz attempt history" — also redundant accessible name**
+- Covered under finding #4 — noting it separately for the accessibility checklist.
 
----
-
-### Low Priority (Optional polish)
-
-**L1 — Date format is locale-sensitive and potentially verbose**
-
-Dates render as `new Date(attempt.completedAt).toLocaleString()`, which produces `1/20/2025, 3:00:00 PM` in en-US. This includes seconds (`3:00:00`), making each date cell wider than necessary and adding noise. Minutes-precision (`3:00 PM`) is sufficient for attempt history.
-
-- **Location**: `src/app/components/quiz/AttemptHistory.tsx` lines 79, 132
-- **Evidence**: Table text captured as `"1/20/2025, 3:00:00 PM"` in DOM inspection
-- **Impact**: Minor visual clutter. In narrow viewports the date column is the widest cell, which can cause table overflow if attempts cluster in a busy time period.
-- **Suggestion**: Use explicit locale options: `new Date(attempt.completedAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })` which gives `1/20/2025, 3:00 PM` — consistent across locales and without seconds.
-
----
-
-**L2 — "Not Passed" uses a neutral muted badge while "Passed" uses a semantic success badge**
-
-The visual weight asymmetry is intentional (green success vs neutral grey), but "Not Passed" is the phrasing used for the badge rather than the more common "Failed". This is a deliberate, learner-friendly UX choice. The neutral badge (muted background, muted foreground) contrast ratio is 6.05:1 — well above threshold. No contrast issue.
-
-- **Location**: `src/app/components/quiz/AttemptHistory.tsx` lines 84–90
-- **Evidence**: Contrast ratio `6.05:1` (passes AA for small text, requires ≥4.5:1)
-- **Impact**: None — the wording is appropriate for an educational context where "Not Passed" is less discouraging than "Failed". Noted as confirmation that this was a considered choice.
+**10. Missing `aria-live` region for toast notification triggered by Review button**
+- `handleReview` fires `toast.info('Review mode coming soon.')`. Sonner toasts are rendered in a `role="status"` region by default (part of the Sonner library), so this is likely already handled — but worth verifying once toast accessibility is audited for the platform broadly.
 
 ---
 
@@ -120,34 +104,81 @@ The visual weight asymmetry is intentional (green success vs neutral grey), but 
 
 | Check | Status | Notes |
 |-------|--------|-------|
-| Text contrast ≥4.5:1 | Pass | All measured ratios: Current badge 4.65:1, Passed badge 6.05:1, Not Passed badge 6.05:1, score text 11.17:1, date text 11.17:1 |
-| Keyboard navigation | Pass | `aria-expanded` / `aria-controls` on collapsible trigger; tab order logical |
-| Focus indicators visible | Pass | Tailwind `focus-visible:ring-[3px]` via box-shadow; verified active on focused button |
-| Heading hierarchy | Pass | Single `<h1>` for quiz title; no skipped levels |
-| ARIA labels on icon buttons | N/A | No icon-only buttons in AttemptHistory |
-| ARIA labels on text buttons with repeated labels | Fail | "Review" buttons have no `aria-label` differentiating by attempt — see H1 |
-| Semantic HTML | Partial | Table uses correct `<th scope="col">` / `<td>` / `sr-only` column header. Wrapper `div[aria-label]` without role is dead markup — see M3 |
-| Form labels associated | N/A | No form inputs in this feature |
-| prefers-reduced-motion | Pass | Collapsible animation via Radix UI respects reduced-motion by default |
-| aria-live regions | Pass | Score summary has `aria-live="polite"` |
-| Images have alt text | Pass | Zero `<img>` without `alt` |
+| Text contrast ≥4.5:1 (light mode) | **Fail** | "Current" badge: 3.16:1. "Passed": 4.92:1. "Not Passed": 4.52:1. |
+| Text contrast ≥4.5:1 (dark mode) | Pass | All badges pass. Current 4.65:1, Passed 6.05:1, Not Passed 6.05:1. |
+| Keyboard navigation — trigger | Pass | `aria-expanded` wired correctly. Focus ring via `focus-visible:ring-[3px]` present. |
+| Keyboard navigation — Review buttons | Pass | Focus ring present (box-shadow ring confirmed at 3px). Tab order is logical. |
+| Focus indicators visible | Pass | All interactive elements have Tailwind `focus-visible:ring` classes. |
+| Touch targets ≥44px (trigger) | Pass | Trigger is 44px tall. |
+| Touch targets ≥44px (Review buttons) | **Fail** | All Review buttons are 32px tall (`size="sm"`). |
+| Heading hierarchy | Pass | H1 "Design Review Quiz — Results", H2 for topic sections — no skipped levels. |
+| ARIA labels on icon buttons | Pass | Review column header has `<span class="sr-only">Review</span>`. |
+| Semantic HTML (table) | Pass | Proper `<table>`, `<thead>`, `<tbody>`, `<th scope="col">`. |
+| Duplicate `aria-label` | **Warn** | Both `<div>` wrapper and `<Table>` carry identical label. Remove from `<div>`. |
+| Form labels associated | N/A | No form inputs in this component. |
+| `prefers-reduced-motion` | Pass | Global stylesheet has `prefers-reduced-motion` rules. Radix Collapsible honours it. |
+| Color not sole indicator | Pass | Pass/fail status uses text label + colour — not colour alone. |
 
 ---
 
 ## Responsive Design Verification
 
-- **Desktop (1440px)**: Pass with caveats — table renders correctly, all data visible, no overflow. Two issues: table cells center-aligned (H2), collapsible not stretching to card width (M2).
-- **Tablet (768px)**: Pass — desktop table shown (viewport renders at 853px effective width which exceeds the `sm` 640px breakpoint). No horizontal scroll. Table fits within card.
-- **Mobile (375px)**: Pass with caveats — correct mobile card layout activated, no horizontal scroll. Review button touch targets 32px tall (M1). Card width 356px within 416px effective viewport — appropriate padding maintained.
+| Viewport | Status | Notes |
+|----------|--------|-------|
+| Mobile (375px) | Pass | Stacked card layout renders correctly. No horizontal overflow. Mobile nav tab bar present. |
+| Tablet (768px) | Pass | Desktop table renders. Sidebar correctly collapses to hamburger. No overflow. |
+| Desktop (1440px) | Pass | Full table visible. Sidebar persistent. Correct spacing. |
+
+---
+
+## Detailed Evidence
+
+### Finding 1 — Current badge contrast (Blocker)
+
+Computed values (light mode, from `browser_evaluate`):
+```
+text:       rgb(94, 106, 210)   — --brand-soft-foreground: #5e6ad2
+background: rgb(208, 210, 238)  — --brand-soft: #d0d2ee
+contrast ratio: 3.16:1          — WCAG AA requires 4.5:1 for small text
+```
+
+### Finding 2 — No chevron on collapsible trigger (High)
+
+```
+AttemptHistory.tsx:41–45
+<CollapsibleTrigger asChild>
+  <Button variant="link" className="text-sm font-medium">
+    View Attempt History {label}
+  </Button>
+</CollapsibleTrigger>
+```
+
+Confirmed via `browser_evaluate`: `hasChevronIcon: false` on the trigger with `aria-expanded="true"`. QuestionBreakdown on the same page has `hasChevronIcon: true` with `transition-transform` animation — creating an inconsistency within a single page.
+
+### Finding 3 — Review button touch targets (High)
+
+```
+AttemptHistory.tsx:94
+<Button variant="ghost" size="sm" onClick={() => handleReview(attempt.id)}>
+
+Measured height: 32px (all three desktop + all three mobile instances)
+Required minimum: 44px
+```
+
+### Finding 4 — Duplicate aria-label (High)
+
+```
+AttemptHistory.tsx:49–50
+<div className="hidden sm:block mt-3" aria-label="Quiz attempt history">
+  <Table aria-label="Quiz attempt history">
+```
 
 ---
 
 ## Recommendations
 
-1. **Fix H1 before merge** — Add `aria-label={`Review attempt #${attemptNum}`}` to both the desktop table `Review` button (line 94) and the mobile card `Review` button (line 127). This is a one-line change per location.
+1. **Fix the "Current" badge token immediately** — update `--brand-soft-foreground` in `src/styles/theme.css` to achieve ≥4.5:1 against `--brand-soft` in light mode. This is the only blocker.
+2. **Add a chevron icon to the AttemptHistory trigger** — mirror the QuestionBreakdown pattern already on this page for consistency. This is the highest-impact UX fix after the contrast issue.
+3. **Upgrade Review buttons to full-size touch targets** — remove `size="sm"` or add `min-h-[44px]` to ensure 44px targets on all interactive controls within the panel.
+4. **Define `--success-soft-foreground` as a paired token** — prevents future silent regressions when theme values change and closes a gap in the token naming convention.
 
-2. **Fix H2 before merge** — Add `text-left` to the `hidden sm:block` wrapper div (line 49) to override the inherited `text-center` from the card and align table cell content with headers.
-
-3. **Fix M1 alongside H1** — While editing the Review buttons for the aria-label, add `min-h-[44px]` to bring them in line with the other action buttons on the page. Zero design impact, significant accessibility improvement.
-
-4. **Fix M2 and M3 as cleanup** — `w-full` on the `<Collapsible>` and removing the redundant `aria-label` from the wrapper `<div>` are both single-attribute changes with no risk of regression.

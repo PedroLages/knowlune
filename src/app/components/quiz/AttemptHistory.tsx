@@ -25,7 +25,12 @@ interface AttemptHistoryProps {
   lessonId: string
 }
 
-export function AttemptHistory({ attempts, currentAttemptId }: AttemptHistoryProps) {
+export function AttemptHistory({
+  attempts,
+  currentAttemptId,
+  courseId: _courseId, // TODO(E16-S01): use for review navigation route
+  lessonId: _lessonId, // TODO(E16-S01): use for review navigation route
+}: AttemptHistoryProps) {
   const [open, setOpen] = useState(false)
 
   const handleReview = useCallback((_attemptId: string) => {
@@ -46,7 +51,7 @@ export function AttemptHistory({ attempts, currentAttemptId }: AttemptHistoryPro
 
       <CollapsibleContent>
         {/* Desktop table — hidden on mobile */}
-        <div className="hidden sm:block mt-3" aria-label="Quiz attempt history">
+        <div className="hidden sm:block mt-3 text-left">
           <Table aria-label="Quiz attempt history">
             <TableHeader>
               <TableRow>
@@ -91,7 +96,12 @@ export function AttemptHistory({ attempts, currentAttemptId }: AttemptHistoryPro
                       )}
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => handleReview(attempt.id)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        aria-label={`Review attempt #${attemptNum}`}
+                        onClick={() => handleReview(attempt.id)}
+                      >
                         Review
                       </Button>
                     </TableCell>
@@ -124,7 +134,12 @@ export function AttemptHistory({ attempts, currentAttemptId }: AttemptHistoryPro
                       </span>
                     )}
                   </span>
-                  <Button variant="ghost" size="sm" onClick={() => handleReview(attempt.id)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label={`Review attempt #${attemptNum}`}
+                    onClick={() => handleReview(attempt.id)}
+                  >
                     Review
                   </Button>
                 </div>

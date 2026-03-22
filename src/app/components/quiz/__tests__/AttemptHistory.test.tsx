@@ -146,4 +146,41 @@ describe('AttemptHistory', () => {
     // Review button visible per attempt (may appear twice due to responsive layout)
     expect(screen.getAllByRole('button', { name: /review/i }).length).toBeGreaterThanOrEqual(3)
   })
+
+  it('clicking a Review button shows "Review mode coming soon" toast', async () => {
+    const { toast } = await import('sonner')
+    const user = userEvent.setup()
+    render(
+      <AttemptHistory
+        attempts={threeAttempts}
+        currentAttemptId={attempt3.id}
+        courseId={COURSE_ID}
+        lessonId={LESSON_ID}
+      />
+    )
+
+    await user.click(screen.getByRole('button', { name: /view attempt history/i }))
+    await user.click(screen.getAllByRole('button', { name: /review attempt #3/i })[0])
+
+    expect(toast.info).toHaveBeenCalledWith('Review mode coming soon.')
+  })
+
+  it('Review buttons have contextual aria-labels distinguishing attempts', async () => {
+    const user = userEvent.setup()
+    render(
+      <AttemptHistory
+        attempts={threeAttempts}
+        currentAttemptId={attempt3.id}
+        courseId={COURSE_ID}
+        lessonId={LESSON_ID}
+      />
+    )
+
+    await user.click(screen.getByRole('button', { name: /view attempt history/i }))
+
+    // Each attempt should have a uniquely named Review button (desktop table renders one per attempt)
+    expect(screen.getAllByRole('button', { name: /review attempt #3/i }).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByRole('button', { name: /review attempt #2/i }).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByRole('button', { name: /review attempt #1/i }).length).toBeGreaterThanOrEqual(1)
+  })
 })

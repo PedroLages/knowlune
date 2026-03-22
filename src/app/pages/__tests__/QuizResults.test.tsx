@@ -146,6 +146,28 @@ describe('QuizResults — improvement summary', () => {
     })
   })
 
+  it('renders the AttemptHistory trigger when attempts exist', async () => {
+    useQuizStore.setState({
+      currentQuiz: testQuiz,
+      attempts: [makeAttemptWith(80, 'a1'), makeAttemptWith(90, 'a2')],
+      isLoading: false,
+      error: null,
+    })
+
+    const { QuizResults } = await import('../QuizResults')
+    render(
+      <MemoryRouter initialEntries={['/courses/c1/lessons/l1/quiz/results']}>
+        <QuizResults />
+      </MemoryRouter>
+    )
+
+    await vi.waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: /view attempt history/i })
+      ).toBeInTheDocument()
+    })
+  })
+
   it('does not show improvement when only 1 attempt exists', async () => {
     useQuizStore.setState({
       currentQuiz: testQuiz,

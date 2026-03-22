@@ -10,6 +10,10 @@
  */
 import { test, expect } from '../support/fixtures'
 import { makeQuiz, makeAttempt } from '../support/fixtures/factories/quiz-factory'
+import {
+  seedIndexedDBStore,
+  seedQuizAttempts,
+} from '../support/helpers/seed-helpers'
 
 // ---------------------------------------------------------------------------
 // Test data
@@ -57,48 +61,6 @@ const attempt3 = makeAttempt({
 // Helpers
 // ---------------------------------------------------------------------------
 
-async function seedIdbStore(
-  page: import('@playwright/test').Page,
-  storeName: string,
-  data: unknown[]
-) {
-  await page.evaluate(
-    async ({ storeName, data, maxRetries, retryDelay }) => {
-      for (let attempt = 0; attempt < maxRetries; attempt++) {
-        const result = await new Promise<'ok' | 'store-missing'>((resolve, reject) => {
-          const request = indexedDB.open('ElearningDB')
-          request.onsuccess = () => {
-            const db = request.result
-            if (!db.objectStoreNames.contains(storeName)) {
-              db.close()
-              resolve('store-missing')
-              return
-            }
-            const tx = db.transaction(storeName, 'readwrite')
-            const store = tx.objectStore(storeName)
-            for (const item of data) {
-              store.put(item)
-            }
-            tx.oncomplete = () => {
-              db.close()
-              resolve('ok')
-            }
-            tx.onerror = () => {
-              db.close()
-              reject(tx.error)
-            }
-          }
-          request.onerror = () => reject(request.error)
-        })
-        if (result === 'ok') return
-        await new Promise(r => setTimeout(r, retryDelay))
-      }
-      throw new Error(`Store "${storeName}" not found after retries`)
-    },
-    { storeName, data, maxRetries: 10, retryDelay: 200 }
-  )
-}
-
 async function navigateToResults(page: import('@playwright/test').Page) {
   // Prevent sidebar overlay on tablet
   await page.addInitScript(() => {
@@ -108,11 +70,9 @@ async function navigateToResults(page: import('@playwright/test').Page) {
   // Navigate to app first so Dexie creates the DB
   await page.goto('/', { waitUntil: 'domcontentloaded' })
 
-  // Seed quiz into IndexedDB
-  await seedIdbStore(page, 'quizzes', [quiz])
-
-  // Seed all three attempts into IndexedDB
-  await seedIdbStore(page, 'quizAttempts', [attempt1, attempt2, attempt3])
+  // Seed quiz and attempts using shared helpers (retry-safe, schema-aware)
+  await seedIndexedDBStore(page, 'ElearningDB', 'quizzes', [quiz])
+  await seedQuizAttempts(page, [attempt1, attempt2, attempt3])
 
   // Seed Zustand persisted state (currentQuiz required so results page doesn't redirect)
   await page.evaluate(
