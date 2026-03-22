@@ -3,6 +3,13 @@ dist/
 .DS_Store
 .env
 *.local
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# BMad generated outputs
+_bmad-output/
 *.log
 .vite/
 

@@ -153,6 +153,26 @@ describe('QuizResults — improvement summary', () => {
     })
   })
 
+  it('renders the AttemptHistory trigger when attempts exist', async () => {
+    useQuizStore.setState({
+      currentQuiz: testQuiz,
+      attempts: [makeAttemptWith(80, 'a1'), makeAttemptWith(90, 'a2')],
+      isLoading: false,
+      error: null,
+    })
+
+    const { QuizResults } = await import('../QuizResults')
+    render(
+      <MemoryRouter initialEntries={['/courses/c1/lessons/l1/quiz/results']}>
+        <QuizResults />
+      </MemoryRouter>
+    )
+
+    await vi.waitFor(() => {
+      expect(screen.getByRole('button', { name: /view attempt history/i })).toBeInTheDocument()
+    })
+  })
+
   it('does not show improvement when only 1 attempt exists', async () => {
     useQuizStore.setState({
       currentQuiz: testQuiz,
@@ -172,9 +192,10 @@ describe('QuizResults — improvement summary', () => {
   })
 
   it('shows positive improvement delta when current > previous best', async () => {
+    // Most-recent-first: a2 (85%) is current, a1 (60%) is previous
     useQuizStore.setState({
       currentQuiz: testQuiz,
-      attempts: [makeAttemptWith(60, 'a1'), makeAttemptWith(85, 'a2')],
+      attempts: [makeAttemptWith(85, 'a2'), makeAttemptWith(60, 'a1')],
       isLoading: false,
       error: null,
     })
@@ -212,9 +233,10 @@ describe('QuizResults — improvement summary', () => {
   })
 
   it('shows previous best only (no negative delta) when current < previous best', async () => {
+    // Most-recent-first: a2 (70%) is current, a1 (90%) is previous best
     useQuizStore.setState({
       currentQuiz: testQuiz,
-      attempts: [makeAttemptWith(90, 'a1'), makeAttemptWith(70, 'a2')],
+      attempts: [makeAttemptWith(70, 'a2'), makeAttemptWith(90, 'a1')],
       isLoading: false,
       error: null,
     })
@@ -236,13 +258,14 @@ describe('QuizResults — improvement summary', () => {
   })
 
   it('uses max of all previous attempts (not just the last one)', async () => {
+    // Most-recent-first: a4 (95%) is current; a3, a2, a1 are previous
     useQuizStore.setState({
       currentQuiz: testQuiz,
       attempts: [
-        makeAttemptWith(50, 'a1'),
+        makeAttemptWith(95, 'a4'), // current (most recent)
+        makeAttemptWith(70, 'a3'), // previous
         makeAttemptWith(90, 'a2'), // previous best
-        makeAttemptWith(70, 'a3'), // most recent previous
-        makeAttemptWith(95, 'a4'), // current (latest)
+        makeAttemptWith(50, 'a1'), // oldest
       ],
       isLoading: false,
       error: null,

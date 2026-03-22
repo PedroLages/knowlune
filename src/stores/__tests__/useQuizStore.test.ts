@@ -591,6 +591,59 @@ describe('loadAttempts', () => {
     expect(attempts.map(a => a.id)).toContain('a1')
     expect(attempts.map(a => a.id)).toContain('a2')
   })
+
+  it('returns attempts sorted most-recent-first (descending completedAt)', async () => {
+    const quizId = 'quiz-order'
+    await db.quizAttempts.bulkAdd([
+      {
+        id: 'old',
+        quizId,
+        answers: [],
+        score: 1,
+        percentage: 100,
+        passed: true,
+        timeSpent: 10000,
+        completedAt: '2025-01-10T08:00:00.000Z',
+        startedAt: '2025-01-10T07:55:00.000Z',
+        timerAccommodation: 'standard' as const,
+      },
+      {
+        id: 'recent',
+        quizId,
+        answers: [],
+        score: 0,
+        percentage: 0,
+        passed: false,
+        timeSpent: 5000,
+        completedAt: '2025-01-20T12:00:00.000Z',
+        startedAt: '2025-01-20T11:55:00.000Z',
+        timerAccommodation: 'standard' as const,
+      },
+      {
+        id: 'middle',
+        quizId,
+        answers: [],
+        score: 1,
+        percentage: 50,
+        passed: false,
+        timeSpent: 7000,
+        completedAt: '2025-01-15T09:00:00.000Z',
+        startedAt: '2025-01-15T08:55:00.000Z',
+        timerAccommodation: 'standard' as const,
+      },
+    ])
+
+    await act(async () => {
+      await useQuizStore.getState().loadAttempts(quizId)
+    })
+
+    const attempts = useQuizStore.getState().attempts
+    expect(attempts).toHaveLength(3)
+    // Most recent first
+    expect(attempts[0].id).toBe('recent')
+    expect(attempts[1].id).toBe('middle')
+    expect(attempts[2].id).toBe('old')
+  })
 })
 
 // ---------------------------------------------------------------------------

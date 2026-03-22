@@ -165,7 +165,7 @@ export const useQuizStore = create<QuizState>()(
           }
 
           set({
-            attempts: [...get().attempts, attempt],
+            attempts: [attempt, ...get().attempts],
             currentProgress: null,
             isLoading: false,
           })
@@ -198,6 +198,7 @@ export const useQuizStore = create<QuizState>()(
             .where('quizId')
             .equals(quizId)
             .sortBy('completedAt')
+          attempts.reverse() // Most recent first
           set({ attempts })
         } catch (err) {
           console.error('[useQuizStore] loadAttempts failed:', err)
