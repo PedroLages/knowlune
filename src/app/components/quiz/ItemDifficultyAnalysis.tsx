@@ -51,11 +51,7 @@ export function ItemDifficultyAnalysis({ quiz, attempts }: ItemDifficultyAnalysi
   const items = calculateItemDifficulty(quiz, attempts)
 
   if (items.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        Not enough data to analyze difficulty.
-      </p>
-    )
+    return <p className="text-sm text-muted-foreground">Not enough data to analyze difficulty.</p>
   }
 
   const suggestions = buildSuggestions(items)
@@ -68,20 +64,11 @@ export function ItemDifficultyAnalysis({ quiz, attempts }: ItemDifficultyAnalysi
       <CardContent>
         <ul className="space-y-2" aria-label="Questions ranked by difficulty">
           {items.map(item => (
-            <li
-              key={item.questionId}
-              className="flex justify-between items-center gap-2"
-            >
-              <span
-                className="text-sm truncate flex-1"
-                title={item.questionText}
-              >
+            <li key={item.questionId} className="flex justify-between items-center gap-2">
+              <span className="text-sm truncate flex-1" title={item.questionText}>
                 {item.questionText}
               </span>
-              <Badge
-                variant="outline"
-                className={getDifficultyBadgeClass(item.difficulty)}
-              >
+              <Badge variant="outline" className={getDifficultyBadgeClass(item.difficulty)}>
                 {item.difficulty} ({Math.round(item.pValue * 100)}%)
               </Badge>
             </li>
