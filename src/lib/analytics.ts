@@ -182,3 +182,33 @@ export function calculateImprovement(attempts: QuizAttempt[]): ImprovementData {
     isNewBest,
   }
 }
+
+// ---------------------------------------------------------------------------
+// Normalized Gain — Hake's Formula (E16-S04)
+// ---------------------------------------------------------------------------
+
+/**
+ * Calculate normalized gain (Hake's formula) across quiz attempts.
+ *
+ * Formula: g = (post% - pre%) / (100 - pre%)
+ *
+ * - pre%: percentage from the chronologically first attempt
+ * - post%: percentage from the chronologically last attempt
+ * - Returns null when < 2 attempts or pre% = 100 (ceiling effect / division by zero)
+ *
+ * Reference: Hake, R.R. (1998). "Interactive-engagement versus traditional methods"
+ */
+export function calculateNormalizedGain(attempts: QuizAttempt[]): number | null {
+  if (attempts.length < 2) return null
+
+  const sorted = [...attempts].sort(
+    (a, b) => new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime()
+  )
+
+  const pre = sorted[0].percentage
+  const post = sorted[sorted.length - 1].percentage
+
+  if (pre >= 100) return null
+
+  return (post - pre) / (100 - pre)
+}

@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { analyzeTopicPerformance, calculateImprovement } from '@/lib/analytics'
+import {
+  analyzeTopicPerformance,
+  calculateImprovement,
+  calculateNormalizedGain,
+} from '@/lib/analytics'
 import {
   makeQuestion,
   makeAttempt,
@@ -367,5 +371,57 @@ describe('calculateImprovement', () => {
     expect(result.isNewBest).toBe(false)
     expect(result.bestScore).toBe(80)
     expect(result.currentScore).toBe(65)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// calculateNormalizedGain (Hake's formula)
+// ---------------------------------------------------------------------------
+
+describe('calculateNormalizedGain', () => {
+  it('returns null for empty attempts', () => {
+    expect(calculateNormalizedGain([])).toBeNull()
+  })
+
+  it('returns null for a single attempt', () => {
+    const a1 = makeAttempt({ percentage: 70, completedAt: '2026-01-01T00:00:00Z' })
+    expect(calculateNormalizedGain([a1])).toBeNull()
+  })
+
+  it('calculates gain correctly: 40→70 = 0.50', () => {
+    const a1 = makeAttempt({ percentage: 40, completedAt: '2026-01-01T00:00:00Z' })
+    const a2 = makeAttempt({ percentage: 70, completedAt: '2026-01-02T00:00:00Z' })
+    expect(calculateNormalizedGain([a1, a2])).toBeCloseTo(0.5, 2)
+  })
+
+  it('calculates gain correctly: 60→90 = 0.75', () => {
+    const a1 = makeAttempt({ percentage: 60, completedAt: '2026-01-01T00:00:00Z' })
+    const a2 = makeAttempt({ percentage: 90, completedAt: '2026-01-02T00:00:00Z' })
+    expect(calculateNormalizedGain([a1, a2])).toBeCloseTo(0.75, 2)
+  })
+
+  it('returns 0 when no improvement (60→60)', () => {
+    const a1 = makeAttempt({ percentage: 60, completedAt: '2026-01-01T00:00:00Z' })
+    const a2 = makeAttempt({ percentage: 60, completedAt: '2026-01-02T00:00:00Z' })
+    expect(calculateNormalizedGain([a1, a2])).toBe(0)
+  })
+
+  it('returns null for ceiling effect (pre = 100%)', () => {
+    const a1 = makeAttempt({ percentage: 100, completedAt: '2026-01-01T00:00:00Z' })
+    const a2 = makeAttempt({ percentage: 100, completedAt: '2026-01-02T00:00:00Z' })
+    expect(calculateNormalizedGain([a1, a2])).toBeNull()
+  })
+
+  it('handles negative gain (regression): 80→60 = -1.0', () => {
+    const a1 = makeAttempt({ percentage: 80, completedAt: '2026-01-01T00:00:00Z' })
+    const a2 = makeAttempt({ percentage: 60, completedAt: '2026-01-02T00:00:00Z' })
+    expect(calculateNormalizedGain([a1, a2])).toBeCloseTo(-1.0, 2)
+  })
+
+  it('uses first and last chronologically (ignores middle)', () => {
+    const a1 = makeAttempt({ percentage: 40, completedAt: '2026-01-01T00:00:00Z' })
+    const a2 = makeAttempt({ percentage: 50, completedAt: '2026-01-02T00:00:00Z' })
+    const a3 = makeAttempt({ percentage: 70, completedAt: '2026-01-03T00:00:00Z' })
+    expect(calculateNormalizedGain([a1, a2, a3])).toBeCloseTo(0.5, 2)
   })
 })
