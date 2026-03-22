@@ -5,9 +5,11 @@
  * - AC1: Chart appears when 2+ attempts exist
  * - AC2: Passing score reference line is labeled correctly
  * - AC3: Chart is hidden with only 1 attempt
+ * Note: AC4 (responsive height) and AC5 (no animation) are covered in unit tests.
  */
 import { test, expect } from '../support/fixtures'
 import { makeQuiz, makeQuestion, makeAttempt } from '../support/fixtures/factories/quiz-factory'
+import { seedQuizzes, seedQuizAttempts } from '../support/helpers/indexeddb-seed'
 
 // ---------------------------------------------------------------------------
 // Test data
@@ -60,43 +62,6 @@ const attempt2 = makeAttempt({
 // Helpers
 // ---------------------------------------------------------------------------
 
-async function seedData(
-  page: import('@playwright/test').Page,
-  quizzes: unknown[],
-  attempts: unknown[]
-) {
-  await page.evaluate(
-    async ({ quizData, attemptData, maxRetries, retryDelay }) => {
-      for (let attempt = 0; attempt < maxRetries; attempt++) {
-        const result = await new Promise<'ok' | 'store-missing'>((resolve, reject) => {
-          const request = indexedDB.open('ElearningDB')
-          request.onsuccess = () => {
-            const db = request.result
-            if (
-              !db.objectStoreNames.contains('quizzes') ||
-              !db.objectStoreNames.contains('quizAttempts')
-            ) {
-              db.close()
-              resolve('store-missing')
-              return
-            }
-            const tx = db.transaction(['quizzes', 'quizAttempts'], 'readwrite')
-            for (const item of quizData) tx.objectStore('quizzes').put(item)
-            for (const item of attemptData) tx.objectStore('quizAttempts').put(item)
-            tx.oncomplete = () => { db.close(); resolve('ok') }
-            tx.onerror = () => { db.close(); reject(tx.error) }
-          }
-          request.onerror = () => reject(request.error)
-        })
-        if (result === 'ok') return
-        await new Promise(r => setTimeout(r, retryDelay))
-      }
-      throw new Error('Required stores not found after retries')
-    },
-    { quizData: quizzes, attemptData: attempts, maxRetries: 10, retryDelay: 200 }
-  )
-}
-
 async function navigateToResults(
   page: import('@playwright/test').Page,
   attemptsForStore: unknown[]
@@ -105,7 +70,8 @@ async function navigateToResults(
     localStorage.setItem('knowlune-sidebar-v1', 'false')
   })
   await page.goto('/', { waitUntil: 'domcontentloaded' })
-  await seedData(page, [quiz], attemptsForStore)
+  await seedQuizzes(page, [quiz] as Record<string, unknown>[])
+  await seedQuizAttempts(page, attemptsForStore as Record<string, unknown>[])
   // Inject Zustand quiz store state so QuizResults doesn't redirect.
   // Key must match the `name` in useQuizStore's persist({ name: 'levelup-quiz-store' })
   await page.evaluate(
@@ -149,7 +115,7 @@ test.describe('E16-S05: Score Trajectory Chart', () => {
 
   test('AC3: chart is hidden with only 1 attempt', async ({ page }) => {
     await navigateToResults(page, [attempt2])
-    // Chart heading should NOT be visible with only 1 attempt
+    // Chart heading should NOT be visible with only 1 attempt (component returns null)
     await expect(page.getByText('Score Trajectory')).not.toBeVisible()
   })
 })
