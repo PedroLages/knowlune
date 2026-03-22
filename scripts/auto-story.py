@@ -489,6 +489,8 @@ Read the review reports you just generated at docs/reviews/code/ and docs/review
 
 Fix ALL [Blocker] findings — these are mandatory.
 Fix ALL [High] findings — these should be fixed.
+Fix ALL [Medium] findings — these improve quality.
+Fix ALL [Nit] findings — these polish the code.
 
 For each fix:
 1. Open the file at the exact line referenced
@@ -505,9 +507,10 @@ RE_REVIEW_PROMPT = """
 Fixes have been applied for story {story_id}. Re-validate:
 
 1. Re-run pre-checks: build, lint, typecheck, format, unit tests, e2e tests
-2. For each previously-reported [Blocker] and [High] finding, verify the fix at the exact file:line
+2. For each previously-reported finding ([Blocker], [High], [Medium], [Nit]), verify the fix at the exact file:line
 3. Do NOT re-run the full code-review or code-review-testing agents (already completed)
 4. Check if any fix introduced new issues
+5. Medium and Nit fixes are expected — verify they were applied correctly
 
 Output exactly one of:
 - VERDICT: PASS — all blockers resolved, pre-checks pass
