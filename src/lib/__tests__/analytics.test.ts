@@ -276,12 +276,11 @@ describe('analyzeTopicPerformance', () => {
 // calculateCompletionRate
 // ---------------------------------------------------------------------------
 
-beforeEach(async () => {
-  await db.quizAttempts.clear()
-  localStorage.clear()
-})
-
 describe('calculateCompletionRate', () => {
+  beforeEach(async () => {
+    await db.quizAttempts.clear()
+    localStorage.clear()
+  })
   it('returns 0% with 0 started when no data', async () => {
     const result = await calculateCompletionRate()
     expect(result).toEqual({ completionRate: 0, completedCount: 0, startedCount: 0 })
@@ -334,17 +333,19 @@ describe('calculateCompletionRate', () => {
     expect(result.completionRate).toBe(0)
   })
 
-  it('uses inProgressQuizIds array if present in localStorage', async () => {
+  it('does not double-count a quiz that is both completed and in-progress', async () => {
+    // User completed q1, then started it again — q1 appears in both DB and currentProgress
     await db.quizAttempts.add(makeAttempt({ quizId: 'q1' }))
     localStorage.setItem(
       'levelup-quiz-store',
       JSON.stringify({
-        state: { inProgressQuizIds: ['q2', 'q3'], currentProgress: null },
+        state: { currentProgress: { quizId: 'q1', currentQuestionIndex: 2 } },
       })
     )
     const result = await calculateCompletionRate()
+    // q1 is completed → startedCount should be 1, not 2
     expect(result.completedCount).toBe(1)
-    expect(result.startedCount).toBe(3)
-    expect(Math.round(result.completionRate)).toBe(33)
+    expect(result.startedCount).toBe(1)
+    expect(result.completionRate).toBe(100)
   })
 })
