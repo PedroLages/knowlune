@@ -99,7 +99,9 @@ export function QuestionBreakdown({ answers, questions }: QuestionBreakdownProps
                     'flex w-full items-center gap-3 rounded-xl px-4 py-2 min-h-[44px] text-left',
                     hasDetails && 'cursor-pointer hover:bg-accent/50 transition-colors'
                   )}
-                  onClick={() => hasDetails && setExpandedQuestion(isExpanded ? null : row.question.id)}
+                  onClick={() =>
+                    hasDetails && setExpandedQuestion(isExpanded ? null : row.question.id)
+                  }
                   aria-expanded={hasDetails ? isExpanded : undefined}
                   disabled={!hasDetails}
                 >
@@ -143,7 +145,11 @@ export function QuestionBreakdown({ answers, questions }: QuestionBreakdownProps
                     aria-live="polite"
                     className={cn(
                       'px-4 pb-3 pt-1 ml-8 border-l-2',
-                      unanswered ? 'border-l-muted' : row.answer.isCorrect ? 'border-l-success' : 'border-l-warning'
+                      unanswered
+                        ? 'border-l-muted'
+                        : row.answer.isCorrect
+                          ? 'border-l-success'
+                          : 'border-l-warning'
                     )}
                   >
                     {unanswered && (
@@ -153,7 +159,8 @@ export function QuestionBreakdown({ answers, questions }: QuestionBreakdownProps
                     )}
                     {(unanswered || !row.answer.isCorrect) && row.question.correctAnswer && (
                       <p className="text-sm text-foreground mb-2">
-                        <strong>Correct answer:</strong> {formatCorrectAnswer(row.question.correctAnswer)}
+                        <strong>Correct answer:</strong>{' '}
+                        {formatCorrectAnswer(row.question.correctAnswer)}
                       </p>
                     )}
                     {row.question.explanation && (

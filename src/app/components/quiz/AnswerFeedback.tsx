@@ -84,7 +84,12 @@ export function AnswerFeedback({ question, userAnswer, isTimerExpired }: AnswerF
   let selectedIncorrectly: string[] = []
   let missedCorrect: string[] = []
 
-  if (state === 'partial' && question.type === 'multiple-select' && Array.isArray(question.correctAnswer) && Array.isArray(userAnswer)) {
+  if (
+    state === 'partial' &&
+    question.type === 'multiple-select' &&
+    Array.isArray(question.correctAnswer) &&
+    Array.isArray(userAnswer)
+  ) {
     const correctSet = new Set(question.correctAnswer)
     const userSet = new Set(userAnswer)
     totalCorrect = correctSet.size
@@ -107,7 +112,10 @@ export function AnswerFeedback({ question, userAnswer, isTimerExpired }: AnswerF
       )}
     >
       <div className="flex items-start gap-3">
-        <Icon className={cn('h-5 w-5 shrink-0 sm:h-6 sm:w-6', config.iconColor)} aria-hidden="true" />
+        <Icon
+          className={cn('h-5 w-5 shrink-0 sm:h-6 sm:w-6', config.iconColor)}
+          aria-hidden="true"
+        />
         <div className="flex-1 min-w-0">
           <h4 className="font-semibold text-lg text-foreground">
             {state === 'partial' ? partialTitle : config.title}
@@ -154,7 +162,8 @@ export function AnswerFeedback({ question, userAnswer, isTimerExpired }: AnswerF
           {/* Points earned (when less than possible) */}
           {pointsEarned < question.points && state !== 'time-expired' && (
             <p className="mt-2 text-sm text-muted-foreground">
-              You earned {pointsEarned} of {question.points} {question.points === 1 ? 'point' : 'points'}.
+              You earned {pointsEarned} of {question.points}{' '}
+              {question.points === 1 ? 'point' : 'points'}.
             </p>
           )}
         </div>

@@ -165,9 +165,7 @@ test.describe('AC2: Incorrect answer feedback', () => {
 // AC3: Partial credit (Multiple Select) → points earned display
 // ---------------------------------------------------------------------------
 test.describe('AC3: Partial credit feedback', () => {
-  test('shows how many correct and per-option feedback for multiple-select', async ({
-    page,
-  }) => {
+  test('shows how many correct and per-option feedback for multiple-select', async ({ page }) => {
     await navigateToQuiz(page, feedbackQuiz)
     await startQuiz(page)
 
@@ -224,9 +222,7 @@ test.describe('AC4: Feedback navigation behavior', () => {
 // AC5: Timer expired → unanswered questions show feedback
 // ---------------------------------------------------------------------------
 test.describe('AC5: Timer-expired feedback', () => {
-  test('unanswered questions show correct answer and "not answered in time"', async ({
-    page,
-  }) => {
+  test('unanswered questions show correct answer and "not answered in time"', async ({ page }) => {
     await navigateToQuiz(page, timedQuiz)
 
     // Save real Date.now before manipulating

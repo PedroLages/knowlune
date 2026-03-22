@@ -449,13 +449,11 @@ export function Quiz() {
               mode="active"
             />
             <QuestionHint hint={currentQuestion.hint} />
-            {currentAnswer !== undefined && currentAnswer !== '' &&
+            {currentAnswer !== undefined &&
+              currentAnswer !== '' &&
               !(Array.isArray(currentAnswer) && currentAnswer.length === 0) && (
-              <AnswerFeedback
-                question={currentQuestion}
-                userAnswer={currentAnswer}
-              />
-            )}
+                <AnswerFeedback question={currentQuestion} userAnswer={currentAnswer} />
+              )}
           </>
         ) : (
           <div className="mt-6 rounded-xl border border-border p-6 text-center text-muted-foreground text-sm">
