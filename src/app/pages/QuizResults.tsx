@@ -16,6 +16,7 @@ import { QuestionBreakdown } from '@/app/components/quiz/QuestionBreakdown'
 import { AreasForGrowth } from '@/app/components/quiz/AreasForGrowth'
 import { PerformanceInsights } from '@/app/components/quiz/PerformanceInsights'
 import { AttemptHistory } from '@/app/components/quiz/AttemptHistory'
+import { ItemDifficultyAnalysis } from '@/app/components/quiz/ItemDifficultyAnalysis'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
 
@@ -160,6 +161,9 @@ export function QuizResults() {
 
         {/* Score trajectory chart — only renders with 2+ attempts */}
         <ScoreTrajectoryChart attempts={trajectoryData} passingScore={currentQuiz.passingScore} />
+
+        {/* Item difficulty analysis — shows when at least 1 attempt has been recorded */}
+        <ItemDifficultyAnalysis quiz={currentQuiz} attempts={attempts} />
 
         <QuestionBreakdown answers={lastAttempt.answers} questions={currentQuiz.questions} />
 
