@@ -4,9 +4,9 @@ story_name: "Remove Hardcoded Branding from Courses Page"
 status: in-progress
 started: 2026-03-22
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-22
-review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -111,15 +111,36 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+- **All 4 ACs pass** — no blockers, no high-priority issues
+- AC1: Header reads "All Courses / 8 courses" — no hardcoded branding
+- AC2: EmptyState renders with BookOpen icon, correct title/description, Import Course CTA
+- AC3: Zero hardcoded colors in Courses.tsx and EmptyState.tsx
+- AC4: Desktop 5 cols, Tablet 3 cols, Mobile 1 col — no overflow
+- Accessibility: contrast ratios well above 4.5:1, skip-to-content link, prefers-reduced-motion honored
+- **M1**: EmptyState action button missing `variant="brand"` (visual inconsistency with header button)
+- **M2** (pre-existing): Search input height 36px, below 44px touch target on mobile
+- Report: `docs/reviews/design/design-review-2026-03-22-E23-S01.md`
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+- **0 blockers** — 2 HIGH findings both fixed in commit `1f4fb505`
+- [FIXED] HybridCourses.tsx:42 — `text-neutral-500` → `text-muted-foreground`
+- [FIXED] Courses.tsx:249 — `w-5 h-5` → `size-5` on Search icon
+- [FIXED] Courses.tsx:211 — singular/plural "1 courses" → "1 course" (edge case review)
+- M: `addInitScript` IDB monkey-patch fragility (documented in lessons learned)
+- M: Duplicate `allCourses.length + importedCourses.length` expression
+- M: 10s timeout on empty state assertion
+- Report: `docs/reviews/code/code-review-2026-03-22-E23-S01.md`
+- Test coverage: 4/4 ACs covered — `docs/reviews/code/code-review-testing-2026-03-22-E23-S01.md`
+- Edge cases: 8 findings (0 high, 3 medium) — `docs/reviews/code/edge-case-review-2026-03-22-E23-S01.md`
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+- HIGH: `transition-all` on Button — pre-existing pattern, not introduced by E23-S01
+- M: Placeholder uses `...` instead of `…` (ellipsis character)
+- M: Search input missing `name` and `autocomplete="off"`
+- M: Filter/search state not reflected in URL params (broader architectural concern)
+- Report: `docs/reviews/design/web-design-guidelines-2026-03-22-E23-S01.md`
 
 ## Challenges and Lessons Learned
 
