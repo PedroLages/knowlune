@@ -89,9 +89,9 @@ describe('MyClass page', () => {
     expect(container).toBeTruthy()
   })
 
-  it('displays the page heading "My Progress"', () => {
+  it('displays the page heading "My Courses"', () => {
     renderMyClass()
-    expect(screen.getByText('My Progress')).toBeInTheDocument()
+    expect(screen.getByText('My Courses')).toBeInTheDocument()
   })
 
   it('renders tab triggers for status, all, category, and difficulty views', () => {

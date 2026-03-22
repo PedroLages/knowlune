@@ -32,10 +32,10 @@ test.describe('App Navigation', () => {
     await expect(page.getByRole('heading', { name: 'All Courses', level: 1 })).toBeVisible()
   })
 
-  test('should navigate to My Class page', async ({ page }) => {
+  test('should navigate to My Courses page', async ({ page }) => {
     await goToMyClass(page)
 
-    await expect(page.getByRole('heading', { name: 'My Progress', level: 1 })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'My Courses', level: 1 })).toBeVisible()
   })
 
   test('should navigate to Reports page', async ({ page }) => {

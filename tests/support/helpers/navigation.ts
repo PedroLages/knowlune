@@ -37,12 +37,12 @@ export async function goToCourses(page: Page): Promise<void> {
   })
 }
 
-/** Navigate to the My Class page. */
+/** Navigate to the My Courses page. */
 export async function goToMyClass(page: Page): Promise<void> {
   await navigateAndWait(page, '/my-class')
   // Wait for page heading to confirm render
   await page
-    .waitForSelector('h1:has-text("My Class")', { state: 'visible', timeout: 10000 })
+    .waitForSelector('h1:has-text("My Courses")', { state: 'visible', timeout: 10000 })
     .catch(() => {})
 }
 
