@@ -25,6 +25,9 @@ import { trackAIUsage } from '@/lib/aiEventTracking'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import type { ImportedCourse } from '@/data/types'
 
+/** Local proxy endpoint for non-streaming completions */
+const PROXY_GENERATE_URL = '/api/ai/generate'
+
 /** Auto-analysis status for a course */
 export type AutoAnalysisStatus = 'analyzing' | 'complete' | 'error' | null
 
@@ -66,19 +69,29 @@ async function runAutoAnalysis(course: ImportedCourse): Promise<void> {
     const courseContext = `Course: "${course.name}" with ${course.videoCount} videos and ${course.pdfCount} PDFs`
     const sanitized = sanitizeAIRequestPayload(courseContext)
 
-    const response = await fetch(getEndpoint(config.provider, apiKey), {
+    const prompt = `Extract 3-5 topic tags for this course. Return ONLY a JSON array of lowercase strings, no other text.\n\n${sanitized.content}`
+
+    const response = await fetch(PROXY_GENERATE_URL, {
       method: 'POST',
-      headers: getHeaders(config.provider, apiKey),
-      body: JSON.stringify(buildTagExtractionPayload(config.provider, sanitized.content)),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        provider: config.provider,
+        apiKey,
+        messages: [{ role: 'user', content: prompt }],
+        maxTokens: 100,
+      }),
       signal: controller.signal,
     })
 
     if (!response.ok) {
-      throw new Error(`AI provider error: ${response.status}`)
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(
+        `AI provider error (${response.status}): ${(errorData as { error?: string }).error || response.statusText}`
+      )
     }
 
     const data = await response.json()
-    const tags = parseTagsFromResponse(config.provider, data)
+    const tags = parseTagsFromProxyResponse((data as { text: string }).text)
 
     if (tags.length > 0) {
       // Update course tags in Dexie
@@ -131,84 +144,15 @@ async function runAutoAnalysis(course: ImportedCourse): Promise<void> {
   }
 }
 
-// --- Provider-specific helpers ---
+// --- Response parsing ---
 
-function getEndpoint(provider: string, apiKey: string): string {
-  switch (provider) {
-    case 'anthropic':
-      return 'https://api.anthropic.com/v1/messages'
-    case 'groq':
-      return 'https://api.groq.com/openai/v1/chat/completions'
-    case 'glm':
-      return 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
-    case 'gemini':
-      return `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`
-    default:
-      return 'https://api.openai.com/v1/chat/completions'
-  }
-}
-
-function getHeaders(provider: string, apiKey: string): Record<string, string> {
-  if (provider === 'anthropic') {
-    return {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    }
-  }
-  if (provider === 'gemini') {
-    return { 'Content-Type': 'application/json' }
-  }
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${apiKey}`,
-  }
-}
-
-function buildTagExtractionPayload(provider: string, content: string): unknown {
-  const prompt = `Extract 3-5 topic tags for this course. Return ONLY a JSON array of lowercase strings, no other text.\n\n${content}`
-
-  if (provider === 'anthropic') {
-    return {
-      model: 'claude-3-5-haiku-20241022',
-      max_tokens: 100,
-      messages: [{ role: 'user', content: prompt }],
-    }
-  }
-  if (provider === 'gemini') {
-    return {
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { maxOutputTokens: 100 },
-    }
-  }
-  // OpenAI-compatible (openai, groq, glm)
-  return {
-    model:
-      provider === 'groq'
-        ? 'llama-3.3-70b-versatile'
-        : provider === 'glm'
-          ? 'glm-4-flash'
-          : 'gpt-4o-mini',
-    messages: [{ role: 'user', content: prompt }],
-    max_tokens: 100,
-  }
-}
-
-function parseTagsFromResponse(provider: string, data: unknown): string[] {
+/**
+ * Parses topic tags from the proxy's unified text response.
+ * The proxy returns { text: string } regardless of provider.
+ */
+function parseTagsFromProxyResponse(text: string | undefined): string[] {
   try {
-    let text: string
-
-    if (provider === 'anthropic') {
-      text = (data as { content: Array<{ text: string }> }).content?.[0]?.text ?? ''
-    } else if (provider === 'gemini') {
-      text =
-        (data as { candidates: Array<{ content: { parts: Array<{ text: string }> } }> })
-          .candidates?.[0]?.content?.parts?.[0]?.text ?? ''
-    } else {
-      text =
-        (data as { choices: Array<{ message: { content: string } }> }).choices?.[0]?.message
-          ?.content ?? ''
-    }
+    if (!text) return []
 
     // Extract JSON array from response (may be wrapped in markdown code block)
     const match = text.match(/\[[\s\S]*?\]/)
