@@ -5,6 +5,8 @@ import {
   BookOpen,
   GraduationCap,
   BarChart3,
+  ClipboardList,
+  BrainCircuit,
   Settings,
   Info,
   FileText,
@@ -90,7 +92,7 @@ const navigationPages: SearchItem[] = [
     label: 'Quiz Analytics',
     path: '/reports?tab=quizzes',
     group: 'Pages',
-    icon: BarChart3,
+    icon: ClipboardList,
     keywords: ['reports', 'quiz', 'analytics', 'quizzes', 'performance', 'score'],
   },
   {
@@ -98,7 +100,7 @@ const navigationPages: SearchItem[] = [
     label: 'AI Analytics',
     path: '/reports?tab=ai',
     group: 'Pages',
-    icon: BarChart3,
+    icon: BrainCircuit,
     keywords: ['reports', 'ai', 'analytics', 'artificial intelligence', 'insights'],
   },
   {
