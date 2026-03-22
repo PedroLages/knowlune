@@ -4,9 +4,9 @@ story_name: "Provide Immediate Explanatory Feedback per Question"
 status: in-progress
 started: 2026-03-22
 completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+reviewed: in-progress
+review_started: 2026-03-22
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
 burn_in_validated: false
 ---
 
@@ -177,3 +177,5 @@ Before requesting `/review-story`, verify:
 
 - **Dirty .gitignore caused mass file deletions in commits**: The working tree had a modified `.gitignore` that excluded most `docs/` and `.claude/` directories. Running `git add <file> && git commit` still picked up these deletions because git tracks file removals caused by `.gitignore` changes. **Fix**: Always verify commit output (file count) and restore `.gitignore` with `git checkout HEAD -- .gitignore` before committing. **Prevention**: Run `git diff --cached --stat` before every commit to verify only intended files are staged.
 - **QuestionBreakdown interface expansion was backward-compatible**: Adding `userAnswer` and `explanation` to the props interface as required fields broke existing tests but not the component consumer (QuizResults.tsx) because `currentQuiz.questions` and `lastAttempt.answers` already contain these fields at runtime.
+- **Sonner toast `role="status"` collision in E2E tests**: Sonner renders a hidden `<div role="status" class="sr-only">` that collides with AnswerFeedback's `role="status"`. Fix: add `data-testid="answer-feedback"` for test-specific targeting while preserving semantic accessibility attributes.
+- **Playwright `page.clock` for timer tests**: Manual `Date.now` overrides via `page.evaluate` are fragile (timing-sensitive, doesn't affect `setInterval` scheduling). Playwright's `page.clock.install()` + `page.clock.fastForward()` properly controls time including intervals — use this for all timer-dependent E2E tests.
