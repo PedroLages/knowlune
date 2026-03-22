@@ -1,4 +1,4 @@
-import type { Question, Answer } from '@/types/quiz'
+import type { Question, Answer, QuizAttempt } from '@/types/quiz'
 import { isUnanswered } from '@/lib/scoring'
 
 // ---------------------------------------------------------------------------
@@ -102,5 +102,86 @@ export function analyzeTopicPerformance(questions: Question[], answers: Answer[]
     strengths,
     growthAreas,
     hasMultipleTopics,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Score Improvement (E16-S03)
+// ---------------------------------------------------------------------------
+
+export type ImprovementData = {
+  /** Percentage from the chronologically first attempt (null if only 1 attempt) */
+  firstScore: number | null
+  /** Highest percentage across ALL attempts including current */
+  bestScore: number | null
+  /** 1-based attempt number for the overall best score */
+  bestAttemptNumber: number | null
+  /** Percentage from the most recent (current) attempt */
+  currentScore: number
+  /** currentScore − firstScore (null when fewer than 2 attempts) */
+  improvement: number | null
+  /** True only when current beats ALL previous attempts (strict >) */
+  isNewBest: boolean
+}
+
+/**
+ * Calculate score improvement across quiz attempts.
+ *
+ * Attempts are sorted chronologically by completedAt before analysis.
+ * The "current" attempt is always the most recent one.
+ *
+ * - Single attempt: improvement = null, isNewBest = false (nothing to compare)
+ * - Multi-attempt: improvement = currentScore - firstScore; isNewBest = current > max(previous)
+ */
+export function calculateImprovement(attempts: QuizAttempt[]): ImprovementData {
+  if (attempts.length === 0) {
+    return {
+      firstScore: null,
+      bestScore: null,
+      bestAttemptNumber: null,
+      currentScore: 0,
+      improvement: null,
+      isNewBest: false,
+    }
+  }
+
+  const sortedByDate = [...attempts].sort(
+    (a, b) => new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime()
+  )
+
+  const firstAttempt = sortedByDate[0]
+  const currentAttempt = sortedByDate[sortedByDate.length - 1]
+
+  // Previous attempts (all except the most recent) — used to determine isNewBest
+  const previousAttempts = sortedByDate.slice(0, -1)
+  const bestPrevious =
+    previousAttempts.length > 0
+      ? previousAttempts.reduce((best, cur) =>
+          cur.percentage > best.percentage ? cur : best
+        )
+      : null
+
+  // Best across ALL attempts (including current) — for bestAttemptNumber display
+  // Uses the original (unsorted) attempts array index for consistent 1-based numbering
+  let bestIndex = 0
+  for (let i = 1; i < attempts.length; i++) {
+    if (attempts[i].percentage > attempts[bestIndex].percentage) {
+      bestIndex = i
+    }
+  }
+
+  const improvement =
+    sortedByDate.length > 1 ? currentAttempt.percentage - firstAttempt.percentage : null
+
+  const isNewBest =
+    bestPrevious !== null && currentAttempt.percentage > bestPrevious.percentage
+
+  return {
+    firstScore: sortedByDate.length > 1 ? firstAttempt.percentage : null,
+    bestScore: attempts[bestIndex].percentage,
+    bestAttemptNumber: bestIndex + 1,
+    currentScore: currentAttempt.percentage,
+    improvement,
+    isNewBest,
   }
 }

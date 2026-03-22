@@ -10,6 +10,7 @@ import {
   selectIsLoading,
 } from '@/stores/useQuizStore'
 import { ScoreSummary } from '@/app/components/quiz/ScoreSummary'
+import { calculateImprovement } from '@/lib/analytics'
 import { QuestionBreakdown } from '@/app/components/quiz/QuestionBreakdown'
 import { AreasForGrowth } from '@/app/components/quiz/AreasForGrowth'
 import { PerformanceInsights } from '@/app/components/quiz/PerformanceInsights'
@@ -48,15 +49,7 @@ export function QuizResults() {
     [lastAttempt],
   )
 
-  const previousBestPercentage = useMemo(() => {
-    if (attempts.length <= 1) return undefined
-    const validPcts = attempts
-      .slice(0, -1)
-      .map(a => a.percentage)
-      .filter(p => Number.isFinite(p))
-    if (validPcts.length === 0) return undefined
-    return Math.min(100, Math.max(0, Math.max(...validPcts)))
-  }, [attempts])
+  const improvementData = useMemo(() => calculateImprovement(attempts), [attempts])
 
   const incorrectItems = useMemo(() => {
     if (!lastAttempt || !currentQuiz) return []
@@ -131,7 +124,7 @@ export function QuizResults() {
           passed={lastAttempt.passed}
           passingScore={currentQuiz.passingScore}
           timeSpent={lastAttempt.timeSpent}
-          previousBestPercentage={previousBestPercentage}
+          improvementData={improvementData}
         />
 
         <QuestionBreakdown answers={lastAttempt.answers} questions={currentQuiz.questions} />
