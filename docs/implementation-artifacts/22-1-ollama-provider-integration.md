@@ -1,8 +1,8 @@
 ---
 story_id: E22-S01
 story_name: "Ollama Provider Integration"
-status: draft
-started:
+status: in-progress
+started: 2026-03-22
 completed:
 reviewed: false
 review_started:
@@ -104,6 +104,10 @@ Before requesting `/review-story`, verify:
 ## Web Design Guidelines Review
 
 [Populated by /review-story]
+
+## Implementation Plan
+
+See: [docs/implementation-artifacts/plans/e22-s01-ollama-provider-integration.md](plans/e22-s01-ollama-provider-integration.md)
 
 ## Challenges and Lessons Learned
 
