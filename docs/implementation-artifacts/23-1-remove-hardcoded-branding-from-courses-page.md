@@ -6,7 +6,7 @@ started: 2026-03-22
 completed:
 reviewed: in-progress
 review_started: 2026-03-22
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
 burn_in_validated: false
 ---
 
@@ -84,11 +84,16 @@ See [plan](plans/e23-s01-remove-hardcoded-branding.md) for implementation approa
 
 ## Implementation Notes
 
-[Architecture decisions, patterns used, dependencies added]
+- Replaced hardcoded header subtitle `"Chase Hughes — The Operative Kit ({count} courses + {n} imported)"` with dynamic `"{totalCount} courses"` derived from actual data
+- Added global `EmptyState` component (reused from Overview.tsx) when both `allCourses` and `importedCourses` are empty — this takes priority over the per-section imported courses empty state
+- Used existing `EmptyState` component with `BookOpen` icon, matching the established pattern
+- Prototype file `HybridCourses.tsx` also updated to remove hardcoded branding references
 
 ## Testing Notes
 
-[Test strategy, edge cases discovered, coverage notes]
+- Unit tests updated to assert against global empty state ("No courses yet" + test ID) instead of per-section imported courses empty state
+- E2E test AC2 clears IndexedDB via fixture `clearStore()` helper, then blocks re-seeding with `addInitScript` to test true empty state
+- Responsive tests verify no horizontal overflow at 375px, 768px, and 1440px viewports
 
 ## Pre-Review Checklist
 
@@ -118,4 +123,7 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Two-tier empty state design**: The Courses page now has two empty state tiers — a global one (EmptyState component, shown when no courses at all) and a per-section one (inline card, shown when pre-seeded courses exist but no imported courses). The global empty state short-circuits the entire page, so the per-section empty state only renders when `allCourses.length > 0`. Unit tests must account for this hierarchy.
+- **Unit test mock coverage gap**: The existing `Courses.test.tsx` didn't mock `useCourseStore`, so `allCourses` defaulted to `[]`. This meant the test saw the global empty state rather than the imported courses empty state it was asserting against. Fixed by updating assertions to match the actual rendered state.
+- **E2E IndexedDB clearing**: Initially used manual `indexedDB.open()` + transaction clearing, but the test pattern validator flagged this as a MEDIUM anti-pattern. Simplified to use the `indexedDB` fixture's `clearStore()` method which has built-in retry logic and is more reliable.
+- **addInitScript for seed blocking**: To test a truly empty Courses page in E2E, we need to not only clear IDB but also prevent the app from re-seeding on navigation. The `page.addInitScript()` approach intercepts `IDBObjectStore.prototype.add` to silently skip course seeding — a pattern worth reusing for other "empty state" E2E tests.
