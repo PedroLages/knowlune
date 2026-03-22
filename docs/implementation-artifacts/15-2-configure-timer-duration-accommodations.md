@@ -4,9 +4,9 @@ story_name: "Configure Timer Duration and Accommodations"
 status: in-progress
 started: 2026-03-22
 completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+reviewed: true
+review_started: 2026-03-22
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -183,15 +183,29 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+**Reviewed 2026-03-22** — 2 blockers, 1 high, 1 medium.
+- BLOCKER: Accommodations trigger 20px tall — below 44px touch target minimum (QuizStartScreen.tsx:102)
+- BLOCKER: Focus returns to `<body>` after modal close — needs `<DialogTrigger asChild>` or manual ref focus
+- HIGH: `annotation` missing from `useEffect` deps in QuizTimer.tsx:55
+- MEDIUM: Explanation text should precede radio options for context-before-choice accessibility
+See: [design-review-2026-03-22-e15-s02.md](../reviews/design/design-review-2026-03-22-e15-s02.md)
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**Reviewed 2026-03-22** — 0 blockers, 3 high, 4 medium.
+- HIGH: QuizResults retake ignores saved accommodation — violates AC5 persistence
+- HIGH: Multiplier logic duplicated in 3 places — extract shared utility
+- HIGH: Unsafe `as` cast on radio value — use Zod safeParse instead
+- MEDIUM: Badge className duplication — use `cn()` composition
+- MEDIUM: Two empty catch blocks without logging in Quiz.tsx
+See: [code-review-2026-03-22-e15-s02.md](../reviews/code/code-review-2026-03-22-e15-s02.md)
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+**Reviewed 2026-03-22** — PASS with 2 medium, 3 low.
+- MEDIUM: Question count badge uses `text-brand` instead of `text-brand-soft-foreground` on `bg-brand-soft`
+- MEDIUM: `<label>` wrapping Radix `RadioGroupItem` button — verify screen reader association
+See: [web-design-guidelines-2026-03-22-e15-s02.md](../reviews/code/web-design-guidelines-2026-03-22-e15-s02.md)
 
 ## Challenges and Lessons Learned
 
