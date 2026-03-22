@@ -7,6 +7,8 @@ interface QuizTimerProps {
   timeRemaining: number
   /** Total quiz time in seconds (used for threshold calculations) */
   totalTime: number
+  /** Optional label shown after the time (e.g., "Extended Time") */
+  annotation?: string
 }
 
 function formatMinuteAnnouncement(totalSeconds: number): string {
@@ -19,7 +21,7 @@ function formatMinuteAnnouncement(totalSeconds: number): string {
   return `Time remaining: ${minutes} ${minuteLabel}`
 }
 
-export function QuizTimer({ timeRemaining, totalTime }: QuizTimerProps) {
+export function QuizTimer({ timeRemaining, totalTime, annotation }: QuizTimerProps) {
   const isWarning = timeRemaining <= totalTime * 0.25 && timeRemaining > totalTime * 0.1
   const isUrgent = timeRemaining <= totalTime * 0.1
 
@@ -41,7 +43,8 @@ export function QuizTimer({ timeRemaining, totalTime }: QuizTimerProps) {
     // Announce when crossing 25% threshold
     const threshold25 = Math.floor(totalTime * 0.25)
     if (prev > threshold25 && timeRemaining <= threshold25) {
-      setLiveAnnouncement(`Warning: ${formatMinuteAnnouncement(timeRemaining)}`)
+      const suffix = annotation ? ` (${annotation})` : ''
+      setLiveAnnouncement(`Warning: ${formatMinuteAnnouncement(timeRemaining)}${suffix}`)
     }
 
     // Announce when crossing 10% threshold
@@ -56,14 +59,20 @@ export function QuizTimer({ timeRemaining, totalTime }: QuizTimerProps) {
       <div
         role="timer"
         aria-label="Time remaining"
+        data-testid="quiz-timer"
         className={cn(
-          'ml-auto font-mono text-sm sm:text-base font-semibold tabular-nums transition-colors duration-300',
+          'ml-auto flex items-baseline gap-1.5 font-mono text-sm sm:text-base font-semibold tabular-nums transition-colors duration-300',
           isUrgent && 'text-destructive',
           isWarning && 'text-warning',
           !isWarning && !isUrgent && 'text-muted-foreground'
         )}
       >
         {formatTime(timeRemaining)}
+        {annotation && (
+          <span className="text-muted-foreground text-xs font-sans font-normal">
+            ({annotation})
+          </span>
+        )}
       </div>
       {/* Screen-reader-only live region — announces per-minute and at thresholds */}
       <span className="sr-only" aria-live="polite" aria-atomic="true">

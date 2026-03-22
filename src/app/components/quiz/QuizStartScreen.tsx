@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react'
-import type { Quiz, QuizProgress } from '@/types/quiz'
+import { useEffect, useRef, useState } from 'react'
+import { Clock } from 'lucide-react'
+import type { Quiz, QuizProgress, TimerAccommodation } from '@/types/quiz'
 import { Button } from '@/app/components/ui/button'
 import {
   AlertDialog,
@@ -12,6 +13,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/app/components/ui/alert-dialog'
+import { TimerAccommodationsModal } from '@/app/components/quiz/TimerAccommodationsModal'
 
 interface QuizStartScreenProps {
   quiz: Quiz
@@ -19,22 +21,42 @@ interface QuizStartScreenProps {
   savedProgress: QuizProgress | null
   /** Whether the user has completed this quiz at least once before */
   hasCompletedBefore?: boolean
+  /** Currently selected timer accommodation */
+  accommodation: TimerAccommodation
   onStart: () => void
   onResume: () => void
+  onAccommodationChange: (accommodation: TimerAccommodation) => void
+}
+
+/** Format the adjusted time for the time limit badge */
+function formatTimeBadge(baseMinutes: number, accommodation: TimerAccommodation): string {
+  if (accommodation === 'untimed') return 'Untimed'
+  const multiplier = accommodation === '150%' ? 1.5 : accommodation === '200%' ? 2 : 1
+  const adjusted = baseMinutes * multiplier
+  const whole = Math.floor(adjusted)
+  const seconds = Math.round((adjusted - whole) * 60)
+  if (seconds === 0) return `${whole} min`
+  return `${whole} min ${seconds} sec`
 }
 
 export function QuizStartScreen({
   quiz,
   savedProgress,
   hasCompletedBefore,
+  accommodation,
   onStart,
   onResume,
+  onAccommodationChange,
 }: QuizStartScreenProps) {
   const answeredCount = savedProgress ? Object.keys(savedProgress.answers).length : 0
   const hasResume = answeredCount > 0
   const questionCount = quiz.questions.length
   const questionLabel = questionCount === 1 ? 'question' : 'questions'
   const resumeBtnRef = useRef<HTMLButtonElement>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+
+  const hasTimed = quiz.timeLimit != null
+  const isAdjusted = accommodation !== 'standard'
 
   // Deferred focus — gives assistive technology time to announce the page
   // before moving focus to the resume button
@@ -57,13 +79,43 @@ export function QuizStartScreen({
         <span className="bg-brand-soft text-brand rounded-full px-3 py-1 text-sm">
           {questionCount} {questionLabel}
         </span>
-        <span className="bg-muted text-muted-foreground rounded-full px-3 py-1 text-sm">
-          {quiz.timeLimit != null ? `${quiz.timeLimit} min` : 'Untimed'}
+        <span
+          className={
+            isAdjusted
+              ? 'bg-brand-soft text-brand-soft-foreground rounded-full px-3 py-1 text-sm'
+              : 'bg-muted text-muted-foreground rounded-full px-3 py-1 text-sm'
+          }
+        >
+          {hasTimed ? formatTimeBadge(quiz.timeLimit!, accommodation) : 'Untimed'}
         </span>
         <span className="bg-muted text-muted-foreground rounded-full px-3 py-1 text-sm">
           {quiz.passingScore}% to pass
         </span>
       </div>
+
+      {/* Accessibility accommodations link — only for timed quizzes */}
+      {hasTimed && (
+        <Button
+          type="button"
+          variant="link"
+          size="sm"
+          className="mt-3 text-brand-soft-foreground p-0 h-auto"
+          onClick={() => setModalOpen(true)}
+        >
+          <Clock className="size-4 mr-1" aria-hidden="true" />
+          Accessibility Accommodations
+        </Button>
+      )}
+
+      {hasTimed && (
+        <TimerAccommodationsModal
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          baseTimeMinutes={quiz.timeLimit!}
+          value={accommodation}
+          onSave={onAccommodationChange}
+        />
+      )}
 
       {/* Screen reader announcement for saved progress */}
       {hasResume && (
