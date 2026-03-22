@@ -195,11 +195,11 @@ export function Layout() {
 
   // Tablet sidebar sheet state with localStorage persistence
   const [sidebarOpen, setSidebarOpen] = useState(() => {
-    // Migrate from legacy key (one-time)
-    const legacy = localStorage.getItem('knowlune-sidebar-v1')
+    // Migrate from legacy eduvi key (one-time)
+    const legacy = localStorage.getItem('eduvi-sidebar-v1')
     if (legacy !== null) {
       localStorage.setItem('knowlune-sidebar-v1', legacy)
-      localStorage.removeItem('knowlune-sidebar-v1')
+      localStorage.removeItem('eduvi-sidebar-v1')
       return JSON.parse(legacy)
     }
     const saved = localStorage.getItem('knowlune-sidebar-v1')
@@ -208,10 +208,10 @@ export function Layout() {
 
   // Desktop sidebar collapsed state with localStorage persistence
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    const legacy = localStorage.getItem('knowlune-sidebar-collapsed-v1')
+    const legacy = localStorage.getItem('eduvi-sidebar-collapsed-v1')
     if (legacy !== null) {
       localStorage.setItem('knowlune-sidebar-collapsed-v1', legacy)
-      localStorage.removeItem('knowlune-sidebar-collapsed-v1')
+      localStorage.removeItem('eduvi-sidebar-collapsed-v1')
       return JSON.parse(legacy)
     }
     const saved = localStorage.getItem('knowlune-sidebar-collapsed-v1')
