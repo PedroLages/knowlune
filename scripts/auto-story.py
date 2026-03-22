@@ -799,7 +799,13 @@ def _checkout_main_and_pull(force: bool = False) -> None:
         capture_output=True, text=True, cwd=PROJECT_DIR,
     )
     if pull.returncode != 0:
-        log.warning(f"git pull --ff-only failed (main diverged?): {pull.stderr.strip()}")
+        log.warning(f"git pull --ff-only failed, trying rebase: {pull.stderr.strip()}")
+        rebase_pull = subprocess.run(
+            ["git", "pull", "--rebase"],
+            capture_output=True, text=True, cwd=PROJECT_DIR,
+        )
+        if rebase_pull.returncode != 0:
+            log.warning(f"git pull --rebase also failed: {rebase_pull.stderr.strip()}")
 
 
 def merge_epic_prs(
@@ -1754,4 +1760,7 @@ def log_epic_result(result: EpicFinishResult, log_file: Path) -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        log.info("\nInterrupted by user. Use --resume to continue where you left off.")
