@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router'
 import { MoreHorizontal } from 'lucide-react'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/app/components/ui/drawer'
 import { cn } from '@/app/components/ui/utils'
-import { getPrimaryNav, getOverflowNav } from '@/app/config/navigation'
+import { getPrimaryNav, getOverflowNav, getIsActive } from '@/app/config/navigation'
 
 // Get navigation items from shared config
 const primaryNav = getPrimaryNav()
@@ -13,12 +13,10 @@ export function BottomNav() {
   const location = useLocation()
   const [moreOpen, setMoreOpen] = useState(false)
 
-  const isActive = (path: string) => {
-    return path === '/' ? location.pathname === '/' : location.pathname.startsWith(path)
-  }
-
   // Check if any overflow item is active
-  const isMoreActive = overflowNav.some(item => isActive(item.path))
+  const isMoreActive = overflowNav.some(item =>
+    getIsActive(item, location.pathname, location.search)
+  )
 
   return (
     <>
@@ -31,12 +29,13 @@ export function BottomNav() {
           {/* Primary Navigation Items */}
           {primaryNav.map(item => {
             const Icon = item.icon
-            const active = isActive(item.path)
+            const active = getIsActive(item, location.pathname, location.search)
+            const href = item.tab ? `${item.path}?tab=${item.tab}` : item.path
 
             return (
               <Link
-                key={item.path}
-                to={item.path}
+                key={item.tab ? `${item.path}?tab=${item.tab}` : item.path}
+                to={href}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   'flex flex-col items-center justify-center gap-1 flex-1 h-14 transition-colors duration-150',
@@ -76,12 +75,13 @@ export function BottomNav() {
             <ul className="space-y-2">
               {overflowNav.map(item => {
                 const Icon = item.icon
-                const active = isActive(item.path)
+                const active = getIsActive(item, location.pathname, location.search)
+                const href = item.tab ? `${item.path}?tab=${item.tab}` : item.path
 
                 return (
-                  <li key={item.path}>
+                  <li key={item.tab ? `${item.path}?tab=${item.tab}` : item.path}>
                     <Link
-                      to={item.path}
+                      to={href}
                       onClick={() => setMoreOpen(false)}
                       aria-current={active ? 'page' : undefined}
                       className={cn(

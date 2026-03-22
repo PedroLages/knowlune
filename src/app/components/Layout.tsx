@@ -12,7 +12,7 @@ import { BottomNav } from './navigation/BottomNav'
 import { useStudyReminders } from '@/app/hooks/useStudyReminders'
 import { useCourseReminders } from '@/app/hooks/useCourseReminders'
 import { useIsMobile, useIsTablet, useIsDesktop } from '@/app/hooks/useMediaQuery'
-import { Sheet, SheetContent } from './ui/sheet'
+import { Sheet, SheetContent, SheetTitle } from './ui/sheet'
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip'
 import { navigationGroups, settingsItem, getIsActive } from '@/app/config/navigation'
 import type { NavigationItem } from '@/app/config/navigation'
@@ -120,7 +120,7 @@ function SidebarContent({ onNavigate, iconOnly }: { onNavigate?: () => void; ico
               <ul className="space-y-0.5">
                 {group.items.map(item => (
                   <NavLink
-                    key={item.path}
+                    key={item.tab ? `${item.path}?tab=${item.tab}` : item.path}
                     item={item}
                     iconOnly={iconOnly}
                     onNavigate={onNavigate}
@@ -336,6 +336,7 @@ export function Layout() {
       {isTablet && (
         <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
           <SheetContent side="left" className="w-[280px] p-6 flex flex-col" aria-label="Sidebar">
+            <SheetTitle className="sr-only">Navigation</SheetTitle>
             <SidebarContent onNavigate={() => setSidebarOpen(false)} />
           </SheetContent>
         </Sheet>
