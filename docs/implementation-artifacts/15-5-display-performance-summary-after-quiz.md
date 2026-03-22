@@ -6,7 +6,7 @@ started: 2026-03-22
 completed:
 reviewed: in-progress
 review_started: 2026-03-22
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
 burn_in_validated: false
 ---
 
@@ -155,11 +155,17 @@ See [plan](plans/e15-s05-performance-summary.md) for implementation approach.
 
 ## Implementation Notes
 
-[Architecture decisions, patterns used, dependencies added]
+- **Analytics module** (`src/lib/analytics.ts`): Pure function `analyzeTopicPerformance()` with no side effects — takes questions and answers, returns categorized topic performance. Threshold for "strength" is ≥70%, below is "growth area".
+- **Component architecture**: `PerformanceInsights` is a presentational component that receives pre-computed analytics data. Conditional rendering hides topic sections when all questions fall under "General" (no topic tags).
+- **Type extension**: Added optional `topic?: string` field to `Question` type — backward-compatible with existing quiz data.
+- **No new dependencies**: Uses existing lucide-react icons (CheckCircle2, TrendingUp) and design tokens.
 
 ## Testing Notes
 
-[Test strategy, edge cases discovered, coverage notes]
+- **Unit tests** (241 lines): 14 tests covering `analyzeTopicPerformance()` — all topics strong, all growth, mixed, single-topic General fallback, empty answers, partial answers.
+- **Component tests** (142 lines): PerformanceInsights rendering — strengths/growth visibility, conditional hiding for General-only topics, accessibility attributes.
+- **E2E tests** (352 lines): 7 Playwright tests covering all 5 ACs + accessibility. Uses shared `seedQuizzes` helper for IndexedDB seeding.
+- **Edge cases discovered**: Playwright strict mode violations when `getByText(/growth/i)` matched both encouraging message text and heading — fixed with `getByRole('heading', ...)` selectors.
 
 ## Pre-Review Checklist
 
@@ -189,4 +195,7 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-Story setup — lessons learned will be documented during implementation.
+- **Strict mode selector discipline**: `getByText(/growth/i)` matched both the encouraging message ("Review the growth areas below") and the "Growth Opportunities" heading, causing strict mode violations. Lesson: always use `getByRole('heading', ...)` for heading assertions in Playwright tests to avoid ambiguity.
+- **Shared seeding helpers reduce code**: Replacing manual IndexedDB seeding (~35 lines) with `seedQuizzes()` (1 line) removed duplication and satisfied test pattern validation. The shared helper has identical retry logic but is maintained in one place.
+- **Pure analytics functions simplify testing**: Keeping `analyzeTopicPerformance()` as a pure function (no React, no side effects) enabled comprehensive unit testing without component rendering overhead — 14 edge cases tested in isolation.
+- **Conditional component rendering**: The "hide when all General" logic was cleaner to implement at the component level (check `hasTopics` boolean) rather than in the analytics function, keeping the analytics layer data-focused.
