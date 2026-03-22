@@ -8,9 +8,9 @@
  * - AC4: "Untimed" hides timer, tracks time internally
  * - AC5: Accommodation preference persists across retakes
  */
-import { test, expect } from '../support/fixtures'
-import { makeQuiz, makeQuestion } from '../support/fixtures/factories/quiz-factory'
-import { seedIndexedDBStore } from '../support/helpers/indexeddb-seed'
+import { test, expect } from '../../support/fixtures'
+import { makeQuiz, makeQuestion } from '../../support/fixtures/factories/quiz-factory'
+import { seedIndexedDBStore } from '../../support/helpers/indexeddb-seed'
 
 // ---------------------------------------------------------------------------
 // Test data — timed quiz with 2 questions, 15-minute time limit
