@@ -12,7 +12,8 @@ import {
   selectIsLoading,
   selectError,
 } from '@/stores/useQuizStore'
-import { useQuizTimer } from '@/hooks/useQuizTimer'
+import { useQuizTimer, type WarningLevel } from '@/hooks/useQuizTimer'
+import { TimerWarnings } from '@/app/components/quiz/TimerWarnings'
 import { isQuotaExceeded } from '@/lib/quotaResilientStorage'
 import { QuizStartScreen } from '@/app/components/quiz/QuizStartScreen'
 import { QuizHeader } from '@/app/components/quiz/QuizHeader'
@@ -262,7 +263,24 @@ export function Quiz() {
 
   const totalTimeSeconds = currentQuiz?.timeLimit != null ? currentQuiz.timeLimit * 60 : 0
 
-  const timerRemaining = useQuizTimer(timerInitialSecondsRef.current, handleTimerExpiry)
+  // Warning state — updated by useQuizTimer's onWarning callback
+  const [warningState, setWarningState] = useState<{
+    level: WarningLevel
+    remaining: number
+  } | null>(null)
+
+  const handleTimerWarning = useCallback(
+    (level: WarningLevel, remaining: number) => {
+      setWarningState({ level, remaining })
+    },
+    [],
+  )
+
+  const timerRemaining = useQuizTimer(
+    timerInitialSecondsRef.current,
+    handleTimerExpiry,
+    handleTimerWarning,
+  )
 
   // Safety net: sync progress to per-quiz localStorage on tab close/crash.
   // The subscribe listener in useQuizStore fires synchronously on every state change,
@@ -378,6 +396,10 @@ export function Quiz() {
           progress={currentProgress}
           timeRemaining={timerInitialSecondsRef.current > 0 ? timerRemaining : null}
           totalTimeSeconds={totalTimeSeconds > 0 ? totalTimeSeconds : null}
+        />
+        <TimerWarnings
+          warningLevel={warningState?.level ?? null}
+          remainingSeconds={warningState?.remaining ?? 0}
         />
         {currentQuestion && currentQuestionId ? (
           <>
