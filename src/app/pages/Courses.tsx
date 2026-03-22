@@ -32,6 +32,13 @@ const ESTIMATED_MINUTES_PER_LESSON = 15
 
 type SortMode = 'recent' | 'momentum'
 
+const CHIP_CLASS =
+  'h-auto rounded-full! border px-4 py-3 md:py-1.5 text-sm font-medium transition-colors flex-none ' +
+  'data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover ' +
+  'data-[state=on]:border-transparent data-[state=off]:bg-card data-[state=off]:text-muted-foreground ' +
+  'data-[state=off]:hover:bg-accent data-[state=off]:hover:text-foreground data-[state=off]:border-border ' +
+  'cursor-pointer shadow-none'
+
 export function Courses() {
   const allCourses = useCourseStore(s => s.courses)
   const [searchQuery, setSearchQuery] = useState('')
@@ -128,14 +135,14 @@ export function Courses() {
       ignore = true
       window.removeEventListener('study-log-updated', handleStudyLogUpdated)
     }
-  }, [allCourses])
+  }, [allCourses, importedCourses])
 
   const unifiedFilterChips = useMemo(
     () => buildUnifiedFilterChips(allCourses, categoryLabels, importedCourses),
     [allCourses, importedCourses]
   )
 
-  const filtered = (() => {
+  const filtered = useMemo(() => {
     let courses = allCourses
 
     if (selectedFilter) {
@@ -157,7 +164,7 @@ export function Courses() {
     }
 
     return courses
-  })()
+  }, [allCourses, selectedFilter, searchQuery])
 
   const sortedCourses = useMemo(() => {
     if (sortMode !== 'momentum') return filtered
@@ -171,7 +178,7 @@ export function Courses() {
     [importedCourses]
   )
 
-  const filteredImportedCourses = (() => {
+  const filteredImportedCourses = useMemo(() => {
     let courses = importedCourses
 
     if (searchQuery.trim()) {
@@ -194,10 +201,14 @@ export function Courses() {
     }
 
     return courses
-  })()
+  }, [importedCourses, searchQuery, selectedFilter, selectedStatuses])
 
-  const sortedImportedCourses = [...filteredImportedCourses].sort(
-    (a, b) => new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime()
+  const sortedImportedCourses = useMemo(
+    () =>
+      [...filteredImportedCourses].sort(
+        (a, b) => new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime()
+      ),
+    [filteredImportedCourses]
   )
 
   async function handleImportCourse() {
@@ -330,14 +341,14 @@ export function Courses() {
           <div className="flex flex-wrap gap-2 items-center flex-1">
             <ToggleGroup
               type="single"
-              value={selectedFilter}
-              onValueChange={v => setSelectedFilter(v ?? '')}
+              value={selectedFilter || 'all'}
+              onValueChange={v => setSelectedFilter(v === 'all' ? '' : (v ?? ''))}
               aria-label="Filter by category or topic"
               className="flex flex-wrap gap-2"
             >
               <ToggleGroupItem
-                value=""
-                className="h-auto rounded-full! border px-4 py-3 sm:py-1.5 text-sm font-medium transition-colors data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-card data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-accent data-[state=off]:hover:text-foreground data-[state=off]:border-border cursor-pointer shadow-none mr-1"
+                value="all"
+                className={CHIP_CLASS + ' mr-1'}
               >
                 All Courses
               </ToggleGroupItem>
@@ -345,7 +356,7 @@ export function Courses() {
                 <ToggleGroupItem
                   key={chip.value}
                   value={chip.value}
-                  className="h-auto rounded-full! border px-4 py-3 sm:py-1.5 text-sm font-medium transition-colors data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-card data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-accent data-[state=off]:hover:text-foreground data-[state=off]:border-border cursor-pointer shadow-none"
+                  className={CHIP_CLASS}
                 >
                   {chip.label}
                 </ToggleGroupItem>
