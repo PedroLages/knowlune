@@ -1,12 +1,22 @@
 ---
 story_id: E16-S02
 story_name: "Display Score History Across All Attempts"
-status: review
+status: done
 started: 2026-03-22
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-03-22
+reviewed: true
+review_started: 2026-03-22
+review_gates_passed:
+  - build
+  - lint
+  - typecheck
+  - prettier
+  - unit-tests
+  - e2e-smoke
+  - e2e-story
+  - code-review
+  - test-coverage
+  - design-review
 burn_in_validated: false
 ---
 
