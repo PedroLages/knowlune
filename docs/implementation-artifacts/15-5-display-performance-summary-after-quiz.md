@@ -1,0 +1,192 @@
+---
+story_id: E15-S05
+story_name: "Display Performance Summary After Quiz"
+status: in-progress
+started: 2026-03-22
+completed:
+reviewed: false
+review_started:
+review_gates_passed: []
+burn_in_validated: false
+---
+
+# Story 15.5: Display Performance Summary After Quiz
+
+## Story
+
+As a learner,
+I want to see a detailed performance summary after completing a quiz,
+So that I understand my strengths and areas for improvement.
+
+## Acceptance Criteria
+
+**Given** I complete a quiz
+**When** I view the results screen
+**Then** I see my overall score prominently (percentage and points)
+**And** I see a breakdown of questions by correctness: "10 correct, 2 incorrect, 0 skipped"
+**And** I see my strongest topic areas highlighted (e.g., "Arrays & Loops: 100%")
+**And** I see growth opportunity topics highlighted (e.g., "Functions: 50%")
+
+**Given** the performance summary identifies topics
+**When** questions are tagged with topics (e.g., "arrays", "functions", "objects")
+**Then** the summary groups my performance by topic
+**And** shows percentage correct per topic
+**And** ranks topics from strongest to weakest
+
+**Given** questions have no topic tags
+**When** viewing the performance summary
+**Then** all questions are grouped under a "General" topic
+**And** the strengths/growth areas section is hidden (single-topic breakdown is not useful)
+
+**Given** I want to understand my performance
+**When** viewing the summary
+**Then** I see an encouraging message based on my score:
+  - ≥90%: "Excellent work! You've mastered this material."
+  - 70-89%: "Great job! You're on the right track."
+  - 50-69%: "Good effort! Review the growth areas below."
+  - <50%: "Keep practicing! Focus on the topics below."
+
+**Given** the summary displays growth areas
+**When** I see "Growth Opportunities"
+**Then** it lists 1-3 specific topics where I scored <70%
+**And** it suggests actions: "Review questions 3, 7, 11 on Functions"
+
+## Tasks / Subtasks
+
+- [ ] Task 1: Add `topic?: string` field to Question type (coordinate with Epic 12.1)
+- [ ] Task 2: Create `src/lib/analytics.ts` with `analyzeTopicPerformance()` function
+  - [ ] 2.1 Group questions by topic (fallback to "General")
+  - [ ] 2.2 Calculate percentage correct per topic
+  - [ ] 2.3 Categorize into strengths (≥70%) and growth areas (<70%)
+  - [ ] 2.4 Track incorrect question numbers for growth area suggestions
+- [ ] Task 3: Create `src/app/components/quiz/PerformanceInsights.tsx`
+  - [ ] 3.1 Overall score display (percentage and points)
+  - [ ] 3.2 Question correctness breakdown
+  - [ ] 3.3 Encouraging message based on score range
+  - [ ] 3.4 Strengths section with topic list and icons
+  - [ ] 3.5 Growth Opportunities section with question references
+  - [ ] 3.6 Hide strengths/growth sections when all questions are "General" topic
+- [ ] Task 4: Integrate PerformanceInsights into QuizResults page
+- [ ] Task 5: Write unit tests for analyzeTopicPerformance
+- [ ] Task 6: Write E2E tests for performance summary display
+- [ ] Task 7: Accessibility audit (heading hierarchy, list semantics, color not sole indicator)
+
+## Design Guidance
+
+### Layout Strategy
+
+The PerformanceInsights component slots into the existing QuizResults page **between** the `QuestionBreakdown` and `AreasForGrowth` components. It provides a topic-level aggregation view.
+
+**Page flow after integration:**
+1. `ScoreSummary` — score ring, percentage, tier message, encouraging text (already exists)
+2. `QuestionBreakdown` — collapsible per-question detail (already exists)
+3. **`PerformanceInsights`** — NEW: topic-based strengths + growth areas (this story)
+4. `AreasForGrowth` — per-question incorrect items (already exists)
+5. Action buttons (Retake, Review, Back to Lesson)
+
+### Component Structure
+
+```
+<PerformanceInsights>
+  ├── Correctness Summary Bar (e.g., "3 correct · 2 incorrect · 0 skipped")
+  ├── <section> "Your Strengths" (conditional — hidden when single "General" topic)
+  │   └── <ul> topic items with CheckCircle2 icon + percentage
+  └── <section> "Growth Opportunities" (conditional — hidden when single "General" topic)
+      └── <ul> topic items with percentage + "Review questions X, Y" suggestion
+```
+
+### Design Tokens & Styling
+
+| Element | Token | Notes |
+|---------|-------|-------|
+| Strengths heading icon | `text-success` | CheckCircle2 from lucide-react |
+| Strengths topic text | `text-foreground` | Standard text, not colored |
+| Strengths percentage | `text-success` | Green to reinforce positive |
+| Growth heading icon | `text-warning` | AlertTriangle or TrendingUp from lucide |
+| Growth topic text | `text-foreground` | Standard text |
+| Growth percentage | `text-warning` | Amber to signal attention needed |
+| Question references | `text-muted-foreground text-sm` | Subdued helper text |
+| Section container | `bg-muted rounded-xl p-5 sm:p-6` | Matches AreasForGrowth card style |
+| Correctness summary | `text-muted-foreground text-sm` | Inline with dots separator |
+
+### Consistency with Existing Components
+
+Follow the established patterns from sibling quiz result components:
+- **Card style**: `bg-muted rounded-xl p-5 sm:p-6 space-y-4` (from AreasForGrowth)
+- **Heading pattern**: Icon + h2/h3 in `flex items-center gap-2` (from AreasForGrowth)
+- **List items**: `space-y-2` or `space-y-3` with proper list semantics
+- **Touch targets**: `min-h-[44px]` on any interactive elements
+- **Section wrapping**: `<section aria-labelledby={headingId}>` with `useId()` for accessible labels
+
+### Responsive Behavior
+
+- **Mobile (< 640px)**: Stack everything vertically. Full-width sections. `p-4` padding.
+- **Tablet/Desktop (≥ 640px)**: Consider side-by-side Strengths/Growth at `sm:grid sm:grid-cols-2 sm:gap-4` if both sections are present. Otherwise single column.
+- **Correctness bar**: Always single line — use `flex gap-2` with middot separators.
+
+### Conditional Rendering Logic
+
+- **All questions tagged with topics**: Show both Strengths and Growth Opportunities sections.
+- **All questions "General" (no topic tags)**: Hide the entire PerformanceInsights component except the correctness summary bar (single-topic breakdown is not useful per AC3).
+- **Topics exist but no growth areas**: Show Strengths only, Growth section hidden.
+- **Topics exist but no strengths**: Show Growth only, Strengths section hidden.
+
+### Accessibility Requirements
+
+- `h3` for section headings (under `h1` page title and `h2` QuestionBreakdown)
+- `<ul>` with `<li>` for topic lists (not divs)
+- Icons are `aria-hidden="true"` — text conveys all information
+- Color is never the sole indicator: icons (CheckCircle2, AlertTriangle) + text labels + percentage values
+- `aria-labelledby` on each `<section>` linking to the heading
+
+### Encouraging Messages
+
+Already implemented in `ScoreSummary.getScoreTier()` — do NOT duplicate. The four tiers map to:
+- ≥90%: "Outstanding! You've mastered this material." (EXCELLENT tier, `text-success`)
+- 70-89% (passed): "Great job! You're on the right track." (PASSED tier, `text-brand`)
+- 50-69%: "Good effort! Review the growth areas below." (NEEDS REVIEW tier, `text-warning`)
+- <50%: "Keep practicing! Focus on the topics below." (NEEDS WORK tier, `text-destructive`)
+
+These messages already reference "growth areas below" and "topics below" — PerformanceInsights naturally fulfills that promise.
+
+## Implementation Plan
+
+See [plan](plans/e15-s05-performance-summary.md) for implementation approach.
+
+## Implementation Notes
+
+[Architecture decisions, patterns used, dependencies added]
+
+## Testing Notes
+
+[Test strategy, edge cases discovered, coverage notes]
+
+## Pre-Review Checklist
+
+Before requesting `/review-story`, verify:
+
+- [ ] All changes committed (`git status` clean)
+- [ ] No error swallowing — catch blocks log AND surface errors
+- [ ] useEffect hooks have cleanup functions (ignore flags for async, event listener removal)
+- [ ] No optimistic UI updates before persistence — state updates after DB write succeeds
+- [ ] Type guards on all dynamic lookups (e.g., `LABELS[type]` when type can be empty)
+- [ ] E2E afterEach cleanup uses `await` (not fire-and-forget)
+- [ ] Date handling uses `toLocaleDateString('sv-SE')` pattern (not `toISOString().split('T')[0]`)
+- [ ] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
+- [ ] If story calls external APIs: CSP allowlist configured (see engineering-patterns.md § CSP Configuration)
+
+## Design Review Feedback
+
+[Populated by /review-story — Playwright MCP findings]
+
+## Code Review Feedback
+
+[Populated by /review-story — adversarial code review findings]
+
+## Web Design Guidelines Review
+
+[Populated by /review-story — Web Interface Guidelines compliance findings]
+
+## Challenges and Lessons Learned
+
+Story setup — lessons learned will be documented during implementation.
