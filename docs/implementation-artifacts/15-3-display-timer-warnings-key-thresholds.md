@@ -6,7 +6,7 @@ started: 2026-03-22
 completed:
 reviewed: in-progress
 review_started: 2026-03-22
-review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -149,15 +149,29 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+Reviewed 2026-03-22. 2 HIGH, 3 MEDIUM, 2 NITS.
+- **H1**: Persistent 1-minute toast overlaps mobile bottom nav (~40px at 375px)
+- **H2**: Duplicate ARIA announcements at 25% threshold (QuizTimer + TimerWarnings)
+- **M1**: 1-minute toast copy regresses urgency arc
+- **M2**: Stale polite ARIA region after escalation
+- **M3**: No prefers-reduced-motion handling for Sonner animations
+Full report: docs/reviews/design/design-review-2026-03-22-e15-s03.md
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+Reviewed 2026-03-22. 1 BLOCKER, 3 HIGH, 3 MEDIUM, 2 NITS.
+- **BLOCKER**: Short quiz batched state update — all 3 thresholds fire in same tick, React batches, only '1min' survives
+- **H1**: Persistent toast not dismissed on quiz end (duration: Infinity lingers)
+- **H2**: Tab-return zero-remaining skip (remaining > 0 guard skips all warnings)
+- **H3**: Redundant prevLevelRef guard (fragile on Suspense remount)
+Full report: docs/reviews/code/code-review-2026-03-22-e15-s03.md
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+Reviewed 2026-03-22. PASS with 2 LOW findings.
+- **L1**: Assertive live region missing role="alert"
+- **L2**: Persistent toast not programmatically dismissed on quiz end
+Full report: docs/reviews/code/web-design-guidelines-2026-03-22-e15-s03.md
 
 ## Challenges and Lessons Learned
 
