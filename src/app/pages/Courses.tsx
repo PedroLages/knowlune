@@ -131,7 +131,7 @@ export function Courses() {
       ignore = true
       window.removeEventListener('study-log-updated', handleStudyLogUpdated)
     }
-  }, [allCourses])
+  }, [allCourses, importedCourses])
 
   // Extract unique categories dynamically from actual course data
   const availableCategories = useMemo(
@@ -166,7 +166,7 @@ export function Courses() {
     )
   }, [filtered, sortMode, momentumMap])
 
-  const allTags = getAllTags()
+  const allTags = useMemo(() => getAllTags(), [getAllTags])
 
   const filteredImportedCourses = (() => {
     let courses = importedCourses
@@ -201,15 +201,16 @@ export function Courses() {
     }
   }
 
+  const totalCourses = allCourses.length + importedCourses.length
+
   return (
     <div>
-      <div className="mb-6 flex items-start justify-between gap-4">
+      <div data-testid="courses-header" className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold mb-2">All Courses</h1>
-          {allCourses.length + importedCourses.length > 0 && (
+          {totalCourses > 0 && (
             <p className="text-muted-foreground">
-              {allCourses.length + importedCourses.length}{' '}
-              {allCourses.length + importedCourses.length === 1 ? 'course' : 'courses'}
+              {totalCourses} {totalCourses === 1 ? 'course' : 'courses'}
             </p>
           )}
         </div>
@@ -217,12 +218,12 @@ export function Courses() {
           variant="brand"
           onClick={handleImportCourse}
           disabled={isImporting}
-          className="hover:scale-[1.02] hover:shadow-md rounded-xl transition-all duration-200"
+          className="hover:scale-[1.02] hover:shadow-md rounded-xl transition-[transform,box-shadow] duration-200"
         >
           {isImporting ? (
             <>
               <Loader2 className="size-4 mr-2 animate-spin" />
-              Scanning...
+              Scanning\u2026
             </>
           ) : (
             <>
@@ -233,7 +234,7 @@ export function Courses() {
         </Button>
       </div>
 
-      {allCourses.length === 0 && importedCourses.length === 0 ? (
+      {totalCourses === 0 ? (
         <EmptyState
           icon={BookOpen}
           title="No courses yet"
@@ -246,11 +247,13 @@ export function Courses() {
         <>
           <Card className="bg-card rounded-[24px] border-0 shadow-sm p-6 mb-6">
             <div className="flex gap-4 items-center">
-              <div className="relative flex-1">
+              <div className="relative flex-1 min-w-0">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground" />
                 <Input
                   type="text"
-                  placeholder="Search for courses..."
+                  name="course-search"
+                  autoComplete="off"
+                  placeholder="Search for courses\u2026"
                   aria-label="Search courses"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
@@ -306,7 +309,7 @@ export function Courses() {
                     {isImporting ? (
                       <>
                         <Loader2 className="size-4 mr-1 animate-spin" />
-                        Scanning...
+                        Scanning\u2026
                       </>
                     ) : (
                       'Import a course \u2192'

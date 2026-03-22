@@ -17,9 +17,8 @@ test.describe('AC1: No hardcoded branding', () => {
   test('page header subtitle does not contain hardcoded provider branding', async ({ page }) => {
     await goToCourses(page)
 
-    // Check only the header area — course card data may still reference the provider
-    // The header is the first div child containing h1 + subtitle paragraph
-    const headerArea = page.locator('main > div > div').first()
+    // Scope to the header area via data-testid — course card data may still reference the provider
+    const headerArea = page.locator('[data-testid="courses-header"]')
     const headerText = await headerArea.textContent()
 
     expect(headerText).not.toContain('Chase Hughes')
@@ -40,14 +39,17 @@ test.describe('AC2: Empty state for no courses', () => {
     await indexedDB.clearStore('courses')
     await indexedDB.clearStore('importedCourses')
 
-    // Navigate away, then back — this forces a fresh component mount
-    // Use addInitScript to block seed on next navigation
+    // Navigate away, then back — this forces a fresh component mount.
+    // Use addInitScript to block course seed on next navigation.
+    // FRAGILE: This monkey-patches IDBObjectStore.prototype.add at a low level.
+    // If Dexie switches to bulkAdd/put internally, this interception will silently
+    // stop working. The fake IDBRequest also lacks addEventListener/removeEventListener.
+    // Validated by passing E2E tests; if Dexie upgrades break this, replace with a
+    // higher-level mock (e.g., localStorage flag the app reads to skip seeding).
     await page.addInitScript(() => {
-      // Override Dexie's bulkAdd by intercepting at the IDBObjectStore level
       const origAdd = IDBObjectStore.prototype.add
       IDBObjectStore.prototype.add = function (...args) {
         if (this.name === 'courses') {
-          // Silently skip — return a resolved request
           const req = {} as IDBRequest
           setTimeout(() => req.onsuccess?.(new Event('success')), 0)
           Object.defineProperty(req, 'result', { get: () => undefined })
@@ -64,8 +66,10 @@ test.describe('AC2: Empty state for no courses', () => {
     await page.goto('/courses')
     await page.waitForLoadState('load')
 
+    // 5s timeout: IDB clear + navigation + component mount. Higher than default
+    // because the two-phase clear-then-block-reseed dance adds latency.
     const emptyState = page.locator('[data-testid="courses-empty-state"]')
-    await expect(emptyState).toBeVisible({ timeout: 10_000 })
+    await expect(emptyState).toBeVisible({ timeout: 5_000 })
     await expect(emptyState).toContainText('No courses yet')
     await expect(emptyState).toContainText('Import Course')
   })
@@ -89,9 +93,10 @@ test.describe('AC4: Responsive layout', () => {
       await page.setViewportSize({ width: vp.width, height: vp.height })
       await goToCourses(page)
 
-      // Page heading should be visible at all breakpoints
+      // Page heading and primary CTA should be visible at all breakpoints
       const heading = page.locator('h1')
       await expect(heading).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Import Course' })).toBeVisible()
 
       // No horizontal overflow
       const body = page.locator('body')
