@@ -3,6 +3,9 @@
  *
  * Covers: fetchAndParseTranscript, generateVideoSummary (all providers),
  * VTT parsing (via fetchAndParseTranscript), streaming, timeouts, errors.
+ *
+ * The source module routes ALL requests through `/api/ai/stream` (local proxy),
+ * which returns unified SSE: `data: {"content":"chunk"}\n\n` and `data: [DONE]\n\n`.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
@@ -278,7 +281,7 @@ Real content`
     })
 
     it('should call sanitizeAIRequestPayload when building payload', async () => {
-      const chunks = ['data: {"choices":[{"delta":{"content":"Hello"}}]}\n\n', 'data: [DONE]\n\n']
+      const chunks = ['data: {"content":"Hello"}\n\n', 'data: [DONE]\n\n']
       globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
 
       const gen = generateVideoSummary('my transcript', 'openai', 'test-key')
@@ -332,14 +335,14 @@ Real content`
     })
 
     // -----------------------------------------------------------------------
-    // OpenAI provider
+    // Proxy-based streaming (unified format for all providers)
     // -----------------------------------------------------------------------
 
-    describe('openai provider', () => {
-      it('should stream chunks from OpenAI SSE format', async () => {
+    describe('proxy streaming (unified format)', () => {
+      it('should stream chunks from proxy SSE format', async () => {
         const chunks = [
-          'data: {"choices":[{"delta":{"content":"Hello"}}]}\n',
-          'data: {"choices":[{"delta":{"content":" world"}}]}\n',
+          'data: {"content":"Hello"}\n',
+          'data: {"content":" world"}\n',
           'data: [DONE]\n',
         ]
         globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
@@ -350,25 +353,22 @@ Real content`
         expect(results).toEqual(['Hello', ' world'])
       })
 
-      it('should use correct endpoint and headers', async () => {
+      it('should use proxy endpoint /api/ai/stream with correct headers', async () => {
         globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(['data: [DONE]\n']))
 
         const gen = generateVideoSummary('transcript', 'openai', 'sk-test')
         await collectGenerator(gen)
 
         expect(globalThis.fetch).toHaveBeenCalledWith(
-          'https://api.openai.com/v1/chat/completions',
+          '/api/ai/stream',
           expect.objectContaining({
             method: 'POST',
-            headers: expect.objectContaining({
-              'Content-Type': 'application/json',
-              Authorization: 'Bearer sk-test',
-            }),
+            headers: { 'Content-Type': 'application/json' },
           })
         )
       })
 
-      it('should include correct model in payload', async () => {
+      it('should include provider, apiKey, model, and maxTokens in payload', async () => {
         globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(['data: [DONE]\n']))
 
         const gen = generateVideoSummary('transcript', 'openai', 'sk-test')
@@ -376,18 +376,15 @@ Real content`
 
         const callArgs = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
         const body = JSON.parse(callArgs[1].body)
+        expect(body.provider).toBe('openai')
+        expect(body.apiKey).toBe('sk-test')
         expect(body.model).toBe('gpt-4o-mini')
-        expect(body.stream).toBe(true)
-        expect(body.max_tokens).toBe(500)
+        expect(body.maxTokens).toBe(500)
+        expect(body.messages).toBeDefined()
       })
 
       it('should skip non-data lines', async () => {
-        const chunks = [
-          ': keep-alive\n',
-          'data: {"choices":[{"delta":{"content":"content"}}]}\n',
-          '\n',
-          'data: [DONE]\n',
-        ]
+        const chunks = [': keep-alive\n', 'data: {"content":"content"}\n', '\n', 'data: [DONE]\n']
         globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
 
         const gen = generateVideoSummary('transcript', 'openai', 'key')
@@ -396,11 +393,7 @@ Real content`
       })
 
       it('should handle malformed JSON in stream gracefully', async () => {
-        const chunks = [
-          'data: {invalid json}\n',
-          'data: {"choices":[{"delta":{"content":"valid"}}]}\n',
-          'data: [DONE]\n',
-        ]
+        const chunks = ['data: {invalid json}\n', 'data: {"content":"valid"}\n', 'data: [DONE]\n']
         globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
 
         const gen = generateVideoSummary('transcript', 'openai', 'key')
@@ -408,259 +401,86 @@ Real content`
         expect(results).toEqual(['valid'])
       })
 
-      it('should handle delta with no content field', async () => {
-        const chunks = [
-          'data: {"choices":[{"delta":{}}]}\n',
-          'data: {"choices":[{"delta":{"content":"real"}}]}\n',
-          'data: [DONE]\n',
-        ]
+      it('should handle chunks with no content field', async () => {
+        const chunks = ['data: {}\n', 'data: {"content":"real"}\n', 'data: [DONE]\n']
         globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
 
         const gen = generateVideoSummary('transcript', 'openai', 'key')
         const results = await collectGenerator(gen)
         expect(results).toEqual(['real'])
       })
+
+      it('should propagate AI proxy error from stream', async () => {
+        const chunks = ['data: {"error":"Rate limit exceeded"}\n']
+        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
+
+        const gen = generateVideoSummary('transcript', 'openai', 'key')
+        await expect(collectGenerator(gen)).rejects.toThrow('AI proxy error: Rate limit exceeded')
+      })
     })
 
     // -----------------------------------------------------------------------
-    // Anthropic provider
+    // Provider-specific model selection (via proxy body)
     // -----------------------------------------------------------------------
 
-    describe('anthropic provider', () => {
-      it('should stream chunks from Anthropic SSE format', async () => {
-        const chunks = [
-          'data: {"type":"content_block_delta","delta":{"text":"Hello"}}\n',
-          'data: {"type":"content_block_delta","delta":{"text":" from Claude"}}\n',
-          'data: {"type":"message_stop"}\n',
-        ]
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
-
-        const gen = generateVideoSummary('transcript', 'anthropic', 'sk-ant-test')
-        const results = await collectGenerator(gen)
-
-        expect(results).toEqual(['Hello', ' from Claude'])
-      })
-
-      it('should use correct endpoint and headers', async () => {
-        globalThis.fetch = vi
-          .fn()
-          .mockResolvedValue(mockStreamResponse(['data: {"type":"message_stop"}\n']))
-
-        const gen = generateVideoSummary('transcript', 'anthropic', 'sk-ant-test')
+    describe('provider model selection', () => {
+      it('should use gpt-4o-mini for openai', async () => {
+        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(['data: [DONE]\n']))
+        const gen = generateVideoSummary('transcript', 'openai', 'key')
         await collectGenerator(gen)
-
-        expect(globalThis.fetch).toHaveBeenCalledWith(
-          'https://api.anthropic.com/v1/messages',
-          expect.objectContaining({
-            method: 'POST',
-            headers: expect.objectContaining({
-              'Content-Type': 'application/json',
-              'x-api-key': 'sk-ant-test',
-              'anthropic-version': '2023-06-01',
-            }),
-          })
+        const body = JSON.parse(
+          (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body
         )
+        expect(body.model).toBe('gpt-4o-mini')
       })
 
-      it('should include correct model in payload', async () => {
-        globalThis.fetch = vi
-          .fn()
-          .mockResolvedValue(mockStreamResponse(['data: {"type":"message_stop"}\n']))
-
+      it('should use claude-3-5-haiku for anthropic', async () => {
+        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(['data: [DONE]\n']))
         const gen = generateVideoSummary('transcript', 'anthropic', 'key')
         await collectGenerator(gen)
-
-        const callArgs = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
-        const body = JSON.parse(callArgs[1].body)
+        const body = JSON.parse(
+          (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body
+        )
         expect(body.model).toBe('claude-3-5-haiku-20241022')
-        expect(body.stream).toBe(true)
       })
 
-      it('should ignore non-content_block_delta events', async () => {
-        const chunks = [
-          'data: {"type":"message_start","message":{"id":"msg_123"}}\n',
-          'data: {"type":"content_block_start","content_block":{"type":"text"}}\n',
-          'data: {"type":"content_block_delta","delta":{"text":"actual content"}}\n',
-          'data: {"type":"content_block_stop"}\n',
-          'data: {"type":"message_stop"}\n',
-        ]
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
-
-        const gen = generateVideoSummary('transcript', 'anthropic', 'key')
-        const results = await collectGenerator(gen)
-        expect(results).toEqual(['actual content'])
-      })
-
-      it('should handle malformed JSON in Anthropic stream', async () => {
-        const chunks = [
-          'data: not-json\n',
-          'data: {"type":"content_block_delta","delta":{"text":"ok"}}\n',
-        ]
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
-
-        const gen = generateVideoSummary('transcript', 'anthropic', 'key')
-        const results = await collectGenerator(gen)
-        expect(results).toEqual(['ok'])
-      })
-    })
-
-    // -----------------------------------------------------------------------
-    // Groq provider
-    // -----------------------------------------------------------------------
-
-    describe('groq provider', () => {
-      it('should stream chunks from Groq SSE format', async () => {
-        const chunks = [
-          'data: {"choices":[{"delta":{"content":"Fast"}}]}\n',
-          'data: {"choices":[{"delta":{"content":" response"}}]}\n',
-          'data: [DONE]\n',
-        ]
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
-
-        const gen = generateVideoSummary('transcript', 'groq', 'gsk-test')
-        const results = await collectGenerator(gen)
-        expect(results).toEqual(['Fast', ' response'])
-      })
-
-      it('should use correct endpoint', async () => {
+      it('should use llama-3.3-70b-versatile for groq', async () => {
         globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(['data: [DONE]\n']))
-
-        const gen = generateVideoSummary('transcript', 'groq', 'gsk-test')
-        await collectGenerator(gen)
-
-        expect(globalThis.fetch).toHaveBeenCalledWith(
-          'https://api.groq.com/openai/v1/chat/completions',
-          expect.objectContaining({ method: 'POST' })
-        )
-      })
-
-      it('should use llama model in payload', async () => {
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(['data: [DONE]\n']))
-
         const gen = generateVideoSummary('transcript', 'groq', 'key')
         await collectGenerator(gen)
-
-        const callArgs = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
-        const body = JSON.parse(callArgs[1].body)
+        const body = JSON.parse(
+          (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body
+        )
         expect(body.model).toBe('llama-3.3-70b-versatile')
       })
-    })
 
-    // -----------------------------------------------------------------------
-    // GLM provider
-    // -----------------------------------------------------------------------
-
-    describe('glm provider', () => {
-      it('should stream chunks from GLM SSE format', async () => {
-        const chunks = [
-          'data: {"choices":[{"delta":{"content":"GLM"}}]}\n',
-          'data: {"choices":[{"delta":{"content":" output"}}]}\n',
-          'data: [DONE]\n',
-        ]
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
-
-        const gen = generateVideoSummary('transcript', 'glm', 'glm-key')
-        const results = await collectGenerator(gen)
-        expect(results).toEqual(['GLM', ' output'])
-      })
-
-      it('should use correct endpoint', async () => {
+      it('should use glm-4-flash for glm', async () => {
         globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(['data: [DONE]\n']))
-
-        const gen = generateVideoSummary('transcript', 'glm', 'glm-key')
-        await collectGenerator(gen)
-
-        expect(globalThis.fetch).toHaveBeenCalledWith(
-          'https://open.bigmodel.cn/api/paas/v4/chat/completions',
-          expect.objectContaining({ method: 'POST' })
-        )
-      })
-
-      it('should use glm-4-flash model', async () => {
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(['data: [DONE]\n']))
-
         const gen = generateVideoSummary('transcript', 'glm', 'key')
         await collectGenerator(gen)
-
-        const callArgs = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
-        const body = JSON.parse(callArgs[1].body)
+        const body = JSON.parse(
+          (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body
+        )
         expect(body.model).toBe('glm-4-flash')
       })
-    })
 
-    // -----------------------------------------------------------------------
-    // Gemini provider
-    // -----------------------------------------------------------------------
-
-    describe('gemini provider', () => {
-      it('should stream chunks from Gemini JSON format', async () => {
-        const chunks = [
-          JSON.stringify({ candidates: [{ content: { parts: [{ text: 'Gemini' }] } }] }) + '\n',
-          JSON.stringify({ candidates: [{ content: { parts: [{ text: ' says hi' }] } }] }) + '\n',
-        ]
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
-
-        const gen = generateVideoSummary('transcript', 'gemini', 'gemini-key')
-        const results = await collectGenerator(gen)
-        expect(results).toEqual(['Gemini', ' says hi'])
-      })
-
-      it('should append API key as query parameter', async () => {
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse([]))
-
-        const gen = generateVideoSummary('transcript', 'gemini', 'my-gemini-key')
-        await collectGenerator(gen)
-
-        const calledUrl = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]
-        expect(calledUrl).toContain('key=my-gemini-key')
-        expect(calledUrl).toContain('generativelanguage.googleapis.com')
-      })
-
-      it('should not include Authorization header', async () => {
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse([]))
-
+      it('should use gemini-1.5-flash for gemini', async () => {
+        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(['data: [DONE]\n']))
         const gen = generateVideoSummary('transcript', 'gemini', 'key')
         await collectGenerator(gen)
-
-        const callArgs = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
-        const headers = callArgs[1].headers
-        expect(headers).not.toHaveProperty('Authorization')
+        const body = JSON.parse(
+          (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body
+        )
+        expect(body.model).toBe('gemini-1.5-flash')
       })
 
-      it('should handle malformed JSON lines gracefully', async () => {
-        const chunks = [
-          'not json at all\n',
-          JSON.stringify({ candidates: [{ content: { parts: [{ text: 'valid' }] } }] }) + '\n',
-        ]
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
-
-        const gen = generateVideoSummary('transcript', 'gemini', 'key')
-        const results = await collectGenerator(gen)
-        expect(results).toEqual(['valid'])
-      })
-
-      it('should skip candidates with no text', async () => {
-        const chunks = [
-          JSON.stringify({ candidates: [{ content: { parts: [] } }] }) + '\n',
-          JSON.stringify({ candidates: [{ content: { parts: [{ text: 'real' }] } }] }) + '\n',
-        ]
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
-
-        const gen = generateVideoSummary('transcript', 'gemini', 'key')
-        const results = await collectGenerator(gen)
-        expect(results).toEqual(['real'])
-      })
-
-      it('should use gemini-1.5-flash model in payload', async () => {
-        globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse([]))
-
-        const gen = generateVideoSummary('transcript', 'gemini', 'key')
-        await collectGenerator(gen)
-
-        const callArgs = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]
-        const body = JSON.parse(callArgs[1].body)
-        expect(body.contents).toBeDefined()
-        expect(body.generationConfig.maxOutputTokens).toBe(500)
+      it('should always send to /api/ai/stream regardless of provider', async () => {
+        for (const provider of ['openai', 'anthropic', 'groq', 'glm', 'gemini'] as AIProviderId[]) {
+          globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(['data: [DONE]\n']))
+          const gen = generateVideoSummary('transcript', provider, 'key')
+          await collectGenerator(gen)
+          expect(globalThis.fetch).toHaveBeenCalledWith('/api/ai/stream', expect.any(Object))
+        }
       })
     })
 
@@ -728,7 +548,7 @@ Real content`
 
       it('should clear timeout after successful completion', async () => {
         const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout')
-        const chunks = ['data: {"choices":[{"delta":{"content":"done"}}]}\n', 'data: [DONE]\n']
+        const chunks = ['data: {"content":"done"}\n', 'data: [DONE]\n']
         globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
 
         const gen = generateVideoSummary('transcript', 'openai', 'key')
@@ -766,7 +586,7 @@ Real content`
     describe('streaming edge cases', () => {
       it('should handle chunks split across multiple reads', async () => {
         // A single SSE message split across two chunks
-        const chunks = ['data: {"choices":[{"delta":{"con', 'tent":"split"}}]}\ndata: [DONE]\n']
+        const chunks = ['data: {"con', 'tent":"split"}\ndata: [DONE]\n']
         globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
 
         const gen = generateVideoSummary('transcript', 'openai', 'key')
@@ -783,9 +603,7 @@ Real content`
       })
 
       it('should handle multiple SSE lines in a single chunk', async () => {
-        const chunks = [
-          'data: {"choices":[{"delta":{"content":"a"}}]}\ndata: {"choices":[{"delta":{"content":"b"}}]}\ndata: [DONE]\n',
-        ]
+        const chunks = ['data: {"content":"a"}\ndata: {"content":"b"}\ndata: [DONE]\n']
         globalThis.fetch = vi.fn().mockResolvedValue(mockStreamResponse(chunks))
 
         const gen = generateVideoSummary('transcript', 'openai', 'key')

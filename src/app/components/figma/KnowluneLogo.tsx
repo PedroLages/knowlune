@@ -15,8 +15,7 @@
 
 const BASE_ANNULUS =
   'M 20 8 A 12 12 0 1 1 20 32 A 12 12 0 1 1 20 8 M 20 12.8 A 7.2 7.2 0 1 0 20 27.2 A 7.2 7.2 0 1 0 20 12.8 Z'
-const CRESCENT =
-  'M 20 8 A 12 12 0 0 0 20 32 A 13.6 13.6 0 0 1 20 8 Z'
+const CRESCENT = 'M 20 8 A 12 12 0 0 0 20 32 A 13.6 13.6 0 0 1 20 8 Z'
 
 /** Standalone lunar eclipse mark. */
 export function KnowluneIcon({ className = 'w-7 h-7' }: { className?: string }) {

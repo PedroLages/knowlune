@@ -52,15 +52,9 @@ export function QuizResults() {
     [lastAttempt]
   )
 
-  const improvementData = useMemo(
-    () => calculateImprovement(attempts),
-    [attempts]
-  )
+  const improvementData = useMemo(() => calculateImprovement(attempts), [attempts])
 
-  const normalizedGain = useMemo(
-    () => calculateNormalizedGain(attempts),
-    [attempts]
-  )
+  const normalizedGain = useMemo(() => calculateNormalizedGain(attempts), [attempts])
 
   const previousAttemptTimeSpent = useMemo(() => {
     if (attempts.length <= 1) return undefined

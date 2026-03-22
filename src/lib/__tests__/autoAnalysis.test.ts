@@ -2,7 +2,10 @@
  * Unit Tests: autoAnalysis.ts
  *
  * Tests auto-analysis service for AI-driven topic tag extraction on imported courses.
- * Covers: triggerAutoAnalysis, provider-specific helpers, tag parsing, error handling.
+ * Covers: triggerAutoAnalysis, tag parsing, error handling.
+ *
+ * The source module routes ALL requests through `/api/ai/generate` (local proxy),
+ * which returns unified JSON: `{ text: "..." }`.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
@@ -85,6 +88,19 @@ function getSetStatusMock(): Mock {
   return useCourseImportStore.getState().setAutoAnalysisStatus as Mock
 }
 
+/**
+ * Helper: builds a mock proxy response for /api/ai/generate
+ * The proxy returns `{ text: "..." }` regardless of provider.
+ */
+function mockProxyResponse(text: string, ok = true, status = 200) {
+  return {
+    ok,
+    status,
+    statusText: ok ? 'OK' : 'Error',
+    json: async () => ({ text }),
+  }
+}
+
 describe('autoAnalysis.ts', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -122,14 +138,9 @@ describe('autoAnalysis.ts', () => {
       ;(getAIConfiguration as Mock).mockReturnValue({ provider: 'openai' })
       ;(getDecryptedApiKey as Mock).mockResolvedValue('sk-test-key')
       ;(sanitizeAIRequestPayload as Mock).mockReturnValue({ content: 'sanitized content' })
-
-      const mockResponse = {
-        ok: true,
-        json: async () => ({
-          choices: [{ message: { content: '["machine learning", "ai", "deep learning"]' } }],
-        }),
-      }
-      ;(global.fetch as Mock).mockResolvedValue(mockResponse)
+      ;(global.fetch as Mock).mockResolvedValue(
+        mockProxyResponse('["machine learning", "ai", "deep learning"]')
+      )
 
       triggerAutoAnalysis(mockCourse)
       await vi.runAllTimersAsync()
@@ -145,14 +156,9 @@ describe('autoAnalysis.ts', () => {
       ;(getAIConfiguration as Mock).mockReturnValue({ provider: 'openai' })
       ;(getDecryptedApiKey as Mock).mockResolvedValue('sk-test-key')
       ;(sanitizeAIRequestPayload as Mock).mockReturnValue({ content: 'sanitized' })
-
-      const mockResponse = {
-        ok: true,
-        json: async () => ({
-          choices: [{ message: { content: '["machine learning", "existing-tag"]' } }],
-        }),
-      }
-      ;(global.fetch as Mock).mockResolvedValue(mockResponse)
+      ;(global.fetch as Mock).mockResolvedValue(
+        mockProxyResponse('["machine learning", "existing-tag"]')
+      )
 
       triggerAutoAnalysis(mockCourse)
       await vi.runAllTimersAsync()
@@ -168,14 +174,7 @@ describe('autoAnalysis.ts', () => {
       ;(getAIConfiguration as Mock).mockReturnValue({ provider: 'openai' })
       ;(getDecryptedApiKey as Mock).mockResolvedValue('sk-test-key')
       ;(sanitizeAIRequestPayload as Mock).mockReturnValue({ content: 'sanitized' })
-
-      const mockResponse = {
-        ok: true,
-        json: async () => ({
-          choices: [{ message: { content: '["tag1", "tag2"]' } }],
-        }),
-      }
-      ;(global.fetch as Mock).mockResolvedValue(mockResponse)
+      ;(global.fetch as Mock).mockResolvedValue(mockProxyResponse('["tag1", "tag2"]'))
 
       triggerAutoAnalysis(mockCourse)
       await vi.runAllTimersAsync()
@@ -192,14 +191,7 @@ describe('autoAnalysis.ts', () => {
       ;(getAIConfiguration as Mock).mockReturnValue({ provider: 'openai' })
       ;(getDecryptedApiKey as Mock).mockResolvedValue('sk-test-key')
       ;(sanitizeAIRequestPayload as Mock).mockReturnValue({ content: 'sanitized' })
-
-      const mockResponse = {
-        ok: true,
-        json: async () => ({
-          choices: [{ message: { content: 'no tags here' } }],
-        }),
-      }
-      ;(global.fetch as Mock).mockResolvedValue(mockResponse)
+      ;(global.fetch as Mock).mockResolvedValue(mockProxyResponse('no tags here'))
 
       triggerAutoAnalysis(mockCourse)
       await vi.runAllTimersAsync()
@@ -216,14 +208,7 @@ describe('autoAnalysis.ts', () => {
       ;(getAIConfiguration as Mock).mockReturnValue({ provider: 'openai' })
       ;(getDecryptedApiKey as Mock).mockResolvedValue('sk-test-key')
       ;(sanitizeAIRequestPayload as Mock).mockReturnValue({ content: 'sanitized' })
-
-      const mockResponse = {
-        ok: true,
-        json: async () => ({
-          choices: [{ message: { content: '["tag1"]' } }],
-        }),
-      }
-      ;(global.fetch as Mock).mockResolvedValue(mockResponse)
+      ;(global.fetch as Mock).mockResolvedValue(mockProxyResponse('["tag1"]'))
 
       triggerAutoAnalysis(mockCourse)
       await vi.runAllTimersAsync()
@@ -267,7 +252,12 @@ describe('autoAnalysis.ts', () => {
       ;(getDecryptedApiKey as Mock).mockResolvedValue('sk-test-key')
       ;(sanitizeAIRequestPayload as Mock).mockReturnValue({ content: 'sanitized' })
 
-      const mockResponse = { ok: false, status: 429 }
+      const mockResponse = {
+        ok: false,
+        status: 429,
+        statusText: 'Too Many Requests',
+        json: async () => ({ error: 'Rate limit exceeded' }),
+      }
       ;(global.fetch as Mock).mockResolvedValue(mockResponse)
 
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -326,197 +316,71 @@ describe('autoAnalysis.ts', () => {
     })
   })
 
-  describe('provider-specific endpoint selection', () => {
+  describe('proxy endpoint and payload', () => {
     const setupProvider = (provider: string) => {
       ;(isFeatureEnabled as Mock).mockReturnValue(true)
       ;(isAIAvailable as Mock).mockReturnValue(true)
       ;(getAIConfiguration as Mock).mockReturnValue({ provider })
       ;(getDecryptedApiKey as Mock).mockResolvedValue('test-key')
       ;(sanitizeAIRequestPayload as Mock).mockReturnValue({ content: 'test' })
-
-      const mockResponse = {
-        ok: true,
-        json: async () => ({
-          choices: [{ message: { content: '["tag"]' } }],
-          content: [{ text: '["tag"]' }],
-          candidates: [{ content: { parts: [{ text: '["tag"]' }] } }],
-        }),
-      }
-      ;(global.fetch as Mock).mockResolvedValue(mockResponse)
+      ;(global.fetch as Mock).mockResolvedValue(mockProxyResponse('["tag"]'))
     }
 
-    it('uses Anthropic endpoint for anthropic provider', async () => {
-      setupProvider('anthropic')
-      triggerAutoAnalysis(mockCourse)
-      await vi.runAllTimersAsync()
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        'https://api.anthropic.com/v1/messages',
-        expect.any(Object)
-      )
+    it('always calls /api/ai/generate regardless of provider', async () => {
+      for (const provider of ['openai', 'anthropic', 'groq', 'glm', 'gemini']) {
+        vi.clearAllMocks()
+        setupProvider(provider)
+        triggerAutoAnalysis(mockCourse)
+        await vi.runAllTimersAsync()
+        expect(global.fetch).toHaveBeenCalledWith('/api/ai/generate', expect.any(Object))
+      }
     })
 
-    it('uses Groq endpoint for groq provider', async () => {
-      setupProvider('groq')
-      triggerAutoAnalysis(mockCourse)
-      await vi.runAllTimersAsync()
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        'https://api.groq.com/openai/v1/chat/completions',
-        expect.any(Object)
-      )
-    })
-
-    it('uses GLM endpoint for glm provider', async () => {
-      setupProvider('glm')
-      triggerAutoAnalysis(mockCourse)
-      await vi.runAllTimersAsync()
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        'https://open.bigmodel.cn/api/paas/v4/chat/completions',
-        expect.any(Object)
-      )
-    })
-
-    it('uses Gemini endpoint with API key in URL for gemini provider', async () => {
-      setupProvider('gemini')
-      triggerAutoAnalysis(mockCourse)
-      await vi.runAllTimersAsync()
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('generativelanguage.googleapis.com'),
-        expect.any(Object)
-      )
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('key=test-key'),
-        expect.any(Object)
-      )
-    })
-
-    it('uses OpenAI endpoint as default for unknown provider', async () => {
+    it('sends Content-Type application/json header', async () => {
       setupProvider('openai')
       triggerAutoAnalysis(mockCourse)
       await vi.runAllTimersAsync()
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        'https://api.openai.com/v1/chat/completions',
-        expect.any(Object)
-      )
-    })
-  })
-
-  describe('provider-specific headers', () => {
-    const setupAndGetHeaders = async (provider: string) => {
-      ;(isFeatureEnabled as Mock).mockReturnValue(true)
-      ;(isAIAvailable as Mock).mockReturnValue(true)
-      ;(getAIConfiguration as Mock).mockReturnValue({ provider })
-      ;(getDecryptedApiKey as Mock).mockResolvedValue('test-key')
-      ;(sanitizeAIRequestPayload as Mock).mockReturnValue({ content: 'test' })
-
-      const mockResponse = {
-        ok: true,
-        json: async () => ({
-          choices: [{ message: { content: '["tag"]' } }],
-          content: [{ text: '["tag"]' }],
-          candidates: [{ content: { parts: [{ text: '["tag"]' }] } }],
-        }),
-      }
-      ;(global.fetch as Mock).mockResolvedValue(mockResponse)
-
-      triggerAutoAnalysis(mockCourse)
-      await vi.runAllTimersAsync()
-
       const fetchCall = (global.fetch as Mock).mock.calls[0]
-      return fetchCall?.[1]?.headers as Record<string, string>
-    }
-
-    it('sends x-api-key header for anthropic', async () => {
-      const headers = await setupAndGetHeaders('anthropic')
-      expect(headers['x-api-key']).toBe('test-key')
-      expect(headers['anthropic-version']).toBe('2023-06-01')
-    })
-
-    it('sends no Authorization header for gemini', async () => {
-      const headers = await setupAndGetHeaders('gemini')
+      const headers = fetchCall?.[1]?.headers as Record<string, string>
       expect(headers['Content-Type']).toBe('application/json')
-      expect(headers['Authorization']).toBeUndefined()
     })
 
-    it('sends Bearer token for openai-compatible providers', async () => {
-      const headers = await setupAndGetHeaders('openai')
-      expect(headers['Authorization']).toBe('Bearer test-key')
-    })
-  })
-
-  describe('provider-specific payload construction', () => {
-    const setupAndGetBody = async (provider: string) => {
-      ;(isFeatureEnabled as Mock).mockReturnValue(true)
-      ;(isAIAvailable as Mock).mockReturnValue(true)
-      ;(getAIConfiguration as Mock).mockReturnValue({ provider })
-      ;(getDecryptedApiKey as Mock).mockResolvedValue('test-key')
-      ;(sanitizeAIRequestPayload as Mock).mockReturnValue({ content: 'test course info' })
-
-      const mockResponse = {
-        ok: true,
-        json: async () => ({
-          choices: [{ message: { content: '["tag"]' } }],
-          content: [{ text: '["tag"]' }],
-          candidates: [{ content: { parts: [{ text: '["tag"]' }] } }],
-        }),
-      }
-      ;(global.fetch as Mock).mockResolvedValue(mockResponse)
-
+    it('sends provider and apiKey in body', async () => {
+      setupProvider('anthropic')
       triggerAutoAnalysis(mockCourse)
       await vi.runAllTimersAsync()
 
       const fetchCall = (global.fetch as Mock).mock.calls[0]
-      return JSON.parse(fetchCall?.[1]?.body as string)
-    }
-
-    it('builds Anthropic payload with claude model', async () => {
-      const body = await setupAndGetBody('anthropic')
-      expect(body.model).toBe('claude-3-5-haiku-20241022')
-      expect(body.max_tokens).toBe(100)
-      expect(body.messages[0].role).toBe('user')
+      const body = JSON.parse(fetchCall?.[1]?.body as string)
+      expect(body.provider).toBe('anthropic')
+      expect(body.apiKey).toBe('test-key')
     })
 
-    it('builds Gemini payload with contents format', async () => {
-      const body = await setupAndGetBody('gemini')
-      expect(body.contents[0].parts[0].text).toContain('test course info')
-      expect(body.generationConfig.maxOutputTokens).toBe(100)
-    })
+    it('sends messages array and maxTokens in body', async () => {
+      setupProvider('openai')
+      triggerAutoAnalysis(mockCourse)
+      await vi.runAllTimersAsync()
 
-    it('builds Groq payload with llama model', async () => {
-      const body = await setupAndGetBody('groq')
-      expect(body.model).toBe('llama-3.3-70b-versatile')
-    })
-
-    it('builds GLM payload with glm-4-flash model', async () => {
-      const body = await setupAndGetBody('glm')
-      expect(body.model).toBe('glm-4-flash')
-    })
-
-    it('builds OpenAI payload with gpt-4o-mini model', async () => {
-      const body = await setupAndGetBody('openai')
-      expect(body.model).toBe('gpt-4o-mini')
+      const fetchCall = (global.fetch as Mock).mock.calls[0]
+      const body = JSON.parse(fetchCall?.[1]?.body as string)
+      expect(body.messages).toBeDefined()
+      expect(Array.isArray(body.messages)).toBe(true)
+      expect(body.maxTokens).toBe(100)
     })
   })
 
-  describe('tag parsing from provider responses', () => {
-    const setupAndGetTags = async (provider: string, responseData: unknown) => {
+  describe('tag parsing from proxy response', () => {
+    const setupAndGetTags = async (responseText: string) => {
       ;(isFeatureEnabled as Mock).mockReturnValue(true)
       ;(isAIAvailable as Mock).mockReturnValue(true)
-      ;(getAIConfiguration as Mock).mockReturnValue({ provider })
+      ;(getAIConfiguration as Mock).mockReturnValue({ provider: 'openai' })
       ;(getDecryptedApiKey as Mock).mockResolvedValue('test-key')
       ;(sanitizeAIRequestPayload as Mock).mockReturnValue({ content: 'test' })
 
       const courseNoTags = { ...mockCourse, tags: [] }
 
-      const mockResponse = {
-        ok: true,
-        json: async () => responseData,
-      }
-      ;(global.fetch as Mock).mockResolvedValue(mockResponse)
+      ;(global.fetch as Mock).mockResolvedValue(mockProxyResponse(responseText))
 
       triggerAutoAnalysis(courseNoTags)
       await vi.runAllTimersAsync()
@@ -525,65 +389,33 @@ describe('autoAnalysis.ts', () => {
       return updateCall?.[1]?.tags as string[] | undefined
     }
 
-    it('parses tags from OpenAI response format', async () => {
-      const tags = await setupAndGetTags('openai', {
-        choices: [{ message: { content: '["python", "machine learning", "data science"]' } }],
-      })
+    it('parses tags from JSON array string', async () => {
+      const tags = await setupAndGetTags('["python", "machine learning", "data science"]')
       expect(tags).toEqual(['python', 'machine learning', 'data science'])
     })
 
-    it('parses tags from Anthropic response format', async () => {
-      const tags = await setupAndGetTags('anthropic', {
-        content: [{ text: '["python", "ai"]' }],
-      })
-      expect(tags).toEqual(['python', 'ai'])
-    })
-
-    it('parses tags from Gemini response format', async () => {
-      const tags = await setupAndGetTags('gemini', {
-        candidates: [{ content: { parts: [{ text: '["nlp", "transformers"]' }] } }],
-      })
-      expect(tags).toEqual(['nlp', 'transformers'])
-    })
-
     it('parses tags wrapped in markdown code blocks', async () => {
-      const tags = await setupAndGetTags('openai', {
-        choices: [{ message: { content: '```json\n["tag1", "tag2"]\n```' } }],
-      })
+      const tags = await setupAndGetTags('```json\n["tag1", "tag2"]\n```')
       expect(tags).toEqual(['tag1', 'tag2'])
     })
 
     it('lowercases and trims tags', async () => {
-      const tags = await setupAndGetTags('openai', {
-        choices: [{ message: { content: '["  Python ", "Machine Learning  "]' } }],
-      })
+      const tags = await setupAndGetTags('["  Python ", "Machine Learning  "]')
       expect(tags).toEqual(['python', 'machine learning'])
     })
 
     it('limits to 5 tags maximum', async () => {
-      const tags = await setupAndGetTags('openai', {
-        choices: [
-          {
-            message: {
-              content: '["a", "b", "c", "d", "e", "f", "g"]',
-            },
-          },
-        ],
-      })
+      const tags = await setupAndGetTags('["a", "b", "c", "d", "e", "f", "g"]')
       expect(tags).toHaveLength(5)
     })
 
     it('filters out non-string values', async () => {
-      const tags = await setupAndGetTags('openai', {
-        choices: [{ message: { content: '["valid", 123, null, "also valid"]' } }],
-      })
+      const tags = await setupAndGetTags('["valid", 123, null, "also valid"]')
       expect(tags).toEqual(['valid', 'also valid'])
     })
 
     it('returns undefined (no DB update) when response has no parseable tags', async () => {
-      const tags = await setupAndGetTags('openai', {
-        choices: [{ message: { content: 'I cannot extract tags from this.' } }],
-      })
+      const tags = await setupAndGetTags('I cannot extract tags from this.')
       expect(tags).toBeUndefined()
       expect(db.importedCourses.update).not.toHaveBeenCalled()
     })
@@ -591,9 +423,7 @@ describe('autoAnalysis.ts', () => {
     it('returns undefined on malformed JSON', async () => {
       const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-      const tags = await setupAndGetTags('openai', {
-        choices: [{ message: { content: '[invalid json' } }],
-      })
+      const tags = await setupAndGetTags('[invalid json')
       expect(tags).toBeUndefined()
 
       consoleWarnSpy.mockRestore()

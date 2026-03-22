@@ -127,15 +127,14 @@ describe('Courses page', () => {
   describe('empty state', () => {
     it('displays empty state when no imported courses', () => {
       renderCourses()
-      expect(screen.getByText('Import your first course to get started')).toBeInTheDocument()
-      expect(screen.getByText('Import Your First Course')).toBeInTheDocument()
+      expect(screen.getByText('No imported courses yet.')).toBeInTheDocument()
     })
 
-    it('empty state card uses rounded-[24px]', () => {
+    it('empty state card uses rounded-xl', () => {
       const { container } = renderCourses()
       const emptyCard = container.querySelector('[role="region"][aria-label="Import courses"]')
       expect(emptyCard).toBeInTheDocument()
-      expect(emptyCard).toHaveClass('rounded-[24px]')
+      expect(emptyCard).toHaveClass('rounded-xl')
     })
   })
 

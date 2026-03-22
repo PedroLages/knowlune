@@ -51,9 +51,7 @@ describe('ScoreTrajectoryChart', () => {
   })
 
   it('returns null when attempts array is empty', () => {
-    const { container } = render(
-      <ScoreTrajectoryChart attempts={[]} passingScore={70} />
-    )
+    const { container } = render(<ScoreTrajectoryChart attempts={[]} passingScore={70} />)
     expect(container.firstChild).toBeNull()
   })
 

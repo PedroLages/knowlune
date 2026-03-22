@@ -23,7 +23,7 @@ import { db } from '@/db'
 import { calculateMomentumScore } from '@/lib/momentum'
 import { calculateAtRiskStatus } from '@/lib/atRisk'
 import { calculateCompletionEstimate } from '@/lib/completionEstimate'
-import type { CourseCategory, LearnerCourseStatus } from '@/data/types'
+import type { LearnerCourseStatus } from '@/data/types'
 import type { MomentumScore } from '@/lib/momentum'
 import type { AtRiskStatus } from '@/lib/atRisk'
 import type { CompletionEstimate } from '@/lib/completionEstimate'
@@ -332,7 +332,13 @@ export function Courses() {
               aria-label="Filter by category"
               className="flex flex-wrap gap-2"
             >
-              {[{ value: 'all', label: 'All Courses' }, ...availableCategories.map(cat => ({ value: cat, label: categoryLabels[cat] ?? cat }))].map((chip, i) => (
+              {[
+                { value: 'all', label: 'All Courses' },
+                ...availableCategories.map(cat => ({
+                  value: cat,
+                  label: categoryLabels[cat] ?? cat,
+                })),
+              ].map((chip, i) => (
                 <ToggleGroupItem
                   key={chip.value}
                   value={chip.value}

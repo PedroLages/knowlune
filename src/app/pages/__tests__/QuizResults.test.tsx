@@ -120,7 +120,15 @@ describe('QuizResults — error paths', () => {
   })
 })
 
+/**
+ * Creates a QuizAttempt with a distinct completedAt timestamp derived from the id.
+ * IDs like 'a1', 'a2', 'a3' produce chronologically ordered timestamps so
+ * calculateImprovement's date-based sorting works correctly.
+ */
 function makeAttemptWith(percentage: number, id: string): QuizAttempt {
+  // Extract numeric suffix from id (e.g., 'a1' → 1, 'a2' → 2)
+  const num = parseInt(id.replace(/\D/g, ''), 10) || 1
+  const minutes = String(num).padStart(2, '0')
   return {
     ...testAttempt,
     id,
@@ -128,6 +136,7 @@ function makeAttemptWith(percentage: number, id: string): QuizAttempt {
     percentage,
     score: Math.round((percentage / 100) * testQuiz.questions.length),
     passed: percentage >= testQuiz.passingScore,
+    completedAt: `2026-03-20T10:${minutes}:00Z`,
   }
 }
 
@@ -356,9 +365,22 @@ describe('QuizResults — time display wiring (E15-S06)', () => {
   it('hides previous attempt time when prior timeSpent is NaN (guard: Number.isFinite)', async () => {
     useQuizStore.setState({
       currentQuiz: timedTestQuiz,
+      // Most-recent-first: a2 is current (index 0), a1 is previous (index 1)
       attempts: [
-        { ...testAttempt, id: 'a1', timeSpent: NaN, timerAccommodation: 'standard' },
-        { ...testAttempt, id: 'a2', timeSpent: 300000, timerAccommodation: 'standard' },
+        {
+          ...testAttempt,
+          id: 'a2',
+          completedAt: '2026-03-20T10:02:00Z',
+          timeSpent: 300000,
+          timerAccommodation: 'standard',
+        },
+        {
+          ...testAttempt,
+          id: 'a1',
+          completedAt: '2026-03-20T10:01:00Z',
+          timeSpent: NaN,
+          timerAccommodation: 'standard',
+        },
       ],
       isLoading: false,
       error: null,
@@ -377,9 +399,22 @@ describe('QuizResults — time display wiring (E15-S06)', () => {
   it('shows previous attempt time when prior timeSpent is valid (AC5 wiring through QuizResults)', async () => {
     useQuizStore.setState({
       currentQuiz: timedTestQuiz,
+      // Most-recent-first: a2 (5m) is current (index 0), a1 (10m15s) is previous (index 1)
       attempts: [
-        { ...testAttempt, id: 'a1', timeSpent: 615000, timerAccommodation: 'standard' }, // 10m 15s
-        { ...testAttempt, id: 'a2', timeSpent: 300000, timerAccommodation: 'standard' }, // 5m
+        {
+          ...testAttempt,
+          id: 'a2',
+          completedAt: '2026-03-20T10:02:00Z',
+          timeSpent: 300000,
+          timerAccommodation: 'standard',
+        }, // 5m — current
+        {
+          ...testAttempt,
+          id: 'a1',
+          completedAt: '2026-03-20T10:01:00Z',
+          timeSpent: 615000,
+          timerAccommodation: 'standard',
+        }, // 10m 15s — previous
       ],
       isLoading: false,
       error: null,
