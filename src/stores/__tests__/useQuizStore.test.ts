@@ -318,6 +318,42 @@ describe('submitQuiz', () => {
     expect(mockSetItemStatus).not.toHaveBeenCalled()
   })
 
+  it('stores timeSpent as elapsed ms in IndexedDB (AC1: timeSpent = submitTime - startTime)', async () => {
+    const T_START = 1_000_000
+    const T_END = 1_512_000 // 512_000ms = 8m 32s later
+
+    await setupQuizInProgress('les-timespent')
+    // Set controlled startTime directly in store state — avoids Date.now() mock
+    // timing issues with fake-indexeddb internals calling Date.now()
+    const state = useQuizStore.getState()
+    if (state.currentProgress) {
+      useQuizStore.setState({
+        currentProgress: { ...state.currentProgress, startTime: T_START },
+      })
+    }
+
+    useQuizStore.getState().submitAnswer('q1', 'A')
+
+    // Mock Date.now() for the submitQuiz call so timeSpent = T_END - T_START
+    vi.spyOn(Date, 'now').mockReturnValue(T_END)
+
+    await act(async () => {
+      await useQuizStore.getState().submitQuiz('course-ts')
+    })
+
+    vi.restoreAllMocks()
+
+    const dbAttempts = await db.quizAttempts.toArray()
+    expect(dbAttempts).toHaveLength(1)
+    // timeSpent = Date.now() - startTime = T_END - T_START
+    expect(dbAttempts[0].timeSpent).toBe(512_000)
+    // startedAt is derived from currentProgress.startTime (T_START), not Date.now()
+    expect(dbAttempts[0].startedAt).toBe(new Date(T_START).toISOString())
+    // completedAt uses new Date() which doesn't route through Date.now() in V8;
+    // assert it is a valid ISO 8601 string rather than an exact value
+    expect(dbAttempts[0].completedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/)
+  })
+
   it('reverts state and shows toast on Dexie failure, preserving currentProgress', async () => {
     await setupQuizInProgress('les-7')
     useQuizStore.getState().submitAnswer('q1', 'A')

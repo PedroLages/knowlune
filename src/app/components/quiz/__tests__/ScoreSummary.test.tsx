@@ -148,4 +148,36 @@ describe('ScoreSummary', () => {
     render(<ScoreSummary {...passProps} timeSpent={500} />)
     expect(screen.getByText('Completed in 1s')).toBeInTheDocument()
   })
+
+  it('hides time display when showTimeSpent is false', () => {
+    render(<ScoreSummary {...passProps} showTimeSpent={false} />)
+    expect(screen.queryByText(/Completed in/)).not.toBeInTheDocument()
+  })
+
+  it('shows time display when showTimeSpent is true (default)', () => {
+    render(<ScoreSummary {...passProps} />)
+    expect(screen.getByText('Completed in 8m 32s')).toBeInTheDocument()
+  })
+
+  it('shows previous attempt time when previousAttemptTimeSpent is provided', () => {
+    render(
+      <ScoreSummary
+        {...passProps}
+        timeSpent={512000} // 8m 32s
+        previousAttemptTimeSpent={615000} // 10m 15s
+      />
+    )
+    expect(screen.getByText('Completed in 8m 32s')).toBeInTheDocument()
+    expect(screen.getByText(/Previous: 10m 15s/)).toBeInTheDocument()
+  })
+
+  it('does not show previous time when previousAttemptTimeSpent is undefined', () => {
+    render(<ScoreSummary {...passProps} timeSpent={512000} />)
+    expect(screen.queryByText(/Previous:/)).not.toBeInTheDocument()
+  })
+
+  it('does not show previous time when showTimeSpent is false', () => {
+    render(<ScoreSummary {...passProps} showTimeSpent={false} previousAttemptTimeSpent={615000} />)
+    expect(screen.queryByText(/Previous:/)).not.toBeInTheDocument()
+  })
 })

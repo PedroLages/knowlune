@@ -131,6 +131,13 @@ function makeAttemptWith(percentage: number, id: string): QuizAttempt {
   }
 }
 
+// Timed quiz fixture for time-display wiring tests
+const timedTestQuiz: Quiz = {
+  ...testQuiz,
+  id: 'quiz-timed',
+  timeLimit: 10,
+}
+
 describe('QuizResults — improvement summary', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -252,5 +259,102 @@ describe('QuizResults — improvement summary', () => {
     // Should compare against best of previous (90%), not last previous (70%)
     expect(summary).toHaveTextContent('Previous best: 90%')
     expect(summary).toHaveTextContent('(+5%)')
+  })
+})
+
+describe('QuizResults — time display wiring (E15-S06)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    useQuizStore.setState({
+      currentQuiz: null,
+      currentProgress: null,
+      attempts: [],
+      isLoading: false,
+      error: null,
+    })
+  })
+
+  it('hides time display when quiz has no timeLimit (AC4 wiring through QuizResults)', async () => {
+    // testQuiz has timeLimit: null → showTimeSpent should be false in QuizResults
+    useQuizStore.setState({
+      currentQuiz: testQuiz,
+      attempts: [testAttempt],
+      isLoading: false,
+      error: null,
+    })
+
+    const { QuizResults } = await import('../QuizResults')
+    render(
+      <MemoryRouter initialEntries={['/courses/c1/lessons/l1/quiz/results']}>
+        <QuizResults />
+      </MemoryRouter>
+    )
+
+    expect(screen.queryByText(/Completed in/)).not.toBeInTheDocument()
+  })
+
+  it('shows time display when quiz has a timeLimit and attempt has standard accommodation', async () => {
+    // timedTestQuiz has timeLimit: 10 → showTimeSpent should be true
+    useQuizStore.setState({
+      currentQuiz: timedTestQuiz,
+      attempts: [{ ...testAttempt, timeSpent: 300000, timerAccommodation: 'standard' }],
+      isLoading: false,
+      error: null,
+    })
+
+    const { QuizResults } = await import('../QuizResults')
+    render(
+      <MemoryRouter initialEntries={['/courses/c1/lessons/l1/quiz/results']}>
+        <QuizResults />
+      </MemoryRouter>
+    )
+
+    expect(screen.getByText(/Completed in 5m/)).toBeInTheDocument()
+  })
+
+  it('hides previous attempt time when prior timeSpent is NaN (guard: Number.isFinite)', async () => {
+    useQuizStore.setState({
+      currentQuiz: timedTestQuiz,
+      attempts: [
+        { ...testAttempt, id: 'a1', timeSpent: NaN, timerAccommodation: 'standard' },
+        { ...testAttempt, id: 'a2', timeSpent: 300000, timerAccommodation: 'standard' },
+      ],
+      isLoading: false,
+      error: null,
+    })
+
+    const { QuizResults } = await import('../QuizResults')
+    render(
+      <MemoryRouter initialEntries={['/courses/c1/lessons/l1/quiz/results']}>
+        <QuizResults />
+      </MemoryRouter>
+    )
+
+    expect(screen.queryByText(/Previous:/)).not.toBeInTheDocument()
+  })
+
+  it('shows previous attempt time when prior timeSpent is valid (AC5 wiring through QuizResults)', async () => {
+    useQuizStore.setState({
+      currentQuiz: timedTestQuiz,
+      attempts: [
+        { ...testAttempt, id: 'a1', timeSpent: 615000, timerAccommodation: 'standard' }, // 10m 15s
+        { ...testAttempt, id: 'a2', timeSpent: 300000, timerAccommodation: 'standard' }, // 5m
+      ],
+      isLoading: false,
+      error: null,
+    })
+
+    const { QuizResults } = await import('../QuizResults')
+    render(
+      <MemoryRouter initialEntries={['/courses/c1/lessons/l1/quiz/results']}>
+        <QuizResults />
+      </MemoryRouter>
+    )
+
+    expect(screen.getByText(/Completed in 5m/)).toBeInTheDocument()
+    expect(screen.getByText(/Previous: 10m 15s/)).toBeInTheDocument()
   })
 })
