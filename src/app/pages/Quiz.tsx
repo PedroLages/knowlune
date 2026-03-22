@@ -20,6 +20,7 @@ import { QuizHeader } from '@/app/components/quiz/QuizHeader'
 import { QuestionDisplay } from '@/app/components/quiz/QuestionDisplay'
 import { QuestionHint } from '@/app/components/quiz/QuestionHint'
 import { QuizNavigation } from '@/app/components/quiz/QuizNavigation'
+import { AnswerFeedback } from '@/app/components/quiz/AnswerFeedback'
 import { MarkForReview } from '@/app/components/quiz/MarkForReview'
 import { ReviewSummary } from '@/app/components/quiz/ReviewSummary'
 import { Skeleton } from '@/app/components/ui/skeleton'
@@ -414,7 +415,7 @@ export function Quiz() {
 
     const currentQuestionId = currentQuestion?.id
     const currentAnswer = currentQuestionId
-      ? (currentProgress.answers[currentQuestionId] as string | undefined)
+      ? (currentProgress.answers[currentQuestionId] as string | string[] | undefined)
       : undefined
 
     const unansweredCount = countUnanswered(currentQuiz.questions, currentProgress.answers)
@@ -448,6 +449,13 @@ export function Quiz() {
               mode="active"
             />
             <QuestionHint hint={currentQuestion.hint} />
+            {currentAnswer !== undefined && currentAnswer !== '' &&
+              !(Array.isArray(currentAnswer) && currentAnswer.length === 0) && (
+              <AnswerFeedback
+                question={currentQuestion}
+                userAnswer={currentAnswer}
+              />
+            )}
           </>
         ) : (
           <div className="mt-6 rounded-xl border border-border p-6 text-center text-muted-foreground text-sm">
