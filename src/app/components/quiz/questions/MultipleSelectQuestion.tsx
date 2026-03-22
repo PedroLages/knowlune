@@ -67,15 +67,30 @@ export function MultipleSelectQuestion({
           const isSelected = value.includes(option)
           const shortcutNum = index + 1
 
+          const correctAnswers = Array.isArray(question.correctAnswer)
+            ? question.correctAnswer
+            : [question.correctAnswer]
+          const isCorrectAnswer = correctAnswers.includes(option)
+          const isMissed = !isSelected && isCorrectAnswer && mode === 'review-incorrect'
+          const reviewStyle = (() => {
+            if (!isActive) {
+              if (isSelected && isCorrectAnswer) return 'border-success bg-success-soft'
+              if (isSelected && !isCorrectAnswer) return 'border-warning bg-warning/10'
+              if (isMissed) return 'border-success bg-success-soft opacity-80 border-dashed'
+              return 'border-border bg-card opacity-60'
+            }
+            return isSelected
+              ? 'border-brand bg-brand-soft'
+              : cn('border-border bg-card', 'hover:bg-accent')
+          })()
+
           return (
             <label
               key={`${index}-${option}`}
               className={cn(
-                'flex items-center gap-3 rounded-xl p-4 min-h-12 cursor-pointer transition-colors duration-150 motion-reduce:transition-none border-2',
-                isSelected
-                  ? 'border-brand bg-brand-soft'
-                  : cn('border-border bg-card', isActive && 'hover:bg-accent'),
-                !isActive && 'cursor-default opacity-60',
+                'flex items-center gap-3 rounded-xl p-4 min-h-12 transition-colors duration-150 motion-reduce:transition-none border-2',
+                isActive ? 'cursor-pointer' : 'cursor-default',
+                reviewStyle,
                 'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2'
               )}
             >

@@ -87,8 +87,9 @@ export function QuizResults() {
   }, [retakeQuiz, lessonId, courseId, navigate])
 
   const handleReviewAnswers = useCallback(() => {
-    toast.info('Answer review is coming soon. Use Question Breakdown below to see your results.')
-  }, [])
+    if (!lastAttempt) return
+    navigate(`/courses/${courseId}/lessons/${lessonId}/quiz/review/${lastAttempt.id}`)
+  }, [lastAttempt, courseId, lessonId, navigate])
 
   // No quiz data — declarative redirect back (not imperative navigate during render)
   if (!currentQuiz && !isLoading) {
