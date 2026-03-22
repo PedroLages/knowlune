@@ -12,6 +12,8 @@ export function formatTime(totalSeconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
+export type WarningLevel = '25%' | '10%' | '1min'
+
 /**
  * Drift-free countdown timer anchored to Date.now().
  *
@@ -22,15 +24,25 @@ export function formatTime(totalSeconds: number): string {
  *
  * @param initialSeconds - Starting countdown in seconds (0 = disabled)
  * @param onExpire - Callback fired once when the timer reaches 0
+ * @param onWarning - Optional callback fired once per threshold (25%, 10%, 1min)
  * @returns Current remaining time in seconds
  */
-export function useQuizTimer(initialSeconds: number, onExpire: () => void): number {
+export function useQuizTimer(
+  initialSeconds: number,
+  onExpire: () => void,
+  onWarning?: (level: WarningLevel, remainingSeconds: number) => void
+): number {
   const [timeRemaining, setTimeRemaining] = useState(initialSeconds)
   const onExpireRef = useRef(onExpire)
   onExpireRef.current = onExpire
+  const onWarningRef = useRef(onWarning)
+  onWarningRef.current = onWarning
 
   // Track whether onExpire has already been called to prevent double-fire
   const hasFiredRef = useRef(false)
+
+  // Track which warning thresholds have fired to prevent re-firing
+  const warningsFiredRef = useRef<Set<WarningLevel>>(new Set())
 
   useEffect(() => {
     if (initialSeconds <= 0) return
@@ -40,6 +52,7 @@ export function useQuizTimer(initialSeconds: number, onExpire: () => void): numb
     // value on first mount, so we must sync explicitly.
     setTimeRemaining(initialSeconds)
     hasFiredRef.current = false
+    warningsFiredRef.current = new Set()
     const startTime = Date.now()
     const endTime = startTime + initialSeconds * 1000
 
@@ -60,10 +73,40 @@ export function useQuizTimer(initialSeconds: number, onExpire: () => void): numb
       }
     }
 
+    const fireWarnings = (remaining: number) => {
+      if (!onWarningRef.current) return
+
+      const fired = warningsFiredRef.current
+      const pct = remaining / initialSeconds
+
+      // Fire warnings in order so each callback executes independently.
+      // Even when multiple thresholds cross in the same tick (short quizzes
+      // or tab-return), each onWarning call fires its toast imperatively.
+      if (pct <= 0.25 && !fired.has('25%')) {
+        fired.add('25%')
+        onWarningRef.current('25%', remaining)
+      }
+      if (pct <= 0.1 && !fired.has('10%')) {
+        fired.add('10%')
+        onWarningRef.current('10%', remaining)
+      }
+      if (remaining <= 60 && !fired.has('1min')) {
+        fired.add('1min')
+        onWarningRef.current('1min', remaining)
+      }
+    }
+
     const recalculate = () => {
       const now = Date.now()
       const remaining = Math.max(0, Math.floor((endTime - now) / 1000))
       setTimeRemaining(remaining)
+
+      // Fire warning callbacks at key thresholds (once each).
+      // Uses >= 0 so warnings fire even on tab-return where remaining
+      // jumps straight to 0 (learner deserves at least the 1min warning).
+      if (remaining >= 0) {
+        fireWarnings(remaining)
+      }
 
       if (remaining === 0 && !hasFiredRef.current) {
         hasFiredRef.current = true

@@ -234,7 +234,7 @@ development_status:
   epic-15: in-progress
   15-1-display-countdown-timer-with-accuracy: done
   15-2-configure-timer-duration-and-accommodations: done
-  15-3-display-timer-warnings-at-key-thresholds: backlog
+  15-3-display-timer-warnings-at-key-thresholds: done
   15-4-provide-immediate-explanatory-feedback-per-question: backlog
   15-5-display-performance-summary-after-quiz: backlog
   15-6-track-time-to-completion-for-each-attempt: backlog

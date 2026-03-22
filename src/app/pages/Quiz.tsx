@@ -12,7 +12,8 @@ import {
   selectIsLoading,
   selectError,
 } from '@/stores/useQuizStore'
-import { useQuizTimer } from '@/hooks/useQuizTimer'
+import { useQuizTimer, formatTime, type WarningLevel } from '@/hooks/useQuizTimer'
+import { TimerWarnings } from '@/app/components/quiz/TimerWarnings'
 import { isQuotaExceeded } from '@/lib/quotaResilientStorage'
 import { QuizStartScreen } from '@/app/components/quiz/QuizStartScreen'
 import { QuizHeader } from '@/app/components/quiz/QuizHeader'
@@ -172,6 +173,12 @@ export function Quiz() {
   )
 
   const handleStart = useCallback(() => {
+    // Reset warning state from any previous attempt
+    setWarningState(null)
+    if (persistentToastIdRef.current !== undefined) {
+      toast.dismiss(persistentToastIdRef.current)
+      persistentToastIdRef.current = undefined
+    }
     // startQuiz handles errors internally (try/catch + store error state)
     startQuiz(lessonId, accommodation)
   }, [startQuiz, lessonId, accommodation])
@@ -234,6 +241,11 @@ export function Quiz() {
   const handleTimerExpiry = useCallback(async () => {
     if (isSubmittingRef.current) return
     isSubmittingRef.current = true
+    // Dismiss persistent 1-minute toast before showing expiry message
+    if (persistentToastIdRef.current !== undefined) {
+      toast.dismiss(persistentToastIdRef.current)
+      persistentToastIdRef.current = undefined
+    }
     try {
       await submitQuiz(courseId)
       toast.error("Time's up! Your quiz has been submitted.")
@@ -262,7 +274,43 @@ export function Quiz() {
 
   const totalTimeSeconds = currentQuiz?.timeLimit != null ? currentQuiz.timeLimit * 60 : 0
 
-  const timerRemaining = useQuizTimer(timerInitialSecondsRef.current, handleTimerExpiry)
+  // Warning state — updated by useQuizTimer's onWarning callback
+  const [warningState, setWarningState] = useState<{
+    level: WarningLevel
+    remaining: number
+  } | null>(null)
+
+  // Store persistent toast ID so we can dismiss it on quiz end
+  const persistentToastIdRef = useRef<string | number | undefined>(undefined)
+
+  const handleTimerWarning = useCallback((level: WarningLevel, remaining: number) => {
+    // Fire toasts imperatively (not via state) so React batching doesn't
+    // swallow warnings when multiple thresholds cross in the same tick
+    // (e.g., short quizzes where 25%, 10%, and 1min fire together).
+    const timeStr = formatTime(remaining)
+    switch (level) {
+      case '25%':
+        toast.info(`${timeStr} remaining`, { duration: 3000 })
+        break
+      case '10%':
+        toast.warning(`Only ${timeStr} remaining!`, { duration: 5000 })
+        break
+      case '1min':
+        persistentToastIdRef.current = toast.warning(`Only ${timeStr} remaining!`, {
+          duration: Infinity,
+          closeButton: true, // explicit — global Toaster enables it, but documents intent
+        })
+        break
+    }
+    // Update ARIA state (TimerWarnings uses this for screen reader announcements)
+    setWarningState({ level, remaining })
+  }, [])
+
+  const timerRemaining = useQuizTimer(
+    timerInitialSecondsRef.current,
+    handleTimerExpiry,
+    handleTimerWarning
+  )
 
   // Safety net: sync progress to per-quiz localStorage on tab close/crash.
   // The subscribe listener in useQuizStore fires synchronously on every state change,
@@ -378,6 +426,10 @@ export function Quiz() {
           progress={currentProgress}
           timeRemaining={timerInitialSecondsRef.current > 0 ? timerRemaining : null}
           totalTimeSeconds={totalTimeSeconds > 0 ? totalTimeSeconds : null}
+        />
+        <TimerWarnings
+          warningLevel={warningState?.level ?? null}
+          remainingSeconds={warningState?.remaining ?? 0}
         />
         {currentQuestion && currentQuestionId ? (
           <>
