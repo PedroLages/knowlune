@@ -1,7 +1,7 @@
 ---
 story_id: E17-S02
 story_name: "Track Average Retake Frequency"
-status: reviewed
+status: done
 started: 2026-03-22
 completed: 2026-03-22
 reviewed: true
