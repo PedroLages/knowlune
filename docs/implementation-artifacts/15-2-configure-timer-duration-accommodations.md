@@ -183,22 +183,18 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-**Reviewed 2026-03-22** — 2 blockers, 1 high, 1 medium.
-- BLOCKER: Accommodations trigger 20px tall — below 44px touch target minimum (QuizStartScreen.tsx:102)
-- BLOCKER: Focus returns to `<body>` after modal close — needs `<DialogTrigger asChild>` or manual ref focus
-- HIGH: `annotation` missing from `useEffect` deps in QuizTimer.tsx:55
-- MEDIUM: Explanation text should precede radio options for context-before-choice accessibility
-See: [design-review-2026-03-22-e15-s02.md](../reviews/design/design-review-2026-03-22-e15-s02.md)
+**v1 (2026-03-22)** — 2 blockers, 1 high, 1 medium → all fixed.
+**v2 (2026-03-22)** — 0 blockers, 0 high. All v1 blockers confirmed resolved.
+- NOTE: `text-brand-soft-foreground`/`bg-brand-soft` contrast 3.16:1 at 14px — pre-existing systemic issue, tracked separately
+See: [design-review-2026-03-22-e15-s02-v2.md](../reviews/design/design-review-2026-03-22-e15-s02-v2.md)
 
 ## Code Review Feedback
 
-**Reviewed 2026-03-22** — 0 blockers, 3 high, 4 medium.
-- HIGH: QuizResults retake ignores saved accommodation — violates AC5 persistence
-- HIGH: Multiplier logic duplicated in 3 places — extract shared utility
-- HIGH: Unsafe `as` cast on radio value — use Zod safeParse instead
-- MEDIUM: Badge className duplication — use `cn()` composition
-- MEDIUM: Two empty catch blocks without logging in Quiz.tsx
-See: [code-review-2026-03-22-e15-s02.md](../reviews/code/code-review-2026-03-22-e15-s02.md)
+**v1 (2026-03-22)** — 0 blockers, 3 high, 4 medium → all fixed.
+**v2 (2026-03-22)** — 0 blockers. v1 fixes verified correct.
+- MEDIUM: Dead `useEffect` in TimerAccommodationsModal (component unmounts on close)
+- MEDIUM: Duration formatting duplicated between `formatTimeBadge` and `formatDuration`
+See: [code-review-2026-03-22-e15-s02-v2.md](../reviews/code/code-review-2026-03-22-e15-s02-v2.md)
 
 ## Web Design Guidelines Review
 

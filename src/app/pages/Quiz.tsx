@@ -60,7 +60,7 @@ function loadSavedProgress(quizId: string): QuizProgress | null {
 }
 
 /** Load persisted timer accommodation preference, validated via Zod */
-function loadSavedAccommodation(lessonId: string): TimerAccommodation {
+export function loadSavedAccommodation(lessonId: string): TimerAccommodation {
   try {
     const raw = localStorage.getItem(`quiz-accommodation-${lessonId}`)
     if (!raw) return 'standard'

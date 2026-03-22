@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useNavigate, Navigate, Link } from 'react-router'
 import { ArrowLeft, History } from 'lucide-react'
 import { toast } from 'sonner'
-import { TimerAccommodationEnum } from '@/types/quiz'
+import { loadSavedAccommodation } from '@/app/pages/Quiz'
 import {
   useQuizStore,
   selectCurrentQuiz,
@@ -76,17 +76,7 @@ export function QuizResults() {
 
   const handleRetake = useCallback(async () => {
     try {
-      // Load saved accommodation so retakes preserve the learner's preference
-      let accommodation: 'standard' | '150%' | '200%' | 'untimed' = 'standard'
-      try {
-        const raw = localStorage.getItem(`quiz-accommodation-${lessonId}`)
-        if (raw) {
-          const result = TimerAccommodationEnum.safeParse(raw)
-          if (result.success) accommodation = result.data
-        }
-      } catch {
-        // Best-effort — fall back to standard
-      }
+      const accommodation = loadSavedAccommodation(lessonId)
       await retakeQuiz(lessonId, accommodation)
       navigate(`/courses/${courseId}/lessons/${lessonId}/quiz`)
     } catch (err: unknown) {
