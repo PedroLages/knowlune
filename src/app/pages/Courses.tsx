@@ -208,7 +208,8 @@ export function Courses() {
           <h1 className="text-2xl font-bold mb-2">All Courses</h1>
           {allCourses.length + importedCourses.length > 0 && (
             <p className="text-muted-foreground">
-              {allCourses.length + importedCourses.length} courses
+              {allCourses.length + importedCourses.length}{' '}
+              {allCourses.length + importedCourses.length === 1 ? 'course' : 'courses'}
             </p>
           )}
         </div>
