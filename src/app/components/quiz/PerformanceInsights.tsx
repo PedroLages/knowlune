@@ -37,7 +37,7 @@ export function PerformanceInsights({ questions, answers }: PerformanceInsightsP
         <div
           className={cn(
             'space-y-4',
-            showBothSections && 'sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0',
+            showBothSections && 'sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0'
           )}
         >
           {strengths.length > 0 && (
@@ -53,7 +53,7 @@ export function PerformanceInsights({ questions, answers }: PerformanceInsightsP
               </div>
 
               <ul className="space-y-2">
-                {strengths.map((topic) => (
+                {strengths.map(topic => (
                   <li key={topic.name} className="flex items-center justify-between gap-2">
                     <span className="text-sm text-foreground">{topic.name}</span>
                     <span className="text-sm font-semibold text-success tabular-nums">
@@ -78,7 +78,7 @@ export function PerformanceInsights({ questions, answers }: PerformanceInsightsP
               </div>
 
               <ul className="space-y-2">
-                {growthAreas.map((topic) => (
+                {growthAreas.map(topic => (
                   <li key={topic.name} className="space-y-0.5">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm text-foreground">{topic.name}</span>

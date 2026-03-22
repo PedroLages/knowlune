@@ -201,7 +201,9 @@ describe('ScoreSummary', () => {
   it('first attempt: shows "First attempt complete!" message', () => {
     render(<ScoreSummary {...passProps} improvementData={firstAttemptData} />)
     expect(screen.getByTestId('improvement-summary')).toBeInTheDocument()
-    expect(screen.getByText(/First attempt complete! Retake to track improvement\./)).toBeInTheDocument()
+    expect(
+      screen.getByText(/First attempt complete! Retake to track improvement\./)
+    ).toBeInTheDocument()
   })
 
   it('first attempt: does NOT show "New personal best!"', () => {

@@ -146,15 +146,22 @@ function ScoreImprovementPanel({ data }: { data: ImprovementData }) {
         </div>
         <div className="flex justify-between border-t border-border pt-1 mt-1">
           <span className="text-muted-foreground">Improvement:</span>
-          <span className={cn('font-semibold', data.isNewBest ? 'text-success' : 'text-muted-foreground')}>
-            {sign}{roundedImprovement}%
+          <span
+            className={cn(
+              'font-semibold',
+              data.isNewBest ? 'text-success' : 'text-muted-foreground'
+            )}
+          >
+            {sign}
+            {roundedImprovement}%
           </span>
         </div>
       </div>
 
       {!data.isNewBest && data.bestScore !== null && (
         <p className="text-muted-foreground text-xs mt-3 text-center">
-          Your best: {Math.round(data.bestScore)}% (attempt #{data.bestAttemptNumber}) &middot; Keep practicing to beat your best!
+          Your best: {Math.round(data.bestScore)}% (attempt #{data.bestAttemptNumber}) &middot; Keep
+          practicing to beat your best!
         </p>
       )}
     </div>

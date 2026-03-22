@@ -156,9 +156,7 @@ export function calculateImprovement(attempts: QuizAttempt[]): ImprovementData {
   const previousAttempts = sortedByDate.slice(0, -1)
   const bestPrevious =
     previousAttempts.length > 0
-      ? previousAttempts.reduce((best, cur) =>
-          cur.percentage > best.percentage ? cur : best
-        )
+      ? previousAttempts.reduce((best, cur) => (cur.percentage > best.percentage ? cur : best))
       : null
 
   // Best across ALL attempts (including current) — for bestAttemptNumber display
@@ -173,8 +171,7 @@ export function calculateImprovement(attempts: QuizAttempt[]): ImprovementData {
   const improvement =
     sortedByDate.length > 1 ? currentAttempt.percentage - firstAttempt.percentage : null
 
-  const isNewBest =
-    bestPrevious !== null && currentAttempt.percentage > bestPrevious.percentage
+  const isNewBest = bestPrevious !== null && currentAttempt.percentage > bestPrevious.percentage
 
   return {
     firstScore: sortedByDate.length > 1 ? firstAttempt.percentage : null,
