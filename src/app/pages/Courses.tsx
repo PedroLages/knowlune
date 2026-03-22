@@ -9,11 +9,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/app/components/ui/select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs'
-import { CourseCard } from '@/app/components/figma/CourseCard'
+import { CourseCard, categoryLabels } from '@/app/components/figma/CourseCard'
 import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
 import { TopicFilter } from '@/app/components/figma/TopicFilter'
 import { StatusFilter } from '@/app/components/figma/StatusFilter'
+import { ToggleGroup, ToggleGroupItem } from '@/app/components/ui/toggle-group'
 import { Search, FolderOpen, Loader2 } from 'lucide-react'
 import { useCourseStore } from '@/stores/useCourseStore'
 import { getCourseCompletionPercent, getProgress } from '@/lib/progress'
@@ -30,21 +30,12 @@ import type { CompletionEstimate } from '@/lib/completionEstimate'
 
 const ESTIMATED_MINUTES_PER_LESSON = 15
 
-const tabs: { value: string; label: string; category?: CourseCategory }[] = [
-  { value: 'all', label: 'All Courses' },
-  { value: 'behavioral-analysis', label: 'Behavioral Analysis', category: 'behavioral-analysis' },
-  { value: 'influence-authority', label: 'Influence & Authority', category: 'influence-authority' },
-  { value: 'confidence-mastery', label: 'Confidence', category: 'confidence-mastery' },
-  { value: 'operative-training', label: 'Operative Training', category: 'operative-training' },
-  { value: 'research-library', label: 'Research Library', category: 'research-library' },
-]
-
 type SortMode = 'recent' | 'momentum'
 
 export function Courses() {
   const allCourses = useCourseStore(s => s.courses)
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeTab, setActiveTab] = useState('all')
+  const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [selectedTopics, setSelectedTopics] = useState<string[]>([])
   const [selectedStatuses, setSelectedStatuses] = useState<LearnerCourseStatus[]>([])
   const [sortMode, setSortMode] = useState<SortMode>('recent')
@@ -141,12 +132,17 @@ export function Courses() {
     }
   }, [allCourses])
 
+  // Extract unique categories dynamically from actual course data
+  const availableCategories = useMemo(
+    () => [...new Set(allCourses.map(c => c.category))],
+    [allCourses]
+  )
+
   const filtered = (() => {
     let courses = allCourses
 
-    const tab = tabs.find(t => t.value === activeTab)
-    if (tab?.category) {
-      courses = courses.filter(c => c.category === tab.category)
+    if (selectedCategory) {
+      courses = courses.filter(c => c.category === selectedCategory)
     }
 
     if (searchQuery.trim()) {
@@ -276,37 +272,32 @@ export function Courses() {
         <div className="mb-8">
           <h2 className="text-xl font-semibold mb-4">Imported Courses</h2>
           {importedCourses.length === 0 ? (
-            <Card
+            <div
               data-testid="imported-courses-empty-state"
-              className="bg-card rounded-[24px] border-0 shadow-sm p-8 text-center"
+              className="flex items-center gap-3 rounded-xl bg-muted/50 px-4 py-3 text-sm text-muted-foreground"
               role="region"
               aria-label="Import courses"
             >
-              <FolderOpen
-                className="size-12 text-muted-foreground mx-auto mb-3"
-                aria-hidden="true"
-              />
-              <p className="text-muted-foreground mb-4">Import your first course to get started</p>
+              <FolderOpen className="size-5 shrink-0" aria-hidden="true" />
+              <span>No imported courses yet.</span>
               <Button
-                variant="brand"
+                variant="link"
+                size="sm"
                 data-testid="import-first-course-cta"
                 onClick={handleImportCourse}
                 disabled={isImporting}
-                className="rounded-xl"
+                className="text-brand h-auto p-0"
               >
                 {isImporting ? (
                   <>
-                    <Loader2 className="size-4 mr-2 animate-spin" />
+                    <Loader2 className="size-4 mr-1 animate-spin" />
                     Scanning...
                   </>
                 ) : (
-                  <>
-                    <FolderOpen className="size-4 mr-2" />
-                    Import Your First Course
-                  </>
+                  'Import a course \u2192'
                 )}
               </Button>
-            </Card>
+            </div>
           ) : filteredImportedCourses.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               No imported courses match your{' '}
@@ -330,15 +321,33 @@ export function Courses() {
         </div>
       )}
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+      <div className="mb-6">
         <div className="flex items-center gap-4 mb-4 flex-wrap">
-          <TabsList className="flex-wrap flex-1">
-            {tabs.map(tab => (
-              <TabsTrigger key={tab.value} value={tab.value}>
-                {tab.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+          <div className="flex flex-wrap gap-2 items-center flex-1">
+            <ToggleGroup
+              type="single"
+              value={selectedCategory}
+              onValueChange={setSelectedCategory}
+              aria-label="Filter by category"
+              className="flex flex-wrap gap-2"
+            >
+              <ToggleGroupItem
+                value=""
+                className="h-auto rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors first:rounded-full last:rounded-full data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-transparent data-[state=off]:hover:bg-accent data-[state=off]:border-input cursor-pointer shadow-none"
+              >
+                All Courses
+              </ToggleGroupItem>
+              {availableCategories.map(cat => (
+                <ToggleGroupItem
+                  key={cat}
+                  value={cat}
+                  className="h-auto rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors first:rounded-full last:rounded-full data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-transparent data-[state=off]:hover:bg-accent data-[state=off]:border-input cursor-pointer shadow-none"
+                >
+                  {categoryLabels[cat] ?? cat}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </div>
           <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
             <SelectTrigger
               data-testid="sort-select"
@@ -354,29 +363,25 @@ export function Courses() {
           </Select>
         </div>
 
-        {tabs.map(tab => (
-          <TabsContent key={tab.value} value={tab.value} className="mt-0">
-            {sortedCourses.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                No courses match your search
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                {sortedCourses.map(course => (
-                  <CourseCard
-                    key={course.id}
-                    course={course}
-                    completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
-                    momentumScore={momentumMap.get(course.id)}
-                    atRiskStatus={atRiskMap.get(course.id)}
-                    completionEstimate={estimateMap.get(course.id)}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        ))}
-      </Tabs>
+        {sortedCourses.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            No courses match your search
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            {sortedCourses.map(course => (
+              <CourseCard
+                key={course.id}
+                course={course}
+                completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
+                momentumScore={momentumMap.get(course.id)}
+                atRiskStatus={atRiskMap.get(course.id)}
+                completionEstimate={estimateMap.get(course.id)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

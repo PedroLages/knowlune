@@ -320,3 +320,14 @@ development_status:
   21-6-smart-dashboard-reordering: backlog
   21-7-age-appropriate-defaults-and-font-scaling: backlog
   epic-21-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 22: Ollama Integration & Smart Course Categorization
+  # ──────────────────────────────────────────────────
+  epic-22: backlog
+  22-1-ollama-provider-integration: backlog
+  22-2-model-auto-discovery: backlog
+  22-3-connection-testing-health-check: backlog
+  22-4-auto-categorize-courses-on-import: backlog
+  22-5-dynamic-filter-chips-from-ai-tags: backlog
+  epic-22-retrospective: optional
