@@ -160,10 +160,10 @@ export function calculateImprovement(attempts: QuizAttempt[]): ImprovementData {
       : null
 
   // Best across ALL attempts (including current) — for bestAttemptNumber display
-  // Uses the original (unsorted) attempts array index for consistent 1-based numbering
+  // Uses the chronologically sorted array for correct 1-based attempt numbering
   let bestIndex = 0
-  for (let i = 1; i < attempts.length; i++) {
-    if (attempts[i].percentage > attempts[bestIndex].percentage) {
+  for (let i = 1; i < sortedByDate.length; i++) {
+    if (sortedByDate[i].percentage > sortedByDate[bestIndex].percentage) {
       bestIndex = i
     }
   }
@@ -175,7 +175,7 @@ export function calculateImprovement(attempts: QuizAttempt[]): ImprovementData {
 
   return {
     firstScore: sortedByDate.length > 1 ? firstAttempt.percentage : null,
-    bestScore: attempts[bestIndex].percentage,
+    bestScore: sortedByDate[bestIndex].percentage,
     bestAttemptNumber: bestIndex + 1,
     currentScore: currentAttempt.percentage,
     improvement,
