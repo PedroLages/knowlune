@@ -286,3 +286,104 @@ export function calculateItemDifficulty(quiz: Quiz, attempts: QuizAttempt[]): It
     .filter((item): item is ItemDifficulty => item !== null)
     .sort((a, b) => b.pValue - a.pValue) // Easiest first
 }
+
+// ---------------------------------------------------------------------------
+// Discrimination Indices — Point-Biserial Correlation (E17-S04)
+// ---------------------------------------------------------------------------
+
+export type DiscriminationResult = {
+  /** Question ID from the quiz */
+  questionId: string
+  /**
+   * Point-biserial correlation between question correctness (0/1) and total score.
+   * Range: -1.0 to 1.0. Negative values indicate the question may have issues.
+   * 0 is returned for edge cases (all same answer, all same score).
+   */
+  discriminationIndex: number
+  /** Human-readable interpretation of the discrimination index */
+  interpretation: string
+}
+
+/**
+ * Calculate discrimination indices (point-biserial correlation) for each quiz question.
+ *
+ * Discrimination index = correlation between getting a question right and overall quiz score.
+ * A high value means high scorers tend to get it right; low scorers tend to get it wrong.
+ *
+ * Returns null when fewer than 5 attempts (insufficient data for meaningful analysis).
+ *
+ * Formula (point-biserial correlation):
+ *   rpb = ((M₁ - M₀) / SD) × √(p × (1 − p))
+ *   where:
+ *     M₁ = mean total score for correct-answer group
+ *     M₀ = mean total score for incorrect-answer group
+ *     SD = sample standard deviation of all scores (n−1)
+ *     p  = proportion of correct answers
+ *
+ * Interpretation thresholds (standard psychometric convention):
+ *   rpb > 0.3  → High discriminator
+ *   0.2 ≤ rpb ≤ 0.3 → Moderate discriminator
+ *   rpb < 0.2  → Low discriminator (or ambiguous/trivial question)
+ */
+export function calculateDiscriminationIndices(
+  quiz: Quiz,
+  attempts: QuizAttempt[]
+): DiscriminationResult[] | null {
+  if (attempts.length < 5) return null
+
+  return quiz.questions.map(question => {
+    const dataPoints = attempts.map(attempt => {
+      const answer = attempt.answers.find(a => a.questionId === question.id)
+      const questionCorrect = answer?.isCorrect ? 1 : 0
+      const totalScore = attempt.score
+      return { x: questionCorrect, y: totalScore }
+    })
+
+    const n = dataPoints.length
+
+    const group1 = dataPoints.filter(d => d.x === 1).map(d => d.y) // Correct
+    const group0 = dataPoints.filter(d => d.x === 0).map(d => d.y) // Incorrect
+
+    if (group1.length === 0 || group0.length === 0) {
+      return {
+        questionId: question.id,
+        discriminationIndex: 0,
+        interpretation: 'Not enough data',
+      }
+    }
+
+    const mean1 = group1.reduce((sum, val) => sum + val, 0) / group1.length
+    const mean0 = group0.reduce((sum, val) => sum + val, 0) / group0.length
+
+    // Sample standard deviation of all scores (n-1 for unbiased estimate)
+    const allScores = dataPoints.map(d => d.y)
+    const meanAll = allScores.reduce((sum, val) => sum + val, 0) / n
+    const variance = allScores.reduce((sum, val) => sum + Math.pow(val - meanAll, 2), 0) / (n - 1)
+    const sd = Math.sqrt(variance)
+
+    if (sd === 0) {
+      return {
+        questionId: question.id,
+        discriminationIndex: 0,
+        interpretation: 'All scores identical — cannot discriminate',
+      }
+    }
+
+    const p = group1.length / n
+    const rpb = ((mean1 - mean0) / sd) * Math.sqrt(p * (1 - p))
+
+    let interpretation: string
+    if (rpb > 0.3) {
+      interpretation =
+        'High discriminator — you tend to get this right on strong attempts and wrong on weak ones.'
+    } else if (rpb >= 0.2) {
+      interpretation =
+        'Moderate discriminator — this question partially differentiates strong and weak attempts.'
+    } else {
+      interpretation =
+        "Low discriminator — doesn't correlate well with overall performance. Might be ambiguous or overly easy/hard."
+    }
+
+    return { questionId: question.id, discriminationIndex: rpb, interpretation }
+  })
+}
