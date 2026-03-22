@@ -11,8 +11,8 @@ import {
 } from '@/app/components/ui/select'
 import { CourseCard, categoryLabels } from '@/app/components/figma/CourseCard'
 import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
-import { TopicFilter } from '@/app/components/figma/TopicFilter'
 import { StatusFilter } from '@/app/components/figma/StatusFilter'
+import { buildUnifiedFilterChips } from '@/lib/filterChips'
 import { ToggleGroup, ToggleGroupItem } from '@/app/components/ui/toggle-group'
 import { Search, FolderOpen, Loader2 } from 'lucide-react'
 import { useCourseStore } from '@/stores/useCourseStore'
@@ -35,8 +35,7 @@ type SortMode = 'recent' | 'momentum'
 export function Courses() {
   const allCourses = useCourseStore(s => s.courses)
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState<string>('all')
-  const [selectedTopics, setSelectedTopics] = useState<string[]>([])
+  const [selectedFilter, setSelectedFilter] = useState<string>('')
   const [selectedStatuses, setSelectedStatuses] = useState<LearnerCourseStatus[]>([])
   const [sortMode, setSortMode] = useState<SortMode>('recent')
   const [momentumMap, setMomentumMap] = useState<Map<string, MomentumScore>>(new Map())
@@ -46,7 +45,6 @@ export function Courses() {
   const importedCourses = useCourseImportStore(state => state.importedCourses)
   const isImporting = useCourseImportStore(state => state.isImporting)
   const loadImportedCourses = useCourseImportStore(state => state.loadImportedCourses)
-  const getAllTags = useCourseImportStore(state => state.getAllTags)
 
   useEffect(() => {
     loadImportedCourses()
@@ -132,17 +130,20 @@ export function Courses() {
     }
   }, [allCourses])
 
-  // Extract unique categories dynamically from actual course data
-  const availableCategories = useMemo(
-    () => [...new Set(allCourses.map(c => c.category))],
-    [allCourses]
+  const unifiedFilterChips = useMemo(
+    () => buildUnifiedFilterChips(allCourses, categoryLabels, importedCourses),
+    [allCourses, importedCourses]
   )
 
   const filtered = (() => {
     let courses = allCourses
 
-    if (selectedCategory && selectedCategory !== 'all') {
-      courses = courses.filter(c => c.category === selectedCategory)
+    if (selectedFilter) {
+      courses = courses.filter(
+        c =>
+          c.category.toLowerCase() === selectedFilter ||
+          c.tags.some(t => t.toLowerCase() === selectedFilter)
+      )
     }
 
     if (searchQuery.trim()) {
@@ -165,8 +166,6 @@ export function Courses() {
     )
   }, [filtered, sortMode, momentumMap])
 
-  const allTags = getAllTags()
-
   const filteredImportedCourses = (() => {
     let courses = importedCourses
 
@@ -177,8 +176,12 @@ export function Courses() {
       )
     }
 
-    if (selectedTopics.length > 0) {
-      courses = courses.filter(c => selectedTopics.every(topic => c.tags.includes(topic)))
+    if (selectedFilter) {
+      courses = courses.filter(
+        c =>
+          c.tags.some(t => t.toLowerCase() === selectedFilter) ||
+          c.category.toLowerCase() === selectedFilter
+      )
     }
 
     if (selectedStatuses.length > 0) {
@@ -254,12 +257,7 @@ export function Courses() {
       </Card>
 
       {importedCourses.length > 0 && (
-        <div className="flex flex-wrap gap-x-6 gap-y-2 items-start">
-          <TopicFilter
-            availableTags={allTags}
-            selectedTags={selectedTopics}
-            onSelectedTagsChange={setSelectedTopics}
-          />
+        <div className="flex flex-wrap gap-x-6 gap-y-2 items-start mb-6">
           <StatusFilter
             selectedStatuses={selectedStatuses}
             onSelectedStatusesChange={setSelectedStatuses}
@@ -302,7 +300,7 @@ export function Courses() {
           ) : filteredImportedCourses.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               No imported courses match your{' '}
-              {selectedTopics.length > 0 || selectedStatuses.length > 0 ? 'filters' : 'search'}
+              {selectedFilter || selectedStatuses.length > 0 ? 'filters' : 'search'}
             </div>
           ) : (
             <div
@@ -327,21 +325,36 @@ export function Courses() {
           <div className="flex flex-wrap gap-2 items-center flex-1">
             <ToggleGroup
               type="single"
-              value={selectedCategory}
-              onValueChange={v => setSelectedCategory(v || 'all')}
-              aria-label="Filter by category"
+              value={selectedFilter}
+              onValueChange={v => setSelectedFilter(v ?? '')}
+              aria-label="Filter by category or topic"
               className="flex flex-wrap gap-2"
             >
-              {[{ value: 'all', label: 'All Courses' }, ...availableCategories.map(cat => ({ value: cat, label: categoryLabels[cat] ?? cat }))].map((chip, i) => (
+              <ToggleGroupItem
+                value=""
+                className="h-auto rounded-full! border px-4 py-3 sm:py-1.5 text-sm font-medium transition-colors data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-card data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-accent data-[state=off]:hover:text-foreground data-[state=off]:border-border cursor-pointer shadow-none mr-1"
+              >
+                All Courses
+              </ToggleGroupItem>
+              {unifiedFilterChips.map(chip => (
                 <ToggleGroupItem
                   key={chip.value}
                   value={chip.value}
-                  className={`h-auto rounded-full! border px-4 py-3 sm:py-1.5 text-sm font-medium transition-colors data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-card data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-accent data-[state=off]:hover:text-foreground data-[state=off]:border-border cursor-pointer shadow-none${i === 0 ? ' mr-1' : ''}`}
+                  className="h-auto rounded-full! border px-4 py-3 sm:py-1.5 text-sm font-medium transition-colors data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-card data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-accent data-[state=off]:hover:text-foreground data-[state=off]:border-border cursor-pointer shadow-none"
                 >
                   {chip.label}
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>
+            {selectedFilter && (
+              <button
+                type="button"
+                onClick={() => setSelectedFilter('')}
+                className="text-xs text-muted-foreground hover:text-foreground underline ml-1"
+              >
+                Clear filters
+              </button>
+            )}
           </div>
           <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
             <SelectTrigger
