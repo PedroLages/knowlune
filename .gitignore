@@ -7,6 +7,9 @@ dist/
 .vite/
 
 
+# Tests (run locally, not tracked)
+tests/
+
 # Test artifacts
 playwright-report/
 test-results/
@@ -27,6 +30,7 @@ coverage/
 # External tools
 .autoforge/
 supabase/
+StudyGy-Dashboard/
 
 # Git worktrees
 .worktrees/
