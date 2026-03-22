@@ -77,7 +77,7 @@ export function AnswerFeedback({ question, userAnswer, isTimerExpired }: AnswerF
   const Icon = config.icon
 
   // Partial credit: compute per-option breakdown for multiple-select
-  let partialTitle = config.title
+  let partialTitle: string = config.title
   let correctCount = 0
   let totalCorrect = 0
   let selectedCorrectly: string[] = []

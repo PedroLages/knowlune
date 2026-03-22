@@ -10,9 +10,9 @@ const questions = [
 ]
 
 const answers = [
-  { questionId: 'q1', isCorrect: true, pointsEarned: 10, pointsPossible: 10 },
-  { questionId: 'q2', isCorrect: false, pointsEarned: 0, pointsPossible: 10 },
-  { questionId: 'q3', isCorrect: true, pointsEarned: 10, pointsPossible: 10 },
+  { questionId: 'q1', isCorrect: true, pointsEarned: 10, pointsPossible: 10, userAnswer: 'A' },
+  { questionId: 'q2', isCorrect: false, pointsEarned: 0, pointsPossible: 10, userAnswer: 'C' },
+  { questionId: 'q3', isCorrect: true, pointsEarned: 10, pointsPossible: 10, userAnswer: 'B' },
 ]
 
 describe('QuestionBreakdown', () => {
@@ -77,7 +77,7 @@ describe('QuestionBreakdown', () => {
       },
     ]
     const singleAnswer = [
-      { questionId: 'q1', isCorrect: true, pointsEarned: 10, pointsPossible: 10 },
+      { questionId: 'q1', isCorrect: true, pointsEarned: 10, pointsPossible: 10, userAnswer: 'A' },
     ]
 
     render(<QuestionBreakdown answers={singleAnswer} questions={longQuestions} />)
