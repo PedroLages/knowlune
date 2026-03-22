@@ -94,8 +94,8 @@ async function startQuiz(page: import('@playwright/test').Page) {
 
 /**
  * Save the real Date.now reference before any overrides.
- * Must be called via addInitScript BEFORE navigating to the quiz page
- * so the reference is available across all evaluate calls.
+ * Call after page load but before shiftDateNow() — captures the
+ * un-shifted Date.now so subsequent shifts use absolute offsets.
  */
 async function saveRealDateNow(page: import('@playwright/test').Page) {
   await page.evaluate(() => {
@@ -122,6 +122,11 @@ async function triggerVisibilityChange(page: import('@playwright/test').Page) {
     document.dispatchEvent(new Event('visibilitychange'))
   })
 }
+
+// Clean up IndexedDB between tests to prevent data leakage
+test.afterEach(async ({ page }) => {
+  await page.evaluate(() => indexedDB.deleteDatabase('ElearningDB'))
+})
 
 // ---------------------------------------------------------------------------
 // AC1: Timer displays in MM:SS format and counts down

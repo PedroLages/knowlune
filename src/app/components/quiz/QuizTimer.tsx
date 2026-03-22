@@ -10,6 +10,10 @@ interface QuizTimerProps {
 }
 
 function formatMinuteAnnouncement(totalSeconds: number): string {
+  if (totalSeconds <= 0) return 'Time has expired'
+  if (totalSeconds < 60) {
+    return `Time remaining: ${totalSeconds} ${totalSeconds === 1 ? 'second' : 'seconds'}`
+  }
   const minutes = Math.floor(totalSeconds / 60)
   const minuteLabel = minutes === 1 ? 'minute' : 'minutes'
   return `Time remaining: ${minutes} ${minuteLabel}`

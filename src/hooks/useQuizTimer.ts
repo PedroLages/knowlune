@@ -6,8 +6,9 @@ import { useQuizStore } from '@/stores/useQuizStore'
  * Moved from QuizHeader — shared by useQuizTimer and QuizTimer component.
  */
 export function formatTime(totalSeconds: number): string {
-  const m = Math.floor(totalSeconds / 60)
-  const s = totalSeconds % 60
+  const clamped = Math.max(0, Number.isFinite(totalSeconds) ? totalSeconds : 0)
+  const m = Math.floor(clamped / 60)
+  const s = clamped % 60
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
@@ -42,34 +43,11 @@ export function useQuizTimer(initialSeconds: number, onExpire: () => void): numb
     const startTime = Date.now()
     const endTime = startTime + initialSeconds * 1000
 
-    const recalculate = () => {
-      const now = Date.now()
-      const remaining = Math.max(0, Math.floor((endTime - now) / 1000))
-      setTimeRemaining(remaining)
-
-      if (remaining === 0 && !hasFiredRef.current) {
-        hasFiredRef.current = true
-        clearInterval(interval)
-        onExpireRef.current()
-      }
-
-      return remaining
-    }
-
-    const interval = setInterval(recalculate, 1000)
-
-    // Recalculate on tab visibility change to correct for throttled intervals
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        recalculate()
-      }
-    }
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-
-    // Sync remaining time back to store for crash recovery
-    // Store expects timeRemaining in minutes
+    // Sync remaining time back to store for crash recovery.
+    // Store expects timeRemaining in minutes. Accepts 0 so expiry
+    // is persisted (prevents stale time on crash recovery).
     const syncToStore = (remainingSeconds: number) => {
-      if (remainingSeconds > 0) {
+      if (remainingSeconds >= 0) {
         useQuizStore.setState(state => {
           if (!state.currentProgress) return {}
           return {
@@ -82,6 +60,35 @@ export function useQuizTimer(initialSeconds: number, onExpire: () => void): numb
       }
     }
 
+    const recalculate = () => {
+      const now = Date.now()
+      const remaining = Math.max(0, Math.floor((endTime - now) / 1000))
+      setTimeRemaining(remaining)
+
+      if (remaining === 0 && !hasFiredRef.current) {
+        hasFiredRef.current = true
+        clearInterval(interval)
+        syncToStore(0)
+        Promise.resolve(onExpireRef.current()).catch(console.error)
+      }
+
+      return remaining
+    }
+
+    const interval = setInterval(recalculate, 1000)
+
+    // Combined visibility change handler: recalculate on visible, sync on hidden
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        recalculate()
+      } else {
+        const now = Date.now()
+        const remaining = Math.max(0, Math.floor((endTime - now) / 1000))
+        syncToStore(remaining)
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
     // Periodic store sync every 60 seconds
     const syncInterval = setInterval(() => {
       const now = Date.now()
@@ -89,21 +96,10 @@ export function useQuizTimer(initialSeconds: number, onExpire: () => void): numb
       syncToStore(remaining)
     }, 60_000)
 
-    // Sync on tab hidden (user switching away)
-    const handleHiddenSync = () => {
-      if (document.visibilityState === 'hidden') {
-        const now = Date.now()
-        const remaining = Math.max(0, Math.floor((endTime - now) / 1000))
-        syncToStore(remaining)
-      }
-    }
-    document.addEventListener('visibilitychange', handleHiddenSync)
-
     return () => {
       clearInterval(interval)
       clearInterval(syncInterval)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
-      document.removeEventListener('visibilitychange', handleHiddenSync)
       // Final sync on unmount
       const now = Date.now()
       const remaining = Math.max(0, Math.floor((endTime - now) / 1000))

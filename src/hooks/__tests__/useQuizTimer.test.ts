@@ -33,11 +33,25 @@ describe('formatTime', () => {
   it('handles large values', () => {
     expect(formatTime(3661)).toBe('61:01')
   })
+
+  it('clamps negative values to 00:00', () => {
+    expect(formatTime(-1)).toBe('00:00')
+    expect(formatTime(-60)).toBe('00:00')
+  })
+
+  it('handles NaN as 00:00', () => {
+    expect(formatTime(NaN)).toBe('00:00')
+  })
+
+  it('handles Infinity as 00:00', () => {
+    expect(formatTime(Infinity)).toBe('00:00')
+  })
 })
 
 describe('useQuizTimer', () => {
   beforeEach(() => {
     vi.useFakeTimers()
+    vi.clearAllMocks()
   })
 
   afterEach(() => {
@@ -146,16 +160,26 @@ describe('useQuizTimer', () => {
     expect(secondCallback).toHaveBeenCalledTimes(1)
   })
 
-  it('recalculates on visibilitychange', () => {
+  it('recalculates from wall clock on visibilitychange (drift correction)', () => {
+    // Start at a known time so we can shift the system clock
+    const startTime = new Date('2026-03-22T12:00:00Z')
+    vi.setSystemTime(startTime)
+
     const onExpire = vi.fn()
     const { result } = renderHook(() => useQuizTimer(900, onExpire))
 
-    // Advance real time by 10 seconds
+    // Simulate browser throttling: advance only 2 interval ticks (2s)
+    // but shift system clock forward by 10 seconds — simulating a hidden tab
+    // where setInterval was throttled but real time passed
     act(() => {
-      vi.advanceTimersByTime(10000)
+      vi.advanceTimersByTime(2000)
     })
+    // Timer would show 898 from ticks alone
 
-    // Simulate tab becoming visible
+    // Now shift system clock forward 10s total from start (8s beyond tick time)
+    vi.setSystemTime(new Date(startTime.getTime() + 10000))
+
+    // Trigger visibilitychange to force wall-clock recalculation
     act(() => {
       Object.defineProperty(document, 'visibilityState', {
         value: 'visible',
@@ -165,6 +189,7 @@ describe('useQuizTimer', () => {
       document.dispatchEvent(new Event('visibilitychange'))
     })
 
+    // Should reflect 10s elapsed from wall clock, not 2s from tick count
     expect(result.current).toBe(890)
   })
 
