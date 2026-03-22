@@ -64,6 +64,11 @@ test.describe('E27-S03: Sidebar links to Reports tabs', () => {
     await navigateAndWait(page, '/reports?tab=study')
     const studyLink = page.locator('nav').getByRole('link', { name: 'Study Analytics' })
     await expect(studyLink).toHaveAttribute('aria-current', 'page')
+    // Other tabs must be inactive
+    const quizLink = page.locator('nav').getByRole('link', { name: 'Quiz Analytics' })
+    await expect(quizLink).not.toHaveAttribute('aria-current', 'page')
+    const aiLink = page.locator('nav').getByRole('link', { name: 'AI Analytics' })
+    await expect(aiLink).not.toHaveAttribute('aria-current', 'page')
   })
 
   test('Quiz Analytics sidebar item has aria-current=page on /reports?tab=quizzes', async ({
@@ -72,12 +77,22 @@ test.describe('E27-S03: Sidebar links to Reports tabs', () => {
     await navigateAndWait(page, '/reports?tab=quizzes')
     const quizLink = page.locator('nav').getByRole('link', { name: 'Quiz Analytics' })
     await expect(quizLink).toHaveAttribute('aria-current', 'page')
+    // Other tabs must be inactive
+    const studyLink = page.locator('nav').getByRole('link', { name: 'Study Analytics' })
+    await expect(studyLink).not.toHaveAttribute('aria-current', 'page')
+    const aiLink = page.locator('nav').getByRole('link', { name: 'AI Analytics' })
+    await expect(aiLink).not.toHaveAttribute('aria-current', 'page')
   })
 
   test('AI Analytics sidebar item has aria-current=page on /reports?tab=ai', async ({ page }) => {
     await navigateAndWait(page, '/reports?tab=ai')
     const aiLink = page.locator('nav').getByRole('link', { name: 'AI Analytics' })
     await expect(aiLink).toHaveAttribute('aria-current', 'page')
+    // Other tabs must be inactive
+    const studyLink = page.locator('nav').getByRole('link', { name: 'Study Analytics' })
+    await expect(studyLink).not.toHaveAttribute('aria-current', 'page')
+    const quizLink = page.locator('nav').getByRole('link', { name: 'Quiz Analytics' })
+    await expect(quizLink).not.toHaveAttribute('aria-current', 'page')
   })
 
   test('Study Analytics is active on bare /reports (default tab)', async ({ page }) => {
@@ -97,6 +112,26 @@ test.describe('E27-S03: Sidebar links to Reports tabs', () => {
     await navigateAndWait(page, '/')
     // Old single "Reports" link should not exist; only the tab-specific ones
     const oldLink = page.locator('nav').getByRole('link', { name: /^Reports$/ })
-    await expect(oldLink).not.toBeVisible()
+    await expect(oldLink).not.toBeAttached()
+  })
+
+  test('SearchCommandPalette shows tab-specific Reports entries (AC8)', async ({ page }) => {
+    await navigateAndWait(page, '/')
+    // Open command palette
+    await page.keyboard.press('Meta+k')
+    const palette = page.getByRole('dialog')
+    await expect(palette).toBeVisible()
+
+    // Search for analytics
+    await page.keyboard.type('Analytics')
+
+    // All three tab entries should be visible
+    await expect(palette.getByRole('option', { name: 'Study Analytics' })).toBeVisible()
+    await expect(palette.getByRole('option', { name: 'Quiz Analytics' })).toBeVisible()
+    await expect(palette.getByRole('option', { name: 'AI Analytics' })).toBeVisible()
+
+    // Selecting Study Analytics navigates to the correct URL
+    await palette.getByRole('option', { name: 'Study Analytics' }).click()
+    await expect(page).toHaveURL(/\/reports\?tab=study/)
   })
 })
