@@ -346,18 +346,11 @@ export function Courses() {
               aria-label="Filter by category or topic"
               className="flex flex-wrap gap-2"
             >
-              <ToggleGroupItem
-                value="all"
-                className={CHIP_CLASS + ' mr-1'}
-              >
+              <ToggleGroupItem value="all" className={CHIP_CLASS + ' mr-1'}>
                 All Courses
               </ToggleGroupItem>
               {unifiedFilterChips.map(chip => (
-                <ToggleGroupItem
-                  key={chip.value}
-                  value={chip.value}
-                  className={CHIP_CLASS}
-                >
+                <ToggleGroupItem key={chip.value} value={chip.value} className={CHIP_CLASS}>
                   {chip.label}
                 </ToggleGroupItem>
               ))}

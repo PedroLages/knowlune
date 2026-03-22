@@ -445,15 +445,21 @@ describe('Courses page', () => {
       renderCourses()
 
       // Both pre-seeded courses visible initially
-      expect(screen.getByRole('heading', { name: 'Behavioral Analysis Fundamentals' })).toBeInTheDocument()
+      expect(
+        screen.getByRole('heading', { name: 'Behavioral Analysis Fundamentals' })
+      ).toBeInTheDocument()
       expect(screen.getByRole('heading', { name: 'Operative Training Course' })).toBeInTheDocument()
 
       // Click the 'Behavioral Analysis' chip (from pre-seeded category)
       await user.click(screen.getByRole('radio', { name: 'Behavioral Analysis' }))
 
       // Only behavioral-analysis course visible
-      expect(screen.getByRole('heading', { name: 'Behavioral Analysis Fundamentals' })).toBeInTheDocument()
-      expect(screen.queryByRole('heading', { name: 'Operative Training Course' })).not.toBeInTheDocument()
+      expect(
+        screen.getByRole('heading', { name: 'Behavioral Analysis Fundamentals' })
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByRole('heading', { name: 'Operative Training Course' })
+      ).not.toBeInTheDocument()
     })
 
     it('updates filter chips when importedCourses store changes (AC5)', async () => {
