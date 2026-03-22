@@ -4,9 +4,9 @@ story_name: "Provide Immediate Explanatory Feedback per Question"
 status: in-progress
 started: 2026-03-22
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-22
-review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -163,15 +163,26 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+- **HIGH**: `AnswerFeedback.tsx:110` — Missing `motion-reduce:animate-none` on entry animation. All other animated quiz components have this guard.
+- **MEDIUM**: `QuestionBreakdown.tsx:131` — `XCircle` uses `text-destructive` (red) for incorrect answers on results page, while AnswerFeedback uses amber. Story says "NO red/destructive colors."
+- **MEDIUM**: `formatCorrectAnswer` duplicated in AnswerFeedback and QuestionBreakdown.
+- PASS: Color tokens, ARIA, responsive, touch targets, no hardcoded colors, no console errors.
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+- **HIGH**: `AnswerFeedback.tsx:20` — `deriveFeedbackState` misses empty-array check for timer-expired multiple-select (shows "Not quite" instead of "Not answered in time").
+- **HIGH**: `formatCorrectAnswer` duplicated in AnswerFeedback.tsx:62 and QuestionBreakdown.tsx:33.
+- **MEDIUM**: `QuestionBreakdown.tsx:144` — `role="status"` on user-triggered expansion should be `role="region"`.
+- **MEDIUM**: No unit tests for QuestionBreakdown expandable details feature.
+- **MEDIUM**: `h-5 w-5` instead of Tailwind v4 `size-5` shorthand (recurring).
+- **MEDIUM**: Disabled button for non-expandable rows is semantically odd — consider `<div>` fallback.
+- **MEDIUM**: Triple duplication of "is unanswered" concept across Quiz.tsx, QuestionBreakdown, and countUnanswered.
+- Derived state pattern praised as exemplary. Non-judgmental tokens well-chosen. Accessibility solid.
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+- 8/8 guidelines PASS. No blockers or warnings.
+- Recommendations: extract `formatCorrectAnswer`, scroll-into-view for long questions, `motion-reduce:transition-none` on QuestionBreakdown row buttons.
 
 ## Challenges and Lessons Learned
 
