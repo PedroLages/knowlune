@@ -38,6 +38,7 @@ StudyGy-Dashboard/
 
 # Python venv
 scripts/.venv/
+__pycache__/
 
 # Auto-story runtime logs
 scripts/auto-story.log
