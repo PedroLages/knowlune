@@ -101,8 +101,8 @@ export default defineConfig({
     registerType: 'prompt',
     includeAssets: ['favicon.svg', 'apple-touch-icon-180x180.png'],
     manifest: {
-      name: 'EduVi',
-      short_name: 'EduVi',
+      name: 'Knowlune',
+      short_name: 'Knowlune',
       description: 'Personal learning platform with progress tracking and study streaks',
       theme_color: '#FAF5EE',
       background_color: '#FAF5EE',

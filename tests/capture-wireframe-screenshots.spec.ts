@@ -1,5 +1,5 @@
 /**
- * Capture screenshots of every EduVi page for use as Stitch 2.0 reference images.
+ * Capture screenshots of every Knowlune page for use as Stitch 2.0 reference images.
  *
  * Usage:
  *   npx playwright test scripts/capture-wireframe-screenshots.ts --project=chromium

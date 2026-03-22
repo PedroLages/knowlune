@@ -1,7 +1,7 @@
 /**
  * LocalStorage fixture for seeding and cleaning up app state.
  *
- * The EduVi app stores all user data in localStorage:
+ * The Knowlune app stores all user data in localStorage:
  *   - 'course-progress': Record<string, CourseProgress>
  *   - 'study-log': StudyAction[]
  *   - 'video-bookmarks': VideoBookmark[]

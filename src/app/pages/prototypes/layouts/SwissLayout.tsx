@@ -52,7 +52,7 @@ export function SwissLayout({ children }: { children: ReactNode }) {
               <rect x="34" y="6" width="12" height="16" />
               <polygon points="40,0 48,6 32,6" />
             </svg>
-            <span className="text-sm font-bold uppercase tracking-[0.15em]">EduVi</span>
+            <span className="text-sm font-bold uppercase tracking-[0.15em]">Knowlune</span>
           </Link>
         </div>
 

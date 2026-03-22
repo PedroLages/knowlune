@@ -29,7 +29,7 @@ test.describe('First-Use Onboarding Flow', () => {
     await expect(dialog).toBeVisible()
 
     // Should show welcome message
-    await expect(page.getByText(/Welcome to EduVi/i)).toBeVisible()
+    await expect(page.getByText(/Welcome to Knowlune/i)).toBeVisible()
 
     // Should show step 1 content
     await expect(page.getByText(/Import your first course/i)).toBeVisible()

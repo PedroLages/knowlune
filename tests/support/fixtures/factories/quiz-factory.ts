@@ -1,5 +1,5 @@
 /**
- * Data factories for EduVi quiz content.
+ * Data factories for Knowlune quiz content.
  *
  * Creates Quiz, Question, QuizAttempt, and QuizProgress objects with
  * sensible defaults and override support.

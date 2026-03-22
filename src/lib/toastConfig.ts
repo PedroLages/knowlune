@@ -1,5 +1,5 @@
 /**
- * Standardized toast duration constants for EduVi.
+ * Standardized toast duration constants for Knowlune.
  * WCAG 2.1 SC 2.2.1: Minimum 3s for readability.
  */
 export const TOAST_DURATION = {

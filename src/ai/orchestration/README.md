@@ -51,7 +51,7 @@ const analyzer = new TaskAnalyzer()
 const result = await analyzer.decomposeTask({
   userTaskDescription: 'Add OAuth 2.0 authentication to the app',
   projectContext: {
-    projectName: 'EduVi',
+    projectName: 'Knowlune',
     techStack: ['React', 'TypeScript', 'Vite'],
   },
 })
@@ -231,4 +231,4 @@ Then Week 5-6: Execution Engine
 
 ## License
 
-MIT (part of EduVi project)
+MIT (part of Knowlune project)

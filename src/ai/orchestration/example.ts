@@ -25,7 +25,7 @@ export async function exampleOAuthDecomposition(): Promise<void> {
   const request: DecompositionRequest = {
     userTaskDescription: 'Add OAuth 2.0 authentication to the app',
     projectContext: {
-      projectName: 'EduVi',
+      projectName: 'Knowlune',
       techStack: ['React', 'TypeScript', 'Vite'],
       recentChanges: 'Just implemented JWT authentication with refresh tokens',
     },

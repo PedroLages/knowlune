@@ -129,7 +129,7 @@ export async function exportAchievementsAsBadges(
   onProgress?: ExportProgressCallback
 ): Promise<OpenBadgeCredential[]> {
   const settings = getSettings()
-  const issuerName = `EduVi — ${settings.displayName}`
+  const issuerName = `Knowlune — ${settings.displayName}`
   const badges: OpenBadgeCredential[] = []
 
   // Completed challenges from IndexedDB

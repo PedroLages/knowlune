@@ -36,7 +36,7 @@ body:
     id: area
     attributes:
       label: Area
-      description: Which part of EduVi does this relate to?
+      description: Which part of Knowlune does this relate to?
       options:
         - Overview / Dashboard
         - Courses

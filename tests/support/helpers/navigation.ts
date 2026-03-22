@@ -1,5 +1,5 @@
 /**
- * Navigation helpers for EduVi E2E tests.
+ * Navigation helpers for Knowlune E2E tests.
  *
  * Pure functions that accept Page as a parameter.
  * Reference: TEA knowledge base - fixture-architecture.md (pure function pattern)

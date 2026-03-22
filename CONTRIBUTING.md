@@ -1,6 +1,6 @@
-# Contributing to EduVi
+# Contributing to Knowlune
 
-Thank you for your interest in contributing to EduVi! We welcome contributions of all kinds — code, documentation, tests, translations, design feedback, and bug reports.
+Thank you for your interest in contributing to Knowlune! We welcome contributions of all kinds — code, documentation, tests, translations, design feedback, and bug reports.
 
 ## Getting Started
 
@@ -13,7 +13,7 @@ Thank you for your interest in contributing to EduVi! We welcome contributions o
 ### Quick Start
 
 ```bash
-git clone https://github.com/PedroLages/eduvi.git
+git clone https://github.com/PedroLages/knowlune.git
 cd eduvi
 npm install
 npm run dev
@@ -56,9 +56,9 @@ tests/
 
 ### Finding Work
 
-- Browse issues labeled [`good first issue`](https://github.com/PedroLages/eduvi/labels/good%20first%20issue) for beginner-friendly tasks
-- Check [`help wanted`](https://github.com/PedroLages/eduvi/labels/help%20wanted) for tasks that need contributors
-- Join [Discussions](https://github.com/PedroLages/eduvi/discussions) to propose ideas or ask questions
+- Browse issues labeled [`good first issue`](https://github.com/PedroLages/knowlune/labels/good%20first%20issue) for beginner-friendly tasks
+- Check [`help wanted`](https://github.com/PedroLages/knowlune/labels/help%20wanted) for tasks that need contributors
+- Join [Discussions](https://github.com/PedroLages/knowlune/discussions) to propose ideas or ask questions
 
 ### Types of Contributions
 
@@ -94,7 +94,7 @@ We use conventional-style commit messages:
 
 ## Code Standards
 
-EduVi uses **13 automated quality mechanisms** that enforce standards at save-time, commit-time, and review-time. This means:
+Knowlune uses **13 automated quality mechanisms** that enforce standards at save-time, commit-time, and review-time. This means:
 
 - **You won't get style nits in review** — ESLint catches formatting and pattern issues automatically
 - **Design tokens are enforced** — use `bg-brand` not `bg-blue-600` (the linter will tell you)
@@ -126,10 +126,10 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 
 ## License
 
-By contributing to EduVi, you agree that your contributions will be licensed under the [AGPL-3.0 License](LICENSE). This is an inbound=outbound model — no separate CLA is required.
+By contributing to Knowlune, you agree that your contributions will be licensed under the [AGPL-3.0 License](LICENSE). This is an inbound=outbound model — no separate CLA is required.
 
 ## Questions?
 
-- Open a [Discussion](https://github.com/PedroLages/eduvi/discussions) for general questions
-- File an [Issue](https://github.com/PedroLages/eduvi/issues) for bugs or feature requests
+- Open a [Discussion](https://github.com/PedroLages/knowlune/discussions) for general questions
+- File an [Issue](https://github.com/PedroLages/knowlune/issues) for bugs or feature requests
 - Check the [CLAUDE.md](CLAUDE.md) file for detailed architecture documentation

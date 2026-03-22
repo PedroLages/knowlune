@@ -117,7 +117,7 @@ export class TaskAnalyzer {
    * const result = await analyzer.decomposeTask({
    *   userTaskDescription: "Add OAuth 2.0 authentication to the app",
    *   projectContext: {
-   *     projectName: "EduVi",
+   *     projectName: "Knowlune",
    *     techStack: ["React", "TypeScript", "Vite"],
    *     recentChanges: "Just added JWT authentication"
    *   }

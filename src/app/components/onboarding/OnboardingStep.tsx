@@ -24,7 +24,7 @@ const STEPS: Record<1 | 2 | 3, StepConfig> = {
     icon: Play,
     title: 'Start studying',
     description:
-      'Open a lesson and watch for a few seconds. EduVi tracks your progress automatically.',
+      'Open a lesson and watch for a few seconds. Knowlune tracks your progress automatically.',
     cta: 'Open a Lesson',
     path: '/courses',
   },

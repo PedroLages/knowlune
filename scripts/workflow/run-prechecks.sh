@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# EduVi Pre-Check Pipeline
+# Knowlune Pre-Check Pipeline
 # Unified pre-check script for /review-story and /finish-story workflows
 #
 # Usage:

@@ -1,4 +1,4 @@
-# Production Dockerfile for EduVi
+# Production Dockerfile for Knowlune
 # Multi-stage build: Build stage + Nginx serving stage
 
 # Stage 1: Builder
