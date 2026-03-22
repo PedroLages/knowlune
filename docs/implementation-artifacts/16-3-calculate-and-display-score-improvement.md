@@ -1,9 +1,9 @@
 ---
 story_id: E16-S03
 story_name: "Calculate and Display Score Improvement"
-status: review
+status: done
 started: 2026-03-22
-completed:
+completed: 2026-03-22
 reviewed: true
 review_started: 2026-03-22
 review_gates_passed:
