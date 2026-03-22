@@ -225,8 +225,9 @@ test.describe('E15-S03: Timer Warning at 1 Minute Remaining', () => {
     await shiftDateNow(page, 14 * 60 * 1000)
     await triggerVisibilityChange(page)
 
-    // Persistent warning toast — should appear with "01:00 remaining"
-    const toast = sonnerToast(page).filter({ hasText: /01:00 remaining/i })
+    // Persistent warning toast — appears when remaining ≤ 60s
+    // Real time elapses during test setup, so remaining is ~57-60s (use flexible regex)
+    const toast = sonnerToast(page).filter({ hasText: /00:\d+ remaining/i })
     await expect(toast.first()).toBeVisible({ timeout: 5000 })
 
     // Wait 6 seconds — persistent warning should still be visible (not auto-dismissed)
