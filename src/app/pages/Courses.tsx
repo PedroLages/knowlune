@@ -35,7 +35,7 @@ type SortMode = 'recent' | 'momentum'
 export function Courses() {
   const allCourses = useCourseStore(s => s.courses)
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState<string>('')
+  const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [selectedTopics, setSelectedTopics] = useState<string[]>([])
   const [selectedStatuses, setSelectedStatuses] = useState<LearnerCourseStatus[]>([])
   const [sortMode, setSortMode] = useState<SortMode>('recent')
@@ -141,7 +141,7 @@ export function Courses() {
   const filtered = (() => {
     let courses = allCourses
 
-    if (selectedCategory) {
+    if (selectedCategory && selectedCategory !== 'all') {
       courses = courses.filter(c => c.category === selectedCategory)
     }
 
@@ -286,7 +286,7 @@ export function Courses() {
                 data-testid="import-first-course-cta"
                 onClick={handleImportCourse}
                 disabled={isImporting}
-                className="text-brand h-auto p-0"
+                className="text-brand-soft-foreground h-auto p-0"
               >
                 {isImporting ? (
                   <>
@@ -327,23 +327,17 @@ export function Courses() {
             <ToggleGroup
               type="single"
               value={selectedCategory}
-              onValueChange={setSelectedCategory}
+              onValueChange={v => setSelectedCategory(v || 'all')}
               aria-label="Filter by category"
               className="flex flex-wrap gap-2"
             >
-              <ToggleGroupItem
-                value=""
-                className="h-auto rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors first:rounded-full last:rounded-full data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-transparent data-[state=off]:hover:bg-accent data-[state=off]:border-input cursor-pointer shadow-none"
-              >
-                All Courses
-              </ToggleGroupItem>
-              {availableCategories.map(cat => (
+              {[{ value: 'all', label: 'All Courses' }, ...availableCategories.map(cat => ({ value: cat, label: categoryLabels[cat] ?? cat }))].map(chip => (
                 <ToggleGroupItem
-                  key={cat}
-                  value={cat}
-                  className="h-auto rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors first:rounded-full last:rounded-full data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-transparent data-[state=off]:hover:bg-accent data-[state=off]:border-input cursor-pointer shadow-none"
+                  key={chip.value}
+                  value={chip.value}
+                  className="h-auto rounded-full! border px-4 py-3 sm:py-1.5 text-sm font-medium transition-colors data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-card data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-accent data-[state=off]:hover:text-foreground data-[state=off]:border-border cursor-pointer shadow-none"
                 >
-                  {categoryLabels[cat] ?? cat}
+                  {chip.label}
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>
