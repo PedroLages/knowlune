@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useNavigate, Navigate, Link } from 'react-router'
-import { ArrowLeft, History } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { loadSavedAccommodation } from '@/app/pages/Quiz'
 import {
@@ -13,6 +13,7 @@ import { ScoreSummary } from '@/app/components/quiz/ScoreSummary'
 import { QuestionBreakdown } from '@/app/components/quiz/QuestionBreakdown'
 import { AreasForGrowth } from '@/app/components/quiz/AreasForGrowth'
 import { PerformanceInsights } from '@/app/components/quiz/PerformanceInsights'
+import { AttemptHistory } from '@/app/components/quiz/AttemptHistory'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
 
@@ -41,7 +42,8 @@ export function QuizResults() {
     }
   }, [currentQuiz?.id, loadAttempts])
 
-  const lastAttempt = attempts.length > 0 ? attempts[attempts.length - 1] : null
+  // attempts is sorted most-recent-first; index 0 is the just-completed attempt
+  const lastAttempt = attempts.length > 0 ? attempts[0] : null
 
   const maxScore = useMemo(
     () => lastAttempt?.answers?.reduce((sum, a) => sum + a.pointsPossible, 0) ?? 0,
@@ -51,7 +53,7 @@ export function QuizResults() {
   const previousBestPercentage = useMemo(() => {
     if (attempts.length <= 1) return undefined
     const validPcts = attempts
-      .slice(0, -1)
+      .slice(1) // Skip the most recent attempt (index 0)
       .map(a => a.percentage)
       .filter(p => Number.isFinite(p))
     if (validPcts.length === 0) return undefined
@@ -158,13 +160,12 @@ export function QuizResults() {
         </div>
 
         <div className="flex flex-col items-center gap-2">
-          <button
-            disabled
-            className="text-muted-foreground text-sm inline-flex items-center gap-1 min-h-[44px] cursor-default disabled:opacity-60"
-          >
-            <History className="size-4" aria-hidden="true" />
-            View All Attempts (Coming Soon)
-          </button>
+          <AttemptHistory
+            attempts={attempts}
+            currentAttemptId={lastAttempt.id}
+            courseId={courseId}
+            lessonId={lessonId}
+          />
           <Link
             to={`/courses/${courseId}/lessons/${lessonId}`}
             className="text-brand hover:underline text-sm font-medium inline-flex items-center gap-1 min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded-sm"
