@@ -14,7 +14,7 @@ import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
 import { TopicFilter } from '@/app/components/figma/TopicFilter'
 import { StatusFilter } from '@/app/components/figma/StatusFilter'
 import { ToggleGroup, ToggleGroupItem } from '@/app/components/ui/toggle-group'
-import { Search, FolderOpen, Loader2 } from 'lucide-react'
+import { Search, FolderOpen, Loader2, BookOpen } from 'lucide-react'
 import { useCourseStore } from '@/stores/useCourseStore'
 import { getCourseCompletionPercent, getProgress } from '@/lib/progress'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
@@ -22,6 +22,7 @@ import { importCourseFromFolder } from '@/lib/courseImport'
 import { db } from '@/db'
 import { calculateMomentumScore } from '@/lib/momentum'
 import { calculateAtRiskStatus } from '@/lib/atRisk'
+import { EmptyState } from '@/app/components/EmptyState'
 import { calculateCompletionEstimate } from '@/lib/completionEstimate'
 import type { LearnerCourseStatus } from '@/data/types'
 import type { MomentumScore } from '@/lib/momentum'
@@ -205,10 +206,11 @@ export function Courses() {
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold mb-2">All Courses</h1>
-          <p className="text-muted-foreground">
-            Chase Hughes — The Operative Kit ({allCourses.length} courses
-            {importedCourses.length > 0 && ` + ${importedCourses.length} imported`})
-          </p>
+          {allCourses.length + importedCourses.length > 0 && (
+            <p className="text-muted-foreground">
+              {allCourses.length + importedCourses.length} courses
+            </p>
+          )}
         </div>
         <Button
           variant="brand"
@@ -230,6 +232,17 @@ export function Courses() {
         </Button>
       </div>
 
+      {allCourses.length === 0 && importedCourses.length === 0 ? (
+        <EmptyState
+          icon={BookOpen}
+          title="No courses yet"
+          description="Import a course folder to get started"
+          actionLabel="Import Course"
+          onAction={handleImportCourse}
+          data-testid="courses-empty-state"
+        />
+      ) : (
+        <>
       <Card className="bg-card rounded-[24px] border-0 shadow-sm p-6 mb-6">
         <div className="flex gap-4 items-center">
           <div className="relative flex-1">
@@ -383,6 +396,8 @@ export function Courses() {
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   )
 }

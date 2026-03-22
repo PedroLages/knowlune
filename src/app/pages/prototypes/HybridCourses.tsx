@@ -38,9 +38,11 @@ export function HybridCourses() {
       {/* Page header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-1">Courses</h1>
-        <p className="text-sm text-neutral-500">
-          Chase Hughes — The Operative Kit ({allCourses.length} courses)
-        </p>
+        {allCourses.length > 0 && (
+          <p className="text-sm text-neutral-500">
+            {allCourses.length} courses
+          </p>
+        )}
       </div>
 
       {/* Search card */}
