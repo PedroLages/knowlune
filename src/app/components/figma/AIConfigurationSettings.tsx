@@ -129,7 +129,11 @@ export function AIConfigurationSettings() {
         // Test connection for API-key providers
         const isConnected = await testAIConnection(settings.provider, apiKey)
         if (!isConnected) {
-          setSettings({ ...settings, connectionStatus: 'error', errorMessage: 'Connection test failed' })
+          setSettings({
+            ...settings,
+            connectionStatus: 'error',
+            errorMessage: 'Connection test failed',
+          })
           return
         }
         await saveAIConfiguration({ connectionStatus: 'connected' }, apiKey)
