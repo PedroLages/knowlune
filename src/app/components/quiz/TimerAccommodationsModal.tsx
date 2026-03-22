@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { TimerAccommodation } from '@/types/quiz'
 import { Button } from '@/app/components/ui/button'
 import {
@@ -50,10 +50,10 @@ export function TimerAccommodationsModal({
 }: TimerAccommodationsModalProps) {
   const [selected, setSelected] = useState<TimerAccommodation>(value)
 
-  // Sync local state when prop changes (e.g., reopen after external update)
-  if (open && selected !== value) {
-    setSelected(value)
-  }
+  // Sync local state when the modal opens — reset to current prop value
+  useEffect(() => {
+    if (open) setSelected(value)
+  }, [open, value])
 
   const handleSave = () => {
     onSave(selected)

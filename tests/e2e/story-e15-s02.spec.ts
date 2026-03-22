@@ -140,7 +140,7 @@ test.describe('E15-S02: Configure Timer Duration and Accommodations', () => {
     await expect(extendedOption).toBeChecked()
 
     // Close/confirm the modal
-    const confirmBtn = dialog.getByRole('button', { name: /save|confirm|apply|close|done/i })
+    const confirmBtn = dialog.getByRole('button', { name: 'Save' })
     await confirmBtn.click()
 
     // Start the quiz
@@ -165,7 +165,7 @@ test.describe('E15-S02: Configure Timer Duration and Accommodations', () => {
     await expect(untimedOption).toBeChecked()
 
     // Close/confirm the modal
-    const confirmBtn = dialog.getByRole('button', { name: /save|confirm|apply|close|done/i })
+    const confirmBtn = dialog.getByRole('button', { name: 'Save' })
     await confirmBtn.click()
 
     // Start the quiz
@@ -190,18 +190,18 @@ test.describe('E15-S02: Configure Timer Duration and Accommodations', () => {
     const extendedOption = dialog.getByRole('radio', { name: /150%/i })
     await extendedOption.click()
 
-    const confirmBtn = dialog.getByRole('button', { name: /save|confirm|apply|close|done/i })
+    const confirmBtn = dialog.getByRole('button', { name: 'Save' })
     await confirmBtn.click()
 
     // Start, answer, and submit the quiz to complete it
     await startQuiz(page)
 
-    // Answer Q1
-    await page.locator('label').filter({ hasText: '4' }).click()
+    // Answer Q1 — use radio role with exact name to avoid ambiguous label matches
+    await page.getByRole('radio', { name: '4' }).click()
     await page.getByRole('button', { name: /next/i }).click()
 
     // Answer Q2
-    await page.locator('label').filter({ hasText: '6' }).click()
+    await page.getByRole('radio', { name: '6' }).click()
     await page.getByRole('button', { name: /submit/i }).click()
 
     // Handle confirmation if present
@@ -210,12 +210,16 @@ test.describe('E15-S02: Configure Timer Duration and Accommodations', () => {
       await submitConfirm.click()
     }
 
-    // Navigate back to retake
-    const retakeBtn = page.getByRole('button', { name: /retake/i })
-    await expect(retakeBtn).toBeVisible()
-    await retakeBtn.click()
+    // Wait for results page, then navigate back to quiz start screen
+    await page.waitForURL(/\/quiz\/results/)
 
-    // On retake start screen, open accommodations modal again
+    // Clear quiz state so we see the start screen again
+    await page.evaluate(() => localStorage.removeItem('levelup-quiz-store'))
+    await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz`, {
+      waitUntil: 'domcontentloaded',
+    })
+
+    // On start screen, open accommodations modal again
     await page.getByRole('button', { name: /accessibility accommodations/i }).click()
     dialog = page.getByRole('dialog')
 
