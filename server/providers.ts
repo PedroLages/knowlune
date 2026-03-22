@@ -13,6 +13,31 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google'
 /** Provider IDs matching the frontend AIProviderId type */
 export type ProviderId = 'openai' | 'anthropic' | 'groq' | 'glm' | 'gemini' | 'ollama'
 
+/**
+ * Validates an Ollama server URL to prevent SSRF attacks.
+ * The proxy forwards HTTP requests to this URL server-side, so it must
+ * be restricted to safe, user-intended destinations.
+ *
+ * @throws {Error} if the URL is invalid, uses a non-HTTP(S) scheme, or
+ *   targets a cloud metadata endpoint (169.254.x.x).
+ */
+export function validateOllamaUrl(rawUrl: string): string {
+  let url: URL
+  try {
+    url = new URL(rawUrl)
+  } catch {
+    throw new Error(`Invalid Ollama URL: "${rawUrl}"`)
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    throw new Error(`Ollama URL must use http or https protocol, got: ${url.protocol}`)
+  }
+  // Block cloud metadata endpoints (AWS, GCP, Azure instance metadata)
+  if (url.hostname === '169.254.169.254' || url.hostname.startsWith('169.254.')) {
+    throw new Error('Ollama URL targets a restricted address')
+  }
+  return rawUrl
+}
+
 /** Default models per provider */
 const DEFAULT_MODELS: Record<string, string> = {
   anthropic: 'claude-haiku-4-5',
@@ -47,6 +72,7 @@ export function getProviderModel(providerId: string, apiKey: string, model?: str
       // apiKey field carries the Ollama base URL (e.g. 'http://192.168.1.x:11434')
       // Ollama exposes an OpenAI-compatible /v1/ API — use createOpenAI with custom baseURL
       const ollamaUrl = apiKey || 'http://localhost:11434'
+      validateOllamaUrl(ollamaUrl) // Throws for invalid schemes or metadata IPs (SSRF guard)
       return createOpenAI({
         baseURL: `${ollamaUrl.replace(/\/$/, '')}/v1`,
         apiKey: 'ollama', // Ollama ignores auth but SDK requires non-empty value

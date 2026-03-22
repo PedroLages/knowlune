@@ -68,6 +68,8 @@ export interface AIConfigurationSettings {
   ollamaBaseUrl?: string
   /** When true, browser connects directly to Ollama (requires CORS on server); default is proxy mode */
   ollamaDirectConnection?: boolean
+  /** Ollama model name to use (e.g. 'llama3.2', 'mistral', 'codellama') — defaults to 'llama3.2' */
+  ollamaModel?: string
   /**
    * E2E test-only plaintext API key bypass (DEV mode only)
    * @internal Only works when import.meta.env.DEV = true
@@ -340,11 +342,21 @@ export function sanitizeAIRequestPayload(content: string): { content: string } {
  */
 export function applyOllamaCSP(baseUrl: string): void {
   if (!baseUrl) return
+  // Extract only the origin to prevent CSP injection via crafted URL strings.
+  // e.g. "http://host; script-src 'unsafe-inline'" would be injected as-is
+  // if we used the raw URL — using .origin limits it to scheme+host+port only.
+  let origin: string
+  try {
+    origin = new URL(baseUrl).origin
+  } catch {
+    return // Unparseable URL — skip CSP update
+  }
+  if (!origin || origin === 'null') return
   const metaCSP = document.querySelector('meta[http-equiv="Content-Security-Policy"]')
   if (!metaCSP) return
   const content = metaCSP.getAttribute('content') ?? ''
-  if (!content.includes(baseUrl)) {
-    const updated = content.replace('connect-src', `connect-src ${baseUrl}`)
+  if (!content.includes(origin)) {
+    const updated = content.replace('connect-src', `connect-src ${origin}`)
     metaCSP.setAttribute('content', updated)
   }
 }
