@@ -27,9 +27,27 @@ const questions = [
 ]
 
 const answers = [
-  { questionId: 'q1', isCorrect: true, pointsEarned: 10, pointsPossible: 10, userAnswer: 'A library' },
-  { questionId: 'q2', isCorrect: false, pointsEarned: 0, pointsPossible: 10, userAnswer: 'useState' },
-  { questionId: 'q3', isCorrect: true, pointsEarned: 10, pointsPossible: 10, userAnswer: 'JavaScript XML' },
+  {
+    questionId: 'q1',
+    isCorrect: true,
+    pointsEarned: 10,
+    pointsPossible: 10,
+    userAnswer: 'A library',
+  },
+  {
+    questionId: 'q2',
+    isCorrect: false,
+    pointsEarned: 0,
+    pointsPossible: 10,
+    userAnswer: 'useState',
+  },
+  {
+    questionId: 'q3',
+    isCorrect: true,
+    pointsEarned: 10,
+    pointsPossible: 10,
+    userAnswer: 'JavaScript XML',
+  },
 ]
 
 describe('QuestionBreakdown', () => {

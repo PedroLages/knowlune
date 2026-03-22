@@ -98,9 +98,7 @@ describe('AnswerFeedback', () => {
     })
 
     it('shows full-credit multiple-select as "Correct!" not partial', () => {
-      render(
-        <AnswerFeedback question={msQuestion} userAnswer={['Red', 'Blue', 'Yellow']} />
-      )
+      render(<AnswerFeedback question={msQuestion} userAnswer={['Red', 'Blue', 'Yellow']} />)
 
       expect(screen.getByText('Correct!')).toBeInTheDocument()
       // No answer breakdown for full credit

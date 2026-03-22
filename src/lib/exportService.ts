@@ -105,7 +105,9 @@ function stripFileHandlePdf(pdf: ImportedPdf): Omit<ImportedPdf, 'fileHandle'> {
   return rest
 }
 
-export async function exportAllAsJson(onProgress?: ExportProgressCallback): Promise<KnowluneExport> {
+export async function exportAllAsJson(
+  onProgress?: ExportProgressCallback
+): Promise<KnowluneExport> {
   const tables = [
     'importedCourses',
     'importedVideos',

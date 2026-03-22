@@ -108,10 +108,7 @@ export function AnswerFeedback({ question, userAnswer, isTimerExpired }: AnswerF
       )}
     >
       <div className="flex items-start gap-3">
-        <Icon
-          className={cn('size-5 shrink-0 sm:size-6', config.iconColor)}
-          aria-hidden="true"
-        />
+        <Icon className={cn('size-5 shrink-0 sm:size-6', config.iconColor)} aria-hidden="true" />
         <div className="flex-1 min-w-0">
           <h4 className="font-semibold text-lg text-foreground">{title}</h4>
 

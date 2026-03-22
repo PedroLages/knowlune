@@ -33,11 +33,7 @@ export function KnowluneLogo() {
         lune
       </text>
       {/* Crescent moon accent between "Know" and "lune" */}
-      <path
-        d="M84,12 A10,10 0 1,1 84,32 A7,7 0 1,0 84,12"
-        className="fill-brand"
-        opacity="0.85"
-      />
+      <path d="M84,12 A10,10 0 1,1 84,32 A7,7 0 1,0 84,12" className="fill-brand" opacity="0.85" />
     </svg>
   )
 }
