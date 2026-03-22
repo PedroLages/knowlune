@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import type { Quiz, QuizProgress, QuizAttempt } from '@/types/quiz'
+import type { Quiz, QuizProgress, QuizAttempt, TimerAccommodation } from '@/types/quiz'
+import { getAccommodationMultiplier } from '@/types/quiz'
 import { db } from '@/db'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import {
@@ -21,10 +22,10 @@ interface QuizState {
   isLoading: boolean
   error: string | null
 
-  startQuiz: (lessonId: string) => Promise<void>
+  startQuiz: (lessonId: string, accommodation?: TimerAccommodation) => Promise<void>
   submitAnswer: (questionId: string, answer: string | string[]) => void
   submitQuiz: (courseId: string) => Promise<void>
-  retakeQuiz: (lessonId: string) => Promise<void>
+  retakeQuiz: (lessonId: string, accommodation?: TimerAccommodation) => Promise<void>
   loadAttempts: (quizId: string) => Promise<void>
   resumeQuiz: () => void
   clearQuiz: () => void
@@ -44,7 +45,7 @@ export const useQuizStore = create<QuizState>()(
       isLoading: false,
       error: null,
 
-      startQuiz: async (lessonId: string) => {
+      startQuiz: async (lessonId: string, accommodation?: TimerAccommodation) => {
         // Clean up orphaned per-quiz localStorage key from previous quiz (if any)
         const prevQuizId = get().currentProgress?.quizId
         if (prevQuizId) {
@@ -83,17 +84,22 @@ export const useQuizStore = create<QuizState>()(
             ? fisherYatesShuffle(quiz.questions.map(q => q.id))
             : quiz.questions.map(q => q.id)
 
+          const acc = accommodation ?? 'standard'
+          const multiplier = getAccommodationMultiplier(acc)
+          const baseTime = quiz.timeLimit != null && quiz.timeLimit > 0 ? quiz.timeLimit : null
+          const timeRemaining =
+            multiplier != null && baseTime != null ? baseTime * multiplier : null
+
           const progress: QuizProgress = {
             quizId: quiz.id,
             currentQuestionIndex: 0,
             answers: {},
             startTime: Date.now(),
-            // TODO(E15-S02): Apply timerAccommodation multiplier when timer accommodations are implemented
-            timeRemaining: quiz.timeLimit ?? null,
+            timeRemaining,
             isPaused: false,
             markedForReview: [],
             questionOrder,
-            timerAccommodation: 'standard',
+            timerAccommodation: acc,
           }
 
           set({ currentQuiz: quiz, currentProgress: progress, isLoading: false })
@@ -182,8 +188,8 @@ export const useQuizStore = create<QuizState>()(
         }
       },
 
-      retakeQuiz: async (lessonId: string) => {
-        await get().startQuiz(lessonId)
+      retakeQuiz: async (lessonId: string, accommodation?: TimerAccommodation) => {
+        await get().startQuiz(lessonId, accommodation)
       },
 
       loadAttempts: async (quizId: string) => {

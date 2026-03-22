@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useNavigate, Navigate, Link } from 'react-router'
 import { ArrowLeft, History } from 'lucide-react'
 import { toast } from 'sonner'
+import { loadSavedAccommodation } from '@/app/pages/Quiz'
 import {
   useQuizStore,
   selectCurrentQuiz,
@@ -75,7 +76,8 @@ export function QuizResults() {
 
   const handleRetake = useCallback(async () => {
     try {
-      await retakeQuiz(lessonId)
+      const accommodation = loadSavedAccommodation(lessonId)
+      await retakeQuiz(lessonId, accommodation)
       navigate(`/courses/${courseId}/lessons/${lessonId}/quiz`)
     } catch (err: unknown) {
       console.error('[QuizResults] Failed to retake quiz:', err)

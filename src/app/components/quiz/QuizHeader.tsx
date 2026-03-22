@@ -22,7 +22,15 @@ export function QuizHeader({ quiz, progress, timeRemaining, totalTimeSeconds }: 
       <div className="flex items-center">
         <h1 className="text-lg font-semibold">{quiz.title}</h1>
         {timeRemaining !== null && totalTimeSeconds !== null && (
-          <QuizTimer timeRemaining={timeRemaining} totalTime={totalTimeSeconds} />
+          <QuizTimer
+            timeRemaining={timeRemaining}
+            totalTime={totalTimeSeconds}
+            annotation={
+              progress.timerAccommodation === '150%' || progress.timerAccommodation === '200%'
+                ? 'Extended Time'
+                : undefined
+            }
+          />
         )}
       </div>
       <Progress

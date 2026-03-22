@@ -3,8 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router'
 import { ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { db } from '@/db'
-import type { Quiz as QuizType, QuizProgress } from '@/types/quiz'
-import { QuizProgressSchema } from '@/types/quiz'
+import type { Quiz as QuizType, QuizProgress, TimerAccommodation } from '@/types/quiz'
+import { QuizProgressSchema, TimerAccommodationEnum } from '@/types/quiz'
 import {
   useQuizStore,
   selectCurrentQuiz,
@@ -59,6 +59,19 @@ function loadSavedProgress(quizId: string): QuizProgress | null {
   }
 }
 
+/** Load persisted timer accommodation preference, validated via Zod */
+export function loadSavedAccommodation(lessonId: string): TimerAccommodation {
+  try {
+    const raw = localStorage.getItem(`quiz-accommodation-${lessonId}`)
+    if (!raw) return 'standard'
+    const result = TimerAccommodationEnum.safeParse(raw)
+    return result.success ? result.data : 'standard'
+  } catch (e) {
+    console.warn('[Quiz] Failed to load accommodation:', e)
+    return 'standard'
+  }
+}
+
 /** Count questions with no answer recorded */
 function countUnanswered(
   questions: QuizType['questions'],
@@ -82,6 +95,9 @@ export function Quiz() {
   const [fetchState, setFetchState] = useState<'loading' | 'found' | 'error'>('loading')
   const [savedProgress, setSavedProgress] = useState<QuizProgress | null>(null)
   const [hasCompletedBefore, setHasCompletedBefore] = useState(false)
+  const [accommodation, setAccommodation] = useState<TimerAccommodation>(() =>
+    loadSavedAccommodation(lessonId)
+  )
 
   // Store selectors — drives the active quiz view after startQuiz()
   const currentQuiz = useQuizStore(selectCurrentQuiz)
@@ -143,10 +159,22 @@ export function Quiz() {
     }
   }, [lessonId, clearError])
 
+  const handleAccommodationChange = useCallback(
+    (value: TimerAccommodation) => {
+      setAccommodation(value)
+      try {
+        localStorage.setItem(`quiz-accommodation-${lessonId}`, value)
+      } catch (e) {
+        console.warn('[Quiz] Failed to persist accommodation:', e)
+      }
+    },
+    [lessonId]
+  )
+
   const handleStart = useCallback(() => {
     // startQuiz handles errors internally (try/catch + store error state)
-    startQuiz(lessonId)
-  }, [startQuiz, lessonId])
+    startQuiz(lessonId, accommodation)
+  }, [startQuiz, lessonId, accommodation])
 
   const handleResume = useCallback(() => {
     if (!quiz || !savedProgress) return
@@ -221,7 +249,12 @@ export function Quiz() {
   // the hook writes timeRemaining back to the store every 60s, which would
   // change this value and re-trigger the hook's effect, resetting the timer.
   const timerInitialSecondsRef = useRef(0)
-  if (timerInitialSecondsRef.current === 0 && currentProgress && currentQuiz?.timeLimit != null) {
+  if (
+    timerInitialSecondsRef.current === 0 &&
+    currentProgress &&
+    currentQuiz?.timeLimit != null &&
+    currentProgress.timerAccommodation !== 'untimed'
+  ) {
     timerInitialSecondsRef.current = Math.round(
       (currentProgress.timeRemaining ?? currentQuiz.timeLimit) * 60
     )
@@ -433,8 +466,10 @@ export function Quiz() {
         quiz={quiz}
         savedProgress={savedProgress}
         hasCompletedBefore={hasCompletedBefore}
+        accommodation={accommodation}
         onStart={handleStart}
         onResume={handleResume}
+        onAccommodationChange={handleAccommodationChange}
       />
     </div>
   )
