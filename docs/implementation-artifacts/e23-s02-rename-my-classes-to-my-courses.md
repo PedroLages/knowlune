@@ -4,9 +4,9 @@ story_name: "Rename My Classes to My Courses"
 status: in-progress
 started: 2026-03-23
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-23
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -28,11 +28,11 @@ So that the terminology matches self-directed learning rather than a school/LMS 
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Update sidebar navigation label from "My Classes" to "My Courses" (AC: 1)
-- [ ] Task 2: Update mobile bottom bar label (AC: 1)
-- [ ] Task 3: Update search command palette entry (AC: 1)
-- [ ] Task 4: Update page title in MyClass.tsx to "My Courses" (AC: 3)
-- [ ] Task 5: Verify route path `/my-class` remains unchanged (AC: 2)
+- [x] Task 1: Update sidebar navigation label from "My Classes" to "My Courses" (AC: 1)
+- [x] Task 2: Update mobile bottom bar label (AC: 1)
+- [x] Task 3: Update search command palette entry (AC: 1)
+- [x] Task 4: Update page title in MyClass.tsx to "My Courses" (AC: 3)
+- [x] Task 5: Verify route path `/my-class` remains unchanged (AC: 2)
 
 ## Implementation Plan
 
@@ -71,15 +71,36 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+**Verdict: PASS** — All 5 ACs verified via Playwright MCP across desktop (1440px) and mobile (375px) viewports.
+- Sidebar: "My Courses" confirmed, zero "My Classes"/"My Progress" remnants
+- Mobile bottom bar: "My Courses" confirmed at 375px
+- Command palette (Cmd+K): "My Courses" in results
+- Route `/my-class` works, heading says "My Courses"
+- Both render branches in MyClass.tsx (empty-state + populated) updated
+- 1 nit: internal doc `design-principles.md:223` still says "My Class" — developer-only, no user impact
+
+Full report: `docs/reviews/design/design-review-2026-03-23-e23-s02.md`
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**Verdict: PASS** — 0 blockers, 0 high, 3 medium, 3 nits.
+- Medium: Sidebar test selector uses non-existent `data-testid="sidebar"` (works via `aside` fallback)
+- Medium: Negative heading assertion checks "My Classes" but old heading was "My Progress"
+- Medium: `goToMyClass` helper silently swallows errors (pre-existing)
+- Nit: Cmd+K is macOS-only in test
+- Nit: Task checkboxes were unchecked (fixed)
+- Edge case review found 5 stale "My Class"/"My Progress" references in `tests/analysis/` error-path specs
+
+Full reports: `docs/reviews/code/code-review-2026-03-23-e23-s02.md`, `docs/reviews/code/edge-case-review-2026-03-23-e23-s02.md`
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+**Verdict: PASS** — No blockers. All ARIA labels, landmarks, semantic HTML, and responsive layout verified.
+- Label consistency: zero stale references in `src/`
+- Accessibility: proper `aria-current`, `aria-hidden` on icons, nav landmarks maintained
+- Rename improves screen reader UX by unifying previously inconsistent labels
+
+Full report: `docs/reviews/code/web-design-guidelines-2026-03-23-e23-s02.md`
 
 ## Challenges and Lessons Learned
 
