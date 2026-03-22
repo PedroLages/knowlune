@@ -51,7 +51,7 @@ export function KnowluneLogo({ className = 'h-7 w-auto' }: { className?: string 
       <text
         x="48"
         y="29"
-        fontFamily="'Space Grotesk Variable', 'Space Grotesk', system-ui, sans-serif"
+        style={{ fontFamily: 'var(--font-heading)' }}
         fontSize="26"
         fontWeight="600"
         fill="currentColor"

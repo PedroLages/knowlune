@@ -332,11 +332,11 @@ export function Courses() {
               aria-label="Filter by category"
               className="flex flex-wrap gap-2"
             >
-              {[{ value: 'all', label: 'All Courses' }, ...availableCategories.map(cat => ({ value: cat, label: categoryLabels[cat] ?? cat }))].map(chip => (
+              {[{ value: 'all', label: 'All Courses' }, ...availableCategories.map(cat => ({ value: cat, label: categoryLabels[cat] ?? cat }))].map((chip, i) => (
                 <ToggleGroupItem
                   key={chip.value}
                   value={chip.value}
-                  className="h-auto rounded-full! border px-4 py-3 sm:py-1.5 text-sm font-medium transition-colors data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-card data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-accent data-[state=off]:hover:text-foreground data-[state=off]:border-border cursor-pointer shadow-none"
+                  className={`h-auto rounded-full! border px-4 py-3 sm:py-1.5 text-sm font-medium transition-colors data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-card data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-accent data-[state=off]:hover:text-foreground data-[state=off]:border-border cursor-pointer shadow-none${i === 0 ? ' mr-1' : ''}`}
                 >
                   {chip.label}
                 </ToggleGroupItem>
