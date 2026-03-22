@@ -120,9 +120,7 @@ test.describe('E15-S02: Configure Timer Duration and Accommodations', () => {
     await expect(dialog.getByText(/untimed/i)).toBeVisible()
 
     // Verify explanation text
-    await expect(
-      dialog.getByText(/extended time is available for learners/i)
-    ).toBeVisible()
+    await expect(dialog.getByText(/extended time is available for learners/i)).toBeVisible()
   })
 
   test('AC3: 150% accommodation applies multiplier — timer shows 22:30 with annotation', async ({

@@ -86,7 +86,7 @@ export const useQuizStore = create<QuizState>()(
           const acc = accommodation ?? 'standard'
           const multiplier = acc === '150%' ? 1.5 : acc === '200%' ? 2 : 1
           const timeRemaining =
-            acc === 'untimed' ? null : (quiz.timeLimit != null ? quiz.timeLimit * multiplier : null)
+            acc === 'untimed' ? null : quiz.timeLimit != null ? quiz.timeLimit * multiplier : null
 
           const progress: QuizProgress = {
             quizId: quiz.id,
