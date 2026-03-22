@@ -155,6 +155,10 @@ When "Untimed" is selected:
 - **Contrast**: All text meets 4.5:1 minimum — use design tokens, not hardcoded colors
 - **Touch targets**: All radio options and buttons ≥44x44px (enforce via `min-h-12`)
 
+## Implementation Plan
+
+See [plan](plans/e15-s02-plan.md) for implementation approach.
+
 ## Implementation Notes
 
 [Architecture decisions, patterns used, dependencies added]
