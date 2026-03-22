@@ -310,12 +310,14 @@ def find_story(sid: str) -> StoryInfo:
 
 def detect_completed_epics(
     stories: list[StoryInfo], results: list[StoryResult],
+    resumed_keys: set[str] | None = None,
 ) -> list[str]:
     """Return epic numbers that just became fully done after this batch.
 
     Combines sprint-status.yaml (on main, pre-batch state) with in-memory
-    batch results to determine completion. A story counts as done if it was
-    already 'done' in YAML OR succeeded in this batch.
+    batch results and stories completed in prior --resume runs to determine
+    completion. A story counts as done if it was already 'done' in YAML,
+    succeeded in this batch, or was completed in a prior run.
 
     Returns sorted list of epic numbers (e.g., ["15", "16"]).
     """
@@ -325,11 +327,22 @@ def detect_completed_epics(
         if result.success:
             batch_succeeded.setdefault(story.epic_num, set()).add(story.yaml_key)
 
-    if not batch_succeeded:
-        return []
-
     data = load_sprint_status()
     dev_status = data.get("development_status", {})
+
+    # Include stories completed in prior resumed runs
+    if resumed_keys:
+        for skey in resumed_keys:
+            try:
+                epic_num, story_num = normalize_story_id(skey)
+                yaml_key = find_yaml_key(epic_num, story_num, dev_status)
+                if yaml_key:
+                    batch_succeeded.setdefault(epic_num, set()).add(yaml_key)
+            except ValueError:
+                continue
+
+    if not batch_succeeded:
+        return []
     completed: list[str] = []
 
     for epic_num in sorted(batch_succeeded):
@@ -1413,8 +1426,8 @@ async def main() -> None:
         sys.exit(1)
 
     # Resume: skip already completed stories
+    completed_keys: set[str] = set()
     if config.resume and config.log_file.exists():
-        completed_keys = set()
         with open(config.log_file) as f:
             for line in f:
                 try:
@@ -1461,7 +1474,7 @@ async def main() -> None:
         # Preview which epics would complete (simulate all stories succeeding)
         if not config.skip_epic_finish:
             fake_results = [StoryResult(story=s, success=True) for s in stories]
-            would_complete = detect_completed_epics(stories, fake_results)
+            would_complete = detect_completed_epics(stories, fake_results, completed_keys)
             if would_complete:
                 phases = [p[0] for p in EPIC_FINISH_PHASES
                           if not (p[0] == "adversarial" and config.skip_adversarial)]
@@ -1534,7 +1547,7 @@ async def main() -> None:
 
         # ── End-of-Epic Processing ──
         if not config.skip_epic_finish:
-            completed_epics = detect_completed_epics(stories, results)
+            completed_epics = detect_completed_epics(stories, results, completed_keys)
 
             if completed_epics:
                 print(f"\n{'=' * 60}")
