@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useEffect, useId } from 'react'
 import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group'
 import { cn } from '@/app/components/ui/utils'
 import type { Question } from '@/types/quiz'
@@ -28,17 +28,26 @@ export function MultipleChoiceQuestion({
     )
   }
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (!isActive || e.nativeEvent.isComposing || e.metaKey || e.ctrlKey || e.altKey) return
-    const num = parseInt(e.key, 10)
-    if (num >= 1 && num <= Math.min(options.length, 9)) {
-      e.preventDefault()
-      onChange(options[num - 1])
+  // Document-level keyboard listener so number keys work regardless of focus
+  useEffect(() => {
+    if (!isActive) return
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.isComposing || e.metaKey || e.ctrlKey || e.altKey) return
+      // Skip if user is typing in an input/textarea
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return
+      const num = parseInt(e.key, 10)
+      if (num >= 1 && num <= Math.min(options.length, 9)) {
+        e.preventDefault()
+        onChange(options[num - 1])
+      }
     }
-  }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isActive, options, onChange])
 
   return (
-    <fieldset className="mt-6 min-w-0" aria-labelledby={labelId} onKeyDown={handleKeyDown}>
+    <fieldset className="mt-6 min-w-0" aria-labelledby={labelId}>
       <div
         id={labelId}
         data-testid="question-text"
