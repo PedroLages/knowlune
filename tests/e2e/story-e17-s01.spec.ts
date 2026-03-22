@@ -55,9 +55,42 @@ test.describe('E17-S01 Quiz Completion Rate', () => {
     await page.goto('/')
 
     await seedQuizAttempts(page, [
-      { id: 'a1', quizId: 'q1', answers: [], score: 1, percentage: 100, passed: true, timeSpent: 30000, completedAt: FIXED_TIMESTAMP, startedAt: FIXED_TIMESTAMP, timerAccommodation: 'standard' },
-      { id: 'a2', quizId: 'q2', answers: [], score: 1, percentage: 100, passed: true, timeSpent: 30000, completedAt: FIXED_TIMESTAMP, startedAt: FIXED_TIMESTAMP, timerAccommodation: 'standard' },
-      { id: 'a3', quizId: 'q3', answers: [], score: 1, percentage: 100, passed: true, timeSpent: 30000, completedAt: FIXED_TIMESTAMP, startedAt: FIXED_TIMESTAMP, timerAccommodation: 'standard' },
+      {
+        id: 'a1',
+        quizId: 'q1',
+        answers: [],
+        score: 1,
+        percentage: 100,
+        passed: true,
+        timeSpent: 30000,
+        completedAt: FIXED_TIMESTAMP,
+        startedAt: FIXED_TIMESTAMP,
+        timerAccommodation: 'standard',
+      },
+      {
+        id: 'a2',
+        quizId: 'q2',
+        answers: [],
+        score: 1,
+        percentage: 100,
+        passed: true,
+        timeSpent: 30000,
+        completedAt: FIXED_TIMESTAMP,
+        startedAt: FIXED_TIMESTAMP,
+        timerAccommodation: 'standard',
+      },
+      {
+        id: 'a3',
+        quizId: 'q3',
+        answers: [],
+        score: 1,
+        percentage: 100,
+        passed: true,
+        timeSpent: 30000,
+        completedAt: FIXED_TIMESTAMP,
+        startedAt: FIXED_TIMESTAMP,
+        timerAccommodation: 'standard',
+      },
     ])
 
     await goToReports(page)
@@ -73,8 +106,30 @@ test.describe('E17-S01 Quiz Completion Rate', () => {
     await page.goto('/')
 
     await seedQuizAttempts(page, [
-      { id: 'b1', quizId: 'q1', answers: [], score: 1, percentage: 100, passed: true, timeSpent: 30000, completedAt: FIXED_TIMESTAMP, startedAt: FIXED_TIMESTAMP, timerAccommodation: 'standard' },
-      { id: 'b2', quizId: 'q2', answers: [], score: 1, percentage: 100, passed: true, timeSpent: 30000, completedAt: FIXED_TIMESTAMP, startedAt: FIXED_TIMESTAMP, timerAccommodation: 'standard' },
+      {
+        id: 'b1',
+        quizId: 'q1',
+        answers: [],
+        score: 1,
+        percentage: 100,
+        passed: true,
+        timeSpent: 30000,
+        completedAt: FIXED_TIMESTAMP,
+        startedAt: FIXED_TIMESTAMP,
+        timerAccommodation: 'standard',
+      },
+      {
+        id: 'b2',
+        quizId: 'q2',
+        answers: [],
+        score: 1,
+        percentage: 100,
+        passed: true,
+        timeSpent: 30000,
+        completedAt: FIXED_TIMESTAMP,
+        startedAt: FIXED_TIMESTAMP,
+        timerAccommodation: 'standard',
+      },
     ])
 
     await goToReports(page)
