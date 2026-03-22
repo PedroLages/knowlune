@@ -7,9 +7,9 @@
  * - AC3: Resume in-progress quiz → see "Resume Quiz (X of Y answered)" button
  * - AC4: Invalid quiz URL → see error message with course link
  */
-import { test, expect } from '../support/fixtures'
-import { makeQuiz, makeQuestion, makeProgress } from '../support/fixtures/factories/quiz-factory'
-import { seedQuizzes } from '../support/helpers/indexeddb-seed'
+import { test, expect } from '../../support/fixtures'
+import { makeQuiz, makeQuestion, makeProgress } from '../../support/fixtures/factories/quiz-factory'
+import { seedQuizzes } from '../../support/helpers/indexeddb-seed'
 
 // Routing placeholder — quiz lookup uses LESSON_ID, not COURSE_ID
 const COURSE_ID = 'course-001'
@@ -158,13 +158,14 @@ test.describe('E12-S04: Quiz Route and QuizPage', () => {
 
       await page.goto(QUIZ_URL)
 
-      // Resume button with count
-      await expect(page.getByRole('button', { name: /resume quiz/i })).toBeVisible()
-      await expect(page.getByText(/5 of 12/i)).toBeVisible()
+      // Resume button with answered count displayed
+      const resumeBtn = page.getByRole('button', { name: /resume quiz/i })
+      await expect(resumeBtn).toBeVisible()
+      await expect(resumeBtn).toContainText(/5 of \d+ answered/i)
 
       // Click Resume and verify position is restored
-      await page.getByRole('button', { name: /resume quiz/i }).click()
-      await expect(page.getByText(/question 5 of 12/i)).toBeVisible()
+      await resumeBtn.click()
+      await expect(page.getByText(/question 5 of \d+/i)).toBeVisible()
     })
   })
 

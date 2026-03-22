@@ -41,7 +41,10 @@ export function FillInBlankQuestion({ question, value, onChange, mode }: FillInB
     }, DEBOUNCE_MS)
 
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current)
+      if (timerRef.current) {
+        clearTimeout(timerRef.current)
+        timerRef.current = null
+      }
     }
   }, [inputValue, onChange])
 
@@ -52,7 +55,10 @@ export function FillInBlankQuestion({ question, value, onChange, mode }: FillInB
 
   function handleBlur() {
     // Cancel pending debounce and save immediately
-    if (timerRef.current) clearTimeout(timerRef.current)
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
     if (userEdited.current) {
       onChange(inputValue)
       userEdited.current = false

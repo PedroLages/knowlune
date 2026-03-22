@@ -1,6 +1,6 @@
-import { test, expect } from '../support/fixtures'
-import { seedQuizzes } from '../support/helpers/indexeddb-seed'
-import { makeQuiz, makeQuestion } from '../support/fixtures/factories/quiz-factory'
+import { test, expect } from '../../support/fixtures'
+import { seedQuizzes } from '../../support/helpers/indexeddb-seed'
+import { makeQuiz, makeQuestion } from '../../support/fixtures/factories/quiz-factory'
 
 /**
  * E14-S02: Display Multiple Select Questions with Partial Credit
@@ -249,12 +249,14 @@ test.describe('E14-S02: Display Multiple Select Questions', () => {
     await seedAndNavigateToQuiz(page)
     await startQuiz(page)
 
-    // Verify fieldset with legend exists
+    // Verify fieldset with aria-labelledby linking to question text
     const fieldset = page.locator('fieldset')
     await expect(fieldset).toBeVisible()
 
-    const legend = fieldset.locator('legend')
-    await expect(legend).toBeVisible()
+    const ariaLabelledBy = await fieldset.getAttribute('aria-labelledby')
+    expect(ariaLabelledBy).toBeTruthy()
+    const questionText = page.locator(`[id="${ariaLabelledBy}"]`)
+    await expect(questionText).toBeVisible()
 
     // Verify checkboxes within the question fieldset have accessible names
     const checkboxes = fieldset.getByRole('checkbox')

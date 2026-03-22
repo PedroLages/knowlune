@@ -9,9 +9,9 @@
  * AC1/AC2 mock Math.random to produce deterministic shuffles,
  * eliminating the 1/120 false-failure probability of random assertions.
  */
-import { test, expect } from '../support/fixtures'
-import { makeQuiz, makeQuestion } from '../support/fixtures/factories/quiz-factory'
-import { seedQuizzes } from '../support/helpers/indexeddb-seed'
+import { test, expect } from '../../support/fixtures'
+import { makeQuiz, makeQuestion } from '../../support/fixtures/factories/quiz-factory'
+import { seedQuizzes } from '../../support/helpers/indexeddb-seed'
 
 // ---------------------------------------------------------------------------
 // Test data — 5 questions to make randomization observable

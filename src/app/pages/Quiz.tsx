@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router'
 import { ArrowLeft } from 'lucide-react'
+import { toast } from 'sonner'
 import { db } from '@/db'
 import type { Quiz as QuizType, QuizProgress } from '@/types/quiz'
 import { QuizProgressSchema } from '@/types/quiz'
@@ -11,6 +12,7 @@ import {
   selectIsLoading,
   selectError,
 } from '@/stores/useQuizStore'
+import { useQuizTimer } from '@/hooks/useQuizTimer'
 import { isQuotaExceeded } from '@/lib/quotaResilientStorage'
 import { QuizStartScreen } from '@/app/components/quiz/QuizStartScreen'
 import { QuizHeader } from '@/app/components/quiz/QuizHeader'
@@ -169,13 +171,19 @@ export function Quiz() {
     })
   }, [quiz, savedProgress])
 
+  // Guard against concurrent submit calls (manual submit + timer expiry race)
+  const isSubmittingRef = useRef(false)
+
   const handleSubmitConfirm = useCallback(async () => {
+    if (isSubmittingRef.current) return
+    isSubmittingRef.current = true
     setShowSubmitDialog(false)
     try {
       await submitQuiz(courseId)
       navigate(`/courses/${courseId}/lessons/${lessonId}/quiz/results`)
     } catch {
       // Store already shows error toast; stay on quiz page with answers preserved
+      isSubmittingRef.current = false
     }
   }, [submitQuiz, courseId, lessonId, navigate])
 
@@ -191,6 +199,37 @@ export function Quiz() {
       handleSubmitConfirm()
     }
   }, [handleSubmitConfirm])
+
+  // ---------------------------------------------------------------------------
+  // Timer — Date.now()-anchored countdown with auto-submit on expiry
+  // ---------------------------------------------------------------------------
+  const handleTimerExpiry = useCallback(async () => {
+    if (isSubmittingRef.current) return
+    isSubmittingRef.current = true
+    try {
+      await submitQuiz(courseId)
+      toast.error("Time's up! Your quiz has been submitted.")
+      navigate(`/courses/${courseId}/lessons/${lessonId}/quiz/results`)
+    } catch {
+      // Store already shows error toast; stay on quiz page with answers preserved
+      isSubmittingRef.current = false
+    }
+  }, [submitQuiz, courseId, lessonId, navigate])
+
+  // Compute initial seconds from quiz time limit or resumed progress.
+  // Frozen in a ref to prevent store sync → re-render → effect restart cycle:
+  // the hook writes timeRemaining back to the store every 60s, which would
+  // change this value and re-trigger the hook's effect, resetting the timer.
+  const timerInitialSecondsRef = useRef(0)
+  if (timerInitialSecondsRef.current === 0 && currentProgress && currentQuiz?.timeLimit != null) {
+    timerInitialSecondsRef.current = Math.round(
+      (currentProgress.timeRemaining ?? currentQuiz.timeLimit) * 60
+    )
+  }
+
+  const totalTimeSeconds = currentQuiz?.timeLimit != null ? currentQuiz.timeLimit * 60 : 0
+
+  const timerRemaining = useQuizTimer(timerInitialSecondsRef.current, handleTimerExpiry)
 
   // Safety net: sync progress to per-quiz localStorage on tab close/crash.
   // The subscribe listener in useQuizStore fires synchronously on every state change,
@@ -301,7 +340,12 @@ export function Quiz() {
 
     return (
       <div className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm">
-        <QuizHeader quiz={currentQuiz} progress={currentProgress} />
+        <QuizHeader
+          quiz={currentQuiz}
+          progress={currentProgress}
+          timeRemaining={timerInitialSecondsRef.current > 0 ? timerRemaining : null}
+          totalTimeSeconds={totalTimeSeconds > 0 ? totalTimeSeconds : null}
+        />
         {currentQuestion && currentQuestionId ? (
           <>
             <QuestionDisplay

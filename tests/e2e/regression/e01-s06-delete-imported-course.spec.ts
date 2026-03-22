@@ -7,10 +7,10 @@
  *
  * Serial mode: IndexedDB is shared state in Chromium.
  */
-import { test, expect } from '../support/fixtures'
-import { createImportedCourse } from '../support/fixtures/factories/imported-course-factory'
-import { seedImportedCourses, clearIndexedDBStore } from '../support/helpers/indexeddb-seed'
-import { goToCourses } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { createImportedCourse } from '../../support/fixtures/factories/imported-course-factory'
+import { seedImportedCourses, clearIndexedDBStore } from '../../support/helpers/indexeddb-seed'
+import { goToCourses } from '../../support/helpers/navigation'
 
 const TEST_COURSE = createImportedCourse({ name: 'Test Course To Delete' })
 

@@ -7,8 +7,8 @@
  * - Multiple questions can be marked simultaneously
  * - Submit dialog shows marked-question list with jump links
  */
-import { test, expect } from '../support/fixtures'
-import { makeQuiz, makeQuestion } from '../support/fixtures/factories/quiz-factory'
+import { test, expect } from '../../support/fixtures'
+import { makeQuiz, makeQuestion } from '../../support/fixtures/factories/quiz-factory'
 
 // ---------------------------------------------------------------------------
 // Test data

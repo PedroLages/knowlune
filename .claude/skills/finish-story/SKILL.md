@@ -168,6 +168,14 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
 10. **Archive story spec**: If `${BASE_PATH}/tests/e2e/story-*.spec.ts` exists for this story, move it to `${BASE_PATH}/tests/e2e/regression/`:
    ```
    git mv ${BASE_PATH}/tests/e2e/story-{id}.spec.ts ${BASE_PATH}/tests/e2e/regression/
+   ```
+   **Post-move import fix (REQUIRED):** Moving a spec one directory deeper breaks relative imports. After the `git mv`, fix all `../support/` and `../utils/` imports in the moved file to `../../support/` and `../../utils/`:
+   ```
+   sed -i '' "s|from '\.\./support/|from '../../support/|g" ${BASE_PATH}/tests/e2e/regression/story-{id}.spec.ts
+   sed -i '' "s|from '\.\./utils/|from '../../utils/|g" ${BASE_PATH}/tests/e2e/regression/story-{id}.spec.ts
+   ```
+   Verify the moved spec compiles: `RUN_REGRESSION=1 npx playwright test tests/e2e/regression/story-{id}.spec.ts --list`
+   ```
    git commit -m "chore: archive E##-S## spec to regression"
    ```
    If no story spec exists in `${BASE_PATH}/tests/e2e/`, skip this step.
