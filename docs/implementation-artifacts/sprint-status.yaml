@@ -37,7 +37,7 @@
 # - Epic 7 gap coverage stories (7-8..7-11) deferred indefinitely — risk accepted for error-path edge cases
 
 generated: 2026-03-15
-last_updated: 2026-03-22  # adversarial review cleanup + E15-S06 status sync
+last_updated: 2026-03-22  # Epic 15 retrospective completed
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -240,8 +240,8 @@ development_status:
   15-3-display-timer-warnings-at-key-thresholds: done
   15-4-provide-immediate-explanatory-feedback-per-question: done
   15-5-display-performance-summary-after-quiz: done
-  15-6-track-time-to-completion-for-each-attempt: review  # PR #119 open, code/design/test reviews passed
-  epic-15-retrospective: optional
+  15-6-track-time-to-completion-for-each-attempt: done  # PR #119 merged
+  epic-15-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 16: Review Performance and Track Improvement
