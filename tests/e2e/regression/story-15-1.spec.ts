@@ -7,9 +7,9 @@
  * - AC3: Color transitions at 25% (amber) and 10% (red) thresholds
  * - AC4: Auto-submit on expiry with "Time's up!" message
  */
-import { test, expect } from '../support/fixtures'
-import { makeQuiz, makeQuestion } from '../support/fixtures/factories/quiz-factory'
-import { seedIndexedDBStore } from '../support/helpers/indexeddb-seed'
+import { test, expect } from '../../support/fixtures'
+import { makeQuiz, makeQuestion } from '../../support/fixtures/factories/quiz-factory'
+import { seedIndexedDBStore } from '../../support/helpers/indexeddb-seed'
 
 // ---------------------------------------------------------------------------
 // Test data — timed quiz with 2 questions, 15-minute time limit
