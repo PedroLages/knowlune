@@ -246,12 +246,12 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 16: Review Performance and Track Improvement
   # ──────────────────────────────────────────────────
-  epic-16: backlog
+  epic-16: in-progress
   16-1-review-all-questions-and-answers-after-completion: backlog
   16-2-display-score-history-across-all-attempts: backlog
   16-3-calculate-and-display-score-improvement: backlog
   16-4-calculate-normalized-gain-hakes-formula: backlog
-  16-5-display-score-improvement-trajectory-chart: backlog
+  16-5-display-score-improvement-trajectory-chart: in-progress
   epic-16-retrospective: optional
 
   # ──────────────────────────────────────────────────
