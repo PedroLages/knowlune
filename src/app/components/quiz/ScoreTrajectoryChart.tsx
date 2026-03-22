@@ -44,6 +44,11 @@ export function ScoreTrajectoryChart({ attempts, passingScore }: ScoreTrajectory
   // which would cause recharts to re-mount all dot elements unnecessarily.
   const customDot = useMemo(() => makeCustomDot(passingScore), [passingScore])
 
+  const prefersReducedMotion = useMemo(
+    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    []
+  )
+
   // AC3: Require at least 2 data points
   if (attempts.length < 2) return null
 
@@ -112,7 +117,7 @@ export function ScoreTrajectoryChart({ attempts, passingScore }: ScoreTrajectory
             strokeWidth={2}
             dot={customDot}
             activeDot={{ r: 7 }}
-            isAnimationActive={false}
+            isAnimationActive={!prefersReducedMotion}
           />
         </LineChart>
       </ChartContainer>
