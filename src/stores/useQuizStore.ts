@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import type { Quiz, QuizProgress, QuizAttempt, TimerAccommodation } from '@/types/quiz'
+import { getAccommodationMultiplier } from '@/types/quiz'
 import { db } from '@/db'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import {
@@ -84,9 +85,10 @@ export const useQuizStore = create<QuizState>()(
             : quiz.questions.map(q => q.id)
 
           const acc = accommodation ?? 'standard'
-          const multiplier = acc === '150%' ? 1.5 : acc === '200%' ? 2 : 1
+          const multiplier = getAccommodationMultiplier(acc)
+          const baseTime = quiz.timeLimit != null && quiz.timeLimit > 0 ? quiz.timeLimit : null
           const timeRemaining =
-            acc === 'untimed' ? null : quiz.timeLimit != null ? quiz.timeLimit * multiplier : null
+            multiplier != null && baseTime != null ? baseTime * multiplier : null
 
           const progress: QuizProgress = {
             quizId: quiz.id,

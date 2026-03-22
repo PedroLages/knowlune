@@ -736,6 +736,78 @@ describe('startQuiz — timeLimit', () => {
 })
 
 // ---------------------------------------------------------------------------
+// startQuiz — accommodation multiplier
+// ---------------------------------------------------------------------------
+
+describe('startQuiz — accommodation multiplier', () => {
+  const timedQuiz = {
+    id: 'quiz-acc',
+    lessonId: 'les-acc',
+    title: 'Accommodation Quiz',
+    description: '',
+    questions: [
+      {
+        id: 'q1',
+        order: 1,
+        type: 'multiple-choice' as const,
+        text: 'Q1',
+        options: ['A'],
+        correctAnswer: 'A',
+        explanation: '',
+        points: 1,
+      },
+    ],
+    timeLimit: 10,
+    passingScore: 70,
+    allowRetakes: true,
+    shuffleQuestions: false,
+    shuffleAnswers: false,
+    createdAt: '2025-01-15T12:00:00.000Z',
+    updatedAt: '2025-01-15T12:00:00.000Z',
+  }
+
+  beforeEach(async () => {
+    await db.quizzes.add(timedQuiz)
+  })
+
+  it('applies 1.5x multiplier for 150% accommodation', async () => {
+    await act(async () => {
+      await useQuizStore.getState().startQuiz('les-acc', '150%')
+    })
+    const progress = useQuizStore.getState().currentProgress
+    expect(progress?.timeRemaining).toBe(15) // 10 * 1.5
+    expect(progress?.timerAccommodation).toBe('150%')
+  })
+
+  it('applies 2x multiplier for 200% accommodation', async () => {
+    await act(async () => {
+      await useQuizStore.getState().startQuiz('les-acc', '200%')
+    })
+    const progress = useQuizStore.getState().currentProgress
+    expect(progress?.timeRemaining).toBe(20) // 10 * 2
+    expect(progress?.timerAccommodation).toBe('200%')
+  })
+
+  it('sets timeRemaining to null and timerAccommodation to untimed for untimed', async () => {
+    await act(async () => {
+      await useQuizStore.getState().startQuiz('les-acc', 'untimed')
+    })
+    const progress = useQuizStore.getState().currentProgress
+    expect(progress?.timeRemaining).toBeNull()
+    expect(progress?.timerAccommodation).toBe('untimed')
+  })
+
+  it('defaults to standard (1x) when accommodation is omitted', async () => {
+    await act(async () => {
+      await useQuizStore.getState().startQuiz('les-acc')
+    })
+    const progress = useQuizStore.getState().currentProgress
+    expect(progress?.timeRemaining).toBe(10) // 10 * 1
+    expect(progress?.timerAccommodation).toBe('standard')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // submitQuiz — early return guard
 // ---------------------------------------------------------------------------
 

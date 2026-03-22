@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Clock } from 'lucide-react'
 import type { Quiz, QuizProgress, TimerAccommodation } from '@/types/quiz'
+import { getAccommodationMultiplier } from '@/types/quiz'
 import { Button } from '@/app/components/ui/button'
+import { cn } from '@/app/components/ui/utils'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,6 +15,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/app/components/ui/alert-dialog'
+import { Dialog, DialogTrigger } from '@/app/components/ui/dialog'
 import { TimerAccommodationsModal } from '@/app/components/quiz/TimerAccommodationsModal'
 
 interface QuizStartScreenProps {
@@ -30,11 +33,12 @@ interface QuizStartScreenProps {
 
 /** Format the adjusted time for the time limit badge */
 function formatTimeBadge(baseMinutes: number, accommodation: TimerAccommodation): string {
-  if (accommodation === 'untimed') return 'Untimed'
-  const multiplier = accommodation === '150%' ? 1.5 : accommodation === '200%' ? 2 : 1
+  const multiplier = getAccommodationMultiplier(accommodation)
+  if (multiplier == null) return 'Untimed'
   const adjusted = baseMinutes * multiplier
   const whole = Math.floor(adjusted)
-  const seconds = Math.round((adjusted - whole) * 60)
+  const fractional = adjusted - whole
+  const seconds = fractional > 0 ? Math.min(Math.round(fractional * 60), 59) : 0
   if (seconds === 0) return `${whole} min`
   return `${whole} min ${seconds} sec`
 }
@@ -76,15 +80,16 @@ export function QuizStartScreen({
 
       {/* Metadata badges */}
       <div className="flex flex-wrap gap-2 mt-6" aria-label="Quiz details" role="group">
-        <span className="bg-brand-soft text-brand rounded-full px-3 py-1 text-sm">
+        <span className="bg-brand-soft text-brand-soft-foreground rounded-full px-3 py-1 text-sm">
           {questionCount} {questionLabel}
         </span>
         <span
-          className={
+          className={cn(
+            'rounded-full px-3 py-1 text-sm',
             isAdjusted
-              ? 'bg-brand-soft text-brand-soft-foreground rounded-full px-3 py-1 text-sm'
-              : 'bg-muted text-muted-foreground rounded-full px-3 py-1 text-sm'
-          }
+              ? 'bg-brand-soft text-brand-soft-foreground'
+              : 'bg-muted text-muted-foreground'
+          )}
         >
           {hasTimed ? formatTimeBadge(quiz.timeLimit!, accommodation) : 'Untimed'}
         </span>
@@ -93,28 +98,29 @@ export function QuizStartScreen({
         </span>
       </div>
 
-      {/* Accessibility accommodations link — only for timed quizzes */}
+      {/* Accessibility accommodations — Dialog with trigger for proper focus return */}
       {hasTimed && (
-        <Button
-          type="button"
-          variant="link"
-          size="sm"
-          className="mt-3 text-brand-soft-foreground p-0 h-auto"
-          onClick={() => setModalOpen(true)}
-        >
-          <Clock className="size-4 mr-1" aria-hidden="true" />
-          Accessibility Accommodations
-        </Button>
-      )}
-
-      {hasTimed && (
-        <TimerAccommodationsModal
-          open={modalOpen}
-          onOpenChange={setModalOpen}
-          baseTimeMinutes={quiz.timeLimit!}
-          value={accommodation}
-          onSave={onAccommodationChange}
-        />
+        <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+          <DialogTrigger asChild>
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              className="mt-3 text-brand-soft-foreground min-h-11"
+            >
+              <Clock className="size-4 mr-1" aria-hidden="true" />
+              Accessibility Accommodations
+            </Button>
+          </DialogTrigger>
+          <TimerAccommodationsModal
+            baseTimeMinutes={quiz.timeLimit!}
+            value={accommodation}
+            onSave={val => {
+              onAccommodationChange(val)
+              setModalOpen(false)
+            }}
+          />
+        </Dialog>
       )}
 
       {/* Screen reader announcement for saved progress */}

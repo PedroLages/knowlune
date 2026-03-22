@@ -151,6 +151,32 @@ test.describe('E15-S02: Configure Timer Duration and Accommodations', () => {
     await expect(page.getByText(/extended time/i)).toBeVisible()
   })
 
+  test('AC3b: 200% accommodation applies multiplier — timer shows 30:00 with annotation', async ({
+    page,
+  }) => {
+    await seedAndNavigateToQuiz(page)
+
+    // Open accommodations and select 200%
+    await page.getByRole('button', { name: /accessibility accommodations/i }).click()
+    const dialog = page.getByRole('dialog')
+
+    const doubleOption = dialog.getByRole('radio', { name: /200%/i })
+    await doubleOption.click()
+    await expect(doubleOption).toBeChecked()
+
+    const confirmBtn = dialog.getByRole('button', { name: 'Save' })
+    await confirmBtn.click()
+
+    // Start the quiz
+    await startQuiz(page)
+
+    // Timer should show 30:00 (200% of 15 min = 30 min)
+    await expect(page.getByText('30:00')).toBeVisible()
+
+    // Timer header should indicate accommodation
+    await expect(page.getByText(/extended time/i)).toBeVisible()
+  })
+
   test('AC4: Untimed mode hides timer display', async ({ page }) => {
     await seedAndNavigateToQuiz(page)
 

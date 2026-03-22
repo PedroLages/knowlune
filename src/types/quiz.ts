@@ -33,6 +33,19 @@ export type QuestionType = z.infer<typeof QuestionTypeEnum>
 export const TimerAccommodationEnum = z.enum(['standard', '150%', '200%', 'untimed'])
 export type TimerAccommodation = z.infer<typeof TimerAccommodationEnum>
 
+/** Single source of truth for accommodation time multipliers */
+const ACCOMMODATION_MULTIPLIERS: Record<TimerAccommodation, number | null> = {
+  standard: 1,
+  '150%': 1.5,
+  '200%': 2,
+  untimed: null,
+}
+
+/** Get the time multiplier for a given accommodation (null = untimed) */
+export function getAccommodationMultiplier(acc: TimerAccommodation): number | null {
+  return ACCOMMODATION_MULTIPLIERS[acc]
+}
+
 // ---------------------------------------------------------------------------
 // QuestionMedia
 // ---------------------------------------------------------------------------

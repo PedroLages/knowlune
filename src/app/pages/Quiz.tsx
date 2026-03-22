@@ -66,7 +66,8 @@ function loadSavedAccommodation(lessonId: string): TimerAccommodation {
     if (!raw) return 'standard'
     const result = TimerAccommodationEnum.safeParse(raw)
     return result.success ? result.data : 'standard'
-  } catch {
+  } catch (e) {
+    console.warn('[Quiz] Failed to load accommodation:', e)
     return 'standard'
   }
 }
@@ -163,8 +164,8 @@ export function Quiz() {
       setAccommodation(value)
       try {
         localStorage.setItem(`quiz-accommodation-${lessonId}`, value)
-      } catch {
-        // Best-effort persistence — storage errors are non-fatal
+      } catch (e) {
+        console.warn('[Quiz] Failed to persist accommodation:', e)
       }
     },
     [lessonId]

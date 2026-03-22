@@ -52,7 +52,7 @@ export function QuizTimer({ timeRemaining, totalTime, annotation }: QuizTimerPro
     if (prev > threshold10 && timeRemaining <= threshold10) {
       setLiveAnnouncement(`Urgent: ${formatMinuteAnnouncement(timeRemaining)}`)
     }
-  }, [timeRemaining, totalTime])
+  }, [timeRemaining, totalTime, annotation])
 
   return (
     <>
