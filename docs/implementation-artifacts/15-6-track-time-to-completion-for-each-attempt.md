@@ -1,12 +1,22 @@
 ---
 story_id: E15-S06
 story_name: "Track Time To Completion For Each Attempt"
-status: in-progress
+status: done
 started: 2026-03-22
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-03-22
+reviewed: true
+review_started: 2026-03-22
+review_gates_passed:
+  - build
+  - lint
+  - tsc
+  - prettier
+  - unit-tests
+  - e2e-smoke
+  - e2e-story
+  - code-review
+  - code-review-testing
+  - design-review
 burn_in_validated: false
 ---
 
