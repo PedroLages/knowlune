@@ -8,9 +8,9 @@
  * - Encouraging messages based on score ranges
  * - Graceful fallback when questions have no topic tags
  */
-import { test, expect } from '../support/fixtures'
-import { makeQuiz, makeQuestion } from '../support/fixtures/factories/quiz-factory'
-import { seedQuizzes } from '../support/helpers/indexeddb-seed'
+import { test, expect } from '../../support/fixtures'
+import { makeQuiz, makeQuestion } from '../../support/fixtures/factories/quiz-factory'
+import { seedQuizzes } from '../../support/helpers/indexeddb-seed'
 
 // ---------------------------------------------------------------------------
 // Test data
