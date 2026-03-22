@@ -1,0 +1,40 @@
+name: Deploy to Titan
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: docker
+    container:
+      image: docker:27-cli
+      options: --network=host
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t knowlune:latest -t knowlune:$GITHUB_SHA .
+
+      - name: Deploy to titan
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          apk add --no-cache openssh-client
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 192.168.2.200 >> ~/.ssh/known_hosts 2>/dev/null
+
+          # Stream image directly to host Docker daemon
+          docker save knowlune:latest | gzip | \
+            ssh -o StrictHostKeyChecking=no root@192.168.2.200 "gunzip | docker load"
+
+          # Restart the stack
+          ssh root@192.168.2.200 \
+            "cd /mnt/cache/docker/stacks/knowlune && docker compose up -d --force-recreate"
+
+      - name: Cleanup DinD disk space
+        if: always()
+        run: docker image prune -f
