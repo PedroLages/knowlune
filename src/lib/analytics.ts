@@ -134,8 +134,7 @@ export async function calculateCompletionRate(): Promise<CompletionRateResult> {
     try {
       const parsed = JSON.parse(quizStoreData)
       inProgressCount =
-        parsed?.state?.inProgressQuizIds?.length ??
-        (parsed?.state?.currentProgress ? 1 : 0)
+        parsed?.state?.inProgressQuizIds?.length ?? (parsed?.state?.currentProgress ? 1 : 0)
     } catch {
       inProgressCount = 0
     }

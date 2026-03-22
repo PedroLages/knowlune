@@ -288,10 +288,7 @@ describe('calculateCompletionRate', () => {
   })
 
   it('returns 100% when all started quizzes are completed', async () => {
-    await db.quizAttempts.bulkAdd([
-      makeAttempt({ quizId: 'q1' }),
-      makeAttempt({ quizId: 'q2' }),
-    ])
+    await db.quizAttempts.bulkAdd([makeAttempt({ quizId: 'q1' }), makeAttempt({ quizId: 'q2' })])
     const result = await calculateCompletionRate()
     expect(result.completedCount).toBe(2)
     expect(result.startedCount).toBe(2)
