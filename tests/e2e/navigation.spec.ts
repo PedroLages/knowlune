@@ -54,7 +54,7 @@ test.describe('App Navigation', () => {
     await goToCourses(page)
 
     // The sidebar link for Courses should have an active indicator
-    const coursesLink = page.locator('nav').getByRole('link', { name: /courses/i })
+    const coursesLink = page.locator('nav').getByRole('link', { name: 'Courses', exact: true })
     await expect(coursesLink).toBeVisible()
   })
 })

@@ -36,9 +36,7 @@ test.describe('Mobile bottom bar label', () => {
     await page.setViewportSize({ width: 375, height: 667 })
     await navigateAndWait(page, '/')
 
-    const bottomBar = page.locator(
-      'nav[data-testid="mobile-nav"], nav[data-testid="bottom-nav"]'
-    )
+    const bottomBar = page.locator('nav[aria-label="Mobile navigation"]')
     await expect(bottomBar.getByText('My Courses')).toBeVisible()
     await expect(bottomBar.getByText('My Classes')).not.toBeVisible()
   })
@@ -55,7 +53,7 @@ test.describe('Search command palette', () => {
     // Open command palette via keyboard shortcut
     await page.keyboard.press('Meta+k')
 
-    const palette = page.locator('[cmdk-dialog], [data-testid="command-palette"]')
+    const palette = page.getByRole('dialog')
     await expect(palette).toBeVisible()
 
     // Type search term
