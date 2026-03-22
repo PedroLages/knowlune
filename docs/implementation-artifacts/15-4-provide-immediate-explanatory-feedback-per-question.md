@@ -135,11 +135,17 @@ See [plan](plans/e15-s04-immediate-explanatory-feedback.md) for implementation a
 
 ## Implementation Notes
 
-[Architecture decisions, patterns used, dependencies added]
+- **Derived state pattern**: AnswerFeedback calculates feedback on render from `question` + `userAnswer` — no useState/useEffect needed. This makes the component fully deterministic and avoids stale state bugs.
+- **Exported scoring helpers**: `isCorrectAnswer()` and `calculatePointsForQuestion()` from `src/lib/scoring.ts` were previously private. Exporting them avoids duplicating the Partial Credit Model (PCM) logic.
+- **QuestionBreakdown progressive disclosure**: Results page questions are now expandable to show explanations and correct answers. Each row becomes a button when details are available.
+- **No `--warning-soft` token**: Used `bg-warning/10` pattern (established in ChatQA.tsx, Challenges.tsx) since no dedicated warning-soft CSS variable exists.
 
 ## Testing Notes
 
-[Test strategy, edge cases discovered, coverage notes]
+- 15 unit tests for AnswerFeedback covering all 4 states (correct, incorrect, partial, time-expired) plus accessibility and edge cases
+- QuestionBreakdown tests updated to include `userAnswer` field in test data (required by new interface)
+- All 1985 existing unit tests continue to pass
+- Build and lint pass with zero errors
 
 ## Pre-Review Checklist
 
@@ -169,4 +175,5 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-Story setup complete. Lessons to be documented during implementation.
+- **Dirty .gitignore caused mass file deletions in commits**: The working tree had a modified `.gitignore` that excluded most `docs/` and `.claude/` directories. Running `git add <file> && git commit` still picked up these deletions because git tracks file removals caused by `.gitignore` changes. **Fix**: Always verify commit output (file count) and restore `.gitignore` with `git checkout HEAD -- .gitignore` before committing. **Prevention**: Run `git diff --cached --stat` before every commit to verify only intended files are staged.
+- **QuestionBreakdown interface expansion was backward-compatible**: Adding `userAnswer` and `explanation` to the props interface as required fields broke existing tests but not the component consumer (QuizResults.tsx) because `currentQuiz.questions` and `lastAttempt.answers` already contain these fields at runtime.
