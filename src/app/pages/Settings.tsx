@@ -713,7 +713,7 @@ export default function Settings() {
                     <div>
                       <h4 className="text-sm font-medium">Restore from Backup</h4>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Import a previously exported LevelUp JSON file
+                        Import a previously exported EduVi JSON file
                       </p>
                     </div>
                   </div>

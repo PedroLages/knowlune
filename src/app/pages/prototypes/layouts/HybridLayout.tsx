@@ -51,7 +51,7 @@ export function HybridLayout({ children }: { children: ReactNode }) {
               className="text-base font-bold"
               style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}
             >
-              LevelUp
+              EduVi
             </span>
           </Link>
         </div>

@@ -1,5 +1,5 @@
 /**
- * Data export service for LevelUp learning platform.
+ * Data export service for EduVi learning platform.
  *
  * Exports all IndexedDB + localStorage data in multiple formats:
  * - JSON (full data with schema version)
@@ -30,7 +30,7 @@ import { sanitizeFilename, extractTextFromHtml, htmlToMarkdown } from './noteExp
 
 export const CURRENT_SCHEMA_VERSION = 14
 
-export interface LevelUpExport {
+export interface EduViExport {
   schemaVersion: number
   exportedAt: string
   data: {
@@ -105,7 +105,7 @@ function stripFileHandlePdf(pdf: ImportedPdf): Omit<ImportedPdf, 'fileHandle'> {
   return rest
 }
 
-export async function exportAllAsJson(onProgress?: ExportProgressCallback): Promise<LevelUpExport> {
+export async function exportAllAsJson(onProgress?: ExportProgressCallback): Promise<EduViExport> {
   const tables = [
     'importedCourses',
     'importedVideos',

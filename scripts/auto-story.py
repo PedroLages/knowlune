@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-auto-story.py — Automated story development cycle for LevelUp.
+auto-story.py — Automated story development cycle for EduVi.
 
 Reads stories from sprint-status.yaml and runs the full cycle:
   Session 1: START   — branch, story file, research, plan
@@ -127,7 +127,7 @@ class StoryError(Exception):
 
 def parse_args() -> RunConfig:
     parser = argparse.ArgumentParser(
-        description="Automated story development for LevelUp",
+        description="Automated story development for EduVi",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )

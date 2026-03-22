@@ -1,6 +1,6 @@
 # Modular Documentation Pattern for Claude Code Skills
 
-This document describes the modular documentation pattern used by LevelUp's story workflow skills (start-story, review-story, finish-story) to improve maintainability, reduce duplication, and enable focused updates.
+This document describes the modular documentation pattern used by EduVi's story workflow skills (start-story, review-story, finish-story) to improve maintainability, reduce duplication, and enable focused updates.
 
 ## Overview
 

@@ -1,6 +1,6 @@
-# LevelUp E2E Test Suite
+# EduVi E2E Test Suite
 
-End-to-end testing infrastructure for the LevelUp learning platform, built with Playwright.
+End-to-end testing infrastructure for the EduVi learning platform, built with Playwright.
 
 ## Setup
 
@@ -99,7 +99,7 @@ Available factories: `createCourse`, `createModule`, `createLesson`, `createReso
 
 ### 3. localStorage Seeding
 
-The LevelUp app stores all state in localStorage. The `localStorage` fixture provides:
+The EduVi app stores all state in localStorage. The `localStorage` fixture provides:
 
 ```typescript
 test('seed and verify', async ({ page, localStorage }) => {

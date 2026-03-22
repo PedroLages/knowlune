@@ -53,7 +53,7 @@ function handleMetric(metric: Metric) {
   if (isDev) {
     const unit = metric.name === 'CLS' ? '' : 'ms'
     console.log(
-      `[LevelUp:Perf] ${metric.name}: ${metric.value.toFixed(2)}${unit} (rating: ${metric.rating})`
+      `[EduVi:Perf] ${metric.name}: ${metric.value.toFixed(2)}${unit} (rating: ${metric.rating})`
     )
   }
 }
@@ -67,7 +67,7 @@ export function markRouteStart(routeName: string) {
   performance.mark(markName)
 
   if (isDev) {
-    console.log(`[LevelUp:Perf] Route transition started: ${routeName}`)
+    console.log(`[EduVi:Perf] Route transition started: ${routeName}`)
   }
 }
 
@@ -82,7 +82,7 @@ export function markRouteEnd(routeName: string) {
     const measure = performance.measure(measureName, startMark, endMark)
 
     if (isDev) {
-      console.log(`[LevelUp:Perf] Route transition ${routeName}: ${measure.duration.toFixed(2)}ms`)
+      console.log(`[EduVi:Perf] Route transition ${routeName}: ${measure.duration.toFixed(2)}ms`)
     }
 
     pushMetric({
@@ -95,7 +95,7 @@ export function markRouteEnd(routeName: string) {
   } catch {
     // Start mark may not exist if markRouteStart was never called
     if (isDev) {
-      console.warn(`[LevelUp:Perf] Missing start mark for route: ${routeName}`)
+      console.warn(`[EduVi:Perf] Missing start mark for route: ${routeName}`)
     }
   } finally {
     // Clean up marks
@@ -141,6 +141,6 @@ export function initPerformanceMonitoring() {
   onINP(handleMetric)
 
   if (isDev) {
-    console.log('[LevelUp:Perf] Performance monitoring initialized')
+    console.log('[EduVi:Perf] Performance monitoring initialized')
   }
 }

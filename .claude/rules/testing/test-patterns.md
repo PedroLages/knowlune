@@ -13,7 +13,7 @@ paths:
 
 For general project guidance, see [/CLAUDE.md](../../../CLAUDE.md).
 
-LevelUp E2E tests follow strict determinism and maintainability patterns to ensure reliable, fast test execution.
+EduVi E2E tests follow strict determinism and maintainability patterns to ensure reliable, fast test execution.
 
 ## Deterministic Time Handling
 

@@ -65,7 +65,7 @@ Task({
 Test anti-patterns detected (step g validation):
 [Insert validation findings if any LOW severity issues were found, or 'No anti-patterns detected' if clean]
 
-Focus on architecture, security, correctness, silent failures, test anti-patterns (section 5.5), and LevelUp stack patterns. Score each finding with confidence (0-100).",
+Focus on architecture, security, correctness, silent failures, test anti-patterns (section 5.5), and EduVi stack patterns. Score each finding with confidence (0-100).",
   description: "Code review E##-S##"
 })
 

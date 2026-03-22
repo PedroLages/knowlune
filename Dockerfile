@@ -1,4 +1,4 @@
-# Production Dockerfile for LevelUp
+# Production Dockerfile for EduVi
 # Multi-stage build: Build stage + Nginx serving stage
 
 # Stage 1: Builder

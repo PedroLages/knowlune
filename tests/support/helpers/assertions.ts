@@ -1,5 +1,5 @@
 /**
- * Common assertion helpers for LevelUp E2E tests.
+ * Common assertion helpers for EduVi E2E tests.
  *
  * Lightweight wrappers for frequent checks. Keep actual expect()
  * calls in test bodies — these helpers only prepare data or

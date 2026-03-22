@@ -1,5 +1,5 @@
 /**
- * Merged test fixtures for LevelUp E2E tests.
+ * Merged test fixtures for EduVi E2E tests.
  *
  * Usage:
  *   import { test, expect } from '../support/fixtures'

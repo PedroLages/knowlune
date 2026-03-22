@@ -1,5 +1,5 @@
 /**
- * Data factories for LevelUp quiz content.
+ * Data factories for EduVi quiz content.
  *
  * Creates Quiz, Question, QuizAttempt, and QuizProgress objects with
  * sensible defaults and override support.

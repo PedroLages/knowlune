@@ -2,7 +2,7 @@
 
 **This file is always loaded (universal rule - no path restrictions).**
 
-LevelUp uses 11 automated mechanisms to enforce code quality and process compliance at three stages: **save-time** (IDE feedback), **commit-time** (git hooks), and **review-time** (AI agents). These catch issues early, reducing review rounds from 2-3 (Epic 7 baseline) to 1-2 (Epic 8+ target).
+EduVi uses 11 automated mechanisms to enforce code quality and process compliance at three stages: **save-time** (IDE feedback), **commit-time** (git hooks), and **review-time** (AI agents). These catch issues early, reducing review rounds from 2-3 (Epic 7 baseline) to 1-2 (Epic 8+ target).
 
 **Status Report:** See [automation-infrastructure-status-2026-03-13.md](../../../docs/implementation-artifacts/automation-infrastructure-status-2026-03-13.md) for verification, test results, and effectiveness metrics.
 
@@ -109,12 +109,12 @@ These agents provide **deep analysis** during `/review-story` — catching issue
 - Manual compliance: 40-50% follow-through
 - Automated enforcement: 65% follow-through (+45% improvement)
 
-**LevelUp Baseline (Epic 7 - before automation awareness):**
+**EduVi Baseline (Epic 7 - before automation awareness):**
 - Hardcoded colors: 4/5 stories (80%)
 - Empty lessons learned: 2/5 stories (40%)
 - Average review rounds: 2-3
 
-**LevelUp Target (Epic 8+ - with automation):**
+**EduVi Target (Epic 8+ - with automation):**
 - Hardcoded colors: <10% (caught at save-time)
 - Empty lessons learned: 0% (lessons learned gate in `/review-story`)
 - Average review rounds: 1-2 (fewer blockers)

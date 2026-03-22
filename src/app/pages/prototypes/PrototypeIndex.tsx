@@ -57,7 +57,7 @@ export function PrototypeIndex() {
 
         <h1 className="text-5xl font-bold mt-8 mb-4 tracking-tight">Design Prototypes</h1>
         <p className="text-lg text-neutral-500 mb-16 max-w-2xl">
-          Compare the current LevelUp design against Swiss/International Style alternatives. Each
+          Compare the current EduVi design against Swiss/International Style alternatives. Each
           prototype reimagines the same pages with different design principles.
         </p>
 

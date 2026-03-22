@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# LevelUp Pre-Check Pipeline
+# EduVi Pre-Check Pipeline
 # Unified pre-check script for /review-story and /finish-story workflows
 #
 # Usage:

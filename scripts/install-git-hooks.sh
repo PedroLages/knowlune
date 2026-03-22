@@ -1,5 +1,5 @@
 #!/bin/bash
-# Install git hooks for LevelUp project
+# Install git hooks for EduVi project
 # Prevents ESLint/TypeScript/format errors from reaching CI
 
 # Colors
@@ -9,7 +9,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BLUE}  Installing LevelUp Git Hooks${NC}"
+echo -e "${BLUE}  Installing EduVi Git Hooks${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 

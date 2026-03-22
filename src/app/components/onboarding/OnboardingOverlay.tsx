@@ -126,7 +126,7 @@ export function OnboardingOverlay() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           role="dialog"
           aria-modal="true"
-          aria-label="Welcome to LevelUp onboarding"
+          aria-label="Welcome to EduVi onboarding"
         >
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.97 }}
@@ -151,7 +151,7 @@ export function OnboardingOverlay() {
             {/* Welcome header (only on first view) */}
             {currentStep === 1 && !isComplete && (
               <p className="mb-6 text-center text-sm font-medium text-muted-foreground">
-                Welcome to LevelUp! Let's get you started in 3 quick steps.
+                Welcome to EduVi! Let's get you started in 3 quick steps.
               </p>
             )}
 

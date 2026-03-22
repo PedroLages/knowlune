@@ -1,6 +1,6 @@
 ---
 name: finish-story
-description: Use when a LevelUp story is ready to ship. Validates, creates PR. Auto-runs reviews if /review-story was not already run. Use after implementing and optionally reviewing a story.
+description: Use when a EduVi story is ready to ship. Validates, creates PR. Auto-runs reviews if /review-story was not already run. Use after implementing and optionally reviewing a story.
 argument-hint: "[E##-S##]"
 disable-model-invocation: true
 ---

@@ -1,4 +1,4 @@
-# Development Dockerfile for LevelUp
+# Development Dockerfile for EduVi
 # Uses Node 20 Alpine for minimal footprint with hot reload support
 
 FROM node:20-alpine

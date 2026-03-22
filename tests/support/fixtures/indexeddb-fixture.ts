@@ -1,7 +1,7 @@
 /**
  * IndexedDB fixture for seeding and cleaning up Dexie database state.
  *
- * The LevelUp app stores imported courses in IndexedDB via Dexie.js:
+ * The EduVi app stores imported courses in IndexedDB via Dexie.js:
  *   - Database: 'ElearningDB'
  *   - Table: 'importedCourses' (key: 'id', indexes: name, importedAt, *tags)
  *

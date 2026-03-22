@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router'
 import { Search, Bell, ChevronDown, ChevronLeft, ChevronRight, Sun, Moon, Menu } from 'lucide-react'
-import { LevelUpLogo } from './figma/LevelUpLogo'
+import { EduViLogo } from './figma/EduViLogo'
 import { Button } from './ui/button'
 import { Kbd } from './ui/kbd'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
@@ -97,7 +97,7 @@ function SidebarContent({ onNavigate, iconOnly }: { onNavigate?: () => void; ico
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
             className="w-7 h-7"
-            aria-label="LevelUp"
+            aria-label="EduVi"
           >
             <text
               x="0"
@@ -108,7 +108,7 @@ function SidebarContent({ onNavigate, iconOnly }: { onNavigate?: () => void; ico
               fill="currentColor"
               letterSpacing="-1"
             >
-              U
+              V
             </text>
             <text
               x="24"
@@ -119,13 +119,13 @@ function SidebarContent({ onNavigate, iconOnly }: { onNavigate?: () => void; ico
               fill="currentColor"
               letterSpacing="-1"
             >
-              p
+              i
             </text>
             <polygon points="18,31 24,18 30,31" className="fill-background" />
             <rect x="22.5" y="30" width="3" height="10" className="fill-background" />
           </svg>
         ) : (
-          <LevelUpLogo />
+          <EduViLogo />
         )}
       </div>
 
