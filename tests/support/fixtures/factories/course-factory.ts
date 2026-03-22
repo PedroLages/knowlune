@@ -1,5 +1,5 @@
 /**
- * Data factories for LevelUp course content.
+ * Data factories for Knowlune course content.
  *
  * Creates Course, Module, Lesson, and Resource objects with sensible
  * defaults and override support. Uses crypto.randomUUID() for unique

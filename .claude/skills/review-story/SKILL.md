@@ -1,6 +1,6 @@
 ---
 name: review-story
-description: Use when running quality gates on a LevelUp story before shipping. Runs build/lint/tests, dispatches design review (Playwright MCP) and adversarial code review agents, generates consolidated report. Use after implementing a story to catch issues before /finish-story.
+description: Use when running quality gates on a Knowlune story before shipping. Runs build/lint/tests, dispatches design review (Playwright MCP) and adversarial code review agents, generates consolidated report. Use after implementing a story to catch issues before /finish-story.
 argument-hint: "[E##-S##]"
 disable-model-invocation: true
 ---
@@ -342,7 +342,7 @@ Mark the first todo as `in_progress` and proceed:
 Test anti-patterns detected (step g validation):
 [Insert validation findings if any LOW severity issues were found, or 'No anti-patterns detected' if clean]
 
-Focus on architecture, security, correctness, silent failures, test anti-patterns (section 5.5), and LevelUp stack patterns. Score each finding with confidence (0-100).",
+Focus on architecture, security, correctness, silent failures, test anti-patterns (section 5.5), and Knowlune stack patterns. Score each finding with confidence (0-100).",
      description: "Code review E##-S##"
    })
 

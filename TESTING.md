@@ -1,6 +1,6 @@
 # Testing Guide
 
-Complete guide to running and interpreting tests for the LevelUp project.
+Complete guide to running and interpreting tests for the Knowlune project.
 
 ## Quick Reference
 

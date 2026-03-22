@@ -5,7 +5,7 @@ description: Use when reviewing UI/UX changes to React components, pages, or sty
 
 # design-review
 
-Comprehensive design review for front-end UI changes in the LevelUp e-learning platform.
+Comprehensive design review for front-end UI changes in the Knowlune e-learning platform.
 
 ## Behavior
 

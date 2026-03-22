@@ -1,6 +1,6 @@
 ---
 name: start-story
-description: Use when beginning work on a LevelUp story, when user says "start story E##-S##", or when picking the next story from sprint-status.yaml. Creates branch, story file, suggests ATDD tests, gathers context, enters plan mode.
+description: Use when beginning work on a Knowlune story, when user says "start story E##-S##", or when picking the next story from sprint-status.yaml. Creates branch, story file, suggests ATDD tests, gathers context, enters plan mode.
 argument-hint: "[E##-S##]"
 disable-model-invocation: true
 ---
@@ -378,7 +378,7 @@ Map changed files to routes for design review context:
 | `pages/Reports.tsx` | `/reports` | Reports & analytics |
 | `pages/Settings.tsx` | `/settings` | Settings |
 
-## LevelUp Stack Patterns
+## Knowlune Stack Patterns
 
 | Story content | Pattern |
 |---|---|

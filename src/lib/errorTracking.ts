@@ -41,7 +41,7 @@ export function reportError(error: unknown, context = 'Unknown'): void {
   }
   errorLog.push(entry)
 
-  console.error(`[LevelUp:Error] ${entry.timestamp} | ${context} | ${message}`)
+  console.error(`[Knowlune:Error] ${entry.timestamp} | ${context} | ${message}`)
 }
 
 /**

@@ -1,5 +1,5 @@
 /**
- * CSV serialization utilities for LevelUp data export.
+ * CSV serialization utilities for Knowlune data export.
  *
  * Generates RFC 4180-compliant CSV with proper escaping.
  * Three export formats: sessions, content progress, streaks (derived).

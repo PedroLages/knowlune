@@ -11,7 +11,7 @@ paths:
 
 ## Automatic Cleanup via Playwright Context Isolation
 
-LevelUp tests achieve excellent isolation (95/100 Grade A) through **automatic cleanup** provided by Playwright's browser context architecture. Manual cleanup hooks are intentionally avoided.
+Knowlune tests achieve excellent isolation (95/100 Grade A) through **automatic cleanup** provided by Playwright's browser context architecture. Manual cleanup hooks are intentionally avoided.
 
 **Key Principles:**
 - **No beforeAll/afterAll hooks** - Each test is fully independent

@@ -1,13 +1,13 @@
 /**
- * Data import service for LevelUp learning platform.
+ * Data import service for Knowlune learning platform.
  *
- * Re-imports a previously exported LevelUp JSON file into IndexedDB + localStorage.
+ * Re-imports a previously exported Knowlune JSON file into IndexedDB + localStorage.
  * Validates schema version and data structure before writing.
  *
  * Uses Dexie transactions for atomicity — no partial writes on failure.
  */
 import { db } from '@/db/schema'
-import { CURRENT_SCHEMA_VERSION, type LevelUpExport } from './exportService'
+import { CURRENT_SCHEMA_VERSION, type KnowluneExport } from './exportService'
 
 // --- Import Result ---
 
@@ -19,7 +19,7 @@ export interface ImportResult {
 
 // --- Validation ---
 
-function isValidExport(data: unknown): data is LevelUpExport {
+function isValidExport(data: unknown): data is KnowluneExport {
   if (typeof data !== 'object' || data === null) return false
   const obj = data as Record<string, unknown>
 
@@ -32,7 +32,7 @@ function isValidExport(data: unknown): data is LevelUpExport {
 
 // --- Schema Migration Registry ---
 
-type MigrationFn = (data: LevelUpExport) => LevelUpExport
+type MigrationFn = (data: KnowluneExport) => KnowluneExport
 
 const migrations: Record<number, MigrationFn> = {
   // v14 is the first export schema version — no migrations needed yet.
@@ -40,7 +40,7 @@ const migrations: Record<number, MigrationFn> = {
   // 15: (data) => { /* transform v14 → v15 */ return data },
 }
 
-function applyMigrations(data: LevelUpExport): LevelUpExport {
+function applyMigrations(data: KnowluneExport): KnowluneExport {
   let current = data
   for (let v = current.schemaVersion; v < CURRENT_SCHEMA_VERSION; v++) {
     const targetVersion = v + 1
@@ -72,11 +72,11 @@ export async function importFullData(json: string): Promise<ImportResult> {
     return {
       success: false,
       recordCount: 0,
-      error: 'Not a valid LevelUp export file (missing schemaVersion or data)',
+      error: 'Not a valid Knowlune export file (missing schemaVersion or data)',
     }
   }
 
-  let exportData = parsed as LevelUpExport
+  let exportData = parsed as KnowluneExport
 
   // Apply forward migrations if needed
   if (exportData.schemaVersion < CURRENT_SCHEMA_VERSION) {

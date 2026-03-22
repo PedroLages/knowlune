@@ -1,0 +1,318 @@
+# Engineering Patterns
+
+Shared patterns extracted from retrospectives (Epics 5-9B). Read this before starting any story.
+
+## IDB Cleanup in E2E Tests
+
+Always `await` IndexedDB cleanup in `afterEach`. Fire-and-forget causes flaky inter-test pollution.
+
+```typescript
+// Use the indexeddb-fixture helper
+test.afterEach(async ({ page, indexedDB }) => {
+  await indexedDB.clearStore('challenges')
+})
+
+// Or wrap raw IDB in a Promise
+await page.evaluate(() =>
+  new Promise<void>((resolve, reject) => {
+    const req = indexedDB.open('ElearningDB')
+    req.onsuccess = () => {
+      const idb = req.result
+      const tx = idb.transaction('storeName', 'readwrite')
+      const clearReq = tx.objectStore('storeName').clear()
+      clearReq.onsuccess = () => { idb.close(); resolve() }
+      clearReq.onerror = () => reject(clearReq.error)
+    }
+    req.onerror = () => reject(req.error)
+  })
+)
+```
+
+## DST-Safe Date Handling
+
+Use `toLocaleDateString('sv-SE')` for timezone-safe YYYY-MM-DD strings. Never use `toISOString().split('T')[0]` — it returns UTC, not local time, so near-midnight users in western timezones get wrong dates.
+
+```typescript
+// CORRECT — local timezone
+const dateStr = new Date().toLocaleDateString('sv-SE') // "2026-03-08"
+
+// WRONG — UTC date, off by one near midnight in US timezones
+const dateStr = new Date().toISOString().split('T')[0]
+```
+
+For parsing YYYY-MM-DD strings back to Date objects, use `parseLocalDate()` to avoid UTC midnight shift:
+
+```typescript
+function parseLocalDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+```
+
+## Type Guard Edge Cases
+
+When form state allows empty or undefined values, always guard dynamic lookups before using them in validation messages or UI labels.
+
+```typescript
+// WRONG — produces "undefined videos" when type is empty
+const label = `${UNIT_LABELS[type]} required`
+
+// CORRECT — guard before lookup
+const label = type ? `${UNIT_LABELS[type]} required` : 'Select a type'
+```
+
+## Optimistic UI with Rollback
+
+When using optimistic UI updates, snapshot the full state array before mutation. Rollback on failure must restore the original order.
+
+```typescript
+const snapshot = [...get().items] // full snapshot before mutation
+
+set({ items: items.filter(i => i.id !== id) }) // optimistic
+
+try {
+  await db.items.delete(id)
+} catch {
+  set({ items: snapshot }) // rollback preserves original order
+}
+```
+
+For non-optimistic operations (like `refreshAllProgress`), update state only after DB persistence succeeds. Keep a snapshot for rollback on DB failure.
+
+## useEffect Cleanup
+
+Always return a cleanup function for effects with async operations. Use an `ignore` flag to prevent stale state updates.
+
+```typescript
+useEffect(() => {
+  let ignore = false
+  fetchData().then(data => {
+    if (!ignore) setState(data)
+  })
+  return () => { ignore = true }
+}, [])
+```
+
+For effects with timers or event listeners, clean those up too:
+
+```typescript
+useEffect(() => {
+  const handler = () => { /* ... */ }
+  window.addEventListener('event-name', handler)
+  return () => window.removeEventListener('event-name', handler)
+}, [deps])
+```
+
+## Error Handling
+
+Never swallow errors in catch blocks. At minimum, log to console AND surface to the user.
+
+```typescript
+// WRONG — error silently disappears
+catch { }
+catch (e) { console.log(e) }
+
+// CORRECT — log + notify user
+catch (error) {
+  console.error('[ComponentName] operation failed:', error)
+  toast.error('Operation failed. Please try again.')
+}
+```
+
+## Start Simple, Escalate If Needed (Decision Framework)
+
+When choosing between implementation approaches of varying complexity, **default to the simplest viable solution**. Only escalate to a more complex approach if the simple one fails to meet explicit, measured performance or capability targets.
+
+**Decision Process:**
+
+1. **Identify the simplest approach** that could work (brute force, linear scan, naive algorithm)
+2. **Define measurable failure criteria** before building (e.g., ">100ms latency", ">100MB memory")
+3. **Build and benchmark** the simple approach first
+4. **Escalate only if** the simple approach fails the defined criteria
+5. **When research scores differ by <15%**, choose the lower-risk/simpler option
+
+**Case Study — Epic 9 Vector Search:**
+- Custom HNSW (complex): 700+ lines, 6.2% recall, 3 hours invested, 0 progress
+- Brute force k-NN (simple): 200 lines, 100% recall, 10.27ms @ 10K vectors (10x under budget)
+- Lesson: Brute force should have been the starting point. HNSW was premature optimization.
+
+**Migration Triggers (document upfront):**
+When building the simple approach, document the specific conditions that would trigger migration to a more complex solution. Example: "If >50K vectors OR >200ms latency → evaluate EdgeVec library."
+
+**Anti-patterns:**
+- Building complex solutions before proving the simple one is insufficient
+- Choosing higher-scored research options when the score gap is small but complexity gap is large
+- Continuing to fix a failing complex approach instead of pivoting to a simpler one (sunk cost)
+
+## Epic Split Criteria
+
+When planning an epic that covers both infrastructure/foundation work AND feature work built on that foundation, consider splitting into two epics.
+
+**Split when:**
+- The epic has 3+ "foundation" stories (data layer, config, API setup, worker architecture) AND 3+ "feature" stories that depend on them
+- Infrastructure stories need to stabilize before feature stories can begin productively
+- Different skill sets or review criteria apply to infrastructure vs. features
+- The combined epic would exceed 8 stories
+
+**Don't split when:**
+- Infrastructure is just 1-2 small stories (setup/config)
+- Features can be developed incrementally alongside infrastructure
+- The total scope is ≤6 stories
+
+**Naming convention:** Use letter suffix for the feature epic (e.g., Epic 9 = infrastructure, Epic 9B = features).
+
+**Case Study — Epic 9/9B:**
+- Epic 9 (3 stories): AI provider config, web workers, embedding pipeline — all foundation
+- Epic 9B (6 stories): Video summary, Q&A, learning paths, gap detection, note org, analytics — all features
+- Result: Clean dependency boundary, infrastructure stabilized before features started
+
+## Fire-and-Forget Error Boundaries
+
+Auto-analysis features, background analytics, and telemetry must **never** throw unhandled errors. These features enhance the experience but must not break user workflows.
+
+```typescript
+// CORRECT — fire-and-forget with error boundary
+const runAutoAnalysis = async (courseId: string) => {
+  try {
+    await analyzeCourseMaterial(courseId)
+  } catch (error) {
+    console.error('[AutoAnalysis] Failed:', error)
+    toast.error('Auto-analysis unavailable. Your data is safe.')
+    // Never re-throw — caller continues normally
+  }
+}
+```
+
+**Rules:**
+- Wrap all background/analytics operations in try/catch
+- Log the error for debugging (console.error with component prefix)
+- Show a non-blocking toast notification (never a modal or alert)
+- Never re-throw — the calling workflow must complete regardless
+- Never let analytics errors propagate to React error boundaries
+
+## CSP Configuration for External APIs
+
+Content Security Policy violations fail **silently** in the browser but **clearly** in E2E tests. This causes features to appear working in dev but fail in tests.
+
+**Rule:** Configure CSP allowlists in infrastructure stories **before** any feature story that calls external APIs.
+
+**Checklist for external API stories:**
+1. Add API domain to `connect-src` in CSP meta tag or header
+2. Verify in both browser console (check for CSP violation warnings) and E2E tests
+3. Document the CSP change in the story's implementation notes
+
+## Branch From Main Always
+
+Never branch a feature branch from another feature branch. Always branch from `main`.
+
+Stacked branches (feature-on-feature) cause painful rebase conflicts when the base branch is rebased and merged. Without dedicated stacked PR tooling (e.g., Graphite, ghstack), the conflict resolution cost exceeds any parallelism benefit.
+
+**Rule:** `git checkout main && git pull && git checkout -b feature/e##-s##-slug`
+
+**Case Study — Epic 13 (E13-S02):**
+E13-S02 was branched from E13-S01's feature branch. When E13-S01 was rebased and merged to main, E13-S02 inherited all old E13-S01 commits plus extensive conflicts during rebase. Sequential stories branching from main would have avoided the issue entirely.
+
+## Catch Blocks Must Surface Errors
+
+Every `catch` block in an event handler or user-triggered function must include visible user feedback (e.g., `toast.error()`). Console logging alone is a **silent failure** — the user has no idea something went wrong.
+
+This pattern has recurred across 3+ epics (E03-S03, E12-S06, E13-S04) and is now enforced by the `error-handling/no-silent-catch` ESLint rule.
+
+```typescript
+// WRONG — silent failure (user sees nothing)
+catch (error) {
+  console.error('Failed:', error)
+}
+
+// WRONG — completely empty catch
+catch { }
+
+// CORRECT — log + notify user
+catch (error) {
+  console.error('[ComponentName] operation failed:', error)
+  toast.error('Something went wrong. Please try again.')
+}
+```
+
+**Exceptions** (where silent catch is acceptable):
+- `beforeunload` handlers (no UI available)
+- Background telemetry/analytics (fire-and-forget pattern — see "Fire-and-Forget Error Boundaries" above)
+- Cleanup/dispose functions where failure is inconsequential
+
+## Inventory Existing Code Before Story Planning
+
+Before writing task breakdowns for a new story, audit the codebase for pre-existing code that's relevant. In Epic 13, 3 of 6 stories (50%) discovered that significant functionality already existed, making task lists overestimate effort.
+
+**Audit checklist:**
+1. Search stores (`src/stores/`) for actions/selectors related to the story's domain
+2. Search types (`src/types/`) for interfaces the story needs
+3. Search components (`src/app/components/`) for UI primitives that can be reused
+4. Check if the story's primary data flow is already wired
+
+**Case Study — Epic 13:**
+- E13-S03 (Pause/Resume): ~80% already built in E12-S03 (Zustand persist) and E13-S01 (resume button)
+- E13-S05 (Shuffle): Fisher-Yates was already inline in `useQuizStore.ts` — story became an extraction refactor
+- E13-S01 (Navigation): `goToNextQuestion`/`goToPrevQuestion` already existed in the store
+
+## Retro Commitment Enforcement Principle
+
+Only commit to retro action items that can be enforced automatically (ESLint rules, git hooks, review gates). Items requiring voluntary initiative without enforcement should be labeled "aspirational" and deprioritized.
+
+**Evidence (Epics 11-13):**
+- Automated items (ESLint design-token rule, review gates): ~100% compliance
+- Documentation-only items (conventions, pattern docs): <20% follow-through
+- Items with enforcement attached (contrast fix blocking a story): 100% completion
+
+**Rule:** If it can't be enforced, it won't get done consistently. Attach automation or accept it's aspirational.
+
+## Scoring Dual-Path: `isCorrect` vs `pointsEarned`
+
+For multiple-select questions, `isCorrect` and `pointsEarned` follow **different logic paths** in `src/lib/scoring.ts`:
+
+- **`isCorrect`** (boolean): Exact set-match — `true` only when the user selects every correct option and no incorrect ones. Used for "correct/incorrect" status display.
+- **`pointsEarned`** (number): Partial Credit Model (PCM) — awards fractional points based on `max(0, (correct_selections - incorrect_selections) / total_correct) * points`. Used for score calculation.
+
+This means a partially correct answer returns `isCorrect: false` but `pointsEarned > 0`. For example, selecting 2 of 3 correct options (no wrong picks) yields `isCorrect: false, pointsEarned: 6.67` on a 10-point question.
+
+**Why two paths:** Quiz results need both a binary status badge ("Correct" / "Incorrect") and a nuanced score. PCM rewards partial knowledge without labeling incomplete answers as fully correct.
+
+**Testing guidance:** Write scoring test expectations directly from the AC formulas, not from intuition about how "correct" should work. The most common mistake (E14-S02) is assuming all-or-nothing points for multiple-select because `isCorrect` is all-or-nothing. Always check both fields independently.
+
+**Reference:** `calculatePointsForQuestion()` in [src/lib/scoring.ts](../src/lib/scoring.ts)
+
+## Quiz/Question Component Accessibility Checklist
+
+Recurring ARIA mistakes from Epic 14 retrospective. Check every item when building question or quiz UI.
+
+**Structure:**
+- [ ] `<fieldset>` + `<legend>` wraps each question group
+- [ ] `<legend>` uses `aria-labelledby` pointing to question text element
+- [ ] No redundant `role="group"` on `<fieldset>` (it's implicit)
+
+**ARIA associations:**
+- [ ] `aria-describedby` links inputs to hint/instruction text
+- [ ] `aria-live="polite"` on dynamically updating content (counters, timers, validation status)
+- [ ] `aria-invalid` + `aria-errormessage` on inputs with validation errors
+
+**Interaction:**
+- [ ] RadioGroup: Arrow keys navigate options (Radix default — don't override)
+- [ ] Checkboxes: Tab key moves between options (not arrow keys)
+- [ ] Focus indicators: `ring-2 ring-ring ring-offset-2` on all interactive elements
+
+**Touch & sizing:**
+- [ ] Touch targets ≥44px (`min-h-12` on clickable elements)
+- [ ] Label text clickable (wraps or `htmlFor` on associated input)
+
+## Playwright addInitScript
+
+`addInitScript` runs on every page load, including `page.reload()`. If you use `localStorage.clear()` inside it, reloads will wipe seeded test data.
+
+Fix: use a sessionStorage flag to run setup only once per test:
+
+```typescript
+await page.addInitScript(() => {
+  if (sessionStorage.getItem('test-setup-done')) return
+  sessionStorage.setItem('test-setup-done', '1')
+  localStorage.clear()
+})
+```

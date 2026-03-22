@@ -6,7 +6,7 @@ import { cn } from '@/app/components/ui/utils'
 const remarkPlugins = [remarkGfm]
 
 /**
- * Styled Markdown component overrides using LevelUp design tokens.
+ * Styled Markdown component overrides using Knowlune design tokens.
  *
  * Inline vs block code: Both render as <code>, but block code lives inside
  * <pre>. The pre component fully styles block code (bg-surface-sunken, reset

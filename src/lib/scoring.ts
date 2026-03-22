@@ -8,7 +8,7 @@ export interface QuizScoreResult {
   answers: Answer[] // with isCorrect and pointsEarned filled in
 }
 
-function isCorrectAnswer(question: Question, userAnswer: string | string[]): boolean {
+export function isCorrectAnswer(question: Question, userAnswer: string | string[]): boolean {
   const correct = question.correctAnswer
 
   switch (question.type) {
@@ -39,7 +39,7 @@ function isCorrectAnswer(question: Question, userAnswer: string | string[]): boo
   }
 }
 
-function calculatePointsForQuestion(
+export function calculatePointsForQuestion(
   question: Question,
   userAnswer: string | string[] | undefined
 ): { pointsEarned: number; isCorrect: boolean } {
@@ -64,6 +64,19 @@ function calculatePointsForQuestion(
   // All other types: all-or-nothing
   const isCorrect = isCorrectAnswer(question, userAnswer)
   return { pointsEarned: isCorrect ? question.points : 0, isCorrect }
+}
+
+/** Check if an answer represents an unanswered question (empty or missing). */
+export function isUnanswered(userAnswer: string | string[] | null | undefined): boolean {
+  if (userAnswer == null) return true
+  if (Array.isArray(userAnswer)) return userAnswer.length === 0
+  return userAnswer === ''
+}
+
+/** Format a correct answer for display (joins arrays with commas). */
+export function formatCorrectAnswer(correctAnswer: string | string[]): string {
+  if (Array.isArray(correctAnswer)) return correctAnswer.join(', ')
+  return correctAnswer
 }
 
 export function calculateQuizScore(

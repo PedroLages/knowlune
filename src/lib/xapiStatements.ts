@@ -1,5 +1,5 @@
 /**
- * xAPI (Experience API) statement generator for LevelUp data export.
+ * xAPI (Experience API) statement generator for Knowlune data export.
  *
  * Transforms existing learning data into xAPI-compliant statements
  * following the Actor + Verb + Object structure.

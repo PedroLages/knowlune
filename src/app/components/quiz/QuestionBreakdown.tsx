@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import { CheckCircle2, XCircle, ChevronDown } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Clock, ChevronDown } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
+import { MarkdownRenderer } from '@/app/components/quiz/MarkdownRenderer'
+import { isUnanswered, formatCorrectAnswer } from '@/lib/scoring'
 import {
   Collapsible,
   CollapsibleContent,
@@ -13,16 +15,20 @@ interface QuestionBreakdownProps {
     isCorrect: boolean
     pointsEarned: number
     pointsPossible: number
+    userAnswer: string | string[]
   }>
   questions: Array<{
     id: string
     text: string
     order: number
+    explanation?: string
+    correctAnswer?: string | string[]
   }>
 }
 
 export function QuestionBreakdown({ answers, questions }: QuestionBreakdownProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [expandedQuestion, setExpandedQuestion] = useState<string | null>(null)
 
   if (answers.length === 0) {
     return null
@@ -71,38 +77,100 @@ export function QuestionBreakdown({ answers, questions }: QuestionBreakdownProps
 
       <CollapsibleContent>
         <ul className="mt-2 space-y-1" role="list">
-          {rows.map(row => (
-            <li
-              key={row.question.id}
-              className={cn('flex items-center gap-3 rounded-xl px-4 py-2 min-h-[44px]', 'bg-card')}
-            >
-              <span className="text-sm font-medium text-muted-foreground w-8 shrink-0">
-                Q{row.question.order}
-              </span>
-              <span
-                className="text-sm text-foreground flex-1 min-w-0 truncate"
-                title={row.question.text}
-              >
-                {row.question.text}
-              </span>
-              {row.answer.isCorrect ? (
-                <CheckCircle2
-                  className="size-5 text-success shrink-0"
-                  role="img"
-                  aria-label="Correct"
-                />
-              ) : (
-                <XCircle
-                  className="size-5 text-destructive shrink-0"
-                  role="img"
-                  aria-label="Incorrect"
-                />
-              )}
-              <span className="text-sm text-muted-foreground shrink-0 w-12 text-right tabular-nums">
-                {`${row.answer.pointsEarned}/${row.answer.pointsPossible}`}
-              </span>
-            </li>
-          ))}
+          {rows.map(row => {
+            const unanswered = isUnanswered(row.answer.userAnswer)
+            const isExpanded = expandedQuestion === row.question.id
+            const hasDetails = row.question.explanation || unanswered || !row.answer.isCorrect
+
+            const rowContent = (
+              <>
+                <span className="text-sm font-medium text-muted-foreground w-8 shrink-0">
+                  Q{row.question.order}
+                </span>
+                <span
+                  className="text-sm text-foreground flex-1 min-w-0 truncate"
+                  title={row.question.text}
+                >
+                  {row.question.text}
+                </span>
+                {unanswered ? (
+                  <Clock
+                    className="size-5 text-muted-foreground shrink-0"
+                    role="img"
+                    aria-label="Not answered in time"
+                  />
+                ) : row.answer.isCorrect ? (
+                  <CheckCircle2
+                    className="size-5 text-success shrink-0"
+                    role="img"
+                    aria-label="Correct"
+                  />
+                ) : (
+                  <AlertCircle
+                    className="size-5 text-warning shrink-0"
+                    role="img"
+                    aria-label="Incorrect"
+                  />
+                )}
+                <span className="text-sm text-muted-foreground shrink-0 w-12 text-right tabular-nums">
+                  {`${row.answer.pointsEarned}/${row.answer.pointsPossible}`}
+                </span>
+              </>
+            )
+
+            return (
+              <li key={row.question.id} className="rounded-xl bg-card">
+                {hasDetails ? (
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 rounded-xl px-4 py-2 min-h-[44px] text-left cursor-pointer hover:bg-accent/50 transition-colors motion-reduce:transition-none"
+                    onClick={() => setExpandedQuestion(isExpanded ? null : row.question.id)}
+                    aria-expanded={isExpanded}
+                  >
+                    {rowContent}
+                  </button>
+                ) : (
+                  <div className="flex w-full items-center gap-3 rounded-xl px-4 py-2 min-h-[44px] text-left">
+                    {rowContent}
+                  </div>
+                )}
+
+                {/* Expanded details: explanation + correct answer */}
+                {isExpanded && hasDetails && (
+                  <div
+                    role="region"
+                    aria-label={`Details for question ${row.question.order}`}
+                    className={cn(
+                      'px-4 pb-3 pt-1 ml-8 border-l-2',
+                      unanswered
+                        ? 'border-l-muted'
+                        : row.answer.isCorrect
+                          ? 'border-l-success'
+                          : 'border-l-warning'
+                    )}
+                  >
+                    {unanswered && (
+                      <p className="text-sm text-muted-foreground mb-2">
+                        This question was not answered in time.
+                      </p>
+                    )}
+                    {(unanswered || !row.answer.isCorrect) &&
+                      row.question.correctAnswer != null && (
+                        <p className="text-sm text-foreground mb-2">
+                          <strong>Correct answer:</strong>{' '}
+                          {formatCorrectAnswer(row.question.correctAnswer)}
+                        </p>
+                      )}
+                    {row.question.explanation && (
+                      <div className="text-sm text-foreground">
+                        <MarkdownRenderer content={row.question.explanation} />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </li>
+            )
+          })}
         </ul>
       </CollapsibleContent>
     </Collapsible>

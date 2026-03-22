@@ -1,8 +1,8 @@
-# LevelUp
+# Knowlune
 
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
 
-LevelUp is a free, open-source personal learning platform for tracking progress, completing courses, and building study habits. Built with React, TypeScript, and Tailwind CSS. The original Figma design is available at <https://www.figma.com/design/q4x6ttJD11avObQNFoeQ2D/E-learning-platform-wireframes>.
+Knowlune is a free, open-source personal learning platform for tracking progress, completing courses, and building study habits. Built with React, TypeScript, and Tailwind CSS. The original Figma design is available at <https://www.figma.com/design/q4x6ttJD11avObQNFoeQ2D/E-learning-platform-wireframes>.
 
 **Open-core model:** The core platform is free and open source. Premium features (AI-powered learning, spaced review, advanced analytics) are available as a paid subscription. See [Open-Core Strategy](docs/planning-artifacts/open-core-strategy.md) for details.
 

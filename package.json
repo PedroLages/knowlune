@@ -1,8 +1,26 @@
 {
-  "name": "level-up",
+  "name": "knowlune",
   "private": true,
   "version": "0.0.1",
   "license": "AGPL-3.0-only",
+  "author": "Pedro Lages",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PedroLages/knowlune"
+  },
+  "homepage": "https://github.com/PedroLages/knowlune",
+  "keywords": [
+    "elearning",
+    "learning-platform",
+    "education",
+    "react",
+    "typescript",
+    "open-source",
+    "self-hosted",
+    "local-first",
+    "gamification",
+    "spaced-repetition"
+  ],
   "type": "module",
   "scripts": {
     "build": "vite build",

@@ -49,7 +49,7 @@ describe('errorTracking', () => {
       reportError(new Error('boom'), 'MyCtx')
 
       expect(spy).toHaveBeenCalledOnce()
-      expect(spy.mock.calls[0][0]).toContain('[LevelUp:Error]')
+      expect(spy.mock.calls[0][0]).toContain('[Knowlune:Error]')
       expect(spy.mock.calls[0][0]).toContain('MyCtx')
       expect(spy.mock.calls[0][0]).toContain('boom')
     })
