@@ -914,6 +914,99 @@ def merge_epic_prs(
     return merged
 
 
+def merge_epic_prs(
+    epic_num: str,
+    stories: list[StoryInfo] | None = None,
+    results: list[StoryResult] | None = None,
+    supervised: bool = True,
+) -> list[str]:
+    """Merge all open PRs for an epic. Returns list of merged PR URLs.
+
+    In normal mode, uses batch stories/results to find PRs.
+    In --epic-only mode (stories=None), discovers PRs by branch prefix.
+    Checks each PR state before merge (handles already-merged/closed).
+    """
+    pr_infos: list[dict[str, Any]] = []
+
+    if stories and results:
+        # Normal mode: find PRs from batch results
+        for story, result in zip(stories, results):
+            if story.epic_num != epic_num or not result.success:
+                continue
+            if result.pr_url:
+                pr_number = result.pr_url.split("/")[-1]
+                pr_infos.append({"number": pr_number, "url": result.pr_url, "story": story.key})
+    else:
+        # --epic-only mode: discover PRs by branch prefix
+        epic_n, epic_suffix = parse_epic_num(epic_num)
+        branch_prefix = f"feature/e{epic_n:02d}{epic_suffix}-"
+        result = subprocess.run(
+            ["gh", "pr", "list", "--head", branch_prefix, "--json", "number,url,headRefName",
+             "--state", "open", "--limit", "50"],
+            capture_output=True, text=True, cwd=PROJECT_DIR,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            for pr in json.loads(result.stdout):
+                pr_infos.append({
+                    "number": str(pr["number"]),
+                    "url": pr["url"],
+                    "story": pr.get("headRefName", "?"),
+                })
+
+    if not pr_infos:
+        log.info(f"  No PRs found to merge for Epic {epic_num}")
+        return []
+
+    # Supervised: confirm before merging
+    if supervised:
+        print(f"\n  PRs to merge for Epic {epic_num}:")
+        for pr in pr_infos:
+            print(f"    #{pr['number']} — {pr['story']} ({pr['url']})")
+        approval = input(f"\n  Merge {len(pr_infos)} PR(s)? [y/n]: ").strip().lower()
+        if approval != "y":
+            log.info("  Skipping PR merge per user request")
+            return []
+
+    merged: list[str] = []
+    for pr in pr_infos:
+        pr_num = pr["number"]
+
+        # Check PR state before merge (review fix #2)
+        state_check = subprocess.run(
+            ["gh", "pr", "view", pr_num, "--json", "state"],
+            capture_output=True, text=True, cwd=PROJECT_DIR,
+        )
+        if state_check.returncode != 0:
+            log.warning(f"  PR #{pr_num}: cannot check state, skipping ({state_check.stderr.strip()})")
+            continue
+
+        state = json.loads(state_check.stdout).get("state", "UNKNOWN")
+        if state == "MERGED":
+            log.info(f"  PR #{pr_num}: already merged, skipping")
+            merged.append(pr["url"])
+            continue
+        if state != "OPEN":
+            log.warning(f"  PR #{pr_num}: state is {state}, skipping")
+            continue
+
+        # Merge
+        merge_result = subprocess.run(
+            ["gh", "pr", "merge", pr_num, "--squash", "--delete-branch"],
+            capture_output=True, text=True, cwd=PROJECT_DIR,
+        )
+        if merge_result.returncode == 0:
+            log.info(f"  PR #{pr_num}: merged successfully")
+            merged.append(pr["url"])
+        else:
+            log.error(f"  PR #{pr_num}: merge failed — {merge_result.stderr.strip()}")
+
+    # Pull merged changes to main
+    if merged:
+        _checkout_main_and_pull()
+
+    return merged
+
+
 async def collect_response(
     client: ClaudeSDKClient, story_key: str = "", stream: bool = True
 ) -> tuple[str, str | None, float]:

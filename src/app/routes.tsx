@@ -56,6 +56,9 @@ const Quiz = React.lazy(() => import('./pages/Quiz').then(m => ({ default: m.Qui
 const QuizResults = React.lazy(() =>
   import('./pages/QuizResults').then(m => ({ default: m.QuizResults }))
 )
+const QuizReview = React.lazy(() =>
+  import('./pages/QuizReview').then(m => ({ default: m.QuizReview }))
+)
 
 // Default exports work directly with React.lazy
 const MyClass = React.lazy(() => import('./pages/MyClass'))
@@ -141,6 +144,14 @@ export const router = createBrowserRouter([
         element: (
           <SuspensePage>
             <QuizResults />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'courses/:courseId/lessons/:lessonId/quiz/review/:attemptId',
+        element: (
+          <SuspensePage>
+            <QuizReview />
           </SuspensePage>
         ),
       },

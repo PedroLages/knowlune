@@ -88,17 +88,51 @@ export function FillInBlankQuestion({ question, value, onChange, mode }: FillInB
           autoComplete="off"
           spellCheck={false}
           aria-labelledby={labelId}
-          aria-describedby={counterId}
+          aria-describedby={isActive ? counterId : undefined}
           className="w-full max-w-lg min-h-[44px]"
         />
-        <span
-          id={counterId}
-          className="text-sm text-muted-foreground block"
-          aria-live="polite"
-          aria-atomic="true"
-        >
-          {inputValue.length} / {MAX_LENGTH}
-        </span>
+        {isActive && (
+          <span
+            id={counterId}
+            className="text-sm text-muted-foreground block"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {inputValue.length} / {MAX_LENGTH}
+          </span>
+        )}
+        {!isActive &&
+          mode !== 'review-disabled' &&
+          (() => {
+            const correctAnswer =
+              typeof question.correctAnswer === 'string' ? question.correctAnswer : ''
+            const userTrimmed = inputValue.trim()
+            const exactMatch = userTrimmed === correctAnswer
+            const caseInsensitiveMatch =
+              !exactMatch && userTrimmed.toLowerCase() === correctAnswer.toLowerCase()
+            const isCorrect = exactMatch || caseInsensitiveMatch
+            return (
+              <div
+                className={`mt-2 rounded-lg p-3 text-sm ${isCorrect ? 'bg-success-soft text-foreground' : 'bg-warning/10 text-foreground'}`}
+              >
+                {isCorrect ? (
+                  <p>
+                    Your answer is correct
+                    {caseInsensitiveMatch ? ' (case-insensitive match)' : ''}.
+                  </p>
+                ) : (
+                  <>
+                    <p>
+                      <strong>Your answer:</strong> {userTrimmed || '(no answer)'}
+                    </p>
+                    <p className="mt-1">
+                      <strong>Correct answer:</strong> {correctAnswer}
+                    </p>
+                  </>
+                )}
+              </div>
+            )
+          })()}
       </div>
     </fieldset>
   )
