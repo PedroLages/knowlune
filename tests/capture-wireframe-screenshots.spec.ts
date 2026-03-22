@@ -63,7 +63,7 @@ test.describe('Stitch 2.0 Wireframe Screenshots', () => {
     test(`capture ${page.name}`, async ({ page: pw }) => {
       // Collapse sidebar to show more content area
       await pw.addInitScript(() => {
-        localStorage.setItem('eduvi-sidebar-v1', 'false')
+        localStorage.setItem('knowlune-sidebar-v1', 'false')
       })
 
       await pw.goto(page.path, { waitUntil: 'networkidle' })

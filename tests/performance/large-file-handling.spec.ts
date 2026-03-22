@@ -12,7 +12,7 @@ test.describe('NFR33: Large file memory efficiency', () => {
   test('blob URL creation does not buffer large file in heap', async ({ page }) => {
     // Seed sidebar state
     await page.addInitScript(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
     })
 
     await page.goto('/')

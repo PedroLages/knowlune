@@ -41,7 +41,7 @@ test.describe('E09B-S01: AI Video Summary', () => {
 
     // Prevent sidebar overlay in tablet viewports (640-1023px)
     // Without this, the Sheet overlay blocks all pointer events in tests
-    await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+    await page.evaluate(() => localStorage.setItem('knowlune-sidebar-v1', 'false'))
 
     // Seed operative-six course with video that has captions
     await seedImportedCourses(page, [createOperativeSixCourse()])

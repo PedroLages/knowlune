@@ -66,7 +66,7 @@ const quiz = makeQuiz({
 
 async function navigateToQuiz(page: import('@playwright/test').Page) {
   await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
+    localStorage.setItem('knowlune-sidebar-v1', 'false')
   })
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   await seedQuizzes(page, [quiz])
@@ -83,7 +83,7 @@ async function seedSavedProgress(
 ) {
   await page.addInitScript(
     ({ quizId, progressData }) => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
       localStorage.setItem(`quiz-progress-${quizId}`, JSON.stringify(progressData))
       // Ensure Zustand store is empty (simulates browser restart)
       localStorage.removeItem('levelup-quiz-store')
@@ -263,7 +263,7 @@ test.describe('E13-S03: Pause and Resume Quiz', () => {
 
     // Seed and navigate
     await page.addInitScript(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
     })
     await page.goto('/', { waitUntil: 'domcontentloaded' })
     await seedQuizzes(page, [timedQuiz])

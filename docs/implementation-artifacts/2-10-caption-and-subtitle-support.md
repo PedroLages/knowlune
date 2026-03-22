@@ -216,7 +216,7 @@ Key differences from WebVTT: commas in timestamps (not dots), no `WEBVTT` header
 ### Testing Standards
 
 - Follow patterns from existing E2E specs (see `tests/e2e/`)
-- Seed `localStorage.setItem('eduvi-sidebar-v1', 'false')` before navigating (tablet sidebar issue)
+- Seed `localStorage.setItem('knowlune-sidebar-v1', 'false')` before navigating (tablet sidebar issue)
 - Use `data-testid` attributes for all new interactive elements
 - File picker testing: use Playwright's `setInputFiles()` on the hidden file input
 - For persistence test: load caption → navigate away → return → verify captions auto-loaded

@@ -57,7 +57,7 @@ test.describe('E02-S10: Caption and Subtitle Support', () => {
 
     // Initialize app and wait for course seeding to complete
     await page.goto('/')
-    await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+    await page.evaluate(() => localStorage.setItem('knowlune-sidebar-v1', 'false'))
     await page.waitForLoadState('networkidle')
   })
 

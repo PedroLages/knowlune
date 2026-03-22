@@ -59,7 +59,7 @@ async function seedAndNavigateToQuiz(page: import('@playwright/test').Page) {
   await page.waitForLoadState('domcontentloaded')
 
   // Prevent sidebar overlay in tablet viewports
-  await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+  await page.evaluate(() => localStorage.setItem('knowlune-sidebar-v1', 'false'))
 
   await seedQuizzes(page, [quiz as unknown as Record<string, unknown>])
 

@@ -89,7 +89,7 @@ test.describe('E11-S06: Per-Course Study Reminders', () => {
 
     // Navigate to initialize Dexie, then seed courses
     await page.goto('/')
-    await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+    await page.evaluate(() => localStorage.setItem('knowlune-sidebar-v1', 'false'))
     await clearIndexedDBStore(page, 'ElearningDB', 'courseReminders')
     await seedTwoCourses(page)
     await page.reload()

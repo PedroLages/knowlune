@@ -93,7 +93,7 @@ async function waitForDashboard(page: import('@playwright/test').Page) {
 test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: FIXED_NOW })
   await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
+    localStorage.setItem('knowlune-sidebar-v1', 'false')
   })
 })
 

@@ -262,7 +262,7 @@ So that I discover the platform's core value immediately without needing documen
 
 **Given** I am on a tablet device (viewport 640-1023px)
 **When** the onboarding flow starts
-**Then** the sidebar is automatically closed (`localStorage.setItem('eduvi-sidebar-v1', 'false')`)
+**Then** the sidebar is automatically closed (`localStorage.setItem('knowlune-sidebar-v1', 'false')`)
 **And** the sidebar remains closed until onboarding completes
 **And** after onboarding, the sidebar state is restored to user preference
 

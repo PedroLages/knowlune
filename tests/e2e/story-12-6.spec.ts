@@ -104,7 +104,7 @@ async function seedQuizData(page: import('@playwright/test').Page, quizData: unk
 async function navigateToQuiz(page: import('@playwright/test').Page) {
   // Close sidebar to prevent tablet overlay blocking
   await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
+    localStorage.setItem('knowlune-sidebar-v1', 'false')
   })
 
   // Navigate to app first so Dexie creates the DB

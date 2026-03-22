@@ -39,7 +39,7 @@ None.
 
 #### Nits
 
-- **Nit** `tests/e2e/story-e13-s05.spec.ts:131-137` (confidence: 45): The `beforeEach` seeds `localStorage.setItem('eduvi-sidebar-v1', 'false')` via `addInitScript` but there is no `afterEach` cleanup. This is intentionally safe because Playwright provides full browser-context isolation per test. A brief comment (`// No afterEach needed — Playwright isolates browser context per test`) would make the intent explicit for reviewers unfamiliar with this guarantee.
+- **Nit** `tests/e2e/story-e13-s05.spec.ts:131-137` (confidence: 45): The `beforeEach` seeds `localStorage.setItem('knowlune-sidebar-v1', 'false')` via `addInitScript` but there is no `afterEach` cleanup. This is intentionally safe because Playwright provides full browser-context isolation per test. A brief comment (`// No afterEach needed — Playwright isolates browser context per test`) would make the intent explicit for reviewers unfamiliar with this guarantee.
 
 - **Nit** `src/lib/__tests__/shuffle.test.ts:57` (confidence: 40): The distribution test documents the ±8% tolerance rationale in a comment (`// ±8% tolerance = ±800, well beyond 3σ (268) — negligible false failure rate`). This is good. The comment could be strengthened by also stating the implied false-positive rate for completeness (approximately 1 in 10^13 per assertion at 3σ), which would help future maintainers calibrate whether the tolerance is too tight if run count is ever lowered.
 

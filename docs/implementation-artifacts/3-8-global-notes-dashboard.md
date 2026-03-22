@@ -169,7 +169,7 @@ So that I can quickly find, review, and navigate to any note regardless of which
   - Test AC3: Click tag chip, verify filter; combine with search, verify AND semantics
   - Test AC4: Change sort dropdown, verify reorder
   - Test AC5: Click card to expand, verify "Open in Lesson" navigates correctly
-- **E2E test gotcha**: Seed `localStorage.setItem('eduvi-sidebar-v1', 'false')` before navigating to prevent sidebar overlay blocking pointer events at 640-1023px viewports.
+- **E2E test gotcha**: Seed `localStorage.setItem('knowlune-sidebar-v1', 'false')` before navigating to prevent sidebar overlay blocking pointer events at 640-1023px viewports.
 - **No unit tests required**: This page is primarily composition of existing tested components (NoteCard, search, store). If the `NoteCard` `courseName` prop addition introduces logic, add a targeted test for that.
 - **Regression**: Run existing smoke tests (navigation, overview, courses) to verify no breakage from route/nav changes.
 

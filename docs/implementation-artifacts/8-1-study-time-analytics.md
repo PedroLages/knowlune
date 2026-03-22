@@ -203,7 +203,7 @@ Strong implementation with excellent accessibility practices. **0 blockers** —
 
 ### Pitfalls Avoided (and some remaining)
 
-**Sidebar seed ordering** — E2E test pattern continues to place `localStorage.setItem('eduvi-sidebar-v1', 'false')` AFTER `page.goto()`. This is a recurring pattern since E02-S07 that risks flaky failures at tablet viewports (640-1023px) where sidebar Sheet renders as fullscreen overlay. Must seed BEFORE navigation.
+**Sidebar seed ordering** — E2E test pattern continues to place `localStorage.setItem('knowlune-sidebar-v1', 'false')` AFTER `page.goto()`. This is a recurring pattern since E02-S07 that risks flaky failures at tablet viewports (640-1023px) where sidebar Sheet renders as fullscreen overlay. Must seed BEFORE navigation.
 
 **Conditional test assertions** — AC3.3 test used `if (count > 0) { ... }` pattern allowing silent pass when no elements found. Recharts SVG bars don't emit expected ARIA roles, making assertion a no-op. Fixed approach: Assert on container `role="img"` and Y-axis labels instead.
 

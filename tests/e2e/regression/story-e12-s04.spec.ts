@@ -20,7 +20,7 @@ test.describe('E12-S04: Quiz Route and QuizPage', () => {
   test.beforeEach(async ({ page }) => {
     // Seed sidebar closed to avoid tablet layout overlay blocking interactions
     await page.addInitScript(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
     })
     // Navigate to app first so Dexie initialises the database
     await page.goto('/')

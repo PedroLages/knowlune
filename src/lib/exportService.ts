@@ -65,7 +65,7 @@ function yieldToUI(): Promise<void> {
 const EXPORTABLE_LS_PREFIXES = [
   'app-settings',
   'streak-',
-  'eduvi-sidebar',
+  'knowlune-sidebar',
   'levelup-',
   'theme',
   'study-',

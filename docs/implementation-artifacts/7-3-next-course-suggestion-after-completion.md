@@ -124,7 +124,7 @@ const progress = createCourseProgress({
 await localStorage.seed('course-progress', { 'ba-101': progress })
 ```
 
-Remember to seed `localStorage.setItem('eduvi-sidebar-v1', 'false')` at tablet viewports.
+Remember to seed `localStorage.setItem('knowlune-sidebar-v1', 'false')` at tablet viewports.
 
 ## Design Review Feedback
 

@@ -26,7 +26,7 @@ test.describe('Story E07-S04: At-Risk Course Detection & Completion Estimates', 
     await page.goto('/courses')
     // Seed sidebar state to prevent fullscreen overlay on tablet/mobile viewports
     await page.evaluate(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
     })
   })
 

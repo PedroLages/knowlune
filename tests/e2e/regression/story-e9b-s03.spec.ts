@@ -64,7 +64,7 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
     await page.goto('/')
 
     // Prevent sidebar overlay in tablet viewports (640-1023px)
-    await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+    await page.evaluate(() => localStorage.setItem('knowlune-sidebar-v1', 'false'))
 
     // Clear learning path table to ensure clean state for each test
     await clearLearningPath(page)

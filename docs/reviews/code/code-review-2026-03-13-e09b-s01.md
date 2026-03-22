@@ -187,11 +187,11 @@ Instead of actually waiting 35 seconds, mock `setTimeout` or `AbortController` a
 
 The `beforeEach` navigates to `page.goto('/')` and seeds data, then individual tests navigate to `/courses/operative-six/op6-introduction`.
 
-On tablet viewports (640-1023px), the sidebar Sheet defaults to `open: true` when `eduvi-sidebar-v1` is not in localStorage, creating a fullscreen overlay that blocks pointer events. This has caused test failures in CI across multiple stories (E07-S04, E08-S01).
+On tablet viewports (640-1023px), the sidebar Sheet defaults to `open: true` when `knowlune-sidebar-v1` is not in localStorage, creating a fullscreen overlay that blocks pointer events. This has caused test failures in CI across multiple stories (E07-S04, E08-S01).
 
 **Fix:**
 
-Add `await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))` before the first navigation.
+Add `await page.evaluate(() => localStorage.setItem('knowlune-sidebar-v1', 'false'))` before the first navigation.
 
 ### 4. CSP connect-src Too Permissive
 

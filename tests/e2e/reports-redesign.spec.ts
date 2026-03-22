@@ -86,7 +86,7 @@ test.describe('Reports Page — Study Analytics', () => {
 
     // Sidebar seed for tablet viewports
     await page.addInitScript(() => {
-      window.localStorage.setItem('eduvi-sidebar-v1', 'false')
+      window.localStorage.setItem('knowlune-sidebar-v1', 'false')
     })
     await page.reload()
     await page.waitForLoadState('load')
@@ -128,7 +128,7 @@ test.describe('Reports Page — Responsive', () => {
 
     // Seed sidebar closed for mobile
     await page.addInitScript(() => {
-      window.localStorage.setItem('eduvi-sidebar-v1', 'false')
+      window.localStorage.setItem('knowlune-sidebar-v1', 'false')
     })
     await page.goto('/reports')
     await page.waitForLoadState('load')

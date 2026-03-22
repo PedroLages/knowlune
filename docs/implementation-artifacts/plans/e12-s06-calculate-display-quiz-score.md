@@ -34,7 +34,7 @@ Create failing E2E tests mapping to acceptance criteria before implementation:
 - Import from `tests/support/fixtures` (merged localStorageFixture + indexedDBFixture)
 - Use `makeQuiz()`, `makeQuestion()`, `makeAttempt()` from `tests/support/fixtures/factories/quiz-factory.ts`
 - Seed quizzes via `seedQuizzes(page, [quiz])` from `tests/support/helpers/seed-helpers.ts`
-- Seed `localStorage.setItem('eduvi-sidebar-v1', 'false')` before navigation (tablet sidebar overlay)
+- Seed `localStorage.setItem('knowlune-sidebar-v1', 'false')` before navigation (tablet sidebar overlay)
 - Use `waitUntil: 'domcontentloaded'` (not `networkidle`)
 
 **Commit**: `test(E12-S06): add failing ATDD E2E tests for quiz scoring`

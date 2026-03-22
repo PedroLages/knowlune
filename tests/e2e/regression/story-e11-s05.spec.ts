@@ -95,7 +95,7 @@ test.describe('E11-S05: Interleaved Review Mode', () => {
     // Navigate to initialise the app and database
     await page.goto('/')
     // Prevent sidebar overlay in tablet viewports
-    await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+    await page.evaluate(() => localStorage.setItem('knowlune-sidebar-v1', 'false'))
   })
 
   test.afterEach(async ({ page }) => {

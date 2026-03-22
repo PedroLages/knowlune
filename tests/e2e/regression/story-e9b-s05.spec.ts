@@ -135,7 +135,7 @@ async function setupNotesPage(
 
   // Navigate first to initialize app and make IndexedDB available
   await page.goto('/')
-  await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+  await page.evaluate(() => localStorage.setItem('knowlune-sidebar-v1', 'false'))
 
   if (seedNotes) {
     await seedTestNotes(page)
@@ -376,7 +376,7 @@ test.describe('AC6: AI unavailable fallback', () => {
   test('shows "AI unavailable" message when provider not configured', async ({ page }) => {
     // Do NOT seed AI configuration — AI is unavailable
     await page.goto('/')
-    await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+    await page.evaluate(() => localStorage.setItem('knowlune-sidebar-v1', 'false'))
     await seedTestNotes(page)
     await page.goto('/notes')
     await page.waitForLoadState('networkidle')
@@ -392,7 +392,7 @@ test.describe('AC6: AI unavailable fallback', () => {
     page,
   }) => {
     await page.goto('/')
-    await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+    await page.evaluate(() => localStorage.setItem('knowlune-sidebar-v1', 'false'))
     await seedTestNotes(page)
     await page.goto('/notes')
     await page.waitForLoadState('networkidle')
@@ -415,7 +415,7 @@ test.describe('AC6: AI unavailable fallback', () => {
 
   test('fallback activates within 2 seconds', async ({ page }) => {
     await page.goto('/')
-    await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+    await page.evaluate(() => localStorage.setItem('knowlune-sidebar-v1', 'false'))
     await seedTestNotes(page)
     await page.goto('/notes')
     await page.waitForLoadState('networkidle')
@@ -439,7 +439,7 @@ test.describe('AC7: Privacy - no metadata in API payload', () => {
   test('API request contains only note content, tags, and course context', async ({ page }) => {
     // Navigate first to make IndexedDB available
     await page.goto('/')
-    await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+    await page.evaluate(() => localStorage.setItem('knowlune-sidebar-v1', 'false'))
     await seedTestNotes(page)
     await seedAIWithOrganizationConsent(page)
     // Do NOT inject mock — let request go through so we can intercept it

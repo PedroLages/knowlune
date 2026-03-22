@@ -51,7 +51,7 @@ None.
 
 - **Nit `src/app/components/quiz/__tests__/MarkdownRenderer.test.tsx:83-91` (confidence: 50)**: The test for "resets inline code styles inside `<pre>` blocks" checks for `[&>code]:bg-transparent` and `[&>code]:p-0` class strings on the `<pre>` element. These are Tailwind arbitrary-value classes and the assertion is checking className strings, which is an implementation detail. If Tailwind purges or renames these classes, the test could fail without the behavior changing. A stronger assertion would use `getComputedStyle` in JSDOM (which won't resolve Tailwind) or accept this as a class-contract test. Low impact since the class approach is consistent with the rest of the unit test suite.
 
-- **Nit `tests/e2e/story-14-4.spec.ts:86-88` (confidence: 50)**: `localStorage.setItem('eduvi-sidebar-v1', 'false')` is seeded inside `addInitScript` correctly. This is good practice per the project memory rule. No action required.
+- **Nit `tests/e2e/story-14-4.spec.ts:86-88` (confidence: 50)**: `localStorage.setItem('knowlune-sidebar-v1', 'false')` is seeded inside `addInitScript` correctly. This is good practice per the project memory rule. No action required.
 
 ---
 

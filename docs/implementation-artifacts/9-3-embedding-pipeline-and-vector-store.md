@@ -180,7 +180,7 @@ embeddings: 'noteId, createdAt'
 
 **Deterministic time:** Use `FIXED_DATE` from `tests/utils/test-time.ts` for `createdAt` timestamps.
 
-**Sidebar seeding:** E2E tests at tablet viewport must seed `localStorage.setItem('eduvi-sidebar-v1', 'false')` before navigation.
+**Sidebar seeding:** E2E tests at tablet viewport must seed `localStorage.setItem('knowlune-sidebar-v1', 'false')` before navigation.
 
 **Mock embeddings:** The embedding.worker.ts returns `Float32Array(384)` of all zeros. For semantic search tests to produce meaningful similarity ordering, the E2E seed helper must use pre-computed vectors with known cosine similarity ordering.
 

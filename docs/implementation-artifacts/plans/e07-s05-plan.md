@@ -398,7 +398,7 @@ function makeStudyLogEntries(count: number, daySpread: number, hour = 9): StudyA
 | AC1+3: full schedule | 10 distinct days, weekly time goal set | `schedule-ready` visible, optimal hour shown, duration shown |
 | AC5: settings link | 10 distinct days, no goal | clicking settings link navigates to `/settings` |
 
-**Sidebar fix (from memory):** Seed `localStorage.setItem('eduvi-sidebar-v1', 'false')` before navigate.
+**Sidebar fix (from memory):** Seed `localStorage.setItem('knowlune-sidebar-v1', 'false')` before navigate.
 
 ---
 

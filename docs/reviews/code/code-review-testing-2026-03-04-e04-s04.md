@@ -23,7 +23,7 @@
 
 - **`tests/e2e/story-e04-s04.spec.ts:444-446` (confidence: 90)**: Time assertions `page.getByText('10:00 AM')` are locale and timezone-dependent. Fix: use `data-testid` attributes or regex tolerating AM/PM case variation.
 
-- **`tests/e2e/story-e04-s04.spec.ts:14-18` (confidence: 88)**: No test seeds `localStorage.setItem('eduvi-sidebar-v1', 'false')` before navigating. Tablet viewport runs would fail due to sidebar overlay blocking interactions.
+- **`tests/e2e/story-e04-s04.spec.ts:14-18` (confidence: 88)**: No test seeds `localStorage.setItem('knowlune-sidebar-v1', 'false')` before navigating. Tablet viewport runs would fail due to sidebar overlay blocking interactions.
 
 - **`tests/e2e/story-e04-s04.spec.ts:315-373` (confidence: 85)**: AC5 pagination test does not assert DOM entry count. Does not click "Show more" button. Test would pass without pagination. Fix: assert initial count of 20, click "Show more", assert count increases.
 

@@ -64,7 +64,7 @@ test.describe('E11-S03: Study Session Quality Scoring', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
     // Prevent sidebar overlay in tablet viewports
-    await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+    await page.evaluate(() => localStorage.setItem('knowlune-sidebar-v1', 'false'))
   })
 
   test('AC1+AC2: session history shows high quality score with badge', async ({ page }) => {

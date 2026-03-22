@@ -17,7 +17,7 @@ test.describe('E09-S01: AI Provider Configuration & Security', () => {
   test.beforeEach(async ({ page }) => {
     // Seed sidebar state before navigation to prevent overlay blocking on tablet viewports
     await page.addInitScript(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
     })
     // Navigate first, then clear localStorage
     await page.goto('/settings')

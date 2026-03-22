@@ -344,7 +344,7 @@ test.describe('Chat Q&A Interface', () => {
 
     // Seed sidebar as closed to prevent overlay blocking
     await page.addInitScript(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
     })
 
     await page.goto('/')

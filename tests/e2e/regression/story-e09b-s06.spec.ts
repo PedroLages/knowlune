@@ -60,7 +60,7 @@ test.describe('E09B-S06: AI Feature Analytics & Auto-Analysis', () => {
     // Navigate first so localStorage is accessible (about:blank blocks it)
     await page.goto('/')
     // Prevent tablet sidebar overlay
-    await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+    await page.evaluate(() => localStorage.setItem('knowlune-sidebar-v1', 'false'))
   })
 
   test.afterEach(async ({ page }) => {

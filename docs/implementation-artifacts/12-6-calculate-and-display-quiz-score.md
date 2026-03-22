@@ -173,7 +173,7 @@ Convert `QuizAttempt.timeSpent` (milliseconds) to human-readable:
 - Use `border-2` consistently on all states to prevent layout shift
 - Test data factory: use `makeQuiz()` and `makeQuestion()` from `tests/support/fixtures/factories/quiz-factory.ts`
 - E2E pattern: seed quiz via `seedQuizzes(page, [quiz])`, navigate, start quiz, then test
-- Sidebar overlay: seed `localStorage.setItem('eduvi-sidebar-v1', 'false')` before navigation in E2E tests
+- Sidebar overlay: seed `localStorage.setItem('knowlune-sidebar-v1', 'false')` before navigation in E2E tests
 
 ### modules Parameter for submitQuiz
 

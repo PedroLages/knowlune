@@ -1881,7 +1881,7 @@ ContinueLearningButton → VideoPlayer Enhancements → MomentumIndicator → AI
 - **Trigger**: Menu icon button (top-left of header), `aria-label="Open navigation menu"`
 - **Sheet**: Slides in from left, 280px width, overlay backdrop
 - **Auto-close**: Sheet closes on navigation (user clicks any nav item)
-- **State Persistence**: Sidebar open/closed preference saved to localStorage (`eduvi-sidebar-v1`)
+- **State Persistence**: Sidebar open/closed preference saved to localStorage (`knowlune-sidebar-v1`)
 
 **Mobile Navigation (<640px):**
 - **Pattern**: Fixed bottom navigation bar with 5 main routes
@@ -2089,7 +2089,7 @@ The platform prioritizes the desktop experience (1440px+ viewport) where users s
 - **Hybrid Approach**: Touch-optimized interface while maintaining information richness
   - Collapsible sidebar sheet (280px) triggered by hamburger menu
   - 2-column grids for course cards and stats (down from 4-column desktop)
-  - Sidebar preference persists to localStorage (`eduvi-sidebar-v1`)
+  - Sidebar preference persists to localStorage (`knowlune-sidebar-v1`)
 - **Touch Interactions**: Larger touch targets and interaction areas
   - Hamburger menu button: 44x44px minimum touch target
   - All interactive elements: Minimum 40px height

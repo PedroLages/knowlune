@@ -69,7 +69,7 @@ test.describe('E01-S05: Detect Missing or Relocated Files', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
     })
   })
 

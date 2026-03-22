@@ -134,7 +134,7 @@ test.describe('Story E04-S03: Active Study Session Logging', () => {
   test.beforeEach(async ({ page, localStorage }) => {
     // Seed localStorage to prevent sidebar overlay
     await page.goto('/')
-    await localStorage.seed({ 'eduvi-sidebar-v1': 'false' })
+    await localStorage.seed({ 'knowlune-sidebar-v1': 'false' })
     await page.reload()
   })
 

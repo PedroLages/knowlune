@@ -76,7 +76,7 @@ async function seedQuizData(
 
 async function navigateToQuiz(page: import('@playwright/test').Page, quizId: string) {
   await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
+    localStorage.setItem('knowlune-sidebar-v1', 'false')
   })
 
   await page.goto('/', { waitUntil: 'domcontentloaded' })

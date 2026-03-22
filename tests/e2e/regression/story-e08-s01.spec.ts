@@ -57,7 +57,7 @@ test.describe('Story E08-S01: Study Time Analytics', () => {
 
     // Seed sidebar state BEFORE navigation to prevent overlay blocking on tablet viewports
     await context.addInitScript(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
     })
     // Navigate to Reports page
     await page.goto('/reports')

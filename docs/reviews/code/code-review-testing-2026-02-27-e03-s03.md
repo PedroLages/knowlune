@@ -44,7 +44,7 @@
 - Both pure functions have real logic and multiple code paths (legacy/new format, hour+ timestamps).
 - Fix: Add Vitest unit tests.
 
-**M2: `eduvi-sidebar-v1` not in STORAGE_KEYS cleanup array (confidence: 75)**
+**M2: `knowlune-sidebar-v1` not in STORAGE_KEYS cleanup array (confidence: 75)**
 - Tests use `addInitScript` to set it, but fixture cleanup doesn't remove it.
 - Fix: Add to `STORAGE_KEYS` in fixtures.
 

@@ -73,7 +73,7 @@ test.describe('E04-S02: Course Completion Percentage', () => {
     await goToCourses(page)
 
     // Seed sidebar localStorage to prevent tablet overlay blocking pointer events
-    await localStorage.seed('eduvi-sidebar-v1', 'false')
+    await localStorage.seed('knowlune-sidebar-v1', 'false')
 
     // Wait for network to be idle and content to load
     await page.waitForLoadState('networkidle')
@@ -130,7 +130,7 @@ test.describe('E04-S02: Course Completion Percentage', () => {
     ]
 
     await page.goto('/')
-    await localStorage.seed('eduvi-sidebar-v1', 'false')
+    await localStorage.seed('knowlune-sidebar-v1', 'false')
     await localStorage.seed(
       'course-progress',
       JSON.stringify({
@@ -170,7 +170,7 @@ test.describe('E04-S02: Course Completion Percentage', () => {
 
     // Seed sidebar localStorage to prevent tablet overlay blocking pointer events
     // At 640-1023px viewports, the sidebar Sheet defaults to open and blocks all clicks
-    await localStorage.seed('eduvi-sidebar-v1', 'false')
+    await localStorage.seed('knowlune-sidebar-v1', 'false')
 
     await page.waitForLoadState('networkidle')
 

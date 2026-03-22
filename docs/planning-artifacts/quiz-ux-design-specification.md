@@ -679,7 +679,7 @@ Optimized for touch with maintained information density:
 - **Attempt History Table**: Horizontal scroll for table, or collapse to card-based layout
 - **Sidebar**: Collapsible Sheet, auto-closes on quiz start to maximize quiz space
 
-**Tablet Sidebar Note:** Following the existing pattern, seed `localStorage.setItem('eduvi-sidebar-v1', 'false')` in E2E tests to prevent the sidebar Sheet from overlaying quiz content at tablet viewports.
+**Tablet Sidebar Note:** Following the existing pattern, seed `localStorage.setItem('knowlune-sidebar-v1', 'false')` in E2E tests to prevent the sidebar Sheet from overlaying quiz content at tablet viewports.
 
 ### Mobile (< 640px)
 

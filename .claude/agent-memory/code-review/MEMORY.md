@@ -26,7 +26,7 @@
 - shadcn/ui components in `src/app/components/ui/`
 - Dexie.js DB in `src/db/schema.ts`, streak data in localStorage via `src/lib/studyLog.ts`
 - Test factories at `tests/support/fixtures/factories/`
-- E2E sidebar seed: `localStorage.setItem('eduvi-sidebar-v1', 'false')` before navigating
+- E2E sidebar seed: `localStorage.setItem('knowlune-sidebar-v1', 'false')` before navigating
 
 ## Story-Level Details
 See [story-details.md](story-details.md) for per-story findings.

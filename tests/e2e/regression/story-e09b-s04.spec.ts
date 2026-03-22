@@ -110,7 +110,7 @@ async function configureAI(page: Page, connected = true) {
         },
       })
     )
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
+    localStorage.setItem('knowlune-sidebar-v1', 'false')
   }, connected)
 }
 

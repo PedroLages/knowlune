@@ -24,7 +24,7 @@ test.describe('NFR24: Note soft delete and restore', () => {
   test.beforeEach(async ({ page }) => {
     // Seed sidebar closed BEFORE navigation
     await page.addInitScript(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
     })
 
     // Navigate and wait for DOM

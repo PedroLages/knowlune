@@ -195,13 +195,26 @@ export function Layout() {
 
   // Tablet sidebar sheet state with localStorage persistence
   const [sidebarOpen, setSidebarOpen] = useState(() => {
-    const saved = localStorage.getItem('eduvi-sidebar-v1')
+    // Migrate from legacy key (one-time)
+    const legacy = localStorage.getItem('knowlune-sidebar-v1')
+    if (legacy !== null) {
+      localStorage.setItem('knowlune-sidebar-v1', legacy)
+      localStorage.removeItem('knowlune-sidebar-v1')
+      return JSON.parse(legacy)
+    }
+    const saved = localStorage.getItem('knowlune-sidebar-v1')
     return saved !== null ? JSON.parse(saved) : true
   })
 
   // Desktop sidebar collapsed state with localStorage persistence
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    const saved = localStorage.getItem('eduvi-sidebar-collapsed-v1')
+    const legacy = localStorage.getItem('knowlune-sidebar-collapsed-v1')
+    if (legacy !== null) {
+      localStorage.setItem('knowlune-sidebar-collapsed-v1', legacy)
+      localStorage.removeItem('knowlune-sidebar-collapsed-v1')
+      return JSON.parse(legacy)
+    }
+    const saved = localStorage.getItem('knowlune-sidebar-collapsed-v1')
     return saved !== null ? JSON.parse(saved) : false
   })
 
@@ -253,11 +266,11 @@ export function Layout() {
 
   // Persist sidebar states to localStorage
   useEffect(() => {
-    localStorage.setItem('eduvi-sidebar-v1', JSON.stringify(sidebarOpen))
+    localStorage.setItem('knowlune-sidebar-v1', JSON.stringify(sidebarOpen))
   }, [sidebarOpen])
 
   useEffect(() => {
-    localStorage.setItem('eduvi-sidebar-collapsed-v1', JSON.stringify(sidebarCollapsed))
+    localStorage.setItem('knowlune-sidebar-collapsed-v1', JSON.stringify(sidebarCollapsed))
   }, [sidebarCollapsed])
 
   // Quality score dialog state (E11-S03)

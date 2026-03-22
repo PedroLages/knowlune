@@ -129,7 +129,7 @@ test.describe('E13-S05: Randomize Question Order', () => {
   test.beforeEach(async ({ page }) => {
     // Seed sidebar closed for tablet viewports
     await page.addInitScript(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
     })
   })
 

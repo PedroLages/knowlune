@@ -34,7 +34,7 @@ Round 1 identified 10 issues (3 blockers, 3 high, 4 medium). The fix commit addr
 
 #### High Priority
 
-- **[Recurring] `/tests/e2e/story-e08-s01.spec.ts:22-28`] (confidence: 85)**: Sidebar seed happens AFTER `page.goto('/reports')`. Per CLAUDE.md and the documented gotcha, `localStorage.setItem('eduvi-sidebar-v1', 'false')` must run BEFORE navigation to prevent the sidebar Sheet overlay from rendering at all. The current order means the first page load in `beforeEach` renders with the sidebar open. While subsequent `page.reload()` calls in tests will respect the localStorage value, this pattern contradicts the documented requirement and risks flaky failures on tablet viewports if any test interacts before reloading.
+- **[Recurring] `/tests/e2e/story-e08-s01.spec.ts:22-28`] (confidence: 85)**: Sidebar seed happens AFTER `page.goto('/reports')`. Per CLAUDE.md and the documented gotcha, `localStorage.setItem('knowlune-sidebar-v1', 'false')` must run BEFORE navigation to prevent the sidebar Sheet overlay from rendering at all. The current order means the first page load in `beforeEach` renders with the sidebar open. While subsequent `page.reload()` calls in tests will respect the localStorage value, this pattern contradicts the documented requirement and risks flaky failures on tablet viewports if any test interacts before reloading.
 
   Pattern from: recurring since E02-S07, explicitly documented in CLAUDE.md test patterns.
 
@@ -42,7 +42,7 @@ Round 1 identified 10 issues (3 blockers, 3 high, 4 medium). The fix commit addr
   ```typescript
   test.beforeEach(async ({ page }) => {
     await page.evaluate(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
     })
     await page.goto('/reports')
   })

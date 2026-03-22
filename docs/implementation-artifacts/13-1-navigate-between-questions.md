@@ -148,7 +148,7 @@ Answers are saved immediately via `submitAnswer` on every `onChange` call in `Qu
 - Reuse `seedQuizData` helper from `story-12-6.spec.ts` (copy pattern, don't share across files)
 - Use `makeQuiz` / `makeQuestion` factories from `tests/support/fixtures/factories/quiz-factory.ts`
 - 3-question quiz minimum to test all navigation states (Q1, Qmiddle, Qlast)
-- Seed `localStorage.setItem('eduvi-sidebar-v1', 'false')` to prevent tablet sidebar overlay
+- Seed `localStorage.setItem('knowlune-sidebar-v1', 'false')` to prevent tablet sidebar overlay
 
 ## Pre-Review Checklist
 

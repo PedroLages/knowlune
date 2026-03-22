@@ -46,7 +46,7 @@ You are the Test Coverage Specialist reviewing tests for Knowlune, a personal le
 - Each test sets up its own data (or uses factories)
 - Tests don't depend on execution order
 - `beforeEach`/`afterEach` properly clean up (especially IndexedDB, localStorage)
-- E2E tests seed `localStorage.setItem('eduvi-sidebar-v1', 'false')` before navigating (tablet viewports)
+- E2E tests seed `localStorage.setItem('knowlune-sidebar-v1', 'false')` before navigating (tablet viewports)
 
 ### 3. Selector Quality (High) — E2E only
 

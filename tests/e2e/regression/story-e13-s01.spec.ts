@@ -63,7 +63,7 @@ const quiz = makeQuiz({
 
 async function navigateToQuiz(page: import('@playwright/test').Page) {
   await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
+    localStorage.setItem('knowlune-sidebar-v1', 'false')
   })
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   await seedQuizzes(page, [quiz as unknown as Record<string, unknown>])

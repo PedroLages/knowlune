@@ -205,7 +205,7 @@ All 5 acceptance criteria passing:
 
 ### localStorage Seeding for E2E Tests
 **Issue**: AC5 test failed on tablet viewport (640-1023px) because sidebar defaults to `open: true` when localStorage is empty, creating fullscreen overlay blocking interactions.
-**Solution**: Seed `localStorage.setItem('eduvi-sidebar-v1', 'false')` before navigation in all tests.
+**Solution**: Seed `localStorage.setItem('knowlune-sidebar-v1', 'false')` before navigation in all tests.
 **Lesson**: E2E tests must seed localStorage state to avoid viewport-specific UI behaviors. Document defaults in MEMORY.md.
 
 ### Accessibility Motion Preferences

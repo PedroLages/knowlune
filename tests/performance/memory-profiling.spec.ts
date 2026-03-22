@@ -14,7 +14,7 @@ test.describe('NFR7: Memory stability', () => {
 
     // Seed sidebar state
     await page.addInitScript(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
     })
 
     // Warm up - navigate each route once

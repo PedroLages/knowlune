@@ -24,7 +24,7 @@ None — all ACs have at least minimal E2E coverage.
 
 ### High Priority
 
-- **[story-e04-s02.spec.ts:125-153](tests/e2e/story-e04-s02.spec.ts#L125-L153) (confidence: 95)**: AC5 test fails on Tablet viewport (768px) because `eduvi-sidebar-v1` localStorage is not seeded, causing the sidebar Sheet overlay to block all pointer events. Test returns 0 course cards when filtering for links with progress bars. Fix: Seed `localStorage.setItem('eduvi-sidebar-v1', 'false')` in `beforeEach` or at test start for tablet viewports (640-1023px).
+- **[story-e04-s02.spec.ts:125-153](tests/e2e/story-e04-s02.spec.ts#L125-L153) (confidence: 95)**: AC5 test fails on Tablet viewport (768px) because `knowlune-sidebar-v1` localStorage is not seeded, causing the sidebar Sheet overlay to block all pointer events. Test returns 0 course cards when filtering for links with progress bars. Fix: Seed `localStorage.setItem('knowlune-sidebar-v1', 'false')` in `beforeEach` or at test start for tablet viewports (640-1023px).
 
 - **[story-e04-s02.spec.ts:36-67](tests/e2e/story-e04-s02.spec.ts#L36-L67) (confidence: 92)**: AC2 claims to test "real-time updates" but has `if ((await contentItem.count()) > 0)` guard that **always skips the test** because E04-S01 (completion status UI) hasn't been implemented yet. The test never verifies the AC behavior — it's a false positive. Test should either: (1) be marked `.skip()` until E04-S01 is done, or (2) manually manipulate localStorage to simulate completion changes and verify progress bar reactivity.
 

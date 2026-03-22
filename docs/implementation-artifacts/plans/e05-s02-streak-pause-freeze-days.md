@@ -117,7 +117,7 @@ Run `npx playwright test tests/e2e/story-e05-s02.spec.ts --project chromium` and
 - **Parse-once**: All data through `getStreakSnapshot()`, no separate calls
 - **DST-safe dates**: Use `toLocalDateString()` / `parseLocalDate()` / `setDate(getDate()-1)` — never `Date.now() - 86400000`
 - **CustomEvent updates**: Dispatch `study-log-updated` after any state change so UI refreshes
-- **Sidebar localStorage seed**: `localStorage.setItem('eduvi-sidebar-v1', 'false')` in E2E `beforeEach`
+- **Sidebar localStorage seed**: `localStorage.setItem('knowlune-sidebar-v1', 'false')` in E2E `beforeEach`
 
 ## Verification
 

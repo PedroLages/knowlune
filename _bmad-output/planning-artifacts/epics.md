@@ -2871,7 +2871,7 @@ So that I discover the platform's core value immediately without needing documen
 
 **Given** on tablet
 **When** onboarding starts
-**Then** sidebar auto-closes (`localStorage 'eduvi-sidebar-v1' = 'false'`), remains closed until completion, restores after
+**Then** sidebar auto-closes (`localStorage 'knowlune-sidebar-v1' = 'false'`), remains closed until completion, restores after
 
 ---
 

@@ -133,7 +133,7 @@ At 640-1023px viewports, the sidebar Sheet component defaults to `open: true` wh
 ```typescript
 // ✅ CORRECT - Seed sidebar state before navigation
 await page.evaluate(() => {
-  localStorage.setItem('eduvi-sidebar-v1', 'false')
+  localStorage.setItem('knowlune-sidebar-v1', 'false')
 })
 await page.goto('/courses')
 ```

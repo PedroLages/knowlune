@@ -46,7 +46,7 @@ test.describe('E09-S03: Embedding Pipeline & Vector Store', () => {
     // Ensure sidebar is closed on mobile/tablet viewports to prevent overlay.
     // Must use addInitScript (not page.evaluate) — localStorage is inaccessible before navigation.
     await page.addInitScript(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
     })
   })
 

@@ -58,7 +58,7 @@
 
   **Fix**: Add `test.afterEach(async ({ page }) => { await page.evaluate(() => indexedDB.deleteDatabase('ElearningDB')) })` to ensure clean state. Current tests may pass due to unique IDs but could fail if assumptions about "session count" or "first session" change.
 
-- **(confidence: 68)** `/Volumes/SSD/Dev/Apps/Elearningplatformwireframes-worktrees/e04-s03/tests/e2e/story-e04-s03.spec.ts:170-175` (sidebar localStorage seeding): Every test seeds `eduvi-sidebar-v1: false` to prevent overlay. This is **correct** per project memory but should be extracted to a shared `beforeEach` in the fixture or `tests/support/helpers/navigation.ts` to avoid repetition.
+- **(confidence: 68)** `/Volumes/SSD/Dev/Apps/Elearningplatformwireframes-worktrees/e04-s03/tests/e2e/story-e04-s03.spec.ts:170-175` (sidebar localStorage seeding): Every test seeds `knowlune-sidebar-v1: false` to prevent overlay. This is **correct** per project memory but should be extracted to a shared `beforeEach` in the fixture or `tests/support/helpers/navigation.ts` to avoid repetition.
 
   **Fix**: Move sidebar seed to global `beforeEach` in `tests/support/fixtures/index.ts` for all E2E tests at tablet viewports (640-1023px).
 

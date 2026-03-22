@@ -160,7 +160,7 @@ function generateChartAltText(data: WeeklyRatePoint[]): string
 ### Test Setup Pattern
 Following `story-e08-s01.spec.ts` exactly:
 - `mockDateNow(page)` before navigation
-- `context.addInitScript` to seed sidebar state (`eduvi-sidebar-v1 = false`) BEFORE `page.goto('/reports')`
+- `context.addInitScript` to seed sidebar state (`knowlune-sidebar-v1 = false`) BEFORE `page.goto('/reports')`
 - Navigate to `/reports`
 - Scroll to the `CourseCompletionTracking` section
 

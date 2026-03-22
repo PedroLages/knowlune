@@ -80,7 +80,7 @@ async function navigateToQuiz(
   quiz: ReturnType<typeof makeQuiz>
 ) {
   await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
+    localStorage.setItem('knowlune-sidebar-v1', 'false')
   })
 
   await page.goto('/', { waitUntil: 'domcontentloaded' })

@@ -176,7 +176,7 @@ Use `indexedDB.clearStore('importedCourses')` (from the fixture) to clear before
 - Seed one `importedCourses` record via `seedImportedCourses(page, [createImportedCourse({ name: 'Test Course' })])`
 - Seed `importedVideos`/`importedPdfs` as empty (or with one entry) to validate cascade
 - Serialize tests with `test.describe.configure({ mode: 'serial' })` (IDB is shared in Chromium)
-- Seed `localStorage.setItem('eduvi-sidebar-v1', 'false')` before navigating to avoid sidebar overlay
+- Seed `localStorage.setItem('knowlune-sidebar-v1', 'false')` before navigating to avoid sidebar overlay
 
 **AC5 (error rollback):** Not covered by E2E — forcing Dexie to throw mid-transaction is not practical in a browser E2E context. Verify manually by temporarily throwing inside `removeImportedCourse` in the store.
 

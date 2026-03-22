@@ -81,7 +81,7 @@ async function seedAttemptData(
 async function navigateToQuiz(page: import('@playwright/test').Page) {
   // Close sidebar to prevent tablet overlay blocking
   await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
+    localStorage.setItem('knowlune-sidebar-v1', 'false')
   })
 
   // Navigate to app first so Dexie creates the DB
@@ -235,7 +235,7 @@ test.describe('E13-S04: Unlimited Quiz Retakes', () => {
   test('AC4: quiz start screen shows "Retake Quiz" for completed quizzes', async ({ page }) => {
     // Close sidebar
     await page.addInitScript(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
     })
 
     // Navigate to app and seed quiz + a previous attempt

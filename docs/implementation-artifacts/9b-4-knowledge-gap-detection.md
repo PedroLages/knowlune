@@ -145,7 +145,7 @@ See [plan](plans/golden-brewing-naur.md) for implementation approach.
 - **ATDD approach**: Tests written in Red phase before implementation. 7 test cases covering all ACs.
 - **IndexedDB seeding**: Uses shared `seedIndexedDBStore` helper for course/video/note/progress data.
 - **Window mock pattern**: `page.addInitScript()` injects `__mockKnowledgeGapsResponse` to control gap detection output without hitting Dexie queries.
-- **Sidebar seeding**: localStorage `eduvi-sidebar-v1` seeded to `false` to prevent tablet overlay blocking interactions.
+- **Sidebar seeding**: localStorage `knowlune-sidebar-v1` seeded to `false` to prevent tablet overlay blocking interactions.
 
 ## Pre-Review Checklist
 

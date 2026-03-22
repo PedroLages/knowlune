@@ -16,7 +16,7 @@ import { FIXED_DATE, addMinutes } from '../utils/test-time'
 test.describe('NFR67: Export/Re-import round-trip fidelity', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
     })
 
     await page.goto('/')

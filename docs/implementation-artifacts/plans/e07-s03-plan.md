@@ -205,7 +205,7 @@ interface NextCourseSuggestionProps {
 | Tag-based ranking | Seed course A (tags: X, Y) done; courses B (X,Y) and C (Z) available | B suggested over C |
 
 **Test setup notes:**
-- Seed `localStorage.setItem('eduvi-sidebar-v1', 'false')` to prevent sidebar overlay
+- Seed `localStorage.setItem('knowlune-sidebar-v1', 'false')` to prevent sidebar overlay
 - Use `tests/support/factories/` factory helpers for course progress
 
 ---

@@ -268,7 +268,7 @@ Test: submit dialog shows review summary
 **E2E seeding pattern** (from story-12-6.spec.ts):
 - Use `makeQuiz` and `makeQuestion` factories
 - Seed IndexedDB via `page.evaluate` with retry loop
-- Seed localStorage sidebar: `localStorage.setItem('eduvi-sidebar-v1', 'false')`
+- Seed localStorage sidebar: `localStorage.setItem('knowlune-sidebar-v1', 'false')`
 
 ---
 

@@ -328,7 +328,7 @@ async function navigateToQuiz(
   priorAttempts: Record<string, unknown>[] = [],
 ) {
   await page.addInitScript(() => {
-    localStorage.setItem('eduvi-sidebar-v1', 'false')
+    localStorage.setItem('knowlune-sidebar-v1', 'false')
   })
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   await seedQuizzes(page, [quiz])
@@ -555,4 +555,4 @@ git commit -m "chore(E15-S06): final polish and validation"
 
 5. **ESLint rule `test-patterns/deterministic-time`** — `Date.now()` is banned in test files. Use `page.clock.setSystemTime()` for time control in E2E tests (no `Date.now()` in test code).
 
-6. **Sidebar localStorage seed** — always set `localStorage.setItem('eduvi-sidebar-v1', 'false')` in `page.addInitScript()` before navigating, per test patterns (see MEMORY.md).
+6. **Sidebar localStorage seed** — always set `localStorage.setItem('knowlune-sidebar-v1', 'false')` in `page.addInitScript()` before navigating, per test patterns (see MEMORY.md).

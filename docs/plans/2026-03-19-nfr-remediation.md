@@ -233,7 +233,7 @@ test.describe('NFR24: Note soft delete and restore', () => {
   test.beforeEach(async ({ page }) => {
     // Seed sidebar closed to prevent overlay blocking
     await page.addInitScript(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
     })
 
     // Navigate to initialize IndexedDB schema
@@ -583,7 +583,7 @@ import { FIXED_DATE, addMinutes, addDays } from '../utils/test-time'
 test.describe('NFR67: Export/Re-import round-trip fidelity', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
-      localStorage.setItem('eduvi-sidebar-v1', 'false')
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
     })
 
     await page.goto('/')

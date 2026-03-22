@@ -39,7 +39,7 @@
 **Strengths:**
 - `goToLessonWithNotes` helper with 30s timeout handles slow dev server under parallel load
 - `addTag` helper encapsulates the full add-tag flow and waits for badge confirmation
-- localStorage sidebar suppression (`eduvi-sidebar-v1`) prevents tablet viewport overlay issues
+- localStorage sidebar suppression (`knowlune-sidebar-v1`) prevents tablet viewport overlay issues
 - Tests use `data-testid` selectors consistently
 
 **Gaps:**

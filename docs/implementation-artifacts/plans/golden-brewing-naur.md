@@ -212,7 +212,7 @@ const KnowledgeGaps = React.lazy(() =>
 
 Setup per test:
 ```ts
-await page.evaluate(() => localStorage.setItem('eduvi-sidebar-v1', 'false'))
+await page.evaluate(() => localStorage.setItem('knowlune-sidebar-v1', 'false'))
 await seedIndexedDB({ courses: [course1], videos: [vid1, vid2, vid3], notes: [], progress: [] })
 await seedAIConfiguration(page, { knowledgeGaps: true })
 ```
