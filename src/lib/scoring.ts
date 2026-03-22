@@ -66,6 +66,19 @@ export function calculatePointsForQuestion(
   return { pointsEarned: isCorrect ? question.points : 0, isCorrect }
 }
 
+/** Check if an answer represents an unanswered question (empty or missing). */
+export function isUnanswered(userAnswer: string | string[] | null | undefined): boolean {
+  if (userAnswer == null) return true
+  if (Array.isArray(userAnswer)) return userAnswer.length === 0
+  return userAnswer === ''
+}
+
+/** Format a correct answer for display (joins arrays with commas). */
+export function formatCorrectAnswer(correctAnswer: string | string[]): string {
+  if (Array.isArray(correctAnswer)) return correctAnswer.join(', ')
+  return correctAnswer
+}
+
 export function calculateQuizScore(
   quiz: Quiz,
   userAnswers: Record<string, string | string[]>

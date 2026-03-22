@@ -1,6 +1,6 @@
 import { CheckCircle, AlertCircle, Clock } from 'lucide-react'
 import type { Question } from '@/types/quiz'
-import { calculatePointsForQuestion } from '@/lib/scoring'
+import { calculatePointsForQuestion, isUnanswered, formatCorrectAnswer } from '@/lib/scoring'
 import { MarkdownRenderer } from '@/app/components/quiz/MarkdownRenderer'
 import { cn } from '@/app/components/ui/utils'
 
@@ -17,7 +17,7 @@ function deriveFeedbackState(
   userAnswer: string | string[] | undefined,
   isTimerExpired?: boolean
 ): { state: FeedbackState; pointsEarned: number; isCorrect: boolean } {
-  if (isTimerExpired && (userAnswer === undefined || userAnswer === '')) {
+  if (isTimerExpired && isUnanswered(userAnswer)) {
     return { state: 'time-expired', pointsEarned: 0, isCorrect: false }
   }
 
@@ -59,9 +59,25 @@ const stateConfig = {
   },
 } as const
 
-function formatCorrectAnswer(correctAnswer: string | string[]): string {
-  if (Array.isArray(correctAnswer)) return correctAnswer.join(', ')
-  return correctAnswer
+function computePartialBreakdown(question: Question, userAnswer: string | string[]) {
+  if (
+    question.type !== 'multiple-select' ||
+    !Array.isArray(question.correctAnswer) ||
+    !Array.isArray(userAnswer)
+  ) {
+    return null
+  }
+  const correctSet = new Set(question.correctAnswer)
+  const userSet = new Set(userAnswer)
+  const selectedCorrectly = [...userSet].filter(a => correctSet.has(a))
+  const selectedIncorrectly = [...userSet].filter(a => !correctSet.has(a))
+  const missedCorrect = [...correctSet].filter(a => !userSet.has(a))
+  return {
+    title: `${selectedCorrectly.length} of ${correctSet.size} correct`,
+    selectedCorrectly,
+    selectedIncorrectly,
+    missedCorrect,
+  }
 }
 
 /**
@@ -76,29 +92,8 @@ export function AnswerFeedback({ question, userAnswer, isTimerExpired }: AnswerF
   const config = stateConfig[state]
   const Icon = config.icon
 
-  // Partial credit: compute per-option breakdown for multiple-select
-  let partialTitle: string = config.title
-  let correctCount = 0
-  let totalCorrect = 0
-  let selectedCorrectly: string[] = []
-  let selectedIncorrectly: string[] = []
-  let missedCorrect: string[] = []
-
-  if (
-    state === 'partial' &&
-    question.type === 'multiple-select' &&
-    Array.isArray(question.correctAnswer) &&
-    Array.isArray(userAnswer)
-  ) {
-    const correctSet = new Set(question.correctAnswer)
-    const userSet = new Set(userAnswer)
-    totalCorrect = correctSet.size
-    selectedCorrectly = [...userSet].filter(a => correctSet.has(a))
-    selectedIncorrectly = [...userSet].filter(a => !correctSet.has(a))
-    missedCorrect = [...correctSet].filter(a => !userSet.has(a))
-    correctCount = selectedCorrectly.length
-    partialTitle = `${correctCount} of ${totalCorrect} correct`
-  }
+  const partial = state === 'partial' ? computePartialBreakdown(question, userAnswer!) : null
+  const title = partial?.title ?? config.title
 
   return (
     <div
@@ -107,23 +102,21 @@ export function AnswerFeedback({ question, userAnswer, isTimerExpired }: AnswerF
       aria-live="polite"
       className={cn(
         'mt-4 rounded-lg border-l-4 p-3 sm:p-4',
-        'animate-in slide-in-from-bottom-2 fade-in duration-300',
+        'animate-in slide-in-from-bottom-2 fade-in duration-300 motion-reduce:animate-none',
         config.border,
         config.bg
       )}
     >
       <div className="flex items-start gap-3">
         <Icon
-          className={cn('h-5 w-5 shrink-0 sm:h-6 sm:w-6', config.iconColor)}
+          className={cn('size-5 shrink-0 sm:size-6', config.iconColor)}
           aria-hidden="true"
         />
         <div className="flex-1 min-w-0">
-          <h4 className="font-semibold text-lg text-foreground">
-            {state === 'partial' ? partialTitle : config.title}
-          </h4>
+          <h4 className="font-semibold text-lg text-foreground">{title}</h4>
 
           {/* Explanation */}
-          {question.explanation && (
+          {question.explanation?.trim() && (
             <div className="mt-2 text-sm text-foreground">
               <MarkdownRenderer content={question.explanation} />
             </div>
@@ -137,23 +130,23 @@ export function AnswerFeedback({ question, userAnswer, isTimerExpired }: AnswerF
           )}
 
           {/* Partial credit breakdown (multiple-select only) */}
-          {state === 'partial' && question.type === 'multiple-select' && (
+          {partial && (
             <ul aria-label="Answer breakdown" className="mt-2 space-y-1 text-sm">
-              {selectedCorrectly.map(opt => (
+              {partial.selectedCorrectly.map(opt => (
                 <li key={opt} className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-success shrink-0" aria-hidden="true" />
+                  <CheckCircle className="size-4 text-success shrink-0" aria-hidden="true" />
                   <span>{opt}</span>
                 </li>
               ))}
-              {selectedIncorrectly.map(opt => (
+              {partial.selectedIncorrectly.map(opt => (
                 <li key={opt} className="flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-warning shrink-0" aria-hidden="true" />
+                  <AlertCircle className="size-4 text-warning shrink-0" aria-hidden="true" />
                   <span>{opt}</span>
                 </li>
               ))}
-              {missedCorrect.map(opt => (
+              {partial.missedCorrect.map(opt => (
                 <li key={opt} className="flex items-center gap-2 text-muted-foreground">
-                  <span className="h-4 w-4 shrink-0 text-center">—</span>
+                  <span className="size-4 shrink-0 text-center">—</span>
                   <span>{opt} (missed)</span>
                 </li>
               ))}

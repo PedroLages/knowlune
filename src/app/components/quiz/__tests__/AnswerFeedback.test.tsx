@@ -77,10 +77,42 @@ describe('AnswerFeedback', () => {
       expect(within(breakdown).getByText(/Yellow.*missed/)).toBeInTheDocument()
     })
 
+    it('shows incorrectly selected options in breakdown', () => {
+      // Select 2 correct (Red, Blue) + 1 wrong (Green) — missing Yellow
+      // PCM: (2-1)/3 * 3 = 1 point → partial credit with breakdown
+      render(<AnswerFeedback question={msQuestion} userAnswer={['Red', 'Blue', 'Green']} />)
+
+      const breakdown = screen.getByRole('list', { name: 'Answer breakdown' })
+      expect(within(breakdown).getByText('Red')).toBeInTheDocument()
+      expect(within(breakdown).getByText('Blue')).toBeInTheDocument()
+      // Green should appear as incorrectly selected
+      expect(within(breakdown).getByText('Green')).toBeInTheDocument()
+      // Missed correct option
+      expect(within(breakdown).getByText(/Yellow.*missed/)).toBeInTheDocument()
+    })
+
     it('shows points earned for partial credit', () => {
       render(<AnswerFeedback question={msQuestion} userAnswer={['Red', 'Blue']} />)
 
       expect(screen.getByText(/You earned/)).toBeInTheDocument()
+    })
+
+    it('shows full-credit multiple-select as "Correct!" not partial', () => {
+      render(
+        <AnswerFeedback question={msQuestion} userAnswer={['Red', 'Blue', 'Yellow']} />
+      )
+
+      expect(screen.getByText('Correct!')).toBeInTheDocument()
+      // No answer breakdown for full credit
+      expect(screen.queryByRole('list', { name: 'Answer breakdown' })).not.toBeInTheDocument()
+    })
+
+    it('shows all-wrong multiple-select as "Not quite" not partial', () => {
+      render(<AnswerFeedback question={msQuestion} userAnswer={['Green']} />)
+
+      expect(screen.getByText('Not quite')).toBeInTheDocument()
+      // No partial breakdown — 0 points earned
+      expect(screen.queryByRole('list', { name: 'Answer breakdown' })).not.toBeInTheDocument()
     })
   })
 
@@ -97,6 +129,19 @@ describe('AnswerFeedback', () => {
       render(<AnswerFeedback question={mcQuestion} userAnswer={undefined} isTimerExpired />)
 
       expect(screen.getByText(/Paris has been the capital/)).toBeInTheDocument()
+    })
+
+    it('handles timer-expired with empty array (multiple-select unanswered)', () => {
+      render(<AnswerFeedback question={msQuestion} userAnswer={[]} isTimerExpired />)
+
+      expect(screen.getByText('Not answered in time')).toBeInTheDocument()
+      expect(screen.getByText(/Correct answer:/)).toBeInTheDocument()
+    })
+
+    it('handles timer-expired with empty string', () => {
+      render(<AnswerFeedback question={mcQuestion} userAnswer="" isTimerExpired />)
+
+      expect(screen.getByText('Not answered in time')).toBeInTheDocument()
     })
   })
 
@@ -135,6 +180,14 @@ describe('AnswerFeedback', () => {
       render(<AnswerFeedback question={noExplanation} userAnswer="Paris" />)
 
       expect(screen.getByText('Correct!')).toBeInTheDocument()
+    })
+
+    it('does not render whitespace-only explanation', () => {
+      const wsExplanation: Question = { ...mcQuestion, explanation: '   ' }
+      const { container } = render(<AnswerFeedback question={wsExplanation} userAnswer="Paris" />)
+
+      // No MarkdownRenderer content block rendered
+      expect(container.querySelector('.prose')).not.toBeInTheDocument()
     })
 
     it('handles fill-in-blank correct (case-insensitive match happens in scoring)', () => {

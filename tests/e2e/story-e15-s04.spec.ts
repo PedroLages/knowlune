@@ -10,7 +10,11 @@
  */
 import { test, expect } from '../support/fixtures'
 import { makeQuiz, makeQuestion } from '../support/fixtures/factories/quiz-factory'
-import { seedIndexedDBStore } from '../support/helpers/indexeddb-seed'
+import { seedIndexedDBStore, clearIndexedDBStore } from '../support/helpers/indexeddb-seed'
+
+test.afterEach(async ({ page }) => {
+  await clearIndexedDBStore(page, 'ElearningDB', 'quizzes')
+})
 
 // ---------------------------------------------------------------------------
 // Test data
@@ -189,6 +193,31 @@ test.describe('AC3: Partial credit feedback', () => {
 
     // Explanation displayed
     await expect(feedback.getByText(/primary colors/i)).toBeVisible()
+  })
+
+  test('shows incorrectly selected options in breakdown', async ({ page }) => {
+    await navigateToQuiz(page, feedbackQuiz)
+    await startQuiz(page)
+
+    // Navigate to question 3 (multiple-select) — answer q1 and q2 first
+    await page.getByText('Paris').click()
+    await page.getByRole('button', { name: /next/i }).click()
+    await page.getByText('4', { exact: true }).first().click()
+    await page.getByRole('button', { name: /next/i }).click()
+
+    // Select 2 correct + 1 incorrect (Red, Blue, Green)
+    // PCM: (2-1)/3 * 3 = 1 point → partial credit with breakdown
+    await page.getByText('Red', { exact: true }).first().click()
+    await page.getByText('Blue', { exact: true }).first().click()
+    await page.getByText('Green', { exact: true }).first().click()
+
+    const feedback = page.locator('[data-testid="answer-feedback"]')
+    await expect(feedback).toBeVisible()
+
+    // "Green" should appear in the breakdown as incorrectly selected
+    await expect(feedback.getByText('Green')).toBeVisible()
+    // Missed correct option should show
+    await expect(feedback.getByText(/Yellow.*missed/)).toBeVisible()
   })
 })
 
