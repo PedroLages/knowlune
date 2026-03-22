@@ -177,13 +177,7 @@ describe('ScoreSummary', () => {
   })
 
   it('does not show previous time when showTimeSpent is false', () => {
-    render(
-      <ScoreSummary
-        {...passProps}
-        showTimeSpent={false}
-        previousAttemptTimeSpent={615000}
-      />
-    )
+    render(<ScoreSummary {...passProps} showTimeSpent={false} previousAttemptTimeSpent={615000} />)
     expect(screen.queryByText(/Previous:/)).not.toBeInTheDocument()
   })
 })
