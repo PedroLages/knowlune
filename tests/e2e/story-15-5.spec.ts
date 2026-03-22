@@ -247,12 +247,12 @@ test.describe('E15-S05: Performance Summary After Quiz', () => {
       await confirmSubmit(page)
 
       // Strengths section should show Arrays and Objects
-      await expect(page.getByText(/strengths/i)).toBeVisible()
+      await expect(page.getByRole('heading', { name: /your strengths/i })).toBeVisible()
       await expect(page.getByText(/Arrays.*100%|100%.*Arrays/)).toBeVisible()
       await expect(page.getByText(/Objects.*100%|100%.*Objects/)).toBeVisible()
 
       // Growth areas should show Functions
-      await expect(page.getByText(/growth/i)).toBeVisible()
+      await expect(page.getByRole('heading', { name: /growth opportunities/i })).toBeVisible()
       await expect(page.getByText(/Functions.*0%|0%.*Functions/)).toBeVisible()
     })
   })
@@ -275,7 +275,9 @@ test.describe('E15-S05: Performance Summary After Quiz', () => {
       await confirmSubmit(page)
 
       // Score should still show
-      await expect(page.getByText('100%')).toBeVisible()
+      await expect(
+        page.getByTestId('main-scroll-container').getByText('100%'),
+      ).toBeVisible()
 
       // Strengths/growth sections should NOT be visible
       await expect(page.getByText(/your strengths/i)).not.toBeVisible()
