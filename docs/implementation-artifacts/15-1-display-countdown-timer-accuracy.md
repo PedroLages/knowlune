@@ -176,3 +176,7 @@ Covered by the design review above — all Web Interface Guidelines checks (cont
 ## Challenges and Lessons Learned
 
 - QuizHeader.tsx already has a basic timer implementation — this story is a refactor + enhance, not greenfield. The existing `formatTime`, `formatMinuteAnnouncement`, and store sync patterns can be reused directly.
+- **Circular dependency trap with Zustand store sync**: Writing timer state back to the store every 60s caused the component to re-render, recompute `timerInitialSeconds`, and re-trigger the hook's effect — resetting the timer. Fix: capture initial seconds in a `useRef` so store updates don't re-initialize the hook. Watch for this pattern anywhere a hook both reads from and writes to Zustand.
+- **`Date.now()` anchor beats `setInterval` decrement**: The naive `setInterval(() => setTime(t - 1))` approach drifts when the browser throttles intervals (background tabs, CPU pressure). Anchoring to `endTime = Date.now() + duration` and deriving remaining time from wall clock eliminates drift entirely.
+- **Export-safe utility functions**: `formatTime` was internal-only and didn't handle negative inputs. Once exported, any caller can pass unexpected values. Add input clamping (`Math.max(0, ...)`) to all exported utility functions as a defensive habit.
+- **Toast ordering matters for UX trust**: Showing "Time's up! Submitted." before `submitQuiz()` completes means the learner sees success even if submission fails. Always show success feedback after the operation succeeds, not before.
