@@ -13,10 +13,7 @@ export function DiscriminationAnalysis({ quiz, attempts }: DiscriminationAnalysi
 
   if (!results) {
     return (
-      <p
-        data-testid="discrimination-empty"
-        className="text-sm text-muted-foreground"
-      >
+      <p data-testid="discrimination-empty" className="text-sm text-muted-foreground">
         Need at least 5 attempts for meaningful discrimination analysis.
       </p>
     )
@@ -35,7 +32,10 @@ export function DiscriminationAnalysis({ quiz, attempts }: DiscriminationAnalysi
             return (
               <li key={item.questionId}>
                 <div className="flex justify-between items-center gap-2">
-                  <span className="text-sm font-medium truncate min-w-0 flex-1" title={questionText}>
+                  <span
+                    className="text-sm font-medium truncate min-w-0 flex-1"
+                    title={questionText}
+                  >
                     {questionText}
                   </span>
                   <span
