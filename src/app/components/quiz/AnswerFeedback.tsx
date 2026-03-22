@@ -102,6 +102,7 @@ export function AnswerFeedback({ question, userAnswer, isTimerExpired }: AnswerF
 
   return (
     <div
+      data-testid="answer-feedback"
       role="status"
       aria-live="polite"
       className={cn(

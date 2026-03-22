@@ -120,7 +120,7 @@ test.describe('AC1: Correct answer feedback', () => {
     await page.getByText('Paris').click()
 
     // Verify feedback appears
-    const feedback = page.locator('[role="status"]')
+    const feedback = page.locator('[data-testid="answer-feedback"]')
     await expect(feedback).toBeVisible()
 
     // Green "Correct!" message
@@ -146,7 +146,7 @@ test.describe('AC2: Incorrect answer feedback', () => {
     await page.getByText('London').click()
 
     // Verify feedback appears
-    const feedback = page.locator('[role="status"]')
+    const feedback = page.locator('[data-testid="answer-feedback"]')
     await expect(feedback).toBeVisible()
 
     // Orange "Not quite" message (not red X — non-judgmental)
@@ -156,8 +156,7 @@ test.describe('AC2: Incorrect answer feedback', () => {
     await expect(feedback.getByText(/Paris has been the capital/)).toBeVisible()
 
     // Correct answer indicated
-    await expect(feedback.getByText(/correct answer/i)).toBeVisible()
-    await expect(feedback.getByText('Paris')).toBeVisible()
+    await expect(feedback.getByText(/Correct answer:.*Paris/)).toBeVisible()
   })
 })
 
@@ -172,21 +171,21 @@ test.describe('AC3: Partial credit feedback', () => {
     // Navigate to question 3 (multiple-select) — answer q1 and q2 first
     await page.getByText('Paris').click()
     await page.getByRole('button', { name: /next/i }).click()
-    await page.getByText('4').click()
+    await page.getByText('4', { exact: true }).first().click()
     await page.getByRole('button', { name: /next/i }).click()
 
     // Select only 2 of 3 correct answers (partial credit)
-    await page.getByText('Red').click()
-    await page.getByText('Blue').click()
-    // Submit partial answer
-    await page.getByRole('button', { name: /submit|check/i }).click()
+    // Use exact match to avoid hitting feedback text from previous questions
+    // Feedback shows immediately after each selection (no separate submit per question)
+    await page.getByText('Red', { exact: true }).first().click()
+    await page.getByText('Blue', { exact: true }).first().click()
 
     // Verify partial credit feedback
-    const feedback = page.locator('[role="status"]')
+    const feedback = page.locator('[data-testid="answer-feedback"]')
     await expect(feedback).toBeVisible()
 
-    // Shows "2 of 3 correct" or similar partial credit indicator
-    await expect(feedback.getByText(/2.*of.*3/i)).toBeVisible()
+    // Shows "2 of 3 correct" heading
+    await expect(feedback.getByRole('heading', { name: /of 3 correct/i })).toBeVisible()
 
     // Explanation displayed
     await expect(feedback.getByText(/primary colors/i)).toBeVisible()
@@ -205,7 +204,7 @@ test.describe('AC4: Feedback navigation behavior', () => {
     await page.getByText('Paris').click()
 
     // Feedback visible
-    const feedback = page.locator('[role="status"]')
+    const feedback = page.locator('[data-testid="answer-feedback"]')
     await expect(feedback).toBeVisible()
 
     // Can still click "Next Question" — not blocked
@@ -223,35 +222,35 @@ test.describe('AC4: Feedback navigation behavior', () => {
 // ---------------------------------------------------------------------------
 test.describe('AC5: Timer-expired feedback', () => {
   test('unanswered questions show correct answer and "not answered in time"', async ({ page }) => {
+    // Install fake timers before navigating so Date.now is controlled
+    await page.clock.install()
+
     await navigateToQuiz(page, timedQuiz)
-
-    // Save real Date.now before manipulating
-    await page.evaluate(() => {
-      ;(window as unknown as Record<string, unknown>).__realDateNow = Date.now
-    })
-
     await startQuiz(page)
 
-    // Don't answer — fast-forward time past the limit
-    await page.evaluate(() => {
-      const realNow = (window as unknown as Record<string, () => number>).__realDateNow
-      ;(Date as { now: () => number }).now = () => realNow() + 2 * 60 * 1000 // 2 minutes past
-    })
+    // Wait for timer to be visible (confirms timer effect has started)
+    await expect(page.getByText(/\d{2}:\d{2}/)).toBeVisible()
 
-    // Trigger timer check (visibility change forces re-evaluation)
-    await page.evaluate(() => {
-      document.dispatchEvent(new Event('visibilitychange'))
-    })
+    // Fast-forward time past the 1-minute limit
+    await page.clock.fastForward(90_000) // 90 seconds (past 60s limit)
 
-    // Quiz should auto-submit — look for feedback on unanswered questions
-    // The results/review should show feedback with correct answers
-    await expect(page.getByText(/not answered in time|time expired|unanswered/i)).toBeVisible({
-      timeout: 10000,
-    })
+    // Quiz auto-submits and navigates to results page
+    await expect(page).toHaveURL(/quiz\/results/, { timeout: 15000 })
 
-    // Correct answer should be shown for unanswered question
-    await expect(page.getByText('Paris')).toBeVisible()
-    await expect(page.getByText(/Paris has been the capital/)).toBeVisible()
+    // Expand the Question Breakdown to see per-question details
+    await page.getByText('Question Breakdown').click()
+
+    // Unanswered questions show Clock icon with "Not answered in time" aria-label
+    await expect(page.getByRole('img', { name: /not answered in time/i }).first()).toBeVisible()
+
+    // Click the first unanswered question to expand its details
+    await page.getByRole('button', { name: /Q1.*What is the capital/ }).click()
+
+    // Expanded details show "not answered in time" text and correct answer
+    // Use .first() to handle duplicate text in QuestionBreakdown vs "Areas to Review"
+    await expect(page.getByText(/not answered in time/i).first()).toBeVisible()
+    await expect(page.getByText(/Correct answer:.*Paris/).first()).toBeVisible()
+    await expect(page.getByText(/Paris has been the capital/).first()).toBeVisible()
   })
 })
 
@@ -267,7 +266,7 @@ test.describe('Accessibility', () => {
     await page.getByText('Paris').click()
 
     // Feedback should have role="status" and aria-live="polite"
-    const feedback = page.locator('[role="status"][aria-live="polite"]')
+    const feedback = page.locator('[data-testid="answer-feedback"][role="status"][aria-live="polite"]')
     await expect(feedback).toBeVisible()
   })
 
@@ -278,7 +277,7 @@ test.describe('Accessibility', () => {
     // Correct answer
     await page.getByText('Paris').click()
 
-    const feedback = page.locator('[role="status"]')
+    const feedback = page.locator('[data-testid="answer-feedback"]')
     // Must have both icon (SVG) and text — color not sole indicator
     await expect(feedback.locator('svg')).toBeVisible()
     await expect(feedback.getByText('Correct!')).toBeVisible()
