@@ -115,8 +115,11 @@ async function triggerVisibilityChange(page: import('@playwright/test').Page) {
   })
 }
 
-/** Select toast by Sonner data attribute, scoped to avoid sr-only ARIA regions */
-function sonnerToast(page: import('@playwright/test').Page) {
+/** Select Sonner toast by data attribute, optionally scoped by toast type */
+function sonnerToast(page: import('@playwright/test').Page, type?: 'info' | 'warning') {
+  if (type) {
+    return page.locator(`[data-sonner-toast][data-type="${type}"]`)
+  }
   return page.locator('[data-sonner-toast]')
 }
 
@@ -130,7 +133,7 @@ test.afterEach(async ({ page }) => {
 // ---------------------------------------------------------------------------
 
 test.describe('E15-S03: Timer Warning at 25% Remaining', () => {
-  test('AC1: shows subtle toast at 25% time remaining', async ({ page }) => {
+  test('AC1: shows subtle info toast at 25% time remaining', async ({ page }) => {
     await navigateToQuiz(page, timedQuiz)
     await startQuiz(page)
 
@@ -142,8 +145,8 @@ test.describe('E15-S03: Timer Warning at 25% Remaining', () => {
     await shiftDateNow(page, 11.25 * 60 * 1000)
     await triggerVisibilityChange(page)
 
-    // Toast should appear with time remaining message
-    const toast = sonnerToast(page).filter({ hasText: /remaining/i })
+    // Info toast should appear with time remaining message
+    const toast = sonnerToast(page, 'info').filter({ hasText: /remaining/i })
     await expect(toast.first()).toBeVisible({ timeout: 5000 })
   })
 
@@ -159,7 +162,7 @@ test.describe('E15-S03: Timer Warning at 25% Remaining', () => {
     await triggerVisibilityChange(page)
 
     // Toast appears
-    const toast = sonnerToast(page).filter({ hasText: /remaining/i })
+    const toast = sonnerToast(page, 'info').filter({ hasText: /remaining/i })
     await expect(toast.first()).toBeVisible({ timeout: 5000 })
 
     // Toast auto-dismisses (3s + buffer)
@@ -172,7 +175,7 @@ test.describe('E15-S03: Timer Warning at 25% Remaining', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('E15-S03: Timer Warning at 10% Remaining', () => {
-  test('AC2: shows prominent toast at 10% time remaining', async ({ page }) => {
+  test('AC2: shows prominent warning toast at 10% time remaining', async ({ page }) => {
     await navigateToQuiz(page, timedQuiz)
     await startQuiz(page)
 
@@ -184,8 +187,8 @@ test.describe('E15-S03: Timer Warning at 10% Remaining', () => {
     await shiftDateNow(page, 13.5 * 60 * 1000)
     await triggerVisibilityChange(page)
 
-    // More prominent toast with "Only" prefix
-    const toast = sonnerToast(page).filter({ hasText: /only.*remaining/i })
+    // Warning toast with "Only" prefix
+    const toast = sonnerToast(page, 'warning').filter({ hasText: /only.*remaining/i })
     await expect(toast.first()).toBeVisible({ timeout: 5000 })
   })
 
@@ -200,7 +203,7 @@ test.describe('E15-S03: Timer Warning at 10% Remaining', () => {
     await shiftDateNow(page, 13.5 * 60 * 1000)
     await triggerVisibilityChange(page)
 
-    const toast = sonnerToast(page).filter({ hasText: /only.*remaining/i })
+    const toast = sonnerToast(page, 'warning').filter({ hasText: /only.*remaining/i })
     await expect(toast.first()).toBeVisible({ timeout: 5000 })
 
     // 10% toast auto-dismisses after 5s + buffer
@@ -227,11 +230,12 @@ test.describe('E15-S03: Timer Warning at 1 Minute Remaining', () => {
 
     // Persistent warning toast — appears when remaining ≤ 60s
     // Real time elapses during test setup, so remaining is ~57-60s (use flexible regex)
-    const toast = sonnerToast(page).filter({ hasText: /00:\d+ remaining/i })
+    const toast = sonnerToast(page, 'warning').filter({ hasText: /only.*00:\d+ remaining/i })
     await expect(toast.first()).toBeVisible({ timeout: 5000 })
 
-    // Wait 6 seconds — persistent warning should still be visible (not auto-dismissed)
-    await page.waitForTimeout(6000) // justified: verifying toast persistence
+    // Wait 3.5 seconds — persistent warning should still be visible (not auto-dismissed).
+    // Longest auto-dismiss is 5s (10% toast), so 3.5s still proves non-dismissal.
+    await page.waitForTimeout(3500) // justified: verifying toast persistence
     await expect(toast.first()).toBeVisible()
   })
 })
@@ -271,11 +275,11 @@ test.describe('E15-S03: ARIA Live Regions', () => {
     await shiftDateNow(page, 11.25 * 60 * 1000)
     await triggerVisibilityChange(page)
 
-    // ARIA live region with polite politeness should contain announcement
+    // ARIA live region with polite politeness should contain text
     const politeRegion = page.locator('[role="status"][aria-live="polite"]').filter({
       hasText: /remaining/i,
     })
-    await expect(politeRegion.first()).toBeAttached({ timeout: 5000 })
+    await expect(politeRegion.first()).toHaveText(/remaining/i, { timeout: 5000 })
   })
 
   test('AC5: 10% warning uses aria-live="assertive"', async ({ page }) => {
@@ -290,10 +294,29 @@ test.describe('E15-S03: ARIA Live Regions', () => {
     await triggerVisibilityChange(page)
 
     // ARIA live region with assertive politeness for urgent warnings
-    const assertiveRegion = page.locator('[aria-live="assertive"]').filter({
+    const assertiveRegion = page.locator('[role="alert"][aria-live="assertive"]').filter({
       hasText: /remaining/i,
     })
-    await expect(assertiveRegion.first()).toBeAttached({ timeout: 5000 })
+    await expect(assertiveRegion.first()).toHaveText(/remaining/i, { timeout: 5000 })
+  })
+
+  test('AC5: 1min warning uses aria-live="assertive"', async ({ page }) => {
+    await navigateToQuiz(page, timedQuiz)
+    await startQuiz(page)
+
+    const timer = page.getByRole('timer')
+    await expect(timer).toBeVisible()
+
+    // Shift to 14 minutes elapsed (1 minute remaining)
+    await saveRealDateNow(page)
+    await shiftDateNow(page, 14 * 60 * 1000)
+    await triggerVisibilityChange(page)
+
+    // ARIA assertive region should contain 1-minute announcement
+    const assertiveRegion = page.locator('[role="alert"][aria-live="assertive"]').filter({
+      hasText: /remaining/i,
+    })
+    await expect(assertiveRegion.first()).toHaveText(/remaining/i, { timeout: 5000 })
   })
 })
 
@@ -317,7 +340,8 @@ test.describe('E15-S03: Accommodation-Adjusted Warnings', () => {
 
     // Close modal and start quiz
     const saveBtn = page.getByRole('button', { name: /save|confirm|apply/i })
-    if (await saveBtn.isVisible()) await saveBtn.click()
+    await expect(saveBtn).toBeVisible()
+    await saveBtn.click()
 
     await startQuiz(page)
 
@@ -340,7 +364,7 @@ test.describe('E15-S03: Accommodation-Adjusted Warnings', () => {
     await triggerVisibilityChange(page)
 
     // NOW the 25% warning should fire (5:37 remaining of 22:30)
-    const toast = sonnerToast(page).filter({ hasText: /remaining/i })
+    const toast = sonnerToast(page, 'info').filter({ hasText: /remaining/i })
     await expect(toast.first()).toBeVisible({ timeout: 5000 })
   })
 })

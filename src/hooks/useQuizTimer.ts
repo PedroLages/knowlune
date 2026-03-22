@@ -42,7 +42,7 @@ export function useQuizTimer(
   const hasFiredRef = useRef(false)
 
   // Track which warning thresholds have fired to prevent re-firing
-  const warningsFiredRef = useRef({ twentyFivePercent: false, tenPercent: false, oneMinute: false })
+  const warningsFiredRef = useRef<Set<WarningLevel>>(new Set())
 
   useEffect(() => {
     if (initialSeconds <= 0) return
@@ -52,7 +52,7 @@ export function useQuizTimer(
     // value on first mount, so we must sync explicitly.
     setTimeRemaining(initialSeconds)
     hasFiredRef.current = false
-    warningsFiredRef.current = { twentyFivePercent: false, tenPercent: false, oneMinute: false }
+    warningsFiredRef.current = new Set()
     const startTime = Date.now()
     const endTime = startTime + initialSeconds * 1000
 
@@ -73,26 +73,39 @@ export function useQuizTimer(
       }
     }
 
+    const fireWarnings = (remaining: number) => {
+      if (!onWarningRef.current) return
+
+      const fired = warningsFiredRef.current
+      const pct = remaining / initialSeconds
+
+      // Fire warnings in order so each callback executes independently.
+      // Even when multiple thresholds cross in the same tick (short quizzes
+      // or tab-return), each onWarning call fires its toast imperatively.
+      if (pct <= 0.25 && !fired.has('25%')) {
+        fired.add('25%')
+        onWarningRef.current('25%', remaining)
+      }
+      if (pct <= 0.1 && !fired.has('10%')) {
+        fired.add('10%')
+        onWarningRef.current('10%', remaining)
+      }
+      if (remaining <= 60 && !fired.has('1min')) {
+        fired.add('1min')
+        onWarningRef.current('1min', remaining)
+      }
+    }
+
     const recalculate = () => {
       const now = Date.now()
       const remaining = Math.max(0, Math.floor((endTime - now) / 1000))
       setTimeRemaining(remaining)
 
-      // Fire warning callbacks at key thresholds (once each)
-      if (remaining > 0 && onWarningRef.current) {
-        const pct = remaining / initialSeconds
-        if (pct <= 0.25 && !warningsFiredRef.current.twentyFivePercent) {
-          warningsFiredRef.current.twentyFivePercent = true
-          onWarningRef.current('25%', remaining)
-        }
-        if (pct <= 0.1 && !warningsFiredRef.current.tenPercent) {
-          warningsFiredRef.current.tenPercent = true
-          onWarningRef.current('10%', remaining)
-        }
-        if (remaining <= 60 && !warningsFiredRef.current.oneMinute) {
-          warningsFiredRef.current.oneMinute = true
-          onWarningRef.current('1min', remaining)
-        }
+      // Fire warning callbacks at key thresholds (once each).
+      // Uses >= 0 so warnings fire even on tab-return where remaining
+      // jumps straight to 0 (learner deserves at least the 1min warning).
+      if (remaining >= 0) {
+        fireWarnings(remaining)
       }
 
       if (remaining === 0 && !hasFiredRef.current) {

@@ -16,6 +16,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
       richColors={true}
       closeButton={true}
       duration={4000}
+      // Offset from bottom to avoid overlapping mobile bottom navigation (57px)
+      offset={64}
       style={
         {
           '--normal-bg': 'var(--popover)',

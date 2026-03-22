@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
-import { toast } from 'sonner'
+import { useState, useEffect } from 'react'
 import { formatTime, type WarningLevel } from '@/hooks/useQuizTimer'
 
 interface TimerWarningsProps {
@@ -10,35 +9,34 @@ interface TimerWarningsProps {
 }
 
 /**
- * Renderless component that fires Sonner toasts and updates ARIA live
- * regions when timer warning thresholds are crossed.
+ * ARIA-only component that updates screen reader live regions when timer
+ * warning thresholds are crossed.
  *
  * Visible DOM: only two sr-only ARIA regions (polite + assertive).
- * Toast notifications handled by Sonner (rendered via global <Toaster />).
+ * Toast notifications are fired imperatively in Quiz.tsx's handleTimerWarning
+ * callback (avoids React batching issues with short quizzes).
  */
 export function TimerWarnings({ warningLevel, remainingSeconds }: TimerWarningsProps) {
   const [politeAnnouncement, setPoliteAnnouncement] = useState('')
   const [assertiveAnnouncement, setAssertiveAnnouncement] = useState('')
-  const prevLevelRef = useRef<WarningLevel | null>(null)
 
   useEffect(() => {
-    if (!warningLevel || warningLevel === prevLevelRef.current) return
-    prevLevelRef.current = warningLevel
+    if (!warningLevel) return
 
     const timeStr = formatTime(remainingSeconds)
 
     switch (warningLevel) {
       case '25%':
-        toast.info(`${timeStr} remaining`, { duration: 3000 })
         setPoliteAnnouncement(`${timeStr} remaining`)
         break
       case '10%':
-        toast.warning(`Only ${timeStr} remaining!`, { duration: 5000 })
+        // Clear stale polite region on urgency escalation
+        setPoliteAnnouncement('')
         setAssertiveAnnouncement(`Only ${timeStr} remaining!`)
         break
       case '1min':
-        toast.warning(`${timeStr} remaining`, { duration: Infinity })
-        setAssertiveAnnouncement(`${timeStr} remaining`)
+        setPoliteAnnouncement('')
+        setAssertiveAnnouncement(`Only ${timeStr} remaining!`)
         break
     }
   }, [warningLevel, remainingSeconds])
@@ -50,7 +48,7 @@ export function TimerWarnings({ warningLevel, remainingSeconds }: TimerWarningsP
         {politeAnnouncement}
       </div>
       {/* Screen-reader-only: interrupting announcement for 10% and 1min thresholds */}
-      <div aria-live="assertive" aria-atomic="true" className="sr-only">
+      <div role="alert" aria-live="assertive" aria-atomic="true" className="sr-only">
         {assertiveAnnouncement}
       </div>
     </>

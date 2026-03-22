@@ -25,7 +25,9 @@ export function QuizTimer({ timeRemaining, totalTime, annotation }: QuizTimerPro
   const isWarning = timeRemaining <= totalTime * 0.25 && timeRemaining > totalTime * 0.1
   const isUrgent = timeRemaining <= totalTime * 0.1
 
-  // Screen reader announcements — update on minute boundaries and threshold crossings
+  // Screen reader announcements — minute boundaries only.
+  // Threshold-crossing announcements (25%, 10%, 1min) are handled exclusively
+  // by TimerWarnings to avoid duplicate ARIA live region updates.
   const [liveAnnouncement, setLiveAnnouncement] = useState(() =>
     formatMinuteAnnouncement(timeRemaining)
   )
@@ -39,20 +41,7 @@ export function QuizTimer({ timeRemaining, totalTime, annotation }: QuizTimerPro
     if (timeRemaining % 60 === 0 && timeRemaining !== prev) {
       setLiveAnnouncement(formatMinuteAnnouncement(timeRemaining))
     }
-
-    // Announce when crossing 25% threshold
-    const threshold25 = Math.floor(totalTime * 0.25)
-    if (prev > threshold25 && timeRemaining <= threshold25) {
-      const suffix = annotation ? ` (${annotation})` : ''
-      setLiveAnnouncement(`Warning: ${formatMinuteAnnouncement(timeRemaining)}${suffix}`)
-    }
-
-    // Announce when crossing 10% threshold
-    const threshold10 = Math.floor(totalTime * 0.1)
-    if (prev > threshold10 && timeRemaining <= threshold10) {
-      setLiveAnnouncement(`Urgent: ${formatMinuteAnnouncement(timeRemaining)}`)
-    }
-  }, [timeRemaining, totalTime, annotation])
+  }, [timeRemaining])
 
   return (
     <>
