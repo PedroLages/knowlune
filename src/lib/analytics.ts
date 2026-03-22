@@ -117,6 +117,7 @@ export function analyzeTopicPerformance(questions: Question[], answers: Answer[]
  * Formula: (finalScore - initialScore) / (100 - initialScore)
  */
 export function calculateNormalizedGain(initialScore: number, finalScore: number): number | null {
+  if (!Number.isFinite(initialScore) || !Number.isFinite(finalScore)) return null
   if (initialScore >= 100) return null
   const actualGain = finalScore - initialScore
   const possibleGain = 100 - initialScore

@@ -62,9 +62,9 @@ export function QuizResults() {
   const normalizedGain = useMemo(() => {
     if (attempts.length < 2) return null
     const firstScore = attempts[0].percentage
-    const latestScore = lastAttempt?.percentage ?? 0
+    const latestScore = attempts[attempts.length - 1].percentage
     return calculateNormalizedGain(firstScore, latestScore)
-  }, [attempts, lastAttempt?.percentage])
+  }, [attempts])
 
   const incorrectItems = useMemo(() => {
     if (!lastAttempt || !currentQuiz) return []

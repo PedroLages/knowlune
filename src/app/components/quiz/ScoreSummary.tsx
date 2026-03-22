@@ -1,6 +1,6 @@
 import { cn } from '@/app/components/ui/utils'
 import { formatDuration } from '@/lib/formatDuration'
-import { interpretNormalizedGain } from '@/lib/analytics'
+import { interpretNormalizedGain, type NormalizedGainLevel } from '@/lib/analytics'
 
 interface ScoreSummaryProps {
   percentage: number
@@ -108,10 +108,10 @@ function ScoreRing({ percentage, tier }: { percentage: number; tier: ScoreTier }
   )
 }
 
-const gainColorMap: Record<string, string> = {
+const gainColorMap: Record<NormalizedGainLevel, string> = {
   regression: 'text-muted-foreground',
   low: 'text-muted-foreground',
-  medium: 'text-brand',
+  medium: 'text-brand-soft-foreground',
   high: 'text-success',
 }
 
@@ -186,7 +186,10 @@ export function ScoreSummary({
       {gainInterpretation != null && (
         <div className="mt-2" data-testid="normalized-gain">
           <span className="text-sm text-muted-foreground">Normalized Gain: </span>
-          <span className={cn('font-semibold', gainColorMap[gainInterpretation.level])}>
+          <span
+            className={cn('font-semibold', gainColorMap[gainInterpretation.level])}
+            data-testid="normalized-gain-value"
+          >
             {Math.round(normalizedGain! * 100)}%
           </span>
           <p className="text-sm text-muted-foreground mt-1">{gainInterpretation.message}</p>

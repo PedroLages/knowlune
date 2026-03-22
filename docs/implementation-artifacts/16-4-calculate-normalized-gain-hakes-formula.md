@@ -4,9 +4,19 @@ story_name: "Calculate Normalized Gain (Hake's Formula)"
 status: review
 started: 2026-03-22
 completed: 2026-03-22
-reviewed: false
-review_started:
-review_gates_passed: []
+reviewed: true
+review_started: 2026-03-22
+review_gates_passed:
+  - build
+  - lint
+  - typecheck
+  - prettier
+  - unit-tests
+  - e2e-smoke
+  - e2e-story
+  - code-review
+  - code-review-testing
+  - design-review
 burn_in_validated: false
 ---
 

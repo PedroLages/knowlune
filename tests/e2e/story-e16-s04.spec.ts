@@ -48,7 +48,7 @@ const ATTEMPT_2_DATE = getRelativeDate(1)
 async function seedIDBStore(
   page: import('@playwright/test').Page,
   storeName: string,
-  data: unknown[],
+  data: unknown[]
 ) {
   await page.evaluate(
     async ({ storeName, data, maxRetries, retryDelay }) => {
@@ -83,25 +83,22 @@ async function seedIDBStore(
       }
       throw new Error(`Store "${storeName}" not found after retries`)
     },
-    { storeName, data, maxRetries: 10, retryDelay: 200 },
+    { storeName, data, maxRetries: 10, retryDelay: 200 }
   )
 }
 
 /** Navigate to the results page with seeded quiz + attempts in IDB */
-async function setupResultsPage(
-  page: import('@playwright/test').Page,
-  attempts: unknown[],
-) {
+async function setupResultsPage(page: import('@playwright/test').Page, attempts: unknown[]) {
   // Close sidebar and seed Zustand currentQuiz via localStorage before navigation
   await page.addInitScript(
     ({ quizData }) => {
       localStorage.setItem('eduvi-sidebar-v1', 'false')
       localStorage.setItem(
         'levelup-quiz-store',
-        JSON.stringify({ state: { currentQuiz: quizData, currentProgress: null }, version: 0 }),
+        JSON.stringify({ state: { currentQuiz: quizData, currentProgress: null }, version: 0 })
       )
     },
-    { quizData: quiz },
+    { quizData: quiz }
   )
 
   // Navigate to app root first so Dexie initializes the DB schema
@@ -121,7 +118,7 @@ async function setupResultsPage(
 // Tests
 // ---------------------------------------------------------------------------
 
-test.describe('E16-S04: Normalized Gain (Hake\'s Formula)', () => {
+test.describe("E16-S04: Normalized Gain (Hake's Formula)", () => {
   test('AC1 + 5.1: two attempts show normalized gain section', async ({ page }) => {
     const attempt1 = makeAttempt({
       id: 'attempt1-e16s04',
@@ -201,6 +198,8 @@ test.describe('E16-S04: Normalized Gain (Hake\'s Formula)', () => {
     await expect(gainSection).toBeVisible()
     // 40% gain shown
     await expect(gainSection).toContainText('40%')
+    // Medium gain tier — message confirms formula-to-display round-trip
+    await expect(gainSection).toContainText('Good learning progress!')
   })
 
   test('5.3: score regression shows encouraging message (not destructive color)', async ({
@@ -238,7 +237,7 @@ test.describe('E16-S04: Normalized Gain (Hake\'s Formula)', () => {
 
     // Must NOT use destructive/red color — uses text-muted-foreground (neutral)
     // Verify the percentage span doesn't have text-destructive class
-    const percentageSpan = gainSection.locator('span.font-semibold')
+    const percentageSpan = gainSection.locator('[data-testid="normalized-gain-value"]')
     await expect(percentageSpan).not.toHaveClass(/text-destructive/)
   })
 })
