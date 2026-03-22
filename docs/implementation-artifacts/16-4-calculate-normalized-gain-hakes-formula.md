@@ -1,9 +1,9 @@
 ---
 story_id: E16-S04
 story_name: "Calculate Normalized Gain (Hake's Formula)"
-status: in-progress
+status: review
 started: 2026-03-22
-completed:
+completed: 2026-03-22
 reviewed: false
 review_started:
 review_gates_passed: []
@@ -46,29 +46,29 @@ So that I understand my learning efficiency beyond just raw score improvement.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add `calculateNormalizedGain` and `interpretNormalizedGain` to `src/lib/analytics.ts` (AC: all)
-  - [ ] 1.1 Implement `calculateNormalizedGain(initialScore, finalScore): number | null` — returns null when initialScore >= 100
-  - [ ] 1.2 Implement `interpretNormalizedGain(gain): { level, message }` — four tiers (regression/low/medium/high)
+- [x] Task 1: Add `calculateNormalizedGain` and `interpretNormalizedGain` to `src/lib/analytics.ts` (AC: all)
+  - [x] 1.1 Implement `calculateNormalizedGain(initialScore, finalScore): number | null` — returns null when initialScore >= 100
+  - [x] 1.2 Implement `interpretNormalizedGain(gain): { level, message }` — four tiers (regression/low/medium/high)
 
-- [ ] Task 2: Update `ScoreSummary.tsx` to accept and render normalized gain (AC: AC2)
-  - [ ] 2.1 Add optional `normalizedGain: number | null` prop to `ScoreSummaryProps`
-  - [ ] 2.2 Add optional `normalizedGainInterpretation` prop (or derive it in component)
-  - [ ] 2.3 Render normalized gain section with `data-testid="normalized-gain"` only when not null
-  - [ ] 2.4 Map `level` to design token classes via `gainColorMap`
+- [x] Task 2: Update `ScoreSummary.tsx` to accept and render normalized gain (AC: AC2)
+  - [x] 2.1 Add optional `normalizedGain: number | null` prop to `ScoreSummaryProps`
+  - [x] 2.2 Add optional `normalizedGainInterpretation` prop (or derive it in component)
+  - [x] 2.3 Render normalized gain section with `data-testid="normalized-gain"` only when not null
+  - [x] 2.4 Map `level` to design token classes via `gainColorMap`
 
-- [ ] Task 3: Update `QuizResults.tsx` to compute and pass normalized gain (AC: AC1, AC4)
-  - [ ] 3.1 Import `calculateNormalizedGain`, `interpretNormalizedGain` from `src/lib/analytics`
-  - [ ] 3.2 Compute `normalizedGain` via `useMemo` — uses `attempts[0].percentage` (first) and `lastAttempt.percentage` (current); null if `attempts.length < 2`
-  - [ ] 3.3 Pass `normalizedGain` and interpretation to `ScoreSummary`
+- [x] Task 3: Update `QuizResults.tsx` to compute and pass normalized gain (AC: AC1, AC4)
+  - [x] 3.1 Import `calculateNormalizedGain`, `interpretNormalizedGain` from `src/lib/analytics`
+  - [x] 3.2 Compute `normalizedGain` via `useMemo` — uses `attempts[0].percentage` (first) and `lastAttempt.percentage` (current); null if `attempts.length < 2`
+  - [x] 3.3 Pass `normalizedGain` and interpretation to `ScoreSummary`
 
-- [ ] Task 4: Unit tests in `src/lib/analytics.test.ts` (AC: all calculation logic)
-  - [ ] 4.1 `calculateNormalizedGain` — standard pairs, initialScore=100 edge, negative gain
-  - [ ] 4.2 `interpretNormalizedGain` — all four tier boundaries (including regression < 0, exact 0.3 boundary, exact 0.7 boundary)
+- [x] Task 4: Unit tests in `src/lib/analytics.test.ts` (AC: all calculation logic)
+  - [x] 4.1 `calculateNormalizedGain` — standard pairs, initialScore=100 edge, negative gain
+  - [x] 4.2 `interpretNormalizedGain` — all four tier boundaries (including regression < 0, exact 0.3 boundary, exact 0.7 boundary)
 
-- [ ] Task 5: E2E tests in `tests/e2e/story-e16-s04.spec.ts` (AC: display)
-  - [ ] 5.1 Complete quiz twice → normalized gain displayed
-  - [ ] 5.2 High initial score → correct percentage shown
-  - [ ] 5.3 Score regression → encouraging "Regression" message displayed
+- [x] Task 5: E2E tests in `tests/e2e/story-e16-s04.spec.ts` (AC: display)
+  - [x] 5.1 Complete quiz twice → normalized gain displayed
+  - [x] 5.2 High initial score → correct percentage shown
+  - [x] 5.3 Score regression → encouraging "Regression" message displayed
 
 ## Design Guidance
 
@@ -158,8 +158,31 @@ Not yet reviewed — run `/review-story E16-S04` after implementation.
 
 Not yet reviewed — run `/review-story E16-S04` after implementation.
 
+## Dev Agent Record
+
+### File List
+
+- `src/lib/analytics.ts` — added `calculateNormalizedGain`, `interpretNormalizedGain`, `NormalizedGainLevel`
+- `src/app/components/quiz/ScoreSummary.tsx` — added `normalizedGain` prop, `gainColorMap`, normalized gain render block
+- `src/app/pages/QuizResults.tsx` — imported `calculateNormalizedGain`, added `normalizedGain` useMemo, passed to `ScoreSummary`
+- `src/lib/analytics.test.ts` — new: 12 unit tests for both functions
+- `tests/e2e/story-e16-s04.spec.ts` — new: 4 E2E tests with IDB seeding
+
+### Completion Notes
+
+✅ All 5 tasks complete. All 12 unit tests pass. All 4 E2E tests pass. TypeScript compiles clean. ESLint clean (no errors in our files). Build passes.
+
+Key implementation decisions:
+- Used `getRelativeDate(1)` (not `new Date()`) for second attempt date — deterministic per ESLint rule
+- Derived `gainInterpretation` before return in component body (not inline IIFE) — matches codebase style
+- Used `gainColorMap` outside the component function (module scope constant) — avoids recreation on each render
+
+### Change Log
+
+- 2026-03-22: Implemented E16-S04. Added Hake's normalized gain formula to analytics.ts, ScoreSummary.tsx, and QuizResults.tsx. 12 unit tests + 4 E2E tests.
+
 ## Challenges and Lessons Learned
 
-Story in progress — no implementation yet. Key pre-implementation notes:
-- E16-S04 can proceed independently despite E16-S02/S03 being backlog, because `loadAttempts` and `attempts` are already available in `QuizResults.tsx`
-- `attempts` from the store are sorted ascending by `completedAt`, so `attempts[0]` = first attempt
+- E16-S04 proceeded independently despite E16-S02/S03 being backlog because `loadAttempts` and `attempts` are already available in `QuizResults.tsx`
+- `attempts` from the store are sorted ascending by `completedAt`, so `attempts[0]` = first attempt (confirmed in implementation)
+- IDB seeding for quiz attempts works cleanly by seeding both `quizzes` and `quizAttempts` stores + setting Zustand persist state via `localStorage` before navigation
