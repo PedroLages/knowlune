@@ -9,7 +9,7 @@ import {
   selectAttempts,
   selectIsLoading,
 } from '@/stores/useQuizStore'
-import { calculateImprovement } from '@/lib/analytics'
+import { calculateImprovement, calculateNormalizedGain } from '@/lib/analytics'
 import { ScoreSummary } from '@/app/components/quiz/ScoreSummary'
 import { ScoreTrajectoryChart } from '@/app/components/quiz/ScoreTrajectoryChart'
 import { QuestionBreakdown } from '@/app/components/quiz/QuestionBreakdown'
@@ -57,9 +57,14 @@ export function QuizResults() {
     [attempts]
   )
 
+  const normalizedGain = useMemo(
+    () => calculateNormalizedGain(attempts),
+    [attempts]
+  )
+
   const previousAttemptTimeSpent = useMemo(() => {
     if (attempts.length <= 1) return undefined
-    const priorAttempt = attempts[attempts.length - 2]
+    const priorAttempt = attempts[1] // attempts[0] = current, attempts[1] = previous
     if (priorAttempt?.timeSpent != null && Number.isFinite(priorAttempt.timeSpent)) {
       return priorAttempt.timeSpent
     }
@@ -68,10 +73,12 @@ export function QuizResults() {
 
   const trajectoryData = useMemo(
     () =>
-      attempts.map((attempt, index) => ({
-        attemptNumber: index + 1,
-        percentage: Math.round(Math.min(100, Math.max(0, attempt.percentage))),
-      })),
+      [...attempts]
+        .reverse() // Chronological order (oldest first) for chart x-axis
+        .map((attempt, index) => ({
+          attemptNumber: index + 1,
+          percentage: Math.round(Math.min(100, Math.max(0, attempt.percentage))),
+        })),
     [attempts]
   )
 
@@ -150,6 +157,7 @@ export function QuizResults() {
           passingScore={currentQuiz.passingScore}
           timeSpent={lastAttempt.timeSpent}
           improvementData={improvementData}
+          normalizedGain={normalizedGain}
           showTimeSpent={
             currentQuiz.timeLimit != null && lastAttempt.timerAccommodation !== 'untimed'
           }
