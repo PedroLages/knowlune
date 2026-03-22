@@ -8,9 +8,9 @@
  * - AC4: Feedback appears immediately, does not block navigation
  * - AC5: Timer-expired → unanswered questions show correct answer feedback
  */
-import { test, expect } from '../support/fixtures'
-import { makeQuiz, makeQuestion } from '../support/fixtures/factories/quiz-factory'
-import { seedIndexedDBStore, clearIndexedDBStore } from '../support/helpers/indexeddb-seed'
+import { test, expect } from '../../support/fixtures'
+import { makeQuiz, makeQuestion } from '../../support/fixtures/factories/quiz-factory'
+import { seedIndexedDBStore, clearIndexedDBStore } from '../../support/helpers/indexeddb-seed'
 
 test.afterEach(async ({ page }) => {
   await clearIndexedDBStore(page, 'ElearningDB', 'quizzes')
