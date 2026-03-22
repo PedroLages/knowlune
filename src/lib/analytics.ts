@@ -38,10 +38,7 @@ const MAX_GROWTH_AREAS = 3
  * calculates per-topic correctness, and categorizes into strengths
  * (≥70%) and growth areas (<70%).
  */
-export function analyzeTopicPerformance(
-  questions: Question[],
-  answers: Answer[]
-): TopicAnalysis {
+export function analyzeTopicPerformance(questions: Question[], answers: Answer[]): TopicAnalysis {
   const answerMap = new Map(answers.map(a => [a.questionId, a]))
 
   // Aggregate counts per topic

@@ -20,11 +20,46 @@ const LESSON_ID = 'test-lesson-e15s05'
 
 // Questions WITH topic tags (mixed performance scenario)
 const topicQuestions = [
-  makeQuestion({ id: 'q1-arrays', order: 1, text: 'What does Array.push() return?', options: ['New length', 'The array', 'undefined', 'The element'], correctAnswer: 'New length', topic: 'Arrays' }),
-  makeQuestion({ id: 'q2-arrays', order: 2, text: 'Array.pop() removes from?', options: ['End', 'Start', 'Middle', 'Random'], correctAnswer: 'End', topic: 'Arrays' }),
-  makeQuestion({ id: 'q3-functions', order: 3, text: 'What is a closure?', options: ['Inner function accessing outer scope', 'A loop', 'A class', 'An object'], correctAnswer: 'Inner function accessing outer scope', topic: 'Functions' }),
-  makeQuestion({ id: 'q4-functions', order: 4, text: 'Arrow functions bind?', options: ['Lexical this', 'Dynamic this', 'No this', 'Global this'], correctAnswer: 'Lexical this', topic: 'Functions' }),
-  makeQuestion({ id: 'q5-objects', order: 5, text: 'Object.keys() returns?', options: ['Array of keys', 'Array of values', 'Object', 'Map'], correctAnswer: 'Array of keys', topic: 'Objects' }),
+  makeQuestion({
+    id: 'q1-arrays',
+    order: 1,
+    text: 'What does Array.push() return?',
+    options: ['New length', 'The array', 'undefined', 'The element'],
+    correctAnswer: 'New length',
+    topic: 'Arrays',
+  }),
+  makeQuestion({
+    id: 'q2-arrays',
+    order: 2,
+    text: 'Array.pop() removes from?',
+    options: ['End', 'Start', 'Middle', 'Random'],
+    correctAnswer: 'End',
+    topic: 'Arrays',
+  }),
+  makeQuestion({
+    id: 'q3-functions',
+    order: 3,
+    text: 'What is a closure?',
+    options: ['Inner function accessing outer scope', 'A loop', 'A class', 'An object'],
+    correctAnswer: 'Inner function accessing outer scope',
+    topic: 'Functions',
+  }),
+  makeQuestion({
+    id: 'q4-functions',
+    order: 4,
+    text: 'Arrow functions bind?',
+    options: ['Lexical this', 'Dynamic this', 'No this', 'Global this'],
+    correctAnswer: 'Lexical this',
+    topic: 'Functions',
+  }),
+  makeQuestion({
+    id: 'q5-objects',
+    order: 5,
+    text: 'Object.keys() returns?',
+    options: ['Array of keys', 'Array of values', 'Object', 'Map'],
+    correctAnswer: 'Array of keys',
+    topic: 'Objects',
+  }),
 ]
 
 const mixedPerformanceQuiz = makeQuiz({
@@ -40,9 +75,27 @@ const mixedPerformanceQuiz = makeQuiz({
 
 // Questions WITHOUT topic tags (fallback scenario)
 const noTopicQuestions = [
-  makeQuestion({ id: 'q1-general', order: 1, text: 'What is 2 + 2?', options: ['4', '3', '5', '6'], correctAnswer: '4' }),
-  makeQuestion({ id: 'q2-general', order: 2, text: 'What is 3 * 3?', options: ['9', '6', '12', '8'], correctAnswer: '9' }),
-  makeQuestion({ id: 'q3-general', order: 3, text: 'What is 10 / 2?', options: ['5', '4', '6', '3'], correctAnswer: '5' }),
+  makeQuestion({
+    id: 'q1-general',
+    order: 1,
+    text: 'What is 2 + 2?',
+    options: ['4', '3', '5', '6'],
+    correctAnswer: '4',
+  }),
+  makeQuestion({
+    id: 'q2-general',
+    order: 2,
+    text: 'What is 3 * 3?',
+    options: ['9', '6', '12', '8'],
+    correctAnswer: '9',
+  }),
+  makeQuestion({
+    id: 'q3-general',
+    order: 3,
+    text: 'What is 10 / 2?',
+    options: ['5', '4', '6', '3'],
+    correctAnswer: '5',
+  }),
 ]
 
 const noTopicQuiz = makeQuiz({
@@ -100,10 +153,7 @@ async function seedQuizData(page: import('@playwright/test').Page, quizData: unk
 }
 
 /** Navigate to quiz page with seeded data and sidebar closed */
-async function navigateToQuiz(
-  page: import('@playwright/test').Page,
-  quizToSeed: unknown
-) {
+async function navigateToQuiz(page: import('@playwright/test').Page, quizToSeed: unknown) {
   await page.addInitScript(() => {
     localStorage.setItem('eduvi-sidebar-v1', 'false')
   })
@@ -208,7 +258,9 @@ test.describe('E15-S05: Performance Summary After Quiz', () => {
   })
 
   test.describe('AC3: No topic tags — General fallback', () => {
-    test('hides strengths/growth sections when all questions are General topic', async ({ page }) => {
+    test('hides strengths/growth sections when all questions are General topic', async ({
+      page,
+    }) => {
       await navigateToQuiz(page, noTopicQuiz)
       await startQuiz(page)
 

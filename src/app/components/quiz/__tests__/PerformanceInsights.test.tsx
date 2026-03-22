@@ -74,11 +74,7 @@ describe('PerformanceInsights', () => {
   })
 
   it('shows growth section with question references for <70%', () => {
-    const questions = [
-      q('q1', 1, 'Arrays'),
-      q('q2', 2, 'Functions'),
-      q('q3', 3, 'Functions'),
-    ]
+    const questions = [q('q1', 1, 'Arrays'), q('q2', 2, 'Functions'), q('q3', 3, 'Functions')]
     const answers = [correct('q1'), wrong('q2'), wrong('q3')]
 
     render(<PerformanceInsights questions={questions} answers={answers} />)
@@ -129,9 +125,7 @@ describe('PerformanceInsights', () => {
     const questions = [q('q1', 1, 'A'), q('q2', 2, 'B')]
     const answers = [correct('q1'), wrong('q2')]
 
-    const { container } = render(
-      <PerformanceInsights questions={questions} answers={answers} />
-    )
+    const { container } = render(<PerformanceInsights questions={questions} answers={answers} />)
 
     const svgs = container.querySelectorAll('svg[aria-hidden="true"]')
     expect(svgs.length).toBeGreaterThanOrEqual(2) // CheckCircle2 + TrendingUp
@@ -141,9 +135,7 @@ describe('PerformanceInsights', () => {
     const questions = [q('q1', 1, 'A')]
     const answers = [correct('q1')]
 
-    const { container } = render(
-      <PerformanceInsights questions={questions} answers={answers} />
-    )
+    const { container } = render(<PerformanceInsights questions={questions} answers={answers} />)
 
     expect(container.querySelector('[data-testid="performance-insights"]')).toBeInTheDocument()
   })

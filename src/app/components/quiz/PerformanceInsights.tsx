@@ -12,10 +12,7 @@ export function PerformanceInsights({ questions, answers }: PerformanceInsightsP
   const strengthsHeadingId = useId()
   const growthHeadingId = useId()
 
-  const analysis = useMemo(
-    () => analyzeTopicPerformance(questions, answers),
-    [questions, answers]
-  )
+  const analysis = useMemo(() => analyzeTopicPerformance(questions, answers), [questions, answers])
 
   const { correctCount, incorrectCount, skippedCount, strengths, growthAreas, hasMultipleTopics } =
     analysis

@@ -295,7 +295,9 @@ test.describe('Accessibility', () => {
     await page.getByText('Paris').click()
 
     // Feedback should have role="status" and aria-live="polite"
-    const feedback = page.locator('[data-testid="answer-feedback"][role="status"][aria-live="polite"]')
+    const feedback = page.locator(
+      '[data-testid="answer-feedback"][role="status"][aria-live="polite"]'
+    )
     await expect(feedback).toBeVisible()
   })
 

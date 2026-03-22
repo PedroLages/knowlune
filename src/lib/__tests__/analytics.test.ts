@@ -48,8 +48,8 @@ describe('analyzeTopicPerformance', () => {
     const answers = [
       correct('q1'), // Arrays ✓
       correct('q2'), // Arrays ✓
-      wrong('q3'),   // Functions ✗
-      wrong('q4'),   // Functions ✗
+      wrong('q3'), // Functions ✗
+      wrong('q4'), // Functions ✗
       correct('q5'), // Objects ✓
     ]
 
@@ -67,7 +67,11 @@ describe('analyzeTopicPerformance', () => {
 
     // Growth: Functions 0%
     expect(result.growthAreas).toHaveLength(1)
-    expect(result.growthAreas[0]).toEqual({ name: 'Functions', percentage: 0, questionNumbers: [3, 4] })
+    expect(result.growthAreas[0]).toEqual({
+      name: 'Functions',
+      percentage: 0,
+      questionNumbers: [3, 4],
+    })
   })
 
   it('returns all strengths when all answers are correct', () => {
@@ -139,8 +143,11 @@ describe('analyzeTopicPerformance', () => {
 
   it('limits growth areas to 3', () => {
     const questions = [
-      q('q1', 1, 'A'), q('q2', 2, 'B'), q('q3', 3, 'C'),
-      q('q4', 4, 'D'), q('q5', 5, 'E'),
+      q('q1', 1, 'A'),
+      q('q2', 2, 'B'),
+      q('q3', 3, 'C'),
+      q('q4', 4, 'D'),
+      q('q5', 5, 'E'),
     ]
     const answers = [wrong('q1'), wrong('q2'), wrong('q3'), wrong('q4'), wrong('q5')]
 
@@ -151,14 +158,26 @@ describe('analyzeTopicPerformance', () => {
 
   it('sorts strengths from highest to lowest percentage', () => {
     const questions = [
-      q('q1', 1, 'A'), q('q2', 2, 'A'), q('q3', 3, 'A'), // A: 2/3 = 67% — not strength
-      q('q4', 4, 'B'), q('q5', 5, 'B'),                    // B: 2/2 = 100%
-      q('q6', 6, 'C'), q('q7', 7, 'C'), q('q8', 8, 'C'), q('q9', 9, 'C'), // C: 3/4 = 75%
+      q('q1', 1, 'A'),
+      q('q2', 2, 'A'),
+      q('q3', 3, 'A'), // A: 2/3 = 67% — not strength
+      q('q4', 4, 'B'),
+      q('q5', 5, 'B'), // B: 2/2 = 100%
+      q('q6', 6, 'C'),
+      q('q7', 7, 'C'),
+      q('q8', 8, 'C'),
+      q('q9', 9, 'C'), // C: 3/4 = 75%
     ]
     const answers = [
-      correct('q1'), correct('q2'), wrong('q3'),
-      correct('q4'), correct('q5'),
-      correct('q6'), correct('q7'), correct('q8'), wrong('q9'),
+      correct('q1'),
+      correct('q2'),
+      wrong('q3'),
+      correct('q4'),
+      correct('q5'),
+      correct('q6'),
+      correct('q7'),
+      correct('q8'),
+      wrong('q9'),
     ]
 
     const result = analyzeTopicPerformance(questions, answers)
@@ -170,8 +189,10 @@ describe('analyzeTopicPerformance', () => {
 
   it('sorts growth areas from lowest to highest percentage', () => {
     const questions = [
-      q('q1', 1, 'A'), q('q2', 2, 'A'), // A: 1/2 = 50%
-      q('q3', 3, 'B'), q('q4', 4, 'B'), // B: 0/2 = 0%
+      q('q1', 1, 'A'),
+      q('q2', 2, 'A'), // A: 1/2 = 50%
+      q('q3', 3, 'B'),
+      q('q4', 4, 'B'), // B: 0/2 = 0%
     ]
     const answers = [correct('q1'), wrong('q2'), wrong('q3'), wrong('q4')]
 
@@ -183,9 +204,7 @@ describe('analyzeTopicPerformance', () => {
   })
 
   it('only includes incorrect question numbers in questionNumbers', () => {
-    const questions = [
-      q('q1', 1, 'Math'), q('q2', 2, 'Math'), q('q3', 3, 'Math'),
-    ]
+    const questions = [q('q1', 1, 'Math'), q('q2', 2, 'Math'), q('q3', 3, 'Math')]
     const answers = [correct('q1'), wrong('q2'), wrong('q3')]
 
     const result = analyzeTopicPerformance(questions, answers)
