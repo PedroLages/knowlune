@@ -1,7 +1,7 @@
 ---
 story_id: E17-S02
 story_name: "Track Average Retake Frequency"
-status: in-progress
+status: review
 started: 2026-03-22
 completed:
 reviewed: false
@@ -51,31 +51,31 @@ so that I can understand my learning persistence.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add `calculateRetakeFrequency()` to `src/lib/analytics.ts` (AC: 1, 2)
-  - [ ] 1.1 Import `db` from `@/db`
-  - [ ] 1.2 Implement async function querying `db.quizAttempts.toArray()`
-  - [ ] 1.3 Calculate `averageRetakes = totalAttempts / uniqueQuizzes` (0 if no quizzes)
-  - [ ] 1.4 Export `RetakeFrequencyResult` type
-- [ ] Task 2: Add `interpretRetakeFrequency()` to `src/lib/analytics.ts` (AC: 3, 4, 5, 6)
-  - [ ] 2.1 Pure function mapping float → string for the 4 bands (≤1.0, ≤2.0, ≤3.0, >3.0)
-- [ ] Task 3: Wire into `Reports.tsx` (AC: 1, 7)
-  - [ ] 3.1 Add `retakeData` state with `{ averageRetakes, totalAttempts, uniqueQuizzes }`
-  - [ ] 3.2 Add `useEffect` with ignore flag calling `calculateRetakeFrequency()`
-  - [ ] 3.3 Add "Average Retake Frequency" Card (Row 5 in study tab — after or alongside Quiz Completion Rate if E17-S01 is merged, otherwise its own row)
-  - [ ] 3.4 Display `averageRetakes.toFixed(1)` + interpretation text
-  - [ ] 3.5 Add `data-testid="quiz-retake-card"` for E2E selectors
-  - [ ] 3.6 Handle empty state: "No quizzes attempted yet"
-  - [ ] 3.7 Update `hasActivity` guard to include `retakeData.totalAttempts > 0`
-- [ ] Task 4: Unit tests in `src/lib/__tests__/analytics.test.ts` (AC: 1–6)
-  - [ ] 4.1 `calculateRetakeFrequency` — various distributions
-  - [ ] 4.2 `calculateRetakeFrequency` — single quiz multiple attempts
-  - [ ] 4.3 `calculateRetakeFrequency` — zero attempts returns 0
-  - [ ] 4.4 `interpretRetakeFrequency` — all 4 boundary values (1.0, 1.5, 2.5, 4.0)
-- [ ] Task 5: E2E tests in `tests/e2e/regression/story-e17-s02.spec.ts` (AC: 1–7)
-  - [ ] 5.1 Same quiz 3 times → retake frequency = 3.0
-  - [ ] 5.2 Two different quizzes once each → retake frequency = 1.0
-  - [ ] 5.3 Zero attempts → empty state shown, no retake card metric visible
-  - [ ] 5.4 Interpretation text renders correctly for 2.5 scenario
+- [x] Task 1: Add `calculateRetakeFrequency()` to `src/lib/analytics.ts` (AC: 1, 2)
+  - [x] 1.1 Import `db` from `@/db`
+  - [x] 1.2 Implement async function querying `db.quizAttempts.toArray()`
+  - [x] 1.3 Calculate `averageRetakes = totalAttempts / uniqueQuizzes` (0 if no quizzes)
+  - [x] 1.4 Export `RetakeFrequencyResult` type
+- [x] Task 2: Add `interpretRetakeFrequency()` to `src/lib/analytics.ts` (AC: 3, 4, 5, 6)
+  - [x] 2.1 Pure function mapping float → string for the 4 bands (≤1.0, ≤2.0, ≤3.0, >3.0)
+- [x] Task 3: Wire into `Reports.tsx` (AC: 1, 7)
+  - [x] 3.1 Add `retakeData` state with `{ averageRetakes, totalAttempts, uniqueQuizzes }`
+  - [x] 3.2 Add `useEffect` with ignore flag calling `calculateRetakeFrequency()`
+  - [x] 3.3 Add "Average Retake Frequency" Card (Row 5 in study tab)
+  - [x] 3.4 Display `averageRetakes.toFixed(1)` + interpretation text
+  - [x] 3.5 Add `data-testid="quiz-retake-card"` for E2E selectors
+  - [x] 3.6 Handle empty state: "No quizzes attempted yet"
+  - [x] 3.7 Update `hasActivity` guard to include `retakeData.totalAttempts > 0`
+- [x] Task 4: Unit tests in `src/lib/__tests__/analytics.test.ts` (AC: 1–6)
+  - [x] 4.1 `calculateRetakeFrequency` — various distributions
+  - [x] 4.2 `calculateRetakeFrequency` — single quiz multiple attempts
+  - [x] 4.3 `calculateRetakeFrequency` — zero attempts returns 0
+  - [x] 4.4 `interpretRetakeFrequency` — all 4 boundary values (1.0, 1.5, 2.5, 4.0)
+- [x] Task 5: E2E tests in `tests/e2e/regression/story-e17-s02.spec.ts` (AC: 1–7)
+  - [x] 5.1 Same quiz 4 times → retake frequency = 4.0 (Deep practice, > 3.0)
+  - [x] 5.2 Two different quizzes once each → retake frequency = 1.0
+  - [x] 5.3 Zero attempts → empty state shown, no retake card metric visible
+  - [x] 5.4 Interpretation text renders correctly for 2.5 scenario
 
 ## Design Guidance
 
@@ -163,6 +163,27 @@ Before requesting `/review-story`, verify:
 
 [Populated by /review-story — Web Interface Guidelines compliance findings]
 
+## Dev Agent Record
+
+### File List
+
+- `src/lib/analytics.ts` — Added `db` import, `RetakeFrequencyResult` type, `calculateRetakeFrequency()`, `interpretRetakeFrequency()`
+- `src/app/pages/Reports.tsx` — Added `RotateCcw` icon, analytics imports, `retakeData` state, useEffect, updated `hasActivity`, added Row 5 card
+- `src/lib/__tests__/analytics.test.ts` — Added `vi`, `beforeEach` imports, `vi.mock('@/db')`, 8 new tests for both functions
+- `tests/e2e/regression/story-e17-s02.spec.ts` — New E2E spec with 4 tests covering all ACs
+
+### Completion Notes
+
+- All 5 tasks complete. 2159 unit tests pass (8 new). 4 E2E tests pass.
+- **Key fix:** Plan test expected "Deep practice" for 3.0 average, but `3.0 <= 3.0` maps to "Active practice". Changed to 4 attempts (avg 4.0) to correctly test the `> 3.0` band.
+- Used `vi.mock('@/db')` at file level (hoisted by Vitest) with `beforeEach(() => vi.clearAllMocks())` for isolation.
+- Used `seedQuizAttempts` + `clearIndexedDBStore` helpers from `tests/support/helpers/indexeddb-seed.ts` (correct `../../` import path, not `../` used in broken E16 specs).
+
+### Change Log
+
+- 2026-03-22: Implemented E17-S02 — Average Retake Frequency metric on Reports page
+
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Import path bug in E16 E2E specs:** `story-e16-s0*.spec.ts` all use `'../support/fixtures'` which resolves to the non-existent `tests/e2e/support/fixtures`. The correct path is `'../../support/fixtures'`. Used the correct path in this story's spec.
+- **Interpretation band boundary:** `3.0` maps to "Active practice" (≤ 3.0), not "Deep practice" (> 3.0). Plan test data was incorrect. Need `> 3.0` (e.g., 4 attempts) to trigger "Deep practice".
