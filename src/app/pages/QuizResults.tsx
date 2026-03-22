@@ -9,7 +9,7 @@ import {
   selectAttempts,
   selectIsLoading,
 } from '@/stores/useQuizStore'
-import { calculateNormalizedGain } from '@/lib/analytics'
+import { calculateImprovement } from '@/lib/analytics'
 import { ScoreSummary } from '@/app/components/quiz/ScoreSummary'
 import { ScoreTrajectoryChart } from '@/app/components/quiz/ScoreTrajectoryChart'
 import { QuestionBreakdown } from '@/app/components/quiz/QuestionBreakdown'
@@ -52,15 +52,10 @@ export function QuizResults() {
     [lastAttempt]
   )
 
-  const previousBestPercentage = useMemo(() => {
-    if (attempts.length <= 1) return undefined
-    const validPcts = attempts
-      .slice(1) // Skip the most recent attempt (index 0)
-      .map(a => a.percentage)
-      .filter(p => Number.isFinite(p))
-    if (validPcts.length === 0) return undefined
-    return Math.min(100, Math.max(0, Math.max(...validPcts)))
-  }, [attempts])
+  const improvementData = useMemo(
+    () => calculateImprovement(attempts),
+    [attempts]
+  )
 
   const previousAttemptTimeSpent = useMemo(() => {
     if (attempts.length <= 1) return undefined
@@ -154,7 +149,7 @@ export function QuizResults() {
           passed={lastAttempt.passed}
           passingScore={currentQuiz.passingScore}
           timeSpent={lastAttempt.timeSpent}
-          previousBestPercentage={previousBestPercentage}
+          improvementData={improvementData}
           showTimeSpent={
             currentQuiz.timeLimit != null && lastAttempt.timerAccommodation !== 'untimed'
           }

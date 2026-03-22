@@ -10,7 +10,7 @@ interface ScoreSummaryProps {
   passed: boolean
   passingScore: number
   timeSpent: number
-  previousBestPercentage?: number
+  improvementData?: ImprovementData
   showTimeSpent?: boolean
   previousAttemptTimeSpent?: number
 }
@@ -177,7 +177,7 @@ export function ScoreSummary({
   passed,
   passingScore,
   timeSpent,
-  previousBestPercentage,
+  improvementData,
   showTimeSpent = true,
   previousAttemptTimeSpent,
 }: ScoreSummaryProps) {
