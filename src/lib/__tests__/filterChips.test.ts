@@ -81,4 +81,25 @@ describe('buildUnifiedFilterChips', () => {
     const chips = buildUnifiedFilterChips([], {}, importedCourses)
     expect(chips.length).toBeGreaterThan(0)
   })
+
+  it('ranks pre-seeded category chip above lower-frequency AI tag chip', () => {
+    // behavioral-analysis has 2 pre-seeded courses, single-ai-tag has 1 imported course
+    const chips = buildUnifiedFilterChips(preseededCourses, categoryLabels, [
+      { category: '', tags: ['single-ai-tag'] },
+    ])
+    const baIdx = chips.findIndex(c => c.value === 'behavioral-analysis')
+    const aiIdx = chips.findIndex(c => c.value === 'single-ai-tag')
+    expect(baIdx).toBeLessThan(aiIdx)
+  })
+
+  it('breaks ties alphabetically', () => {
+    // Two chips with identical count=1 — alphabetical order by label
+    const chips = buildUnifiedFilterChips([], {}, [
+      { category: '', tags: ['zebra'] },
+      { category: '', tags: ['apple'] },
+    ])
+    const zebraIdx = chips.findIndex(c => c.value === 'zebra')
+    const appleIdx = chips.findIndex(c => c.value === 'apple')
+    expect(appleIdx).toBeLessThan(zebraIdx)
+  })
 })

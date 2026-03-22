@@ -1,8 +1,34 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
-import type { ImportedCourse } from '@/data/types'
+import type { Course, ImportedCourse } from '@/data/types'
+
+// Controlled pre-seeded course store
+const courseStoreState = {
+  courses: [] as Course[],
+}
+
+vi.mock('@/stores/useCourseStore', () => ({
+  useCourseStore: (selector: (state: typeof courseStoreState) => unknown) =>
+    selector(courseStoreState),
+}))
+
+// Mock CourseCard to render a simple article with title h3
+vi.mock('@/app/components/figma/CourseCard', () => ({
+  CourseCard: ({ course }: { course: Course }) => (
+    <article>
+      <h3>{course.title}</h3>
+    </article>
+  ),
+  categoryLabels: {
+    'behavioral-analysis': 'Behavioral Analysis',
+    'influence-authority': 'Influence & Authority',
+    'confidence-mastery': 'Confidence & Mastery',
+    'operative-training': 'Operative Training',
+    'research-library': 'Research Library',
+  },
+}))
 
 vi.mock('motion/react', async importOriginal => {
   const actual = await importOriginal<typeof import('motion/react')>()
@@ -125,6 +151,7 @@ describe('Courses page', () => {
   beforeEach(() => {
     storeState.importedCourses = []
     storeState.loadImportedCourses = vi.fn()
+    courseStoreState.courses = []
   })
 
   describe('empty state', () => {
@@ -322,14 +349,16 @@ describe('Courses page', () => {
       ).toBeInTheDocument()
     })
 
-    it('shows "All Courses" chip (AC1)', () => {
+    it('shows "All Courses" chip selected by default (AC1)', () => {
       renderCourses()
-      expect(screen.getByRole('radio', { name: 'All Courses' })).toBeInTheDocument()
+      const chip = screen.getByRole('radio', { name: 'All Courses' })
+      expect(chip).toBeInTheDocument()
+      expect(chip).toHaveAttribute('data-state', 'on')
     })
 
     it('shows AI tag chips from imported courses (AC1)', () => {
       renderCourses()
-      expect(screen.getByRole('radio', { name: /python/i })).toBeInTheDocument()
+      expect(screen.getByRole('radio', { name: 'Python' })).toBeInTheDocument()
     })
 
     it('shows "Clear filters" button only when filter is active (AC4)', async () => {
@@ -338,8 +367,7 @@ describe('Courses page', () => {
 
       expect(screen.queryByText('Clear filters')).not.toBeInTheDocument()
 
-      const pythonChip = screen.getByRole('radio', { name: /python/i })
-      await user.click(pythonChip)
+      await user.click(screen.getByRole('radio', { name: 'Python' }))
 
       expect(screen.getByText('Clear filters')).toBeInTheDocument()
     })
@@ -348,8 +376,7 @@ describe('Courses page', () => {
       const user = userEvent.setup()
       renderCourses()
 
-      const pythonChip = screen.getByRole('radio', { name: /python/i })
-      await user.click(pythonChip)
+      await user.click(screen.getByRole('radio', { name: 'Python' }))
 
       expect(screen.getByRole('heading', { name: 'Python Basics' })).toBeInTheDocument()
       // "Data Science" appears as a chip label; check course card heading is hidden
@@ -359,19 +386,108 @@ describe('Courses page', () => {
 
       expect(screen.getByRole('heading', { name: 'Python Basics' })).toBeInTheDocument()
       expect(screen.getByRole('heading', { name: 'Data Science' })).toBeInTheDocument()
+      // "All Courses" chip returns to active after clearing
+      expect(screen.getByRole('radio', { name: 'All Courses' })).toHaveAttribute('data-state', 'on')
     })
 
     it('filters imported courses by AI tag (AC3)', async () => {
       const user = userEvent.setup()
       renderCourses()
 
-      const pythonChip = screen.getByRole('radio', { name: /python/i })
-      await user.click(pythonChip)
+      await user.click(screen.getByRole('radio', { name: 'Python' }))
 
       expect(screen.getByRole('heading', { name: 'Python Basics' })).toBeInTheDocument()
       expect(screen.getByRole('heading', { name: 'Advanced Python' })).toBeInTheDocument()
       // Course card heading hidden; chip label still in ToggleGroup
       expect(screen.queryByRole('heading', { name: 'Data Science' })).not.toBeInTheDocument()
+    })
+
+    it('filters pre-seeded courses by category when chip is selected (AC3)', async () => {
+      const user = userEvent.setup()
+      // Add a pre-seeded course with 'behavioral-analysis' category
+      courseStoreState.courses = [
+        {
+          id: 'seed-ba-1',
+          title: 'Behavioral Analysis Fundamentals',
+          shortTitle: 'BA Fundamentals',
+          description: 'Core behavioral analysis skills',
+          category: 'behavioral-analysis',
+          difficulty: 'intermediate',
+          totalLessons: 5,
+          totalVideos: 5,
+          totalPDFs: 0,
+          estimatedHours: 2,
+          tags: [],
+          modules: [],
+          isSequential: false,
+          basePath: '/test',
+          instructorId: 'instructor-1',
+        },
+        {
+          id: 'seed-op-1',
+          title: 'Operative Training Course',
+          shortTitle: 'Operative Training',
+          description: 'Operative training basics',
+          category: 'operative-training',
+          difficulty: 'advanced',
+          totalLessons: 8,
+          totalVideos: 8,
+          totalPDFs: 0,
+          estimatedHours: 4,
+          tags: [],
+          modules: [],
+          isSequential: false,
+          basePath: '/test',
+          instructorId: 'instructor-1',
+        },
+      ] as Course[]
+
+      renderCourses()
+
+      // Both pre-seeded courses visible initially
+      expect(screen.getByRole('heading', { name: 'Behavioral Analysis Fundamentals' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Operative Training Course' })).toBeInTheDocument()
+
+      // Click the 'Behavioral Analysis' chip (from pre-seeded category)
+      await user.click(screen.getByRole('radio', { name: 'Behavioral Analysis' }))
+
+      // Only behavioral-analysis course visible
+      expect(screen.getByRole('heading', { name: 'Behavioral Analysis Fundamentals' })).toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Operative Training Course' })).not.toBeInTheDocument()
+    })
+
+    it('updates filter chips when importedCourses store changes (AC5)', async () => {
+      const { rerender } = renderCourses()
+
+      // No neuroscience chip initially
+      expect(screen.queryByRole('radio', { name: 'Neuroscience' })).not.toBeInTheDocument()
+
+      // Simulate store update (as Zustand would trigger a re-render in production)
+      act(() => {
+        storeState.importedCourses = [
+          {
+            id: 'neuro-1',
+            name: 'Neuroscience Basics',
+            importedAt: '2026-03-01T00:00:00Z',
+            category: '',
+            tags: ['neuroscience'],
+            status: 'active',
+            videoCount: 5,
+            pdfCount: 0,
+            directoryHandle: {} as FileSystemDirectoryHandle,
+          },
+        ]
+      })
+
+      rerender(
+        <MemoryRouter>
+          <Courses />
+        </MemoryRouter>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByRole('radio', { name: 'Neuroscience' })).toBeInTheDocument()
+      })
     })
   })
 })
