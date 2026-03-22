@@ -37,7 +37,7 @@
 # - Epic 7 gap coverage stories (7-8..7-11) deferred indefinitely — risk accepted for error-path edge cases
 
 generated: 2026-03-15
-last_updated: 2026-03-22  # E16-S04 started
+last_updated: 2026-03-22  # E16-S04 done
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -250,7 +250,7 @@ development_status:
   16-1-review-all-questions-and-answers-after-completion: backlog
   16-2-display-score-history-across-all-attempts: backlog
   16-3-calculate-and-display-score-improvement: backlog
-  16-4-calculate-normalized-gain-hakes-formula: review
+  16-4-calculate-normalized-gain-hakes-formula: done
   16-5-display-score-improvement-trajectory-chart: backlog
   epic-16-retrospective: optional
 

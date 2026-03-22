@@ -1,7 +1,7 @@
 ---
 story_id: E16-S04
 story_name: "Calculate Normalized Gain (Hake's Formula)"
-status: review
+status: done
 started: 2026-03-22
 completed: 2026-03-22
 reviewed: true
