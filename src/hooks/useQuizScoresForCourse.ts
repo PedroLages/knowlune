@@ -21,7 +21,11 @@ export function useQuizScoresForCourse(courseId: string, modules: Module[]): Qui
 
   // Stable string key: only recomputes when lesson IDs actually change
   const lessonIdKey = useMemo(
-    () => modules.flatMap(m => m.lessons).map(l => l.id).join(','),
+    () =>
+      modules
+        .flatMap(m => m.lessons)
+        .map(l => l.id)
+        .join(','),
     [modules]
   )
 

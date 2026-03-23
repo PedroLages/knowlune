@@ -178,7 +178,5 @@ test('clicking quiz badge navigates to quiz start screen', async ({ page }) => {
   const badge = page.getByTestId(`quiz-badge-${LESSON_WITH_QUIZ_ID}`)
   await badge.click()
 
-  await expect(page).toHaveURL(
-    `/courses/${COURSE_ID}/lessons/${LESSON_WITH_QUIZ_ID}/quiz`
-  )
+  await expect(page).toHaveURL(`/courses/${COURSE_ID}/lessons/${LESSON_WITH_QUIZ_ID}/quiz`)
 })
