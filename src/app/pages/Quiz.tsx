@@ -445,7 +445,7 @@ export function Quiz() {
           <>
             {/* tabIndex={-1}: programmatically focusable so screen readers announce
                 the question text on navigation, but NOT reachable via Tab (AC #2) */}
-            <div ref={questionTextRef} tabIndex={-1} className="outline-none">
+            <div ref={questionTextRef} tabIndex={-1} className="outline-none" data-testid="question-focus-target">
               <QuestionDisplay
                 question={currentQuestion}
                 value={currentAnswer}
