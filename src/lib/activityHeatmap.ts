@@ -102,10 +102,7 @@ export function buildHeatmapGrid(
   }))
 
   // Pad start so week columns are Sunday-aligned
-  const padded: (HeatmapDay | null)[] = [
-    ...Array<null>(firstDayOfWeek).fill(null),
-    ...days,
-  ]
+  const padded: (HeatmapDay | null)[] = [...Array<null>(firstDayOfWeek).fill(null), ...days]
 
   // Pad end to make the last week complete
   while (padded.length % 7 !== 0) {

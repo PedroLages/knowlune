@@ -113,18 +113,14 @@ describe('aggregateSessionsByDay', () => {
 
   it('ignores sessions outside the date window', () => {
     // Session from 2 years ago — outside 365-day window
-    const sessions = [
-      makeSession({ startTime: '2024-01-01T12:00:00.000Z', duration: 3600 }),
-    ]
+    const sessions = [makeSession({ startTime: '2024-01-01T12:00:00.000Z', duration: 3600 })]
     const result = aggregateSessionsByDay(sessions, TODAY)
     expect(result.has('2024-01-01')).toBe(false)
   })
 
   it('handles sessions on the boundary date (oldest day in window)', () => {
     // With 7 days ending on 2026-03-23, the oldest day is 2026-03-17
-    const sessions = [
-      makeSession({ startTime: '2026-03-17T12:00:00.000Z', duration: 1200 }),
-    ]
+    const sessions = [makeSession({ startTime: '2026-03-17T12:00:00.000Z', duration: 1200 })]
     const result = aggregateSessionsByDay(sessions, TODAY, 7)
     expect(result.get('2026-03-17')).toBe(1200)
   })

@@ -191,7 +191,6 @@ export function ActivityHeatmap() {
                   </div>
                 )
               })}
-
               {/* Day rows (Sun=0 through Sat=6) */}
               {[0, 1, 2, 3, 4, 5, 6].map(dayIdx => (
                 <Fragment key={`row-${dayIdx}`}>
@@ -264,10 +263,7 @@ export function ActivityHeatmap() {
                 <Tooltip key={level}>
                   <TooltipTrigger asChild>
                     <div
-                      className={cn(
-                        'size-3 rounded-[3px] cursor-default',
-                        LEVEL_CLASSES[level]
-                      )}
+                      className={cn('size-3 rounded-[3px] cursor-default', LEVEL_CLASSES[level])}
                       aria-label={LEGEND_LABELS[level]}
                     />
                   </TooltipTrigger>
