@@ -69,7 +69,7 @@ export function useQuizScoresForCourse(courseId: string, modules: Module[]): Qui
     return () => {
       ignore = true
     }
-  }, [courseId, lessonIdKey])
+  }, [lessonIdKey]) // courseId intentionally omitted: queries are lessonId-scoped; lesson IDs are globally unique so courseId changes always produce a new lessonIdKey
 
   return scoreMap
 }
