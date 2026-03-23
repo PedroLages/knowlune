@@ -13,6 +13,7 @@ import {
 import { calculateQuizScore } from '@/lib/scoring'
 import { fisherYatesShuffle } from '@/lib/shuffle'
 import { toastError } from '@/lib/toastHelpers'
+import { getQuizPreferences } from '@/lib/quizPreferences'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 
 interface QuizState {
@@ -80,7 +81,9 @@ export const useQuizStore = create<QuizState>()(
             return
           }
 
-          const questionOrder = quiz.shuffleQuestions
+          // Shuffle if user preference OR quiz definition requests it
+          const shouldShuffle = getQuizPreferences().shuffleQuestions || quiz.shuffleQuestions
+          const questionOrder = shouldShuffle
             ? fisherYatesShuffle(quiz.questions.map(q => q.id))
             : quiz.questions.map(q => q.id)
 

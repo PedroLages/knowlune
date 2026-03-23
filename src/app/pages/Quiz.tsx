@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { db } from '@/db'
 import type { Quiz as QuizType, QuizProgress, TimerAccommodation } from '@/types/quiz'
 import { QuizProgressSchema, TimerAccommodationEnum } from '@/types/quiz'
+import { getQuizPreferences } from '@/lib/quizPreferences'
 import {
   useQuizStore,
   selectCurrentQuiz,
@@ -62,13 +63,17 @@ function loadSavedProgress(quizId: string): QuizProgress | null {
   }
 }
 
-/** Load persisted timer accommodation preference, validated via Zod */
+/** Load persisted timer accommodation preference, validated via Zod.
+ *  Falls back to global quiz preference, then 'standard' on error. */
 export function loadSavedAccommodation(lessonId: string): TimerAccommodation {
   try {
     const raw = localStorage.getItem(`quiz-accommodation-${lessonId}`)
-    if (!raw) return 'standard'
+    if (!raw) {
+      // No per-lesson preference saved — use global quiz preference as default
+      return getQuizPreferences().timerAccommodation
+    }
     const result = TimerAccommodationEnum.safeParse(raw)
-    return result.success ? result.data : 'standard'
+    return result.success ? result.data : getQuizPreferences().timerAccommodation
   } catch (e) {
     console.warn('[Quiz] Failed to load accommodation:', e)
     return 'standard'
@@ -101,6 +106,8 @@ export function Quiz() {
   const [accommodation, setAccommodation] = useState<TimerAccommodation>(() =>
     loadSavedAccommodation(lessonId)
   )
+  // Freeze feedback preference at mount — prevents mid-quiz UX surprise if settings change in another tab
+  const [showImmediateFeedback] = useState(() => getQuizPreferences().showImmediateFeedback)
 
   // Store selectors — drives the active quiz view after startQuiz()
   const currentQuiz = useQuizStore(selectCurrentQuiz)
@@ -450,7 +457,7 @@ export function Quiz() {
               mode="active"
             />
             <QuestionHint hint={currentQuestion.hint} />
-            {!isUnanswered(currentAnswer) && (
+            {showImmediateFeedback && !isUnanswered(currentAnswer) && (
               <AnswerFeedback question={currentQuestion} userAnswer={currentAnswer} />
             )}
           </>
