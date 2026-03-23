@@ -77,10 +77,7 @@ export function makeProgress(quizId: string, overrides: Partial<QuizProgress> = 
 // Answer helpers — quick factories for unit/component tests
 // ---------------------------------------------------------------------------
 
-export function makeCorrectAnswer(
-  questionId: string,
-  overrides: Partial<Answer> = {},
-): Answer {
+export function makeCorrectAnswer(questionId: string, overrides: Partial<Answer> = {}): Answer {
   return {
     questionId,
     userAnswer: 'A',
@@ -91,10 +88,7 @@ export function makeCorrectAnswer(
   }
 }
 
-export function makeWrongAnswer(
-  questionId: string,
-  overrides: Partial<Answer> = {},
-): Answer {
+export function makeWrongAnswer(questionId: string, overrides: Partial<Answer> = {}): Answer {
   return {
     questionId,
     userAnswer: 'B',
@@ -105,10 +99,7 @@ export function makeWrongAnswer(
   }
 }
 
-export function makeSkippedAnswer(
-  questionId: string,
-  overrides: Partial<Answer> = {},
-): Answer {
+export function makeSkippedAnswer(questionId: string, overrides: Partial<Answer> = {}): Answer {
   return {
     questionId,
     userAnswer: '',

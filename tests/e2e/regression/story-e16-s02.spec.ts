@@ -76,7 +76,7 @@ const attemptNew = {
 async function seedIdbStore(
   page: import('@playwright/test').Page,
   storeName: string,
-  data: unknown[],
+  data: unknown[]
 ) {
   await page.evaluate(
     async ({ storeName: sName, data: d, maxRetries, retryDelay }) => {
@@ -111,7 +111,7 @@ async function seedIdbStore(
       }
       throw new Error(`Store "${sName}" not found after retries`)
     },
-    { storeName, data, maxRetries: 10, retryDelay: 200 },
+    { storeName, data, maxRetries: 10, retryDelay: 200 }
   )
 }
 
@@ -140,7 +140,7 @@ async function setupResultsPage(page: import('@playwright/test').Page) {
         state: { currentQuiz: quiz, currentProgress: null },
         version: 0,
       }),
-    ] as [string, string],
+    ] as [string, string]
   )
 
   // Navigate to results page
@@ -157,9 +157,7 @@ test.describe('E16-S02: Display Score History Across All Attempts', () => {
   test('AC: "View Attempt History" trigger is visible on results screen', async ({ page }) => {
     await setupResultsPage(page)
 
-    await expect(
-      page.getByRole('button', { name: /view attempt history/i }),
-    ).toBeVisible()
+    await expect(page.getByRole('button', { name: /view attempt history/i })).toBeVisible()
   })
 
   test('AC: Expanding shows all 3 attempts', async ({ page }) => {

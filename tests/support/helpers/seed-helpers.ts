@@ -146,18 +146,12 @@ export async function seedImportedVideos(
 }
 
 /** Seed imported PDFs into the importedPdfs store. */
-export async function seedImportedPdfs(
-  page: Page,
-  pdfs: Record<string, unknown>[]
-): Promise<void> {
+export async function seedImportedPdfs(page: Page, pdfs: Record<string, unknown>[]): Promise<void> {
   await seedIndexedDBStore(page, DB_NAME, 'importedPdfs', pdfs)
 }
 
 /** Seed notes into the notes store. */
-export async function seedNotes(
-  page: Page,
-  notes: Record<string, unknown>[]
-): Promise<void> {
+export async function seedNotes(page: Page, notes: Record<string, unknown>[]): Promise<void> {
   await seedIndexedDBStore(page, DB_NAME, 'notes', notes)
 }
 
@@ -170,10 +164,7 @@ export async function seedStudySessions(
 }
 
 /** Seed quiz definitions into the quizzes store. */
-export async function seedQuizzes(
-  page: Page,
-  quizzes: Record<string, unknown>[]
-): Promise<void> {
+export async function seedQuizzes(page: Page, quizzes: Record<string, unknown>[]): Promise<void> {
   await seedIndexedDBStore(page, DB_NAME, 'quizzes', quizzes)
 }
 

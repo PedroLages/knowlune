@@ -22,9 +22,7 @@ const ImportedLessonPlayer = React.lazy(() =>
 )
 const Notes = React.lazy(() => import('./pages/Notes').then(m => ({ default: m.Notes })))
 const ChatQA = React.lazy(() => import('./pages/ChatQA').then(m => ({ default: m.ChatQA })))
-const Authors = React.lazy(() =>
-  import('./pages/Authors').then(m => ({ default: m.Authors }))
-)
+const Authors = React.lazy(() => import('./pages/Authors').then(m => ({ default: m.Authors })))
 const AuthorProfile = React.lazy(() =>
   import('./pages/AuthorProfile').then(m => ({ default: m.AuthorProfile }))
 )

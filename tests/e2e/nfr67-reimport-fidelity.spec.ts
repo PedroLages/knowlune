@@ -1,9 +1,5 @@
 import { test, expect } from '@playwright/test'
-import {
-  seedImportedCourses,
-  seedStudySessions,
-  seedNotes,
-} from '../support/helpers/seed-helpers'
+import { seedImportedCourses, seedStudySessions, seedNotes } from '../support/helpers/seed-helpers'
 import { FIXED_DATE, addMinutes } from '../utils/test-time'
 
 // addMinutes(minutes) adds minutes to FIXED_DATE and returns ISO string

@@ -103,9 +103,7 @@ export function CourseDetail() {
                   </Avatar>
                   <div className="text-left">
                     <p className="text-sm font-medium leading-tight">{author.name}</p>
-                    <p className="text-xs text-muted-foreground leading-tight">
-                      {author.title}
-                    </p>
+                    <p className="text-xs text-muted-foreground leading-tight">{author.title}</p>
                   </div>
                 </Link>
               )
