@@ -84,4 +84,14 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **`quizAttempts` schema discovery** — The `db.quizAttempts` table only stores *submitted* attempts; in-progress attempts live in localStorage via Zustand persist middleware. This made `completionRate` trivially 100% for now, requiring a TODO comment to revisit when Story 17.1 adds abandoned-attempt tracking. Always audit how an entity lifecycle is split across storage layers (IndexedDB vs Zustand persist) before computing derived metrics.
+
+- **Button-wrapping an interactive Link** — Wrapping a `<Link>` inside a `<button>` creates a nested interactive element that fails accessibility checks. The solution was to make the entire card a `<button>` for the primary navigation action, then use `e.stopPropagation()` on the inner "View Detailed Analytics" `<Link>` to prevent double-navigation. This is the canonical pattern for "card = primary CTA + footer link = secondary CTA" layouts.
+
+- **Ignore-flag pattern for async useEffect** — Used `let ignore = false` with cleanup `ignore = true` to avoid setting state after unmount in the `calculateQuizMetrics()` `useEffect`. This is the React team's recommended approach (avoiding AbortController for Dexie queries that don't support cancellation). Worth using consistently on all data-fetching effects.
+
+- **`quizMetrics.ts` as a separate module** — The analytics calculation was extracted into `src/lib/quizMetrics.ts` (not added to the existing `analytics.ts`) to keep concerns separated. `analytics.ts` handles study-time/session analytics; quiz metrics are a distinct domain. This prevents the analytics file from becoming a catch-all blob.
+
+- **Test anti-pattern caught by validator** — The initial spec defined an inline `seedQuizAttempts()` function duplicating logic that already exists in `tests/support/helpers/indexeddb-seed.ts`. The validator caught this as MEDIUM severity. Fix: import from the shared helper. Lesson: always check `indexeddb-seed.ts` before writing inline IDB seeding in new specs.
+
+- **Skeleton-before-empty-state ordering** — `metrics === null` (loading) must render the skeleton, while `metrics.totalQuizzes === 0` (loaded but empty) must render the empty state inside the card. Getting this ordering wrong produces a flash from skeleton → empty state that looks broken. The `null` check must be exhaustive before accessing any property on `metrics`.
