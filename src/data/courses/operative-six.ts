@@ -17,7 +17,7 @@ export const operativeSix: Course = {
   isSequential: true,
   basePath: BASE,
   coverImage: '/images/operative-six',
-  instructorId: 'chase-hughes',
+  authorId: 'chase-hughes',
   tags: [
     'operative-training',
     'influence',

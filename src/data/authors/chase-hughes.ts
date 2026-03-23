@@ -1,6 +1,6 @@
-import type { Instructor } from '@/data/types'
+import type { Author } from '@/data/types'
 
-export const chaseHughes: Instructor = {
+export const chaseHughes: Author = {
   id: 'chase-hughes',
   name: 'Chase Hughes',
   avatar: '/images/instructors/chase-hughes',

@@ -26,7 +26,7 @@ export const studyMaterialsCourse: Course = {
   isSequential: false,
   basePath,
   coverImage: '/images/study-materials',
-  instructorId: 'chase-hughes',
+  authorId: 'chase-hughes',
   modules: [
     {
       id: 'sm-authority-foundations',
