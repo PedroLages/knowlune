@@ -123,4 +123,20 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+**Duplicate text nodes from `<legend>` with visible content:**
+The first approach placed the question text inside `<legend>` for semantic correctness. This caused `getByText()` to find two elements (one in the legend, one in the visible question text), breaking Playwright's strict-mode locators. The fix was to use an empty `<legend className="sr-only" />` (visually hidden but structurally present) and rely on `aria-labelledby` pointing to the visible question heading. This pattern — empty/sr-only legend + aria-labelledby — satisfies both WCAG fieldset labelling rules and DOM uniqueness for tests.
+
+**`<main>` vs `<section>` for page regions:**
+Quiz.tsx couldn't use a second `<main>` element because Layout.tsx already provides the outer `<main>`. Adding nested `<main>` elements is invalid HTML. The correct approach is `<section aria-label="...">` for distinct content regions within the existing `<main>`. This applies to any component that renders inside a layout wrapper.
+
+**Two progressbars for single progress concept:**
+AC5 requires `role="progressbar"` with 1-based question-count values (e.g., `aria-valuenow=2` for question 2 of 10, `aria-valuemax=10`). The existing shadcn `<Progress>` component renders a visual 0–100 percentage bar. Rather than modify the visual bar's ARIA values (which would show 20% visually but claim to be question 2), the solution was to keep the visual bar untouched and add an sr-only `<div role="progressbar">` with the correct 1-based values. This avoids diverging visual and semantic representations.
+
+**`role="toolbar"` coexists with `<nav>` landmark:**
+The QuestionGrid already used `role="toolbar"` for the question navigation buttons. Adding a `<nav aria-label="Quiz navigation">` wrapper satisfies the landmark requirement without removing `role="toolbar"` — the two are independent: landmark vs. widget role. This was validated by the E2E test checking that `nav[aria-label="Quiz navigation"]` contains the toolbar.
+
+**Pre-existing unit test failures from E17:**
+Two unit tests in `Courses.test.tsx` (localStorage collapse state) fail on both `main` and this branch — caused by E17's difficulty badges creating `getByText()` ambiguity. These are inherited debt, not regressions introduced by E18-S03. Confirmed by running the failing tests in isolation on `main`.
+
+**ARIA live region separation of concerns:**
+`role="timer"` requires `aria-live="off"` per AC5 because constant time updates would be extremely noisy for screen reader users. Warning announcements (low-time alerts) are handled by Story 18.2's tiered live region infrastructure — not the timer element itself. This separation avoids both silent timers and over-announcing designs.
