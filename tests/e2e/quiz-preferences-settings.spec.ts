@@ -109,10 +109,13 @@ async function goToQuiz(
   quiz: typeof timedQuiz,
   prefsJson?: string
 ) {
-  await page.addInitScript(({ sidebarKey, prefsKey, prefs }) => {
-    localStorage.setItem(sidebarKey, 'false')
-    if (prefs) localStorage.setItem(prefsKey, prefs)
-  }, { sidebarKey: 'knowlune-sidebar-v1', prefsKey: PREFS_KEY, prefs: prefsJson ?? null })
+  await page.addInitScript(
+    ({ sidebarKey, prefsKey, prefs }) => {
+      localStorage.setItem(sidebarKey, 'false')
+      if (prefs) localStorage.setItem(prefsKey, prefs)
+    },
+    { sidebarKey: 'knowlune-sidebar-v1', prefsKey: PREFS_KEY, prefs: prefsJson ?? null }
+  )
 
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   await seedQuizData(page, [quiz])
@@ -249,7 +252,9 @@ test.describe('E18-S09: Quiz reads preferences as defaults', () => {
   })
 
   // AC3: Quiz shows immediate feedback when preference is on
-  test('answer feedback visible when showImmediateFeedback preference is true', async ({ page }) => {
+  test('answer feedback visible when showImmediateFeedback preference is true', async ({
+    page,
+  }) => {
     const prefs = JSON.stringify({
       timerAccommodation: 'standard',
       showImmediateFeedback: true,

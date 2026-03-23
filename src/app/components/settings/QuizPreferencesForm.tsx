@@ -108,7 +108,10 @@ export function QuizPreferencesForm() {
         <div className="space-y-1">
           <div className="flex items-center justify-between min-h-[44px]">
             <div>
-              <Label htmlFor="show-immediate-feedback" className="cursor-pointer text-sm font-medium">
+              <Label
+                htmlFor="show-immediate-feedback"
+                className="cursor-pointer text-sm font-medium"
+              >
                 Show immediate feedback
               </Label>
               <p className="text-xs text-muted-foreground mt-0.5">
