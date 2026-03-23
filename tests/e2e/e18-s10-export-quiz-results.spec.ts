@@ -98,10 +98,10 @@ const TEST_ATTEMPT = {
 
 test.describe('AC4 — disabled export when no quiz attempts', () => {
   test('export button is disabled with tooltip when no attempts', async ({ page }) => {
-    // Seed a study session so hasActivity=true and the Reports analytics section shows,
-    // but no quiz attempts so the export button stays disabled.
+    // Seed a note so hasActivity=true (studyNotes > 0) and the Reports analytics
+    // section shows, but no quiz attempts so the export button stays disabled.
     await page.goto('/reports')
-    await seedStudySessions(page, [SEED_STUDY_SESSION])
+    await seedNotes(page, [SEED_NOTE])
     await page.reload()
     await page.waitForLoadState('networkidle')
 
@@ -118,8 +118,8 @@ test.describe('AC4 — disabled export when no quiz attempts', () => {
     const tooltipTrigger = exportCard.locator('span[tabindex="0"]')
     await tooltipTrigger.hover()
 
-    // Tooltip text should be visible
-    await expect(page.getByText('Complete a quiz to enable export')).toBeVisible()
+    // Tooltip text should be visible (use first() — Radix renders tooltip content twice in DOM)
+    await expect(page.getByText('Complete a quiz to enable export').first()).toBeVisible()
   })
 })
 
