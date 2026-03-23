@@ -1,6 +1,7 @@
 import React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router'
 import { useCourseStore } from '@/stores/useCourseStore'
 
 // ── Mock motion/react ──
@@ -116,6 +117,12 @@ vi.mock('@/app/components/reports/AIAnalyticsTab', () => ({
   AIAnalyticsTab: () => <div data-testid="ai-analytics-tab">AIAnalyticsTab</div>,
 }))
 
+vi.mock('@/app/components/reports/QuizAnalyticsDashboard', () => ({
+  QuizAnalyticsDashboard: () => (
+    <div data-testid="quiz-analytics-dashboard">QuizAnalyticsDashboard</div>
+  ),
+}))
+
 vi.mock('@/app/components/reports/CategoryRadar', () => ({
   CategoryRadar: () => <div data-testid="category-radar">CategoryRadar</div>,
 }))
@@ -204,17 +211,29 @@ afterEach(() => {
 
 describe('Reports page', () => {
   it('renders without crashing', () => {
-    const { container } = render(<Reports />)
+    const { container } = render(
+      <MemoryRouter>
+        <Reports />
+      </MemoryRouter>
+    )
     expect(container).toBeTruthy()
   })
 
   it('displays the page heading "Reports"', () => {
-    render(<Reports />)
+    render(
+      <MemoryRouter>
+        <Reports />
+      </MemoryRouter>
+    )
     expect(screen.getByText('Reports')).toBeInTheDocument()
   })
 
   it('renders stat labels', () => {
-    render(<Reports />)
+    render(
+      <MemoryRouter>
+        <Reports />
+      </MemoryRouter>
+    )
     expect(screen.getByText('Lessons Completed')).toBeInTheDocument()
     expect(screen.getByText('Courses In Progress')).toBeInTheDocument()
     expect(screen.getByText('Courses Completed')).toBeInTheDocument()
@@ -222,7 +241,11 @@ describe('Reports page', () => {
   })
 
   it('renders chart section headings', () => {
-    render(<Reports />)
+    render(
+      <MemoryRouter>
+        <Reports />
+      </MemoryRouter>
+    )
     expect(screen.getByText('Course Completion')).toBeInTheDocument()
     expect(screen.getByText('Progress by Category')).toBeInTheDocument()
     expect(screen.getByText('Study Activity (Last 30 Days)')).toBeInTheDocument()

@@ -451,7 +451,6 @@ export function calculateItemDifficulty(quiz: Quiz, attempts: QuizAttempt[]): It
     .sort((a, b) => b.pValue - a.pValue) // Easiest first
 }
 
-
 // ---------------------------------------------------------------------------
 // Discrimination Indices — Point-Biserial Correlation (E17-S04)
 // ---------------------------------------------------------------------------

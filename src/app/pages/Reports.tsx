@@ -190,11 +190,7 @@ export default function Reports() {
             actionHref="/courses"
           />
         ) : (
-          <Tabs
-            value={activeTab}
-            onValueChange={tab => setSearchParams({ tab })}
-            className="mb-6"
-          >
+          <Tabs value={activeTab} onValueChange={tab => setSearchParams({ tab })} className="mb-6">
             <motion.div variants={fadeUp}>
               <TabsList className="h-11">
                 <TabsTrigger value="study" className="h-9">

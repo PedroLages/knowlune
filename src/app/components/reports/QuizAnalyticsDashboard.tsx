@@ -173,10 +173,7 @@ export function QuizAnalyticsDashboard() {
                   <TableRow key={attempt.id} data-testid="quiz-recent-row">
                     <TableCell className="font-medium">{attempt.quizTitle}</TableCell>
                     <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={scoreColor(attempt.percentage)}
-                      >
+                      <Badge variant="outline" className={scoreColor(attempt.percentage)}>
                         {attempt.percentage}%
                       </Badge>
                     </TableCell>
@@ -222,7 +219,10 @@ export function QuizAnalyticsDashboard() {
                   >
                     {quiz.quizTitle}
                   </Link>
-                  <Badge variant="outline" className={`ml-2 shrink-0 ${scoreColor(quiz.averageScore)}`}>
+                  <Badge
+                    variant="outline"
+                    className={`ml-2 shrink-0 ${scoreColor(quiz.averageScore)}`}
+                  >
                     {quiz.averageScore}%
                   </Badge>
                 </div>
@@ -251,7 +251,10 @@ export function QuizAnalyticsDashboard() {
                   >
                     {quiz.quizTitle}
                   </Link>
-                  <Badge variant="outline" className={`ml-2 shrink-0 ${scoreColor(quiz.averageScore)}`}>
+                  <Badge
+                    variant="outline"
+                    className={`ml-2 shrink-0 ${scoreColor(quiz.averageScore)}`}
+                  >
                     {quiz.averageScore}%
                   </Badge>
                 </div>
