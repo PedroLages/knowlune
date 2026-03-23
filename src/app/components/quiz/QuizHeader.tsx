@@ -44,7 +44,7 @@ export function QuizHeader({ quiz, progress, timeRemaining, totalTimeSeconds }: 
       {/* sr-only progressbar with question-count values per AC5; visual Progress uses percentage */}
       <div
         role="progressbar"
-        aria-label="Quiz progress"
+        aria-label="Question progress"
         aria-valuenow={currentQuestion}
         aria-valuemin={1}
         aria-valuemax={totalQuestions}
