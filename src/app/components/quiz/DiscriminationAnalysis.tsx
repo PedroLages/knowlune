@@ -1,4 +1,5 @@
 // src/app/components/quiz/DiscriminationAnalysis.tsx
+import { useMemo } from 'react'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 import { calculateDiscriminationIndices } from '@/lib/analytics'
 import { Card, CardContent, CardHeader } from '@/app/components/ui/card'
@@ -9,7 +10,7 @@ interface DiscriminationAnalysisProps {
 }
 
 export function DiscriminationAnalysis({ quiz, attempts }: DiscriminationAnalysisProps) {
-  const results = calculateDiscriminationIndices(quiz, attempts)
+  const results = useMemo(() => calculateDiscriminationIndices(quiz, attempts), [quiz, attempts])
 
   if (!results) {
     return (

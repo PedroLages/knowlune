@@ -331,13 +331,21 @@ export function calculateDiscriminationIndices(
 ): DiscriminationResult[] | null {
   if (attempts.length < 5) return null
 
+  // Pre-build lookup map to avoid O(n×m) find() calls and to support unanswered filtering.
+  // Consistent with calculateItemDifficulty which also excludes unanswered/skipped answers.
+  const answerLookup = new Map(
+    attempts.map(attempt => [attempt.id, new Map(attempt.answers.map(a => [a.questionId, a]))])
+  )
+
   return quiz.questions.map(question => {
-    const dataPoints = attempts.map(attempt => {
-      const answer = attempt.answers.find(a => a.questionId === question.id)
-      const questionCorrect = answer?.isCorrect ? 1 : 0
-      const totalScore = attempt.score
-      return { x: questionCorrect, y: totalScore }
-    })
+    // Only include attempts where this question was actually answered (not skipped)
+    const dataPoints = attempts
+      .map(attempt => {
+        const answer = answerLookup.get(attempt.id)?.get(question.id)
+        if (!answer || isUnanswered(answer.userAnswer)) return null
+        return { x: answer.isCorrect ? 1 : 0, y: attempt.score }
+      })
+      .filter((d): d is { x: number; y: number } => d !== null)
 
     const n = dataPoints.length
 
