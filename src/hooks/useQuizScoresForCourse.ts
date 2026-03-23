@@ -16,7 +16,7 @@ export type QuizScoreMap = Map<string, number | null>
  *
  * E18-S08: QFR58, QFR61
  */
-export function useQuizScoresForCourse(courseId: string, modules: Module[]): QuizScoreMap {
+export function useQuizScoresForCourse(_courseId: string, modules: Module[]): QuizScoreMap {
   const [scoreMap, setScoreMap] = useState<QuizScoreMap>(new Map())
 
   // Stable string key: only recomputes when lesson IDs actually change
