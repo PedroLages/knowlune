@@ -17,6 +17,7 @@ import { StudyGoalsWidget } from '@/app/components/StudyGoalsWidget'
 import { StudyHistoryCalendar } from '@/app/components/StudyHistoryCalendar'
 import { StudyScheduleWidget } from '@/app/components/StudyScheduleWidget'
 import { RecommendedNext, RecommendedNextSkeleton } from '@/app/components/RecommendedNext'
+import { QuizPerformanceCard } from '@/app/components/dashboard/QuizPerformanceCard'
 import { CourseCard } from '@/app/components/figma/CourseCard'
 import { ProgressChart } from '@/app/components/charts/ProgressChart'
 import { useCourseStore } from '@/stores/useCourseStore'
@@ -237,6 +238,16 @@ export function Overview() {
             </div>
             <AchievementBanner completedLessons={completedLessons} />
           </div>
+        </motion.section>
+
+        {/* ── Quiz Performance ── */}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-50px' }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <QuizPerformanceCard />
         </motion.section>
 
         {/* ── Engagement Zone ── */}
