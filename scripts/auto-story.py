@@ -1776,6 +1776,7 @@ async def main() -> None:
         print("BATCH COMPLETE")
         print(f"{'=' * 60}")
         print_progress(results, len(stories))
+        print_failure_summary(results)
 
         total_cost = sum(r.total_cost_usd for r in results)
         total_time = sum(r.duration_secs for r in results)
@@ -1981,6 +1982,53 @@ def print_progress(results: list[StoryResult], total: int) -> None:
         pr = f" | PR: {r.pr_url}" if r.pr_url else ""
         err = f" | {r.error}" if r.error else ""
         print(f"  {r.story.key}: {status} | {duration} | {cost}{pr}{err}")
+
+
+def print_failure_summary(results: list[StoryResult]) -> None:
+    """Print categorized failure analysis with actionable advice."""
+    failures = [r for r in results if not r.success]
+    if not failures:
+        return
+
+    # Categorize failures
+    categories: dict[str, list[StoryResult]] = {}
+    for r in failures:
+        err = r.error or "unknown"
+        if "ProcessError" in err or "exit code" in err:
+            cat = "SDK process crash"
+        elif "401" in err or "authenticate" in err.lower():
+            cat = "Auth failure"
+        elif "buffer" in err.lower() or "exceeded" in err.lower():
+            cat = "Buffer overflow"
+        elif "FINISH incomplete" in err:
+            cat = "Finish verification"
+        elif "Still blocked" in err:
+            cat = "Review loop exhausted"
+        elif "ValueError" in err:
+            cat = "Parsing error"
+        else:
+            cat = "Other"
+        categories.setdefault(cat, []).append(r)
+
+    print(f"\n{'=' * 60}")
+    print(f"FAILURE ANALYSIS ({len(failures)} failures)")
+    print(f"{'=' * 60}")
+
+    advice = {
+        "SDK process crash": "Check: API key valid? Network stable? Try --legacy-mode or run fewer stories.",
+        "Auth failure": "API key expired or invalid. Check ANTHROPIC_API_KEY env var.",
+        "Buffer overflow": "Increase max_buffer_size in make_options (currently 10MB).",
+        "Finish verification": "Usually harmless — story was implemented but cleanup failed. Re-run with --resume.",
+        "Review loop exhausted": "Review found unfixable blockers. Try --skip-review or --max-review-rounds 5.",
+        "Parsing error": "Story ID format issue. Check sprint-status.yaml key format.",
+        "Other": "Check auto-story.log for details.",
+    }
+
+    for cat, items in sorted(categories.items(), key=lambda x: -len(x[1])):
+        stories = ", ".join(r.story.key for r in items)
+        print(f"\n  [{len(items)}x] {cat}")
+        print(f"       Stories: {stories}")
+        print(f"       Fix: {advice.get(cat, 'Check logs.')}")
 
 
 def log_result(result: StoryResult, log_file: Path) -> None:
