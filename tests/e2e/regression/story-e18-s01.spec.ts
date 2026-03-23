@@ -254,6 +254,9 @@ test.describe('E18-S01: Complete Keyboard Navigation', () => {
     await navigateToQuiz(page)
     await startQuiz(page)
 
+    // Wait for programmatic focus to settle on question-focus-target before tabbing
+    await expect(page.getByTestId('question-focus-target')).toBeFocused()
+
     // Tab to radio group, then Arrow Down to second option, then Space to select it
     await page.keyboard.press('Tab')
     await page.keyboard.press('ArrowDown')

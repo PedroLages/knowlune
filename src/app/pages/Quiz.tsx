@@ -120,6 +120,9 @@ export function Quiz() {
   const nextBtnRef = useRef<HTMLButtonElement>(null)
   const rafRef = useRef<number>(0)
   const questionTextRef = useRef<HTMLDivElement>(null)
+  // Tracks whether the last keydown was an Arrow key — suppresses auto-advance
+  // on Arrow navigation so focus stays in the radio group (AC #3 trade-off fix)
+  const isArrowNavRef = useRef(false)
 
   // Fetch quiz from Dexie on mount
   useEffect(() => {
@@ -450,6 +453,14 @@ export function Quiz() {
               tabIndex={-1}
               className="outline-none"
               data-testid="question-focus-target"
+              onKeyDown={e => {
+                // Track Arrow key presses so onChange can skip auto-advance.
+                // ArrowDown/Up are used for radio group navigation — auto-advancing
+                // to the Next button mid-navigation is disruptive (AC #3).
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                  isArrowNavRef.current = true
+                }
+              }}
             >
               <QuestionDisplay
                 question={currentQuestion}
@@ -458,10 +469,12 @@ export function Quiz() {
                   submitAnswer(currentQuestionId, answer)
                   // Auto-focus Next/Submit button for single-answer types (MC, TF, FIB)
                   // Skip for multiple-select — user needs to toggle multiple checkboxes
-                  if (currentQuestion.type !== 'multiple-select') {
+                  // Skip for Arrow key navigation — user is browsing options, not confirming
+                  if (currentQuestion.type !== 'multiple-select' && !isArrowNavRef.current) {
                     cancelAnimationFrame(rafRef.current)
                     rafRef.current = requestAnimationFrame(() => nextBtnRef.current?.focus())
                   }
+                  isArrowNavRef.current = false
                 }}
                 mode="active"
               />
