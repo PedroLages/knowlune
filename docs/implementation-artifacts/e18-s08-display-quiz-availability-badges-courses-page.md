@@ -1,12 +1,12 @@
 ---
 story_id: E18-S08
 story_name: "Display Quiz Availability Badges on Courses Page"
-status: in-progress
+status: done
 started: 2026-03-23
-completed:
-reviewed: in-progress
+completed: 2026-03-23
+reviewed: true
 review_started: 2026-03-23
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing]
 burn_in_validated: false
 ---
 
@@ -99,16 +99,35 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+Full report: `docs/reviews/design/design-review-2026-03-23-e18-s08.md`
+
+- HIGH H1: Focus ring contrast 1.19:1 (need 3:1, WCAG 2.4.7) — **Fixed**: added `focus-visible:ring-brand focus-visible:ring-2 focus-visible:ring-offset-1` to QuizBadge className
+- MEDIUM M1: Icon color doesn't match muted label weight in "Take Quiz" state — tracked for future polish
+- MEDIUM M2 (pre-existing): h1→h3 heading skip in CourseDetail.tsx — not in scope
+- LOW L2: `stopPropagation`/`preventDefault` were no-ops (badge outside `<Link>`) — **Fixed**: removed
+- LOW L3: `size="sm"` + `min-h-[44px]` override pattern — acceptable, works correctly
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+Full report: `docs/reviews/code/code-review-2026-03-23-e18-s08.md`
+
+- HIGH: Manual `seedToStore` duplicated shared helper — **Fixed**: replaced with `seedIndexedDBStore`, `seedQuizzes`, `seedQuizAttempts`
+- HIGH: `courseId` phantom dependency in `useEffect` — **Fixed**: removed from deps array (prefixed param with `_`)
+- HIGH: Touch target 28px < 44px WCAG 2.5.5 — **Fixed**: added `min-h-[44px]` to badge className
+- MEDIUM: No `afterEach` cleanup in E2E spec — **Fixed**: added `test.afterEach` with `clearIndexedDBStore`
+- MEDIUM: AC3 test didn't assert success color — **Fixed**: added `data-testid="quiz-score-text-{id}"` and color assertion
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+Full report: `docs/reviews/code/code-review-testing-2026-03-23-e18-s08.md`
+
+- All 4 ACs covered (100%). HIGH findings addressed — see Code Review Feedback above.
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Three-state Map semantic**: `Map<string, number | null>` elegantly encodes "no quiz" (absent key), "never attempted" (null value), and "has score" (number). Using `has()` vs `get()` as separate gates prevents ambiguity between "no quiz" and "0% score".
+- **`ignore` flag for async Effects**: The cleanup pattern (`let ignore = false; return () => { ignore = true }`) is the idiomatic React way to avoid stale state after unmount — avoid `AbortController` for simple Dexie queries since Dexie doesn't natively support signal cancellation.
+- **Stable useMemo key via primitive**: Converting an unstable array reference to a stable string primitive (`lessonIds.join(',')`) is a lightweight way to make `useEffect` dep comparison work correctly without deep equality.
+- **Auto-expand test isolation (E23 regression)**: The E23 "restore visibility when all imports removed" logic breaks tests that set `localStorage` with empty `importedCourses`. Fix: seed at least one imported course in tests that verify collapse persistence.
+- **Focus ring override on shared components**: The shared Button `ring-ring/50` is imperceptible on warm backgrounds. Interactive elements that appear on low-contrast backgrounds need `focus-visible:ring-brand` className override until the Button base class is globally updated.
+- **stopPropagation inside vs outside Link**: Verify DOM structure before adding propagation guards. If a button is rendered *after* a `</Link>` (outside), `stopPropagation` is a no-op and only adds confusion.

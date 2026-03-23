@@ -268,7 +268,7 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 18: Accessible and Integrated Quiz Experience
   # ──────────────────────────────────────────────────
-  epic-18: backlog
+  epic-18: in-progress
   18-1-implement-complete-keyboard-navigation: backlog
   18-2-implement-aria-live-regions-for-dynamic-content: backlog
   18-3-ensure-semantic-html-and-proper-aria-attributes: backlog
@@ -276,7 +276,7 @@ development_status:
   18-5-integrate-quiz-completion-with-study-streaks: backlog
   18-6-display-quiz-performance-in-overview-dashboard: backlog
   18-7-surface-quiz-analytics-in-reports-section: backlog
-  18-8-display-quiz-availability-badges-on-courses-page: backlog
+  18-8-display-quiz-availability-badges-on-courses-page: done
   18-9-configure-quiz-preferences-in-settings: backlog
   18-10-export-quiz-results: backlog
   18-11-track-quiz-progress-in-content-completion: backlog

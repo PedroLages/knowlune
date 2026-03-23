@@ -24,12 +24,8 @@ export function QuizBadge({ courseId, lessonId, lessonTitle, bestScore }: QuizBa
       variant="outline"
       size="sm"
       data-testid={`quiz-badge-${lessonId}`}
-      onClick={e => {
-        e.preventDefault()
-        e.stopPropagation()
-        navigate(`/courses/${courseId}/lessons/${lessonId}/quiz`)
-      }}
-      className="flex items-center gap-1.5 min-h-[44px] px-2 text-xs shrink-0"
+      onClick={() => navigate(`/courses/${courseId}/lessons/${lessonId}/quiz`)}
+      className="flex items-center gap-1.5 min-h-[44px] px-2 text-xs shrink-0 focus-visible:ring-brand focus-visible:ring-2 focus-visible:ring-offset-1"
       aria-label={`${bestScore != null ? `Quiz score: ${bestScore}%` : 'Take quiz'} for ${lessonTitle}`}
     >
       <ClipboardCheck className="size-3.5" aria-hidden="true" />
