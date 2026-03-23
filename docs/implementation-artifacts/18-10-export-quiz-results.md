@@ -1,10 +1,10 @@
 ---
 story_id: E18-S10
 story_name: "Export Quiz Results"
-status: in-progress
+status: done
 started: 2026-03-23
-completed:
-reviewed: in-progress
+completed: 2026-03-23
+reviewed: true
 review_started: 2026-03-23
 review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
