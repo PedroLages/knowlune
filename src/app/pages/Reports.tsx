@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useSearchParams } from 'react-router'
 import { BookOpen, CheckCircle, FileText, TrendingUp, Clock, RotateCcw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import {
@@ -36,6 +37,7 @@ import { StatsCard } from '@/app/components/StatsCard'
 import { EmptyState } from '@/app/components/EmptyState'
 import StudyTimeAnalytics from '@/app/components/StudyTimeAnalytics'
 import { AIAnalyticsTab } from '@/app/components/reports/AIAnalyticsTab'
+import { QuizAnalyticsDashboard } from '@/app/components/reports/QuizAnalyticsDashboard'
 import { CategoryRadar } from '@/app/components/reports/CategoryRadar'
 import { SkillsRadar } from '@/app/components/reports/SkillsRadar'
 import { WeeklyGoalRing } from '@/app/components/reports/WeeklyGoalRing'
@@ -65,6 +67,9 @@ const areaChartConfig = {
 /* ------------------------------------------------------------------ */
 
 export default function Reports() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTab = searchParams.get('tab') ?? 'study'
+
   const allCourses = useCourseStore(s => s.courses)
   const [studyNotes, setStudyNotes] = useState(0)
   const [retakeData, setRetakeData] = useState<RetakeFrequencyResult>({
@@ -185,17 +190,28 @@ export default function Reports() {
             actionHref="/courses"
           />
         ) : (
-          <Tabs defaultValue="study" className="mb-6">
+          <Tabs
+            value={activeTab}
+            onValueChange={tab => setSearchParams({ tab })}
+            className="mb-6"
+          >
             <motion.div variants={fadeUp}>
               <TabsList className="h-11">
                 <TabsTrigger value="study" className="h-9">
                   Study Analytics
+                </TabsTrigger>
+                <TabsTrigger value="quizzes" className="h-9">
+                  Quiz Analytics
                 </TabsTrigger>
                 <TabsTrigger value="ai" className="h-9">
                   AI Analytics
                 </TabsTrigger>
               </TabsList>
             </motion.div>
+
+            <TabsContent value="quizzes" className="mt-6">
+              <QuizAnalyticsDashboard />
+            </TabsContent>
 
             <TabsContent value="ai" className="mt-6">
               <AIAnalyticsTab />

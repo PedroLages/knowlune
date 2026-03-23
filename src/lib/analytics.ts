@@ -3,6 +3,121 @@ import { isUnanswered } from '@/lib/scoring'
 import { db } from '@/db'
 
 // ---------------------------------------------------------------------------
+// Quiz Analytics Summary (E18-S07)
+// ---------------------------------------------------------------------------
+
+export type QuizAttemptWithTitle = QuizAttempt & { quizTitle: string }
+
+export type QuizPerformance = {
+  quizId: string
+  quizTitle: string
+  /** Average score across all attempts, 0-100 */
+  averageScore: number
+  attemptCount: number
+  /** Best single-attempt score, 0-100 */
+  bestScore: number
+  /** ISO 8601 date of the most recent attempt */
+  lastAttemptDate: string
+}
+
+export type QuizAnalyticsSummary = {
+  totalQuizzesCompleted: number
+  /** Average score across all attempts, 0-100 */
+  averageScore: number
+  /** Unique quizzes attempted / total quizzes available × 100 */
+  completionRate: number
+  averageRetakeFrequency: number
+  /** Last 5 attempts, most-recent-first, enriched with quiz title */
+  recentAttempts: QuizAttemptWithTitle[]
+  /** Top 5 quizzes by average score */
+  topPerforming: QuizPerformance[]
+  /** Bottom 5 quizzes by average score (at least 1 attempt) */
+  needsImprovement: QuizPerformance[]
+}
+
+/**
+ * Aggregate quiz analytics summary from Dexie.
+ *
+ * Completion rate = (unique quizzes attempted / total quizzes available) × 100.
+ * Since quizAttempts only stores submitted attempts (no abandoned records),
+ * all stored attempts are considered "completed".
+ */
+export async function calculateQuizAnalytics(): Promise<QuizAnalyticsSummary> {
+  const [allAttempts, allQuizzes] = await Promise.all([
+    db.quizAttempts.toArray(),
+    db.quizzes.toArray(),
+  ])
+
+  const quizTitleMap = new Map(allQuizzes.map(q => [q.id, q.title]))
+  const totalQuizzesAvailable = allQuizzes.length
+
+  if (allAttempts.length === 0) {
+    return {
+      totalQuizzesCompleted: 0,
+      averageScore: 0,
+      completionRate: 0,
+      averageRetakeFrequency: 0,
+      recentAttempts: [],
+      topPerforming: [],
+      needsImprovement: [],
+    }
+  }
+
+  // Group attempts by quizId
+  const byQuiz = new Map<string, QuizAttempt[]>()
+  for (const attempt of allAttempts) {
+    if (!byQuiz.has(attempt.quizId)) byQuiz.set(attempt.quizId, [])
+    byQuiz.get(attempt.quizId)!.push(attempt)
+  }
+
+  // Per-quiz aggregation
+  const performances: QuizPerformance[] = []
+  for (const [quizId, attempts] of byQuiz.entries()) {
+    const avgScore = attempts.reduce((sum, a) => sum + a.percentage, 0) / attempts.length
+    const bestScore = Math.max(...attempts.map(a => a.percentage))
+    const sorted = [...attempts].sort(
+      (a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
+    )
+    performances.push({
+      quizId,
+      quizTitle: quizTitleMap.get(quizId) ?? 'Unknown Quiz',
+      averageScore: Math.round(avgScore),
+      attemptCount: attempts.length,
+      bestScore,
+      lastAttemptDate: sorted[0].completedAt,
+    })
+  }
+
+  const totalAttempts = allAttempts.length
+  const uniqueQuizzes = byQuiz.size
+  const overallAvg = allAttempts.reduce((sum, a) => sum + a.percentage, 0) / totalAttempts
+  const completionRate =
+    totalQuizzesAvailable > 0 ? Math.round((uniqueQuizzes / totalQuizzesAvailable) * 100) : 0
+  const avgRetakeFrequency = uniqueQuizzes > 0 ? totalAttempts / uniqueQuizzes : 0
+
+  // Recent 5 attempts, most-recent-first
+  const recentAttempts: QuizAttemptWithTitle[] = [...allAttempts]
+    .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
+    .slice(0, 5)
+    .map(a => ({ ...a, quizTitle: quizTitleMap.get(a.quizId) ?? 'Unknown Quiz' }))
+
+  // Top/bottom sorted by averageScore
+  const sortedByScore = [...performances].sort((a, b) => b.averageScore - a.averageScore)
+  const topPerforming = sortedByScore.slice(0, 5)
+  const needsImprovement = [...sortedByScore].reverse().slice(0, 5)
+
+  return {
+    totalQuizzesCompleted: uniqueQuizzes,
+    averageScore: Math.round(overallAvg),
+    completionRate,
+    averageRetakeFrequency: Math.round(avgRetakeFrequency * 10) / 10,
+    recentAttempts,
+    topPerforming,
+    needsImprovement,
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
