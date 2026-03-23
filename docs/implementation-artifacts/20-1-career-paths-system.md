@@ -4,9 +4,9 @@ story_name: "Career Paths System"
 status: in-progress
 started: 2026-03-23
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-23
-review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, edge-case-review]
 burn_in_validated: false
 ---
 
@@ -104,15 +104,42 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+Full report: `docs/reviews/design/design-review-2026-03-23-e20-s01.md`
+
+**Fixed (HIGH):**
+- "Leave path" button was `size="sm"` = 32px height, below 44px WCAG touch target — removed `size="sm"`
+- Stage metadata rendered `{completedCourses}/{totalCourses}` and `{hours}h` in adjacent divs, visually ambiguous as "0/28h" — added "courses" unit label
+
+**Remaining (MEDIUM — follow-up):**
+- `aria-disabled` on plain `<div>` (locked CourseTile) has no effect on AT; should add `role` or use visually-hidden description
+- "Start learning" badge border has 1.20:1 contrast in dark mode — badge boundary invisible
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+Full report: `docs/reviews/code/code-review-2026-03-23-e20-s01.md` | Test coverage: `docs/reviews/code/code-review-testing-2026-03-23-e20-s01.md`
+
+**Fixed (HIGH):**
+- TOCTOU race: two concurrent `loadPaths()` calls both saw `count()===0` and both attempted `bulkAdd()`, causing a ConstraintError and spurious error toast on first app load — replaced with `bulkPut` (idempotent) + `loadInFlight` guard
+- Stale closure: `enrollInPath`/`dropPath` captured `enrollments` snapshot before `await`, then `set()` could overwrite concurrent mutations — switched to `set(state => ...)` callback pattern
+- Double-click guard: two rapid clicks on "Start Path" both passed the `existing` check before either updated state, creating two active enrollment records — added `enrollingPaths` module-level Set with try/finally cleanup
+- `refreshCourseCompletion` concurrent overwrites: two parallel calls each spread the cache then `set()` replaced it, last-write-wins — now collects `updates` dict and merges via `set(state => { ...state.courseCompletionCache, ...updates })`
+- Silent progress failures: `refreshCourseCompletion` errors logged to console only; learner saw 0% progress with no explanation — added `toast.warning()`
+- Locked AC5 course navigation test: only CSS opacity class was asserted; actual link presence was untested — added test asserting Stage 2 course list contains no `<a>` elements
+
+**Fixed (MEDIUM):**
+- `debug-enroll.spec.ts` contained `waitForTimeout(3000)` hard wait — removed file
+- `getByText(/^Stage \d/)` and `getByRole('listitem')` locators were unscoped — scoped to `"Learning stages"` list
+- Hours metadata regex `/h$/` could match any text ending in 'h' — tightened to `/^\d+h$/`
+
+**Remaining (MEDIUM — follow-up):**
+- Course tile display name derived from courseId slug (`'6mx'` → `'6mx'`); real course titles exist in DB but are not fetched
+- `sortedPaths` in `CareerPaths.tsx` applies no sort; name is misleading — rename or implement ordering
+- `networkidle` used as wait strategy throughout E2E; prefer `expect(locator).toBeVisible()` auto-retry
+- Completed courses cannot be revisited — CourseTile renders non-interactive div for completed state
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+Design review passed with no BLOCKER findings. See `docs/reviews/design/design-review-2026-03-23-e20-s01.md` for full report. Design tokens used throughout; motion accessibility correct (`reducedMotion="user"`); responsive layout correct at all 3 breakpoints.
 
 ## Challenges and Lessons Learned
 
