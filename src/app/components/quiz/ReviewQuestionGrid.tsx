@@ -30,7 +30,7 @@ export function ReviewQuestionGrid({
             aria-current={isCurrent ? 'step' : undefined}
             className={cn(
               'relative flex items-center justify-center size-11 rounded-full text-sm font-medium',
-              'hover:opacity-80 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 transition-opacity',
+              'hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-opacity',
               isCurrent
                 ? 'bg-brand text-brand-foreground'
                 : answer?.isCorrect
