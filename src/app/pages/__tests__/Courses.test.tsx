@@ -350,6 +350,7 @@ describe('Courses page', () => {
   describe('sample courses section', () => {
     beforeEach(() => {
       courseStoreState.courses = mockPreSeededCourses
+      localStorage.clear()
     })
 
     it('renders "Sample Courses (N)" heading with count', () => {
@@ -377,6 +378,23 @@ describe('Courses page', () => {
       courseStoreState.courses = []
       renderCourses()
       expect(screen.queryByTestId('sample-courses-section')).not.toBeInTheDocument()
+    })
+
+    it('reads collapse state from localStorage on mount and starts collapsed', () => {
+      localStorage.setItem('knowlune:sample-courses-collapsed', 'true')
+      renderCourses()
+      // Grid should not be present when collapsed
+      expect(screen.queryByTestId('sample-courses-grid')).not.toBeInTheDocument()
+    })
+
+    it('persists collapse state to localStorage when toggled', async () => {
+      const user = userEvent.setup()
+      renderCourses()
+      // Starts expanded (grid visible)
+      expect(screen.getByTestId('sample-courses-grid')).toBeInTheDocument()
+      // Click toggle to collapse
+      await user.click(screen.getByTestId('sample-courses-toggle'))
+      expect(localStorage.getItem('knowlune:sample-courses-collapsed')).toBe('true')
     })
   })
 })

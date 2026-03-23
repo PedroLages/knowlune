@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Card } from '@/app/components/ui/card'
 import { Input } from '@/app/components/ui/input'
 import { Button } from '@/app/components/ui/button'
@@ -52,8 +52,12 @@ export function Courses() {
 
   // Collapse state for sample courses section — persisted to localStorage
   const [sampleCollapsed, setSampleCollapsed] = useState(() => {
-    const stored = localStorage.getItem(COLLAPSE_KEY)
-    if (stored !== null) return stored === 'true'
+    try {
+      const stored = localStorage.getItem(COLLAPSE_KEY)
+      if (stored !== null) return stored === 'true'
+    } catch {
+      // localStorage unavailable (private browsing, quota exceeded)
+    }
     return false // Will be re-evaluated in useEffect when importedCourses loads
   })
 
@@ -67,11 +71,19 @@ export function Courses() {
   }, [loadImportedCourses])
 
   // Auto-collapse when imported courses are loaded for the first time
+  // useRef prevents re-triggering if the user imports more courses during the session
+  const hasAutoCollapsed = useRef(false)
   useEffect(() => {
-    const stored = localStorage.getItem(COLLAPSE_KEY)
-    if (stored === null && importedCourses.length > 0) {
-      setSampleCollapsed(true)
-      localStorage.setItem(COLLAPSE_KEY, 'true')
+    if (hasAutoCollapsed.current) return
+    try {
+      const stored = localStorage.getItem(COLLAPSE_KEY)
+      if (stored === null && importedCourses.length > 0) {
+        hasAutoCollapsed.current = true
+        setSampleCollapsed(true)
+        localStorage.setItem(COLLAPSE_KEY, 'true')
+      }
+    } catch {
+      // localStorage unavailable
     }
   }, [importedCourses.length])
 
@@ -226,7 +238,11 @@ export function Courses() {
   function handleCollapseToggle(open: boolean) {
     const collapsed = !open
     setSampleCollapsed(collapsed)
-    localStorage.setItem(COLLAPSE_KEY, String(collapsed))
+    try {
+      localStorage.setItem(COLLAPSE_KEY, String(collapsed))
+    } catch {
+      // localStorage unavailable — state still works for the session
+    }
   }
 
   const totalCourses = allCourses.length + importedCourses.length
@@ -373,12 +389,15 @@ export function Courses() {
               open={!sampleCollapsed}
               onOpenChange={handleCollapseToggle}
               data-testid="sample-courses-section"
-              className={`mb-6 rounded-[24px] border border-border/50 p-4 transition-opacity duration-200 ${
-                importedCourses.length > 0 ? 'opacity-60 hover:opacity-100' : ''
-              }`}
+              role="region"
+              aria-labelledby="sample-courses-heading"
+              className="mb-6 rounded-[24px] border border-border/50 p-4"
             >
               <div className="flex items-center justify-between mb-2">
-                <h2 className="text-lg font-semibold text-muted-foreground">
+                <h2
+                  id="sample-courses-heading"
+                  className="text-lg font-semibold text-muted-foreground"
+                >
                   Sample Courses ({allCourses.length})
                 </h2>
                 <CollapsibleTrigger asChild>
@@ -389,7 +408,7 @@ export function Courses() {
                     aria-label={
                       sampleCollapsed ? 'Expand sample courses' : 'Collapse sample courses'
                     }
-                    className="p-2"
+                    className="min-h-[44px] min-w-[44px] p-2"
                   >
                     <ChevronDown
                       aria-hidden="true"
@@ -401,7 +420,11 @@ export function Courses() {
                 </CollapsibleTrigger>
               </div>
 
-              <CollapsibleContent>
+              <CollapsibleContent
+                className={`transition-opacity duration-200 motion-reduce:transition-none ${
+                  importedCourses.length > 0 ? 'opacity-60 hover:opacity-100' : ''
+                }`}
+              >
                 <div className="flex items-center gap-4 mb-4 flex-wrap">
                   <div className="flex flex-wrap gap-2 items-center flex-1">
                     <ToggleGroup

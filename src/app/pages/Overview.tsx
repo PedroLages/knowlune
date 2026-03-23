@@ -332,7 +332,18 @@ export function Overview() {
               <ArrowRight className="size-3.5" aria-hidden="true" />
             </Link>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          {importedCourses.length > 0 && (
+            <p className="text-xs text-muted-foreground mb-3">
+              Sample courses ·{' '}
+              <Link to="/courses" className="hover:text-foreground transition-colors">
+                View all
+              </Link>
+            </p>
+          )}
+          <div
+            data-testid="library-section"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
+          >
             {allCourses.map(course => (
               <div
                 key={course.id}
