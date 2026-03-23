@@ -78,7 +78,13 @@ const attempt1 = makeAttempt({
   startedAt: '2026-01-01T09:55:00.000Z',
   answers: [
     { questionId: q1.id, userAnswer: '4', isCorrect: true, pointsEarned: 1, pointsPossible: 1 },
-    { questionId: q2.id, userAnswer: 'Mitochondria', isCorrect: true, pointsEarned: 1, pointsPossible: 1 },
+    {
+      questionId: q2.id,
+      userAnswer: 'Mitochondria',
+      isCorrect: true,
+      pointsEarned: 1,
+      pointsPossible: 1,
+    },
   ],
 })
 
@@ -92,7 +98,13 @@ const attempt2 = makeAttempt({
   startedAt: '2026-01-02T09:55:00.000Z',
   answers: [
     { questionId: q1.id, userAnswer: '4', isCorrect: true, pointsEarned: 1, pointsPossible: 1 },
-    { questionId: q2.id, userAnswer: 'Nucleus', isCorrect: false, pointsEarned: 0, pointsPossible: 1 },
+    {
+      questionId: q2.id,
+      userAnswer: 'Nucleus',
+      isCorrect: false,
+      pointsEarned: 0,
+      pointsPossible: 1,
+    },
   ],
 })
 
@@ -106,7 +118,13 @@ const attempt3 = makeAttempt({
   startedAt: '2026-01-03T09:55:00.000Z',
   answers: [
     { questionId: q1.id, userAnswer: '4', isCorrect: true, pointsEarned: 1, pointsPossible: 1 },
-    { questionId: q2.id, userAnswer: 'Nucleus', isCorrect: false, pointsEarned: 0, pointsPossible: 1 },
+    {
+      questionId: q2.id,
+      userAnswer: 'Nucleus',
+      isCorrect: false,
+      pointsEarned: 0,
+      pointsPossible: 1,
+    },
   ],
 })
 

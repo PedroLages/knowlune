@@ -400,9 +400,9 @@ test.describe('Error Path: Malformed Study Log Data', () => {
     await expect(page).toHaveURL(/\/courses/)
     await expect(page.getByRole('heading', { name: 'All Courses' })).toBeVisible()
 
-    await page.getByRole('link', { name: /my class/i }).click()
+    await page.getByRole('link', { name: /my courses/i }).click()
     await expect(page).toHaveURL(/\/myclass/)
-    await expect(page.getByRole('heading', { name: /my progress/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /my courses/i })).toBeVisible()
 
     await clearStudyLog(page)
   })

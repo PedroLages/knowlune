@@ -32,10 +32,10 @@ test.describe('App Navigation', () => {
     await expect(page.getByRole('heading', { name: 'All Courses', level: 1 })).toBeVisible()
   })
 
-  test('should navigate to My Class page', async ({ page }) => {
+  test('should navigate to My Courses page', async ({ page }) => {
     await goToMyClass(page)
 
-    await expect(page.getByRole('heading', { name: 'My Progress', level: 1 })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'My Courses', level: 1 })).toBeVisible()
   })
 
   test('should navigate to Reports page', async ({ page }) => {
@@ -54,7 +54,7 @@ test.describe('App Navigation', () => {
     await goToCourses(page)
 
     // The sidebar link for Courses should have an active indicator
-    const coursesLink = page.locator('nav').getByRole('link', { name: /courses/i })
+    const coursesLink = page.locator('nav').getByRole('link', { name: 'Courses', exact: true })
     await expect(coursesLink).toBeVisible()
   })
 })

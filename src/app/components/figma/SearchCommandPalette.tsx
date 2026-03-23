@@ -48,12 +48,12 @@ const navigationPages: SearchItem[] = [
     keywords: ['overview', 'dashboard', 'home'],
   },
   {
-    id: 'page-my-progress',
-    label: 'My Progress',
+    id: 'page-my-courses',
+    label: 'My Courses',
     path: '/my-class',
     group: 'Pages',
     icon: BookOpen,
-    keywords: ['progress', 'class', 'my'],
+    keywords: ['courses', 'progress', 'class', 'my'],
   },
   {
     id: 'page-courses',
