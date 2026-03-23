@@ -308,31 +308,8 @@ export function blobToFile(blob: Blob, filename: string): File {
 // Text Utilities
 // ============================================================================
 
-/**
- * Extracts initials from a name string
- * Returns the first letter of each word, uppercase, limited to 2 characters
- * @param name - The name to extract initials from
- * @returns Initials string (max 2 characters)
- */
-export function getInitials(name: string): string {
-  if (!name || typeof name !== 'string') {
-    return ''
-  }
-
-  // Split by whitespace and filter empty strings
-  const parts = name
-    .trim()
-    .split(/\s+/)
-    .filter(part => part.length > 0)
-
-  // Get first letter of each word, take first 2, uppercase
-  const initials = parts
-    .slice(0, 2)
-    .map(part => part.charAt(0).toUpperCase())
-    .join('')
-
-  return initials
-}
+// Re-export from textUtils — canonical location for this pure string utility
+export { getInitials } from '@/lib/textUtils'
 
 /**
  * Generates a color for avatar fallback based on a name

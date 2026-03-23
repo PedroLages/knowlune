@@ -76,6 +76,11 @@ describe('Authors page', () => {
       expect(screen.queryByTestId('featured-author')).not.toBeInTheDocument()
       expect(screen.queryByTestId('author-grid')).not.toBeInTheDocument()
     })
+
+    it('does not render subtitle text', () => {
+      renderAuthors()
+      expect(screen.queryByText(/meet the/i)).not.toBeInTheDocument()
+    })
   })
 
   describe('single author — featured layout', () => {
@@ -94,6 +99,19 @@ describe('Authors page', () => {
       expect(screen.getByText('Test Author')).toBeInTheDocument()
       expect(screen.getByText('Expert')).toBeInTheDocument()
       expect(screen.getByText('Short bio text.')).toBeInTheDocument()
+    })
+
+    it('falls back to full bio when shortBio is empty', () => {
+      mockState.authors = [makeAuthor({ shortBio: '' })]
+      renderAuthors()
+      expect(screen.getByText('Full bio text.')).toBeInTheDocument()
+    })
+
+    it('renders no bio paragraph when both shortBio and bio are empty', () => {
+      mockState.authors = [makeAuthor({ shortBio: '', bio: '' })]
+      renderAuthors()
+      const card = screen.getByTestId('featured-author')
+      expect(card.querySelector('p.max-w-prose')).not.toBeInTheDocument()
     })
 
     it('shows stat values from getAuthorStats', () => {
@@ -131,20 +149,49 @@ describe('Authors page', () => {
       expect(screen.getByText('Skill B')).toBeInTheDocument()
     })
 
-    it('does not render blockquote when featuredQuote is absent', () => {
+    it('caps specialty badges at 5 with overflow indicator', () => {
+      mockState.authors = [
+        makeAuthor({
+          specialties: ['A', 'B', 'C', 'D', 'E', 'F', 'G'],
+        }),
+      ]
       renderAuthors()
-      expect(screen.queryByRole('blockquote')).not.toBeInTheDocument()
+      expect(screen.getByText('A')).toBeInTheDocument()
+      expect(screen.getByText('E')).toBeInTheDocument()
+      expect(screen.getByText('+2')).toBeInTheDocument()
+      expect(screen.queryByText('F')).not.toBeInTheDocument()
+      expect(screen.queryByText('G')).not.toBeInTheDocument()
     })
 
-    it('renders blockquote when featuredQuote is set', () => {
+    it('renders no badge container when specialties is empty', () => {
+      mockState.authors = [makeAuthor({ specialties: [] })]
+      renderAuthors()
+      const card = screen.getByTestId('featured-author')
+      expect(card.querySelector('.flex.flex-wrap')).not.toBeInTheDocument()
+    })
+
+    it('does not render quote when featuredQuote is absent', () => {
+      renderAuthors()
+      expect(screen.queryByTestId('featured-quote')).not.toBeInTheDocument()
+    })
+
+    it('renders quote when featuredQuote is set', () => {
       mockState.authors = [makeAuthor({ featuredQuote: 'Learning is a lifelong journey.' })]
       renderAuthors()
+      expect(screen.getByTestId('featured-quote')).toBeInTheDocument()
       expect(screen.getByText(/Learning is a lifelong journey/i)).toBeInTheDocument()
     })
 
     it('displays singular subtitle text', () => {
       renderAuthors()
       expect(screen.getByText('Meet the expert behind your learning journey')).toBeInTheDocument()
+    })
+
+    it('clamps negative yearsExperience to 0', () => {
+      mockState.authors = [makeAuthor({ yearsExperience: -5 })]
+      renderAuthors()
+      const card = screen.getByTestId('featured-author')
+      expect(card).toHaveTextContent('0y')
     })
   })
 
