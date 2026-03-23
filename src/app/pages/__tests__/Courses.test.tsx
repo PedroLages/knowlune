@@ -381,6 +381,9 @@ describe('Courses page', () => {
     })
 
     it('reads collapse state from localStorage on mount and starts collapsed', () => {
+      // Need imported courses so the auto-expand effect (added E23: "restore when all imports removed")
+      // doesn't immediately override the stored collapsed state.
+      storeState.importedCourses = mockCourses
       localStorage.setItem('knowlune:sample-courses-collapsed', 'true')
       renderCourses()
       // Grid should not be present when collapsed
@@ -388,6 +391,11 @@ describe('Courses page', () => {
     })
 
     it('persists collapse state to localStorage when toggled', async () => {
+      // Need imported courses so auto-expand doesn't undo the collapse.
+      // Pre-set key to 'false' so the auto-collapse effect (which only fires when key is null)
+      // doesn't immediately collapse the section before the user interacts.
+      storeState.importedCourses = mockCourses
+      localStorage.setItem('knowlune:sample-courses-collapsed', 'false')
       const user = userEvent.setup()
       renderCourses()
       // Starts expanded (grid visible)

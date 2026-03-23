@@ -92,9 +92,7 @@ async function setupCourseDetail(
   await page.goto('/', { waitUntil: 'domcontentloaded' })
 
   // Seed course, quiz, and optionally attempt using shared helpers (frame-accurate timing)
-  await seedIndexedDBStore(page, 'ElearningDB', 'courses', [
-    testCourse as Record<string, unknown>,
-  ])
+  await seedIndexedDBStore(page, 'ElearningDB', 'courses', [testCourse as Record<string, unknown>])
   await seedQuizzes(page, [quiz as Record<string, unknown>])
   if (withAttempt) {
     await seedQuizAttempts(page, [completedAttempt as Record<string, unknown>])
