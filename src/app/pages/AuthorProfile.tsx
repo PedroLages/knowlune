@@ -14,8 +14,8 @@ import {
   BreadcrumbSeparator,
 } from '@/app/components/ui/breadcrumb'
 import { CourseCard } from '@/app/components/figma/CourseCard'
-import { getInstructorById } from '@/data/instructors'
-import { getInstructorStats, getAvatarSrc } from '@/lib/instructors'
+import { getAuthorById } from '@/data/authors'
+import { getAuthorStats, getAvatarSrc } from '@/lib/authors'
 import { getCourseCompletionPercent } from '@/lib/progress'
 
 function getInitials(name: string) {
@@ -26,27 +26,27 @@ function getInitials(name: string) {
     .toUpperCase()
 }
 
-export function InstructorProfile() {
-  const { instructorId } = useParams<{ instructorId: string }>()
-  const instructor = getInstructorById(instructorId!)
+export function AuthorProfile() {
+  const { authorId } = useParams<{ authorId: string }>()
+  const author = getAuthorById(authorId!)
 
-  if (!instructor) {
+  if (!author) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
         <Users className="mb-4 h-16 w-16 text-muted-foreground/50" />
-        <h2 className="text-xl font-semibold mb-2">Instructor Not Found</h2>
+        <h2 className="text-xl font-semibold mb-2">Author Not Found</h2>
         <p className="text-muted-foreground mb-6">
-          The instructor you&apos;re looking for doesn&apos;t exist.
+          The author you&apos;re looking for doesn&apos;t exist.
         </p>
         <Button asChild>
-          <Link to="/instructors">Back to Instructors</Link>
+          <Link to="/authors">Back to Authors</Link>
         </Button>
       </div>
     )
   }
 
-  const stats = getInstructorStats(instructor)
-  const socialEntries = Object.entries(instructor.socialLinks).filter(([, url]) => url)
+  const stats = getAuthorStats(author)
+  const socialEntries = Object.entries(author.socialLinks).filter(([, url]) => url)
 
   return (
     <div>
@@ -55,12 +55,12 @@ export function InstructorProfile() {
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/instructors">Instructors</Link>
+              <Link to="/authors">Authors</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>{instructor.name}</BreadcrumbPage>
+            <BreadcrumbPage>{author.name}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -71,27 +71,27 @@ export function InstructorProfile() {
           <div className="flex flex-col sm:flex-row gap-6">
             {/* Avatar */}
             <Avatar className="size-28 sm:size-32 shrink-0 ring-2 ring-border/50 self-center sm:self-start">
-              <AvatarImage {...getAvatarSrc(instructor.avatar, 128)} alt={instructor.name} />
+              <AvatarImage {...getAvatarSrc(author.avatar, 128)} alt={author.name} />
               <AvatarFallback className="text-2xl font-semibold bg-brand/10 text-brand">
-                {getInitials(instructor.name)}
+                {getInitials(author.name)}
               </AvatarFallback>
             </Avatar>
 
             {/* Info */}
             <div className="flex-1 text-center sm:text-left">
-              <h1 className="text-2xl font-bold mb-1">{instructor.name}</h1>
-              <p className="text-muted-foreground mb-3">{instructor.title}</p>
+              <h1 className="text-2xl font-bold mb-1">{author.name}</h1>
+              <p className="text-muted-foreground mb-3">{author.title}</p>
 
               {/* Featured Quote */}
-              {instructor.featuredQuote && (
+              {author.featuredQuote && (
                 <blockquote className="text-sm italic text-muted-foreground border-l-2 border-brand pl-3 mb-4">
-                  &ldquo;{instructor.featuredQuote}&rdquo;
+                  &ldquo;{author.featuredQuote}&rdquo;
                 </blockquote>
               )}
 
               {/* Specialty Badges */}
               <div className="flex flex-wrap justify-center sm:justify-start gap-1.5 mb-4">
-                {instructor.specialties.map(specialty => (
+                {author.specialties.map(specialty => (
                   <Badge key={specialty} variant="secondary" className="text-xs">
                     {specialty}
                   </Badge>
@@ -129,7 +129,7 @@ export function InstructorProfile() {
         />
         <StatCard icon={Clock} value={`${Math.round(stats.totalHours)}h`} label="Content" />
         <StatCard icon={GraduationCap} value={stats.totalLessons} label="Lessons" />
-        <StatCard icon={Award} value={`${instructor.yearsExperience}y`} label="Experience" />
+        <StatCard icon={Award} value={`${author.yearsExperience}y`} label="Experience" />
       </div>
 
       {/* Bio Section */}
@@ -137,17 +137,17 @@ export function InstructorProfile() {
         <CardContent className="p-6 sm:p-8">
           <h2 className="text-lg font-semibold mb-4">About</h2>
           <div className="space-y-3 text-muted-foreground leading-relaxed">
-            {instructor.bio.split('\n\n').map((paragraph, i) => (
+            {author.bio.split('\n\n').map((paragraph, i) => (
               <p key={i}>{paragraph}</p>
             ))}
           </div>
-          {instructor.education && (
+          {author.education && (
             <>
               <Separator className="my-5" />
               <div className="flex items-center gap-2 text-sm">
                 <Award className="size-4 text-brand" aria-hidden="true" />
                 <span className="font-medium">Education:</span>
-                <span className="text-muted-foreground">{instructor.education}</span>
+                <span className="text-muted-foreground">{author.education}</span>
               </div>
             </>
           )}
@@ -156,7 +156,7 @@ export function InstructorProfile() {
 
       {/* Courses Section */}
       <div>
-        <h2 className="text-lg font-semibold mb-4">Courses by {instructor.name}</h2>
+        <h2 className="text-lg font-semibold mb-4">Courses by {author.name}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {stats.courses.map(course => (
             <CourseCard
