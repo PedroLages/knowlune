@@ -56,7 +56,7 @@ function makeCourse(overrides: Partial<Course> = {}): Course {
     modules: [],
     isSequential: false,
     basePath: 'advanced-influence',
-    instructorId: 'instructor-1',
+    authorId: 'instructor-1',
     ...overrides,
   }
 }

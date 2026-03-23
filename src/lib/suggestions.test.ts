@@ -44,7 +44,7 @@ function makeCourse(id: string, tags: string[], lessonCount = 3): Course {
     ],
     isSequential: false,
     basePath: id,
-    instructorId: 'instructor-1',
+    authorId: 'instructor-1',
   }
 }
 

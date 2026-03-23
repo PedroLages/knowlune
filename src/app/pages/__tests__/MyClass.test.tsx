@@ -64,7 +64,7 @@ beforeEach(() => {
         ],
         isSequential: false,
         basePath: '/test',
-        instructorId: 'i1',
+        authorId: 'i1',
       },
     ],
     isLoaded: true,

@@ -7,7 +7,7 @@
 // Common Types
 // ============================================================================
 
-export interface Instructor {
+export interface Author {
   id: string
   name: string
   avatar: string
@@ -56,7 +56,7 @@ export interface Course {
   id: string
   title: string
   description: string
-  instructor: Instructor
+  author: Author
   thumbnail: string
   duration: string
   level: 'Beginner' | 'Intermediate' | 'Advanced'
@@ -221,7 +221,7 @@ export interface UserProfile {
   name: string
   email: string
   avatar: string
-  role: 'student' | 'instructor' | 'admin'
+  role: 'student' | 'author' | 'admin'
   joinedDate: string
   bio: string
   location: string

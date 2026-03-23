@@ -1,7 +1,7 @@
 /**
  * ATDD tests for E23-S03: Rename Instructors to Authors
  *
- * RED phase — these tests should FAIL until the rename is implemented.
+ * GREEN phase — these tests validate the rename is complete.
  * Each test maps to an acceptance criterion.
  */
 import { test, expect } from '../support/fixtures'
@@ -10,8 +10,8 @@ import { navigateAndWait } from '../support/helpers/navigation'
 test.describe('E23-S03: Rename Instructors to Authors', () => {
   // AC1: All text labels, navigation items, and headings use "Author" / "Authors"
   test('AC1: no "Instructor" text appears anywhere in the app', async ({ page }) => {
-    // Check the Authors page (formerly Instructors)
-    await navigateAndWait(page, '/instructors')
+    // Check the Authors page
+    await navigateAndWait(page, '/authors')
     await page.waitForLoadState('load')
 
     // The page should not contain "Instructor" in any visible text
@@ -36,7 +36,7 @@ test.describe('E23-S03: Rename Instructors to Authors', () => {
 
   // AC3: Page heading and content use "Author" / "Authors" terminology
   test('AC3: Authors page heading says "Authors" not "Instructors"', async ({ page }) => {
-    await navigateAndWait(page, '/instructors')
+    await navigateAndWait(page, '/authors')
     await page.waitForLoadState('load')
 
     // Should have a heading with "Authors" terminology
@@ -50,7 +50,7 @@ test.describe('E23-S03: Rename Instructors to Authors', () => {
   // AC5: Layout remains responsive (spot check at mobile width)
   test('AC5: Authors page renders correctly at mobile viewport', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 })
-    await navigateAndWait(page, '/instructors')
+    await navigateAndWait(page, '/authors')
     await page.waitForLoadState('load')
 
     // Page should render without horizontal overflow

@@ -133,7 +133,7 @@ beforeEach(() => {
         modules: [{ id: 'm1', title: 'Module 1', description: '', order: 1, lessons: [] }],
         isSequential: false,
         basePath: '/test',
-        instructorId: 'i1',
+        authorId: 'i1',
       },
     ],
     isLoaded: true,
