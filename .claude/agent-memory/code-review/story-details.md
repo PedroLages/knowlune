@@ -284,6 +284,18 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M4: ReviewSummary jump buttons lack `min-w-[44px]`
 - Positive: Clean component decomposition, solid ARIA (aria-current="step", dynamic aria-labels), defensive store guards, correct array answer handling in QuestionGrid
 
+## E18-S10: Export Quiz Results (Round 1)
+- No uncommitted changes (positive)
+- BLOCKER: CSV formula injection -- `escapeCsv` handles RFC 4180 delimiters but not formula-injection payloads (`=`, `+`, `-`, `@`)
+- H1 (RECURRING x17): Silent failure on IndexedDB count query -- `console.error` only, no user-facing error state, disabled button misleads
+- H2: Non-deterministic `new Date()` in `exportQuizResultsCsv` and `exportQuizResultsPdf` -- tests use regex matching, reducing assertion precision
+- H3: `Math.max(...scores)` stack overflow risk on large arrays (recurring pattern from E08-S01)
+- M1: `tabIndex={0}` on span wrapper creates tab stop with no focus indicator
+- M2: `networkidle` in 4 test locations (widespread codebase pattern, 85 occurrences across 14 files)
+- M3: `formatTimeSpent` duplicates `formatDuration` utility with different output format
+- M4: `formatTimeSpent` doesn't guard against negative/NaN input (unlike `formatDuration`)
+- Positive: Clean architecture separation, excellent lazy-loading for jsPDF, thorough unit tests (24 cases), proper useEffect cleanup, good error handling in handleExport, proper design tokens in UI, factory usage in tests
+
 ## E15-S05: Display Performance Summary After Quiz (Round 1)
 - No uncommitted changes (positive)
 - H1: `text-warning` used for "incorrect" count in correctness bar -- `text-destructive` is the established convention (ScoreSummary.tsx uses it)
