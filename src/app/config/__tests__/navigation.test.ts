@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest'
 import { navigationGroups, getPrimaryNav, getOverflowNav } from '../navigation'
 
 describe('navigationGroups', () => {
