@@ -110,14 +110,24 @@ function SidebarContent({ onNavigate, iconOnly }: { onNavigate?: () => void; ico
               {/* Group label — hidden in collapsed mode, replaced by separator */}
               {iconOnly ? (
                 idx > 0 && (
-                  <div className="mx-4 mb-2 border-t border-border/50" aria-hidden="true" />
+                  <div
+                    className="mx-4 mb-2 border-t border-border/50"
+                    aria-hidden="true"
+                    data-testid="group-separator"
+                  />
                 )
               ) : (
-                <div className="px-4 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                <div
+                  id={`nav-group-${group.label.toLowerCase()}`}
+                  className="px-4 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground"
+                >
                   {group.label}
                 </div>
               )}
-              <ul className="space-y-0.5">
+              <ul
+                className="space-y-0.5"
+                aria-labelledby={!iconOnly ? `nav-group-${group.label.toLowerCase()}` : undefined}
+              >
                 {group.items.map(item => (
                   <NavLink
                     key={item.tab ? `${item.path}?tab=${item.tab}` : item.path}
