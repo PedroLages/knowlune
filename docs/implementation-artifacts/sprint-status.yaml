@@ -37,7 +37,7 @@
 # - Epic 7 gap coverage stories (7-8..7-11) deferred indefinitely — risk accepted for error-path edge cases
 
 generated: 2026-03-15
-last_updated: 2026-03-23  # E18-S01 started
+last_updated: 2026-03-23  # E18-S01 done
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -269,7 +269,7 @@ development_status:
   # Epic 18: Accessible and Integrated Quiz Experience
   # ──────────────────────────────────────────────────
   epic-18: in-progress
-  18-1-implement-complete-keyboard-navigation: in-progress
+  18-1-implement-complete-keyboard-navigation: done
   18-2-implement-aria-live-regions-for-dynamic-content: backlog
   18-3-ensure-semantic-html-and-proper-aria-attributes: backlog
   18-4-verify-contrast-ratios-and-touch-targets: backlog
