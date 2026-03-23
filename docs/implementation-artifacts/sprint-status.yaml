@@ -335,10 +335,10 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 23: Platform Identity & Navigation Cleanup
   # ──────────────────────────────────────────────────
-  epic-23: backlog
+  epic-23: in-progress
   23-1-remove-hardcoded-branding-from-courses-page: backlog
   23-2-rename-my-classes-to-my-courses: backlog
-  23-3-rename-instructors-to-authors: backlog
+  23-3-rename-instructors-to-authors: in-progress
   23-4-restructure-sidebar-navigation-groups: backlog
   23-5-de-emphasize-pre-seeded-courses: backlog
   23-6-featured-author-layout-for-single-author-state: backlog
