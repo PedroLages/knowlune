@@ -17,6 +17,12 @@ import {
   createLesson,
   createModule,
 } from '../support/fixtures/factories/course-factory'
+import {
+  seedIndexedDBStore,
+  seedQuizzes,
+  seedQuizAttempts,
+  clearIndexedDBStore,
+} from '../support/helpers/indexeddb-seed'
 
 // ---------------------------------------------------------------------------
 // Test data (stable IDs for deterministic queries)
@@ -72,49 +78,6 @@ const completedAttempt = makeAttempt({
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Seed arbitrary records into any ElearningDB store. */
-async function seedToStore(
-  page: import('@playwright/test').Page,
-  storeName: string,
-  records: unknown[]
-) {
-  await page.evaluate(
-    async ({ storeName, records, maxRetries, retryDelay }) => {
-      for (let attempt = 0; attempt < maxRetries; attempt++) {
-        const result = await new Promise<'ok' | 'store-missing'>((resolve, reject) => {
-          const request = indexedDB.open('ElearningDB')
-          request.onsuccess = () => {
-            const db = request.result
-            if (!db.objectStoreNames.contains(storeName)) {
-              db.close()
-              resolve('store-missing')
-              return
-            }
-            const tx = db.transaction(storeName, 'readwrite')
-            const store = tx.objectStore(storeName)
-            for (const record of records) {
-              store.put(record)
-            }
-            tx.oncomplete = () => {
-              db.close()
-              resolve('ok')
-            }
-            tx.onerror = () => {
-              db.close()
-              reject(tx.error)
-            }
-          }
-          request.onerror = () => reject(request.error)
-        })
-        if (result === 'ok') return
-        await new Promise(r => setTimeout(r, retryDelay))
-      }
-      throw new Error(`Store "${storeName}" not found after retries`)
-    },
-    { storeName, records, maxRetries: 10, retryDelay: 200 }
-  )
-}
-
 /** Set up page for tests: navigate to home (creates DB), seed course + quiz, then navigate to course detail. */
 async function setupCourseDetail(
   page: import('@playwright/test').Page,
@@ -128,14 +91,13 @@ async function setupCourseDetail(
   // Navigate first so Dexie creates and migrates the DB
   await page.goto('/', { waitUntil: 'domcontentloaded' })
 
-  // Seed course into 'courses' table so CourseDetail can find it
-  await seedToStore(page, 'courses', [testCourse])
-
-  // Seed quiz into 'quizzes' table
-  await seedToStore(page, 'quizzes', [quiz])
-
+  // Seed course, quiz, and optionally attempt using shared helpers (frame-accurate timing)
+  await seedIndexedDBStore(page, 'ElearningDB', 'courses', [
+    testCourse as Record<string, unknown>,
+  ])
+  await seedQuizzes(page, [quiz as Record<string, unknown>])
   if (withAttempt) {
-    await seedToStore(page, 'quizAttempts', [completedAttempt])
+    await seedQuizAttempts(page, [completedAttempt as Record<string, unknown>])
   }
 
   // Full navigation so main.tsx re-runs loadCourses() with fresh Zustand state
@@ -149,6 +111,12 @@ async function setupCourseDetail(
 // Tests
 // ---------------------------------------------------------------------------
 
+test.afterEach(async ({ page }) => {
+  await clearIndexedDBStore(page, 'ElearningDB', 'courses')
+  await clearIndexedDBStore(page, 'ElearningDB', 'quizzes')
+  await clearIndexedDBStore(page, 'ElearningDB', 'quizAttempts')
+})
+
 test('lesson with quiz shows "Take Quiz" badge', async ({ page }) => {
   await setupCourseDetail(page)
 
@@ -161,7 +129,7 @@ test('lesson without quiz shows no badge', async ({ page }) => {
   await setupCourseDetail(page)
 
   const badge = page.getByTestId(`quiz-badge-${LESSON_WITHOUT_QUIZ_ID}`)
-  await expect(badge).not.toBeVisible()
+  await expect(badge).not.toBeAttached()
 })
 
 test('lesson with completed quiz shows score badge', async ({ page }) => {
@@ -170,6 +138,10 @@ test('lesson with completed quiz shows score badge', async ({ page }) => {
   const badge = page.getByTestId(`quiz-badge-${LESSON_WITH_QUIZ_ID}`)
   await expect(badge).toBeVisible()
   await expect(badge).toContainText('Quiz: 85%')
+
+  // AC3 requires success color on the score text
+  const scoreText = page.getByTestId(`quiz-score-text-${LESSON_WITH_QUIZ_ID}`)
+  await expect(scoreText).toHaveClass(/text-success/)
 })
 
 test('clicking quiz badge navigates to quiz start screen', async ({ page }) => {

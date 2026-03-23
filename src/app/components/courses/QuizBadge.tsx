@@ -34,7 +34,7 @@ export function QuizBadge({ courseId, lessonId, lessonTitle, bestScore }: QuizBa
     >
       <ClipboardCheck className="size-3.5" aria-hidden="true" />
       {bestScore != null ? (
-        <span className="text-success">Quiz: {bestScore}%</span>
+        <span className="text-success" data-testid={`quiz-score-text-${lessonId}`}>Quiz: {bestScore}%</span>
       ) : (
         <span className="text-muted-foreground">Take Quiz</span>
       )}
