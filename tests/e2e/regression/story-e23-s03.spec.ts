@@ -4,8 +4,8 @@
  * GREEN phase — these tests validate the rename is complete.
  * Each test maps to an acceptance criterion.
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
 
 test.describe('E23-S03: Rename Instructors to Authors', () => {
   // AC1: All text labels, navigation items, and headings use "Author" / "Authors"
