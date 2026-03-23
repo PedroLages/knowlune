@@ -4,9 +4,9 @@ story_name: "Implement Complete Keyboard Navigation"
 status: in-progress
 started: 2026-03-23
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-23
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -124,15 +124,33 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story]
+Reviewed 2026-03-23. Full report: `docs/reviews/design/design-review-2026-03-23-e18-s01.md`
+
+**Fixed during review:**
+- B1 (BLOCKER): `text-brand` on `bg-brand-soft` = 2.76:1 contrast (WCAG AA fail) → fixed to `text-brand-soft-foreground` in `QuestionGrid.tsx:92`
+- H1 (HIGH): AlertDialog Escape returned focus to `<body>` instead of Submit button → fixed via `onOpenChange` RAF focus return in `Quiz.tsx`
+
+**Passing:** AC1 tab order, AC2 programmatic focus, AC3 Arrow nav suppression, AC5 roving tabindex (all keys + wrap), AC6 focus trap. Touch targets 44px. Responsive at all breakpoints. Zero console errors.
+
+**Advisory (not blocking):** H2 — `--ring` token (2.01:1) doesn't meet WCAG 2.4.11 at the token level; pre-existing issue, story improved from ring-ring/50 → ring-ring which is the right direction.
 
 ## Code Review Feedback
 
-[Populated by /review-story]
+Reviewed 2026-03-23. Full report: `docs/reviews/code/code-review-2026-03-23-e18-s01.md`
+
+**Fixed during review:**
+- Missing `e.preventDefault()` on Enter case in `QuestionGrid.handleKeyDown` (double-invocation) → fixed
+- AC4 (multiple-select checkboxes) had zero test coverage → added 2 AC4 E2E tests
+- Programmatic focus `useEffect` fires spuriously when `currentProgress → null` → added null guard
+- `isArrowNavRef` stuck true on Tab-away → reset on question change in useEffect
+
+**Advisory (not blocking):** question-focus-target div could benefit from `role="region"` + `aria-label` for screen reader context; no QuestionGrid unit tests for roving tabindex behavior; buttonRefs not trimmed on total shrink.
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story]
+Reviewed 2026-03-23. Full report: `docs/reviews/design/web-design-guidelines-2026-03-23-e18-s01.md`
+
+18 checks passed. No blockers. Advisory: add inline justification comment for `outline-none` on the question wrapper (intentional — programmatic focus, not user-initiated).
 
 ## Challenges and Lessons Learned
 

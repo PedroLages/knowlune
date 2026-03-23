@@ -284,6 +284,16 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M4: ReviewSummary jump buttons lack `min-w-[44px]`
 - Positive: Clean component decomposition, solid ARIA (aria-current="step", dynamic aria-labels), defensive store guards, correct array answer handling in QuestionGrid
 
+## E18-S01: Implement Complete Keyboard Navigation (Round 1)
+- No uncommitted changes (positive)
+- H1: QuestionGrid Enter key handler missing `e.preventDefault()` -- double `onQuestionClick` invocation (keydown + native button click)
+- H2: AC4 (Checkboxes Tab + Space) has zero E2E test coverage despite header listing it
+- H3: Programmatic focus `useEffect` fires spuriously when `currentProgress` becomes `null` on quiz submit
+- M1: `question-focus-target` div lacks `role="region"` and `aria-label` for screen reader context
+- M2: QuestionGrid unit tests not updated for new roving tabindex behavior (role=toolbar, tabIndex, arrow keys)
+- M3: Stale story Implementation Notes contradict Challenges section on isArrowNavRef fix
+- Positive: WAI-ARIA toolbar pattern correctly implemented, isArrowNavRef event-order pattern is clever, test barriers prevent focus race conditions, clean working tree
+
 ## E15-S05: Display Performance Summary After Quiz (Round 1)
 - No uncommitted changes (positive)
 - H1: `text-warning` used for "incorrect" count in correctness bar -- `text-destructive` is the established convention (ScoreSummary.tsx uses it)
