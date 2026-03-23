@@ -19,6 +19,7 @@ import { StudyScheduleWidget } from '@/app/components/StudyScheduleWidget'
 import { RecommendedNext, RecommendedNextSkeleton } from '@/app/components/RecommendedNext'
 import { CourseCard } from '@/app/components/figma/CourseCard'
 import { ProgressChart } from '@/app/components/charts/ProgressChart'
+import { SkillProficiencyRadar } from '@/app/components/overview/SkillProficiencyRadar'
 import { useCourseStore } from '@/stores/useCourseStore'
 import {
   getCoursesInProgress,
@@ -32,6 +33,7 @@ import {
   getCourseCompletionPercent,
 } from '@/lib/progress'
 import { getActionsPerDay } from '@/lib/studyLog'
+import { getSkillProficiencyForOverview } from '@/lib/reportStats'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 
 function getGreeting(): string {
@@ -95,6 +97,7 @@ export function Overview() {
   const lessonSparkline = useMemo(() => getLast7DaysLessonCompletions(), [])
   const lessonsChange = useMemo(() => getWeeklyChange('lessons'), [])
   const chartData = useMemo(() => getActionsPerDay(14), [])
+  const skillProficiencyData = useMemo(() => getSkillProficiencyForOverview(), [])
 
   // Memoize last watched calculation to prevent sorting on every render
   const lastWatchedEntry = useMemo(
@@ -182,6 +185,9 @@ export function Overview() {
           <Skeleton className="h-[280px] rounded-2xl" />
           <Skeleton className="h-[280px] rounded-2xl" />
         </div>
+
+        {/* Skill Proficiency skeleton */}
+        <Skeleton className="h-[340px] rounded-[24px]" />
 
         {/* Gallery skeleton */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
@@ -280,6 +286,20 @@ export function Overview() {
           <h2 className="text-xl font-semibold mb-4">Suggested Study Time</h2>
           <StudyScheduleWidget />
         </motion.section>
+
+        {/* ── Skill Proficiency Radar ── */}
+        {skillProficiencyData.length > 0 && (
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-50px' }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="rounded-[24px] border border-border/50 bg-card p-6"
+          >
+            <h2 className="text-xl font-semibold mb-4">Skill Proficiency</h2>
+            <SkillProficiencyRadar data={skillProficiencyData} />
+          </motion.section>
+        )}
 
         {/* ── Insight + Action Zone ── */}
         <motion.section
