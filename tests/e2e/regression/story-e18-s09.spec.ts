@@ -7,8 +7,8 @@
  * - AC3: Quiz initialization reads saved preferences as defaults
  * - AC4: Defaults are used when no preferences configured
  */
-import { test, expect } from '../support/fixtures'
-import { makeQuiz, makeQuestion } from '../support/fixtures/factories/quiz-factory'
+import { test, expect } from '../../support/fixtures'
+import { makeQuiz, makeQuestion } from '../../support/fixtures/factories/quiz-factory'
 
 // ---------------------------------------------------------------------------
 // Constants
