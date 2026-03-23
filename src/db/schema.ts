@@ -439,4 +439,41 @@ db.version(18).stores({
   videoCaptions: '[courseId+videoId], courseId, videoId',
 })
 
+// v19: Rename instructorId → authorId in courses table
+db.version(19)
+  .stores({
+    // All 20 existing v18 tables (unchanged — must redeclare or Dexie deletes them)
+    importedCourses: 'id, name, importedAt, status, *tags',
+    importedVideos: 'id, courseId, filename',
+    importedPdfs: 'id, courseId, filename',
+    progress: '[courseId+videoId], courseId, videoId',
+    bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+    notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+    screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+    studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+    contentProgress: '[courseId+itemId], courseId, itemId, status',
+    challenges: 'id, type, deadline, createdAt',
+    embeddings: 'noteId, createdAt',
+    learningPath: 'courseId, position, generatedAt',
+    courseThumbnails: 'courseId',
+    aiUsageEvents: 'id, featureType, timestamp, courseId',
+    reviewRecords: 'id, noteId, nextReviewAt, reviewedAt',
+    courseReminders: 'id, courseId',
+    courses: 'id, category, difficulty, authorId',
+    quizzes: 'id, lessonId, createdAt',
+    quizAttempts: 'id, quizId, [quizId+completedAt], completedAt',
+    videoCaptions: '[courseId+videoId], courseId, videoId',
+  })
+  .upgrade(tx => {
+    return tx
+      .table('courses')
+      .toCollection()
+      .modify(course => {
+        if (course.instructorId !== undefined) {
+          course.authorId = course.instructorId
+          delete course.instructorId
+        }
+      })
+  })
+
 export { db }
