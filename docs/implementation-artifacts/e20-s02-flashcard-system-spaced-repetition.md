@@ -91,4 +91,23 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+**Dexie schema migration discipline:**
+- Adding a new `flashcards` table required a Dexie version bump (v19 → v20) with an explicit upgrade handler. The pattern is `db.version(20).stores({ flashcards: '++id, courseId, dueDate, ...' }).upgrade(tx => ...)`. Forgetting to add the table key in `.stores()` results in the table being inaccessible even after the version bump — always verify both `.stores()` and the upgrade callback.
+
+**SM-2 algorithm implementation nuances:**
+- The SM-2 algorithm uses an ease factor (EF) that starts at 2.5 and decreases on "Hard" ratings. The critical constraint is `EF >= 1.3` to prevent infinitely short intervals. The initial interval on the first correct review is 1 day, then 6 days, then EF × previous interval — this graduation sequence took multiple iterations to match the original SM-2 spec. A dedicated `SpacedRepetitionState` interface was extracted (`refactor(E20-S02)`) to allow the algorithm to be reused for future review-queue features.
+
+**Zustand store with IndexedDB persistence:**
+- The `useFlashcardStore` follows the established Knowlune pattern: optimistic state update → async IndexedDB write → rollback on failure. One subtle issue was that the review session state (`reviewQueue`, `reviewIndex`) is ephemeral UI state, not persisted — this is intentional and differs from card CRUD state. The `isReviewActive` flag was added to the store but turned out unused in the component; the review mode is instead inferred from `reviewQueue.length > 0 && reviewIndex < reviewQueue.length`. Removed in the review pre-check.
+
+**BubbleMenuBar text selection integration:**
+- The "Create Flashcard" button in `BubbleMenuBar` only appears when text is selected in TipTap and the note has a valid `courseId`. This required reading the TipTap selection state via `editor.state.selection` and comparing `from !== to`. The selected text is passed as the initial `front` value of the flashcard dialog, which is the key UX for AC1.
+
+**`motion/react` animation with conditional sections:**
+- `Flashcards.tsx` uses `MotionConfig` with `staggerChildren` for the stats grid and review queue sections. A subtle issue: when switching between "review mode" and "overview mode", the layout shift can cause the `AnimatePresence` to flash. The solution was to keep the review card always mounted but toggle visibility via opacity/scale variants rather than conditional rendering.
+
+**Missing E2E spec — testing via navigation smoke test:**
+- No story-specific E2E spec was written; the AC coverage relies on unit tests for SM-2 logic (`spacedRepetition.test.ts`, 23 tests) and store behavior (`useFlashcardStore.test.ts`, 24 tests). The Flashcards route is covered by the updated navigation smoke test. For future stories adding interactive review flows, consider adding a dedicated E2E spec testing the flip-and-rate cycle.
+
+**Pre-review fix: `isReviewActive` unused variable:**
+- TypeScript caught a destructured variable from `useFlashcardStore` that was never used in the component. This was a TS6133 error (not caught by `eslint --fix`). Remove unused store destructuring immediately when refactoring components.
