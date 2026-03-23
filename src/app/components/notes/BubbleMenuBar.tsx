@@ -1,6 +1,6 @@
 import type { Editor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
-import { Bold, Italic, Underline as UnderlineIcon, Highlighter, Link2, Palette } from 'lucide-react'
+import { Bold, Italic, Underline as UnderlineIcon, Highlighter, Link2, Palette, Layers } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
 import { cn } from '@/app/components/ui/utils'
 import { InteractiveButton } from '@/app/components/ui/interactive-button'
@@ -19,9 +19,10 @@ const TEXT_COLORS = [
 interface BubbleMenuBarProps {
   editor: Editor
   onOpenLinkDialog: () => void
+  onCreateFlashcard?: () => void
 }
 
-export function BubbleMenuBar({ editor, onOpenLinkDialog }: BubbleMenuBarProps) {
+export function BubbleMenuBar({ editor, onOpenLinkDialog, onCreateFlashcard }: BubbleMenuBarProps) {
   return (
     <BubbleMenu editor={editor}>
       <div
@@ -65,6 +66,12 @@ export function BubbleMenuBar({ editor, onOpenLinkDialog }: BubbleMenuBarProps) 
         <BubbleButton onClick={onOpenLinkDialog} active={editor.isActive('link')} aria-label="Link">
           <Link2 className="size-4" />
         </BubbleButton>
+
+        {onCreateFlashcard && (
+          <BubbleButton onClick={onCreateFlashcard} aria-label="Create Flashcard">
+            <Layers className="size-4" />
+          </BubbleButton>
+        )}
 
         <Popover>
           <PopoverTrigger asChild>
