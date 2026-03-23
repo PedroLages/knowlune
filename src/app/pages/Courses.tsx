@@ -56,7 +56,7 @@ export function Courses() {
       const stored = localStorage.getItem(COLLAPSE_KEY)
       if (stored !== null) return stored === 'true'
     } catch {
-      // localStorage unavailable (private browsing, quota exceeded)
+      // silent-catch-ok: localStorage unavailable in restricted contexts — silent fallback is correct
     }
     return false // Will be re-evaluated in useEffect when importedCourses loads
   })
@@ -83,7 +83,7 @@ export function Courses() {
         localStorage.setItem(COLLAPSE_KEY, 'true')
       }
     } catch {
-      // localStorage unavailable
+      // silent-catch-ok: localStorage unavailable — session still works without persistence
     }
   }, [importedCourses.length])
 
@@ -153,6 +153,7 @@ export function Courses() {
         setAtRiskMap(atRiskMap)
         setEstimateMap(estimateMap)
       } catch (err) {
+        // silent-catch-ok: metrics failure is non-fatal — courses still load without momentum/risk indicators
         console.error('[Courses] Failed to load course metrics:', err)
       }
     }
@@ -231,7 +232,7 @@ export function Courses() {
     try {
       await importCourseFromFolder()
     } catch {
-      // Errors handled by importCourseFromFolder via toasts
+      // silent-catch-ok: errors are surfaced by importCourseFromFolder via toasts
     }
   }
 
@@ -241,7 +242,7 @@ export function Courses() {
     try {
       localStorage.setItem(COLLAPSE_KEY, String(collapsed))
     } catch {
-      // localStorage unavailable — state still works for the session
+      // silent-catch-ok: localStorage unavailable — collapse state still works for the session
     }
   }
 
