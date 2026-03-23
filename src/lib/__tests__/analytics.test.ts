@@ -822,6 +822,27 @@ describe('calculateDiscriminationIndices', () => {
     expect(result[0].interpretation).toContain('Low discriminator')
   })
 
+  it('moderate discriminator (0.2 ≤ rpb ≤ 0.3) gets correct interpretation text', () => {
+    // Manually verified scenario yielding rpb ≈ 0.293 (in the 0.2–0.3 Moderate range):
+    // group1 (correct): scores [4, 5, 6] — mean1 = 5.0
+    // group0 (incorrect): scores [4, 5] — mean0 = 4.5
+    // allScores = [4, 4, 5, 5, 6], mean = 4.8
+    // variance = [(0.64 + 0.64 + 0.04 + 0.04 + 1.44) / 4] = 2.8/4 = 0.7 → sd ≈ 0.8367
+    // p = 3/5 = 0.6 → √(p*(1-p)) ≈ 0.4899
+    // rpb ≈ (0.5 / 0.8367) × 0.4899 ≈ 0.293 → Moderate discriminator
+    const quiz = makeTestQuiz(1)
+    const attempts = [
+      makeAttempt({ id: 'a1', quizId: 'quiz-disc-test', score: 4, answers: [makeWrongAnswer('q1')] }),
+      makeAttempt({ id: 'a2', quizId: 'quiz-disc-test', score: 4, answers: [makeCorrectAnswer('q1')] }),
+      makeAttempt({ id: 'a3', quizId: 'quiz-disc-test', score: 5, answers: [makeWrongAnswer('q1')] }),
+      makeAttempt({ id: 'a4', quizId: 'quiz-disc-test', score: 5, answers: [makeCorrectAnswer('q1')] }),
+      makeAttempt({ id: 'a5', quizId: 'quiz-disc-test', score: 6, answers: [makeCorrectAnswer('q1')] }),
+    ]
+    const result = calculateDiscriminationIndices(quiz, attempts)!
+    expect(result[0].discriminationIndex).toBeCloseTo(0.293, 2)
+    expect(result[0].interpretation).toContain('Moderate discriminator')
+  })
+
   it('returns one result per quiz question', () => {
     const quiz = makeTestQuiz(3)
     const attempts = Array.from({ length: 5 }, (_, i) =>
