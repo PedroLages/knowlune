@@ -48,7 +48,7 @@ function renderAuthors() {
   return render(
     <MemoryRouter>
       <Authors />
-    </MemoryRouter>,
+    </MemoryRouter>
   )
 }
 
@@ -89,9 +89,7 @@ describe('Authors page', () => {
 
     it('displays singular subtitle text', () => {
       renderAuthors()
-      expect(
-        screen.getByText('Meet the expert behind your learning journey'),
-      ).toBeInTheDocument()
+      expect(screen.getByText('Meet the expert behind your learning journey')).toBeInTheDocument()
     })
   })
 
@@ -118,7 +116,7 @@ describe('Authors page', () => {
     it('displays plural subtitle text', () => {
       renderAuthors()
       expect(
-        screen.getByText('Meet the 2 experts behind your learning journey'),
+        screen.getByText('Meet the 2 experts behind your learning journey')
       ).toBeInTheDocument()
     })
   })
