@@ -128,9 +128,7 @@ describe('Courses page', () => {
     it('displays global empty state when no courses at all', () => {
       renderCourses()
       expect(screen.getByText('No courses yet')).toBeInTheDocument()
-      expect(
-        screen.getByText('Import a course folder to get started'),
-      ).toBeInTheDocument()
+      expect(screen.getByText('Import a course folder to get started')).toBeInTheDocument()
     })
 
     it('global empty state has correct test id', () => {
