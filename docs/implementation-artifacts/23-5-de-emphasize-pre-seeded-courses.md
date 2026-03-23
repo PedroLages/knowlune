@@ -20,7 +20,7 @@ so that the platform prioritizes my own content and the sample courses feel like
 
 ## Acceptance Criteria
 
-- **AC1**: Given the Courses page is loaded, when the user views the page, then the pre-seeded courses section is visually de-emphasized with a "Sample Courses" heading, muted styling, and a collapsible container that defaults to collapsed when imported courses exist
+- **AC1**: Given the Courses page is loaded, when the user views the page, then the pre-seeded courses section is visually de-emphasized with a "Sample Courses (N)" heading, muted styling, and a collapsible container that defaults to collapsed when imported courses exist
 - **AC2**: Given the Courses page has both imported and pre-seeded courses, when the user views the page, then the imported courses section appears first (above the pre-seeded section) with full visual prominence
 - **AC3**: Given the Overview page is loaded, when the user has imported courses, then the "Your Library" gallery prioritizes imported courses and shows pre-seeded courses with reduced visual weight (opacity/muted treatment)
 - **AC4**: Given the Overview page is loaded, when the user has no imported courses, then pre-seeded courses display at full prominence (no de-emphasis) as the primary content

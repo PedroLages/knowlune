@@ -294,7 +294,7 @@ Replace the current pre-seeded courses section with:
   >
     <div className="flex items-center justify-between mb-2">
       <h2 className="text-lg font-semibold text-muted-foreground">
-        Sample Courses
+        Sample Courses ({allCourses.length})
       </h2>
       <CollapsibleTrigger asChild>
         <Button
@@ -305,7 +305,8 @@ Replace the current pre-seeded courses section with:
           className="p-2"
         >
           <ChevronDown
-            className={`size-4 transition-transform duration-200 ${
+            aria-hidden="true"
+            className={`size-4 transition-transform duration-200 motion-reduce:transition-none ${
               !sampleCollapsed ? 'rotate-180' : ''
             }`}
           />
@@ -431,11 +432,10 @@ Replace the current "Your Library" section (lines 318-345) with:
     {allCourses.map(course => (
       <div
         key={course.id}
-        data-testid={`course-card-${course.id}`}
-        className={`transition-opacity duration-200 ${
+        data-testid={importedCourses.length > 0 ? 'sample-course-card' : `course-card-${course.id}`}
+        className={`transition-opacity duration-200 motion-reduce:transition-none ${
           importedCourses.length > 0 ? 'opacity-60 hover:opacity-100' : ''
         }`}
-        {...(importedCourses.length > 0 ? { 'data-testid': 'sample-course-card' } : {})}
       >
         <CourseCard
           course={course}
@@ -448,11 +448,7 @@ Replace the current "Your Library" section (lines 318-345) with:
 </motion.section>
 ```
 
-**Important note on data-testid**: The pre-seeded cards need `data-testid="sample-course-card"` for E2E tests to verify AC3. However, we can't set two `data-testid` values. Instead, use a single conditional testid:
-
-```tsx
-data-testid={importedCourses.length > 0 ? 'sample-course-card' : `course-card-${course.id}`}
-```
+**Note on data-testid**: When imported courses exist, pre-seeded cards use `data-testid="sample-course-card"` for E2E AC3 verification. When no imports exist, they use `course-card-{id}` for AC4 verification. Only one testid is needed per state — no conflict.
 
 **Step 2: Run build**
 
@@ -580,3 +576,19 @@ git commit -m "fix(E23-S05): final polish and verification"
 - **Opacity contrast**: Verify that `opacity-60` on course cards still maintains WCAG 4.5:1 contrast for text. The cards use `bg-card` background and `text-foreground` text — at 60% opacity on `bg-background`, contrast should remain adequate but verify in dark mode too.
 - **localStorage key collision**: Using `knowlune:` prefix to namespace. Pattern consistent with existing localStorage keys.
 - **Radix Collapsible animation**: The default Radix Collapsible has no built-in animation. The content appears/disappears instantly. If smooth animation is desired, add CSS `data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up` classes (from tw-animate-css, already included in the project).
+- **Existing E2E regression**: `tests/e2e/courses.spec.ts` checks "at least one course card should be visible" — this still passes because the pre-seeded section is only collapsed when `importedCourses.length > 0` (and default test runs have no imports seeded).
+
+## Plan Review Notes (2026-03-23)
+
+**Validated against fresh codebase research:**
+1. Collapsible pattern confirmed in `Challenges.tsx` (lines 227-272) — same Radix Collapsible + ChevronDown rotation pattern
+2. `seedImportedCourses` helper confirmed in `tests/support/helpers/seed-helpers.ts:133` — accepts `(page, Record<string, unknown>[])`
+3. Overview "Your Library" section confirmed at `Overview.tsx:318-345` — only renders `allCourses` (pre-seeded), no imported courses in this gallery
+4. `cn()` utility not imported in current `Courses.tsx` — template literal approach for conditional classes avoids new import, consistent with existing file
+5. Auto-collapse `useEffect` logic is safe: only triggers when `localStorage` has no stored value AND imports exist — won't re-collapse after user manually expands
+
+**Fixes applied to original plan:**
+- Added `aria-hidden="true"` and `motion-reduce:transition-none` to ChevronDown (matches Challenges.tsx pattern)
+- Added count to section heading: "Sample Courses (8)" (matches Challenges.tsx "Completed (N)" pattern)
+- Fixed data-testid conflict in Overview template — use conditional testid instead of conflicting spread
+- Added `motion-reduce:transition-none` to Overview card opacity transition
