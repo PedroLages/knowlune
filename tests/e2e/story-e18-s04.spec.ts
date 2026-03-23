@@ -206,9 +206,9 @@ test.describe('E18-S04: Contrast Ratios — Dark Mode', () => {
   test('AC5: Quiz start screen passes WCAG 2.1 AA in dark mode', async ({ page }) => {
     await seedAndNavigateToQuizStart(page)
 
-    // Apply dark mode
+    // Disable transitions and apply dark mode (deterministic — no CSS timing uncertainty)
+    await page.addStyleTag({ content: '* { transition: none !important; animation: none !important; }' })
     await page.evaluate(() => document.documentElement.classList.add('dark'))
-    await page.waitForTimeout(100) // allow CSS transitions to settle
 
     const results = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
@@ -222,7 +222,8 @@ test.describe('E18-S04: Contrast Ratios — Dark Mode', () => {
   test('AC5: Active quiz with answered state passes WCAG 2.1 AA in dark mode', async ({ page }) => {
     await seedAndNavigateToQuizStart(page)
 
-    // Apply dark mode before starting quiz
+    // Disable transitions and apply dark mode (deterministic — no CSS timing uncertainty)
+    await page.addStyleTag({ content: '* { transition: none !important; animation: none !important; }' })
     await page.evaluate(() => document.documentElement.classList.add('dark'))
     await startQuiz(page)
 
