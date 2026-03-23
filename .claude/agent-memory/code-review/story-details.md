@@ -284,6 +284,17 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M4: ReviewSummary jump buttons lack `min-w-[44px]`
 - Positive: Clean component decomposition, solid ARIA (aria-current="step", dynamic aria-labels), defensive store guards, correct array answer handling in QuestionGrid
 
+## E23-S06: Featured Author Layout For Single Author State (Round 2 - Post-Fix)
+**Round 1 fixes verified:** All 6 findings addressed (getInitials extraction, shortBio fallback, StatCard ring, data-testid on blockquote, badge overflow test, empty state subtitle test).
+**Round 2 findings:**
+- H1: `getInitials` still duplicated in AuthorProfile.tsx:21-27 (different behavior: no null guard, no 2-char cap) -- inconsistency between Authors and AuthorProfile pages
+- H2: Quiz component files (MultipleChoiceQuestion, TrueFalseQuestion) committed under `fix(E23-S06)` but unrelated to story scope -- commit hygiene violation
+- M1: `avatarUpload.ts` re-exports getInitials from textUtils -- ghost dependency invites regression
+- M2: totalHours formatting logic `Math.max(Math.round(h), h > 0 ? 1 : 0)` convoluted -- extract helper
+- M3: Blockquote border-l-2 still renders on mobile inside centered column -- visual inconsistency
+- M4: getAuthorStats uses useCourseStore.getState() outside React cycle (acknowledged forward-looking)
+- Positive: No uncommitted changes, all round-1 findings fixed, thorough 13-scenario test file, clean design token usage, good defensive programming (empty state, badge overflow, negative year clamping)
+
 ## E15-S05: Display Performance Summary After Quiz (Round 1)
 - No uncommitted changes (positive)
 - H1: `text-warning` used for "incorrect" count in correctness bar -- `text-destructive` is the established convention (ScoreSummary.tsx uses it)

@@ -89,7 +89,7 @@ export function Authors() {
                     {/* Stats Row */}
                     <div
                       className="flex items-center justify-center gap-6 text-sm text-muted-foreground"
-                      aria-label={`${stats.courseCount} courses, ${Math.round(stats.totalHours)} hours, ${stats.totalLessons} lessons`}
+                      aria-label={`${stats.courseCount} courses, ${Number.isFinite(stats.totalHours) ? Math.round(stats.totalHours) : 0} hours, ${stats.totalLessons} lessons`}
                     >
                       <div className="flex items-center gap-1.5">
                         <BookOpen className="size-4 text-brand" aria-hidden="true" />

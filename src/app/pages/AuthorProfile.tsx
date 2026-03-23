@@ -17,14 +17,7 @@ import { CourseCard } from '@/app/components/figma/CourseCard'
 import { getAuthorById } from '@/data/authors'
 import { getAuthorStats, getAvatarSrc } from '@/lib/authors'
 import { getCourseCompletionPercent } from '@/lib/progress'
-
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
-}
+import { getInitials } from '@/lib/textUtils'
 
 export function AuthorProfile() {
   const { authorId } = useParams<{ authorId: string }>()

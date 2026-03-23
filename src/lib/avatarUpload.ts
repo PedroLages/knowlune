@@ -304,13 +304,6 @@ export function blobToFile(blob: Blob, filename: string): File {
   return new File([blob], filename, { type: blob.type })
 }
 
-// ============================================================================
-// Text Utilities
-// ============================================================================
-
-// Re-export from textUtils — canonical location for this pure string utility
-export { getInitials } from '@/lib/textUtils'
-
 /**
  * Generates a color for avatar fallback based on a name
  * Uses a deterministic algorithm to ensure same name always gets same color

@@ -1,68 +1,77 @@
 ## Test Coverage Review: E23-S06 — Featured Author Layout For Single Author State
 
+_Revision 2 — 2026-03-23. Supersedes the initial review of the same date. This review re-evaluates the test file after fixes were applied in commit `dd0123d2`._
+
+---
+
 ### AC Coverage Summary
 
 **Acceptance Criteria Coverage:** 4/5 ACs tested (**80%**)
 
-**COVERAGE GATE:** PASS (80%) — meets the minimum threshold, but AC4 (responsive layout) has no meaningful test, making this a boundary pass that warrants attention.
+**COVERAGE GATE:** PASS (>=80%) — Meets the minimum threshold. AC4 (responsive layout) remains partial; the story carries a boundary pass.
 
 ### AC Coverage Table
 
 | AC# | Description | Unit Test | E2E Test | Verdict |
 |-----|-------------|-----------|----------|---------|
-| AC1 | Single author → featured hero layout (avatar, name, title, bio, specialties, stats, profile link) | `Authors.test.tsx:86-148` | None | Covered |
-| AC2 | Multiple authors → existing card grid unchanged | `Authors.test.tsx:159-184` | None | Covered |
-| AC3 | Profile link navigates to `/authors/:authorId` | `Authors.test.tsx:122-126` (featured), `171-177` (grid) | None | Covered |
-| AC4 | Responsive at mobile (375px), tablet (768px), desktop (1440px) | None — CSS class assertions only (not rendering behavior) | None | Partial |
-| AC5 | All styling uses design tokens (no hardcoded colors) | None — not testable in unit tests | None (ESLint rule provides static enforcement) | Partial |
+| AC1 | Single author shows featured hero layout with avatar, name, title, bio, specialties, stats, profile link | `Authors.test.tsx:91-195` (13 tests covering each sub-element individually) | None | Covered |
+| AC2 | Multiple authors renders existing card grid unchanged | `Authors.test.tsx:198-232` (4 tests) | None | Covered |
+| AC3 | Profile link navigates to `/authors/:authorId` | `Authors.test.tsx:140-144` (featured), `218-224` (grid) | None | Covered |
+| AC4 | Responsive at 375px, 768px, 1440px | None — no viewport tests in unit or E2E | None | Partial |
+| AC5 | All styling uses design tokens (no hardcoded colors) | None — ESLint rule provides enforcement | None | Partial |
 
 **Coverage**: 3/5 ACs fully covered | 0 gaps | 2 partial
 
 ---
 
+### Previous Findings: Resolution Status
+
+The two [MEDIUM] findings from the initial review have been resolved.
+
+**[MEDIUM] No test for specialty badge overflow (>5 specialties) — RESOLVED**
+`Authors.test.tsx:152-164` now contains `caps specialty badges at 5 with overflow indicator`. The test seeds 7 specialties (`['A','B','C','D','E','F','G']`), asserts the first five render and a `+2` overflow badge is present, and negatively asserts `F` and `G` are absent. The overflow boundary (exactly 5 visible + count badge) is correctly verified.
+
+**[MEDIUM] No test for empty state subtitle absence — RESOLVED**
+`Authors.test.tsx:80-83` contains `does not render subtitle text` which asserts `screen.queryByText(/meet the/i)` returns null in the zero-author state. The subtitle element is correctly absent in that branch.
+
+The previous [HIGH] finding about a false-assurance `queryByRole('blockquote')` assertion has also been resolved. The test at `Authors.test.tsx:173-175` now correctly uses `queryByTestId('featured-quote')`, and the implementation at `FeaturedAuthor.tsx:53-58` carries a matching `data-testid="featured-quote"` on the `<blockquote>` element. Both the negative case (absent when `featuredQuote` is undefined) and the positive case (present and correct text) are tested.
+
+---
+
 ### Test Quality Findings
-
-#### Blockers (untested ACs)
-
-No ACs have zero test coverage. However AC4 and AC5 have only partial coverage; their current test artifacts do not verify the behavior described in the ACs.
 
 #### High Priority
 
-- **`/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/__tests__/Authors.test.tsx:134-136` (confidence: 92)**: The assertion `screen.queryByRole('blockquote')` will always return `null` regardless of implementation, because `blockquote` is not a valid ARIA role in the ARIA specification. Testing Library's `getByRole`/`queryByRole` resolves against ARIA implicit roles; `<blockquote>` has an implicit ARIA role of `generic` (ARIA 1.2) or no corresponding role in ARIA 1.1 — it is not queryable as `'blockquote'`. This means the "does not render blockquote when featuredQuote is absent" test will pass even if `FeaturedAuthor.tsx` renders a `<blockquote>` unconditionally. The test provides false assurance. Fix: use `screen.queryByText(/Learning is a lifelong journey/i)` to assert absence, and for the positive case at line 142 the existing `getByText` is already correct. Alternatively, add a `data-testid="featured-quote"` to the `<blockquote>` element and query by test ID.
-
-- **AC4 — Responsive layout (confidence: 78)**: The story's Testing Notes state "Responsive breakpoints tested via unit tests verifying conditional CSS classes." No such class-inspection assertions exist in the test file. The unit tests make no assertions about responsive CSS classes (`flex-col`, `sm:flex-row`, `grid-cols-2`, `sm:grid-cols-4`) or viewport-conditional rendering. JSDOM does not apply CSS media queries, so unit tests cannot verify responsive layout behavior in any meaningful way. The AC explicitly calls out three breakpoints (375px, 768px, 1440px) and specifies distinct layout behavior at each. This requires at minimum a Playwright E2E test that sets viewport and asserts layout structure, or explicit class assertions on the rendered DOM elements. Fix: add a Playwright E2E spec (suggested path: `tests/e2e/regression/story-e23-s06.spec.ts`) with three `test` blocks — one per breakpoint — each calling `page.setViewportSize(...)`, navigating to `/authors`, and asserting the presence of `data-testid="featured-author"` along with a viewport-appropriate structural element (e.g., avatar positioned above content at 375px, side-by-side at 768px+). An acceptable lower-cost alternative is to add class assertions in the unit tests to at least confirm the responsive Tailwind classes are present on the rendered elements, with a comment that JSDOM cannot evaluate them at runtime.
+- **`/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/__tests__/Authors.test.tsx` — AC4 responsive layout (confidence: 78)**: No test exercises the three viewport breakpoints specified in AC4. The story notes claim "responsive breakpoints tested via unit tests verifying conditional CSS classes" but no such assertions exist in the file. JSDOM does not evaluate CSS media queries, so unit tests cannot verify that `flex-col sm:flex-row` or `grid-cols-2 sm:grid-cols-4` produce the correct layout at 375px, 768px, and 1440px. The AC explicitly names distinct structural behavior at each breakpoint (stacked vs. side-by-side avatar, 2x2 vs. 4-column stats). The minimum fix is a Playwright E2E spec at `tests/e2e/regression/story-e23-s06.spec.ts` with three `test` blocks — one per breakpoint — each calling `page.setViewportSize(...)`, navigating to `/authors`, and asserting `data-testid="featured-author"` is present; for mobile (375px) additionally assert the avatar and content are stacked (i.e., the hero `div` does not have `flex-row` rendered), and for tablet+ (768px, 1440px) assert they are side-by-side. An acceptable lower-cost alternative is to add explicit class assertions in the unit tests confirming the responsive Tailwind classes are present on the rendered DOM elements, accompanied by a comment that JSDOM cannot evaluate them at runtime. As written, the story is shipping with an untested AC.
 
 #### Medium
 
-- **`/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/__tests__/Authors.test.tsx:38-49` (confidence: 72)**: The inline `makeAuthor` factory should live in `tests/support/fixtures/factories/` as `author-factory.ts`. No author factory exists in the shared factory directory (`/Volumes/SSD/Dev/Apps/Knowlune/tests/support/fixtures/factories/`). The inline factory uses placeholder values (`'test-author'`, `'Test Author'`, `'Expert'`, `'Full bio text.'`) — permissible for unit tests, but if E2E tests are later added for authors, a second factory would be created in isolation from this one. Fix: create `/Volumes/SSD/Dev/Apps/Knowlune/tests/support/fixtures/factories/author-factory.ts` exporting `makeAuthor(overrides?)` with realistic defaults (real-sounding name, plausible title, multi-word bio). Import from there in `Authors.test.tsx`.
+- **`/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/__tests__/Authors.test.tsx:166-171` (confidence: 73)**: The assertion `card.querySelector('.flex.flex-wrap')` queries the DOM by CSS class names. This is a brittle selector that couples the test to implementation details (Tailwind class names) rather than semantic behavior. If the badge container is refactored to use a different layout class while keeping the same visual structure, the test would fail for the wrong reason. Fix: add a `data-testid="specialty-badges"` to the badge container `div` in `FeaturedAuthor.tsx:63` and query by `card.querySelector('[data-testid="specialty-badges"]')` instead. This maintains the "does not render" assertion while decoupling from class names.
 
-- **AC5 — Design token enforcement (confidence: 65)**: AC5 ("all styling uses design tokens — no hardcoded colors") is enforced at save-time by ESLint rule `design-tokens/no-hardcoded-colors` per project automation. This is appropriate enforcement for a static styling constraint. However, the story notes claim tests verify this; they do not. No test assertion confirms token usage. This is not a blocker since ESLint provides the right enforcement layer, but the testing notes are misleading. Low-risk: annotate the test file or story notes to clarify that AC5 is verified by lint rather than runtime tests.
+- **`/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/__tests__/Authors.test.tsx:110-115` (confidence: 68)**: The assertion `card.querySelector('p.max-w-prose')` queries by a CSS class name, same category of brittleness as the badge container above. The `not.toBeInTheDocument()` result is functionally correct (Testing Library handles null values from `querySelector` correctly), but the selector is fragile. Fix: add `data-testid="featured-bio"` to the bio `<p>` element in `FeaturedAuthor.tsx:101` and assert by test ID.
 
-- **`/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/__tests__/Authors.test.tsx:86-89` (confidence: 68)**: The "renders featured layout instead of grid" test checks for `data-testid="featured-author"` and absence of `data-testid="author-grid"` but does not assert any of the sub-elements the AC requires — specifically the avatar image, author name, specialties, stats, and profile link as a combined smoke check. Individual tests do cover these fields, so this is not a gap in AC coverage, but the describe-block structure would benefit from a single integration-style test that confirms all required elements are present simultaneously. The current test only confirms the correct branch was taken, not that the branch renders correctly. Fix: acceptable as-is since sibling tests in the describe block cover each field individually.
+- **`/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/__tests__/Authors.test.tsx:38-49` (confidence: 65)**: The inline `makeAuthor` factory uses placeholder string values (`'test-author'`, `'Test Author'`, `'Expert'`, `'/images/test'`). The shared factory directory at `tests/support/fixtures/factories/` contains factories for courses, sessions, notes, quizzes, and reviews — but no author factory. If E2E tests are later added for authors (as AC4 requires), a separate factory would be written in isolation. Fix: extract `makeAuthor` to `tests/support/fixtures/factories/author-factory.ts` and import it in `Authors.test.tsx`. This is not blocking the current suite but creates duplication risk.
 
 #### Nits
 
-- **Nit** `/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/__tests__/Authors.test.tsx:99-105` (confidence: 55)**: The stats test uses `toHaveTextContent` on the `featured-author` container rather than finding each `StatCard` independently. This means the test would pass even if stat values appeared in the wrong semantic context (e.g., in the bio paragraph). Low-risk given the values are numeric and distinct, but more precise assertions scoped to each stat element would be more resilient to structural changes.
+- **Nit** `Authors.test.tsx:117-124` (confidence: 50): The stats test uses `toHaveTextContent` on the full `featured-author` container. For the `10y` experience assertion, this is correct because `yearsExperience` is a property on the `Author` object directly rather than from the mocked `getAuthorStats`. However the value `10` (courseCount) could collide with part of a label string if the implementation changes. Scoping each stat assertion to the individual `StatCard` element (via a `data-testid` per stat) would be more precise, though this is a low-priority improvement.
 
-- **Nit** `/Volumes/SSD/Dev/Apps/Knowlune/src/app/pages/__tests__/Authors.test.tsx:171-177` (confidence: 52)**: The grid card link assertion uses `getByRole('link', { name: /Author One/i })` which matches the link's accessible name. The link wraps an entire `<Card>` with multiple text nodes (name, title, specialty badges). If the computed accessible name changes (e.g., a badge text matches), this selector could become ambiguous. Acceptable for now, but a `data-testid="author-card-{id}"` on each grid `<Link>` would make the selector more robust.
+- **Nit** `Authors.test.tsx:218-224` (confidence: 48): The grid card link selector `getByRole('link', { name: /Author One/i })` matches the accessible name of a `<Link>` that wraps an entire `<Card>` with multiple text children. If a specialty badge label happened to start with "Author One", the name computation could become ambiguous. A `data-testid="author-card-author-1"` on each grid `<Link>` would make the selector unambiguous and more resilient to content changes.
 
 ---
 
 ### Edge Cases to Consider
 
-- **Avatar fallback rendering**: The `FeaturedAuthor` component renders an `AvatarFallback` using `getInitials(author.name)`. No test verifies the fallback renders correctly when `getAvatarSrc` returns a broken or empty src. Suggested test: provide an author with `avatar: ''` and assert the fallback text (initials) is visible.
+- **Avatar fallback rendering**: No test seeds an author with `avatar: ''` or a broken image path to verify the `AvatarFallback` component renders the initials. The factory defaults to `avatar: '/images/test'`. Suggested test in the single-author describe block: `makeAuthor({ avatar: '' })` and assert `screen.getByText('TA')` (initials of "Test Author") is visible.
 
-- **Specialty overflow badge**: `FeaturedAuthor.tsx` at line 64-68 renders a `+N` overflow badge when `specialties.length > 5`. No test covers this boundary. Suggested test in the "single author" describe block: `makeAuthor({ specialties: ['A','B','C','D','E','F','G'] })` and assert `screen.getByText('+2')` is present and only the first 5 specialty labels are rendered.
+- **`yearsExperience: 0`**: The `clamps negative yearsExperience to 0` test at line 190-195 covers the `< 0` case. The exact boundary `0` is not tested. `Math.max(0, 0)` renders `0y` correctly, but an explicit test for `yearsExperience: 0` would document the intended behavior at the lower boundary.
 
-- **Zero years experience**: `StatCard` renders `${author.yearsExperience}y`. No test covers `yearsExperience: 0` — the rendered value would be `0y`. While unlikely in production data, the factory defaults to `10` and no boundary test exists.
+- **`totalHours` rounding for fractional values**: `FeaturedAuthor.tsx:88` uses `Math.max(Math.round(stats.totalHours), stats.totalHours > 0 ? 1 : 0)h`. No test covers fractional hours (e.g., `totalHours: 0.4`) to verify the minimum-1-hour floor is applied when hours are nonzero but round to zero. Suggested test: mock `totalHours: 0.4` and assert `1h` is rendered (not `0h`).
 
-- **Author with no specialties**: `author.specialties.slice(0, 5).map(...)` on an empty array renders nothing. No test confirms the featured layout degrades gracefully when `specialties: []`. The badge container still renders but is empty; no assertion verifies this.
+- **`totalHours: 0` rendering**: Related to above — when `totalHours` is exactly `0`, the expression renders `0h`. No test covers this case explicitly.
 
-- **Exact empty-state text match**: The empty state test at line 75 matches `/no authors available/i`. The actual implementation in `Authors.tsx` at line 19 renders `"No authors available yet."`. The regex matches, but if the message changes to something not containing "no authors available", the test silently degrades. Consider asserting the full string for precision.
-
-- **E2E navigation for AC3**: AC3 specifies that clicking the profile link navigates to `/authors/:authorId`. The unit tests verify the `href` attribute is correct but cannot verify that the React Router navigation actually resolves to the `AuthorProfile` page. No E2E test exercises this user journey. Given the app uses `MemoryRouter` in tests and the real router in production, a full navigation test via Playwright would close this gap definitively.
+- **E2E navigation for AC3**: Unit tests verify the `href` attribute value but cannot verify that React Router resolves `/authors/test-author` to the `AuthorProfile` page in the real app. A Playwright E2E test that clicks the "View Full Profile" button and asserts the resulting URL or page heading would provide end-to-end confidence for AC3 that the unit tests cannot.
 
 ---
 
-ACs: 4/5 covered (1 partial on AC4, 1 partial on AC5) | Findings: 8 | Blockers: 0 | High: 2 | Medium: 3 | Nits: 2
-
+ACs: 4/5 covered (3 full, 2 partial: AC4 and AC5) | Findings: 6 | High: 1 | Medium: 3 | Nits: 2

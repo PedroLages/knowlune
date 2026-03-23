@@ -144,30 +144,35 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-**Reviewed 2026-03-23** — 2 MEDIUM, 1 nit. No blockers.
-- [MEDIUM] Blockquote `text-left` misaligns inside centered mobile layout (FeaturedAuthor.tsx:52)
-- [MEDIUM] Stats render as zero — seed author has no linked courses in data layer
-- [NIT] Pre-existing brand Button focus ring issue with `asChild` rendering (not introduced by this story)
+**Review 1 (2026-03-23)** — 2 MEDIUM, 1 nit. No blockers.
+- [MEDIUM] Blockquote `text-left` misaligns inside centered mobile layout — PARTIALLY FIXED (removed text-left but border still misaligns)
+- [MEDIUM] Stats render as zero — FIXED (seed author now linked to courses)
+- [NIT] Button focus ring with `asChild` — RECLASSIFIED to MEDIUM (WCAG 2.4.7)
+
+**Review 2 (2026-03-23)** — 2 MEDIUM remaining. ACs all pass.
+- [MEDIUM] Blockquote left-border still misaligns at 375px mobile (FeaturedAuthor.tsx:52) — add `text-left` to blockquote
+- [MEDIUM] Button `asChild` focus ring invisible for keyboard users (FeaturedAuthor.tsx:105) — add `focus-visible:outline` classes
 
 ## Code Review Feedback
 
-**Reviewed 2026-03-23** — 0 blockers, 2 HIGH, 4 MEDIUM, 3 nits.
-- [HIGH] `getInitials` imported from `avatarUpload.ts` — couples FeaturedAuthor to heavy upload module (FeaturedAuthor.tsx:9)
-- [HIGH] `author.shortBio` rendered without fallback — empty string creates empty `<p>` (FeaturedAuthor.tsx:86)
-- [MEDIUM] `StatCard` bg-muted may lack contrast against bg-card in dark mode
-- [MEDIUM] `getAuthorStats` accesses Zustand store outside React cycle — stale if courses become async
-- [MEDIUM] No test for specialty badge overflow (>5 specialties)
-- [MEDIUM] No test for empty state subtitle absence
+**Review 1 (2026-03-23)** — 2 HIGH, 4 MEDIUM. All fixed in dd0123d2.
+
+**Review 2 (2026-03-23)** — 0 blockers, 2 HIGH, 4 MEDIUM, 3 nits.
+- [HIGH] `getInitials` still duplicated in `AuthorProfile.tsx:21-27` — behavioral inconsistency (confidence 90)
+- [HIGH] Quiz component changes bundled in E23-S06 commit — commit scope bleed (confidence 92)
+- [MEDIUM] `getInitials` re-export in `avatarUpload.ts:311` creates ghost dependency (confidence 78)
+- [MEDIUM] `totalHours` display logic convoluted in FeaturedAuthor.tsx:88 (confidence 75)
+- [MEDIUM] `getAuthorStats` outside React cycle — acknowledged, forward-looking (confidence 73)
+- [MEDIUM] Blockquote mobile border alignment (confidence 72) — overlaps design review M1
 
 ## Web Design Guidelines Review
 
-**Reviewed 2026-03-23** — 2 MEDIUM, 4 LOW. No blockers.
-- [MEDIUM] `transition-all` anti-pattern in Authors.tsx:53 — use explicit properties
-- [MEDIUM] `hover:scale-[1.02]` lacks `prefers-reduced-motion` guard — use `motion-safe:` prefix
-- [LOW] Headings should use `text-wrap: balance`
-- [LOW] Mobile stat row in grid cards hides text labels — add `aria-label`
-- [LOW] Bio paragraph has no truncation safeguard
-- Passed: semantic navigation, aria-hidden on icons, tabular-nums, empty state, design tokens, focus rings, responsive layout
+**Review 1 (2026-03-23)** — 2 MEDIUM, 4 LOW. All 5 actionable findings fixed in dd0123d2.
+
+**Review 2 (2026-03-23)** — 2 LOW, 1 NIT. No blockers. 19/22 checks pass.
+- [LOW] FeaturedAuthor stats grid lacks `aria-label` (inconsistency with grid cards)
+- [LOW] Bio paragraph has no `line-clamp` overflow safeguard
+- [NIT] Author title `<p>` could use `text-wrap-balance`
 
 ## Challenges and Lessons Learned
 

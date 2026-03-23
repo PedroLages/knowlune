@@ -110,8 +110,7 @@ describe('Authors page', () => {
     it('renders no bio paragraph when both shortBio and bio are empty', () => {
       mockState.authors = [makeAuthor({ shortBio: '', bio: '' })]
       renderAuthors()
-      const card = screen.getByTestId('featured-author')
-      expect(card.querySelector('p.max-w-prose')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('featured-bio')).not.toBeInTheDocument()
     })
 
     it('shows stat values from getAuthorStats', () => {
@@ -166,8 +165,7 @@ describe('Authors page', () => {
     it('renders no badge container when specialties is empty', () => {
       mockState.authors = [makeAuthor({ specialties: [] })]
       renderAuthors()
-      const card = screen.getByTestId('featured-author')
-      expect(card.querySelector('.flex.flex-wrap')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('specialty-badges')).not.toBeInTheDocument()
     })
 
     it('does not render quote when featuredQuote is absent', () => {
@@ -192,6 +190,26 @@ describe('Authors page', () => {
       renderAuthors()
       const card = screen.getByTestId('featured-author')
       expect(card).toHaveTextContent('0y')
+    })
+
+    it('has responsive Tailwind classes for mobile/tablet/desktop (AC4)', () => {
+      renderAuthors()
+      const card = screen.getByTestId('featured-author')
+      // Hero section: stacked on mobile (flex-col), horizontal on sm+ (sm:flex-row)
+      const heroSection = card.querySelector('.flex.flex-col.sm\\:flex-row')
+      expect(heroSection).toBeInTheDocument()
+      // Stats grid: 2 cols on mobile (grid-cols-2), 4 cols on sm+ (sm:grid-cols-4)
+      const statsGrid = card.querySelector('.grid.grid-cols-2.sm\\:grid-cols-4')
+      expect(statsGrid).toBeInTheDocument()
+      // Avatar: centered on mobile (self-center), start-aligned on sm+ (sm:self-start)
+      const avatar = card.querySelector('.self-center.sm\\:self-start')
+      expect(avatar).toBeInTheDocument()
+    })
+
+    it('renders bio with line-clamp overflow safeguard', () => {
+      renderAuthors()
+      const bio = screen.getByTestId('featured-bio')
+      expect(bio).toHaveClass('line-clamp-6')
     })
   })
 
