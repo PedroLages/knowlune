@@ -301,9 +301,9 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 20: Learning Pathways & Knowledge Retention
   # ──────────────────────────────────────────────────
-  epic-20: backlog
+  epic-20: in-progress
   20-1-career-paths-system: backlog
-  20-2-flashcard-system-with-spaced-repetition: backlog
+  20-2-flashcard-system-with-spaced-repetition: in-progress
   20-3-365-day-activity-heatmap: backlog
   20-4-skill-proficiency-radar-chart: backlog
   epic-20-retrospective: optional
