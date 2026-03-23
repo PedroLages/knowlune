@@ -30,8 +30,7 @@ export async function calculateQuizMetrics(): Promise<QuizMetrics> {
     return { totalQuizzes: 0, averageScore: 0, completionRate: 0 }
   }
 
-  const averageScore =
-    allAttempts.reduce((sum, a) => sum + a.percentage, 0) / totalQuizzes
+  const averageScore = allAttempts.reduce((sum, a) => sum + a.percentage, 0) / totalQuizzes
 
   // All records in quizAttempts are submitted — completionRate = 100%.
   // Story 17.1 will refine this once abandoned-attempt tracking is added.
