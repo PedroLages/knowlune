@@ -1,12 +1,22 @@
 ---
 story_id: E23-S04
 story_name: "Restructure Sidebar Navigation Groups"
-status: in-progress
+status: done
 started: 2026-03-23
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-03-23
+reviewed: true
+review_started: 2026-03-23
+review_gates_passed:
+  - build
+  - lint
+  - types
+  - format
+  - unit-tests
+  - e2e-smoke
+  - e2e-story
+  - code-review
+  - code-review-testing
+  - design-review
 burn_in_validated: false
 ---
 
