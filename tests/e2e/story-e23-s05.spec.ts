@@ -37,8 +37,10 @@ test.describe('AC1: Pre-seeded section de-emphasis', () => {
   test('pre-seeded section is collapsible and collapsed by default when imports exist', async ({
     page,
   }) => {
-    await seedImportedCourses(page, [SAMPLE_IMPORTED_COURSE])
+    // Navigate first to establish origin, then seed, then navigate to target
     await goToCourses(page)
+    await seedImportedCourses(page, [SAMPLE_IMPORTED_COURSE])
+    await page.reload({ waitUntil: 'domcontentloaded' })
 
     const sampleSection = page.locator('[data-testid="sample-courses-section"]')
     await expect(sampleSection).toBeVisible()
@@ -62,8 +64,9 @@ test.describe('AC1: Pre-seeded section de-emphasis', () => {
 
 test.describe('AC2: Imported courses first', () => {
   test('imported courses section appears above sample courses section', async ({ page }) => {
-    await seedImportedCourses(page, [SAMPLE_IMPORTED_COURSE])
     await goToCourses(page)
+    await seedImportedCourses(page, [SAMPLE_IMPORTED_COURSE])
+    await page.reload({ waitUntil: 'domcontentloaded' })
 
     const importedSection = page.locator('[data-testid="imported-courses-grid"]')
     const sampleSection = page.locator('[data-testid="sample-courses-section"]')
@@ -87,8 +90,9 @@ test.describe('AC3: Overview de-emphasis with imports', () => {
   test('pre-seeded courses in overview have reduced opacity when imports exist', async ({
     page,
   }) => {
-    await seedImportedCourses(page, [SAMPLE_IMPORTED_COURSE])
     await goToOverview(page)
+    await seedImportedCourses(page, [SAMPLE_IMPORTED_COURSE])
+    await page.reload({ waitUntil: 'domcontentloaded' })
 
     const sampleCards = page.locator('[data-testid="sample-course-card"]')
     // At least one pre-seeded course card should exist
