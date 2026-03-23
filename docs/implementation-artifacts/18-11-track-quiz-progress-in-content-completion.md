@@ -1,10 +1,10 @@
 ---
 story_id: E18-S11
 story_name: "Track Quiz Progress In Content Completion"
-status: in-progress
+status: done
 started: 2026-03-23
-completed:
-reviewed: in-progress
+completed: 2026-03-23
+reviewed: done
 review_started: 2026-03-23
 review_gates_passed: []
 burn_in_validated: false
