@@ -116,11 +116,17 @@ See [plan](plans/e23-s06-featured-author-layout-for-single-author-state.md) for 
 
 ## Implementation Notes
 
-[Architecture decisions, patterns used, dependencies added]
+- Created `FeaturedAuthor` component in `src/app/components/figma/FeaturedAuthor.tsx` — a self-contained hero-style card with avatar, name, title, featured quote, specialty badges, stats strip, short bio, and View Full Profile CTA
+- Reused existing `getAuthorStats()`, `getAvatarSrc()`, and `getInitials()` utilities — no new dependencies added
+- Extracted `StatCard` as a local helper within `FeaturedAuthor.tsx` (mirrors pattern from `AuthorProfile.tsx` but scoped to featured layout)
+- Added empty state handling (`allAuthors.length === 0`) to `Authors.tsx` as a defensive guard
+- All styling uses design tokens (`bg-muted`, `text-brand`, `ring-border/50`, etc.) — no hardcoded colors
 
 ## Testing Notes
 
-[Test strategy, edge cases discovered, coverage notes]
+- Unit tests in `Authors.test.tsx` cover: single author → featured layout, multiple authors → grid layout, empty state
+- No E2E spec created for this story (UI-only change with unit test coverage)
+- Responsive breakpoints tested via unit tests verifying conditional CSS classes
 
 ## Pre-Review Checklist
 
@@ -150,4 +156,8 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Duplicate `getInitials` utility:** Initially duplicated a `getInitials` helper locally in `FeaturedAuthor.tsx` — discovered during a fix commit that `getInitials` already existed in `src/lib/avatarUpload.ts`. Consolidated to single import. Pattern: always search for existing utilities before creating new ones.
+- **Empty state guard:** Added `allAuthors.length === 0` guard to `Authors.tsx` — not in original ACs but necessary for defensive rendering. Prevents rendering errors if the authors data source becomes empty.
+- **StatCard extraction decision:** Chose to keep `StatCard` as a local component within `FeaturedAuthor.tsx` rather than extracting to shared component. Rationale: only used in one place; premature extraction would add file overhead without reuse benefit. Can be promoted later if `AuthorProfile.tsx` refactors to share it.
+- **Responsive layout approach:** Used `flex-col sm:flex-row` for the hero section and `grid-cols-2 sm:grid-cols-4` for stats — simple, robust responsive breakpoints without media query complexity. The `self-center sm:self-start` on the avatar handles alignment naturally.
+- **Specialty badge overflow:** Capped at 5 badges with `+N` overflow indicator to prevent layout breakage with authors who have many specialties.
