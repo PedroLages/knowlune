@@ -113,7 +113,9 @@ test.describe('AC4: Overview full prominence without imports', () => {
     await goToOverview(page)
 
     // Pre-seeded course cards should be at full opacity
-    const courseCards = page.locator('[data-testid="library-section"] [data-testid^="course-card-"]').first()
+    const courseCards = page
+      .locator('[data-testid="library-section"] [data-testid^="course-card-"]')
+      .first()
     await expect(courseCards).toBeVisible()
     await expect(courseCards).toHaveCSS('opacity', '1')
   })

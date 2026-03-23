@@ -211,7 +211,10 @@ test.describe('AC4: Accessible names on controls', () => {
       const ariaLabel = await buttons.nth(i).getAttribute('aria-label')
       const textContent = await buttons.nth(i).textContent()
       const accessibleName = (ariaLabel ?? textContent ?? '').trim()
-      expect(accessibleName.length, `Button ${i + 1} of ${count} has no accessible name`).toBeGreaterThan(0)
+      expect(
+        accessibleName.length,
+        `Button ${i + 1} of ${count} has no accessible name`
+      ).toBeGreaterThan(0)
     }
   })
 })
