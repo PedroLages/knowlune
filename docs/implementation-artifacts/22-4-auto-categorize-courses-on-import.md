@@ -1,8 +1,8 @@
 ---
 story_id: E22-S04
 story_name: "Auto-Categorize Courses on Import"
-status: draft
-started:
+status: in-progress
+started: 2026-03-23
 completed:
 reviewed: false
 review_started:
@@ -56,6 +56,10 @@ so that I don't have to manually organize my course library.
 - Show a brief "AI tagging..." indicator on the course card that resolves to tag pills
 - Tag pills: same style as TopicFilter chips (rounded-full, brand colors)
 - Tag editing: click X to remove, small + button or input to add
+
+## Implementation Plan
+
+[Full plan](../plans/2026-03-23-e22-s04-auto-categorize-courses-on-import.md)
 
 ## Implementation Notes
 

@@ -328,7 +328,7 @@ development_status:
   22-1-ollama-provider-integration: done
   22-2-model-auto-discovery: done
   22-3-connection-testing-health-check: done
-  22-4-auto-categorize-courses-on-import: backlog
+  22-4-auto-categorize-courses-on-import: in-progress
   22-5-dynamic-filter-chips-from-ai-tags: backlog
   epic-22-retrospective: optional
 
