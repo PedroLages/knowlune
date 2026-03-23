@@ -168,14 +168,8 @@ test.describe('E20-S03: 365-Day Activity Heatmap', () => {
   test('AC2: tooltip shows date and study time on hover', async ({ page }) => {
     await goToReportsWithActivity(page)
 
-    // Find a cell with activity (level > 0)
+    // Find a cell with activity — look for aria-label containing the session date
     // The session is on 2026-03-20, which has "30 min" of study time
-    const activeCell = page
-      .locator('[data-testid="activity-heatmap"] [role="img"]')
-      .filter({ hasText: /Mar 20/ })
-      .first()
-
-    // The cell may need to be found differently — look for aria-label containing the session date
     const cellWithActivity = page.locator(
       '[data-testid="activity-heatmap"] [role="img"][aria-label*="Mar 20"]'
     )

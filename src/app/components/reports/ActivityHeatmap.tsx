@@ -53,6 +53,7 @@ export function ActivityHeatmap() {
           setIsLoading(false)
         }
       } catch (err) {
+        // silent-catch-ok: background data load — component renders empty state naturally
         console.error('[ActivityHeatmap] Failed to load study sessions:', err)
         if (!ignore) setIsLoading(false)
       }
@@ -71,6 +72,7 @@ export function ActivityHeatmap() {
         const sessions = await db.studySessions.toArray()
         setDayMap(aggregateSessionsByDay(sessions, today))
       } catch (err) {
+        // silent-catch-ok: background refresh on event — stale data shown, non-critical
         console.error('[ActivityHeatmap] Failed to refresh study sessions:', err)
       }
     }
