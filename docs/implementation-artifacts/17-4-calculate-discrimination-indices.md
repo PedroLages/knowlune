@@ -1,12 +1,22 @@
 ---
 story_id: E17-S04
 story_name: "Calculate Discrimination Indices"
-status: in-progress
+status: reviewed
 started: 2026-03-23
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-03-23
+reviewed: true
+review_started: 2026-03-23
+review_gates_passed:
+  - build
+  - lint
+  - typecheck
+  - prettier
+  - unit-tests
+  - e2e-smoke
+  - e2e-story
+  - code-review
+  - code-review-testing
+  - design-review
 burn_in_validated: false
 ---
 
