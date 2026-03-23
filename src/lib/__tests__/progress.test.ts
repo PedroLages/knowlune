@@ -46,7 +46,7 @@ function makeCourse(overrides: Partial<Course> = {}): Course {
     totalPDFs: 1,
     estimatedHours: 5,
     tags: ['test'],
-    authorId: 'instructor-1',
+    authorId: 'author-1',
     modules: [
       {
         id: 'mod-1',

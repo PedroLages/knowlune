@@ -92,7 +92,7 @@ describe('useQuizStore cross-store integration (E12-S03-AC5)', () => {
       modules: testModules,
       isSequential: false,
       basePath: '/courses/test',
-      authorId: 'instructor-1',
+      authorId: 'author-1',
     } as import('@/data/types').Course)
 
     await act(async () => {

@@ -39,7 +39,7 @@ function makeCourse(overrides: Partial<Course> = {}): Course {
     ],
     isSequential: false,
     basePath: '/courses/test',
-    authorId: 'instructor-1',
+    authorId: 'author-1',
     ...overrides,
   }
 }
