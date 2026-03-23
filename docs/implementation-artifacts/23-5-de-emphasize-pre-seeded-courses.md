@@ -1,10 +1,10 @@
 ---
 story_id: E23-S05
 story_name: "De-Emphasize Pre-Seeded Courses"
-status: in-progress
+status: done
 started: 2026-03-23
-completed:
-reviewed: false
+completed: 2026-03-23
+reviewed: true
 review_started:
 review_gates_passed: []
 burn_in_validated: false
