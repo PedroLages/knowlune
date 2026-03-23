@@ -220,7 +220,7 @@
 - Recently accessed courses prominently featured
 - Upcoming live sessions or deadlines highlighted
 
-### My Class (Active Courses)
+### My Courses (Active Courses)
 
 **Course List:**
 - Progress bars with clear percentage indicators

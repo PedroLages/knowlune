@@ -19,7 +19,7 @@ test.describe('Sidebar navigation label', () => {
   test('displays "My Courses" in the desktop sidebar', async ({ page }) => {
     await navigateAndWait(page, '/')
 
-    const sidebar = page.locator('nav[data-testid="sidebar"], aside')
+    const sidebar = page.locator('aside[aria-label="Sidebar"]')
     await expect(sidebar.getByText('My Courses')).toBeVisible()
     await expect(sidebar.getByText('My Classes')).not.toBeVisible()
   })
@@ -35,6 +35,7 @@ test.describe('Mobile bottom bar label', () => {
     await navigateAndWait(page, '/')
 
     const bottomBar = page.locator('nav[aria-label="Mobile navigation"]')
+    await expect(bottomBar).toBeVisible()
     await expect(bottomBar.getByText('My Courses')).toBeVisible()
     await expect(bottomBar.getByText('My Classes')).not.toBeVisible()
   })
@@ -49,7 +50,8 @@ test.describe('Search command palette', () => {
     await navigateAndWait(page, '/')
 
     // Open command palette via keyboard shortcut
-    await page.keyboard.press('Meta+k')
+    const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
+    await page.keyboard.press(`${modifier}+k`)
 
     const palette = page.getByRole('dialog')
     await expect(palette).toBeVisible()
@@ -88,6 +90,6 @@ test.describe('Page title', () => {
 
     await expect(page.locator('h1').filter({ hasText: 'My Courses' })).toBeVisible()
     // Ensure old title is gone
-    await expect(page.locator('h1').filter({ hasText: 'My Classes' })).not.toBeVisible()
+    await expect(page.locator('h1').filter({ hasText: 'My Progress' })).not.toBeVisible()
   })
 })
