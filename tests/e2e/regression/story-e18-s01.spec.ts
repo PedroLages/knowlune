@@ -14,7 +14,7 @@
 
 import { test, expect } from '../../support/fixtures'
 import { makeQuiz, makeQuestion } from '../../support/fixtures/factories/quiz-factory'
-import { seedQuizzes } from '../../support/helpers/seed-helpers'
+import { seedQuizzes, clearIndexedDBStore } from '../../support/helpers/seed-helpers'
 
 // ---------------------------------------------------------------------------
 // Test data
@@ -92,6 +92,10 @@ async function startQuiz(page: import('@playwright/test').Page) {
 // ---------------------------------------------------------------------------
 
 test.describe('E18-S01: Complete Keyboard Navigation', () => {
+  test.afterEach(async ({ page }) => {
+    await clearIndexedDBStore(page, 'ElearningDB', 'quizzes')
+    await clearIndexedDBStore(page, 'ElearningDB', 'quizAttempts')
+  })
   test('AC2: Programmatic focus moves to question text on navigation', async ({ page }) => {
     await navigateToQuiz(page)
     await startQuiz(page)
@@ -268,6 +272,57 @@ test.describe('E18-S01: Complete Keyboard Navigation', () => {
     await expect(secondRadio).toBeChecked()
   })
 
+  test('AC4: Multiple-select — Tab navigates to each checkbox independently', async ({
+    page,
+  }) => {
+    await navigateToQuiz(page)
+    await startQuiz(page)
+
+    // Navigate to Q3 (multiple-select)
+    await page.getByRole('button', { name: /next/i }).click()
+    await page.getByRole('button', { name: /next/i }).click()
+    await expect(page.getByText(/question 3 of 3/i)).toBeVisible()
+
+    // Wait for programmatic focus to settle before sending keyboard events
+    await expect(page.getByTestId('question-focus-target')).toBeFocused()
+
+    // Tab into checkboxes — each checkbox is independently tabbable
+    await page.keyboard.press('Tab')
+    const firstCheckbox = page.getByRole('checkbox').first()
+    await expect(firstCheckbox).toBeFocused()
+
+    // Tab to second checkbox
+    await page.keyboard.press('Tab')
+    const secondCheckbox = page.getByRole('checkbox').nth(1)
+    await expect(secondCheckbox).toBeFocused()
+  })
+
+  test('AC4: Multiple-select — Space toggles a checkbox', async ({ page }) => {
+    await navigateToQuiz(page)
+    await startQuiz(page)
+
+    // Navigate to Q3 (multiple-select)
+    await page.getByRole('button', { name: /next/i }).click()
+    await page.getByRole('button', { name: /next/i }).click()
+    await expect(page.getByText(/question 3 of 3/i)).toBeVisible()
+
+    // Wait for programmatic focus to settle
+    await expect(page.getByTestId('question-focus-target')).toBeFocused()
+
+    // Tab to first checkbox, press Space to check it
+    await page.keyboard.press('Tab')
+    const firstCheckbox = page.getByRole('checkbox').first()
+    await expect(firstCheckbox).toBeFocused()
+    await expect(firstCheckbox).not.toBeChecked()
+
+    await page.keyboard.press('Space')
+    await expect(firstCheckbox).toBeChecked()
+
+    // Space again toggles it off
+    await page.keyboard.press('Space')
+    await expect(firstCheckbox).not.toBeChecked()
+  })
+
   test('AC6: AlertDialog — Escape closes dialog', async ({ page }) => {
     await navigateToQuiz(page)
     await startQuiz(page)
@@ -289,8 +344,8 @@ test.describe('E18-S01: Complete Keyboard Navigation', () => {
     await page.keyboard.press('Escape')
     await expect(dialog).not.toBeVisible()
 
-    // Submit Quiz button should still be visible (user can try again)
-    await expect(submitBtn).toBeVisible()
+    // Focus must return to the trigger (Submit Quiz button) — AC6 requirement
+    await expect(submitBtn).toBeFocused()
   })
 
   test('AC6: AlertDialog — Tab cycles within dialog (focus trap)', async ({ page }) => {

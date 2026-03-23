@@ -30,6 +30,7 @@ export function QuestionGrid({
   }, [currentIndex])
 
   function handleKeyDown(e: React.KeyboardEvent) {
+    if (total === 0) return
     let nextIndex = focusedIndex
     switch (e.key) {
       case 'ArrowRight':
@@ -45,6 +46,7 @@ export function QuestionGrid({
         nextIndex = total - 1
         break
       case 'Enter':
+        e.preventDefault()
         onQuestionClick(focusedIndex)
         return
       default:
@@ -89,7 +91,7 @@ export function QuestionGrid({
               isCurrent
                 ? 'bg-brand text-brand-foreground'
                 : isAnswered
-                  ? 'bg-brand-soft text-brand border border-brand'
+                  ? 'bg-brand-soft text-brand-soft-foreground border border-brand'
                   : 'bg-card text-muted-foreground border border-border'
             )}
           >

@@ -322,6 +322,10 @@ export function Quiz() {
   // tabIndex={-1} makes it focusable via .focus() without entering Tab order.
   // Keyed on currentQuestionIndex so screen readers re-announce on navigation.
   useEffect(() => {
+    if (currentProgress?.currentQuestionIndex == null) return
+    // Reset arrow-nav flag when question changes (prevents isArrowNavRef sticking
+    // true if user Arrow-navigated and then moved to next question without selecting)
+    isArrowNavRef.current = false
     questionTextRef.current?.focus()
   }, [currentProgress?.currentQuestionIndex])
 
@@ -510,7 +514,14 @@ export function Quiz() {
         />
 
         {/* Confirmation dialog for unanswered questions */}
-        <AlertDialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
+        <AlertDialog
+          open={showSubmitDialog}
+          onOpenChange={open => {
+            setShowSubmitDialog(open)
+            // Return focus to the Submit button when dialog closes (AC #6: focus returns to trigger)
+            if (!open) requestAnimationFrame(() => nextBtnRef.current?.focus())
+          }}
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Submit quiz?</AlertDialogTitle>
