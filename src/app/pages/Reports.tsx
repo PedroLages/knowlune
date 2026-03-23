@@ -40,6 +40,7 @@ import { CategoryRadar } from '@/app/components/reports/CategoryRadar'
 import { SkillsRadar } from '@/app/components/reports/SkillsRadar'
 import { WeeklyGoalRing } from '@/app/components/reports/WeeklyGoalRing'
 import { RecentActivityTimeline } from '@/app/components/reports/RecentActivityTimeline'
+import { ActivityHeatmap } from '@/app/components/reports/ActivityHeatmap'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 
 /* ------------------------------------------------------------------ */
@@ -429,6 +430,18 @@ export default function Reports() {
                   </CardHeader>
                   <CardContent>
                     <RecentActivityTimeline limit={8} />
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* ── Row 7: 365-Day Activity Heatmap ── */}
+              <motion.div variants={fadeUp}>
+                <Card data-testid="activity-heatmap-card">
+                  <CardHeader>
+                    <CardTitle className="text-base">365-Day Study Activity</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ActivityHeatmap />
                   </CardContent>
                 </Card>
               </motion.div>

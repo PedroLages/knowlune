@@ -102,11 +102,11 @@
   --resource-notes-bg: oklch(0.962 0.059 95.277);
 
   /* Progress heatmap activity levels */
-  --heatmap-empty: hsl(var(--muted) / 0.3);
-  --heatmap-level-1: hsl(var(--success) / 0.3);
-  --heatmap-level-2: hsl(var(--success) / 0.5);
-  --heatmap-level-3: hsl(var(--success) / 0.7);
-  --heatmap-level-4: hsl(var(--success) / 1);
+  --heatmap-empty: color-mix(in oklab, var(--muted) 40%, transparent);
+  --heatmap-level-1: color-mix(in oklab, var(--success) 25%, transparent);
+  --heatmap-level-2: color-mix(in oklab, var(--success) 50%, transparent);
+  --heatmap-level-3: color-mix(in oklab, var(--success) 75%, transparent);
+  --heatmap-level-4: var(--success);
 }
 
 .dark {
@@ -205,11 +205,11 @@
   --resource-notes-bg: oklch(0.279 0.077 85.874);
 
   /* Progress heatmap activity levels (dark) */
-  --heatmap-empty: hsl(var(--muted) / 0.3);
-  --heatmap-level-1: hsl(var(--success) / 0.3);
-  --heatmap-level-2: hsl(var(--success) / 0.5);
-  --heatmap-level-3: hsl(var(--success) / 0.7);
-  --heatmap-level-4: hsl(var(--success) / 1);
+  --heatmap-empty: color-mix(in oklab, var(--muted) 40%, transparent);
+  --heatmap-level-1: color-mix(in oklab, var(--success) 25%, transparent);
+  --heatmap-level-2: color-mix(in oklab, var(--success) 50%, transparent);
+  --heatmap-level-3: color-mix(in oklab, var(--success) 75%, transparent);
+  --heatmap-level-4: var(--success);
 }
 
 @theme inline {
@@ -294,6 +294,11 @@
   --color-resource-image-bg: var(--resource-image-bg);
   --color-resource-notes: var(--resource-notes);
   --color-resource-notes-bg: var(--resource-notes-bg);
+  --color-heatmap-empty: var(--heatmap-empty);
+  --color-heatmap-level-1: var(--heatmap-level-1);
+  --color-heatmap-level-2: var(--heatmap-level-2);
+  --color-heatmap-level-3: var(--heatmap-level-3);
+  --color-heatmap-level-4: var(--heatmap-level-4);
   --font-sans: var(--font-body);
   --font-display: var(--font-heading);
 }
