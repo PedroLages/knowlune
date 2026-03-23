@@ -219,9 +219,7 @@ test.describe('E18-S04: Contrast Ratios — Dark Mode', () => {
     expect(results.violations).toEqual([])
   })
 
-  test('AC5: Active quiz with answered state passes WCAG 2.1 AA in dark mode', async ({
-    page,
-  }) => {
+  test('AC5: Active quiz with answered state passes WCAG 2.1 AA in dark mode', async ({ page }) => {
     await seedAndNavigateToQuizStart(page)
 
     // Apply dark mode before starting quiz
