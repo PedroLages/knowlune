@@ -40,13 +40,7 @@ describe('SkillProficiencyRadar', () => {
   it('provides accessible aria-label with proficiency summary', () => {
     render(<SkillProficiencyRadar data={mockData} />)
     const img = screen.getByRole('img')
-    expect(img).toHaveAttribute(
-      'aria-label',
-      expect.stringContaining('Behavioral Analysis 80%')
-    )
-    expect(img).toHaveAttribute(
-      'aria-label',
-      expect.stringContaining('Confidence Mastery 60%')
-    )
+    expect(img).toHaveAttribute('aria-label', expect.stringContaining('Behavioral Analysis 80%'))
+    expect(img).toHaveAttribute('aria-label', expect.stringContaining('Confidence Mastery 60%'))
   })
 })
