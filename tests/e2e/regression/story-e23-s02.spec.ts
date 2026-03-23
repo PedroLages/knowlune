@@ -8,8 +8,8 @@
  * - Page title in MyClass.tsx
  * - Route path remains /my-class for backwards compatibility
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
 
 // ---------------------------------------------------------------------------
 // AC1: Sidebar shows "My Courses" instead of "My Classes"
