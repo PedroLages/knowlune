@@ -6,7 +6,7 @@ started: 2026-03-23
 completed:
 reviewed: in-progress
 review_started: 2026-03-23
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -105,15 +105,39 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+Report: `docs/reviews/design/design-review-2026-03-23-e18-s04.md`
+
+- **HIGH**: Answered-state QuestionGrid focus ring in dark mode — ring-offset gap (card bg vs brand-soft) is only 1.11:1 contrast, visually merging ring boundary. `QuestionGrid.tsx:39`.
+- **MEDIUM**: Current/active grid button ring and button surface are same brand color — ring appears to merge with button. Offset gap rescues it at 3.07:1.
+- **MEDIUM**: MarkForReview `<Checkbox>` indicator is 16×16px. Label is correct 44px touch target (the story fix is correct); visual indicator size is a documentation note.
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+Report: `docs/reviews/code/code-review-2026-03-23-e18-s04.md`
+
+**BLOCKERs:**
+- `src/app/components/quiz/ReviewQuestionGrid.tsx:33` — `ring-ring/50` NOT fixed (~1.41:1 contrast). Story tasks listed this file but it was not modified.
+- `src/app/components/quiz/QuestionBreakdown.tsx:60` — `ring-ring` NOT fixed (2.10:1, fails 3:1 minimum).
+- `src/app/components/quiz/QuizReviewContent.tsx:109` — "Back to Results" link uses `ring-ring` (2.10:1).
+
+**HIGH:**
+- `src/app/pages/QuizResults.tsx:207` — "Back to Lesson" link uses `ring-ring`.
+- `src/app/pages/Quiz.tsx:387` — "Back to course" error state link uses `ring-ring`.
+- Missing E2E axe-core scans for QuizResults and QuizReview pages.
+- AC4 focus tests only assert `.toBeFocused()`, not contrast/thickness.
+
+**MEDIUM:**
+- MarkForReview: `min-h-[44px]` but no width constraint. AC3 requires both dimensions.
+- Duplicate story file: `18-4-verify-contrast-ratios-and-touch-targets.md` should be deleted.
+- Mark for Review touch target test only checks height, not width.
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+Report: `docs/reviews/code/web-design-guidelines-2026-03-23-e18-s04.md`
+
+**BLOCKER — WCAG 1.4.11 FAIL:** `ring-brand` in dark mode has only 2.76:1 contrast against `bg-brand-soft` (#2a2c48 fill on answered options). Requires ≥3:1. Fix: raise dark `--brand` to ~`#7a82de` (gives 3.91:1).
+
+**ADVISORY:** `.dark` class in `theme.css` missing `color-scheme: dark` — native browser UI elements won't auto-adopt dark styling.
 
 ## Challenges and Lessons Learned
 
