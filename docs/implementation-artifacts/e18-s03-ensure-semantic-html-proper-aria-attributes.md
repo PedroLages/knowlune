@@ -4,9 +4,9 @@ story_name: "Ensure Semantic HTML and Proper ARIA Attributes"
 status: in-progress
 started: 2026-03-23
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-23
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -111,15 +111,42 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story -- Playwright MCP findings]
+Reviewed 2026-03-23. Report: `docs/reviews/design/design-review-2026-03-23-e18-s03.md`
+
+- **[HIGH]** `QuizHeader.tsx:47` — sr-only progressbar shares `aria-label="Quiz progress"` with visual bar; distinguish labels
+- **[HIGH]** `AnswerFeedback.tsx:114` — `<h4>` skips h3, violating WCAG 1.3.1; change to `<h3>`
+- **[MEDIUM]** Section `aria-label="Quiz header"` should describe content: `"Quiz progress and timer"`
+- **[MEDIUM]** Dual-progressbar (visual + sr-only) renders correctly with zero visual regression across all breakpoints
 
 ## Code Review Feedback
 
-[Populated by /review-story -- adversarial code review findings]
+Reviewed 2026-03-23. Reports: `docs/reviews/code/code-review-2026-03-23-e18-s03.md`, `docs/reviews/code/code-review-testing-2026-03-23-e18-s03.md`, `docs/reviews/code/edge-case-review-2026-03-23-e18-s03.md`
+
+**Blockers:**
+- `AnswerFeedback.tsx:114` — `<h4>` skips `<h3>`, violating AC2 heading hierarchy and WCAG 1.3.1
+- `QuizHeader.tsx:39,47` — both progressbars have identical `aria-label="Quiz progress"`; sr-only one must be differentiated
+
+**High:**
+- All 4 question components: empty `<legend />` provides no accessible name; should use `<legend className="sr-only">{question.text}</legend>` for AT fallback
+- `Quiz.tsx:435` — `currentProgress.questionOrder.length` without `?.` will throw if `questionOrder` is null/undefined
+- `Quiz.tsx:445-447` — `currentQuestionIndex` can be undefined → NaN in sr-only h2 heading text
+- Missing AC3 test for `role="alert"` on timer warnings
+- `QuizHeader.tsx:36-42` — explicit `aria-label="Quiz progress"` on `<Progress>` loses the dynamic "45% complete" label
+
+**Medium:**
+- `QuizHeader.tsx:44-51` — `aria-valuenow` can exceed `aria-valuemax` on off-by-one; clamp with `Math.min`
+- `QuizActions.tsx:28-46` — focus lost when last question is reached (Next button unmounts); need fallback focus target
+- Add untimed-quiz test asserting `role="timer"` is absent when no `timeLimit`
+
+**Nits:** `aria-label` on buttons with visible text causes voice-control divergence; add `data-testid` to sr-only progressbar for stable selectors
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story -- Web Interface Guidelines compliance findings]
+Reviewed 2026-03-23. Report: `docs/reviews/code/web-design-guidelines-2026-03-23-e18-s03.md`
+
+- **[MEDIUM]** `QuizHeader.tsx:39,47` — two identically-named progressbars (same finding as code review)
+- **[MEDIUM]** Triple-announcement of question position (sr-only h2, visible p, sr-only progressbar) — redundant for AT users
+- No blockers; touch targets, motion-reduce, design tokens, keyboard nav, landmark structure all pass
 
 ## Challenges and Lessons Learned
 
