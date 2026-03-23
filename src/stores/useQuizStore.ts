@@ -13,6 +13,7 @@ import {
 import { calculateQuizScore } from '@/lib/scoring'
 import { fisherYatesShuffle } from '@/lib/shuffle'
 import { toastError } from '@/lib/toastHelpers'
+import { logStudyAction } from '@/lib/studyLog'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 
 interface QuizState {
@@ -162,6 +163,20 @@ export const useQuizStore = create<QuizState>()(
             } catch (err) {
               console.error('[useQuizStore] setItemStatus failed after quiz submit:', err)
             }
+          }
+
+          // Trigger study streak update (QFR55).
+          // Fire-and-forget: streak failure must never block quiz submission.
+          try {
+            logStudyAction({
+              type: 'quiz_complete',
+              courseId,
+              lessonId: currentQuiz.lessonId,
+              timestamp: new Date().toISOString(),
+              metadata: { timeSpent: attempt.timeSpent, passed: attempt.passed },
+            })
+          } catch (streakErr) {
+            console.error('[useQuizStore] streak logging failed (non-blocking):', streakErr)
           }
 
           set({
