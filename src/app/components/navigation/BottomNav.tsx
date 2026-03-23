@@ -49,7 +49,7 @@ export function BottomNav() {
                   active ? 'text-brand' : 'text-muted-foreground active:text-brand'
                 )}
               >
-                <Icon className="w-6 h-6" aria-hidden="true" />
+                <Icon className="size-6" aria-hidden="true" />
                 <span className="text-[10px] font-medium leading-none">{item.name}</span>
               </Link>
             )
@@ -65,7 +65,7 @@ export function BottomNav() {
               isMoreActive ? 'text-brand' : 'text-muted-foreground active:text-brand'
             )}
           >
-            <MoreHorizontal className="w-6 h-6" aria-hidden="true" />
+            <MoreHorizontal className="size-6" aria-hidden="true" />
             <span className="text-[10px] font-medium leading-none">More</span>
           </button>
         </div>
@@ -106,7 +106,7 @@ export function BottomNav() {
                                 : 'text-foreground hover:bg-accent active:bg-accent'
                             )}
                           >
-                            <Icon className="w-5 h-5" aria-hidden="true" />
+                            <Icon className="size-5" aria-hidden="true" />
                             <span className="text-sm font-medium">{item.name}</span>
                           </Link>
                         </li>
@@ -137,7 +137,7 @@ export function BottomNav() {
                             : 'text-foreground hover:bg-accent active:bg-accent'
                         )}
                       >
-                        <Icon className="w-5 h-5" aria-hidden="true" />
+                        <Icon className="size-5" aria-hidden="true" />
                         <span className="text-sm font-medium">{item.name}</span>
                       </Link>
                     </li>

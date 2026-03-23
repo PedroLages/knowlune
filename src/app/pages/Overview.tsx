@@ -66,9 +66,14 @@ export function Overview() {
   useEffect(() => {
     let ignore = false
 
-    getTotalStudyNotes().then(notes => {
-      if (!ignore) setStudyNotes(notes)
-    })
+    getTotalStudyNotes()
+      .then(notes => {
+        if (!ignore) setStudyNotes(notes)
+      })
+      .catch(err => {
+        // silent-catch-ok — non-critical stat; dashboard still renders with default value
+        console.error('[Overview] Failed to load study notes count:', err)
+      })
 
     return () => {
       ignore = true
@@ -308,7 +313,7 @@ export function Overview() {
               actionLabel="Import Course"
               onAction={() => {
                 importCourseFromFolder().catch(() => {
-                  // User cancelled file picker or permission denied — no action needed
+                  // silent-catch-ok — user cancelled file picker or permission denied
                 })
               }}
             />

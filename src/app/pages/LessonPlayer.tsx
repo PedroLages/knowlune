@@ -642,7 +642,7 @@ export function LessonPlayer() {
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="outline" size="icon" className="lg:hidden shrink-0">
-                  <Menu className="h-4 w-4" />
+                  <Menu className="size-4" />
                   <span className="sr-only">Open course content</span>
                 </Button>
               </SheetTrigger>
@@ -671,7 +671,7 @@ export function LessonPlayer() {
                 className="gap-1.5"
               >
                 <span className="relative">
-                  <PencilLine className="h-4 w-4" />
+                  <PencilLine className="size-4" />
                   {hasNotes && !notesOpen && (
                     <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-brand" />
                   )}
@@ -686,9 +686,9 @@ export function LessonPlayer() {
               className="flex items-center gap-1.5 text-sm shrink-0 cursor-pointer"
             >
               {completed ? (
-                <CheckCircle2 className="h-5 w-5 text-success" />
+                <CheckCircle2 className="size-5 text-success" />
               ) : (
-                <Circle className="h-5 w-5 text-muted-foreground/40" />
+                <Circle className="size-5 text-muted-foreground/40" />
               )}
               <span className={completed ? 'text-success' : 'text-muted-foreground'}>
                 {completed ? 'Completed' : 'Mark Complete'}
@@ -770,7 +770,7 @@ export function LessonPlayer() {
                 className="mt-3 w-full gap-1.5"
                 onClick={() => setNoteFullScreen(true)}
               >
-                <Maximize2 className="h-4 w-4" />
+                <Maximize2 className="size-4" />
                 Expand full screen
               </Button>
             )}
@@ -818,7 +818,7 @@ export function LessonPlayer() {
             variant="outline"
             onClick={() => navigate(`/courses/${courseId}/${prevLesson.id}`)}
           >
-            <ChevronLeft className="mr-1 h-4 w-4" />
+            <ChevronLeft className="mr-1 size-4" />
             Previous
           </Button>
         ) : (
@@ -827,7 +827,7 @@ export function LessonPlayer() {
         {nextLesson ? (
           <Button variant="brand" onClick={() => navigate(`/courses/${courseId}/${nextLesson.id}`)}>
             Next
-            <ChevronRight className="ml-1 h-4 w-4" />
+            <ChevronRight className="ml-1 size-4" />
           </Button>
         ) : (
           <div />
@@ -869,11 +869,11 @@ export function LessonPlayer() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7"
+                    className="size-7"
                     onClick={() => setNotesOpen(false)}
                     aria-label="Close notes panel"
                   >
-                    <X className="h-4 w-4" />
+                    <X className="size-4" />
                   </Button>
                 </div>
                 <NoteEditor
@@ -905,7 +905,7 @@ export function LessonPlayer() {
                 className="flex-1 gap-1.5"
                 onClick={() => setNotesOpen(false)}
               >
-                <Video className="h-4 w-4" />
+                <Video className="size-4" />
                 Video
               </Button>
               <Button
@@ -914,7 +914,7 @@ export function LessonPlayer() {
                 className="flex-1 gap-1.5"
                 onClick={() => setNotesOpen(true)}
               >
-                <PencilLine className="h-4 w-4" />
+                <PencilLine className="size-4" />
                 Notes
               </Button>
             </div>
@@ -979,7 +979,7 @@ export function LessonPlayer() {
               className="gap-1.5"
               onClick={() => setNoteFullScreen(false)}
             >
-              <Minimize2 className="h-4 w-4" />
+              <Minimize2 className="size-4" />
               Minimize
             </Button>
           </div>

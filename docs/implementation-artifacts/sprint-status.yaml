@@ -37,7 +37,7 @@
 # - Epic 7 gap coverage stories (7-8..7-11) deferred indefinitely — risk accepted for error-path edge cases
 
 generated: 2026-03-15
-last_updated: 2026-03-22  # Epic 16 retrospective completed
+last_updated: 2026-03-23  # Epic 23 retrospective completed
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -335,14 +335,14 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 23: Platform Identity & Navigation Cleanup
   # ──────────────────────────────────────────────────
-  epic-23: in-progress
+  epic-23: done  # all 6 stories completed, retro done 2026-03-23
   23-1-remove-hardcoded-branding-from-courses-page: done
   23-2-rename-my-classes-to-my-courses: done
   23-3-rename-instructors-to-authors: done
   23-4-restructure-sidebar-navigation-groups: done
   23-5-de-emphasize-pre-seeded-courses: done
   23-6-featured-author-layout-for-single-author-state: done
-  epic-23-retrospective: optional
+  epic-23-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 24: Course Import Wizard & Editing

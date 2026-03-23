@@ -123,7 +123,9 @@ export function QAChatPanel() {
       trackAIUsage('qa', {
         durationMs: Date.now() - startTime,
         metadata: { retrievedNotesCount: retrievedNotes.length },
-      }).catch(() => {})
+      }).catch(() => {
+        // silent-catch-ok — non-critical analytics tracking
+      })
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate answer'
       setError(errorMessage)
@@ -131,7 +133,9 @@ export function QAChatPanel() {
         status: 'error',
         durationMs: Date.now() - startTime,
         metadata: { error: errorMessage },
-      }).catch(() => {})
+      }).catch(() => {
+        // silent-catch-ok — non-critical analytics tracking
+      })
     } finally {
       setGenerating(false)
     }
@@ -151,7 +155,7 @@ export function QAChatPanel() {
       {!aiAvailable && (
         <div className="rounded-lg border border-warning bg-warning-soft p-4 text-sm text-warning">
           <div className="flex items-start gap-2">
-            <AlertCircle className="h-5 w-5 shrink-0" />
+            <AlertCircle className="size-5 shrink-0" />
             <div>
               <p className="font-medium">AI features unavailable</p>
               <p className="mt-1 text-warning/80">
@@ -170,7 +174,7 @@ export function QAChatPanel() {
       {aiAvailable && !hasNotes && (
         <div className="rounded-lg border border-info bg-info-soft p-4 text-sm text-info">
           <div className="flex items-start gap-2">
-            <BookOpen className="h-5 w-5 shrink-0" />
+            <BookOpen className="size-5 shrink-0" />
             <div>
               <p className="font-medium">No notes yet</p>
               <p className="mt-1 text-info/80">
@@ -185,7 +189,7 @@ export function QAChatPanel() {
       {error && (
         <div className="rounded-lg border border-destructive bg-destructive-soft p-4 text-sm text-destructive">
           <div className="flex items-start gap-2">
-            <AlertCircle className="h-5 w-5 shrink-0" />
+            <AlertCircle className="size-5 shrink-0" />
             <div>
               <p className="font-medium">Error</p>
               <p className="mt-1 text-destructive/80">{error}</p>
@@ -200,7 +204,7 @@ export function QAChatPanel() {
         <div className="space-y-4 py-4">
           {messages.length === 0 && aiAvailable && hasNotes && (
             <div className="text-center text-muted-foreground">
-              <MessageCircle className="mx-auto h-12 w-12 opacity-20" />
+              <MessageCircle className="mx-auto size-12 opacity-20" />
               <p className="mt-2 text-sm">Ask a question about your notes</p>
               <p className="mt-1 text-xs opacity-70">
                 I'll search your notes and provide answers with citations
@@ -249,7 +253,7 @@ export function QAChatPanel() {
           {/* Loading indicator */}
           {isGenerating && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="size-4 animate-spin" />
               <span>Thinking...</span>
             </div>
           )}
@@ -272,7 +276,7 @@ export function QAChatPanel() {
             disabled={!inputValue.trim() || !aiAvailable || !hasNotes || isGenerating}
             size="icon"
           >
-            <Send className="h-4 w-4" />
+            <Send className="size-4" />
           </Button>
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
@@ -285,7 +289,7 @@ export function QAChatPanel() {
   // Trigger button (shared)
   const triggerButton = (
     <Button variant="outline" size="icon" title="Ask AI about your notes">
-      <MessageCircle className="h-5 w-5" />
+      <MessageCircle className="size-5" />
     </Button>
   )
 
@@ -315,10 +319,10 @@ export function QAChatPanel() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6"
+              className="size-6"
               onClick={() => setIsOpen(false)}
             >
-              <X className="h-4 w-4" />
+              <X className="size-4" />
             </Button>
           </div>
           {chatContent}

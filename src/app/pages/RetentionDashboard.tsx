@@ -22,6 +22,7 @@ export function RetentionDashboard() {
   useEffect(() => {
     let ignore = false
     Promise.all([loadReviews(), loadNotes(), loadSessionStats()]).catch(err => {
+      // silent-catch-ok — error state handled by individual store isLoading flags
       if (!ignore) console.error('[RetentionDashboard] Failed to load data:', err)
     })
     return () => {

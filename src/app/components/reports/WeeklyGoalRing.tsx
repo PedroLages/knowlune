@@ -34,13 +34,18 @@ export function WeeklyGoalRing() {
       .then(data => {
         if (!ignore) setGoal(data)
       })
-      .catch(err => console.error('Failed to load weekly goal:', err))
+      .catch(err => {
+        // silent-catch-ok — error state handled by component (goal stays null)
+        console.error('Failed to load weekly goal:', err)
+      })
       .finally(() => {
         if (!ignore) setLoading(false)
       })
 
     const handler = () => {
-      computeWeeklyGoalProgress().then(setGoal)
+      computeWeeklyGoalProgress().then(setGoal).catch(() => {
+        // silent-catch-ok — non-critical background refresh
+      })
     }
     window.addEventListener('study-session-recorded', handler)
     window.addEventListener('study-session-updated', handler)

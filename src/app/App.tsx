@@ -27,7 +27,10 @@ export default function App() {
     if (supportsWorkers()) {
       vectorStorePersistence
         .loadAll()
-        .catch(err => console.error('[App] Vector store init failed:', err))
+        .catch(err => {
+          // silent-catch-ok — non-critical background initialization
+          console.error('[App] Vector store init failed:', err)
+        })
     }
   }, [])
 
