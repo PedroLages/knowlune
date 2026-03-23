@@ -7,21 +7,21 @@ on:
 jobs:
   build-and-deploy:
     runs-on: docker
-    container:
-      image: docker:27-cli
-      options: --network=host
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Docker image
+      - name: Install Docker CLI and SSH
         run: |
-          docker build -t knowlune:latest -t knowlune:$GITHUB_SHA .
+          apt-get update -qq
+          apt-get install -y -qq docker.io openssh-client > /dev/null
+
+      - name: Build Docker image
+        run: docker build -t knowlune:latest .
 
       - name: Deploy to titan
         env:
           DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
-          apk add --no-cache openssh-client
           mkdir -p ~/.ssh
           echo "$DEPLOY_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
@@ -35,6 +35,6 @@ jobs:
           ssh root@192.168.2.200 \
             "cd /mnt/cache/docker/stacks/knowlune && docker compose up -d --force-recreate"
 
-      - name: Cleanup DinD disk space
+      - name: Cleanup
         if: always()
-        run: docker image prune -f
+        run: docker image prune -f 2>/dev/null || true
