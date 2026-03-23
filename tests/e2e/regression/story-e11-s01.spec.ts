@@ -42,6 +42,7 @@ function createDueReview(
  *  Uses real current time so the review stays in the future regardless of
  *  when the test runs (FIXED_NOW is March 2026 and can drift into the past). */
 function createFutureReview(noteId: string, daysUntilDue = 5) {
+  // eslint-disable-next-line test-patterns/deterministic-time -- intentional: real time needed so due date stays in the future as FIXED_NOW drifts into the past
   const realNow = new Date()
   return {
     id: crypto.randomUUID(),
