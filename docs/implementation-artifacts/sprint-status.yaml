@@ -311,14 +311,14 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 21: Engagement & Adaptive Experience
   # ──────────────────────────────────────────────────
-  epic-21: backlog
+  epic-21: in-progress
   21-1-ab-loop-video-controls: backlog
   21-2-enhanced-video-keyboard-shortcuts: backlog
   21-3-pomodoro-focus-timer: backlog
   21-4-visual-energy-boost: backlog
   21-5-user-engagement-preference-controls: backlog
   21-6-smart-dashboard-reordering: backlog
-  21-7-age-appropriate-defaults-and-font-scaling: backlog
+  21-7-age-appropriate-defaults-and-font-scaling: in-progress
   epic-21-retrospective: optional
 
   # ──────────────────────────────────────────────────
