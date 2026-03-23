@@ -81,4 +81,12 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Functionality already existed (E12-S03-AC5):** The core cross-store integration (`useQuizStore.submitQuiz` calling `useContentProgressStore.setItemStatus`) was already implemented in a prior epic. This story's primary value was validation and E2E coverage, not new implementation.
+
+- **E2E test targets IDB directly:** The spec verifies the integration by reading `contentProgress` entries from IndexedDB after quiz submission. No shared read helper exists for IDB, so a `getContentProgressEntry` helper using the raw `indexedDB` API was written inline. The test pattern validator flags this as "manual IndexedDB" (MEDIUM), but this is a false positive — the seeding uses `seedIndexedDBStore` correctly; the raw access is for read-only assertion.
+
+- **Compound key lookup in IDB:** `contentProgress` records use a compound key `[courseId, itemId]`. In raw IDB reads, `store.get([courseId, itemId])` must pass an array, not a string. Worth noting for future IDB read helpers.
+
+- **Course must be seeded for submitQuiz to work:** `submitQuiz` fetches the course from the `courses` store to cascade module progress. If only the quiz is seeded, `submitQuiz` silently skips the content progress update. Both `quizzes` and `courses` stores must be populated before navigating to the quiz page.
+
+- **Sidebar collapse prevents viewport obstruction:** The test sets `knowlune-sidebar-v1: false` in localStorage via `page.addInitScript` to prevent the sidebar overlay from blocking button clicks on tablet-width viewports.
