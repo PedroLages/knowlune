@@ -28,7 +28,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import html
 import json
 import logging
 import re
@@ -168,8 +167,6 @@ class PhaseConfig:
             raise ValueError(f"Invalid effort '{self.effort}', must be one of {VALID_EFFORTS}")
         if self.model and self.model not in VALID_MODELS:
             raise ValueError(f"Invalid model '{self.model}', must be one of {VALID_MODELS}")
-        if self.model and self.fallback_model and self.model == self.fallback_model:
-            raise ValueError(f"fallback_model cannot be the same as model ('{self.model}')")
 
 
 class StoryError(Exception):
@@ -432,8 +429,12 @@ def find_next_backlog_keys(n: int, skip_epics: list[int] | None = None) -> list[
         parts = yaml_key.split("-")
         if len(parts) >= 2:
             try:
-                epic_n, story_n = int(parts[0]), int(parts[1])
-            except ValueError:
+                epic_match = re.match(r"(\d+)", parts[0])
+                if not epic_match:
+                    continue
+                epic_n = int(epic_match.group(1))
+                story_n = int(parts[1])
+            except (ValueError, AttributeError):
                 continue
             # Skip stories from done epics or explicitly skipped epics
             if epic_n in done_epics or (skip_epics and epic_n in skip_epics):
@@ -448,146 +449,66 @@ def find_next_backlog_keys(n: int, skip_epics: list[int] | None = None) -> list[
 # Section C: Phase Prompts
 # ─────────────────────────────────────────────────
 
-START_PROMPT = """
-You are starting story {story_id} ("{story_name}").
+def start_prompt(story: StoryInfo) -> str:
+    """Invoke the /start-story skill — handles branch, story file, plan."""
+    return f"Use /start-story {story.key}"
 
-Follow these steps exactly:
 
-1. Look up story "{story_id}" in docs/planning-artifacts/epics.md — find its acceptance criteria and requirements
-2. Check current status in docs/implementation-artifacts/sprint-status.yaml
-3. Create branch: feature/{branch_slug} from main (if it doesn't exist, switch to it if it does)
-4. Create story file from docs/implementation-artifacts/story-template.md at docs/implementation-artifacts/{yaml_key}.md (if it doesn't already exist)
-5. Update sprint-status.yaml: set story to in-progress
-6. Research the codebase:
-   - Read the acceptance criteria carefully
-   - Check existing components, stores, and utilities that relate to this story
-   - Identify patterns from similar completed features
-   - Check test patterns in tests/
-7. Create a detailed implementation plan and save it to docs/implementation-artifacts/plans/
-8. Link the plan in the story file
-9. Commit: "chore: start story {story_id}"
+def implement_prompt(story: StoryInfo) -> str:
+    """Implementation instructions — reads plan from disk, no skill needed."""
+    return (
+        f"Implement story {story.key} following the plan.\n"
+        f"Read the plan at docs/implementation-artifacts/plans/ (find the latest for this story).\n\n"
+        f"Key rules:\n"
+        f"- Follow existing codebase patterns (Tailwind, shadcn/ui, Zustand, Dexie)\n"
+        f"- Use the @/ import alias\n"
+        f"- Make granular commits after each logical task (as save points)\n"
+        f"- Write unit tests for business logic\n"
+        f"- Write E2E test spec if the story has UI\n"
+        f"- Run tests after implementation to verify\n"
+        f"- Commit all changes when complete\n\n"
+        f"When finished, output: IMPLEMENTATION_COMPLETE"
+    )
 
-Do NOT start implementing. Only plan.
-When done, output the full plan and end with: PLAN_COMPLETE
-"""
 
-IMPLEMENT_PROMPT = """
-Implement story {story_id} following the plan you created.
+def review_prompt(story: StoryInfo) -> str:
+    """Invoke the /review-story skill — runs all 9 quality gates."""
+    return f"Use /review-story {story.key}"
 
-Read the plan file at docs/implementation-artifacts/plans/ (find the latest one for this story).
 
-Key rules:
-- Follow existing codebase patterns (Tailwind, shadcn/ui, Zustand, Dexie)
-- Use the @/ import alias
-- Make granular commits after each logical task (as save points)
-- Write unit tests for business logic
-- Write E2E test spec at tests/e2e/story-{story_id_lower}.spec.ts if the story has UI
-- Run tests after implementation to verify (npm run test:unit, npx playwright test)
-- Commit all changes when complete
+def fix_prompt(story: StoryInfo) -> str:
+    """Fix instructions — reads review reports from disk."""
+    story_key_lower = story.key.lower()
+    return (
+        f"Read the review reports for story {story.key} at:\n"
+        f"  - docs/reviews/code/code-review-*-{story_key_lower}.md\n"
+        f"  - docs/reviews/code/code-review-testing-*-{story_key_lower}.md\n"
+        f"  - docs/reviews/design/design-review-*-{story_key_lower}.md (if exists)\n\n"
+        f"Fix ALL findings by severity priority:\n"
+        f"1. [Blocker] — mandatory, these block shipping\n"
+        f"2. [High] — fix these, they are important quality issues\n"
+        f"3. [Medium] — fix if straightforward\n"
+        f"4. [Nit] — fix if trivial (one-line changes)\n\n"
+        f"For each fix: open file at exact line, apply fix, verify it doesn't break tests.\n"
+        f'Commit each fix: git commit -m "fix({story.key}): [what was fixed]"\n'
+        f"After ALL fixes: npm run build && npm run lint && npx tsc --noEmit"
+    )
 
-When finished, output: IMPLEMENTATION_COMPLETE
-"""
 
-REVIEW_PROMPT = """
-Review story {story_id}. Run these quality gates in order:
+def finish_prompt_text(story: StoryInfo) -> str:
+    """Invoke the /finish-story skill — updates files, pushes, creates PR."""
+    return f"Use /finish-story {story.key}"
 
-PRE-CHECKS:
-1. Verify working tree is clean (commit any uncommitted changes first)
-2. npm run build — must pass
-3. npm run lint — must pass
-4. npx tsc --noEmit — must pass (auto-fix type errors in branch-changed files)
-5. npx prettier --check src/ — auto-fix with --write if needed, then commit
-6. npm run test:unit -- --run (if tests exist)
-7. npx playwright test tests/e2e/navigation.spec.ts tests/e2e/overview.spec.ts tests/e2e/courses.spec.ts (smoke specs, chromium only)
-8. If a story-specific E2E spec exists at tests/e2e/story-{story_id_lower}.spec.ts, run it too
 
-AGENT REVIEWS:
-9. Run the code-review agent: dispatch it via the Agent tool with subagent_type="code-review". It should review git diff main...HEAD.
-10. Run the code-review-testing agent: dispatch via Agent tool with subagent_type="code-review-testing". It should verify AC coverage.
-11. Run the design-review agent: dispatch via Agent tool with subagent_type="design-review". It tests the live app at http://localhost:5173 using Playwright MCP at mobile (375px), tablet (768px), and desktop (1440px) viewports. Only run this if the story has UI changes (check git diff for .tsx or .css files).
-
-IMPORTANT: Run agents 9, 10, and 11 in PARALLEL for efficiency.
-
-12. Save review reports to:
-    - docs/reviews/code/code-review-{today}-{story_id}.md
-    - docs/reviews/code/code-review-testing-{today}-{story_id}.md
-    - docs/reviews/design/design-review-{today}-{story_id}.md (if design review ran)
-
-13. Generate a CONSOLIDATED report with severity-triaged findings:
-    - [Blocker]: must fix before shipping (confidence >= 70)
-    - [High]: should fix (confidence >= 70)
-    - [Medium]: fix when possible
-    - [Nit]: optional
-
-14. Update story file frontmatter: review_gates_passed list, reviewed status
-
-End with exactly one of:
-- VERDICT: PASS — if no [Blocker] findings
-- VERDICT: BLOCKED — N blocker(s) — ONLY if [Blocker] findings exist
-
-IMPORTANT: Only [Blocker] severity triggers BLOCKED. [High], [Medium], and [Nit]
-are informational — report them but they do NOT block shipping.
-"""
-
-FIX_PROMPT = """
-The review found issues that must be fixed before shipping story {story_id}.
-
-Read the review reports you just generated at docs/reviews/code/ and docs/reviews/design/ (if design review ran).
-
-Fix ALL findings by severity priority:
-1. [Blocker] — mandatory, these block shipping
-2. [High] — fix these, they are important quality issues
-3. [Medium] — fix if straightforward
-4. [Nit] — fix if trivial (one-line changes)
-
-For each fix:
-1. Open the file at the exact line referenced
-2. Apply the suggested fix
-3. Verify the fix doesn't break existing tests
-4. Commit with message: "fix({story_id}): [what was fixed]"
-
-After ALL fixes are committed, run: npm run build && npm run lint && npx tsc --noEmit
-If those pass, output: FIXES_APPLIED
-If they fail, fix the failures and try again.
-"""
-
-RE_REVIEW_PROMPT = """
-Fixes have been applied for story {story_id}. Re-validate:
-
-1. Re-run pre-checks: build, lint, typecheck, format, unit tests, e2e tests
-2. For each previously-reported [Blocker] finding, verify the fix at the exact file:line
-3. [High], [Medium], and [Nit] findings are informational — do NOT re-check them
-4. Do NOT re-run the full code-review or code-review-testing agents (already completed)
-5. Check if any fix introduced new issues
-
-Output exactly one of:
-- VERDICT: PASS — all blockers resolved, pre-checks pass
-- VERDICT: BLOCKED — N remaining — list the unresolved issues
-"""
-
-FINISH_PROMPT = """
-Finish story {story_id}:
-
-1. Update story file frontmatter: status=done, completed={today}, reviewed=true
-2. Update sprint-status.yaml: set story to done
-3. Commit: "feat({story_id}): [story name from story file]"
-4. If tests/e2e/story-{story_id_lower}.spec.ts exists, move it to tests/e2e/regression/
-5. Commit the archive: "chore: archive {story_id} spec to regression"
-6. Push: git push -u origin HEAD
-7. Create PR via: gh pr create --title "feat({story_id}): [story name]" --body "[summary of changes, verification table]"
-
-Output the PR URL on its own line as: PR_URL: <url>
-"""
-
-FINISH_RETRY_PROMPT = """
-The FINISH phase for story {story_id} did not complete all tasks.
-
-Missing:
-{missing_items}
-
-Complete ONLY the missing tasks listed above. Do not repeat already-completed tasks.
-When done, output: FINISH_COMPLETE
-"""
+def finish_retry_prompt(story: StoryInfo, missing: list[str]) -> str:
+    """Retry prompt for incomplete FINISH — only addresses missing tasks."""
+    missing_str = "\n".join(f"- {m}" for m in missing)
+    return (
+        f"The FINISH phase for story {story.key} did not complete all tasks.\n\n"
+        f"Missing:\n{missing_str}\n\n"
+        f"Complete ONLY the missing tasks listed above. Do not repeat already-completed tasks.\n"
+        f"When done, output: FINISH_COMPLETE"
+    )
 
 # ── Epic Finish Prompts (direct instructions, no slash commands) ──
 
@@ -774,6 +695,7 @@ def make_options(
         "Agent",                          # Spawn review agents
         "TodoWrite",                      # Track implementation progress
         "ToolSearch",                     # Discover MCP tools
+        "Skill",                          # Invoke /start-story, /review-story, /finish-story
     ]
 
     # Headless Playwright MCP for design review (no browser window pops up)
@@ -823,24 +745,6 @@ def make_options(
     return ClaudeAgentOptions(**opts)
 
 
-def format_prompt(template: str, story: StoryInfo) -> str:
-    """Fill prompt template with story details. Sanitizes story name to prevent injection."""
-    epic_n, epic_suffix = parse_epic_num(story.epic_num)
-    story_n = int(story.story_num)
-    branch_slug = f"e{epic_n:02d}{epic_suffix}-s{story_n:02d}-{'-'.join(story.name.lower().split())}"
-    story_id_lower = f"e{epic_n:02d}{epic_suffix}-s{story_n:02d}"
-    today = date.today().isoformat()
-
-    return template.format(
-        story_id=story.key,
-        story_name=html.escape(story.name),  # Prevent prompt injection
-        yaml_key=story.yaml_key,
-        branch_slug=branch_slug,
-        story_id_lower=story_id_lower,
-        today=today,
-    )
-
-
 PROGRESS_FILE = PROJECT_DIR / "scripts" / "auto-story-progress.log"
 
 
@@ -883,7 +787,73 @@ def _checkout_main_and_pull(force: bool = False) -> None:
             log.warning(f"git pull --rebase also failed: {rebase_pull.stderr.strip()}")
 
 
-def merge_epic_prs(
+async def resolve_merge_conflict(
+    branch_name: str, story_key: str, autonomous: bool
+) -> bool:
+    """Resolve merge conflicts by merging main into the branch via AI session.
+
+    Flow: checkout branch → git merge main → SDK resolves conflicts → push.
+    Returns True if conflicts resolved and branch pushed successfully.
+    """
+    # 1. Checkout the PR's branch
+    checkout = subprocess.run(
+        ["git", "checkout", branch_name],
+        capture_output=True, text=True, cwd=PROJECT_DIR,
+    )
+    if checkout.returncode != 0:
+        log.error(f"  Cannot checkout {branch_name}: {checkout.stderr.strip()}")
+        return False
+
+    # 2. Merge main into branch (creates conflict markers if conflicts exist)
+    merge = subprocess.run(
+        ["git", "merge", "main", "--no-edit"],
+        capture_output=True, text=True, cwd=PROJECT_DIR,
+    )
+    if merge.returncode == 0:
+        # No actual conflict — merge was clean, just needs push
+        push = subprocess.run(
+            ["git", "push"], capture_output=True, text=True, cwd=PROJECT_DIR,
+        )
+        if push.returncode == 0:
+            return True
+        log.error(f"  Push failed after clean merge: {push.stderr.strip()}")
+        return False
+
+    # 3. Conflicts exist — launch SDK session to resolve
+    log.info(f"  [{story_key}] Resolving merge conflicts on {branch_name}...")
+    resolve_phase = PhaseConfig(
+        model="sonnet", effort="high",
+        needs_agents=False, needs_playwright=False,
+    )
+    try:
+        text, _, cost = await run_session(
+            (
+                f"There are merge conflicts on branch {branch_name} for story {story_key}.\n"
+                f"Run `git status` to see conflicted files.\n"
+                f"For each conflicted file:\n"
+                f"1. Read the file to see conflict markers (<<<<<<< / ======= / >>>>>>>)\n"
+                f"2. Resolve by keeping the correct code (usually both changes are needed)\n"
+                f"3. git add the resolved file\n"
+                f"After all conflicts resolved: git commit (accept the default merge message)\n"
+                f"Then: npm run build && npm run lint (verify nothing broke)\n"
+                f"If build/lint fails, fix and commit.\n"
+                f"Finally: git push"
+            ),
+            max_turns=50, max_budget=0, autonomous=autonomous,
+            story_key=story_key, phase=resolve_phase,
+        )
+        write_progress(story_key, "CONFLICT_RESOLVED", f"cost=${cost:.2f}")
+        return True
+
+    except (StoryError, Exception) as e:
+        log.error(f"  Conflict resolution failed for {branch_name}: {e}")
+        # Abort the failed merge to leave branch in clean state
+        subprocess.run(["git", "merge", "--abort"], cwd=PROJECT_DIR)
+        subprocess.run(["git", "checkout", "main"], cwd=PROJECT_DIR)
+        return False
+
+
+async def merge_epic_prs(
     epic_num: str,
     stories: list[StoryInfo] | None = None,
     results: list[StoryResult] | None = None,
@@ -958,7 +928,7 @@ def merge_epic_prs(
             log.warning(f"  PR #{pr_num}: state is {state}, skipping")
             continue
 
-        # Merge
+        # Try merge
         merge_result = subprocess.run(
             ["gh", "pr", "merge", pr_num, "--squash", "--delete-branch"],
             capture_output=True, text=True, cwd=PROJECT_DIR,
@@ -967,11 +937,41 @@ def merge_epic_prs(
             log.info(f"  PR #{pr_num}: merged successfully")
             merged.append(pr["url"])
         else:
-            log.error(f"  PR #{pr_num}: merge failed — {merge_result.stderr.strip()}")
+            # Merge failed — attempt conflict resolution
+            stderr = merge_result.stderr.strip()
+            log.warning(f"  PR #{pr_num}: merge failed — {stderr}")
 
-    # Pull merged changes to main
-    if merged:
-        _checkout_main_and_pull()
+            if "conflict" in stderr.lower() or "not possible" in stderr.lower():
+                # Get branch name from PR
+                branch_info = subprocess.run(
+                    ["gh", "pr", "view", pr_num, "--json", "headRefName"],
+                    capture_output=True, text=True, cwd=PROJECT_DIR,
+                )
+                if branch_info.returncode == 0:
+                    branch_name = json.loads(branch_info.stdout)["headRefName"]
+                    log.info(f"  PR #{pr_num}: attempting conflict resolution on {branch_name}...")
+
+                    resolved = await resolve_merge_conflict(
+                        branch_name, pr.get("story", "?"), not supervised,
+                    )
+                    if resolved:
+                        # Return to main and retry merge
+                        _checkout_main_and_pull()
+                        retry = subprocess.run(
+                            ["gh", "pr", "merge", pr_num, "--squash", "--delete-branch"],
+                            capture_output=True, text=True, cwd=PROJECT_DIR,
+                        )
+                        if retry.returncode == 0:
+                            log.info(f"  PR #{pr_num}: merged after conflict resolution")
+                            merged.append(pr["url"])
+                        else:
+                            log.error(f"  PR #{pr_num}: still failed after resolution — {retry.stderr.strip()}")
+                    else:
+                        log.error(f"  PR #{pr_num}: conflict resolution failed, skipping")
+
+        # Pull main after each successful merge (prevents cascading conflicts)
+        if pr["url"] in merged:
+            _checkout_main_and_pull()
 
     return merged
 
@@ -1035,165 +1035,6 @@ async def run_session(
     async with ClaudeSDKClient(options=options) as client:
         await client.query(prompt)
         return await collect_response(client, story_key=story_key)
-
-
-async def run_review_fix_session(
-    story: StoryInfo, config: RunConfig
-) -> tuple[ReviewResult, str, float]:
-    """Run review + fix loop in a single session. Returns (review_result, text, cost)."""
-    autonomous = config.mode == "autonomous"
-    review_phase = None if config.legacy_mode else PhaseConfig(
-        model="sonnet", effort="medium", fallback_model="opus",
-        needs_agents=True, needs_playwright=True,
-        append_context=f"Story: {story.key}. Running quality gates.",
-    )
-    options = make_options(config.max_turns, BUDGET_SESSION_REVIEW, autonomous, phase=review_phase)
-    result = ReviewResult()
-    total_cost = 0.0
-    all_text = ""
-
-    async with ClaudeSDKClient(options=options) as client:
-        # Initial review
-        write_progress(story.key, "REVIEW", "running quality gates...")
-        review_prompt = format_prompt(REVIEW_PROMPT, story)
-        await client.query(review_prompt)
-        text, _, cost = await collect_response(client, story_key=story.key)
-        total_cost += cost
-        all_text = text
-
-        # ── Review + Fix loop ──
-        # Strategy: fix ALL findings (blocker/high/medium/nit) in each fix round,
-        # but only BLOCKERS trigger the re-review loop. Non-blocker-only findings
-        # get one fix pass then proceed to FINISH.
-
-        verdict = parse_verdict(text)
-
-        # If zero blockers but non-blocker findings exist, do one fix pass
-        if verdict.is_pass and (verdict.high_count > 0):
-            total_findings = verdict.high_count
-            write_progress(story.key, "REVIEW",
-                f"PASSED (0 blockers), {total_findings} non-blocker finding(s) — fixing in one pass")
-            result.rounds = 1
-
-            # Supervised: ask before fixing
-            if config.mode == "supervised":
-                print(f"\n{'=' * 60}")
-                print(f"NON-BLOCKER FINDINGS: {verdict.high_count} HIGH")
-                print(f"{'=' * 60}")
-                print(verdict.findings_text[:2000])
-                print()
-                action = input("Fix non-blockers? [y/n]: ").strip().lower()
-                if action != "y":
-                    log.info("Skipping non-blocker fixes per user request")
-                else:
-                    fix_prompt = format_prompt(FIX_PROMPT, story)
-                    await client.query(fix_prompt)
-                    fix_text, _, fix_cost = await collect_response(client, story_key=story.key)
-                    total_cost += fix_cost
-            else:
-                write_progress(story.key, "FIX", "fixing non-blocker findings...")
-                fix_prompt = format_prompt(FIX_PROMPT, story)
-                await client.query(fix_prompt)
-                fix_text, _, fix_cost = await collect_response(client, story_key=story.key)
-                total_cost += fix_cost
-
-        elif verdict.is_pass:
-            write_progress(story.key, "REVIEW", "PASSED — no findings")
-            result.rounds = 1
-
-        else:
-            # Blockers exist — enter fix + re-review loop
-            for round_num in range(1, config.max_review_rounds + 1):
-                result.rounds = round_num
-
-                if verdict.is_pass:
-                    write_progress(story.key, "REVIEW", f"PASSED on round {round_num}")
-                    break
-
-                result.blockers_found += verdict.blocker_count
-                write_progress(
-                    story.key, "REVIEW",
-                    f"round {round_num}: {verdict.blocker_count} blocker(s), "
-                    f"{verdict.high_count} high(s)",
-                )
-
-                # Supervised: ask before fixing
-                if config.mode == "supervised":
-                    print(f"\n{'=' * 60}")
-                    print(f"REVIEW ROUND {round_num}: "
-                          f"{verdict.blocker_count} BLOCKER(S), "
-                          f"{verdict.high_count} HIGH")
-                    print(f"{'=' * 60}")
-                    print(verdict.findings_text[:2000])
-                    print()
-                    action = input("Fix automatically? [y/n/skip]: ").strip().lower()
-                    if action == "n":
-                        raise StoryError("User declined to fix blockers")
-                    if action == "skip":
-                        log.warning("Skipping blockers per user request")
-                        break
-
-                # Fix ALL findings (blockers + highs + mediums + nits)
-                write_progress(story.key, "FIX", f"round {round_num}: fixing all findings...")
-                fix_prompt = format_prompt(FIX_PROMPT, story)
-                await client.query(fix_prompt)
-                fix_text, _, fix_cost = await collect_response(client, story_key=story.key)
-                total_cost += fix_cost
-                result.blockers_fixed += verdict.blocker_count  # optimistic
-
-                if round_num >= config.max_review_rounds:
-                    raise StoryError(
-                        f"Still blocked after {config.max_review_rounds} fix rounds"
-                    )
-
-                # Re-review (only verifies blockers are resolved)
-                write_progress(story.key, "RE-REVIEW", f"round {round_num + 1}...")
-                re_review_prompt = format_prompt(RE_REVIEW_PROMPT, story)
-                await client.query(re_review_prompt)
-                text, _, rr_cost = await collect_response(client, story_key=story.key)
-                total_cost += rr_cost
-                all_text = text
-                verdict = parse_verdict(text)
-
-        # Finish (same session if review passed)
-        write_progress(story.key, "FINISH", "updating story, pushing, creating PR...")
-        finish_prompt = format_prompt(FINISH_PROMPT, story)
-        await client.query(finish_prompt)
-        finish_text, _, finish_cost = await collect_response(
-            client, story_key=story.key
-        )
-        total_cost += finish_cost
-        all_text += "\n" + finish_text
-
-        # Verify FINISH completed its tasks
-        missing = verify_finish(story)
-        if missing:
-            write_progress(
-                story.key, "FINISH_RETRY",
-                f"missing: {', '.join(missing)}",
-            )
-            retry_prompt = FINISH_RETRY_PROMPT.format(
-                story_id=story.key,
-                missing_items="\n".join(f"- {m}" for m in missing),
-            )
-            await client.query(retry_prompt)
-            retry_text, _, retry_cost = await collect_response(
-                client, story_key=story.key
-            )
-            total_cost += retry_cost
-            all_text += "\n" + retry_text
-
-            # Check again
-            still_missing = verify_finish(story)
-            if still_missing:
-                raise StoryError(
-                    f"FINISH incomplete after retry: {', '.join(still_missing)}"
-                )
-
-    # Return to main for next story (runs after verify_finish on feature branch)
-    _checkout_main_and_pull()
-
-    return result, all_text, total_cost
 
 
 async def _run_single_epic_phase(
@@ -1324,80 +1165,84 @@ async def run_epic_finish(
 
 
 async def run_story(story: StoryInfo, config: RunConfig) -> StoryResult:
-    """Full lifecycle for one story across 3 sessions."""
+    """Full lifecycle for one story — each phase gets a fresh SDK session.
+
+    Architecture (coordinator pattern):
+      Session 1: /start-story    → verify branch, story file, plan on disk
+      Session 2: implement       → verify code committed, build passes
+      Session 3: /review-story   → parse verdict from output
+      (if blocked) Session 4: fix → commit fixes
+      (if blocked) Session 5: /review-story (fresh re-review, all 9 gates)
+      Session N: /finish-story   → verify PR URL, PR exists
+    """
     start_time = time.monotonic()
     result = StoryResult(story=story)
     autonomous = config.mode == "autonomous"
 
     try:
         # ── Phase configs (disabled in legacy mode) ──
-        if config.legacy_mode:
-            start_phase = None
-            impl_phase = None
-        else:
-            start_phase = PhaseConfig(
-                model="opus", effort="high", fallback_model="sonnet",
-                needs_agents=False, needs_playwright=False,
-                append_context=f"Story: {story.key} ({story.name}). Planning phase only.",
-            )
+        start_phase = None if config.legacy_mode else PhaseConfig(
+            model="opus", effort="high", fallback_model="sonnet",
+            needs_agents=False, needs_playwright=False,
+            append_context=f"Story: {story.key} ({story.name}). Planning phase only.",
+        )
 
-        # ── Session 1: START ──
+        # ── Session 1: START (fresh) ──
         write_progress(story.key, "SESSION 1: START", "branch, story file, plan...")
-        start_prompt = format_prompt(START_PROMPT, story)
         text, sid, cost = await run_session(
-            start_prompt, config.max_turns, BUDGET_SESSION_START, autonomous,
-            story_key=story.key, phase=start_phase if not config.legacy_mode else None,
+            start_prompt(story), config.max_turns, BUDGET_SESSION_START, autonomous,
+            story_key=story.key, phase=start_phase,
         )
         result.cost_start = cost
         result.total_cost_usd += cost
         if sid:
             result.session_ids.append(sid)
-        start_session_id = sid  # save for session chaining
+        start_session_id = sid
         result.phase_reached = "start"
 
-        if "PLAN_COMPLETE" not in text:
-            log.warning(f"  START did not output PLAN_COMPLETE marker")
+        # Verify START artifacts on disk
+        start_failures = verify_start(story)
+        if start_failures:
+            log.warning(f"  START verification: {', '.join(start_failures)}")
 
         # Supervised: show plan and ask for approval
         if config.mode == "supervised":
             print(f"\n{'=' * 60}")
             print(f"PLAN FOR {story.key}")
             print(f"{'=' * 60}")
-            # Show end of output (the plan is usually at the end)
             print(text[-PLAN_PREVIEW_CHARS:])
             approval = input("\nApprove plan? [y/n]: ").strip().lower()
             if approval != "y":
                 raise StoryError("Plan rejected by user")
 
-        # ── Session 2: IMPLEMENT (with session chaining fallback) ──
+        # ── Session 2: IMPLEMENT (fork from START for plan context) ──
         write_progress(story.key, "SESSION 2: IMPLEMENT", "coding feature...")
-        impl_prompt = format_prompt(IMPLEMENT_PROMPT, story)
+        impl_phase = None if config.legacy_mode else PhaseConfig(
+            model="sonnet", effort="high", fallback_model="sonnet",
+            resume_session_id=start_session_id,
+            fork_session=True,
+            needs_agents=False, needs_playwright=False,
+            append_context=f"Story: {story.key}. Implement the plan from the previous session.",
+        )
 
         if not config.legacy_mode:
-            impl_phase = PhaseConfig(
-                model="sonnet", effort="high", fallback_model="opus",
-                resume_session_id=start_session_id,
-                fork_session=True,
-                needs_agents=False, needs_playwright=False,
-                append_context=f"Story: {story.key}. Implement the plan from the previous session.",
-            )
             try:
                 text, sid, cost = await run_session(
-                    impl_prompt, config.max_turns, BUDGET_SESSION_IMPLEMENT, autonomous,
-                    story_key=story.key, phase=impl_phase,
+                    implement_prompt(story), config.max_turns, BUDGET_SESSION_IMPLEMENT,
+                    autonomous, story_key=story.key, phase=impl_phase,
                 )
             except Exception as e:
                 log.warning(f"  Session chaining failed ({e}), falling back to cold start")
                 impl_phase.resume_session_id = None
                 impl_phase.fork_session = False
                 text, sid, cost = await run_session(
-                    impl_prompt, config.max_turns, BUDGET_SESSION_IMPLEMENT, autonomous,
-                    story_key=story.key, phase=impl_phase,
+                    implement_prompt(story), config.max_turns, BUDGET_SESSION_IMPLEMENT,
+                    autonomous, story_key=story.key, phase=impl_phase,
                 )
         else:
             text, sid, cost = await run_session(
-                impl_prompt, config.max_turns, BUDGET_SESSION_IMPLEMENT, autonomous,
-                story_key=story.key,
+                implement_prompt(story), config.max_turns, BUDGET_SESSION_IMPLEMENT,
+                autonomous, story_key=story.key,
             )
 
         result.cost_implement = cost
@@ -1406,22 +1251,174 @@ async def run_story(story: StoryInfo, config: RunConfig) -> StoryResult:
             result.session_ids.append(sid)
         result.phase_reached = "implement"
 
-        # ── Session 3: REVIEW + FIX + FINISH ──
-        write_progress(story.key, "SESSION 3: REVIEW+FIX+FINISH", "quality gates...")
-        review_result, text, cost = await run_review_fix_session(story, config)
+        # Verify implementation artifacts
+        impl_failures = verify_implement(story)
+        if impl_failures:
+            log.warning(f"  IMPLEMENT verification: {', '.join(impl_failures)}")
+
+        # Ensure clean tree before review (required by /review-story)
+        ensure_clean_tree(story, "review")
+
+        # ── Session 3: REVIEW (fresh — full context for review agents) ──
+        review_phase = None if config.legacy_mode else PhaseConfig(
+            model="sonnet", effort="high", fallback_model="sonnet",
+            needs_agents=True, needs_playwright=True,
+            append_context=f"Story: {story.key}. Running quality gates.",
+        )
+
+        write_progress(story.key, "SESSION 3: REVIEW", "quality gates...")
+        text, sid, cost = await run_session(
+            review_prompt(story), config.max_turns, BUDGET_SESSION_REVIEW,
+            autonomous, story_key=story.key, phase=review_phase,
+        )
         result.cost_review = cost
         result.total_cost_usd += cost
-        result.review_rounds = review_result.rounds
-        result.blockers_found = review_result.blockers_found
-        result.blockers_fixed = review_result.blockers_fixed
+        if sid:
+            result.session_ids.append(sid)
+
+        verdict = parse_verdict(text)
+        rr = ReviewResult(rounds=1, blockers_found=verdict.blocker_count)
+
+        # ── Fix loop: each round is a SEPARATE session pair (fresh context!) ──
+        for round_num in range(1, config.max_review_rounds + 1):
+            if verdict.is_pass:
+                write_progress(story.key, "REVIEW", f"PASSED on round {round_num}")
+                break
+
+            rr.rounds = round_num
+            write_progress(
+                story.key, "REVIEW",
+                f"round {round_num}: {verdict.blocker_count} blocker(s), "
+                f"{verdict.high_count} high(s)",
+            )
+
+            # Supervised: ask before fixing
+            if config.mode == "supervised":
+                print(f"\n{'=' * 60}")
+                print(f"REVIEW ROUND {round_num}: "
+                      f"{verdict.blocker_count} BLOCKER(S), {verdict.high_count} HIGH")
+                print(f"{'=' * 60}")
+                print(verdict.findings_text[:2000])
+                print()
+                action = input("Fix automatically? [y/n/skip]: ").strip().lower()
+                if action == "n":
+                    raise StoryError("User declined to fix blockers")
+                if action == "skip":
+                    log.warning("Skipping blockers per user request")
+                    break
+
+            # Fix session (fresh context — fixes ALL severities)
+            fix_phase = None if config.legacy_mode else PhaseConfig(
+                model="sonnet", effort="high", fallback_model="sonnet",
+                needs_agents=False, needs_playwright=False,
+                append_context=f"Story: {story.key}. Fixing review findings round {round_num}.",
+            )
+            write_progress(story.key, "FIX", f"round {round_num}: fixing all findings...")
+            _, _, fix_cost = await run_session(
+                fix_prompt(story), config.max_turns, BUDGET_SESSION_REVIEW,
+                autonomous, story_key=story.key, phase=fix_phase,
+            )
+            result.cost_review += fix_cost
+            result.total_cost_usd += fix_cost
+            rr.blockers_fixed += verdict.blocker_count
+
+            if round_num >= config.max_review_rounds:
+                raise StoryError(
+                    f"Still blocked after {config.max_review_rounds} fix rounds"
+                )
+
+            # Ensure fixes are committed before re-review
+            ensure_clean_tree(story, "re-review")
+
+            # Re-review session (fresh — full /review-story, all 9 gates!)
+            write_progress(story.key, "RE-REVIEW", f"round {round_num + 1}...")
+            text, _, rr_cost = await run_session(
+                review_prompt(story), config.max_turns, BUDGET_SESSION_REVIEW,
+                autonomous, story_key=story.key, phase=review_phase,
+            )
+            result.cost_review += rr_cost
+            result.total_cost_usd += rr_cost
+            verdict = parse_verdict(text)
+            rr.blockers_found += verdict.blocker_count
+
+        # Handle non-blocker-only findings (one fix pass if high findings exist)
+        if verdict.is_pass and verdict.high_count > 0:
+            write_progress(story.key, "REVIEW",
+                f"PASSED (0 blockers), {verdict.high_count} high finding(s) — fixing in one pass")
+            should_fix = True
+            if config.mode == "supervised":
+                print(f"\n{'=' * 60}")
+                print(f"NON-BLOCKER FINDINGS: {verdict.high_count} HIGH")
+                print(f"{'=' * 60}")
+                print(verdict.findings_text[:2000])
+                print()
+                should_fix = input("Fix non-blockers? [y/n]: ").strip().lower() == "y"
+
+            if should_fix:
+                fix_phase = None if config.legacy_mode else PhaseConfig(
+                    model="sonnet", effort="high", fallback_model="sonnet",
+                    needs_agents=False, needs_playwright=False,
+                )
+                write_progress(story.key, "FIX", "fixing non-blocker findings...")
+                _, _, fix_cost = await run_session(
+                    fix_prompt(story), config.max_turns, BUDGET_SESSION_REVIEW,
+                    autonomous, story_key=story.key, phase=fix_phase,
+                )
+                result.cost_review += fix_cost
+                result.total_cost_usd += fix_cost
+
+        result.review_rounds = rr.rounds
+        result.blockers_found = rr.blockers_found
+        result.blockers_fixed = rr.blockers_fixed
+        result.phase_reached = "review"
+
+        # Ensure clean tree before finish
+        ensure_clean_tree(story, "finish")
+
+        # ── Session N: FINISH (fresh) ──
+        finish_phase = None if config.legacy_mode else PhaseConfig(
+            model="sonnet", effort="medium", fallback_model="sonnet",
+            needs_agents=False, needs_playwright=False,
+        )
+
+        write_progress(story.key, "FINISH", "updating story, pushing, creating PR...")
+        text, sid, cost = await run_session(
+            finish_prompt_text(story), config.max_turns, BUDGET_SESSION_REVIEW,
+            autonomous, story_key=story.key, phase=finish_phase,
+        )
+        result.cost_review += cost
+        result.total_cost_usd += cost
+        if sid:
+            result.session_ids.append(sid)
         result.phase_reached = "finish"
+
+        # Verify FINISH completed its tasks
+        missing = verify_finish(story)
+        if missing:
+            write_progress(story.key, "FINISH_RETRY", f"missing: {', '.join(missing)}")
+            retry_phase = None if config.legacy_mode else PhaseConfig(
+                model="sonnet", effort="medium", fallback_model="sonnet",
+                needs_agents=False, needs_playwright=False,
+            )
+            retry_text, _, retry_cost = await run_session(
+                finish_retry_prompt(story, missing), config.max_turns,
+                BUDGET_SESSION_REVIEW, autonomous,
+                story_key=story.key, phase=retry_phase,
+            )
+            result.total_cost_usd += retry_cost
+            text += "\n" + retry_text
+
+            still_missing = verify_finish(story)
+            if still_missing:
+                raise StoryError(
+                    f"FINISH incomplete after retry: {', '.join(still_missing)}"
+                )
 
         # Extract and verify PR URL
         result.pr_url = extract_pr_url(text, story)
         if not result.pr_url:
             raise StoryError("FINISH phase did not create a PR (no URL found)")
 
-        # Verify PR actually exists
         pr_number = result.pr_url.split('/')[-1]
         verify_pr = subprocess.run(
             ["gh", "pr", "view", pr_number],
@@ -1431,6 +1428,12 @@ async def run_story(story: StoryInfo, config: RunConfig) -> StoryResult:
             raise StoryError(f"PR {pr_number} does not exist: {verify_pr.stderr}")
 
         write_progress(story.key, "PR_VERIFIED", f"PR #{pr_number} created successfully")
+
+        # Merge immediately (no CI wait) — next story gets fresh main
+        if not merge_story_pr(result.pr_url, story.key):
+            log.warning(f"  [{story.key}] PR merge failed — PR stays open for manual merge")
+            # Don't fail the story — PR was created successfully
+
         result.success = True
 
     except StoryError as e:
@@ -1509,7 +1512,7 @@ async def _run_epic_only(config: RunConfig) -> None:
         log.info("Dev server ready")
 
         # Merge PRs (discover by branch prefix)
-        merged = merge_epic_prs(
+        merged = await merge_epic_prs(
             epic_num, supervised=(config.mode == "supervised"),
         )
 
@@ -1683,7 +1686,6 @@ async def main() -> None:
         print("BATCH COMPLETE")
         print(f"{'=' * 60}")
         print_progress(results, len(stories))
-        print_failure_summary(results)
 
         total_cost = sum(r.total_cost_usd for r in results)
         total_time = sum(r.duration_secs for r in results)
@@ -1719,7 +1721,7 @@ async def main() -> None:
                     log.info(f"\n--- Epic {epic_num} finish ({story_count} stories) ---")
 
                     # Merge PRs first
-                    merged = merge_epic_prs(
+                    merged = await merge_epic_prs(
                         epic_num, stories, results,
                         supervised=(config.mode == "supervised"),
                     )
@@ -1757,6 +1759,113 @@ async def main() -> None:
 # ─────────────────────────────────────────────────
 # Section F: Helpers
 # ─────────────────────────────────────────────────
+
+# Files that are expected noise — don't fail verify_finish for these
+_NOISE_FILES = {
+    ".claude/scheduled_tasks.lock",
+    "scripts/__pycache__/",
+    "scripts/auto-story-progress.log",
+    "scripts/dev-server.log",
+}
+
+
+def ensure_clean_tree(story: StoryInfo, next_phase: str) -> None:
+    """Auto-commit any dirty files before the next phase. No AI session needed.
+
+    The /review-story skill requires a clean working tree. This function
+    ensures that by committing any uncommitted changes via subprocess.
+    """
+    result = subprocess.run(
+        ["git", "status", "--porcelain"],
+        capture_output=True, text=True, cwd=PROJECT_DIR,
+    )
+    dirty_lines = result.stdout.strip()
+    if not dirty_lines:
+        return  # already clean
+
+    # Filter out noise files — only commit meaningful changes
+    meaningful = [
+        line for line in dirty_lines.splitlines()
+        if not any(noise in line for noise in _NOISE_FILES)
+    ]
+    if not meaningful:
+        return  # only noise files, safe to proceed
+
+    subprocess.run(["git", "add", "-A"], cwd=PROJECT_DIR, check=True)
+    subprocess.run(
+        ["git", "commit", "-m", f"chore({story.key}): save progress before {next_phase}"],
+        cwd=PROJECT_DIR, check=True,
+    )
+    log.info(f"  Auto-committed {len(meaningful)} file(s) before {next_phase}")
+
+
+def verify_start(story: StoryInfo) -> list[str]:
+    """Check START phase artifacts exist on disk. Returns list of failures."""
+    failures: list[str] = []
+
+    # Branch exists?
+    epic_n, epic_suffix = parse_epic_num(story.epic_num)
+    story_n = int(story.story_num)
+    branch_prefix = f"feature/e{epic_n:02d}{epic_suffix}-s{story_n:02d}"
+    result = subprocess.run(
+        ["git", "branch", "--list", f"{branch_prefix}*"],
+        capture_output=True, text=True, cwd=PROJECT_DIR,
+    )
+    if not result.stdout.strip():
+        failures.append(f"Branch matching {branch_prefix}* not created")
+
+    # Story file exists?
+    story_files = list(
+        (PROJECT_DIR / "docs" / "implementation-artifacts").glob(f"{story.yaml_key}*")
+    )
+    if not story_files:
+        failures.append(f"Story file not created for {story.yaml_key}")
+
+    # Plan file exists?
+    plans = list(
+        (PROJECT_DIR / "docs" / "implementation-artifacts" / "plans").glob(f"*")
+    )
+    # Check if any plan mentions the story key
+    has_plan = any(
+        story.yaml_key in p.name or story.key.lower() in p.name.lower()
+        for p in plans
+    )
+    if not has_plan:
+        failures.append("No plan file created")
+
+    # Sprint status updated?
+    data = load_sprint_status()
+    dev_status = data.get("development_status", {})
+    status = str(dev_status.get(story.yaml_key, "")).strip()
+    if status not in ("in-progress", "done"):
+        failures.append(f"Sprint status is '{status}', expected 'in-progress'")
+
+    return failures
+
+
+def verify_implement(story: StoryInfo) -> list[str]:
+    """Check IMPLEMENT phase: code was committed, build passes. Returns list of failures."""
+    failures: list[str] = []
+
+    # Check commits exist beyond start
+    result = subprocess.run(
+        ["git", "log", "main..HEAD", "--oneline"],
+        capture_output=True, text=True, cwd=PROJECT_DIR,
+    )
+    commit_count = len(result.stdout.strip().splitlines()) if result.stdout.strip() else 0
+    if commit_count <= 1:
+        failures.append(f"[{story.key}] Only {commit_count} commit(s) on branch (expected implementation commits)")
+
+    # Quick build check
+    build = subprocess.run(
+        ["npm", "run", "build"],
+        capture_output=True, text=True, cwd=PROJECT_DIR,
+        timeout=120,
+    )
+    if build.returncode != 0:
+        failures.append("Build fails after implementation")
+
+    return failures
 
 
 def parse_verdict(text: str) -> Verdict:
@@ -1822,13 +1931,18 @@ def verify_finish(story: StoryInfo) -> list[str]:
     if str(dev_status.get(story.yaml_key, "")).strip() != "done":
         failures.append("Sprint status not updated to done")
 
-    # 3. Check no uncommitted changes
+    # 3. Check no uncommitted changes (ignoring known noise files)
     result = subprocess.run(
         ["git", "status", "--porcelain"],
         capture_output=True, text=True, cwd=PROJECT_DIR,
     )
     if result.stdout.strip():
-        failures.append(f"Uncommitted files: {result.stdout.strip()[:200]}")
+        meaningful = [
+            line for line in result.stdout.strip().splitlines()
+            if not any(noise in line for noise in _NOISE_FILES)
+        ]
+        if meaningful:
+            failures.append(f"Uncommitted files: {'; '.join(meaningful)[:200]}")
 
     # 4. Check branch was pushed
     # First verify upstream is set
@@ -1876,6 +1990,26 @@ def extract_pr_url(text: str, story: StoryInfo | None = None) -> str | None:
     return None
 
 
+def merge_story_pr(pr_url: str, story_key: str) -> bool:
+    """Merge a single story PR immediately via squash. No CI wait. Returns success.
+
+    Merge failure does NOT fail the story — the PR exists and can be merged manually.
+    """
+    pr_number = pr_url.split("/")[-1]
+
+    merge_result = subprocess.run(
+        ["gh", "pr", "merge", pr_number, "--squash", "--delete-branch"],
+        capture_output=True, text=True, cwd=PROJECT_DIR,
+    )
+    if merge_result.returncode == 0:
+        log.info(f"  [{story_key}] PR #{pr_number} merged successfully")
+        write_progress(story_key, "PR_MERGED", f"PR #{pr_number}")
+        return True
+
+    log.warning(f"  [{story_key}] PR #{pr_number} merge failed: {merge_result.stderr.strip()}")
+    return False
+
+
 def print_progress(results: list[StoryResult], total: int) -> None:
     done = sum(1 for r in results if r.success)
     failed = sum(1 for r in results if not r.success and r.phase_reached != "init")
@@ -1889,53 +2023,6 @@ def print_progress(results: list[StoryResult], total: int) -> None:
         pr = f" | PR: {r.pr_url}" if r.pr_url else ""
         err = f" | {r.error}" if r.error else ""
         print(f"  {r.story.key}: {status} | {duration} | {cost}{pr}{err}")
-
-
-def print_failure_summary(results: list[StoryResult]) -> None:
-    """Print categorized failure analysis with actionable advice."""
-    failures = [r for r in results if not r.success]
-    if not failures:
-        return
-
-    # Categorize failures
-    categories: dict[str, list[StoryResult]] = {}
-    for r in failures:
-        err = r.error or "unknown"
-        if "ProcessError" in err or "exit code" in err:
-            cat = "SDK process crash"
-        elif "401" in err or "authenticate" in err.lower():
-            cat = "Auth failure"
-        elif "buffer" in err.lower() or "exceeded" in err.lower():
-            cat = "Buffer overflow"
-        elif "FINISH incomplete" in err:
-            cat = "Finish verification"
-        elif "Still blocked" in err:
-            cat = "Review loop exhausted"
-        elif "ValueError" in err:
-            cat = "Parsing error"
-        else:
-            cat = "Other"
-        categories.setdefault(cat, []).append(r)
-
-    print(f"\n{'=' * 60}")
-    print(f"FAILURE ANALYSIS ({len(failures)} failures)")
-    print(f"{'=' * 60}")
-
-    advice = {
-        "SDK process crash": "Check: API key valid? Network stable? Try --legacy-mode or run fewer stories.",
-        "Auth failure": "API key expired or invalid. Check ANTHROPIC_API_KEY env var.",
-        "Buffer overflow": "Increase max_buffer_size in make_options (currently 10MB).",
-        "Finish verification": "Usually harmless — story was implemented but cleanup failed. Re-run with --resume.",
-        "Review loop exhausted": "Review found unfixable blockers. Try --skip-review or --max-review-rounds 5.",
-        "Parsing error": "Story ID format issue. Check sprint-status.yaml key format.",
-        "Other": "Check auto-story.log for details.",
-    }
-
-    for cat, items in sorted(categories.items(), key=lambda x: -len(x[1])):
-        stories = ", ".join(r.story.key for r in items)
-        print(f"\n  [{len(items)}x] {cat}")
-        print(f"       Stories: {stories}")
-        print(f"       Fix: {advice.get(cat, 'Check logs.')}")
 
 
 def log_result(result: StoryResult, log_file: Path) -> None:
