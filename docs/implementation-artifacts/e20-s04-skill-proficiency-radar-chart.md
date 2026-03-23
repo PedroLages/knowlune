@@ -1,10 +1,10 @@
 ---
 story_id: E20-S04
 story_name: "Skill Proficiency Radar Chart"
-status: in-progress
+status: done
 started: 2026-03-24
-completed:
-reviewed: in-progress
+completed: 2026-03-24
+reviewed: done
 review_started: 2026-03-24
 review_gates_passed: []
 burn_in_validated: false
