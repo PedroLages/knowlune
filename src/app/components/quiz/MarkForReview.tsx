@@ -21,7 +21,7 @@ export function MarkForReview({ questionId, isMarked, onToggle }: MarkForReviewP
       <Label
         id={`${id}-label`}
         htmlFor={id}
-        className="text-sm text-muted-foreground cursor-pointer flex items-center gap-1.5 select-none min-h-[44px]"
+        className="text-sm text-muted-foreground cursor-pointer flex items-center gap-1.5 select-none min-h-[44px] min-w-[44px]"
       >
         <Bookmark className="size-3.5" aria-hidden="true" />
         Mark for Review

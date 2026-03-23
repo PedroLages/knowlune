@@ -11,8 +11,8 @@
 
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { seedQuizzes } from '../support/helpers/seed-helpers'
-import { makeQuiz, makeQuestion } from '../support/fixtures/factories/quiz-factory'
+import { seedQuizzes, seedQuizAttempts } from '../support/helpers/seed-helpers'
+import { makeQuiz, makeQuestion, makeAttempt, makeCorrectAnswer, makeWrongAnswer } from '../support/fixtures/factories/quiz-factory'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -334,11 +334,12 @@ test.describe('E18-S04: Touch Targets — Mobile (375px)', () => {
     await seedAndNavigateToQuizStart(page)
     await startQuiz(page)
 
-    // The "Mark for Review" label should be ≥44px tall
+    // The "Mark for Review" label should be ≥44px tall AND ≥44px wide (AC3: both dimensions)
     const markLabel = page.getByText('Mark for Review')
     const box = await markLabel.boundingBox()
     expect(box).not.toBeNull()
     expect(box!.height).toBeGreaterThanOrEqual(44)
+    expect(box!.width).toBeGreaterThanOrEqual(44)
   })
 
   test('AC3: No horizontal scroll on mobile viewport', async ({ page }) => {
@@ -361,12 +362,18 @@ test.describe('E18-S04: Focus Indicators', () => {
     await seedAndNavigateToQuizStart(page)
     await startQuiz(page)
 
-    // Focus a question grid button via keyboard
     const questionBtn = page.getByRole('button', { name: 'Question 1' })
     await questionBtn.focus()
-
-    // Verify the element is focused (not just a CSS check, but functional)
     await expect(questionBtn).toBeFocused()
+
+    // Verify the focus ring is brand token (not the low-contrast ring-ring)
+    const outlineColor = await page.evaluate(() => {
+      const el = document.activeElement as HTMLElement
+      return getComputedStyle(el).outlineColor
+    })
+    // Brand ring should not be transparent and not be the neutral grey ring-ring (#b3b3b3 → rgb(179,179,179))
+    expect(outlineColor).not.toBe('rgba(0, 0, 0, 0)')
+    expect(outlineColor).not.toMatch(/rgb\(17[0-9],\s*17[0-9],\s*17[0-9]\)/)
   })
 
   test('AC4: Multiple-choice option shows focus ring when radio receives focus', async ({
@@ -380,7 +387,7 @@ test.describe('E18-S04: Focus Indicators', () => {
     await expect(firstRadio).toBeFocused()
   })
 
-  test('AC4: Fill-in-blank input shows focus on focus', async ({ page }) => {
+  test('AC4: Fill-in-blank input receives and holds keyboard focus', async ({ page }) => {
     await seedAndNavigateToQuizStart(page)
     await startQuiz(page)
 
@@ -391,5 +398,165 @@ test.describe('E18-S04: Focus Indicators', () => {
     const input = page.locator('input[name="quiz-answer"]')
     await input.focus()
     await expect(input).toBeFocused()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Helper: complete a quiz and land on the results page
+// (QuizResults requires currentQuiz in Zustand store — must flow through UI)
+// ---------------------------------------------------------------------------
+
+async function completeQuizAndNavigateToResults(page: import('@playwright/test').Page) {
+  await seedAndNavigateToQuizStart(page)
+  await startQuiz(page)
+
+  // Q1 — multiple-choice
+  await page.getByRole('radiogroup').waitFor({ state: 'visible' })
+  await page.locator('label').filter({ hasText: 'Web accessibility' }).click()
+
+  // Q2 — true/false
+  await page.getByRole('button', { name: 'Question 2' }).click()
+  await page.getByRole('radiogroup').waitFor({ state: 'visible' })
+  await page.locator('label').filter({ hasText: 'True' }).click()
+
+  // Q3 — multiple-select
+  await page.getByRole('button', { name: 'Question 3' }).click()
+  await page.locator('fieldset').waitFor({ state: 'visible' })
+  await page.locator('label').filter({ hasText: '4.5:1 text contrast' }).click()
+  await page.locator('label').filter({ hasText: '3:1 large text contrast' }).click()
+  await page.locator('label').filter({ hasText: '7:1 contrast' }).click()
+
+  // Q4 — fill-in-blank
+  await page.getByRole('button', { name: 'Question 4' }).click()
+  await page.locator('input[name="quiz-answer"]').waitFor({ state: 'visible' })
+  await page.locator('input[name="quiz-answer"]').fill('44')
+
+  // Submit (all answered — no confirmation dialog)
+  await page.getByRole('button', { name: /submit quiz/i }).click()
+  await page.waitForURL(`**/quiz/results`)
+  await page.getByRole('heading').first().waitFor({ state: 'visible' })
+}
+
+// ---------------------------------------------------------------------------
+// AC1/AC2/AC5: Contrast — QuizResults and QuizReview pages
+// ---------------------------------------------------------------------------
+
+test.describe('E18-S04: Contrast Ratios — QuizResults Page', () => {
+  test('AC1/AC2: QuizResults page passes WCAG 2.1 AA axe-core audit (light mode)', async ({
+    page,
+  }) => {
+    await completeQuizAndNavigateToResults(page)
+
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .exclude('[data-agentation]')
+      .exclude('[data-feedback-toolbar]')
+      .analyze()
+
+    expect(results.violations).toEqual([])
+  })
+
+  test('AC5: QuizResults page passes WCAG 2.1 AA axe-core audit (dark mode)', async ({ page }) => {
+    await completeQuizAndNavigateToResults(page)
+
+    await page.addStyleTag({ content: '* { transition: none !important; animation: none !important; }' })
+    await page.evaluate(() => document.documentElement.classList.add('dark'))
+
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .exclude('[data-agentation]')
+      .exclude('[data-feedback-toolbar]')
+      .analyze()
+
+    expect(results.violations).toEqual([])
+  })
+})
+
+const REVIEW_QUIZ_ID = 'quiz-e18-s04-review'
+const REVIEW_ATTEMPT_ID = 'attempt-e18-s04-review'
+
+function buildReviewTestData() {
+  const q1 = makeQuestion({ id: 'rq1', order: 1, type: 'multiple-choice', text: 'What is WCAG?', options: ['Web accessibility standard', 'A color model', 'A font system', 'A browser'], correctAnswer: 'Web accessibility standard' })
+  const q2 = makeQuestion({ id: 'rq2', order: 2, type: 'true-false', text: 'WCAG 2.1 AA requires 4.5:1 contrast for normal text.', options: ['True', 'False'], correctAnswer: 'True' })
+  const quiz = makeQuiz({ id: REVIEW_QUIZ_ID, lessonId: `${LESSON_ID}-review`, title: 'WCAG Review Quiz', questions: [q1, q2], shuffleQuestions: false })
+  const attempt = makeAttempt({
+    id: REVIEW_ATTEMPT_ID,
+    quizId: REVIEW_QUIZ_ID,
+    answers: [
+      makeCorrectAnswer('rq1', { userAnswer: 'Web accessibility standard', pointsPossible: 1 }),
+      makeWrongAnswer('rq2', { userAnswer: 'False', pointsPossible: 1 }),
+    ],
+    score: 1,
+    percentage: 50,
+    passed: false,
+  })
+  return { quiz, attempt }
+}
+
+test.describe('E18-S04: Contrast Ratios — QuizReview Page', () => {
+  test('AC1/AC2/AC4: QuizReview page passes WCAG 2.1 AA axe-core audit (light mode)', async ({
+    page,
+  }) => {
+    const { quiz, attempt } = buildReviewTestData()
+    await page.goto('/')
+    await page.waitForLoadState('domcontentloaded')
+    await page.evaluate(() => localStorage.setItem('knowlune-sidebar-v1', 'false'))
+    await seedQuizzes(page, [quiz as unknown as Record<string, unknown>])
+    await seedQuizAttempts(page, [attempt as unknown as Record<string, unknown>])
+    await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}-review/quiz/review/${REVIEW_ATTEMPT_ID}`)
+    await page.getByRole('heading').first().waitFor({ state: 'visible' })
+
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .exclude('[data-agentation]')
+      .exclude('[data-feedback-toolbar]')
+      .analyze()
+
+    expect(results.violations).toEqual([])
+  })
+
+  test('AC4: ReviewQuestionGrid buttons show brand focus ring (not ring-ring)', async ({ page }) => {
+    const { quiz, attempt } = buildReviewTestData()
+    await page.goto('/')
+    await page.waitForLoadState('domcontentloaded')
+    await page.evaluate(() => localStorage.setItem('knowlune-sidebar-v1', 'false'))
+    await seedQuizzes(page, [quiz as unknown as Record<string, unknown>])
+    await seedQuizAttempts(page, [attempt as unknown as Record<string, unknown>])
+    await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}-review/quiz/review/${REVIEW_ATTEMPT_ID}`)
+    await page.getByRole('heading').first().waitFor({ state: 'visible' })
+
+    // Focus a ReviewQuestionGrid button (toolbar buttons)
+    const gridBtn = page.getByRole('toolbar').getByRole('button').first()
+    await gridBtn.focus()
+    await expect(gridBtn).toBeFocused()
+
+    // Brand ring should not be transparent (ring-ring/50 was ~1.41:1 contrast)
+    const outlineColor = await page.evaluate(() => {
+      const el = document.activeElement as HTMLElement
+      return getComputedStyle(el).outlineColor
+    })
+    expect(outlineColor).not.toBe('rgba(0, 0, 0, 0)')
+  })
+
+  test('AC5: QuizReview page passes WCAG 2.1 AA axe-core audit (dark mode)', async ({ page }) => {
+    const { quiz, attempt } = buildReviewTestData()
+    await page.goto('/')
+    await page.waitForLoadState('domcontentloaded')
+    await page.evaluate(() => localStorage.setItem('knowlune-sidebar-v1', 'false'))
+    await seedQuizzes(page, [quiz as unknown as Record<string, unknown>])
+    await seedQuizAttempts(page, [attempt as unknown as Record<string, unknown>])
+    await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}-review/quiz/review/${REVIEW_ATTEMPT_ID}`)
+    await page.getByRole('heading').first().waitFor({ state: 'visible' })
+
+    await page.addStyleTag({ content: '* { transition: none !important; animation: none !important; }' })
+    await page.evaluate(() => document.documentElement.classList.add('dark'))
+
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .exclude('[data-agentation]')
+      .exclude('[data-feedback-toolbar]')
+      .analyze()
+
+    expect(results.violations).toEqual([])
   })
 })
