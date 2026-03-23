@@ -20,8 +20,13 @@ async function goToCareerPaths(page: import('@playwright/test').Page) {
   await page.waitForLoadState('networkidle')
 }
 
+/** Returns the listitem locator scoped to the career paths grid (avoids sidebar listitems). */
+function getPathCards(page: import('@playwright/test').Page) {
+  return page.getByRole('list', { name: 'Career paths' }).getByRole('listitem')
+}
+
 async function getPathId(page: import('@playwright/test').Page, index = 0): Promise<string> {
-  const cards = page.getByRole('listitem')
+  const cards = getPathCards(page)
   const href = await cards.nth(index).locator('a').first().getAttribute('href')
   const match = href?.match(/\/career-paths\/([^/?]+)/)
   return match?.[1] ?? ''
@@ -39,15 +44,14 @@ test.describe('Career Paths list page (AC1)', () => {
 
   test('displays at least 3 career path cards', async ({ page }) => {
     await goToCareerPaths(page)
-    const cards = page.getByRole('listitem')
-    await expect(cards).toHaveCount(expect.any(Number))
+    const cards = getPathCards(page)
     const count = await cards.count()
     expect(count).toBeGreaterThanOrEqual(3)
   })
 
   test('each card shows title and description', async ({ page }) => {
     await goToCareerPaths(page)
-    const firstCard = page.getByRole('listitem').first()
+    const firstCard = getPathCards(page).first()
     await expect(firstCard.getByRole('heading', { level: 2 })).toBeVisible()
     // Description is in the card (non-heading text)
     const cardText = await firstCard.textContent()
@@ -56,7 +60,7 @@ test.describe('Career Paths list page (AC1)', () => {
 
   test('cards show courses count and estimated hours', async ({ page }) => {
     await goToCareerPaths(page)
-    const firstCard = page.getByRole('listitem').first()
+    const firstCard = getPathCards(page).first()
     // Both metadata items are present (look for "courses" and "h" text patterns)
     await expect(firstCard.getByText(/courses/)).toBeVisible()
     await expect(firstCard.getByText(/h$/)).toBeVisible()
@@ -70,27 +74,22 @@ test.describe('Career Paths list page (AC1)', () => {
 test.describe('Career Path detail page (AC2)', () => {
   test('loads detail page when clicking a path card', async ({ page }) => {
     await goToCareerPaths(page)
-    await page.getByRole('listitem').first().locator('a').first().click()
+    await getPathCards(page).first().locator('a').first().click()
     await page.waitForLoadState('networkidle')
     await expect(page.url()).toContain('/career-paths/')
   })
 
   test('detail page shows path title as heading', async ({ page }) => {
     await goToCareerPaths(page)
-    const title = await page
-      .getByRole('listitem')
-      .first()
-      .locator('h2')
-      .first()
-      .textContent()
-    await page.getByRole('listitem').first().locator('a').first().click()
+    const title = await getPathCards(page).first().locator('h2').first().textContent()
+    await getPathCards(page).first().locator('a').first().click()
     await page.waitForLoadState('networkidle')
     await expect(page.getByRole('heading', { level: 1 })).toContainText(title ?? '')
   })
 
   test('shows at least 2 stages with "Stage" labels', async ({ page }) => {
     await goToCareerPaths(page)
-    await page.getByRole('listitem').first().locator('a').first().click()
+    await getPathCards(page).first().locator('a').first().click()
     await page.waitForLoadState('networkidle')
     const stageLabels = page.getByText(/^Stage \d/)
     await expect(stageLabels.first()).toBeVisible()
@@ -100,7 +99,7 @@ test.describe('Career Path detail page (AC2)', () => {
 
   test('back link returns to career paths list', async ({ page }) => {
     await goToCareerPaths(page)
-    await page.getByRole('listitem').first().locator('a').first().click()
+    await getPathCards(page).first().locator('a').first().click()
     await page.waitForLoadState('networkidle')
     await page.getByRole('link', { name: /Career Paths/i }).click()
     await expect(page).toHaveURL('/career-paths')
@@ -114,14 +113,14 @@ test.describe('Career Path detail page (AC2)', () => {
 test.describe('Path enrollment (AC3)', () => {
   test('"Start Path" button is visible on detail page', async ({ page }) => {
     await goToCareerPaths(page)
-    await page.getByRole('listitem').first().locator('a').first().click()
+    await getPathCards(page).first().locator('a').first().click()
     await page.waitForLoadState('networkidle')
     await expect(page.getByTestId('enroll-button')).toBeVisible()
   })
 
   test('clicking "Start Path" replaces button with "Leave path"', async ({ page }) => {
     await goToCareerPaths(page)
-    await page.getByRole('listitem').first().locator('a').first().click()
+    await getPathCards(page).first().locator('a').first().click()
     await page.waitForLoadState('networkidle')
 
     await page.getByTestId('enroll-button').click()
@@ -133,7 +132,7 @@ test.describe('Path enrollment (AC3)', () => {
 
   test('enrollment survives page reload', async ({ page }) => {
     await goToCareerPaths(page)
-    await page.getByRole('listitem').first().locator('a').first().click()
+    await getPathCards(page).first().locator('a').first().click()
     await page.waitForLoadState('networkidle')
     const url = page.url()
 
@@ -155,7 +154,7 @@ test.describe('Path enrollment (AC3)', () => {
 test.describe('Progress tracking (AC4)', () => {
   test('progress bar appears when enrolled', async ({ page }) => {
     await goToCareerPaths(page)
-    await page.getByRole('listitem').first().locator('a').first().click()
+    await getPathCards(page).first().locator('a').first().click()
     await page.waitForLoadState('networkidle')
 
     await page.getByTestId('enroll-button').click()
@@ -167,7 +166,7 @@ test.describe('Progress tracking (AC4)', () => {
 
   test('enrolled path shows progress bar on list page', async ({ page }) => {
     await goToCareerPaths(page)
-    const firstLink = page.getByRole('listitem').first().locator('a').first()
+    const firstLink = getPathCards(page).first().locator('a').first()
     const href = await firstLink.getAttribute('href')
     await firstLink.click()
     await page.waitForLoadState('networkidle')
@@ -180,7 +179,7 @@ test.describe('Progress tracking (AC4)', () => {
     await page.waitForLoadState('networkidle')
 
     // The progress bar should be present (aria-label contains "progress")
-    const pathCard = page.getByRole('listitem').first()
+    const pathCard = getPathCards(page).first()
     await expect(pathCard.getByRole('progressbar')).toBeVisible()
     void href // used above
   })
@@ -193,7 +192,7 @@ test.describe('Progress tracking (AC4)', () => {
 test.describe('Stage prerequisites (AC5)', () => {
   test('Stage 1 is not locked (no lock icon)', async ({ page }) => {
     await goToCareerPaths(page)
-    await page.getByRole('listitem').first().locator('a').first().click()
+    await getPathCards(page).first().locator('a').first().click()
     await page.waitForLoadState('networkidle')
 
     // Stage 1 should not show "Complete Stage 0 to unlock" messaging
@@ -202,7 +201,7 @@ test.describe('Stage prerequisites (AC5)', () => {
 
   test('Stage 2+ shows lock messaging when Stage 1 is incomplete', async ({ page }) => {
     await goToCareerPaths(page)
-    await page.getByRole('listitem').first().locator('a').first().click()
+    await getPathCards(page).first().locator('a').first().click()
     await page.waitForLoadState('networkidle')
 
     // "Complete Stage 1 to unlock" message should be visible for Stage 2
@@ -211,7 +210,7 @@ test.describe('Stage prerequisites (AC5)', () => {
 
   test('locked stage cards have reduced opacity via class', async ({ page }) => {
     await goToCareerPaths(page)
-    await page.getByRole('listitem').first().locator('a').first().click()
+    await getPathCards(page).first().locator('a').first().click()
     await page.waitForLoadState('networkidle')
 
     const stages = page.getByRole('listitem').filter({ has: page.getByText(/^Stage \d/) })
