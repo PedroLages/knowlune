@@ -119,6 +119,7 @@ export function Quiz() {
   const [showSubmitDialog, setShowSubmitDialog] = useState(false)
   const nextBtnRef = useRef<HTMLButtonElement>(null)
   const rafRef = useRef<number>(0)
+  const questionTextRef = useRef<HTMLDivElement>(null)
 
   // Fetch quiz from Dexie on mount
   useEffect(() => {
@@ -314,6 +315,13 @@ export function Quiz() {
     handleTimerWarning
   )
 
+  // Move programmatic focus to question text container on question change.
+  // tabIndex={-1} makes it focusable via .focus() without entering Tab order.
+  // Keyed on currentQuestionIndex so screen readers re-announce on navigation.
+  useEffect(() => {
+    questionTextRef.current?.focus()
+  }, [currentProgress?.currentQuestionIndex])
+
   // Safety net: sync progress to per-quiz localStorage on tab close/crash.
   // The subscribe listener in useQuizStore fires synchronously on every state change,
   // so the per-quiz key is always up-to-date. This beforeunload handler provides
@@ -435,20 +443,24 @@ export function Quiz() {
         />
         {currentQuestion && currentQuestionId ? (
           <>
-            <QuestionDisplay
-              question={currentQuestion}
-              value={currentAnswer}
-              onChange={answer => {
-                submitAnswer(currentQuestionId, answer)
-                // Auto-focus Next/Submit button for single-answer types (MC, TF, FIB)
-                // Skip for multiple-select — user needs to toggle multiple checkboxes
-                if (currentQuestion.type !== 'multiple-select') {
-                  cancelAnimationFrame(rafRef.current)
-                  rafRef.current = requestAnimationFrame(() => nextBtnRef.current?.focus())
-                }
-              }}
-              mode="active"
-            />
+            {/* tabIndex={-1}: programmatically focusable so screen readers announce
+                the question text on navigation, but NOT reachable via Tab (AC #2) */}
+            <div ref={questionTextRef} tabIndex={-1} className="outline-none">
+              <QuestionDisplay
+                question={currentQuestion}
+                value={currentAnswer}
+                onChange={answer => {
+                  submitAnswer(currentQuestionId, answer)
+                  // Auto-focus Next/Submit button for single-answer types (MC, TF, FIB)
+                  // Skip for multiple-select — user needs to toggle multiple checkboxes
+                  if (currentQuestion.type !== 'multiple-select') {
+                    cancelAnimationFrame(rafRef.current)
+                    rafRef.current = requestAnimationFrame(() => nextBtnRef.current?.focus())
+                  }
+                }}
+                mode="active"
+              />
+            </div>
             <QuestionHint hint={currentQuestion.hint} />
             {!isUnanswered(currentAnswer) && (
               <AnswerFeedback question={currentQuestion} userAnswer={currentAnswer} />
