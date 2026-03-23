@@ -74,10 +74,10 @@ const navigationPages: SearchItem[] = [
   {
     id: 'page-about',
     label: 'About',
-    path: '/instructors',
+    path: '/authors',
     group: 'Pages',
     icon: Info,
-    keywords: ['about', 'instructors', 'info'],
+    keywords: ['about', 'authors', 'instructors', 'info'],
   },
   {
     id: 'page-reports-study',

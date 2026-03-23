@@ -286,7 +286,7 @@ describe('submitQuiz', () => {
       modules: mockModules,
       isSequential: false,
       basePath: '/courses/course-1',
-      instructorId: 'inst-1',
+      authorId: 'author-1',
     } as Course)
 
     // Mock useContentProgressStore

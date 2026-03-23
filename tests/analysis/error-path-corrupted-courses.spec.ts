@@ -185,7 +185,7 @@ test.describe('Error Path: Empty/Corrupted allCourses', () => {
         modules: [],
         isSequential: false,
         basePath: '/courses/bad-id',
-        instructorId: 'inst-1',
+        authorId: 'inst-1',
       },
       {
         id: 'corrupt-bad-numbers',
@@ -202,7 +202,7 @@ test.describe('Error Path: Empty/Corrupted allCourses', () => {
         modules: [],
         isSequential: false,
         basePath: '/courses/bad-nums',
-        instructorId: 'inst-1',
+        authorId: 'inst-1',
       },
     ])
 
@@ -235,7 +235,7 @@ test.describe('Error Path: Empty/Corrupted allCourses', () => {
         modules: null, // null instead of array
         isSequential: false,
         basePath: '/courses/null-modules',
-        instructorId: 'inst-1',
+        authorId: 'inst-1',
       },
       {
         id: 'corrupt-undefined-modules',
@@ -252,7 +252,7 @@ test.describe('Error Path: Empty/Corrupted allCourses', () => {
         modules: undefined, // undefined instead of array
         isSequential: false,
         basePath: '/courses/undef-modules',
-        instructorId: 'inst-1',
+        authorId: 'inst-1',
       },
       {
         id: 'corrupt-string-modules',
@@ -269,7 +269,7 @@ test.describe('Error Path: Empty/Corrupted allCourses', () => {
         modules: 'not-an-array', // String instead of array
         isSequential: false,
         basePath: '/courses/str-modules',
-        instructorId: 'inst-1',
+        authorId: 'inst-1',
       },
     ])
 
@@ -305,7 +305,7 @@ test.describe('Error Path: Empty/Corrupted allCourses', () => {
         modules: [],
         isSequential: false,
         basePath: '/courses/bad-cat',
-        instructorId: 'inst-1',
+        authorId: 'inst-1',
       },
       {
         id: 'corrupt-bad-difficulty',
@@ -322,7 +322,7 @@ test.describe('Error Path: Empty/Corrupted allCourses', () => {
         modules: [],
         isSequential: false,
         basePath: '/courses/bad-diff',
-        instructorId: 'inst-1',
+        authorId: 'inst-1',
       },
     ])
 
@@ -356,7 +356,7 @@ test.describe('Error Path: Empty/Corrupted allCourses', () => {
         modules: [],
         isSequential: false,
         basePath: '/courses/valid',
-        instructorId: 'inst-1',
+        authorId: 'inst-1',
       },
       // Corrupted course - should be skipped
       {

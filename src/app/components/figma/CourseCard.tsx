@@ -16,8 +16,8 @@ import { getProgress } from '@/lib/progress'
 import { getResourceUrl } from '@/lib/media'
 import { cn } from '@/app/components/ui/utils'
 import { useCourseCardPreview } from '@/hooks/useCourseCardPreview'
-import { getInstructorById } from '@/data/instructors'
-import { getAvatarSrc } from '@/lib/instructors'
+import { getAuthorById } from '@/data/authors'
+import { getAvatarSrc } from '@/lib/authors'
 import type { Course, CourseCategory } from '@/data/types'
 import type { MomentumScore } from '@/lib/momentum'
 import type { AtRiskStatus } from '@/lib/atRisk'
@@ -131,9 +131,9 @@ export function CourseCard({
     guardNavigation,
   } = useCourseCardPreview()
 
-  // ── Instructor data ──────────────────────────────────────────────
+  // ── Author data ──────────────────────────────────────────────
 
-  const instructor = getInstructorById(course.instructorId)
+  const author = getAuthorById(course.authorId)
 
   // ── Shared derived state ──────────────────────────────────────────
 
@@ -500,22 +500,22 @@ export function CourseCard({
             <h3 className="font-semibold text-base mb-2 group-hover:text-brand transition-colors line-clamp-2">
               {course.title}
             </h3>
-            {instructor && (
+            {author && (
               <Link
-                to={`/instructors/${instructor.id}`}
+                to={`/authors/${author.id}`}
                 onClick={e => e.stopPropagation()}
                 className="flex items-center gap-1.5 mb-3 text-xs text-muted-foreground hover:text-brand transition-colors w-fit"
               >
                 <Avatar className="size-5">
-                  <AvatarImage {...getAvatarSrc(instructor.avatar, 20)} alt="" />
+                  <AvatarImage {...getAvatarSrc(author.avatar, 20)} alt="" />
                   <AvatarFallback className="text-[8px]">
-                    {instructor.name
+                    {author.name
                       .split(' ')
                       .map(n => n[0])
                       .join('')}
                   </AvatarFallback>
                 </Avatar>
-                <span>{instructor.name}</span>
+                <span>{author.name}</span>
               </Link>
             )}
             <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-auto mb-3">
@@ -561,22 +561,22 @@ export function CourseCard({
             <h3 className="font-semibold text-base line-clamp-2 mb-1 group-hover:text-brand transition-colors">
               {course.title}
             </h3>
-            {instructor && (
+            {author && (
               <Link
-                to={`/instructors/${instructor.id}`}
+                to={`/authors/${author.id}`}
                 onClick={e => e.stopPropagation()}
                 className="flex items-center gap-1.5 mb-2 text-xs text-muted-foreground hover:text-brand transition-colors w-fit"
               >
                 <Avatar className="size-5">
-                  <AvatarImage {...getAvatarSrc(instructor.avatar, 20)} alt="" />
+                  <AvatarImage {...getAvatarSrc(author.avatar, 20)} alt="" />
                   <AvatarFallback className="text-[8px]">
-                    {instructor.name
+                    {author.name
                       .split(' ')
                       .map(n => n[0])
                       .join('')}
                   </AvatarFallback>
                 </Avatar>
-                <span>{instructor.name}</span>
+                <span>{author.name}</span>
               </Link>
             )}
             <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto">
@@ -636,22 +636,22 @@ export function CourseCard({
               {course.title}
             </h3>
 
-            {instructor && (
+            {author && (
               <Link
-                to={`/instructors/${instructor.id}`}
+                to={`/authors/${author.id}`}
                 onClick={e => e.stopPropagation()}
                 className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-brand transition-colors w-fit"
               >
                 <Avatar className="size-5">
-                  <AvatarImage {...getAvatarSrc(instructor.avatar, 20)} alt="" />
+                  <AvatarImage {...getAvatarSrc(author.avatar, 20)} alt="" />
                   <AvatarFallback className="text-[8px]">
-                    {instructor.name
+                    {author.name
                       .split(' ')
                       .map(n => n[0])
                       .join('')}
                   </AvatarFallback>
                 </Avatar>
-                <span>{instructor.name}</span>
+                <span>{author.name}</span>
               </Link>
             )}
 
@@ -754,7 +754,7 @@ export function CourseCard({
     )
   }
 
-  // library + overview: div onClick + navigate (avoids nested <a> from instructor link)
+  // library + overview: div onClick + navigate (avoids nested <a> from author link)
   return (
     <>
       <div

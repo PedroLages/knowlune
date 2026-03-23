@@ -96,7 +96,7 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
     await expect(cardsContainer).toBeVisible()
 
     // Must show exactly 3 cards (algorithm hard-caps at limit=3).
-    // Use href selector: outer card links point to /courses/, instructor links to /instructors/
+    // Use href selector: outer card links point to /courses/, author links to /authors/
     const cards = cardsContainer.locator('[data-href*="/courses/"]')
     await expect(cards).toHaveCount(3)
   })
@@ -160,7 +160,7 @@ test.describe('Recommended Next Dashboard Section (E07-S02)', () => {
     const section = page.getByTestId('recommended-next-section')
     await expect(section).toBeVisible()
 
-    // Click the course card link (not instructor link) and verify navigation
+    // Click the course card link (not author link) and verify navigation
     const courseLink = section.locator('[data-href*="/courses/6mx"]').first()
     await expect(courseLink).toBeVisible()
 
