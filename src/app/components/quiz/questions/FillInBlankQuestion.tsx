@@ -67,6 +67,8 @@ export function FillInBlankQuestion({ question, value, onChange, mode }: FillInB
 
   return (
     <fieldset className="mt-6 min-w-0" aria-labelledby={labelId}>
+      {/* sr-only legend for AT compatibility; aria-labelledby takes precedence per ARIA spec */}
+      <legend className="sr-only">{question.text}</legend>
       <div
         id={labelId}
         data-testid="question-text"
