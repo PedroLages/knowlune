@@ -10,14 +10,21 @@ import { navigateAndWait } from '../support/helpers/navigation'
 test.describe('E23-S03: Rename Instructors to Authors', () => {
   // AC1: All text labels, navigation items, and headings use "Author" / "Authors"
   test('AC1: no "Instructor" text appears anywhere in the app', async ({ page }) => {
-    // Check the Authors page
-    await navigateAndWait(page, '/authors')
-    await page.waitForLoadState('load')
+    // Check multiple key pages for stray "Instructor" references
+    const pagesToCheck = [
+      '/authors',
+      '/authors/chase-hughes',
+      '/courses/operative-six',
+    ]
 
-    // The page should not contain "Instructor" in any visible text
-    const bodyText = await page.locator('body').innerText()
-    const hasInstructor = /\binstructor\b/i.test(bodyText)
-    expect(hasInstructor).toBe(false)
+    for (const route of pagesToCheck) {
+      await navigateAndWait(page, route)
+      await page.waitForLoadState('load')
+
+      const bodyText = await page.locator('body').innerText()
+      const hasInstructor = /\binstructor\b/i.test(bodyText)
+      expect(hasInstructor, `Found "Instructor" text on ${route}`).toBe(false)
+    }
   })
 
   // AC2: Sidebar navigation shows "Authors" instead of "Instructors"
@@ -52,6 +59,9 @@ test.describe('E23-S03: Rename Instructors to Authors', () => {
     await page.setViewportSize({ width: 375, height: 812 })
     await navigateAndWait(page, '/authors')
     await page.waitForLoadState('load')
+
+    // Page should render content at mobile width
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
 
     // Page should render without horizontal overflow
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth)

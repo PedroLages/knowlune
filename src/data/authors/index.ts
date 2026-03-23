@@ -7,5 +7,5 @@ export { chaseHughes }
 export const allAuthors: Author[] = [chaseHughes]
 
 export function getAuthorById(id: string): Author | undefined {
-  return allAuthors.find(i => i.id === id)
+  return allAuthors.find(a => a.id === id)
 }
