@@ -101,7 +101,7 @@ test.describe('Career Path detail page (AC2)', () => {
     await goToCareerPaths(page)
     await getPathCards(page).first().locator('a').first().click()
     await page.waitForLoadState('networkidle')
-    await page.getByRole('link', { name: /Career Paths/i }).click()
+    await page.getByTestId('back-link').click()
     await expect(page).toHaveURL('/career-paths')
   })
 })
@@ -160,8 +160,8 @@ test.describe('Progress tracking (AC4)', () => {
     await page.getByTestId('enroll-button').click()
     await page.getByRole('button', { name: /Leave path/i }).waitFor()
 
-    // Progress section is visible (contains percentage)
-    await expect(page.getByText(/0%/)).toBeVisible()
+    // Progress section is visible (role="status" only shown when enrolled)
+    await expect(page.getByRole('status')).toBeVisible()
   })
 
   test('enrolled path shows progress bar on list page', async ({ page }) => {

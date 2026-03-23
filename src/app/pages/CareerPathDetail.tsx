@@ -301,10 +301,12 @@ export function CareerPathDetail() {
     loadPaths,
     enrollInPath,
     dropPath,
-    getEnrollmentForPath,
     getPathProgress,
     isStageUnlocked,
   } = useCareerPathStore()
+
+  // Explicit selector so the component re-renders when enrollments change
+  const enrollments = useCareerPathStore(state => state.enrollments)
 
   useEffect(() => {
     let ignore = false
@@ -329,7 +331,7 @@ export function CareerPathDetail() {
     return <DetailSkeleton />
   }
 
-  const enrollment = getEnrollmentForPath(path.id)
+  const enrollment = enrollments.find(e => e.pathId === path.id && e.status !== 'dropped')
   const isEnrolled = !!enrollment
   const progress = getPathProgress(path.id)
 
@@ -361,6 +363,7 @@ export function CareerPathDetail() {
         <motion.div variants={fadeUp}>
           <Link
             to="/career-paths"
+            data-testid="back-link"
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ChevronLeft className="size-4" aria-hidden="true" />
