@@ -74,10 +74,12 @@ export async function calculateQuizAnalytics(): Promise<QuizAnalyticsSummary> {
   const performances: QuizPerformance[] = []
   for (const [quizId, attempts] of byQuiz.entries()) {
     const avgScore = attempts.reduce((sum, a) => sum + a.percentage, 0) / attempts.length
-    const bestScore = Math.max(...attempts.map(a => a.percentage))
-    const sorted = [...attempts].sort(
-      (a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
-    )
+    const bestScore = attempts.reduce((max, a) => Math.max(max, a.percentage), 0)
+    const sorted = [...attempts].sort((a, b) => {
+      const ta = new Date(a.completedAt).getTime()
+      const tb = new Date(b.completedAt).getTime()
+      return (isNaN(tb) ? 0 : tb) - (isNaN(ta) ? 0 : ta)
+    })
     performances.push({
       quizId,
       quizTitle: quizTitleMap.get(quizId) ?? 'Unknown Quiz',
@@ -92,19 +94,29 @@ export async function calculateQuizAnalytics(): Promise<QuizAnalyticsSummary> {
   const uniqueQuizzes = byQuiz.size
   const overallAvg = allAttempts.reduce((sum, a) => sum + a.percentage, 0) / totalAttempts
   const completionRate =
-    totalQuizzesAvailable > 0 ? Math.round((uniqueQuizzes / totalQuizzesAvailable) * 100) : 0
+    totalQuizzesAvailable > 0
+      ? Math.min(100, Math.round((uniqueQuizzes / totalQuizzesAvailable) * 100))
+      : 0
   const avgRetakeFrequency = uniqueQuizzes > 0 ? totalAttempts / uniqueQuizzes : 0
 
   // Recent 5 attempts, most-recent-first
   const recentAttempts: QuizAttemptWithTitle[] = [...allAttempts]
-    .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
+    .sort((a, b) => {
+      const ta = new Date(a.completedAt).getTime()
+      const tb = new Date(b.completedAt).getTime()
+      return (isNaN(tb) ? 0 : tb) - (isNaN(ta) ? 0 : ta)
+    })
     .slice(0, 5)
     .map(a => ({ ...a, quizTitle: quizTitleMap.get(a.quizId) ?? 'Unknown Quiz' }))
 
   // Top/bottom sorted by averageScore
   const sortedByScore = [...performances].sort((a, b) => b.averageScore - a.averageScore)
   const topPerforming = sortedByScore.slice(0, 5)
-  const needsImprovement = [...sortedByScore].reverse().slice(0, 5)
+  const topPerformingIds = new Set(topPerforming.map(q => q.quizId))
+  const needsImprovement = [...sortedByScore]
+    .reverse()
+    .filter(q => !topPerformingIds.has(q.quizId))
+    .slice(0, 5)
 
   return {
     totalQuizzesCompleted: uniqueQuizzes,

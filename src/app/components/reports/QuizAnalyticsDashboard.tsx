@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router'
 import { Trophy, Target, RotateCcw, BookOpen, TrendingUp, TrendingDown } from 'lucide-react'
 import { motion } from 'motion/react'
+import { cn } from '@/app/components/ui/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import {
   Table,
@@ -26,9 +27,13 @@ function scoreColor(pct: number): string {
 export function QuizAnalyticsDashboard() {
   const [summary, setSummary] = useState<QuizAnalyticsSummary | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
     let ignore = false
+    setLoading(true)
+    setError(null)
     calculateQuizAnalytics()
       .then(data => {
         if (!ignore) {
@@ -38,12 +43,15 @@ export function QuizAnalyticsDashboard() {
       })
       .catch(err => {
         console.error('Failed to load quiz analytics:', err)
-        if (!ignore) setLoading(false)
+        if (!ignore) {
+          setError('Failed to load analytics. Please try again.')
+          setLoading(false)
+        }
       })
     return () => {
       ignore = true
     }
-  }, [])
+  }, [retryKey])
 
   if (loading) {
     return (
@@ -58,6 +66,24 @@ export function QuizAnalyticsDashboard() {
           <Skeleton className="h-52 rounded-[24px]" />
           <Skeleton className="h-52 rounded-[24px]" />
         </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div
+        role="alert"
+        data-testid="quiz-analytics-error"
+        className="rounded-[24px] border border-destructive/30 bg-destructive/10 p-6 text-center"
+      >
+        <p className="text-sm text-destructive">{error}</p>
+        <button
+          className="mt-3 text-sm text-brand-soft-foreground hover:underline"
+          onClick={() => setRetryKey(k => k + 1)}
+        >
+          Try again
+        </button>
       </div>
     )
   }
@@ -77,6 +103,7 @@ export function QuizAnalyticsDashboard() {
 
   return (
     <div className="space-y-6">
+      <h2 className="sr-only">Quiz Analytics</h2>
       {/* ── Row 1: Metric cards (3-col → 1-col) ── */}
       <motion.div
         variants={fadeUp}
@@ -106,7 +133,7 @@ export function QuizAnalyticsDashboard() {
           </CardHeader>
           <CardContent>
             <p
-              className={`text-3xl font-bold ${scoreColor(summary.averageScore)}`}
+              className={cn('text-3xl font-bold', scoreColor(summary.averageScore))}
               data-testid="quiz-avg-score"
             >
               {summary.averageScore}%
@@ -123,7 +150,7 @@ export function QuizAnalyticsDashboard() {
           </CardHeader>
           <CardContent>
             <p
-              className={`text-3xl font-bold ${scoreColor(summary.completionRate)}`}
+              className={cn('text-3xl font-bold', scoreColor(summary.completionRate))}
               data-testid="quiz-completion-rate"
             >
               {summary.completionRate}%
@@ -178,12 +205,21 @@ export function QuizAnalyticsDashboard() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {new Date(attempt.completedAt).toLocaleDateString()}
+                      {(() => {
+                        const d = new Date(attempt.completedAt)
+                        return isNaN(d.getTime())
+                          ? 'Unknown'
+                          : d.toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })
+                      })()}
                     </TableCell>
                     <TableCell>
                       <Link
                         to={`/reports/quiz/${attempt.quizId}`}
-                        className="text-brand text-sm hover:underline"
+                        className="block py-3 text-brand-soft-foreground text-sm hover:underline"
                         aria-label={`View details for ${attempt.quizTitle}`}
                       >
                         Details
@@ -214,14 +250,14 @@ export function QuizAnalyticsDashboard() {
                 <div key={quiz.quizId} className="flex items-center justify-between">
                   <Link
                     to={`/reports/quiz/${quiz.quizId}`}
-                    className="text-sm text-brand hover:underline truncate max-w-[160px]"
+                    className="text-sm text-brand-soft-foreground hover:underline truncate max-w-[160px]"
                     aria-label={`View details for ${quiz.quizTitle}`}
                   >
                     {quiz.quizTitle}
                   </Link>
                   <Badge
                     variant="outline"
-                    className={`ml-2 shrink-0 ${scoreColor(quiz.averageScore)}`}
+                    className={cn('ml-2 shrink-0', scoreColor(quiz.averageScore))}
                   >
                     {quiz.averageScore}%
                   </Badge>
@@ -246,14 +282,14 @@ export function QuizAnalyticsDashboard() {
                 <div key={quiz.quizId} className="flex items-center justify-between">
                   <Link
                     to={`/reports/quiz/${quiz.quizId}`}
-                    className="text-sm text-brand hover:underline truncate max-w-[160px]"
+                    className="text-sm text-brand-soft-foreground hover:underline truncate max-w-[160px]"
                     aria-label={`View details for ${quiz.quizTitle}`}
                   >
                     {quiz.quizTitle}
                   </Link>
                   <Badge
                     variant="outline"
-                    className={`ml-2 shrink-0 ${scoreColor(quiz.averageScore)}`}
+                    className={cn('ml-2 shrink-0', scoreColor(quiz.averageScore))}
                   >
                     {quiz.averageScore}%
                   </Badge>

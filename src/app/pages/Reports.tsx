@@ -68,7 +68,9 @@ const areaChartConfig = {
 
 export default function Reports() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const activeTab = searchParams.get('tab') ?? 'study'
+  const VALID_TABS = ['study', 'quizzes', 'ai'] as const
+  const rawTab = searchParams.get('tab') ?? 'study'
+  const activeTab = (VALID_TABS as readonly string[]).includes(rawTab) ? rawTab : 'study'
 
   const allCourses = useCourseStore(s => s.courses)
   const [studyNotes, setStudyNotes] = useState(0)
@@ -190,18 +192,21 @@ export default function Reports() {
             actionHref="/courses"
           />
         ) : (
-          <Tabs value={activeTab} onValueChange={tab => setSearchParams({ tab })} className="mb-6">
+          <Tabs
+            value={activeTab}
+            onValueChange={tab =>
+              setSearchParams(prev => {
+                prev.set('tab', tab)
+                return prev
+              })
+            }
+            className="mb-6"
+          >
             <motion.div variants={fadeUp}>
-              <TabsList className="h-11">
-                <TabsTrigger value="study" className="h-9">
-                  Study Analytics
-                </TabsTrigger>
-                <TabsTrigger value="quizzes" className="h-9">
-                  Quiz Analytics
-                </TabsTrigger>
-                <TabsTrigger value="ai" className="h-9">
-                  AI Analytics
-                </TabsTrigger>
+              <TabsList className="h-11" aria-label="Analytics views">
+                <TabsTrigger value="study">Study Analytics</TabsTrigger>
+                <TabsTrigger value="quizzes">Quiz Analytics</TabsTrigger>
+                <TabsTrigger value="ai">AI Analytics</TabsTrigger>
               </TabsList>
             </motion.div>
 

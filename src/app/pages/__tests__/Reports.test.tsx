@@ -209,6 +209,13 @@ afterEach(() => {
   useCourseStore.setState({ courses: [], isLoaded: false })
 })
 
+// ── Mock analytics ──
+vi.mock('@/lib/analytics', () => ({
+  calculateRetakeFrequency: () =>
+    Promise.resolve({ averageRetakes: 0, totalAttempts: 0, uniqueQuizzes: 0 }),
+  interpretRetakeFrequency: () => 'No retakes yet — each quiz taken once.',
+}))
+
 describe('Reports page', () => {
   it('renders without crashing', () => {
     const { container } = render(
@@ -249,5 +256,24 @@ describe('Reports page', () => {
     expect(screen.getByText('Course Completion')).toBeInTheDocument()
     expect(screen.getByText('Progress by Category')).toBeInTheDocument()
     expect(screen.getByText('Study Activity (Last 30 Days)')).toBeInTheDocument()
+  })
+
+  it('mounts QuizAnalyticsDashboard when navigating to ?tab=quizzes', () => {
+    render(
+      <MemoryRouter initialEntries={['/reports?tab=quizzes']}>
+        <Reports />
+      </MemoryRouter>
+    )
+    expect(screen.getByTestId('quiz-analytics-dashboard')).toBeInTheDocument()
+  })
+
+  it('defaults to study tab for unknown ?tab= values', () => {
+    render(
+      <MemoryRouter initialEntries={['/reports?tab=unknown']}>
+        <Reports />
+      </MemoryRouter>
+    )
+    expect(screen.getByText('Course Completion')).toBeInTheDocument()
+    expect(screen.queryByTestId('quiz-analytics-dashboard')).not.toBeInTheDocument()
   })
 })
