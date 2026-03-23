@@ -102,11 +102,19 @@ See [plan](plans/e23-s03-rename-instructors-to-authors.md) for implementation ap
 
 ## Implementation Notes
 
-[Architecture decisions, patterns used, dependencies added]
+- **Inside-out rename strategy**: types → data → lib → pages → components → routes → DB → tests. TypeScript caught cascading errors at each step, acting as a safety net.
+- **Dexie v19 migration**: Added schema version 19 with upgrade function that copies `instructorId` → `authorId` and deletes the old field on existing records. All 20 tables must be redeclared to prevent Dexie from deleting them.
+- **Preserved intentional "instructor" references**: `confidence-reboot.ts` has "guest instructor" in course content (keyTopics), and E2E tests for E09B-S01 have "The instructor explains..." (LLM-generated output text). These are content, not code references.
+- **Asset paths kept**: Image paths like `/images/instructors/chase-hughes` kept as-is since they're not user-visible. Can be renamed separately if desired.
+- **53 files touched** across types, data (10 files), lib, pages (2 renamed), components (5 updated), navigation, routes, DB schema, unit tests (13 files), E2E tests (6 files), API types.
 
 ## Testing Notes
 
-[Test strategy, edge cases discovered, coverage notes]
+- **2151 unit tests** all pass after renaming `instructorId` → `authorId` in mock data across 12 test files
+- **Schema version test** needed updating from 18 → 19 (caught by unit test run)
+- **Test data values** (e.g., `'instructor-1'`) updated to `'author-1'` for consistency
+- **4 E2E ATDD tests** validate: no "Instructor" text visible, sidebar says "Authors", page heading correct, mobile layout works
+- **Smoke specs** (navigation, overview, courses) all pass
 
 ## Pre-Review Checklist
 
@@ -136,4 +144,8 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Schema version test forgotten**: The `src/db/__tests__/schema.test.ts` asserts `db.verno === 18` — adding v19 migration broke this. Lesson: when adding Dexie schema versions, always search for version assertion tests.
+- **Test mock data values vs field names**: After renaming the field `instructorId` → `authorId`, the mock data _values_ (e.g., `authorId: 'instructor-1'`) still contained "instructor". While functionally irrelevant (they're arbitrary IDs), updating them to `'author-1'` maintains consistency and avoids confusion in grep results.
+- **Inside-out strategy works well for renames**: Starting from types and working outward means TypeScript errors guide you to every downstream consumer. No references were missed — the `grep -ri instructor src/` verification confirmed zero remaining code references (only intentional content strings and historical DB schema).
+- **Dexie migration pattern**: When renaming an indexed field, the upgrade function must handle the field copy + delete atomically. The pattern of `modify(record => { record.newField = record.oldField; delete record.oldField })` is reliable and Dexie runs it lazily at `db.open()`.
+- **Scope discipline**: The plan correctly identified "guest instructor" in course content and "The instructor explains" in LLM test output as non-targets. This prevented unnecessary content changes that would have been incorrect (they describe real-world instructor roles, not platform terminology).
