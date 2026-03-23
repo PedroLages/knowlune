@@ -17,7 +17,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/app/components/ui/tooltip'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/app/components/ui/tooltip'
 import { exportQuizResultsCsv, exportQuizResultsPdf } from '@/lib/quizExport'
 import { toastSuccess, toastError } from '@/lib/toastHelpers'
 import { db } from '@/db'
@@ -81,8 +86,8 @@ export function QuizExportCard() {
         {hasAttempts ? (
           <div className="flex items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">
-              {totalAttempts} {totalAttempts === 1 ? 'attempt' : 'attempts'} across{' '}
-              {totalQuizzes} {totalQuizzes === 1 ? 'quiz' : 'quizzes'}
+              {totalAttempts} {totalAttempts === 1 ? 'attempt' : 'attempts'} across {totalQuizzes}{' '}
+              {totalQuizzes === 1 ? 'quiz' : 'quizzes'}
             </p>
 
             <DropdownMenu>
@@ -103,16 +108,10 @@ export function QuizExportCard() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => handleExport('csv')}
-                  data-testid="quiz-export-csv"
-                >
+                <DropdownMenuItem onClick={() => handleExport('csv')} data-testid="quiz-export-csv">
                   CSV (spreadsheet)
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleExport('pdf')}
-                  data-testid="quiz-export-pdf"
-                >
+                <DropdownMenuItem onClick={() => handleExport('pdf')} data-testid="quiz-export-pdf">
                   PDF (formatted report)
                 </DropdownMenuItem>
               </DropdownMenuContent>

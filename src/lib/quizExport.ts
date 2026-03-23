@@ -40,10 +40,7 @@ export async function loadAllQuizExportData(): Promise<QuizExportBundle[]> {
 
   const bundles = await Promise.all(
     quizzes.map(async quiz => {
-      const attempts = await db.quizAttempts
-        .where('quizId')
-        .equals(quiz.id)
-        .sortBy('completedAt')
+      const attempts = await db.quizAttempts.where('quizId').equals(quiz.id).sortBy('completedAt')
       return { quiz, attempts }
     })
   )
@@ -83,7 +80,7 @@ export function calculateSummaryStats(bundles: QuizExportBundle[]): QuizSummaryS
   }
   const scores = allAttempts.map(a => a.percentage)
   const totalAttempts = allAttempts.length
-  const averageScore = Math.round(scores.reduce((s, p) => s + p, 0) / totalAttempts * 10) / 10
+  const averageScore = Math.round((scores.reduce((s, p) => s + p, 0) / totalAttempts) * 10) / 10
   const bestScore = Math.max(...scores)
   return { totalAttempts, averageScore, bestScore }
 }
