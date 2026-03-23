@@ -37,7 +37,7 @@
 # - Epic 7 gap coverage stories (7-8..7-11) deferred indefinitely — risk accepted for error-path edge cases
 
 generated: 2026-03-15
-last_updated: 2026-03-23  # Epic 23 retrospective completed
+last_updated: 2026-03-23  # E18-S05 started
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -271,9 +271,9 @@ development_status:
   epic-18: in-progress
   18-1-implement-complete-keyboard-navigation: backlog
   18-2-implement-aria-live-regions-for-dynamic-content: backlog
-  18-3-ensure-semantic-html-and-proper-aria-attributes: done
+  18-3-ensure-semantic-html-and-proper-aria-attributes: backlog
   18-4-verify-contrast-ratios-and-touch-targets: backlog
-  18-5-integrate-quiz-completion-with-study-streaks: backlog
+  18-5-integrate-quiz-completion-with-study-streaks: in-progress
   18-6-display-quiz-performance-in-overview-dashboard: backlog
   18-7-surface-quiz-analytics-in-reports-section: backlog
   18-8-display-quiz-availability-badges-on-courses-page: backlog
@@ -335,14 +335,14 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 23: Platform Identity & Navigation Cleanup
   # ──────────────────────────────────────────────────
-  epic-23: done  # all 6 stories completed, retro done 2026-03-23
+  epic-23: in-progress
   23-1-remove-hardcoded-branding-from-courses-page: done
   23-2-rename-my-classes-to-my-courses: done
   23-3-rename-instructors-to-authors: done
-  23-4-restructure-sidebar-navigation-groups: done
-  23-5-de-emphasize-pre-seeded-courses: done
-  23-6-featured-author-layout-for-single-author-state: done
-  epic-23-retrospective: done
+  23-4-restructure-sidebar-navigation-groups: backlog
+  23-5-de-emphasize-pre-seeded-courses: backlog
+  23-6-featured-author-layout-for-single-author-state: backlog
+  epic-23-retrospective: optional
 
   # ──────────────────────────────────────────────────
   # Epic 24: Course Import Wizard & Editing
