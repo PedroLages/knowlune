@@ -4,9 +4,9 @@ story_name: "Featured Author Layout For Single Author State"
 status: in-progress
 started: 2026-03-23
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-23
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests-skipped, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -144,15 +144,30 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+**Reviewed 2026-03-23** — 2 MEDIUM, 1 nit. No blockers.
+- [MEDIUM] Blockquote `text-left` misaligns inside centered mobile layout (FeaturedAuthor.tsx:52)
+- [MEDIUM] Stats render as zero — seed author has no linked courses in data layer
+- [NIT] Pre-existing brand Button focus ring issue with `asChild` rendering (not introduced by this story)
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**Reviewed 2026-03-23** — 0 blockers, 2 HIGH, 4 MEDIUM, 3 nits.
+- [HIGH] `getInitials` imported from `avatarUpload.ts` — couples FeaturedAuthor to heavy upload module (FeaturedAuthor.tsx:9)
+- [HIGH] `author.shortBio` rendered without fallback — empty string creates empty `<p>` (FeaturedAuthor.tsx:86)
+- [MEDIUM] `StatCard` bg-muted may lack contrast against bg-card in dark mode
+- [MEDIUM] `getAuthorStats` accesses Zustand store outside React cycle — stale if courses become async
+- [MEDIUM] No test for specialty badge overflow (>5 specialties)
+- [MEDIUM] No test for empty state subtitle absence
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+**Reviewed 2026-03-23** — 2 MEDIUM, 4 LOW. No blockers.
+- [MEDIUM] `transition-all` anti-pattern in Authors.tsx:53 — use explicit properties
+- [MEDIUM] `hover:scale-[1.02]` lacks `prefers-reduced-motion` guard — use `motion-safe:` prefix
+- [LOW] Headings should use `text-wrap: balance`
+- [LOW] Mobile stat row in grid cards hides text labels — add `aria-label`
+- [LOW] Bio paragraph has no truncation safeguard
+- Passed: semantic navigation, aria-hidden on icons, tabular-nums, empty state, design tokens, focus rings, responsive layout
 
 ## Challenges and Lessons Learned
 
