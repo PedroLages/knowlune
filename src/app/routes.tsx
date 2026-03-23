@@ -205,6 +205,15 @@ export const router = createBrowserRouter([
           </SuspensePage>
         ),
       },
+      // Legacy redirects: /instructors → /authors (E23-S03 rename)
+      {
+        path: 'instructors',
+        element: <Navigate to="/authors" replace />,
+      },
+      {
+        path: 'instructors/:authorId',
+        element: <Navigate to="/authors" replace />,
+      },
       {
         path: 'challenges',
         element: (

@@ -54,18 +54,31 @@ test.describe('E23-S03: Rename Instructors to Authors', () => {
     expect(headingText).not.toMatch(/instructor/i)
   })
 
-  // AC5: Layout remains responsive (spot check at mobile width)
-  test('AC5: Authors page renders correctly at mobile viewport', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 812 })
-    await navigateAndWait(page, '/authors')
-    await page.waitForLoadState('load')
+  // AC5: Layout remains responsive at mobile, tablet, and desktop
+  test('AC5: Authors page renders correctly at all viewports', async ({ page }) => {
+    const viewports = [
+      { width: 375, height: 812, label: 'mobile' },
+      { width: 768, height: 1024, label: 'tablet' },
+      { width: 1280, height: 800, label: 'desktop' },
+    ]
 
-    // Page should render content at mobile width
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    for (const { width, height, label } of viewports) {
+      await page.setViewportSize({ width, height })
+      await navigateAndWait(page, '/authors')
+      await page.waitForLoadState('load')
 
-    // Page should render without horizontal overflow
-    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth)
-    const clientWidth = await page.evaluate(() => document.documentElement.clientWidth)
-    expect(scrollWidth).toBeLessThanOrEqual(clientWidth)
+      // Page should render content
+      await expect(
+        page.getByRole('heading', { level: 1 }),
+        `Heading not visible at ${label} (${width}px)`,
+      ).toBeVisible()
+
+      // No horizontal overflow
+      const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth)
+      const clientWidth = await page.evaluate(() => document.documentElement.clientWidth)
+      expect(scrollWidth, `Horizontal overflow at ${label} (${width}px)`).toBeLessThanOrEqual(
+        clientWidth,
+      )
+    }
   })
 })
