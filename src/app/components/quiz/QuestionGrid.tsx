@@ -36,11 +36,11 @@ export function QuestionGrid({
             aria-current={isCurrent ? 'step' : undefined}
             className={cn(
               'relative flex items-center justify-center size-11 rounded-full text-sm font-medium',
-              'hover:opacity-80 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+              'hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-background',
               isCurrent
                 ? 'bg-brand text-brand-foreground'
                 : isAnswered
-                  ? 'bg-brand-soft text-brand border border-brand'
+                  ? 'bg-brand-soft text-brand-soft-foreground border border-brand'
                   : 'bg-card text-muted-foreground border border-border'
             )}
           >
