@@ -168,6 +168,8 @@ class PhaseConfig:
             raise ValueError(f"Invalid effort '{self.effort}', must be one of {VALID_EFFORTS}")
         if self.model and self.model not in VALID_MODELS:
             raise ValueError(f"Invalid model '{self.model}', must be one of {VALID_MODELS}")
+        if self.model and self.fallback_model and self.model == self.fallback_model:
+            raise ValueError(f"fallback_model cannot be the same as model ('{self.model}')")
 
 
 class StoryError(Exception):
@@ -1134,7 +1136,7 @@ async def run_review_fix_session(
     """Run review + fix loop in a single session. Returns (review_result, text, cost)."""
     autonomous = config.mode == "autonomous"
     review_phase = None if config.legacy_mode else PhaseConfig(
-        model="sonnet", effort="medium", fallback_model="sonnet",
+        model="sonnet", effort="medium", fallback_model="opus",
         needs_agents=True, needs_playwright=True,
         append_context=f"Story: {story.key}. Running quality gates.",
     )
@@ -1466,7 +1468,7 @@ async def run_story(story: StoryInfo, config: RunConfig) -> StoryResult:
 
         if not config.legacy_mode:
             impl_phase = PhaseConfig(
-                model="sonnet", effort="high", fallback_model="sonnet",
+                model="sonnet", effort="high", fallback_model="opus",
                 resume_session_id=start_session_id,
                 fork_session=True,
                 needs_agents=False, needs_playwright=False,
