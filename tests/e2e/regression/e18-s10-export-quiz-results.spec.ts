@@ -9,8 +9,8 @@
  */
 
 import { test, expect } from '@playwright/test'
-import { seedQuizzes, seedQuizAttempts, seedNotes } from '../support/helpers/seed-helpers'
-import { FIXED_DATE } from '../utils/test-time'
+import { seedQuizzes, seedQuizAttempts, seedNotes } from '../../support/helpers/seed-helpers'
+import { FIXED_DATE } from '../../utils/test-time'
 
 // A minimal note that triggers hasActivity (studyNotes > 0) in Reports.tsx,
 // making the analytics section visible without any quiz attempts.
