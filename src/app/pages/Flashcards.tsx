@@ -1,13 +1,6 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { motion, MotionConfig } from 'motion/react'
-import {
-  Layers,
-  CheckCircle2,
-  RotateCcw,
-  ChevronRight,
-  CalendarDays,
-  BookOpen,
-} from 'lucide-react'
+import { Layers, CheckCircle2, RotateCcw, ChevronRight, CalendarDays, BookOpen } from 'lucide-react'
 import { useFlashcardStore } from '@/stores/useFlashcardStore'
 import { useCourseStore } from '@/stores/useCourseStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
@@ -89,7 +82,6 @@ export function Flashcards() {
     loadFlashcards,
     reviewQueue,
     reviewIndex,
-    isReviewActive,
     startReviewSession,
     rateFlashcard,
     getSessionSummary,
@@ -276,11 +268,7 @@ export function Flashcards() {
 
           {/* Stats grid */}
           <motion.div variants={fadeUp} className="grid grid-cols-3 gap-4">
-            <StatCard
-              label="Total Cards"
-              value={stats.total}
-              data-testid="flashcard-stats-total"
-            />
+            <StatCard label="Total Cards" value={stats.total} data-testid="flashcard-stats-total" />
             <StatCard
               label="Due Today"
               value={stats.dueToday}
@@ -324,10 +312,7 @@ export function Flashcards() {
                   </div>
                   <div className="space-y-2">
                     {upcomingSchedule.map(({ label, count }) => (
-                      <div
-                        key={label}
-                        className="flex items-center justify-between text-sm"
-                      >
+                      <div key={label} className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">{label}</span>
                         <Badge variant="secondary" className="tabular-nums">
                           {count} card{count !== 1 ? 's' : ''}

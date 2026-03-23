@@ -43,9 +43,11 @@ export function WeeklyGoalRing() {
       })
 
     const handler = () => {
-      computeWeeklyGoalProgress().then(setGoal).catch(() => {
-        // silent-catch-ok — non-critical background refresh
-      })
+      computeWeeklyGoalProgress()
+        .then(setGoal)
+        .catch(() => {
+          // silent-catch-ok — non-critical background refresh
+        })
     }
     window.addEventListener('study-session-recorded', handler)
     window.addEventListener('study-session-updated', handler)

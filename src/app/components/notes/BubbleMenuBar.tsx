@@ -1,6 +1,14 @@
 import type { Editor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
-import { Bold, Italic, Underline as UnderlineIcon, Highlighter, Link2, Palette, Layers } from 'lucide-react'
+import {
+  Bold,
+  Italic,
+  Underline as UnderlineIcon,
+  Highlighter,
+  Link2,
+  Palette,
+  Layers,
+} from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
 import { cn } from '@/app/components/ui/utils'
 import { InteractiveButton } from '@/app/components/ui/interactive-button'

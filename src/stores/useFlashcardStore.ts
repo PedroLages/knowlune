@@ -24,12 +24,7 @@ interface FlashcardState {
 
   // CRUD
   loadFlashcards: () => Promise<void>
-  createFlashcard: (
-    front: string,
-    back: string,
-    courseId: string,
-    noteId?: string
-  ) => Promise<void>
+  createFlashcard: (front: string, back: string, courseId: string, noteId?: string) => Promise<void>
   deleteFlashcard: (id: string) => Promise<void>
 
   // Review
