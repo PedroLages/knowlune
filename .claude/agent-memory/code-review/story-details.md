@@ -293,3 +293,14 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M2: Redundant `new Set(topicMap.keys())` when `topicMap.size` suffices
 - M3: E2E AC3 uses `getByText` for not.toBeVisible assertions instead of `getByRole('heading')` -- fragile
 - Positive: Pure function architecture, excellent unit test coverage (14 tests, boundary conditions), proper accessibility (useId, aria-labelledby, semantic HTML), no uncommitted changes, shared E2E seeding helpers used
+
+## E18-S06: Display Quiz Performance in Overview Dashboard (Round 1)
+- No uncommitted changes (positive)
+- BLOCKER: Nested interactive elements -- `<button>` card wraps `QuizEmptyState` containing `<Button asChild><Link>`, causing HTML spec violation and empty-state click navigating to wrong route (AC4 broken for keyboard/AT users)
+- H1 (RECURRING): `calculateQuizMetrics().then()` has no `.catch()` -- infinite skeleton on IndexedDB failure
+- H2: `calculateQuizMetrics` in quizMetrics.ts has no try/catch around `db.quizAttempts.toArray()` -- unhandled Dexie rejection
+- H3: AC2 (skeleton loading state) listed in test header but has no corresponding test case
+- M1: Missing `type="button"` on outer `<button>` element (defensive, no parent form currently)
+- M2: `opacity-60` on icon inconsistent with `text-muted-foreground` pattern used by other dashboard cards
+- M3: Motion animation uses inline props instead of `variants={fadeUp}` matching surrounding sections
+- Positive: Clean module separation (quizMetrics.ts vs analytics.ts), well-documented hardcoded completionRate with forward reference, proper ignore-flag pattern, shared E2E seeding helpers used, no test anti-patterns, no hardcoded colors
