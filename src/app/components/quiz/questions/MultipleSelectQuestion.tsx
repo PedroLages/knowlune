@@ -51,8 +51,9 @@ export function MultipleSelectQuestion({
       aria-describedby={hintId}
       onKeyDown={handleKeyDown}
     >
-      {/* sr-only legend for AT compatibility; aria-labelledby takes precedence per ARIA spec */}
-      <legend className="sr-only">{question.text}</legend>
+      {/* Empty legend satisfies semantic HTML requirement; aria-labelledby on fieldset
+          provides the accessible name so no duplicate text node is added to the DOM */}
+      <legend className="sr-only" />
       <div
         id={labelId}
         data-testid="question-text"

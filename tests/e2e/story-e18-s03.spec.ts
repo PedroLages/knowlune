@@ -88,9 +88,10 @@ test.describe('AC1: Semantic form controls', () => {
     const fieldset = page.locator('fieldset').first()
     await expect(fieldset).toBeVisible()
 
-    // Legend is sr-only (clipped) but present in the DOM — toContainText works without visibility
+    // Legend is sr-only and empty — its presence satisfies semantic HTML; accessible name
+    // comes from aria-labelledby on the fieldset pointing to the visible question text div
     const legend = fieldset.locator('legend')
-    await expect(legend).toContainText(q1.text)
+    await expect(legend).toBeAttached()
   })
 
   test('all radio inputs have associated labels', async ({ page }) => {
@@ -198,18 +199,19 @@ test.describe('AC4: Accessible names on controls', () => {
     await expect(nextBtn).toBeVisible()
   })
 
-  test('all buttons have non-empty accessible names', async ({ page }) => {
+  test('all quiz buttons have non-empty accessible names', async ({ page }) => {
     await navigateToQuiz(page)
     await startQuiz(page)
 
-    // All buttons should have accessible text (no empty accessible names)
-    const buttons = page.getByRole('button')
+    // Scope to the quiz card — AC4 is about quiz controls, not page-level layout buttons
+    const quizContainer = page.locator('[data-testid="quiz-active-container"]')
+    const buttons = quizContainer.getByRole('button')
     const count = await buttons.count()
     for (let i = 0; i < count; i++) {
       const ariaLabel = await buttons.nth(i).getAttribute('aria-label')
       const textContent = await buttons.nth(i).textContent()
       const accessibleName = (ariaLabel ?? textContent ?? '').trim()
-      expect(accessibleName.length).toBeGreaterThan(0)
+      expect(accessibleName.length, `Button ${i + 1} of ${count} has no accessible name`).toBeGreaterThan(0)
     }
   })
 })
