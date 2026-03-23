@@ -4,9 +4,9 @@ story_name: "Integrate Quiz Completion with Study Streaks"
 status: in-progress
 started: 2026-03-23
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-23
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review-skipped, code-review, code-review-testing, web-design-guidelines-skipped]
 burn_in_validated: false
 ---
 
@@ -98,7 +98,25 @@ N/A — integration logic only, no UI changes.
 
 ## Code Review Feedback
 
-[Populated by /review-story]
+**Review Date:** 2026-03-23 | **Verdict: PASS** — 0 blockers, 5 HIGH, 5 MEDIUM, 5 nits
+
+**High Priority (should fix):**
+- `studyLog.test.ts:424` — test named "only counts lesson_complete actions" is now factually wrong; add `quiz_complete` coverage to `getStudyActivity` suite
+- `story-e18-s05.spec.ts` — AC4 listed in file header but no E2E test exists; add test or remove from header
+- `useQuizStore.streakIntegration.test.ts` — missing `vi.useFakeTimers()` in beforeEach; timestamp assertions use `expect.any(String)` hiding non-determinism
+- `useQuizStore.ts:176` — `metadata` object missing `quizId` and `score` fields per implementation plan
+- `activityFromLog` — `lessonCount` field now increments for `quiz_complete`; any UI rendering "N lessons completed" will over-report
+
+**Medium:**
+- `studyLog.ts:saveLog` — no try/catch inside `logStudyAction`; 5 call sites in `progress.ts` have no protection (pre-existing, expanded blast radius)
+- `story-e18-s05.spec.ts:44` — `TODAY_STR` computed with Node.js timezone; app uses browser timezone; CI timezone mismatch risk
+- `story-e18-s05.spec.ts` — `afterEach` doesn't clear `quizzes` IDB store
+- `useQuizStore.streakIntegration.test.ts` — asymmetric mock cleanup; switch `beforeEach` to `vi.resetAllMocks()`
+
+**Reports:**
+- `docs/reviews/code/code-review-2026-03-23-e18-s05.md`
+- `docs/reviews/code/code-review-testing-2026-03-23-e18-s05.md`
+- `docs/reviews/code/edge-case-review-2026-03-23-e18-s05.md`
 
 ## Web Design Guidelines Review
 
