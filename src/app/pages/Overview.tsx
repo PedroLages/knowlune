@@ -334,12 +334,21 @@ export function Overview() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {allCourses.map(course => (
-              <CourseCard
+              <div
                 key={course.id}
-                course={course}
-                variant="overview"
-                completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
-              />
+                data-testid={
+                  importedCourses.length > 0 ? 'sample-course-card' : `course-card-${course.id}`
+                }
+                className={`transition-opacity duration-200 motion-reduce:transition-none ${
+                  importedCourses.length > 0 ? 'opacity-60 hover:opacity-100' : ''
+                }`}
+              >
+                <CourseCard
+                  course={course}
+                  variant="overview"
+                  completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
+                />
+              </div>
             ))}
           </div>
         </motion.section>
