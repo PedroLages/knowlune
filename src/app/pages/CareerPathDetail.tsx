@@ -295,15 +295,8 @@ function StageCard({ path, stage, stageIndex, isUnlocked }: StageCardProps) {
 export function CareerPathDetail() {
   const { pathId } = useParams<{ pathId: string }>()
   const navigate = useNavigate()
-  const {
-    paths,
-    isLoaded,
-    loadPaths,
-    enrollInPath,
-    dropPath,
-    getPathProgress,
-    isStageUnlocked,
-  } = useCareerPathStore()
+  const { paths, isLoaded, loadPaths, enrollInPath, dropPath, getPathProgress, isStageUnlocked } =
+    useCareerPathStore()
 
   // Explicit selector so the component re-renders when enrollments change
   const enrollments = useCareerPathStore(state => state.enrollments)
