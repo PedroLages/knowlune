@@ -10,19 +10,19 @@
  * QFR58: Courses page can display quiz availability badges per lesson
  * QFR61: System can associate quizzes with specific course lessons
  */
-import { test, expect } from '../support/fixtures'
-import { makeQuiz, makeAttempt, makeQuestion } from '../support/fixtures/factories/quiz-factory'
+import { test, expect } from '../../support/fixtures'
+import { makeQuiz, makeAttempt, makeQuestion } from '../../support/fixtures/factories/quiz-factory'
 import {
   createCourse,
   createLesson,
   createModule,
-} from '../support/fixtures/factories/course-factory'
+} from '../../support/fixtures/factories/course-factory'
 import {
   seedIndexedDBStore,
   seedQuizzes,
   seedQuizAttempts,
   clearIndexedDBStore,
-} from '../support/helpers/indexeddb-seed'
+} from '../../support/helpers/indexeddb-seed'
 
 // ---------------------------------------------------------------------------
 // Test data (stable IDs for deterministic queries)
