@@ -7,13 +7,11 @@
  * AC4: Empty state renders correctly when no sessions exist
  */
 import { test, expect } from '../../support/fixtures'
+import { seedStudySessions, clearIndexedDBStore } from '../../support/helpers/indexeddb-seed'
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-
-const DB_NAME = 'ElearningDB'
-const STORE_NAME = 'studySessions'
 
 // A completed session ~30 min ago (within the 365-day window)
 const SESSION_DATE = '2026-03-20T12:00:00.000Z' // within last 365 days
@@ -34,52 +32,6 @@ function makeSession(id: string, overrides: Record<string, unknown> = {}) {
     sessionType: 'video',
     ...overrides,
   }
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Seed study sessions into IndexedDB with retry logic. */
-async function seedStudySessions(
-  page: import('@playwright/test').Page,
-  sessions: Record<string, unknown>[]
-): Promise<void> {
-  await page.evaluate(
-    async ({ dbName, storeName, data, maxRetries }) => {
-      for (let attempt = 0; attempt < maxRetries; attempt++) {
-        const result = await new Promise<'ok' | 'store-missing'>((resolve, reject) => {
-          const request = indexedDB.open(dbName)
-          request.onsuccess = () => {
-            const db = request.result
-            if (!db.objectStoreNames.contains(storeName)) {
-              db.close()
-              resolve('store-missing')
-              return
-            }
-            const tx = db.transaction(storeName, 'readwrite')
-            const store = tx.objectStore(storeName)
-            for (const item of data) {
-              store.put(item)
-            }
-            tx.oncomplete = () => {
-              db.close()
-              resolve('ok')
-            }
-            tx.onerror = () => {
-              db.close()
-              reject(tx.error)
-            }
-          }
-          request.onerror = () => reject(request.error)
-        })
-        if (result === 'ok') return
-        await new Promise(r => setTimeout(r, 200))
-      }
-      throw new Error(`Store "${storeName}" not found after retries`)
-    },
-    { dbName: DB_NAME, storeName: STORE_NAME, data: sessions, maxRetries: 10 }
-  )
 }
 
 /** Navigate to Reports page with activity pre-seeded. */
@@ -112,32 +64,7 @@ async function goToReportsWithActivity(page: import('@playwright/test').Page) {
 // ---------------------------------------------------------------------------
 
 test.afterEach(async ({ page }) => {
-  await page.evaluate(
-    async ({ dbName, storeName }) => {
-      const db = await new Promise<IDBDatabase>((resolve, reject) => {
-        const req = indexedDB.open(dbName)
-        req.onsuccess = () => resolve(req.result)
-        req.onerror = () => reject(req.error)
-      })
-      if (!db.objectStoreNames.contains(storeName)) {
-        db.close()
-        return
-      }
-      await new Promise<void>((resolve, reject) => {
-        const tx = db.transaction(storeName, 'readwrite')
-        tx.objectStore(storeName).clear()
-        tx.oncomplete = () => {
-          db.close()
-          resolve()
-        }
-        tx.onerror = () => {
-          db.close()
-          reject(tx.error)
-        }
-      })
-    },
-    { dbName: DB_NAME, storeName: STORE_NAME }
-  )
+  await clearIndexedDBStore(page, 'ElearningDB', 'studySessions')
 })
 
 // ---------------------------------------------------------------------------
