@@ -273,7 +273,7 @@ development_status:
   18-2-implement-aria-live-regions-for-dynamic-content: backlog
   18-3-ensure-semantic-html-and-proper-aria-attributes: backlog
   18-4-verify-contrast-ratios-and-touch-targets: backlog
-  18-5-integrate-quiz-completion-with-study-streaks: in-progress
+  18-5-integrate-quiz-completion-with-study-streaks: done
   18-6-display-quiz-performance-in-overview-dashboard: backlog
   18-7-surface-quiz-analytics-in-reports-section: backlog
   18-8-display-quiz-availability-badges-on-courses-page: backlog
