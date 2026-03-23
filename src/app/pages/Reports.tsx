@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { BookOpen, CheckCircle, FileText, TrendingUp, Clock } from 'lucide-react'
+import { BookOpen, CheckCircle, FileText, TrendingUp, Clock, RotateCcw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import {
   ChartContainer,
@@ -21,6 +21,11 @@ import {
   getWeeklyChange,
 } from '@/lib/progress'
 import { getActionsPerDay } from '@/lib/studyLog'
+import {
+  calculateRetakeFrequency,
+  interpretRetakeFrequency,
+  type RetakeFrequencyResult,
+} from '@/lib/analytics'
 import {
   getCourseCompletionData,
   getCategoryColorMap,
@@ -62,6 +67,11 @@ const areaChartConfig = {
 export default function Reports() {
   const allCourses = useCourseStore(s => s.courses)
   const [studyNotes, setStudyNotes] = useState(0)
+  const [retakeData, setRetakeData] = useState<RetakeFrequencyResult>({
+    averageRetakes: 0,
+    totalAttempts: 0,
+    uniqueQuizzes: 0,
+  })
 
   useEffect(() => {
     let ignore = false
@@ -70,6 +80,18 @@ export default function Reports() {
         if (!ignore) setStudyNotes(notes)
       })
       .catch(err => console.error('Failed to load study notes:', err))
+    return () => {
+      ignore = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let ignore = false
+    calculateRetakeFrequency()
+      .then(data => {
+        if (!ignore) setRetakeData(data)
+      })
+      .catch(err => console.error('Failed to load retake frequency:', err))
     return () => {
       ignore = true
     }
@@ -141,7 +163,10 @@ export default function Reports() {
   const barChartHeight = Math.max(250, courseCompletionData.length * 36)
 
   const hasActivity =
-    completedLessons > 0 || studyNotes > 0 || activityData.some(d => d.activities > 0)
+    completedLessons > 0 ||
+    studyNotes > 0 ||
+    activityData.some(d => d.activities > 0) ||
+    retakeData.totalAttempts > 0
 
   return (
     <MotionConfig reducedMotion="user">
@@ -369,7 +394,34 @@ export default function Reports() {
                 </Card>
               </motion.div>
 
-              {/* ── Row 5: Recent Activity Timeline ── */}
+              {/* ── Row 5: Average Retake Frequency ── */}
+              <motion.div variants={fadeUp}>
+                <Card data-testid="quiz-retake-card">
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <RotateCcw className="size-4 text-muted-foreground" aria-hidden="true" />
+                      Average Retake Frequency
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {retakeData.totalAttempts === 0 ? (
+                      <p className="text-sm text-muted-foreground">No quizzes attempted yet</p>
+                    ) : (
+                      <>
+                        <div className="text-3xl font-bold">
+                          {retakeData.averageRetakes.toFixed(1)}
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">attempts per quiz</p>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          {interpretRetakeFrequency(retakeData.averageRetakes)}
+                        </p>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* ── Row 6: Recent Activity Timeline ── */}
               <motion.div variants={fadeUp}>
                 <Card>
                   <CardHeader>

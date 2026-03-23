@@ -1,5 +1,6 @@
-import type { Question, Answer, QuizAttempt } from '@/types/quiz'
+import type { Question, Answer, QuizAttempt, Quiz } from '@/types/quiz'
 import { isUnanswered } from '@/lib/scoring'
+import { db } from '@/db'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -187,6 +188,54 @@ export function calculateImprovement(attempts: QuizAttempt[]): ImprovementData {
 // Normalized Gain — Hake's Formula (E16-S04)
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Retake Frequency (E17-S02)
+// ---------------------------------------------------------------------------
+
+export type RetakeFrequencyResult = {
+  /** Average number of attempts per unique quiz */
+  averageRetakes: number
+  /** Total completed attempts across all quizzes */
+  totalAttempts: number
+  /** Number of distinct quizzes attempted at least once */
+  uniqueQuizzes: number
+}
+
+/**
+ * Calculate average retake frequency from quiz attempt history.
+ *
+ * Formula: totalAttempts / uniqueQuizzes
+ *
+ * Multiple attempts for the same quizId all count. Returns 0 when no
+ * attempts exist (no division by zero).
+ */
+export async function calculateRetakeFrequency(): Promise<RetakeFrequencyResult> {
+  const allAttempts = await db.quizAttempts.toArray()
+  const uniqueQuizIds = new Set(allAttempts.map(a => a.quizId))
+
+  const totalAttempts = allAttempts.length
+  const uniqueQuizzes = uniqueQuizIds.size
+  const averageRetakes = uniqueQuizzes > 0 ? totalAttempts / uniqueQuizzes : 0
+
+  return { averageRetakes, totalAttempts, uniqueQuizzes }
+}
+
+/**
+ * Returns an encouraging interpretation string for the retake frequency.
+ *
+ * Bands:
+ * - ≤ 1.0: "No retakes yet — each quiz taken once."
+ * - ≤ 2.0: "Light review — you occasionally revisit quizzes."
+ * - ≤ 3.0: "Active practice — you retake quizzes 2-3 times on average for mastery."
+ * - > 3.0: "Deep practice — strong commitment to mastery through repetition."
+ */
+export function interpretRetakeFrequency(avg: number): string {
+  if (avg <= 1.0) return 'No retakes yet — each quiz taken once.'
+  if (avg <= 2.0) return 'Light review — you occasionally revisit quizzes.'
+  if (avg <= 3.0) return 'Active practice — you retake quizzes 2-3 times on average for mastery.'
+  return 'Deep practice — strong commitment to mastery through repetition.'
+}
+
 /**
  * Calculate normalized gain (Hake's formula) across quiz attempts.
  *
@@ -211,4 +260,78 @@ export function calculateNormalizedGain(attempts: QuizAttempt[]): number | null 
   if (pre >= 100) return null
 
   return (post - pre) / (100 - pre)
+}
+
+// ---------------------------------------------------------------------------
+// Item Difficulty — P-Values (E17-S03)
+// ---------------------------------------------------------------------------
+
+export type ItemDifficulty = {
+  /** Question ID from the quiz */
+  questionId: string
+  /** Question text for display */
+  questionText: string
+  /** 1-indexed display order (from question.order) */
+  questionOrder: number
+  /** Topic tag (defaults to "General" if unset) */
+  topic: string
+  /** Proportion of attempts answered correctly (0.0–1.0) */
+  pValue: number
+  /** Human-readable difficulty label */
+  difficulty: 'Easy' | 'Medium' | 'Difficult'
+}
+
+/**
+ * Calculate item difficulty (P-values) for each question in a quiz.
+ *
+ * P-value = proportion of attempts where the question was answered correctly.
+ * Questions with zero attempts across all attempts are excluded.
+ *
+ * Difficulty thresholds (standard psychometric convention):
+ *   - P >= 0.8  → "Easy"
+ *   - 0.5 <= P < 0.8 → "Medium"
+ *   - P < 0.5  → "Difficult"
+ *
+ * Results are sorted easiest-first (descending P-value) for display.
+ */
+export function calculateItemDifficulty(quiz: Quiz, attempts: QuizAttempt[]): ItemDifficulty[] {
+  if (attempts.length === 0) return []
+
+  // Aggregate correct/total counts per questionId across all attempts
+  const statsMap = new Map<string, { correct: number; total: number }>()
+
+  for (const attempt of attempts) {
+    for (const answer of attempt.answers) {
+      // Exclude skipped/unanswered — they reflect time pressure, not knowledge gaps.
+      // Consistent with analyzeTopicPerformance which uses the same exclusion.
+      if (isUnanswered(answer.userAnswer)) continue
+      const existing = statsMap.get(answer.questionId) ?? { correct: 0, total: 0 }
+      statsMap.set(answer.questionId, {
+        correct: existing.correct + (answer.isCorrect ? 1 : 0),
+        total: existing.total + 1,
+      })
+    }
+  }
+
+  // Map quiz questions to ItemDifficulty, excluding questions with no attempts
+  return quiz.questions
+    .map((q): ItemDifficulty | null => {
+      const stats = statsMap.get(q.id)
+      if (!stats || stats.total === 0) return null
+
+      const pValue = stats.correct / stats.total
+      const difficulty: ItemDifficulty['difficulty'] =
+        pValue >= 0.8 ? 'Easy' : pValue >= 0.5 ? 'Medium' : 'Difficult'
+
+      return {
+        questionId: q.id,
+        questionText: q.text,
+        questionOrder: q.order,
+        topic: q.topic?.trim() || 'General',
+        pValue,
+        difficulty,
+      }
+    })
+    .filter((item): item is ItemDifficulty => item !== null)
+    .sort((a, b) => b.pValue - a.pValue) // Easiest first
 }

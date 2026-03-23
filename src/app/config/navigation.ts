@@ -9,6 +9,8 @@ import {
   Target,
   History,
   BarChart3,
+  ClipboardList,
+  BrainCircuit,
   Sparkles,
   Brain,
   Settings as SettingsIcon,
@@ -19,6 +21,21 @@ export interface NavigationItem {
   name: string
   path: string
   icon: LucideIcon
+  tab?: string // optional: when set, link navigates to path?tab=tab and is active only when search matches
+}
+
+/** Pure function to calculate whether a navigation item is active given current location. */
+export function getIsActive(
+  item: Pick<NavigationItem, 'path' | 'tab'>,
+  pathname: string,
+  search: string
+): boolean {
+  if (item.tab) {
+    const searchMatch = search === `?tab=${item.tab}`
+    const isDefaultTab = item.tab === 'study' && search === '' && pathname === item.path
+    return pathname === item.path && (searchMatch || isDefaultTab)
+  }
+  return item.path === '/' ? pathname === '/' : pathname.startsWith(item.path)
 }
 
 export interface NavigationGroup {
@@ -32,7 +49,7 @@ export const navigationGroups: NavigationGroup[] = [
     label: 'Learn',
     items: [
       { name: 'Overview', path: '/', icon: LayoutDashboard },
-      { name: 'My Classes', path: '/my-class', icon: BookOpen },
+      { name: 'My Courses', path: '/my-class', icon: BookOpen },
       { name: 'Courses', path: '/courses', icon: GraduationCap },
       { name: 'Learning Path', path: '/ai-learning-path', icon: Sparkles },
       { name: 'Knowledge Gaps', path: '/knowledge-gaps', icon: Brain },
@@ -50,7 +67,9 @@ export const navigationGroups: NavigationGroup[] = [
     items: [
       { name: 'Challenges', path: '/challenges', icon: Target },
       { name: 'Session History', path: '/session-history', icon: History },
-      { name: 'Reports', path: '/reports', icon: BarChart3 },
+      { name: 'Study Analytics', path: '/reports', tab: 'study', icon: BarChart3 },
+      { name: 'Quiz Analytics', path: '/reports', tab: 'quizzes', icon: ClipboardList },
+      { name: 'AI Analytics', path: '/reports', tab: 'ai', icon: BrainCircuit },
     ],
   },
 ]

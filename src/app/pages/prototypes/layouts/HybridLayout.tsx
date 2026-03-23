@@ -22,7 +22,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { name: 'Overview', icon: LayoutDashboard, path: '/prototypes/hybrid-overview' },
-  { name: 'My Classes', icon: BookOpen, path: '#' },
+  { name: 'My Courses', icon: BookOpen, path: '#' },
   { name: 'Courses', icon: GraduationCap, path: '/prototypes/hybrid-courses' },
   { name: 'Library', icon: Library, path: '#' },
   { name: 'Messages', icon: Notebook, path: '#' },
