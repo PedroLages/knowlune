@@ -6,7 +6,7 @@ started: 2026-03-23
 completed:
 reviewed: in-progress
 review_started: 2026-03-23
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
 burn_in_validated: false
 ---
 
@@ -116,4 +116,14 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+**1. Zustand v5 getter functions don't create reactive subscriptions**
+Storing getter functions in Zustand state that internally call `get()` (e.g. `getEnrollmentForPath`) does NOT create a reactive subscription in components. When `enrollments` changed via `set()`, the component using only the getter didn't re-render — the enrollment button never flipped. Fix: add an explicit selector (`useCareerPathStore(state => state.enrollments)`) to create a proper subscription, then derive enrollment from it directly. Pattern to follow: any component that needs to react to state changes must subscribe via a selector, not call a getter.
+
+**2. Agentation dev toolbar injects CSS `@keyframes` into the DOM**
+`getByText(/0%/)` matched both the progress `<span>0%</span>` AND Agentation's injected `<style>@keyframes { 0% { ... } }</style>` element, causing a Playwright strict-mode violation. Fix: use semantic role selectors (`getByRole('status')`) that can't accidentally match style elements. General rule: prefer role/testid selectors over text matchers for numeric/percentage values.
+
+**3. Playwright strict mode violations from ambiguous role selectors**
+`getByRole('link', { name: /Career Paths/i })` matched both the sidebar nav link and the detail page back-link. Fix: add `data-testid="back-link"` to the back-link and use `getByTestId('back-link')` in the test. When two elements share a semantic role and similar accessible name, `data-testid` is the right disambiguation tool.
+
+**4. Schema unit test requires manual update when adding new tables**
+`src/db/__tests__/schema.test.ts` asserts the exact sorted list of table names and the DB version number. Adding v20 tables (`careerPaths`, `pathEnrollments`) without updating this test caused 2 test failures. Pattern: whenever a new Dexie version is added, update the schema test immediately as part of the same commit.
