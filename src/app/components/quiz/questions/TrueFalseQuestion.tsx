@@ -1,4 +1,4 @@
-import { useEffect, useId } from 'react'
+import { useCallback, useEffect, useId } from 'react'
 import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group'
 import { cn } from '@/app/components/ui/utils'
 import type { Question } from '@/types/quiz'
@@ -40,6 +40,23 @@ export function TrueFalseQuestion({ question, value, onChange, mode }: TrueFalse
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [isActive, options, onChange])
 
+  // WAI-ARIA radio group spec: arrow keys should both focus AND select.
+  // Same selection-follows-focus workaround as MultipleChoiceQuestion.
+  const handleRadioGroupKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!isActive) return
+      if (!['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return
+      requestAnimationFrame(() => {
+        const focused = document.activeElement as HTMLElement | null
+        if (focused?.getAttribute('role') === 'radio') {
+          const val = focused.getAttribute('value')
+          if (val) onChange(val)
+        }
+      })
+    },
+    [isActive, onChange]
+  )
+
   return (
     <fieldset className="mt-6 min-w-0" aria-labelledby={labelId}>
       <div
@@ -55,6 +72,7 @@ export function TrueFalseQuestion({ question, value, onChange, mode }: TrueFalse
         onValueChange={isActive ? onChange : undefined}
         disabled={!isActive}
         className="grid grid-cols-1 lg:grid-cols-2 gap-3"
+        onKeyDown={handleRadioGroupKeyDown}
       >
         {options.map((option, index) => {
           const isSelected = value === option
