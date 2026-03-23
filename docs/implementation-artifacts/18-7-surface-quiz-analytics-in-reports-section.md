@@ -121,15 +121,27 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story -- Playwright MCP findings]
+Full report: `docs/reviews/design/design-review-2026-03-23-e18-s07.md`
+
+**Blocker:** WCAG AA contrast failure on `text-brand` links in dark mode (3.07:1 vs 4.5:1 required) — `QuizAnalyticsDashboard.tsx:186,217,249`. Fix: use `text-brand-soft-foreground`.
+
+**High:** Touch targets below 44px on mobile (Details links 17px height, tab triggers 36px). Missing H2 heading (H1→H3 skip) — add `<h2 className="sr-only">Quiz Analytics</h2>`. `fadeUp` animations silently inert (variant propagation blocked by Radix `TabsContent` — add `initial="hidden" animate="visible"` to root div).
+
+**Medium:** Tab list has no `aria-label` (`aria-label="Analytics views"`). "Unknown Quiz" surfaces for orphaned attempts.
 
 ## Code Review Feedback
 
-[Populated by /review-story -- adversarial code review findings]
+Full report: `docs/reviews/code/code-review-2026-03-23-e18-s07.md`
+
+**High:** `topPerforming` and `needsImprovement` overlap when ≤5 unique quizzes — same quizzes appear in both lists (`analytics.ts:105-107`). No error state in `QuizAnalyticsDashboard` — DB failure silently shows "No quiz data yet" (`QuizAnalyticsDashboard.tsx:26-46`). String interpolation instead of `cn()` in 3 locations (`QuizAnalyticsDashboard.tsx:109,126,224`). `calculateQuizAnalytics()` has zero unit tests.
+
+**Medium:** `toLocaleDateString()` without explicit locale (`QuizAnalyticsDashboard.tsx:181`). `setSearchParams({ tab })` replaces all query params — use functional form (`Reports.tsx:193`). `totalQuizzesCompleted` shows unique quizzes, not total attempts — consider clearer label.
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story -- Web Interface Guidelines compliance findings]
+Full report: `docs/reviews/code/edge-case-review-2026-03-23-e18-s07.md` (combined with edge cases)
+
+**High:** Arbitrary `?tab=` values accepted without validation — invalid tab shows blank content area. Orphaned attempts can push `completionRate` above 100% (`analytics.ts:94`). `attempt.percentage` NaN/undefined propagates through all averages. Malformed `completedAt` renders "Invalid Date" in table.
 
 ## Challenges and Lessons Learned
 
