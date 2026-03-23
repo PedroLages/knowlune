@@ -101,15 +101,14 @@ async function completeQuiz(page: import('@playwright/test').Page, answer = 'Par
 
 /** Read the study-log from localStorage and return quiz_complete entries for today */
 async function getTodayQuizEntries(page: import('@playwright/test').Page) {
-  return page.evaluate(() => {
+  // eslint-disable-next-line test-patterns/deterministic-time -- no date mock configured; app writes real timestamps so assertions must match real "today"
+  const todayStr = new Intl.DateTimeFormat('sv-SE').format(new Date()).substring(0, 10)
+  return page.evaluate((today) => {
     const raw = localStorage.getItem('study-log')
     if (!raw) return []
     const log = JSON.parse(raw) as Array<{ type: string; timestamp: string }>
-    const today = new Intl.DateTimeFormat('sv-SE').format(new Date()) // YYYY-MM-DD local
-    return log.filter(
-      a => a.type === 'quiz_complete' && a.timestamp.startsWith(today.substring(0, 10))
-    )
-  })
+    return log.filter(a => a.type === 'quiz_complete' && a.timestamp.startsWith(today))
+  }, todayStr)
 }
 
 // ---------------------------------------------------------------------------
