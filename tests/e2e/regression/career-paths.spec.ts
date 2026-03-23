@@ -8,8 +8,8 @@
  * AC5: Stage 2+ is locked until Stage 1 complete
  * AC6: "Career Paths" link in sidebar navigates correctly
  */
-import { test, expect } from '../support/fixtures'
-import { seedPathEnrollments } from '../support/helpers/indexeddb-seed'
+import { test, expect } from '../../support/fixtures'
+import { seedPathEnrollments } from '../../support/helpers/indexeddb-seed'
 
 // ─────────────────────────────────────────────
 // Helpers
