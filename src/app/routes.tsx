@@ -22,11 +22,11 @@ const ImportedLessonPlayer = React.lazy(() =>
 )
 const Notes = React.lazy(() => import('./pages/Notes').then(m => ({ default: m.Notes })))
 const ChatQA = React.lazy(() => import('./pages/ChatQA').then(m => ({ default: m.ChatQA })))
-const Instructors = React.lazy(() =>
-  import('./pages/Instructors').then(m => ({ default: m.Instructors }))
+const Authors = React.lazy(() =>
+  import('./pages/Authors').then(m => ({ default: m.Authors }))
 )
-const InstructorProfile = React.lazy(() =>
-  import('./pages/InstructorProfile').then(m => ({ default: m.InstructorProfile }))
+const AuthorProfile = React.lazy(() =>
+  import('./pages/AuthorProfile').then(m => ({ default: m.AuthorProfile }))
 )
 const SessionHistory = React.lazy(() =>
   import('./pages/SessionHistory').then(m => ({ default: m.SessionHistory }))
@@ -192,18 +192,18 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'instructors',
+        path: 'authors',
         element: (
           <SuspensePage>
-            <Instructors />
+            <Authors />
           </SuspensePage>
         ),
       },
       {
-        path: 'instructors/:instructorId',
+        path: 'authors/:authorId',
         element: (
           <SuspensePage>
-            <InstructorProfile />
+            <AuthorProfile />
           </SuspensePage>
         ),
       },
