@@ -386,7 +386,9 @@ export function Courses() {
                     variant="ghost"
                     size="sm"
                     data-testid="sample-courses-toggle"
-                    aria-label={sampleCollapsed ? 'Expand sample courses' : 'Collapse sample courses'}
+                    aria-label={
+                      sampleCollapsed ? 'Expand sample courses' : 'Collapse sample courses'
+                    }
                     className="p-2"
                   >
                     <ChevronDown
@@ -454,7 +456,10 @@ export function Courses() {
                       <CourseCard
                         key={course.id}
                         course={course}
-                        completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
+                        completionPercent={getCourseCompletionPercent(
+                          course.id,
+                          course.totalLessons
+                        )}
                         momentumScore={momentumMap.get(course.id)}
                         atRiskStatus={atRiskMap.get(course.id)}
                         completionEstimate={estimateMap.get(course.id)}
