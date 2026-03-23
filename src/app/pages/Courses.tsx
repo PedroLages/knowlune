@@ -70,22 +70,28 @@ export function Courses() {
     loadImportedCourses()
   }, [loadImportedCourses])
 
-  // Auto-collapse when imported courses are loaded for the first time
-  // useRef prevents re-triggering if the user imports more courses during the session
+  // Auto-collapse when imported courses first appear; auto-expand when all imports removed.
+  // useRef prevents re-triggering the initial collapse on subsequent imports during the session.
   const hasAutoCollapsed = useRef(false)
   useEffect(() => {
-    if (hasAutoCollapsed.current) return
     try {
-      const stored = localStorage.getItem(COLLAPSE_KEY)
-      if (stored === null && importedCourses.length > 0) {
-        hasAutoCollapsed.current = true
-        setSampleCollapsed(true)
-        localStorage.setItem(COLLAPSE_KEY, 'true')
+      if (importedCourses.length > 0 && !hasAutoCollapsed.current) {
+        const stored = localStorage.getItem(COLLAPSE_KEY)
+        if (stored === null) {
+          hasAutoCollapsed.current = true
+          setSampleCollapsed(true)
+          localStorage.setItem(COLLAPSE_KEY, 'true')
+        }
+      } else if (importedCourses.length === 0 && sampleCollapsed) {
+        // All imports removed — restore sample courses visibility
+        setSampleCollapsed(false)
+        localStorage.removeItem(COLLAPSE_KEY)
+        hasAutoCollapsed.current = false
       }
     } catch {
       // silent-catch-ok: localStorage unavailable — session still works without persistence
     }
-  }, [importedCourses.length])
+  }, [importedCourses.length, sampleCollapsed])
 
   useEffect(() => {
     let ignore = false
