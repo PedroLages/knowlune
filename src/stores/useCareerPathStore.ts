@@ -63,9 +63,11 @@ export const useCareerPathStore = create<CareerPathState>((set, get) => ({
       set({ paths, enrollments, isLoaded: true, error: null })
 
       // Load completion data asynchronously (non-blocking)
-      get().refreshCourseCompletion(uniqueIds).catch(err => {
-        console.error('[CareerPathStore] Failed to refresh course completion:', err)
-      })
+      get()
+        .refreshCourseCompletion(uniqueIds)
+        .catch(err => {
+          console.error('[CareerPathStore] Failed to refresh course completion:', err)
+        })
     } catch (error) {
       console.error('[CareerPathStore] Failed to load career paths:', error)
       set({ error: 'Failed to load career paths', isLoaded: true })

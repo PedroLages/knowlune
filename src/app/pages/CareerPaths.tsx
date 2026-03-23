@@ -95,7 +95,11 @@ function PathCard({ path }: { path: CareerPath }) {
                   <span>Progress</span>
                   <span>{progress.percentage}%</span>
                 </div>
-                <Progress value={progress.percentage} className="h-1.5" aria-label={`${progress.percentage}% complete`} />
+                <Progress
+                  value={progress.percentage}
+                  className="h-1.5"
+                  aria-label={`${progress.percentage}% complete`}
+                />
               </div>
             ) : (
               <Badge variant="outline" className="self-start text-xs">

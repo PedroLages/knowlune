@@ -235,7 +235,9 @@ function StageCard({ path, stage, stageIndex, isUnlocked }: StageCardProps) {
               <p className="text-sm text-muted-foreground mt-0.5">{stage.description}</p>
             </div>
             <div className="text-right text-xs text-muted-foreground shrink-0">
-              <div>{progress.completedCourses}/{progress.totalCourses}</div>
+              <div>
+                {progress.completedCourses}/{progress.totalCourses}
+              </div>
               <div>{stage.estimatedHours}h</div>
             </div>
           </div>
@@ -293,8 +295,16 @@ function StageCard({ path, stage, stageIndex, isUnlocked }: StageCardProps) {
 export function CareerPathDetail() {
   const { pathId } = useParams<{ pathId: string }>()
   const navigate = useNavigate()
-  const { paths, isLoaded, loadPaths, enrollInPath, dropPath, getEnrollmentForPath, getPathProgress, isStageUnlocked } =
-    useCareerPathStore()
+  const {
+    paths,
+    isLoaded,
+    loadPaths,
+    enrollInPath,
+    dropPath,
+    getEnrollmentForPath,
+    getPathProgress,
+    isStageUnlocked,
+  } = useCareerPathStore()
 
   useEffect(() => {
     let ignore = false

@@ -35,7 +35,11 @@ beforeEach(async () => {
   vi.restoreAllMocks()
   resetStore()
   const { db } = await import('@/db')
-  await Promise.all([db.careerPaths.clear(), db.pathEnrollments.clear(), db.contentProgress.clear()])
+  await Promise.all([
+    db.careerPaths.clear(),
+    db.pathEnrollments.clear(),
+    db.contentProgress.clear(),
+  ])
 })
 
 // ─────────────────────────────────────────────
