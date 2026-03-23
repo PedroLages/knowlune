@@ -29,7 +29,7 @@ export function QuizBadge({ courseId, lessonId, lessonTitle, bestScore }: QuizBa
         e.stopPropagation()
         navigate(`/courses/${courseId}/lessons/${lessonId}/quiz`)
       }}
-      className="flex items-center gap-1.5 h-7 px-2 text-xs shrink-0"
+      className="flex items-center gap-1.5 min-h-[44px] px-2 text-xs shrink-0"
       aria-label={`${bestScore != null ? `Quiz score: ${bestScore}%` : 'Take quiz'} for ${lessonTitle}`}
     >
       <ClipboardCheck className="size-3.5" aria-hidden="true" />
