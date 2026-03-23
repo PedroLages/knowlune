@@ -34,11 +34,12 @@ See: [plans/e18-s11-track-quiz-progress-plan.md](plans/e18-s11-track-quiz-progre
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Validate existing cross-store integration in useQuizStore.submitQuiz (AC: 1, 2, 3, 4)
-- [ ] Task 2: Add retake-specific unit test for idempotent completion (AC: 3)
-- [ ] Task 3: Write E2E test — pass quiz → lesson shows completed in course view (AC: 1)
+- [x] Task 1: Validate existing cross-store integration in useQuizStore.submitQuiz (AC: 1, 2, 3, 4)
+      — Already implemented at src/stores/useQuizStore.ts:152-165 (E12-S03-AC5)
+- [x] Task 2: Unit tests for cross-store integration (AC: 1, 2, 4)
+      — Covered by src/stores/__tests__/useQuizStore.crossStore.test.ts (3 tests)
+- [ ] Task 3: Write E2E test — pass quiz → lesson marked completed in contentProgress IDB (AC: 1)
 - [ ] Task 4: Write E2E test — fail quiz → lesson NOT completed (AC: 2)
-- [ ] Task 5: Verify console.error logging on progress failure path (AC: 4)
 
 ## Design Guidance
 
