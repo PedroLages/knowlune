@@ -106,4 +106,17 @@ N/A — no UI changes.
 
 ## Challenges and Lessons Learned
 
-[To be filled after implementation]
+**Extending an existing type union is low-risk but requires tracing all consumers:**
+Adding `'quiz_complete'` to `StudyAction.type` meant checking every function that switches on `type` — `studyDaysFromLog`, `activityFromLog`, `getStudyLogForCourse`. TypeScript's exhaustiveness checking caught no gaps because the type union uses a string literal (not discriminated union with a default branch). Manual grep was required to verify all sites were updated.
+
+**Fire-and-forget pattern: always wrap in isolated try/catch, never await in the main flow:**
+The `logStudyAction` call in `submitQuiz` follows the same pattern already used by `setItemStatus` — DB write first, then side-effect in a non-awaited try/catch. The temptation was to `await` the streak call for cleaner error logging, but that would make streak failures block quiz submission (violating AC4). The pattern is: succeed the primary operation first, then best-effort the side effect.
+
+**E2E date mocking: `addInitScript` is required for app-side timestamp determinism:**
+The initial test used `new Date()` inside `page.evaluate()` for today's date comparison. This worked locally but triggered the `test-patterns/deterministic-time` lint error and the pattern validator. The correct approach is to mock `Date` via `page.addInitScript()` so the app's `new Date().toISOString()` in `useQuizStore` writes a known timestamp (`FIXED_DATE`), and assertions reference `TODAY_STR` derived from `FIXED_DATE`. Without the mock, tests pass but are non-deterministic across midnight boundaries.
+
+**Retake quiz flow has different button label ("Retake Quiz" vs "Start Quiz"):**
+The `completeQuiz` test helper initially only matched `/start quiz/i`. After completing a quiz and navigating back, the page shows "Retake Quiz" — a different label not covered by the original regex. The fix is `/(start|retake) quiz/i` to handle both states. This was caught by the AC2 idempotency test, which is the only test that exercises the retake flow.
+
+**`seedQuizzes()` helper exists in `indexeddb-seed.ts` but is not widely advertised:**
+The first implementation used raw `indexedDB.open()` for quiz seeding (triggered `manualIndexedDB` warning). The shared `seedQuizzes()` wrapper already existed with retry logic. Checking `indexeddb-seed.ts` exports first before writing custom IDB code saves time and produces more robust tests.
