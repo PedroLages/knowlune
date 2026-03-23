@@ -64,3 +64,4 @@ experiments/
 .claude/session-memory/archived/*
 !.claude/session-memory/archived/.gitkeep
 __pycache__/
+scripts/auto-story-run-*.md
