@@ -100,6 +100,7 @@ export function AnswerFeedback({ question, userAnswer, isTimerExpired }: AnswerF
       data-testid="answer-feedback"
       role="status"
       aria-live="polite"
+      aria-atomic="true"
       className={cn(
         'mt-4 rounded-lg border-l-4 p-3 sm:p-4',
         'animate-in slide-in-from-bottom-2 fade-in duration-300 motion-reduce:animate-none',
