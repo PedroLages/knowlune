@@ -1,8 +1,8 @@
 ---
 story_id: E22-S05
 story_name: "Dynamic Filter Chips from AI Tags"
-status: draft
-started:
+status: in-progress
+started: 2026-03-23
 completed:
 reviewed: false
 review_started:
@@ -52,6 +52,10 @@ so that I can quickly find courses by topic across my entire library.
 - AI-generated tags use same pill style as pre-seeded categories — no visual distinction needed
 - Consider showing tag count in parentheses: "Python (3)" — optional, only if it doesn't clutter
 - "Clear filters" link appears only when a filter is active (same as TopicFilter pattern)
+
+## Implementation Plan
+
+See [docs/plans/2026-03-23-e22-s05-dynamic-filter-chips.md](../plans/2026-03-23-e22-s05-dynamic-filter-chips.md)
 
 ## Implementation Notes
 
