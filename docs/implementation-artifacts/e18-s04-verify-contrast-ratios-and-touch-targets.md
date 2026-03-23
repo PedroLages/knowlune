@@ -117,4 +117,26 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+### Challenges Faced
+
+- **Focus ring override chain was non-obvious.** The global `theme.css` sets a correct `*:focus-visible` outline, but quiz components override it with `ring-ring/50` — a half-opacity neutral gray that renders at ~1:1 contrast. The bug was invisible in light mode casual testing because the ring was present (the component pattern wasn't broken), just nearly invisible. Required explicit contrast measurement to detect.
+
+- **Dark mode `--brand-soft-foreground` calculation.** The initial fix of switching from `text-brand` to `text-brand-soft-foreground` on `bg-brand-soft` still failed — the token value of `#8b92da` achieved only 4.44:1 against dark-mode `bg-brand-soft` (#2a2c48), just below the 4.5:1 minimum. Had to recalculate and brighten to `#a0a8eb` to achieve ~5.4:1.
+
+- **waitForTimeout anti-pattern in dark mode tests.** The initial spec used `waitForTimeout(100)` after applying the `.dark` class via `page.evaluate`, with a justification comment. The test pattern validator still flagged this as MEDIUM severity (comment is not parsed). Fix required replacing with `page.addStyleTag` to disable CSS transitions entirely.
+
+### Solutions and Patterns
+
+- **CSS transition-disable pattern for dark mode E2E tests:** `await page.addStyleTag({ content: '* { transition: none !important; animation: none !important; }' })` before applying dark class removes all timing uncertainty. This is the accessibility testing community's standard approach — no transitions = no race conditions between class application and style rendering.
+
+- **Focus ring token hierarchy:** `ring-brand` (from `--brand` OKLCH value) passes 3:1 contrast against card backgrounds in both light and dark mode. The existing `ring-ring/50` shorthand is only suitable for non-accessibility contexts.
+
+- **axe-core `.exclude()` for toolbar overlays:** The agentation toolbar and feedback toolbar overlay inject DOM elements that can fail axe scans. Always exclude `[data-agentation]` and `[data-feedback-toolbar]` from axe scans to avoid false positives.
+
+### Decisions and Trade-Offs
+
+- **Brightening `--brand-soft-foreground` rather than darkening `--brand-soft`:** Darkening the background would have cascaded to all uses of `bg-brand-soft`. Brightening the foreground token is a targeted fix with no side-effects.
+
+- **Explicit min-height on MarkForReview Label rather than wrapper:** The label is a flex child — adding `min-h-[44px]` directly on the label element avoids layout changes to the containing row, while still creating the required touch target area on mobile.
+
+- **axe-core `wcag21aa` tag set (not `wcag2aa` alone):** Using both `wcag2a, wcag2aa, wcag21a, wcag21aa` catches WCAG 2.1-specific rules (like 1.3.4 orientation, 1.4.10 reflow) that aren't included in the older `wcag2aa` tag set alone.
