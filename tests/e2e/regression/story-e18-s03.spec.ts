@@ -8,9 +8,9 @@
  * - AC4: Descriptive accessible names, aria-label on icon-only buttons
  * - AC5: role="timer" with aria-live="off", role="progressbar" with aria-value*
  */
-import { test, expect } from '../support/fixtures'
-import { makeQuiz, makeQuestion } from '../support/fixtures/factories/quiz-factory'
-import { seedQuizzes } from '../support/helpers/seed-helpers'
+import { test, expect } from '../../support/fixtures'
+import { makeQuiz, makeQuestion } from '../../support/fixtures/factories/quiz-factory'
+import { seedQuizzes } from '../../support/helpers/seed-helpers'
 
 // ---------------------------------------------------------------------------
 // Test data
