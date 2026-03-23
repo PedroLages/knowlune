@@ -4,9 +4,9 @@ story_name: "Flashcard System with Spaced Repetition"
 status: in-progress
 started: 2026-03-23
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-23
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -79,15 +79,44 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+**Date:** 2026-03-23 | **Report:** [design-review-2026-03-23-e20-s02.md](../reviews/design/design-review-2026-03-23-e20-s02.md)
+
+- ✅ Zero hardcoded colors; design token discipline excellent
+- ✅ `prefers-reduced-motion` handled at every animated boundary
+- ✅ Keyboard accessibility exemplary (Space/Enter/1/2/3, `aria-live`)
+- ⚠️ H1: Review header buttons 32px on mobile — below 44px WCAG 2.5.8 touch target (`Flashcards.tsx:360-368`, change `size="sm"` → `size="default"`)
+- M1: 3-column stats grid clips at 375px — add `grid-cols-2 sm:grid-cols-3`
+- M2: Rating button tinted backgrounds invisible in dark mode — increase to `/20` opacity
+- N1: `"← Back"` uses Unicode arrow — replace with `<ArrowLeft />`
+- N2: `"⌘↵ to save"` is Mac-only — update to `"⌘/Ctrl+↵"`
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**Date:** 2026-03-23 | **Report:** [code-review-2026-03-23-e20-s02.md](../reviews/code/code-review-2026-03-23-e20-s02.md)
+
+- ✅ SM-2 algorithm correctly extracts `SpacedRepetitionState` interface for structural reuse
+- ✅ Optimistic update + rollback pattern matches Knowlune conventions
+- 🚫 **BLOCKER B1:** `noteId` never passed to NoteEditor in LessonPlayer/NoteCard — all flashcards created with `noteId: undefined` (`LessonPlayer.tsx:757,879,925,988`)
+- ⚠️ H1: `FIXED_NOW = new Date()` at module scope — page open past midnight shows stale due counts (`Flashcards.tsx:27`)
+- ⚠️ H2: `handleRate` missing try/catch/finally — `isRating` stuck `true` on DB failure, UI permanently frozen (`Flashcards.tsx:134-155`)
+- ⚠️ H3: Entire store destructured without selectors — unnecessary re-renders + `predictRetention` called on every render (`Flashcards.tsx:79-91`)
+- ⚠️ H4: Load error state not shown — load failure indistinguishable from empty state
+- M1: `formatNextReviewDate` returns "Tomorrow" for cards due today/overdue (`Flashcards.tsx:29-40`)
+- M2: Phase `'reviewing'` + undefined `currentCard` → blank screen with no recovery (`Flashcards.tsx:481`)
+- M3: `CreateFlashcardDialog.handleCreate` no try/catch — dialog closes on failure without feedback
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+**Date:** 2026-03-23 | **Report:** [web-design-guidelines-2026-03-23-e20-s02.md](../reviews/design/web-design-guidelines-2026-03-23-e20-s02.md)
+
+- 0 BLOCKERs, 0 HIGH, 4 MEDIUM, 16 LOW
+- M: `FIXED_NOW` module-scope stale value (same as code review H1)
+- M: `setTimeout(500)` for post-flip focus has no cleanup — use `onAnimationComplete`
+- M: `"← Back"` Unicode arrow (same as design review N1)
+- M: Decorative `<Layers />` icons missing `aria-hidden="true"` (`FlashcardReviewCard.tsx:67,115`)
+- L: `formatNextReviewDate` off-by-one — today returns "Tomorrow"
+- L: `toLocaleDateString('en-US', ...)` hardcodes locale
+- L: `perspective: 1000` should be `perspective: '1000px'` (`FlashcardReviewCard.tsx:43`)
 
 ## Challenges and Lessons Learned
 
