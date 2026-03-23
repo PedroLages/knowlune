@@ -9,7 +9,12 @@
  * - Invalid attempt ID shows error state
  */
 import { test, expect } from '../support/fixtures'
-import { makeQuestion, makeAttempt, makeCorrectAnswer, makeWrongAnswer } from '../support/fixtures/factories/quiz-factory'
+import {
+  makeQuestion,
+  makeAttempt,
+  makeCorrectAnswer,
+  makeWrongAnswer,
+} from '../support/fixtures/factories/quiz-factory'
 import type { Quiz } from '../../src/types/quiz'
 
 // ---------------------------------------------------------------------------
@@ -92,8 +97,14 @@ async function seedStore(
             const tx = db.transaction(storeName, 'readwrite')
             const store = tx.objectStore(storeName)
             for (const item of data) store.put(item)
-            tx.oncomplete = () => { db.close(); resolve('ok') }
-            tx.onerror = () => { db.close(); reject(tx.error) }
+            tx.oncomplete = () => {
+              db.close()
+              resolve('ok')
+            }
+            tx.onerror = () => {
+              db.close()
+              reject(tx.error)
+            }
           }
           req.onerror = () => reject(req.error)
         })
@@ -123,22 +134,22 @@ async function setupReviewPage(page: import('@playwright/test').Page) {
 test.describe('E16-S01: Quiz Review Page', () => {
   test('AC1: navigate directly to review URL shows questions', async ({ page }) => {
     await setupReviewPage(page)
-    await page.goto(
-      `/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz/review/${ATTEMPT_ID}`,
-      { waitUntil: 'domcontentloaded' }
-    )
+    await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz/review/${ATTEMPT_ID}`, {
+      waitUntil: 'domcontentloaded',
+    })
 
     await expect(page.getByText('E16-S01 Review Quiz — Review')).toBeVisible()
-    await expect(page.getByTestId('question-text').first()).toContainText('What is the capital of France?')
+    await expect(page.getByTestId('question-text').first()).toContainText(
+      'What is the capital of France?'
+    )
     await expect(page.getByText('Question 1 of 2')).toBeVisible()
   })
 
   test('AC2: feedback panel (AnswerFeedback) is visible for question', async ({ page }) => {
     await setupReviewPage(page)
-    await page.goto(
-      `/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz/review/${ATTEMPT_ID}`,
-      { waitUntil: 'domcontentloaded' }
-    )
+    await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz/review/${ATTEMPT_ID}`, {
+      waitUntil: 'domcontentloaded',
+    })
 
     await expect(page.getByTestId('answer-feedback')).toBeVisible()
     // Q1 was answered correctly
@@ -149,10 +160,9 @@ test.describe('E16-S01: Quiz Review Page', () => {
 
   test('AC3: Next navigates to question 2, Previous returns to question 1', async ({ page }) => {
     await setupReviewPage(page)
-    await page.goto(
-      `/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz/review/${ATTEMPT_ID}`,
-      { waitUntil: 'domcontentloaded' }
-    )
+    await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz/review/${ATTEMPT_ID}`, {
+      waitUntil: 'domcontentloaded',
+    })
 
     await expect(page.getByText('Question 1 of 2')).toBeVisible()
 
@@ -166,12 +176,13 @@ test.describe('E16-S01: Quiz Review Page', () => {
     await expect(page.getByText('Question 1 of 2')).toBeVisible()
   })
 
-  test('AC4: last question shows "Back to Results" button that navigates to results', async ({ page }) => {
+  test('AC4: last question shows "Back to Results" button that navigates to results', async ({
+    page,
+  }) => {
     await setupReviewPage(page)
-    await page.goto(
-      `/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz/review/${ATTEMPT_ID}`,
-      { waitUntil: 'domcontentloaded' }
-    )
+    await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz/review/${ATTEMPT_ID}`, {
+      waitUntil: 'domcontentloaded',
+    })
 
     // Go to last question
     await page.getByRole('button', { name: /next/i }).click()

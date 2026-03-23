@@ -117,7 +117,7 @@ const noTopicQuiz = makeQuiz({
 /** Navigate to quiz page with seeded data and sidebar closed */
 async function navigateToQuiz(
   page: import('@playwright/test').Page,
-  quizToSeed: Record<string, unknown>,
+  quizToSeed: Record<string, unknown>
 ) {
   await page.addInitScript(() => {
     localStorage.setItem('knowlune-sidebar-v1', 'false')
@@ -241,9 +241,7 @@ test.describe('E15-S05: Performance Summary After Quiz', () => {
       await confirmSubmit(page)
 
       // Score should still show
-      await expect(
-        page.getByTestId('main-scroll-container').getByText('100%'),
-      ).toBeVisible()
+      await expect(page.getByTestId('main-scroll-container').getByText('100%')).toBeVisible()
 
       // Strengths/growth sections should be absent from DOM entirely
       await expect(page.getByRole('heading', { name: /your strengths/i })).toHaveCount(0)

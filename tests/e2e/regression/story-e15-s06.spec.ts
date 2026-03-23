@@ -10,7 +10,11 @@
  */
 import { test, expect } from '../support/fixtures'
 import { makeQuiz, makeQuestion, makeAttempt } from '../support/fixtures/factories/quiz-factory'
-import { seedQuizzes, seedQuizAttempts, clearIndexedDBStore } from '../support/helpers/indexeddb-seed'
+import {
+  seedQuizzes,
+  seedQuizAttempts,
+  clearIndexedDBStore,
+} from '../support/helpers/indexeddb-seed'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -73,7 +77,7 @@ const untimedQuiz = makeQuiz({
 async function navigateToQuiz(
   page: import('@playwright/test').Page,
   quiz: Record<string, unknown>,
-  priorAttempts: Record<string, unknown>[] = [],
+  priorAttempts: Record<string, unknown>[] = []
 ) {
   await page.addInitScript(() => {
     localStorage.setItem('knowlune-sidebar-v1', 'false')
@@ -122,7 +126,6 @@ test.afterEach(async ({ page }) => {
 // ---------------------------------------------------------------------------
 
 test.describe('E15-S06: Time-to-Completion Tracking', () => {
-
   test.describe('AC2+AC3: Timed quiz shows time-to-completion on results', () => {
     test('displays formatted time on results after timed quiz', async ({ page }) => {
       // Fix Date.now() at T_START so startQuiz captures this as startTime
@@ -174,11 +177,9 @@ test.describe('E15-S06: Time-to-Completion Tracking', () => {
 
       await page.clock.setFixedTime(T_START)
 
-      await navigateToQuiz(
-        page,
-        timedQuiz as unknown as Record<string, unknown>,
-        [priorAttempt as unknown as Record<string, unknown>]
-      )
+      await navigateToQuiz(page, timedQuiz as unknown as Record<string, unknown>, [
+        priorAttempt as unknown as Record<string, unknown>,
+      ])
       await startOrRetakeQuiz(page)
       await answerQuestions(page)
 
