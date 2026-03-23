@@ -32,6 +32,7 @@ Learn (5)               Review (4)                Track (5)
 | File | Change | Lines |
 |------|--------|-------|
 | `src/app/config/navigation.ts` | Restructure `navigationGroups` array | ~47-75 |
+| `src/app/config/__tests__/navigation.test.ts` | New unit test for navigation config structure | ~60 lines |
 | `tests/e2e/story-e23-s04.spec.ts` | New E2E test file for this story | ~80 lines |
 
 ## Files Verified (No Changes Needed)
@@ -43,6 +44,9 @@ Learn (5)               Review (4)                Track (5)
 | `src/app/components/figma/SearchCommandPalette.tsx` | Maintains its own `navigationPages` list — decoupled from sidebar groups. **Note**: Already uses different labels ("About" for Authors). No change required for this story, though syncing is a future improvement. | Lines 41-114 |
 | `tests/e2e/navigation.spec.ts` | Tests route navigation, not group labels — all routes unchanged | Full file |
 | `tests/support/helpers/navigation.ts` | Pure navigation helpers by route path — unaffected by group restructuring | Full file |
+| `tests/e2e/accessibility-navigation.spec.ts` | Tests `aria-current="page"` on active link — structural change doesn't affect this | Full file |
+| `tests/e2e/regression/story-e23-s03.spec.ts` | Tests "Authors" link visibility in nav — verified no reference to "Connect" group label | Full file |
+| `src/app/components/__tests__/NavLink.test.tsx` | Tests `getIsActive()` logic — function unchanged, tests unaffected | Full file |
 
 ## Implementation Steps
 
@@ -169,12 +173,82 @@ test.describe('E23-S04: Restructure Sidebar Navigation Groups', () => {
 - Tablet viewport (768px) for AC7
 - Selectors: group labels via text content, items via link names within nav landmark
 
-### Step 5: Verify Existing Tests Pass
+### Step 5: Add Unit Tests for Navigation Config (AC1-4)
+
+**File:** `src/app/config/__tests__/navigation.test.ts` (new)
+
+```typescript
+import { navigationGroups, getPrimaryNav, getOverflowNav } from '../navigation'
+
+describe('navigationGroups', () => {
+  it('has exactly 3 groups: Learn, Review, Track', () => {
+    expect(navigationGroups).toHaveLength(3)
+    expect(navigationGroups.map(g => g.label)).toEqual(['Learn', 'Review', 'Track'])
+  })
+
+  it('Learn group has 5 items in correct order', () => {
+    const learn = navigationGroups[0]
+    expect(learn.items.map(i => i.name)).toEqual([
+      'Overview', 'My Courses', 'Courses', 'Authors', 'Notes',
+    ])
+  })
+
+  it('Review group has 4 items in correct order', () => {
+    const review = navigationGroups[1]
+    expect(review.items.map(i => i.name)).toEqual([
+      'Learning Path', 'Knowledge Gaps', 'Review', 'Retention',
+    ])
+  })
+
+  it('Track group has 5 items in correct order', () => {
+    const track = navigationGroups[2]
+    expect(track.items.map(i => i.name)).toEqual([
+      'Challenges', 'Session History', 'Study Analytics', 'Quiz Analytics', 'AI Analytics',
+    ])
+  })
+
+  it('all items have unique navigation keys (path or path+tab)', () => {
+    const allItems = navigationGroups.flatMap(g => g.items)
+    const keys = allItems.map(i => i.tab ? `${i.path}?tab=${i.tab}` : i.path)
+    expect(new Set(keys).size).toBe(keys.length)
+  })
+
+  it('no "Connect" group exists', () => {
+    const labels = navigationGroups.map(g => g.label)
+    expect(labels).not.toContain('Connect')
+  })
+})
+
+describe('getPrimaryNav', () => {
+  it('returns 4 primary items for mobile bottom bar', () => {
+    const primary = getPrimaryNav()
+    expect(primary.map(i => i.name)).toEqual([
+      'Overview', 'My Courses', 'Courses', 'Notes',
+    ])
+  })
+})
+
+describe('getOverflowNav', () => {
+  it('returns remaining items including Authors', () => {
+    const overflow = getOverflowNav()
+    const names = overflow.map(i => i.name)
+    expect(names).toContain('Authors')
+    expect(names).toContain('Settings')
+    expect(names).toContain('Learning Path')
+    expect(names).not.toContain('Overview')
+  })
+})
+```
+
+**Why:** The `navigationGroups` config drives 3 UI surfaces (sidebar, collapsed sidebar, mobile bottom bar). A structural unit test prevents accidental reordering in future stories (E23-S05, E25-S08).
+
+### Step 6: Verify Existing Tests Pass
 
 Run all existing test suites to confirm no regressions:
-- `npm run test:unit` — 2151+ unit tests
-- Smoke E2E specs: `navigation.spec.ts`, `overview.spec.ts`, `courses.spec.ts`
-- E23 story specs: `story-e23-s01.spec.ts`, `story-e23-s02.spec.ts`, `story-e23-s03.spec.ts`
+- `npm run test:unit` — all unit tests including new navigation config tests
+- Smoke E2E specs: `navigation.spec.ts`, `accessibility-navigation.spec.ts`
+- E23 story specs: `story-e23-s02.spec.ts`, `story-e23-s03.spec.ts`
+- `NavLink.test.tsx` — `getIsActive()` logic unchanged
 
 ## Risk Assessment
 
@@ -197,3 +271,22 @@ Run all existing test suites to confirm no regressions:
 | "Review" label (not "Retain" or "Deepen") | "Review" is the clearest action verb matching what users do: review flashcards, review knowledge gaps, check retention | "Retain" — too passive; "Deepen" — too vague |
 | Keep Search palette decoupled | SearchCommandPalette has its own navigation list with different labels (e.g., "About" vs "Authors"). Syncing is out of scope for this story. | Refactor to import from navigation config — too large a scope |
 | No route changes | All routes stay the same (`/authors`, `/review`, `/retention`, etc.). Only group assignment and labels change. | Moving routes — unnecessary complexity |
+| Add unit tests for config | Navigation config drives 3 UI surfaces — structural unit test prevents regression in future stories | Skip unit tests — rejected because config is shared state worth protecting |
+
+## Codebase Impact Summary
+
+**Consumers of `navigationGroups` (3 total, all verified):**
+1. `Layout.tsx:108-131` — `SidebarContent` iterates groups generically via `.map()`. Handles any group count, renders labels and separators by index. **No change needed.**
+2. `BottomNav.tsx:6-10` — Uses `getPrimaryNav()` / `getOverflowNav()` which are driven by `primaryNavPaths`, not group labels. **No change needed.**
+3. `navigation.ts:84-88` — `navigationItems` flat list derived from `navigationGroups.flatMap()`. Automatically correct. **No change needed.**
+
+**Consumers of `getIsActive` (2 total, both verified):**
+1. `Layout.tsx:38` — `NavLink` component. **No change needed.**
+2. `BottomNav.tsx:17,32,78` — Active state highlighting. **No change needed.**
+
+**No existing E2E tests reference:**
+- The "Connect" group label (grep confirmed: zero matches)
+- Group order or group item counts
+- Any selector that would break from group reassignment
+
+**SearchCommandPalette is decoupled** — maintains its own `navigationPages` array (verified at `SearchCommandPalette.tsx:41-114`). Group restructuring does not affect search results.
