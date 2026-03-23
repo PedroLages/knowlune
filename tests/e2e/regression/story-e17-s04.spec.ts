@@ -4,6 +4,7 @@
  * AC1: 5+ attempts → discrimination analysis section visible with rpb values
  * AC2: < 5 attempts → "Need at least 5 attempts" message shown
  * AC3: High discrimination question shows "High discriminator" text
+ * AC4: Moderate discrimination question shows "Moderate discriminator" text
  * AC5: Low discrimination question shows "Low discriminator" text
  */
 import { test, expect } from '../../support/fixtures'
@@ -43,7 +44,7 @@ const quiz = makeQuiz({
 })
 
 // 5 attempts: q1 correct in last 3 (high scorers), wrong in first 2 (low scorers)
-// This yields high discrimination (rpb ≈ 0.894)
+// This yields high discrimination (rpb ≈ 0.894 > 0.3)
 const fiveAttempts = [
   makeAttempt({
     id: 'att1-e17s04',
@@ -94,6 +95,118 @@ const fiveAttempts = [
     completedAt: '2026-01-05T10:00:00.000Z',
     startedAt: '2026-01-05T10:00:00.000Z',
     answers: [{ questionId: 'q1-e17s04', userAnswer: '4', isCorrect: true, pointsEarned: 1, pointsPossible: 1 }],
+  }),
+]
+
+// 5 attempts yielding moderate discrimination (rpb ≈ 0.293, in 0.2–0.3 range):
+// group1 (correct) scores [4,5,6] mean=5.0, group0 (incorrect) scores [4,5] mean=4.5
+// SD ≈ 0.837, rpb ≈ 0.293 → Moderate discriminator
+const moderateAttempts = [
+  makeAttempt({
+    id: 'mod1-e17s04',
+    quizId: QUIZ_ID,
+    score: 4,
+    percentage: 40,
+    passed: false,
+    completedAt: '2026-01-01T10:00:00.000Z',
+    startedAt: '2026-01-01T10:00:00.000Z',
+    answers: [{ questionId: 'q1-e17s04', userAnswer: '3', isCorrect: false, pointsEarned: 0, pointsPossible: 1 }],
+  }),
+  makeAttempt({
+    id: 'mod2-e17s04',
+    quizId: QUIZ_ID,
+    score: 4,
+    percentage: 40,
+    passed: false,
+    completedAt: '2026-01-02T10:00:00.000Z',
+    startedAt: '2026-01-02T10:00:00.000Z',
+    answers: [{ questionId: 'q1-e17s04', userAnswer: '4', isCorrect: true, pointsEarned: 1, pointsPossible: 1 }],
+  }),
+  makeAttempt({
+    id: 'mod3-e17s04',
+    quizId: QUIZ_ID,
+    score: 5,
+    percentage: 50,
+    passed: false,
+    completedAt: '2026-01-03T10:00:00.000Z',
+    startedAt: '2026-01-03T10:00:00.000Z',
+    answers: [{ questionId: 'q1-e17s04', userAnswer: '3', isCorrect: false, pointsEarned: 0, pointsPossible: 1 }],
+  }),
+  makeAttempt({
+    id: 'mod4-e17s04',
+    quizId: QUIZ_ID,
+    score: 5,
+    percentage: 50,
+    passed: false,
+    completedAt: '2026-01-04T10:00:00.000Z',
+    startedAt: '2026-01-04T10:00:00.000Z',
+    answers: [{ questionId: 'q1-e17s04', userAnswer: '4', isCorrect: true, pointsEarned: 1, pointsPossible: 1 }],
+  }),
+  makeAttempt({
+    id: 'mod5-e17s04',
+    quizId: QUIZ_ID,
+    score: 6,
+    percentage: 60,
+    passed: false,
+    completedAt: '2026-01-05T10:00:00.000Z',
+    startedAt: '2026-01-05T10:00:00.000Z',
+    answers: [{ questionId: 'q1-e17s04', userAnswer: '4', isCorrect: true, pointsEarned: 1, pointsPossible: 1 }],
+  }),
+]
+
+// 5 attempts yielding low discrimination (rpb ≈ 0.193 < 0.2):
+// group1 (correct) scores [3,3], group0 (incorrect) scores [2,2,4]
+// mean1=3.0, mean0≈2.67, SD≈0.837, rpb≈0.193 → Low discriminator
+const lowAttempts = [
+  makeAttempt({
+    id: 'low1-e17s04',
+    quizId: QUIZ_ID,
+    score: 2,
+    percentage: 20,
+    passed: false,
+    completedAt: '2026-01-01T10:00:00.000Z',
+    startedAt: '2026-01-01T10:00:00.000Z',
+    answers: [{ questionId: 'q1-e17s04', userAnswer: '3', isCorrect: false, pointsEarned: 0, pointsPossible: 1 }],
+  }),
+  makeAttempt({
+    id: 'low2-e17s04',
+    quizId: QUIZ_ID,
+    score: 2,
+    percentage: 20,
+    passed: false,
+    completedAt: '2026-01-02T10:00:00.000Z',
+    startedAt: '2026-01-02T10:00:00.000Z',
+    answers: [{ questionId: 'q1-e17s04', userAnswer: '3', isCorrect: false, pointsEarned: 0, pointsPossible: 1 }],
+  }),
+  makeAttempt({
+    id: 'low3-e17s04',
+    quizId: QUIZ_ID,
+    score: 3,
+    percentage: 30,
+    passed: false,
+    completedAt: '2026-01-03T10:00:00.000Z',
+    startedAt: '2026-01-03T10:00:00.000Z',
+    answers: [{ questionId: 'q1-e17s04', userAnswer: '4', isCorrect: true, pointsEarned: 1, pointsPossible: 1 }],
+  }),
+  makeAttempt({
+    id: 'low4-e17s04',
+    quizId: QUIZ_ID,
+    score: 3,
+    percentage: 30,
+    passed: false,
+    completedAt: '2026-01-04T10:00:00.000Z',
+    startedAt: '2026-01-04T10:00:00.000Z',
+    answers: [{ questionId: 'q1-e17s04', userAnswer: '4', isCorrect: true, pointsEarned: 1, pointsPossible: 1 }],
+  }),
+  makeAttempt({
+    id: 'low5-e17s04',
+    quizId: QUIZ_ID,
+    score: 4,
+    percentage: 40,
+    passed: false,
+    completedAt: '2026-01-05T10:00:00.000Z',
+    startedAt: '2026-01-05T10:00:00.000Z',
+    answers: [{ questionId: 'q1-e17s04', userAnswer: '3', isCorrect: false, pointsEarned: 0, pointsPossible: 1 }],
   }),
 ]
 
@@ -169,6 +282,22 @@ test.describe('E17-S04: Discrimination Indices', () => {
     await expect(emptyMsg).toBeVisible()
     await expect(emptyMsg).toContainText('Need at least 5 attempts')
     // Full discrimination card should not be rendered
-    await expect(page.locator('[data-testid="discrimination-analysis"]')).not.toBeVisible()
+    await expect(page.locator('[data-testid="discrimination-analysis"]')).not.toBeAttached()
+  })
+
+  test('AC4: Moderate discriminator question shows correct interpretation', async ({ page }) => {
+    await navigateToResults(page, moderateAttempts)
+    const section = page.locator('[data-testid="discrimination-analysis"]')
+    await expect(section).toBeVisible()
+    // rpb ≈ 0.293 (0.2 ≤ rpb ≤ 0.3) → Moderate discriminator
+    await expect(section).toContainText('Moderate discriminator')
+  })
+
+  test('AC5: Low discriminator question shows correct interpretation', async ({ page }) => {
+    await navigateToResults(page, lowAttempts)
+    const section = page.locator('[data-testid="discrimination-analysis"]')
+    await expect(section).toBeVisible()
+    // rpb ≈ 0.193 (< 0.2) → Low discriminator
+    await expect(section).toContainText('Low discriminator')
   })
 })
