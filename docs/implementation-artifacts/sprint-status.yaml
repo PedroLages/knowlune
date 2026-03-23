@@ -359,7 +359,7 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 25: Author Management & New User Experience
   # ──────────────────────────────────────────────────
-  epic-25: backlog
+  epic-25: in-progress
   25-1-author-data-model-and-migration: backlog
   25-2-author-crud-dialog: backlog
   25-3-authors-page-from-indexeddb: backlog
@@ -367,7 +367,7 @@ development_status:
   25-5-smart-author-photo-detection-from-course-folder: backlog
   25-6-link-imported-courses-to-author-profiles: backlog
   25-7-import-focused-onboarding-overlay: backlog
-  25-8-progressive-sidebar-disclosure: backlog
+  25-8-progressive-sidebar-disclosure: in-progress
   25-9-empty-state-improvements: backlog
   epic-25-retrospective: optional
 
