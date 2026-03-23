@@ -57,6 +57,12 @@ const QuizResults = React.lazy(() =>
 const QuizReview = React.lazy(() =>
   import('./pages/QuizReview').then(m => ({ default: m.QuizReview }))
 )
+const CareerPaths = React.lazy(() =>
+  import('./pages/CareerPaths').then(m => ({ default: m.CareerPaths }))
+)
+const CareerPathDetail = React.lazy(() =>
+  import('./pages/CareerPathDetail').then(m => ({ default: m.CareerPathDetail }))
+)
 
 // Default exports work directly with React.lazy
 const MyClass = React.lazy(() => import('./pages/MyClass'))
@@ -166,6 +172,22 @@ export const router = createBrowserRouter([
         element: (
           <SuspensePage>
             <ImportedLessonPlayer />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'career-paths',
+        element: (
+          <SuspensePage>
+            <CareerPaths />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'career-paths/:pathId',
+        element: (
+          <SuspensePage>
+            <CareerPathDetail />
           </SuspensePage>
         ),
       },
