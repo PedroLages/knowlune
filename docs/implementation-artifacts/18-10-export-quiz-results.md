@@ -6,7 +6,7 @@ started: 2026-03-23
 completed:
 reviewed: in-progress
 review_started: 2026-03-23
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -86,15 +86,26 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+See `docs/reviews/design/design-review-2026-03-23-e18-s10.md`
+
+**High:** H1 — Button text contrast failure in dark mode (brand-outline: 2.76:1, needs 4.5:1); H2 — Export button 32px on mobile (need ≥44px)
+**Medium:** M1 — No flex-wrap on mobile layout; M2 — Disabled state shows no supporting text
+**Nits:** Download icon duplication; missing aria-busy during export
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+See `docs/reviews/code/code-review-2026-03-23-e18-s10.md`
+
+**BLOCKER:** CSV formula injection — `escapeCsv` doesn't sanitize `=`, `+`, `-`, `@` prefixes (quizExport.ts:93)
+**High:** Silent DB failure in count query shows misleading "no data" state; `Math.max(...scores)` spread on large arrays; non-deterministic `new Date()` in export filenames
+**Medium:** Missing focus indicator on disabled span; `waitForLoadState('networkidle')` fragile; `formatTimeSpent` lacks NaN/negative guard
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+See `docs/reviews/code/web-design-guidelines-2026-03-23-e18-s10.md`
+
+**High:** Redundant TooltipProvider wrapper; disabled-state reason not announced via aria-describedby
+**Medium:** No keydown guard on disabled span; flash of empty state on load; mr-2 overrides Button gap spacing
 
 ## Challenges and Lessons Learned
 
