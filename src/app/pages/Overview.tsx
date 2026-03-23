@@ -97,7 +97,7 @@ export function Overview() {
   const lessonSparkline = useMemo(() => getLast7DaysLessonCompletions(), [])
   const lessonsChange = useMemo(() => getWeeklyChange('lessons'), [])
   const chartData = useMemo(() => getActionsPerDay(14), [])
-  const skillProficiencyData = useMemo(() => getSkillProficiencyForOverview(), [])
+  const skillProficiencyData = useMemo(() => getSkillProficiencyForOverview(), [allCourses])
 
   // Memoize last watched calculation to prevent sorting on every render
   const lastWatchedEntry = useMemo(
