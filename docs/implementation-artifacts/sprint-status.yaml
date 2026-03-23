@@ -37,7 +37,7 @@
 # - Epic 7 gap coverage stories (7-8..7-11) deferred indefinitely — risk accepted for error-path edge cases
 
 generated: 2026-03-15
-last_updated: 2026-03-23  # E20-S03 started (365-day activity heatmap)
+last_updated: 2026-03-24  # E20-S03 done (365-day activity heatmap)
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -304,7 +304,7 @@ development_status:
   epic-20: in-progress
   20-1-career-paths-system: backlog
   20-2-flashcard-system-with-spaced-repetition: backlog
-  20-3-365-day-activity-heatmap: in-progress
+  20-3-365-day-activity-heatmap: done
   20-4-skill-proficiency-radar-chart: backlog
   epic-20-retrospective: optional
 
