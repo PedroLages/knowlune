@@ -62,6 +62,39 @@ vi.mock('@/lib/courseImport', () => ({
   importCourseFromFolder: vi.fn(),
 }))
 
+// Pre-seeded course mock data for Sample Courses section tests
+const mockPreSeededCourses = [
+  {
+    id: 'authority',
+    title: 'Authority',
+    shortTitle: 'Authority',
+    description: 'Influence',
+    category: 'influence-authority',
+    difficulty: 'intermediate',
+    totalLessons: 10,
+    totalVideos: 8,
+    totalPDFs: 2,
+    estimatedHours: 5,
+    tags: ['influence'],
+    coverImage: undefined,
+    modules: [],
+    isSequential: false,
+    basePath: '/courses/authority',
+    authorId: 'chase-hughes',
+  },
+]
+
+const courseStoreState = {
+  courses: [] as typeof mockPreSeededCourses,
+  isLoaded: false,
+  loadCourses: vi.fn(),
+}
+
+vi.mock('@/stores/useCourseStore', () => ({
+  useCourseStore: (selector: (state: typeof courseStoreState) => unknown) =>
+    selector(courseStoreState),
+}))
+
 vi.mock('@/lib/progress', () => ({
   getCourseCompletionPercent: () => 0,
   getProgress: () => ({
@@ -122,6 +155,8 @@ describe('Courses page', () => {
   beforeEach(() => {
     storeState.importedCourses = []
     storeState.loadImportedCourses = vi.fn()
+    courseStoreState.courses = []
+    localStorage.clear()
   })
 
   describe('empty state', () => {
@@ -311,6 +346,41 @@ describe('Courses page', () => {
       statusButtons.forEach(button => {
         expect(button).toHaveAttribute('aria-pressed', 'false')
       })
+    })
+  })
+
+  describe('sample courses section', () => {
+    beforeEach(() => {
+      courseStoreState.courses = mockPreSeededCourses
+    })
+
+    it('renders "Sample Courses (N)" heading with count', () => {
+      renderCourses()
+      expect(
+        screen.getByRole('heading', { name: /sample courses \(1\)/i })
+      ).toBeInTheDocument()
+    })
+
+    it('renders the sample-courses-section container', () => {
+      renderCourses()
+      expect(screen.getByTestId('sample-courses-section')).toBeInTheDocument()
+    })
+
+    it('sample courses grid is visible by default when no imported courses', () => {
+      renderCourses()
+      expect(screen.getByTestId('sample-courses-grid')).toBeInTheDocument()
+    })
+
+    it('toggle button has correct aria-label when expanded', () => {
+      renderCourses()
+      const toggle = screen.getByTestId('sample-courses-toggle')
+      expect(toggle).toHaveAttribute('aria-label', 'Collapse sample courses')
+    })
+
+    it('sample courses section is not shown when allCourses is empty', () => {
+      courseStoreState.courses = []
+      renderCourses()
+      expect(screen.queryByTestId('sample-courses-section')).not.toBeInTheDocument()
     })
   })
 })
