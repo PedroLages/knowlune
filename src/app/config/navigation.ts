@@ -13,6 +13,7 @@ import {
   BrainCircuit,
   Sparkles,
   Brain,
+  Layers,
   Settings as SettingsIcon,
   type LucideIcon,
 } from 'lucide-react'
@@ -64,6 +65,7 @@ export const navigationGroups: NavigationGroup[] = [
       { name: 'Knowledge Gaps', path: '/knowledge-gaps', icon: Brain },
       { name: 'Review', path: '/review', icon: RotateCcw },
       { name: 'Retention', path: '/retention', icon: ShieldCheck },
+      { name: 'Flashcards', path: '/flashcards', icon: Layers },
     ],
   },
   {

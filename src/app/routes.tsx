@@ -47,6 +47,9 @@ const ReviewQueue = React.lazy(() =>
 const RetentionDashboard = React.lazy(() =>
   import('./pages/RetentionDashboard').then(m => ({ default: m.RetentionDashboard }))
 )
+const Flashcards = React.lazy(() =>
+  import('./pages/Flashcards').then(m => ({ default: m.Flashcards }))
+)
 const InterleavedReview = React.lazy(() =>
   import('./pages/InterleavedReview').then(m => ({ default: m.InterleavedReview }))
 )
@@ -289,6 +292,14 @@ export const router = createBrowserRouter([
         element: (
           <SuspensePage>
             <RetentionDashboard />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'flashcards',
+        element: (
+          <SuspensePage>
+            <Flashcards />
           </SuspensePage>
         ),
       },
