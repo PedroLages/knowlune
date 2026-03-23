@@ -61,7 +61,10 @@ vi.mock('jspdf', () => {
   return { default: MockJsPDF }
 })
 
-vi.mock('jspdf-autotable', () => ({ default: vi.fn() }))
+// Mock jspdf-autotable using functional API (autoTable(doc, opts) → { finalY })
+vi.mock('jspdf-autotable', () => ({
+  default: vi.fn().mockReturnValue({ finalY: 100 }),
+}))
 
 const mockQuizzesToArray = db.quizzes.toArray as ReturnType<typeof vi.fn>
 const mockAttemptsWhere = db.quizAttempts.where as ReturnType<typeof vi.fn>

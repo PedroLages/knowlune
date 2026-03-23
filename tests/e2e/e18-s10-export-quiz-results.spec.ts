@@ -9,8 +9,20 @@
  */
 
 import { test, expect } from '@playwright/test'
-import { seedQuizzes, seedQuizAttempts } from '../support/helpers/seed-helpers'
+import { seedQuizzes, seedQuizAttempts, seedNotes } from '../support/helpers/seed-helpers'
 import { FIXED_DATE } from '../utils/test-time'
+
+// A minimal note that triggers hasActivity (studyNotes > 0) in Reports.tsx,
+// making the analytics section visible without any quiz attempts.
+const SEED_NOTE = {
+  id: 'note-export-test',
+  courseId: 'course-export-test',
+  videoId: 'lesson-export-test',
+  content: '<p>Test note for export</p>',
+  createdAt: FIXED_DATE,
+  updatedAt: FIXED_DATE,
+  tags: [],
+}
 
 // ---------------------------------------------------------------------------
 // Test data
@@ -86,7 +98,11 @@ const TEST_ATTEMPT = {
 
 test.describe('AC4 — disabled export when no quiz attempts', () => {
   test('export button is disabled with tooltip when no attempts', async ({ page }) => {
+    // Seed a study session so hasActivity=true and the Reports analytics section shows,
+    // but no quiz attempts so the export button stays disabled.
     await page.goto('/reports')
+    await seedStudySessions(page, [SEED_STUDY_SESSION])
+    await page.reload()
     await page.waitForLoadState('networkidle')
 
     // The export card should be visible

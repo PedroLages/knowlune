@@ -191,9 +191,11 @@ export async function exportQuizResultsPdf(): Promise<void> {
   const stats = calculateSummaryStats(bundles)
   const dateStr = new Date().toLocaleDateString('sv-SE')
 
-  // Lazy-load jsPDF and autotable to keep the initial bundle lean
+  // Lazy-load jsPDF and autotable to keep the initial bundle lean.
+  // Use functional API (autoTable(doc, opts)) instead of prototype augmentation
+  // to avoid timing issues with dynamic side-effect imports.
   const { default: jsPDF } = await import('jspdf')
-  await import('jspdf-autotable')
+  const { default: autoTable } = await import('jspdf-autotable')
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const pageWidth = doc.internal.pageSize.getWidth()
@@ -216,7 +218,11 @@ export async function exportQuizResultsPdf(): Promise<void> {
   doc.text('Summary Statistics', 14, y)
   y += 6
 
-  ;(doc as unknown as { autoTable: (opts: object) => void }).autoTable({
+  // autoTable() mutates doc and sets doc.lastAutoTable.finalY (jspdf-autotable functional API)
+  type DocWithAutoTable = typeof doc & { lastAutoTable: { finalY: number } }
+  const docAt = doc as DocWithAutoTable
+
+  autoTable(doc, {
     startY: y,
     head: [['Metric', 'Value']],
     body: [
@@ -229,8 +235,7 @@ export async function exportQuizResultsPdf(): Promise<void> {
     headStyles: { fillColor: [59, 130, 246] },
     margin: { left: 14, right: 14 },
   })
-
-  y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 12
+  y = (docAt.lastAutoTable?.finalY ?? y + 30) + 12
 
   // ── Per-Quiz Details ──
   for (const { quiz, attempts } of bundles) {
@@ -249,7 +254,7 @@ export async function exportQuizResultsPdf(): Promise<void> {
     const questionMap = new Map<string, Question>(quiz.questions.map(q => [q.id, q]))
 
     // Attempts summary table for this quiz
-    ;(doc as unknown as { autoTable: (opts: object) => void }).autoTable({
+    autoTable(doc, {
       startY: y,
       head: [['Date', 'Time', 'Score (%)', 'Pass/Fail', 'Points']],
       body: attempts.map(a => [
@@ -263,8 +268,7 @@ export async function exportQuizResultsPdf(): Promise<void> {
       headStyles: { fillColor: [100, 116, 139] },
       margin: { left: 14, right: 14 },
     })
-
-    y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4
+    y = (docAt.lastAutoTable?.finalY ?? y + 20) + 4
 
     // Per-question breakdown for the most recent attempt
     const latestAttempt = attempts[attempts.length - 1]
@@ -279,19 +283,20 @@ export async function exportQuizResultsPdf(): Promise<void> {
       doc.text('Latest attempt — question breakdown', 14, y)
       y += 4
 
-      const rows: (string | string[])[][] = []
+      const rows: string[][] = []
       for (const answer of latestAttempt.answers) {
         const question = questionMap.get(answer.questionId)
         if (!question) continue
+        const qText = stripHtml(question.text)
         rows.push([
-          stripHtml(question.text).substring(0, 60) + (stripHtml(question.text).length > 60 ? '…' : ''),
+          qText.substring(0, 60) + (qText.length > 60 ? '…' : ''),
           formatAnswer(answer.userAnswer),
           formatAnswer(question.correctAnswer),
-          answer.isCorrect ? '✓' : '✗',
+          answer.isCorrect ? 'Correct' : 'Incorrect',
         ])
       }
 
-      ;(doc as unknown as { autoTable: (opts: object) => void }).autoTable({
+      autoTable(doc, {
         startY: y,
         head: [['Question', 'Your Answer', 'Correct Answer', 'Result']],
         body: rows,
@@ -301,8 +306,7 @@ export async function exportQuizResultsPdf(): Promise<void> {
         margin: { left: 14, right: 14 },
         columnStyles: { 3: { halign: 'center', cellWidth: 16 } },
       })
-
-      y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10
+      y = (docAt.lastAutoTable?.finalY ?? y + 20) + 10
     } else {
       y += 8
     }
