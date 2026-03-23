@@ -92,7 +92,8 @@ async function navigateToQuiz(page: import('@playwright/test').Page) {
 }
 
 async function completeQuiz(page: import('@playwright/test').Page, answer = 'Paris') {
-  await page.getByRole('button', { name: /start quiz/i }).click()
+  // Handles both fresh start ("Start Quiz") and retake flow ("Retake Quiz")
+  await page.getByRole('button', { name: /start quiz|retake quiz/i }).click()
   await page.getByRole('radio', { name: answer }).click()
   await page.getByRole('button', { name: /submit quiz/i }).click()
   // Wait for results page to confirm submission succeeded
