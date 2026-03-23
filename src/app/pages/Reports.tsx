@@ -40,6 +40,7 @@ import { CategoryRadar } from '@/app/components/reports/CategoryRadar'
 import { SkillsRadar } from '@/app/components/reports/SkillsRadar'
 import { WeeklyGoalRing } from '@/app/components/reports/WeeklyGoalRing'
 import { RecentActivityTimeline } from '@/app/components/reports/RecentActivityTimeline'
+import { QuizExportCard } from '@/app/components/reports/QuizExportCard'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 
 /* ------------------------------------------------------------------ */
@@ -419,6 +420,11 @@ export default function Reports() {
                     )}
                   </CardContent>
                 </Card>
+              </motion.div>
+
+              {/* ── Row 5b: Quiz Export ── */}
+              <motion.div variants={fadeUp}>
+                <QuizExportCard />
               </motion.div>
 
               {/* ── Row 6: Recent Activity Timeline ── */}
