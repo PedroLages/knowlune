@@ -36,6 +36,12 @@ interface CareerPathState {
   isCourseCompleted: (courseId: string) => boolean
 }
 
+/** Guards against concurrent loadPaths() invocations racing on the initial seed. */
+let loadInFlight = false
+
+/** Guards against double-click creating two active enrollment records for the same path. */
+const enrollingPaths = new Set<string>()
+
 export const useCareerPathStore = create<CareerPathState>((set, get) => ({
   paths: [],
   enrollments: [],
@@ -44,12 +50,15 @@ export const useCareerPathStore = create<CareerPathState>((set, get) => ({
   error: null,
 
   loadPaths: async () => {
+    // Deduplicate concurrent calls — only one load should run at a time
+    if (get().isLoaded || loadInFlight) return
+    loadInFlight = true
+
     try {
-      // Seed curated paths if the table is empty (first run or new users)
-      const existingCount = await db.careerPaths.count()
-      if (existingCount === 0) {
-        await db.careerPaths.bulkAdd(CURATED_CAREER_PATHS)
-      }
+      // bulkPut is idempotent: safe to call on every first load without a count() check,
+      // and avoids a TOCTOU race where two concurrent calls both see count()===0 and
+      // both attempt bulkAdd(), causing a ConstraintError on the second invocation.
+      await db.careerPaths.bulkPut(CURATED_CAREER_PATHS)
 
       const [paths, enrollments] = await Promise.all([
         db.careerPaths.toArray(),
@@ -67,11 +76,14 @@ export const useCareerPathStore = create<CareerPathState>((set, get) => ({
         .refreshCourseCompletion(uniqueIds)
         .catch(err => {
           console.error('[CareerPathStore] Failed to refresh course completion:', err)
+          toast.warning('Progress data may be outdated — please reload.')
         })
     } catch (error) {
       console.error('[CareerPathStore] Failed to load career paths:', error)
       set({ error: 'Failed to load career paths', isLoaded: true })
       toast.error('Failed to load career paths')
+    } finally {
+      loadInFlight = false
     }
   },
 
@@ -79,7 +91,8 @@ export const useCareerPathStore = create<CareerPathState>((set, get) => ({
     if (courseIds.length === 0) return
 
     try {
-      const cache: Record<string, boolean> = { ...get().courseCompletionCache }
+      // Collect updates separately so concurrent calls merge rather than overwrite
+      const updates: Record<string, boolean> = {}
 
       await Promise.all(
         courseIds.map(async courseId => {
@@ -91,69 +104,84 @@ export const useCareerPathStore = create<CareerPathState>((set, get) => ({
 
           if (progressRecords.length === 0) {
             // No progress records yet — not started
-            cache[courseId] = false
+            updates[courseId] = false
             return
           }
 
           // Course is completed when ALL tracked items have status 'completed'
           const allCompleted = progressRecords.every(r => r.status === 'completed')
-          cache[courseId] = allCompleted
+          updates[courseId] = allCompleted
 
           // For imported courses: also check importedCourse.status field
           if (!allCompleted) {
             const imported = await db.importedCourses.get(courseId)
             if (imported?.status === 'completed') {
-              cache[courseId] = true
+              updates[courseId] = true
             }
           }
         })
       )
 
-      set({ courseCompletionCache: cache })
+      // Merge into existing cache so concurrent refreshCourseCompletion calls don't
+      // overwrite each other's results (each call computes only its own courseIds)
+      set(state => ({ courseCompletionCache: { ...state.courseCompletionCache, ...updates } }))
     } catch (error) {
       console.error('[CareerPathStore] Failed to compute course completion:', error)
+      toast.warning('Progress data may be outdated — please reload.')
     }
   },
 
   enrollInPath: async (pathId: string) => {
-    const { enrollments } = get()
-    const existing = enrollments.find(e => e.pathId === pathId)
+    // Prevent rapid double-clicks from creating two active enrollment records
+    if (enrollingPaths.has(pathId)) return
+    enrollingPaths.add(pathId)
 
-    // Re-activate a dropped enrollment instead of creating a duplicate
-    if (existing && existing.status === 'dropped') {
-      const updated: PathEnrollment = { ...existing, status: 'active' as PathEnrollmentStatus }
+    try {
+      const { enrollments } = get()
+      const existing = enrollments.find(e => e.pathId === pathId)
+
+      // Re-activate a dropped enrollment instead of creating a duplicate
+      if (existing && existing.status === 'dropped') {
+        const updated: PathEnrollment = { ...existing, status: 'active' as PathEnrollmentStatus }
+        try {
+          await persistWithRetry(async () => {
+            await db.pathEnrollments.put(updated)
+          })
+          set(state => ({
+            enrollments: state.enrollments.map(e => (e.id === existing.id ? updated : e)),
+          }))
+        } catch (error) {
+          console.error('[CareerPathStore] Failed to re-activate enrollment:', error)
+          toast.error('Failed to enroll in path')
+          throw error
+        }
+        return
+      }
+
+      if (existing) return // Already enrolled
+
+      const enrollment: PathEnrollment = {
+        id: crypto.randomUUID(),
+        pathId,
+        enrolledAt: new Date().toISOString(),
+        status: 'active',
+      }
+
       try {
         await persistWithRetry(async () => {
-          await db.pathEnrollments.put(updated)
+          await db.pathEnrollments.add(enrollment)
         })
-        set({ enrollments: enrollments.map(e => (e.id === existing.id ? updated : e)) })
+        // Use state callback to read the latest enrollments at write time, preventing
+        // stale-closure overwrites when concurrent store mutations occur during the await
+        set(state => ({ enrollments: [...state.enrollments, enrollment] }))
+        toast.success('Enrolled! Your progress will be tracked automatically.')
       } catch (error) {
-        console.error('[CareerPathStore] Failed to re-activate enrollment:', error)
+        console.error('[CareerPathStore] Failed to enroll in path:', error)
         toast.error('Failed to enroll in path')
         throw error
       }
-      return
-    }
-
-    if (existing) return // Already enrolled
-
-    const enrollment: PathEnrollment = {
-      id: crypto.randomUUID(),
-      pathId,
-      enrolledAt: new Date().toISOString(),
-      status: 'active',
-    }
-
-    try {
-      await persistWithRetry(async () => {
-        await db.pathEnrollments.add(enrollment)
-      })
-      set({ enrollments: [...enrollments, enrollment] })
-      toast.success('Enrolled! Your progress will be tracked automatically.')
-    } catch (error) {
-      console.error('[CareerPathStore] Failed to enroll in path:', error)
-      toast.error('Failed to enroll in path')
-      throw error
+    } finally {
+      enrollingPaths.delete(pathId)
     }
   },
 
@@ -168,7 +196,9 @@ export const useCareerPathStore = create<CareerPathState>((set, get) => ({
       await persistWithRetry(async () => {
         await db.pathEnrollments.put(updated)
       })
-      set({ enrollments: enrollments.map(e => (e.id === enrollment.id ? updated : e)) })
+      set(state => ({
+        enrollments: state.enrollments.map(e => (e.id === enrollment.id ? updated : e)),
+      }))
       toast.success('You have left this path.')
     } catch (error) {
       console.error('[CareerPathStore] Failed to drop path:', error)

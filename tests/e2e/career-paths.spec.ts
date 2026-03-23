@@ -63,7 +63,7 @@ test.describe('Career Paths list page (AC1)', () => {
     const firstCard = getPathCards(page).first()
     // Both metadata items are present (look for "courses" and "h" text patterns)
     await expect(firstCard.getByText(/courses/)).toBeVisible()
-    await expect(firstCard.getByText(/h$/)).toBeVisible()
+    await expect(firstCard.getByText(/^\d+h$/)).toBeVisible()
   })
 })
 
@@ -91,7 +91,9 @@ test.describe('Career Path detail page (AC2)', () => {
     await goToCareerPaths(page)
     await getPathCards(page).first().locator('a').first().click()
     await page.waitForLoadState('networkidle')
-    const stageLabels = page.getByText(/^Stage \d/)
+    const stageLabels = page
+      .getByRole('list', { name: 'Learning stages' })
+      .getByText(/^Stage \d/)
     await expect(stageLabels.first()).toBeVisible()
     const count = await stageLabels.count()
     expect(count).toBeGreaterThanOrEqual(2)
@@ -166,9 +168,7 @@ test.describe('Progress tracking (AC4)', () => {
 
   test('enrolled path shows progress bar on list page', async ({ page }) => {
     await goToCareerPaths(page)
-    const firstLink = getPathCards(page).first().locator('a').first()
-    const href = await firstLink.getAttribute('href')
-    await firstLink.click()
+    await getPathCards(page).first().locator('a').first().click()
     await page.waitForLoadState('networkidle')
 
     await page.getByTestId('enroll-button').click()
@@ -181,7 +181,6 @@ test.describe('Progress tracking (AC4)', () => {
     // The progress bar should be present (aria-label contains "progress")
     const pathCard = getPathCards(page).first()
     await expect(pathCard.getByRole('progressbar')).toBeVisible()
-    void href // used above
   })
 })
 
@@ -213,12 +212,23 @@ test.describe('Stage prerequisites (AC5)', () => {
     await getPathCards(page).first().locator('a').first().click()
     await page.waitForLoadState('networkidle')
 
-    const stages = page.getByRole('listitem').filter({ has: page.getByText(/^Stage \d/) })
+    const stagesList = page.getByRole('list', { name: 'Learning stages' })
+    const stages = stagesList.getByRole('listitem').filter({ has: page.getByText(/^Stage \d/) })
     const secondStage = stages.nth(1)
 
     // Card for stage 2 should have opacity styling (locked state)
     const cardClass = await secondStage.locator('[class*="opacity"]').first().getAttribute('class')
     expect(cardClass).toContain('opacity')
+  })
+
+  test('locked stage course tiles have no navigation links', async ({ page }) => {
+    await goToCareerPaths(page)
+    await getPathCards(page).first().locator('a').first().click()
+    await page.waitForLoadState('networkidle')
+
+    // Stage 2 is locked — its course list should contain no navigable links
+    const stage2CourseList = page.getByRole('list', { name: /Courses in Stage 2/ })
+    await expect(stage2CourseList.getByRole('link')).toHaveCount(0)
   })
 })
 

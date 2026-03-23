@@ -121,7 +121,7 @@ function PathHeader({
       {/* Enroll / Drop CTA */}
       <div className="flex gap-3">
         {isEnrolled ? (
-          <Button variant="outline" size="sm" onClick={onDrop}>
+          <Button variant="outline" onClick={onDrop}>
             Leave path
           </Button>
         ) : (
@@ -236,7 +236,7 @@ function StageCard({ path, stage, stageIndex, isUnlocked }: StageCardProps) {
             </div>
             <div className="text-right text-xs text-muted-foreground shrink-0">
               <div>
-                {progress.completedCourses}/{progress.totalCourses}
+                {progress.completedCourses}/{progress.totalCourses} courses
               </div>
               <div>{stage.estimatedHours}h</div>
             </div>
@@ -339,7 +339,7 @@ export function CareerPathDetail() {
     try {
       await enrollInPath(path.id)
     } catch {
-      // Toast already shown by store
+      // silent-catch-ok — toast already shown by store
     }
   }
 
@@ -347,7 +347,7 @@ export function CareerPathDetail() {
     try {
       await dropPath(path.id)
     } catch {
-      // Toast already shown by store
+      // silent-catch-ok — toast already shown by store
     }
   }
 
