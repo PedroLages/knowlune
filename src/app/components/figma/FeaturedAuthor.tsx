@@ -6,14 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { Button } from '@/app/components/ui/button'
 import type { Author } from '@/data/types'
 import { getAuthorStats, getAvatarSrc } from '@/lib/authors'
-
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
-}
+import { getInitials } from '@/lib/avatarUpload'
 
 function StatCard({
   icon: Icon,
@@ -25,7 +18,7 @@ function StatCard({
   label: string
 }) {
   return (
-    <div className="flex flex-col items-center gap-1 rounded-2xl bg-card p-4 shadow-sm">
+    <div className="flex flex-col items-center gap-1 rounded-2xl bg-muted p-4 shadow-sm">
       <Icon className="size-5 text-brand mb-1" aria-hidden="true" />
       <span className="text-xl font-bold tabular-nums">{value}</span>
       <span className="text-xs text-muted-foreground">{label}</span>
@@ -37,7 +30,7 @@ export function FeaturedAuthor({ author }: { author: Author }) {
   const stats = getAuthorStats(author)
 
   return (
-    <Card className="rounded-3xl border-0 shadow-sm" data-testid="featured-author">
+    <Card className="rounded-[24px] border-0 shadow-sm" data-testid="featured-author">
       <CardContent className="p-6 sm:p-8">
         {/* Hero section: avatar + info */}
         <div className="flex flex-col sm:flex-row gap-6">
@@ -56,18 +49,23 @@ export function FeaturedAuthor({ author }: { author: Author }) {
 
             {/* Featured Quote */}
             {author.featuredQuote && (
-              <blockquote className="text-sm italic text-muted-foreground border-l-2 border-brand pl-3 mt-3">
+              <blockquote className="text-sm italic text-left text-muted-foreground sm:border-l-2 sm:border-brand sm:pl-3 mt-3">
                 &ldquo;{author.featuredQuote}&rdquo;
               </blockquote>
             )}
 
             {/* Specialty Badges */}
             <div className="flex flex-wrap justify-center sm:justify-start gap-1.5 mt-3">
-              {author.specialties.map(specialty => (
+              {author.specialties.slice(0, 5).map(specialty => (
                 <Badge key={specialty} variant="secondary" className="text-xs">
                   {specialty}
                 </Badge>
               ))}
+              {author.specialties.length > 5 && (
+                <Badge variant="secondary" className="text-xs">
+                  +{author.specialties.length - 5}
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -85,7 +83,7 @@ export function FeaturedAuthor({ author }: { author: Author }) {
         </div>
 
         {/* Short bio + CTA */}
-        <p className="text-muted-foreground leading-relaxed mt-6">{author.shortBio}</p>
+        <p className="max-w-prose text-muted-foreground leading-relaxed mt-6">{author.shortBio}</p>
 
         <div className="flex justify-end mt-4">
           <Button variant="brand" asChild>

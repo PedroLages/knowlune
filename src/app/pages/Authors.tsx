@@ -6,16 +6,22 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { allAuthors } from '@/data/authors'
 import { getAuthorStats, getAvatarSrc } from '@/lib/authors'
 import { FeaturedAuthor } from '@/app/components/figma/FeaturedAuthor'
-
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
-}
+import { getInitials } from '@/lib/avatarUpload'
 
 export function Authors() {
+  if (allAuthors.length === 0) {
+    return (
+      <div>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold mb-2">Our Authors</h1>
+        </div>
+        <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
+          <p className="text-lg">No authors available yet.</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div>
       {/* Page Header */}

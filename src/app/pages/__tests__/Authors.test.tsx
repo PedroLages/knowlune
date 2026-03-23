@@ -16,15 +16,19 @@ vi.mock('@/data/authors', () => ({
 }))
 
 // Mock getAuthorStats and getAvatarSrc — FeaturedAuthor calls these
-vi.mock('@/lib/authors', () => ({
-  getAuthorStats: () => ({
+const mockGetAuthorStats = vi.hoisted(() =>
+  vi.fn(() => ({
     courses: [],
     courseCount: 5,
     totalLessons: 120,
     totalHours: 40,
     totalVideos: 100,
     categories: ['general'],
-  }),
+  }))
+)
+
+vi.mock('@/lib/authors', () => ({
+  getAuthorStats: mockGetAuthorStats,
   getAvatarSrc: (basePath: string) => ({ src: `${basePath}-96w.jpg` }),
 }))
 
@@ -55,6 +59,23 @@ function renderAuthors() {
 describe('Authors page', () => {
   beforeEach(() => {
     mockState.authors = []
+    mockGetAuthorStats.mockReturnValue({
+      courses: [],
+      courseCount: 5,
+      totalLessons: 120,
+      totalHours: 40,
+      totalVideos: 100,
+      categories: ['general'],
+    })
+  })
+
+  describe('no authors — empty state', () => {
+    it('renders empty state message without featured layout or grid', () => {
+      renderAuthors()
+      expect(screen.getByText(/no authors available/i)).toBeInTheDocument()
+      expect(screen.queryByTestId('featured-author')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('author-grid')).not.toBeInTheDocument()
+    })
   })
 
   describe('single author — featured layout', () => {
@@ -75,6 +96,29 @@ describe('Authors page', () => {
       expect(screen.getByText('Short bio text.')).toBeInTheDocument()
     })
 
+    it('shows stat values from getAuthorStats', () => {
+      renderAuthors()
+      const card = screen.getByTestId('featured-author')
+      expect(card).toHaveTextContent('5')
+      expect(card).toHaveTextContent('40h')
+      expect(card).toHaveTextContent('120')
+      expect(card).toHaveTextContent('10y')
+    })
+
+    it('shows singular Course label when courseCount is 1', () => {
+      mockGetAuthorStats.mockReturnValue({
+        courses: [],
+        courseCount: 1,
+        totalLessons: 10,
+        totalHours: 5,
+        totalVideos: 8,
+        categories: ['general'],
+      })
+      renderAuthors()
+      expect(screen.getByText('Course')).toBeInTheDocument()
+      expect(screen.queryByText('Courses')).not.toBeInTheDocument()
+    })
+
     it('shows View Full Profile link pointing to author profile', () => {
       renderAuthors()
       const link = screen.getByRole('link', { name: /view full profile/i })
@@ -85,6 +129,17 @@ describe('Authors page', () => {
       renderAuthors()
       expect(screen.getByText('Skill A')).toBeInTheDocument()
       expect(screen.getByText('Skill B')).toBeInTheDocument()
+    })
+
+    it('does not render blockquote when featuredQuote is absent', () => {
+      renderAuthors()
+      expect(screen.queryByRole('blockquote')).not.toBeInTheDocument()
+    })
+
+    it('renders blockquote when featuredQuote is set', () => {
+      mockState.authors = [makeAuthor({ featuredQuote: 'Learning is a lifelong journey.' })]
+      renderAuthors()
+      expect(screen.getByText(/Learning is a lifelong journey/i)).toBeInTheDocument()
     })
 
     it('displays singular subtitle text', () => {
@@ -111,6 +166,14 @@ describe('Authors page', () => {
       renderAuthors()
       expect(screen.getByText('Author One')).toBeInTheDocument()
       expect(screen.getByText('Author Two')).toBeInTheDocument()
+    })
+
+    it('each grid card links to the correct author profile', () => {
+      renderAuthors()
+      const link1 = screen.getByRole('link', { name: /Author One/i })
+      const link2 = screen.getByRole('link', { name: /Author Two/i })
+      expect(link1).toHaveAttribute('href', '/authors/author-1')
+      expect(link2).toHaveAttribute('href', '/authors/author-2')
     })
 
     it('displays plural subtitle text', () => {
