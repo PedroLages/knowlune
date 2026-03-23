@@ -98,4 +98,14 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **jsPDF bundle size**: Adding jsPDF introduced a ~391 kB minified chunk (`jspdf.es.min`). This is expected for PDF generation but worth noting — the export feature lazy-loads correctly via the existing Vite code-split setup so it doesn't affect initial load.
+
+- **AC4 test — `hasActivity` surface condition**: The disabled-button test requires the Reports analytics section to be visible (`hasActivity=true`). Seeding a `StudySession` does NOT trigger this (study sessions aren't included in the `hasActivity` check). The correct approach is `seedNotes` since `studyNotes > 0` satisfies the condition. The `SEED_NOTE` constant was already defined at the top of the spec for this purpose, but the test body incorrectly referenced the non-existent `seedStudySessions` + `SEED_STUDY_SESSION`. Fixed during review.
+
+- **Radix tooltip strict mode violation**: Radix UI renders `TooltipContent` twice in the DOM (once hidden for positioning calculation, once visible). `page.getByText('...')` resolves to 2 elements and fails strict mode. Fix: use `.first()` to target the initially visible element, or scope to the tooltip portal via a test ID on `TooltipContent`.
+
+- **CSV export bundles as ZIP**: The implementation wraps both CSV files (`quiz-attempts.csv`, `quiz-questions.csv`) in a JSZip archive for a cleaner single-download UX. The E2E test validates the zip structure by reading the downloaded file with `JSZip` in Node — a useful pattern for validating file content beyond just filename/extension.
+
+- **Per-question breakdown in CSV**: The AC required per-question data (question text, selected answer, correct answer, result) in a separate CSV sheet. Splitting into two CSV files (`attempts` + `questions`) within one zip was cleaner than cramming all columns into a single wide CSV — also avoids row-count mismatches between attempt-level and question-level data.
+
+- **`aria-disabled` vs `disabled` for tooltip triggering**: The export button uses `aria-disabled` (not the native HTML `disabled` attribute) because disabled buttons suppress mouse events, preventing the Radix tooltip from firing. Wrapping in a `span[tabindex="0"]` allows hover events to propagate for the tooltip while visually and semantically communicating the disabled state.
