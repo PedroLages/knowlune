@@ -6,7 +6,7 @@ started: 2026-03-23
 completed:
 reviewed: in-progress
 review_started: 2026-03-23
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
 burn_in_validated: false
 ---
 
@@ -133,4 +133,19 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+**useSearchParams() breaks Router-less unit tests:**
+- Adding `useSearchParams()` to `Reports.tsx` for URL-based tab state caused all 4 existing Reports unit tests to fail with "useLocation() may be used only in the context of a Router component".
+- Fix: wrap `render(<Reports />)` with `<MemoryRouter>` in all affected tests. Also mock the new `QuizAnalyticsDashboard` component so it doesn't trigger its own async side-effects in the test environment.
+- Pattern: any time a page component gains a React Router hook (useSearchParams, useNavigate, useLocation), its unit tests must be updated with a Router wrapper.
+
+**URL-driven tab state vs local state trade-off:**
+- Migrating the Reports tab from `defaultValue` (uncontrolled) to `value + onValueChange + useSearchParams` (URL-controlled) means bookmarkable, shareable tab links but requires a Router in every rendering context. The previous `defaultValue="study"` required no Router context. This is a meaningful DX trade-off worth evaluating early.
+
+**calculateQuizAnalytics() has no dedicated unit tests:**
+- The new `calculateQuizAnalytics()` function in `analytics.ts` was not covered by unit tests at review time. The existing `analytics.test.ts` covers other exports but not the new quiz analytics summary function. This should be addressed — the function has non-trivial aggregation logic (grouping by quizId, computing averages, sorting top/bottom performers) that benefits from isolated test coverage.
+
+**Partial story implementation pattern:**
+- Tasks 4 (QuizDetailAnalytics page + route) and 5 (E2E tests) were not implemented in this branch. This means AC3 (quiz detail navigation) and test coverage (AC1-4) remain unverified. Story task checkboxes were left unchecked, which accurately reflects actual state — a good habit.
+
+**Design token usage for score colouring:**
+- The `scoreColor()` helper maps percentage ranges to `text-success`, `text-warning`, `text-destructive` design tokens rather than hardcoded Tailwind colors. This pattern should be reused anywhere conditional score-based colouring is needed.
