@@ -50,7 +50,7 @@ test.describe('Search command palette', () => {
     await navigateAndWait(page, '/')
 
     // Open command palette via keyboard shortcut
-    const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
+    const modifier = process.platform === 'darwin' ? 'Meta' : 'Control'
     await page.keyboard.press(`${modifier}+k`)
 
     const palette = page.getByRole('dialog')
