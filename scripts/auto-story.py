@@ -88,6 +88,7 @@ class RunConfig:
     epic_only: str | None = None  # e.g., "15" — skip stories, run only epic finish
     epic_phases: list[str] | None = None  # e.g., ["retrospective"] — run only specific phases
     skip_epics: list[int] | None = None  # e.g., [19] — skip stories from these epics in --next
+    legacy_mode: bool = False  # disable all optimizations (per-phase models, effort, session chaining)
 
 
 @dataclass
@@ -146,6 +147,29 @@ class EpicFinishResult:
     session_id: str | None = None
 
 
+VALID_EFFORTS = ("low", "medium", "high", "max")
+VALID_MODELS = ("sonnet", "opus", "opusplan")
+
+
+@dataclass
+class PhaseConfig:
+    """Per-phase SDK configuration for model, effort, session chaining, and tools."""
+    model: str | None = None
+    effort: str | None = None
+    fallback_model: str | None = None
+    resume_session_id: str | None = None
+    fork_session: bool = False
+    append_context: str = ""
+    needs_agents: bool = True
+    needs_playwright: bool = True
+
+    def __post_init__(self):
+        if self.effort and self.effort not in VALID_EFFORTS:
+            raise ValueError(f"Invalid effort '{self.effort}', must be one of {VALID_EFFORTS}")
+        if self.model and self.model not in VALID_MODELS:
+            raise ValueError(f"Invalid model '{self.model}', must be one of {VALID_MODELS}")
+
+
 class StoryError(Exception):
     pass
 
@@ -202,6 +226,10 @@ def parse_args() -> RunConfig:
         "--skip-epic", nargs="+", type=int, metavar="N", dest="skip_epics",
         help="Skip stories from these epic numbers in --next discovery (e.g., --skip-epic 19)",
     )
+    parser.add_argument(
+        "--legacy-mode", action="store_true",
+        help="Disable all optimizations (no per-phase models, effort, session chaining)",
+    )
 
     args = parser.parse_args()
 
@@ -236,6 +264,7 @@ def parse_args() -> RunConfig:
         epic_only=args.epic_only,
         epic_phases=args.epic_phases,
         skip_epics=args.skip_epics,
+        legacy_mode=args.legacy_mode,
     )
 
 
@@ -491,8 +520,11 @@ IMPORTANT: Run agents 9, 10, and 11 in PARALLEL for efficiency.
 14. Update story file frontmatter: review_gates_passed list, reviewed status
 
 End with exactly one of:
-- VERDICT: PASS — if no blockers
-- VERDICT: BLOCKED — N blocker(s), M high(s) — if blockers exist
+- VERDICT: PASS — if no [Blocker] findings
+- VERDICT: BLOCKED — N blocker(s) — ONLY if [Blocker] findings exist
+
+IMPORTANT: Only [Blocker] severity triggers BLOCKED. [High], [Medium], and [Nit]
+are informational — report them but they do NOT block shipping.
 """
 
 FIX_PROMPT = """
@@ -500,8 +532,11 @@ The review found issues that must be fixed before shipping story {story_id}.
 
 Read the review reports you just generated at docs/reviews/code/ and docs/reviews/design/ (if design review ran).
 
-Fix ALL [Blocker] findings — these are mandatory.
-Fix ALL [High] findings — these should be fixed.
+Fix ALL findings by severity priority:
+1. [Blocker] — mandatory, these block shipping
+2. [High] — fix these, they are important quality issues
+3. [Medium] — fix if straightforward
+4. [Nit] — fix if trivial (one-line changes)
 
 For each fix:
 1. Open the file at the exact line referenced
@@ -518,9 +553,10 @@ RE_REVIEW_PROMPT = """
 Fixes have been applied for story {story_id}. Re-validate:
 
 1. Re-run pre-checks: build, lint, typecheck, format, unit tests, e2e tests
-2. For each previously-reported [Blocker] and [High] finding, verify the fix at the exact file:line
-3. Do NOT re-run the full code-review or code-review-testing agents (already completed)
-4. Check if any fix introduced new issues
+2. For each previously-reported [Blocker] finding, verify the fix at the exact file:line
+3. [High], [Medium], and [Nit] findings are informational — do NOT re-check them
+4. Do NOT re-run the full code-review or code-review-testing agents (already completed)
+5. Check if any fix introduced new issues
 
 Output exactly one of:
 - VERDICT: PASS — all blockers resolved, pre-checks pass
@@ -691,35 +727,42 @@ def format_epic_prompt(template: str, epic_num: str, story_count: int = 0) -> st
 
 
 def make_options(
-    max_turns: int, max_budget: float, autonomous: bool
+    max_turns: int, max_budget: float, autonomous: bool,
+    phase: PhaseConfig | None = None,
 ) -> ClaudeAgentOptions:
-    """Build ClaudeAgentOptions with agent registration and scoped permissions."""
+    """Build ClaudeAgentOptions with agent registration and scoped permissions.
+
+    When phase is provided, applies per-phase model, effort, session chaining,
+    and tool overrides. When phase is None, preserves original behavior.
+    """
+    pc = phase or PhaseConfig()
+
     agents: dict[str, AgentDefinition] = {}
+    if pc.needs_agents:
+        # Register code-review agents if configs exist
+        cr_path = AGENTS_DIR / "code-review.md"
+        crt_path = AGENTS_DIR / "code-review-testing.md"
 
-    # Register code-review agents if configs exist
-    cr_path = AGENTS_DIR / "code-review.md"
-    crt_path = AGENTS_DIR / "code-review-testing.md"
+        if cr_path.exists():
+            agents["code-review"] = AgentDefinition(
+                description="Adversarial code reviewer. Find 3-10 real issues per review.",
+                prompt=cr_path.read_text(),
+                model="opus",
+            )
+        if crt_path.exists():
+            agents["code-review-testing"] = AgentDefinition(
+                description="Test coverage specialist. Verify every AC has a test.",
+                prompt=crt_path.read_text(),
+                model="sonnet",
+            )
 
-    if cr_path.exists():
-        agents["code-review"] = AgentDefinition(
-            description="Adversarial code reviewer. Find 3-10 real issues per review.",
-            prompt=cr_path.read_text(),
-            model="opus",
-        )
-    if crt_path.exists():
-        agents["code-review-testing"] = AgentDefinition(
-            description="Test coverage specialist. Verify every AC has a test.",
-            prompt=crt_path.read_text(),
-            model="sonnet",
-        )
-
-    dr_path = AGENTS_DIR / "design-review.md"
-    if dr_path.exists():
-        agents["design-review"] = AgentDefinition(
-            description="Elite UI/UX design reviewer using Playwright MCP to test the live app at multiple viewports.",
-            prompt=dr_path.read_text(),
-            model="sonnet",
-        )
+        dr_path = AGENTS_DIR / "design-review.md"
+        if dr_path.exists():
+            agents["design-review"] = AgentDefinition(
+                description="Elite UI/UX design reviewer using Playwright MCP to test the live app at multiple viewports.",
+                prompt=dr_path.read_text(),
+                model="sonnet",
+            )
 
     # Core tools needed for story development
     allowed = [
@@ -732,12 +775,12 @@ def make_options(
     ]
 
     # Headless Playwright MCP for design review (no browser window pops up)
-    mcp_servers: dict[str, McpStdioServerConfig] = {
-        "playwright": McpStdioServerConfig(
+    mcp_servers: dict[str, McpStdioServerConfig] = {}
+    if pc.needs_playwright:
+        mcp_servers["playwright"] = McpStdioServerConfig(
             command="npx",
             args=["@playwright/mcp@latest", "--headless"],
-        ),
-    }
+        )
 
     opts: dict[str, Any] = dict(
         setting_sources=["user", "project", "local"],
@@ -748,9 +791,26 @@ def make_options(
         system_prompt={"type": "preset", "preset": "claude_code"},
         max_turns=max_turns,
         cwd=str(PROJECT_DIR),
-        mcp_servers=mcp_servers,
+        mcp_servers=mcp_servers if mcp_servers else None,
         max_buffer_size=10 * 1024 * 1024,  # 10MB buffer (Epic 9B AI features exceed 1MB default)
     )
+
+    # Apply per-phase overrides
+    if pc.model:
+        opts["model"] = pc.model
+    if pc.effort:
+        opts["effort"] = pc.effort
+    if pc.fallback_model:
+        opts["fallback_model"] = pc.fallback_model
+    if pc.resume_session_id:
+        opts["resume"] = pc.resume_session_id
+        opts["fork_session"] = pc.fork_session
+    if pc.append_context and pc.append_context.strip():
+        opts["system_prompt"] = {
+            "type": "preset", "preset": "claude_code",
+            "append": pc.append_context,
+        }
+
     if max_budget > 0:
         opts["max_budget_usd"] = max_budget
 
@@ -1059,10 +1119,10 @@ async def collect_response(
 
 async def run_session(
     prompt: str, max_turns: int, max_budget: float, autonomous: bool,
-    story_key: str = "",
+    story_key: str = "", phase: PhaseConfig | None = None,
 ) -> tuple[str, str | None, float]:
     """Run a single SDK session and return (text, session_id, cost)."""
-    options = make_options(max_turns, max_budget, autonomous)
+    options = make_options(max_turns, max_budget, autonomous, phase=phase)
     async with ClaudeSDKClient(options=options) as client:
         await client.query(prompt)
         return await collect_response(client, story_key=story_key)
@@ -1073,7 +1133,12 @@ async def run_review_fix_session(
 ) -> tuple[ReviewResult, str, float]:
     """Run review + fix loop in a single session. Returns (review_result, text, cost)."""
     autonomous = config.mode == "autonomous"
-    options = make_options(config.max_turns, BUDGET_SESSION_REVIEW, autonomous)
+    review_phase = None if config.legacy_mode else PhaseConfig(
+        model="sonnet", effort="medium", fallback_model="sonnet",
+        needs_agents=True, needs_playwright=True,
+        append_context=f"Story: {story.key}. Running quality gates.",
+    )
+    options = make_options(config.max_turns, BUDGET_SESSION_REVIEW, autonomous, phase=review_phase)
     result = ReviewResult()
     total_cost = 0.0
     all_text = ""
@@ -1087,57 +1152,99 @@ async def run_review_fix_session(
         total_cost += cost
         all_text = text
 
-        for round_num in range(1, config.max_review_rounds + 1):
-            result.rounds = round_num
-            verdict = parse_verdict(text)
+        # ── Review + Fix loop ──
+        # Strategy: fix ALL findings (blocker/high/medium/nit) in each fix round,
+        # but only BLOCKERS trigger the re-review loop. Non-blocker-only findings
+        # get one fix pass then proceed to FINISH.
 
-            if verdict.is_pass:
-                write_progress(story.key, "REVIEW", f"PASSED on round {round_num}")
-                break
+        verdict = parse_verdict(text)
 
-            result.blockers_found += verdict.blocker_count
-            write_progress(
-                story.key, "REVIEW",
-                f"round {round_num}: {verdict.blocker_count} blocker(s), "
-                f"{verdict.high_count} high(s)",
-            )
+        # If zero blockers but non-blocker findings exist, do one fix pass
+        if verdict.is_pass and (verdict.high_count > 0):
+            total_findings = verdict.high_count
+            write_progress(story.key, "REVIEW",
+                f"PASSED (0 blockers), {total_findings} non-blocker finding(s) — fixing in one pass")
+            result.rounds = 1
 
             # Supervised: ask before fixing
             if config.mode == "supervised":
                 print(f"\n{'=' * 60}")
-                print(f"REVIEW ROUND {round_num}: "
-                      f"{verdict.blocker_count} BLOCKER(S), "
-                      f"{verdict.high_count} HIGH")
+                print(f"NON-BLOCKER FINDINGS: {verdict.high_count} HIGH")
                 print(f"{'=' * 60}")
                 print(verdict.findings_text[:2000])
                 print()
-                action = input("Fix automatically? [y/n/skip]: ").strip().lower()
-                if action == "n":
-                    raise StoryError("User declined to fix blockers")
-                if action == "skip":
-                    log.warning("Skipping blockers per user request")
+                action = input("Fix non-blockers? [y/n]: ").strip().lower()
+                if action != "y":
+                    log.info("Skipping non-blocker fixes per user request")
+                else:
+                    fix_prompt = format_prompt(FIX_PROMPT, story)
+                    await client.query(fix_prompt)
+                    fix_text, _, fix_cost = await collect_response(client, story_key=story.key)
+                    total_cost += fix_cost
+            else:
+                write_progress(story.key, "FIX", "fixing non-blocker findings...")
+                fix_prompt = format_prompt(FIX_PROMPT, story)
+                await client.query(fix_prompt)
+                fix_text, _, fix_cost = await collect_response(client, story_key=story.key)
+                total_cost += fix_cost
+
+        elif verdict.is_pass:
+            write_progress(story.key, "REVIEW", "PASSED — no findings")
+            result.rounds = 1
+
+        else:
+            # Blockers exist — enter fix + re-review loop
+            for round_num in range(1, config.max_review_rounds + 1):
+                result.rounds = round_num
+
+                if verdict.is_pass:
+                    write_progress(story.key, "REVIEW", f"PASSED on round {round_num}")
                     break
 
-            # Fix
-            write_progress(story.key, "FIX", f"round {round_num}: fixing issues...")
-            fix_prompt = format_prompt(FIX_PROMPT, story)
-            await client.query(fix_prompt)
-            fix_text, _, fix_cost = await collect_response(client, story_key=story.key)
-            total_cost += fix_cost
-            result.blockers_fixed += verdict.blocker_count  # optimistic
-
-            if round_num >= config.max_review_rounds:
-                raise StoryError(
-                    f"Still blocked after {config.max_review_rounds} fix rounds"
+                result.blockers_found += verdict.blocker_count
+                write_progress(
+                    story.key, "REVIEW",
+                    f"round {round_num}: {verdict.blocker_count} blocker(s), "
+                    f"{verdict.high_count} high(s)",
                 )
 
-            # Re-review
-            write_progress(story.key, "RE-REVIEW", f"round {round_num + 1}...")
-            re_review_prompt = format_prompt(RE_REVIEW_PROMPT, story)
-            await client.query(re_review_prompt)
-            text, _, rr_cost = await collect_response(client, story_key=story.key)
-            total_cost += rr_cost
-            all_text = text
+                # Supervised: ask before fixing
+                if config.mode == "supervised":
+                    print(f"\n{'=' * 60}")
+                    print(f"REVIEW ROUND {round_num}: "
+                          f"{verdict.blocker_count} BLOCKER(S), "
+                          f"{verdict.high_count} HIGH")
+                    print(f"{'=' * 60}")
+                    print(verdict.findings_text[:2000])
+                    print()
+                    action = input("Fix automatically? [y/n/skip]: ").strip().lower()
+                    if action == "n":
+                        raise StoryError("User declined to fix blockers")
+                    if action == "skip":
+                        log.warning("Skipping blockers per user request")
+                        break
+
+                # Fix ALL findings (blockers + highs + mediums + nits)
+                write_progress(story.key, "FIX", f"round {round_num}: fixing all findings...")
+                fix_prompt = format_prompt(FIX_PROMPT, story)
+                await client.query(fix_prompt)
+                fix_text, _, fix_cost = await collect_response(client, story_key=story.key)
+                total_cost += fix_cost
+                result.blockers_fixed += verdict.blocker_count  # optimistic
+
+                if round_num >= config.max_review_rounds:
+                    raise StoryError(
+                        f"Still blocked after {config.max_review_rounds} fix rounds"
+                    )
+
+                # Re-review (only verifies blockers are resolved)
+                write_progress(story.key, "RE-REVIEW", f"round {round_num + 1}...")
+                re_review_prompt = format_prompt(RE_REVIEW_PROMPT, story)
+                await client.query(re_review_prompt)
+                text, _, rr_cost = await collect_response(client, story_key=story.key)
+                total_cost += rr_cost
+                all_text = text
+                verdict = parse_verdict(text)
 
         # Finish (same session if review passed)
         write_progress(story.key, "FINISH", "updating story, pushing, creating PR...")
@@ -1314,17 +1421,29 @@ async def run_story(story: StoryInfo, config: RunConfig) -> StoryResult:
     autonomous = config.mode == "autonomous"
 
     try:
+        # ── Phase configs (disabled in legacy mode) ──
+        if config.legacy_mode:
+            start_phase = None
+            impl_phase = None
+        else:
+            start_phase = PhaseConfig(
+                model="opus", effort="high", fallback_model="sonnet",
+                needs_agents=False, needs_playwright=False,
+                append_context=f"Story: {story.key} ({story.name}). Planning phase only.",
+            )
+
         # ── Session 1: START ──
         write_progress(story.key, "SESSION 1: START", "branch, story file, plan...")
         start_prompt = format_prompt(START_PROMPT, story)
         text, sid, cost = await run_session(
             start_prompt, config.max_turns, BUDGET_SESSION_START, autonomous,
-            story_key=story.key,
+            story_key=story.key, phase=start_phase if not config.legacy_mode else None,
         )
         result.cost_start = cost
         result.total_cost_usd += cost
         if sid:
             result.session_ids.append(sid)
+        start_session_id = sid  # save for session chaining
         result.phase_reached = "start"
 
         if "PLAN_COMPLETE" not in text:
@@ -1341,13 +1460,37 @@ async def run_story(story: StoryInfo, config: RunConfig) -> StoryResult:
             if approval != "y":
                 raise StoryError("Plan rejected by user")
 
-        # ── Session 2: IMPLEMENT ──
+        # ── Session 2: IMPLEMENT (with session chaining fallback) ──
         write_progress(story.key, "SESSION 2: IMPLEMENT", "coding feature...")
         impl_prompt = format_prompt(IMPLEMENT_PROMPT, story)
-        text, sid, cost = await run_session(
-            impl_prompt, config.max_turns, BUDGET_SESSION_IMPLEMENT, autonomous,
-            story_key=story.key,
-        )
+
+        if not config.legacy_mode:
+            impl_phase = PhaseConfig(
+                model="sonnet", effort="high", fallback_model="sonnet",
+                resume_session_id=start_session_id,
+                fork_session=True,
+                needs_agents=False, needs_playwright=False,
+                append_context=f"Story: {story.key}. Implement the plan from the previous session.",
+            )
+            try:
+                text, sid, cost = await run_session(
+                    impl_prompt, config.max_turns, BUDGET_SESSION_IMPLEMENT, autonomous,
+                    story_key=story.key, phase=impl_phase,
+                )
+            except Exception as e:
+                log.warning(f"  Session chaining failed ({e}), falling back to cold start")
+                impl_phase.resume_session_id = None
+                impl_phase.fork_session = False
+                text, sid, cost = await run_session(
+                    impl_prompt, config.max_turns, BUDGET_SESSION_IMPLEMENT, autonomous,
+                    story_key=story.key, phase=impl_phase,
+                )
+        else:
+            text, sid, cost = await run_session(
+                impl_prompt, config.max_turns, BUDGET_SESSION_IMPLEMENT, autonomous,
+                story_key=story.key,
+            )
+
         result.cost_implement = cost
         result.total_cost_usd += cost
         if sid:
@@ -1720,6 +1863,17 @@ def parse_verdict(text: str) -> Verdict:
     # If no explicit VERDICT, infer from blocker count
     if not m:
         is_pass = blocker_count == 0
+
+    # Safety overrides: verdict is deterministic based on blocker count,
+    # regardless of what the model outputs.
+    if is_pass and blocker_count > 0:
+        log.warning(f"  parse_verdict: model said PASS but {blocker_count} "
+                    f"[Blocker] found — forcing BLOCKED")
+        is_pass = False
+    if not is_pass and blocker_count == 0:
+        log.info(f"  parse_verdict: model said BLOCKED but 0 blockers — "
+                 f"overriding to PASS ({high_count} high(s) are informational)")
+        is_pass = True
 
     # Extract findings section for display
     findings_text = ""

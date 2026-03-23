@@ -17,6 +17,7 @@ import { AreasForGrowth } from '@/app/components/quiz/AreasForGrowth'
 import { PerformanceInsights } from '@/app/components/quiz/PerformanceInsights'
 import { AttemptHistory } from '@/app/components/quiz/AttemptHistory'
 import { ItemDifficultyAnalysis } from '@/app/components/quiz/ItemDifficultyAnalysis'
+import { DiscriminationAnalysis } from '@/app/components/quiz/DiscriminationAnalysis'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
 
@@ -164,6 +165,10 @@ export function QuizResults() {
 
         {/* Item difficulty analysis — shows when at least 1 attempt has been recorded */}
         <ItemDifficultyAnalysis quiz={currentQuiz} attempts={attempts} />
+
+        {/* Discrimination analysis — requires 5+ attempts for meaningful results */}
+        <DiscriminationAnalysis quiz={currentQuiz} attempts={attempts} />
+
 
         <QuestionBreakdown answers={lastAttempt.answers} questions={currentQuiz.questions} />
 
