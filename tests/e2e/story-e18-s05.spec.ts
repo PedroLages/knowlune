@@ -9,6 +9,8 @@
  */
 import { test, expect } from '../support/fixtures'
 import { makeQuiz, makeQuestion } from '../support/fixtures/factories/quiz-factory'
+import { seedQuizzes } from '../support/helpers/indexeddb-seed'
+import { FIXED_DATE } from '../utils/test-time'
 
 // ---------------------------------------------------------------------------
 // Test data
@@ -38,54 +40,36 @@ const quiz = makeQuiz({
   shuffleAnswers: false,
 })
 
+// Today's date string derived from FIXED_DATE (deterministic)
+const TODAY_STR = new Intl.DateTimeFormat('sv-SE').format(new Date(FIXED_DATE)).substring(0, 10)
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-async function seedQuizData(page: import('@playwright/test').Page, quizData: unknown[]) {
-  await page.evaluate(
-    async ({ data, maxRetries, retryDelay }) => {
-      for (let attempt = 0; attempt < maxRetries; attempt++) {
-        const result = await new Promise<'ok' | 'store-missing'>((resolve, reject) => {
-          const request = indexedDB.open('ElearningDB')
-          request.onsuccess = () => {
-            const db = request.result
-            if (!db.objectStoreNames.contains('quizzes')) {
-              db.close()
-              resolve('store-missing')
-              return
-            }
-            const tx = db.transaction('quizzes', 'readwrite')
-            const store = tx.objectStore('quizzes')
-            for (const item of data) {
-              store.put(item)
-            }
-            tx.oncomplete = () => {
-              db.close()
-              resolve('ok')
-            }
-            tx.onerror = () => {
-              db.close()
-              reject(tx.error)
-            }
-          }
-          request.onerror = () => reject(request.error)
-        })
-        if (result === 'ok') return
-        await new Promise(r => setTimeout(r, retryDelay))
-      }
-      throw new Error('Store "quizzes" not found after retries')
-    },
-    { data: quizData, maxRetries: 10, retryDelay: 200 }
-  )
-}
-
 async function navigateToQuiz(page: import('@playwright/test').Page) {
-  await page.addInitScript(() => {
+  await page.addInitScript(fixedDate => {
+    // Mock Date so app timestamps use deterministic FIXED_DATE
+    const OriginalDate = Date
+    class MockDate extends OriginalDate {
+      constructor(...args: ConstructorParameters<typeof OriginalDate>) {
+        if (args.length === 0) {
+          super(fixedDate)
+        } else {
+          // @ts-expect-error spread
+          super(...args)
+        }
+      }
+      static now() {
+        return new OriginalDate(fixedDate).getTime()
+      }
+    }
+    // @ts-expect-error mock
+    globalThis.Date = MockDate
     localStorage.setItem('knowlune-sidebar-v1', 'false')
-  })
+  }, FIXED_DATE)
   await page.goto('/', { waitUntil: 'domcontentloaded' })
-  await seedQuizData(page, [quiz])
+  await seedQuizzes(page, [quiz as Record<string, unknown>])
   await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}/quiz`, {
     waitUntil: 'domcontentloaded',
   })
@@ -102,14 +86,12 @@ async function completeQuiz(page: import('@playwright/test').Page, answer = 'Par
 
 /** Read the study-log from localStorage and return quiz_complete entries for today */
 async function getTodayQuizEntries(page: import('@playwright/test').Page) {
-  // eslint-disable-next-line test-patterns/deterministic-time -- no date mock configured; app writes real timestamps so assertions must match real "today"
-  const todayStr = new Intl.DateTimeFormat('sv-SE').format(new Date()).substring(0, 10)
   return page.evaluate(today => {
     const raw = localStorage.getItem('study-log')
     if (!raw) return []
     const log = JSON.parse(raw) as Array<{ type: string; timestamp: string }>
     return log.filter(a => a.type === 'quiz_complete' && a.timestamp.startsWith(today))
-  }, todayStr)
+  }, TODAY_STR)
 }
 
 // ---------------------------------------------------------------------------
