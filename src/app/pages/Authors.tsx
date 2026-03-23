@@ -5,6 +5,7 @@ import { Badge } from '@/app/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { allAuthors } from '@/data/authors'
 import { getAuthorStats, getAvatarSrc } from '@/lib/authors'
+import { FeaturedAuthor } from '@/app/components/figma/FeaturedAuthor'
 
 function getInitials(name: string) {
   return name
@@ -27,8 +28,11 @@ export function Authors() {
         </p>
       </div>
 
-      {/* Author Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Author content: featured layout for single author, grid for multiple */}
+      {allAuthors.length === 1 ? (
+        <FeaturedAuthor author={allAuthors[0]} />
+      ) : (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="author-grid">
         {allAuthors.map(author => {
           const stats = getAuthorStats(author)
           return (
@@ -94,6 +98,7 @@ export function Authors() {
           )
         })}
       </div>
+      )}
     </div>
   )
 }
