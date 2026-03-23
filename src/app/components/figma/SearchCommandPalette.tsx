@@ -75,7 +75,7 @@ const navigationPages: SearchItem[] = [
     path: '/authors',
     group: 'Pages',
     icon: Info,
-    keywords: ['about', 'authors', 'info'],
+    keywords: ['about', 'authors', 'instructors', 'info'],
   },
   {
     id: 'page-reports',
