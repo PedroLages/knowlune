@@ -136,4 +136,14 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Radix RadioGroup fires `onValueChange` on Arrow key navigation, not just Space/click.** This triggered the existing auto-advance RAF on every Arrow press, moving focus to the Next button while the user was browsing options. Fixed by adding an `isArrowNavRef` ref and an `onKeyDown` handler on the wrapper div to suppress auto-advance when Arrow keys are involved. The ref pattern (set on keydown, cleared in onChange) is reliable because `onKeyDown` bubbles before Radix's `onValueChange` fires.
+
+- **Roving tabindex requires synchronizing `focusedIndex` with `currentIndex` via `useEffect`.** When the user navigates via the QuestionGrid's Enter key (jumping to a question), the `currentIndex` prop changes from the parent. Without a `useEffect` that resets `focusedIndex` on prop change, the roving tabindex falls out of sync — the highlighted button and the actually-focused button diverge. Pattern: `useEffect(() => { setFocusedIndex(currentIndex) }, [currentIndex])`.
+
+- **Programmatic focus (`tabIndex={-1}` + `useEffect`) requires a synchronization barrier in tests.** The `useEffect` that focuses `question-focus-target` fires asynchronously after React renders. Tests that press Tab immediately after `startQuiz()` are racing against this effect. Always add `await expect(question-focus-target).toBeFocused()` as a barrier before sending keyboard events, ensuring the component is in stable focus state. This prevents hard-to-reproduce flakiness.
+
+- **WAI-ARIA toolbar pattern for QuestionGrid vs. plain button list.** The original implementation had all buttons tabbable (tabIndex=0), which floods the tab order. Roving tabindex (only the "current" button has tabIndex=0) follows the WAI-ARIA toolbar/grid pattern and keeps Tab navigation fast for keyboard users. The pattern requires: an `aria-label` on the container, `role="toolbar"`, and imperative `.focus()` via refs on arrow key presses.
+
+- **Focus ring opacity token matters for WCAG contrast.** The default `ring-ring/50` (50% opacity) fails WCAG 4.5:1 contrast for keyboard focus indicators. Upgrading to `ring-ring` (full opacity) passes. Always use full-opacity ring tokens on interactive elements that participate in keyboard navigation.
+
+- **Radix AlertDialog provides focus trap + Escape for free.** No custom focus trap logic was needed — Radix's AlertDialog component handles both focus trapping (Tab/Shift+Tab cycle within the dialog) and Escape key dismissal out of the box. This is a pattern worth trusting: before implementing custom focus management, check if the Radix primitive already provides it.
