@@ -1,8 +1,8 @@
 ---
 story_id: E22-S01
 story_name: "Ollama Provider Integration"
-status: draft
-started:
+status: in-progress
+started: 2026-03-23
 completed:
 reviewed: false
 review_started:
@@ -55,6 +55,10 @@ so that I can use my own local models without API keys or costs.
 - Use the same Card layout as other providers
 - "Direct Connection" toggle should be in a collapsible "Advanced" section
 - Show informational tooltip: "Direct connection requires CORS configured on your Ollama server"
+
+## Implementation Plan
+
+See [plans/e22-s01-ollama-provider-integration.md](plans/e22-s01-ollama-provider-integration.md) for the detailed step-by-step implementation plan.
 
 ## Implementation Notes
 
