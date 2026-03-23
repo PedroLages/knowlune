@@ -76,7 +76,7 @@ export function CoursesExample() {
         <Card key={course.id}>
           <CardHeader>
             <CardTitle>{course.title}</CardTitle>
-            <CardDescription>{course.instructor.name}</CardDescription>
+            <CardDescription>{course.author.name}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">

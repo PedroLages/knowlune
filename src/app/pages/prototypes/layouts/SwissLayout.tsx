@@ -28,7 +28,7 @@ const navItems: NavItem[] = [
   { name: 'Courses', icon: GraduationCap, path: '/prototypes/swiss-courses' },
   { name: 'Library', icon: Library, path: '#' },
   { name: 'Messages', icon: Notebook, path: '#' },
-  { name: 'Instructors', icon: Info, path: '#' },
+  { name: 'Authors', icon: Info, path: '#' },
   { name: 'Reports', icon: BarChart3, path: '#' },
   { name: 'Settings', icon: Settings, path: '#' },
 ]
