@@ -103,7 +103,7 @@ async function completeQuiz(page: import('@playwright/test').Page, answer = 'Par
 async function getTodayQuizEntries(page: import('@playwright/test').Page) {
   // eslint-disable-next-line test-patterns/deterministic-time -- no date mock configured; app writes real timestamps so assertions must match real "today"
   const todayStr = new Intl.DateTimeFormat('sv-SE').format(new Date()).substring(0, 10)
-  return page.evaluate((today) => {
+  return page.evaluate(today => {
     const raw = localStorage.getItem('study-log')
     if (!raw) return []
     const log = JSON.parse(raw) as Array<{ type: string; timestamp: string }>
