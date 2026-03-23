@@ -18,6 +18,7 @@ import type {
   CourseReminder,
   Course,
   VideoCaptionRecord,
+  Flashcard,
 } from '@/data/types'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 
@@ -42,6 +43,7 @@ const db = new Dexie('ElearningDB') as Dexie & {
   quizzes: EntityTable<Quiz, 'id'>
   quizAttempts: EntityTable<QuizAttempt, 'id'>
   videoCaptions: Table<VideoCaptionRecord> // compound PK: [courseId+videoId]
+  flashcards: EntityTable<Flashcard, 'id'>
 }
 
 db.version(1).stores({
@@ -475,5 +477,32 @@ db.version(19)
         }
       })
   })
+
+// v20: Add flashcards table for SM-2 spaced repetition flashcard system
+db.version(20).stores({
+  // All 20 existing v19 tables (must redeclare or Dexie deletes them)
+  importedCourses: 'id, name, importedAt, status, *tags',
+  importedVideos: 'id, courseId, filename',
+  importedPdfs: 'id, courseId, filename',
+  progress: '[courseId+videoId], courseId, videoId',
+  bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+  screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+  contentProgress: '[courseId+itemId], courseId, itemId, status',
+  challenges: 'id, type, deadline, createdAt',
+  embeddings: 'noteId, createdAt',
+  learningPath: 'courseId, position, generatedAt',
+  courseThumbnails: 'courseId',
+  aiUsageEvents: 'id, featureType, timestamp, courseId',
+  reviewRecords: 'id, noteId, nextReviewAt, reviewedAt',
+  courseReminders: 'id, courseId',
+  courses: 'id, category, difficulty, authorId',
+  quizzes: 'id, lessonId, createdAt',
+  quizAttempts: 'id, quizId, [quizId+completedAt], completedAt',
+  videoCaptions: '[courseId+videoId], courseId, videoId',
+  // NEW: Flashcard system with SM-2 spaced repetition
+  flashcards: 'id, courseId, noteId, nextReviewAt, createdAt',
+})
 
 export { db }

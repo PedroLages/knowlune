@@ -56,6 +56,7 @@ describe('ElearningDB schema', () => {
       'courseThumbnails',
       'courses',
       'embeddings',
+      'flashcards',
       'importedCourses',
       'importedPdfs',
       'importedVideos',
@@ -71,8 +72,8 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 19', () => {
-    expect(db.verno).toBe(19)
+  it('should be at version 20', () => {
+    expect(db.verno).toBe(20)
   })
 
   it('should preserve key indexes on existing v16 tables in v17 migration', async () => {
@@ -521,5 +522,75 @@ describe('quizAttempts table', () => {
     const results = await db.quizAttempts.where('completedAt').above(t1).toArray()
     expect(results).toHaveLength(1)
     expect(results[0].completedAt).toBe(t2)
+  })
+})
+
+describe('flashcards table (v20)', () => {
+  function makeFlashcard(overrides: Record<string, unknown> = {}) {
+    return {
+      id: crypto.randomUUID(),
+      courseId: 'course-1',
+      front: 'What is spaced repetition?',
+      back: 'A learning technique that spaces reviews at increasing intervals.',
+      interval: 0,
+      easeFactor: 2.5,
+      reviewCount: 0,
+      createdAt: '2026-03-23T10:00:00.000Z',
+      updatedAt: '2026-03-23T10:00:00.000Z',
+      ...overrides,
+    }
+  }
+
+  it('should add and retrieve a flashcard', async () => {
+    const card = makeFlashcard({ front: 'What is SM-2?' })
+    await db.flashcards.add(card)
+    const retrieved = await db.flashcards.get(card.id)
+    expect(retrieved).toBeDefined()
+    expect(retrieved!.front).toBe('What is SM-2?')
+    expect(retrieved!.easeFactor).toBe(2.5)
+    expect(retrieved!.reviewCount).toBe(0)
+  })
+
+  it('should query flashcards by courseId index', async () => {
+    const courseId = crypto.randomUUID()
+    await db.flashcards.bulkAdd([
+      makeFlashcard({ courseId, front: 'Card 1' }),
+      makeFlashcard({ courseId, front: 'Card 2' }),
+      makeFlashcard({ courseId: 'other-course', front: 'Card 3' }),
+    ])
+    const results = await db.flashcards.where('courseId').equals(courseId).toArray()
+    expect(results).toHaveLength(2)
+  })
+
+  it('should query flashcards due for review by nextReviewAt index', async () => {
+    const past = '2026-01-01T00:00:00.000Z'
+    const future = '2030-01-01T00:00:00.000Z'
+    await db.flashcards.bulkAdd([
+      makeFlashcard({ nextReviewAt: past }),
+      makeFlashcard({ nextReviewAt: future }),
+    ])
+    const now = '2026-03-23T10:00:00.000Z'
+    const due = await db.flashcards.where('nextReviewAt').belowOrEqual(now).toArray()
+    expect(due).toHaveLength(1)
+    expect(due[0].nextReviewAt).toBe(past)
+  })
+
+  it('should query flashcards by optional noteId index', async () => {
+    const noteId = crypto.randomUUID()
+    await db.flashcards.bulkAdd([
+      makeFlashcard({ noteId, front: 'From note' }),
+      makeFlashcard({ front: 'Standalone' }),
+    ])
+    const fromNote = await db.flashcards.where('noteId').equals(noteId).toArray()
+    expect(fromNote).toHaveLength(1)
+    expect(fromNote[0].front).toBe('From note')
+  })
+
+  it('should delete a flashcard', async () => {
+    const card = makeFlashcard()
+    await db.flashcards.add(card)
+    await db.flashcards.delete(card.id)
+    const result = await db.flashcards.get(card.id)
+    expect(result).toBeUndefined()
   })
 })
