@@ -359,9 +359,9 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 25: Author Management & New User Experience
   # ──────────────────────────────────────────────────
-  epic-25: backlog
-  25-1-author-data-model-and-migration: backlog
-  25-2-author-crud-dialog: backlog
+  epic-25: in-progress
+  25-1-author-data-model-and-migration: backlog  # subsumed into E25-S02
+  25-2-author-crud-dialog: in-progress
   25-3-authors-page-from-indexeddb: backlog
   25-4-author-auto-detection-during-import: backlog
   25-5-smart-author-photo-detection-from-course-folder: backlog
