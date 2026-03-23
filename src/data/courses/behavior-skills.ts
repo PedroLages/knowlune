@@ -26,7 +26,7 @@ export const behaviorSkillsCourse: Course = {
   isSequential: true,
   basePath,
   coverImage: '/images/behavior-skills',
-  instructorId: 'chase-hughes',
+  authorId: 'chase-hughes',
   modules: [
     {
       id: 'bsb-human-behavior',

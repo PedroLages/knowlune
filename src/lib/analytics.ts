@@ -1,5 +1,6 @@
 import type { Question, Answer, QuizAttempt, Quiz } from '@/types/quiz'
 import { isUnanswered } from '@/lib/scoring'
+import { db } from '@/db'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -187,6 +188,54 @@ export function calculateImprovement(attempts: QuizAttempt[]): ImprovementData {
 // Normalized Gain — Hake's Formula (E16-S04)
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Retake Frequency (E17-S02)
+// ---------------------------------------------------------------------------
+
+export type RetakeFrequencyResult = {
+  /** Average number of attempts per unique quiz */
+  averageRetakes: number
+  /** Total completed attempts across all quizzes */
+  totalAttempts: number
+  /** Number of distinct quizzes attempted at least once */
+  uniqueQuizzes: number
+}
+
+/**
+ * Calculate average retake frequency from quiz attempt history.
+ *
+ * Formula: totalAttempts / uniqueQuizzes
+ *
+ * Multiple attempts for the same quizId all count. Returns 0 when no
+ * attempts exist (no division by zero).
+ */
+export async function calculateRetakeFrequency(): Promise<RetakeFrequencyResult> {
+  const allAttempts = await db.quizAttempts.toArray()
+  const uniqueQuizIds = new Set(allAttempts.map(a => a.quizId))
+
+  const totalAttempts = allAttempts.length
+  const uniqueQuizzes = uniqueQuizIds.size
+  const averageRetakes = uniqueQuizzes > 0 ? totalAttempts / uniqueQuizzes : 0
+
+  return { averageRetakes, totalAttempts, uniqueQuizzes }
+}
+
+/**
+ * Returns an encouraging interpretation string for the retake frequency.
+ *
+ * Bands:
+ * - ≤ 1.0: "No retakes yet — each quiz taken once."
+ * - ≤ 2.0: "Light review — you occasionally revisit quizzes."
+ * - ≤ 3.0: "Active practice — you retake quizzes 2-3 times on average for mastery."
+ * - > 3.0: "Deep practice — strong commitment to mastery through repetition."
+ */
+export function interpretRetakeFrequency(avg: number): string {
+  if (avg <= 1.0) return 'No retakes yet — each quiz taken once.'
+  if (avg <= 2.0) return 'Light review — you occasionally revisit quizzes.'
+  if (avg <= 3.0) return 'Active practice — you retake quizzes 2-3 times on average for mastery.'
+  return 'Deep practice — strong commitment to mastery through repetition.'
+}
+
 /**
  * Calculate normalized gain (Hake's formula) across quiz attempts.
  *
@@ -286,6 +335,7 @@ export function calculateItemDifficulty(quiz: Quiz, attempts: QuizAttempt[]): It
     .filter((item): item is ItemDifficulty => item !== null)
     .sort((a, b) => b.pValue - a.pValue) // Easiest first
 }
+
 
 // ---------------------------------------------------------------------------
 // Discrimination Indices — Point-Biserial Correlation (E17-S04)

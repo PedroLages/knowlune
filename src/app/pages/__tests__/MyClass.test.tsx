@@ -64,7 +64,7 @@ beforeEach(() => {
         ],
         isSequential: false,
         basePath: '/test',
-        instructorId: 'i1',
+        authorId: 'i1',
       },
     ],
     isLoaded: true,
@@ -85,13 +85,13 @@ function renderMyClass() {
 
 describe('MyClass page', () => {
   it('renders without crashing', () => {
-    const { container } = renderMyClass()
-    expect(container).toBeTruthy()
+    renderMyClass()
+    expect(screen.getByRole('heading', { name: 'My Courses', level: 1 })).toBeInTheDocument()
   })
 
-  it('displays the page heading "My Progress"', () => {
+  it('displays the page heading "My Courses"', () => {
     renderMyClass()
-    expect(screen.getByText('My Progress')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'My Courses', level: 1 })).toBeInTheDocument()
   })
 
   it('renders tab triggers for status, all, category, and difficulty views', () => {

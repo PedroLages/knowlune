@@ -169,6 +169,7 @@ export function QuizResults() {
         {/* Discrimination analysis — requires 5+ attempts for meaningful results */}
         <DiscriminationAnalysis quiz={currentQuiz} attempts={attempts} />
 
+
         <QuestionBreakdown answers={lastAttempt.answers} questions={currentQuiz.questions} />
 
         <PerformanceInsights

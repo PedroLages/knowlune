@@ -1,9 +1,9 @@
 import { useCourseStore } from '@/stores/useCourseStore'
-import { getInstructorById } from '@/data/instructors'
-import type { Course, Instructor } from '@/data/types'
+import { getAuthorById } from '@/data/authors'
+import type { Course, Author } from '@/data/types'
 
-export function getInstructorStats(instructor: Instructor) {
-  const courses = useCourseStore.getState().courses.filter(c => c.instructorId === instructor.id)
+export function getAuthorStats(author: Author) {
+  const courses = useCourseStore.getState().courses.filter(c => c.authorId === author.id)
   return {
     courses,
     courseCount: courses.length,
@@ -14,15 +14,15 @@ export function getInstructorStats(instructor: Instructor) {
   }
 }
 
-export function getInstructorForCourse(course: Course): Instructor | undefined {
-  return getInstructorById(course.instructorId)
+export function getAuthorForCourse(course: Course): Author | undefined {
+  return getAuthorById(course.authorId)
 }
 
 /** Available responsive avatar widths (px) */
 const AVATAR_WIDTHS = [48, 96, 192, 256] as const
 
 /**
- * Returns src + srcSet props for an instructor avatar at a given display size.
+ * Returns src + srcSet props for an author avatar at a given display size.
  * Picks the smallest width >= displaySize for 1x, and >= displaySize*2 for 2x.
  * Falls back to the largest available width.
  */

@@ -1,8 +1,10 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   analyzeTopicPerformance,
   calculateImprovement,
   calculateNormalizedGain,
+  calculateRetakeFrequency,
+  interpretRetakeFrequency,
   calculateItemDifficulty,
   calculateDiscriminationIndices,
 } from '@/lib/analytics'
@@ -14,6 +16,17 @@ import {
   makeWrongAnswer,
   makeSkippedAnswer,
 } from '../../../tests/support/fixtures/factories/quiz-factory'
+import { db } from '@/db'
+
+vi.mock('@/db', () => ({
+  db: {
+    quizAttempts: {
+      toArray: vi.fn(),
+    },
+  },
+}))
+
+const mockToArray = db.quizAttempts.toArray as ReturnType<typeof vi.fn>
 
 // ---------------------------------------------------------------------------
 // Shorthand aliases
@@ -430,6 +443,83 @@ describe('calculateNormalizedGain', () => {
 })
 
 // ---------------------------------------------------------------------------
+// calculateRetakeFrequency (E17-S02)
+// ---------------------------------------------------------------------------
+
+describe('calculateRetakeFrequency', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('returns 0 averageRetakes when no attempts', async () => {
+    mockToArray.mockResolvedValue([])
+    const result = await calculateRetakeFrequency()
+    expect(result).toEqual({ averageRetakes: 0, totalAttempts: 0, uniqueQuizzes: 0 })
+  })
+
+  it('calculates 3.0 for one quiz attempted 3 times', async () => {
+    mockToArray.mockResolvedValue([
+      { id: 'a1', quizId: 'q1' },
+      { id: 'a2', quizId: 'q1' },
+      { id: 'a3', quizId: 'q1' },
+    ])
+    const result = await calculateRetakeFrequency()
+    expect(result.averageRetakes).toBe(3)
+    expect(result.totalAttempts).toBe(3)
+    expect(result.uniqueQuizzes).toBe(1)
+  })
+
+  it('calculates 1.0 for two different quizzes each attempted once', async () => {
+    mockToArray.mockResolvedValue([
+      { id: 'a1', quizId: 'q1' },
+      { id: 'a2', quizId: 'q2' },
+    ])
+    const result = await calculateRetakeFrequency()
+    expect(result.averageRetakes).toBe(1)
+    expect(result.totalAttempts).toBe(2)
+    expect(result.uniqueQuizzes).toBe(2)
+  })
+
+  it('calculates 2.5 for quiz A × 3 + quiz B × 2', async () => {
+    mockToArray.mockResolvedValue([
+      { id: 'a1', quizId: 'qA' },
+      { id: 'a2', quizId: 'qA' },
+      { id: 'a3', quizId: 'qA' },
+      { id: 'a4', quizId: 'qB' },
+      { id: 'a5', quizId: 'qB' },
+    ])
+    const result = await calculateRetakeFrequency()
+    expect(result.averageRetakes).toBe(2.5)
+    expect(result.totalAttempts).toBe(5)
+    expect(result.uniqueQuizzes).toBe(2)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// interpretRetakeFrequency (E17-S02)
+// ---------------------------------------------------------------------------
+
+describe('interpretRetakeFrequency', () => {
+  it('returns "No retakes yet" for exactly 1.0', () => {
+    expect(interpretRetakeFrequency(1.0)).toBe('No retakes yet — each quiz taken once.')
+  })
+
+  it('returns "Light review" for 1.5', () => {
+    expect(interpretRetakeFrequency(1.5)).toBe('Light review — you occasionally revisit quizzes.')
+  })
+
+  it('returns "Active practice" for 2.5', () => {
+    expect(interpretRetakeFrequency(2.5)).toBe(
+      'Active practice — you retake quizzes 2-3 times on average for mastery.'
+    )
+  })
+
+  it('returns "Deep practice" for 4.0', () => {
+    expect(interpretRetakeFrequency(4.0)).toBe(
+      'Deep practice — strong commitment to mastery through repetition.'
+    )
+  })
+})
+
+// ---------------------------------------------------------------------------
 // calculateItemDifficulty (E17-S03)
 // ---------------------------------------------------------------------------
 
@@ -522,9 +612,10 @@ describe('calculateItemDifficulty', () => {
       }),
     ]
     const result = calculateItemDifficulty(quiz, attempts)
-    expect(result[0].questionId).toBe('q1') // P=1.0 — easiest first
+expect(result[0].questionId).toBe('q1') // P=1.0 — easiest first
     expect(result[1].questionId).toBe('q2') // P=0.0 — hardest last
-  })
+expect(result[0].questionId).toBe('q1')
+    expect(result[1].questionId).toBe('q2')  })
 
   it('aggregates across multiple attempts for the same question', () => {
     const q1 = makeQuestion({ id: 'q1', order: 1, text: 'Q1' })

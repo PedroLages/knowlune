@@ -62,12 +62,12 @@ export function EmptyState({
           <Heading className="font-display text-lg font-medium mb-2">{title}</Heading>
           <p className="text-muted-foreground mb-6 max-w-sm">{description}</p>
           {actionLabel && onAction && (
-            <Button size="lg" onClick={onAction}>
+            <Button variant="brand" size="lg" onClick={onAction}>
               {actionLabel}
             </Button>
           )}
           {actionLabel && actionHref && !onAction && (
-            <Button asChild size="lg">
+            <Button asChild variant="brand" size="lg">
               <Link to={actionHref}>{actionLabel}</Link>
             </Button>
           )}

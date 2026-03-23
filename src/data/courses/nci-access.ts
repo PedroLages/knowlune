@@ -17,7 +17,7 @@ export const nciAccess: Course = {
   isSequential: false,
   basePath: BASE,
   coverImage: '/images/nci-access',
-  instructorId: 'chase-hughes',
+  authorId: 'chase-hughes',
   tags: [
     'NCI',
     'behavior profiling',

@@ -117,7 +117,7 @@ test.describe('Accessibility - Courses Pages', () => {
     expect(accessibilityScanResults.violations).toEqual([])
   })
 
-  test('My Class page - WCAG 2.1 AA violations', async ({ page }) => {
+  test('My Courses page - WCAG 2.1 AA violations', async ({ page }) => {
     await page.goto('/my-class')
     await setupTestData(page)
     await page.reload()

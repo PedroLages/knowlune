@@ -18,7 +18,7 @@ export const authority: Course = {
   isSequential: true,
   basePath: BASE,
   coverImage: '/images/authority-course',
-  instructorId: 'chase-hughes',
+  authorId: 'chase-hughes',
   tags: [
     'authority',
     'influence',

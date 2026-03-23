@@ -24,11 +24,11 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { name: 'Overview', icon: LayoutDashboard, path: '/prototypes/swiss-overview' },
-  { name: 'My Classes', icon: BookOpen, path: '#' },
+  { name: 'My Courses', icon: BookOpen, path: '#' },
   { name: 'Courses', icon: GraduationCap, path: '/prototypes/swiss-courses' },
   { name: 'Library', icon: Library, path: '#' },
   { name: 'Messages', icon: Notebook, path: '#' },
-  { name: 'Instructors', icon: Info, path: '#' },
+  { name: 'Authors', icon: Info, path: '#' },
   { name: 'Reports', icon: BarChart3, path: '#' },
   { name: 'Settings', icon: Settings, path: '#' },
 ]

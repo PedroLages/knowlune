@@ -18,7 +18,7 @@ const PAGES: { name: string; path: string; waitFor?: string; setup?: string }[] 
   { name: '01-overview', path: '/' },
   { name: '02-my-class', path: '/my-class' },
   { name: '03-courses', path: '/courses' },
-  { name: '04-instructors', path: '/instructors' },
+  { name: '04-authors', path: '/authors' },
   { name: '05-reports', path: '/reports' },
   { name: '06-settings', path: '/settings' },
 
@@ -34,8 +34,8 @@ const PAGES: { name: string; path: string; waitFor?: string; setup?: string }[] 
     waitFor: '[data-testid="video-player-container"], [data-testid="lesson-player"]',
   },
   {
-    name: '09-instructor-profile',
-    path: '/instructors/chase-hughes',
+    name: '09-author-profile',
+    path: '/authors/chase-hughes',
     waitFor: 'h1',
   },
   { name: '10-notes', path: '/notes' },

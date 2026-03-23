@@ -113,7 +113,7 @@ export default function MyClass() {
   if (!hasAnyCourses) {
     return (
       <div>
-        <h1 className="text-2xl font-bold mb-6">My Progress</h1>
+        <h1 className="text-2xl font-bold mb-6">My Courses</h1>
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <PlayCircle className="w-12 h-12 text-muted-foreground mb-4" aria-hidden="true" />
           <h2 className="text-xl font-semibold mb-2">Ready to start learning?</h2>
@@ -133,7 +133,7 @@ export default function MyClass() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">My Progress</h1>
+      <h1 className="text-2xl font-bold mb-6">My Courses</h1>
 
       {/* Stats Dashboard */}
       <ProgressStats courses={allCourses} />
