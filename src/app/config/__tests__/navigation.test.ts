@@ -54,6 +54,8 @@ describe('navigationGroups', () => {
 describe('getPrimaryNav', () => {
   it('returns 4 primary items for mobile bottom bar', () => {
     const primary = getPrimaryNav()
+    // The bottom bar has exactly 4 slots — length must stay at 4
+    expect(primary).toHaveLength(4)
     expect(primary.map(i => i.name)).toEqual(['Overview', 'My Courses', 'Courses', 'Notes'])
   })
 })
@@ -62,6 +64,9 @@ describe('getOverflowNav', () => {
   it('returns remaining items including Authors, Settings, and all Review items', () => {
     const overflow = getOverflowNav()
     const names = overflow.map(i => i.name)
+    // 15 total items (14 group items + Settings) - 4 primary = 11 overflow
+    // (Authors + 4 Review + 5 Track + Settings)
+    expect(overflow).toHaveLength(11)
     expect(names).toContain('Authors')
     expect(names).toContain('Settings')
     expect(names).toContain('Learning Path')

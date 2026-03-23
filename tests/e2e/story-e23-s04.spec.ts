@@ -27,15 +27,14 @@ test.describe('E23-S04: Restructure Sidebar Navigation Groups', () => {
     const sidebar = page.locator('aside[aria-label="Sidebar"]')
     await expect(sidebar).toBeVisible()
 
-    // Group labels use CSS text-transform:uppercase — innerText reflects computed values.
-    // Check via innerText to avoid dealing with CSS class escaping.
-    const sidebarText = await sidebar.evaluate(el => el.innerText)
-    expect(sidebarText).toMatch(/\bLEARN\b/)
-    expect(sidebarText).toMatch(/\bREVIEW\b/)
-    expect(sidebarText).toMatch(/\bTRACK\b/)
+    // Group labels have unique id attributes (nav-group-{label}) — locate by id so the
+    // test is not coupled to CSS text-transform or computed innerText behaviour.
+    await expect(sidebar.locator('#nav-group-learn')).toBeVisible()
+    await expect(sidebar.locator('#nav-group-review')).toBeVisible()
+    await expect(sidebar.locator('#nav-group-track')).toBeVisible()
 
     // Old group label must not appear
-    expect(sidebarText).not.toMatch(/\bCONNECT\b/)
+    await expect(sidebar.locator('#nav-group-connect')).not.toBeAttached()
   })
 
   // ---------------------------------------------------------------------------
@@ -99,14 +98,13 @@ test.describe('E23-S04: Restructure Sidebar Navigation Groups', () => {
     await page.setViewportSize(MOBILE)
     await navigateAndWait(page, '/')
 
-    // Open the "More" drawer. Use evaluate to click the DOM element directly,
-    // bypassing any dev-only toolbar overlays that intercept pointer events at coordinates.
+    // Open the "More" drawer.
+    // dispatchEvent bypasses coordinate-based interception from the dev-only Agentation toolbar
+    // which overlays the bottom portion of the viewport in development mode.
+    // Unlike page.evaluate btn.click(), this goes through Playwright's element handle.
     const moreButton = page.getByRole('button', { name: 'More menu' })
     await expect(moreButton).toBeVisible()
-    await page.evaluate(() => {
-      const btn = document.querySelector<HTMLButtonElement>('button[aria-label="More menu"]')
-      btn?.click()
-    })
+    await moreButton.dispatchEvent('click')
 
     const drawer = page.locator('[role="dialog"]')
     await expect(drawer).toBeVisible()
@@ -120,8 +118,12 @@ test.describe('E23-S04: Restructure Sidebar Navigation Groups', () => {
     await expect(drawer.getByRole('link', { name: 'Review', exact: true })).toBeVisible()
     await expect(drawer.getByRole('link', { name: 'Retention' })).toBeVisible()
 
-    // Track items in overflow
+    // Track items in overflow (all 5)
     await expect(drawer.getByRole('link', { name: 'Challenges' })).toBeVisible()
+    await expect(drawer.getByRole('link', { name: 'Session History' })).toBeVisible()
+    await expect(drawer.getByRole('link', { name: 'Study Analytics' })).toBeVisible()
+    await expect(drawer.getByRole('link', { name: 'Quiz Analytics' })).toBeVisible()
+    await expect(drawer.getByRole('link', { name: 'AI Analytics' })).toBeVisible()
   })
 
   // ---------------------------------------------------------------------------
@@ -138,9 +140,10 @@ test.describe('E23-S04: Restructure Sidebar Navigation Groups', () => {
 
     const sidebar = page.locator('aside[aria-label="Sidebar"]')
 
-    // In collapsed mode, separators appear as border-t divs between groups (idx > 0)
+    // In collapsed mode, separators appear between groups (idx > 0).
+    // Selects by data-testid to avoid coupling to Tailwind class names.
     // There should be exactly 2 separators (before Review and before Track groups)
-    const separators = sidebar.locator('div[aria-hidden="true"].border-t')
+    const separators = sidebar.getByTestId('group-separator')
     await expect(separators).toHaveCount(2)
   })
 

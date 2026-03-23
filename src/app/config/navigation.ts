@@ -56,6 +56,8 @@ export const navigationGroups: NavigationGroup[] = [
     ],
   },
   {
+    // Note: group label 'Review' intentionally shares the name with the nav item 'Review'
+    // (path /review). They serve different roles: the label names the group, the item is a link.
     label: 'Review',
     items: [
       { name: 'Learning Path', path: '/ai-learning-path', icon: Sparkles },
@@ -89,8 +91,9 @@ export const navigationItems: NavigationItem[] = [
   settingsItem,
 ]
 
-// Paths for primary navigation (shown in mobile bottom bar)
-const primaryNavPaths = ['/', '/my-class', '/courses', '/notes']
+// Paths for primary navigation (shown in mobile bottom bar).
+// The bottom bar has exactly 4 slots — this list must stay at 4 entries.
+export const primaryNavPaths = ['/', '/my-class', '/courses', '/notes']
 
 // Get primary navigation items (for mobile bottom bar)
 export function getPrimaryNav(): NavigationItem[] {
