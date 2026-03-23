@@ -11,7 +11,12 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
+import {
+  seedIndexedDBStore,
+  clearIndexedDBStore,
+} from '../../support/helpers/indexeddb-seed'
 import type { Page } from '@playwright/test'
+
 
 const TEST_COURSES = [
   {
@@ -67,49 +72,9 @@ const TEST_COURSES = [
   },
 ]
 
-/** Seed the Dexie `courses` table with retry (waits for DB to be initialized). */
+/** Seed the Dexie `courses` table using the shared seedIndexedDBStore helper. */
 async function seedCoursesIntoIDB(page: Page): Promise<void> {
-  await page.evaluate(
-    async ({ dbName, storeName, data, maxRetries, retryDelay }) => {
-      for (let attempt = 0; attempt < maxRetries; attempt++) {
-        const result = await new Promise<'ok' | 'store-missing'>((resolve, reject) => {
-          const request = indexedDB.open(dbName)
-          request.onsuccess = () => {
-            const db = request.result
-            if (!db.objectStoreNames.contains(storeName)) {
-              db.close()
-              resolve('store-missing')
-              return
-            }
-            const tx = db.transaction(storeName, 'readwrite')
-            const store = tx.objectStore(storeName)
-            for (const item of data) {
-              store.put(item)
-            }
-            tx.oncomplete = () => {
-              db.close()
-              resolve('ok')
-            }
-            tx.onerror = () => {
-              db.close()
-              reject(tx.error)
-            }
-          }
-          request.onerror = () => reject(request.error)
-        })
-        if (result === 'ok') return
-        await new Promise(r => setTimeout(r, retryDelay))
-      }
-      throw new Error(`Store "${storeName}" not found in "${dbName}" after ${maxRetries} retries`)
-    },
-    {
-      dbName: 'ElearningDB',
-      storeName: 'courses',
-      data: TEST_COURSES,
-      maxRetries: 10,
-      retryDelay: 200,
-    }
-  )
+  await seedIndexedDBStore(page, 'ElearningDB', 'courses', TEST_COURSES as Record<string, unknown>[])
 }
 
 /** Navigate to Overview with pre-seeded multi-category courses. */
@@ -126,6 +91,10 @@ async function goToOverviewWithCourses(page: Page): Promise<void> {
 }
 
 test.describe('E20-S04: Skill Proficiency Radar Chart', () => {
+  test.afterEach(async ({ page }) => {
+    await clearIndexedDBStore(page, 'ElearningDB', 'courses')
+  })
+
   test('displays radar chart section on Overview with pre-seeded courses', async ({ page }) => {
     await goToOverviewWithCourses(page)
 
