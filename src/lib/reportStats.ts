@@ -72,6 +72,44 @@ export function getCategoryCompletionForRadar(): CategoryRadarData[] {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Skill proficiency data for Overview radar chart (E20-S04)          */
+/* ------------------------------------------------------------------ */
+
+export interface SkillProficiencyData {
+  domain: string
+  proficiency: number // 0-100 average completion %
+  fullMark: 100
+}
+
+export function getSkillProficiencyForOverview(): SkillProficiencyData[] {
+  const allCourses = useCourseStore.getState().courses
+  const domainMap: Record<string, { totalCompletion: number; count: number }> = {}
+
+  for (const course of allCourses) {
+    const totalLessons = course.modules.reduce((sum, m) => sum + m.lessons.length, 0)
+    const completion = getCourseCompletionPercent(course.id, totalLessons)
+    const cat = course.category
+
+    if (!domainMap[cat]) {
+      domainMap[cat] = { totalCompletion: 0, count: 0 }
+    }
+    domainMap[cat].totalCompletion += completion
+    domainMap[cat].count++
+  }
+
+  const entries = Object.entries(domainMap)
+
+  // Need at least 2 domains for a meaningful radar chart
+  if (entries.length < 2) return []
+
+  return entries.map(([category, data]) => ({
+    domain: formatCategoryLabel(category),
+    proficiency: Math.round(data.totalCompletion / data.count),
+    fullMark: 100 as const,
+  }))
+}
+
+/* ------------------------------------------------------------------ */
 /*  Course completion data for horizontal bar chart                    */
 /* ------------------------------------------------------------------ */
 
