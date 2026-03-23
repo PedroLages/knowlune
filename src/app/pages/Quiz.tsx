@@ -119,6 +119,9 @@ export function Quiz() {
   const [showSubmitDialog, setShowSubmitDialog] = useState(false)
   const nextBtnRef = useRef<HTMLButtonElement>(null)
   const rafRef = useRef<number>(0)
+  // Ref for programmatic focus when question changes — tabIndex={-1} makes it
+  // focusable via .focus() but NOT reachable via Tab (WCAG 2.4.3 Focus Order)
+  const questionContainerRef = useRef<HTMLDivElement>(null)
 
   // Fetch quiz from Dexie on mount
   useEffect(() => {
@@ -349,6 +352,14 @@ export function Quiz() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [isQuizActive])
 
+  // Programmatic focus on question change (AC #2)
+  // Moves focus to the question container when the current question index changes.
+  // The container uses tabIndex={-1} so it is reachable via .focus() but not Tab.
+  useEffect(() => {
+    if (!isQuizActive) return
+    questionContainerRef.current?.focus()
+  }, [isQuizActive, currentProgress?.currentQuestionIndex])
+
   // ---------------------------------------------------------------------------
   // Loading state
   // ---------------------------------------------------------------------------
@@ -435,20 +446,28 @@ export function Quiz() {
         />
         {currentQuestion && currentQuestionId ? (
           <>
-            <QuestionDisplay
-              question={currentQuestion}
-              value={currentAnswer}
-              onChange={answer => {
-                submitAnswer(currentQuestionId, answer)
-                // Auto-focus Next/Submit button for single-answer types (MC, TF, FIB)
-                // Skip for multiple-select — user needs to toggle multiple checkboxes
-                if (currentQuestion.type !== 'multiple-select') {
-                  cancelAnimationFrame(rafRef.current)
-                  rafRef.current = requestAnimationFrame(() => nextBtnRef.current?.focus())
-                }
-              }}
-              mode="active"
-            />
+            {/* tabIndex={-1}: programmatically focusable on question change, not in tab order */}
+            <div
+              ref={questionContainerRef}
+              tabIndex={-1}
+              className="outline-none"
+              data-testid="question-container"
+            >
+              <QuestionDisplay
+                question={currentQuestion}
+                value={currentAnswer}
+                onChange={answer => {
+                  submitAnswer(currentQuestionId, answer)
+                  // Auto-focus Next/Submit button for single-answer types (MC, TF, FIB)
+                  // Skip for multiple-select — user needs to toggle multiple checkboxes
+                  if (currentQuestion.type !== 'multiple-select') {
+                    cancelAnimationFrame(rafRef.current)
+                    rafRef.current = requestAnimationFrame(() => nextBtnRef.current?.focus())
+                  }
+                }}
+                mode="active"
+              />
+            </div>
             <QuestionHint hint={currentQuestion.hint} />
             {!isUnanswered(currentAnswer) && (
               <AnswerFeedback question={currentQuestion} userAnswer={currentAnswer} />
