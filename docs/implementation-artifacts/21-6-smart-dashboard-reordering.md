@@ -103,11 +103,18 @@ so that my most-used features are always at the top.
 
 ## Implementation Notes
 
-[To be filled during implementation]
+- Used IntersectionObserver for section visibility tracking with jsdom guard for unit test compatibility
+- @dnd-kit/sortable for drag-and-drop following existing AILearningPath.tsx patterns
+- Relevance scoring: recency 40%, views 30%, time 30% — balances recent activity with sustained engagement
+- Auto-reorder pauses when user manually drags sections; resumed only on explicit reset
+- Hero zone and Import Course empty state remain fixed (not reorderable)
 
 ## Testing Notes
 
-[To be filled during implementation]
+- 12 E2E tests covering all ACs: toggle, pin/unpin, reset, persistence, auto-reorder, manual order, accessibility
+- AC2 (auto-reorder) tested by seeding dashboard stats with known relevance scores
+- AC3 (manual order) tested by seeding localStorage with explicit section order
+- IntersectionObserver guard added after jsdom unit test failures in Round 2
 
 ## Pre-Review Checklist
 
