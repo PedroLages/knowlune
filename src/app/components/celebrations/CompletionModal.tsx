@@ -195,8 +195,11 @@ export function CompletionModal({
 }
 
 /**
- * Lightweight confetti celebration without modal (for inline celebrations)
+ * Lightweight confetti celebration without modal (for inline celebrations).
+ * Respects the user's animations engagement preference.
  */
 export function celebrateCompletion(type: CelebrationType) {
+  const animationsEnabled = useEngagementPrefsStore.getState().animations
+  if (!animationsEnabled) return
   triggerConfetti(type)
 }

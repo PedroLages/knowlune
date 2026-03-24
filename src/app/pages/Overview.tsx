@@ -251,15 +251,13 @@ export function Overview() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-50px' }}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6"
+          className={`grid grid-cols-1 ${showStreaks ? 'lg:grid-cols-[3fr_2fr]' : ''} gap-6`}
         >
-          {showStreaks ? (
+          {showStreaks && (
             <div>
               <h2 className="text-xl mb-4">Study Streak</h2>
               <StudyStreakCalendar weeks={26} />
             </div>
-          ) : (
-            <div />
           )}
           <div className="flex flex-col gap-6">
             <StudyGoalsWidget />

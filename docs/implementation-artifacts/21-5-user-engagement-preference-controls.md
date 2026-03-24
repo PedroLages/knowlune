@@ -129,4 +129,9 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Zustand for reactive preferences**: Using `useEngagementPrefsStore` with selectors (e.g., `s => s.badges`) ensures components only re-render when their specific toggle changes, not on every preference update. The `useEngagementVisible(feature)` hook wraps this pattern for clean one-liner checks.
+- **Gating components across the app**: Components like `MomentumBadge` self-gate via the store (returning `null` when disabled), while layout-level components like `StudyStreakCalendar` are gated by the parent page. The self-gating pattern is cleaner for deeply nested components; parent-gating is better when layout adjustments (grid collapse) are needed.
+- **Empty grid space when features are disabled**: Initially used an empty `<div />` placeholder when streaks were hidden, which left a large blank column on desktop. Fixed by removing the placeholder entirely and making the grid layout conditional (`lg:grid-cols-[3fr_2fr]` only when streaks are shown), so remaining content takes full width.
+- **Standalone functions need store gating too**: The `celebrateCompletion()` export calls confetti outside the React component tree, so it cannot use hooks. Used `useEngagementPrefsStore.getState()` for imperative access to check the animations preference before firing confetti.
+- **Vibrant color scheme "coming soon" pattern**: Used a disabled radio option with a "coming soon" badge rather than hiding the option entirely. This signals the feature roadmap to users without cluttering the UI, and avoids re-layout when the feature ships later.
+- **Deterministic test data**: Replaced `new Date().toISOString()` in test init scripts with a fixed ISO string to prevent flaky time-dependent behavior in CI environments.
