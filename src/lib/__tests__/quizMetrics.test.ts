@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { calculateQuizMetrics } from '@/lib/quizMetrics'
 import { makeAttempt } from '../../../tests/support/fixtures/factories/quiz-factory'
 import { db } from '@/db'
@@ -11,9 +11,13 @@ vi.mock('@/db', () => ({
   },
 }))
 
-const mockToArray = db.quizAttempts.toArray as ReturnType<typeof vi.fn>
+const mockToArray = vi.mocked(db.quizAttempts.toArray)
 
 describe('calculateQuizMetrics', () => {
+  beforeEach(() => {
+    mockToArray.mockClear()
+  })
+
   it('returns zeros when no attempts exist', async () => {
     mockToArray.mockResolvedValue([])
 
@@ -75,6 +79,39 @@ describe('calculateQuizMetrics', () => {
     const result = await calculateQuizMetrics()
 
     // (0 + 50 + 100) / 3 ≈ 50
+    expect(result.averageScore).toBeCloseTo(50, 5)
+  })
+
+  it('returns zero-state fallback when IndexedDB fails', async () => {
+    mockToArray.mockRejectedValue(new Error('IndexedDB unavailable'))
+
+    const result = await calculateQuizMetrics()
+
+    expect(result).toEqual({ totalQuizzes: 0, averageScore: 0, completionRate: 0 })
+  })
+
+  it('treats NaN/undefined percentage as 0 in average calculation', async () => {
+    mockToArray.mockResolvedValue([
+      makeAttempt({ percentage: 80 }),
+      makeAttempt({ percentage: NaN }),
+      makeAttempt({ percentage: 100 }),
+    ])
+
+    const result = await calculateQuizMetrics()
+
+    // (80 + 0 + 100) / 3 = 60
+    expect(result.averageScore).toBeCloseTo(60, 5)
+  })
+
+  it('clamps percentage values outside [0, 100]', async () => {
+    mockToArray.mockResolvedValue([
+      makeAttempt({ percentage: -20 }),
+      makeAttempt({ percentage: 150 }),
+    ])
+
+    const result = await calculateQuizMetrics()
+
+    // (0 + 100) / 2 = 50
     expect(result.averageScore).toBeCloseTo(50, 5)
   })
 })
