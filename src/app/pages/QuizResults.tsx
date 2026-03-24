@@ -12,6 +12,7 @@ import {
 import { calculateImprovement, calculateNormalizedGain } from '@/lib/analytics'
 import { ScoreSummary } from '@/app/components/quiz/ScoreSummary'
 import { ScoreTrajectoryChart } from '@/app/components/quiz/ScoreTrajectoryChart'
+import { ImprovementChart } from '@/app/components/quiz/ImprovementChart'
 import { QuestionBreakdown } from '@/app/components/quiz/QuestionBreakdown'
 import { AreasForGrowth } from '@/app/components/quiz/AreasForGrowth'
 import { PerformanceInsights } from '@/app/components/quiz/PerformanceInsights'
@@ -162,6 +163,9 @@ export function QuizResults() {
 
         {/* Score trajectory chart — only renders with 2+ attempts */}
         <ScoreTrajectoryChart attempts={trajectoryData} passingScore={currentQuiz.passingScore} />
+
+        {/* Learning trajectory pattern detection — requires 3+ attempts */}
+        <ImprovementChart attempts={attempts} />
 
         {/* Item difficulty analysis — shows when at least 1 attempt has been recorded */}
         <ItemDifficultyAnalysis quiz={currentQuiz} attempts={attempts} />
