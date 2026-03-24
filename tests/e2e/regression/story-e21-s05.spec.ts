@@ -41,14 +41,14 @@ test.describe('AC1: Engagement Preferences section in Settings', () => {
     // Verify toggle labels
     await expect(section.getByText('Achievements')).toBeVisible()
     await expect(section.getByText('Streaks')).toBeVisible()
-    await expect(section.getByText('Badges')).toBeVisible()
+    await expect(section.getByText('Badges', { exact: true })).toBeVisible()
     await expect(section.getByText('Animations')).toBeVisible()
 
     // Verify color scheme picker is present
     const colorPicker = section.getByTestId('color-scheme-picker')
     await expect(colorPicker).toBeVisible()
-    await expect(colorPicker.getByText('Professional')).toBeVisible()
-    await expect(colorPicker.getByText('Vibrant')).toBeVisible()
+    await expect(colorPicker.getByText('Professional', { exact: true })).toBeVisible()
+    await expect(colorPicker.getByText('Vibrant', { exact: true })).toBeVisible()
   })
 })
 
