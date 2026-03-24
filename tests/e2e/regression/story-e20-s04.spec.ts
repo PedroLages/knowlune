@@ -11,10 +11,7 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
-import {
-  seedIndexedDBStore,
-  clearIndexedDBStore,
-} from '../../support/helpers/indexeddb-seed'
+import { seedIndexedDBStore, clearIndexedDBStore } from '../../support/helpers/indexeddb-seed'
 import type { Page } from '@playwright/test'
 
 const TEST_COURSES = [
@@ -73,7 +70,12 @@ const TEST_COURSES = [
 
 /** Seed the Dexie `courses` table using the shared seedIndexedDBStore helper. */
 async function seedCoursesIntoIDB(page: Page): Promise<void> {
-  await seedIndexedDBStore(page, 'ElearningDB', 'courses', TEST_COURSES as Record<string, unknown>[])
+  await seedIndexedDBStore(
+    page,
+    'ElearningDB',
+    'courses',
+    TEST_COURSES as Record<string, unknown>[]
+  )
 }
 
 /** Navigate to Overview with pre-seeded multi-category courses. */
@@ -120,11 +122,35 @@ test.describe('E20-S04: Skill Proficiency Radar Chart', () => {
   test('radar chart section is hidden when fewer than 2 categories exist (AC4)', async ({
     page,
   }) => {
-    // Navigate without seeding courses — no categories at all
+    // Navigate first so Dexie creates the DB schema
     await navigateAndWait(page, '/')
+    // Seed exactly 1 course (single category) — seedCoursesIfEmpty() won't run
+    // because courses already exist, and <2 categories hides the radar chart
+    await seedIndexedDBStore(page, 'ElearningDB', 'courses', [
+      {
+        id: 'e20s04-single-cat',
+        title: 'Solo Category Course',
+        shortTitle: 'SC-101',
+        description: 'Test course with single category',
+        category: 'behavioral-analysis',
+        difficulty: 'beginner',
+        totalLessons: 0,
+        totalVideos: 0,
+        totalPDFs: 0,
+        estimatedHours: 1,
+        tags: ['test'],
+        modules: [],
+        isSequential: false,
+        basePath: '/courses/e20s04-single',
+        authorId: 'test-author',
+      },
+    ] as Record<string, unknown>[])
+    // Reload so loadCourses() picks up the seeded single-category data
+    await page.reload()
+    await page.waitForLoadState('domcontentloaded')
     await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 10000 })
 
-    // The radar chart heading and img should not be present
+    // The radar chart heading and img should not be present (< 2 categories)
     const heading = page.getByRole('heading', { name: 'Skill Proficiency' })
     await expect(heading).not.toBeVisible()
 
