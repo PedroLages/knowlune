@@ -100,3 +100,7 @@ Before requesting `/review-story`, verify:
 
 - Consolidated three independent `useEffect` hooks into one to reduce mount overhead and simplify the cleanup pattern. All three async calls are independent (no data dependencies), so they fire concurrently within a single effect.
 - The `silent-catch-ok` ESLint annotation is needed for the localStorage parse in `calculateCompletionRate` — parse failure is intentionally non-fatal (falls back to "no in-progress quiz").
+- Used `Set<quizId>` for deduplication early in the design, which avoided the common pitfall of counting raw attempts instead of unique quizzes. Unit tests confirmed this with a dedicated deduplication scenario.
+- The `hasActivity` guard on Reports needed updating to include the new completion rate data — first E2E run caught the card not rendering because `hasActivity` didn't account for quiz attempts. Lesson: when adding a new data source to an existing page, always check conditional rendering guards.
+- Extracted `Math.round(completionRate.rate)` into a computed variable after code review flagged duplication — small refactor, but it eliminated a subtle risk of inconsistent rounding if logic changes later.
+- E2E tests were moved to `regression/` during story setup since the spec already existed there, avoiding the archive step at finish time. Pattern works well for stories created by the epic orchestrator.
