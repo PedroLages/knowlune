@@ -16,7 +16,11 @@ interface FontSizePickerProps {
 export function FontSizePicker({ value, onChange }: FontSizePickerProps) {
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3" role="radiogroup" aria-label="Font size">
+      <div
+        className="grid grid-cols-2 sm:grid-cols-4 gap-3"
+        role="radiogroup"
+        aria-label="Font size"
+      >
         {FONT_SIZE_OPTIONS.map(option => {
           const isSelected = value === option.value
           const px = FONT_SIZE_PX[option.value]

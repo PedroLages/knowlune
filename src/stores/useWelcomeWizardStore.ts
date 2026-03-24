@@ -41,7 +41,7 @@ function persist(completedAt: string) {
   }
 }
 
-export const useWelcomeWizardStore = create<WelcomeWizardStore>((set) => ({
+export const useWelcomeWizardStore = create<WelcomeWizardStore>(set => ({
   isOpen: false,
   completedAt: null,
 

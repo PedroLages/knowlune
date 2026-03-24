@@ -87,7 +87,12 @@ export function WelcomeWizard() {
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleSkip() }}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={open => {
+        if (!open) handleSkip()
+      }}
+    >
       <DialogContent
         className="sm:max-w-lg rounded-[24px]"
         data-testid="welcome-wizard"
@@ -128,8 +133,8 @@ export function WelcomeWizard() {
             <DialogHeader className="space-y-2">
               <DialogTitle className="text-lg font-display">What generation are you?</DialogTitle>
               <DialogDescription className="text-muted-foreground text-sm">
-                This helps us set comfortable defaults. Your answer stays on your device and is never
-                sent to any server.
+                This helps us set comfortable defaults. Your answer stays on your device and is
+                never sent to any server.
               </DialogDescription>
             </DialogHeader>
             <div
@@ -200,12 +205,7 @@ export function WelcomeWizard() {
               <Button variant="ghost" size="sm" onClick={() => setStep('age')}>
                 Back
               </Button>
-              <Button
-                variant="brand"
-                size="sm"
-                onClick={handleFinish}
-                data-testid="wizard-finish"
-              >
+              <Button variant="brand" size="sm" onClick={handleFinish} data-testid="wizard-finish">
                 Finish Setup
               </Button>
             </div>

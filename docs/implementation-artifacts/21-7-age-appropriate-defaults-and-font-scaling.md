@@ -120,4 +120,12 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+1. **CSS variable font scaling** — Using `html { font-size: var(--font-size) }` with a CSS custom property allows proportional scaling of all `rem`-based sizes across the app. The `FONT_SIZE_PX` constant in `src/lib/settings.ts` maps human-readable labels to pixel values, keeping the mapping in a single source of truth shared by both the picker UI and the layout integration.
+
+2. **Age-specific defaults pattern** — The `AGE_FONT_DEFAULTS` record maps each `AgeRange` to a recommended `FontSize`. This pattern cleanly separates "what age means" from "how settings are applied," making it easy to add new age-specific defaults (e.g., reduced motion) without touching the wizard UI.
+
+3. **Welcome wizard UX** — Keeping the wizard to 3 lightweight steps (welcome, age, font) and always allowing skip/dismiss ensures the onboarding feels non-intrusive. The Zustand store with localStorage persistence (`knowlune-welcome-wizard-v1`) guarantees the wizard never reappears after completion or dismissal.
+
+4. **Settings test mock maintenance** — When adding new exports to `@/lib/settings` (like `FONT_SIZE_PX`), existing test mocks that enumerate exports break. Using `importOriginal` in the mock factory pulls all actual exports and only overrides the functions that need mocking, making tests resilient to new constant exports.
+
+5. **AC5 Settings integration** — The Age Range section in Settings reuses the same `AGE_FONT_DEFAULTS` mapping and `AgeRange` type, with a confirmation dialog before re-applying defaults. This prevents accidental overwriting of user-customized font sizes while still providing a clear path to reset.
