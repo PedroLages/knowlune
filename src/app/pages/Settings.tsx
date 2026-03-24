@@ -47,6 +47,7 @@ import { AIConfigurationSettings } from '@/app/components/figma/AIConfigurationS
 import { QuizPreferencesForm } from '@/app/components/settings/QuizPreferencesForm'
 import { AvatarCropDialog } from '@/app/components/ui/avatar-crop-dialog'
 import { AvatarUploadZone } from '@/app/components/settings/avatar-upload-zone'
+import { EngagementPreferences } from '@/app/components/settings/EngagementPreferences'
 import { validateImageFile, compressAvatar, fileToDataUrl } from '@/lib/avatarUpload'
 import { toastSuccess, toastError } from '@/lib/toastHelpers'
 
@@ -552,6 +553,9 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Engagement Preferences */}
+        <EngagementPreferences />
 
         {/* Reminders */}
         <ReminderSettings />

@@ -36,6 +36,7 @@ import {
 import { getActionsPerDay } from '@/lib/studyLog'
 import { getSkillProficiencyForOverview } from '@/lib/reportStats'
 import { staggerContainer, fadeUp } from '@/lib/motion'
+import { useEngagementVisible } from '@/hooks/useEngagementVisible'
 
 function getGreeting(): string {
   const hour = new Date().getHours()
@@ -118,6 +119,11 @@ export function Overview() {
   )
   const lastWatchedCourse = lastWatchedEntry?.[0]
   const lastWatchedLesson = lastWatchedEntry?.[1].lastWatchedLesson
+
+  // Engagement preference toggles
+  const showAchievements = useEngagementVisible('achievements')
+  const showStreaks = useEngagementVisible('streaks')
+  const showAnimations = useEngagementVisible('animations')
 
   // Memoize stats cards array to prevent recreation on every render
   const statsCards = useMemo(
@@ -210,7 +216,7 @@ export function Overview() {
   }
 
   return (
-    <MotionConfig reducedMotion="user">
+    <MotionConfig reducedMotion={showAnimations ? 'user' : 'always'}>
       <motion.div
         initial="hidden"
         animate="visible"
@@ -244,7 +250,7 @@ export function Overview() {
                 <StatsCard key={stat.label} {...stat} />
               ))}
             </div>
-            <AchievementBanner completedLessons={completedLessons} />
+            {showAchievements && <AchievementBanner completedLessons={completedLessons} />}
           </div>
         </motion.section>
 
@@ -259,12 +265,14 @@ export function Overview() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-50px' }}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6"
+          className={`grid grid-cols-1 ${showStreaks ? 'lg:grid-cols-[3fr_2fr]' : ''} gap-6`}
         >
-          <div>
-            <h2 className="text-xl mb-4">Study Streak</h2>
-            <StudyStreakCalendar weeks={26} />
-          </div>
+          {showStreaks && (
+            <div>
+              <h2 className="text-xl mb-4">Study Streak</h2>
+              <StudyStreakCalendar weeks={26} />
+            </div>
+          )}
           <div className="flex flex-col gap-6">
             <StudyGoalsWidget />
             <RecentActivity activities={recentActivity} />
