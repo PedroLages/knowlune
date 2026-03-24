@@ -15,6 +15,7 @@ import {
   FileSpreadsheet,
   FileText,
   Award,
+  Type,
 } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
@@ -36,7 +37,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/app/components/ui/alert-dialog'
-import { getSettings, saveSettings, resetAllData } from '@/lib/settings'
+import { getSettings, saveSettings, resetAllData, type FontSize } from '@/lib/settings'
+import { FontSizePicker } from '@/app/components/settings/FontSizePicker'
 import { exportAllAsJson, exportAllAsCsv, exportNotesAsMarkdown } from '@/lib/exportService'
 import { importFullData } from '@/lib/importService'
 import { downloadJson, downloadZip } from '@/lib/fileDownload'
@@ -549,6 +551,35 @@ export default function Settings() {
                 </div>
               </RadioGroup>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Font Size */}
+        <Card>
+          <CardHeader className="border-b border-border/50 bg-surface-sunken/30">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-brand-soft p-2">
+                <Type className="size-5 text-brand" aria-hidden="true" />
+              </div>
+              <div>
+                <h2 className="text-lg font-display leading-none">Font Size</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Adjust text size for comfortable reading
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6" data-testid="font-size-section">
+            <FontSizePicker
+              value={settings.fontSize ?? 'medium'}
+              onChange={(size: FontSize) => {
+                const updated = { ...settings, fontSize: size }
+                setSettings(updated)
+                saveSettings(updated)
+                window.dispatchEvent(new Event('settingsUpdated'))
+                toastSuccess.saved('Font size')
+              }}
+            />
           </CardContent>
         </Card>
 
