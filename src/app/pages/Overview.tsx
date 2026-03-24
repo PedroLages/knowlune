@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { BookOpen, CheckCircle, FileText, Clock, ArrowRight } from 'lucide-react'
 import { motion, MotionConfig } from 'motion/react'
@@ -19,6 +19,7 @@ import { StudyScheduleWidget } from '@/app/components/StudyScheduleWidget'
 import { RecommendedNext, RecommendedNextSkeleton } from '@/app/components/RecommendedNext'
 import { CourseCard } from '@/app/components/figma/CourseCard'
 import { ProgressChart } from '@/app/components/charts/ProgressChart'
+import { DashboardCustomizer } from '@/app/components/DashboardCustomizer'
 import { useCourseStore } from '@/stores/useCourseStore'
 import {
   getCoursesInProgress,
@@ -33,6 +34,8 @@ import {
 } from '@/lib/progress'
 import { getActionsPerDay } from '@/lib/studyLog'
 import { staggerContainer, fadeUp } from '@/lib/motion'
+import { useDashboardOrder } from '@/hooks/useDashboardOrder'
+import type { DashboardSectionId } from '@/lib/dashboardOrder'
 
 function getGreeting(): string {
   const hour = new Date().getHours()
@@ -40,6 +43,14 @@ function getGreeting(): string {
   if (hour < 17) return 'Good afternoon'
   return 'Good evening'
 }
+
+/** Shared animation props for viewport-triggered sections */
+const viewportAnimation = {
+  initial: { opacity: 0, y: 20 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, margin: '-50px' },
+  transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+} as const
 
 export function Overview() {
   const allCourses = useCourseStore(s => s.courses)
@@ -154,6 +165,154 @@ export function Overview() {
     ]
   )
 
+  // Dashboard section ordering
+  const {
+    sectionOrder,
+    pinnedSections,
+    isManuallyOrdered,
+    isCustomizing,
+    setIsCustomizing,
+    handlePin,
+    handleUnpin,
+    handleReorder,
+    handleReset,
+    createSectionRef,
+  } = useDashboardOrder()
+
+  // Map section IDs to their rendered content
+  const sectionRenderers: Record<DashboardSectionId, () => ReactNode> = useMemo(
+    () => ({
+      'recommended-next': () => (
+        <motion.section
+          key="recommended-next"
+          ref={createSectionRef('recommended-next')}
+          variants={fadeUp}
+          data-testid="section-recommended-next"
+        >
+          <RecommendedNext />
+        </motion.section>
+      ),
+      'metrics-strip': () => (
+        <motion.section
+          key="metrics-strip"
+          ref={createSectionRef('metrics-strip')}
+          variants={fadeUp}
+          data-testid="section-metrics-strip"
+        >
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-6 items-start">
+            <div
+              data-testid="stats-grid"
+              className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3"
+            >
+              {statsCards.map(stat => (
+                <StatsCard key={stat.label} {...stat} />
+              ))}
+            </div>
+            <AchievementBanner completedLessons={completedLessons} />
+          </div>
+        </motion.section>
+      ),
+      'engagement-zone': () => (
+        <motion.section
+          key="engagement-zone"
+          ref={createSectionRef('engagement-zone')}
+          {...viewportAnimation}
+          className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6"
+          data-testid="section-engagement-zone"
+        >
+          <div>
+            <h2 className="text-xl mb-4">Study Streak</h2>
+            <StudyStreakCalendar weeks={26} />
+          </div>
+          <div className="flex flex-col gap-6">
+            <StudyGoalsWidget />
+            <RecentActivity activities={recentActivity} />
+          </div>
+        </motion.section>
+      ),
+      'study-history': () => (
+        <motion.section
+          key="study-history"
+          ref={createSectionRef('study-history')}
+          {...viewportAnimation}
+          className="rounded-[24px] border border-border/50 bg-card p-6"
+          data-testid="section-study-history"
+        >
+          <h2 className="text-xl font-semibold mb-4">Study History</h2>
+          <StudyHistoryCalendar />
+        </motion.section>
+      ),
+      'study-schedule': () => (
+        <motion.section
+          key="study-schedule"
+          ref={createSectionRef('study-schedule')}
+          {...viewportAnimation}
+          className="rounded-[24px] border border-border/50 bg-card p-6"
+          data-testid="section-study-schedule"
+        >
+          <h2 className="text-xl font-semibold mb-4">Suggested Study Time</h2>
+          <StudyScheduleWidget />
+        </motion.section>
+      ),
+      'insight-action': () => (
+        <motion.section
+          key="insight-action"
+          ref={createSectionRef('insight-action')}
+          {...viewportAnimation}
+          className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6"
+          data-testid="section-insight-action"
+        >
+          <ProgressChart data={chartData} />
+          <QuickActions
+            studyNotes={studyNotes}
+            lastWatchedCourse={lastWatchedCourse}
+            lastWatchedLesson={lastWatchedLesson}
+          />
+        </motion.section>
+      ),
+      'course-gallery': () => (
+        <motion.section
+          key="course-gallery"
+          ref={createSectionRef('course-gallery')}
+          {...viewportAnimation}
+          data-testid="section-course-gallery"
+        >
+          <div className="flex items-baseline justify-between mb-6">
+            <h2 className="text-xl">Your Library</h2>
+            <Link
+              to="/courses"
+              className="text-sm text-brand hover:text-brand-hover flex items-center gap-1 motion-safe:transition-colors"
+            >
+              View all
+              <ArrowRight className="size-3.5" aria-hidden="true" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {allCourses.map(course => (
+              <CourseCard
+                key={course.id}
+                course={course}
+                variant="overview"
+                completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
+              />
+            ))}
+          </div>
+        </motion.section>
+      ),
+    }),
+    [
+      statsCards,
+      completedLessons,
+      recentActivity,
+      chartData,
+      studyNotes,
+      lastWatchedCourse,
+      lastWatchedLesson,
+      allCourses,
+      createSectionRef,
+    ]
+  )
+
   if (isLoading) {
     return (
       <div className="space-y-12" aria-busy="true" aria-label="Loading dashboard">
@@ -208,7 +367,7 @@ export function Overview() {
         variants={staggerContainer}
         className="space-y-12 pb-12"
       >
-        {/* ── Hero Zone ── */}
+        {/* ── Hero Zone (fixed, never reordered) ── */}
         <motion.section variants={fadeUp} className="space-y-6">
           <div>
             <p className="text-sm text-muted-foreground tracking-wide uppercase font-medium">
@@ -219,85 +378,23 @@ export function Overview() {
           <ContinueLearning />
         </motion.section>
 
-        {/* ── Recommended Next ── */}
-        <motion.section variants={fadeUp}>
-          <RecommendedNext />
-        </motion.section>
+        {/* ── Dashboard Customizer ── */}
+        <DashboardCustomizer
+          sectionOrder={sectionOrder}
+          pinnedSections={pinnedSections}
+          isManuallyOrdered={isManuallyOrdered}
+          isOpen={isCustomizing}
+          onToggle={setIsCustomizing}
+          onPin={handlePin}
+          onUnpin={handleUnpin}
+          onReorder={handleReorder}
+          onReset={handleReset}
+        />
 
-        {/* ── Metrics Strip ── */}
-        <motion.section variants={fadeUp}>
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-6 items-start">
-            <div
-              data-testid="stats-grid"
-              className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3"
-            >
-              {statsCards.map(stat => (
-                <StatsCard key={stat.label} {...stat} />
-              ))}
-            </div>
-            <AchievementBanner completedLessons={completedLessons} />
-          </div>
-        </motion.section>
+        {/* ── Reorderable Sections ── */}
+        {sectionOrder.map(sectionId => sectionRenderers[sectionId]())}
 
-        {/* ── Engagement Zone ── */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-50px' }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6"
-        >
-          <div>
-            <h2 className="text-xl mb-4">Study Streak</h2>
-            <StudyStreakCalendar weeks={26} />
-          </div>
-          <div className="flex flex-col gap-6">
-            <StudyGoalsWidget />
-            <RecentActivity activities={recentActivity} />
-          </div>
-        </motion.section>
-
-        {/* ── Study History Calendar ── */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-50px' }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="rounded-[24px] border border-border/50 bg-card p-6"
-        >
-          <h2 className="text-xl font-semibold mb-4">Study History</h2>
-          <StudyHistoryCalendar />
-        </motion.section>
-
-        {/* ── Study Schedule Widget ── */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-50px' }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="rounded-[24px] border border-border/50 bg-card p-6"
-        >
-          <h2 className="text-xl font-semibold mb-4">Suggested Study Time</h2>
-          <StudyScheduleWidget />
-        </motion.section>
-
-        {/* ── Insight + Action Zone ── */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-50px' }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6"
-        >
-          <ProgressChart data={chartData} />
-          <QuickActions
-            studyNotes={studyNotes}
-            lastWatchedCourse={lastWatchedCourse}
-            lastWatchedLesson={lastWatchedLesson}
-          />
-        </motion.section>
-
-        {/* ── Import Course Empty State ── */}
+        {/* ── Import Course Empty State (fixed, never reordered) ── */}
         {importedCourses.length === 0 && (
           <motion.section variants={fadeUp}>
             <EmptyState
@@ -314,35 +411,6 @@ export function Overview() {
             />
           </motion.section>
         )}
-
-        {/* ── Course Gallery ── */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-50px' }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <div className="flex items-baseline justify-between mb-6">
-            <h2 className="text-xl">Your Library</h2>
-            <Link
-              to="/courses"
-              className="text-sm text-brand hover:text-brand-hover flex items-center gap-1 motion-safe:transition-colors"
-            >
-              View all
-              <ArrowRight className="size-3.5" aria-hidden="true" />
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {allCourses.map(course => (
-              <CourseCard
-                key={course.id}
-                course={course}
-                variant="overview"
-                completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
-              />
-            ))}
-          </div>
-        </motion.section>
       </motion.div>
     </MotionConfig>
   )
