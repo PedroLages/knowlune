@@ -261,7 +261,7 @@ development_status:
   17-1-track-and-display-quiz-completion-rate: done
   17-2-track-average-retake-frequency: done
   17-3-calculate-item-difficulty-p-values: done
-  17-4-calculate-discrimination-indices: in-progress
+  17-4-calculate-discrimination-indices: done
   17-5-identify-learning-trajectory-patterns: backlog
   epic-17-retrospective: optional
 
