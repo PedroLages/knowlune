@@ -174,3 +174,9 @@ Before requesting `/review-story`, verify:
 - Seeding `dashboard-section-stats` in localStorage with high view/time values for specific sections, then asserting render order, effectively tests the auto-reorder code path without needing to simulate real user interactions over time.
 - Manual order testing via direct localStorage seeding with `isManuallyOrdered: true` validates the same code path as actual drag-and-drop without flaky drag simulation.
 - The `Reset` button should only appear when `isManuallyOrdered` is true — showing it always confuses users who haven't customized anything (AC5 fidelity).
+
+### Review Cycle Insights
+
+- IntersectionObserver requires a runtime guard (`typeof IntersectionObserver !== 'undefined'`) for jsdom/SSR environments — discovered during unit test failures in Round 2. This is a recurring pattern for browser APIs.
+- AC2/AC3 test coverage gaps flagged by code-review-testing were resolved by seeding localStorage directly rather than simulating complex user interactions (drag, 7-day usage history). Seeding is deterministic and avoids flaky mouse-coordinate-dependent tests.
+- Review reports written against an earlier commit can flag issues already resolved in subsequent commits — worth cross-referencing the latest test run before treating HIGH findings as open.
