@@ -33,6 +33,11 @@ const controlShortcuts: ShortcutEntry[] = [
   { keys: ['?'], description: 'Show shortcuts' },
 ]
 
+const loopShortcuts: ShortcutEntry[] = [
+  { keys: ['A'], description: 'Set loop start / end (A→B, Esc to reset)' },
+  { keys: ['Esc'], description: 'Clear loop' },
+]
+
 const notesShortcuts: ShortcutEntry[] = [
   { keys: ['N'], description: 'Focus note editor' },
   { keys: ['Alt', 'T'], description: 'Insert timestamp (in notes)' },
@@ -117,12 +122,18 @@ export function VideoShortcutsOverlay({ open, onClose }: VideoShortcutsOverlayPr
             ))}
           </div>
 
-          {/* Column 2: Controls + Notes */}
+          {/* Column 2: Controls + AB Loop + Notes */}
           <div data-column="controls" className="space-y-2">
             <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">
               Controls
             </p>
             {controlShortcuts.map(s => (
+              <ShortcutRow key={s.description} shortcut={s} />
+            ))}
+            <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2 mt-4">
+              AB Loop
+            </p>
+            {loopShortcuts.map(s => (
               <ShortcutRow key={s.description} shortcut={s} />
             ))}
             <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2 mt-4">
