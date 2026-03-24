@@ -7,9 +7,9 @@
  *   - AC3: Shortcuts overlay shows updated entries
  *   - AC4: Accessibility — ARIA announcements, no focus traps
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
-import { TIMEOUTS } from '../utils/constants'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
+import { TIMEOUTS } from '../../utils/constants'
 
 const LESSON_URL = '/courses/operative-six/op6-introduction'
 
