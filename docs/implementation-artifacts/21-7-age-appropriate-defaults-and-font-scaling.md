@@ -129,3 +129,5 @@ Before requesting `/review-story`, verify:
 4. **Settings test mock maintenance** — When adding new exports to `@/lib/settings` (like `FONT_SIZE_PX`), existing test mocks that enumerate exports break. Using `importOriginal` in the mock factory pulls all actual exports and only overrides the functions that need mocking, making tests resilient to new constant exports.
 
 5. **AC5 Settings integration** — The Age Range section in Settings reuses the same `AGE_FONT_DEFAULTS` mapping and `AgeRange` type, with a confirmation dialog before re-applying defaults. This prevents accidental overwriting of user-customized font sizes while still providing a clear path to reset.
+
+6. **Large-scale cleanup alongside feature work** — This branch removed ~10,000 lines of dead code (Pomodoro timer, dashboard reordering, engagement preferences, unused quiz analytics) while adding the new feature. Bundling cleanup with a feature commit keeps the codebase lean but makes the diff harder to review. Future large cleanups should be a separate preparatory commit to isolate the signal.
