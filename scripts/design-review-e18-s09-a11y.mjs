@@ -1,3 +1,4 @@
+/* eslint-disable no-undef, @typescript-eslint/no-unused-vars */
 import { chromium } from '@playwright/test';
 
 const browser = await chromium.launch();
