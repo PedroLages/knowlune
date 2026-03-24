@@ -4,9 +4,9 @@ story_name: "Enhanced Video Keyboard Shortcuts"
 status: in-progress
 started: 2026-03-23
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-24
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
 burn_in_validated: false
 ---
 
@@ -121,15 +121,57 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+**Verdict: PASS** — All 15 visual/interactive tests passed. Accessibility checklist all pass.
+
+- **[MEDIUM]** `< + >` chord separator misleading — `ShortcutRow` renders `[<] + [>]` implying simultaneous keypress. Fix: add optional `separator` field defaulting to `+`, pass `'/'` for this entry.
+- **[NIT]** `document.querySelector('[contenteditable="true"]')` is fragile — recommend exposing imperative `focus()` handle from NoteEditor.
+- **[PRE-EXISTING]** Mobile overlay clipped at 375px (introduced in E02-S07, not this story).
+
+Report: [design-review-2026-03-24-e21-s02.md](../reviews/design/design-review-2026-03-24-e21-s02.md)
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**Verdict: PASS with warnings** — 0 blockers, 2 high, 3 medium, 2 nits.
+
+- **[HIGH]** `stepPlaybackSpeed` doesn't handle `indexOf === -1` when localStorage has non-standard speed value — silently jumps to 0.5x or gets stuck. Fix: add nearest-speed fallback guard.
+- **[HIGH]** `document.querySelector('[contenteditable="true"]')` is fragile global DOM query — could focus wrong element. Fix: use targeted ref or scoped selector.
+- **[MEDIUM]** `parseFloat` on localStorage produces any float — validate against `PLAYBACK_SPEEDS` during init.
+- **[MEDIUM]** `useCallback` on `handleFocusNotes` with `[notesOpen]` creates false optimization sense.
+- **[MEDIUM]** `< + >` overlay display implies simultaneous keypress (duplicate of design review finding).
+
+Report: [code-review-2026-03-24-e21-s02.md](../reviews/code/code-review-2026-03-24-e21-s02.md)
+
+### Test Coverage Review
+
+**AC Coverage: 4/4 (100%)** — All ACs have at least one test. 4 sub-criteria gaps identified.
+
+- **[HIGH]** AC2: No assertion that video continues playing after N key focus change.
+- **[HIGH]** AC2: Input guard only tested for contenteditable, not native `<input>`/`<textarea>`.
+- **[HIGH]** AC3: No assertion that existing shortcuts remain unchanged.
+- **[HIGH]** AC4: No ARIA announcement test for N key.
+- **[MEDIUM]** `video-playback-speed` missing from `STORAGE_KEYS` fixture.
+
+Report: [code-review-testing-2026-03-24-e21-s02.md](../reviews/code/code-review-testing-2026-03-24-e21-s02.md)
+
+### Edge Case Review
+
+7 edge cases found, 3 high-impact:
+- **[HIGH]** Non-standard speed in localStorage causes wrong `indexOf` behavior.
+- **[HIGH]** Unparseable localStorage value (`NaN`) breaks speed stepping.
+- **[HIGH]** N key when notes panel open on different tab (bookmarks/materials) — `setActiveTab('notes')` not called, focus silently fails.
+
+Report: [edge-case-review-2026-03-24-e21-s02.md](../reviews/code/edge-case-review-2026-03-24-e21-s02.md)
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+**Verdict: PASS** — 0 blockers, 0 high, 1 medium, 3 low.
+
+- **[MEDIUM]** `+` separator between `<` and `>` implies chord (duplicate finding).
+- **[LOW]** N shortcut lacks screen reader announcement when focusing editor.
+- **[LOW]** Fragile `contenteditable` selector (duplicate finding).
+- **[LOW]** Pre-existing hardcoded colors in Kbd component (acceptable on dark overlay).
+
+Report: [web-design-guidelines-2026-03-24-e21-s02.md](../reviews/code/web-design-guidelines-2026-03-24-e21-s02.md)
 
 ## Challenges and Lessons Learned
 
