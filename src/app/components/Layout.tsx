@@ -421,10 +421,7 @@ export function Layout() {
               aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
             >
               <Sun className="size-5 text-muted-foreground dark:hidden" aria-hidden="true" />
-              <Moon
-                className="size-5 text-muted-foreground hidden dark:block"
-                aria-hidden="true"
-              />
+              <Moon className="size-5 text-muted-foreground hidden dark:block" aria-hidden="true" />
             </Button>
 
             <Button

@@ -316,12 +316,7 @@ export function QAChatPanel() {
         <div className="flex h-full flex-col">
           <div className="flex items-center justify-between border-b px-4 py-3">
             <h3 className="font-semibold">Ask AI</h3>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-6"
-              onClick={() => setIsOpen(false)}
-            >
+            <Button variant="ghost" size="icon" className="size-6" onClick={() => setIsOpen(false)}>
               <X className="size-4" />
             </Button>
           </div>

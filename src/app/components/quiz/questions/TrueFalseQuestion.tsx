@@ -62,6 +62,9 @@ export function TrueFalseQuestion({ question, value, onChange, mode }: TrueFalse
 
   return (
     <fieldset className="mt-6 min-w-0" aria-labelledby={labelId}>
+      {/* Empty legend satisfies semantic HTML requirement; aria-labelledby on fieldset
+          provides the accessible name so no duplicate text node is added to the DOM */}
+      <legend className="sr-only" />
       <div
         id={labelId}
         data-testid="question-text"
