@@ -279,7 +279,7 @@ development_status:
   18-8-display-quiz-availability-badges-on-courses-page: backlog
   18-9-configure-quiz-preferences-in-settings: backlog
   18-10-export-quiz-results: backlog
-  18-11-track-quiz-progress-in-content-completion: backlog
+  18-11-track-quiz-progress-in-content-completion: done
   epic-18-retrospective: optional
 
   # ──────────────────────────────────────────────────
