@@ -340,14 +340,14 @@ export function Courses() {
           )}
 
           <div className="mb-6">
-            <div className="flex items-center gap-4 mb-4 flex-wrap">
-              <div className="flex flex-wrap gap-2 items-center flex-1">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4">
+              <div className="overflow-x-auto flex-1 min-w-0">
                 <ToggleGroup
                   type="single"
                   value={selectedCategory}
                   onValueChange={v => setSelectedCategory(v || 'all')}
                   aria-label="Filter by category"
-                  className="flex flex-wrap gap-2"
+                  className="flex flex-nowrap gap-1.5 sm:gap-2"
                 >
                   {[
                     { value: 'all', label: 'All Courses' },
@@ -359,7 +359,7 @@ export function Courses() {
                     <ToggleGroupItem
                       key={chip.value}
                       value={chip.value}
-                      className={`h-auto rounded-full! border px-4 py-3 sm:py-1.5 text-sm font-medium transition-colors data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-card data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-accent data-[state=off]:hover:text-foreground data-[state=off]:border-border cursor-pointer shadow-none${i === 0 ? ' mr-1' : ''}`}
+                      className={`h-auto rounded-full! border px-3 sm:px-4 py-3 sm:py-1.5 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-card data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-accent data-[state=off]:hover:text-foreground data-[state=off]:border-border cursor-pointer shadow-none${i === 0 ? ' mr-1' : ''}`}
                     >
                       {chip.label}
                     </ToggleGroupItem>
@@ -370,7 +370,7 @@ export function Courses() {
                 <SelectTrigger
                   data-testid="sort-select"
                   aria-label="Sort courses"
-                  className="w-[180px] rounded-xl"
+                  className="w-full sm:w-[180px] rounded-xl"
                 >
                   <SelectValue />
                 </SelectTrigger>
