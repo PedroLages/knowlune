@@ -312,7 +312,7 @@ development_status:
   # Epic 21: Engagement & Adaptive Experience
   # ──────────────────────────────────────────────────
   epic-21: in-progress
-  21-1-ab-loop-video-controls: in-progress
+  21-1-ab-loop-video-controls: done
   21-2-enhanced-video-keyboard-shortcuts: backlog
   21-3-pomodoro-focus-timer: backlog
   21-4-visual-energy-boost: backlog

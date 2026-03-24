@@ -1,10 +1,10 @@
 ---
 story_id: E21-S01
 story_name: "AB-Loop Video Controls"
-status: in-progress
+status: done
 started: 2026-03-23
-completed:
-reviewed: in-progress
+completed: 2026-03-24
+reviewed: done
 review_started: 2026-03-24
 review_gates_passed: []
 burn_in_validated: false
