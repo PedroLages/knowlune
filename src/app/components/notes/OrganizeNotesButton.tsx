@@ -34,14 +34,18 @@ export function OrganizeNotesButton({ notes, courseNames }: OrganizeNotesButtonP
       trackAIUsage('note_organization', {
         durationMs: Date.now() - startTime,
         metadata: { noteCount: notes.length, proposalCount: result.length },
-      }).catch(() => {})
+      }).catch(() => {
+        // silent-catch-ok — non-critical analytics tracking
+      })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to organize notes'
       trackAIUsage('note_organization', {
         status: 'error',
         durationMs: Date.now() - startTime,
         metadata: { error: message },
-      }).catch(() => {})
+      }).catch(() => {
+        // silent-catch-ok — non-critical analytics tracking
+      })
       toast.error(message, {
         action: {
           label: 'Retry',

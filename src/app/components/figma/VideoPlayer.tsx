@@ -55,6 +55,7 @@ interface VideoPlayerProps {
   theaterMode?: boolean
   onTheaterModeToggle?: () => void
   onLoadCaptions?: (file: File) => void
+  onFocusNotes?: () => void
 }
 
 export interface VideoPlayerHandle {
@@ -87,6 +88,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     theaterMode,
     onTheaterModeToggle,
     onLoadCaptions,
+    onFocusNotes,
   },
   ref
 ) {
@@ -127,10 +129,12 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   const [showControls, setShowControls] = useState(true)
   const [announcement, setAnnouncement] = useState('')
 
-  // Load saved playback speed from localStorage
+  // Load saved playback speed from localStorage (validated against allowed values)
   const [playbackSpeed, setPlaybackSpeed] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEY_PLAYBACK_SPEED)
-    return saved ? parseFloat(saved) : 1
+    if (!saved) return 1
+    const parsed = parseFloat(saved)
+    return PLAYBACK_SPEEDS.includes(parsed) ? parsed : 1
   })
 
   // Track whether speed menu is open (prevents controls auto-hide)
@@ -354,6 +358,34 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     setPlaybackSpeed(speed)
     localStorage.setItem(STORAGE_KEY_PLAYBACK_SPEED, speed.toString())
     announce(`Speed changed to ${speed}x`)
+  }
+
+  // Step playback speed up/down through PLAYBACK_SPEEDS list (</>  keyboard shortcuts)
+  const stepPlaybackSpeed = (direction: 'up' | 'down') => {
+    const currentIndex = PLAYBACK_SPEEDS.indexOf(playbackSpeed)
+
+    // Guard: if current speed is not in the list (corrupted localStorage), snap to nearest
+    if (currentIndex === -1) {
+      const nearest = PLAYBACK_SPEEDS.reduce((prev, curr) =>
+        Math.abs(curr - playbackSpeed) < Math.abs(prev - playbackSpeed) ? curr : prev
+      )
+      changePlaybackSpeed(nearest)
+      return
+    }
+
+    if (direction === 'up') {
+      if (currentIndex >= PLAYBACK_SPEEDS.length - 1) {
+        announce('Already at maximum speed')
+        return
+      }
+      changePlaybackSpeed(PLAYBACK_SPEEDS[currentIndex + 1])
+    } else {
+      if (currentIndex <= 0) {
+        announce('Already at minimum speed')
+        return
+      }
+      changePlaybackSpeed(PLAYBACK_SPEEDS[currentIndex - 1])
+    }
   }
 
   // Jump to percentage
@@ -646,6 +678,20 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
           e.preventDefault()
           handleAddBookmark()
           break
+        case '<':
+          e.preventDefault()
+          stepPlaybackSpeed('down')
+          containerRef.current?.focus({ preventScroll: true })
+          break
+        case '>':
+          e.preventDefault()
+          stepPlaybackSpeed('up')
+          containerRef.current?.focus({ preventScroll: true })
+          break
+        case 'n':
+          e.preventDefault()
+          onFocusNotes?.()
+          break
         case '0':
         case '1':
         case '2':
@@ -682,6 +728,8 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     setLoopA,
     setLoopB,
     clearLoop,
+    stepPlaybackSpeed,
+    onFocusNotes,
   ])
 
   // Auto-hide controls (mouse interaction — only hides when playing)

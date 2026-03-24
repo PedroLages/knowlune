@@ -17,8 +17,10 @@ import { StudyGoalsWidget } from '@/app/components/StudyGoalsWidget'
 import { StudyHistoryCalendar } from '@/app/components/StudyHistoryCalendar'
 import { StudyScheduleWidget } from '@/app/components/StudyScheduleWidget'
 import { RecommendedNext, RecommendedNextSkeleton } from '@/app/components/RecommendedNext'
+import { QuizPerformanceCard } from '@/app/components/dashboard/QuizPerformanceCard'
 import { CourseCard } from '@/app/components/figma/CourseCard'
 import { ProgressChart } from '@/app/components/charts/ProgressChart'
+import { SkillProficiencyRadar } from '@/app/components/overview/SkillProficiencyRadar'
 import { useCourseStore } from '@/stores/useCourseStore'
 import {
   getCoursesInProgress,
@@ -32,6 +34,7 @@ import {
   getCourseCompletionPercent,
 } from '@/lib/progress'
 import { getActionsPerDay } from '@/lib/studyLog'
+import { getSkillProficiencyForOverview } from '@/lib/reportStats'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 
 function getGreeting(): string {
@@ -66,9 +69,14 @@ export function Overview() {
   useEffect(() => {
     let ignore = false
 
-    getTotalStudyNotes().then(notes => {
-      if (!ignore) setStudyNotes(notes)
-    })
+    getTotalStudyNotes()
+      .then(notes => {
+        if (!ignore) setStudyNotes(notes)
+      })
+      .catch(err => {
+        // silent-catch-ok — non-critical stat; dashboard still renders with default value
+        console.error('[Overview] Failed to load study notes count:', err)
+      })
 
     return () => {
       ignore = true
@@ -95,6 +103,7 @@ export function Overview() {
   const lessonSparkline = useMemo(() => getLast7DaysLessonCompletions(), [])
   const lessonsChange = useMemo(() => getWeeklyChange('lessons'), [])
   const chartData = useMemo(() => getActionsPerDay(14), [])
+  const skillProficiencyData = useMemo(() => getSkillProficiencyForOverview(), [allCourses])
 
   // Memoize last watched calculation to prevent sorting on every render
   const lastWatchedEntry = useMemo(
@@ -239,6 +248,11 @@ export function Overview() {
           </div>
         </motion.section>
 
+        {/* ── Quiz Performance ── */}
+        <motion.section variants={fadeUp}>
+          <QuizPerformanceCard />
+        </motion.section>
+
         {/* ── Engagement Zone ── */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
@@ -281,6 +295,20 @@ export function Overview() {
           <StudyScheduleWidget />
         </motion.section>
 
+        {/* ── Skill Proficiency Radar ── */}
+        {skillProficiencyData.length > 0 && (
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-50px' }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="rounded-[24px] border border-border/50 bg-card p-6"
+          >
+            <h2 className="text-xl font-semibold mb-4">Skill Proficiency</h2>
+            <SkillProficiencyRadar data={skillProficiencyData} />
+          </motion.section>
+        )}
+
         {/* ── Insight + Action Zone ── */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
@@ -308,7 +336,7 @@ export function Overview() {
               actionLabel="Import Course"
               onAction={() => {
                 importCourseFromFolder().catch(() => {
-                  // User cancelled file picker or permission denied — no action needed
+                  // silent-catch-ok — user cancelled file picker or permission denied
                 })
               }}
             />
@@ -332,14 +360,34 @@ export function Overview() {
               <ArrowRight className="size-3.5" aria-hidden="true" />
             </Link>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          {importedCourses.length > 0 && (
+            <p className="text-xs text-muted-foreground mb-3">
+              Sample courses ·{' '}
+              <Link to="/courses" className="hover:text-foreground transition-colors">
+                View all
+              </Link>
+            </p>
+          )}
+          <div
+            data-testid="library-section"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
+          >
             {allCourses.map(course => (
-              <CourseCard
+              <div
                 key={course.id}
-                course={course}
-                variant="overview"
-                completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
-              />
+                data-testid={
+                  importedCourses.length > 0 ? 'sample-course-card' : `course-card-${course.id}`
+                }
+                className={`transition-opacity duration-200 motion-reduce:transition-none ${
+                  importedCourses.length > 0 ? 'opacity-60 hover:opacity-100' : ''
+                }`}
+              >
+                <CourseCard
+                  course={course}
+                  variant="overview"
+                  completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
+                />
+              </div>
             ))}
           </div>
         </motion.section>

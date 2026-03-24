@@ -44,7 +44,7 @@ export function ResourceBadge({ type, count }: ResourceBadgeProps) {
       aria-label={text}
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${color}`}
     >
-      <Icon className="h-3 w-3" aria-hidden="true" />
+      <Icon className="size-3" aria-hidden="true" />
       {text}
     </span>
   )

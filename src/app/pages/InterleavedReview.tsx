@@ -100,6 +100,7 @@ export function InterleavedReview() {
     Promise.all([loadReviews(), loadNotes(), loadImportedCourses()])
       .then(() => setDataLoaded(true))
       .catch(err => {
+        // silent-catch-ok — error state handled by setLoadError UI with retry button
         console.error('[InterleavedReview] Failed to load data:', err)
         setLoadError(true)
       })
@@ -240,6 +241,7 @@ export function InterleavedReview() {
                 Promise.all([loadReviews(), loadNotes(), loadImportedCourses()])
                   .then(() => setDataLoaded(true))
                   .catch(err => {
+                    // silent-catch-ok — error state handled by setLoadError UI
                     console.error('[InterleavedReview] Retry failed:', err)
                     setLoadError(true)
                   })
