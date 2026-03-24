@@ -92,11 +92,18 @@ so that I can navigate videos efficiently without touching the mouse.
 
 **Plan:** [2026-03-23-e21-s02-enhanced-video-keyboard-shortcuts.md](plans/2026-03-23-e21-s02-enhanced-video-keyboard-shortcuts.md)
 
-[Architecture decisions, patterns used, dependencies added]
+- Extended existing `handleKeyDown` switch in VideoPlayer.tsx with `<` and `>` cases using `Shift+Period`/`Shift+Comma` key detection
+- Created `stepPlaybackSpeed(direction)` helper with predefined speed steps array `[0.5, 0.75, 1, 1.25, 1.5, 2]`
+- Added `onFocusNotes` callback prop to VideoPlayer component, wired through LessonPlayer to control notes panel state and TipTap editor focus
+- Reused existing ARIA live region pattern from E21-S01 for speed change announcements
+- No new dependencies added — all functionality built on existing VideoPlayer keyboard handler infrastructure
 
 ## Testing Notes
 
-[Test strategy, edge cases discovered, coverage notes]
+- 17 E2E tests covering all 4 ACs: speed stepping (6 tests), N key focus (4 tests), overlay content (4 tests), accessibility (3 tests)
+- Key discovery: Playwright uses `Shift+.` and `Shift+,` (not `>` and `<` directly) for key simulation — required test fix in f884e4c0
+- Input guard test verifies N key is suppressed when typing in contenteditable elements
+- Boundary tests verify max/min speed announcements ("Already at maximum/minimum speed")
 
 ## Pre-Review Checklist
 
@@ -126,4 +133,7 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Playwright key simulation quirk**: `page.keyboard.press('>')` doesn't work — must use `Shift+.` (the physical key combo). Same for `<` requiring `Shift+,`. This caused initial E2E test failures and required a dedicated fix commit (f884e4c0).
+- **Input guard pattern**: Keyboard shortcuts must check `event.target` for input/textarea/contenteditable to prevent firing while user is typing. The existing `isTypingInInput()` guard in VideoPlayer handles this elegantly — just needed to add the `n` case to the same guard.
+- **Focus management without pause**: The N key shortcut opens the notes panel and focuses the editor without pausing video — achieved by calling `onFocusNotes` without touching playback state. This was a deliberate UX decision from the AC.
+- **Speed steps array pattern**: Using a predefined array `[0.5, 0.75, 1, 1.25, 1.5, 2]` with `indexOf` + direction stepping is cleaner than increment/decrement math, handles boundary cases naturally, and matches common video player UX patterns.
