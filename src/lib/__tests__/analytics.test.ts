@@ -3,10 +3,13 @@ import {
   analyzeTopicPerformance,
   calculateImprovement,
   calculateNormalizedGain,
+  calculateCompletionRate,
   calculateRetakeFrequency,
   interpretRetakeFrequency,
   calculateItemDifficulty,
   calculateDiscriminationIndices,
+  detectLearningTrajectory,
+  calculateLinearR2,
 } from '@/lib/analytics'
 import {
   makeQuestion,
@@ -443,6 +446,132 @@ describe('calculateNormalizedGain', () => {
 })
 
 // ---------------------------------------------------------------------------
+// calculateCompletionRate (E17-S01)
+// ---------------------------------------------------------------------------
+
+describe('calculateCompletionRate', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+  })
+
+  it('returns 0% when no attempts and no in-progress quiz', async () => {
+    mockToArray.mockResolvedValue([])
+    const result = await calculateCompletionRate()
+    expect(result).toEqual({ completionRate: 0, completedCount: 0, startedCount: 0 })
+  })
+
+  it('returns 100% when 3 unique quizzes completed and none in-progress', async () => {
+    mockToArray.mockResolvedValue([
+      { id: 'a1', quizId: 'q1' },
+      { id: 'a2', quizId: 'q2' },
+      { id: 'a3', quizId: 'q3' },
+    ])
+    const result = await calculateCompletionRate()
+    expect(result.completionRate).toBe(100)
+    expect(result.completedCount).toBe(3)
+    expect(result.startedCount).toBe(3)
+  })
+
+  it('counts multiple attempts of the same quiz as 1 completed quiz', async () => {
+    mockToArray.mockResolvedValue([
+      { id: 'a1', quizId: 'q1' },
+      { id: 'a2', quizId: 'q1' },
+      { id: 'a3', quizId: 'q1' },
+    ])
+    const result = await calculateCompletionRate()
+    expect(result.completedCount).toBe(1)
+    expect(result.startedCount).toBe(1)
+    expect(result.completionRate).toBe(100)
+  })
+
+  it('counts in-progress quiz from localStorage as started but not completed', async () => {
+    mockToArray.mockResolvedValue([
+      { id: 'a1', quizId: 'q1' },
+      { id: 'a2', quizId: 'q2' },
+    ])
+    localStorage.setItem(
+      'levelup-quiz-store',
+      JSON.stringify({ state: { currentProgress: { quizId: 'q3' } } })
+    )
+    const result = await calculateCompletionRate()
+    expect(result.completedCount).toBe(2)
+    expect(result.startedCount).toBe(3)
+    // 2/3 * 100 = 66.67
+    expect(result.completionRate).toBeCloseTo(66.67, 1)
+  })
+
+  it('does not double-count in-progress quiz that already has completed attempts', async () => {
+    mockToArray.mockResolvedValue([
+      { id: 'a1', quizId: 'q1' },
+      { id: 'a2', quizId: 'q2' },
+    ])
+    // q1 is in-progress but already has a completed attempt
+    localStorage.setItem(
+      'levelup-quiz-store',
+      JSON.stringify({ state: { currentProgress: { quizId: 'q1' } } })
+    )
+    const result = await calculateCompletionRate()
+    expect(result.completedCount).toBe(2)
+    expect(result.startedCount).toBe(2)
+    expect(result.completionRate).toBe(100)
+  })
+
+  it('calculates 75% for 3 completed + 1 in-progress', async () => {
+    mockToArray.mockResolvedValue([
+      { id: 'a1', quizId: 'q1' },
+      { id: 'a2', quizId: 'q2' },
+      { id: 'a3', quizId: 'q3' },
+    ])
+    localStorage.setItem(
+      'levelup-quiz-store',
+      JSON.stringify({ state: { currentProgress: { quizId: 'q4' } } })
+    )
+    const result = await calculateCompletionRate()
+    expect(result.completionRate).toBe(75)
+    expect(result.completedCount).toBe(3)
+    expect(result.startedCount).toBe(4)
+  })
+
+  it('handles malformed localStorage gracefully', async () => {
+    mockToArray.mockResolvedValue([{ id: 'a1', quizId: 'q1' }])
+    localStorage.setItem('levelup-quiz-store', 'not valid json')
+    const result = await calculateCompletionRate()
+    // Falls back to just completed count
+    expect(result.completedCount).toBe(1)
+    expect(result.startedCount).toBe(1)
+    expect(result.completionRate).toBe(100)
+  })
+
+  it('handles missing currentProgress in localStorage', async () => {
+    mockToArray.mockResolvedValue([{ id: 'a1', quizId: 'q1' }])
+    localStorage.setItem('levelup-quiz-store', JSON.stringify({ state: {} }))
+    const result = await calculateCompletionRate()
+    expect(result.completedCount).toBe(1)
+    expect(result.startedCount).toBe(1)
+  })
+
+  it('handles empty quizId in currentProgress', async () => {
+    mockToArray.mockResolvedValue([])
+    localStorage.setItem(
+      'levelup-quiz-store',
+      JSON.stringify({ state: { currentProgress: { quizId: '' } } })
+    )
+    const result = await calculateCompletionRate()
+    expect(result.startedCount).toBe(0)
+    expect(result.completionRate).toBe(0)
+  })
+
+  it('handles null localStorage value', async () => {
+    mockToArray.mockResolvedValue([{ id: 'a1', quizId: 'q1' }])
+    // localStorage.getItem returns null by default for missing keys
+    const result = await calculateCompletionRate()
+    expect(result.completedCount).toBe(1)
+    expect(result.startedCount).toBe(1)
+  })
+})
+
+// ---------------------------------------------------------------------------
 // calculateRetakeFrequency (E17-S02)
 // ---------------------------------------------------------------------------
 
@@ -612,10 +741,11 @@ describe('calculateItemDifficulty', () => {
       }),
     ]
     const result = calculateItemDifficulty(quiz, attempts)
-expect(result[0].questionId).toBe('q1') // P=1.0 — easiest first
+    expect(result[0].questionId).toBe('q1') // P=1.0 — easiest first
     expect(result[1].questionId).toBe('q2') // P=0.0 — hardest last
-expect(result[0].questionId).toBe('q1')
-    expect(result[1].questionId).toBe('q2')  })
+    expect(result[0].questionId).toBe('q1')
+    expect(result[1].questionId).toBe('q2')
+  })
 
   it('aggregates across multiple attempts for the same question', () => {
     const q1 = makeQuestion({ id: 'q1', order: 1, text: 'Q1' })
@@ -923,11 +1053,36 @@ describe('calculateDiscriminationIndices', () => {
     // rpb ≈ (0.5 / 0.8367) × 0.4899 ≈ 0.293 → Moderate discriminator
     const quiz = makeTestQuiz(1)
     const attempts = [
-      makeAttempt({ id: 'a1', quizId: 'quiz-disc-test', score: 4, answers: [makeWrongAnswer('q1')] }),
-      makeAttempt({ id: 'a2', quizId: 'quiz-disc-test', score: 4, answers: [makeCorrectAnswer('q1')] }),
-      makeAttempt({ id: 'a3', quizId: 'quiz-disc-test', score: 5, answers: [makeWrongAnswer('q1')] }),
-      makeAttempt({ id: 'a4', quizId: 'quiz-disc-test', score: 5, answers: [makeCorrectAnswer('q1')] }),
-      makeAttempt({ id: 'a5', quizId: 'quiz-disc-test', score: 6, answers: [makeCorrectAnswer('q1')] }),
+      makeAttempt({
+        id: 'a1',
+        quizId: 'quiz-disc-test',
+        score: 4,
+        answers: [makeWrongAnswer('q1')],
+      }),
+      makeAttempt({
+        id: 'a2',
+        quizId: 'quiz-disc-test',
+        score: 4,
+        answers: [makeCorrectAnswer('q1')],
+      }),
+      makeAttempt({
+        id: 'a3',
+        quizId: 'quiz-disc-test',
+        score: 5,
+        answers: [makeWrongAnswer('q1')],
+      }),
+      makeAttempt({
+        id: 'a4',
+        quizId: 'quiz-disc-test',
+        score: 5,
+        answers: [makeCorrectAnswer('q1')],
+      }),
+      makeAttempt({
+        id: 'a5',
+        quizId: 'quiz-disc-test',
+        score: 6,
+        answers: [makeCorrectAnswer('q1')],
+      }),
     ]
     const result = calculateDiscriminationIndices(quiz, attempts)!
     expect(result[0].discriminationIndex).toBeCloseTo(0.293, 2)
@@ -993,5 +1148,230 @@ describe('calculateDiscriminationIndices', () => {
     const result = calculateDiscriminationIndices(quiz, attempts)!
     // only passes if n-1
     expect(result[0].discriminationIndex).toBeCloseTo(0.894, 2)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// calculateLinearR2 (E17-S05)
+// ---------------------------------------------------------------------------
+
+describe('calculateLinearR2', () => {
+  it('returns 0 for fewer than 2 points', () => {
+    expect(calculateLinearR2([{ x: 1, y: 10 }])).toBe(0)
+    expect(calculateLinearR2([])).toBe(0)
+  })
+
+  it('returns 1.0 for perfectly linear data', () => {
+    const points = [
+      { x: 1, y: 10 },
+      { x: 2, y: 20 },
+      { x: 3, y: 30 },
+      { x: 4, y: 40 },
+      { x: 5, y: 50 },
+    ]
+    expect(calculateLinearR2(points)).toBeCloseTo(1.0, 5)
+  })
+
+  it('returns 0 when all y values are identical (plateau)', () => {
+    const points = [
+      { x: 1, y: 50 },
+      { x: 2, y: 50 },
+      { x: 3, y: 50 },
+    ]
+    expect(calculateLinearR2(points)).toBe(0)
+  })
+
+  it('returns R² between 0 and 1 for noisy data', () => {
+    const points = [
+      { x: 1, y: 20 },
+      { x: 2, y: 35 },
+      { x: 3, y: 25 },
+      { x: 4, y: 45 },
+      { x: 5, y: 50 },
+    ]
+    const r2 = calculateLinearR2(points)
+    expect(r2).toBeGreaterThan(0)
+    expect(r2).toBeLessThan(1)
+  })
+
+  it('returns 0 when all x values are identical', () => {
+    const points = [
+      { x: 1, y: 10 },
+      { x: 1, y: 20 },
+      { x: 1, y: 30 },
+    ]
+    expect(calculateLinearR2(points)).toBe(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// detectLearningTrajectory (E17-S05)
+// ---------------------------------------------------------------------------
+
+describe('detectLearningTrajectory', () => {
+  it('returns null for fewer than 3 attempts', () => {
+    expect(detectLearningTrajectory([])).toBeNull()
+    expect(
+      detectLearningTrajectory([
+        makeAttempt({ percentage: 50, completedAt: '2026-01-01T00:00:00Z' }),
+      ])
+    ).toBeNull()
+    expect(
+      detectLearningTrajectory([
+        makeAttempt({ percentage: 50, completedAt: '2026-01-01T00:00:00Z' }),
+        makeAttempt({ percentage: 60, completedAt: '2026-01-02T00:00:00Z' }),
+      ])
+    ).toBeNull()
+  })
+
+  it('detects plateau pattern when scores vary by 5 or less', () => {
+    const attempts = [
+      makeAttempt({ percentage: 70, completedAt: '2026-01-01T00:00:00Z' }),
+      makeAttempt({ percentage: 72, completedAt: '2026-01-02T00:00:00Z' }),
+      makeAttempt({ percentage: 68, completedAt: '2026-01-03T00:00:00Z' }),
+      makeAttempt({ percentage: 71, completedAt: '2026-01-04T00:00:00Z' }),
+    ]
+    const result = detectLearningTrajectory(attempts)!
+    expect(result.pattern).toBe('plateau')
+    expect(result.interpretation).toBe('Consistent performance')
+    expect(result.confidence).toBe(1)
+  })
+
+  it('detects declining pattern when scores decrease', () => {
+    const attempts = [
+      makeAttempt({ percentage: 90, completedAt: '2026-01-01T00:00:00Z' }),
+      makeAttempt({ percentage: 70, completedAt: '2026-01-02T00:00:00Z' }),
+      makeAttempt({ percentage: 50, completedAt: '2026-01-03T00:00:00Z' }),
+      makeAttempt({ percentage: 30, completedAt: '2026-01-04T00:00:00Z' }),
+    ]
+    const result = detectLearningTrajectory(attempts)!
+    expect(result.pattern).toBe('declining')
+    expect(result.interpretation).toBe('Consider reviewing material')
+    expect(result.confidence).toBeGreaterThan(0.9)
+  })
+
+  it('detects linear pattern for steady improvement', () => {
+    const attempts = [
+      makeAttempt({ percentage: 20, completedAt: '2026-01-01T00:00:00Z' }),
+      makeAttempt({ percentage: 40, completedAt: '2026-01-02T00:00:00Z' }),
+      makeAttempt({ percentage: 60, completedAt: '2026-01-03T00:00:00Z' }),
+      makeAttempt({ percentage: 80, completedAt: '2026-01-04T00:00:00Z' }),
+      makeAttempt({ percentage: 100, completedAt: '2026-01-05T00:00:00Z' }),
+    ]
+    const result = detectLearningTrajectory(attempts)!
+    expect(result.pattern).toBe('linear')
+    expect(result.interpretation).toBe('Consistent improvement')
+    expect(result.confidence).toBeCloseTo(1.0, 2)
+  })
+
+  it('detects logarithmic pattern for diminishing gains', () => {
+    // Large early gains that taper off (logarithmic shape)
+    const attempts = [
+      makeAttempt({ percentage: 20, completedAt: '2026-01-01T00:00:00Z' }),
+      makeAttempt({ percentage: 60, completedAt: '2026-01-02T00:00:00Z' }),
+      makeAttempt({ percentage: 75, completedAt: '2026-01-03T00:00:00Z' }),
+      makeAttempt({ percentage: 82, completedAt: '2026-01-04T00:00:00Z' }),
+      makeAttempt({ percentage: 85, completedAt: '2026-01-05T00:00:00Z' }),
+      makeAttempt({ percentage: 87, completedAt: '2026-01-06T00:00:00Z' }),
+    ]
+    const result = detectLearningTrajectory(attempts)!
+    expect(result.pattern).toBe('logarithmic')
+    expect(result.interpretation).toBe('Strong early gains, then plateauing')
+  })
+
+  it('detects exponential pattern for accelerating improvement', () => {
+    // Slow early progress then rapid acceleration (exponential shape)
+    const attempts = [
+      makeAttempt({ percentage: 10, completedAt: '2026-01-01T00:00:00Z' }),
+      makeAttempt({ percentage: 12, completedAt: '2026-01-02T00:00:00Z' }),
+      makeAttempt({ percentage: 16, completedAt: '2026-01-03T00:00:00Z' }),
+      makeAttempt({ percentage: 25, completedAt: '2026-01-04T00:00:00Z' }),
+      makeAttempt({ percentage: 45, completedAt: '2026-01-05T00:00:00Z' }),
+      makeAttempt({ percentage: 80, completedAt: '2026-01-06T00:00:00Z' }),
+    ]
+    const result = detectLearningTrajectory(attempts)!
+    expect(result.pattern).toBe('exponential')
+    expect(result.interpretation).toBe('Accelerating mastery')
+  })
+
+  it('sorts attempts chronologically before analysis', () => {
+    // Pass attempts out of order — should still detect linear pattern
+    const attempts = [
+      makeAttempt({ percentage: 60, completedAt: '2026-01-03T00:00:00Z' }),
+      makeAttempt({ percentage: 20, completedAt: '2026-01-01T00:00:00Z' }),
+      makeAttempt({ percentage: 80, completedAt: '2026-01-04T00:00:00Z' }),
+      makeAttempt({ percentage: 40, completedAt: '2026-01-02T00:00:00Z' }),
+    ]
+    const result = detectLearningTrajectory(attempts)!
+    expect(result.pattern).toBe('linear')
+    expect(result.dataPoints.map(d => d.percentage)).toEqual([20, 40, 60, 80])
+  })
+
+  it('returns correct dataPoints with attemptNumber and percentage', () => {
+    const attempts = [
+      makeAttempt({ percentage: 50, completedAt: '2026-01-01T00:00:00Z' }),
+      makeAttempt({ percentage: 50, completedAt: '2026-01-02T00:00:00Z' }),
+      makeAttempt({ percentage: 50, completedAt: '2026-01-03T00:00:00Z' }),
+    ]
+    const result = detectLearningTrajectory(attempts)!
+    expect(result.dataPoints).toEqual([
+      { attemptNumber: 1, percentage: 50 },
+      { attemptNumber: 2, percentage: 50 },
+      { attemptNumber: 3, percentage: 50 },
+    ])
+  })
+
+  it('confidence is between 0 and 1', () => {
+    const attempts = [
+      makeAttempt({ percentage: 30, completedAt: '2026-01-01T00:00:00Z' }),
+      makeAttempt({ percentage: 55, completedAt: '2026-01-02T00:00:00Z' }),
+      makeAttempt({ percentage: 40, completedAt: '2026-01-03T00:00:00Z' }),
+      makeAttempt({ percentage: 70, completedAt: '2026-01-04T00:00:00Z' }),
+      makeAttempt({ percentage: 65, completedAt: '2026-01-05T00:00:00Z' }),
+    ]
+    const result = detectLearningTrajectory(attempts)!
+    expect(result.confidence).toBeGreaterThanOrEqual(0)
+    expect(result.confidence).toBeLessThanOrEqual(1)
+  })
+
+  it('exactly 3 attempts (minimum) produces a valid result', () => {
+    const attempts = [
+      makeAttempt({ percentage: 30, completedAt: '2026-01-01T00:00:00Z' }),
+      makeAttempt({ percentage: 50, completedAt: '2026-01-02T00:00:00Z' }),
+      makeAttempt({ percentage: 70, completedAt: '2026-01-03T00:00:00Z' }),
+    ]
+    const result = detectLearningTrajectory(attempts)
+    expect(result).not.toBeNull()
+    expect(result!.dataPoints).toHaveLength(3)
+  })
+
+  it('all identical scores with range 0 → plateau', () => {
+    const attempts = [
+      makeAttempt({ percentage: 50, completedAt: '2026-01-01T00:00:00Z' }),
+      makeAttempt({ percentage: 50, completedAt: '2026-01-02T00:00:00Z' }),
+      makeAttempt({ percentage: 50, completedAt: '2026-01-03T00:00:00Z' }),
+    ]
+    const result = detectLearningTrajectory(attempts)!
+    expect(result.pattern).toBe('plateau')
+  })
+
+  it('boundary: range of exactly 5 is still plateau', () => {
+    const attempts = [
+      makeAttempt({ percentage: 50, completedAt: '2026-01-01T00:00:00Z' }),
+      makeAttempt({ percentage: 55, completedAt: '2026-01-02T00:00:00Z' }),
+      makeAttempt({ percentage: 52, completedAt: '2026-01-03T00:00:00Z' }),
+    ]
+    const result = detectLearningTrajectory(attempts)!
+    expect(result.pattern).toBe('plateau')
+  })
+
+  it('boundary: range of 6 is NOT plateau', () => {
+    const attempts = [
+      makeAttempt({ percentage: 50, completedAt: '2026-01-01T00:00:00Z' }),
+      makeAttempt({ percentage: 56, completedAt: '2026-01-02T00:00:00Z' }),
+      makeAttempt({ percentage: 53, completedAt: '2026-01-03T00:00:00Z' }),
+    ]
+    const result = detectLearningTrajectory(attempts)!
+    expect(result.pattern).not.toBe('plateau')
   })
 })

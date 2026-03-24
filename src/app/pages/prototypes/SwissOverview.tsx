@@ -156,11 +156,11 @@ export function SwissOverview() {
                 <img
                   src={`${course.coverImage}-320w.webp`}
                   alt={course.title}
-                  className="w-14 h-14 object-cover"
+                  className="size-14 object-cover"
                 />
               ) : (
-                <div className="w-14 h-14 bg-neutral-100 flex items-center justify-center">
-                  <BookOpen className="w-6 h-6 text-neutral-400" />
+                <div className="size-14 bg-neutral-100 flex items-center justify-center">
+                  <BookOpen className="size-6 text-neutral-400" />
                 </div>
               )}
 

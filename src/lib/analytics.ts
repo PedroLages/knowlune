@@ -185,8 +185,58 @@ export function calculateImprovement(attempts: QuizAttempt[]): ImprovementData {
 }
 
 // ---------------------------------------------------------------------------
-// Normalized Gain — Hake's Formula (E16-S04)
+// Completion Rate (E17-S01)
 // ---------------------------------------------------------------------------
+
+export type CompletionRateResult = {
+  /** Percentage of started quizzes that were completed (0–100) */
+  completionRate: number
+  /** Number of distinct quizzes with at least one completed attempt */
+  completedCount: number
+  /** Total unique quizzes started (completed + in-progress) */
+  startedCount: number
+}
+
+/**
+ * Calculate quiz completion rate from attempt history and in-progress state.
+ *
+ * Formula: (unique quizzes completed / unique quizzes started) * 100
+ *
+ * "Completed" = has at least one entry in db.quizAttempts.
+ * "In-progress" = currently tracked in localStorage quiz store (not yet submitted).
+ *
+ * Multiple attempts of the same quiz count as 1 completed quiz (uses Set of quizIds).
+ * An in-progress quiz that also has past completed attempts is NOT double-counted
+ * (it already appears in the completed set).
+ */
+export async function calculateCompletionRate(): Promise<CompletionRateResult> {
+  const allAttempts = await db.quizAttempts.toArray()
+  const completedQuizIds = new Set(allAttempts.map(a => a.quizId))
+  const completedCount = completedQuizIds.size
+
+  // Parse localStorage to detect in-progress quiz (not yet submitted)
+  let inProgressQuizId: string | null = null
+  try {
+    const quizStoreData = localStorage.getItem('levelup-quiz-store')
+    if (quizStoreData) {
+      const parsed = JSON.parse(quizStoreData)
+      const progressQuizId = parsed?.state?.currentProgress?.quizId
+      if (typeof progressQuizId === 'string' && progressQuizId.length > 0) {
+        inProgressQuizId = progressQuizId
+      }
+    }
+  } catch {
+    // silent-catch-ok — localStorage parse failure is non-fatal; treat as no in-progress quiz
+  }
+
+  // Only count in-progress quiz if it hasn't already been completed before
+  const inProgressCount = inProgressQuizId && !completedQuizIds.has(inProgressQuizId) ? 1 : 0
+
+  const startedCount = completedCount + inProgressCount
+  const completionRate = startedCount > 0 ? (completedCount / startedCount) * 100 : 0
+
+  return { completionRate, completedCount, startedCount }
+}
 
 // ---------------------------------------------------------------------------
 // Retake Frequency (E17-S02)
@@ -336,7 +386,6 @@ export function calculateItemDifficulty(quiz: Quiz, attempts: QuizAttempt[]): It
     .sort((a, b) => b.pValue - a.pValue) // Easiest first
 }
 
-
 // ---------------------------------------------------------------------------
 // Discrimination Indices — Point-Biserial Correlation (E17-S04)
 // ---------------------------------------------------------------------------
@@ -444,4 +493,179 @@ export function calculateDiscriminationIndices(
 
     return { questionId: question.id, discriminationIndex: rpb, interpretation }
   })
+}
+
+// ---------------------------------------------------------------------------
+// Learning Trajectory Patterns (E17-S05)
+// ---------------------------------------------------------------------------
+
+export type TrajectoryPattern = 'linear' | 'exponential' | 'logarithmic' | 'declining' | 'plateau'
+
+export type TrajectoryResult = {
+  /** Detected pattern type */
+  pattern: TrajectoryPattern
+  /** Human-readable interpretation of the pattern */
+  interpretation: string
+  /** R² (coefficient of determination) for the best-fit model (0.0–1.0) */
+  confidence: number
+  /** Data points used for the analysis (attempt number + percentage) */
+  dataPoints: Array<{ attemptNumber: number; percentage: number }>
+}
+
+/**
+ * Pattern interpretations mapping.
+ */
+const TRAJECTORY_INTERPRETATIONS: Record<TrajectoryPattern, string> = {
+  linear: 'Consistent improvement',
+  exponential: 'Accelerating mastery',
+  logarithmic: 'Strong early gains, then plateauing',
+  declining: 'Consider reviewing material',
+  plateau: 'Consistent performance',
+}
+
+/**
+ * Calculate the linear R² (coefficient of determination) for a set of (x, y) points.
+ *
+ * R² = 1 - (SS_res / SS_tot)
+ * where SS_res = sum of (y_i - ŷ_i)² and SS_tot = sum of (y_i - ȳ)²
+ *
+ * Returns 0 when SS_tot is 0 (all y values identical — plateau).
+ */
+export function calculateLinearR2(points: Array<{ x: number; y: number }>): number {
+  const n = points.length
+  if (n < 2) return 0
+
+  const meanY = points.reduce((sum, p) => sum + p.y, 0) / n
+  const meanX = points.reduce((sum, p) => sum + p.x, 0) / n
+
+  // Linear regression: ŷ = slope * x + intercept
+  let sumXY = 0
+  let sumX2 = 0
+  for (const p of points) {
+    sumXY += (p.x - meanX) * (p.y - meanY)
+    sumX2 += (p.x - meanX) ** 2
+  }
+
+  if (sumX2 === 0) return 0
+
+  const slope = sumXY / sumX2
+  const intercept = meanY - slope * meanX
+
+  let ssRes = 0
+  let ssTot = 0
+  for (const p of points) {
+    const predicted = slope * p.x + intercept
+    ssRes += (p.y - predicted) ** 2
+    ssTot += (p.y - meanY) ** 2
+  }
+
+  if (ssTot === 0) return 0
+
+  return Math.max(0, 1 - ssRes / ssTot)
+}
+
+/**
+ * Calculate R² for a logarithmic fit: y = a * ln(x) + b
+ * Transforms x to ln(x) then applies linear regression on (ln(x), y).
+ */
+function calculateLogR2(points: Array<{ x: number; y: number }>): number {
+  const transformed = points.filter(p => p.x > 0).map(p => ({ x: Math.log(p.x), y: p.y }))
+  return calculateLinearR2(transformed)
+}
+
+/**
+ * Calculate R² for an exponential fit: y = a * e^(bx)
+ * Transforms y to ln(y) then applies linear regression on (x, ln(y)).
+ * Only uses points where y > 0.
+ */
+function calculateExpR2(points: Array<{ x: number; y: number }>): number {
+  const transformed = points.filter(p => p.y > 0).map(p => ({ x: p.x, y: Math.log(p.y) }))
+  if (transformed.length < 2) return 0
+  return calculateLinearR2(transformed)
+}
+
+/**
+ * Detect learning trajectory pattern from quiz attempts.
+ *
+ * Requires at least 3 attempts for meaningful analysis. Attempts are sorted
+ * chronologically by completedAt before analysis.
+ *
+ * Classification logic:
+ * 1. Check for plateau: if range of scores <= 5 percentage points → plateau
+ * 2. Check for declining: if linear slope is negative → declining (confidence = linear R²)
+ * 3. Compare R² of linear, exponential, and logarithmic fits → pick best model
+ *
+ * Returns null when fewer than 3 attempts exist.
+ */
+export function detectLearningTrajectory(attempts: QuizAttempt[]): TrajectoryResult | null {
+  if (attempts.length < 3) return null
+
+  const sorted = [...attempts].sort(
+    (a, b) => new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime()
+  )
+
+  const dataPoints = sorted.map((a, i) => ({
+    attemptNumber: i + 1,
+    percentage: a.percentage,
+  }))
+
+  const points = dataPoints.map(d => ({ x: d.attemptNumber, y: d.percentage }))
+
+  // Check for plateau: range of scores <= 5
+  const scores = points.map(p => p.y)
+  const minScore = Math.min(...scores)
+  const maxScore = Math.max(...scores)
+
+  if (maxScore - minScore <= 5) {
+    return {
+      pattern: 'plateau',
+      interpretation: TRAJECTORY_INTERPRETATIONS.plateau,
+      confidence: 1,
+      dataPoints,
+    }
+  }
+
+  // Calculate linear slope for direction detection
+  const n = points.length
+  const meanX = points.reduce((sum, p) => sum + p.x, 0) / n
+  const meanY = points.reduce((sum, p) => sum + p.y, 0) / n
+  let sumXY = 0
+  let sumX2 = 0
+  for (const p of points) {
+    sumXY += (p.x - meanX) * (p.y - meanY)
+    sumX2 += (p.x - meanX) ** 2
+  }
+  const slope = sumX2 === 0 ? 0 : sumXY / sumX2
+
+  // Check for declining trend
+  if (slope < 0) {
+    const confidence = calculateLinearR2(points)
+    return {
+      pattern: 'declining',
+      interpretation: TRAJECTORY_INTERPRETATIONS.declining,
+      confidence,
+      dataPoints,
+    }
+  }
+
+  // Compare models for positive/improving trends
+  const linearR2 = calculateLinearR2(points)
+  const expR2 = calculateExpR2(points)
+  const logR2 = calculateLogR2(points)
+
+  const models: Array<{ pattern: TrajectoryPattern; r2: number }> = [
+    { pattern: 'linear', r2: linearR2 },
+    { pattern: 'exponential', r2: expR2 },
+    { pattern: 'logarithmic', r2: logR2 },
+  ]
+
+  // Pick the best-fit model
+  const best = models.reduce((a, b) => (b.r2 > a.r2 ? b : a))
+
+  return {
+    pattern: best.pattern,
+    interpretation: TRAJECTORY_INTERPRETATIONS[best.pattern],
+    confidence: best.r2,
+    dataPoints,
+  }
 }
