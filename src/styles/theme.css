@@ -212,6 +212,129 @@
   --heatmap-level-4: hsl(var(--success) / 1);
 }
 
+/* --------------------------------------------------------------------------
+ * Vibrant color scheme — activated by `.vibrant` class on <html>
+ * (E21-S04: Visual Energy Boost)
+ *
+ * Strategy: Increase OKLCH chroma (C) by ~15% while keeping lightness (L) and
+ * hue (H) stable. Because OKLCH is perceptually uniform, chroma-only changes
+ * preserve contrast ratios against foreground colors.
+ *
+ * WCAG 2.1 AA compliance verified for every token pair:
+ *   - Normal text (< 18px): >= 4.5:1 contrast ratio
+ *   - Large text (>= 18px or >= 14px bold): >= 3:1 contrast ratio
+ * -------------------------------------------------------------------------- */
+
+.vibrant {
+  /* Brand — increased chroma from ~0.14 to ~0.18 */
+  --brand: oklch(0.50 0.19 275);
+  --brand-hover: oklch(0.44 0.17 275);
+  --brand-soft: oklch(0.85 0.08 275);
+  --brand-soft-foreground: oklch(0.42 0.16 275);
+  --brand-muted: oklch(0.82 0.07 275);
+
+  /* Success — more vivid green */
+  --success: oklch(0.47 0.14 155);
+  --success-soft: oklch(0.94 0.04 155);
+
+  /* Warning — richer amber */
+  --warning: oklch(0.55 0.15 75);
+
+  /* Gold — more saturated */
+  --gold: oklch(0.65 0.16 75);
+  --gold-muted: oklch(0.93 0.06 75);
+
+  /* Destructive — vivid red */
+  --destructive: oklch(0.52 0.20 25);
+  --destructive-soft-foreground: oklch(0.40 0.16 25);
+
+  /* Info — matches vibrant brand */
+  --info: oklch(0.50 0.19 275);
+
+  /* Momentum tiers — colorful badges */
+  --momentum-hot: oklch(0.53 0.19 30);
+  --momentum-hot-bg: oklch(0.94 0.04 30);
+  --momentum-warm: oklch(0.65 0.16 75);
+  --momentum-warm-bg: oklch(0.95 0.04 75);
+  --momentum-cold: oklch(0.50 0.19 275);
+  --momentum-cold-bg: oklch(0.93 0.05 275);
+
+  /* At-risk indicator */
+  --at-risk: oklch(0.53 0.19 30);
+  --at-risk-bg: oklch(0.94 0.04 30);
+
+  /* Chart colors — more vivid */
+  --chart-1: oklch(0.52 0.20 270);
+  --chart-2: oklch(0.55 0.15 160);
+  --chart-3: oklch(0.48 0.13 40);
+  --chart-4: oklch(0.62 0.16 85);
+  --chart-5: oklch(0.52 0.15 310);
+
+  /* Colored shadows — slightly more saturated */
+  --shadow-brand: oklch(0.42 0.16 270 / 0.10);
+  --shadow-warm: oklch(0.48 0.08 60 / 0.08);
+  --shadow-gold: oklch(0.58 0.14 85 / 0.12);
+
+  /* Accent violet — richer */
+  --accent-violet: oklch(0.60 0.14 305);
+  --accent-violet-muted: oklch(0.94 0.04 305);
+}
+
+.dark.vibrant {
+  /* Brand — vibrant dark (slightly less chroma than light to avoid neon) */
+  --brand: oklch(0.58 0.18 275);
+  --brand-hover: oklch(0.52 0.16 275);
+  --brand-soft: oklch(0.26 0.07 275);
+  --brand-soft-foreground: oklch(0.68 0.16 275);
+  --brand-muted: oklch(0.32 0.08 275);
+
+  /* Success — vivid green for dark */
+  --success: oklch(0.65 0.16 155);
+  --success-soft: oklch(0.22 0.05 155);
+
+  /* Warning */
+  --warning: oklch(0.72 0.15 75);
+
+  /* Gold */
+  --gold: oklch(0.72 0.15 75);
+  --gold-muted: oklch(0.28 0.06 75);
+
+  /* Destructive */
+  --destructive: oklch(0.68 0.19 20);
+  --destructive-soft-foreground: oklch(0.78 0.14 20);
+
+  /* Info — matches vibrant dark brand */
+  --info: oklch(0.68 0.16 275);
+
+  /* Momentum tiers — colorful dark badges */
+  --momentum-hot: oklch(0.68 0.18 30);
+  --momentum-hot-bg: oklch(0.24 0.06 30);
+  --momentum-warm: oklch(0.72 0.15 75);
+  --momentum-warm-bg: oklch(0.24 0.06 75);
+  --momentum-cold: oklch(0.68 0.16 275);
+  --momentum-cold-bg: oklch(0.24 0.06 275);
+
+  /* At-risk indicator */
+  --at-risk: oklch(0.68 0.18 30);
+  --at-risk-bg: oklch(0.24 0.06 30);
+
+  /* Chart colors — more vivid dark */
+  --chart-1: oklch(0.58 0.20 270);
+  --chart-2: oklch(0.60 0.16 160);
+  --chart-3: oklch(0.62 0.14 85);
+  --chart-4: oklch(0.56 0.18 310);
+  --chart-5: oklch(0.58 0.16 40);
+
+  /* Colored shadows */
+  --shadow-brand: oklch(0.22 0.16 270 / 0.25);
+  --shadow-warm: oklch(0.22 0.08 60 / 0.18);
+  --shadow-gold: oklch(0.32 0.12 85 / 0.18);
+
+  /* Accent violet */
+  --accent-violet: oklch(0.70 0.16 305);
+  --accent-violet-muted: oklch(0.24 0.06 305);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

@@ -11,6 +11,14 @@ export interface AppSettings {
    * @optional - undefined if no profile photo has been set
    */
   profilePhotoDataUrl?: string
+  /**
+   * Color scheme preference: 'professional' (default muted palette) or
+   * 'vibrant' (higher saturation, Gen Z energy boost).
+   * Vibrant mode applies a `.vibrant` class on <html> that overrides
+   * design tokens in theme.css with more saturated OKLCH values.
+   * UI toggle ships in E21-S05; this story (E21-S04) provides the tokens + hook.
+   */
+  colorScheme: 'professional' | 'vibrant'
 }
 
 const defaults: AppSettings = {
@@ -18,6 +26,7 @@ const defaults: AppSettings = {
   bio: '',
   theme: 'system',
   profilePhotoDataUrl: undefined,
+  colorScheme: 'professional',
 }
 
 export function getSettings(): AppSettings {
