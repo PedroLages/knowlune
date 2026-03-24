@@ -48,7 +48,12 @@ function formatCategoryLabel(slug: string): string {
   return slug.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
-export function getCategoryCompletionForRadar(): CategoryRadarData[] {
+/** Shared helper: compute average completion % grouped by course category. */
+function computeAvgCompletionByCategory(): Array<{
+  slug: string
+  label: string
+  avgCompletion: number
+}> {
   const allCourses = useCourseStore.getState().courses
   const categoryMap: Record<string, { totalCompletion: number; count: number }> = {}
 
@@ -64,9 +69,17 @@ export function getCategoryCompletionForRadar(): CategoryRadarData[] {
     categoryMap[cat].count++
   }
 
-  return Object.entries(categoryMap).map(([category, data]) => ({
-    category: formatCategoryLabel(category),
-    completion: Math.round(data.totalCompletion / data.count),
+  return Object.entries(categoryMap).map(([slug, data]) => ({
+    slug,
+    label: formatCategoryLabel(slug),
+    avgCompletion: Math.round(data.totalCompletion / data.count),
+  }))
+}
+
+export function getCategoryCompletionForRadar(): CategoryRadarData[] {
+  return computeAvgCompletionByCategory().map(({ label, avgCompletion }) => ({
+    category: label,
+    completion: avgCompletion,
     fullMark: 100,
   }))
 }
@@ -82,29 +95,14 @@ export interface SkillProficiencyData {
 }
 
 export function getSkillProficiencyForOverview(): SkillProficiencyData[] {
-  const allCourses = useCourseStore.getState().courses
-  const domainMap: Record<string, { totalCompletion: number; count: number }> = {}
-
-  for (const course of allCourses) {
-    const totalLessons = course.modules.reduce((sum, m) => sum + m.lessons.length, 0)
-    const completion = getCourseCompletionPercent(course.id, totalLessons)
-    const cat = course.category
-
-    if (!domainMap[cat]) {
-      domainMap[cat] = { totalCompletion: 0, count: 0 }
-    }
-    domainMap[cat].totalCompletion += completion
-    domainMap[cat].count++
-  }
-
-  const entries = Object.entries(domainMap)
+  const categories = computeAvgCompletionByCategory()
 
   // Need at least 2 domains for a meaningful radar chart
-  if (entries.length < 2) return []
+  if (categories.length < 2) return []
 
-  return entries.map(([category, data]) => ({
-    domain: formatCategoryLabel(category),
-    proficiency: Math.round(data.totalCompletion / data.count),
+  return categories.map(({ label, avgCompletion }) => ({
+    domain: label,
+    proficiency: avgCompletion,
     fullMark: 100 as const,
   }))
 }

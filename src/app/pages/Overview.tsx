@@ -192,9 +192,6 @@ export function Overview() {
           <Skeleton className="h-[280px] rounded-2xl" />
         </div>
 
-        {/* Skill Proficiency skeleton */}
-        <Skeleton className="h-[340px] rounded-[24px]" />
-
         {/* Gallery skeleton */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {[1, 2, 3, 4].map(i => (

@@ -17,7 +17,6 @@ import {
 } from '../../support/helpers/indexeddb-seed'
 import type { Page } from '@playwright/test'
 
-
 const TEST_COURSES = [
   {
     id: 'e20s04-course-1',
@@ -116,5 +115,20 @@ test.describe('E20-S04: Skill Proficiency Radar Chart', () => {
     const label = await chart.getAttribute('aria-label')
     expect(label).toContain('%')
     expect(label).toContain('Skill proficiency:')
+  })
+
+  test('radar chart section is hidden when fewer than 2 categories exist (AC4)', async ({
+    page,
+  }) => {
+    // Navigate without seeding courses — no categories at all
+    await navigateAndWait(page, '/')
+    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 10000 })
+
+    // The radar chart heading and img should not be present
+    const heading = page.getByRole('heading', { name: 'Skill Proficiency' })
+    await expect(heading).not.toBeVisible()
+
+    const chart = page.getByRole('img', { name: /skill proficiency/i })
+    await expect(chart).not.toBeVisible()
   })
 })
