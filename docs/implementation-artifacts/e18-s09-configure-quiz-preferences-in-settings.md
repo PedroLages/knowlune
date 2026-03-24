@@ -4,18 +4,9 @@ story_name: "Configure Quiz Preferences in Settings"
 status: done
 started: 2026-03-23
 completed: 2026-03-23
-reviewed: true
-review_started: 2026-03-23
-review_gates_passed:
-  - build
-  - lint
-  - type-check
-  - format-check
-  - unit-tests
-  - e2e-tests
-  - design-review
-  - code-review
-  - code-review-testing
+reviewed: in-progress
+review_started: 2026-03-24
+review_gates_passed: []
 burn_in_validated: false
 ---
 
