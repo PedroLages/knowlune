@@ -69,6 +69,7 @@ export function ImportedCourseDetail() {
         }
       })
       .catch(err => {
+        // silent-catch-ok — error state handled by setLoadError UI
         console.error('Failed to load course content:', err)
         if (!ignore) setLoadError(true)
       })

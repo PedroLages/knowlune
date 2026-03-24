@@ -46,11 +46,11 @@ export function SwissStreakCalendar() {
       {/* Legend */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 bg-neutral-100" />
+          <div className="size-3 bg-neutral-100" />
           <span className="text-xs uppercase tracking-[0.05em] text-neutral-400">Inactive</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 bg-[#DC2626]" />
+          <div className="size-3 bg-[#DC2626]" />
           <span className="text-xs uppercase tracking-[0.05em] text-neutral-400">Active</span>
         </div>
       </div>

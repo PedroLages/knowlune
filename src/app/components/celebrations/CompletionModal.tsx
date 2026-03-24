@@ -98,11 +98,11 @@ export function CompletionModal({
   const getIcon = () => {
     switch (type) {
       case 'course':
-        return <Trophy className="w-16 h-16 text-brand" aria-hidden="true" />
+        return <Trophy className="size-16 text-brand" aria-hidden="true" />
       case 'module':
-        return <Star className="w-16 h-16 text-brand" aria-hidden="true" />
+        return <Star className="size-16 text-brand" aria-hidden="true" />
       case 'lesson':
-        return <CheckCircle2 className="w-16 h-16 text-brand" aria-hidden="true" />
+        return <CheckCircle2 className="size-16 text-brand" aria-hidden="true" />
     }
   }
 

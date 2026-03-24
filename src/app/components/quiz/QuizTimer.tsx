@@ -47,6 +47,7 @@ export function QuizTimer({ timeRemaining, totalTime, annotation }: QuizTimerPro
     <>
       <div
         role="timer"
+        aria-live="off"
         aria-label="Time remaining"
         data-testid="quiz-timer"
         className={cn(

@@ -284,6 +284,17 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M4: ReviewSummary jump buttons lack `min-w-[44px]`
 - Positive: Clean component decomposition, solid ARIA (aria-current="step", dynamic aria-labels), defensive store guards, correct array answer handling in QuestionGrid
 
+## E23-S06: Featured Author Layout For Single Author State (Round 2 - Post-Fix)
+**Round 1 fixes verified:** All 6 findings addressed (getInitials extraction, shortBio fallback, StatCard ring, data-testid on blockquote, badge overflow test, empty state subtitle test).
+**Round 2 findings:**
+- H1: `getInitials` still duplicated in AuthorProfile.tsx:21-27 (different behavior: no null guard, no 2-char cap) -- inconsistency between Authors and AuthorProfile pages
+- H2: Quiz component files (MultipleChoiceQuestion, TrueFalseQuestion) committed under `fix(E23-S06)` but unrelated to story scope -- commit hygiene violation
+- M1: `avatarUpload.ts` re-exports getInitials from textUtils -- ghost dependency invites regression
+- M2: totalHours formatting logic `Math.max(Math.round(h), h > 0 ? 1 : 0)` convoluted -- extract helper
+- M3: Blockquote border-l-2 still renders on mobile inside centered column -- visual inconsistency
+- M4: getAuthorStats uses useCourseStore.getState() outside React cycle (acknowledged forward-looking)
+- Positive: No uncommitted changes, all round-1 findings fixed, thorough 13-scenario test file, clean design token usage, good defensive programming (empty state, badge overflow, negative year clamping)
+
 ## E15-S05: Display Performance Summary After Quiz (Round 1)
 - No uncommitted changes (positive)
 - H1: `text-warning` used for "incorrect" count in correctness bar -- `text-destructive` is the established convention (ScoreSummary.tsx uses it)
@@ -293,3 +304,43 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M2: Redundant `new Set(topicMap.keys())` when `topicMap.size` suffices
 - M3: E2E AC3 uses `getByText` for not.toBeVisible assertions instead of `getByRole('heading')` -- fragile
 - Positive: Pure function architecture, excellent unit test coverage (14 tests, boundary conditions), proper accessibility (useId, aria-labelledby, semantic HTML), no uncommitted changes, shared E2E seeding helpers used
+
+## E18-S06: Display Quiz Performance in Overview Dashboard (Round 1)
+- No uncommitted changes (positive)
+- BLOCKER: Nested interactive elements -- `<button>` card wraps `QuizEmptyState` containing `<Button asChild><Link>`, causing HTML spec violation and empty-state click navigating to wrong route (AC4 broken for keyboard/AT users)
+- H1 (RECURRING): `calculateQuizMetrics().then()` has no `.catch()` -- infinite skeleton on IndexedDB failure
+- H2: `calculateQuizMetrics` in quizMetrics.ts has no try/catch around `db.quizAttempts.toArray()` -- unhandled Dexie rejection
+- H3: AC2 (skeleton loading state) listed in test header but has no corresponding test case
+- M1: Missing `type="button"` on outer `<button>` element (defensive, no parent form currently)
+- M2: `opacity-60` on icon inconsistent with `text-muted-foreground` pattern used by other dashboard cards
+- M3: Motion animation uses inline props instead of `variants={fadeUp}` matching surrounding sections
+- Positive: Clean module separation (quizMetrics.ts vs analytics.ts), well-documented hardcoded completionRate with forward reference, proper ignore-flag pattern, shared E2E seeding helpers used, no test anti-patterns, no hardcoded colors
+
+## E18-S09: Configure Quiz Preferences in Settings (Round 1)
+- No uncommitted changes (positive)
+- H1: `saveQuizPreferences` does not handle `localStorage.setItem` throwing -- QuotaExceededError silently lost, toast fires "saved" anyway
+- H2: `loadSavedAccommodation` catch block falls back to `'standard'` instead of global quiz preference (inconsistent with other fallback paths)
+- H3 (RECURRING): Unsafe `as` type assertion on RadioGroup `onValueChange` bypasses runtime validation
+- M1: Shuffle preference OR logic (`userPref || quizDef`) means user cannot disable quiz-author-forced shuffle
+- M2: Timer radio cards use color-only selected state indicator (WCAG 1.4.1)
+- M3: No unit test for `saveQuizPreferences` localStorage failure path
+- Positive: Zod-validated localStorage, frozen feedback preference at mount, cross-tab sync, proper effect cleanup, shared E2E seeding helpers, clean working tree
+
+## E21-S02: Enhanced Video Keyboard Shortcuts (Round 1)
+- No uncommitted changes (positive)
+- H1: `stepPlaybackSpeed` does not handle `indexOf === -1` when localStorage has non-standard speed value -- silently jumps to 0.5x or announces "Already at minimum" with no recovery
+- H2: `handleFocusNotes` uses global `document.querySelector('[contenteditable="true"]')` -- fragile, may miss TipTap mount timing
+- M1: localStorage-parsed speed not validated against PLAYBACK_SPEEDS array
+- M2: Shortcuts overlay shows `< + >` (implying simultaneous press) instead of separate entries
+- Positive: Clean extension of existing keyboard handler, proper ARIA announcements, thorough E2E coverage (17 tests), correct input guard reuse
+
+## E18-S05: Integrate Quiz Completion with Study Streaks (Round 1)
+- No uncommitted changes (positive -- pattern broken since E07-S04)
+- H1: Stale test name "only counts lesson_complete actions" now factually incorrect after adding quiz_complete to activityFromLog
+- H2: AC4 E2E test listed in file header comment but no actual test implemented -- false coverage impression
+- H3: No vi.useFakeTimers() in useQuizStore.streakIntegration.test.ts -- timestamp assertion uses expect.any(String) to paper over non-determinism
+- M1: saveLog() in studyLog.ts has no try/catch -- logStudyAction callers in progress.ts (5 sites) have no error handling (pre-existing, expanded blast radius)
+- M2: TODAY_STR derived from Intl.DateTimeFormat in Node runner, may diverge from browser toLocaleDateString in extreme timezones
+- M3: metadata object omits quizId and score fields specified in implementation plan
+- Positive: Correct architecture decision (extend existing pattern, not new store), solid fire-and-forget isolation, clean working tree, thorough lessons learned
+>>>>>>> main

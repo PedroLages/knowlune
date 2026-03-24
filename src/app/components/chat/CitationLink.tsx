@@ -33,7 +33,7 @@ export function CitationLink({ index, citation }: CitationLinkProps) {
       type="button"
       data-citation={index}
       onClick={handleClick}
-      className="inline-flex items-center justify-center w-6 h-6 ml-0.5 text-xs font-medium
+      className="inline-flex items-center justify-center size-6 ml-0.5 text-xs font-medium
                  bg-accent text-accent-foreground rounded hover:bg-accent-hover
                  focus:outline-none focus:ring-2 focus:ring-brand transition-colors"
       title={`${citation.videoFilename} — ${citation.courseName}`}
