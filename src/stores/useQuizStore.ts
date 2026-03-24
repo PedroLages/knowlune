@@ -13,6 +13,7 @@ import {
 import { calculateQuizScore } from '@/lib/scoring'
 import { fisherYatesShuffle } from '@/lib/shuffle'
 import { toastError } from '@/lib/toastHelpers'
+import { getQuizPreferences } from '@/lib/quizPreferences'
 import { logStudyAction } from '@/lib/studyLog'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 
@@ -81,7 +82,11 @@ export const useQuizStore = create<QuizState>()(
             return
           }
 
-          const questionOrder = quiz.shuffleQuestions
+          // Shuffle if user preference OR quiz definition requests it.
+          // Intentional one-way OR: quiz authors can force shuffle via quiz.shuffleQuestions,
+          // and learners can opt-in via preferences, but learners cannot disable author-forced shuffle.
+          const shouldShuffle = getQuizPreferences().shuffleQuestions || quiz.shuffleQuestions
+          const questionOrder = shouldShuffle
             ? fisherYatesShuffle(quiz.questions.map(q => q.id))
             : quiz.questions.map(q => q.id)
 
