@@ -162,10 +162,15 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
   const [loopStart, setLoopStart] = useState<number | null>(null)
   const [loopEnd, setLoopEnd] = useState<number | null>(null)
 
-  // Reset position flag and error state when source changes
+  // Reset position flag, error state, and loop markers when source changes
   useEffect(() => {
     hasRestoredPosition.current = false
     setHasError(false)
+    // Clear loop state so stale markers don't persist across lessons
+    loopStartRef.current = null
+    loopEndRef.current = null
+    setLoopStart(null)
+    setLoopEnd(null)
   }, [src])
 
   // PiP enter/leave listeners
@@ -452,10 +457,17 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     }
   }
 
-  // AB-loop: set loop start (A point) at current time
+  // AB-loop: set loop start (A point) at current time.
+  // Clamps to duration to prevent markers beyond the video length.
+  // If both A and B are already set (third press), clears both and re-sets A.
   const setLoopA = () => {
     if (!videoRef.current) return
-    const time = videoRef.current.currentTime
+    // Third-press re-set: if both markers exist, clear them first
+    if (loopStartRef.current !== null && loopEndRef.current !== null) {
+      loopEndRef.current = null
+      setLoopEnd(null)
+    }
+    const time = Math.min(videoRef.current.currentTime, videoRef.current.duration)
     loopStartRef.current = time
     setLoopStart(time)
     announce(`Loop start set at ${formatTime(time)}`)
@@ -593,12 +605,15 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
 
       switch (e.key) {
         case 'a':
-          // AB-loop: first press sets A (loop start), second press sets B (loop end)
+          // AB-loop: first press sets A, second sets B, third re-sets A (clearing B)
           e.preventDefault()
           if (loopStartRef.current === null) {
             setLoopA()
           } else if (loopEndRef.current === null) {
             setLoopB()
+          } else {
+            // Third press: re-set — setLoopA handles clearing B internally
+            setLoopA()
           }
           containerRef.current?.focus({ preventScroll: true })
           break
@@ -1183,6 +1198,9 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                       setLoopA()
                     } else if (loopEnd === null) {
                       setLoopB()
+                    } else {
+                      // Third press: re-set A (clears B internally)
+                      setLoopA()
                     }
                   }}
                   aria-label={
@@ -1190,7 +1208,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                       ? 'Set loop start (A)'
                       : loopEnd === null
                         ? 'Set loop end (B)'
-                        : `Loop active: ${formatTime(loopStart)} – ${formatTime(loopEnd)}`
+                        : `Loop active: ${formatTime(loopStart)} to ${formatTime(loopEnd)}`
                   }
                   aria-pressed={loopStart !== null}
                 >
@@ -1203,7 +1221,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                     variant="ghost"
                     size="icon"
                     data-testid="loop-clear-button"
-                    className="size-8 text-white/60 hover:text-white hover:bg-white/20"
+                    className="size-11 text-white/60 hover:text-white hover:bg-white/20"
                     onClick={clearLoop}
                     aria-label="Clear loop"
                   >

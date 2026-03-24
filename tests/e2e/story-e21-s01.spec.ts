@@ -27,7 +27,7 @@ const LESSON_URL = '/courses/operative-six/op6-introduction'
 // ---------------------------------------------------------------------------
 
 /**
- * Mocks the video element's duration and dispatches durationchange so React
+ * Mocks the video element's duration and dispatches loadedmetadata so React
  * updates its duration state. Must be called before any loop marker checks
  * since ChapterProgressBar guards markers behind duration > 0.
  */
@@ -50,6 +50,10 @@ async function setupVideo(page: import('@playwright/test').Page, durationSeconds
 /**
  * Sets the video element's currentTime to `seconds` via evaluate,
  * then dispatches a timeupdate event to trigger React's onTimeUpdate handler.
+ *
+ * Note: This overwrites currentTime with Object.defineProperty, so the test
+ * validates its own mock rather than real seek behavior. This is acceptable
+ * for E2E since real video seeking requires actual media content.
  */
 async function setVideoTime(page: import('@playwright/test').Page, seconds: number) {
   await page.evaluate(s => {
@@ -84,11 +88,30 @@ test.describe('E21-S01: AB-Loop Video Controls', () => {
     // Inject a prototype-level duration mock before any page scripts run.
     // This ensures VideoPlayer's handleLoadedMetadata always reads 120s,
     // satisfying ChapterProgressBar's duration > 0 guard for loop markers.
+    // Also suppress the video error event so the empty mp4 mock doesn't trigger
+    // the error overlay (bg-black/80 z-10) which blocks all control interactions.
     await page.addInitScript(() => {
       Object.defineProperty(HTMLMediaElement.prototype, 'duration', {
         get: () => 120,
         configurable: true,
       })
+
+      // Suppress video error listener — the mocked empty mp4 triggers an error
+      // event that sets hasError=true, rendering an overlay that blocks all UI.
+      const origAddEventListener = HTMLVideoElement.prototype.addEventListener
+      HTMLVideoElement.prototype.addEventListener = function (
+        type: string,
+        listener: EventListenerOrEventListenerObject,
+        ...args: unknown[]
+      ) {
+        if (type === 'error') return // suppress error listener
+        return origAddEventListener.call(
+          this,
+          type,
+          listener,
+          ...(args as [boolean | AddEventListenerOptions | undefined])
+        )
+      }
     })
 
     // Mock the media endpoint so tests work in CI without the actual video file.

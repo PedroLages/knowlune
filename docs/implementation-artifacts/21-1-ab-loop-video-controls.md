@@ -1,10 +1,10 @@
 ---
 story_id: E21-S01
 story_name: "AB-Loop Video Controls"
-status: done
+status: in-progress
 started: 2026-03-23
-completed: 2026-03-24
-reviewed: done
+completed:
+reviewed: in-progress
 review_started: 2026-03-24
 review_gates_passed: []
 burn_in_validated: false
@@ -63,15 +63,15 @@ so that I can master complex concepts through repetition without manually rewind
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add AB loop state to VideoPlayer (AC: 1, 2, 3)
-- [ ] Task 2: Add loop enforcement in handleTimeUpdate (AC: 3)
-- [ ] Task 3: Add keyboard shortcut "A" key handler (AC: 1, 2, 4)
-- [ ] Task 4: Add Escape key handler for loop clear (AC: 4)
-- [ ] Task 5: Update ChapterProgressBar with loop region visual (AC: 5)
-- [ ] Task 6: Add AB Loop toggle button to control bar (AC: 1, 2, 6)
-- [ ] Task 7: Update VideoShortcutsOverlay with A/Escape entries (AC: 1, 4)
-- [ ] Task 8: Write E2E tests for AB loop feature
-- [ ] Task 9: Write unit tests for loop logic
+- [x] Task 1: Add AB loop state to VideoPlayer (AC: 1, 2, 3)
+- [x] Task 2: Add loop enforcement in handleTimeUpdate (AC: 3)
+- [x] Task 3: Add keyboard shortcut "A" key handler (AC: 1, 2, 4)
+- [x] Task 4: Add Escape key handler for loop clear (AC: 4)
+- [x] Task 5: Update ChapterProgressBar with loop region visual (AC: 5)
+- [x] Task 6: Add AB Loop toggle button to control bar (AC: 1, 2, 6)
+- [x] Task 7: Update VideoShortcutsOverlay with A/Escape entries (AC: 1, 4)
+- [x] Task 8: Write E2E tests for AB loop feature
+- [x] Task 9: Write unit tests for loop logic
 
 ## Implementation Plan
 
@@ -88,25 +88,25 @@ See [e21-s01-ab-loop-video-controls.md](plans/e21-s01-ab-loop-video-controls.md)
 
 ## Implementation Notes
 
-[Architecture decisions, patterns used, dependencies added]
+Component architecture uses a dual ref+state pattern for loop markers: refs (`loopStartRef`, `loopEndRef`) are read inside `handleTimeUpdate` to avoid stale closures in the video event handler, while corresponding state (`loopStart`, `loopEnd`) drives UI rendering. The `setLoopA` function clamps to duration and handles third-press re-set by clearing the end marker before setting a new start. Loop enforcement in `handleTimeUpdate` compares `currentTime >= B` and seeks back to A. Loop state is cleared on source change via the `[src]` useEffect. The clear button touch target is 44x44px to meet accessibility requirements.
 
 ## Testing Notes
 
-[Test strategy, edge cases discovered, coverage notes]
+E2E tests cover all six acceptance criteria plus keyboard shortcuts. The `setupVideo` helper mocks video duration and dispatches `loadedmetadata` to satisfy the `ChapterProgressBar` duration guard. The `addInitScript` suppresses the video error event listener to prevent the error overlay (which blocks all controls) from appearing when the empty mp4 mock triggers an error. `setVideoTime` uses `Object.defineProperty` to mock `currentTime` -- this validates the mock rather than real seek behavior, which is acceptable since real seeking requires actual media content. Unit tests in `VideoPlayer.test.tsx` cover: setLoopA, setLoopB, clearLoop, auto-swap when B < A, third-press re-set, loop enforcement on timeupdate, and duration clamping.
 
 ## Pre-Review Checklist
 
 Before requesting `/review-story`, verify:
 
-- [ ] All changes committed (`git status` clean)
-- [ ] No error swallowing — catch blocks log AND surface errors
-- [ ] useEffect hooks have cleanup functions (ignore flags for async, event listener removal)
-- [ ] No optimistic UI updates before persistence — state updates after DB write succeeds
-- [ ] Type guards on all dynamic lookups (e.g., `LABELS[type]` when type can be empty)
-- [ ] E2E afterEach cleanup uses `await` (not fire-and-forget)
-- [ ] Date handling uses `toLocaleDateString('sv-SE')` pattern (not `toISOString().split('T')[0]`)
-- [ ] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
-- [ ] If story calls external APIs: CSP allowlist configured (see engineering-patterns.md § CSP Configuration)
+- [x] All changes committed (`git status` clean)
+- [x] No error swallowing — catch blocks log AND surface errors
+- [x] useEffect hooks have cleanup functions (ignore flags for async, event listener removal)
+- [x] No optimistic UI updates before persistence — state updates after DB write succeeds
+- [x] Type guards on all dynamic lookups (e.g., `LABELS[type]` when type can be empty)
+- [x] E2E afterEach cleanup uses `await` (not fire-and-forget)
+- [x] Date handling uses `toLocaleDateString('sv-SE')` pattern (not `toISOString().split('T')[0]`)
+- [x] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
+- [x] If story calls external APIs: CSP allowlist configured (see engineering-patterns.md § CSP Configuration)
 
 ## Design Review Feedback
 
@@ -122,4 +122,6 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Video error overlay blocking E2E tests:** The empty mp4 mock (`Buffer.alloc(0)`) triggers the browser's native error event, which sets `hasError=true` and renders a `bg-black/80 z-10` overlay that blocks all pointer events. Fixed by suppressing the error event listener in `addInitScript` before any page scripts run.
+- **Loop state cleanup on source change:** The original `[src]` useEffect only reset `hasRestoredPosition` and `hasError`, leaving stale loop markers when navigating between lessons. Added `loopStartRef`/`loopEndRef` and state cleanup to the same effect.
+- **Third-press re-set UX:** The initial implementation left the loop button as a no-op when both markers were set. Pressing it again now clears B and sets a new A at the current time, providing a natural workflow without requiring Escape first.

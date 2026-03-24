@@ -34,7 +34,7 @@ const controlShortcuts: ShortcutEntry[] = [
 ]
 
 const loopShortcuts: ShortcutEntry[] = [
-  { keys: ['A'], description: 'Set loop start / end (A→B)' },
+  { keys: ['A'], description: 'Set loop start / end (A→B, Esc to reset)' },
   { keys: ['Esc'], description: 'Clear loop' },
 ]
 
