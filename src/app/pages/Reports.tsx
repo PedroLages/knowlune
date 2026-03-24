@@ -84,6 +84,7 @@ export default function Reports() {
 
   useEffect(() => {
     let ignore = false
+
     getTotalStudyNotes()
       .then(notes => {
         if (!ignore) setStudyNotes(notes)
@@ -92,13 +93,7 @@ export default function Reports() {
         console.error('Failed to load study notes:', err)
         toast.error('Failed to load study notes')
       })
-    return () => {
-      ignore = true
-    }
-  }, [])
 
-  useEffect(() => {
-    let ignore = false
     calculateCompletionRate()
       .then(data => {
         if (!ignore) setCompletionData(data)
@@ -107,13 +102,7 @@ export default function Reports() {
         console.error('Failed to load completion rate:', err)
         toast.error('Failed to load quiz completion data')
       })
-    return () => {
-      ignore = true
-    }
-  }, [])
 
-  useEffect(() => {
-    let ignore = false
     calculateRetakeFrequency()
       .then(data => {
         if (!ignore) setRetakeData(data)
@@ -122,6 +111,7 @@ export default function Reports() {
         console.error('Failed to load retake frequency:', err)
         toast.error('Failed to load retake data')
       })
+
     return () => {
       ignore = true
     }

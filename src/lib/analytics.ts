@@ -230,7 +230,7 @@ export async function calculateCompletionRate(): Promise<CompletionRateResult> {
       }
     }
   } catch {
-    // localStorage parse failure is non-fatal — treat as no in-progress quiz
+    // silent-catch-ok — localStorage parse failure is non-fatal; treat as no in-progress quiz
   }
 
   // Only count in-progress quiz if it hasn't already been completed before
