@@ -182,6 +182,8 @@ export default function Reports() {
   // ── Dynamic height for horizontal bar chart ──
   const barChartHeight = Math.max(250, courseCompletionData.length * 36)
 
+  const roundedCompletionRate = Math.round(completionData.completionRate)
+
   const hasActivity =
     completedLessons > 0 ||
     studyNotes > 0 ||
@@ -438,13 +440,14 @@ export default function Reports() {
                           <Progress
                             value={completionData.completionRate}
                             className="flex-1"
-                            aria-label={`Quiz completion rate: ${Math.round(completionData.completionRate)}%`}
+                            // Explicit labelFormat overrides the default; avoids relying on {...props} spread order for aria-label
+                            labelFormat={() => `Quiz completion rate: ${roundedCompletionRate}%`}
                           />
                           <span
                             className="text-2xl font-bold tabular-nums"
                             data-testid="quiz-completion-percentage"
                           >
-                            {Math.round(completionData.completionRate)}%
+                            {roundedCompletionRate}%
                           </span>
                         </div>
                         <p
