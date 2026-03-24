@@ -2,11 +2,18 @@
  * ESLint Plugin: Error Handling
  * Enforces visible error feedback in catch blocks within event handlers
  * Epic 13 Retrospective — addresses 3-epic recurring silent failure pattern
+ * Epic 23 Retrospective — enhanced to detect .catch() promise chains
  *
  * Rule: no-silent-catch
- * Flags catch blocks that don't include toast.error(), toast.warning(),
- * toastError(), or toastWarning() calls — meaning the user never sees
- * that something went wrong.
+ * Flags catch blocks AND .catch() promise handlers that don't include
+ * toast.error(), toast.warning(), toastError(), or toastWarning() calls —
+ * meaning the user never sees that something went wrong.
+ *
+ * Detects:
+ * - try/catch blocks without toast (original)
+ * - .catch(() => {}) silent error suppression
+ * - .catch(err => console.error(...)) console-only handlers
+ * - .catch(console.error) function reference passthrough
  *
  * Exceptions (won't flag):
  * - catch blocks with explicit "// silent-catch-ok" comment
@@ -34,6 +41,10 @@ export default {
           silentCatch:
             'Catch block has no visible user feedback. Add toast.error() or toastError() so the user knows something went wrong. ' +
             'If silence is intentional, add a "// silent-catch-ok" comment inside the catch block. ' +
+            'See docs/engineering-patterns.md § "Catch Blocks Must Surface Errors".',
+          silentPromiseCatch:
+            '.catch() handler has no visible user feedback. Add toast.error() or toastError() so the user knows something went wrong. ' +
+            'If silence is intentional, add a "// silent-catch-ok" comment before the .catch() call. ' +
             'See docs/engineering-patterns.md § "Catch Blocks Must Surface Errors".',
         },
         schema: [],
@@ -160,40 +171,93 @@ export default {
           return false
         }
 
+        /**
+         * Check if a file should be skipped based on path
+         */
+        function shouldSkipFile(filename) {
+          // Skip test files
+          if (
+            filename.includes('/tests/') ||
+            filename.includes('.test.') ||
+            filename.includes('.spec.')
+          ) {
+            return true
+          }
+
+          // Skip stores — stores use set({ error }) pattern, not toast
+          if (filename.includes('/stores/')) {
+            return true
+          }
+
+          // Skip AI pipeline, workers, and background services
+          if (
+            filename.includes('/ai/') ||
+            filename.includes('.worker.') ||
+            filename.includes('/workers/')
+          ) {
+            return true
+          }
+
+          // Skip library/utility files — they throw or return errors, callers handle UI
+          if (filename.includes('/lib/')) {
+            return true
+          }
+
+          // Skip database schema/migration files
+          if (filename.includes('/db/')) {
+            return true
+          }
+
+          return false
+        }
+
+        /**
+         * Check if a .catch() handler has a "silent-catch-ok" comment
+         * before the entire statement or as a leading comment on the .catch() call
+         */
+        function hasSilentCatchCommentBefore(node) {
+          const sourceCode = context.getSourceCode
+            ? context.getSourceCode()
+            : context.sourceCode
+          if (!sourceCode) return false
+
+          // Check comments before the .catch() call expression
+          const comments = sourceCode.getCommentsBefore
+            ? sourceCode.getCommentsBefore(node)
+            : []
+          if (comments.some((c) => c.value.includes('silent-catch-ok'))) {
+            return true
+          }
+
+          // Also check the parent ExpressionStatement
+          if (node.parent && node.parent.type === 'ExpressionStatement') {
+            const parentComments = sourceCode.getCommentsBefore
+              ? sourceCode.getCommentsBefore(node.parent)
+              : []
+            if (parentComments.some((c) => c.value.includes('silent-catch-ok'))) {
+              return true
+            }
+          }
+
+          // Check comments inside the .catch() callback body
+          const handler = node.arguments && node.arguments[0]
+          if (handler) {
+            const innerComments = sourceCode.getCommentsInside
+              ? sourceCode.getCommentsInside(handler)
+              : []
+            if (innerComments.some((c) => c.value.includes('silent-catch-ok'))) {
+              return true
+            }
+          }
+
+          return false
+        }
+
         return {
           CatchClause(node) {
             const filename = context.getFilename()
 
-            // Skip test files
-            if (
-              filename.includes('/tests/') ||
-              filename.includes('.test.') ||
-              filename.includes('.spec.')
-            ) {
-              return
-            }
-
-            // Skip stores — stores use set({ error }) pattern, not toast
-            if (filename.includes('/stores/')) {
-              return
-            }
-
-            // Skip AI pipeline, workers, and background services
-            if (
-              filename.includes('/ai/') ||
-              filename.includes('.worker.') ||
-              filename.includes('/workers/')
-            ) {
-              return
-            }
-
-            // Skip library/utility files — they throw or return errors, callers handle UI
-            if (filename.includes('/lib/')) {
-              return
-            }
-
-            // Skip database schema/migration files
-            if (filename.includes('/db/')) {
+            if (shouldSkipFile(filename)) {
               return
             }
 
@@ -228,6 +292,103 @@ export default {
                 node,
                 messageId: 'silentCatch',
               })
+            }
+          },
+
+          /**
+           * Detect .catch() promise handlers without visible user feedback.
+           * Catches patterns like:
+           *   promise.catch(() => {})
+           *   promise.catch(err => console.error(err))
+           *   promise.catch(console.error)
+           */
+          CallExpression(node) {
+            const filename = context.getFilename()
+
+            if (shouldSkipFile(filename)) {
+              return
+            }
+
+            // Only interested in .catch() calls
+            if (
+              !node.callee ||
+              node.callee.type !== 'MemberExpression' ||
+              !node.callee.property ||
+              node.callee.property.name !== 'catch'
+            ) {
+              return
+            }
+
+            // Must have at least one argument (the handler)
+            if (!node.arguments || node.arguments.length === 0) {
+              return
+            }
+
+            // Skip if inside beforeunload handler
+            if (isInsideBeforeUnload(node)) {
+              return
+            }
+
+            // Skip if has silent-catch-ok comment
+            if (hasSilentCatchCommentBefore(node)) {
+              return
+            }
+
+            const handler = node.arguments[0]
+
+            // Case 1: .catch(console.error) — function reference, no user feedback
+            if (
+              handler.type === 'MemberExpression' &&
+              handler.object.type === 'Identifier' &&
+              handler.object.name === 'console'
+            ) {
+              context.report({
+                node,
+                messageId: 'silentPromiseCatch',
+              })
+              return
+            }
+
+            // Case 2: .catch(someIdentifier) — function reference (not toast-related)
+            if (handler.type === 'Identifier') {
+              // Allow toastError / toastWarning function refs
+              if (['toastError', 'toastWarning'].includes(handler.name)) {
+                return
+              }
+              // console.error as identifier shouldn't happen but guard anyway
+              context.report({
+                node,
+                messageId: 'silentPromiseCatch',
+              })
+              return
+            }
+
+            // Case 3: .catch(() => {}) or .catch(err => { ... }) — arrow/function expression
+            if (
+              handler.type === 'ArrowFunctionExpression' ||
+              handler.type === 'FunctionExpression'
+            ) {
+              const body = handler.body
+
+              // Empty body: .catch(() => {})
+              if (
+                body.type === 'BlockStatement' &&
+                (!body.body || body.body.length === 0)
+              ) {
+                context.report({
+                  node,
+                  messageId: 'silentPromiseCatch',
+                })
+                return
+              }
+
+              // Check if body contains a toast call
+              if (!containsToastCall(body)) {
+                context.report({
+                  node,
+                  messageId: 'silentPromiseCatch',
+                })
+              }
             }
           },
         }

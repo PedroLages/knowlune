@@ -40,6 +40,7 @@ import { CategoryRadar } from '@/app/components/reports/CategoryRadar'
 import { SkillsRadar } from '@/app/components/reports/SkillsRadar'
 import { WeeklyGoalRing } from '@/app/components/reports/WeeklyGoalRing'
 import { RecentActivityTimeline } from '@/app/components/reports/RecentActivityTimeline'
+import { toast } from 'sonner'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 
 /* ------------------------------------------------------------------ */
@@ -79,7 +80,10 @@ export default function Reports() {
       .then(notes => {
         if (!ignore) setStudyNotes(notes)
       })
-      .catch(err => console.error('Failed to load study notes:', err))
+      .catch(err => {
+        console.error('Failed to load study notes:', err)
+        toast.error('Failed to load study notes')
+      })
     return () => {
       ignore = true
     }
@@ -91,7 +95,10 @@ export default function Reports() {
       .then(data => {
         if (!ignore) setRetakeData(data)
       })
-      .catch(err => console.error('Failed to load retake frequency:', err))
+      .catch(err => {
+        console.error('Failed to load retake frequency:', err)
+        toast.error('Failed to load retake data')
+      })
     return () => {
       ignore = true
     }

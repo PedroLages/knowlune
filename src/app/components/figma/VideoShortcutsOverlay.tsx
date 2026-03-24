@@ -10,6 +10,7 @@ interface VideoShortcutsOverlayProps {
 interface ShortcutEntry {
   keys: string[]
   description: string
+  separator?: string // defaults to '+' (chord); use '/' for independent keys
 }
 
 const playbackShortcuts: ShortcutEntry[] = [
@@ -20,6 +21,7 @@ const playbackShortcuts: ShortcutEntry[] = [
   { keys: ['\u2192'], description: 'Seek forward 5s' },
   { keys: ['0\u20139'], description: 'Jump to 0\u201390%' },
   { keys: ['P'], description: 'Picture-in-Picture' },
+  { keys: ['<', '>'], description: 'Speed down/up', separator: '/' },
 ]
 
 const controlShortcuts: ShortcutEntry[] = [
@@ -32,6 +34,7 @@ const controlShortcuts: ShortcutEntry[] = [
 ]
 
 const notesShortcuts: ShortcutEntry[] = [
+  { keys: ['N'], description: 'Focus note editor' },
   { keys: ['Alt', 'T'], description: 'Insert timestamp (in notes)' },
 ]
 
@@ -44,13 +47,14 @@ function Kbd({ children }: { children: React.ReactNode }) {
 }
 
 function ShortcutRow({ shortcut }: { shortcut: ShortcutEntry }) {
+  const sep = shortcut.separator ?? '+'
   return (
     <div className="flex items-center justify-between gap-4">
       <span className="text-sm text-white/80">{shortcut.description}</span>
       <div className="flex items-center gap-1 shrink-0">
         {shortcut.keys.map((key, i) => (
           <span key={key} className="flex items-center gap-1">
-            {i > 0 && <span className="text-xs text-white/50">+</span>}
+            {i > 0 && <span className="text-xs text-white/50">{sep}</span>}
             <Kbd>{key}</Kbd>
           </span>
         ))}
