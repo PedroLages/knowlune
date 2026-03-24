@@ -20,6 +20,7 @@ const playbackShortcuts: ShortcutEntry[] = [
   { keys: ['\u2192'], description: 'Seek forward 5s' },
   { keys: ['0\u20139'], description: 'Jump to 0\u201390%' },
   { keys: ['P'], description: 'Picture-in-Picture' },
+  { keys: ['<', '>'], description: 'Speed down/up' },
 ]
 
 const controlShortcuts: ShortcutEntry[] = [
@@ -32,6 +33,7 @@ const controlShortcuts: ShortcutEntry[] = [
 ]
 
 const notesShortcuts: ShortcutEntry[] = [
+  { keys: ['N'], description: 'Focus note editor' },
   { keys: ['Alt', 'T'], description: 'Insert timestamp (in notes)' },
 ]
 

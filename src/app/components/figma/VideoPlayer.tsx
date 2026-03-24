@@ -53,6 +53,7 @@ interface VideoPlayerProps {
   theaterMode?: boolean
   onTheaterModeToggle?: () => void
   onLoadCaptions?: (file: File) => void
+  onFocusNotes?: () => void
 }
 
 export interface VideoPlayerHandle {
@@ -85,6 +86,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     theaterMode,
     onTheaterModeToggle,
     onLoadCaptions,
+    onFocusNotes,
   },
   ref
 ) {
@@ -340,6 +342,24 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     announce(`Speed changed to ${speed}x`)
   }
 
+  // Step playback speed up/down through PLAYBACK_SPEEDS list (</>  keyboard shortcuts)
+  const stepPlaybackSpeed = (direction: 'up' | 'down') => {
+    const currentIndex = PLAYBACK_SPEEDS.indexOf(playbackSpeed)
+    if (direction === 'up') {
+      if (currentIndex >= PLAYBACK_SPEEDS.length - 1) {
+        announce('Already at maximum speed')
+        return
+      }
+      changePlaybackSpeed(PLAYBACK_SPEEDS[currentIndex + 1])
+    } else {
+      if (currentIndex <= 0) {
+        announce('Already at minimum speed')
+        return
+      }
+      changePlaybackSpeed(PLAYBACK_SPEEDS[currentIndex - 1])
+    }
+  }
+
   // Jump to percentage
   const jumpToPercentage = (percentage: number) => {
     if (videoRef.current) {
@@ -575,6 +595,20 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
           e.preventDefault()
           handleAddBookmark()
           break
+        case '<':
+          e.preventDefault()
+          stepPlaybackSpeed('down')
+          containerRef.current?.focus({ preventScroll: true })
+          break
+        case '>':
+          e.preventDefault()
+          stepPlaybackSpeed('up')
+          containerRef.current?.focus({ preventScroll: true })
+          break
+        case 'n':
+          e.preventDefault()
+          onFocusNotes?.()
+          break
         case '0':
         case '1':
         case '2':
@@ -608,6 +642,8 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     shortcutsOpen,
     handleAddBookmark,
     onTheaterModeToggle,
+    stepPlaybackSpeed,
+    onFocusNotes,
   ])
 
   // Auto-hide controls (mouse interaction — only hides when playing)
