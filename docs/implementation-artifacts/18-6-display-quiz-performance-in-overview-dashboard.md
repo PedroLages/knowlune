@@ -1,9 +1,9 @@
 ---
 story_id: E18-S06
 story_name: "Display Quiz Performance in Overview Dashboard"
-status: in-progress
+status: done
 started: 2026-03-23
-completed:
+completed: 2026-03-24
 reviewed: true
 review_started: 2026-03-24
 review_gates_passed: ["build", "lint", "type-check", "format-check", "unit-tests", "e2e-tests", "design-review", "code-review", "code-review-testing"]
