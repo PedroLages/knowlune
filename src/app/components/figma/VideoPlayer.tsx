@@ -16,6 +16,8 @@ import {
   BookmarkCheck,
   ChevronLeft,
   ChevronRight,
+  Repeat,
+  X,
 } from 'lucide-react'
 import type { CaptionTrack, Chapter } from '@/data/types'
 import { ChapterProgressBar } from './ChapterProgressBar'
@@ -148,6 +150,14 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     return saved === 'true'
   })
 
+  // AB-loop: dual ref+state pattern.
+  // Refs are read inside handleTimeUpdate (avoids stale closure in video event handler).
+  // State drives UI rendering.
+  const loopStartRef = useRef<number | null>(null)
+  const loopEndRef = useRef<number | null>(null)
+  const [loopStart, setLoopStart] = useState<number | null>(null)
+  const [loopEnd, setLoopEnd] = useState<number | null>(null)
+
   // Reset position flag and error state when source changes
   useEffect(() => {
     hasRestoredPosition.current = false
@@ -211,6 +221,12 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       const time = videoRef.current.currentTime
       setCurrentTime(time)
       onTimeUpdate?.(time)
+      // AB-loop enforcement: seek back to A when video reaches B
+      const a = loopStartRef.current
+      const b = loopEndRef.current
+      if (a !== null && b !== null && time >= b) {
+        videoRef.current.currentTime = a
+      }
     }
   }
 
@@ -404,6 +420,44 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     }
   }
 
+  // AB-loop: set loop start (A point) at current time
+  const setLoopA = () => {
+    if (!videoRef.current) return
+    const time = videoRef.current.currentTime
+    loopStartRef.current = time
+    setLoopStart(time)
+    announce(`Loop start set at ${formatTime(time)}`)
+  }
+
+  // AB-loop: set loop end (B point) at current time.
+  // Auto-swaps A and B if the new B point is before A.
+  const setLoopB = () => {
+    if (!videoRef.current) return
+    const time = Math.min(videoRef.current.currentTime, videoRef.current.duration)
+    const a = loopStartRef.current
+    if (a !== null && time <= a) {
+      // User set B before A — swap so A is always earlier
+      loopStartRef.current = time
+      loopEndRef.current = a
+      setLoopStart(time)
+      setLoopEnd(a)
+    } else {
+      loopEndRef.current = time
+      setLoopEnd(time)
+    }
+    const activeA = loopStartRef.current ?? 0
+    announce(`Loop active: ${formatTime(activeA)} to ${formatTime(loopEndRef.current ?? 0)}`)
+  }
+
+  // AB-loop: clear all loop markers
+  const clearLoop = () => {
+    loopStartRef.current = null
+    loopEndRef.current = null
+    setLoopStart(null)
+    setLoopEnd(null)
+    announce('Loop cleared')
+  }
+
   // Toggle Picture-in-Picture
   const togglePiP = async () => {
     if (!videoRef.current) return
@@ -506,6 +560,23 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
       const isPlayerFocused = containerRef.current?.contains(document.activeElement)
 
       switch (e.key) {
+        case 'a':
+          // AB-loop: first press sets A (loop start), second press sets B (loop end)
+          e.preventDefault()
+          if (loopStartRef.current === null) {
+            setLoopA()
+          } else if (loopEndRef.current === null) {
+            setLoopB()
+          }
+          containerRef.current?.focus({ preventScroll: true })
+          break
+        case 'Escape':
+          // Clear loop if any markers are set (shortcuts overlay is already handled above)
+          if (loopStartRef.current !== null || loopEndRef.current !== null) {
+            e.preventDefault()
+            clearLoop()
+          }
+          break
         case 't':
           e.preventDefault()
           onTheaterModeToggle?.()
@@ -608,6 +679,9 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
     shortcutsOpen,
     handleAddBookmark,
     onTheaterModeToggle,
+    setLoopA,
+    setLoopB,
+    clearLoop,
   ])
 
   // Auto-hide controls (mouse interaction — only hides when playing)
@@ -888,6 +962,8 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                 bookmarks={bookmarks}
                 onSeek={handleProgressChange}
                 onBookmarkSeek={onBookmarkSeek}
+                loopStart={loopStart}
+                loopEnd={loopEnd}
               />
               <button
                 className="text-white text-xs font-medium min-w-[45px] text-right hover:text-white/80 transition-colors cursor-pointer"
@@ -1041,6 +1117,49 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                     </DropdownMenuRadioGroup>
                   </DropdownMenuContent>
                 </DropdownMenu>
+
+                {/* AB-Loop Button — cycles: no markers → set A → set B → (Escape to clear) */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  data-testid="loop-toggle-button"
+                  className={cn(
+                    'size-11 text-white hover:bg-white/20 transition-colors duration-150',
+                    loopStart !== null && loopEnd === null && 'bg-white/20',
+                    loopStart !== null && loopEnd !== null && 'bg-brand/30 text-brand-soft-foreground'
+                  )}
+                  onClick={() => {
+                    if (loopStart === null) {
+                      setLoopA()
+                    } else if (loopEnd === null) {
+                      setLoopB()
+                    }
+                  }}
+                  aria-label={
+                    loopStart === null
+                      ? 'Set loop start (A)'
+                      : loopEnd === null
+                        ? 'Set loop end (B)'
+                        : `Loop active: ${formatTime(loopStart)} – ${formatTime(loopEnd)}`
+                  }
+                  aria-pressed={loopStart !== null}
+                >
+                  <Repeat className="size-5" />
+                </Button>
+
+                {/* Clear loop — shown whenever any marker is set */}
+                {(loopStart !== null || loopEnd !== null) && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    data-testid="loop-clear-button"
+                    className="size-8 text-white/60 hover:text-white hover:bg-white/20"
+                    onClick={clearLoop}
+                    aria-label="Clear loop"
+                  >
+                    <X className="size-3" />
+                  </Button>
+                )}
 
                 {/* Bookmark Button */}
                 {onBookmarkAdd && (
