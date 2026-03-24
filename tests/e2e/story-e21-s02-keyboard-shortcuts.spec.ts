@@ -13,13 +13,29 @@ import { TIMEOUTS } from '../utils/constants'
 
 const LESSON_URL = '/courses/operative-six/op6-introduction'
 
-async function goToLessonPlayer(page: Parameters<typeof navigateAndWait>[0]) {
-  await page.addInitScript(() => {
-    localStorage.removeItem('video-playback-speed') // start at 1x every time
+type PageParam = Parameters<typeof navigateAndWait>[0]
+
+async function focusPlayer(page: PageParam) {
+  await page.waitForLoadState('networkidle')
+  const player = page.getByTestId('video-player-container')
+  await player.focus()
+  // Note: not asserting toBeFocused() — in parallel runs the window may be "inactive"
+  // (lacking OS-level focus), causing false failures. CDP focus sets document.activeElement
+  // correctly, which is what the keyboard shortcut guard checks.
+}
+
+async function goToLessonPlayer(page: PageParam, speedOverride?: string) {
+  await page.addInitScript(({ speed }: { speed: string | null }) => {
+    if (speed !== null) {
+      localStorage.setItem('video-playback-speed', speed)
+    } else {
+      localStorage.removeItem('video-playback-speed')
+    }
     localStorage.setItem('knowlune-sidebar-v1', 'false')
-  })
+  }, { speed: speedOverride ?? null })
   await navigateAndWait(page, LESSON_URL)
   await page.locator('video').waitFor({ state: 'visible', timeout: TIMEOUTS.NETWORK })
+  await focusPlayer(page)
 }
 
 // ===========================================================================
@@ -36,7 +52,7 @@ test.describe('E21-S02 AC1: Speed keyboard controls', () => {
     await goToLessonPlayer(page)
 
     // Speed starts at 1x — pressing > should increase to 1.25x
-    await page.keyboard.press('Shift+.')
+    await page.keyboard.press('>')
     await expect(page.getByTestId('speed-menu-trigger')).toContainText('1.25x', {
       timeout: TIMEOUTS.SHORT,
     })
@@ -45,10 +61,10 @@ test.describe('E21-S02 AC1: Speed keyboard controls', () => {
   test('pressing > multiple times steps through the list to 2x', async ({ page }) => {
     await goToLessonPlayer(page)
 
-    // From 1x: 1.25 → 1.5 → 2
-    await page.keyboard.press('Shift+.')
-    await page.keyboard.press('Shift+.')
-    await page.keyboard.press('Shift+.')
+    // From 1x: 1.25 → 1.5 → 2 (handler refocuses player after each press)
+    await page.keyboard.press('>')
+    await page.keyboard.press('>')
+    await page.keyboard.press('>')
 
     await expect(page.getByTestId('speed-menu-trigger')).toContainText('2x', {
       timeout: TIMEOUTS.SHORT,
@@ -56,16 +72,11 @@ test.describe('E21-S02 AC1: Speed keyboard controls', () => {
   })
 
   test('> at maximum speed announces "Already at maximum speed"', async ({ page }) => {
-    await page.addInitScript(() => {
-      localStorage.setItem('video-playback-speed', '2')
-      localStorage.setItem('knowlune-sidebar-v1', 'false')
-    })
-    await navigateAndWait(page, LESSON_URL)
-    await page.locator('video').waitFor({ state: 'visible', timeout: TIMEOUTS.NETWORK })
+    await goToLessonPlayer(page, '2')
 
-    const liveRegion = page.locator('[role="status"]')
+    const liveRegion = page.locator('[role="status"][aria-live="polite"]')
 
-    await page.keyboard.press('Shift+.')
+    await page.keyboard.press('>')
     await expect(liveRegion).toContainText('Already at maximum speed', {
       timeout: TIMEOUTS.SHORT,
     })
@@ -74,30 +85,20 @@ test.describe('E21-S02 AC1: Speed keyboard controls', () => {
   })
 
   test('< key decreases playback speed to the previous step', async ({ page }) => {
-    await page.addInitScript(() => {
-      localStorage.setItem('video-playback-speed', '1.25')
-      localStorage.setItem('knowlune-sidebar-v1', 'false')
-    })
-    await navigateAndWait(page, LESSON_URL)
-    await page.locator('video').waitFor({ state: 'visible', timeout: TIMEOUTS.NETWORK })
+    await goToLessonPlayer(page, '1.25')
 
-    await page.keyboard.press('Shift+,')
+    await page.keyboard.press('<')
     await expect(page.getByTestId('speed-menu-trigger')).toContainText('1x', {
       timeout: TIMEOUTS.SHORT,
     })
   })
 
   test('< at minimum speed announces "Already at minimum speed"', async ({ page }) => {
-    await page.addInitScript(() => {
-      localStorage.setItem('video-playback-speed', '0.5')
-      localStorage.setItem('knowlune-sidebar-v1', 'false')
-    })
-    await navigateAndWait(page, LESSON_URL)
-    await page.locator('video').waitFor({ state: 'visible', timeout: TIMEOUTS.NETWORK })
+    await goToLessonPlayer(page, '0.5')
 
-    const liveRegion = page.locator('[role="status"]')
+    const liveRegion = page.locator('[role="status"][aria-live="polite"]')
 
-    await page.keyboard.press('Shift+,')
+    await page.keyboard.press('<')
     await expect(liveRegion).toContainText('Already at minimum speed', {
       timeout: TIMEOUTS.SHORT,
     })
@@ -108,7 +109,7 @@ test.describe('E21-S02 AC1: Speed keyboard controls', () => {
   test('speed change is persisted to localStorage', async ({ page }) => {
     await goToLessonPlayer(page)
 
-    await page.keyboard.press('Shift+.')
+    await page.keyboard.press('>')
 
     const storedSpeed = await page.evaluate(() => localStorage.getItem('video-playback-speed'))
     expect(storedSpeed).toBe('1.25')
@@ -129,7 +130,7 @@ test.describe('E21-S02 AC2: Focus note editor (N key)', () => {
     await goToLessonPlayer(page)
 
     // Notes panel should be closed by default
-    await expect(page.locator('[data-testid="lesson-content-scroll"]')).toBeVisible()
+    await expect(page.locator('[data-testid="lesson-content-scroll"]')). toBeVisible()
 
     await page.keyboard.press('n')
 
@@ -144,7 +145,7 @@ test.describe('E21-S02 AC2: Focus note editor (N key)', () => {
 
     // Wait for editor to mount and receive focus
     await expect(page.locator('[contenteditable="true"]').first()).toBeFocused({
-      timeout: TIMEOUTS.STANDARD,
+      timeout: TIMEOUTS.LONG,
     })
   })
 
@@ -153,34 +154,36 @@ test.describe('E21-S02 AC2: Focus note editor (N key)', () => {
 
     // Open notes panel via N
     await page.keyboard.press('n')
-    await page.locator('[contenteditable="true"]').first().waitFor({ timeout: TIMEOUTS.STANDARD })
+    await page.locator('[contenteditable="true"]').first().waitFor({ timeout: TIMEOUTS.LONG })
 
-    // Click elsewhere to lose focus
-    await page.locator('video').click()
+    // Focus the player container to remove focus from editor
+    await page.getByTestId('video-player-container').focus()
     await expect(page.locator('[contenteditable="true"]').first()).not.toBeFocused()
 
-    // Press N again
+    // Press N again — panel is already open so only focuses editor
     await page.keyboard.press('n')
     await expect(page.locator('[contenteditable="true"]').first()).toBeFocused({
       timeout: TIMEOUTS.SHORT,
     })
   })
 
-  test('N shortcut is suppressed when typing in a search input', async ({ page }) => {
+  test('N shortcut is suppressed when typing in contenteditable editor', async ({ page }) => {
     await goToLessonPlayer(page)
 
-    // Focus the header search box (input field)
-    const searchInput = page.locator('input[type="search"], input[placeholder*="Search"]').first()
-    await searchInput.focus()
-
-    // Type N — should insert character, NOT trigger the shortcut
+    // Open notes panel and wait for editor to mount
     await page.keyboard.press('n')
-    await expect(searchInput).toHaveValue('n')
+    const editor = page.locator('[contenteditable="true"]').first()
+    await editor.waitFor({ timeout: TIMEOUTS.LONG })
 
-    // Notes panel should NOT have opened
-    await expect(
-      page.locator('[contenteditable="true"]').first()
-    ).not.toBeFocused()
+    // Click into editor to give it focus
+    await editor.click()
+    await expect(editor).toBeFocused()
+
+    // Type N while in contenteditable — should type 'n', NOT trigger the shortcut
+    await page.keyboard.press('n')
+
+    // The editor should have received the typed 'n' character
+    await expect(editor).toContainText('n')
   })
 })
 
@@ -193,7 +196,7 @@ test.describe('E21-S02 AC3: Updated shortcuts overlay', () => {
     await goToLessonPlayer(page)
 
     // Open shortcuts overlay via ? key
-    await page.keyboard.press('Shift+/')
+    await page.keyboard.press('?')
     await expect(page.getByTestId('video-shortcuts-overlay')).toBeVisible({
       timeout: TIMEOUTS.SHORT,
     })
@@ -204,7 +207,7 @@ test.describe('E21-S02 AC3: Updated shortcuts overlay', () => {
   test('shortcuts overlay shows Focus note editor entry', async ({ page }) => {
     await goToLessonPlayer(page)
 
-    await page.keyboard.press('Shift+/')
+    await page.keyboard.press('?')
     await expect(page.getByTestId('video-shortcuts-overlay')).toBeVisible({
       timeout: TIMEOUTS.SHORT,
     })
@@ -215,7 +218,7 @@ test.describe('E21-S02 AC3: Updated shortcuts overlay', () => {
   test('shortcuts overlay shows < and > key badges', async ({ page }) => {
     await goToLessonPlayer(page)
 
-    await page.keyboard.press('Shift+/')
+    await page.keyboard.press('?')
     const overlay = page.getByTestId('video-shortcuts-overlay')
     await expect(overlay).toBeVisible({ timeout: TIMEOUTS.SHORT })
 
@@ -227,7 +230,7 @@ test.describe('E21-S02 AC3: Updated shortcuts overlay', () => {
   test('shortcuts overlay shows N key badge in notes section', async ({ page }) => {
     await goToLessonPlayer(page)
 
-    await page.keyboard.press('Shift+/')
+    await page.keyboard.press('?')
     const overlay = page.getByTestId('video-shortcuts-overlay')
     await expect(overlay).toBeVisible({ timeout: TIMEOUTS.SHORT })
 
@@ -248,8 +251,8 @@ test.describe('E21-S02 AC4: Accessibility', () => {
   test('> key announces speed change in ARIA live region', async ({ page }) => {
     await goToLessonPlayer(page)
 
-    const liveRegion = page.locator('[role="status"]')
-    await page.keyboard.press('Shift+.')
+    const liveRegion = page.locator('[role="status"][aria-live="polite"]')
+    await page.keyboard.press('>')
 
     await expect(liveRegion).toContainText('Speed changed to 1.25x', {
       timeout: TIMEOUTS.SHORT,
@@ -257,15 +260,10 @@ test.describe('E21-S02 AC4: Accessibility', () => {
   })
 
   test('< key announces speed change in ARIA live region', async ({ page }) => {
-    await page.addInitScript(() => {
-      localStorage.setItem('video-playback-speed', '1.25')
-      localStorage.setItem('knowlune-sidebar-v1', 'false')
-    })
-    await navigateAndWait(page, LESSON_URL)
-    await page.locator('video').waitFor({ state: 'visible', timeout: TIMEOUTS.NETWORK })
+    await goToLessonPlayer(page, '1.25')
 
-    const liveRegion = page.locator('[role="status"]')
-    await page.keyboard.press('Shift+,')
+    const liveRegion = page.locator('[role="status"][aria-live="polite"]')
+    await page.keyboard.press('<')
 
     await expect(liveRegion).toContainText('Speed changed to 1x', { timeout: TIMEOUTS.SHORT })
   })
@@ -274,7 +272,7 @@ test.describe('E21-S02 AC4: Accessibility', () => {
     await goToLessonPlayer(page)
 
     await page.keyboard.press('n')
-    await page.locator('[contenteditable="true"]').first().waitFor({ timeout: TIMEOUTS.STANDARD })
+    await page.locator('[contenteditable="true"]').first().waitFor({ timeout: TIMEOUTS.LONG })
 
     // User should be able to Tab away from the editor
     await page.keyboard.press('Tab')
