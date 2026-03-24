@@ -13,6 +13,9 @@ review_gates_passed:
   - format-check
   - unit-tests
   - e2e-tests
+  - design-review
+  - code-review
+  - code-review-testing
 burn_in_validated: false
 ---
 
@@ -84,15 +87,15 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story -- Playwright MCP findings]
+**2026-03-24 review**: 1 BLOCKER (keyboard focus invisible on selected timer radio card — WCAG 2.4.7), 2 HIGH (RadioGroup missing aria-labelledby; Switch focus ring absent), 2 MEDIUM (toast debounce; missing htmlFor on labels). Full report: docs/reviews/design/design-review-2026-03-24-e18-s09.md
 
 ## Code Review Feedback
 
-[Populated by /review-story -- adversarial code review findings]
+**2026-03-24 review**: 3 HIGH (saveQuizPreferences no try/catch on localStorage; loadSavedAccommodation catch falls back to 'standard' instead of global pref; unsafe type cast bypasses Zod), 3 MEDIUM (one-way shuffle OR; timer selected state color-only; no localStorage failure unit test), 2 nits. Full report: docs/reviews/code/code-review-2026-03-24-e18-s09.md
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story -- Web Interface Guidelines compliance findings]
+Covered by design review agent (web design guidelines checked inline). See design review report.
 
 ## Challenges and Lessons Learned
 
