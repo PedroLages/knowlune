@@ -118,8 +118,10 @@ test.describe('E18-S09: Quiz Preferences in Settings', () => {
 
     const section = page.getByTestId('quiz-preferences-section')
 
-    // 1x (standard) timer should be selected
-    await expect(section.getByTestId('timer-option-standard')).toHaveClass(/border-brand/)
+    // 1x (standard) timer should be selected — use ARIA role instead of CSS class
+    await expect(
+      section.getByRole('radio', { name: /1x — Standard timing/i })
+    ).toBeChecked()
 
     // Feedback and shuffle toggles should be off
     const feedbackToggle = section.getByTestId('immediate-feedback-toggle')
@@ -142,7 +144,9 @@ test.describe('E18-S09: Quiz Preferences in Settings', () => {
     await page.reload({ waitUntil: 'domcontentloaded' })
 
     const section = page.getByTestId('quiz-preferences-section')
-    await expect(section.getByTestId('timer-option-150%')).toHaveClass(/border-brand/)
+    await expect(
+      section.getByRole('radio', { name: /1\.5x — Extended time/i })
+    ).toBeChecked()
   })
 
   // AC2: Persist toggle preferences with toast
@@ -174,13 +178,19 @@ test.describe('E18-S09: Quiz Preferences in Settings', () => {
     const section = page.getByTestId('quiz-preferences-section')
 
     await page.getByTestId('timer-option-200%').click()
-    await expect(section.getByTestId('timer-option-200%')).toHaveClass(/border-brand/)
+    await expect(
+      section.getByRole('radio', { name: /2x — Maximum extension/i })
+    ).toBeChecked()
 
     await page.getByTestId('timer-option-150%').click()
-    await expect(section.getByTestId('timer-option-150%')).toHaveClass(/border-brand/)
+    await expect(
+      section.getByRole('radio', { name: /1\.5x — Extended time/i })
+    ).toBeChecked()
 
     await page.getByTestId('timer-option-standard').click()
-    await expect(section.getByTestId('timer-option-standard')).toHaveClass(/border-brand/)
+    await expect(
+      section.getByRole('radio', { name: /1x — Standard timing/i })
+    ).toBeChecked()
   })
 })
 
@@ -248,5 +258,49 @@ test.describe('E18-S09: Quiz reads preferences as defaults', () => {
 
     // AnswerFeedback should NOT be visible
     await expect(page.getByTestId('answer-feedback')).not.toBeVisible()
+  })
+
+  // AC3: Per-quiz override via Accessibility Accommodations modal
+  test('per-quiz override changes timer from saved 150% (15 min) to 200% (20 min)', async ({
+    page,
+  }) => {
+    const prefs = JSON.stringify({
+      timerAccommodation: '150%',
+      showImmediateFeedback: false,
+      shuffleQuestions: false,
+    })
+
+    await goToQuiz(page, timedQuiz, prefs)
+
+    // Start screen should initially reflect saved 150% preference → 15 min
+    await expect(page.getByText('15 min')).toBeVisible()
+
+    // Open the per-quiz Accessibility Accommodations modal
+    await page.getByRole('button', { name: /accessibility accommodations/i }).click()
+
+    // Modal should be visible with "Timer Accommodations" heading
+    const dialog = page.getByRole('dialog')
+    await expect(dialog.getByText('Timer Accommodations')).toBeVisible()
+
+    // The 150% option should be pre-selected (matching saved preference)
+    await expect(
+      dialog.getByRole('radio', { name: /150% extended time/i })
+    ).toBeChecked()
+
+    // Select 200% extended time
+    await dialog.getByRole('radio', { name: /200% extended time/i }).click()
+    await expect(
+      dialog.getByRole('radio', { name: /200% extended time/i })
+    ).toBeChecked()
+
+    // Save the per-quiz override
+    await dialog.getByRole('button', { name: /save/i }).click()
+
+    // Modal should close
+    await expect(dialog).not.toBeVisible()
+
+    // Start screen time badge should now show 200% of 10 min = 20 min
+    await expect(page.getByText('20 min')).toBeVisible()
+    await expect(page.getByText('15 min')).not.toBeVisible()
   })
 })
