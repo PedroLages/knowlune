@@ -304,3 +304,13 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M2: Redundant `new Set(topicMap.keys())` when `topicMap.size` suffices
 - M3: E2E AC3 uses `getByText` for not.toBeVisible assertions instead of `getByRole('heading')` -- fragile
 - Positive: Pure function architecture, excellent unit test coverage (14 tests, boundary conditions), proper accessibility (useId, aria-labelledby, semantic HTML), no uncommitted changes, shared E2E seeding helpers used
+
+## E18-S05: Integrate Quiz Completion with Study Streaks (Round 1)
+- No uncommitted changes (positive -- pattern broken since E07-S04)
+- H1: Stale test name "only counts lesson_complete actions" now factually incorrect after adding quiz_complete to activityFromLog
+- H2: AC4 E2E test listed in file header comment but no actual test implemented -- false coverage impression
+- H3: No vi.useFakeTimers() in useQuizStore.streakIntegration.test.ts -- timestamp assertion uses expect.any(String) to paper over non-determinism
+- M1: saveLog() in studyLog.ts has no try/catch -- logStudyAction callers in progress.ts (5 sites) have no error handling (pre-existing, expanded blast radius)
+- M2: TODAY_STR derived from Intl.DateTimeFormat in Node runner, may diverge from browser toLocaleDateString in extreme timezones
+- M3: metadata object omits quizId and score fields specified in implementation plan
+- Positive: Correct architecture decision (extend existing pattern, not new store), solid fire-and-forget isolation, clean working tree, thorough lessons learned
