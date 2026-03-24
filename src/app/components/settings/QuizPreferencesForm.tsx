@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { SlidersHorizontal } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { SlidersHorizontal, Check } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import { Switch } from '@/app/components/ui/switch'
@@ -9,9 +9,11 @@ import { Separator } from '@/app/components/ui/separator'
 import {
   getQuizPreferences,
   saveQuizPreferences,
+  QuizPreferencesSchema,
+  STORAGE_KEY,
   type QuizPreferences,
 } from '@/lib/quizPreferences'
-import { toastSuccess } from '@/lib/toastHelpers'
+import { toastSuccess, toastError } from '@/lib/toastHelpers'
 
 type TimerOption = {
   value: QuizPreferences['timerAccommodation']
@@ -27,25 +29,50 @@ const TIMER_OPTIONS: TimerOption[] = [
 
 export function QuizPreferencesForm() {
   const [prefs, setPrefs] = useState<QuizPreferences>(getQuizPreferences)
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Sync cross-tab changes (native storage event fires only for other tabs)
   useEffect(() => {
     function handleUpdate() {
       setPrefs(getQuizPreferences())
     }
+    function handleStorageEvent(e: StorageEvent) {
+      if (e.key === STORAGE_KEY) handleUpdate()
+    }
     window.addEventListener('quiz-preferences-updated', handleUpdate)
-    window.addEventListener('storage', handleUpdate)
+    window.addEventListener('storage', handleStorageEvent)
     return () => {
       window.removeEventListener('quiz-preferences-updated', handleUpdate)
-      window.removeEventListener('storage', handleUpdate)
+      window.removeEventListener('storage', handleStorageEvent)
+    }
+  }, [])
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
     }
   }, [])
 
   function update(patch: Partial<QuizPreferences>) {
     const next = saveQuizPreferences(patch)
+    if (next === null) {
+      toastError.saveFailed('Quiz preferences — storage may be full')
+      return
+    }
     setPrefs(next)
     window.dispatchEvent(new CustomEvent('quiz-preferences-updated'))
-    toastSuccess.saved('Quiz preferences saved')
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
+    toastTimeoutRef.current = setTimeout(() => {
+      toastSuccess.saved('Quiz preferences saved')
+    }, 600)
+  }
+
+  function handleTimerChange(value: string) {
+    const parsed = QuizPreferencesSchema.shape.timerAccommodation.safeParse(value)
+    if (parsed.success) {
+      update({ timerAccommodation: parsed.data })
+    }
   }
 
   return (
@@ -53,7 +80,7 @@ export function QuizPreferencesForm() {
       <CardHeader className="border-b border-border/50 bg-surface-sunken/30">
         <div className="flex items-center gap-3">
           <div className="rounded-full bg-brand-soft p-2">
-            <SlidersHorizontal className="size-5 text-brand" aria-hidden="true" />
+            <SlidersHorizontal className="size-5 text-brand-soft-foreground" aria-hidden="true" />
           </div>
           <div>
             <CardTitle className="text-lg font-display">Quiz Preferences</CardTitle>
@@ -68,7 +95,9 @@ export function QuizPreferencesForm() {
         {/* Timer Accommodation Default */}
         <div className="space-y-3">
           <div>
-            <Label className="text-sm font-medium">Timer accommodation default</Label>
+            <Label id="timer-accommodation-label" className="text-sm font-medium">
+              Timer accommodation default
+            </Label>
             <p className="text-xs text-muted-foreground mt-0.5">
               Default time multiplier for timed quizzes
             </p>
@@ -76,10 +105,9 @@ export function QuizPreferencesForm() {
 
           <RadioGroup
             data-testid="timer-accommodation-group"
+            aria-labelledby="timer-accommodation-label"
             value={prefs.timerAccommodation}
-            onValueChange={value =>
-              update({ timerAccommodation: value as QuizPreferences['timerAccommodation'] })
-            }
+            onValueChange={handleTimerChange}
             className="grid grid-cols-1 sm:grid-cols-3 gap-3"
           >
             {TIMER_OPTIONS.map(option => (
@@ -88,13 +116,24 @@ export function QuizPreferencesForm() {
                 className={cn(
                   'relative flex flex-col gap-1.5 p-4 border-2 rounded-xl cursor-pointer',
                   'transition-all duration-200 hover:shadow-sm',
+                  'has-[[data-radix-collection-item]:focus-visible]:ring-2 has-[[data-radix-collection-item]:focus-visible]:ring-ring has-[[data-radix-collection-item]:focus-visible]:ring-offset-2',
                   prefs.timerAccommodation === option.value
                     ? 'border-brand bg-brand-soft shadow-sm'
                     : 'border-border bg-background hover:border-brand/50'
                 )}
                 data-testid={`timer-option-${option.value}`}
               >
-                <RadioGroupItem value={option.value} className="sr-only" />
+                <RadioGroupItem
+                  value={option.value}
+                  className="sr-only"
+                  aria-label={`${option.label} — ${option.description}`}
+                />
+                {prefs.timerAccommodation === option.value && (
+                  <Check
+                    className="absolute top-2 right-2 size-4 text-brand-soft-foreground"
+                    aria-hidden="true"
+                  />
+                )}
                 <span className="text-sm font-medium">{option.label}</span>
                 <span className="text-xs text-muted-foreground">{option.description}</span>
               </label>

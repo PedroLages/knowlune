@@ -1,11 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   getQuizPreferences,
   saveQuizPreferences,
   DEFAULT_QUIZ_PREFERENCES,
+  STORAGE_KEY,
 } from '@/lib/quizPreferences'
-
-const STORAGE_KEY = 'levelup-quiz-preferences'
 
 describe('quizPreferences', () => {
   beforeEach(() => {
@@ -86,9 +85,10 @@ describe('quizPreferences', () => {
 
     it('returns the updated preferences', () => {
       const result = saveQuizPreferences({ timerAccommodation: '150%' })
-      expect(result.timerAccommodation).toBe('150%')
-      expect(result.showImmediateFeedback).toBe(false)
-      expect(result.shuffleQuestions).toBe(false)
+      expect(result).not.toBeNull()
+      expect(result!.timerAccommodation).toBe('150%')
+      expect(result!.showImmediateFeedback).toBe(false)
+      expect(result!.shuffleQuestions).toBe(false)
     })
 
     it('overwrites previously saved values', () => {
@@ -103,10 +103,41 @@ describe('quizPreferences', () => {
         showImmediateFeedback: true,
         shuffleQuestions: true,
       })
-      expect(result).toEqual({
+      expect(result).not.toBeNull()
+      expect(result!).toEqual({
         timerAccommodation: '200%',
         showImmediateFeedback: true,
         shuffleQuestions: true,
+      })
+    })
+
+    it('returns null when localStorage throws', () => {
+      const spy = vi
+        .spyOn(Storage.prototype, 'setItem')
+        .mockImplementation(() => {
+          throw new DOMException('QuotaExceededError')
+        })
+      const result = saveQuizPreferences({ shuffleQuestions: true })
+      expect(result).toBeNull()
+      spy.mockRestore()
+    })
+
+    it('validates patch with Zod and drops invalid values', () => {
+      saveQuizPreferences({ timerAccommodation: '150%' })
+      const result = saveQuizPreferences({
+        timerAccommodation: 'invalid' as any,
+      })
+      expect(result).not.toBeNull()
+      expect(result!.timerAccommodation).toBe('150%')
+    })
+
+    it('returns current preferences unchanged for empty patch', () => {
+      saveQuizPreferences({ timerAccommodation: '200%', showImmediateFeedback: true })
+      const result = saveQuizPreferences({})
+      expect(result).toEqual({
+        timerAccommodation: '200%',
+        showImmediateFeedback: true,
+        shuffleQuestions: false,
       })
     })
   })

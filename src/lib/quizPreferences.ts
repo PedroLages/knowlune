@@ -3,7 +3,7 @@ import { z } from 'zod'
 // ── Schema ──
 
 /** Quiz preferences schema (excludes 'untimed' — only 1x, 1.5x, 2x timer options per QFR43) */
-const QuizPreferencesSchema = z.object({
+export const QuizPreferencesSchema = z.object({
   timerAccommodation: z.enum(['standard', '150%', '200%']),
   showImmediateFeedback: z.boolean(),
   shuffleQuestions: z.boolean(),
@@ -13,7 +13,7 @@ export type QuizPreferences = z.infer<typeof QuizPreferencesSchema>
 
 // ── Constants ──
 
-const STORAGE_KEY = 'levelup-quiz-preferences'
+export const STORAGE_KEY = 'levelup-quiz-preferences'
 
 export const DEFAULT_QUIZ_PREFERENCES: QuizPreferences = {
   timerAccommodation: 'standard',
@@ -35,10 +35,16 @@ export function getQuizPreferences(): QuizPreferences {
   }
 }
 
-/** Save a partial or full update to quiz preferences. Returns the merged result. */
-export function saveQuizPreferences(patch: Partial<QuizPreferences>): QuizPreferences {
+/** Save a partial or full update to quiz preferences. Returns the merged result, or null on storage failure. */
+export function saveQuizPreferences(patch: Partial<QuizPreferences>): QuizPreferences | null {
   const current = getQuizPreferences()
-  const updated = { ...current, ...patch }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+  const merged = { ...current, ...patch }
+  const validated = QuizPreferencesSchema.safeParse(merged)
+  const updated = validated.success ? validated.data : current
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+  } catch {
+    return null
+  }
   return updated
 }

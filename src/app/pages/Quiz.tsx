@@ -76,7 +76,7 @@ export function loadSavedAccommodation(lessonId: string): TimerAccommodation {
     return result.success ? result.data : getQuizPreferences().timerAccommodation
   } catch (e) {
     console.warn('[Quiz] Failed to load accommodation:', e)
-    return 'standard'
+    return getQuizPreferences().timerAccommodation
   }
 }
 

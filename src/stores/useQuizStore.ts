@@ -81,7 +81,9 @@ export const useQuizStore = create<QuizState>()(
             return
           }
 
-          // Shuffle if user preference OR quiz definition requests it
+          // Shuffle if user preference OR quiz definition requests it.
+          // Intentional one-way OR: quiz authors can force shuffle via quiz.shuffleQuestions,
+          // and learners can opt-in via preferences, but learners cannot disable author-forced shuffle.
           const shouldShuffle = getQuizPreferences().shuffleQuestions || quiz.shuffleQuestions
           const questionOrder = shouldShuffle
             ? fisherYatesShuffle(quiz.questions.map(q => q.id))
