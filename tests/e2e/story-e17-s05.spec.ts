@@ -9,7 +9,13 @@
  * - AC5: Complete quiz 5 times with improving scores → see chart + pattern label
  */
 import { test, expect } from '../support/fixtures'
-import { makeQuiz, makeQuestion, makeAttempt, makeCorrectAnswer, makeWrongAnswer } from '../support/fixtures/factories/quiz-factory'
+import {
+  makeQuiz,
+  makeQuestion,
+  makeAttempt,
+  makeCorrectAnswer,
+  makeWrongAnswer,
+} from '../support/fixtures/factories/quiz-factory'
 import { seedQuizzes, seedQuizAttempts } from '../support/helpers/indexeddb-seed'
 import { FIXED_DATE } from '../utils/test-time'
 
@@ -52,12 +58,10 @@ function buildAttempt(index: number, percentage: number) {
       score: isCorrect ? 1 : 0,
       passed: percentage >= 70,
       completedAt: new Date(new Date(FIXED_DATE).getTime() - (10 - index) * 86400000).toISOString(),
-      startedAt: new Date(new Date(FIXED_DATE).getTime() - (10 - index) * 86400000 - 60000).toISOString(),
-      answers: [
-        isCorrect
-          ? makeCorrectAnswer('q1-e17s05')
-          : makeWrongAnswer('q1-e17s05'),
-      ],
+      startedAt: new Date(
+        new Date(FIXED_DATE).getTime() - (10 - index) * 86400000 - 60000
+      ).toISOString(),
+      answers: [isCorrect ? makeCorrectAnswer('q1-e17s05') : makeWrongAnswer('q1-e17s05')],
     }),
   }
 }
@@ -136,11 +140,7 @@ test.describe('E17-S05: Learning Trajectory Patterns', () => {
     await page.goto('/', { waitUntil: 'domcontentloaded' })
     await seedQuizzes(page, [quiz as unknown as Record<string, unknown>])
 
-    const priorAttempts = [
-      buildAttempt(1, 20),
-      buildAttempt(2, 40),
-      buildAttempt(3, 60),
-    ]
+    const priorAttempts = [buildAttempt(1, 20), buildAttempt(2, 40), buildAttempt(3, 60)]
     await seedQuizAttempts(page, priorAttempts as unknown as Record<string, unknown>[])
 
     await navigateToResults(page)
@@ -155,11 +155,7 @@ test.describe('E17-S05: Learning Trajectory Patterns', () => {
     await page.goto('/', { waitUntil: 'domcontentloaded' })
     await seedQuizzes(page, [quiz as unknown as Record<string, unknown>])
 
-    const priorAttempts = [
-      buildAttempt(1, 20),
-      buildAttempt(2, 40),
-      buildAttempt(3, 60),
-    ]
+    const priorAttempts = [buildAttempt(1, 20), buildAttempt(2, 40), buildAttempt(3, 60)]
     await seedQuizAttempts(page, priorAttempts as unknown as Record<string, unknown>[])
 
     await navigateToResults(page)

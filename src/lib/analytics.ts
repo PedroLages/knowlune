@@ -569,9 +569,7 @@ export function calculateLinearR2(points: Array<{ x: number; y: number }>): numb
  * Transforms x to ln(x) then applies linear regression on (ln(x), y).
  */
 function calculateLogR2(points: Array<{ x: number; y: number }>): number {
-  const transformed = points
-    .filter(p => p.x > 0)
-    .map(p => ({ x: Math.log(p.x), y: p.y }))
+  const transformed = points.filter(p => p.x > 0).map(p => ({ x: Math.log(p.x), y: p.y }))
   return calculateLinearR2(transformed)
 }
 
@@ -581,9 +579,7 @@ function calculateLogR2(points: Array<{ x: number; y: number }>): number {
  * Only uses points where y > 0.
  */
 function calculateExpR2(points: Array<{ x: number; y: number }>): number {
-  const transformed = points
-    .filter(p => p.y > 0)
-    .map(p => ({ x: p.x, y: Math.log(p.y) }))
+  const transformed = points.filter(p => p.y > 0).map(p => ({ x: p.x, y: Math.log(p.y) }))
   if (transformed.length < 2) return 0
   return calculateLinearR2(transformed)
 }

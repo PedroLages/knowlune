@@ -7,7 +7,7 @@ import {
   type ChartConfig,
 } from '@/app/components/ui/chart'
 import { Badge } from '@/app/components/ui/badge'
-import { useIsMobile } from '@/app/hooks/useMediaQuery'
+import { useIsMobile, useMediaQuery } from '@/app/hooks/useMediaQuery'
 import { detectLearningTrajectory, type TrajectoryResult } from '@/lib/analytics'
 import type { QuizAttempt } from '@/types/quiz'
 
@@ -37,12 +37,7 @@ export function ImprovementChart({ attempts }: ImprovementChartProps) {
     [attempts]
   )
 
-  const prefersReducedMotion = useMemo(
-    () =>
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-    []
-  )
+  const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
 
   if (!trajectory) return null
 
@@ -67,15 +62,13 @@ export function ImprovementChart({ attempts }: ImprovementChartProps) {
           <Badge variant={patternBadgeVariant} data-testid="trajectory-pattern">
             {interpretation}
           </Badge>
-          <span
-            className="text-xs text-muted-foreground"
-            data-testid="trajectory-confidence"
-          >
+          <span className="text-xs text-muted-foreground" data-testid="trajectory-confidence">
             {confidencePercent}% confidence
           </span>
         </div>
       </div>
 
+      {/* Inline style required: chartHeight is computed dynamically from isMobile breakpoint */}
       <ChartContainer config={chartConfig} className="w-full" style={{ height: chartHeight }}>
         <LineChart
           data={dataPoints}
