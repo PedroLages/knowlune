@@ -319,7 +319,7 @@ development_status:
   21-5-user-engagement-preference-controls: done
   21-6-smart-dashboard-reordering: done
   21-7-age-appropriate-defaults-and-font-scaling: done
-  epic-21-retrospective: optional
+  epic-21-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 22: Ollama Integration & Smart Course Categorization
