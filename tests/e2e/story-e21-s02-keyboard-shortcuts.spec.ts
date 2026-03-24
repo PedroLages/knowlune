@@ -16,8 +16,9 @@ const LESSON_URL = '/courses/operative-six/op6-introduction'
 type PageParam = Parameters<typeof navigateAndWait>[0]
 
 async function focusPlayer(page: PageParam) {
-  await page.waitForLoadState('networkidle')
+  await page.waitForLoadState('domcontentloaded')
   const player = page.getByTestId('video-player-container')
+  await player.waitFor({ state: 'visible' })
   await player.focus()
   // Note: not asserting toBeFocused() — in parallel runs the window may be "inactive"
   // (lacking OS-level focus), causing false failures. CDP focus sets document.activeElement
@@ -150,6 +151,18 @@ test.describe('E21-S02 AC2: Focus note editor (N key)', () => {
     await expect(page.locator('[contenteditable="true"]').first()).toBeFocused({
       timeout: TIMEOUTS.LONG,
     })
+
+    // AC2: video continues playing — pressing N must not trigger a pause
+    // Start playback first, then verify N doesn't pause it
+    await page.locator('video').evaluate((v: HTMLVideoElement) => {
+      v.muted = true // bypass autoplay policy
+      v.play()
+    })
+    // Re-focus player and press N again to verify no pause
+    await page.getByTestId('video-player-container').focus()
+    await page.keyboard.press('n')
+    const isPaused = await page.locator('video').evaluate((v: HTMLVideoElement) => v.paused)
+    expect(isPaused).toBe(false)
   })
 
   test('N key focuses editor when notes panel is already open', async ({ page }) => {
@@ -188,6 +201,27 @@ test.describe('E21-S02 AC2: Focus note editor (N key)', () => {
     // The editor should have received the typed 'n' character
     await expect(editor).toContainText('n')
   })
+
+  test('shortcuts are suppressed when focused on a native input element', async ({ page }) => {
+    await goToLessonPlayer(page)
+
+    // Inject a temporary native <input> to test the input guard
+    await page.evaluate(() => {
+      const input = document.createElement('input')
+      input.type = 'text'
+      input.id = 'test-input-guard'
+      document.body.appendChild(input)
+    })
+
+    const testInput = page.locator('#test-input-guard')
+    await testInput.focus()
+    await expect(testInput).toBeFocused()
+
+    // Press > while in native input — should NOT change speed
+    await page.keyboard.press('>')
+    // Speed should remain at default 1x
+    await expect(page.getByTestId('speed-menu-trigger')).toContainText('1x')
+  })
 })
 
 // ===========================================================================
@@ -218,7 +252,7 @@ test.describe('E21-S02 AC3: Updated shortcuts overlay', () => {
     await expect(page.getByTestId('video-shortcuts-overlay')).toContainText('Focus note editor')
   })
 
-  test('shortcuts overlay shows < and > key badges', async ({ page }) => {
+  test('shortcuts overlay shows < and > key badges with / separator', async ({ page }) => {
     await goToLessonPlayer(page)
 
     await page.keyboard.press('?')
@@ -228,6 +262,8 @@ test.describe('E21-S02 AC3: Updated shortcuts overlay', () => {
     // Both < and > should appear as kbd elements
     await expect(overlay.locator('kbd').filter({ hasText: '<' })).toBeVisible()
     await expect(overlay.locator('kbd').filter({ hasText: '>' })).toBeVisible()
+    // Verify the separator between < and > is / not + (exact match on the separator span)
+    await expect(overlay.getByText('/', { exact: true })).toBeVisible()
   })
 
   test('shortcuts overlay shows N key badge in notes section', async ({ page }) => {
@@ -238,6 +274,21 @@ test.describe('E21-S02 AC3: Updated shortcuts overlay', () => {
     await expect(overlay).toBeVisible({ timeout: TIMEOUTS.SHORT })
 
     await expect(overlay.locator('kbd').filter({ hasText: 'N' })).toBeVisible()
+  })
+
+  test('existing shortcuts remain unchanged in overlay', async ({ page }) => {
+    await goToLessonPlayer(page)
+
+    await page.keyboard.press('?')
+    const overlay = page.getByTestId('video-shortcuts-overlay')
+    await expect(overlay).toBeVisible({ timeout: TIMEOUTS.SHORT })
+
+    // Pre-existing shortcuts should still be present
+    await expect(overlay).toContainText('Play/Pause')
+    await expect(overlay).toContainText('Skip back 10s')
+    await expect(overlay).toContainText('Mute')
+    await expect(overlay).toContainText('Fullscreen')
+    await expect(overlay).toContainText('Captions')
   })
 })
 
