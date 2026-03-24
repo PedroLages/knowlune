@@ -79,4 +79,8 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Use `useMediaQuery` over `useMemo` + `matchMedia` for reactive media queries.** Round 1 review caught that `prefersReducedMotion` used a one-shot `useMemo` check. Switching to `useMediaQuery()` with `addEventListener('change')` ensures the component reacts when the user toggles reduced motion mid-session.
+- **Inline styles need justification comments.** When dynamic values (e.g., `chartHeight` computed from `isMobile`) require inline styles, adding a comment explaining why Tailwind can't handle it prevents future reviewers from flagging it as a design token violation.
+- **R-squared edge cases matter.** The `calculateLinearR2` function needed guards for identical x-values (division by zero in SS_tot), fewer than 2 data points, and identical y-values (perfect plateau). Unit-testing these boundary conditions caught real bugs before integration.
+- **Create story artifact files at `/start-story` time, not during implementation.** Round 1 flagged a missing story file. Creating the implementation artifact at story kickoff avoids this recurring issue.
+- **Pure analytics functions simplify testing.** Keeping `detectLearningTrajectory` as a pure function with no side effects or I/O enabled 13 focused unit tests without mocking stores or IndexedDB.
