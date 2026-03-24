@@ -1126,7 +1126,9 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
                   className={cn(
                     'size-11 text-white hover:bg-white/20 transition-colors duration-150',
                     loopStart !== null && loopEnd === null && 'bg-white/20',
-                    loopStart !== null && loopEnd !== null && 'bg-brand/30 text-brand-soft-foreground'
+                    loopStart !== null &&
+                      loopEnd !== null &&
+                      'bg-brand/30 text-brand-soft-foreground'
                   )}
                   onClick={() => {
                     if (loopStart === null) {

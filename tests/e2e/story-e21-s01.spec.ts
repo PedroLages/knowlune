@@ -31,10 +31,7 @@ const LESSON_URL = '/courses/operative-six/op6-introduction'
  * updates its duration state. Must be called before any loop marker checks
  * since ChapterProgressBar guards markers behind duration > 0.
  */
-async function setupVideo(
-  page: import('@playwright/test').Page,
-  durationSeconds: number = 120
-) {
+async function setupVideo(page: import('@playwright/test').Page, durationSeconds: number = 120) {
   // Wait for the video element to be attached before mocking
   await page.waitForSelector('video', { state: 'attached' })
   await page.evaluate(d => {
