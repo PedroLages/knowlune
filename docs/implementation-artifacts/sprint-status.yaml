@@ -257,12 +257,12 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 17: Analyze Quiz Data and Patterns
   # ──────────────────────────────────────────────────
-  epic-17: in-progress
+  epic-17: done
   17-1-track-and-display-quiz-completion-rate: done
   17-2-track-average-retake-frequency: done
   17-3-calculate-item-difficulty-p-values: done
   17-4-calculate-discrimination-indices: done
-  17-5-identify-learning-trajectory-patterns: backlog
+  17-5-identify-learning-trajectory-patterns: done
   epic-17-retrospective: optional
 
   # ──────────────────────────────────────────────────
