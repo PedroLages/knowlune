@@ -1,5 +1,16 @@
 const STORAGE_KEY = 'app-settings'
 
+export type FontSize = 'small' | 'medium' | 'large' | 'extra-large'
+export type AgeRange = 'gen-z' | 'millennial' | 'boomer' | 'prefer-not-to-say'
+
+/** Maps font size labels to root font-size pixel values */
+export const FONT_SIZE_PX: Record<FontSize, number> = {
+  small: 14,
+  medium: 16,
+  large: 18,
+  'extra-large': 20,
+}
+
 export interface AppSettings {
   displayName: string
   bio: string
@@ -11,6 +22,10 @@ export interface AppSettings {
    * @optional - undefined if no profile photo has been set
    */
   profilePhotoDataUrl?: string
+  /** User-selected font size for proportional scaling. Default: 'medium' (16px) */
+  fontSize?: FontSize
+  /** Age range selected in welcome wizard. Stored locally, never sent to server. */
+  ageRange?: AgeRange
   /**
    * Color scheme preference: 'professional' (default muted palette) or
    * 'vibrant' (higher saturation, Gen Z energy boost).
