@@ -234,8 +234,7 @@ export async function calculateCompletionRate(): Promise<CompletionRateResult> {
   }
 
   // Only count in-progress quiz if it hasn't already been completed before
-  const inProgressCount =
-    inProgressQuizId && !completedQuizIds.has(inProgressQuizId) ? 1 : 0
+  const inProgressCount = inProgressQuizId && !completedQuizIds.has(inProgressQuizId) ? 1 : 0
 
   const startedCount = completedCount + inProgressCount
   const completionRate = startedCount > 0 ? (completedCount / startedCount) * 100 : 0

@@ -435,7 +435,10 @@ export default function Reports() {
                   </CardHeader>
                   <CardContent>
                     {completionData.startedCount === 0 ? (
-                      <p className="text-sm text-muted-foreground" data-testid="quiz-completion-empty">
+                      <p
+                        className="text-sm text-muted-foreground"
+                        data-testid="quiz-completion-empty"
+                      >
                         No quizzes started yet
                       </p>
                     ) : (
