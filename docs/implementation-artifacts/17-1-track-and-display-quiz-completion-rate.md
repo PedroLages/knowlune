@@ -1,12 +1,12 @@
 ---
 story_id: E17-S01
 story_name: "Track and Display Quiz Completion Rate"
-status: complete
+status: done
 started: 2026-03-24
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-03-24
+reviewed: true
+review_started: 2026-03-24
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing]
 burn_in_validated: false
 ---
 
