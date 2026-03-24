@@ -37,6 +37,7 @@ import { AISummaryPanel } from '../components/figma/AISummaryPanel'
 import { PdfViewer } from '../components/figma/PdfViewer'
 import { ModuleAccordion } from '../components/figma/ModuleAccordion'
 import { AutoAdvanceCountdown } from '../components/figma/AutoAdvanceCountdown'
+import { PomodoroTimer } from '../components/figma/PomodoroTimer'
 import { ResourceBadge } from '../components/figma/ResourceBadge'
 import { NoteEditor } from '../components/notes/NoteEditor'
 import { CompletionModal, type CelebrationType } from '../components/celebrations/CompletionModal'
@@ -660,6 +661,9 @@ export function LessonPlayer() {
                 </div>
               </SheetContent>
             </Sheet>
+
+            {/* Pomodoro focus timer */}
+            <PomodoroTimer />
 
             {/* Notes toggle — desktop only, hidden in theater mode */}
             {isDesktop && !isTheaterMode && (
