@@ -4,9 +4,9 @@ story_name: "Skill Proficiency Radar Chart"
 status: done
 started: 2026-03-24
 completed: 2026-03-24
-reviewed: done
+reviewed: true
 review_started: 2026-03-24
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing]
 burn_in_validated: false
 ---
 
