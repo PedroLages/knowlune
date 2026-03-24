@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link } from 'react-router'
 import { ClipboardList, ArrowRight } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
@@ -79,7 +79,6 @@ function QuizEmptyState() {
 
 export function QuizPerformanceCard() {
   const [metrics, setMetrics] = useState<QuizMetrics | null>(null)
-  const navigate = useNavigate()
 
   useEffect(() => {
     let ignore = false
@@ -121,13 +120,20 @@ export function QuizPerformanceCard() {
   }
 
   return (
-    <button
-      type="button"
-      className="w-full text-left rounded-[24px] border border-border/50 bg-card p-6 hover:border-brand-muted motion-safe:transition-colors motion-safe:duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+    <div
+      className="relative w-full text-left rounded-[24px] border border-border/50 bg-card p-6 hover:border-brand-muted motion-safe:transition-colors motion-safe:duration-200"
       data-testid="quiz-performance-card"
-      onClick={() => navigate('/reports?tab=quizzes')}
-      aria-label="Quiz Performance — view detailed analytics"
     >
+      {/* Card-level link overlay — visually hidden, stretches to fill the card */}
+      <Link
+        to="/reports?tab=quizzes"
+        className="absolute inset-0 rounded-[24px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        aria-label="Quiz Performance — view detailed analytics"
+        tabIndex={0}
+      >
+        <span className="sr-only">View quiz performance details</span>
+      </Link>
+
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-base font-semibold">Quiz Performance</h2>
@@ -152,16 +158,15 @@ export function QuizPerformanceCard() {
         />
       </div>
 
-      <div className="mt-4 pt-3 border-t border-border/40">
+      <div className="relative z-10 mt-4 pt-3 border-t border-border/40">
         <Link
           to="/reports?tab=quizzes"
           className="inline-flex items-center gap-1 text-xs text-brand-soft-foreground hover:text-brand-hover motion-safe:transition-colors py-2 -my-2"
-          onClick={e => e.stopPropagation()}
         >
           View Detailed Analytics
           <ArrowRight className="size-3" aria-hidden="true" />
         </Link>
       </div>
-    </button>
+    </div>
   )
 }
