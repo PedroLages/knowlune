@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Card } from '@/app/components/ui/card'
 import { Input } from '@/app/components/ui/input'
 import { Button } from '@/app/components/ui/button'
@@ -9,12 +9,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/app/components/ui/select'
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from '@/app/components/ui/collapsible'
 import { CourseCard, categoryLabels } from '@/app/components/figma/CourseCard'
 import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
 import { TopicFilter } from '@/app/components/figma/TopicFilter'
 import { StatusFilter } from '@/app/components/figma/StatusFilter'
 import { ToggleGroup, ToggleGroupItem } from '@/app/components/ui/toggle-group'
-import { Search, FolderOpen, Loader2, BookOpen } from 'lucide-react'
+import { Search, FolderOpen, Loader2, BookOpen, ChevronDown } from 'lucide-react'
 import { useCourseStore } from '@/stores/useCourseStore'
 import { getCourseCompletionPercent, getProgress } from '@/lib/progress'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
@@ -30,6 +35,7 @@ import type { AtRiskStatus } from '@/lib/atRisk'
 import type { CompletionEstimate } from '@/lib/completionEstimate'
 
 const ESTIMATED_MINUTES_PER_LESSON = 15
+const COLLAPSE_KEY = 'knowlune:sample-courses-collapsed'
 
 type SortMode = 'recent' | 'momentum'
 
@@ -44,6 +50,17 @@ export function Courses() {
   const [atRiskMap, setAtRiskMap] = useState<Map<string, AtRiskStatus>>(new Map())
   const [estimateMap, setEstimateMap] = useState<Map<string, CompletionEstimate>>(new Map())
 
+  // Collapse state for sample courses section — persisted to localStorage
+  const [sampleCollapsed, setSampleCollapsed] = useState(() => {
+    try {
+      const stored = localStorage.getItem(COLLAPSE_KEY)
+      if (stored !== null) return stored === 'true'
+    } catch {
+      // silent-catch-ok: localStorage unavailable in restricted contexts — silent fallback is correct
+    }
+    return false // Will be re-evaluated in useEffect when importedCourses loads
+  })
+
   const importedCourses = useCourseImportStore(state => state.importedCourses)
   const isImporting = useCourseImportStore(state => state.isImporting)
   const loadImportedCourses = useCourseImportStore(state => state.loadImportedCourses)
@@ -52,6 +69,29 @@ export function Courses() {
   useEffect(() => {
     loadImportedCourses()
   }, [loadImportedCourses])
+
+  // Auto-collapse when imported courses first appear; auto-expand when all imports removed.
+  // useRef prevents re-triggering the initial collapse on subsequent imports during the session.
+  const hasAutoCollapsed = useRef(false)
+  useEffect(() => {
+    try {
+      if (importedCourses.length > 0 && !hasAutoCollapsed.current) {
+        const stored = localStorage.getItem(COLLAPSE_KEY)
+        if (stored === null) {
+          hasAutoCollapsed.current = true
+          setSampleCollapsed(true)
+          localStorage.setItem(COLLAPSE_KEY, 'true')
+        }
+      } else if (importedCourses.length === 0 && sampleCollapsed) {
+        // All imports removed — restore sample courses visibility
+        setSampleCollapsed(false)
+        localStorage.removeItem(COLLAPSE_KEY)
+        hasAutoCollapsed.current = false
+      }
+    } catch {
+      // silent-catch-ok: localStorage unavailable — session still works without persistence
+    }
+  }, [importedCourses.length, sampleCollapsed])
 
   useEffect(() => {
     let ignore = false
@@ -119,6 +159,7 @@ export function Courses() {
         setAtRiskMap(atRiskMap)
         setEstimateMap(estimateMap)
       } catch (err) {
+        // silent-catch-ok: metrics failure is non-fatal — courses still load without momentum/risk indicators
         console.error('[Courses] Failed to load course metrics:', err)
       }
     }
@@ -197,7 +238,17 @@ export function Courses() {
     try {
       await importCourseFromFolder()
     } catch {
-      // Errors handled by importCourseFromFolder via toasts
+      // silent-catch-ok: errors are surfaced by importCourseFromFolder via toasts
+    }
+  }
+
+  function handleCollapseToggle(open: boolean) {
+    const collapsed = !open
+    setSampleCollapsed(collapsed)
+    try {
+      localStorage.setItem(COLLAPSE_KEY, String(collapsed))
+    } catch {
+      // silent-catch-ok: localStorage unavailable — collapse state still works for the session
     }
   }
 
@@ -339,67 +390,116 @@ export function Courses() {
             </div>
           )}
 
-          <div className="mb-6">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4">
-              <div className="overflow-x-auto flex-1 min-w-0">
-                <ToggleGroup
-                  type="single"
-                  value={selectedCategory}
-                  onValueChange={v => setSelectedCategory(v || 'all')}
-                  aria-label="Filter by category"
-                  className="flex flex-nowrap gap-1.5 sm:gap-2"
+          {/* Sample Courses Section */}
+          {allCourses.length > 0 && (
+            <Collapsible
+              open={!sampleCollapsed}
+              onOpenChange={handleCollapseToggle}
+              data-testid="sample-courses-section"
+              role="region"
+              aria-labelledby="sample-courses-heading"
+              className="mb-6 rounded-[24px] border border-border/50 p-4"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <h2
+                  id="sample-courses-heading"
+                  className="text-lg font-semibold text-muted-foreground"
                 >
-                  {[
-                    { value: 'all', label: 'All Courses' },
-                    ...availableCategories.map(cat => ({
-                      value: cat,
-                      label: categoryLabels[cat] ?? cat,
-                    })),
-                  ].map((chip, i) => (
-                    <ToggleGroupItem
-                      key={chip.value}
-                      value={chip.value}
-                      className={`h-auto rounded-full! border px-3 sm:px-4 py-3 sm:py-1.5 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-card data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-accent data-[state=off]:hover:text-foreground data-[state=off]:border-border cursor-pointer shadow-none${i === 0 ? ' mr-1' : ''}`}
-                    >
-                      {chip.label}
-                    </ToggleGroupItem>
-                  ))}
-                </ToggleGroup>
+                  Sample Courses ({allCourses.length})
+                </h2>
+                <CollapsibleTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    data-testid="sample-courses-toggle"
+                    aria-label={
+                      sampleCollapsed ? 'Expand sample courses' : 'Collapse sample courses'
+                    }
+                    className="min-h-[44px] min-w-[44px] p-2"
+                  >
+                    <ChevronDown
+                      aria-hidden="true"
+                      className={`size-4 transition-transform duration-200 motion-reduce:transition-none ${
+                        !sampleCollapsed ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </Button>
+                </CollapsibleTrigger>
               </div>
-              <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
-                <SelectTrigger
-                  data-testid="sort-select"
-                  aria-label="Sort courses"
-                  className="w-full sm:w-[180px] rounded-xl"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="recent">Most Recent</SelectItem>
-                  <SelectItem value="momentum">Sort by Momentum</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
 
-            {sortedCourses.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                No courses match your search
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                {sortedCourses.map(course => (
-                  <CourseCard
-                    key={course.id}
-                    course={course}
-                    completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
-                    momentumScore={momentumMap.get(course.id)}
-                    atRiskStatus={atRiskMap.get(course.id)}
-                    completionEstimate={estimateMap.get(course.id)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+              <CollapsibleContent
+                className={`transition-opacity duration-200 motion-reduce:transition-none ${
+                  importedCourses.length > 0 ? 'opacity-60 hover:opacity-100' : ''
+                }`}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4">
+                  <div className="overflow-x-auto flex-1 min-w-0">
+                    <ToggleGroup
+                      type="single"
+                      value={selectedCategory}
+                      onValueChange={v => setSelectedCategory(v || 'all')}
+                      aria-label="Filter by category"
+                      className="flex flex-nowrap gap-1.5 sm:gap-2"
+                    >
+                      {[
+                        { value: 'all', label: 'All Courses' },
+                        ...availableCategories.map(cat => ({
+                          value: cat,
+                          label: categoryLabels[cat] ?? cat,
+                        })),
+                      ].map((chip, i) => (
+                        <ToggleGroupItem
+                          key={chip.value}
+                          value={chip.value}
+                          className={`h-auto rounded-full! border px-3 sm:px-4 py-3 sm:py-1.5 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-card data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-accent data-[state=off]:hover:text-foreground data-[state=off]:border-border cursor-pointer shadow-none${i === 0 ? ' mr-1' : ''}`}
+                        >
+                          {chip.label}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                  </div>
+                  <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
+                    <SelectTrigger
+                      data-testid="sort-select"
+                      aria-label="Sort courses"
+                      className="w-full sm:w-[180px] rounded-xl"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="recent">Most Recent</SelectItem>
+                      <SelectItem value="momentum">Sort by Momentum</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {sortedCourses.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    No courses match your search
+                  </div>
+                ) : (
+                  <div
+                    data-testid="sample-courses-grid"
+                    className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
+                  >
+                    {sortedCourses.map(course => (
+                      <CourseCard
+                        key={course.id}
+                        course={course}
+                        completionPercent={getCourseCompletionPercent(
+                          course.id,
+                          course.totalLessons
+                        )}
+                        momentumScore={momentumMap.get(course.id)}
+                        atRiskStatus={atRiskMap.get(course.id)}
+                        completionEstimate={estimateMap.get(course.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
+          )}
         </>
       )}
     </div>

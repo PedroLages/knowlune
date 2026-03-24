@@ -284,6 +284,17 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M4: ReviewSummary jump buttons lack `min-w-[44px]`
 - Positive: Clean component decomposition, solid ARIA (aria-current="step", dynamic aria-labels), defensive store guards, correct array answer handling in QuestionGrid
 
+## E23-S06: Featured Author Layout For Single Author State (Round 2 - Post-Fix)
+**Round 1 fixes verified:** All 6 findings addressed (getInitials extraction, shortBio fallback, StatCard ring, data-testid on blockquote, badge overflow test, empty state subtitle test).
+**Round 2 findings:**
+- H1: `getInitials` still duplicated in AuthorProfile.tsx:21-27 (different behavior: no null guard, no 2-char cap) -- inconsistency between Authors and AuthorProfile pages
+- H2: Quiz component files (MultipleChoiceQuestion, TrueFalseQuestion) committed under `fix(E23-S06)` but unrelated to story scope -- commit hygiene violation
+- M1: `avatarUpload.ts` re-exports getInitials from textUtils -- ghost dependency invites regression
+- M2: totalHours formatting logic `Math.max(Math.round(h), h > 0 ? 1 : 0)` convoluted -- extract helper
+- M3: Blockquote border-l-2 still renders on mobile inside centered column -- visual inconsistency
+- M4: getAuthorStats uses useCourseStore.getState() outside React cycle (acknowledged forward-looking)
+- Positive: No uncommitted changes, all round-1 findings fixed, thorough 13-scenario test file, clean design token usage, good defensive programming (empty state, badge overflow, negative year clamping)
+
 ## E15-S05: Display Performance Summary After Quiz (Round 1)
 - No uncommitted changes (positive)
 - H1: `text-warning` used for "incorrect" count in correctness bar -- `text-destructive` is the established convention (ScoreSummary.tsx uses it)
@@ -301,3 +312,13 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M1: localStorage-parsed speed not validated against PLAYBACK_SPEEDS array
 - M2: Shortcuts overlay shows `< + >` (implying simultaneous press) instead of separate entries
 - Positive: Clean extension of existing keyboard handler, proper ARIA announcements, thorough E2E coverage (17 tests), correct input guard reuse
+
+## E18-S05: Integrate Quiz Completion with Study Streaks (Round 1)
+- No uncommitted changes (positive -- pattern broken since E07-S04)
+- H1: Stale test name "only counts lesson_complete actions" now factually incorrect after adding quiz_complete to activityFromLog
+- H2: AC4 E2E test listed in file header comment but no actual test implemented -- false coverage impression
+- H3: No vi.useFakeTimers() in useQuizStore.streakIntegration.test.ts -- timestamp assertion uses expect.any(String) to paper over non-determinism
+- M1: saveLog() in studyLog.ts has no try/catch -- logStudyAction callers in progress.ts (5 sites) have no error handling (pre-existing, expanded blast radius)
+- M2: TODAY_STR derived from Intl.DateTimeFormat in Node runner, may diverge from browser toLocaleDateString in extreme timezones
+- M3: metadata object omits quizId and score fields specified in implementation plan
+- Positive: Correct architecture decision (extend existing pattern, not new store), solid fire-and-forget isolation, clean working tree, thorough lessons learned

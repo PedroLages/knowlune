@@ -46,8 +46,14 @@ export function ReviewQueue() {
   const cardListRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    loadReviews().catch(console.error)
-    loadNotes().catch(console.error)
+    loadReviews().catch(err => {
+      // silent-catch-ok — error state handled by store isLoading flag
+      console.error(err)
+    })
+    loadNotes().catch(err => {
+      // silent-catch-ok — error state handled by store isLoading flag
+      console.error(err)
+    })
   }, [loadReviews, loadNotes])
 
   // Derive due reviews from subscribed allReviews — this triggers re-renders

@@ -66,9 +66,14 @@ export function Overview() {
   useEffect(() => {
     let ignore = false
 
-    getTotalStudyNotes().then(notes => {
-      if (!ignore) setStudyNotes(notes)
-    })
+    getTotalStudyNotes()
+      .then(notes => {
+        if (!ignore) setStudyNotes(notes)
+      })
+      .catch(err => {
+        // silent-catch-ok — non-critical stat; dashboard still renders with default value
+        console.error('[Overview] Failed to load study notes count:', err)
+      })
 
     return () => {
       ignore = true
@@ -308,7 +313,7 @@ export function Overview() {
               actionLabel="Import Course"
               onAction={() => {
                 importCourseFromFolder().catch(() => {
-                  // User cancelled file picker or permission denied — no action needed
+                  // silent-catch-ok — user cancelled file picker or permission denied
                 })
               }}
             />
@@ -332,14 +337,34 @@ export function Overview() {
               <ArrowRight className="size-3.5" aria-hidden="true" />
             </Link>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          {importedCourses.length > 0 && (
+            <p className="text-xs text-muted-foreground mb-3">
+              Sample courses ·{' '}
+              <Link to="/courses" className="hover:text-foreground transition-colors">
+                View all
+              </Link>
+            </p>
+          )}
+          <div
+            data-testid="library-section"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
+          >
             {allCourses.map(course => (
-              <CourseCard
+              <div
                 key={course.id}
-                course={course}
-                variant="overview"
-                completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
-              />
+                data-testid={
+                  importedCourses.length > 0 ? 'sample-course-card' : `course-card-${course.id}`
+                }
+                className={`transition-opacity duration-200 motion-reduce:transition-none ${
+                  importedCourses.length > 0 ? 'opacity-60 hover:opacity-100' : ''
+                }`}
+              >
+                <CourseCard
+                  course={course}
+                  variant="overview"
+                  completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
+                />
+              </div>
             ))}
           </div>
         </motion.section>
