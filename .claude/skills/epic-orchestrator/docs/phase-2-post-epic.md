@@ -12,11 +12,11 @@ Run in this exact order (each depends on prior context):
 
 ### 1. Sprint Status Check (Sub-Agent)
 
-**Prompt**: Use Sprint Status Agent template from [agent-prompt-templates.md](agent-prompt-templates.md).
+**Prompt**: Use Sprint Status Agent template from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`**.
 
 **Purpose**: Verify all stories are `done`, no orphaned work remains.
 
-**Coordinator after**: If issues found, resolve before proceeding.
+**Coordinator after**: Output completion banner with status summary. If issues found, resolve before proceeding.
 
 ### 2. Mark Epic Done (Coordinator Directly)
 
@@ -33,7 +33,7 @@ git push
 
 ### 3. Testarch Trace — with Fix-Revalidate Cycle (Sub-Agent)
 
-**Prompt**: Use Testarch Trace Agent template from [agent-prompt-templates.md](agent-prompt-templates.md).
+**Prompt**: Use Testarch Trace Agent template from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`** for all agents in this cycle (trace, fix, revalidation).
 
 **Purpose**: Generate requirements-to-tests traceability matrix. Identifies coverage gaps.
 
@@ -71,7 +71,7 @@ digraph trace_cycle {
 
 ### 4. Testarch NFR — with Fix-Revalidate Cycle (Sub-Agent)
 
-**Prompt**: Use Testarch NFR Agent template from [agent-prompt-templates.md](agent-prompt-templates.md).
+**Prompt**: Use Testarch NFR Agent template from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`** for all agents in this cycle.
 
 **Purpose**: Assess non-functional requirements (performance, security, reliability, maintainability).
 
@@ -90,17 +90,17 @@ digraph trace_cycle {
 
 ### 5. Adversarial Review (Sub-Agent) — Report Only
 
-**Prompt**: Use Adversarial Review Agent template from [agent-prompt-templates.md](agent-prompt-templates.md).
+**Prompt**: Use Adversarial Review Agent template from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`**.
 
 **Purpose**: Cynical critique of epic scope and implementation. Identifies at least 10 issues.
 
 **No fix cycle** — findings are informational. They represent opinions and scope critiques, not pass/fail gates.
 
-**Coordinator after**: Note critical findings count. Include in final report.
+**Coordinator after**: Output completion banner with findings count. Include in final report.
 
 ### 6. Retrospective (Sub-Agent) — Report Only
 
-**Prompt**: Use Retrospective Agent template from [agent-prompt-templates.md](agent-prompt-templates.md).
+**Prompt**: Use Retrospective Agent template from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`**.
 
 **Purpose**: Post-epic review with lessons learned and action items for next epic.
 
@@ -112,7 +112,7 @@ digraph trace_cycle {
 - Draw from actual implementation experience
 - Be honest and constructive
 
-**Coordinator after**: Note retro document path and key action items.
+**Coordinator after**: Output completion banner with retro document path and key action items.
 
 ## Post-Epic TodoWrite Updates
 

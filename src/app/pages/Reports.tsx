@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { BookOpen, CheckCircle, FileText, TrendingUp, Clock, RotateCcw } from 'lucide-react'
+import { BookOpen, CheckCircle, FileText, TrendingUp, Clock, RotateCcw, Target } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import {
   ChartContainer,
@@ -7,6 +7,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from '@/app/components/ui/chart'
+import { Progress } from '@/app/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area } from 'recharts'
 import { MotionConfig, motion } from 'motion/react'
@@ -22,6 +23,8 @@ import {
 } from '@/lib/progress'
 import { getActionsPerDay } from '@/lib/studyLog'
 import {
+  calculateCompletionRate,
+  type CompletionRateResult,
   calculateRetakeFrequency,
   interpretRetakeFrequency,
   type RetakeFrequencyResult,
@@ -68,6 +71,11 @@ const areaChartConfig = {
 export default function Reports() {
   const allCourses = useCourseStore(s => s.courses)
   const [studyNotes, setStudyNotes] = useState(0)
+  const [completionData, setCompletionData] = useState<CompletionRateResult>({
+    completionRate: 0,
+    completedCount: 0,
+    startedCount: 0,
+  })
   const [retakeData, setRetakeData] = useState<RetakeFrequencyResult>({
     averageRetakes: 0,
     totalAttempts: 0,
@@ -76,6 +84,7 @@ export default function Reports() {
 
   useEffect(() => {
     let ignore = false
+
     getTotalStudyNotes()
       .then(notes => {
         if (!ignore) setStudyNotes(notes)
@@ -84,13 +93,16 @@ export default function Reports() {
         console.error('Failed to load study notes:', err)
         toast.error('Failed to load study notes')
       })
-    return () => {
-      ignore = true
-    }
-  }, [])
 
-  useEffect(() => {
-    let ignore = false
+    calculateCompletionRate()
+      .then(data => {
+        if (!ignore) setCompletionData(data)
+      })
+      .catch(err => {
+        console.error('Failed to load completion rate:', err)
+        toast.error('Failed to load quiz completion data')
+      })
+
     calculateRetakeFrequency()
       .then(data => {
         if (!ignore) setRetakeData(data)
@@ -99,6 +111,7 @@ export default function Reports() {
         console.error('Failed to load retake frequency:', err)
         toast.error('Failed to load retake data')
       })
+
     return () => {
       ignore = true
     }
@@ -169,11 +182,14 @@ export default function Reports() {
   // ── Dynamic height for horizontal bar chart ──
   const barChartHeight = Math.max(250, courseCompletionData.length * 36)
 
+  const roundedCompletionRate = Math.round(completionData.completionRate)
+
   const hasActivity =
     completedLessons > 0 ||
     studyNotes > 0 ||
     activityData.some(d => d.activities > 0) ||
-    retakeData.totalAttempts > 0
+    retakeData.totalAttempts > 0 ||
+    completionData.startedCount > 0
 
   return (
     <MotionConfig reducedMotion="user">
@@ -401,7 +417,53 @@ export default function Reports() {
                 </Card>
               </motion.div>
 
-              {/* ── Row 5: Average Retake Frequency ── */}
+              {/* ── Row 5: Quiz Completion Rate ── */}
+              <motion.div variants={fadeUp}>
+                <Card data-testid="quiz-completion-rate-card">
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Target className="size-4 text-muted-foreground" aria-hidden="true" />
+                      Quiz Completion Rate
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {completionData.startedCount === 0 ? (
+                      <p
+                        className="text-sm text-muted-foreground"
+                        data-testid="quiz-completion-empty"
+                      >
+                        No quizzes started yet
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-4">
+                          <Progress
+                            value={completionData.completionRate}
+                            className="flex-1"
+                            // Explicit labelFormat overrides the default; avoids relying on {...props} spread order for aria-label
+                            labelFormat={() => `Quiz completion rate: ${roundedCompletionRate}%`}
+                          />
+                          <span
+                            className="text-2xl font-bold tabular-nums"
+                            data-testid="quiz-completion-percentage"
+                          >
+                            {roundedCompletionRate}%
+                          </span>
+                        </div>
+                        <p
+                          className="text-sm text-muted-foreground"
+                          data-testid="quiz-completion-summary"
+                        >
+                          {completionData.completedCount} of {completionData.startedCount} started
+                          quizzes completed
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* ── Row 6: Average Retake Frequency ── */}
               <motion.div variants={fadeUp}>
                 <Card data-testid="quiz-retake-card">
                   <CardHeader>
@@ -428,7 +490,7 @@ export default function Reports() {
                 </Card>
               </motion.div>
 
-              {/* ── Row 6: Recent Activity Timeline ── */}
+              {/* ── Row 7: Recent Activity Timeline ── */}
               <motion.div variants={fadeUp}>
                 <Card>
                   <CardHeader>

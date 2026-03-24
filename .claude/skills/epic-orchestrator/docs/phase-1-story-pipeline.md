@@ -14,7 +14,14 @@ Process each story sequentially through the full lifecycle: start → implement 
 
 ### Step 1: Start + Implement (Story Agent)
 
-Spawn a **general-purpose sub-agent** with the Story Agent prompt from [agent-prompt-templates.md](agent-prompt-templates.md).
+Spawn a **general-purpose sub-agent** with the Story Agent prompt from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`** to keep intermediate tool calls out of the main conversation.
+
+Before dispatch, output the status banner:
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1/4: Implementing {STORY_ID} (Story Agent)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
 
 The agent will:
 1. Run `/start-story {STORY_ID}` (creates branch, story file, research, plan)
@@ -22,7 +29,7 @@ The agent will:
 3. Commit with descriptive messages
 4. Return summary of what was built
 
-**Coordinator after**: Update TodoWrite, note the summary in tracking table.
+**Coordinator after**: Output completion banner with agent's summary, update TodoWrite, note the summary in tracking table, print progress dashboard.
 
 ### Step 2: Review Loop
 
@@ -36,7 +43,14 @@ Key points:
 
 ### Step 3: Finish + PR (Finish Agent)
 
-Spawn a **general-purpose sub-agent** with the Finish Agent prompt from [agent-prompt-templates.md](agent-prompt-templates.md).
+Spawn a **general-purpose sub-agent** with the Finish Agent prompt from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`**.
+
+Before dispatch, output the status banner:
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 3/4: Finishing {STORY_ID} (Finish Agent)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
 
 The agent will:
 1. Run `/finish-story {STORY_ID}`
@@ -44,6 +58,8 @@ The agent will:
 3. Update story file and sprint status
 4. Commit, push, create PR
 5. Return PR URL
+
+**Coordinator after**: Output completion banner with PR URL, update tracking table, print progress dashboard.
 
 ### Step 4: Merge + Sync (Coordinator Directly)
 

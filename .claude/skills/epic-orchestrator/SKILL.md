@@ -31,6 +31,50 @@ Execute an entire epic autonomously — `/start-story` through implementation, `
 
 **ALL issues must be fixed** — BLOCKER, HIGH, MEDIUM, LOW, NITS. No exceptions. The review loop continues until `/review-story` returns zero findings. Zero tolerance. Everything perfect.
 
+## Output Discipline
+
+Sub-agents generate heavy tool call output (bash, read, edit, glob...) that floods the conversation. The orchestrator must provide a **scannable, high-level experience** so the user always knows what's happening without drowning in noise.
+
+### Rule 1: Background Agents
+
+**Always dispatch sub-agents with `run_in_background: true`**. This keeps intermediate tool calls out of the main conversation view. The orchestrator is notified when each agent completes and extracts only the structured return data.
+
+### Rule 2: Status Banners
+
+Output a clear banner **before** dispatching each agent and **after** receiving results:
+
+**Before:**
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP {N}/{TOTAL}: {Action} — {STORY_ID}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**After (with key data from agent return):**
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP {N} COMPLETE: {Outcome summary}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{2-3 key data points from agent return}
+Next: {what happens next}
+```
+
+### Rule 3: Progress Dashboard
+
+After every step change (story status transitions), output the tracking table:
+
+```
+| Story   | Status         | PR  | Rounds | Fixed |
+|---------|----------------|-----|--------|-------|
+| E##-S01 | done           | #42 | 2      | 7     |
+| E##-S02 | reviewing (R1) | —   | 1      | —     |
+| E##-S03 | queued         | —   | —      | —     |
+```
+
+### Rule 4: No Inline Heavy Work
+
+The orchestrator should **never** run commands that produce large output (git diff, npm run build, lint). These belong inside sub-agents. The orchestrator only runs lightweight commands: `git checkout`, `git pull`, `gh pr merge`, `lsof -ti:5173 | xargs kill`.
+
 ## Execution Flow
 
 ```dot
