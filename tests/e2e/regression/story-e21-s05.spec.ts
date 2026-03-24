@@ -59,14 +59,17 @@ test.describe('AC1: Engagement Preferences section in Settings', () => {
 test.describe('AC2: Toggling streaks hides streak section on Overview', () => {
   test('should hide study streak calendar when streaks toggle is OFF', async ({ page }) => {
     // GIVEN: Streaks are toggled OFF
-    await page.addInitScript((key) => {
-      localStorage.setItem(key, JSON.stringify({
-        achievements: true,
-        streaks: false,
-        badges: true,
-        animations: true,
-        colorScheme: 'professional',
-      }))
+    await page.addInitScript(key => {
+      localStorage.setItem(
+        key,
+        JSON.stringify({
+          achievements: true,
+          streaks: false,
+          badges: true,
+          animations: true,
+          colorScheme: 'professional',
+        })
+      )
     }, PREFS_KEY)
 
     // WHEN: Navigate to Overview
@@ -78,14 +81,17 @@ test.describe('AC2: Toggling streaks hides streak section on Overview', () => {
 
   test('should show study streak calendar when streaks toggle is ON', async ({ page }) => {
     // GIVEN: Streaks are toggled ON (default)
-    await page.addInitScript((key) => {
-      localStorage.setItem(key, JSON.stringify({
-        achievements: true,
-        streaks: true,
-        badges: true,
-        animations: true,
-        colorScheme: 'professional',
-      }))
+    await page.addInitScript(key => {
+      localStorage.setItem(
+        key,
+        JSON.stringify({
+          achievements: true,
+          streaks: true,
+          badges: true,
+          animations: true,
+          colorScheme: 'professional',
+        })
+      )
     }, PREFS_KEY)
 
     // WHEN: Navigate to Overview
@@ -99,24 +105,30 @@ test.describe('AC2: Toggling streaks hides streak section on Overview', () => {
 test.describe('AC2: Toggling achievements hides banner on Overview', () => {
   test('should hide achievement banner when achievements toggle is OFF', async ({ page }) => {
     // GIVEN: Achievements are toggled OFF
-    await page.addInitScript((key) => {
-      localStorage.setItem(key, JSON.stringify({
-        achievements: false,
-        streaks: true,
-        badges: true,
-        animations: true,
-        colorScheme: 'professional',
-      }))
+    await page.addInitScript(key => {
+      localStorage.setItem(
+        key,
+        JSON.stringify({
+          achievements: false,
+          streaks: true,
+          badges: true,
+          animations: true,
+          colorScheme: 'professional',
+        })
+      )
     }, PREFS_KEY)
 
     // Seed some lesson progress so the banner would normally appear
     await page.addInitScript(() => {
-      localStorage.setItem('course-progress', JSON.stringify({
-        'test-course': {
-          completedLessons: ['l1', 'l2', 'l3', 'l4', 'l5', 'l6', 'l7', 'l8', 'l9', 'l10', 'l11'],
-          lastAccessedAt: new Date().toISOString(),
-        },
-      }))
+      localStorage.setItem(
+        'course-progress',
+        JSON.stringify({
+          'test-course': {
+            completedLessons: ['l1', 'l2', 'l3', 'l4', 'l5', 'l6', 'l7', 'l8', 'l9', 'l10', 'l11'],
+            lastAccessedAt: new Date().toISOString(),
+          },
+        })
+      )
     })
 
     // WHEN: Navigate to Overview
@@ -207,7 +219,7 @@ test.describe('AC4: Preferences persist across page reload', () => {
 test.describe('AC5: Default state for new users', () => {
   test('should default all toggles to ON and color scheme to Professional', async ({ page }) => {
     // GIVEN: No saved engagement preferences (clean slate)
-    await page.addInitScript((key) => {
+    await page.addInitScript(key => {
       localStorage.removeItem(key)
     }, PREFS_KEY)
 

@@ -5,10 +5,7 @@ import { Label } from '@/app/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group'
 import { Separator } from '@/app/components/ui/separator'
 import { cn } from '@/app/components/ui/utils'
-import {
-  useEngagementPrefsStore,
-  type ColorScheme,
-} from '@/stores/useEngagementPrefsStore'
+import { useEngagementPrefsStore, type ColorScheme } from '@/stores/useEngagementPrefsStore'
 
 const toggles = [
   {

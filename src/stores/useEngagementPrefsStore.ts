@@ -18,10 +18,7 @@ export interface EngagementPrefs {
 }
 
 interface EngagementPrefsStore extends EngagementPrefs {
-  setPreference: <K extends keyof EngagementPrefs>(
-    key: K,
-    value: EngagementPrefs[K]
-  ) => void
+  setPreference: <K extends keyof EngagementPrefs>(key: K, value: EngagementPrefs[K]) => void
   resetToDefaults: () => void
 }
 
@@ -39,10 +36,12 @@ function loadPersistedPrefs(): EngagementPrefs {
     if (raw) {
       const parsed = JSON.parse(raw)
       return {
-        achievements: typeof parsed.achievements === 'boolean' ? parsed.achievements : defaults.achievements,
+        achievements:
+          typeof parsed.achievements === 'boolean' ? parsed.achievements : defaults.achievements,
         streaks: typeof parsed.streaks === 'boolean' ? parsed.streaks : defaults.streaks,
         badges: typeof parsed.badges === 'boolean' ? parsed.badges : defaults.badges,
-        animations: typeof parsed.animations === 'boolean' ? parsed.animations : defaults.animations,
+        animations:
+          typeof parsed.animations === 'boolean' ? parsed.animations : defaults.animations,
         colorScheme: parsed.colorScheme === 'vibrant' ? 'vibrant' : 'professional',
       }
     }
