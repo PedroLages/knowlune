@@ -102,6 +102,7 @@ export function LessonPlayer() {
   const [noteText, setNoteText] = useState('')
   const [notesOpen, setNotesOpen] = useState(() => searchParams.get('panel') === 'notes')
   const [noteFullScreen, setNoteFullScreen] = useState(false)
+  const [pendingNoteFocus, setPendingNoteFocus] = useState(false)
   const hasNotes = noteText.length > 0 && noteText !== '<p></p>'
 
   const [seekToTime, setSeekToTime] = useState<number | undefined>(undefined)
@@ -493,6 +494,31 @@ export function LessonPlayer() {
     })
   }
 
+  // N keyboard shortcut: open notes panel and focus the TipTap editor
+  const focusNoteEditor = () => {
+    // .ProseMirror is TipTap-specific — scoped to avoid matching other contenteditable elements
+    const editor = document.querySelector('.ProseMirror[contenteditable="true"]') as HTMLElement
+    editor?.focus()
+  }
+
+  const handleFocusNotes = useCallback(() => {
+    if (!notesOpen) {
+      setNotesOpen(true)
+      setPendingNoteFocus(true)
+    } else {
+      // Panel already open — focus immediately after current paint
+      requestAnimationFrame(focusNoteEditor)
+    }
+  }, [notesOpen])
+
+  // Focus the editor once the panel has mounted after pressing N
+  useEffect(() => {
+    if (pendingNoteFocus && notesOpen) {
+      requestAnimationFrame(focusNoteEditor)
+      setPendingNoteFocus(false)
+    }
+  }, [pendingNoteFocus, notesOpen])
+
   if (!course || !lesson) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
@@ -598,6 +624,7 @@ export function LessonPlayer() {
               }}
               theaterMode={isTheaterMode}
               onTheaterModeToggle={handleTheaterModeToggle}
+              onFocusNotes={handleFocusNotes}
             />
           </div>
         </div>

@@ -26,6 +26,7 @@ const STORAGE_KEYS = [
   'study-reminders-last-daily',
   'study-reminders-last-risk',
   'streak-milestones',
+  'video-playback-speed',
 ] as const
 
 type LocalStorageHelper = {
