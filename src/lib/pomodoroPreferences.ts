@@ -34,9 +34,7 @@ export function getPomodoroPreferences(): PomodoroPreferences {
   }
 }
 
-export function savePomodoroPreferences(
-  prefs: Partial<PomodoroPreferences>
-): PomodoroPreferences {
+export function savePomodoroPreferences(prefs: Partial<PomodoroPreferences>): PomodoroPreferences {
   const current = getPomodoroPreferences()
   const merged = { ...current, ...prefs }
   try {

@@ -21,9 +21,7 @@ test.describe('E21-S03: Pomodoro Focus Timer', () => {
     await page.goto(LESSON_URL, { waitUntil: 'networkidle' })
   })
 
-  test('AC1: timer button is visible and opens popover with default 25:00', async ({
-    page,
-  }) => {
+  test('AC1: timer button is visible and opens popover with default 25:00', async ({ page }) => {
     const trigger = page.getByTestId('pomodoro-trigger')
     await expect(trigger).toBeVisible()
     await expect(trigger).toHaveAccessibleName(/pomodoro focus timer/i)
@@ -42,9 +40,7 @@ test.describe('E21-S03: Pomodoro Focus Timer', () => {
     await expect(phase).toHaveText('Ready')
   })
 
-  test('AC2: start transitions to focus phase and shows countdown on trigger', async ({
-    page,
-  }) => {
+  test('AC2: start transitions to focus phase and shows countdown on trigger', async ({ page }) => {
     await page.getByTestId('pomodoro-trigger').click()
 
     // Start the timer
@@ -67,19 +63,20 @@ test.describe('E21-S03: Pomodoro Focus Timer', () => {
     await page.getByTestId('pomodoro-trigger').click()
     await page.getByTestId('pomodoro-start').click()
 
-    // Wait 2 seconds for countdown to tick
+    // eslint-disable-next-line test-patterns/no-hard-waits -- Intentional: real-time interval ticks needed to decrement countdown
     await page.waitForTimeout(2100)
 
     // Pause
     await page.getByTestId('pomodoro-pause').click()
     const pausedTime = await page.getByTestId('pomodoro-countdown').textContent()
 
-    // Wait and verify time doesn't change
+    // eslint-disable-next-line test-patterns/no-hard-waits -- Intentional: verifying countdown stays frozen while paused
     await page.waitForTimeout(2000)
     await expect(page.getByTestId('pomodoro-countdown')).toHaveText(pausedTime!)
 
     // Resume
     await page.getByTestId('pomodoro-resume').click()
+    // eslint-disable-next-line test-patterns/no-hard-waits -- Intentional: real-time ticks after resume to confirm countdown progresses
     await page.waitForTimeout(1500)
 
     // Time should have decreased from paused value
@@ -118,9 +115,7 @@ test.describe('E21-S03: Pomodoro Focus Timer', () => {
     await page.getByTestId('pomodoro-trigger').click()
 
     // Initial sessions should be 0
-    await expect(page.getByTestId('pomodoro-sessions')).toHaveText(
-      '0 sessions completed'
-    )
+    await expect(page.getByTestId('pomodoro-sessions')).toHaveText('0 sessions completed')
 
     // Start and skip focus
     await page.getByTestId('pomodoro-start').click()
@@ -131,9 +126,7 @@ test.describe('E21-S03: Pomodoro Focus Timer', () => {
     await page.getByTestId('pomodoro-skip').click()
 
     // Session counter should show 1
-    await expect(page.getByTestId('pomodoro-sessions')).toHaveText(
-      '1 session completed'
-    )
+    await expect(page.getByTestId('pomodoro-sessions')).toHaveText('1 session completed')
   })
 
   test('AC4: preferences persist across page reloads', async ({ page }) => {

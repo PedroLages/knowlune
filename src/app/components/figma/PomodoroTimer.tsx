@@ -36,13 +36,10 @@ export function PomodoroTimer() {
   const [showPrefs, setShowPrefs] = useState(false)
 
   // Sync preferences to localStorage on change
-  const updatePref = useCallback(
-    (update: Partial<PomodoroPreferences>) => {
-      const merged = savePomodoroPreferences(update)
-      setPrefs(merged)
-    },
-    []
-  )
+  const updatePref = useCallback((update: Partial<PomodoroPreferences>) => {
+    const merged = savePomodoroPreferences(update)
+    setPrefs(merged)
+  }, [])
 
   const handleFocusComplete = useCallback(() => {
     playChime(prefs.notificationVolume)
@@ -52,24 +49,15 @@ export function PomodoroTimer() {
     playChime(prefs.notificationVolume)
   }, [prefs.notificationVolume])
 
-  const {
-    phase,
-    status,
-    timeRemaining,
-    completedSessions,
-    start,
-    pause,
-    resume,
-    reset,
-    skip,
-  } = usePomodoroTimer({
-    focusDuration: prefs.focusDuration * 60,
-    breakDuration: prefs.breakDuration * 60,
-    onFocusComplete: handleFocusComplete,
-    onBreakComplete: handleBreakComplete,
-    autoStartBreak: prefs.autoStartBreak,
-    autoStartFocus: prefs.autoStartFocus,
-  })
+  const { phase, status, timeRemaining, completedSessions, start, pause, resume, reset, skip } =
+    usePomodoroTimer({
+      focusDuration: prefs.focusDuration * 60,
+      breakDuration: prefs.breakDuration * 60,
+      onFocusComplete: handleFocusComplete,
+      onBreakComplete: handleBreakComplete,
+      autoStartBreak: prefs.autoStartBreak,
+      autoStartFocus: prefs.autoStartFocus,
+    })
 
   // Reload preferences on mount (in case they changed from another tab)
   useEffect(() => {
@@ -80,17 +68,9 @@ export function PomodoroTimer() {
   const isPaused = status === 'paused'
   const isActive = phase !== 'idle' || status !== 'stopped'
 
-  const phaseLabel =
-    phase === 'focus'
-      ? 'Focus Time'
-      : phase === 'break'
-        ? 'Break Time'
-        : 'Ready'
+  const phaseLabel = phase === 'focus' ? 'Focus Time' : phase === 'break' ? 'Break Time' : 'Ready'
 
-  const sessionLabel =
-    completedSessions === 1
-      ? '1 session'
-      : `${completedSessions} sessions`
+  const sessionLabel = completedSessions === 1 ? '1 session' : `${completedSessions} sessions`
 
   return (
     <Popover>
@@ -119,11 +99,7 @@ export function PomodoroTimer() {
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent
-        className="w-72"
-        align="end"
-        data-testid="pomodoro-popover"
-      >
+      <PopoverContent className="w-72" align="end" data-testid="pomodoro-popover">
         {/* Phase indicator */}
         <div
           className={cn(
@@ -240,11 +216,7 @@ export function PomodoroTimer() {
           data-testid="pomodoro-prefs-toggle"
         >
           Preferences
-          {showPrefs ? (
-            <ChevronUp className="h-3 w-3" />
-          ) : (
-            <ChevronDown className="h-3 w-3" />
-          )}
+          {showPrefs ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
         </button>
 
         {/* Preferences panel */}
@@ -348,9 +320,7 @@ export function PomodoroTimer() {
               <Switch
                 id="pomodoro-auto-break"
                 checked={prefs.autoStartBreak}
-                onCheckedChange={checked =>
-                  updatePref({ autoStartBreak: checked })
-                }
+                onCheckedChange={checked => updatePref({ autoStartBreak: checked })}
                 aria-label="Auto-start break after focus"
                 data-testid="pomodoro-auto-break"
               />
@@ -364,9 +334,7 @@ export function PomodoroTimer() {
               <Switch
                 id="pomodoro-auto-focus"
                 checked={prefs.autoStartFocus}
-                onCheckedChange={checked =>
-                  updatePref({ autoStartFocus: checked })
-                }
+                onCheckedChange={checked => updatePref({ autoStartFocus: checked })}
                 aria-label="Auto-start focus after break"
                 data-testid="pomodoro-auto-focus"
               />
@@ -380,9 +348,7 @@ export function PomodoroTimer() {
                 min={0}
                 max={100}
                 step={10}
-                onValueChange={([v]) =>
-                  updatePref({ notificationVolume: v / 100 })
-                }
+                onValueChange={([v]) => updatePref({ notificationVolume: v / 100 })}
                 aria-label="Notification volume"
                 data-testid="pomodoro-volume"
               />

@@ -139,10 +139,7 @@ export function usePomodoroTimer(
       setTimeRemaining(durationSeconds)
 
       const recalculate = () => {
-        const remaining = Math.max(
-          0,
-          Math.floor((endTimeRef.current - Date.now()) / 1000)
-        )
+        const remaining = Math.max(0, Math.floor((endTimeRef.current - Date.now()) / 1000))
         setTimeRemaining(remaining)
 
         if (remaining === 0 && !hasFiredRef.current) {
@@ -152,9 +149,7 @@ export function usePomodoroTimer(
           const result = handlePhaseComplete(newPhase)
           if (result.autoStart) {
             const dur =
-              result.nextPhase === 'break'
-                ? breakDurationRef.current
-                : focusDurationRef.current
+              result.nextPhase === 'break' ? breakDurationRef.current : focusDurationRef.current
             startCountdown(dur, result.nextPhase)
           }
         }
@@ -168,21 +163,14 @@ export function usePomodoroTimer(
   // Handle visibility change for tab-return accuracy
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (
-        document.visibilityState === 'visible' &&
-        intervalRef.current !== null
-      ) {
-        const remaining = Math.max(
-          0,
-          Math.floor((endTimeRef.current - Date.now()) / 1000)
-        )
+      if (document.visibilityState === 'visible' && intervalRef.current !== null) {
+        const remaining = Math.max(0, Math.floor((endTimeRef.current - Date.now()) / 1000))
         setTimeRemaining(remaining)
       }
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
-    return () =>
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [])
 
   // Cleanup on unmount
@@ -195,10 +183,7 @@ export function usePomodoroTimer(
   const pause = useCallback(() => {
     if (intervalRef.current === null) return
     clearTimer()
-    const remaining = Math.max(
-      0,
-      Math.floor((endTimeRef.current - Date.now()) / 1000)
-    )
+    const remaining = Math.max(0, Math.floor((endTimeRef.current - Date.now()) / 1000))
     remainingAtPauseRef.current = remaining
     setTimeRemaining(remaining)
     setStatus('paused')
@@ -215,10 +200,7 @@ export function usePomodoroTimer(
     const currentPhase = phaseRef.current
 
     const recalculate = () => {
-      const remaining = Math.max(
-        0,
-        Math.floor((endTimeRef.current - Date.now()) / 1000)
-      )
+      const remaining = Math.max(0, Math.floor((endTimeRef.current - Date.now()) / 1000))
       setTimeRemaining(remaining)
 
       if (remaining === 0 && !hasFiredRef.current) {
@@ -228,9 +210,7 @@ export function usePomodoroTimer(
         const result = handlePhaseComplete(currentPhase)
         if (result.autoStart) {
           const dur =
-            result.nextPhase === 'break'
-              ? breakDurationRef.current
-              : focusDurationRef.current
+            result.nextPhase === 'break' ? breakDurationRef.current : focusDurationRef.current
           startCountdown(dur, result.nextPhase)
         }
       }
@@ -256,10 +236,7 @@ export function usePomodoroTimer(
     const currentPhase = phaseRef.current
     const result = handlePhaseComplete(currentPhase)
     if (result.autoStart) {
-      const dur =
-        result.nextPhase === 'break'
-          ? breakDurationRef.current
-          : focusDurationRef.current
+      const dur = result.nextPhase === 'break' ? breakDurationRef.current : focusDurationRef.current
       startCountdown(dur, result.nextPhase)
     }
   }, [clearTimer, startCountdown, handlePhaseComplete])
