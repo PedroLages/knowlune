@@ -162,6 +162,57 @@ test.describe('E21-S07: Font Size Settings', () => {
   })
 })
 
+test.describe('E21-S07: Age Range in Settings (AC5)', () => {
+  test('displays seeded age range and persists change after reload', async ({
+    page,
+    localStorage,
+  }) => {
+    await page.goto('/')
+
+    // Pre-seed: wizard completed with age range set to gen-z
+    await localStorage.seed(WIZARD_STORAGE_KEY, {
+      completedAt: '2026-01-01T00:00:00.000Z',
+    })
+    await localStorage.seed(SETTINGS_STORAGE_KEY, {
+      displayName: 'Student',
+      bio: '',
+      theme: 'system',
+      ageRange: 'gen-z',
+    })
+    await page.reload()
+
+    // Navigate to Settings
+    await page.goto('/settings')
+    await expect(page.locator('h1')).toContainText('Settings')
+
+    // Find the Age Range section
+    const ageSection = page.getByTestId('age-range-section')
+    await expect(ageSection).toBeVisible()
+
+    // Verify 'Gen Z' radio is currently selected
+    const genZRadio = ageSection.getByRole('radio', { name: /gen z/i })
+    await expect(genZRadio).toHaveAttribute('aria-checked', 'true')
+
+    // Change age range to 'Boomer'
+    const boomerRadio = ageSection.getByRole('radio', { name: /boomer/i })
+    await boomerRadio.click()
+    await expect(boomerRadio).toHaveAttribute('aria-checked', 'true')
+
+    // Verify persisted in localStorage
+    const settings = await localStorage.get<{ ageRange: string }>(SETTINGS_STORAGE_KEY)
+    expect(settings?.ageRange).toBe('boomer')
+
+    // Reload and verify persistence
+    await page.reload()
+    await expect(page.locator('h1')).toContainText('Settings')
+
+    const ageSectionAfter = page.getByTestId('age-range-section')
+    await expect(ageSectionAfter).toBeVisible()
+    const boomerAfterReload = ageSectionAfter.getByRole('radio', { name: /boomer/i })
+    await expect(boomerAfterReload).toHaveAttribute('aria-checked', 'true')
+  })
+})
+
 test.describe('E21-S07: Proportional Scaling', () => {
   test('heading hierarchy is maintained at different font sizes', async ({
     page,

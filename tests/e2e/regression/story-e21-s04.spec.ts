@@ -238,6 +238,56 @@ test.describe('E21-S04: Visual Energy Boost', () => {
     })
   })
 
+  test.describe('AC4 — prefers-reduced-motion instant color transition', () => {
+    test('vibrant mode color change has no transition when reduced motion is preferred', async ({
+      page,
+    }) => {
+      // Enable reduced motion preference
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+
+      // Seed vibrant color scheme
+      await page.addInitScript(() => {
+        localStorage.setItem(
+          'app-settings',
+          JSON.stringify({
+            displayName: 'Student',
+            bio: '',
+            theme: 'light',
+            colorScheme: 'vibrant',
+          })
+        )
+      })
+      await page.goto('/')
+      await page.waitForLoadState('networkidle')
+
+      // Verify vibrant class is applied
+      const hasVibrant = await page.evaluate(() =>
+        document.documentElement.classList.contains('vibrant')
+      )
+      expect(hasVibrant).toBe(true)
+
+      // Check that transition-duration is effectively 0 on all elements
+      // The global prefers-reduced-motion rule in index.css sets:
+      //   transition-duration: 0.01ms !important
+      const transitionDuration = await page.evaluate(() => {
+        const body = document.body
+        return getComputedStyle(body).transitionDuration
+      })
+
+      // Should be 0s or 0.01ms (effectively instant) — not 300ms
+      const durationMs = parseFloat(transitionDuration)
+      // transitionDuration returns in 's' units: 0s or 0.00001s (0.01ms)
+      expect(durationMs).toBeLessThanOrEqual(0.01)
+
+      // Also verify on <html> element itself
+      const rootTransition = await page.evaluate(() =>
+        getComputedStyle(document.documentElement).transitionDuration
+      )
+      const rootDurationMs = parseFloat(rootTransition)
+      expect(rootDurationMs).toBeLessThanOrEqual(0.01)
+    })
+  })
+
   test.describe('AC1 — WCAG contrast ratio validation', () => {
     /**
      * Parses a CSS color string into [r, g, b] in 0-255 range.

@@ -325,4 +325,42 @@ test.describe('Dashboard Reordering (E21-S06)', () => {
     await expect(panel).toHaveAttribute('role', 'region')
     await expect(panel).toHaveAttribute('aria-label', 'Dashboard section order')
   })
+
+  test('AC6: keyboard drag handles are focusable with correct ARIA and live region exists', async ({
+    page,
+  }) => {
+    // Seed wizard completion before navigation to prevent overlay blocking
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'knowlune-welcome-wizard-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' })
+      )
+    })
+    await goToOverview(page)
+
+    // Open customizer
+    await page.getByTestId('customize-dashboard-toggle').click()
+    const panel = page.locator('#dashboard-customizer-panel')
+    await expect(panel).toBeVisible()
+
+    // Verify @dnd-kit injects an ARIA live region for screen reader announcements
+    const liveRegion = page.locator('[aria-live="assertive"][role="status"]')
+    await expect(liveRegion).toBeAttached()
+
+    // Verify drag handles have correct ARIA labels and are keyboard-focusable
+    const firstHandle = page.getByLabel('Drag to reorder Recommended Next')
+    await expect(firstHandle).toBeVisible()
+
+    // Drag handle is a native <button> — should be keyboard-focusable
+    await firstHandle.focus()
+    await expect(firstHandle).toBeFocused()
+
+    // Verify @dnd-kit sets aria-roledescription="sortable" on sortable items
+    const sortableItem = page.getByTestId('section-row-recommended-next')
+    await expect(sortableItem).toHaveAttribute('aria-roledescription', 'sortable')
+
+    // Verify all drag handles exist with descriptive ARIA labels (9 sections total)
+    const handles = panel.locator('button[aria-label^="Drag to reorder"]')
+    await expect(handles).toHaveCount(9)
+  })
 })
