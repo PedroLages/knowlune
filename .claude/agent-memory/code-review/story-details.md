@@ -293,3 +293,13 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M2: Redundant `new Set(topicMap.keys())` when `topicMap.size` suffices
 - M3: E2E AC3 uses `getByText` for not.toBeVisible assertions instead of `getByRole('heading')` -- fragile
 - Positive: Pure function architecture, excellent unit test coverage (14 tests, boundary conditions), proper accessibility (useId, aria-labelledby, semantic HTML), no uncommitted changes, shared E2E seeding helpers used
+
+## E18-S09: Configure Quiz Preferences in Settings (Round 1)
+- No uncommitted changes (positive)
+- H1: `saveQuizPreferences` does not handle `localStorage.setItem` throwing -- QuotaExceededError silently lost, toast fires "saved" anyway
+- H2: `loadSavedAccommodation` catch block falls back to `'standard'` instead of global quiz preference (inconsistent with other fallback paths)
+- H3 (RECURRING): Unsafe `as` type assertion on RadioGroup `onValueChange` bypasses runtime validation
+- M1: Shuffle preference OR logic (`userPref || quizDef`) means user cannot disable quiz-author-forced shuffle
+- M2: Timer radio cards use color-only selected state indicator (WCAG 1.4.1)
+- M3: No unit test for `saveQuizPreferences` localStorage failure path
+- Positive: Zod-validated localStorage, frozen feedback preference at mount, cross-tab sync, proper effect cleanup, shared E2E seeding helpers, clean working tree
