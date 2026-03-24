@@ -41,7 +41,7 @@ export function HybridLayout({ children }: { children: ReactNode }) {
         {/* Logo */}
         <div className="px-5 pt-6 pb-4">
           <Link to="/prototypes/hybrid-overview" className="flex items-center gap-2.5">
-            <svg viewBox="0 0 60 60" className="w-7 h-7 text-brand" fill="currentColor">
+            <svg viewBox="0 0 60 60" className="size-7 text-brand" fill="currentColor">
               <rect x="0" y="40" width="60" height="20" />
               <rect x="24" y="22" width="36" height="18" />
               <rect x="34" y="6" width="12" height="16" />
@@ -99,7 +99,7 @@ export function HybridLayout({ children }: { children: ReactNode }) {
         {/* Header */}
         <header className="flex items-center justify-between px-6 m-4 mb-0 h-14 bg-white rounded-xl shadow-xs flex-shrink-0">
           <div className="flex items-center gap-3 flex-1 max-w-md">
-            <Search className="w-4 h-4 text-neutral-400" />
+            <Search className="size-4 text-neutral-400" />
             <input
               type="text"
               placeholder="Search..."
@@ -108,12 +108,12 @@ export function HybridLayout({ children }: { children: ReactNode }) {
             />
           </div>
           <div className="flex items-center gap-3">
-            <button className="w-9 h-9 rounded-lg flex items-center justify-center text-neutral-400 hover:bg-neutral-50 transition-colors">
+            <button className="size-9 rounded-lg flex items-center justify-center text-neutral-400 hover:bg-neutral-50 transition-colors">
               <Bell className="w-[18px] h-[18px]" />
             </button>
             <div className="w-px h-6 bg-neutral-100" />
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-brand-soft flex items-center justify-center text-xs font-semibold text-brand">
+              <div className="size-8 rounded-full bg-brand-soft flex items-center justify-center text-xs font-semibold text-brand">
                 S
               </div>
               <span className="text-sm font-medium text-neutral-700">Student</span>
