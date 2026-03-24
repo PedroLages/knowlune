@@ -112,11 +112,9 @@ describe('quizPreferences', () => {
     })
 
     it('returns null when localStorage throws', () => {
-      const spy = vi
-        .spyOn(Storage.prototype, 'setItem')
-        .mockImplementation(() => {
-          throw new DOMException('QuotaExceededError')
-        })
+      const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new DOMException('QuotaExceededError')
+      })
       const result = saveQuizPreferences({ shuffleQuestions: true })
       expect(result).toBeNull()
       spy.mockRestore()

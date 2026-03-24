@@ -119,9 +119,7 @@ test.describe('E18-S09: Quiz Preferences in Settings', () => {
     const section = page.getByTestId('quiz-preferences-section')
 
     // 1x (standard) timer should be selected — use ARIA role instead of CSS class
-    await expect(
-      section.getByRole('radio', { name: /1x — Standard timing/i })
-    ).toBeChecked()
+    await expect(section.getByRole('radio', { name: /1x — Standard timing/i })).toBeChecked()
 
     // Feedback and shuffle toggles should be off
     const feedbackToggle = section.getByTestId('immediate-feedback-toggle')
@@ -144,9 +142,7 @@ test.describe('E18-S09: Quiz Preferences in Settings', () => {
     await page.reload({ waitUntil: 'domcontentloaded' })
 
     const section = page.getByTestId('quiz-preferences-section')
-    await expect(
-      section.getByRole('radio', { name: /1\.5x — Extended time/i })
-    ).toBeChecked()
+    await expect(section.getByRole('radio', { name: /1\.5x — Extended time/i })).toBeChecked()
   })
 
   // AC2: Persist toggle preferences with toast
@@ -178,19 +174,13 @@ test.describe('E18-S09: Quiz Preferences in Settings', () => {
     const section = page.getByTestId('quiz-preferences-section')
 
     await page.getByTestId('timer-option-200%').click()
-    await expect(
-      section.getByRole('radio', { name: /2x — Maximum extension/i })
-    ).toBeChecked()
+    await expect(section.getByRole('radio', { name: /2x — Maximum extension/i })).toBeChecked()
 
     await page.getByTestId('timer-option-150%').click()
-    await expect(
-      section.getByRole('radio', { name: /1\.5x — Extended time/i })
-    ).toBeChecked()
+    await expect(section.getByRole('radio', { name: /1\.5x — Extended time/i })).toBeChecked()
 
     await page.getByTestId('timer-option-standard').click()
-    await expect(
-      section.getByRole('radio', { name: /1x — Standard timing/i })
-    ).toBeChecked()
+    await expect(section.getByRole('radio', { name: /1x — Standard timing/i })).toBeChecked()
   })
 })
 
@@ -283,15 +273,11 @@ test.describe('E18-S09: Quiz reads preferences as defaults', () => {
     await expect(dialog.getByText('Timer Accommodations')).toBeVisible()
 
     // The 150% option should be pre-selected (matching saved preference)
-    await expect(
-      dialog.getByRole('radio', { name: /150% extended time/i })
-    ).toBeChecked()
+    await expect(dialog.getByRole('radio', { name: /150% extended time/i })).toBeChecked()
 
     // Select 200% extended time
     await dialog.getByRole('radio', { name: /200% extended time/i }).click()
-    await expect(
-      dialog.getByRole('radio', { name: /200% extended time/i })
-    ).toBeChecked()
+    await expect(dialog.getByRole('radio', { name: /200% extended time/i })).toBeChecked()
 
     // Save the per-quiz override
     await dialog.getByRole('button', { name: /save/i }).click()
