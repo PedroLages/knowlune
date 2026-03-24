@@ -189,6 +189,61 @@ export function calculateImprovement(attempts: QuizAttempt[]): ImprovementData {
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
+// Completion Rate (E17-S01)
+// ---------------------------------------------------------------------------
+
+export type CompletionRateResult = {
+  /** Percentage of started quizzes that were completed (0–100) */
+  completionRate: number
+  /** Number of distinct quizzes with at least one completed attempt */
+  completedCount: number
+  /** Total unique quizzes started (completed + in-progress) */
+  startedCount: number
+}
+
+/**
+ * Calculate quiz completion rate from attempt history and in-progress state.
+ *
+ * Formula: (unique quizzes completed / unique quizzes started) * 100
+ *
+ * "Completed" = has at least one entry in db.quizAttempts.
+ * "In-progress" = currently tracked in localStorage quiz store (not yet submitted).
+ *
+ * Multiple attempts of the same quiz count as 1 completed quiz (uses Set of quizIds).
+ * An in-progress quiz that also has past completed attempts is NOT double-counted
+ * (it already appears in the completed set).
+ */
+export async function calculateCompletionRate(): Promise<CompletionRateResult> {
+  const allAttempts = await db.quizAttempts.toArray()
+  const completedQuizIds = new Set(allAttempts.map(a => a.quizId))
+  const completedCount = completedQuizIds.size
+
+  // Parse localStorage to detect in-progress quiz (not yet submitted)
+  let inProgressQuizId: string | null = null
+  try {
+    const quizStoreData = localStorage.getItem('levelup-quiz-store')
+    if (quizStoreData) {
+      const parsed = JSON.parse(quizStoreData)
+      const progressQuizId = parsed?.state?.currentProgress?.quizId
+      if (typeof progressQuizId === 'string' && progressQuizId.length > 0) {
+        inProgressQuizId = progressQuizId
+      }
+    }
+  } catch {
+    // localStorage parse failure is non-fatal — treat as no in-progress quiz
+  }
+
+  // Only count in-progress quiz if it hasn't already been completed before
+  const inProgressCount =
+    inProgressQuizId && !completedQuizIds.has(inProgressQuizId) ? 1 : 0
+
+  const startedCount = completedCount + inProgressCount
+  const completionRate = startedCount > 0 ? (completedCount / startedCount) * 100 : 0
+
+  return { completionRate, completedCount, startedCount }
+}
+
+// ---------------------------------------------------------------------------
 // Retake Frequency (E17-S02)
 // ---------------------------------------------------------------------------
 
