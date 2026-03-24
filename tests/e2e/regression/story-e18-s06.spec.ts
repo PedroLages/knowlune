@@ -7,9 +7,9 @@
  * AC3 — Clicking the card navigates to /reports?tab=quizzes
  * AC4 — Empty state shown when no quizzes completed
  */
-import { test, expect } from '../support/fixtures'
-import { makeAttempt } from '../support/fixtures/factories/quiz-factory'
-import { seedQuizAttempts, clearIndexedDBStore } from '../support/helpers/indexeddb-seed'
+import { test, expect } from '../../support/fixtures'
+import { makeAttempt } from '../../support/fixtures/factories/quiz-factory'
+import { seedQuizAttempts, clearIndexedDBStore } from '../../support/helpers/indexeddb-seed'
 
 /** Navigate to overview with sidebar collapsed */
 async function navigateToOverview(page: import('@playwright/test').Page): Promise<void> {
