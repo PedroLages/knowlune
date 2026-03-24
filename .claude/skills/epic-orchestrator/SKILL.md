@@ -1,0 +1,149 @@
+---
+name: epic-orchestrator
+description: Use when executing an entire epic end-to-end — all stories from start through implementation, review, finish, merge, post-epic validation, and final report. Triggered by requests to run a full epic, batch-process stories, or automate the complete story lifecycle.
+---
+
+# Epic Orchestrator
+
+Execute an entire epic autonomously — `/start-story` through implementation, `/review-story` (fix ALL issues at every severity), `/finish-story`, post-epic commands, and a comprehensive completion report. The coordinator dispatches fresh sub-agents for each task while staying lean.
+
+## Usage
+
+```
+/epic-orchestrator          # Auto-detects what needs work from sprint status, recommends next epic
+/epic-orchestrator 20       # Runs Epic 20 directly
+```
+
+## Orchestrator Discipline
+
+**See:** [../_shared/orchestrator-principles.md](../_shared/orchestrator-principles.md)
+
+**Additional principles for this skill:**
+
+1. **Never read source code** — sub-agents read and implement
+2. **Never read full review reports** — sub-agents summarize findings
+3. **Track only**: story ID, status, PR URL, issue counts, round number
+4. **TodoWrite is the state machine** — all progress tracked there
+5. **Template prompts** — fill variables from [docs/agent-prompt-templates.md](docs/agent-prompt-templates.md)
+6. **Fresh agent per task** — never reuse agents across rounds or stories
+
+### Quality Standard
+
+**ALL issues must be fixed** — BLOCKER, HIGH, MEDIUM, LOW, NITS. No exceptions. The review loop continues until `/review-story` returns zero findings. Zero tolerance. Everything perfect.
+
+## Execution Flow
+
+```dot
+digraph epic_flow {
+  rankdir=TB;
+  node [shape=box];
+
+  phase0 [label="Phase 0: Epic Selection\n(AskUserQuestion or argument)"];
+  extract [label="Extract stories from epics.md\nCreate TodoWrite"];
+  story_start [label="Step 1: Story Agent\n(/start-story + implement)"];
+  review [label="Step 2: Review Agent\n(/review-story)"];
+  issues [label="Issues found?" shape=diamond];
+  fix [label="Fix Agent\n(fix ALL severities)"];
+  finish [label="Step 3: Finish Agent\n(/finish-story + PR)"];
+  merge [label="Step 4: Merge + Sync\n(gh pr merge, no CI wait)"];
+  more [label="More stories?" shape=diamond];
+  post [label="Phase 2: Post-Epic\n(sprint-status, trace, NFR,\nadversarial, retrospective)"];
+  report [label="Phase 3: Final Report"];
+
+  phase0 -> extract;
+  extract -> story_start;
+  story_start -> review;
+  review -> issues;
+  issues -> fix [label="yes (any severity)"];
+  fix -> review [label="NEW agent"];
+  issues -> finish [label="zero issues"];
+  finish -> merge;
+  merge -> more;
+  more -> story_start [label="yes (next story)"];
+  more -> post [label="no"];
+  post -> report;
+}
+```
+
+## Phase 0: Epic Selection
+
+**See:** [docs/phase-0-epic-selection.md](docs/phase-0-epic-selection.md) for:
+- Epic argument parsing or AskUserQuestion prompt
+- Story list extraction from `docs/planning-artifacts/epics.md`
+- Status check via `docs/implementation-artifacts/sprint-status.yaml`
+- Master TodoWrite creation
+- Dev server cleanup (port 5173)
+
+## Phase 1: Story Pipeline (Sequential)
+
+**See:** [docs/phase-1-story-pipeline.md](docs/phase-1-story-pipeline.md) for:
+- Step 1: Start + Implement (Story Agent)
+- Step 2: Review Loop — **See:** [docs/review-loop.md](docs/review-loop.md) for zero-tolerance review cycle
+- Step 3: Finish + PR (Finish Agent)
+- Step 4: Merge + Sync (coordinator directly)
+- Step 5: Prepare next story (kill dev server, merge main)
+- Conflict management strategy
+
+**All agent prompt templates:** [docs/agent-prompt-templates.md](docs/agent-prompt-templates.md)
+
+## Phase 2: Post-Epic Commands
+
+**See:** [docs/phase-2-post-epic.md](docs/phase-2-post-epic.md) for:
+- Sequential: `/sprint-status` → mark epic done → `/testarch-trace` → `/testarch-nfr` → `/review-adversarial` → `/retrospective`
+- Retrospective agent acts as Pedro (developer) in party mode dialogue
+
+## Phase 3: Final Report
+
+**See:** [docs/phase-3-final-report.md](docs/phase-3-final-report.md) for:
+- Report agent gathers all artifacts
+- Saves to `docs/implementation-artifacts/epic-{N}-completion-report-{DATE}.md`
+
+## Error Handling
+
+**See:** [docs/error-handling.md](docs/error-handling.md)
+
+## Agent Types
+
+| Agent | Purpose | Fresh Per | Returns |
+|-------|---------|-----------|---------|
+| **Story** | `/start-story` + implement | Story | Summary, files changed |
+| **Review** | `/review-story` | Round | Verdict, issue list by severity |
+| **Fix** | Fix all review findings | Round | Fix count, unfixed items |
+| **Finish** | `/finish-story` + PR | Story | PR URL, branch |
+| **Sprint Status** | `/sprint-status` | Epic | Status summary |
+| **Trace** | `/testarch-trace` | Epic (+revalidation) | Coverage, gate decision |
+| **Trace Fix** | Write missing tests | When trace finds gaps | Tests added, remaining gaps |
+| **NFR** | `/testarch-nfr` | Epic (+revalidation) | NFR assessment |
+| **NFR Fix** | Fix code-level NFR issues | When NFR finds fixable issues | Issues fixed |
+| **Adversarial** | `/review-adversarial` | Epic | Findings list |
+| **Retro** | `/retrospective` (as Pedro) | Epic | Retro doc, lessons |
+| **Report** | Final completion report | Epic | Report file path |
+
+## Coordinator Data Tracking
+
+Keep two small data structures in-context for the report handoff:
+
+**Stories table:**
+```
+| Story | Status | PR URL | Review Rounds | Issues Fixed |
+|-------|--------|--------|---------------|--------------|
+```
+
+**Pre-existing issues list** (issues in files NOT changed by any story — deferred to final report):
+```
+PRE-EXISTING ISSUES (deferred):
+- [SEVERITY] description — file:line (found during E##-S##)
+```
+
+These are the ONLY state in-context. Everything else is in TodoWrite or sub-agent output.
+
+## Verification
+
+After full execution:
+1. All stories `done` in sprint-status.yaml
+2. Epic status `done`
+3. All PRs merged to main
+4. `npm run build` passes on main
+5. Post-epic reports generated
+6. Completion report in `docs/implementation-artifacts/`
+7. Zero unfixed issues across all stories
