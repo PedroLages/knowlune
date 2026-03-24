@@ -42,7 +42,14 @@ digraph review_loop {
 
 ## Round N: Review Agent
 
-Spawn a **new general-purpose sub-agent** with the Review Agent prompt from [agent-prompt-templates.md](agent-prompt-templates.md).
+Spawn a **new general-purpose sub-agent** with the Review Agent prompt from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`** to keep review output (build, lint, test, agent reports) out of the main conversation.
+
+Before dispatch, output the status banner:
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2/4: Reviewing {STORY_ID} — Round {N}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
 
 The review agent runs `/review-story {STORY_ID}` which executes:
 1. Pre-checks (build, lint, type-check, format, unit tests, E2E tests)
@@ -94,7 +101,14 @@ This list is passed to the Report Agent to include in the final completion repor
 
 ## If Story-Related Issues Found: Fix Agent
 
-Spawn a **new general-purpose sub-agent** with the Fix Agent prompt from [agent-prompt-templates.md](agent-prompt-templates.md).
+Spawn a **new general-purpose sub-agent** with the Fix Agent prompt from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`**.
+
+Before dispatch, output the status banner:
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FIX: Resolving {N} issues — {STORY_ID} Round {R}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
 
 The fix agent receives the **story-related findings only** and must:
 1. Read each file at the specified location
