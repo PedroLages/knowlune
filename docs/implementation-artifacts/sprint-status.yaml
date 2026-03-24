@@ -263,7 +263,7 @@ development_status:
   17-3-calculate-item-difficulty-p-values: done
   17-4-calculate-discrimination-indices: done
   17-5-identify-learning-trajectory-patterns: done
-  epic-17-retrospective: optional
+  epic-17-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 18: Accessible and Integrated Quiz Experience
