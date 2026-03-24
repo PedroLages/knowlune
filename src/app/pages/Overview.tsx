@@ -17,9 +17,11 @@ import { StudyGoalsWidget } from '@/app/components/StudyGoalsWidget'
 import { StudyHistoryCalendar } from '@/app/components/StudyHistoryCalendar'
 import { StudyScheduleWidget } from '@/app/components/StudyScheduleWidget'
 import { RecommendedNext, RecommendedNextSkeleton } from '@/app/components/RecommendedNext'
+import { QuizPerformanceCard } from '@/app/components/dashboard/QuizPerformanceCard'
 import { CourseCard } from '@/app/components/figma/CourseCard'
 import { ProgressChart } from '@/app/components/charts/ProgressChart'
 import { DashboardCustomizer } from '@/app/components/DashboardCustomizer'
+import { SkillProficiencyRadar } from '@/app/components/overview/SkillProficiencyRadar'
 import { useCourseStore } from '@/stores/useCourseStore'
 import {
   getCoursesInProgress,
@@ -33,9 +35,11 @@ import {
   getCourseCompletionPercent,
 } from '@/lib/progress'
 import { getActionsPerDay } from '@/lib/studyLog'
+import { getSkillProficiencyForOverview } from '@/lib/reportStats'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 import { useDashboardOrder } from '@/hooks/useDashboardOrder'
 import type { DashboardSectionId } from '@/lib/dashboardOrder'
+import { useEngagementVisible } from '@/hooks/useEngagementVisible'
 
 function getGreeting(): string {
   const hour = new Date().getHours()
@@ -77,9 +81,14 @@ export function Overview() {
   useEffect(() => {
     let ignore = false
 
-    getTotalStudyNotes().then(notes => {
-      if (!ignore) setStudyNotes(notes)
-    })
+    getTotalStudyNotes()
+      .then(notes => {
+        if (!ignore) setStudyNotes(notes)
+      })
+      .catch(err => {
+        // silent-catch-ok — non-critical stat; dashboard still renders with default value
+        console.error('[Overview] Failed to load study notes count:', err)
+      })
 
     return () => {
       ignore = true
@@ -106,6 +115,7 @@ export function Overview() {
   const lessonSparkline = useMemo(() => getLast7DaysLessonCompletions(), [])
   const lessonsChange = useMemo(() => getWeeklyChange('lessons'), [])
   const chartData = useMemo(() => getActionsPerDay(14), [])
+  const skillProficiencyData = useMemo(() => getSkillProficiencyForOverview(), [allCourses])
 
   // Memoize last watched calculation to prevent sorting on every render
   const lastWatchedEntry = useMemo(
@@ -120,6 +130,11 @@ export function Overview() {
   )
   const lastWatchedCourse = lastWatchedEntry?.[0]
   const lastWatchedLesson = lastWatchedEntry?.[1].lastWatchedLesson
+
+  // Engagement preference toggles
+  const showAchievements = useEngagementVisible('achievements')
+  const showStreaks = useEngagementVisible('streaks')
+  const showAnimations = useEngagementVisible('animations')
 
   // Memoize stats cards array to prevent recreation on every render
   const statsCards = useMemo(
@@ -208,8 +223,18 @@ export function Overview() {
                 <StatsCard key={stat.label} {...stat} />
               ))}
             </div>
-            <AchievementBanner completedLessons={completedLessons} />
+            {showAchievements && <AchievementBanner completedLessons={completedLessons} />}
           </div>
+        </motion.section>
+      ),
+      'quiz-performance': () => (
+        <motion.section
+          key="quiz-performance"
+          ref={createSectionRef('quiz-performance')}
+          variants={fadeUp}
+          data-testid="section-quiz-performance"
+        >
+          <QuizPerformanceCard />
         </motion.section>
       ),
       'engagement-zone': () => (
@@ -217,13 +242,15 @@ export function Overview() {
           key="engagement-zone"
           ref={createSectionRef('engagement-zone')}
           {...viewportAnimation}
-          className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6"
+          className={`grid grid-cols-1 ${showStreaks ? 'lg:grid-cols-[3fr_2fr]' : ''} gap-6`}
           data-testid="section-engagement-zone"
         >
-          <div>
-            <h2 className="text-xl mb-4">Study Streak</h2>
-            <StudyStreakCalendar weeks={26} />
-          </div>
+          {showStreaks && (
+            <div>
+              <h2 className="text-xl mb-4">Study Streak</h2>
+              <StudyStreakCalendar weeks={26} />
+            </div>
+          )}
           <div className="flex flex-col gap-6">
             <StudyGoalsWidget />
             <RecentActivity activities={recentActivity} />
@@ -270,6 +297,19 @@ export function Overview() {
           />
         </motion.section>
       ),
+      'skill-proficiency': () =>
+        skillProficiencyData.length > 0 ? (
+          <motion.section
+            key="skill-proficiency"
+            ref={createSectionRef('skill-proficiency')}
+            {...viewportAnimation}
+            className="rounded-[24px] border border-border/50 bg-card p-6"
+            data-testid="section-skill-proficiency"
+          >
+            <h2 className="text-xl font-semibold mb-4">Skill Proficiency</h2>
+            <SkillProficiencyRadar data={skillProficiencyData} />
+          </motion.section>
+        ) : null,
       'course-gallery': () => (
         <motion.section
           key="course-gallery"
@@ -287,14 +327,34 @@ export function Overview() {
               <ArrowRight className="size-3.5" aria-hidden="true" />
             </Link>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          {importedCourses.length > 0 && (
+            <p className="text-xs text-muted-foreground mb-3">
+              Sample courses ·{' '}
+              <Link to="/courses" className="hover:text-foreground transition-colors">
+                View all
+              </Link>
+            </p>
+          )}
+          <div
+            data-testid="library-section"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
+          >
             {allCourses.map(course => (
-              <CourseCard
+              <div
                 key={course.id}
-                course={course}
-                variant="overview"
-                completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
-              />
+                data-testid={
+                  importedCourses.length > 0 ? 'sample-course-card' : `course-card-${course.id}`
+                }
+                className={`transition-opacity duration-200 motion-reduce:transition-none ${
+                  importedCourses.length > 0 ? 'opacity-60 hover:opacity-100' : ''
+                }`}
+              >
+                <CourseCard
+                  course={course}
+                  variant="overview"
+                  completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
+                />
+              </div>
             ))}
           </div>
         </motion.section>
@@ -309,7 +369,11 @@ export function Overview() {
       lastWatchedCourse,
       lastWatchedLesson,
       allCourses,
+      importedCourses,
       createSectionRef,
+      showAchievements,
+      showStreaks,
+      skillProficiencyData,
     ]
   )
 
@@ -360,7 +424,7 @@ export function Overview() {
   }
 
   return (
-    <MotionConfig reducedMotion="user">
+    <MotionConfig reducedMotion={showAnimations ? 'user' : 'always'}>
       <motion.div
         initial="hidden"
         animate="visible"
@@ -405,7 +469,7 @@ export function Overview() {
               actionLabel="Import Course"
               onAction={() => {
                 importCourseFromFolder().catch(() => {
-                  // User cancelled file picker or permission denied — no action needed
+                  // silent-catch-ok — user cancelled file picker or permission denied
                 })
               }}
             />

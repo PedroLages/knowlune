@@ -111,7 +111,7 @@ export function AvatarUploadZone({
       <Avatar className="w-24 h-24 md:w-32 md:h-32 ring-2 ring-border">
         <AvatarImage src={currentAvatar || undefined} alt="Profile photo" />
         <AvatarFallback>
-          <Upload className="w-8 h-8 text-muted-foreground" />
+          <Upload className="size-8 text-muted-foreground" />
         </AvatarFallback>
       </Avatar>
 
@@ -140,7 +140,7 @@ export function AvatarUploadZone({
           <div className="flex flex-col items-center justify-center gap-2 text-center">
             <Upload
               className={cn(
-                'w-8 h-8 transition-colors',
+                'size-8 transition-colors',
                 dragState.isDragOver ? 'text-brand' : 'text-muted-foreground'
               )}
             />
@@ -168,7 +168,7 @@ export function AvatarUploadZone({
         {/* Remove button */}
         {currentAvatar && !isLoading && (
           <Button variant="outline" size="sm" onClick={onRemove} className="mt-3 w-full md:w-auto">
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="size-4" />
             Remove Photo
           </Button>
         )}

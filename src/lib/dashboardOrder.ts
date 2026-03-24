@@ -16,9 +16,11 @@ const STATS_KEY = 'dashboard-section-stats'
 export type DashboardSectionId =
   | 'recommended-next'
   | 'metrics-strip'
+  | 'quiz-performance'
   | 'engagement-zone'
   | 'study-history'
   | 'study-schedule'
+  | 'skill-proficiency'
   | 'insight-action'
   | 'course-gallery'
 
@@ -26,9 +28,11 @@ export type DashboardSectionId =
 export const SECTION_LABELS: Record<DashboardSectionId, string> = {
   'recommended-next': 'Recommended Next',
   'metrics-strip': 'Metrics & Achievements',
+  'quiz-performance': 'Quiz Performance',
   'engagement-zone': 'Study Streak & Goals',
   'study-history': 'Study History',
   'study-schedule': 'Suggested Study Time',
+  'skill-proficiency': 'Skill Proficiency',
   'insight-action': 'Progress & Quick Actions',
   'course-gallery': 'Your Library',
 }
@@ -37,9 +41,11 @@ export const SECTION_LABELS: Record<DashboardSectionId, string> = {
 export const DEFAULT_ORDER: DashboardSectionId[] = [
   'recommended-next',
   'metrics-strip',
+  'quiz-performance',
   'engagement-zone',
   'study-history',
   'study-schedule',
+  'skill-proficiency',
   'insight-action',
   'course-gallery',
 ]

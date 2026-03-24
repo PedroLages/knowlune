@@ -28,6 +28,7 @@ const STORAGE_KEYS = [
   'streak-milestones',
   'dashboard-section-order',
   'dashboard-section-stats',
+  'video-playback-speed',
 ] as const
 
 type LocalStorageHelper = {
