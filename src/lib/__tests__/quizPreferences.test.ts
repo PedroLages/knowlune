@@ -5,6 +5,7 @@ import {
   DEFAULT_QUIZ_PREFERENCES,
   STORAGE_KEY,
 } from '@/lib/quizPreferences'
+import { loadSavedAccommodation } from '@/app/pages/Quiz'
 
 describe('quizPreferences', () => {
   beforeEach(() => {
@@ -137,6 +138,35 @@ describe('quizPreferences', () => {
         showImmediateFeedback: true,
         shuffleQuestions: false,
       })
+    })
+  })
+
+  describe('loadSavedAccommodation', () => {
+    it('returns global preference when no per-lesson key exists', () => {
+      saveQuizPreferences({ timerAccommodation: '150%' })
+      expect(loadSavedAccommodation('lesson-1')).toBe('150%')
+    })
+
+    it('returns per-lesson key when it is a valid TimerAccommodation', () => {
+      localStorage.setItem('quiz-accommodation-lesson-2', '200%')
+      expect(loadSavedAccommodation('lesson-2')).toBe('200%')
+    })
+
+    it('falls back to global preference when per-lesson key is an invalid enum value', () => {
+      saveQuizPreferences({ timerAccommodation: '150%' })
+      localStorage.setItem('quiz-accommodation-lesson-3', 'invalid-value')
+      expect(loadSavedAccommodation('lesson-3')).toBe('150%')
+    })
+
+    it('falls back to global preference when per-lesson key is a non-enum string', () => {
+      saveQuizPreferences({ timerAccommodation: '200%' })
+      // 'bogus' is not a valid TimerAccommodation enum value, so Zod rejects it
+      localStorage.setItem('quiz-accommodation-lesson-4', 'bogus')
+      expect(loadSavedAccommodation('lesson-4')).toBe('200%')
+    })
+
+    it('returns standard when no preferences exist at all', () => {
+      expect(loadSavedAccommodation('lesson-5')).toBe('standard')
     })
   })
 })
