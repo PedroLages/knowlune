@@ -6,7 +6,13 @@ started: 2026-03-23
 completed: 2026-03-23
 reviewed: in-progress
 review_started: 2026-03-24
-review_gates_passed: []
+review_gates_passed:
+  - build
+  - lint
+  - type-check
+  - format-check
+  - unit-tests
+  - e2e-tests
 burn_in_validated: false
 ---
 
@@ -90,4 +96,8 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Zod validation for preferences**: Used Zod schema (`quizPreferencesSchema`) to validate localStorage data on read, gracefully falling back to defaults when data is corrupted or missing. This prevents runtime errors from stale or malformed preference objects.
+- **localStorage over IndexedDB**: Quiz preferences are simple key-value data that the quiz start screen reads synchronously. localStorage was the right choice over IndexedDB — no async overhead, no Dexie dependency, and preferences are available before the app's database initializes.
+- **Timer accommodation as multiplier pattern**: Timer accommodation uses string-based multiplier keys (`'standard'`, `'150%'`, `'200%'`) rather than numeric values. This avoids floating-point ambiguity and makes the UI labels self-documenting. The conversion to numeric happens only at quiz initialization time.
+- **Design review scripts use browser globals**: Playwright `page.evaluate()` scripts (design-review-*.mjs) use `getComputedStyle` which is a browser API. ESLint's `no-undef` rule doesn't know about browser context — requires `/* eslint-disable no-undef */` directive.
+- **Shared IDB seeding helpers**: Initial E2E tests used a custom `seedQuizData()` with `setTimeout` delays. Replaced with shared `seedQuizzes()` helper from `tests/support/helpers/indexeddb-seed.ts` which uses frame-accurate `requestAnimationFrame` delays, reducing flakiness risk under load (Epic 16 retro finding).
