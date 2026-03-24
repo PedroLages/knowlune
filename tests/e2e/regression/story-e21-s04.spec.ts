@@ -237,4 +237,133 @@ test.describe('E21-S04: Visual Energy Boost', () => {
       expect(hasVibrant).toBe(false)
     })
   })
+
+  test.describe('AC1 — WCAG contrast ratio validation', () => {
+    /**
+     * Parses a CSS color string (hex, rgb, oklch resolved to rgb by the browser)
+     * into [r, g, b] in 0-255 range.
+     */
+    function parseColor(color: string): [number, number, number] {
+      // Browser getComputedStyle always returns rgb() or rgba()
+      const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
+      if (!match) throw new Error(`Cannot parse color: ${color}`)
+      return [Number(match[1]), Number(match[2]), Number(match[3])]
+    }
+
+    /** Compute relative luminance per WCAG 2.1 definition */
+    function relativeLuminance([r, g, b]: [number, number, number]): number {
+      const [rs, gs, bs] = [r, g, b].map((c) => {
+        const s = c / 255
+        return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
+      })
+      return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs
+    }
+
+    /** Compute WCAG contrast ratio between two colors */
+    function contrastRatio(
+      c1: [number, number, number],
+      c2: [number, number, number]
+    ): number {
+      const l1 = relativeLuminance(c1)
+      const l2 = relativeLuminance(c2)
+      const lighter = Math.max(l1, l2)
+      const darker = Math.min(l1, l2)
+      return (lighter + 0.05) / (darker + 0.05)
+    }
+
+    test('vibrant brand foreground on brand background meets 4.5:1', async ({
+      page,
+    }) => {
+      await page.addInitScript(() => {
+        localStorage.setItem(
+          'app-settings',
+          JSON.stringify({
+            displayName: 'Student',
+            bio: '',
+            theme: 'light',
+            colorScheme: 'vibrant',
+          })
+        )
+      })
+      await page.goto('/')
+      await page.waitForLoadState('networkidle')
+
+      const colors = await page.evaluate(() => {
+        const el = document.documentElement
+        const style = getComputedStyle(el)
+        // Create a temporary element to resolve CSS custom property values to rgb()
+        const probe = document.createElement('div')
+        document.body.appendChild(probe)
+
+        probe.style.color = style.getPropertyValue('--brand').trim()
+        const brand = getComputedStyle(probe).color
+
+        probe.style.color = style.getPropertyValue('--brand-foreground').trim()
+        const brandFg = getComputedStyle(probe).color
+
+        probe.style.color = style.getPropertyValue('--brand-soft').trim()
+        const brandSoft = getComputedStyle(probe).color
+
+        probe.style.color = style
+          .getPropertyValue('--brand-soft-foreground')
+          .trim()
+        const brandSoftFg = getComputedStyle(probe).color
+
+        document.body.removeChild(probe)
+        return { brand, brandFg, brandSoft, brandSoftFg }
+      })
+
+      // Brand foreground (white) on brand background
+      const brandBg = parseColor(colors.brand)
+      const brandFg = parseColor(colors.brandFg)
+      const ratio = contrastRatio(brandBg, brandFg)
+      expect(ratio).toBeGreaterThanOrEqual(4.5)
+
+      // Brand-soft-foreground on brand-soft background
+      const softBg = parseColor(colors.brandSoft)
+      const softFg = parseColor(colors.brandSoftFg)
+      const softRatio = contrastRatio(softBg, softFg)
+      expect(softRatio).toBeGreaterThanOrEqual(4.5)
+    })
+
+    test('dark vibrant brand foreground on brand background meets 4.5:1', async ({
+      page,
+    }) => {
+      await page.addInitScript(() => {
+        localStorage.setItem('theme', 'dark')
+        localStorage.setItem(
+          'app-settings',
+          JSON.stringify({
+            displayName: 'Student',
+            bio: '',
+            theme: 'dark',
+            colorScheme: 'vibrant',
+          })
+        )
+      })
+      await page.goto('/')
+      await page.waitForLoadState('networkidle')
+
+      const colors = await page.evaluate(() => {
+        const el = document.documentElement
+        const style = getComputedStyle(el)
+        const probe = document.createElement('div')
+        document.body.appendChild(probe)
+
+        probe.style.color = style.getPropertyValue('--brand').trim()
+        const brand = getComputedStyle(probe).color
+
+        probe.style.color = style.getPropertyValue('--brand-foreground').trim()
+        const brandFg = getComputedStyle(probe).color
+
+        document.body.removeChild(probe)
+        return { brand, brandFg }
+      })
+
+      const brandBg = parseColor(colors.brand)
+      const brandFg = parseColor(colors.brandFg)
+      const ratio = contrastRatio(brandBg, brandFg)
+      expect(ratio).toBeGreaterThanOrEqual(4.5)
+    })
+  })
 })

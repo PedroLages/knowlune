@@ -118,4 +118,12 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+1. **OKLCH chroma-only modifications preserve contrast ratios.** By increasing only the chroma (C) channel in OKLCH while keeping lightness (L) and hue (H) stable, vibrant colors are more saturated without shifting contrast ratios against foreground colors. This makes WCAG AA compliance straightforward — no lightness recalculation needed.
+
+2. **Composable `.vibrant` class approach enables zero-runtime-cost theming.** Using a CSS class on `<html>` that overrides design tokens via the cascade means no JavaScript runs at render time for color switching. The browser's CSS engine handles the override natively, and the `.dark.vibrant` compound selector cleanly composes dark mode with vibrant mode.
+
+3. **Dark mode chroma reduction prevents neon fatigue.** Vibrant chroma values that look energizing on light backgrounds become uncomfortably neon on dark backgrounds. The `.dark.vibrant` block uses ~10-15% less chroma than `.vibrant` to maintain visual energy without causing eye strain during extended dark-mode sessions.
+
+4. **`hsl(var(...) / alpha)` breaks with OKLCH token values.** The heatmap tokens originally used `hsl(var(--success) / 0.3)` which assumes the token contains HSL channel values. When `.vibrant` overrides `--success` with an `oklch()` value, the `hsl()` wrapper computes invalid CSS. Replaced with `color-mix(in oklch, var(--success) 30%, transparent)` which works with any color format.
+
+5. **E2E contrast ratio validation is feasible via Playwright.** Using `getComputedStyle()` with a probe element to resolve CSS custom properties to `rgb()`, then calculating WCAG relative luminance in the test, provides programmatic WCAG AA verification without external tools.
