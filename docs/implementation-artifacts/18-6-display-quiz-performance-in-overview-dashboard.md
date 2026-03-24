@@ -4,8 +4,8 @@ story_name: "Display Quiz Performance in Overview Dashboard"
 status: in-progress
 started: 2026-03-23
 completed:
-reviewed: in-progress
-review_started: 2026-03-23
+reviewed: true
+review_started: 2026-03-24
 review_gates_passed: ["build", "lint", "type-check", "format-check", "unit-tests", "e2e-tests", "design-review", "code-review", "code-review-testing"]
 burn_in_validated: false
 ---
