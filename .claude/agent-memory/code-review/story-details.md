@@ -293,3 +293,11 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M2: Redundant `new Set(topicMap.keys())` when `topicMap.size` suffices
 - M3: E2E AC3 uses `getByText` for not.toBeVisible assertions instead of `getByRole('heading')` -- fragile
 - Positive: Pure function architecture, excellent unit test coverage (14 tests, boundary conditions), proper accessibility (useId, aria-labelledby, semantic HTML), no uncommitted changes, shared E2E seeding helpers used
+
+## E21-S02: Enhanced Video Keyboard Shortcuts (Round 1)
+- No uncommitted changes (positive)
+- H1: `stepPlaybackSpeed` does not handle `indexOf === -1` when localStorage has non-standard speed value -- silently jumps to 0.5x or announces "Already at minimum" with no recovery
+- H2: `handleFocusNotes` uses global `document.querySelector('[contenteditable="true"]')` -- fragile, may miss TipTap mount timing
+- M1: localStorage-parsed speed not validated against PLAYBACK_SPEEDS array
+- M2: Shortcuts overlay shows `< + >` (implying simultaneous press) instead of separate entries
+- Positive: Clean extension of existing keyboard handler, proper ARIA announcements, thorough E2E coverage (17 tests), correct input guard reuse
