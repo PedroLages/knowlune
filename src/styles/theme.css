@@ -284,8 +284,8 @@
 
 .dark.vibrant {
   /* Brand — vibrant dark (slightly less chroma than light to avoid neon) */
-  --brand: oklch(0.58 0.18 275);
-  --brand-hover: oklch(0.52 0.16 275);
+  --brand: oklch(0.57 0.18 275);
+  --brand-hover: oklch(0.51 0.16 275);
   --brand-soft: oklch(0.26 0.07 275);
   --brand-soft-foreground: oklch(0.68 0.16 275);
   --brand-muted: oklch(0.32 0.08 275);

@@ -187,10 +187,10 @@ test.describe('E21-S04: Visual Energy Boost', () => {
         getComputedStyle(document.documentElement).getPropertyValue('--brand').trim()
       )
 
-      // Dark vibrant brand is oklch(0.58 0.18 275) — distinct from light vibrant
+      // Dark vibrant brand is oklch(0.57 0.18 275) — distinct from light vibrant
       expect(brandValue).toContain('oklch')
-      // Should contain 0.58 lightness (dark vibrant) not 0.50 (light vibrant)
-      expect(brandValue).toContain('0.58')
+      // Should contain 0.57 lightness (dark vibrant) not 0.50 (light vibrant)
+      expect(brandValue).toContain('0.57')
     })
   })
 
@@ -240,19 +240,27 @@ test.describe('E21-S04: Visual Energy Boost', () => {
 
   test.describe('AC1 — WCAG contrast ratio validation', () => {
     /**
-     * Parses a CSS color string (hex, rgb, oklch resolved to rgb by the browser)
-     * into [r, g, b] in 0-255 range.
+     * Parses a CSS color string into [r, g, b] in 0-255 range.
+     * Handles rgb(), rgba(), hex (#rrggbb), and oklch() formats.
+     * For oklch(), uses the canvas 2D fillStyle round-trip to convert to hex.
      */
     function parseColor(color: string): [number, number, number] {
-      // Browser getComputedStyle always returns rgb() or rgba()
-      const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
-      if (!match) throw new Error(`Cannot parse color: ${color}`)
-      return [Number(match[1]), Number(match[2]), Number(match[3])]
+      // Try rgb()/rgba() first
+      const rgbMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
+      if (rgbMatch) {
+        return [Number(rgbMatch[1]), Number(rgbMatch[2]), Number(rgbMatch[3])]
+      }
+      // Try hex (#rrggbb or #rgb)
+      const hexMatch = color.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i)
+      if (hexMatch) {
+        return [parseInt(hexMatch[1], 16), parseInt(hexMatch[2], 16), parseInt(hexMatch[3], 16)]
+      }
+      throw new Error(`Cannot parse color: ${color}`)
     }
 
     /** Compute relative luminance per WCAG 2.1 definition */
     function relativeLuminance([r, g, b]: [number, number, number]): number {
-      const [rs, gs, bs] = [r, g, b].map((c) => {
+      const [rs, gs, bs] = [r, g, b].map(c => {
         const s = c / 255
         return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
       })
@@ -260,10 +268,7 @@ test.describe('E21-S04: Visual Energy Boost', () => {
     }
 
     /** Compute WCAG contrast ratio between two colors */
-    function contrastRatio(
-      c1: [number, number, number],
-      c2: [number, number, number]
-    ): number {
+    function contrastRatio(c1: [number, number, number], c2: [number, number, number]): number {
       const l1 = relativeLuminance(c1)
       const l2 = relativeLuminance(c2)
       const lighter = Math.max(l1, l2)
@@ -271,9 +276,7 @@ test.describe('E21-S04: Visual Energy Boost', () => {
       return (lighter + 0.05) / (darker + 0.05)
     }
 
-    test('vibrant brand foreground on brand background meets 4.5:1', async ({
-      page,
-    }) => {
+    test('vibrant brand foreground on brand background meets 4.5:1', async ({ page }) => {
       await page.addInitScript(() => {
         localStorage.setItem(
           'app-settings',
@@ -289,28 +292,26 @@ test.describe('E21-S04: Visual Energy Boost', () => {
       await page.waitForLoadState('networkidle')
 
       const colors = await page.evaluate(() => {
-        const el = document.documentElement
-        const style = getComputedStyle(el)
-        // Create a temporary element to resolve CSS custom property values to rgb()
-        const probe = document.createElement('div')
-        document.body.appendChild(probe)
+        // Resolve any CSS color (oklch, color-mix, hex) to rgb() via canvas pixel readback
+        const canvas = document.createElement('canvas')
+        canvas.width = 1
+        canvas.height = 1
+        const ctx = canvas.getContext('2d', { willReadFrequently: true })!
+        function resolveToRgb(cssColor: string): string {
+          ctx.clearRect(0, 0, 1, 1)
+          ctx.fillStyle = cssColor
+          ctx.fillRect(0, 0, 1, 1)
+          const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data
+          return `rgb(${r}, ${g}, ${b})`
+        }
 
-        probe.style.color = style.getPropertyValue('--brand').trim()
-        const brand = getComputedStyle(probe).color
-
-        probe.style.color = style.getPropertyValue('--brand-foreground').trim()
-        const brandFg = getComputedStyle(probe).color
-
-        probe.style.color = style.getPropertyValue('--brand-soft').trim()
-        const brandSoft = getComputedStyle(probe).color
-
-        probe.style.color = style
-          .getPropertyValue('--brand-soft-foreground')
-          .trim()
-        const brandSoftFg = getComputedStyle(probe).color
-
-        document.body.removeChild(probe)
-        return { brand, brandFg, brandSoft, brandSoftFg }
+        const style = getComputedStyle(document.documentElement)
+        return {
+          brand: resolveToRgb(style.getPropertyValue('--brand').trim()),
+          brandFg: resolveToRgb(style.getPropertyValue('--brand-foreground').trim()),
+          brandSoft: resolveToRgb(style.getPropertyValue('--brand-soft').trim()),
+          brandSoftFg: resolveToRgb(style.getPropertyValue('--brand-soft-foreground').trim()),
+        }
       })
 
       // Brand foreground (white) on brand background
@@ -326,9 +327,7 @@ test.describe('E21-S04: Visual Energy Boost', () => {
       expect(softRatio).toBeGreaterThanOrEqual(4.5)
     })
 
-    test('dark vibrant brand foreground on brand background meets 4.5:1', async ({
-      page,
-    }) => {
+    test('dark vibrant brand foreground on brand background meets 4.5:1', async ({ page }) => {
       await page.addInitScript(() => {
         localStorage.setItem('theme', 'dark')
         localStorage.setItem(
@@ -345,19 +344,23 @@ test.describe('E21-S04: Visual Energy Boost', () => {
       await page.waitForLoadState('networkidle')
 
       const colors = await page.evaluate(() => {
-        const el = document.documentElement
-        const style = getComputedStyle(el)
-        const probe = document.createElement('div')
-        document.body.appendChild(probe)
+        const canvas = document.createElement('canvas')
+        canvas.width = 1
+        canvas.height = 1
+        const ctx = canvas.getContext('2d', { willReadFrequently: true })!
+        function resolveToRgb(cssColor: string): string {
+          ctx.clearRect(0, 0, 1, 1)
+          ctx.fillStyle = cssColor
+          ctx.fillRect(0, 0, 1, 1)
+          const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data
+          return `rgb(${r}, ${g}, ${b})`
+        }
 
-        probe.style.color = style.getPropertyValue('--brand').trim()
-        const brand = getComputedStyle(probe).color
-
-        probe.style.color = style.getPropertyValue('--brand-foreground').trim()
-        const brandFg = getComputedStyle(probe).color
-
-        document.body.removeChild(probe)
-        return { brand, brandFg }
+        const style = getComputedStyle(document.documentElement)
+        return {
+          brand: resolveToRgb(style.getPropertyValue('--brand').trim()),
+          brandFg: resolveToRgb(style.getPropertyValue('--brand-foreground').trim()),
+        }
       })
 
       const brandBg = parseColor(colors.brand)
