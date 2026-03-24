@@ -115,7 +115,7 @@ export default function MyClass() {
       <div>
         <h1 className="text-2xl font-bold mb-6">My Courses</h1>
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <PlayCircle className="w-12 h-12 text-muted-foreground mb-4" aria-hidden="true" />
+          <PlayCircle className="size-12 text-muted-foreground mb-4" aria-hidden="true" />
           <h2 className="text-xl font-semibold mb-2">Ready to start learning?</h2>
           <p className="text-muted-foreground mb-6 max-w-md">
             Browse our course catalog to find the perfect course to kickstart your learning journey.
@@ -123,7 +123,7 @@ export default function MyClass() {
           <Button variant="brand" asChild>
             <Link to="/courses">
               Browse All Courses
-              <ArrowRight className="w-4 h-4 ml-2" />
+              <ArrowRight className="size-4 ml-2" />
             </Link>
           </Button>
         </div>
@@ -170,7 +170,7 @@ export default function MyClass() {
                 <section className="mb-8">
                   <div className="bg-brand-soft p-4 rounded-xl mb-4">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
-                      <Clock className="w-6 h-6 text-brand" />
+                      <Clock className="size-6 text-brand" />
                       In Progress
                     </h2>
                   </div>
@@ -197,7 +197,7 @@ export default function MyClass() {
                 <section className="mb-8">
                   <div className="bg-success-soft p-4 rounded-xl mb-4">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
-                      <CheckCircle className="w-6 h-6 text-success" />
+                      <CheckCircle className="size-6 text-success" />
                       Completed
                     </h2>
                   </div>
@@ -218,7 +218,7 @@ export default function MyClass() {
                 <section>
                   <div className="bg-muted p-4 rounded-xl mb-4">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
-                      <PlayCircle className="w-6 h-6 text-muted-foreground" />
+                      <PlayCircle className="size-6 text-muted-foreground" />
                       Not Started
                     </h2>
                   </div>
@@ -237,7 +237,7 @@ export default function MyClass() {
 
               {inProgress.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <Clock className="w-12 h-12 text-muted-foreground mb-4" aria-hidden="true" />
+                  <Clock className="size-12 text-muted-foreground mb-4" aria-hidden="true" />
                   <h2 className="text-xl font-semibold mb-2">No courses in progress</h2>
                   <p className="text-muted-foreground mb-6 max-w-md">
                     Start a new course to begin learning!
@@ -245,7 +245,7 @@ export default function MyClass() {
                   <Button variant="brand" asChild>
                     <Link to="/courses">
                       Browse Courses
-                      <ArrowRight className="w-4 h-4 ml-2" />
+                      <ArrowRight className="size-4 ml-2" />
                     </Link>
                   </Button>
                 </div>

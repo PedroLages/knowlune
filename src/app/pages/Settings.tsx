@@ -54,8 +54,10 @@ import { exportAchievementsAsBadges } from '@/lib/openBadges'
 import { ReminderSettings } from '@/app/components/figma/ReminderSettings'
 import { CourseReminderSettings } from '@/app/components/figma/CourseReminderSettings'
 import { AIConfigurationSettings } from '@/app/components/figma/AIConfigurationSettings'
+import { QuizPreferencesForm } from '@/app/components/settings/QuizPreferencesForm'
 import { AvatarCropDialog } from '@/app/components/ui/avatar-crop-dialog'
 import { AvatarUploadZone } from '@/app/components/settings/avatar-upload-zone'
+import { EngagementPreferences } from '@/app/components/settings/EngagementPreferences'
 import { validateImageFile, compressAvatar, fileToDataUrl } from '@/lib/avatarUpload'
 import { toastSuccess, toastError } from '@/lib/toastHelpers'
 
@@ -487,7 +489,7 @@ export default function Settings() {
                 >
                   <div className="size-4 rounded-full bg-success flex items-center justify-center flex-shrink-0">
                     <svg
-                      className="w-3 h-3 text-white"
+                      className="size-3 text-white"
                       fill="none"
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -723,6 +725,9 @@ export default function Settings() {
           }}
         />
 
+        {/* Engagement Preferences */}
+        <EngagementPreferences />
+
         {/* Reminders */}
         <ReminderSettings />
 
@@ -731,6 +736,9 @@ export default function Settings() {
 
         {/* AI Configuration */}
         <AIConfigurationSettings />
+
+        {/* Quiz Preferences */}
+        <QuizPreferencesForm />
 
         {/* Data Management */}
         <Card>

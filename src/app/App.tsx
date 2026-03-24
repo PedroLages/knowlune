@@ -13,11 +13,13 @@ import { vectorStorePersistence } from '@/ai/vector-store'
 import { supportsWorkers } from '@/ai/lib/workerCapabilities'
 import { useFontScale } from '@/hooks/useFontScale'
 import { useWelcomeWizardStore } from '@/stores/useWelcomeWizardStore'
+import { useColorScheme } from '@/hooks/useColorScheme'
 
 // Register global error handlers (window.onerror, unhandledrejection)
 initErrorTracking()
 
 export default function App() {
+  useColorScheme() // Applies .vibrant class on <html> based on settings (E21-S04)
   const { recoverOrphanedSessions } = useSessionStore()
   const { initialize: initWizard } = useWelcomeWizardStore()
 
@@ -37,9 +39,10 @@ export default function App() {
   // Load vector embeddings from IndexedDB on startup
   useEffect(() => {
     if (supportsWorkers()) {
-      vectorStorePersistence
-        .loadAll()
-        .catch(err => console.error('[App] Vector store init failed:', err))
+      vectorStorePersistence.loadAll().catch(err => {
+        // silent-catch-ok — non-critical background initialization
+        console.error('[App] Vector store init failed:', err)
+      })
     }
   }, [])
 
