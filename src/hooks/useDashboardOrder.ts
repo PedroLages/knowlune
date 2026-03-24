@@ -71,6 +71,7 @@ export function useDashboardOrder(): UseDashboardOrderReturn {
 
   // Set up IntersectionObserver for tracking views and time
   useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') return
     observerRef.current = new IntersectionObserver(
       entries => {
         for (const entry of entries) {
