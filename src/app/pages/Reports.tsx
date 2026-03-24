@@ -186,7 +186,8 @@ export default function Reports() {
     completedLessons > 0 ||
     studyNotes > 0 ||
     activityData.some(d => d.activities > 0) ||
-    retakeData.totalAttempts > 0
+    retakeData.totalAttempts > 0 ||
+    completionData.startedCount > 0
 
   return (
     <MotionConfig reducedMotion="user">
