@@ -25,14 +25,17 @@ async function focusPlayer(page: PageParam) {
 }
 
 async function goToLessonPlayer(page: PageParam, speedOverride?: string) {
-  await page.addInitScript(({ speed }: { speed: string | null }) => {
-    if (speed !== null) {
-      localStorage.setItem('video-playback-speed', speed)
-    } else {
-      localStorage.removeItem('video-playback-speed')
-    }
-    localStorage.setItem('knowlune-sidebar-v1', 'false')
-  }, { speed: speedOverride ?? null })
+  await page.addInitScript(
+    ({ speed }: { speed: string | null }) => {
+      if (speed !== null) {
+        localStorage.setItem('video-playback-speed', speed)
+      } else {
+        localStorage.removeItem('video-playback-speed')
+      }
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
+    },
+    { speed: speedOverride ?? null }
+  )
   await navigateAndWait(page, LESSON_URL)
   await page.locator('video').waitFor({ state: 'visible', timeout: TIMEOUTS.NETWORK })
   await focusPlayer(page)
@@ -130,7 +133,7 @@ test.describe('E21-S02 AC2: Focus note editor (N key)', () => {
     await goToLessonPlayer(page)
 
     // Notes panel should be closed by default
-    await expect(page.locator('[data-testid="lesson-content-scroll"]')). toBeVisible()
+    await expect(page.locator('[data-testid="lesson-content-scroll"]')).toBeVisible()
 
     await page.keyboard.press('n')
 

@@ -612,10 +612,11 @@ describe('calculateItemDifficulty', () => {
       }),
     ]
     const result = calculateItemDifficulty(quiz, attempts)
-expect(result[0].questionId).toBe('q1') // P=1.0 — easiest first
+    expect(result[0].questionId).toBe('q1') // P=1.0 — easiest first
     expect(result[1].questionId).toBe('q2') // P=0.0 — hardest last
-expect(result[0].questionId).toBe('q1')
-    expect(result[1].questionId).toBe('q2')  })
+    expect(result[0].questionId).toBe('q1')
+    expect(result[1].questionId).toBe('q2')
+  })
 
   it('aggregates across multiple attempts for the same question', () => {
     const q1 = makeQuestion({ id: 'q1', order: 1, text: 'Q1' })
@@ -923,11 +924,36 @@ describe('calculateDiscriminationIndices', () => {
     // rpb ≈ (0.5 / 0.8367) × 0.4899 ≈ 0.293 → Moderate discriminator
     const quiz = makeTestQuiz(1)
     const attempts = [
-      makeAttempt({ id: 'a1', quizId: 'quiz-disc-test', score: 4, answers: [makeWrongAnswer('q1')] }),
-      makeAttempt({ id: 'a2', quizId: 'quiz-disc-test', score: 4, answers: [makeCorrectAnswer('q1')] }),
-      makeAttempt({ id: 'a3', quizId: 'quiz-disc-test', score: 5, answers: [makeWrongAnswer('q1')] }),
-      makeAttempt({ id: 'a4', quizId: 'quiz-disc-test', score: 5, answers: [makeCorrectAnswer('q1')] }),
-      makeAttempt({ id: 'a5', quizId: 'quiz-disc-test', score: 6, answers: [makeCorrectAnswer('q1')] }),
+      makeAttempt({
+        id: 'a1',
+        quizId: 'quiz-disc-test',
+        score: 4,
+        answers: [makeWrongAnswer('q1')],
+      }),
+      makeAttempt({
+        id: 'a2',
+        quizId: 'quiz-disc-test',
+        score: 4,
+        answers: [makeCorrectAnswer('q1')],
+      }),
+      makeAttempt({
+        id: 'a3',
+        quizId: 'quiz-disc-test',
+        score: 5,
+        answers: [makeWrongAnswer('q1')],
+      }),
+      makeAttempt({
+        id: 'a4',
+        quizId: 'quiz-disc-test',
+        score: 5,
+        answers: [makeCorrectAnswer('q1')],
+      }),
+      makeAttempt({
+        id: 'a5',
+        quizId: 'quiz-disc-test',
+        score: 6,
+        answers: [makeCorrectAnswer('q1')],
+      }),
     ]
     const result = calculateDiscriminationIndices(quiz, attempts)!
     expect(result[0].discriminationIndex).toBeCloseTo(0.293, 2)
