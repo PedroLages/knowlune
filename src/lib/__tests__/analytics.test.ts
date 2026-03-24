@@ -3,6 +3,7 @@ import {
   analyzeTopicPerformance,
   calculateImprovement,
   calculateNormalizedGain,
+  calculateCompletionRate,
   calculateRetakeFrequency,
   interpretRetakeFrequency,
   calculateItemDifficulty,
@@ -439,6 +440,132 @@ describe('calculateNormalizedGain', () => {
     const a2 = makeAttempt({ percentage: 50, completedAt: '2026-01-02T00:00:00Z' })
     const a3 = makeAttempt({ percentage: 70, completedAt: '2026-01-03T00:00:00Z' })
     expect(calculateNormalizedGain([a1, a2, a3])).toBeCloseTo(0.5, 2)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// calculateCompletionRate (E17-S01)
+// ---------------------------------------------------------------------------
+
+describe('calculateCompletionRate', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+  })
+
+  it('returns 0% when no attempts and no in-progress quiz', async () => {
+    mockToArray.mockResolvedValue([])
+    const result = await calculateCompletionRate()
+    expect(result).toEqual({ completionRate: 0, completedCount: 0, startedCount: 0 })
+  })
+
+  it('returns 100% when 3 unique quizzes completed and none in-progress', async () => {
+    mockToArray.mockResolvedValue([
+      { id: 'a1', quizId: 'q1' },
+      { id: 'a2', quizId: 'q2' },
+      { id: 'a3', quizId: 'q3' },
+    ])
+    const result = await calculateCompletionRate()
+    expect(result.completionRate).toBe(100)
+    expect(result.completedCount).toBe(3)
+    expect(result.startedCount).toBe(3)
+  })
+
+  it('counts multiple attempts of the same quiz as 1 completed quiz', async () => {
+    mockToArray.mockResolvedValue([
+      { id: 'a1', quizId: 'q1' },
+      { id: 'a2', quizId: 'q1' },
+      { id: 'a3', quizId: 'q1' },
+    ])
+    const result = await calculateCompletionRate()
+    expect(result.completedCount).toBe(1)
+    expect(result.startedCount).toBe(1)
+    expect(result.completionRate).toBe(100)
+  })
+
+  it('counts in-progress quiz from localStorage as started but not completed', async () => {
+    mockToArray.mockResolvedValue([
+      { id: 'a1', quizId: 'q1' },
+      { id: 'a2', quizId: 'q2' },
+    ])
+    localStorage.setItem(
+      'levelup-quiz-store',
+      JSON.stringify({ state: { currentProgress: { quizId: 'q3' } } })
+    )
+    const result = await calculateCompletionRate()
+    expect(result.completedCount).toBe(2)
+    expect(result.startedCount).toBe(3)
+    // 2/3 * 100 = 66.67
+    expect(result.completionRate).toBeCloseTo(66.67, 1)
+  })
+
+  it('does not double-count in-progress quiz that already has completed attempts', async () => {
+    mockToArray.mockResolvedValue([
+      { id: 'a1', quizId: 'q1' },
+      { id: 'a2', quizId: 'q2' },
+    ])
+    // q1 is in-progress but already has a completed attempt
+    localStorage.setItem(
+      'levelup-quiz-store',
+      JSON.stringify({ state: { currentProgress: { quizId: 'q1' } } })
+    )
+    const result = await calculateCompletionRate()
+    expect(result.completedCount).toBe(2)
+    expect(result.startedCount).toBe(2)
+    expect(result.completionRate).toBe(100)
+  })
+
+  it('calculates 75% for 3 completed + 1 in-progress', async () => {
+    mockToArray.mockResolvedValue([
+      { id: 'a1', quizId: 'q1' },
+      { id: 'a2', quizId: 'q2' },
+      { id: 'a3', quizId: 'q3' },
+    ])
+    localStorage.setItem(
+      'levelup-quiz-store',
+      JSON.stringify({ state: { currentProgress: { quizId: 'q4' } } })
+    )
+    const result = await calculateCompletionRate()
+    expect(result.completionRate).toBe(75)
+    expect(result.completedCount).toBe(3)
+    expect(result.startedCount).toBe(4)
+  })
+
+  it('handles malformed localStorage gracefully', async () => {
+    mockToArray.mockResolvedValue([{ id: 'a1', quizId: 'q1' }])
+    localStorage.setItem('levelup-quiz-store', 'not valid json')
+    const result = await calculateCompletionRate()
+    // Falls back to just completed count
+    expect(result.completedCount).toBe(1)
+    expect(result.startedCount).toBe(1)
+    expect(result.completionRate).toBe(100)
+  })
+
+  it('handles missing currentProgress in localStorage', async () => {
+    mockToArray.mockResolvedValue([{ id: 'a1', quizId: 'q1' }])
+    localStorage.setItem('levelup-quiz-store', JSON.stringify({ state: {} }))
+    const result = await calculateCompletionRate()
+    expect(result.completedCount).toBe(1)
+    expect(result.startedCount).toBe(1)
+  })
+
+  it('handles empty quizId in currentProgress', async () => {
+    mockToArray.mockResolvedValue([])
+    localStorage.setItem(
+      'levelup-quiz-store',
+      JSON.stringify({ state: { currentProgress: { quizId: '' } } })
+    )
+    const result = await calculateCompletionRate()
+    expect(result.startedCount).toBe(0)
+    expect(result.completionRate).toBe(0)
+  })
+
+  it('handles null localStorage value', async () => {
+    mockToArray.mockResolvedValue([{ id: 'a1', quizId: 'q1' }])
+    // localStorage.getItem returns null by default for missing keys
+    const result = await calculateCompletionRate()
+    expect(result.completedCount).toBe(1)
+    expect(result.startedCount).toBe(1)
   })
 })
 
