@@ -39,15 +39,7 @@ function QuizPerformanceSkeleton() {
 // Metric row
 // ---------------------------------------------------------------------------
 
-function MetricRow({
-  label,
-  value,
-  testId,
-}: {
-  label: string
-  value: string
-  testId?: string
-}) {
+function MetricRow({ label, value, testId }: { label: string; value: string; testId?: string }) {
   return (
     <div className="flex items-center justify-between py-1">
       <span className="text-sm text-muted-foreground">{label}</span>
