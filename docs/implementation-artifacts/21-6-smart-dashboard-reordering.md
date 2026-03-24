@@ -1,6 +1,6 @@
 ---
 story_id: E21-S06
-story_name: "Smart Dashboard Reordering"
+story_name: 'Smart Dashboard Reordering'
 status: in-progress
 started: 2026-03-23
 completed:
@@ -21,35 +21,41 @@ so that my most-used features are always at the top.
 ## Acceptance Criteria
 
 ### AC1: Track section interactions
+
 **Given** I am viewing the Overview dashboard
 **When** I scroll a section into view or interact with it (click, hover > 2s)
 **Then** the system records the interaction (section ID, timestamp, duration) in localStorage
 
 ### AC2: Auto-reorder by relevance
+
 **Given** I have accumulated at least 7 days of interaction data
 **When** I load the Overview dashboard
 **Then** sections are ordered by a relevance score (weighted: frequency × recency × duration)
 **And** the Hero Zone always remains first (pinned by default)
 
 ### AC3: Manual drag-and-drop override
+
 **Given** I am viewing the Overview dashboard
 **When** I drag a section to a new position using the drag handle
 **Then** the section moves to the new position
 **And** the custom order is persisted and overrides auto-reorder for that section
 
 ### AC4: Pin to top
+
 **Given** I right-click or long-press a section header
 **When** I select "Pin to top" from the context menu
 **Then** the section is pinned to the top (after Hero Zone)
 **And** pinned sections maintain their relative order
 
 ### AC5: Reset to default
+
 **Given** I have customized the dashboard order
 **When** I click "Reset to Default" in dashboard settings or the section context menu
 **Then** all sections return to the original fixed order
 **And** all interaction data and pins are cleared
 
 ### AC6: Keyboard accessibility
+
 **Given** I am navigating with keyboard only
 **When** I focus a section drag handle and press Space, then use arrow keys
 **Then** the section moves up/down in the dashboard order
@@ -131,4 +137,33 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+### IntersectionObserver for Section Tracking
+
+- Using `IntersectionObserver` with a 0.3 threshold provides a good balance between detecting genuine section views and ignoring brief scrolls past sections.
+- The observer must be set up via `useEffect` with proper cleanup (`disconnect()`) and remaining visibility timers must be flushed on unmount to avoid data loss.
+- Ref callbacks (`createSectionRef`) paired with data attributes (`data-section-id`) are cleaner than maintaining a separate ref map manually.
+
+### @dnd-kit Integration
+
+- `@dnd-kit/core` + `@dnd-kit/sortable` provides a clean declarative API for drag-and-drop with built-in keyboard accessibility (Space + Arrow keys).
+- Adding `DragOverlay` significantly improves visual feedback during drag operations — without it, the dragged item just dims in place.
+- The `PointerSensor` activation constraint (`distance: 5`) prevents accidental drags on click, which is important for the pin/unpin buttons adjacent to drag handles.
+- Drag handles should be hidden on mobile (`hidden sm:block`) since touch-based drag in constrained panels is unreliable.
+
+### Relevance Scoring Algorithm
+
+- A weighted score (40% recency, 30% views, 30% time spent) with logarithmic scaling and exponential recency decay (24h half-life) produces intuitive results.
+- The `computeAutoOrder` function correctly falls back to default order when all scores are 0 (new users), preventing confusing random-looking reorders.
+- `Date.now()` in the hook is acceptable for elapsed-time deltas (not display) — documented with eslint-disable comments for clarity.
+
+### localStorage State Management
+
+- Keeping order config and interaction stats in separate localStorage keys (`dashboard-section-order` and `dashboard-section-stats`) allows independent reset: clearing order preserves historical stats.
+- All localStorage reads must be wrapped in try/catch with fallback to defaults — corrupted JSON from manual edits or quota exceeded errors should never crash the dashboard.
+- The `getOrderConfig()` function handles schema evolution by adding missing section IDs and removing stale ones, preventing breakage when new sections are added in future stories.
+
+### Testing Patterns
+
+- Seeding `dashboard-section-stats` in localStorage with high view/time values for specific sections, then asserting render order, effectively tests the auto-reorder code path without needing to simulate real user interactions over time.
+- Manual order testing via direct localStorage seeding with `isManuallyOrdered: true` validates the same code path as actual drag-and-drop without flaky drag simulation.
+- The `Reset` button should only appear when `isManuallyOrdered` is true — showing it always confuses users who haven't customized anything (AC5 fidelity).

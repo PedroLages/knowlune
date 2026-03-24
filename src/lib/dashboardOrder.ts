@@ -70,6 +70,7 @@ export function getSectionStats(): Record<DashboardSectionId, SectionStats> {
     const raw = localStorage.getItem(STATS_KEY)
     if (raw) return JSON.parse(raw)
   } catch {
+    // silent-catch-ok: localStorage fallback to defaults
     // Corrupted data - return defaults
   }
   return createDefaultStats()
@@ -88,6 +89,7 @@ export function saveSectionStats(stats: Record<DashboardSectionId, SectionStats>
   try {
     localStorage.setItem(STATS_KEY, JSON.stringify(stats))
   } catch {
+    // silent-catch-ok: localStorage quota exceeded, stats non-critical
     // Storage quota exceeded - silently fail
   }
 }
@@ -130,6 +132,7 @@ export function getOrderConfig(): DashboardOrderConfig {
       return config
     }
   } catch {
+    // silent-catch-ok: localStorage fallback to defaults
     // Corrupted data - return defaults
   }
   return {
@@ -144,6 +147,7 @@ export function saveOrderConfig(config: DashboardOrderConfig): void {
   try {
     localStorage.setItem(ORDER_KEY, JSON.stringify(config))
   } catch {
+    // silent-catch-ok: localStorage quota exceeded, order non-critical
     // Storage quota exceeded - silently fail
   }
 }

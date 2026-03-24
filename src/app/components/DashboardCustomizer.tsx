@@ -7,15 +7,17 @@
  * - Reset to default order
  * - Visual indicator of current arrangement
  */
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import {
   DndContext,
+  DragOverlay,
   closestCenter,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
 } from '@dnd-kit/core'
 import {
   SortableContext,
@@ -75,7 +77,7 @@ function SortableSectionRow({
       data-testid={`section-row-${sectionId}`}
     >
       <button
-        className="cursor-grab touch-manipulation rounded p-1 text-muted-foreground hover:text-foreground active:cursor-grabbing"
+        className="hidden cursor-grab touch-manipulation rounded p-1 text-muted-foreground hover:text-foreground active:cursor-grabbing sm:block"
         aria-label={`Drag to reorder ${SECTION_LABELS[sectionId]}`}
         {...listeners}
       >
@@ -98,7 +100,11 @@ function SortableSectionRow({
             ? 'text-brand hover:bg-brand-soft hover:text-brand-soft-foreground'
             : 'text-muted-foreground hover:bg-muted hover:text-foreground'
         )}
-        aria-label={isPinned ? `Unpin ${SECTION_LABELS[sectionId]}` : `Pin ${SECTION_LABELS[sectionId]} to top`}
+        aria-label={
+          isPinned
+            ? `Unpin ${SECTION_LABELS[sectionId]}`
+            : `Pin ${SECTION_LABELS[sectionId]} to top`
+        }
         data-testid={`pin-${sectionId}`}
       >
         {isPinned ? (
@@ -122,14 +128,21 @@ export function DashboardCustomizer({
   onReorder,
   onReset,
 }: DashboardCustomizerProps) {
+  const [activeId, setActiveId] = useState<DashboardSectionId | null>(null)
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveId(event.active.id as DashboardSectionId)
+  }, [])
+
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event
+      setActiveId(null)
       if (over && active.id !== over.id) {
         const oldIndex = sectionOrder.indexOf(active.id as DashboardSectionId)
         const newIndex = sectionOrder.indexOf(over.id as DashboardSectionId)
@@ -160,7 +173,7 @@ export function DashboardCustomizer({
           {isOpen ? 'Close' : 'Customize Layout'}
         </Button>
 
-        {isOpen && (
+        {isOpen && isManuallyOrdered && (
           <Button
             variant="ghost"
             size="sm"
@@ -194,6 +207,7 @@ export function DashboardCustomizer({
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
             <SortableContext items={sectionOrder} strategy={verticalListSortingStrategy}>
@@ -210,6 +224,14 @@ export function DashboardCustomizer({
                 ))}
               </div>
             </SortableContext>
+            <DragOverlay>
+              {activeId ? (
+                <div className="flex items-center gap-3 rounded-xl border border-brand/30 bg-card px-3 py-2.5 shadow-lg">
+                  <GripVertical className="size-4 text-muted-foreground" aria-hidden="true" />
+                  <span className="flex-1 text-sm font-medium">{SECTION_LABELS[activeId]}</span>
+                </div>
+              ) : null}
+            </DragOverlay>
           </DndContext>
         </div>
       )}

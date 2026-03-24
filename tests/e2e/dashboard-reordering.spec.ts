@@ -10,6 +10,7 @@
  */
 import { test, expect } from '../support/fixtures'
 import { goToOverview } from '../support/helpers/navigation'
+import { FIXED_DATE } from '../utils/test-time'
 
 const DEFAULT_SECTION_ORDER = [
   'section-recommended-next',
@@ -41,8 +42,8 @@ test.describe('Dashboard Reordering (E21-S06)', () => {
     await expect(panel).toBeVisible()
     await expect(toggle).toHaveText('Close')
 
-    // Reset button should be visible
-    await expect(page.getByTestId('reset-dashboard-order')).toBeVisible()
+    // Reset button should NOT be visible when not manually ordered
+    await expect(page.getByTestId('reset-dashboard-order')).not.toBeVisible()
 
     // Close the panel
     await toggle.click()
@@ -184,6 +185,129 @@ test.describe('Dashboard Reordering (E21-S06)', () => {
     for (const sectionTestId of DEFAULT_SECTION_ORDER) {
       await expect(page.getByTestId(sectionTestId)).toBeAttached()
     }
+  })
+
+  test('AC2: should auto-reorder sections based on seeded relevance stats', async ({
+    page,
+    localStorage,
+  }) => {
+    await page.goto('/')
+
+    // Seed interaction stats with high relevance for course-gallery and insight-action
+    // so they should sort above sections with zero interactions
+    const now = FIXED_DATE
+    await localStorage.seed('dashboard-section-stats', {
+      'recommended-next': { views: 0, timeSpentMs: 0, lastAccessedAt: '' },
+      'metrics-strip': { views: 0, timeSpentMs: 0, lastAccessedAt: '' },
+      'engagement-zone': { views: 0, timeSpentMs: 0, lastAccessedAt: '' },
+      'study-history': { views: 0, timeSpentMs: 0, lastAccessedAt: '' },
+      'study-schedule': { views: 0, timeSpentMs: 0, lastAccessedAt: '' },
+      'insight-action': { views: 50, timeSpentMs: 600000, lastAccessedAt: now },
+      'course-gallery': { views: 100, timeSpentMs: 1200000, lastAccessedAt: now },
+    })
+
+    // Ensure no manual order is set (auto-reorder should kick in)
+    await localStorage.seed('dashboard-section-order', {
+      order: [
+        'recommended-next',
+        'metrics-strip',
+        'engagement-zone',
+        'study-history',
+        'study-schedule',
+        'insight-action',
+        'course-gallery',
+      ],
+      pinnedSections: [],
+      isManuallyOrdered: false,
+    })
+
+    await page.reload()
+    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 10000 })
+
+    // Gather rendered section order
+    const sections = page.locator('[data-testid^="section-"]')
+    const count = await sections.count()
+    const testIds: string[] = []
+    for (let i = 0; i < count; i++) {
+      const testId = await sections.nth(i).getAttribute('data-testid')
+      if (testId) testIds.push(testId)
+    }
+
+    // course-gallery and insight-action should be in top positions (before zero-interaction sections)
+    const courseGalleryIdx = testIds.indexOf('section-course-gallery')
+    const insightActionIdx = testIds.indexOf('section-insight-action')
+    const studyHistoryIdx = testIds.indexOf('section-study-history')
+
+    expect(courseGalleryIdx).toBeLessThan(studyHistoryIdx)
+    expect(insightActionIdx).toBeLessThan(studyHistoryIdx)
+    // course-gallery has higher stats, should come before insight-action
+    expect(courseGalleryIdx).toBeLessThan(insightActionIdx)
+  })
+
+  test('AC3: should render sections in manually-specified order from localStorage', async ({
+    page,
+    localStorage,
+  }) => {
+    await page.goto('/')
+
+    // Seed a specific manual order
+    const manualOrder = [
+      'course-gallery',
+      'study-schedule',
+      'insight-action',
+      'engagement-zone',
+      'study-history',
+      'metrics-strip',
+      'recommended-next',
+    ] as const
+
+    await localStorage.seed('dashboard-section-order', {
+      order: [...manualOrder],
+      pinnedSections: [],
+      isManuallyOrdered: true,
+    })
+
+    await page.reload()
+    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 10000 })
+
+    // Verify sections render in the exact manually-specified order
+    const sections = page.locator('[data-testid^="section-"]')
+    const count = await sections.count()
+    expect(count).toBe(7)
+
+    const testIds: string[] = []
+    for (let i = 0; i < count; i++) {
+      const testId = await sections.nth(i).getAttribute('data-testid')
+      if (testId) testIds.push(testId)
+    }
+
+    const expectedOrder = manualOrder.map(id => `section-${id}`)
+    expect(testIds).toEqual(expectedOrder)
+  })
+
+  test('should show reset button only when manually ordered', async ({ page, localStorage }) => {
+    await page.goto('/')
+    // Seed a manual order
+    await localStorage.seed('dashboard-section-order', {
+      order: [
+        'course-gallery',
+        'recommended-next',
+        'metrics-strip',
+        'engagement-zone',
+        'study-history',
+        'study-schedule',
+        'insight-action',
+      ],
+      pinnedSections: [],
+      isManuallyOrdered: true,
+    })
+    await page.reload()
+    await page.waitForSelector('[data-testid="stats-grid"]', { state: 'visible', timeout: 10000 })
+
+    await page.getByTestId('customize-dashboard-toggle').click()
+
+    // Reset button should be visible when manually ordered
+    await expect(page.getByTestId('reset-dashboard-order')).toBeVisible()
   })
 
   test('customizer panel should be keyboard accessible', async ({ page }) => {

@@ -6,7 +6,7 @@
  * - Section interaction tracking (IntersectionObserver)
  * - Pin/unpin, drag-reorder, and reset actions
  */
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import {
   type DashboardSectionId,
   type DashboardOrderConfig,
@@ -82,7 +82,7 @@ export function useDashboardOrder(): UseDashboardOrderReturn {
           if (entry.isIntersecting) {
             // Record view
             recordSectionView(sectionId)
-            // Start timer
+            // Start timer — Date.now() acceptable: elapsed-time delta, not display
             visibilityTimers.current.set(sectionId, Date.now())
           } else {
             // Record time spent
@@ -151,9 +151,11 @@ export function useDashboardOrder(): UseDashboardOrderReturn {
     setConfig({ ...newConfig })
   }, [])
 
+  const pinnedSectionsSet = useMemo(() => new Set(config.pinnedSections), [config.pinnedSections])
+
   return {
     sectionOrder: config.order,
-    pinnedSections: new Set(config.pinnedSections),
+    pinnedSections: pinnedSectionsSet,
     isManuallyOrdered: config.isManuallyOrdered,
     isCustomizing,
     setIsCustomizing,
