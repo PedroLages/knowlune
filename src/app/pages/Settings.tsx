@@ -371,7 +371,7 @@ export default function Settings() {
                 >
                   <div className="size-4 rounded-full bg-success flex items-center justify-center flex-shrink-0">
                     <svg
-                      className="w-3 h-3 text-white"
+                      className="size-3 text-white"
                       fill="none"
                       strokeLinecap="round"
                       strokeLinejoin="round"

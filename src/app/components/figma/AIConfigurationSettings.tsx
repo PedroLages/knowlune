@@ -12,6 +12,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import {
   Select,
@@ -139,6 +140,7 @@ export function AIConfigurationSettings() {
 
       setSettings(getAIConfiguration())
     } catch (error) {
+      // silent-catch-ok — error state rendered inline via connectionStatus
       // Transient error - do NOT persist to localStorage
       setSettings({
         ...settings,
@@ -181,9 +183,10 @@ export function AIConfigurationSettings() {
           <Select
             value={settings.provider}
             onValueChange={value =>
-              handleProviderChange(value as AIProviderId).catch(err =>
+              handleProviderChange(value as AIProviderId).catch(err => {
                 console.error('Failed to change AI provider:', err)
-              )
+                toast.error('Failed to change AI provider')
+              })
             }
           >
             <SelectTrigger
@@ -272,9 +275,10 @@ export function AIConfigurationSettings() {
                       id={`consent-${key}`}
                       checked={settings.consentSettings[key]}
                       onCheckedChange={checked =>
-                        updateConsent(key, checked).catch(err =>
+                        updateConsent(key, checked).catch(err => {
                           console.error(`Failed to update consent for ${key}:`, err)
-                        )
+                          toast.error('Failed to update consent setting')
+                        })
                       }
                       data-testid={`consent-${key}`}
                       aria-label={`${label} consent`}

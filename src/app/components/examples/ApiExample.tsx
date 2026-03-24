@@ -55,7 +55,7 @@ export function CoursesExample() {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-brand" />
+        <Loader2 className="size-8 animate-spin text-brand" />
         <span className="ml-2">Loading courses...</span>
       </div>
     )
@@ -64,7 +64,7 @@ export function CoursesExample() {
   if (error) {
     return (
       <div className="flex items-center gap-2 p-4 bg-destructive/10 text-destructive rounded-lg">
-        <AlertCircle className="h-5 w-5" />
+        <AlertCircle className="size-5" />
         <span>{error}</span>
       </div>
     )
@@ -141,14 +141,14 @@ export function CourseDetailExample({ courseId }: { courseId: string }) {
       <CardContent className="space-y-4">
         <div className="flex gap-2">
           <Button onClick={loadCourse} disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {loading && <Loader2 className="mr-2 size-4 animate-spin" />}
             Load Course {courseId}
           </Button>
         </div>
 
         {error && (
           <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-lg">
-            <AlertCircle className="h-5 w-5 flex-shrink-0" />
+            <AlertCircle className="size-5 flex-shrink-0" />
             <span className="text-sm">{error}</span>
           </div>
         )}
@@ -156,7 +156,7 @@ export function CourseDetailExample({ courseId }: { courseId: string }) {
         {course && (
           <div className="space-y-3">
             <div className="flex items-center gap-2 p-3 bg-success/10 text-success rounded-lg">
-              <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
+              <CheckCircle2 className="size-5 flex-shrink-0" />
               <span className="text-sm">Course loaded successfully!</span>
             </div>
             <div className="p-4 bg-muted rounded-lg">
@@ -223,18 +223,18 @@ export function ProgressUpdateExample({ lessonId = 'lesson-1', courseId = '1' })
       <CardContent className="space-y-4">
         <div className="flex gap-2">
           <Button onClick={() => updateProgress(false)} disabled={updating} variant="outline">
-            {updating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {updating && <Loader2 className="mr-2 size-4 animate-spin" />}
             Mark In Progress (48%)
           </Button>
           <Button onClick={() => updateProgress(true)} disabled={updating}>
-            {updating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {updating && <Loader2 className="mr-2 size-4 animate-spin" />}
             Mark Complete (100%)
           </Button>
         </div>
 
         {error && (
           <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-lg">
-            <AlertCircle className="h-5 w-5 flex-shrink-0" />
+            <AlertCircle className="size-5 flex-shrink-0" />
             <span className="text-sm">{error}</span>
           </div>
         )}
@@ -242,7 +242,7 @@ export function ProgressUpdateExample({ lessonId = 'lesson-1', courseId = '1' })
         {result && (
           <div className="space-y-3">
             <div className="flex items-center gap-2 p-3 bg-success/10 text-success rounded-lg">
-              <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
+              <CheckCircle2 className="size-5 flex-shrink-0" />
               <span className="text-sm">{result.message}</span>
             </div>
             <div className="p-4 bg-muted rounded-lg">
@@ -282,7 +282,7 @@ export function UserProfileExample() {
       </CardHeader>
       <CardContent className="space-y-4">
         <Button onClick={loadProfile} disabled={loading}>
-          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {loading && <Loader2 className="mr-2 size-4 animate-spin" />}
           Load User Profile
         </Button>
 
@@ -292,7 +292,7 @@ export function UserProfileExample() {
               <img
                 src={profile.avatar}
                 alt={profile.name}
-                className="w-16 h-16 rounded-full object-cover"
+                className="size-16 rounded-full object-cover"
               />
               <div>
                 <h3 className="font-semibold">{profile.name}</h3>

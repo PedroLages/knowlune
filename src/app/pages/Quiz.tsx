@@ -126,6 +126,9 @@ export function Quiz() {
   const [showSubmitDialog, setShowSubmitDialog] = useState(false)
   const nextBtnRef = useRef<HTMLButtonElement>(null)
   const rafRef = useRef<number>(0)
+  // Ref for programmatic focus when question changes — tabIndex={-1} makes it
+  // focusable via .focus() but NOT reachable via Tab (WCAG 2.4.3 Focus Order)
+  const questionContainerRef = useRef<HTMLDivElement>(null)
 
   // Fetch quiz from Dexie on mount
   useEffect(() => {
@@ -356,6 +359,14 @@ export function Quiz() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [isQuizActive])
 
+  // Programmatic focus on question change (AC #2)
+  // Moves focus to the question container when the current question index changes.
+  // The container uses tabIndex={-1} so it is reachable via .focus() but not Tab.
+  useEffect(() => {
+    if (!isQuizActive) return
+    questionContainerRef.current?.focus()
+  }, [isQuizActive, currentProgress?.currentQuestionIndex])
+
   // ---------------------------------------------------------------------------
   // Loading state
   // ---------------------------------------------------------------------------
@@ -428,53 +439,75 @@ export function Quiz() {
 
     const unansweredCount = countUnanswered(currentQuiz.questions, currentProgress.answers)
 
+    const totalQuestions = currentProgress.questionOrder.length || currentQuiz.questions.length
+
     return (
-      <div className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm">
-        <QuizHeader
-          quiz={currentQuiz}
-          progress={currentProgress}
-          timeRemaining={timerInitialSecondsRef.current > 0 ? timerRemaining : null}
-          totalTimeSeconds={totalTimeSeconds > 0 ? totalTimeSeconds : null}
-        />
-        <TimerWarnings
-          warningLevel={warningState?.level ?? null}
-          remainingSeconds={warningState?.remaining ?? 0}
-        />
-        {currentQuestion && currentQuestionId ? (
-          <>
-            <QuestionDisplay
-              question={currentQuestion}
-              value={currentAnswer}
-              onChange={answer => {
-                submitAnswer(currentQuestionId, answer)
-                // Auto-focus Next/Submit button for single-answer types (MC, TF, FIB)
-                // Skip for multiple-select — user needs to toggle multiple checkboxes
-                if (currentQuestion.type !== 'multiple-select') {
-                  cancelAnimationFrame(rafRef.current)
-                  rafRef.current = requestAnimationFrame(() => nextBtnRef.current?.focus())
-                }
-              }}
-              mode="active"
-            />
-            <QuestionHint hint={currentQuestion.hint} />
-            {showImmediateFeedback && !isUnanswered(currentAnswer) && (
-              <AnswerFeedback question={currentQuestion} userAnswer={currentAnswer} />
-            )}
-          </>
-        ) : (
-          <div className="mt-6 rounded-xl border border-border p-6 text-center text-muted-foreground text-sm">
-            No question found at index {currentProgress.currentQuestionIndex}
-          </div>
-        )}
-
-        {currentQuestionId && (
-          <MarkForReview
-            questionId={currentQuestionId}
-            isMarked={currentProgress.markedForReview.includes(currentQuestionId)}
-            onToggle={() => toggleReviewMark(currentQuestionId)}
+      <div
+        className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm"
+        data-testid="quiz-active-container"
+      >
+        <section aria-label="Quiz header">
+          <QuizHeader
+            quiz={currentQuiz}
+            progress={currentProgress}
+            timeRemaining={timerInitialSecondsRef.current > 0 ? timerRemaining : null}
+            totalTimeSeconds={totalTimeSeconds > 0 ? totalTimeSeconds : null}
           />
-        )}
+          <TimerWarnings
+            warningLevel={warningState?.level ?? null}
+            remainingSeconds={warningState?.remaining ?? 0}
+          />
+        </section>
+        <section aria-label="Question area">
+          {/* sr-only h2 establishes the heading for this section (h1 is quiz title in QuizHeader) */}
+          <h2 className="sr-only">
+            Question {currentProgress.currentQuestionIndex + 1} of {totalQuestions}
+          </h2>
+          {currentQuestion && currentQuestionId ? (
+            <>
+              {/* tabIndex={-1}: programmatically focusable on question change, not in tab order */}
+              <div
+                ref={questionContainerRef}
+                tabIndex={-1}
+                className="outline-none"
+                data-testid="question-container"
+              >
+                <QuestionDisplay
+                  question={currentQuestion}
+                  value={currentAnswer}
+                  onChange={answer => {
+                    submitAnswer(currentQuestionId, answer)
+                    // Auto-focus Next/Submit button for single-answer types (MC, TF, FIB)
+                    // Skip for multiple-select — user needs to toggle multiple checkboxes
+                    if (currentQuestion.type !== 'multiple-select') {
+                      cancelAnimationFrame(rafRef.current)
+                      rafRef.current = requestAnimationFrame(() => nextBtnRef.current?.focus())
+                    }
+                  }}
+                  mode="active"
+                />
+              </div>
+              <QuestionHint hint={currentQuestion.hint} />
+              {showImmediateFeedback && !isUnanswered(currentAnswer) && (
+                <AnswerFeedback question={currentQuestion} userAnswer={currentAnswer} />
+              )}
+            </>
+          ) : (
+            <div className="mt-6 rounded-xl border border-border p-6 text-center text-muted-foreground text-sm">
+              No question found at index {currentProgress.currentQuestionIndex}
+            </div>
+          )}
 
+          {currentQuestionId && (
+            <MarkForReview
+              questionId={currentQuestionId}
+              isMarked={currentProgress.markedForReview.includes(currentQuestionId)}
+              onToggle={() => toggleReviewMark(currentQuestionId)}
+            />
+          )}
+        </section>
+
+        {/* QuizNavigation renders <nav aria-label="Quiz navigation"> internally */}
         <QuizNavigation
           ref={nextBtnRef}
           quiz={currentQuiz}

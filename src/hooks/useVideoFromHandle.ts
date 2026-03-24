@@ -29,6 +29,7 @@ export function useVideoFromHandle(handle: FileSystemFileHandle | null | undefin
         objectUrl = URL.createObjectURL(file)
         if (!cancelled) setState({ blobUrl: objectUrl, error: null, loading: false })
       } catch {
+        // silent-catch-ok — error state rendered by consuming component
         if (!cancelled) setState({ blobUrl: null, error: 'file-not-found', loading: false })
       }
     }
