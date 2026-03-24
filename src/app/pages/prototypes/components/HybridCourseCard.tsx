@@ -39,7 +39,7 @@ export function HybridCourseCard({ course, completionPercent }: HybridCourseCard
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <BookOpen className="h-12 w-12 text-neutral-300" aria-hidden="true" />
+              <BookOpen className="size-12 text-neutral-300" aria-hidden="true" />
             </div>
           )}
 

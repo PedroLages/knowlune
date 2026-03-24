@@ -25,9 +25,10 @@ export default function App() {
   // Load vector embeddings from IndexedDB on startup
   useEffect(() => {
     if (supportsWorkers()) {
-      vectorStorePersistence
-        .loadAll()
-        .catch(err => console.error('[App] Vector store init failed:', err))
+      vectorStorePersistence.loadAll().catch(err => {
+        // silent-catch-ok — non-critical background initialization
+        console.error('[App] Vector store init failed:', err)
+      })
     }
   }, [])
 

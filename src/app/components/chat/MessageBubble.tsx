@@ -79,16 +79,16 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
       <div className={`flex gap-3 max-w-[80%] ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
         {/* Avatar */}
         <div
-          className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+          className={`flex-shrink-0 size-8 rounded-full flex items-center justify-center ${
             isUser ? 'bg-brand' : 'bg-accent'
           }`}
           aria-label={isUser ? 'You' : 'AI Assistant'}
           role="img"
         >
           {isUser ? (
-            <User className="w-4 h-4 text-white" />
+            <User className="size-4 text-white" />
           ) : (
-            <Sparkles className="w-4 h-4 text-accent-foreground" />
+            <Sparkles className="size-4 text-accent-foreground" />
           )}
         </div>
 
@@ -102,7 +102,7 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
             {renderContentWithCitations()}
             {isStreaming && (
               <span className="inline-flex items-center ml-1">
-                <Loader2 className="w-3 h-3 animate-spin" />
+                <Loader2 className="size-3 animate-spin" />
               </span>
             )}
           </div>

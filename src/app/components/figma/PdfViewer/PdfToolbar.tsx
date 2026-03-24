@@ -124,13 +124,13 @@ export function PdfToolbar({
           data-testid="pdf-toggle-collapse"
           variant="ghost"
           size="icon"
-          className="h-8 w-8"
+          className="size-8"
           onClick={toggleCollapsed}
           aria-label={collapsed ? 'Expand PDF viewer' : 'Collapse PDF viewer'}
           aria-expanded={!collapsed}
           title={collapsed ? 'Expand' : 'Collapse'}
         >
-          {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+          {collapsed ? <ChevronDown className="size-4" /> : <ChevronUp className="size-4" />}
         </Button>
       )}
 
@@ -153,26 +153,26 @@ export function PdfToolbar({
             data-testid="pdf-toggle-thumbnails"
             variant={thumbnailsOpen ? 'secondary' : 'ghost'}
             size="icon"
-            className="h-8 w-8"
+            className="size-8"
             onClick={toggleThumbnails}
             aria-label={thumbnailsOpen ? 'Hide thumbnails' : 'Show thumbnails'}
             aria-pressed={thumbnailsOpen}
             title="Thumbnails"
           >
-            <PanelLeft className="h-4 w-4" />
+            <PanelLeft className="size-4" />
           </Button>
 
           <Button
             data-testid="pdf-toggle-outline"
             variant={outlineOpen ? 'secondary' : 'ghost'}
             size="icon"
-            className="h-8 w-8"
+            className="size-8"
             onClick={toggleOutline}
             aria-label={outlineOpen ? 'Hide outline' : 'Show outline'}
             aria-pressed={outlineOpen}
             title="Outline"
           >
-            <BookOpen className="h-4 w-4" />
+            <BookOpen className="size-4" />
           </Button>
 
           {/* Separator */}
@@ -191,7 +191,7 @@ export function PdfToolbar({
           disabled={currentPage <= 1}
           aria-label="Previous page"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="size-4" />
         </Button>
 
         <div data-testid="pdf-page-indicator" className="flex items-center gap-1 text-sm">
@@ -222,7 +222,7 @@ export function PdfToolbar({
           disabled={currentPage >= totalPages}
           aria-label="Next page"
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="size-4" />
         </Button>
       </div>
 
@@ -242,7 +242,7 @@ export function PdfToolbar({
               onClick={zoomOut}
               aria-label="Zoom out"
             >
-              <ZoomOut className="h-4 w-4" />
+              <ZoomOut className="size-4" />
             </Button>
 
             {/* Zoom dropdown */}
@@ -286,7 +286,7 @@ export function PdfToolbar({
               onClick={zoomIn}
               aria-label="Zoom in"
             >
-              <ZoomIn className="h-4 w-4" />
+              <ZoomIn className="size-4" />
             </Button>
 
             {/* Fit width / Fit page */}
@@ -299,7 +299,7 @@ export function PdfToolbar({
               aria-label="Fit to width"
               title="Fit to width"
             >
-              <ChevronsLeftRight className="h-4 w-4" />
+              <ChevronsLeftRight className="size-4" />
             </Button>
 
             <Button
@@ -311,7 +311,7 @@ export function PdfToolbar({
               aria-label="Fit to page"
               title="Fit to page"
             >
-              <Maximize2 className="h-4 w-4" />
+              <Maximize2 className="size-4" />
             </Button>
           </div>
 
@@ -324,13 +324,13 @@ export function PdfToolbar({
               data-testid="pdf-toggle-search"
               variant={searchOpen ? 'secondary' : 'ghost'}
               size="icon"
-              className="h-8 w-8"
+              className="size-8"
               onClick={toggleSearch}
               aria-label={searchOpen ? 'Close search' : 'Search'}
               aria-pressed={searchOpen}
               title="Search (Ctrl+F)"
             >
-              <Search className="h-4 w-4" />
+              <Search className="size-4" />
             </Button>
 
             {!compact && (
@@ -338,12 +338,12 @@ export function PdfToolbar({
                 data-testid="pdf-toggle-scroll-mode"
                 variant={scrollMode === 'continuous' ? 'secondary' : 'ghost'}
                 size="icon"
-                className="h-8 w-8"
+                className="size-8"
                 onClick={toggleScrollMode}
                 aria-label={scrollMode === 'single' ? 'Continuous scroll' : 'Single page'}
                 title={scrollMode === 'single' ? 'Continuous scroll' : 'Single page'}
               >
-                <Rows3 className="h-4 w-4" />
+                <Rows3 className="size-4" />
               </Button>
             )}
 
@@ -352,40 +352,40 @@ export function PdfToolbar({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="size-8"
               onClick={rotateClockwise}
               aria-label="Rotate clockwise"
               title="Rotate"
             >
-              <RotateCw className="h-4 w-4" />
+              <RotateCw className="size-4" />
             </Button>
 
             <Button
               variant={darkMode ? 'secondary' : 'ghost'}
               size="icon"
-              className="h-8 w-8"
+              className="size-8"
               onClick={toggleDarkMode}
               aria-label={darkMode ? 'Light mode' : 'Dark mode'}
               title={darkMode ? 'Light mode' : 'Dark mode'}
             >
-              {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              {darkMode ? <Sun className="size-4" /> : <Moon className="size-4" />}
             </Button>
 
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="size-8"
               onClick={() => handlePrint(src)}
               aria-label="Print"
               title="Print"
             >
-              <Printer className="h-4 w-4" />
+              <Printer className="size-4" />
             </Button>
 
             <a href={src} download aria-label="Download PDF" title="Download">
-              <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+              <Button variant="ghost" size="icon" className="size-8" asChild>
                 <span>
-                  <Download className="h-4 w-4" />
+                  <Download className="size-4" />
                 </span>
               </Button>
             </a>
@@ -400,7 +400,7 @@ export function PdfToolbar({
                 className="h-11 w-11 sm:hidden"
                 aria-label="More actions"
               >
-                <MoreHorizontal className="h-4 w-4" />
+                <MoreHorizontal className="size-4" />
               </Button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-48 p-1">
@@ -410,14 +410,14 @@ export function PdfToolbar({
                     onClick={toggleThumbnails}
                     className="flex w-full items-center gap-2 rounded px-3 py-2 text-sm hover:bg-accent"
                   >
-                    <PanelLeft className="h-4 w-4" />
+                    <PanelLeft className="size-4" />
                     {thumbnailsOpen ? 'Hide thumbnails' : 'Thumbnails'}
                   </button>
                   <button
                     onClick={toggleOutline}
                     className="flex w-full items-center gap-2 rounded px-3 py-2 text-sm hover:bg-accent"
                   >
-                    <BookOpen className="h-4 w-4" />
+                    <BookOpen className="size-4" />
                     {outlineOpen ? 'Hide outline' : 'Outline'}
                   </button>
                 </>
@@ -426,7 +426,7 @@ export function PdfToolbar({
                 onClick={toggleSearch}
                 className="flex w-full items-center gap-2 rounded px-3 py-2 text-sm hover:bg-accent"
               >
-                <Search className="h-4 w-4" />
+                <Search className="size-4" />
                 {searchOpen ? 'Close search' : 'Search'}
               </button>
               {!compact && (
@@ -434,7 +434,7 @@ export function PdfToolbar({
                   onClick={toggleScrollMode}
                   className="flex w-full items-center gap-2 rounded px-3 py-2 text-sm hover:bg-accent"
                 >
-                  <Rows3 className="h-4 w-4" />
+                  <Rows3 className="size-4" />
                   {scrollMode === 'single' ? 'Continuous scroll' : 'Single page'}
                 </button>
               )}
@@ -443,33 +443,33 @@ export function PdfToolbar({
                 onClick={rotateClockwise}
                 className="flex w-full items-center gap-2 rounded px-3 py-2 text-sm hover:bg-accent"
               >
-                <RotateCw className="h-4 w-4" /> Rotate
+                <RotateCw className="size-4" /> Rotate
               </button>
               <button
                 onClick={toggleDarkMode}
                 className="flex w-full items-center gap-2 rounded px-3 py-2 text-sm hover:bg-accent"
               >
-                {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                {darkMode ? <Sun className="size-4" /> : <Moon className="size-4" />}
                 {darkMode ? 'Light mode' : 'Dark mode'}
               </button>
               <button
                 onClick={() => handlePrint(src)}
                 className="flex w-full items-center gap-2 rounded px-3 py-2 text-sm hover:bg-accent"
               >
-                <Printer className="h-4 w-4" /> Print
+                <Printer className="size-4" /> Print
               </button>
               <a
                 href={src}
                 download
                 className="flex w-full items-center gap-2 rounded px-3 py-2 text-sm hover:bg-accent"
               >
-                <Download className="h-4 w-4" /> Download
+                <Download className="size-4" /> Download
               </a>
               <button
                 onClick={toggleFullscreen}
                 className="flex w-full items-center gap-2 rounded px-3 py-2 text-sm hover:bg-accent"
               >
-                {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+                {isFullscreen ? <Minimize className="size-4" /> : <Maximize className="size-4" />}
                 {isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
               </button>
             </PopoverContent>
@@ -491,7 +491,7 @@ export function PdfToolbar({
           aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
           title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
         >
-          {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+          {isFullscreen ? <Minimize className="size-4" /> : <Maximize className="size-4" />}
         </Button>
       )}
 
@@ -505,7 +505,7 @@ export function PdfToolbar({
         aria-label="Open PDF in new tab"
         title="Open in new tab"
       >
-        <ExternalLink className="h-4 w-4" />
+        <ExternalLink className="size-4" />
       </Button>
     </div>
   )

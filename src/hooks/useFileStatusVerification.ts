@@ -83,7 +83,10 @@ export function useFileStatusVerification(
       }
     }
 
-    verifyAll().catch(err => console.error('[FileStatusVerification] Unexpected error:', err))
+    verifyAll().catch(err => {
+      // silent-catch-ok — non-critical background file verification
+      console.error('[FileStatusVerification] Unexpected error:', err)
+    })
 
     return () => {
       ignore = true
