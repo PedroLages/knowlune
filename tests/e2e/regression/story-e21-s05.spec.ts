@@ -172,11 +172,8 @@ test.describe('AC2: Toggling badges hides MomentumBadge on Overview', () => {
     await badgesToggle.click()
     await expect(badgesToggle).toBeChecked()
 
-    // AND: Navigate back to Overview
-    await goToOverview(page)
-
-    // THEN: Momentum badges should now be visible (if course data present)
-    // Verify localStorage was updated to badges: true
+    // THEN: Verify localStorage was updated to badges: true
+    // (Must check before navigating away — addInitScript re-runs on each navigation)
     const prefs = await page.evaluate(
       key => JSON.parse(localStorage.getItem(key) || '{}'),
       PREFS_KEY
