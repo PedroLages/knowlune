@@ -1,6 +1,8 @@
 import { create } from 'zustand'
+import { useCourseImportStore } from './useCourseImportStore'
 
-const STORAGE_KEY = 'levelup-onboarding-v1'
+const STORAGE_KEY = 'knowlune-onboarding-v1'
+const LEGACY_STORAGE_KEY = 'levelup-onboarding-v1'
 
 export type OnboardingStep = 0 | 1 | 2 | 3
 
@@ -32,6 +34,13 @@ type OnboardingStore = OnboardingState & OnboardingActions
 
 function loadPersistedState(): Pick<OnboardingState, 'completedAt' | 'skipped'> {
   try {
+    // Migrate legacy "levelup-onboarding-v1" key to new key
+    const legacy = localStorage.getItem(LEGACY_STORAGE_KEY)
+    if (legacy && !localStorage.getItem(STORAGE_KEY)) {
+      localStorage.setItem(STORAGE_KEY, legacy)
+      localStorage.removeItem(LEGACY_STORAGE_KEY)
+    }
+
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw)
@@ -67,6 +76,16 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
       set({ completedAt: persisted.completedAt, skipped: persisted.skipped })
       return
     }
+
+    // If user already has imported courses, skip onboarding (existing user)
+    const { importedCourses } = useCourseImportStore.getState()
+    if (importedCourses.length > 0) {
+      const now = new Date().toISOString()
+      persistCompletion(now, true)
+      set({ completedAt: now, skipped: true })
+      return
+    }
+
     set({ isActive: true, currentStep: 1 })
   },
 

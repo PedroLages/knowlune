@@ -43,10 +43,12 @@ const storeState = {
   importError: null as string | null,
   importProgress: null,
   thumbnailUrls: {} as Record<string, string>,
+  autoAnalysisStatus: {} as Record<string, string>,
   addImportedCourse: vi.fn(),
   removeImportedCourse: vi.fn(),
   updateCourseTags: vi.fn(),
   updateCourseStatus: vi.fn(),
+  updateCourseDetails: vi.fn().mockResolvedValue(true),
   getAllTags: () => [] as string[],
   loadImportedCourses: vi.fn(),
   setImporting: vi.fn(),
@@ -138,6 +140,26 @@ vi.mock('@/app/components/figma/ThumbnailPickerDialog', () => ({
 
 vi.mock('@/app/components/figma/MomentumBadge', () => ({
   MomentumBadge: () => null,
+}))
+
+vi.mock('@/stores/useAuthorStore', () => ({
+  useAuthorStore: (selector: (state: Record<string, unknown>) => unknown) =>
+    selector({
+      authors: [],
+      loadAuthors: vi.fn(),
+    }),
+}))
+
+vi.mock('@/lib/authors', () => ({
+  getAuthorForCourse: () => undefined,
+  getAuthorForImportedCourse: () => undefined,
+  getAvatarSrc: () => ({ src: '' }),
+  getInitials: (name: string) =>
+    name
+      .split(' ')
+      .map((n: string) => n[0])
+      .join('')
+      .toUpperCase(),
 }))
 
 // Import component AFTER all mocks
@@ -381,6 +403,8 @@ describe('Courses page', () => {
     })
 
     it('reads collapse state from localStorage on mount and starts collapsed', () => {
+      // Need imported courses so auto-expand effect (importedCourses.length === 0 → expand) doesn't fire
+      storeState.importedCourses = mockCourses
       localStorage.setItem('knowlune:sample-courses-collapsed', 'true')
       renderCourses()
       // Grid should not be present when collapsed
@@ -388,6 +412,10 @@ describe('Courses page', () => {
     })
 
     it('persists collapse state to localStorage when toggled', async () => {
+      // Need imported courses so auto-expand effect (importedCourses.length === 0 → expand) doesn't undo the toggle
+      storeState.importedCourses = mockCourses
+      // Pre-set localStorage so auto-collapse effect doesn't also write on mount
+      localStorage.setItem('knowlune:sample-courses-collapsed', 'false')
       const user = userEvent.setup()
       renderCourses()
       // Starts expanded (grid visible)

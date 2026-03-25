@@ -51,6 +51,9 @@ export function MultipleSelectQuestion({
       aria-describedby={hintId}
       onKeyDown={handleKeyDown}
     >
+      {/* Empty legend satisfies semantic HTML requirement; aria-labelledby on fieldset
+          provides the accessible name so no duplicate text node is added to the DOM */}
+      <legend className="sr-only" />
       <div
         id={labelId}
         data-testid="question-text"
@@ -91,7 +94,7 @@ export function MultipleSelectQuestion({
                 'flex items-center gap-3 rounded-xl p-4 min-h-12 transition-colors duration-150 motion-reduce:transition-none border-2',
                 isActive ? 'cursor-pointer' : 'cursor-default',
                 reviewStyle,
-                'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2'
+                'focus-within:ring-2 focus-within:ring-brand focus-within:ring-offset-2'
               )}
             >
               {isActive && shortcutNum <= 9 && (

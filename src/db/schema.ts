@@ -19,6 +19,9 @@ import type {
   Course,
   VideoCaptionRecord,
   Flashcard,
+  ImportedAuthor,
+  CareerPath,
+  PathEnrollment,
 } from '@/data/types'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 
@@ -44,6 +47,9 @@ const db = new Dexie('ElearningDB') as Dexie & {
   quizAttempts: EntityTable<QuizAttempt, 'id'>
   videoCaptions: Table<VideoCaptionRecord> // compound PK: [courseId+videoId]
   flashcards: EntityTable<Flashcard, 'id'>
+  authors: EntityTable<ImportedAuthor, 'id'>
+  careerPaths: EntityTable<CareerPath, 'id'>
+  pathEnrollments: EntityTable<PathEnrollment, 'id'>
 }
 
 db.version(1).stores({
@@ -478,9 +484,128 @@ db.version(19)
       })
   })
 
-// v20: Add flashcards table for SM-2 spaced repetition flashcard system
-db.version(20).stores({
-  // All 20 existing v19 tables (must redeclare or Dexie deletes them)
+// v20: Authors table for user-managed author profiles (E25-S01)
+// Migration: pre-seeds Chase Hughes, migrates importedCourses authorName → ImportedAuthor records
+db.version(20)
+  .stores({
+    // All 21 existing v19 tables (unchanged — must redeclare or Dexie deletes them)
+    importedCourses: 'id, name, importedAt, status, *tags',
+    importedVideos: 'id, courseId, filename',
+    importedPdfs: 'id, courseId, filename',
+    progress: '[courseId+videoId], courseId, videoId',
+    bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+    notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+    screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+    studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+    contentProgress: '[courseId+itemId], courseId, itemId, status',
+    challenges: 'id, type, deadline, createdAt',
+    embeddings: 'noteId, createdAt',
+    learningPath: 'courseId, position, generatedAt',
+    courseThumbnails: 'courseId',
+    aiUsageEvents: 'id, featureType, timestamp, courseId',
+    reviewRecords: 'id, noteId, nextReviewAt, reviewedAt',
+    courseReminders: 'id, courseId',
+    courses: 'id, category, difficulty, authorId',
+    quizzes: 'id, lessonId, createdAt',
+    quizAttempts: 'id, quizId, [quizId+completedAt], completedAt',
+    videoCaptions: '[courseId+videoId], courseId, videoId',
+    // NEW: User-managed author profiles
+    authors: 'id, name, createdAt',
+  })
+  .upgrade(async tx => {
+    try {
+      const now = new Date().toISOString()
+      const authorsTable = tx.table('authors')
+      const coursesTable = tx.table('importedCourses')
+
+      // AC7: Pre-seed Chase Hughes from static data
+      const chaseHughesId = 'chase-hughes'
+      await authorsTable.add({
+        id: chaseHughesId,
+        name: 'Chase Hughes',
+        bio: 'Chase Hughes is a leading expert in behavioral analysis, persuasion, and influence. With over two decades of experience training law enforcement, intelligence professionals, and military personnel worldwide, he has developed some of the most advanced behavioral profiling techniques used in the field today.',
+        photoUrl: '/images/instructors/chase-hughes',
+        courseIds: [],
+        specialties: [
+          'Behavioral Analysis',
+          'Deception Detection',
+          'Body Language',
+          'Influence & Persuasion',
+          'Operative Training',
+        ],
+        socialLinks: {
+          website: 'https://www.chasehughes.com',
+          twitter: 'https://twitter.com/taborplace',
+        },
+        isPreseeded: true,
+        createdAt: now,
+        updatedAt: now,
+      })
+
+      // AC3: Migrate existing importedCourses with authorName strings to ImportedAuthor records
+      const courses = await coursesTable.toArray()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const coursesWithAuthorName = courses.filter((c: any) => c.authorName)
+
+      if (coursesWithAuthorName.length > 0) {
+        // Deduplicate author names (case-insensitive, trimmed)
+        const authorMap = new Map<string, string>() // normalized name → author ID
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        for (const course of coursesWithAuthorName as any[]) {
+          const rawName: string = course.authorName
+          const normalized = rawName.trim().toLowerCase()
+
+          // Skip empty strings after trimming
+          if (!normalized) continue
+
+          if (!authorMap.has(normalized)) {
+            const authorId = crypto.randomUUID()
+            authorMap.set(normalized, authorId)
+
+            // Use the original (first-seen) name for display
+            await authorsTable.add({
+              id: authorId,
+              name: rawName.trim(),
+              bio: undefined,
+              photoUrl: undefined,
+              courseIds: [course.id],
+              isPreseeded: false,
+              createdAt: now,
+              updatedAt: now,
+            })
+          } else {
+            // Link course to existing author and update courseIds
+            const existingAuthorId = authorMap.get(normalized)!
+            const existingAuthor = await authorsTable.get(existingAuthorId)
+            if (existingAuthor) {
+              await authorsTable.update(existingAuthorId, {
+                courseIds: [...existingAuthor.courseIds, course.id],
+              })
+            }
+          }
+
+          // Set authorId on the course
+          await coursesTable.update(course.id, {
+            authorId: authorMap.get(normalized),
+          })
+        }
+
+        console.log(
+          `[Migration v20] Created ${authorMap.size} author profile(s) from ${coursesWithAuthorName.length} courses`
+        )
+      }
+
+      console.log('[Migration v20] Authors table created with Chase Hughes pre-seeded')
+    } catch (error) {
+      console.error('[Migration v20] Author migration failed:', error)
+      // Graceful degradation: app loads without author features (AC4)
+      // Don't rethrow — preserve existing data
+    }
+  })
+
+// v21: Career Paths system — curated multi-course learning journeys (E20-S01)
+db.version(21).stores({
+  // All 22 existing v20 tables (unchanged — must redeclare or Dexie deletes them)
   importedCourses: 'id, name, importedAt, status, *tags',
   importedVideos: 'id, courseId, filename',
   importedPdfs: 'id, courseId, filename',
@@ -501,6 +626,38 @@ db.version(20).stores({
   quizzes: 'id, lessonId, createdAt',
   quizAttempts: 'id, quizId, [quizId+completedAt], completedAt',
   videoCaptions: '[courseId+videoId], courseId, videoId',
+  authors: 'id, name, createdAt',
+  // NEW: Career Paths tables
+  careerPaths: 'id',
+  pathEnrollments: 'id, pathId, status',
+})
+
+// v22: Add flashcards table for SM-2 spaced repetition flashcard system (E20-S02)
+db.version(22).stores({
+  // All 24 existing v21 tables (unchanged — must redeclare or Dexie deletes them)
+  importedCourses: 'id, name, importedAt, status, *tags',
+  importedVideos: 'id, courseId, filename',
+  importedPdfs: 'id, courseId, filename',
+  progress: '[courseId+videoId], courseId, videoId',
+  bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+  screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+  contentProgress: '[courseId+itemId], courseId, itemId, status',
+  challenges: 'id, type, deadline, createdAt',
+  embeddings: 'noteId, createdAt',
+  learningPath: 'courseId, position, generatedAt',
+  courseThumbnails: 'courseId',
+  aiUsageEvents: 'id, featureType, timestamp, courseId',
+  reviewRecords: 'id, noteId, nextReviewAt, reviewedAt',
+  courseReminders: 'id, courseId',
+  courses: 'id, category, difficulty, authorId',
+  quizzes: 'id, lessonId, createdAt',
+  quizAttempts: 'id, quizId, [quizId+completedAt], completedAt',
+  videoCaptions: '[courseId+videoId], courseId, videoId',
+  authors: 'id, name, createdAt',
+  careerPaths: 'id',
+  pathEnrollments: 'id, pathId, status',
   // NEW: Flashcard system with SM-2 spaced repetition
   flashcards: 'id, courseId, noteId, nextReviewAt, createdAt',
 })

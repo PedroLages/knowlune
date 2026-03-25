@@ -18,8 +18,10 @@ vi.mock('@/lib/fileSystem', () => ({
   extractPdfMetadata: vi.fn(),
   isSupportedVideoFormat: vi.fn(),
   getVideoFormat: vi.fn(),
+  isImageFile: vi.fn(),
   SUPPORTED_VIDEO_EXTENSIONS: ['.mp4', '.mkv', '.avi', '.webm'],
   SUPPORTED_DOCUMENT_EXTENSIONS: ['.pdf'],
+  SUPPORTED_IMAGE_EXTENSIONS: ['.jpg', '.jpeg', '.png', '.gif', '.webp'],
   SUPPORTED_FILE_EXTENSIONS: ['.mp4', '.mkv', '.avi', '.webm', '.pdf'],
 }))
 
@@ -224,6 +226,74 @@ describe('importCourseFromFolder', () => {
     // Should still succeed with the one valid video
     expect(course.videoCount).toBe(1)
     expect(toastMocks.success).toHaveBeenCalled()
+  })
+
+  it('should set authorId when folder name contains author pattern', async () => {
+    const dirHandle = createMockDirHandle('Chase Hughes - Behavioral Analysis')
+    const videoHandle = createMockFileHandle('lesson-01.mp4')
+
+    fileSystemMocks.showDirectoryPicker.mockResolvedValue(dirHandle)
+    fileSystemMocks.scanDirectory.mockImplementation(async function* () {
+      yield { handle: videoHandle, path: 'lesson-01.mp4' }
+    })
+    fileSystemMocks.isSupportedVideoFormat.mockReturnValue(true)
+    fileSystemMocks.getVideoFormat.mockReturnValue('mp4')
+    fileSystemMocks.extractVideoMetadata.mockResolvedValue({
+      duration: 120,
+      width: 1920,
+      height: 1080,
+    })
+
+    const course = await importCourseFromFolder()
+
+    expect(course.authorId).toBeTruthy()
+    // Verify author was created in DB
+    const { db } = await import('@/db')
+    const author = await db.authors.get(course.authorId!)
+    expect(author).toBeDefined()
+    expect(author!.name).toBe('Chase Hughes')
+  })
+
+  it('should show author name in success toast', async () => {
+    const dirHandle = createMockDirHandle('John Doe - React Patterns')
+    const videoHandle = createMockFileHandle('lesson.mp4')
+
+    fileSystemMocks.showDirectoryPicker.mockResolvedValue(dirHandle)
+    fileSystemMocks.scanDirectory.mockImplementation(async function* () {
+      yield { handle: videoHandle, path: 'lesson.mp4' }
+    })
+    fileSystemMocks.isSupportedVideoFormat.mockReturnValue(true)
+    fileSystemMocks.getVideoFormat.mockReturnValue('mp4')
+    fileSystemMocks.extractVideoMetadata.mockResolvedValue({
+      duration: 60,
+      width: 1280,
+      height: 720,
+    })
+
+    await importCourseFromFolder()
+
+    expect(toastMocks.success).toHaveBeenCalledWith(expect.stringContaining('by John Doe'))
+  })
+
+  it('should import without authorId when folder name has no author pattern', async () => {
+    const dirHandle = createMockDirHandle('my-videos')
+    const videoHandle = createMockFileHandle('vid.mp4')
+
+    fileSystemMocks.showDirectoryPicker.mockResolvedValue(dirHandle)
+    fileSystemMocks.scanDirectory.mockImplementation(async function* () {
+      yield { handle: videoHandle, path: 'vid.mp4' }
+    })
+    fileSystemMocks.isSupportedVideoFormat.mockReturnValue(true)
+    fileSystemMocks.getVideoFormat.mockReturnValue('mp4')
+    fileSystemMocks.extractVideoMetadata.mockResolvedValue({
+      duration: 60,
+      width: 1280,
+      height: 720,
+    })
+
+    const course = await importCourseFromFolder()
+
+    expect(course.authorId).toBeUndefined()
   })
 })
 

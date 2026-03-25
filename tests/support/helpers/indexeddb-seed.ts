@@ -264,3 +264,14 @@ export async function seedQuizAttempts(
 ): Promise<void> {
   await seedIndexedDBStore(page, 'ElearningDB', 'quizAttempts', attempts)
 }
+
+/**
+ * Seeds the pathEnrollments object store in ElearningDB (E20-S01).
+ * Convenience wrapper around seedIndexedDBStore.
+ */
+export async function seedPathEnrollments(
+  page: Page,
+  enrollments: Record<string, unknown>[]
+): Promise<void> {
+  await seedIndexedDBStore(page, 'ElearningDB', 'pathEnrollments', enrollments)
+}

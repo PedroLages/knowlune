@@ -1,12 +1,12 @@
 ---
 story_id: E22-S05
 story_name: "Dynamic Filter Chips from AI Tags"
-status: draft
-started:
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+status: done
+started: 2026-03-23
+completed: 2026-03-25
+reviewed: true
+review_started: 2026-03-25
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review-skipped, code-review, code-review-testing]
 burn_in_validated: false
 ---
 
@@ -53,6 +53,10 @@ so that I can quickly find courses by topic across my entire library.
 - Consider showing tag count in parentheses: "Python (3)" — optional, only if it doesn't clutter
 - "Clear filters" link appears only when a filter is active (same as TopicFilter pattern)
 
+## Implementation Plan
+
+See [docs/plans/2026-03-23-e22-s05-dynamic-filter-chips.md](../plans/2026-03-23-e22-s05-dynamic-filter-chips.md)
+
 ## Implementation Notes
 
 - Pre-seeded course categories use `CourseCategory` type and `categoryLabels` map
@@ -96,4 +100,7 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Case-insensitive normalization must be end-to-end.** Tag deduplication normalized to lowercase for chip display, but the filter comparison on imported courses used exact `includes()`. Always trace the normalized value through every comparison site, not just the display layer.
+- **E2E `hasText` substring matching causes false positives.** Short tag names like "ai" matched substrings in other button labels (e.g., "entrainment"). Use regex with word boundaries (`/^ai\b/`) for short filter text in Playwright locators.
+- **`seedAndReload` localStorage access before navigation fails.** Setting localStorage via `page.evaluate` on `about:blank` triggers SecurityError. Use `addInitScript` instead, which runs after navigation when the page origin is established.
+- **Zustand store subscriptions provide free reactivity for tag updates.** No special subscription or effect was needed for AC5 (reactive tag appearance) — the `useCourseImportStore` hook re-renders the component automatically when tags are added post-import.

@@ -60,6 +60,12 @@ const QuizResults = React.lazy(() =>
 const QuizReview = React.lazy(() =>
   import('./pages/QuizReview').then(m => ({ default: m.QuizReview }))
 )
+const CareerPaths = React.lazy(() =>
+  import('./pages/CareerPaths').then(m => ({ default: m.CareerPaths }))
+)
+const CareerPathDetail = React.lazy(() =>
+  import('./pages/CareerPathDetail').then(m => ({ default: m.CareerPathDetail }))
+)
 
 // Default exports work directly with React.lazy
 const MyClass = React.lazy(() => import('./pages/MyClass'))
@@ -179,6 +185,22 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'career-paths',
+        element: (
+          <SuspensePage>
+            <CareerPaths />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'career-paths/:pathId',
+        element: (
+          <SuspensePage>
+            <CareerPathDetail />
+          </SuspensePage>
+        ),
+      },
+      {
         path: 'library',
         element: <Navigate to="/notes?tab=bookmarks" replace />,
       },
@@ -246,6 +268,19 @@ export const router = createBrowserRouter([
             <Reports />
           </SuspensePage>
         ),
+      },
+      // Legacy path-based redirects → query-param tabs (E27-S02)
+      {
+        path: 'reports/study',
+        element: <Navigate to="/reports?tab=study" replace />,
+      },
+      {
+        path: 'reports/quizzes',
+        element: <Navigate to="/reports?tab=quizzes" replace />,
+      },
+      {
+        path: 'reports/ai',
+        element: <Navigate to="/reports?tab=ai" replace />,
       },
       {
         path: 'settings',

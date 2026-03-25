@@ -19,11 +19,11 @@ import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
 import { TopicFilter } from '@/app/components/figma/TopicFilter'
 import { StatusFilter } from '@/app/components/figma/StatusFilter'
 import { ToggleGroup, ToggleGroupItem } from '@/app/components/ui/toggle-group'
-import { Search, FolderOpen, Loader2, BookOpen, ChevronDown } from 'lucide-react'
+import { Search, FolderOpen, BookOpen, ChevronDown } from 'lucide-react'
 import { useCourseStore } from '@/stores/useCourseStore'
 import { getCourseCompletionPercent, getProgress } from '@/lib/progress'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
-import { importCourseFromFolder } from '@/lib/courseImport'
+import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
 import { db } from '@/db'
 import { calculateMomentumScore } from '@/lib/momentum'
 import { calculateAtRiskStatus } from '@/lib/atRisk'
@@ -46,6 +46,7 @@ export function Courses() {
   const [selectedTopics, setSelectedTopics] = useState<string[]>([])
   const [selectedStatuses, setSelectedStatuses] = useState<LearnerCourseStatus[]>([])
   const [sortMode, setSortMode] = useState<SortMode>('recent')
+  const [wizardOpen, setWizardOpen] = useState(false)
   const [momentumMap, setMomentumMap] = useState<Map<string, MomentumScore>>(new Map())
   const [atRiskMap, setAtRiskMap] = useState<Map<string, AtRiskStatus>>(new Map())
   const [estimateMap, setEstimateMap] = useState<Map<string, CompletionEstimate>>(new Map())
@@ -62,7 +63,6 @@ export function Courses() {
   })
 
   const importedCourses = useCourseImportStore(state => state.importedCourses)
-  const isImporting = useCourseImportStore(state => state.isImporting)
   const loadImportedCourses = useCourseImportStore(state => state.loadImportedCourses)
   const getAllTags = useCourseImportStore(state => state.getAllTags)
 
@@ -197,6 +197,13 @@ export function Courses() {
       )
     }
 
+    // AC3: Apply topic filter to pre-seeded courses too
+    if (selectedTopics.length > 0) {
+      courses = courses.filter(c =>
+        selectedTopics.every(topic => c.tags.some(t => t.toLowerCase() === topic))
+      )
+    }
+
     return courses
   })()
 
@@ -207,6 +214,36 @@ export function Courses() {
     )
   }, [filtered, sortMode, momentumMap])
 
+  // AC1+AC2: Merge tags from both pre-seeded and imported courses,
+  // deduplicate, and sort by frequency (most courses first)
+  const { mergedTags, tagCounts } = useMemo(() => {
+    const counts = new Map<string, number>()
+
+    // Count tags from pre-seeded courses
+    for (const course of allCourses) {
+      for (const tag of course.tags) {
+        const normalized = tag.trim().toLowerCase()
+        if (normalized) counts.set(normalized, (counts.get(normalized) ?? 0) + 1)
+      }
+    }
+
+    // Count tags from imported courses (AI-generated tags)
+    for (const course of importedCourses) {
+      for (const tag of course.tags) {
+        const normalized = tag.trim().toLowerCase()
+        if (normalized) counts.set(normalized, (counts.get(normalized) ?? 0) + 1)
+      }
+    }
+
+    // Sort by frequency descending, then alphabetically for ties
+    const sorted = [...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([tag]) => tag)
+
+    return { mergedTags: sorted, tagCounts: counts }
+  }, [allCourses, importedCourses])
+
+  // Keep legacy allTags for ImportedCourseCard (imported-only tags)
   const allTags = useMemo(() => getAllTags(), [getAllTags])
 
   const filteredImportedCourses = (() => {
@@ -220,7 +257,9 @@ export function Courses() {
     }
 
     if (selectedTopics.length > 0) {
-      courses = courses.filter(c => selectedTopics.every(topic => c.tags.includes(topic)))
+      courses = courses.filter(c =>
+        selectedTopics.every(topic => c.tags.some(t => t.toLowerCase() === topic))
+      )
     }
 
     if (selectedStatuses.length > 0) {
@@ -234,12 +273,8 @@ export function Courses() {
     (a, b) => new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime()
   )
 
-  async function handleImportCourse() {
-    try {
-      await importCourseFromFolder()
-    } catch {
-      // silent-catch-ok: errors are surfaced by importCourseFromFolder via toasts
-    }
+  function handleOpenWizard() {
+    setWizardOpen(true)
   }
 
   function handleCollapseToggle(open: boolean) {
@@ -267,23 +302,15 @@ export function Courses() {
         </div>
         <Button
           variant="brand"
-          onClick={handleImportCourse}
-          disabled={isImporting}
+          onClick={handleOpenWizard}
           className="hover:scale-[1.02] hover:shadow-md rounded-xl transition-[transform,box-shadow] duration-200"
         >
-          {isImporting ? (
-            <>
-              <Loader2 className="size-4 mr-2 animate-spin" />
-              Scanning\u2026
-            </>
-          ) : (
-            <>
-              <FolderOpen className="size-4 mr-2" />
-              Import Course
-            </>
-          )}
+          <FolderOpen className="size-4 mr-2" />
+          Import Course
         </Button>
       </div>
+
+      <ImportWizardDialog open={wizardOpen} onOpenChange={setWizardOpen} />
 
       {totalCourses === 0 ? (
         <EmptyState
@@ -291,7 +318,7 @@ export function Courses() {
           title="No courses yet"
           description="Import a course folder to get started"
           actionLabel="Import Course"
-          onAction={handleImportCourse}
+          onAction={handleOpenWizard}
           data-testid="courses-empty-state"
         />
       ) : (
@@ -321,19 +348,21 @@ export function Courses() {
             </div>
           </Card>
 
-          {importedCourses.length > 0 && (
-            <div className="flex flex-wrap gap-x-6 gap-y-2 items-start">
-              <TopicFilter
-                availableTags={allTags}
-                selectedTags={selectedTopics}
-                onSelectedTagsChange={setSelectedTopics}
-              />
+          {/* AC1: Show unified topic filter with merged tags from both course types */}
+          <div className="flex flex-wrap gap-x-6 gap-y-2 items-start">
+            <TopicFilter
+              availableTags={mergedTags}
+              selectedTags={selectedTopics}
+              onSelectedTagsChange={setSelectedTopics}
+              tagCounts={tagCounts}
+            />
+            {importedCourses.length > 0 && (
               <StatusFilter
                 selectedStatuses={selectedStatuses}
                 onSelectedStatusesChange={setSelectedStatuses}
               />
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Imported Courses Section */}
           {(importedCourses.length > 0 || !searchQuery.trim()) && (
@@ -353,18 +382,10 @@ export function Courses() {
                     size="sm"
                     data-testid="import-first-course-cta"
                     aria-label="Import your first course"
-                    onClick={handleImportCourse}
-                    disabled={isImporting}
+                    onClick={handleOpenWizard}
                     className="text-brand-soft-foreground h-auto p-0"
                   >
-                    {isImporting ? (
-                      <>
-                        <Loader2 className="size-4 mr-1 animate-spin" />
-                        Scanning\u2026
-                      </>
-                    ) : (
-                      'Import a course \u2192'
-                    )}
+                    Import a course &rarr;
                   </Button>
                 </div>
               ) : filteredImportedCourses.length === 0 ? (
@@ -432,14 +453,14 @@ export function Courses() {
                   importedCourses.length > 0 ? 'opacity-60 hover:opacity-100' : ''
                 }`}
               >
-                <div className="flex items-center gap-4 mb-4 flex-wrap">
-                  <div className="flex flex-wrap gap-2 items-center flex-1">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4">
+                  <div className="overflow-x-auto flex-1 min-w-0">
                     <ToggleGroup
                       type="single"
                       value={selectedCategory}
                       onValueChange={v => setSelectedCategory(v || 'all')}
                       aria-label="Filter by category"
-                      className="flex flex-wrap gap-2"
+                      className="flex flex-nowrap gap-1.5 sm:gap-2"
                     >
                       {[
                         { value: 'all', label: 'All Courses' },
@@ -451,7 +472,7 @@ export function Courses() {
                         <ToggleGroupItem
                           key={chip.value}
                           value={chip.value}
-                          className={`h-auto rounded-full! border px-4 py-3 sm:py-1.5 text-sm font-medium transition-colors data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-card data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-accent data-[state=off]:hover:text-foreground data-[state=off]:border-border cursor-pointer shadow-none${i === 0 ? ' mr-1' : ''}`}
+                          className={`h-auto rounded-full! border px-3 sm:px-4 py-3 sm:py-1.5 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-card data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-accent data-[state=off]:hover:text-foreground data-[state=off]:border-border cursor-pointer shadow-none${i === 0 ? ' mr-1' : ''}`}
                         >
                           {chip.label}
                         </ToggleGroupItem>
@@ -462,7 +483,7 @@ export function Courses() {
                     <SelectTrigger
                       data-testid="sort-select"
                       aria-label="Sort courses"
-                      className="w-[180px] rounded-xl"
+                      className="w-full sm:w-[180px] rounded-xl"
                     >
                       <SelectValue />
                     </SelectTrigger>

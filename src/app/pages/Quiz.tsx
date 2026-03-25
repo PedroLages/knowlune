@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { db } from '@/db'
 import type { Quiz as QuizType, QuizProgress, TimerAccommodation } from '@/types/quiz'
 import { QuizProgressSchema, TimerAccommodationEnum } from '@/types/quiz'
+import { getQuizPreferences } from '@/lib/quizPreferences'
 import {
   useQuizStore,
   selectCurrentQuiz,
@@ -62,16 +63,20 @@ function loadSavedProgress(quizId: string): QuizProgress | null {
   }
 }
 
-/** Load persisted timer accommodation preference, validated via Zod */
+/** Load persisted timer accommodation preference, validated via Zod.
+ *  Falls back to global quiz preference, then 'standard' on error. */
 export function loadSavedAccommodation(lessonId: string): TimerAccommodation {
   try {
     const raw = localStorage.getItem(`quiz-accommodation-${lessonId}`)
-    if (!raw) return 'standard'
+    if (!raw) {
+      // No per-lesson preference saved — use global quiz preference as default
+      return getQuizPreferences().timerAccommodation
+    }
     const result = TimerAccommodationEnum.safeParse(raw)
-    return result.success ? result.data : 'standard'
+    return result.success ? result.data : getQuizPreferences().timerAccommodation
   } catch (e) {
     console.warn('[Quiz] Failed to load accommodation:', e)
-    return 'standard'
+    return getQuizPreferences().timerAccommodation
   }
 }
 
@@ -101,6 +106,8 @@ export function Quiz() {
   const [accommodation, setAccommodation] = useState<TimerAccommodation>(() =>
     loadSavedAccommodation(lessonId)
   )
+  // Freeze feedback preference at mount — prevents mid-quiz UX surprise if settings change in another tab
+  const [showImmediateFeedback] = useState(() => getQuizPreferences().showImmediateFeedback)
 
   // Store selectors — drives the active quiz view after startQuiz()
   const currentQuiz = useQuizStore(selectCurrentQuiz)
@@ -395,7 +402,7 @@ export function Quiz() {
         <p className="text-muted-foreground">{storeError || 'No quiz found for this lesson.'}</p>
         <Link
           to={`/courses/${courseId}`}
-          className="text-brand hover:underline mt-4 inline-flex items-center gap-1 text-sm min-h-[44px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:rounded-lg"
+          className="text-brand hover:underline mt-4 inline-flex items-center gap-1 text-sm min-h-[44px] focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:rounded-lg"
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
           Back to course
@@ -432,61 +439,75 @@ export function Quiz() {
 
     const unansweredCount = countUnanswered(currentQuiz.questions, currentProgress.answers)
 
+    const totalQuestions = currentProgress.questionOrder.length || currentQuiz.questions.length
+
     return (
-      <div className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm">
-        <QuizHeader
-          quiz={currentQuiz}
-          progress={currentProgress}
-          timeRemaining={timerInitialSecondsRef.current > 0 ? timerRemaining : null}
-          totalTimeSeconds={totalTimeSeconds > 0 ? totalTimeSeconds : null}
-        />
-        <TimerWarnings
-          warningLevel={warningState?.level ?? null}
-          remainingSeconds={warningState?.remaining ?? 0}
-        />
-        {currentQuestion && currentQuestionId ? (
-          <>
-            {/* tabIndex={-1}: programmatically focusable on question change, not in tab order */}
-            <div
-              ref={questionContainerRef}
-              tabIndex={-1}
-              className="outline-none"
-              data-testid="question-container"
-            >
-              <QuestionDisplay
-                question={currentQuestion}
-                value={currentAnswer}
-                onChange={answer => {
-                  submitAnswer(currentQuestionId, answer)
-                  // Auto-focus Next/Submit button for single-answer types (MC, TF, FIB)
-                  // Skip for multiple-select — user needs to toggle multiple checkboxes
-                  if (currentQuestion.type !== 'multiple-select') {
-                    cancelAnimationFrame(rafRef.current)
-                    rafRef.current = requestAnimationFrame(() => nextBtnRef.current?.focus())
-                  }
-                }}
-                mode="active"
-              />
-            </div>
-            <QuestionHint hint={currentQuestion.hint} />
-            {!isUnanswered(currentAnswer) && (
-              <AnswerFeedback question={currentQuestion} userAnswer={currentAnswer} />
-            )}
-          </>
-        ) : (
-          <div className="mt-6 rounded-xl border border-border p-6 text-center text-muted-foreground text-sm">
-            No question found at index {currentProgress.currentQuestionIndex}
-          </div>
-        )}
-
-        {currentQuestionId && (
-          <MarkForReview
-            questionId={currentQuestionId}
-            isMarked={currentProgress.markedForReview.includes(currentQuestionId)}
-            onToggle={() => toggleReviewMark(currentQuestionId)}
+      <div
+        className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm"
+        data-testid="quiz-active-container"
+      >
+        <section aria-label="Quiz header">
+          <QuizHeader
+            quiz={currentQuiz}
+            progress={currentProgress}
+            timeRemaining={timerInitialSecondsRef.current > 0 ? timerRemaining : null}
+            totalTimeSeconds={totalTimeSeconds > 0 ? totalTimeSeconds : null}
           />
-        )}
+          <TimerWarnings
+            warningLevel={warningState?.level ?? null}
+            remainingSeconds={warningState?.remaining ?? 0}
+          />
+        </section>
+        <section aria-label="Question area">
+          {/* sr-only h2 establishes the heading for this section (h1 is quiz title in QuizHeader) */}
+          <h2 className="sr-only">
+            Question {currentProgress.currentQuestionIndex + 1} of {totalQuestions}
+          </h2>
+          {currentQuestion && currentQuestionId ? (
+            <>
+              {/* tabIndex={-1}: programmatically focusable on question change, not in tab order */}
+              <div
+                ref={questionContainerRef}
+                tabIndex={-1}
+                className="outline-none"
+                data-testid="question-container"
+              >
+                <QuestionDisplay
+                  question={currentQuestion}
+                  value={currentAnswer}
+                  onChange={answer => {
+                    submitAnswer(currentQuestionId, answer)
+                    // Auto-focus Next/Submit button for single-answer types (MC, TF, FIB)
+                    // Skip for multiple-select — user needs to toggle multiple checkboxes
+                    if (currentQuestion.type !== 'multiple-select') {
+                      cancelAnimationFrame(rafRef.current)
+                      rafRef.current = requestAnimationFrame(() => nextBtnRef.current?.focus())
+                    }
+                  }}
+                  mode="active"
+                />
+              </div>
+              <QuestionHint hint={currentQuestion.hint} />
+              {showImmediateFeedback && !isUnanswered(currentAnswer) && (
+                <AnswerFeedback question={currentQuestion} userAnswer={currentAnswer} />
+              )}
+            </>
+          ) : (
+            <div className="mt-6 rounded-xl border border-border p-6 text-center text-muted-foreground text-sm">
+              No question found at index {currentProgress.currentQuestionIndex}
+            </div>
+          )}
 
+          {currentQuestionId && (
+            <MarkForReview
+              questionId={currentQuestionId}
+              isMarked={currentProgress.markedForReview.includes(currentQuestionId)}
+              onToggle={() => toggleReviewMark(currentQuestionId)}
+            />
+          )}
+        </section>
+
+        {/* QuizNavigation renders <nav aria-label="Quiz navigation"> internally */}
         <QuizNavigation
           ref={nextBtnRef}
           quiz={currentQuiz}

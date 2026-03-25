@@ -38,18 +38,14 @@ function createDueReview(
   }
 }
 
-/** Create a review record that is NOT due (nextReviewAt in the future).
- *  Uses real current time so the review stays in the future regardless of
- *  when the test runs (FIXED_NOW is March 2026 and can drift into the past). */
+/** Create a review record that is NOT due (nextReviewAt in the future relative to FIXED_NOW). */
 function createFutureReview(noteId: string, daysUntilDue = 5) {
-  // eslint-disable-next-line test-patterns/deterministic-time -- intentional: real time needed so due date stays in the future as FIXED_NOW drifts into the past
-  const realNow = new Date()
   return {
     id: crypto.randomUUID(),
     noteId,
     rating: 'easy',
-    reviewedAt: realNow.toISOString(),
-    nextReviewAt: new Date(realNow.getTime() + daysUntilDue * 86400000).toISOString(),
+    reviewedAt: FIXED_NOW.toISOString(),
+    nextReviewAt: new Date(FIXED_NOW.getTime() + daysUntilDue * 86400000).toISOString(),
     interval: daysUntilDue,
     easeFactor: 2.5,
     reviewCount: 1,

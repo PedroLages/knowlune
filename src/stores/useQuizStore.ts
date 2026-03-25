@@ -13,6 +13,8 @@ import {
 import { calculateQuizScore } from '@/lib/scoring'
 import { fisherYatesShuffle } from '@/lib/shuffle'
 import { toastError } from '@/lib/toastHelpers'
+import { getQuizPreferences } from '@/lib/quizPreferences'
+import { logStudyAction } from '@/lib/studyLog'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 
 interface QuizState {
@@ -80,7 +82,11 @@ export const useQuizStore = create<QuizState>()(
             return
           }
 
-          const questionOrder = quiz.shuffleQuestions
+          // Shuffle if user preference OR quiz definition requests it.
+          // Intentional one-way OR: quiz authors can force shuffle via quiz.shuffleQuestions,
+          // and learners can opt-in via preferences, but learners cannot disable author-forced shuffle.
+          const shouldShuffle = getQuizPreferences().shuffleQuestions || quiz.shuffleQuestions
+          const questionOrder = shouldShuffle
             ? fisherYatesShuffle(quiz.questions.map(q => q.id))
             : quiz.questions.map(q => q.id)
 
@@ -162,6 +168,20 @@ export const useQuizStore = create<QuizState>()(
             } catch (err) {
               console.error('[useQuizStore] setItemStatus failed after quiz submit:', err)
             }
+          }
+
+          // Trigger study streak update (QFR55).
+          // Fire-and-forget: streak failure must never block quiz submission.
+          try {
+            logStudyAction({
+              type: 'quiz_complete',
+              courseId,
+              lessonId: currentQuiz.lessonId,
+              timestamp: new Date().toISOString(),
+              metadata: { timeSpent: attempt.timeSpent, passed: attempt.passed },
+            })
+          } catch (streakErr) {
+            console.error('[useQuizStore] streak logging failed (non-blocking):', streakErr)
           }
 
           set({

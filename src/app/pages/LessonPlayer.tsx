@@ -37,6 +37,7 @@ import { AISummaryPanel } from '../components/figma/AISummaryPanel'
 import { PdfViewer } from '../components/figma/PdfViewer'
 import { ModuleAccordion } from '../components/figma/ModuleAccordion'
 import { AutoAdvanceCountdown } from '../components/figma/AutoAdvanceCountdown'
+import { PomodoroTimer } from '../components/figma/PomodoroTimer'
 import { ResourceBadge } from '../components/figma/ResourceBadge'
 import { NoteEditor } from '../components/notes/NoteEditor'
 import { CompletionModal, type CelebrationType } from '../components/celebrations/CompletionModal'
@@ -103,6 +104,7 @@ export function LessonPlayer() {
   const [noteId, setNoteId] = useState<string | undefined>(undefined)
   const [notesOpen, setNotesOpen] = useState(() => searchParams.get('panel') === 'notes')
   const [noteFullScreen, setNoteFullScreen] = useState(false)
+  const [pendingNoteFocus, setPendingNoteFocus] = useState(false)
   const hasNotes = noteText.length > 0 && noteText !== '<p></p>'
 
   const [seekToTime, setSeekToTime] = useState<number | undefined>(undefined)
@@ -499,6 +501,31 @@ export function LessonPlayer() {
     })
   }
 
+  // N keyboard shortcut: open notes panel and focus the TipTap editor
+  const focusNoteEditor = () => {
+    // .ProseMirror is TipTap-specific — scoped to avoid matching other contenteditable elements
+    const editor = document.querySelector('.ProseMirror[contenteditable="true"]') as HTMLElement
+    editor?.focus()
+  }
+
+  const handleFocusNotes = useCallback(() => {
+    if (!notesOpen) {
+      setNotesOpen(true)
+      setPendingNoteFocus(true)
+    } else {
+      // Panel already open — focus immediately after current paint
+      requestAnimationFrame(focusNoteEditor)
+    }
+  }, [notesOpen])
+
+  // Focus the editor once the panel has mounted after pressing N
+  useEffect(() => {
+    if (pendingNoteFocus && notesOpen) {
+      requestAnimationFrame(focusNoteEditor)
+      setPendingNoteFocus(false)
+    }
+  }, [pendingNoteFocus, notesOpen])
+
   if (!course || !lesson) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
@@ -604,6 +631,7 @@ export function LessonPlayer() {
               }}
               theaterMode={isTheaterMode}
               onTheaterModeToggle={handleTheaterModeToggle}
+              onFocusNotes={handleFocusNotes}
             />
           </div>
         </div>
@@ -666,6 +694,9 @@ export function LessonPlayer() {
                 </div>
               </SheetContent>
             </Sheet>
+
+            {/* Pomodoro focus timer */}
+            <PomodoroTimer />
 
             {/* Notes toggle — desktop only, hidden in theater mode */}
             {isDesktop && !isTheaterMode && (

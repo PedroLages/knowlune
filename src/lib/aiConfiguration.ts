@@ -13,7 +13,7 @@
 import { encryptData, decryptData, type EncryptedData } from './crypto'
 
 /** Supported AI provider IDs */
-export type AIProviderId = 'openai' | 'anthropic' | 'groq' | 'glm' | 'gemini'
+export type AIProviderId = 'openai' | 'anthropic' | 'groq' | 'glm' | 'gemini' | 'ollama'
 
 /** AI provider configuration and validation */
 export interface AIProvider {
@@ -21,10 +21,12 @@ export interface AIProvider {
   id: AIProviderId
   /** Display name for UI */
   name: string
-  /** Validates API key format without making network calls */
-  validateApiKey: (key: string) => boolean
+  /** Whether this provider uses a server URL instead of an API key */
+  usesServerUrl?: boolean
+  /** Validates credential format without making network calls (API key or server URL for Ollama) */
+  validateApiKey: (keyOrUrl: string) => boolean
   /** Tests provider connectivity (stub for S01, real implementation in S02-S07) */
-  testConnection: (key: string) => Promise<boolean>
+  testConnection: (keyOrUrl: string) => Promise<boolean>
 }
 
 /** Connection status states */
@@ -50,6 +52,28 @@ export interface ConsentSettings {
   analytics: boolean
 }
 
+/** Model metadata from Ollama /api/tags response */
+export interface OllamaModel {
+  /** Model name (e.g., "llama3.2:latest") */
+  name: string
+  /** Human-readable size (e.g., "2.0 GB") */
+  size: string
+  /** Raw size in bytes for sorting */
+  sizeBytes: number
+  /** Model modification date */
+  modifiedAt: string
+}
+
+/** Ollama-specific configuration */
+export interface OllamaSettings {
+  /** Ollama server URL (e.g., http://192.168.1.x:11434) */
+  serverUrl: string
+  /** Use direct browser-to-Ollama connection (requires CORS on server) */
+  directConnection: boolean
+  /** Selected model name (e.g., "llama3.2:latest") */
+  selectedModel?: string
+}
+
 /** Complete AI configuration state */
 export interface AIConfigurationSettings {
   /** Selected AI provider */
@@ -62,6 +86,8 @@ export interface AIConfigurationSettings {
   errorMessage?: string
   /** Per-feature consent toggles */
   consentSettings: ConsentSettings
+  /** Ollama-specific settings (only used when provider === 'ollama') */
+  ollamaSettings?: OllamaSettings
   /**
    * E2E test-only plaintext API key bypass (DEV mode only)
    * @internal Only works when import.meta.env.DEV = true
@@ -146,6 +172,36 @@ export const AI_PROVIDERS: Record<AIProviderId, AIProvider> = {
       // Stub: Real Gemini API call implemented in future stories (S02-S07)
       // For now, validate format only
       return Promise.resolve(key.startsWith('AIza'))
+    },
+  },
+  ollama: {
+    id: 'ollama',
+    name: 'Ollama (Local)',
+    usesServerUrl: true,
+    validateApiKey: (url: string) => {
+      // Validates URL format: must be http:// or https:// with optional port
+      try {
+        const parsed = new URL(url)
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+      } catch {
+        return false
+      }
+    },
+    testConnection: async (url: string) => {
+      // Real Ollama connection test (E22-S03)
+      // Lazy-import to avoid circular dependencies and keep bundle small
+      const { testOllamaConnection } = await import('./ollamaHealthCheck')
+      const config = getAIConfiguration()
+      const result = await testOllamaConnection(
+        url,
+        config.ollamaSettings?.directConnection ?? false,
+        config.ollamaSettings?.selectedModel
+      )
+      // If connection test returned an error, throw so the UI can show the message
+      if (!result.success) {
+        throw new Error(result.message)
+      }
+      return true
     },
   },
 }
@@ -235,6 +291,12 @@ export async function getDecryptedApiKey(): Promise<string | null> {
     return config._testApiKey
   }
 
+  // Ollama uses server URL instead of API key — return a dummy key
+  // since Ollama ignores auth but the AI SDK requires a non-empty string
+  if (config.provider === 'ollama') {
+    return config.ollamaSettings?.serverUrl ? 'ollama' : null
+  }
+
   if (!config.apiKeyEncrypted) return null
 
   try {
@@ -286,6 +348,52 @@ export function isFeatureEnabled(feature: keyof ConsentSettings): boolean {
 export function isAIAvailable(): boolean {
   const config = getAIConfiguration()
   return config.connectionStatus === 'connected'
+}
+
+/**
+ * Gets the Ollama server URL from configuration
+ *
+ * @returns Ollama server URL (e.g., "http://192.168.1.100:11434") or null
+ */
+export function getOllamaServerUrl(): string | null {
+  const config = getAIConfiguration()
+  if (config.provider !== 'ollama') return null
+  return config.ollamaSettings?.serverUrl || null
+}
+
+/**
+ * Gets the Ollama connection mode (proxy or direct)
+ *
+ * @returns True if direct connection mode is enabled
+ */
+export function isOllamaDirectConnection(): boolean {
+  const config = getAIConfiguration()
+  return config.ollamaSettings?.directConnection ?? false
+}
+
+/**
+ * Gets the selected Ollama model name
+ *
+ * @returns Selected model name (e.g., "llama3.2:latest") or null if not selected
+ */
+export function getOllamaSelectedModel(): string | null {
+  const config = getAIConfiguration()
+  if (config.provider !== 'ollama') return null
+  return config.ollamaSettings?.selectedModel || null
+}
+
+/**
+ * Formats bytes to human-readable size string
+ *
+ * @param bytes - Size in bytes
+ * @returns Human-readable size (e.g., "2.0 GB", "500 MB")
+ */
+export function formatModelSize(bytes: number): string {
+  if (bytes <= 0) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(1024))
+  const size = bytes / Math.pow(1024, i)
+  return `${size.toFixed(1)} ${units[i]}`
 }
 
 /**
