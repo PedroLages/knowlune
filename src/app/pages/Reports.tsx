@@ -35,7 +35,7 @@ import { StatsCard } from '@/app/components/StatsCard'
 import { EmptyState } from '@/app/components/EmptyState'
 import StudyTimeAnalytics from '@/app/components/StudyTimeAnalytics'
 import { AIAnalyticsTab } from '@/app/components/reports/AIAnalyticsTab'
-import { QuizAnalyticsTab } from '@/app/components/reports/QuizAnalyticsTab'
+import { QuizAnalyticsDashboard } from '@/app/components/reports/QuizAnalyticsDashboard'
 import { CategoryRadar } from '@/app/components/reports/CategoryRadar'
 import { SkillsRadar } from '@/app/components/reports/SkillsRadar'
 import { WeeklyGoalRing } from '@/app/components/reports/WeeklyGoalRing'
@@ -68,12 +68,13 @@ const areaChartConfig = {
 const VALID_TABS = ['study', 'quizzes', 'ai'] as const
 
 export default function Reports() {
-  const allCourses = useCourseStore(s => s.courses)
   const [searchParams, setSearchParams] = useSearchParams()
   const rawTab = searchParams.get('tab')
   const activeTab = VALID_TABS.includes(rawTab as (typeof VALID_TABS)[number])
     ? (rawTab as string)
     : 'study'
+
+  const allCourses = useCourseStore(s => s.courses)
 
   const [studyNotes, setStudyNotes] = useState(0)
   const [completionData, setCompletionData] = useState<CompletionRateResult>({
@@ -223,12 +224,12 @@ export default function Reports() {
               </TabsList>
             </motion.div>
 
-            <TabsContent value="ai" className="mt-6">
-              <AIAnalyticsTab />
+            <TabsContent value="quizzes" className="mt-6">
+              <QuizAnalyticsDashboard />
             </TabsContent>
 
-            <TabsContent value="quizzes" className="mt-6">
-              <QuizAnalyticsTab />
+            <TabsContent value="ai" className="mt-6">
+              <AIAnalyticsTab />
             </TabsContent>
 
             <TabsContent value="study" className="mt-6 space-y-6">

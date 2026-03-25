@@ -8,6 +8,7 @@ import {
   interpretRetakeFrequency,
   calculateItemDifficulty,
   calculateDiscriminationIndices,
+  calculateQuizAnalytics,
   detectLearningTrajectory,
   calculateLinearR2,
 } from '@/lib/analytics'
@@ -26,10 +27,14 @@ vi.mock('@/db', () => ({
     quizAttempts: {
       toArray: vi.fn(),
     },
+    quizzes: {
+      toArray: vi.fn(),
+    },
   },
 }))
 
 const mockToArray = db.quizAttempts.toArray as ReturnType<typeof vi.fn>
+const mockQuizzesToArray = db.quizzes.toArray as ReturnType<typeof vi.fn>
 
 // ---------------------------------------------------------------------------
 // Shorthand aliases
@@ -1148,6 +1153,175 @@ describe('calculateDiscriminationIndices', () => {
     const result = calculateDiscriminationIndices(quiz, attempts)!
     // only passes if n-1
     expect(result[0].discriminationIndex).toBeCloseTo(0.894, 2)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// calculateQuizAnalytics (E18-S07)
+// ---------------------------------------------------------------------------
+
+describe('calculateQuizAnalytics', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockQuizzesToArray.mockResolvedValue([])
+  })
+
+  it('returns zero-value summary when no attempts exist', async () => {
+    mockToArray.mockResolvedValue([])
+    mockQuizzesToArray.mockResolvedValue([])
+
+    const result = await calculateQuizAnalytics()
+
+    expect(result.totalQuizzesCompleted).toBe(0)
+    expect(result.averageScore).toBe(0)
+    expect(result.completionRate).toBe(0)
+    expect(result.averageRetakeFrequency).toBe(0)
+    expect(result.recentAttempts).toEqual([])
+    expect(result.topPerforming).toEqual([])
+    expect(result.needsImprovement).toEqual([])
+  })
+
+  it('aggregates single quiz with single attempt correctly', async () => {
+    mockToArray.mockResolvedValue([
+      makeAttempt({ id: 'a1', quizId: 'q1', percentage: 80, completedAt: '2026-01-10T10:00:00Z' }),
+    ])
+    mockQuizzesToArray.mockResolvedValue([{ id: 'q1', title: 'Math Basics' }])
+
+    const result = await calculateQuizAnalytics()
+
+    expect(result.totalQuizzesCompleted).toBe(1)
+    expect(result.averageScore).toBe(80)
+    expect(result.averageRetakeFrequency).toBe(1)
+    expect(result.recentAttempts).toHaveLength(1)
+    expect(result.recentAttempts[0].quizTitle).toBe('Math Basics')
+    expect(result.topPerforming).toHaveLength(1)
+    expect(result.topPerforming[0].quizTitle).toBe('Math Basics')
+    // With only 1 quiz, needsImprovement is empty (all quizzes are in topPerforming)
+    expect(result.needsImprovement).toHaveLength(0)
+  })
+
+  it('resolves quiz title fallback to "Unknown Quiz" for orphaned attempts', async () => {
+    mockToArray.mockResolvedValue([
+      makeAttempt({ id: 'a1', quizId: 'missing-id', percentage: 60, completedAt: '2026-01-01T00:00:00Z' }),
+    ])
+    mockQuizzesToArray.mockResolvedValue([])
+
+    const result = await calculateQuizAnalytics()
+
+    expect(result.recentAttempts[0].quizTitle).toBe('Unknown Quiz')
+    expect(result.topPerforming[0].quizTitle).toBe('Unknown Quiz')
+  })
+
+  it('calculates completionRate correctly for 2 attempted / 4 available', async () => {
+    mockToArray.mockResolvedValue([
+      makeAttempt({ id: 'a1', quizId: 'q1', percentage: 70, completedAt: '2026-01-01T00:00:00Z' }),
+      makeAttempt({ id: 'a2', quizId: 'q2', percentage: 90, completedAt: '2026-01-02T00:00:00Z' }),
+    ])
+    mockQuizzesToArray.mockResolvedValue([
+      { id: 'q1', title: 'Quiz 1' },
+      { id: 'q2', title: 'Quiz 2' },
+      { id: 'q3', title: 'Quiz 3' },
+      { id: 'q4', title: 'Quiz 4' },
+    ])
+
+    const result = await calculateQuizAnalytics()
+
+    expect(result.completionRate).toBe(50) // 2/4 = 50%
+  })
+
+  it('caps completionRate at 100% when orphaned attempts exceed available quizzes', async () => {
+    mockToArray.mockResolvedValue([
+      makeAttempt({ id: 'a1', quizId: 'q1', percentage: 80, completedAt: '2026-01-01T00:00:00Z' }),
+      makeAttempt({ id: 'a2', quizId: 'q2', percentage: 70, completedAt: '2026-01-02T00:00:00Z' }),
+      makeAttempt({ id: 'a3', quizId: 'q3', percentage: 60, completedAt: '2026-01-03T00:00:00Z' }),
+    ])
+    // Only 1 quiz registered but 3 attempted (orphaned records)
+    mockQuizzesToArray.mockResolvedValue([{ id: 'q1', title: 'Quiz 1' }])
+
+    const result = await calculateQuizAnalytics()
+
+    expect(result.completionRate).toBe(100) // capped: 3/1 → 300% → 100%
+  })
+
+  it('topPerforming and needsImprovement do not overlap with ≤5 quizzes', async () => {
+    mockToArray.mockResolvedValue([
+      makeAttempt({ id: 'a1', quizId: 'q1', percentage: 90, completedAt: '2026-01-01T00:00:00Z' }),
+      makeAttempt({ id: 'a2', quizId: 'q2', percentage: 80, completedAt: '2026-01-02T00:00:00Z' }),
+      makeAttempt({ id: 'a3', quizId: 'q3', percentage: 70, completedAt: '2026-01-03T00:00:00Z' }),
+      makeAttempt({ id: 'a4', quizId: 'q4', percentage: 60, completedAt: '2026-01-04T00:00:00Z' }),
+    ])
+    mockQuizzesToArray.mockResolvedValue([
+      { id: 'q1', title: 'Q1' },
+      { id: 'q2', title: 'Q2' },
+      { id: 'q3', title: 'Q3' },
+      { id: 'q4', title: 'Q4' },
+    ])
+
+    const result = await calculateQuizAnalytics()
+
+    const topIds = new Set(result.topPerforming.map(q => q.quizId))
+    const needsIds = result.needsImprovement.map(q => q.quizId)
+    expect(needsIds.every(id => !topIds.has(id))).toBe(true)
+    expect(result.needsImprovement).toHaveLength(0) // all 4 are in topPerforming (≤5)
+  })
+
+  it('topPerforming and needsImprovement split correctly with 6+ quizzes', async () => {
+    const attempts = [
+      makeAttempt({ id: 'a1', quizId: 'q1', percentage: 95, completedAt: '2026-01-01T00:00:00Z' }),
+      makeAttempt({ id: 'a2', quizId: 'q2', percentage: 85, completedAt: '2026-01-02T00:00:00Z' }),
+      makeAttempt({ id: 'a3', quizId: 'q3', percentage: 75, completedAt: '2026-01-03T00:00:00Z' }),
+      makeAttempt({ id: 'a4', quizId: 'q4', percentage: 65, completedAt: '2026-01-04T00:00:00Z' }),
+      makeAttempt({ id: 'a5', quizId: 'q5', percentage: 55, completedAt: '2026-01-05T00:00:00Z' }),
+      makeAttempt({ id: 'a6', quizId: 'q6', percentage: 45, completedAt: '2026-01-06T00:00:00Z' }),
+    ]
+    const quizzes = [1, 2, 3, 4, 5, 6].map(n => ({ id: `q${n}`, title: `Quiz ${n}` }))
+    mockToArray.mockResolvedValue(attempts)
+    mockQuizzesToArray.mockResolvedValue(quizzes)
+
+    const result = await calculateQuizAnalytics()
+
+    expect(result.topPerforming).toHaveLength(5)
+    expect(result.topPerforming[0].quizId).toBe('q1') // highest first
+    expect(result.needsImprovement).toHaveLength(1)
+    expect(result.needsImprovement[0].quizId).toBe('q6') // lowest, not in top 5
+  })
+
+  it('recentAttempts returns last 5 sorted most-recent-first', async () => {
+    const attempts = Array.from({ length: 7 }, (_, i) =>
+      makeAttempt({
+        id: `a${i + 1}`,
+        quizId: 'q1',
+        percentage: 70,
+        completedAt: `2026-01-0${i + 1}T00:00:00Z`,
+      })
+    )
+    mockToArray.mockResolvedValue(attempts)
+    mockQuizzesToArray.mockResolvedValue([{ id: 'q1', title: 'Q1' }])
+
+    const result = await calculateQuizAnalytics()
+
+    expect(result.recentAttempts).toHaveLength(5)
+    expect(result.recentAttempts[0].id).toBe('a7') // most recent first
+    expect(result.recentAttempts[4].id).toBe('a3')
+  })
+
+  it('calculates averageRetakeFrequency = totalAttempts / uniqueQuizzes', async () => {
+    mockToArray.mockResolvedValue([
+      makeAttempt({ id: 'a1', quizId: 'q1', percentage: 80, completedAt: '2026-01-01T00:00:00Z' }),
+      makeAttempt({ id: 'a2', quizId: 'q1', percentage: 85, completedAt: '2026-01-02T00:00:00Z' }),
+      makeAttempt({ id: 'a3', quizId: 'q1', percentage: 90, completedAt: '2026-01-03T00:00:00Z' }),
+      makeAttempt({ id: 'a4', quizId: 'q2', percentage: 70, completedAt: '2026-01-04T00:00:00Z' }),
+    ])
+    mockQuizzesToArray.mockResolvedValue([
+      { id: 'q1', title: 'Q1' },
+      { id: 'q2', title: 'Q2' },
+    ])
+
+    const result = await calculateQuizAnalytics()
+
+    // 4 attempts / 2 unique quizzes = 2.0
+    expect(result.averageRetakeFrequency).toBe(2)
+    expect(result.topPerforming.find(q => q.quizId === 'q1')?.averageScore).toBe(85) // (80+85+90)/3
   })
 })
 

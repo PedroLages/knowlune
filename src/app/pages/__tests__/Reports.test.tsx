@@ -75,6 +75,19 @@ vi.mock('@/lib/progress', () => ({
 vi.mock('@/lib/analytics', () => ({
   calculateCompletionRate: () =>
     Promise.resolve({ completionRate: 0, completedCount: 0, startedCount: 0 }),
+  calculateQuizAnalytics: () =>
+    Promise.resolve({
+      totalQuizzesCompleted: 0,
+      averageScore: 0,
+      completionRate: 0,
+      averageRetakeFrequency: 0,
+      recentAttempts: [],
+      topPerforming: [],
+      needsImprovement: [],
+    }),
+  calculateRetakeFrequency: () =>
+    Promise.resolve({ averageRetakes: 0, totalAttempts: 0, uniqueQuizzes: 0 }),
+  interpretRetakeFrequency: () => 'No retakes yet — each quiz taken once.',
 }))
 
 // ── Mock @/db (for db.quizAttempts.count()) ──
@@ -130,6 +143,12 @@ vi.mock('@/app/components/StudyTimeAnalytics', () => ({
 
 vi.mock('@/app/components/reports/AIAnalyticsTab', () => ({
   AIAnalyticsTab: () => <div data-testid="ai-analytics-tab">AIAnalyticsTab</div>,
+}))
+
+vi.mock('@/app/components/reports/QuizAnalyticsDashboard', () => ({
+  QuizAnalyticsDashboard: () => (
+    <div data-testid="quiz-analytics-dashboard">QuizAnalyticsDashboard</div>
+  ),
 }))
 
 vi.mock('@/app/components/reports/QuizAnalyticsTab', () => ({
@@ -262,5 +281,24 @@ describe('Reports page', () => {
     expect(screen.getByText('Course Completion')).toBeInTheDocument()
     expect(screen.getByText('Progress by Category')).toBeInTheDocument()
     expect(screen.getByText('Study Activity (Last 30 Days)')).toBeInTheDocument()
+  })
+
+  it('mounts QuizAnalyticsDashboard when navigating to ?tab=quizzes', () => {
+    render(
+      <MemoryRouter initialEntries={['/reports?tab=quizzes']}>
+        <Reports />
+      </MemoryRouter>
+    )
+    expect(screen.getByTestId('quiz-analytics-dashboard')).toBeInTheDocument()
+  })
+
+  it('defaults to study tab for unknown ?tab= values', () => {
+    render(
+      <MemoryRouter initialEntries={['/reports?tab=unknown']}>
+        <Reports />
+      </MemoryRouter>
+    )
+    expect(screen.getByText('Course Completion')).toBeInTheDocument()
+    expect(screen.queryByTestId('quiz-analytics-dashboard')).not.toBeInTheDocument()
   })
 })
