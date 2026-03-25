@@ -18,8 +18,8 @@ import { ModuleAccordion } from '@/app/components/figma/ModuleAccordion'
 import { CourseNotesTab } from '@/app/components/notes/CourseNotesTab'
 import { categoryLabels, categoryColors } from '@/app/components/figma/CourseCard'
 import { useCourseStore } from '@/stores/useCourseStore'
-import { getAuthorById } from '@/data/authors'
 import { getAvatarSrc } from '@/lib/authors'
+import { useAuthorStore } from '@/stores/useAuthorStore'
 import { getProgress, getCourseCompletionPercent } from '@/lib/progress'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 
@@ -85,7 +85,7 @@ export function CourseDetail() {
 
             {/* Author */}
             {(() => {
-              const author = getAuthorById(course.authorId)
+              const author = useAuthorStore.getState().getAuthorById(course.authorId)
               if (!author) return null
               return (
                 <Link

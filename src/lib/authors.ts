@@ -1,5 +1,5 @@
 import { useCourseStore } from '@/stores/useCourseStore'
-import { getAuthorById } from '@/data/authors'
+import { useAuthorStore } from '@/stores/useAuthorStore'
 import type { Course, Author } from '@/data/types'
 
 export function getAuthorStats(author: Author) {
@@ -15,7 +15,7 @@ export function getAuthorStats(author: Author) {
 }
 
 export function getAuthorForCourse(course: Course): Author | undefined {
-  return getAuthorById(course.authorId)
+  return useAuthorStore.getState().getAuthorById(course.authorId)
 }
 
 /** Available responsive avatar widths (px) */

@@ -17,6 +17,7 @@ import type {
   ReviewRecord,
   CourseReminder,
   Course,
+  Author,
   VideoCaptionRecord,
 } from '@/data/types'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
@@ -42,6 +43,7 @@ const db = new Dexie('ElearningDB') as Dexie & {
   quizzes: EntityTable<Quiz, 'id'>
   quizAttempts: EntityTable<QuizAttempt, 'id'>
   videoCaptions: Table<VideoCaptionRecord> // compound PK: [courseId+videoId]
+  authors: EntityTable<Author, 'id'>
 }
 
 db.version(1).stores({
@@ -474,6 +476,41 @@ db.version(19)
           delete course.instructorId
         }
       })
+  })
+
+// v20: Authors table for CRUD management (E25-S02)
+db.version(20)
+  .stores({
+    // All 20 existing v19 tables (unchanged — must redeclare or Dexie deletes them)
+    importedCourses: 'id, name, importedAt, status, *tags',
+    importedVideos: 'id, courseId, filename',
+    importedPdfs: 'id, courseId, filename',
+    progress: '[courseId+videoId], courseId, videoId',
+    bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+    notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+    screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+    studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+    contentProgress: '[courseId+itemId], courseId, itemId, status',
+    challenges: 'id, type, deadline, createdAt',
+    embeddings: 'noteId, createdAt',
+    learningPath: 'courseId, position, generatedAt',
+    courseThumbnails: 'courseId',
+    aiUsageEvents: 'id, featureType, timestamp, courseId',
+    reviewRecords: 'id, noteId, nextReviewAt, reviewedAt',
+    courseReminders: 'id, courseId',
+    courses: 'id, category, difficulty, authorId',
+    quizzes: 'id, lessonId, createdAt',
+    quizAttempts: 'id, quizId, [quizId+completedAt], completedAt',
+    videoCaptions: '[courseId+videoId], courseId, videoId',
+    // NEW: Authors table
+    authors: 'id, name',
+  })
+  .upgrade(async tx => {
+    const { allAuthors } = await import('@/data/authors')
+    const existingCount = await tx.table('authors').count()
+    if (existingCount === 0) {
+      await tx.table('authors').bulkAdd(allAuthors)
+    }
   })
 
 export { db }

@@ -1,10 +1,12 @@
-import { useParams, Link } from 'react-router'
-import { BookOpen, Clock, ExternalLink, GraduationCap, Award, Users } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useParams, Link, useNavigate } from 'react-router'
+import { BookOpen, Clock, ExternalLink, GraduationCap, Award, Users, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Separator } from '@/app/components/ui/separator'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
+import { Skeleton } from '@/app/components/ui/skeleton'
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -14,9 +16,11 @@ import {
   BreadcrumbSeparator,
 } from '@/app/components/ui/breadcrumb'
 import { CourseCard } from '@/app/components/figma/CourseCard'
-import { getAuthorById } from '@/data/authors'
+import { useAuthorStore } from '@/stores/useAuthorStore'
 import { getAuthorStats, getAvatarSrc } from '@/lib/authors'
 import { getCourseCompletionPercent } from '@/lib/progress'
+import { AuthorFormDialog } from '@/app/components/authors/AuthorFormDialog'
+import { DeleteAuthorDialog } from '@/app/components/authors/DeleteAuthorDialog'
 
 function getInitials(name: string) {
   return name
@@ -28,7 +32,30 @@ function getInitials(name: string) {
 
 export function AuthorProfile() {
   const { authorId } = useParams<{ authorId: string }>()
+  const navigate = useNavigate()
+  const { isLoaded, isLoading, loadAuthors, getAuthorById } = useAuthorStore()
+  const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+
+  useEffect(() => {
+    loadAuthors()
+  }, [loadAuthors])
+
   const author = getAuthorById(authorId!)
+
+  if (isLoading && !isLoaded) {
+    return (
+      <div>
+        <Skeleton className="h-5 w-48 mb-4" />
+        <Skeleton className="h-48 rounded-3xl mb-6" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-2xl" />
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   if (!author) {
     return (
@@ -79,7 +106,31 @@ export function AuthorProfile() {
 
             {/* Info */}
             <div className="flex-1 text-center sm:text-left">
-              <h1 className="text-2xl font-bold mb-1">{author.name}</h1>
+              <div className="flex items-start gap-3 justify-center sm:justify-start">
+                <h1 className="text-2xl font-bold mb-1">{author.name}</h1>
+                <div className="flex gap-1 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8"
+                    onClick={() => setEditOpen(true)}
+                    aria-label={`Edit ${author.name}`}
+                    data-testid="profile-edit-button"
+                  >
+                    <Pencil className="size-4" aria-hidden="true" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => setDeleteOpen(true)}
+                    aria-label={`Delete ${author.name}`}
+                    data-testid="profile-delete-button"
+                  >
+                    <Trash2 className="size-4" aria-hidden="true" />
+                  </Button>
+                </div>
+              </div>
               <p className="text-muted-foreground mb-3">{author.title}</p>
 
               {/* Featured Quote */}
@@ -168,6 +219,17 @@ export function AuthorProfile() {
           ))}
         </div>
       </div>
+
+      {/* Edit Dialog */}
+      <AuthorFormDialog open={editOpen} onOpenChange={setEditOpen} author={author} />
+
+      {/* Delete Dialog */}
+      <DeleteAuthorDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        author={author}
+        onDeleted={() => navigate('/authors')}
+      />
     </div>
   )
 }
