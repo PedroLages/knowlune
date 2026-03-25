@@ -6,7 +6,7 @@ started: 2026-03-23
 completed:
 reviewed: in-progress
 review_started: 2026-03-25
-review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing]
 burn_in_validated: false
 ---
 
@@ -153,11 +153,24 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+- **H1 (HIGH)**: Tab triggers are 36px on mobile, below 44px touch target minimum — remove `className="h-9"` from TabsTriggers
+- **H2 (HIGH)**: TabsList missing `aria-label` — add `aria-label="Reports navigation"`
+- **M1**: Retake frequency appears twice (stat card + detail card) — consider retiring redundant stat card
+- **M2**: `replace: true` makes tab switches invisible to browser Back (overlaps with code review blocker)
+- **M3**: No entrance animations on QuizAnalyticsTab (inconsistent with Study tab's motion.div)
+- Report: `docs/reviews/design/design-review-2026-03-25-e27-s01.md`
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+- **BLOCKER**: `{ replace: true }` in `setSearchParams` (Reports.tsx:202) breaks AC 5 — back button skips tab changes
+- **BLOCKER**: AC 7 requires "Best/worst performing quizzes" — not implemented in QuizAnalyticsTab
+- **HIGH**: `db.quizAttempts.toArray()` full table scan — use `each()` cursor for running average
+- **HIGH**: No E2E test for back-button navigation or quiz data-seeded view (AC 5, AC 7)
+- **MEDIUM**: Error state conflated with empty state in QuizAnalyticsTab
+- **MEDIUM**: `hasActivity` doesn't account for quiz-only users
+- Report: `docs/reviews/code/code-review-2026-03-25-e27-s01.md`
+- Test report: `docs/reviews/code/code-review-testing-2026-03-25-e27-s01.md`
+- Edge case report: `docs/reviews/code/edge-case-review-2026-03-25-e27-s01.md`
 
 ## Web Design Guidelines Review
 
