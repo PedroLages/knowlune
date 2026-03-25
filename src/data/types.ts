@@ -387,3 +387,34 @@ export interface ReviewRecord {
   easeFactor: number // SM-2 ease factor (starts at 2.5, min 1.3)
   reviewCount: number // Cumulative number of reviews
 }
+
+// --- Career Paths (Story 20.1) ---
+
+export interface CareerPathStage {
+  id: string // e.g., 'web-dev-stage-1'
+  title: string // e.g., 'Foundations'
+  description: string
+  courseIds: string[] // References to Course.id or ImportedCourse.id
+  skills: string[] // Skill tags for this stage
+  estimatedHours: number
+}
+
+export interface CareerPath {
+  id: string // e.g., 'behavioral-intelligence'
+  title: string // e.g., 'Behavioral Intelligence'
+  description: string
+  icon: string // Lucide icon name (e.g., 'Brain')
+  stages: CareerPathStage[]
+  totalEstimatedHours: number
+  createdAt: string // ISO 8601
+}
+
+export type PathEnrollmentStatus = 'active' | 'completed' | 'dropped'
+
+export interface PathEnrollment {
+  id: string // UUID
+  pathId: string // FK to CareerPath.id
+  enrolledAt: string // ISO 8601
+  status: PathEnrollmentStatus
+  completedAt?: string // ISO 8601 (set when all stages done)
+}

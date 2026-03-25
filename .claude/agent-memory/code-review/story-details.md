@@ -284,6 +284,19 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M4: ReviewSummary jump buttons lack `min-w-[44px]`
 - Positive: Clean component decomposition, solid ARIA (aria-current="step", dynamic aria-labels), defensive store guards, correct array answer handling in QuestionGrid
 
+## E20-S01: Career Paths System (Round 1)
+- No uncommitted changes (positive -- pattern finally stable since ~E07)
+- H1: TOCTOU race on `loadPaths` seed logic -- concurrent calls both see count===0, both call bulkAdd, second throws ConstraintError
+- H2: Stale closure on `enrollments` in enrollInPath/dropPath -- destructures at function start, uses stale snapshot after await
+- H3 (RECURRING): Fire-and-forget `refreshCourseCompletion` -- `.catch` logs only, no user feedback when progress data fails
+- H4 (RECURRING): Silent catch on `refreshCourseCompletion` internal error (line 113) -- logs but no toast or error state
+- M1: No loadPaths deduplication -- both pages call it, wasteful DB queries
+- M2: `sortedPaths` not actually sorted -- misleading variable name
+- M3: Course display name derived from ID with naive regex -- real course names exist in DB but not fetched
+- M4: `networkidle` used 20 times in E2E spec -- fragile wait strategy
+- M5: Completed courses not navigable -- blocks revisiting completed material
+- Positive: Correct persistence-before-state pattern, comprehensive test coverage (20 unit + 15 E2E), strong accessibility (aria-label, role, reducedMotion), proper design token usage, no hardcoded colors
+
 ## E18-S10: Export Quiz Results (Round 1)
 - No uncommitted changes (positive)
 - BLOCKER: CSV formula injection -- `escapeCsv` handles RFC 4180 delimiters but not formula-injection payloads (`=`, `+`, `-`, `@`)

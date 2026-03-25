@@ -51,6 +51,7 @@ describe('ElearningDB schema', () => {
       'aiUsageEvents',
       'authors',
       'bookmarks',
+      'careerPaths',
       'challenges',
       'contentProgress',
       'courseReminders',
@@ -62,6 +63,7 @@ describe('ElearningDB schema', () => {
       'importedVideos',
       'learningPath',
       'notes',
+      'pathEnrollments',
       'progress',
       'quizAttempts',
       'quizzes',
@@ -72,8 +74,8 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 20', () => {
-    expect(db.verno).toBe(20)
+  it('should be at version 21', () => {
+    expect(db.verno).toBe(21)
   })
 
   it('should preserve key indexes on existing v16 tables in v17 migration', async () => {

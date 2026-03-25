@@ -19,6 +19,8 @@ import type {
   Course,
   VideoCaptionRecord,
   ImportedAuthor,
+  CareerPath,
+  PathEnrollment,
 } from '@/data/types'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 
@@ -44,6 +46,8 @@ const db = new Dexie('ElearningDB') as Dexie & {
   quizAttempts: EntityTable<QuizAttempt, 'id'>
   videoCaptions: Table<VideoCaptionRecord> // compound PK: [courseId+videoId]
   authors: EntityTable<ImportedAuthor, 'id'>
+  careerPaths: EntityTable<CareerPath, 'id'>
+  pathEnrollments: EntityTable<PathEnrollment, 'id'>
 }
 
 db.version(1).stores({
@@ -596,5 +600,34 @@ db.version(20)
       // Don't rethrow — preserve existing data
     }
   })
+
+// v21: Career Paths system — curated multi-course learning journeys (E20-S01)
+db.version(21).stores({
+  // All 22 existing v20 tables (unchanged — must redeclare or Dexie deletes them)
+  importedCourses: 'id, name, importedAt, status, *tags',
+  importedVideos: 'id, courseId, filename',
+  importedPdfs: 'id, courseId, filename',
+  progress: '[courseId+videoId], courseId, videoId',
+  bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+  screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+  contentProgress: '[courseId+itemId], courseId, itemId, status',
+  challenges: 'id, type, deadline, createdAt',
+  embeddings: 'noteId, createdAt',
+  learningPath: 'courseId, position, generatedAt',
+  courseThumbnails: 'courseId',
+  aiUsageEvents: 'id, featureType, timestamp, courseId',
+  reviewRecords: 'id, noteId, nextReviewAt, reviewedAt',
+  courseReminders: 'id, courseId',
+  courses: 'id, category, difficulty, authorId',
+  quizzes: 'id, lessonId, createdAt',
+  quizAttempts: 'id, quizId, [quizId+completedAt], completedAt',
+  videoCaptions: '[courseId+videoId], courseId, videoId',
+  authors: 'id, name, createdAt',
+  // NEW: Career Paths tables
+  careerPaths: 'id',
+  pathEnrollments: 'id, pathId, status',
+})
 
 export { db }
