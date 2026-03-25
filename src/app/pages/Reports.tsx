@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router'
-import { BookOpen, CheckCircle, FileText, TrendingUp, Clock, RotateCcw } from 'lucide-react'
+import { BookOpen, CheckCircle, FileText, TrendingUp, Clock } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import {
   ChartContainer,
@@ -23,11 +23,6 @@ import {
 } from '@/lib/progress'
 import { getActionsPerDay } from '@/lib/studyLog'
 import {
-  calculateRetakeFrequency,
-  interpretRetakeFrequency,
-  type RetakeFrequencyResult,
-} from '@/lib/analytics'
-import {
   getCourseCompletionData,
   getCategoryColorMap,
   getCategoryCompletionForRadar,
@@ -37,6 +32,7 @@ import { StatsCard } from '@/app/components/StatsCard'
 import { EmptyState } from '@/app/components/EmptyState'
 import StudyTimeAnalytics from '@/app/components/StudyTimeAnalytics'
 import { AIAnalyticsTab } from '@/app/components/reports/AIAnalyticsTab'
+import { QuizAnalyticsTab } from '@/app/components/reports/QuizAnalyticsTab'
 import { CategoryRadar } from '@/app/components/reports/CategoryRadar'
 import { SkillsRadar } from '@/app/components/reports/SkillsRadar'
 import { WeeklyGoalRing } from '@/app/components/reports/WeeklyGoalRing'
@@ -76,11 +72,6 @@ export default function Reports() {
     : 'study'
 
   const [studyNotes, setStudyNotes] = useState(0)
-  const [retakeData, setRetakeData] = useState<RetakeFrequencyResult>({
-    averageRetakes: 0,
-    totalAttempts: 0,
-    uniqueQuizzes: 0,
-  })
 
   useEffect(() => {
     let ignore = false
@@ -89,18 +80,6 @@ export default function Reports() {
         if (!ignore) setStudyNotes(notes)
       })
       .catch(err => console.error('Failed to load study notes:', err))
-    return () => {
-      ignore = true
-    }
-  }, [])
-
-  useEffect(() => {
-    let ignore = false
-    calculateRetakeFrequency()
-      .then(data => {
-        if (!ignore) setRetakeData(data)
-      })
-      .catch(err => console.error('Failed to load retake frequency:', err))
     return () => {
       ignore = true
     }
@@ -174,8 +153,7 @@ export default function Reports() {
   const hasActivity =
     completedLessons > 0 ||
     studyNotes > 0 ||
-    activityData.some(d => d.activities > 0) ||
-    retakeData.totalAttempts > 0
+    activityData.some(d => d.activities > 0)
 
   return (
     <MotionConfig reducedMotion="user">
@@ -204,6 +182,9 @@ export default function Reports() {
                 <TabsTrigger value="study" className="h-9">
                   Study Analytics
                 </TabsTrigger>
+                <TabsTrigger value="quizzes" className="h-9">
+                  Quiz Analytics
+                </TabsTrigger>
                 <TabsTrigger value="ai" className="h-9">
                   AI Analytics
                 </TabsTrigger>
@@ -212,6 +193,10 @@ export default function Reports() {
 
             <TabsContent value="ai" className="mt-6">
               <AIAnalyticsTab />
+            </TabsContent>
+
+            <TabsContent value="quizzes" className="mt-6">
+              <QuizAnalyticsTab />
             </TabsContent>
 
             <TabsContent value="study" className="mt-6 space-y-6">
@@ -407,34 +392,7 @@ export default function Reports() {
                 </Card>
               </motion.div>
 
-              {/* ── Row 5: Average Retake Frequency ── */}
-              <motion.div variants={fadeUp}>
-                <Card data-testid="quiz-retake-card">
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <RotateCcw className="size-4 text-muted-foreground" aria-hidden="true" />
-                      Average Retake Frequency
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {retakeData.totalAttempts === 0 ? (
-                      <p className="text-sm text-muted-foreground">No quizzes attempted yet</p>
-                    ) : (
-                      <>
-                        <div className="text-3xl font-bold">
-                          {retakeData.averageRetakes.toFixed(1)}
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-1">attempts per quiz</p>
-                        <p className="text-sm text-muted-foreground mt-2">
-                          {interpretRetakeFrequency(retakeData.averageRetakes)}
-                        </p>
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              {/* ── Row 6: Recent Activity Timeline ── */}
+              {/* ── Row 5: Recent Activity Timeline ── */}
               <motion.div variants={fadeUp}>
                 <Card>
                   <CardHeader>
