@@ -154,6 +154,7 @@ export interface ImportedCourse {
   videoCount: number
   pdfCount: number
   directoryHandle: FileSystemDirectoryHandle
+  authorId?: string // FK to ImportedAuthor.id (E25-S01 AC2)
 }
 
 export interface ImportedVideo {
@@ -356,10 +357,13 @@ export interface CourseReminder {
 export interface ImportedAuthor {
   id: string
   name: string
-  bio: string
-  photoUrl: string // URL or object URL for display
+  bio?: string // Biographical text (optional)
+  photoUrl?: string // URL or object URL for display (optional)
   photoHandle?: FileSystemFileHandle // Optional: local file handle for photo
   courseIds: string[] // Linked imported course IDs
+  specialties?: string[] // Specialty tags (E25-S01 AC5)
+  socialLinks?: { website?: string; twitter?: string; linkedin?: string } // Social profile links (E25-S01 AC5)
+  isPreseeded: boolean // Flag indicating if bundled (e.g., Chase Hughes) (E25-S01 AC5)
   createdAt: string // ISO 8601
   updatedAt: string // ISO 8601
 }

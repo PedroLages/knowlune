@@ -7,10 +7,13 @@ import { toastWithUndo, toastError } from '@/lib/toastHelpers'
 
 interface NewAuthorData {
   name: string
-  bio: string
-  photoUrl: string
+  bio?: string
+  photoUrl?: string
   photoHandle?: FileSystemFileHandle
   courseIds?: string[]
+  specialties?: string[]
+  socialLinks?: { website?: string; twitter?: string; linkedin?: string }
+  isPreseeded?: boolean
 }
 
 interface UpdateAuthorData {
@@ -19,6 +22,8 @@ interface UpdateAuthorData {
   photoUrl?: string
   photoHandle?: FileSystemFileHandle
   courseIds?: string[]
+  specialties?: string[]
+  socialLinks?: { website?: string; twitter?: string; linkedin?: string }
 }
 
 interface AuthorStoreState {
@@ -48,6 +53,7 @@ export const useAuthorStore = create<AuthorStoreState>((set, get) => ({
     } catch (error) {
       set({ isLoading: false, error: 'Failed to load authors' })
       console.error('[AuthorStore] Failed to load authors:', error)
+      toast.error('Failed to load authors. Please try refreshing the page.')
     }
   },
 
@@ -60,6 +66,9 @@ export const useAuthorStore = create<AuthorStoreState>((set, get) => ({
       photoUrl: data.photoUrl,
       photoHandle: data.photoHandle,
       courseIds: data.courseIds ?? [],
+      specialties: data.specialties,
+      socialLinks: data.socialLinks,
+      isPreseeded: data.isPreseeded ?? false,
       createdAt: now,
       updatedAt: now,
     }
@@ -122,8 +131,9 @@ export const useAuthorStore = create<AuthorStoreState>((set, get) => ({
 
   deleteAuthor: async (id: string) => {
     const { authors } = get()
-    const deletedAuthor = authors.find(a => a.id === id)
-    if (!deletedAuthor) return
+    const deletedIndex = authors.findIndex(a => a.id === id)
+    if (deletedIndex === -1) return
+    const deletedAuthor = authors[deletedIndex]
 
     // Optimistic update
     set({
@@ -140,7 +150,11 @@ export const useAuthorStore = create<AuthorStoreState>((set, get) => ({
         message: `Author "${deletedAuthor.name}" deleted`,
         onUndo: async () => {
           await db.authors.add(deletedAuthor)
-          set({ authors: [...get().authors, deletedAuthor] })
+          // Restore at original index position
+          const current = get().authors
+          const restored = [...current]
+          restored.splice(deletedIndex, 0, deletedAuthor)
+          set({ authors: restored })
           toast.success('Author restored')
         },
         duration: 5000,

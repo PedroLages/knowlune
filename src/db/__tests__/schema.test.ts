@@ -428,6 +428,7 @@ describe('authors table (v20)', () => {
       bio: 'A test bio',
       photoUrl: '',
       courseIds: [] as string[],
+      isPreseeded: false,
       createdAt: now,
       updatedAt: now,
       ...overrides,
@@ -482,6 +483,119 @@ describe('authors table (v20)', () => {
     await db.authors.update(author.id, { name: 'Updated' })
     const updated = await db.authors.get(author.id)
     expect(updated!.name).toBe('Updated')
+  })
+})
+
+describe('v20 migration edge cases', () => {
+  /**
+   * Helper: create a v19 database with importedCourses data, then trigger v20 upgrade.
+   * Returns the upgraded db instance.
+   */
+  async function migrateFromV19(
+    courses: Array<Record<string, unknown>> = []
+  ) {
+    await Dexie.delete('ElearningDB')
+
+    // Create a v19 database with importedCourses
+    const v19Db = new Dexie('ElearningDB')
+    v19Db.version(19).stores({
+      importedCourses: 'id, name, importedAt, status, *tags',
+      importedVideos: 'id, courseId, filename',
+      importedPdfs: 'id, courseId, filename',
+      progress: '[courseId+videoId], courseId, videoId',
+      bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+      notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+      screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+      studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+      contentProgress: '[courseId+itemId], courseId, itemId, status',
+      challenges: 'id, type, deadline, createdAt',
+      embeddings: 'noteId, createdAt',
+      learningPath: 'courseId, position, generatedAt',
+      courseThumbnails: 'courseId',
+      aiUsageEvents: 'id, featureType, timestamp, courseId',
+      reviewRecords: 'id, noteId, nextReviewAt, reviewedAt',
+      courseReminders: 'id, courseId',
+      courses: 'id, category, difficulty, authorId',
+      quizzes: 'id, lessonId, createdAt',
+      quizAttempts: 'id, quizId, [quizId+completedAt], completedAt',
+      videoCaptions: '[courseId+videoId], courseId, videoId',
+    })
+    await v19Db.open()
+
+    // Seed importedCourses with authorName data
+    if (courses.length > 0) {
+      await v19Db.table('importedCourses').bulkAdd(courses)
+    }
+
+    v19Db.close()
+
+    // Re-import the real schema module (v20) to trigger upgrade
+    vi.resetModules()
+    const module = await import('@/db/schema')
+    db = module.db
+
+    return db
+  }
+
+  function makeMigrationCourse(overrides: Record<string, unknown> = {}) {
+    return {
+      id: crypto.randomUUID(),
+      name: 'Test Course',
+      importedAt: new Date().toISOString(),
+      category: '',
+      tags: [] as string[],
+      status: 'active',
+      videoCount: 0,
+      pdfCount: 0,
+      directoryHandle: {} as FileSystemDirectoryHandle,
+      ...overrides,
+    }
+  }
+
+  it('should handle 0 courses (empty library) — only Chase Hughes is seeded', async () => {
+    const upgradedDb = await migrateFromV19([])
+
+    const authors = await upgradedDb.authors.toArray()
+    expect(authors).toHaveLength(1)
+    expect(authors[0].name).toBe('Chase Hughes')
+    expect(authors[0].isPreseeded).toBe(true)
+  })
+
+  it('should deduplicate authorNames (case-insensitive, trimmed)', async () => {
+    const courses = [
+      makeMigrationCourse({ authorName: 'John Smith' }),
+      makeMigrationCourse({ authorName: 'john smith' }),
+      makeMigrationCourse({ authorName: ' John Smith ' }),
+    ]
+
+    const upgradedDb = await migrateFromV19(courses)
+
+    const authors = await upgradedDb.authors.toArray()
+    // 1 Chase Hughes (pre-seeded) + 1 John Smith (deduplicated)
+    expect(authors).toHaveLength(2)
+
+    const johnSmith = authors.find(a => a.name === 'John Smith')
+    expect(johnSmith).toBeDefined()
+    expect(johnSmith!.courseIds).toHaveLength(3) // All 3 courses linked
+    expect(johnSmith!.isPreseeded).toBe(false)
+  })
+
+  it('should skip empty authorName strings', async () => {
+    const courses = [
+      makeMigrationCourse({ authorName: '' }),
+      makeMigrationCourse({ authorName: '   ' }),
+      makeMigrationCourse({ authorName: 'Valid Author' }),
+    ]
+
+    const upgradedDb = await migrateFromV19(courses)
+
+    const authors = await upgradedDb.authors.toArray()
+    // 1 Chase Hughes + 1 Valid Author (empty strings skipped)
+    expect(authors).toHaveLength(2)
+
+    const validAuthor = authors.find(a => a.name === 'Valid Author')
+    expect(validAuthor).toBeDefined()
+    expect(validAuthor!.courseIds).toHaveLength(1)
   })
 })
 

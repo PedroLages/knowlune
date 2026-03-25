@@ -1,7 +1,7 @@
 ---
 story_id: E25-S01
 story_name: "Author Data Model And Migration"
-status: in-progress
+status: review-fixes
 started: 2026-03-23
 completed:
 reviewed: false
@@ -116,11 +116,17 @@ See [e25-s01-author-data-model-and-migration.md](plans/e25-s01-author-data-model
 
 ## Implementation Notes
 
-[Architecture decisions, patterns used, dependencies added]
+- `ImportedAuthor` type expanded with `specialties`, `socialLinks`, `isPreseeded` fields per AC5
+- `ImportedCourse` type extended with optional `authorId` field per AC2
+- v20 migration upgrade function pre-seeds Chase Hughes and migrates `authorName` strings per AC3/AC7
+- Migration uses case-insensitive, trimmed deduplication for author names
+- `loadAuthors` error handling now surfaces toast feedback to users
+- `deleteAuthor` undo restores author at original list position
 
 ## Testing Notes
 
-[Test strategy, edge cases discovered, coverage notes]
+- Added v20 migration edge case tests: 0 courses, duplicate authorNames, empty authorName strings
+- Migration tests use v19→v20 upgrade path with `vi.resetModules()` to trigger real upgrade handler
 
 ## Pre-Review Checklist
 
@@ -138,16 +144,18 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+N/A — data model story, no UI changes.
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+Review identified 9 issues (3 HIGH, 3 MEDIUM, 2 LOW, 1 NIT). All addressed in review-fixes commit.
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+N/A — data model story, no UI changes.
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- Type alignment between spec and implementation requires careful attention — AC5 divergence was caught in review
+- Migration upgrade functions need comprehensive edge case tests from the start (empty data, duplicates, whitespace)
+- Error handling in stores should always include user-facing feedback (toast), not just console.error
