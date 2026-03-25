@@ -82,11 +82,19 @@ No new UI components needed. Changes are limited to:
 
 ## Implementation Notes
 
-[Populated during implementation]
+- `detectAuthorFromFolderName()` is a pure function using separator heuristics (` - `, ` — `, ` – `) and a Unicode-aware person name regex requiring 2+ words.
+- `matchOrCreateAuthor()` does case-insensitive DB lookup, creates new author with `isPreseeded: false` if none found. Uses `crypto.randomUUID()` for IDs.
+- Detection integrated into `persistScannedCourse()` so both wizard and one-shot import flows benefit. The `overrides` parameter now accepts an optional `authorId` for explicit override.
+- After persist, the detected author's `courseIds` array is updated to include the new course.
+- Success toast includes ` by AuthorName` when detection succeeds (AC4).
+- Detection failure is fully silent — import continues without authorId (AC5).
 
 ## Testing Notes
 
-[Populated during implementation]
+- 15 unit tests for `detectAuthorFromFolderName()` covering separators, edge cases, name validation.
+- 7 integration tests for `matchOrCreateAuthor()` with fake-indexeddb.
+- 3 new tests in `courseImport.test.ts` verifying end-to-end detection, toast, and fallback.
+- 2 E2E regression tests verifying seeded author/course data on Authors page.
 
 ## Pre-Review Checklist
 
