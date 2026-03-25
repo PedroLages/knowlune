@@ -2466,3 +2466,202 @@ Uses Recharts `RadarChart` component. 5-7 axes representing skill domains derive
 **Responsive:** Chart scales proportionally; compact labels on mobile (<640px)
 
 **Accessibility:** `role="img"`, data table alternative available via "View as table" link, 3:1 contrast
+
+## YouTube Course Builder — Design Thinking Addendum (Epic 23)
+
+**Added 2026-03-26**
+**Input:** Design thinking session ([design-thinking-2026-03-26.md](../../_bmad-output/design-thinking-2026-03-26.md))
+**Method:** Empathize → Define → Ideate → Prototype → Test (Stanford d.school)
+**Scope:** Revisions to the YouTube Course Builder UX spec (Section 12) based on empathy-driven design with two user personas.
+
+### User Personas
+
+The original YouTube spec (Section 12) was designed for a single persona. Design thinking surfaced that the YouTube import journey serves **two fundamentally different users** with radically different expectations:
+
+**Persona 1: Pedro (Power User)**
+- Self-hosted Ollama on Unraid, deep technical comfort, existing Knowlune user
+- Mental model: "Import this playlist into my existing system"
+- Patience: Will invest 5 minutes for a powerful, customizable result
+- AI expectation: Wants AI structuring, transcript search, RAG Q&A
+- Drop-off risk: Low (already invested)
+
+**Persona 2: Maya (Free-Tier Newcomer)**
+- 28-year-old career switcher, non-technical, found Knowlune via Reddit "Turn YouTube into courses"
+- Mental model: "I pasted a URL. Where's my course?"
+- Patience: Will leave in 30 seconds if confused or underwhelmed
+- AI expectation: Doesn't know AI is involved — just wants "organized"
+- Drop-off risk: Very high (first visit, no investment)
+- **Critical constraint:** Will NOT set up Ollama or provide an API key. Free tier must feel complete with zero config.
+
+**Design implication:** Every screen must have a one-click happy path (for Maya) with progressive disclosure of power features (for Pedro). The free tier is not "degraded AI" — it's "creator intelligence" (YouTube chapters + playlist order + keyword extraction).
+
+### Revision 1: Entry Point — Unified Dialog vs. Dropdown
+
+**Original design (Section 12.1):** `DropdownMenu` on "Add Course" button with two items: "Import from Folder" and "Build from YouTube."
+
+**Revised design:** Replace the dropdown with a **unified "Add Course" dialog** that opens to a dual-mode first screen:
+
+```
+┌──────────────────────────────────────────────┐
+│  Add a Course                           [X]  │
+│                                              │
+│  Paste a YouTube link or playlist            │
+│  ┌──────────────────────────────────────────┐│
+│  │ https://youtube.com/playlist?list=...   ││
+│  └──────────────────────────────────────────┘│
+│                                              │
+│  ──────────────── or ─────────────────       │
+│                                              │
+│  📁 Import from local files                  │
+│     Select a folder with videos & PDFs       │
+│                                              │
+└──────────────────────────────────────────────┘
+```
+
+**Why this replaces the dropdown:**
+
+1. **Eliminates a decision before action.** The dropdown forces "choose type → then act." The unified dialog lets users act (paste URL or click browse) and the system routes them. Action before decision = less friction.
+
+2. **URL is the hero.** Maya arrived via "Turn YouTube into courses." She expects a URL field, not a dropdown. The URL field auto-focused on open is the zero-friction path.
+
+3. **File import remains discoverable.** Pedro sees "Import from local files" immediately. No buried menus. But it doesn't compete with the headline use case.
+
+4. **Reinforces product identity.** "We handle all your content" (one entry point) vs. "We have two separate import tools" (dropdown with branches).
+
+5. **"or" separator eliminates decision paralysis.** Users see a primary path and an alternative, not two equally-weighted options.
+
+**Behavior after branching:**
+- Pasting a YouTube URL → transitions to the existing `YouTubeImportDialog` Step 1 (URL validation + auto-detection)
+- Clicking "Import from local files" → opens existing `ImportWizardDialog` (unchanged)
+- The unified dialog is a lightweight router, not a replacement for either wizard
+
+**Component:** New `AddCourseDialog` component wrapping the routing logic. `sm:max-w-lg` (same as current import wizard).
+
+**Empty state update:** The Courses page empty state retains both action buttons but now both open the same unified dialog (with auto-focus on URL field or file picker depending on which button was clicked):
+```
+      [illustration: course import]
+  "Start building your library"
+  [▶️ Build from YouTube]  [📁 Import from Files]
+```
+
+### Revision 2: oEmbed Instant Preview (< 1 Second Feedback)
+
+**Original design (Section 12.2-12.3):** URL validation → auto-fetch metadata (YouTube API, 1-5 seconds) → skeleton loading → preview.
+
+**Enhancement:** Add an **oEmbed micro-preview** that appears within 1 second of paste, before the full API metadata fetch completes.
+
+**How it works:**
+1. User pastes URL → instant regex validation (sync, <10ms)
+2. oEmbed fetch fires immediately: `https://www.youtube.com/oembed?url={url}&format=json` → returns title, author, thumbnail URL (~200-500ms, free, no API quota)
+3. Micro-preview appears while full API fetch continues in background:
+
+```
+┌──────────────────────────────────────────────┐
+│  ┌──────┐  React Full Course 2024            │
+│  │ 🎬   │  Fireship • Playlist               │
+│  │ thumb │  Loading full details...           │
+│  └──────┘                                    │
+│                                              │
+│  ░░░░░░░░░░░░░░░░░ fetching metadata         │
+└──────────────────────────────────────────────┘
+```
+
+4. When full API metadata loads, the micro-preview transitions seamlessly to the full preview (Step 2).
+
+**Why this matters:** The 30-second window. Maya's decision to stay happens in seconds 1-3 after paste. Seeing a thumbnail + title + channel name within 1 second says "it worked, your course is coming." A 3-5 second spinner says "is this broken?"
+
+**Fallback:** If oEmbed fails (rare), fall back to the existing behavior (skeleton loading until API fetch completes). oEmbed is an enhancement, not a dependency.
+
+**Cost:** Zero API quota. YouTube's oEmbed endpoint is public and rate-limit-generous.
+
+### Revision 3: "Start Learning" Activation CTA
+
+**Original design (Section 12.6):** Course saved → dialog closes → course appears in Courses page → toast: "Course created! Extracting transcripts in the background..."
+
+**Enhancement:** Add a **celebration + activation screen** as the final dialog state before closing:
+
+```
+┌──────────────────────────────────────────────┐
+│                                              │
+│           ✓ Course Created!                  │
+│                                              │
+│  ┌──────┐  React Full Course 2024            │
+│  │ 🎬   │  24 videos • 5 chapters • ~8h 30m │
+│  │ cover │  Tags: React, JavaScript          │
+│  └──────┘                                    │
+│                                              │
+│  ┌──────────────────────────────────────┐    │
+│  │     Start Learning →                  │    │
+│  │     Begin with "What is React"        │    │
+│  └──────────────────────────────────────┘    │
+│                                              │
+│  or go to Courses page                       │
+│                                              │
+└──────────────────────────────────────────────┘
+```
+
+**Why this matters (HMW #8):** The gap between "I just imported this" and "I'm actually studying this" is where activation energy is highest. Without the CTA, users land on the Courses page and may not immediately open their new course. The "Start Learning" button collapses the import-to-study gap to one click.
+
+**Behavior:**
+- "Start Learning →" navigates to the first lesson of the course (YouTube player + chapter sidebar)
+- "or go to Courses page" is a text link (secondary action)
+- The celebration screen auto-shows for 0ms (no delay) — it's instant
+- Background transcript extraction begins simultaneously (existing behavior)
+
+**Component:** Final state of `YouTubeImportDialog` before close. Uses `variant="brand"` for the CTA button.
+
+### Revision 4: Free Tier Dignity — Reframing
+
+**Original design (Section 12.4):** No-AI path shows info banner: "Videos grouped by keyword similarity from titles. Set up an AI provider in Settings for smarter chapter organization."
+
+**Revised framing:** Change the banner copy to remove the "degraded" implication:
+
+```
+Before (original):
+  ℹ️ Videos grouped by keyword similarity from titles.
+  Set up an AI provider in Settings for smarter chapter organization.
+
+After (revised):
+  📋 Organized using the creator's playlist structure and video chapters.
+  Want AI-powered topic clustering? Set up an AI provider in Settings.
+```
+
+**Why this matters:**
+- "Creator's playlist structure" is a positive signal — the creator intentionally ordered these videos
+- "keyword similarity" sounds mechanical; "playlist structure and video chapters" sounds intentional
+- "smarter chapter organization" implies the current organization is dumb; "AI-powered topic clustering" describes a specific capability upgrade
+- This reframing makes the free tier feel like "the creator organized it" rather than "the AI is missing"
+
+**Chapter badges:**
+- YouTube chapters present: `[YouTube Chapters]` badge (green, positive)
+- Playlist order used: `[Creator's Order]` badge (neutral)
+- Keyword clustering used: `[Auto-grouped]` badge (neutral)
+- AI structured: `[✨ AI Suggested]` badge (brand, sparkles)
+
+### Success Metrics (New Section for YouTube Course Builder)
+
+| Metric | Target | Measurement |
+|--------|--------|-------------|
+| Time from paste to visual feedback (oEmbed) | < 1 second | FCP measurement on oEmbed preview |
+| Time from paste to "Create Course" available | < 10 seconds | YouTube API metadata fetch + processing |
+| Free tier course creation completion rate | > 80% | `course_created_youtube` / `youtube_url_pasted` events |
+| "Start Learning" CTA click-through rate | > 60% | Post-creation activation analytics |
+| YouTube course completion parity | Within 10% of local course completion rates | Compare streaks/progress by course source |
+| Maya persona bounce rate | < 30% abandon after URL paste | Paste events without course creation |
+| Pedro AI enhancement usage | > 50% of AI-configured users try AI structuring | `ai_structure_requested` events |
+
+### Testing Plan
+
+**Participants:** 5-7 users (2-3 Pedro-type, 3-4 Maya-type)
+
+**Critical assumptions to validate:**
+1. One-click "Create Course" is sufficient for Maya (she won't feel uncomfortable skipping structure review)
+2. Unified entry point is better than dropdown for discoverability
+3. oEmbed instant preview reduces paste anxiety
+4. "Start Learning" CTA bridges the import-to-study activation gap
+5. YouTube badge on course cards doesn't create second-class citizen perception
+6. "Enhance with AI" is discoverable by Pedro but ignorable by Maya
+
+### Design Thinking Source
+
+Full session artifact with empathy maps, HMW questions, 30 ideas, and 8-screen prototype storyboard: [design-thinking-2026-03-26.md](../../_bmad-output/design-thinking-2026-03-26.md)
