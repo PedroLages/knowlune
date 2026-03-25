@@ -29,7 +29,7 @@ app.use(express.json({ limit: '1mb' }))
  * Private-network ranges (192.168.x, 10.x, 172.16-31.x) are intentionally allowed
  * because Ollama servers are typically on the user's LAN.
  */
-function isAllowedOllamaUrl(urlString: string): boolean {
+export function isAllowedOllamaUrl(urlString: string): boolean {
   try {
     const parsed = new URL(urlString)
     const hostname = parsed.hostname.toLowerCase()
@@ -38,6 +38,7 @@ function isAllowedOllamaUrl(urlString: string): boolean {
     if (
       hostname === 'localhost' ||
       hostname === '127.0.0.1' ||
+      hostname === '0.0.0.0' ||
       hostname === '[::1]' ||
       hostname === '::1' ||
       hostname.startsWith('127.')
