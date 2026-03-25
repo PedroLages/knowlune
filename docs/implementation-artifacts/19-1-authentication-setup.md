@@ -233,3 +233,11 @@ Before requesting `/review-story`, verify:
 - **Network error constant extraction**: Exported `NETWORK_ERROR_MESSAGE` as a constant from `useAuthStore.ts` so form components can compare against it to conditionally show Retry buttons, rather than duplicating the error string across 3 components.
 
 - **Google icon replacement**: Replaced the generic `Chrome` lucide icon with an inline SVG of the actual Google logo (4-color "G") for brand accuracy. Inline SVG avoids adding a new icon dependency.
+
+- **Shared auth state causes race conditions**: Initial implementation used global Zustand `loading`/`error` state shared across all auth tabs. Switching tabs inherited stale loading spinners and `clearError()` silently discarded unread errors. Fix: move loading/error to local component state; use the return value from store actions (`{ error?: string }`) instead of subscribing to shared state.
+
+- **Supabase client fails silently with empty env vars**: `createClient('', '')` produces a client that makes requests to relative URLs, hitting the Vite dev server and returning HTML. Fix: guard with `supabase = url && key ? createClient(url, key) : null` and surface a clear "Supabase not configured" message in every store action.
+
+- **Uncontrolled Radix Tabs persist state across dialog open/close**: `defaultValue` only sets initial state — Radix preserves internal state when the Dialog unmounts/remounts. Users who select "Magic Link", close, and reopen see stale tab selection. Fix: use controlled `value`/`onValueChange` and reset in the `open` effect.
+
+- **Supabase SDK can throw on true network failures**: While Supabase normally returns `{ error }` objects, DNS failures and CORS errors throw exceptions that bypass the error-return pattern, leaving `loading: true` permanently. All auth actions need try/catch wrapping.
