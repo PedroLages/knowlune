@@ -201,7 +201,8 @@ export default function Settings() {
   // Run once on mount — intentionally reads searchParams only on initial load
   const checkoutParamRef = useRef(searchParams.get('checkout'))
   useEffect(() => {
-    const status = checkoutParamRef.current as 'success' | 'cancel' | null
+    const raw = checkoutParamRef.current
+    const status = raw === 'success' || raw === 'cancel' ? raw : null
     if (status) {
       setCheckoutStatus(status)
       const cleaned = new URLSearchParams(window.location.search)
