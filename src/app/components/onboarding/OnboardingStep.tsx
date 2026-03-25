@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router'
-import { BookOpen, Play, Trophy, PartyPopper } from 'lucide-react'
+import { FolderOpen, Play, Trophy, PartyPopper } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import type { OnboardingStep as StepNumber } from '@/stores/useOnboardingStore'
 
@@ -13,11 +13,11 @@ interface StepConfig {
 
 const STEPS: Record<1 | 2 | 3, StepConfig> = {
   1: {
-    icon: BookOpen,
-    title: 'Import your first course',
+    icon: FolderOpen,
+    title: 'Welcome to Knowlune',
     description:
-      'Add a folder with video lessons or PDFs to start building your personal learning library.',
-    cta: 'Go to Courses',
+      'Import your first course to get started. Point Knowlune at a folder of video lessons or PDFs and it will organise everything into a course you can track.',
+    cta: 'Import a Course',
     path: '/courses',
   },
   2: {
@@ -78,6 +78,7 @@ export function OnboardingStepContent({ step, isComplete, onNavigate }: Onboardi
       <h2 className="text-2xl font-bold text-foreground">{config.title}</h2>
       <p className="text-muted-foreground">{config.description}</p>
       <Button
+        variant={step === 1 ? 'brand' : 'default'}
         onClick={() => {
           onNavigate()
           navigate(config.path)

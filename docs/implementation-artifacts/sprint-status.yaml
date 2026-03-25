@@ -366,7 +366,7 @@ development_status:
   25-4-author-auto-detection-during-import: done
   25-5-smart-author-photo-detection-from-course-folder: done
   25-6-link-imported-courses-to-author-profiles: backlog
-  25-7-import-focused-onboarding-overlay: backlog
+  25-7-import-focused-onboarding-overlay: in-progress
   25-8-progressive-sidebar-disclosure: backlog
   25-9-empty-state-improvements: backlog
   epic-25-retrospective: optional

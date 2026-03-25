@@ -23,6 +23,7 @@ import { useCourseStore } from '@/stores/useCourseStore'
 import { toast } from 'sonner'
 import { QualityScoreDialog } from './session/QualityScoreDialog'
 import type { QualityScoreResult } from '@/lib/qualityScore'
+import { OnboardingOverlay } from './onboarding/OnboardingOverlay'
 
 // Individual nav link — wraps in Tooltip when collapsed
 function NavLink({
@@ -499,6 +500,9 @@ export function Layout() {
           factors={qualityResult.factors}
         />
       )}
+
+      {/* First-use onboarding overlay (E25-S07) */}
+      <OnboardingOverlay />
     </div>
   )
 }
