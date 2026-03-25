@@ -86,7 +86,7 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
           type="email"
           placeholder="you@example.com"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={e => setEmail(e.target.value)}
           disabled={loading}
           required
           autoComplete={isSignUp ? 'email' : 'username'}
@@ -103,7 +103,7 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
           type="password"
           placeholder="At least 8 characters"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={e => setPassword(e.target.value)}
           disabled={loading}
           required
           minLength={8}
@@ -122,7 +122,7 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
             type="password"
             placeholder="Confirm your password"
             value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+            onChange={e => setConfirmPassword(e.target.value)}
             disabled={loading}
             required
             autoComplete="new-password"

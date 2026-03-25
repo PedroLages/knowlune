@@ -154,7 +154,12 @@ vi.mock('@/lib/authors', () => ({
   getAuthorForCourse: () => undefined,
   getAuthorForImportedCourse: () => undefined,
   getAvatarSrc: () => ({ src: '' }),
-  getInitials: (name: string) => name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+  getInitials: (name: string) =>
+    name
+      .split(' ')
+      .map((n: string) => n[0])
+      .join('')
+      .toUpperCase(),
 }))
 
 // Import component AFTER all mocks

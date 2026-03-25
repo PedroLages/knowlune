@@ -463,9 +463,7 @@ export default function Settings() {
               <div>
                 <h2 className="text-lg font-display leading-none">Account</h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {user
-                    ? `Signed in as ${user.email}`
-                    : 'Sign in to access premium features'}
+                  {user ? `Signed in as ${user.email}` : 'Sign in to access premium features'}
                 </p>
               </div>
             </div>
@@ -849,7 +847,6 @@ export default function Settings() {
 
         {/* Engagement Preferences */}
         <EngagementPreferences />
-
 
         {/* Reminders */}
         <ReminderSettings />

@@ -47,7 +47,7 @@ function mapSupabaseError(message: string): string {
   return message
 }
 
-export const useAuthStore = create<AuthStore>((set) => ({
+export const useAuthStore = create<AuthStore>(set => ({
   user: null,
   session: null,
   loading: false,
@@ -78,7 +78,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
     return {}
   },
 
-  signInWithMagicLink: async (email) => {
+  signInWithMagicLink: async email => {
     set({ loading: true, error: null })
     const { error } = await supabase.auth.signInWithOtp({ email })
     if (error) {
@@ -117,7 +117,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
     return {}
   },
 
-  setSession: (session) => {
+  setSession: session => {
     set({
       session,
       user: session?.user ?? null,

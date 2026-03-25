@@ -93,10 +93,10 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
   // Subscribe to author store so card re-renders when authors load
   const storeAuthors = useAuthorStore(state => state.authors)
   const loadAuthors = useAuthorStore(state => state.loadAuthors)
-  useEffect(() => { loadAuthors() }, [loadAuthors])
-  const authorData = course.authorId
-    ? storeAuthors.find(a => a.id === course.authorId)
-    : undefined
+  useEffect(() => {
+    loadAuthors()
+  }, [loadAuthors])
+  const authorData = course.authorId ? storeAuthors.find(a => a.id === course.authorId) : undefined
 
   const [thumbnailPickerOpen, setThumbnailPickerOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -442,7 +442,12 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
                 <span>{authorData.name}</span>
               </button>
             ) : (
-              <p data-testid="course-card-unknown-author" className="text-xs text-muted-foreground mb-1">Unknown Author</p>
+              <p
+                data-testid="course-card-unknown-author"
+                className="text-xs text-muted-foreground mb-1"
+              >
+                Unknown Author
+              </p>
             )}
             <p className="text-sm text-muted-foreground mb-2">
               Imported {new Date(course.importedAt).toLocaleDateString()}

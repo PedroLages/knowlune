@@ -59,11 +59,7 @@ export function GoogleAuthButton() {
         disabled={loading}
         aria-disabled={loading}
       >
-        {loading ? (
-          <Loader2 className="size-5 animate-spin" />
-        ) : (
-          <GoogleIcon />
-        )}
+        {loading ? <Loader2 className="size-5 animate-spin" /> : <GoogleIcon />}
         Continue with Google
       </Button>
     </div>

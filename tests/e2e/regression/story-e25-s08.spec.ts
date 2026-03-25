@@ -78,7 +78,7 @@ test.describe('E25-S08: Progressive Sidebar Disclosure', () => {
       await expect(sidebar.getByText('Authors', { exact: true })).not.toBeVisible()
 
       // Simulate unlocking via localStorage + event
-      await page.evaluate((key) => {
+      await page.evaluate(key => {
         localStorage.setItem(key, JSON.stringify(['course-imported']))
         window.dispatchEvent(new CustomEvent('sidebar-unlock', { detail: 'course-imported' }))
       }, DISCLOSURE_STORAGE_KEY)
@@ -101,7 +101,7 @@ test.describe('E25-S08: Progressive Sidebar Disclosure', () => {
       const sidebar = page.locator('aside[aria-label="Sidebar"]')
       await expect(sidebar.getByText('Study Analytics', { exact: true })).not.toBeVisible()
 
-      await page.evaluate((key) => {
+      await page.evaluate(key => {
         localStorage.setItem(key, JSON.stringify(['lesson-completed']))
         window.dispatchEvent(new CustomEvent('sidebar-unlock', { detail: 'lesson-completed' }))
       }, DISCLOSURE_STORAGE_KEY)

@@ -64,9 +64,9 @@ test.describe('AC2: Sign-up form', () => {
     const signUpTrigger = page.getByRole('button', { name: /sign up|upgrade|create account/i })
     await signUpTrigger.click()
 
-    const signInLink = page.getByRole('link', { name: /sign in/i }).or(
-      page.getByRole('button', { name: /sign in/i })
-    )
+    const signInLink = page
+      .getByRole('link', { name: /sign in/i })
+      .or(page.getByRole('button', { name: /sign in/i }))
     await expect(signInLink).toBeVisible()
   })
 })

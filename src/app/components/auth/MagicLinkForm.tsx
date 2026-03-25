@@ -18,7 +18,7 @@ export function MagicLinkForm() {
   // Countdown timer for resend
   useEffect(() => {
     if (cooldown <= 0) return
-    const timer = setTimeout(() => setCooldown((c) => c - 1), 1000)
+    const timer = setTimeout(() => setCooldown(c => c - 1), 1000)
     return () => clearTimeout(timer)
   }, [cooldown])
 
@@ -51,9 +51,7 @@ export function MagicLinkForm() {
     return (
       <div className="flex flex-col items-center gap-4 py-6" role="status" aria-live="polite">
         <CheckCircle className="size-12 text-success" />
-        <p className="text-center text-sm font-medium">
-          Check your email for a sign-in link
-        </p>
+        <p className="text-center text-sm font-medium">Check your email for a sign-in link</p>
         <p className="text-center text-sm text-muted-foreground">
           We sent a link to <strong>{email}</strong>
         </p>
@@ -82,7 +80,11 @@ export function MagicLinkForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4" aria-busy={loading}>
       {displayError && (
-        <div id="magic-link-error" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
+        <div
+          id="magic-link-error"
+          role="alert"
+          className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive"
+        >
           <p>{displayError}</p>
           {error === NETWORK_ERROR_MESSAGE && (
             <Button
@@ -105,7 +107,7 @@ export function MagicLinkForm() {
           type="email"
           placeholder="you@example.com"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={e => setEmail(e.target.value)}
           disabled={loading}
           required
           autoComplete="email"

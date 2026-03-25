@@ -12,12 +12,12 @@ const SHOW_ALL_KEY = 'knowlune-sidebar-show-all-v1'
  * navigation items. Items without a disclosure key are always visible.
  */
 export type DisclosureKey =
-  | 'course-imported'   // Authors section appears
-  | 'lesson-completed'  // Reports / analytics items appear
-  | 'note-created'      // Notes / bookmarks appear
-  | 'review-used'       // Review, Retention appear
-  | 'challenge-used'    // Challenges, Session History appear
-  | 'ai-used'           // AI Learning Path, Knowledge Gaps, AI Analytics appear
+  | 'course-imported' // Authors section appears
+  | 'lesson-completed' // Reports / analytics items appear
+  | 'note-created' // Notes / bookmarks appear
+  | 'review-used' // Review, Retention appear
+  | 'challenge-used' // Challenges, Session History appear
+  | 'ai-used' // AI Learning Path, Knowledge Gaps, AI Analytics appear
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -90,7 +90,9 @@ export function useProgressiveDisclosure() {
       if (e.key === STORAGE_KEY && e.newValue) {
         try {
           setUnlocked(new Set(JSON.parse(e.newValue)))
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
       if (e.key === SHOW_ALL_KEY && e.newValue !== null) {
         setShowAll(e.newValue === 'true')

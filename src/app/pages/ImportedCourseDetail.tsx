@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router'
-import { ArrowLeft, Video, FileText, AlertTriangle, ShieldAlert, RefreshCw, User } from 'lucide-react'
+import {
+  ArrowLeft,
+  Video,
+  FileText,
+  AlertTriangle,
+  ShieldAlert,
+  RefreshCw,
+  User,
+} from 'lucide-react'
 import { db } from '@/db/schema'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
@@ -57,9 +65,7 @@ export function ImportedCourseDetail() {
     loadAuthors()
   }, [loadImportedCourses, loadAuthors])
 
-  const authorData = course?.authorId
-    ? storeAuthors.find(a => a.id === course.authorId)
-    : undefined
+  const authorData = course?.authorId ? storeAuthors.find(a => a.id === course.authorId) : undefined
 
   const [videos, setVideos] = useState<ImportedVideo[]>([])
   const [pdfs, setPdfs] = useState<ImportedPdf[]>([])

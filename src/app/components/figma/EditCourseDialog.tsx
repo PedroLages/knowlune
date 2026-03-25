@@ -54,7 +54,9 @@ export function EditCourseDialog({ open, onOpenChange, course, allTags }: EditCo
   const [activeTab, setActiveTab] = useState('details')
   const [videos, setVideos] = useState<ImportedVideo[]>([])
 
-  useEffect(() => { loadAuthors() }, [loadAuthors])
+  useEffect(() => {
+    loadAuthors()
+  }, [loadAuthors])
 
   // Reset form when dialog opens with fresh course data
   useEffect(() => {

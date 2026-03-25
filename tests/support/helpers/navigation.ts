@@ -33,7 +33,10 @@ export async function navigateAndWait(page: Page, path: string): Promise<void> {
   if (await skipButton.isVisible({ timeout: 500 }).catch(() => false)) {
     await skipButton.click()
     // Wait for dialog to close
-    await page.getByRole('dialog', { name: 'Welcome to Knowlune' }).waitFor({ state: 'hidden', timeout: 2000 }).catch(() => {})
+    await page
+      .getByRole('dialog', { name: 'Welcome to Knowlune' })
+      .waitFor({ state: 'hidden', timeout: 2000 })
+      .catch(() => {})
   }
 }
 
