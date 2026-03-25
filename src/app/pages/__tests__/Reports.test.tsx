@@ -77,6 +77,15 @@ vi.mock('@/lib/analytics', () => ({
     Promise.resolve({ completionRate: 0, completedCount: 0, startedCount: 0 }),
 }))
 
+// ── Mock @/db (for db.quizAttempts.count()) ──
+vi.mock('@/db', () => ({
+  db: {
+    quizAttempts: {
+      count: () => Promise.resolve(0),
+    },
+  },
+}))
+
 // ── Mock studyLog ──
 vi.mock('@/lib/studyLog', () => ({
   getActionsPerDay: () => [],
