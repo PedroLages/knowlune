@@ -296,6 +296,16 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M4: `formatTimeSpent` doesn't guard against negative/NaN input (unlike `formatDuration`)
 - Positive: Clean architecture separation, excellent lazy-loading for jsPDF, thorough unit tests (24 cases), proper useEffect cleanup, good error handling in handleExport, proper design tokens in UI, factory usage in tests
 
+## E18-S01: Implement Complete Keyboard Navigation (Round 1)
+- No uncommitted changes (positive)
+- H1: QuestionGrid Enter key handler missing `e.preventDefault()` -- double `onQuestionClick` invocation (keydown + native button click)
+- H2: AC4 (Checkboxes Tab + Space) has zero E2E test coverage despite header listing it
+- H3: Programmatic focus `useEffect` fires spuriously when `currentProgress` becomes `null` on quiz submit
+- M1: `question-focus-target` div lacks `role="region"` and `aria-label` for screen reader context
+- M2: QuestionGrid unit tests not updated for new roving tabindex behavior (role=toolbar, tabIndex, arrow keys)
+- M3: Stale story Implementation Notes contradict Challenges section on isArrowNavRef fix
+- Positive: WAI-ARIA toolbar pattern correctly implemented, isArrowNavRef event-order pattern is clever, test barriers prevent focus race conditions, clean working tree
+
 ## E15-S05: Display Performance Summary After Quiz (Round 1)
 - No uncommitted changes (positive)
 - H1: `text-warning` used for "incorrect" count in correctness bar -- `text-destructive` is the established convention (ScoreSummary.tsx uses it)
@@ -305,3 +315,15 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M2: Redundant `new Set(topicMap.keys())` when `topicMap.size` suffices
 - M3: E2E AC3 uses `getByText` for not.toBeVisible assertions instead of `getByRole('heading')` -- fragile
 - Positive: Pure function architecture, excellent unit test coverage (14 tests, boundary conditions), proper accessibility (useId, aria-labelledby, semantic HTML), no uncommitted changes, shared E2E seeding helpers used
+
+## E18-S07: Surface Quiz Analytics in Reports Section (Round 1)
+- No uncommitted changes (positive)
+- H1: topPerforming and needsImprovement overlap when <= 5 quizzes (same quiz in both lists)
+- H2 (RECURRING x17): String interpolation for className instead of cn() in QuizAnalyticsDashboard (3 instances)
+- H3: No error state -- IndexedDB failure renders misleading "No quiz data yet" empty state instead of error message
+- H4: calculateQuizAnalytics() has zero unit tests (story doc acknowledges this in lessons-learned)
+- M1: toLocaleDateString() without locale arg -- inconsistent with codebase pattern (sv-SE or en-US)
+- M2: AC2 CTA links to /courses instead of quiz-specific listing (minor AC fidelity)
+- M3: setSearchParams({ tab }) replaces all URL params instead of preserving existing
+- M4: totalQuizzesCompleted label ambiguity (unique quizzes vs total submissions)
+- Positive: Proper ignore flag pattern, .catch() on async, design token compliance, clean working tree

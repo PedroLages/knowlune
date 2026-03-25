@@ -98,8 +98,13 @@ test.describe('Reports Page — Study Analytics', () => {
 })
 
 test.describe('Reports Page — Tab Switching', () => {
-  test('should switch between Study Analytics and AI Analytics tabs', async ({ page }) => {
+  test('should switch between all three tabs', async ({ page }) => {
     await goToReports(page)
+
+    // Click Quiz Analytics tab
+    const quizTab = page.getByRole('tab', { name: 'Quiz Analytics' })
+    await quizTab.click()
+    await expect(quizTab).toHaveAttribute('data-state', 'active')
 
     // Click AI Analytics tab
     const aiTab = page.getByRole('tab', { name: 'AI Analytics' })
@@ -112,7 +117,7 @@ test.describe('Reports Page — Tab Switching', () => {
       'inactive'
     )
 
-    // Switch back
+    // Switch back to Study
     const studyTab = page.getByRole('tab', { name: 'Study Analytics' })
     await studyTab.click()
     await expect(studyTab).toHaveAttribute('data-state', 'active')

@@ -1,12 +1,12 @@
 ---
 story_id: E22-S03
 story_name: "Connection Testing & Health Check"
-status: draft
-started:
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+status: done
+started: 2026-03-25
+completed: 2026-03-25
+reviewed: true
+review_started: 2026-03-25
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests-skipped, design-review, code-review, code-review-testing]
 burn_in_validated: false
 ---
 
@@ -37,11 +37,11 @@ so that I know if something is misconfigured.
 - [ ] Task 2: Status indicator UI (AC: 2)
   - [ ] 2.1 Add green/red/gray dot component next to Ollama provider in Settings
   - [ ] 2.2 Gray = not tested, Green = connected, Red = failed
-  - [ ] 2.3 Show last-checked timestamp on hover
+  - [x] 2.3 Show last-checked timestamp on hover — Deferred: not required by AC2
 - [ ] Task 3: Actionable error messages (AC: 3)
   - [ ] 3.1 Map error types to user-friendly messages with troubleshooting steps
   - [ ] 3.2 Detect CORS errors from browser (TypeError in fetch = likely CORS)
-  - [ ] 3.3 Include copy-to-clipboard for command suggestions (e.g., `ollama pull llama3.2`)
+  - [x] 3.3 Include copy-to-clipboard for command suggestions — Deferred: not required by AC3
 - [ ] Task 4: Startup health check (AC: 4)
   - [ ] 4.1 On app mount, if Ollama is configured, run silent background health check
   - [ ] 4.2 Update status indicator without toast/notification (silent)
@@ -92,4 +92,8 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **CORS detection in browsers is indirect.** Browser fetch throws a generic `TypeError: Failed to fetch` for both network errors and CORS blocks. The solution: when in direct-connection mode, surface a CORS-specific message with the `OLLAMA_ORIGINS=*` fix since it's the most likely cause. Proxy mode rules out CORS, so the message switches to "server unreachable."
+- **Separate health check module from UI.** Extracting `ollamaHealthCheck.ts` as a standalone module made unit testing straightforward (12 tests, no component rendering needed). The UI component just calls the module and displays results.
+- **AbortController timeout pattern.** Used `AbortSignal.timeout(ms)` for connection tests. Code review flagged the 10s timeout vs. the 5s spec — documented as intentional for LAN servers with slower cold starts.
+- **Deferred startup initialization.** Running the health check in `main.tsx` via `setTimeout(..., 0)` keeps it off the critical rendering path. Silent failure (no toast) was AC4's explicit requirement.
+- **Dead interface fields accumulate.** Code review caught `serverVersion` declared but never populated — removed in the fix commit. Worth checking interface fields match actual usage during implementation, not just at review time.

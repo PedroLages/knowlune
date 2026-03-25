@@ -70,7 +70,7 @@ export function SwissCourses() {
 
       {/* Search bar */}
       <div className="flex items-center gap-3 border border-neutral-200 bg-white px-4 py-3 mb-8 hover:border-neutral-900 transition-colors">
-        <Search className="w-4 h-4 text-neutral-400" />
+        <Search className="size-4 text-neutral-400" />
         <input
           type="text"
           placeholder="Search..."
