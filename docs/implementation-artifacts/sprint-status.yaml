@@ -37,7 +37,7 @@
 # - Epic 7 gap coverage stories (7-8..7-11) deferred indefinitely — risk accepted for error-path edge cases
 
 generated: 2026-03-15
-last_updated: 2026-03-24  # E18-S06 done
+last_updated: 2026-03-25  # E27-S01 done
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -386,7 +386,7 @@ development_status:
   # Epic 27: Analytics Consolidation
   # ──────────────────────────────────────────────────
   epic-27: in-progress
-  27-1-add-analytics-tabs-to-reports-page: in-progress
+  27-1-add-analytics-tabs-to-reports-page: done
   27-2-route-redirects-for-legacy-paths: backlog
   27-3-update-sidebar-links-to-reports-tabs: done
   epic-27-retrospective: optional
