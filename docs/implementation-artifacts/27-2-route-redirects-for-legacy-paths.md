@@ -3,10 +3,10 @@ story_id: E27-S02
 story_name: "Route Redirects For Legacy Paths"
 status: in-progress
 started: 2026-03-23
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-03-25
+reviewed: in-progress
+review_started: 2026-03-25
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, code-review, code-review-testing]
 burn_in_validated: false
 ---
 
