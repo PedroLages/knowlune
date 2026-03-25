@@ -29,6 +29,7 @@ interface UpdateAuthorData {
 interface AuthorStoreState {
   authors: ImportedAuthor[]
   isLoading: boolean
+  isLoaded: boolean
   error: string | null
 
   loadAuthors: () => Promise<void>
@@ -43,15 +44,17 @@ interface AuthorStoreState {
 export const useAuthorStore = create<AuthorStoreState>((set, get) => ({
   authors: [],
   isLoading: false,
+  isLoaded: false,
   error: null,
 
   loadAuthors: async () => {
+    if (get().isLoaded) return
     set({ isLoading: true, error: null })
     try {
       const authors = await db.authors.orderBy('createdAt').reverse().toArray()
-      set({ authors, isLoading: false })
+      set({ authors, isLoading: false, isLoaded: true })
     } catch (error) {
-      set({ isLoading: false, error: 'Failed to load authors' })
+      set({ isLoading: false, isLoaded: true, error: 'Failed to load authors' })
       console.error('[AuthorStore] Failed to load authors:', error)
       toast.error('Failed to load authors. Please try refreshing the page.')
     }

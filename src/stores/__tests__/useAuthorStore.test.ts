@@ -27,7 +27,7 @@ const { useAuthorStore } = await import('@/stores/useAuthorStore')
 
 beforeEach(async () => {
   vi.restoreAllMocks()
-  useAuthorStore.setState({ authors: [], isLoading: false, error: null })
+  useAuthorStore.setState({ authors: [], isLoading: false, isLoaded: false, error: null })
   const { db } = await import('@/db')
   await db.authors.clear()
 })

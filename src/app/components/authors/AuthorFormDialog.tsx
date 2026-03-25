@@ -16,7 +16,7 @@ import { Textarea } from '@/app/components/ui/textarea'
 import { Badge } from '@/app/components/ui/badge'
 import { Separator } from '@/app/components/ui/separator'
 import { useAuthorStore } from '@/stores/useAuthorStore'
-import type { Author, AuthorSocialLinks } from '@/data/types'
+import type { Author, AuthorSocialLinks, ImportedAuthor } from '@/data/types'
 
 interface FormErrors {
   name?: string
@@ -26,10 +26,13 @@ interface FormErrors {
   twitter?: string
 }
 
+/** Accept either pre-seeded Author or ImportedAuthor for edit mode */
+type EditableAuthor = Author | ImportedAuthor
+
 interface AuthorFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  author?: Author // undefined = create mode, defined = edit mode
+  author?: EditableAuthor // undefined = create mode, defined = edit mode
 }
 
 function isValidUrl(value: string): boolean {
@@ -62,22 +65,23 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
   const [errors, setErrors] = useState<FormErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Populate form when editing
+  // Populate form when editing — handle both Author and ImportedAuthor shapes
   useEffect(() => {
     if (open && author) {
+      const a = author as unknown as Record<string, unknown>
       setName(author.name)
-      setTitle(author.title || '')
-      setBio(author.bio || '')
-      setShortBio(author.shortBio || '')
-      setSpecialties([...author.specialties])
+      setTitle((a.title as string) || '')
+      setBio((author.bio as string) || '')
+      setShortBio((a.shortBio as string) || '')
+      setSpecialties([...(author.specialties ?? (a.specialties as string[]) ?? [])])
       setSpecialtyInput('')
-      setYearsExperience(author.yearsExperience ? String(author.yearsExperience) : '')
-      setEducation(author.education || '')
-      setAvatar(author.avatar || '')
+      setYearsExperience(a.yearsExperience ? String(a.yearsExperience) : '')
+      setEducation((a.education as string) || '')
+      setAvatar((a.avatar as string) || (a.photoUrl as string) || '')
       setWebsite(author.socialLinks?.website || '')
       setLinkedin(author.socialLinks?.linkedin || '')
       setTwitter(author.socialLinks?.twitter || '')
-      setFeaturedQuote(author.featuredQuote || '')
+      setFeaturedQuote((a.featuredQuote as string) || '')
       setErrors({})
     }
   }, [open, author])

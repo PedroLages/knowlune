@@ -11,12 +11,12 @@ import {
   AlertDialogTitle,
 } from '@/app/components/ui/alert-dialog'
 import { useAuthorStore } from '@/stores/useAuthorStore'
-import type { Author } from '@/data/types'
+import type { Author, ImportedAuthor } from '@/data/types'
 
 interface DeleteAuthorDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  author: Author
+  author: Author | ImportedAuthor
   onDeleted?: () => void
 }
 

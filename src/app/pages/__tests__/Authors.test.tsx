@@ -1,52 +1,62 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
-import type { Author } from '@/data/types'
+import { useAuthorStore } from '@/stores/useAuthorStore'
+import type { ImportedAuthor } from '@/data/types'
 
-// vi.hoisted ensures mockState is available when the vi.mock factory runs (mocks are hoisted above imports)
-const mockState = vi.hoisted(() => ({
-  authors: [] as Author[],
+// Mock allAuthors (pre-seeded static data) — empty by default, populated per-test
+const mockPreseededAuthors = vi.hoisted(() => ({
+  authors: [] as Array<{
+    id: string
+    name: string
+    avatar: string
+    title: string
+    bio: string
+    shortBio: string
+    specialties: string[]
+    yearsExperience: number
+    socialLinks: Record<string, string>
+    featuredQuote?: string
+  }>,
 }))
 
-// Use a getter so allAuthors reads the CURRENT value of mockState.authors on each render
 vi.mock('@/data/authors', () => ({
   get allAuthors() {
-    return mockState.authors
+    return mockPreseededAuthors.authors
   },
 }))
 
-// Mock getAuthorStats and getAvatarSrc — FeaturedAuthor calls these
-const mockGetAuthorStats = vi.hoisted(() =>
-  vi.fn(() => ({
-    courses: [],
-    courseCount: 5,
-    totalLessons: 120,
-    totalHours: 40,
-    totalVideos: 100,
-    categories: ['general'],
-  }))
-)
-
-vi.mock('@/lib/authors', () => ({
-  getAuthorStats: mockGetAuthorStats,
-  getAvatarSrc: (basePath: string) => ({ src: `${basePath}-96w.jpg` }),
+// Mock useCourseStore for getAuthorStats / getMergedAuthors
+vi.mock('@/stores/useCourseStore', () => ({
+  useCourseStore: Object.assign(
+    vi.fn((selector: (state: { courses: unknown[] }) => unknown) =>
+      selector({ courses: [] })
+    ),
+    {
+      getState: () => ({ courses: [] }),
+    }
+  ),
 }))
 
-// Import component AFTER all mocks (vi.mock calls are hoisted, so this runs with mocks active)
+// Import component AFTER all mocks
 import { Authors } from '../Authors'
 
-const makeAuthor = (overrides: Partial<Author> = {}): Author => ({
-  id: 'test-author',
-  name: 'Test Author',
-  avatar: '/images/test',
-  title: 'Expert',
-  bio: 'Full bio text.',
-  shortBio: 'Short bio text.',
-  specialties: ['Skill A', 'Skill B'],
-  yearsExperience: 10,
-  socialLinks: {},
-  ...overrides,
-})
+function makeImportedAuthor(overrides: Partial<ImportedAuthor> = {}): ImportedAuthor {
+  return {
+    id: 'imported-1',
+    name: 'Imported Author',
+    bio: 'Bio text for imported author.',
+    photoUrl: '',
+    courseIds: [],
+    specialties: ['TypeScript', 'React'],
+    socialLinks: {},
+    isPreseeded: false,
+    createdAt: '2026-03-25T10:00:00.000Z',
+    updatedAt: '2026-03-25T10:00:00.000Z',
+    ...overrides,
+  }
+}
 
 function renderAuthors() {
   return render(
@@ -58,194 +68,274 @@ function renderAuthors() {
 
 describe('Authors page', () => {
   beforeEach(() => {
-    mockState.authors = []
-    mockGetAuthorStats.mockReturnValue({
-      courses: [],
-      courseCount: 5,
-      totalLessons: 120,
-      totalHours: 40,
-      totalVideos: 100,
-      categories: ['general'],
+    mockPreseededAuthors.authors = []
+    useAuthorStore.setState({
+      authors: [],
+      isLoading: false,
+      isLoaded: true,
+      error: null,
     })
   })
 
-  describe('no authors — empty state', () => {
-    it('renders empty state message without featured layout or grid', () => {
-      renderAuthors()
-      expect(screen.getByText(/no authors available/i)).toBeInTheDocument()
-      expect(screen.queryByTestId('featured-author')).not.toBeInTheDocument()
-      expect(screen.queryByTestId('author-grid')).not.toBeInTheDocument()
-    })
-
-    it('does not render subtitle text', () => {
-      renderAuthors()
-      expect(screen.queryByText(/meet the/i)).not.toBeInTheDocument()
+  afterEach(() => {
+    useAuthorStore.setState({
+      authors: [],
+      isLoading: false,
+      isLoaded: false,
+      error: null,
     })
   })
 
-  describe('single author — featured layout', () => {
+  describe('empty state', () => {
+    it('renders empty state when no authors exist', () => {
+      renderAuthors()
+      expect(screen.getByText('No Authors Yet')).toBeInTheDocument()
+      expect(screen.getByTestId('empty-add-author-button')).toBeInTheDocument()
+    })
+
+    it('shows correct subtitle for no authors', () => {
+      renderAuthors()
+      expect(
+        screen.getByText('No authors yet. Add your first author to get started.')
+      ).toBeInTheDocument()
+    })
+  })
+
+  describe('single author', () => {
     beforeEach(() => {
-      mockState.authors = [makeAuthor()]
-    })
-
-    it('renders featured layout instead of grid', () => {
-      renderAuthors()
-      expect(screen.getByTestId('featured-author')).toBeInTheDocument()
-      expect(screen.queryByTestId('author-grid')).not.toBeInTheDocument()
-    })
-
-    it('shows author name, title, and short bio', () => {
-      renderAuthors()
-      expect(screen.getByText('Test Author')).toBeInTheDocument()
-      expect(screen.getByText('Expert')).toBeInTheDocument()
-      expect(screen.getByText('Short bio text.')).toBeInTheDocument()
-    })
-
-    it('falls back to full bio when shortBio is empty', () => {
-      mockState.authors = [makeAuthor({ shortBio: '' })]
-      renderAuthors()
-      expect(screen.getByText('Full bio text.')).toBeInTheDocument()
-    })
-
-    it('renders no bio paragraph when both shortBio and bio are empty', () => {
-      mockState.authors = [makeAuthor({ shortBio: '', bio: '' })]
-      renderAuthors()
-      expect(screen.queryByTestId('featured-bio')).not.toBeInTheDocument()
-    })
-
-    it('shows stat values from getAuthorStats', () => {
-      renderAuthors()
-      const card = screen.getByTestId('featured-author')
-      expect(card).toHaveTextContent('5')
-      expect(card).toHaveTextContent('40h')
-      expect(card).toHaveTextContent('120')
-      expect(card).toHaveTextContent('10y')
-    })
-
-    it('shows singular Course label when courseCount is 1', () => {
-      mockGetAuthorStats.mockReturnValue({
-        courses: [],
-        courseCount: 1,
-        totalLessons: 10,
-        totalHours: 5,
-        totalVideos: 8,
-        categories: ['general'],
+      useAuthorStore.setState({
+        authors: [makeImportedAuthor()],
+        isLoading: false,
+        isLoaded: true,
+        error: null,
       })
-      renderAuthors()
-      expect(screen.getByText('Course')).toBeInTheDocument()
-      expect(screen.queryByText('Courses')).not.toBeInTheDocument()
     })
 
-    it('shows View Full Profile link pointing to author profile', () => {
+    it('renders author card with name', () => {
       renderAuthors()
-      const link = screen.getByRole('link', { name: /view full profile/i })
-      expect(link).toHaveAttribute('href', '/authors/test-author')
+      expect(screen.getByText('Imported Author')).toBeInTheDocument()
+    })
+
+    it('shows singular subtitle text', () => {
+      renderAuthors()
+      expect(
+        screen.getByText('Meet the expert behind your learning journey')
+      ).toBeInTheDocument()
     })
 
     it('shows specialty badges', () => {
       renderAuthors()
-      expect(screen.getByText('Skill A')).toBeInTheDocument()
-      expect(screen.getByText('Skill B')).toBeInTheDocument()
+      expect(screen.getByText('TypeScript')).toBeInTheDocument()
+      expect(screen.getByText('React')).toBeInTheDocument()
     })
 
-    it('caps specialty badges at 5 with overflow indicator', () => {
-      mockState.authors = [
-        makeAuthor({
-          specialties: ['A', 'B', 'C', 'D', 'E', 'F', 'G'],
-        }),
-      ]
+    it('shows course count', () => {
       renderAuthors()
-      expect(screen.getByText('A')).toBeInTheDocument()
-      expect(screen.getByText('E')).toBeInTheDocument()
-      expect(screen.getByText('+2')).toBeInTheDocument()
-      expect(screen.queryByText('F')).not.toBeInTheDocument()
-      expect(screen.queryByText('G')).not.toBeInTheDocument()
+      const countEl = screen.getByTestId('author-course-count')
+      expect(countEl).toHaveTextContent('0')
     })
 
-    it('renders no badge container when specialties is empty', () => {
-      mockState.authors = [makeAuthor({ specialties: [] })]
+    it('links to author profile page', () => {
       renderAuthors()
-      expect(screen.queryByTestId('specialty-badges')).not.toBeInTheDocument()
-    })
-
-    it('does not render quote when featuredQuote is absent', () => {
-      renderAuthors()
-      expect(screen.queryByTestId('featured-quote')).not.toBeInTheDocument()
-    })
-
-    it('renders quote when featuredQuote is set', () => {
-      mockState.authors = [makeAuthor({ featuredQuote: 'Learning is a lifelong journey.' })]
-      renderAuthors()
-      expect(screen.getByTestId('featured-quote')).toBeInTheDocument()
-      expect(screen.getByText(/Learning is a lifelong journey/i)).toBeInTheDocument()
-    })
-
-    it('displays singular subtitle text', () => {
-      renderAuthors()
-      expect(screen.getByText('Meet the expert behind your learning journey')).toBeInTheDocument()
-    })
-
-    it('clamps negative yearsExperience to 0', () => {
-      mockState.authors = [makeAuthor({ yearsExperience: -5 })]
-      renderAuthors()
-      const card = screen.getByTestId('featured-author')
-      expect(card).toHaveTextContent('0y')
-    })
-
-    it('has responsive Tailwind classes for mobile/tablet/desktop (AC4)', () => {
-      renderAuthors()
-      const card = screen.getByTestId('featured-author')
-      // Hero section: stacked on mobile (flex-col), horizontal on sm+ (sm:flex-row)
-      const heroSection = card.querySelector('.flex.flex-col.sm\\:flex-row')
-      expect(heroSection).toBeInTheDocument()
-      // Stats grid: 2 cols on mobile (grid-cols-2), 4 cols on sm+ (sm:grid-cols-4)
-      const statsGrid = card.querySelector('.grid.grid-cols-2.sm\\:grid-cols-4')
-      expect(statsGrid).toBeInTheDocument()
-      // Avatar: centered on mobile (self-center), start-aligned on sm+ (sm:self-start)
-      const avatar = card.querySelector('.self-center.sm\\:self-start')
-      expect(avatar).toBeInTheDocument()
-    })
-
-    it('renders bio with line-clamp overflow safeguard', () => {
-      renderAuthors()
-      const bio = screen.getByTestId('featured-bio')
-      expect(bio).toHaveClass('line-clamp-6')
+      const card = screen.getByTestId('author-card')
+      expect(card).toHaveAttribute('href', '/authors/imported-1')
     })
   })
 
-  describe('multiple authors — grid layout', () => {
+  describe('multiple authors', () => {
     beforeEach(() => {
-      mockState.authors = [
-        makeAuthor({ id: 'author-1', name: 'Author One' }),
-        makeAuthor({ id: 'author-2', name: 'Author Two' }),
-      ]
+      useAuthorStore.setState({
+        authors: [
+          makeImportedAuthor({ id: 'a1', name: 'Alice', createdAt: '2026-03-20T10:00:00.000Z' }),
+          makeImportedAuthor({ id: 'a2', name: 'Bob', createdAt: '2026-03-25T10:00:00.000Z' }),
+        ],
+        isLoading: false,
+        isLoaded: true,
+        error: null,
+      })
     })
 
-    it('renders grid instead of featured layout', () => {
+    it('renders multiple author cards', () => {
       renderAuthors()
-      expect(screen.getByTestId('author-grid')).toBeInTheDocument()
-      expect(screen.queryByTestId('featured-author')).not.toBeInTheDocument()
+      expect(screen.getByText('Alice')).toBeInTheDocument()
+      expect(screen.getByText('Bob')).toBeInTheDocument()
     })
 
-    it('shows all author names in grid', () => {
-      renderAuthors()
-      expect(screen.getByText('Author One')).toBeInTheDocument()
-      expect(screen.getByText('Author Two')).toBeInTheDocument()
-    })
-
-    it('each grid card links to the correct author profile', () => {
-      renderAuthors()
-      const link1 = screen.getByRole('link', { name: /Author One/i })
-      const link2 = screen.getByRole('link', { name: /Author Two/i })
-      expect(link1).toHaveAttribute('href', '/authors/author-1')
-      expect(link2).toHaveAttribute('href', '/authors/author-2')
-    })
-
-    it('displays plural subtitle text', () => {
+    it('shows plural subtitle text', () => {
       renderAuthors()
       expect(
         screen.getByText('Meet the 2 experts behind your learning journey')
       ).toBeInTheDocument()
+    })
+
+    it('each card links to correct profile', () => {
+      renderAuthors()
+      const cards = screen.getAllByTestId('author-card')
+      const hrefs = cards.map(c => c.getAttribute('href'))
+      expect(hrefs).toContain('/authors/a1')
+      expect(hrefs).toContain('/authors/a2')
+    })
+  })
+
+  describe('search', () => {
+    beforeEach(() => {
+      useAuthorStore.setState({
+        authors: [
+          makeImportedAuthor({ id: 'a1', name: 'Alice Johnson', specialties: ['Python'] }),
+          makeImportedAuthor({ id: 'a2', name: 'Bob Smith', specialties: ['React'] }),
+        ],
+        isLoading: false,
+        isLoaded: true,
+        error: null,
+      })
+    })
+
+    it('renders search input', () => {
+      renderAuthors()
+      expect(screen.getByTestId('author-search-input')).toBeInTheDocument()
+    })
+
+    it('filters authors by name', async () => {
+      const user = userEvent.setup()
+      renderAuthors()
+      const input = screen.getByTestId('author-search-input')
+      await user.type(input, 'Alice')
+      expect(screen.getByText('Alice Johnson')).toBeInTheDocument()
+      expect(screen.queryByText('Bob Smith')).not.toBeInTheDocument()
+    })
+
+    it('filters authors by specialty', async () => {
+      const user = userEvent.setup()
+      renderAuthors()
+      const input = screen.getByTestId('author-search-input')
+      await user.type(input, 'React')
+      expect(screen.queryByText('Alice Johnson')).not.toBeInTheDocument()
+      expect(screen.getByText('Bob Smith')).toBeInTheDocument()
+    })
+
+    it('shows no results message when search matches nothing', async () => {
+      const user = userEvent.setup()
+      renderAuthors()
+      const input = screen.getByTestId('author-search-input')
+      await user.type(input, 'ZZZ nonexistent')
+      expect(screen.getByText('No Authors Found')).toBeInTheDocument()
+    })
+  })
+
+  describe('sort', () => {
+    beforeEach(() => {
+      useAuthorStore.setState({
+        authors: [
+          makeImportedAuthor({
+            id: 'a1',
+            name: 'Zara',
+            createdAt: '2026-03-20T10:00:00.000Z',
+          }),
+          makeImportedAuthor({
+            id: 'a2',
+            name: 'Alice',
+            createdAt: '2026-03-25T10:00:00.000Z',
+          }),
+        ],
+        isLoading: false,
+        isLoaded: true,
+        error: null,
+      })
+    })
+
+    it('renders sort select', () => {
+      renderAuthors()
+      expect(screen.getByTestId('author-sort-select')).toBeInTheDocument()
+    })
+
+    it('sorts alphabetically by default', () => {
+      renderAuthors()
+      const cards = screen.getAllByTestId('author-card')
+      // Alice should be before Zara alphabetically
+      const names = cards.map(c => within(c).getByRole('heading', { level: 2 }).textContent)
+      expect(names).toEqual(['Alice', 'Zara'])
+    })
+  })
+
+  describe('loading state', () => {
+    it('shows skeletons while loading', () => {
+      // Prevent loadAuthors from actually running by mocking it
+      const mockLoadAuthors = vi.fn()
+      useAuthorStore.setState({
+        authors: [],
+        isLoading: true,
+        isLoaded: false,
+        error: null,
+        loadAuthors: mockLoadAuthors,
+      })
+      const { container } = renderAuthors()
+      // Should render skeleton elements
+      const skeletons = container.querySelectorAll('[data-slot="skeleton"]')
+      expect(skeletons.length).toBeGreaterThan(0)
+    })
+  })
+
+  describe('pre-seeded author fallback', () => {
+    it('shows pre-seeded authors when store is empty', () => {
+      mockPreseededAuthors.authors = [
+        {
+          id: 'chase-hughes',
+          name: 'Chase Hughes',
+          avatar: '/images/instructors/chase-hughes',
+          title: 'Behavioral Intelligence Expert',
+          bio: 'Expert bio.',
+          shortBio: 'Short bio.',
+          specialties: ['Behavioral Analysis'],
+          yearsExperience: 20,
+          socialLinks: {},
+        },
+      ]
+      useAuthorStore.setState({
+        authors: [],
+        isLoading: false,
+        isLoaded: true,
+        error: null,
+      })
+      renderAuthors()
+      expect(screen.getByText('Chase Hughes')).toBeInTheDocument()
+    })
+
+    it('prefers store author over pre-seeded when IDs match', () => {
+      mockPreseededAuthors.authors = [
+        {
+          id: 'chase-hughes',
+          name: 'Chase Hughes (Static)',
+          avatar: '/images/instructors/chase-hughes',
+          title: 'Behavioral Intelligence Expert',
+          bio: 'Static bio.',
+          shortBio: 'Short.',
+          specialties: ['Behavioral Analysis'],
+          yearsExperience: 20,
+          socialLinks: {},
+        },
+      ]
+      useAuthorStore.setState({
+        authors: [
+          makeImportedAuthor({
+            id: 'chase-hughes',
+            name: 'Chase Hughes (Edited)',
+            isPreseeded: true,
+          }),
+        ],
+        isLoading: false,
+        isLoaded: true,
+        error: null,
+      })
+      renderAuthors()
+      expect(screen.getByText('Chase Hughes (Edited)')).toBeInTheDocument()
+      expect(screen.queryByText('Chase Hughes (Static)')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('add author button', () => {
+    it('renders Add Author button in header', () => {
+      renderAuthors()
+      expect(screen.getByTestId('add-author-button')).toBeInTheDocument()
     })
   })
 })

@@ -98,11 +98,18 @@ This story bundles the E25-S01 data model work since it hasn't been completed:
 
 **Plan:** [2026-03-23-e25-s03-authors-page-from-indexeddb.md](plans/2026-03-23-e25-s03-authors-page-from-indexeddb.md)
 
-[Additional notes to be filled during implementation]
+### Key Changes
+- Added `isLoaded` flag to `useAuthorStore` (was missing, referenced by pages)
+- Created `AuthorView` unified type in `lib/authors.ts` to normalize `Author` vs `ImportedAuthor`
+- `getMergedAuthors()` merges store authors with static fallback
+- Authors page now has search by name/specialty and sort (alphabetical, most courses, recently added)
+- AuthorProfile refactored to use `AuthorView` via `getMergedAuthors()`
+- Fixed type mismatches in `AuthorFormDialog`, `DeleteAuthorDialog`, `CourseDetail.tsx`
 
 ## Testing Notes
 
-[To be filled during implementation]
+- Rewrote `Authors.test.tsx` (20 tests) covering: empty state, single/multiple authors, search, sort, loading skeleton, pre-seeded fallback, store preference
+- Author store tests updated with `isLoaded` in state reset
 
 ## Pre-Review Checklist
 
