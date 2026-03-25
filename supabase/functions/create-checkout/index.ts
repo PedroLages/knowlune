@@ -6,15 +6,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import Stripe from 'https://esm.sh/stripe@14?target=deno'
 
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, {
-  apiVersion: '2024-04-10',
-  httpClient: Stripe.createFetchHttpClient(),
-})
-
-const STRIPE_PRICE_ID = Deno.env.get('STRIPE_PRICE_ID')!
-
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': Deno.env.get('APP_URL') || 'http://localhost:5173',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
@@ -23,6 +16,22 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
+
+  // Method guard — only POST allowed
+  if (req.method !== 'POST') {
+    return new Response('Method not allowed', { status: 405, headers: corsHeaders })
+  }
+
+  // Env var validation — fail fast if misconfigured
+  const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_SECRET_KEY')
+  const STRIPE_PRICE_ID = Deno.env.get('STRIPE_PRICE_ID')
+  if (!STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY is required')
+  if (!STRIPE_PRICE_ID) throw new Error('STRIPE_PRICE_ID is required')
+
+  const stripe = new Stripe(STRIPE_SECRET_KEY, {
+    apiVersion: '2024-04-10',
+    httpClient: Stripe.createFetchHttpClient(),
+  })
 
   try {
     // 1. Verify Supabase JWT and extract user
@@ -48,28 +57,50 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    // 2. Look up or create Stripe customer by email
-    const existingCustomers = await stripe.customers.list({
-      email: user.email,
-      limit: 1,
+    // 2. Parse origin from request for redirect URLs
+    const body = await req.json().catch(() => {
+      console.warn('create-checkout: malformed request body')
+      return {}
     })
+    const origin = body.origin || Deno.env.get('APP_URL') || 'http://localhost:5173'
 
-    let customerId: string
-    if (existingCustomers.data.length > 0) {
-      customerId = existingCustomers.data[0].id
-    } else {
+    // Origin validation — prevent open redirect
+    const ALLOWED_ORIGINS = [Deno.env.get('APP_URL'), 'http://localhost:5173'].filter(Boolean)
+    if (!ALLOWED_ORIGINS.includes(origin)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid origin' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+
+    // 3. Check for existing premium subscription (duplicate guard)
+    const { data: existingEnt } = await supabaseClient
+      .from('entitlements')
+      .select('tier')
+      .eq('user_id', user.id)
+      .single()
+    if (existingEnt?.tier === 'premium') {
+      return new Response(
+        JSON.stringify({ error: 'Already subscribed to premium' }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+
+    // 4. Look up or create Stripe customer by metadata (not email)
+    // user.email can be null for phone-auth or SSO
+    const customers = await stripe.customers.search({
+      query: `metadata["supabase_user_id"]:"${user.id}"`,
+    })
+    let customerId = customers.data[0]?.id
+    if (!customerId) {
       const newCustomer = await stripe.customers.create({
-        email: user.email,
+        email: user.email ?? undefined,
         metadata: { supabase_user_id: user.id },
       })
       customerId = newCustomer.id
     }
 
-    // 3. Parse origin from request for redirect URLs
-    const body = await req.json().catch(() => ({}))
-    const origin = body.origin || Deno.env.get('APP_URL') || 'http://localhost:5173'
-
-    // 4. Create Stripe Checkout Session
+    // 5. Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
@@ -80,7 +111,7 @@ Deno.serve(async (req: Request) => {
       metadata: { supabase_user_id: user.id },
     })
 
-    // 5. Return checkout URL
+    // 6. Return checkout URL
     return new Response(
       JSON.stringify({ url: session.url }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
