@@ -9,6 +9,7 @@ import {
   getAIConfiguration,
   getDecryptedApiKey,
   getOllamaServerUrl,
+  getOllamaSelectedModel,
   isOllamaDirectConnection,
 } from '@/lib/aiConfiguration'
 import type { LLMClient } from './client'
@@ -50,7 +51,8 @@ export async function getLLMClient(): Promise<LLMClient> {
         'ollama'
       )
     }
-    return new OllamaLLMClient(serverUrl, isOllamaDirectConnection())
+    const selectedModel = getOllamaSelectedModel() || undefined
+    return new OllamaLLMClient(serverUrl, isOllamaDirectConnection(), selectedModel)
   }
 
   const apiKey = await getDecryptedApiKey()
@@ -86,7 +88,8 @@ export function getLLMClientForProvider(providerId: AIProviderId, apiKey: string
   if (providerId === 'ollama') {
     // For Ollama, apiKey is actually the server URL when called from proxy
     const serverUrl = getOllamaServerUrl() || 'http://localhost:11434'
-    return new OllamaLLMClient(serverUrl, isOllamaDirectConnection())
+    const selectedModel = getOllamaSelectedModel() || undefined
+    return new OllamaLLMClient(serverUrl, isOllamaDirectConnection(), selectedModel)
   }
 
   return new ProxyLLMClient(providerId, apiKey)

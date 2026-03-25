@@ -38,6 +38,7 @@ import {
   TooltipTrigger,
 } from '@/app/components/ui/tooltip'
 import { CheckCircle2, AlertTriangle, Settings, ChevronDown, Info, Server } from 'lucide-react'
+import { OllamaModelPicker } from './OllamaModelPicker'
 import {
   getAIConfiguration,
   saveAIConfiguration,
@@ -151,6 +152,7 @@ export function AIConfigurationSettings() {
           ollamaSettings: {
             serverUrl: ollamaUrl,
             directConnection: settings.ollamaSettings?.directConnection ?? false,
+            selectedModel: settings.ollamaSettings?.selectedModel,
           },
         })
         setShowSuccess(true)
@@ -257,6 +259,21 @@ export function AIConfigurationSettings() {
       ollamaSettings: {
         serverUrl: ollamaUrl || settings.ollamaSettings?.serverUrl || '',
         directConnection: enabled,
+        selectedModel: settings.ollamaSettings?.selectedModel,
+      },
+    })
+    setSettings(getAIConfiguration())
+  }
+
+  /**
+   * Handles Ollama model selection (AC3: persist in AI configuration)
+   */
+  async function handleModelSelect(modelName: string) {
+    await saveAIConfiguration({
+      ollamaSettings: {
+        serverUrl: ollamaUrl || settings.ollamaSettings?.serverUrl || '',
+        directConnection: settings.ollamaSettings?.directConnection ?? false,
+        selectedModel: modelName,
       },
     })
     setSettings(getAIConfiguration())
@@ -439,6 +456,22 @@ export function AIConfigurationSettings() {
             </div>
           )}
         </div>
+
+        {/* Ollama Model Picker (AC1-AC5) — shown after successful connection */}
+        {isOllama && (
+          <OllamaModelPicker
+            serverUrl={ollamaUrl || settings.ollamaSettings?.serverUrl || ''}
+            directConnection={settings.ollamaSettings?.directConnection ?? false}
+            selectedModel={settings.ollamaSettings?.selectedModel}
+            onModelSelect={model => {
+              // silent-catch-ok — model selection errors are non-critical, picker shows error state
+              handleModelSelect(model).catch(err => {
+                console.error('Failed to select model:', err)
+              })
+            }}
+            isConnected={isConnected}
+          />
+        )}
 
         {/* Save Button */}
         <Button

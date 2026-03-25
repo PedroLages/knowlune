@@ -13,6 +13,7 @@
 import { BaseLLMClient } from './client'
 import type { LLMMessage, LLMStreamChunk } from './types'
 import { LLMError } from './types'
+import { formatModelSize, type OllamaModel } from '@/lib/aiConfiguration'
 
 /** Default model for Ollama when none is specified */
 const DEFAULT_OLLAMA_MODEL = 'llama3.2'
@@ -158,6 +159,102 @@ export class OllamaLLMClient extends BaseLLMClient {
       }
 
       throw new LLMError(`Ollama request failed: ${message}`, 'NETWORK_ERROR', 'ollama')
+    }
+  }
+
+  /**
+   * List available models from the Ollama server.
+   *
+   * Calls GET /api/tags (Ollama native endpoint) to retrieve all downloaded models.
+   * In proxy mode, routes through the Express proxy at /api/ai/ollama/tags.
+   *
+   * @returns Array of available models with name and size metadata
+   * @throws {LLMError} If the server is unreachable or returns an error
+   */
+  async listModels(): Promise<OllamaModel[]> {
+    return OllamaLLMClient.fetchModels(this.serverUrl, this.directConnection)
+  }
+
+  /**
+   * Static method to fetch models from an Ollama server without needing a full client instance.
+   * Used by the UI to discover models before a client is fully configured.
+   *
+   * @param serverUrl - Ollama server URL (e.g., "http://192.168.2.200:11434")
+   * @param directConnection - If true, connects directly to Ollama (requires CORS)
+   * @returns Array of available models
+   * @throws {LLMError} If the server is unreachable or returns an error
+   */
+  static async fetchModels(
+    serverUrl: string,
+    directConnection: boolean = false
+  ): Promise<OllamaModel[]> {
+    const normalizedUrl = serverUrl.replace(/\/+$/, '')
+
+    try {
+      let response: Response
+
+      if (directConnection) {
+        // Direct: browser -> Ollama /api/tags
+        response = await fetch(`${normalizedUrl}/api/tags`, {
+          method: 'GET',
+          signal: AbortSignal.timeout(15_000),
+        })
+      } else {
+        // Proxy: browser -> Express /api/ai/ollama/tags
+        response = await fetch(`/api/ai/ollama/tags?serverUrl=${encodeURIComponent(normalizedUrl)}`, {
+          method: 'GET',
+          signal: AbortSignal.timeout(15_000),
+        })
+      }
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => response.statusText)
+        throw new LLMError(
+          `Failed to list models (${response.status}): ${errorText}`,
+          'UNKNOWN',
+          'ollama'
+        )
+      }
+
+      const data = (await response.json()) as {
+        models?: Array<{
+          name: string
+          size: number
+          modified_at: string
+          details?: { parameter_size?: string; quantization_level?: string }
+        }>
+      }
+
+      if (!data.models || !Array.isArray(data.models)) {
+        return []
+      }
+
+      return data.models.map(model => ({
+        name: model.name,
+        size: formatModelSize(model.size),
+        sizeBytes: model.size,
+        modifiedAt: model.modified_at,
+      }))
+    } catch (error) {
+      if (error instanceof LLMError) throw error
+
+      const message = (error as Error).message
+      if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
+        throw new LLMError(
+          `Cannot reach Ollama at ${normalizedUrl}. Is the server running?`,
+          'NETWORK_ERROR',
+          'ollama'
+        )
+      }
+      if ((error as Error).name === 'AbortError' || (error as Error).name === 'TimeoutError') {
+        throw new LLMError(
+          `Ollama server at ${normalizedUrl} timed out. Check if the server is responsive.`,
+          'TIMEOUT',
+          'ollama'
+        )
+      }
+
+      throw new LLMError(`Failed to list models: ${message}`, 'NETWORK_ERROR', 'ollama')
     }
   }
 

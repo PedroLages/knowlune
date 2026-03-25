@@ -52,12 +52,26 @@ export interface ConsentSettings {
   analytics: boolean
 }
 
+/** Model metadata from Ollama /api/tags response */
+export interface OllamaModel {
+  /** Model name (e.g., "llama3.2:latest") */
+  name: string
+  /** Human-readable size (e.g., "2.0 GB") */
+  size: string
+  /** Raw size in bytes for sorting */
+  sizeBytes: number
+  /** Model modification date */
+  modifiedAt: string
+}
+
 /** Ollama-specific configuration */
 export interface OllamaSettings {
   /** Ollama server URL (e.g., http://192.168.1.x:11434) */
   serverUrl: string
   /** Use direct browser-to-Ollama connection (requires CORS on server) */
   directConnection: boolean
+  /** Selected model name (e.g., "llama3.2:latest") */
+  selectedModel?: string
 }
 
 /** Complete AI configuration state */
@@ -349,6 +363,31 @@ export function getOllamaServerUrl(): string | null {
 export function isOllamaDirectConnection(): boolean {
   const config = getAIConfiguration()
   return config.ollamaSettings?.directConnection ?? false
+}
+
+/**
+ * Gets the selected Ollama model name
+ *
+ * @returns Selected model name (e.g., "llama3.2:latest") or null if not selected
+ */
+export function getOllamaSelectedModel(): string | null {
+  const config = getAIConfiguration()
+  if (config.provider !== 'ollama') return null
+  return config.ollamaSettings?.selectedModel || null
+}
+
+/**
+ * Formats bytes to human-readable size string
+ *
+ * @param bytes - Size in bytes
+ * @returns Human-readable size (e.g., "2.0 GB", "500 MB")
+ */
+export function formatModelSize(bytes: number): string {
+  if (bytes === 0) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(1024))
+  const size = bytes / Math.pow(1024, i)
+  return `${size.toFixed(1)} ${units[i]}`
 }
 
 /**
