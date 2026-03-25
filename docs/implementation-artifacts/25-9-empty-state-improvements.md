@@ -1,12 +1,12 @@
 ---
 story_id: E25-S09
 story_name: "Empty State Improvements"
-status: in-progress
+status: complete
 started: 2026-03-23
-completed:
-reviewed: false
+completed: 2026-03-25
+reviewed: true
 review_started:
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests]
 burn_in_validated: false
 ---
 
