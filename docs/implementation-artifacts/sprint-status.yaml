@@ -37,7 +37,7 @@
 # - Epic 7 gap coverage stories (7-8..7-11) deferred indefinitely — risk accepted for error-path edge cases
 
 generated: 2026-03-15
-last_updated: 2026-03-25  # E25-S04 done
+last_updated: 2026-03-25  # E18-S10 merge
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -278,7 +278,7 @@ development_status:
   18-7-surface-quiz-analytics-in-reports-section: done
   18-8-display-quiz-availability-badges-on-courses-page: done
   18-9-configure-quiz-preferences-in-settings: done
-  18-10-export-quiz-results: backlog
+  18-10-export-quiz-results: done
   18-11-track-quiz-progress-in-content-completion: done
   epic-18-retrospective: optional
 
