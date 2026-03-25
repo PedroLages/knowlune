@@ -11,6 +11,7 @@ import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { Label } from '@/app/components/ui/label'
 import { Badge } from '@/app/components/ui/badge'
+import { Textarea } from '@/app/components/ui/textarea'
 import {
   FolderOpen,
   Loader2,
@@ -21,9 +22,11 @@ import {
   Image as ImageIcon,
   Tag,
   Check,
+  Sparkles,
 } from 'lucide-react'
 import { scanCourseFolder, persistScannedCourse } from '@/lib/courseImport'
 import type { ScannedCourse, ScannedImage } from '@/lib/courseImport'
+import { useAISuggestions } from '@/ai/hooks/useAISuggestions'
 
 type WizardStep = 'select' | 'details'
 
@@ -41,9 +44,15 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
   const [selectedCoverImage, setSelectedCoverImage] = useState<ScannedImage | null>(null)
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null)
   const [imagePreviewUrls, setImagePreviewUrls] = useState<Map<string, string>>(new Map())
+  const [description, setDescription] = useState('')
   const [isScanning, setIsScanning] = useState(false)
   const [isPersisting, setIsPersisting] = useState(false)
+  const [aiTagsApplied, setAiTagsApplied] = useState(false)
+  const [aiDescriptionApplied, setAiDescriptionApplied] = useState(false)
   const tagInputRef = useRef<HTMLInputElement>(null)
+
+  // AI suggestions hook — fires automatically when Ollama is configured
+  const aiSuggestions = useAISuggestions(scannedCourse)
 
   const resetWizard = useCallback(() => {
     setStep('select')
@@ -51,12 +60,46 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
     setCourseName('')
     setTags([])
     setTagInput('')
+    setDescription('')
     setSelectedCoverImage(null)
     setCoverPreviewUrl(null)
     setImagePreviewUrls(new Map())
     setIsScanning(false)
     setIsPersisting(false)
+    setAiTagsApplied(false)
+    setAiDescriptionApplied(false)
   }, [])
+
+  // Apply AI-suggested tags when they arrive (only if user hasn't manually added tags yet)
+  useEffect(() => {
+    if (
+      aiSuggestions.hasFetched &&
+      aiSuggestions.suggestedTags.length > 0 &&
+      !aiTagsApplied &&
+      tags.length === 0
+    ) {
+      setTags(aiSuggestions.suggestedTags)
+      setAiTagsApplied(true)
+    }
+  }, [aiSuggestions.hasFetched, aiSuggestions.suggestedTags, aiTagsApplied, tags.length])
+
+  // Apply AI-suggested description when it arrives (only if user hasn't typed one yet)
+  useEffect(() => {
+    if (
+      aiSuggestions.hasFetched &&
+      aiSuggestions.suggestedDescription.length > 0 &&
+      !aiDescriptionApplied &&
+      description === ''
+    ) {
+      setDescription(aiSuggestions.suggestedDescription)
+      setAiDescriptionApplied(true)
+    }
+  }, [
+    aiSuggestions.hasFetched,
+    aiSuggestions.suggestedDescription,
+    aiDescriptionApplied,
+    description,
+  ])
 
   // Generate preview URLs for scanned images
   useEffect(() => {
@@ -118,7 +161,10 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
       const scanned = await scanCourseFolder()
       setScannedCourse(scanned)
       setCourseName(scanned.name)
-      setTags([]) // Start with empty tags; user adds their own
+      setTags([]) // Start with empty tags; AI or user will populate
+      setDescription('')
+      setAiTagsApplied(false)
+      setAiDescriptionApplied(false)
       setStep('details')
     } catch (error) {
       // silent-catch-ok: scanCourseFolder already handles toasts for ImportError and cancellation
@@ -136,16 +182,19 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
     setIsPersisting(true)
     try {
       const trimmedName = courseName.trim()
+      const trimmedDescription = description.trim()
       const hasNameChange = trimmedName !== scannedCourse.name
       const hasTags = tags.length > 0
       const hasCover = selectedCoverImage !== null
+      const hasDescription = trimmedDescription.length > 0
 
       const overrides =
-        hasNameChange || hasTags || hasCover
+        hasNameChange || hasTags || hasCover || hasDescription
           ? {
               ...(hasNameChange ? { name: trimmedName } : {}),
               ...(hasTags ? { tags } : {}),
               ...(hasCover ? { coverImageHandle: selectedCoverImage.fileHandle } : {}),
+              ...(hasDescription ? { description: trimmedDescription } : {}),
             }
           : undefined
 
@@ -156,16 +205,19 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
     } finally {
       setIsPersisting(false)
     }
-  }, [scannedCourse, courseName, tags, selectedCoverImage, handleOpenChange])
+  }, [scannedCourse, courseName, description, tags, selectedCoverImage, handleOpenChange])
 
   const handleRescan = useCallback(() => {
     setScannedCourse(null)
     setCourseName('')
     setTags([])
     setTagInput('')
+    setDescription('')
     setSelectedCoverImage(null)
     setCoverPreviewUrl(null)
     setImagePreviewUrls(new Map())
+    setAiTagsApplied(false)
+    setAiDescriptionApplied(false)
     setStep('select')
   }, [])
 
@@ -307,34 +359,103 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
                 )}
               </div>
 
+              {/* AI suggestions loading indicator */}
+              {aiSuggestions.isAvailable && aiSuggestions.isLoading && (
+                <div
+                  className="flex items-center gap-2 rounded-xl border border-brand/20 bg-brand-soft/30 px-3 py-2"
+                  data-testid="wizard-ai-loading"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <Loader2
+                    className="size-4 animate-spin text-brand-soft-foreground"
+                    aria-hidden="true"
+                  />
+                  <span className="text-xs text-brand-soft-foreground">
+                    AI is generating tag and description suggestions...
+                  </span>
+                </div>
+              )}
+
+              {/* Description field */}
+              <div className="flex flex-col gap-2" data-testid="wizard-description-section">
+                <Label htmlFor="wizard-description">
+                  <span className="flex items-center gap-1.5">
+                    Description
+                    {aiDescriptionApplied && description === aiSuggestions.suggestedDescription && (
+                      <Badge
+                        variant="secondary"
+                        className="gap-1 rounded-full px-1.5 py-0 text-[10px] font-normal bg-brand-soft text-brand-soft-foreground"
+                        data-testid="wizard-ai-description-badge"
+                      >
+                        <Sparkles className="size-2.5" aria-hidden="true" />
+                        AI Suggested
+                      </Badge>
+                    )}
+                  </span>
+                </Label>
+                <Textarea
+                  id="wizard-description"
+                  data-testid="wizard-description-input"
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  placeholder={
+                    aiSuggestions.isAvailable && aiSuggestions.isLoading
+                      ? 'AI is generating a description...'
+                      : 'Enter a course description (optional)'
+                  }
+                  rows={2}
+                  className="resize-none rounded-xl"
+                />
+              </div>
+
               {/* Tag management */}
               <div className="flex flex-col gap-2" data-testid="wizard-tags-section">
                 <Label htmlFor="wizard-tag-input">
                   <span className="flex items-center gap-1.5">
                     <Tag className="size-3.5" aria-hidden="true" />
                     Tags
+                    {aiTagsApplied &&
+                      tags.length > 0 &&
+                      tags.some(t => aiSuggestions.suggestedTags.includes(t)) && (
+                        <Badge
+                          variant="secondary"
+                          className="gap-1 rounded-full px-1.5 py-0 text-[10px] font-normal bg-brand-soft text-brand-soft-foreground"
+                          data-testid="wizard-ai-tags-badge"
+                        >
+                          <Sparkles className="size-2.5" aria-hidden="true" />
+                          AI Suggested
+                        </Badge>
+                      )}
                   </span>
                 </Label>
                 <div className="flex flex-wrap items-center gap-1.5 min-h-[2.25rem] rounded-xl border border-border bg-background px-3 py-1.5 focus-within:ring-2 focus-within:ring-ring">
-                  {tags.map(tag => (
-                    <Badge
-                      key={tag}
-                      variant="secondary"
-                      className="gap-1 rounded-full pl-2.5 pr-1 py-0.5"
-                      data-testid={`wizard-tag-${tag}`}
-                    >
-                      {tag}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveTag(tag)}
-                        className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20 transition-colors"
-                        aria-label={`Remove tag ${tag}`}
-                        data-testid={`wizard-remove-tag-${tag}`}
+                  {tags.map(tag => {
+                    const isAiTag = aiTagsApplied && aiSuggestions.suggestedTags.includes(tag)
+                    return (
+                      <Badge
+                        key={tag}
+                        variant="secondary"
+                        className={`gap-1 rounded-full pl-2.5 pr-1 py-0.5 ${
+                          isAiTag ? 'bg-brand-soft text-brand-soft-foreground' : ''
+                        }`}
+                        data-testid={`wizard-tag-${tag}`}
+                        data-ai-suggested={isAiTag || undefined}
                       >
-                        <X className="size-3" />
-                      </button>
-                    </Badge>
-                  ))}
+                        {isAiTag && <Sparkles className="size-2.5" aria-hidden="true" />}
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTag(tag)}
+                          className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20 transition-colors"
+                          aria-label={`Remove tag ${tag}`}
+                          data-testid={`wizard-remove-tag-${tag}`}
+                        >
+                          <X className="size-3" />
+                        </button>
+                      </Badge>
+                    )
+                  })}
                   <input
                     ref={tagInputRef}
                     id="wizard-tag-input"
@@ -344,7 +465,13 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
                     onChange={e => setTagInput(e.target.value)}
                     onKeyDown={handleTagKeyDown}
                     onBlur={handleAddTag}
-                    placeholder={tags.length === 0 ? 'Type a tag and press Enter' : 'Add tag...'}
+                    placeholder={
+                      aiSuggestions.isAvailable && aiSuggestions.isLoading
+                        ? 'AI is suggesting tags...'
+                        : tags.length === 0
+                          ? 'Type a tag and press Enter'
+                          : 'Add tag...'
+                    }
                     className="flex-1 min-w-[8rem] bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                     aria-label="Add tag"
                   />

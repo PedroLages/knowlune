@@ -147,6 +147,7 @@ export interface PdfMetadata {
 export interface ImportedCourse {
   id: string
   name: string
+  description?: string // AI-suggested or user-entered course description
   importedAt: string // ISO 8601
   category: string
   tags: string[]
