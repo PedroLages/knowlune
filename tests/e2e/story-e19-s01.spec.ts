@@ -15,6 +15,22 @@
  * Real auth flows require VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.
  */
 import { test, expect } from '../support/fixtures'
+import {
+  goToOverview,
+  goToCourses,
+  goToSettings,
+  navigateAndWait,
+} from '../support/helpers/navigation'
+
+// Dismiss welcome wizard for all tests (appears on first visit)
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'knowlune-welcome-wizard-v1',
+      JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' }),
+    )
+  })
+})
 
 // ---------------------------------------------------------------------------
 // AC1: Core features work without authentication
@@ -22,20 +38,20 @@ import { test, expect } from '../support/fixtures'
 
 test.describe('AC1: Core features without account', () => {
   test('should access overview page without login', async ({ page }) => {
-    await page.goto('/')
+    await goToOverview(page)
     await expect(page.locator('main')).toBeVisible()
-    // No login prompt or modal should appear
-    await expect(page.getByRole('dialog')).not.toBeVisible()
+    // No auth-specific dialog should appear (welcome wizard already dismissed)
+    await expect(page.getByTestId('welcome-wizard')).not.toBeVisible()
   })
 
   test('should access courses page without login', async ({ page }) => {
-    await page.goto('/courses')
+    await goToCourses(page)
     await expect(page.locator('main')).toBeVisible()
-    await expect(page.getByRole('dialog')).not.toBeVisible()
+    await expect(page.getByTestId('welcome-wizard')).not.toBeVisible()
   })
 
   test('should access settings page without login', async ({ page }) => {
-    await page.goto('/settings')
+    await goToSettings(page)
     await expect(page.locator('main')).toBeVisible()
   })
 })
@@ -46,27 +62,26 @@ test.describe('AC1: Core features without account', () => {
 
 test.describe('AC2: Sign-up form', () => {
   test('should show sign-up form with email and password fields', async ({ page }) => {
-    await page.goto('/settings')
-    // Look for a sign-up or upgrade trigger
-    const signUpTrigger = page.getByRole('button', { name: /sign up|upgrade|create account/i })
+    await goToSettings(page)
+    // Look for a sign-up trigger in the Account section
+    const signUpTrigger = page.getByRole('button', { name: /sign up/i })
     await expect(signUpTrigger).toBeVisible()
     await signUpTrigger.click()
 
-    // Sign-up form should appear
-    const emailField = page.getByLabel(/email/i)
-    const passwordField = page.getByLabel(/password/i)
+    // Sign-up form should appear in dialog — scope to the email tab's fields
+    const emailField = page.locator('#auth-email')
+    const passwordField = page.locator('#auth-password')
     await expect(emailField).toBeVisible()
     await expect(passwordField).toBeVisible()
   })
 
   test('should include sign-in link for existing accounts', async ({ page }) => {
-    await page.goto('/settings')
-    const signUpTrigger = page.getByRole('button', { name: /sign up|upgrade|create account/i })
+    await goToSettings(page)
+    const signUpTrigger = page.getByRole('button', { name: /sign up/i })
     await signUpTrigger.click()
 
-    const signInLink = page
-      .getByRole('link', { name: /sign in/i })
-      .or(page.getByRole('button', { name: /sign in/i }))
+    // Mode toggle at bottom of dialog: "Already have an account? Sign In"
+    const signInLink = page.getByRole('button', { name: /sign in/i })
     await expect(signInLink).toBeVisible()
   })
 })
@@ -77,11 +92,12 @@ test.describe('AC2: Sign-up form', () => {
 
 test.describe('AC3: Sign-up completion', () => {
   test('should show loading state during sign-up submission', async ({ page }) => {
-    await page.goto('/settings')
-    const signUpTrigger = page.getByRole('button', { name: /sign up|upgrade|create account/i })
+    await goToSettings(page)
+    const signUpTrigger = page.getByRole('button', { name: /sign up/i })
     await signUpTrigger.click()
 
-    const submitButton = page.getByRole('button', { name: /sign up|create account|submit/i })
+    // The submit button in the email/password form
+    const submitButton = page.getByRole('button', { name: /sign up|create account/i }).last()
     // Before submission, button should be enabled
     await expect(submitButton).toBeEnabled()
   })
@@ -93,14 +109,15 @@ test.describe('AC3: Sign-up completion', () => {
 
 test.describe('AC4: Sign-in', () => {
   test('should show sign-in form with email and password fields', async ({ page }) => {
-    await page.goto('/settings')
-    // Navigate to sign-in (may be via sign-up → sign-in link)
+    await goToSettings(page)
+    // Click the Sign In button in the Account section
     const signInTrigger = page.getByRole('button', { name: /sign in/i })
     await expect(signInTrigger).toBeVisible()
     await signInTrigger.click()
 
-    const emailField = page.getByLabel(/email/i)
-    const passwordField = page.getByLabel(/password/i)
+    // Scope to the email tab's specific fields (magic link tab also has an email field)
+    const emailField = page.locator('#auth-email')
+    const passwordField = page.locator('#auth-password')
     await expect(emailField).toBeVisible()
     await expect(passwordField).toBeVisible()
   })
@@ -112,7 +129,7 @@ test.describe('AC4: Sign-in', () => {
 
 test.describe('AC5: Sign-out', () => {
   test('should not show sign-out button when not authenticated', async ({ page }) => {
-    await page.goto('/settings')
+    await goToSettings(page)
     const signOutButton = page.getByRole('button', { name: /sign out|log out/i })
     await expect(signOutButton).not.toBeVisible()
   })
@@ -124,12 +141,12 @@ test.describe('AC5: Sign-out', () => {
 
 test.describe('AC6: Duplicate email', () => {
   test('should show error for duplicate email on sign-up form', async ({ page }) => {
-    await page.goto('/settings')
-    const signUpTrigger = page.getByRole('button', { name: /sign up|upgrade|create account/i })
+    await goToSettings(page)
+    const signUpTrigger = page.getByRole('button', { name: /sign up/i })
     await signUpTrigger.click()
 
     // The form should have client-side validation
-    const emailField = page.getByLabel(/email/i)
+    const emailField = page.locator('#auth-email')
     await expect(emailField).toHaveAttribute('type', 'email')
   })
 })
@@ -141,7 +158,7 @@ test.describe('AC6: Duplicate email', () => {
 test.describe('Loading states', () => {
   test('should show loading indicator on app launch (session restore)', async ({ page }) => {
     // Core features should load immediately — no blocking auth check
-    await page.goto('/')
+    await navigateAndWait(page, '/')
     await expect(page.locator('main')).toBeVisible()
     // Page should be interactive within reasonable time
     await expect(page.getByRole('navigation')).toBeVisible()
