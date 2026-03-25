@@ -25,7 +25,6 @@ vi.mock('@/lib/fileSystem', () => ({
 
 let scanCourseFolder: (typeof import('@/lib/courseImport'))['scanCourseFolder']
 let persistScannedCourse: (typeof import('@/lib/courseImport'))['persistScannedCourse']
-let ImportError: (typeof import('@/lib/courseImport'))['ImportError']
 type ScannedCourse = import('@/lib/courseImport').ScannedCourse
 
 let fileSystemMocks: {
@@ -75,13 +74,9 @@ beforeEach(async () => {
   const courseImportModule = await import('@/lib/courseImport')
   scanCourseFolder = courseImportModule.scanCourseFolder
   persistScannedCourse = courseImportModule.persistScannedCourse
-  ImportError = courseImportModule.ImportError
 })
 
-function setupScanMocks(
-  dirName: string,
-  files: { name: string; isVideo: boolean }[]
-) {
+function setupScanMocks(dirName: string, files: { name: string; isVideo: boolean }[]) {
   const dirHandle = createMockDirHandle(dirName)
   fileSystemMocks.showDirectoryPicker.mockResolvedValue(dirHandle)
   fileSystemMocks.scanDirectory.mockImplementation(async function* () {

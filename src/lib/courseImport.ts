@@ -229,7 +229,7 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
           action: {
             label: 'Try Again',
             onClick: () => {
-              importCourseFromFolder().catch(() => {})
+              scanCourseFolder().catch(() => {})
             },
           },
         })
@@ -304,16 +304,23 @@ export async function persistScannedCourse(
     directoryHandle: scanned.directoryHandle,
   }
 
-  // Persist to Dexie.js atomically (course + videos + pdfs)
-  await db.transaction(
-    'rw',
-    [db.importedCourses, db.importedVideos, db.importedPdfs],
-    async () => {
-      await db.importedCourses.add(course)
-      if (videos.length > 0) await db.importedVideos.bulkAdd(videos)
-      if (pdfs.length > 0) await db.importedPdfs.bulkAdd(pdfs)
-    }
-  )
+  try {
+    // Persist to Dexie.js atomically (course + videos + pdfs)
+    await db.transaction(
+      'rw',
+      [db.importedCourses, db.importedVideos, db.importedPdfs],
+      async () => {
+        await db.importedCourses.add(course)
+        if (videos.length > 0) await db.importedVideos.bulkAdd(videos)
+        if (pdfs.length > 0) await db.importedPdfs.bulkAdd(pdfs)
+      }
+    )
+  } catch (error) {
+    const message = `Failed to save "${course.name}" to your library. Please try again.`
+    console.error('[Import] Persist transaction failed:', error)
+    toast.error(message)
+    throw error
+  }
 
   // Update Zustand store
   useCourseImportStore.setState(state => ({
