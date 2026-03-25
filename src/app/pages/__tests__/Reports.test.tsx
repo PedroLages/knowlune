@@ -71,6 +71,34 @@ vi.mock('@/lib/progress', () => ({
   getWeeklyChange: () => 3,
 }))
 
+// ── Mock analytics ──
+vi.mock('@/lib/analytics', () => ({
+  calculateCompletionRate: () =>
+    Promise.resolve({ completionRate: 0, completedCount: 0, startedCount: 0 }),
+  calculateQuizAnalytics: () =>
+    Promise.resolve({
+      totalQuizzesCompleted: 0,
+      averageScore: 0,
+      completionRate: 0,
+      averageRetakeFrequency: 0,
+      recentAttempts: [],
+      topPerforming: [],
+      needsImprovement: [],
+    }),
+  calculateRetakeFrequency: () =>
+    Promise.resolve({ averageRetakes: 0, totalAttempts: 0, uniqueQuizzes: 0 }),
+  interpretRetakeFrequency: () => 'No retakes yet — each quiz taken once.',
+}))
+
+// ── Mock @/db (for db.quizAttempts.count()) ──
+vi.mock('@/db', () => ({
+  db: {
+    quizAttempts: {
+      count: () => Promise.resolve(0),
+    },
+  },
+}))
+
 // ── Mock studyLog ──
 vi.mock('@/lib/studyLog', () => ({
   getActionsPerDay: () => [],
@@ -121,6 +149,10 @@ vi.mock('@/app/components/reports/QuizAnalyticsDashboard', () => ({
   QuizAnalyticsDashboard: () => (
     <div data-testid="quiz-analytics-dashboard">QuizAnalyticsDashboard</div>
   ),
+}))
+
+vi.mock('@/app/components/reports/QuizAnalyticsTab', () => ({
+  QuizAnalyticsTab: () => <div data-testid="quiz-analytics-tab">QuizAnalyticsTab</div>,
 }))
 
 vi.mock('@/app/components/reports/CategoryRadar', () => ({
@@ -208,13 +240,6 @@ beforeEach(() => {
 afterEach(() => {
   useCourseStore.setState({ courses: [], isLoaded: false })
 })
-
-// ── Mock analytics ──
-vi.mock('@/lib/analytics', () => ({
-  calculateRetakeFrequency: () =>
-    Promise.resolve({ averageRetakes: 0, totalAttempts: 0, uniqueQuizzes: 0 }),
-  interpretRetakeFrequency: () => 'No retakes yet — each quiz taken once.',
-}))
 
 describe('Reports page', () => {
   it('renders without crashing', () => {

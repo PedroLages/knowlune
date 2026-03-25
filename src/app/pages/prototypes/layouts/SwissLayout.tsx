@@ -46,7 +46,7 @@ export function SwissLayout({ children }: { children: ReactNode }) {
         {/* Logo */}
         <div className="h-16 flex items-center px-6 border-b border-black/10">
           <Link to="/prototypes/swiss-overview" className="flex items-center gap-2">
-            <svg viewBox="0 0 60 60" className="w-6 h-6 text-black" fill="currentColor">
+            <svg viewBox="0 0 60 60" className="size-6 text-black" fill="currentColor">
               <rect x="0" y="40" width="60" height="20" />
               <rect x="24" y="22" width="36" height="18" />
               <rect x="34" y="6" width="12" height="16" />
@@ -75,7 +75,7 @@ export function SwissLayout({ children }: { children: ReactNode }) {
                     style={{ background: ACCENT }}
                   />
                 )}
-                <item.icon className="w-4 h-4" strokeWidth={isActive ? 2.5 : 1.5} />
+                <item.icon className="size-4" strokeWidth={isActive ? 2.5 : 1.5} />
                 {item.name}
               </Link>
             )
@@ -98,7 +98,7 @@ export function SwissLayout({ children }: { children: ReactNode }) {
         {/* Header */}
         <header className="h-16 flex items-center justify-between px-8 border-b border-black/10 bg-white flex-shrink-0">
           <div className="flex items-center gap-3 flex-1 max-w-md">
-            <Search className="w-4 h-4 text-neutral-400" />
+            <Search className="size-4 text-neutral-400" />
             <input
               type="text"
               placeholder="Search..."
@@ -107,7 +107,7 @@ export function SwissLayout({ children }: { children: ReactNode }) {
             />
           </div>
           <div className="flex items-center gap-4">
-            <div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-xs font-bold">
+            <div className="size-8 rounded-full bg-neutral-200 flex items-center justify-center text-xs font-bold">
               S
             </div>
           </div>

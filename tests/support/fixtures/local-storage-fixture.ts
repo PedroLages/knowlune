@@ -26,6 +26,9 @@ const STORAGE_KEYS = [
   'study-reminders-last-daily',
   'study-reminders-last-risk',
   'streak-milestones',
+  'dashboard-section-order',
+  'dashboard-section-stats',
+  'video-playback-speed',
 ] as const
 
 type LocalStorageHelper = {

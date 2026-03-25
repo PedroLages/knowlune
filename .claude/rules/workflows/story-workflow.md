@@ -87,6 +87,7 @@ When all stories in an epic are done, run in order:
 3. `/testarch-nfr` — Non-functional requirements validation
 4. `/review-adversarial` — Optional: cynical critique of the epic's scope and implementation *(skip if low-risk epic)*
 5. `/retrospective` — Lessons learned and pattern extraction
+6. **Known issues triage** — Review `docs/known-issues.yaml` for `open` items discovered during this epic. For each: schedule for a future epic, mark `wont-fix`, or fix now as a chore commit.
 
 ## Key Files
 

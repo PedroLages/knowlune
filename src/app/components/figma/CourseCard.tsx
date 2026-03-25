@@ -16,8 +16,7 @@ import { getProgress } from '@/lib/progress'
 import { getResourceUrl } from '@/lib/media'
 import { cn } from '@/app/components/ui/utils'
 import { useCourseCardPreview } from '@/hooks/useCourseCardPreview'
-import { getAuthorById } from '@/data/authors'
-import { getAvatarSrc } from '@/lib/authors'
+import { getAuthorForCourse, getAvatarSrc } from '@/lib/authors'
 import type { Course, CourseCategory } from '@/data/types'
 import type { MomentumScore } from '@/lib/momentum'
 import type { AtRiskStatus } from '@/lib/atRisk'
@@ -133,7 +132,7 @@ export function CourseCard({
 
   // ── Author data ──────────────────────────────────────────────
 
-  const author = getAuthorById(course.authorId)
+  const author = getAuthorForCourse(course)
 
   // ── Shared derived state ──────────────────────────────────────────
 
@@ -481,7 +480,7 @@ export function CourseCard({
             </picture>
           )
         ) : (
-          <BookOpen className="h-16 w-16 text-brand" />
+          <BookOpen className="size-16 text-brand" />
         )}
         {inlineVideoPreview}
         {renderThumbnailOverlays()}

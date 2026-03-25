@@ -43,7 +43,7 @@ test.describe('E17-S02: Average Retake Frequency', () => {
     await page.goto('/reports', { waitUntil: 'domcontentloaded' })
     await page.getByRole('tab', { name: /study analytics/i }).click()
 
-    const card = page.getByTestId('quiz-retake-card')
+    const card = page.getByTestId('quiz-retake-detail-card')
     await expect(card).toBeVisible()
     await expect(card).toContainText('4.0')
     await expect(card).toContainText('attempts per quiz')
@@ -61,7 +61,7 @@ test.describe('E17-S02: Average Retake Frequency', () => {
     await page.goto('/reports', { waitUntil: 'domcontentloaded' })
     await page.getByRole('tab', { name: /study analytics/i }).click()
 
-    const card = page.getByTestId('quiz-retake-card')
+    const card = page.getByTestId('quiz-retake-detail-card')
     await expect(card).toBeVisible()
     await expect(card).toContainText('1.0')
     await expect(card).toContainText('No retakes yet')
@@ -79,7 +79,7 @@ test.describe('E17-S02: Average Retake Frequency', () => {
     await page.goto('/reports', { waitUntil: 'domcontentloaded' })
     await page.getByRole('tab', { name: /study analytics/i }).click()
 
-    const card = page.getByTestId('quiz-retake-card')
+    const card = page.getByTestId('quiz-retake-detail-card')
     await expect(card).toBeVisible()
     await expect(card).toContainText('2.5')
     await expect(card).toContainText('attempts per quiz')
@@ -94,6 +94,6 @@ test.describe('E17-S02: Average Retake Frequency', () => {
 
     // Empty state is shown because hasActivity is false
     await expect(page.getByTestId('empty-state-sessions')).toBeVisible()
-    await expect(page.getByTestId('quiz-retake-card')).not.toBeVisible()
+    await expect(page.getByTestId('quiz-retake-detail-card')).not.toBeVisible()
   })
 })
