@@ -67,26 +67,38 @@ So that I always know my next step and can complete core workflows within 2 minu
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Refactor MyClass.tsx page-level empty state to use EmptyState component (AC1, AC5, AC6)
-  - [ ] 1.1 Replace custom div (lines 113-131) with `<EmptyState>` component
-  - [ ] 1.2 Add `data-testid="empty-state-my-courses"`
-- [ ] Task 2: Refactor MyClass.tsx in-progress tab empty state (AC6)
-  - [ ] 2.1 Replace custom div (lines 238-252) with `<EmptyState>` component
-  - [ ] 2.2 Use `headingLevel={3}` for correct nesting
-- [ ] Task 3: Refactor SessionHistory.tsx filtered empty state
-  - [ ] 3.1 Replace raw HTML (lines 426-436) with `<EmptyState>` inside `<li>`
-  - [ ] 3.2 Add `data-testid="empty-state-filtered-sessions"`
-- [ ] Task 4: Refactor InterleavedReview.tsx empty phase (AC6)
-  - [ ] 4.1 Replace composable Empty* components (lines 267-287) with `<EmptyState>`
-  - [ ] 4.2 Add CTA to navigate back to review queue
-- [ ] Task 5: Clean up imports across modified files
-- [ ] Task 6: Add E2E tests for new standardized empty states
+- [x] Task 1: Refactor MyClass.tsx page-level empty state to use EmptyState component (AC1, AC5, AC6)
+  - [x] 1.1 Replace custom div with `<EmptyState>` component
+  - [x] 1.2 Add `data-testid="empty-state-my-courses"`
+- [x] Task 2: Refactor MyClass.tsx in-progress tab empty state (AC6)
+  - [x] 2.1 Replace custom div with `<EmptyState>` component
+  - [x] 2.2 Use `headingLevel={3}` for correct nesting
+- [x] Task 3: Refactor SessionHistory.tsx filtered empty state
+  - [x] 3.1 Replace raw HTML with `<EmptyState>` inside `<li>`
+  - [x] 3.2 Add `data-testid="empty-state-filtered-sessions"`
+- [x] Task 4: Refactor InterleavedReview.tsx empty phase (AC6)
+  - [x] 4.1 Replace composable Empty* components with `<EmptyState>`
+  - [x] 4.2 Add CTA to navigate back to review queue
+- [x] Task 5: Clean up imports across modified files (removed unused Link, Button, ArrowRight, Clock)
+- [x] Task 6: Refactor BookmarksSection.tsx empty state to use EmptyState component
+- [ ] Task 7: Add E2E tests for new standardized empty states
 
 ## Design Guidance
 
 [To be populated during planning]
 
 ## Implementation Notes
+
+**Approach:** Reused the existing `EmptyState` component (`src/app/components/EmptyState.tsx`) which already provides consistent brand styling (bg-brand-soft icon circle), motion animations, ARIA role="status", and supports both `onAction` callbacks and `actionHref` links.
+
+**Files changed:**
+- `src/app/pages/MyClass.tsx` — Replaced 2 ad-hoc empty states (page-level + in-progress tab) with `<EmptyState>`. Removed unused imports (Link, Button, ArrowRight).
+- `src/app/pages/SessionHistory.tsx` — Replaced filtered empty state raw HTML with `<EmptyState>` inside `<li>`, using `onAction` for "Clear all filters".
+- `src/app/pages/InterleavedReview.tsx` — Replaced composable `Empty*` components for the "empty" phase with `<EmptyState>`, aliased as `EmptyStateComponent` to avoid collision with the existing `ui/empty` import.
+- `src/app/components/figma/BookmarksSection.tsx` — Replaced raw div empty state with `<EmptyState>` using BookmarkIcon and "Browse Courses" CTA.
+
+**Already using EmptyState (no changes needed):**
+- Courses.tsx, Overview.tsx, Reports.tsx, Notes.tsx, Challenges.tsx, SessionHistory.tsx (page-level)
 
 **Plan:** [docs/implementation-artifacts/plans/e25-s09-plan.md](plans/e25-s09-plan.md)
 
@@ -122,4 +134,10 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+1. **Reusable component coverage was already high.** Most pages (Courses, Overview, Reports, Notes, Challenges) already used the `EmptyState` component. The remaining ad-hoc empty states were in MyClass, SessionHistory (filtered state), InterleavedReview, and BookmarksSection.
+
+2. **Import aliasing for name collisions.** InterleavedReview already imports composable `Empty*` components from `ui/empty`. Aliasing the shared `EmptyState` as `EmptyStateComponent` avoided the conflict while keeping both available (the error state still uses the composable pattern for its custom retry button).
+
+3. **Unused import cleanup matters.** Replacing ad-hoc markup with the `EmptyState` component made several imports redundant (Link, Button, ArrowRight in MyClass.tsx; Clock in BookmarksSection.tsx). TypeScript strict mode catches these immediately, preventing build failures.
+
+4. **Semantic HTML in list contexts.** SessionHistory renders inside a `<ul>`, so the empty state needed to be wrapped in `<li className="list-none">` to maintain valid HTML while visually hiding the list marker.
