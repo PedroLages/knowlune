@@ -80,6 +80,10 @@ describe('ElearningDB schema', () => {
     expect(db.verno).toBe(23)
   })
 
+  it('should have entitlements table with userId as primary key', () => {
+    expect(db.entitlements.schema.primKey.name).toBe('userId')
+  })
+
   it('should preserve key indexes on existing v16 tables in v17 migration', async () => {
     // Dexie uses i.name for the index identifier (e.g. '[courseId+lessonId]', '*tags')
     const bookmarkIndexNames = db.bookmarks.schema.indexes.map(i => i.name)
