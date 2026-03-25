@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router'
-import { BookOpen, Clock, ExternalLink, GraduationCap, Award, Users, Pencil, Trash2 } from 'lucide-react'
+import {
+  BookOpen,
+  Clock,
+  ExternalLink,
+  GraduationCap,
+  Award,
+  Users,
+  Pencil,
+  Trash2,
+} from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Card, CardContent } from '@/app/components/ui/card'
@@ -17,18 +26,10 @@ import {
 } from '@/app/components/ui/breadcrumb'
 import { CourseCard } from '@/app/components/figma/CourseCard'
 import { useAuthorStore } from '@/stores/useAuthorStore'
-import { getAuthorStats, getAvatarSrc } from '@/lib/authors'
+import { getAuthorStats, getAvatarSrc, getInitials } from '@/lib/authors'
 import { getCourseCompletionPercent } from '@/lib/progress'
 import { AuthorFormDialog } from '@/app/components/authors/AuthorFormDialog'
 import { DeleteAuthorDialog } from '@/app/components/authors/DeleteAuthorDialog'
-
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
-}
 
 export function AuthorProfile() {
   const { authorId } = useParams<{ authorId: string }>()
@@ -180,7 +181,11 @@ export function AuthorProfile() {
         />
         <StatCard icon={Clock} value={`${Math.round(stats.totalHours)}h`} label="Content" />
         <StatCard icon={GraduationCap} value={stats.totalLessons} label="Lessons" />
-        <StatCard icon={Award} value={`${author.yearsExperience}y`} label="Experience" />
+        <StatCard
+          icon={Award}
+          value={author.yearsExperience > 0 ? `${author.yearsExperience}y` : '—'}
+          label="Experience"
+        />
       </div>
 
       {/* Bio Section */}

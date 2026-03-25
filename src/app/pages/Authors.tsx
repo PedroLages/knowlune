@@ -7,18 +7,10 @@ import { Button } from '@/app/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { useAuthorStore } from '@/stores/useAuthorStore'
-import { getAuthorStats, getAvatarSrc } from '@/lib/authors'
+import { getAuthorStats, getAvatarSrc, getInitials } from '@/lib/authors'
 import { AuthorFormDialog } from '@/app/components/authors/AuthorFormDialog'
 import { DeleteAuthorDialog } from '@/app/components/authors/DeleteAuthorDialog'
 import type { Author } from '@/data/types'
-
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
-}
 
 export function Authors() {
   const { authors, isLoaded, isLoading, loadAuthors } = useAuthorStore()

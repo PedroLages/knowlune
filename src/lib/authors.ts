@@ -2,6 +2,15 @@ import { useCourseStore } from '@/stores/useCourseStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import type { Course, Author } from '@/data/types'
 
+/** Extract initials from a full name (e.g., "Jane Smith" → "JS") */
+export function getInitials(name: string) {
+  return name
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+}
+
 export function getAuthorStats(author: Author) {
   const courses = useCourseStore.getState().courses.filter(c => c.authorId === author.id)
   return {
@@ -15,7 +24,12 @@ export function getAuthorStats(author: Author) {
 }
 
 export function getAuthorForCourse(course: Course): Author | undefined {
-  return useAuthorStore.getState().getAuthorById(course.authorId)
+  const state = useAuthorStore.getState()
+  // Ensure authors are loaded — loadAuthors is idempotent (no-ops if already loaded/loading)
+  if (!state.isLoaded && !state.isLoading) {
+    state.loadAuthors()
+  }
+  return state.getAuthorById(course.authorId)
 }
 
 /** Available responsive avatar widths (px) */

@@ -166,7 +166,7 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
       bio: bio.trim(),
       shortBio: shortBio.trim(),
       specialties,
-      yearsExperience: yearsExperience ? Number(yearsExperience) : 0,
+      yearsExperience: yearsExperience && Number(yearsExperience) > 0 ? Number(yearsExperience) : 0,
       avatar: avatar.trim(),
       socialLinks,
       ...(education.trim() ? { education: education.trim() } : {}),
@@ -183,8 +183,9 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
       }
       resetForm()
       onOpenChange(false)
-    } catch {
+    } catch (error) {
       // Store already shows toast.error
+      console.error('[AuthorFormDialog] Submit failed:', error)
     } finally {
       setIsSubmitting(false)
     }

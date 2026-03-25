@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useParams, Link } from 'react-router'
 import { Clock, Video, FileText, BookOpen, Play, CheckCircle } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
@@ -30,6 +31,12 @@ export function CourseDetail() {
   // Subscribe to statusMap changes to trigger re-render when content status updates
   // This ensures the progress bar reflects changes made via StatusSelector
   useContentProgressStore(s => s.statusMap)
+
+  // Subscribe to author store reactively and ensure authors are loaded
+  const { loadAuthors, getAuthorById } = useAuthorStore()
+  useEffect(() => {
+    loadAuthors()
+  }, [loadAuthors])
 
   if (!course) {
     return (
@@ -85,7 +92,7 @@ export function CourseDetail() {
 
             {/* Author */}
             {(() => {
-              const author = useAuthorStore.getState().getAuthorById(course.authorId)
+              const author = getAuthorById(course.authorId)
               if (!author) return null
               return (
                 <Link

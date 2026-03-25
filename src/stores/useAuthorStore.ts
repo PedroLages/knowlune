@@ -34,6 +34,7 @@ export const useAuthorStore = create<AuthorState>((set, get) => ({
     } catch (error) {
       set({ isLoading: false, error: 'Failed to load authors' })
       console.error('[AuthorStore] Failed to load authors:', error)
+      toast.error('Failed to load authors')
     }
   },
 

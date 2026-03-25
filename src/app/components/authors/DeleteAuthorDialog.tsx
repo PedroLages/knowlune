@@ -38,8 +38,9 @@ export function DeleteAuthorDialog({
       toast.success('Author deleted')
       onOpenChange(false)
       onDeleted?.()
-    } catch {
+    } catch (error) {
       // Store already shows toast.error
+      console.error('[DeleteAuthorDialog] Delete failed:', error)
     } finally {
       setDeleting(false)
     }

@@ -142,4 +142,12 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+1. **Zustand `getState()` in render is non-reactive.** Using `useAuthorStore.getState()` inside a render function (e.g., CourseDetail's IIFE) reads the snapshot but never re-renders when authors load. Always use the `useAuthorStore()` hook for reactive subscriptions, and call `loadAuthors()` in a `useEffect` to ensure data is available even when navigating directly to a page.
+
+2. **Utility functions that access store state need load guards.** `getAuthorForCourse()` used `getState()` without checking if authors were loaded. For non-React utility functions, add an idempotent `loadAuthors()` call when `isLoaded` is false to prevent stale/empty reads.
+
+3. **Silent `console.error` in catch blocks is insufficient.** The `loadAuthors` catch block logged to console but showed no user-facing feedback. All error paths that affect user-visible state should include `toast.error()` alongside `console.error` for debugging.
+
+4. **Default `0` for optional numeric fields is misleading.** When `yearsExperience` is empty, defaulting to `0` caused the UI to display "0y Experience" — implying no experience rather than unknown. The display layer should treat `0` as "not specified" and show a dash or hide the stat.
+
+5. **Duplicated helpers across pages.** `getInitials()` was copy-pasted into both Authors.tsx and AuthorProfile.tsx. Extracting to `lib/authors.ts` provides a single source of truth and reduces maintenance burden.
