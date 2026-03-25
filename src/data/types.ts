@@ -154,6 +154,7 @@ export interface ImportedCourse {
   videoCount: number
   pdfCount: number
   directoryHandle: FileSystemDirectoryHandle
+  coverImageHandle?: FileSystemFileHandle // User-selected cover image from folder
 }
 
 export interface ImportedVideo {

@@ -8,6 +8,7 @@ import {
   extractVideoMetadata,
   extractPdfMetadata,
   isSupportedVideoFormat,
+  isImageFile,
   getVideoFormat,
 } from '@/lib/fileSystem'
 import type { ImportedCourse, ImportedVideo, ImportedPdf } from '@/data/types'
@@ -47,6 +48,13 @@ export interface ScannedPdf {
   fileHandle: FileSystemFileHandle
 }
 
+/** An image discovered during folder scan, candidate for cover image. */
+export interface ScannedImage {
+  filename: string
+  path: string
+  fileHandle: FileSystemFileHandle
+}
+
 /**
  * Complete scan result from a course folder, ready for preview/edit
  * before persisting to IndexedDB. Contains all metadata the wizard needs.
@@ -64,6 +72,8 @@ export interface ScannedCourse {
   videos: ScannedVideo[]
   /** Discovered PDF files with extracted metadata. */
   pdfs: ScannedPdf[]
+  /** Image files found in the folder, candidates for cover image. */
+  images: ScannedImage[]
 }
 
 // --- Scan Phase ---
@@ -108,14 +118,17 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
       )
     }
 
-    // Step 2: Scan directory for supported files
+    // Step 2: Scan directory for supported files (including images for cover selection)
     const videoFiles: { handle: FileSystemFileHandle; path: string }[] = []
     const pdfFiles: { handle: FileSystemFileHandle; path: string }[] = []
+    const imageFiles: { handle: FileSystemFileHandle; path: string }[] = []
 
     try {
-      for await (const entry of scanDirectory(dirHandle)) {
+      for await (const entry of scanDirectory(dirHandle, '', { includeImages: true })) {
         if (isSupportedVideoFormat(entry.handle.name)) {
           videoFiles.push(entry)
+        } else if (isImageFile(entry.handle.name)) {
+          imageFiles.push(entry)
         } else {
           pdfFiles.push(entry)
         }
@@ -213,6 +226,13 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
         fileHandle: r.value.entry.handle,
       }))
 
+    // Build image candidates for cover selection
+    const images: ScannedImage[] = imageFiles.map(entry => ({
+      filename: entry.handle.name,
+      path: entry.path,
+      fileHandle: entry.handle,
+    }))
+
     return {
       id: courseId,
       name: courseName,
@@ -220,6 +240,7 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
       directoryHandle: dirHandle,
       videos,
       pdfs,
+      images,
     }
   } catch (error) {
     if (error instanceof ImportError) {
@@ -266,6 +287,7 @@ export async function persistScannedCourse(
     name?: string
     category?: string
     tags?: string[]
+    coverImageHandle?: FileSystemFileHandle
   }
 ): Promise<ImportedCourse> {
   const now = new Date().toISOString()
@@ -302,6 +324,7 @@ export async function persistScannedCourse(
     videoCount: videos.length,
     pdfCount: pdfs.length,
     directoryHandle: scanned.directoryHandle,
+    ...(overrides?.coverImageHandle ? { coverImageHandle: overrides.coverImageHandle } : {}),
   }
 
   try {

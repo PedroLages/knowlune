@@ -17,9 +17,11 @@ vi.mock('@/lib/fileSystem', () => ({
   extractVideoMetadata: vi.fn(),
   extractPdfMetadata: vi.fn(),
   isSupportedVideoFormat: vi.fn(),
+  isImageFile: vi.fn(),
   getVideoFormat: vi.fn(),
   SUPPORTED_VIDEO_EXTENSIONS: ['.mp4', '.mkv', '.avi', '.webm'],
   SUPPORTED_DOCUMENT_EXTENSIONS: ['.pdf'],
+  SUPPORTED_IMAGE_EXTENSIONS: ['.jpg', '.jpeg', '.png', '.gif', '.webp'],
   SUPPORTED_FILE_EXTENSIONS: ['.mp4', '.mkv', '.avi', '.webm', '.pdf'],
 }))
 
@@ -33,6 +35,7 @@ let fileSystemMocks: {
   extractVideoMetadata: ReturnType<typeof vi.fn>
   extractPdfMetadata: ReturnType<typeof vi.fn>
   isSupportedVideoFormat: ReturnType<typeof vi.fn>
+  isImageFile: ReturnType<typeof vi.fn>
   getVideoFormat: ReturnType<typeof vi.fn>
 }
 let toastMocks: { success: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> }
@@ -59,6 +62,7 @@ beforeEach(async () => {
     extractVideoMetadata: fsModule.extractVideoMetadata as ReturnType<typeof vi.fn>,
     extractPdfMetadata: fsModule.extractPdfMetadata as ReturnType<typeof vi.fn>,
     isSupportedVideoFormat: fsModule.isSupportedVideoFormat as ReturnType<typeof vi.fn>,
+    isImageFile: (fsModule as Record<string, unknown>).isImageFile as ReturnType<typeof vi.fn>,
     getVideoFormat: fsModule.getVideoFormat as ReturnType<typeof vi.fn>,
   }
 
@@ -86,6 +90,9 @@ function setupScanMocks(dirName: string, files: { name: string; isVideo: boolean
   })
   fileSystemMocks.isSupportedVideoFormat.mockImplementation((name: string) =>
     /\.(mp4|mkv|avi|webm)$/i.test(name)
+  )
+  fileSystemMocks.isImageFile.mockImplementation((name: string) =>
+    /\.(jpg|jpeg|png|gif|webp)$/i.test(name)
   )
   fileSystemMocks.getVideoFormat.mockImplementation((name: string) => {
     const ext = name.split('.').pop()
@@ -227,6 +234,23 @@ describe('scanCourseFolder', () => {
 
     expect(useCourseImportStore.getState().isImporting).toBe(false)
   })
+
+  it('should discover image files during scan', async () => {
+    setupScanMocks('Course With Images', [
+      { name: 'lesson.mp4', isVideo: true },
+      { name: 'cover.jpg', isVideo: false },
+      { name: 'banner.png', isVideo: false },
+      { name: 'notes.pdf', isVideo: false },
+    ])
+
+    const scanned = await scanCourseFolder()
+
+    expect(scanned.videos).toHaveLength(1)
+    expect(scanned.pdfs).toHaveLength(1)
+    expect(scanned.images).toHaveLength(2)
+    expect(scanned.images[0].filename).toBe('cover.jpg')
+    expect(scanned.images[1].filename).toBe('banner.png')
+  })
 })
 
 // --- persistScannedCourse tests ---
@@ -258,6 +282,7 @@ describe('persistScannedCourse', () => {
           fileHandle: createMockFileHandle('workbook.pdf'),
         },
       ],
+      images: [],
       ...overrides,
     }
   }
@@ -365,6 +390,18 @@ describe('persistScannedCourse', () => {
     expect(toastMocks.success).toHaveBeenCalledWith(
       'Imported: TypeScript Deep Dive — 0 videos, 1 PDF'
     )
+  })
+
+  it('should apply coverImageHandle override from wizard', async () => {
+    const coverHandle = createMockFileHandle('cover.jpg')
+    const scanned = createScannedCourse()
+    const course = await persistScannedCourse(scanned, {
+      coverImageHandle: coverHandle,
+    })
+
+    expect(course.coverImageHandle).toBe(coverHandle)
+    const storedCourse = await db.importedCourses.get(course.id)
+    expect(storedCourse!.coverImageHandle).toBeDefined()
   })
 })
 
