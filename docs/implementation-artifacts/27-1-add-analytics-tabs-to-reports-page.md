@@ -6,7 +6,7 @@ started: 2026-03-23
 completed:
 reviewed: in-progress
 review_started: 2026-03-25
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
 burn_in_validated: false
 ---
 
@@ -165,4 +165,10 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Welcome wizard blocking E2E tests**: The `knowlune-welcome-wizard-v1` localStorage key must be seeded in `addInitScript` for any E2E test that navigates to pages with the welcome wizard overlay. Without it, the modal blocks all tab/button interactions. This was missed during initial test implementation because the test for empty state (`getByText`) could find text through the overlay, while `getByRole('tab')` could not.
+
+- **useSearchParams requires MemoryRouter in unit tests**: When converting Reports from `defaultValue` to controlled `Tabs` with `useSearchParams`, the existing unit tests broke because `useSearchParams` requires a router context. Wrapping the test render in `<MemoryRouter>` resolved this. This is a common pattern when adding URL-aware state to components that previously didn't use routing hooks.
+
+- **Merge conflict with quiz completion rate card**: The retake frequency card move (Study → Quiz tab) conflicted with concurrent work adding a quiz completion rate card. The resolution required carefully preserving both changes — the new completion rate card stayed in the Study tab while the retake frequency card moved to Quiz Analytics.
+
+- **Controlled vs. uncontrolled Tabs pattern**: Converting shadcn `Tabs` from `defaultValue` to `value` + `onValueChange` is the correct pattern for URL-synced tabs. The `VALID_TABS` array with `.includes()` check provides a clean fallback for invalid tab params without additional error handling.
