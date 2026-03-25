@@ -164,7 +164,7 @@ export default function MyClass() {
                 <section className="mb-8">
                   <div className="bg-brand-soft p-4 rounded-xl mb-4">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
-                      <Clock className="w-6 h-6 text-brand" />
+                      <Clock className="size-6 text-brand" />
                       In Progress
                     </h2>
                   </div>
@@ -191,7 +191,7 @@ export default function MyClass() {
                 <section className="mb-8">
                   <div className="bg-success-soft p-4 rounded-xl mb-4">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
-                      <CheckCircle className="w-6 h-6 text-success" />
+                      <CheckCircle className="size-6 text-success" />
                       Completed
                     </h2>
                   </div>
@@ -212,7 +212,7 @@ export default function MyClass() {
                 <section>
                   <div className="bg-muted p-4 rounded-xl mb-4">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
-                      <PlayCircle className="w-6 h-6 text-muted-foreground" />
+                      <PlayCircle className="size-6 text-muted-foreground" />
                       Not Started
                     </h2>
                   </div>

@@ -15,6 +15,10 @@ import {
   FileSpreadsheet,
   FileText,
   Award,
+  Eye,
+  Type,
+  Users,
+  RotateCcw,
 } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
@@ -36,21 +40,140 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/app/components/ui/alert-dialog'
-import { getSettings, saveSettings, resetAllData } from '@/lib/settings'
+import {
+  getSettings,
+  saveSettings,
+  resetAllData,
+  type FontSize,
+  type AgeRange,
+} from '@/lib/settings'
+import { FontSizePicker } from '@/app/components/settings/FontSizePicker'
 import { exportAllAsJson, exportAllAsCsv, exportNotesAsMarkdown } from '@/lib/exportService'
 import { importFullData } from '@/lib/importService'
 import { downloadJson, downloadZip } from '@/lib/fileDownload'
 import { exportAchievementsAsBadges } from '@/lib/openBadges'
+import { Switch } from '@/app/components/ui/switch'
+import { useProgressiveDisclosure } from '@/app/hooks/useProgressiveDisclosure'
 import { ReminderSettings } from '@/app/components/figma/ReminderSettings'
 import { CourseReminderSettings } from '@/app/components/figma/CourseReminderSettings'
 import { AIConfigurationSettings } from '@/app/components/figma/AIConfigurationSettings'
+import { QuizPreferencesForm } from '@/app/components/settings/QuizPreferencesForm'
 import { AvatarCropDialog } from '@/app/components/ui/avatar-crop-dialog'
 import { AvatarUploadZone } from '@/app/components/settings/avatar-upload-zone'
+import { EngagementPreferences } from '@/app/components/settings/EngagementPreferences'
 import { validateImageFile, compressAvatar, fileToDataUrl } from '@/lib/avatarUpload'
 import { toastSuccess, toastError } from '@/lib/toastHelpers'
 
+const AGE_RANGE_OPTIONS: { value: AgeRange; label: string; description: string }[] = [
+  { value: 'gen-z', label: 'Gen Z', description: 'Born 1997-2012' },
+  { value: 'millennial', label: 'Millennial', description: 'Born 1981-1996' },
+  { value: 'boomer', label: 'Boomer', description: 'Born 1946-1964' },
+  { value: 'prefer-not-to-say', label: 'Prefer not to say', description: 'Default settings' },
+]
+
+function AgeRangeSection({
+  ageRange,
+  onChangeAgeRange,
+  onReapplyDefaults,
+}: {
+  ageRange?: AgeRange
+  onChangeAgeRange: (age: AgeRange | undefined) => void
+  onReapplyDefaults: (age: AgeRange) => void
+}) {
+  return (
+    <Card>
+      <CardHeader className="border-b border-border/50 bg-surface-sunken/30">
+        <div className="flex items-center gap-3">
+          <div className="rounded-full bg-brand-soft p-2">
+            <Users className="size-5 text-brand" aria-hidden="true" />
+          </div>
+          <div>
+            <h2 className="text-lg font-display leading-none">Age Range</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Used to set comfortable defaults. Stored locally only.
+            </p>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-6" data-testid="age-range-section">
+        <RadioGroup
+          value={ageRange ?? ''}
+          onValueChange={(val: string) => onChangeAgeRange(val as AgeRange)}
+          className="space-y-3"
+          aria-label="Age range"
+        >
+          {AGE_RANGE_OPTIONS.map(option => (
+            <label
+              key={option.value}
+              className={cn(
+                'flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer',
+                'transition-all duration-200 hover:shadow-sm min-h-[44px]',
+                ageRange === option.value
+                  ? 'border-brand bg-brand-soft shadow-sm'
+                  : 'border-border bg-background hover:border-brand/50'
+              )}
+            >
+              <RadioGroupItem value={option.value} />
+              <div>
+                <span className="text-sm font-medium block">{option.label}</span>
+                <span className="text-xs text-muted-foreground">{option.description}</span>
+              </div>
+            </label>
+          ))}
+        </RadioGroup>
+
+        <div className="flex items-center gap-3 mt-4 pt-4 border-t border-border/50">
+          {ageRange && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 min-h-[44px]"
+                  aria-label="Re-apply age-specific defaults"
+                >
+                  <RotateCcw className="size-4" />
+                  Re-apply defaults
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="rounded-[24px]">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Re-apply age-specific defaults?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will reset your font size to the recommended setting for your age range.
+                    Your other settings will not be affected.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => onReapplyDefaults(ageRange)}>
+                    Re-apply Defaults
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+          {ageRange && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onChangeAgeRange(undefined)}
+              className="text-muted-foreground min-h-[44px]"
+              aria-label="Clear age range"
+            >
+              Clear
+            </Button>
+          )}
+          {!ageRange && <p className="text-sm text-muted-foreground">No age range selected</p>}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function Settings() {
   const { theme, setTheme } = useTheme()
+  const { showAll, toggleShowAll } = useProgressiveDisclosure()
   const [settings, setSettings] = useState(getSettings())
   const [saved, setSaved] = useState(false)
   const [uploadError, setUploadError] = useState<string>('')
@@ -370,7 +493,7 @@ export default function Settings() {
                 >
                   <div className="size-4 rounded-full bg-success flex items-center justify-center flex-shrink-0">
                     <svg
-                      className="w-3 h-3 text-white"
+                      className="size-3 text-white"
                       fill="none"
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -552,6 +675,94 @@ export default function Settings() {
           </CardContent>
         </Card>
 
+        {/* Navigation */}
+        <Card>
+          <CardHeader>
+            <h2 className="text-base leading-none">Navigation</h2>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-brand-soft p-2 mt-0.5">
+                  <Eye className="size-4 text-brand" aria-hidden="true" />
+                </div>
+                <div>
+                  <Label htmlFor="show-all-nav" className="text-sm font-medium">
+                    Show all menu items
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Bypass progressive disclosure and show every sidebar item
+                  </p>
+                </div>
+              </div>
+              <Switch
+                id="show-all-nav"
+                checked={showAll}
+                onCheckedChange={toggleShowAll}
+                aria-label="Show all menu items"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Font Size */}
+        <Card>
+          <CardHeader className="border-b border-border/50 bg-surface-sunken/30">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-brand-soft p-2">
+                <Type className="size-5 text-brand" aria-hidden="true" />
+              </div>
+              <div>
+                <h2 className="text-lg font-display leading-none">Font Size</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Adjust text size for comfortable reading
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6" data-testid="font-size-section">
+            <FontSizePicker
+              value={settings.fontSize ?? 'medium'}
+              onChange={(size: FontSize) => {
+                const updated = { ...settings, fontSize: size }
+                setSettings(updated)
+                saveSettings(updated)
+                window.dispatchEvent(new Event('settingsUpdated'))
+                toastSuccess.saved('Font size')
+              }}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Age Range */}
+        <AgeRangeSection
+          ageRange={settings.ageRange}
+          onChangeAgeRange={(age: AgeRange | undefined) => {
+            const updated = { ...settings, ageRange: age }
+            setSettings(updated)
+            saveSettings(updated)
+            window.dispatchEvent(new Event('settingsUpdated'))
+          }}
+          onReapplyDefaults={(age: AgeRange) => {
+            const AGE_FONT_DEFAULTS: Record<AgeRange, FontSize> = {
+              'gen-z': 'medium',
+              millennial: 'medium',
+              boomer: 'large',
+              'prefer-not-to-say': 'medium',
+            }
+            const fontSize = AGE_FONT_DEFAULTS[age]
+            const updated = { ...settings, ageRange: age, fontSize }
+            setSettings(updated)
+            saveSettings(updated)
+            window.dispatchEvent(new Event('settingsUpdated'))
+            toastSuccess.saved('Age-specific defaults re-applied')
+          }}
+        />
+
+        {/* Engagement Preferences */}
+        <EngagementPreferences />
+
+
         {/* Reminders */}
         <ReminderSettings />
 
@@ -560,6 +771,9 @@ export default function Settings() {
 
         {/* AI Configuration */}
         <AIConfigurationSettings />
+
+        {/* Quiz Preferences */}
+        <QuizPreferencesForm />
 
         {/* Data Management */}
         <Card>

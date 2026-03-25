@@ -928,6 +928,147 @@ describe('VideoPlayer', () => {
   })
 
   // -------------------------------------------------------------------------
+  // AB-Loop (E21-S01)
+  // -------------------------------------------------------------------------
+  describe('AB-loop controls', () => {
+    function setUpWithDuration(dur = 120) {
+      setDesktopViewport()
+      renderPlayer()
+      fireLoadedMetadata(dur)
+      return getVideo()
+    }
+
+    function setCurrentTime(video: HTMLVideoElement, seconds: number) {
+      Object.defineProperty(video, 'currentTime', {
+        writable: true,
+        configurable: true,
+        value: seconds,
+      })
+    }
+
+    it('clicking loop button once sets A marker (aria-pressed true, label changes)', () => {
+      const video = setUpWithDuration()
+      setCurrentTime(video, 10)
+      fireEvent.timeUpdate(video)
+
+      const loopBtn = screen.getByTestId('loop-toggle-button')
+      expect(loopBtn).toHaveAttribute('aria-label', expect.stringMatching(/set loop start/i))
+
+      fireEvent.click(loopBtn)
+
+      expect(loopBtn).toHaveAttribute('aria-pressed', 'true')
+      expect(loopBtn).toHaveAttribute('aria-label', expect.stringMatching(/set loop end/i))
+    })
+
+    it('clicking loop button twice sets A then B (loop active label)', () => {
+      const video = setUpWithDuration()
+      setCurrentTime(video, 10)
+      fireEvent.timeUpdate(video)
+
+      const loopBtn = screen.getByTestId('loop-toggle-button')
+      fireEvent.click(loopBtn)
+
+      setCurrentTime(video, 20)
+      fireEvent.timeUpdate(video)
+      fireEvent.click(loopBtn)
+
+      expect(loopBtn).toHaveAttribute('aria-label', expect.stringMatching(/loop active/i))
+    })
+
+    it('third press re-sets A (clears B, goes back to "set B" state)', () => {
+      const video = setUpWithDuration()
+      setCurrentTime(video, 10)
+      fireEvent.timeUpdate(video)
+
+      const loopBtn = screen.getByTestId('loop-toggle-button')
+      // First press: set A
+      fireEvent.click(loopBtn)
+      // Second press: set B
+      setCurrentTime(video, 20)
+      fireEvent.timeUpdate(video)
+      fireEvent.click(loopBtn)
+
+      expect(loopBtn).toHaveAttribute('aria-label', expect.stringMatching(/loop active/i))
+
+      // Third press: re-set A at 25s
+      setCurrentTime(video, 25)
+      fireEvent.timeUpdate(video)
+      fireEvent.click(loopBtn)
+
+      // Should now be back in "set B" state (A is set, B is cleared)
+      expect(loopBtn).toHaveAttribute('aria-label', expect.stringMatching(/set loop end/i))
+    })
+
+    it('clearLoop via Escape removes all markers', () => {
+      const video = setUpWithDuration()
+      setCurrentTime(video, 10)
+      fireEvent.timeUpdate(video)
+
+      const loopBtn = screen.getByTestId('loop-toggle-button')
+      fireEvent.click(loopBtn)
+
+      // Clear button should appear
+      const clearBtn = screen.getByTestId('loop-clear-button')
+      fireEvent.click(clearBtn)
+
+      expect(loopBtn).toHaveAttribute('aria-label', expect.stringMatching(/set loop start/i))
+      expect(loopBtn).toHaveAttribute('aria-pressed', 'false')
+    })
+
+    it('auto-swaps A and B when B is set before A', () => {
+      const video = setUpWithDuration()
+      // Set A at 20s
+      setCurrentTime(video, 20)
+      fireEvent.timeUpdate(video)
+
+      const loopBtn = screen.getByTestId('loop-toggle-button')
+      fireEvent.click(loopBtn)
+
+      // Set B at 5s (before A) — should auto-swap
+      setCurrentTime(video, 5)
+      fireEvent.timeUpdate(video)
+      fireEvent.click(loopBtn)
+
+      // Loop should be active (no error)
+      expect(loopBtn).toHaveAttribute('aria-label', expect.stringMatching(/loop active/i))
+    })
+
+    it('loop enforcement: timeupdate past B seeks back to A', () => {
+      const video = setUpWithDuration()
+      // Set A at 5s
+      setCurrentTime(video, 5)
+      fireEvent.timeUpdate(video)
+      const loopBtn = screen.getByTestId('loop-toggle-button')
+      fireEvent.click(loopBtn)
+
+      // Set B at 15s
+      setCurrentTime(video, 15)
+      fireEvent.timeUpdate(video)
+      fireEvent.click(loopBtn)
+
+      // Simulate video reaching past B
+      setCurrentTime(video, 15.5)
+      fireEvent.timeUpdate(video)
+
+      // handleTimeUpdate should have set currentTime back to A (5)
+      expect(video.currentTime).toBeCloseTo(5)
+    })
+
+    it('setLoopA clamps to duration', () => {
+      const video = setUpWithDuration(60)
+      // Set currentTime beyond duration
+      setCurrentTime(video, 999)
+      fireEvent.timeUpdate(video)
+
+      const loopBtn = screen.getByTestId('loop-toggle-button')
+      fireEvent.click(loopBtn)
+
+      // aria-label should contain the clamped time (60s = 1:00), not 999
+      expect(loopBtn).toHaveAttribute('aria-label', expect.stringMatching(/set loop end/i))
+    })
+  })
+
+  // -------------------------------------------------------------------------
   // Imperative handle
   // -------------------------------------------------------------------------
   describe('imperative handle (ref)', () => {

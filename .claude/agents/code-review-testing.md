@@ -38,6 +38,7 @@ You are the Test Coverage Specialist reviewing tests for Knowlune, a personal le
 - Every acceptance criterion must have at least one test (unit or E2E)
 - Tests must verify the BEHAVIOR described in the AC, not just that code runs
 - AC edge cases (error states, empty states, boundary values) need explicit tests
+- **Intermediate UI states** (loading skeletons, spinners, progress indicators) count as implicit ACs — if the implementation shows a loading state, it needs a test even if the AC doesn't explicitly mention it (recurring gap from E18-S06)
 - If an AC mentions a specific user interaction, an E2E test should cover it
 
 ### 2. Test Isolation (High)

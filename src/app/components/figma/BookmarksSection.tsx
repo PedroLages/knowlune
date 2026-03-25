@@ -43,6 +43,7 @@ export function BookmarksSection() {
         }
       })
       .catch(() => {
+        // silent-catch-ok — error state handled by component
         if (!ignore) {
           setError('Failed to load bookmarks')
           setIsLoading(false)

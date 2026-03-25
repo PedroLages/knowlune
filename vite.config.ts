@@ -174,6 +174,9 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+    // CSP allowlist for Ollama direct connections is managed dynamically via
+    // meta tag in index.html — no static config needed here since proxy mode
+    // is the default and routes through /api/ai/ollama.
     headers: {
       // XSS Protection
       'X-Content-Type-Options': 'nosniff',
@@ -218,6 +221,13 @@ export default defineConfig({
         name: 'unit',
         include: ['src/**/*.test.{ts,tsx}'],
         exclude: ['src/**/*.stories.*'],
+      }
+    }, {
+      test: {
+        name: 'server',
+        include: ['server/**/*.test.ts'],
+        environment: 'node',
+        globals: true,
       }
     }]
   },

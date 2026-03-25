@@ -164,12 +164,20 @@ Use **Playwright MCP** for live accessibility testing:
    const style = getComputedStyle(el);
    [style.color, style.backgroundColor]
    ```
-   - Verify text contrast ≥4.5:1 for normal text, ≥3:1 for large text
+   - Verify text contrast ≥4.5:1 for normal text, ≥3:1 for large text (test BOTH light and dark mode — dark mode contrast failures are a recurring issue)
 
 4. **Code-Level Checks** (via `Grep`):
    - Find `<div.*onClick` patterns (should be `<button>`)
    - Find `<img` without `alt=` attributes
    - Find icon buttons without `aria-label`
+
+5. **ARIA Completeness Checklist** (recurring miss — Epics 14+):
+   - `aria-describedby` on form fields that have help text, error messages, or character counts
+   - `aria-live="polite"` on regions with dynamic content (toast areas, status messages, score updates, quiz feedback)
+   - `aria-expanded` on collapsible sections, accordions, and dropdown triggers
+   - No redundant `role` attributes on semantic elements (`role="group"` on `<fieldset>` is redundant)
+   - `aria-current="page"` on active navigation links
+   - `aria-invalid="true"` + `aria-errormessage` on form fields in error state
 
 ### Phase 5: Robustness Testing
 

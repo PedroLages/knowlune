@@ -5,17 +5,21 @@ vi.mock('next-themes', () => ({
   useTheme: () => ({ theme: 'light', setTheme: vi.fn() }),
 }))
 
-vi.mock('@/lib/settings', () => ({
-  getSettings: () => ({
-    displayName: 'Student',
-    bio: '',
-    theme: 'system',
-  }),
-  saveSettings: vi.fn(),
-  exportAllData: () => '{}',
-  importAllData: vi.fn(() => true),
-  resetAllData: vi.fn(),
-}))
+vi.mock('@/lib/settings', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/lib/settings')>()
+  return {
+    ...actual,
+    getSettings: () => ({
+      displayName: 'Student',
+      bio: '',
+      theme: 'system',
+    }),
+    saveSettings: vi.fn(),
+    exportAllData: () => '{}',
+    importAllData: vi.fn(() => true),
+    resetAllData: vi.fn(),
+  }
+})
 
 vi.mock('@/app/components/figma/ReminderSettings', () => ({
   ReminderSettings: () => <div data-testid="reminder-settings" />,
