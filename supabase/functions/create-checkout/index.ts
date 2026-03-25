@@ -37,24 +37,30 @@ Deno.serve(async (req: Request) => {
     // 1. Verify Supabase JWT and extract user
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      )
+      return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } },
-    )
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
+    const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')
+    if (!SUPABASE_URL) throw new Error('SUPABASE_URL is required')
+    if (!SUPABASE_ANON_KEY) throw new Error('SUPABASE_ANON_KEY is required')
 
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    })
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabaseClient.auth.getUser()
     if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid or expired token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      )
+      return new Response(JSON.stringify({ error: 'Invalid or expired token' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
     // 2. Parse origin from request for redirect URLs
@@ -66,12 +72,13 @@ Deno.serve(async (req: Request) => {
     const origin = body.origin || Deno.env.get('APP_URL') || 'http://localhost:5173'
 
     // Origin validation — prevent open redirect
+    // Note: APP_URL must exactly match the deployed domain (no trailing slash, no www prefix)
     const ALLOWED_ORIGINS = [Deno.env.get('APP_URL'), 'http://localhost:5173'].filter(Boolean)
     if (!ALLOWED_ORIGINS.includes(origin)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid origin' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      )
+      return new Response(JSON.stringify({ error: 'Invalid origin' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
     // 3. Check for existing premium subscription (duplicate guard)
@@ -81,10 +88,10 @@ Deno.serve(async (req: Request) => {
       .eq('user_id', user.id)
       .single()
     if (existingEnt?.tier === 'premium') {
-      return new Response(
-        JSON.stringify({ error: 'Already subscribed to premium' }),
-        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      )
+      return new Response(JSON.stringify({ error: 'Already subscribed to premium' }), {
+        status: 409,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
     // 4. Look up or create Stripe customer by metadata (not email)
@@ -113,15 +120,16 @@ Deno.serve(async (req: Request) => {
     })
 
     // 6. Return checkout URL
-    return new Response(
-      JSON.stringify({ url: session.url }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    )
-  } catch (err) { // silent-catch-ok — server-side edge function, returns error response
+    return new Response(JSON.stringify({ url: session.url }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  } catch (err) {
+    // silent-catch-ok — server-side edge function, returns error response
     console.error('create-checkout error:', err)
-    return new Response(
-      JSON.stringify({ error: 'Unable to start checkout. Please try again.' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    )
+    return new Response(JSON.stringify({ error: 'Unable to start checkout. Please try again.' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 })

@@ -18,11 +18,14 @@ const stripe = new Stripe(STRIPE_SECRET_KEY, {
   httpClient: Stripe.createFetchHttpClient(),
 })
 
+// Env var validation — fail fast if misconfigured
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+if (!SUPABASE_URL) throw new Error('SUPABASE_URL is required')
+if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error('SUPABASE_SERVICE_ROLE_KEY is required')
+
 // Service-role client for DB writes (bypasses RLS)
-const supabaseAdmin = createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-)
+const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 /** Maps Stripe subscription status to our tier enum */
 function mapSubscriptionToTier(status: string): 'free' | 'trial' | 'premium' {
@@ -49,7 +52,7 @@ async function upsertEntitlement(
     planId?: string
     expiresAt?: string
   },
-  eventTime: string,
+  eventTime: string
 ) {
   // Event replay protection — skip if we already have a newer update
   const { data: existing } = await supabaseAdmin
@@ -59,24 +62,27 @@ async function upsertEntitlement(
     .single()
 
   if (existing && existing.updated_at > eventTime) {
-    console.warn('Skipping stale webhook event, existing updated_at:', existing.updated_at, 'event time:', eventTime)
+    console.warn(
+      'Skipping stale webhook event, existing updated_at:',
+      existing.updated_at,
+      'event time:',
+      eventTime
+    )
     return
   }
 
-  const { error } = await supabaseAdmin
-    .from('entitlements')
-    .upsert(
-      {
-        user_id: params.userId,
-        tier: params.tier,
-        stripe_customer_id: params.stripeCustomerId,
-        stripe_subscription_id: params.stripeSubscriptionId ?? null,
-        plan_id: params.planId ?? null,
-        expires_at: params.expiresAt ?? null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id' },
-    )
+  const { error } = await supabaseAdmin.from('entitlements').upsert(
+    {
+      user_id: params.userId,
+      tier: params.tier,
+      stripe_customer_id: params.stripeCustomerId,
+      stripe_subscription_id: params.stripeSubscriptionId ?? null,
+      plan_id: params.planId ?? null,
+      expires_at: params.expiresAt ?? null,
+      updated_at: eventTime,
+    },
+    { onConflict: 'user_id' }
+  )
 
   if (error) {
     console.error('Entitlement upsert failed:', error)
@@ -84,15 +90,21 @@ async function upsertEntitlement(
   }
 }
 
-/** Resolves user ID from subscription metadata, falling back to stripe_customer_id lookup */
+/** Resolves user ID from subscription metadata, falling back to stripe_customer_id lookup.
+ *  Throws on DB errors (caller should return 500 for Stripe retry).
+ *  Returns undefined only when user genuinely doesn't exist. */
 async function resolveUserId(subscription: Stripe.Subscription): Promise<string | undefined> {
   let userId = subscription.metadata?.supabase_user_id
   if (!userId) {
-    const { data } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from('entitlements')
       .select('user_id')
       .eq('stripe_customer_id', subscription.customer as string)
       .single()
+    if (error && error.code !== 'PGRST116') {
+      // PGRST116 = "not found" — that's expected. Other errors are transient DB failures.
+      throw new Error(`DB error resolving user ID: ${error.message}`)
+    }
     userId = data?.user_id
   }
   return userId
@@ -156,7 +168,7 @@ Deno.serve(async (req: Request) => {
               ? new Date(subscription.current_period_end * 1000).toISOString()
               : undefined,
           },
-          eventTime,
+          eventTime
         )
 
         console.log(`checkout.session.completed: user ${userId} upgraded to premium`)
@@ -165,11 +177,11 @@ Deno.serve(async (req: Request) => {
 
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription
-        const userId = await resolveUserId(subscription)
+        const userId = await resolveUserId(subscription) // throws on DB error → caught by outer try/catch → 500
 
         if (!userId) {
-          console.error('subscription event: cannot resolve user ID', subscription.id)
-          break
+          console.warn('subscription.updated: user not found for subscription', subscription.id)
+          break // User genuinely doesn't exist — acknowledge to Stripe (no retry)
         }
 
         const tier = mapSubscriptionToTier(subscription.status)
@@ -183,20 +195,22 @@ Deno.serve(async (req: Request) => {
             planId: subscription.items.data[0]?.price.id,
             expiresAt: new Date(subscription.current_period_end * 1000).toISOString(),
           },
-          eventTime,
+          eventTime
         )
 
-        console.log(`customer.subscription.updated: user ${userId} → ${tier} (${subscription.status})`)
+        console.log(
+          `customer.subscription.updated: user ${userId} → ${tier} (${subscription.status})`
+        )
         break
       }
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription
-        const userId = await resolveUserId(subscription)
+        const userId = await resolveUserId(subscription) // throws on DB error → caught by outer try/catch → 500
 
         if (!userId) {
-          console.error('subscription event: cannot resolve user ID', subscription.id)
-          break
+          console.warn('subscription.deleted: user not found for subscription', subscription.id)
+          break // User genuinely doesn't exist — acknowledge to Stripe (no retry)
         }
 
         await upsertEntitlement(
@@ -208,7 +222,7 @@ Deno.serve(async (req: Request) => {
             planId: undefined,
             expiresAt: undefined,
           },
-          eventTime,
+          eventTime
         )
 
         console.log(`customer.subscription.deleted: user ${userId} → free`)
@@ -223,8 +237,11 @@ Deno.serve(async (req: Request) => {
 
         // Fetch subscription to get status and user ID
         const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-        const userId = await resolveUserId(subscription)
-        if (!userId) break
+        const userId = await resolveUserId(subscription) // throws on DB error → 500
+        if (!userId) {
+          console.warn('invoice.payment_failed: user not found for subscription', subscriptionId)
+          break
+        }
 
         const tier = mapSubscriptionToTier(subscription.status)
 
@@ -237,14 +254,17 @@ Deno.serve(async (req: Request) => {
             planId: subscription.items.data[0]?.price.id,
             expiresAt: new Date(subscription.current_period_end * 1000).toISOString(),
           },
-          eventTime,
+          eventTime
         )
 
-        console.log(`invoice.payment_failed: user ${userId} → ${tier} (sub status: ${subscription.status})`)
+        console.log(
+          `invoice.payment_failed: user ${userId} → ${tier} (sub status: ${subscription.status})`
+        )
         break
       }
 
       default:
+        // Stripe recommends acknowledging all events to prevent retries
         console.log(`Unhandled event type: ${event.type}`)
     }
 

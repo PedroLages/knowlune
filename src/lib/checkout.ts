@@ -83,8 +83,18 @@ export async function pollEntitlement(
       console.warn('Entitlement poll attempt failed:', err)
     }
 
-    // Wait before next poll
-    await new Promise(resolve => setTimeout(resolve, intervalMs))
+    // Signal-aware sleep — resolves early if abort fires mid-sleep
+    await new Promise<void>(resolve => {
+      const timer = setTimeout(resolve, intervalMs)
+      signal?.addEventListener(
+        'abort',
+        () => {
+          clearTimeout(timer)
+          resolve()
+        },
+        { once: true }
+      )
+    })
   }
 
   return null // Timeout — webhook hasn't processed yet

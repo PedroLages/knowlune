@@ -29,10 +29,11 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
   const [entitlement, setEntitlement] = useState<CachedEntitlement | null>(null)
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false)
   const checkoutInProgress = useRef(false)
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout>>()
 
   // Load cached entitlement on mount
   useEffect(() => {
-    if (!user) return
+    if (!user || checkoutStatus === 'success') return
 
     let cancelled = false
 
@@ -52,7 +53,7 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
     return () => {
       cancelled = true
     }
-  }, [user])
+  }, [user, checkoutStatus])
 
   // Handle checkout return
   useEffect(() => {
@@ -109,27 +110,47 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
       if ('error' in result) {
         toastError.saveFailed(result.error)
         setIsCheckoutLoading(false)
+        checkoutInProgress.current = false
+        return
+      }
+
+      // Defense-in-depth: validate checkout URL before redirect
+      if (!result.url.startsWith('https://checkout.stripe.com/')) {
+        toastError.saveFailed('Invalid checkout URL received.')
+        setIsCheckoutLoading(false)
+        checkoutInProgress.current = false
         return
       }
 
       // Redirect to Stripe Checkout
       window.location.href = result.url
       // Fallback: reset loading if redirect doesn't happen (popup blocker, etc.)
-      setTimeout(() => setIsCheckoutLoading(false), 5000)
-    } finally {
+      clearTimeout(fallbackTimerRef.current)
+      fallbackTimerRef.current = setTimeout(() => {
+        setIsCheckoutLoading(false)
+        checkoutInProgress.current = false
+      }, 5000)
+    } catch {
+      // silent-catch-ok — startCheckout handles its own errors with toastError above; this catch only resets loading state as a safety net
+      setIsCheckoutLoading(false)
       checkoutInProgress.current = false
     }
+  }, [])
+
+  // Clean up fallback timer on unmount
+  useEffect(() => {
+    return () => clearTimeout(fallbackTimerRef.current)
   }, [])
 
   if (!user) return null
 
   return (
-    <Card className="overflow-hidden shadow-[0_2px_8px_var(--shadow-gold)]">
+    <Card className="overflow-hidden shadow-studio-gold">
       <CardHeader className="border-b border-border/50 bg-surface-sunken/30">
         <div className="flex items-center gap-3">
           <div className="rounded-full bg-gold-muted p-2">
             {state === 'activating' ? (
-              <Loader2 className="size-5 text-gold animate-spin" aria-hidden="true" />
+              <Loader2 className="size-5 text-gold motion-safe:animate-spin" aria-hidden="true" />
             ) : (
               <Crown className="size-5 text-gold" aria-hidden="true" />
             )}
@@ -177,9 +198,7 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
             >
               <div className="h-full w-1/3 rounded-full bg-gold motion-safe:animate-[indeterminate_1.5s_ease-in-out_infinite]" />
             </div>
-            <p className="text-sm text-muted-foreground text-center">
-              This usually takes a few seconds...
-            </p>
+            <p className="text-sm text-muted-foreground">This usually takes a few seconds...</p>
           </div>
         )}
 
@@ -225,7 +244,9 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
               aria-describedby="premium-features-list"
               aria-busy={isCheckoutLoading}
             >
-              {isCheckoutLoading && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
+              {isCheckoutLoading && (
+                <Loader2 className="size-4 motion-safe:animate-spin" aria-hidden="true" />
+              )}
               {isCheckoutLoading ? 'Starting checkout...' : 'Upgrade to Premium'}
             </Button>
           </div>
@@ -235,7 +256,10 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
         {state === 'premium' && entitlement && (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <Badge className="bg-gold-muted text-gold border-transparent">Premium</Badge>
+              <Badge className="bg-gold-muted text-gold-soft-foreground border-transparent">
+                Premium
+              </Badge>
+              {/* TODO(E19-S03): derive interval from entitlement.planId when annual plans are added */}
               <span className="text-sm text-muted-foreground">Monthly</span>
             </div>
 
@@ -260,7 +284,7 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
             <Button
               variant="brand-outline"
               size="sm"
-              className="mt-2"
+              className="mt-2 min-h-[44px]"
               onClick={() => {
                 // TODO(E19-S03): Implement Stripe billing portal redirect
                 toast.info(

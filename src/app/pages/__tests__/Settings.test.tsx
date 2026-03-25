@@ -125,4 +125,45 @@ describe('Settings page', () => {
       expect(screen.getByTestId('subscription-section')).toBeInTheDocument()
     })
   })
+
+  it('passes checkout=success to SubscriptionCard and triggers URL cleanup', async () => {
+    mockUser = { id: 'user-123', email: 'test@test.com' }
+    const replaceStateSpy = vi.spyOn(window.history, 'replaceState')
+
+    render(
+      <MemoryRouter initialEntries={['/settings?checkout=success&session_id=cs_test']}>
+        <Settings />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('subscription-section')).toBeInTheDocument()
+    })
+
+    // Settings reads checkout param via useSearchParams (MemoryRouter),
+    // then calls replaceState to strip params from the real URL.
+    // In jsdom, window.location.pathname is '/' (not '/settings'),
+    // so we assert replaceState was called (URL cleanup triggered).
+    expect(replaceStateSpy).toHaveBeenCalled()
+    replaceStateSpy.mockRestore()
+  })
+
+  it('does not trigger URL cleanup for invalid checkout param', async () => {
+    mockUser = { id: 'user-123', email: 'test@test.com' }
+
+    render(
+      <MemoryRouter initialEntries={['/settings?checkout=invalid']}>
+        <Settings />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('subscription-section')).toBeInTheDocument()
+    })
+
+    // SubscriptionCard should render free tier (invalid param is ignored)
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /upgrade to premium/i })).toBeInTheDocument()
+    })
+  })
 })

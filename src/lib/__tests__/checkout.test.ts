@@ -60,7 +60,7 @@ function makeCachedEntitlement(overrides: Partial<CachedEntitlement> = {}): Cach
     stripeSubscriptionId: 'sub_test',
     planId: 'plan_test',
     expiresAt: '2027-01-01T00:00:00.000Z',
-    cachedAt: new Date().toISOString(),
+    cachedAt: '2026-03-25T12:00:00.000Z',
     ...overrides,
   }
 }

@@ -76,7 +76,7 @@ function makePremiumEntitlement(overrides: Partial<CachedEntitlement> = {}): Cac
     stripeSubscriptionId: 'sub_test',
     planId: 'plan_test',
     expiresAt: '2027-01-01T00:00:00.000Z',
-    cachedAt: new Date().toISOString(),
+    cachedAt: '2026-03-25T12:00:00.000Z',
     ...overrides,
   }
 }
@@ -218,45 +218,76 @@ describe('SubscriptionCard', () => {
   // Activated → premium transition
   // -------------------------------------------------------------------------
 
-  it('shows "Welcome to Premium!" then transitions to premium after 3s', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true })
-
-    mockGetCachedEntitlement.mockResolvedValue(null)
-    mockPollEntitlement.mockResolvedValue(makePremiumEntitlement())
-
-    renderCard({ checkoutStatus: 'success' })
-
-    // Wait for activation to complete
-    await waitFor(() => {
-      expect(screen.getByText('Welcome to Premium!')).toBeInTheDocument()
+  describe('with fake timers', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
     })
 
-    expect(screen.getByText('All premium features are now unlocked.')).toBeInTheDocument()
-
-    // Advance 3s to trigger transition to premium view
-    await act(async () => {
-      vi.advanceTimersByTime(3000)
+    afterEach(() => {
+      vi.useRealTimers()
     })
 
-    await waitFor(() => {
-      expect(screen.getByText('Premium')).toBeInTheDocument()
-      expect(screen.getByText('Active')).toBeInTheDocument()
-    })
+    it('shows "Welcome to Premium!" then transitions to premium after 3s', async () => {
+      mockGetCachedEntitlement.mockResolvedValue(null)
+      mockPollEntitlement.mockResolvedValue(makePremiumEntitlement())
 
-    vi.useRealTimers()
+      renderCard({ checkoutStatus: 'success' })
+
+      // Wait for activation to complete
+      await waitFor(() => {
+        expect(screen.getByText('Welcome to Premium!')).toBeInTheDocument()
+      })
+
+      expect(screen.getByText('All premium features are now unlocked.')).toBeInTheDocument()
+
+      // Advance 3s to trigger transition to premium view
+      await act(async () => {
+        vi.advanceTimersByTime(3000)
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText('Premium')).toBeInTheDocument()
+        expect(screen.getByText('Active')).toBeInTheDocument()
+      })
+    })
   })
 
   // -------------------------------------------------------------------------
   // Cancel state
   // -------------------------------------------------------------------------
 
-  it('shows toast error when checkoutStatus is cancel', async () => {
+  it('falls back to free tier with error toast when poll times out', async () => {
+    mockGetCachedEntitlement.mockResolvedValue(null)
+    // pollEntitlement returns null = webhook never processed
+    mockPollEntitlement.mockResolvedValue(null)
+
+    const { toastError } = await import('@/lib/toastHelpers')
+
+    renderCard({ checkoutStatus: 'success' })
+
+    // Should show activating first, then fall back to free
+    await waitFor(() => {
+      expect(toastError.saveFailed).toHaveBeenCalledWith(expect.stringContaining('being processed'))
+    })
+
+    // Should be back on free tier
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /upgrade to premium/i })).toBeInTheDocument()
+    })
+  })
+
+  it('shows toast error when checkoutStatus is cancel and remains on free tier', async () => {
     mockGetCachedEntitlement.mockResolvedValue(null)
 
     renderCard({ checkoutStatus: 'cancel' })
 
     await waitFor(() => {
       expect(mockToastError).toHaveBeenCalledWith('Upgrade not completed')
+    })
+
+    // Verify the card remains on free tier — upgrade button should still be visible
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /upgrade to premium/i })).toBeInTheDocument()
     })
   })
 })
