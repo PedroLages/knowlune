@@ -23,10 +23,10 @@ export interface AIProvider {
   name: string
   /** Whether this provider uses a server URL instead of an API key */
   usesServerUrl?: boolean
-  /** Validates API key format without making network calls */
-  validateApiKey: (key: string) => boolean
+  /** Validates credential format without making network calls (API key or server URL for Ollama) */
+  validateApiKey: (keyOrUrl: string) => boolean
   /** Tests provider connectivity (stub for S01, real implementation in S02-S07) */
-  testConnection: (key: string) => Promise<boolean>
+  testConnection: (keyOrUrl: string) => Promise<boolean>
 }
 
 /** Connection status states */
@@ -331,19 +331,6 @@ export function isAIAvailable(): boolean {
 }
 
 /**
- * Sanitizes request payload to prevent PII and metadata leakage
- *
- * Privacy guarantee: Only analyzed content is included in payload.
- * No user metadata, file paths, timestamps, or identifiable information.
- *
- * @param content - Content to analyze (note text, video transcript, etc.)
- * @returns Sanitized payload safe for AI provider transmission
- *
- * @example
- * const payload = sanitizeAIRequestPayload(userNote.content)
- * // payload = { content: "..." } — no userId, noteId, timestamps, etc.
- */
-/**
  * Gets the Ollama server URL from configuration
  *
  * @returns Ollama server URL (e.g., "http://192.168.1.100:11434") or null
@@ -364,6 +351,19 @@ export function isOllamaDirectConnection(): boolean {
   return config.ollamaSettings?.directConnection ?? false
 }
 
+/**
+ * Sanitizes request payload to prevent PII and metadata leakage
+ *
+ * Privacy guarantee: Only analyzed content is included in payload.
+ * No user metadata, file paths, timestamps, or identifiable information.
+ *
+ * @param content - Content to analyze (note text, video transcript, etc.)
+ * @returns Sanitized payload safe for AI provider transmission
+ *
+ * @example
+ * const payload = sanitizeAIRequestPayload(userNote.content)
+ * // payload = { content: "..." } — no userId, noteId, timestamps, etc.
+ */
 export function sanitizeAIRequestPayload(content: string): { content: string } {
   // Only include content being analyzed — no metadata
   return { content }

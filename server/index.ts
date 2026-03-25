@@ -23,6 +23,39 @@ const PORT = 3001
 
 app.use(express.json({ limit: '1mb' }))
 
+/**
+ * Validates that a URL targets a non-loopback, plausible Ollama server.
+ * Blocks localhost / 127.x / [::1] to prevent SSRF against the proxy host itself.
+ * Private-network ranges (192.168.x, 10.x, 172.16-31.x) are intentionally allowed
+ * because Ollama servers are typically on the user's LAN.
+ */
+function isAllowedOllamaUrl(urlString: string): boolean {
+  try {
+    const parsed = new URL(urlString)
+    const hostname = parsed.hostname.toLowerCase()
+
+    // Block loopback addresses — proxy should not call itself
+    if (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '[::1]' ||
+      hostname === '::1' ||
+      hostname.startsWith('127.')
+    ) {
+      return false
+    }
+
+    // Only allow http/https protocols
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return false
+    }
+
+    return true
+  } catch {
+    return false
+  }
+}
+
 /** Ollama request body schema */
 const OllamaRequestSchema = z.object({
   ollamaServerUrl: z.string().url('Valid Ollama server URL is required'),
@@ -76,6 +109,11 @@ app.post('/api/ai/ollama', async (req, res) => {
 
     const { ollamaServerUrl, messages, model, temperature, maxTokens } = parsed.data
 
+    if (!isAllowedOllamaUrl(ollamaServerUrl)) {
+      res.status(403).json({ error: 'Ollama server URL targets a disallowed address' })
+      return
+    }
+
     const providerModel = getOllamaProviderModel(ollamaServerUrl, model)
 
     const result = streamText({
@@ -100,7 +138,7 @@ app.post('/api/ai/ollama', async (req, res) => {
     // Signal stream end
     res.write('data: [DONE]\n\n')
     res.end()
-  } catch (error) {
+  } catch (error) { // silent-catch-ok — logs to console and returns error response to client
     console.error('[/api/ai/ollama] Error:', (error as Error).message)
 
     if (!res.headersSent) {

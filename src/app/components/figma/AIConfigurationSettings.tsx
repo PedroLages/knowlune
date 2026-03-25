@@ -134,7 +134,8 @@ export function AIConfigurationSettings() {
       setSettings({
         ...settings,
         connectionStatus: 'error',
-        errorMessage: 'Invalid URL format. Use http://hostname:port (e.g., http://192.168.1.100:11434)',
+        errorMessage:
+          'Invalid URL format. Use http://hostname:port (e.g., http://192.168.1.100:11434)',
       })
       return
     }
@@ -369,9 +370,9 @@ export function AIConfigurationSettings() {
                         <TooltipContent side="top" className="max-w-xs">
                           <p>
                             Direct connection sends requests straight from your browser to Ollama.
-                            Requires CORS configured on your Ollama server
-                            (set <code className="text-xs bg-muted px-1 rounded">OLLAMA_ORIGINS=*</code>).
-                            Proxy mode (default) avoids CORS issues.
+                            Requires CORS configured on your Ollama server (set{' '}
+                            <code className="text-xs bg-muted px-1 rounded">OLLAMA_ORIGINS=*</code>
+                            ). Proxy mode (default) avoids CORS issues.
                           </p>
                         </TooltipContent>
                       </Tooltip>

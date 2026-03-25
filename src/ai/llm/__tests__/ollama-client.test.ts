@@ -206,11 +206,7 @@ describe('OllamaLLMClient', () => {
 
   describe('custom model', () => {
     it('should use specified model in request body', async () => {
-      const customClient = new OllamaLLMClient(
-        'http://192.168.2.200:11434',
-        false,
-        'qwen3:8b'
-      )
+      const customClient = new OllamaLLMClient('http://192.168.2.200:11434', false, 'qwen3:8b')
 
       ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,

@@ -297,10 +297,7 @@ describe('aiConfiguration.ts', () => {
 
   describe('getOllamaServerUrl', () => {
     it('returns null when provider is not ollama', () => {
-      localStorage.setItem(
-        'ai-configuration',
-        JSON.stringify({ ...DEFAULTS, provider: 'openai' })
-      )
+      localStorage.setItem('ai-configuration', JSON.stringify({ ...DEFAULTS, provider: 'openai' }))
       expect(getOllamaServerUrl()).toBeNull()
     })
 
@@ -317,20 +314,14 @@ describe('aiConfiguration.ts', () => {
     })
 
     it('returns null when ollama has no settings', () => {
-      localStorage.setItem(
-        'ai-configuration',
-        JSON.stringify({ ...DEFAULTS, provider: 'ollama' })
-      )
+      localStorage.setItem('ai-configuration', JSON.stringify({ ...DEFAULTS, provider: 'ollama' }))
       expect(getOllamaServerUrl()).toBeNull()
     })
   })
 
   describe('isOllamaDirectConnection', () => {
     it('returns false by default', () => {
-      localStorage.setItem(
-        'ai-configuration',
-        JSON.stringify({ ...DEFAULTS, provider: 'ollama' })
-      )
+      localStorage.setItem('ai-configuration', JSON.stringify({ ...DEFAULTS, provider: 'ollama' }))
       expect(isOllamaDirectConnection()).toBe(false)
     })
 

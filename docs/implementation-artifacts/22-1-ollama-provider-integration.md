@@ -62,16 +62,13 @@ See [plans/e22-s01-ollama-provider-integration.md](plans/e22-s01-ollama-provider
 
 ## Implementation Notes
 
-- **KEY FINDING: No custom OllamaLLMClient needed.** Ollama exposes an OpenAI-compatible API at `/v1/`.
-  Use `createOpenAI` from `@ai-sdk/openai` (already in package.json) with a custom `baseURL`:
-  ```typescript
-  case 'ollama':
-    return createOpenAI({
-      baseURL: `${userOllamaUrl}/v1`,
-      apiKey: 'ollama',  // Ollama ignores this but SDK requires it
-    })(model || 'llama3.2')
-  ```
-- This gives streaming, chat, embeddings, and structured output for free — zero new dependencies
+- **UPDATE:** A custom `OllamaLLMClient` was implemented (`src/ai/llm/ollama-client.ts`) to handle
+  both proxy and direct connection modes with Ollama-specific error handling, timeout configuration
+  (2 min for local inference), and SSE streaming. The server-side proxy uses `createOpenAI` from
+  `@ai-sdk/openai` with a custom `baseURL` pointing at Ollama's OpenAI-compatible `/v1/` endpoint.
+- ~~Initial finding suggested no custom client was needed~~ — in practice, dual connection modes
+  (proxy vs direct) and Ollama-specific UX (longer timeouts, helpful network error messages) justified
+  a dedicated client class.
 - Community `ollama-ai-provider` packages are fragmented and stale — skip them
 - Ollama default port: 11434, no authentication required
 - OpenAI-compat endpoints: `/v1/chat/completions`, `/v1/embeddings`, `/v1/models`

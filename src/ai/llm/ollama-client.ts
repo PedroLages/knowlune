@@ -62,19 +62,20 @@ export class OllamaLLMClient extends BaseLLMClient {
       const requestBody: Record<string, unknown> = {
         model: this.model,
         messages,
-        stream: true,
         temperature: 0.7,
       }
 
-      // In proxy mode, include the target server URL so the proxy knows where to forward
-      if (!this.directConnection) {
+      // In direct mode, stream flag is required by Ollama's OpenAI-compat endpoint.
+      // In proxy mode, the Express handler always uses streamText() so it's unnecessary.
+      if (this.directConnection) {
+        requestBody.stream = true
+      } else {
+        // Include the target server URL so the proxy knows where to forward
         requestBody.ollamaServerUrl = this.serverUrl
       }
 
       const response = await this.fetchWithTimeout(
-        this.directConnection
-          ? `${baseUrl}/chat/completions`
-          : baseUrl,
+        this.directConnection ? `${baseUrl}/chat/completions` : baseUrl,
         {
           method: 'POST',
           headers: {
@@ -114,10 +115,12 @@ export class OllamaLLMClient extends BaseLLMClient {
 
           // OpenAI-compat format: choices[0].delta.content
           const delta = parsed.choices?.[0]?.delta
+          const finishReason = parsed.choices?.[0]?.finish_reason || undefined
+
           if (delta?.content) {
             yield {
               content: delta.content,
-              finishReason: parsed.choices?.[0]?.finish_reason || undefined,
+              finishReason,
             }
           }
 
@@ -126,9 +129,8 @@ export class OllamaLLMClient extends BaseLLMClient {
             yield { content: parsed.content }
           }
 
-          // Check for finish reason
-          const finishReason = parsed.choices?.[0]?.finish_reason
-          if (finishReason === 'stop') {
+          // If finish reason with no content (final SSE frame), signal stop
+          if (finishReason === 'stop' && !delta?.content) {
             yield { content: '', finishReason: 'stop' }
             break
           }
@@ -155,11 +157,7 @@ export class OllamaLLMClient extends BaseLLMClient {
         )
       }
 
-      throw new LLMError(
-        `Ollama request failed: ${message}`,
-        'NETWORK_ERROR',
-        'ollama'
-      )
+      throw new LLMError(`Ollama request failed: ${message}`, 'NETWORK_ERROR', 'ollama')
     }
   }
 
