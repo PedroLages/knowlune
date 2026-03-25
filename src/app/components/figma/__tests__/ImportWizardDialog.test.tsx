@@ -100,9 +100,7 @@ describe('ImportWizardDialog', () => {
   it('shows folder selection step initially', () => {
     render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
     expect(screen.getByTestId('wizard-select-folder-btn')).toBeInTheDocument()
-    expect(
-      screen.getByText(/choose a folder with your course materials/i)
-    ).toBeInTheDocument()
+    expect(screen.getByText(/choose a folder with your course materials/i)).toBeInTheDocument()
   })
 
   it('shows step indicator with step 1 active', () => {

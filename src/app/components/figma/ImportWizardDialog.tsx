@@ -95,9 +95,7 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
         aria-describedby="import-wizard-description"
       >
         <DialogHeader>
-          <DialogTitle>
-            {step === 'select' ? 'Import Course' : 'Course Details'}
-          </DialogTitle>
+          <DialogTitle>{step === 'select' ? 'Import Course' : 'Course Details'}</DialogTitle>
           <DialogDescription id="import-wizard-description">
             {step === 'select'
               ? 'Select a folder containing your course videos and PDFs.'
@@ -133,9 +131,7 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
           >
             2
           </span>
-          <span className={step === 'details' ? 'font-medium text-foreground' : ''}>
-            Details
-          </span>
+          <span className={step === 'details' ? 'font-medium text-foreground' : ''}>Details</span>
         </div>
 
         {step === 'select' && (
@@ -203,11 +199,13 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
                 </span>
                 <span className="flex items-center gap-1.5" data-testid="wizard-pdf-count">
                   <FileText className="size-4" aria-hidden="true" />
-                  {scannedCourse.pdfs.length}{' '}
-                  {scannedCourse.pdfs.length === 1 ? 'PDF' : 'PDFs'}
+                  {scannedCourse.pdfs.length} {scannedCourse.pdfs.length === 1 ? 'PDF' : 'PDFs'}
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground truncate" data-testid="wizard-folder-path">
+              <p
+                className="text-xs text-muted-foreground truncate"
+                data-testid="wizard-folder-path"
+              >
                 Folder: {scannedCourse.name}
               </p>
             </div>
