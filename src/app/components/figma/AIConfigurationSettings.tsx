@@ -12,7 +12,7 @@
  * Follows ReminderSettings.tsx pattern for state management and accessibility.
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import {
@@ -279,6 +279,16 @@ export function AIConfigurationSettings() {
     setSettings(getAIConfiguration())
   }
 
+  const handleModelSelectCallback = useCallback(
+    (model: string) => {
+      // silent-catch-ok — model selection errors are non-critical, picker shows error state
+      handleModelSelect(model).catch(err => {
+        console.error('Failed to select model:', err)
+      })
+    },
+    [ollamaUrl, settings.ollamaSettings?.serverUrl, settings.ollamaSettings?.directConnection]
+  )
+
   /**
    * Updates consent setting for a specific feature
    */
@@ -463,12 +473,7 @@ export function AIConfigurationSettings() {
             serverUrl={ollamaUrl || settings.ollamaSettings?.serverUrl || ''}
             directConnection={settings.ollamaSettings?.directConnection ?? false}
             selectedModel={settings.ollamaSettings?.selectedModel}
-            onModelSelect={model => {
-              // silent-catch-ok — model selection errors are non-critical, picker shows error state
-              handleModelSelect(model).catch(err => {
-                console.error('Failed to select model:', err)
-              })
-            }}
+            onModelSelect={handleModelSelectCallback}
             isConnected={isConnected}
           />
         )}

@@ -43,9 +43,7 @@ describe('OllamaLLMClient.fetchModels', () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        models: [
-          { name: 'gemma2:2b', size: 536870912, modified_at: '2026-03-18T10:00:00Z' },
-        ],
+        models: [{ name: 'gemma2:2b', size: 536870912, modified_at: '2026-03-18T10:00:00Z' }],
       }),
     })
 
@@ -88,26 +86,26 @@ describe('OllamaLLMClient.fetchModels', () => {
       text: async () => 'Internal Server Error',
     })
 
-    await expect(
-      OllamaLLMClient.fetchModels('http://192.168.2.200:11434')
-    ).rejects.toThrow('Failed to list models (500)')
+    await expect(OllamaLLMClient.fetchModels('http://192.168.2.200:11434')).rejects.toThrow(
+      'Failed to list models (500)'
+    )
   })
 
   it('throws helpful error on network failure (AC4)', async () => {
     mockFetch.mockRejectedValueOnce(new TypeError('Failed to fetch'))
 
-    await expect(
-      OllamaLLMClient.fetchModels('http://192.168.2.200:11434')
-    ).rejects.toThrow('Cannot reach Ollama')
+    await expect(OllamaLLMClient.fetchModels('http://192.168.2.200:11434')).rejects.toThrow(
+      'Cannot reach Ollama'
+    )
   })
 
   it('throws timeout error when request exceeds limit (AC4)', async () => {
     const timeoutError = new DOMException('The operation was aborted', 'TimeoutError')
     mockFetch.mockRejectedValueOnce(timeoutError)
 
-    await expect(
-      OllamaLLMClient.fetchModels('http://192.168.2.200:11434')
-    ).rejects.toThrow('timed out')
+    await expect(OllamaLLMClient.fetchModels('http://192.168.2.200:11434')).rejects.toThrow(
+      'timed out'
+    )
   })
 
   it('normalizes trailing slashes in URL', async () => {

@@ -201,10 +201,13 @@ export class OllamaLLMClient extends BaseLLMClient {
         })
       } else {
         // Proxy: browser -> Express /api/ai/ollama/tags
-        response = await fetch(`/api/ai/ollama/tags?serverUrl=${encodeURIComponent(normalizedUrl)}`, {
-          method: 'GET',
-          signal: AbortSignal.timeout(15_000),
-        })
+        response = await fetch(
+          `/api/ai/ollama/tags?serverUrl=${encodeURIComponent(normalizedUrl)}`,
+          {
+            method: 'GET',
+            signal: AbortSignal.timeout(15_000),
+          }
+        )
       }
 
       if (!response.ok) {
