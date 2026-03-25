@@ -25,8 +25,10 @@ import {
   BreadcrumbSeparator,
 } from '@/app/components/ui/breadcrumb'
 import { CourseCard } from '@/app/components/figma/CourseCard'
+import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import { useCourseStore } from '@/stores/useCourseStore'
+import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { getMergedAuthors, getAvatarSrc, getInitials, type AuthorView } from '@/lib/authors'
 import { getCourseCompletionPercent } from '@/lib/progress'
 import { AuthorFormDialog } from '@/app/components/authors/AuthorFormDialog'
@@ -37,22 +39,34 @@ export function AuthorProfile() {
   const navigate = useNavigate()
   const { authors: storeAuthors, isLoaded, isLoading, loadAuthors } = useAuthorStore()
   const courses = useCourseStore(s => s.courses)
+  const importedCourses = useCourseImportStore(state => state.importedCourses)
+  const loadImportedCourses = useCourseImportStore(state => state.loadImportedCourses)
+  const getAllTags = useCourseImportStore(state => state.getAllTags)
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
 
   useEffect(() => {
     loadAuthors()
-  }, [loadAuthors])
+    loadImportedCourses()
+  }, [loadAuthors, loadImportedCourses])
 
   // Merge pre-seeded + store authors and find the one matching the URL param
   const allAuthors = useMemo(() => getMergedAuthors(storeAuthors), [storeAuthors])
   const author: AuthorView | undefined = allAuthors.find(a => a.id === authorId)
 
-  // Get courses by this author
+  // Get courses by this author (pre-seeded + imported)
   const authorCourses = useMemo(
     () => courses.filter(c => c.authorId === authorId),
     [courses, authorId]
   )
+
+  const authorImportedCourses = useMemo(
+    () => importedCourses.filter(c => c.authorId === authorId),
+    [importedCourses, authorId]
+  )
+
+  const allTags = useMemo(() => getAllTags(), [getAllTags])
+  const totalCourseCount = authorCourses.length + authorImportedCourses.length
 
   if (isLoading && !isLoaded) {
     return (
@@ -189,8 +203,8 @@ export function AuthorProfile() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <StatCard
           icon={BookOpen}
-          value={authorCourses.length}
-          label={authorCourses.length === 1 ? 'Course' : 'Courses'}
+          value={totalCourseCount}
+          label={totalCourseCount === 1 ? 'Course' : 'Courses'}
         />
         <StatCard
           icon={Clock}
@@ -234,7 +248,7 @@ export function AuthorProfile() {
       )}
 
       {/* Courses Section */}
-      {authorCourses.length > 0 && (
+      {totalCourseCount > 0 && (
         <div>
           <h2 className="text-lg font-semibold mb-4">Courses by {author.name}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
@@ -246,11 +260,18 @@ export function AuthorProfile() {
                 completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
               />
             ))}
+            {authorImportedCourses.map(course => (
+              <ImportedCourseCard
+                key={course.id}
+                course={course}
+                allTags={allTags}
+              />
+            ))}
           </div>
         </div>
       )}
 
-      {authorCourses.length === 0 && (
+      {totalCourseCount === 0 && (
         <Card className="rounded-3xl border-0 shadow-sm">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <BookOpen className="size-12 text-muted-foreground/50 mb-3" aria-hidden="true" />

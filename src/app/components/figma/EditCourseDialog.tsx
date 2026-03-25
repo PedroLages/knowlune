@@ -13,9 +13,19 @@ import { Input } from '@/app/components/ui/input'
 import { Textarea } from '@/app/components/ui/textarea'
 import { Label } from '@/app/components/ui/label'
 import { Badge } from '@/app/components/ui/badge'
+import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/app/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs'
 import { toast } from 'sonner'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { useAuthorStore } from '@/stores/useAuthorStore'
+import { getAvatarSrc, getInitials } from '@/lib/authors'
 import { db } from '@/db'
 import { VideoReorderList } from '@/app/components/figma/VideoReorderList'
 import type { ImportedCourse, ImportedVideo } from '@/data/types'
@@ -29,15 +39,22 @@ interface EditCourseDialogProps {
 
 export function EditCourseDialog({ open, onOpenChange, course, allTags }: EditCourseDialogProps) {
   const updateCourseDetails = useCourseImportStore(state => state.updateCourseDetails)
+  const authors = useAuthorStore(state => state.authors)
+  const loadAuthors = useAuthorStore(state => state.loadAuthors)
+  const linkCourseToAuthor = useAuthorStore(state => state.linkCourseToAuthor)
+  const unlinkCourseFromAuthor = useAuthorStore(state => state.unlinkCourseFromAuthor)
 
   const [name, setName] = useState(course.name)
   const [description, setDescription] = useState(course.description ?? '')
   const [category, setCategory] = useState(course.category)
   const [tags, setTags] = useState<string[]>(course.tags)
   const [tagInput, setTagInput] = useState('')
+  const [authorId, setAuthorId] = useState<string>(course.authorId ?? '')
   const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState('details')
   const [videos, setVideos] = useState<ImportedVideo[]>([])
+
+  useEffect(() => { loadAuthors() }, [loadAuthors])
 
   // Reset form when dialog opens with fresh course data
   useEffect(() => {
@@ -47,6 +64,7 @@ export function EditCourseDialog({ open, onOpenChange, course, allTags }: EditCo
       setCategory(course.category)
       setTags([...course.tags])
       setTagInput('')
+      setAuthorId(course.authorId ?? '')
       setSaving(false)
       setActiveTab('details')
 
@@ -75,7 +93,8 @@ export function EditCourseDialog({ open, onOpenChange, course, allTags }: EditCo
     name.trim() !== course.name ||
     (description.trim() || '') !== (course.description ?? '') ||
     category.trim() !== course.category ||
-    JSON.stringify([...tags].sort()) !== JSON.stringify([...course.tags].sort())
+    JSON.stringify([...tags].sort()) !== JSON.stringify([...course.tags].sort()) ||
+    authorId !== (course.authorId ?? '')
 
   function handleRemoveTag(tag: string) {
     setTags(prev => prev.filter(t => t !== tag))
@@ -109,15 +128,29 @@ export function EditCourseDialog({ open, onOpenChange, course, allTags }: EditCo
     if (!nameValid || saving) return
     setSaving(true)
     try {
+      const newAuthorId = authorId || null
       const success = await updateCourseDetails(course.id, {
         name: name.trim(),
         description: description.trim(),
         category: category.trim(),
         tags,
+        authorId: newAuthorId,
       })
       if (!success) {
         toast.error('Failed to save changes')
       } else {
+        // Sync author ↔ course bidirectional link
+        const oldAuthorId = course.authorId ?? ''
+        if (oldAuthorId !== (authorId || '')) {
+          // Unlink from old author
+          if (oldAuthorId) {
+            await unlinkCourseFromAuthor(oldAuthorId, course.id)
+          }
+          // Link to new author
+          if (authorId) {
+            await linkCourseToAuthor(authorId, course.id)
+          }
+        }
         toast.success('Course updated')
         onOpenChange(false)
       }
@@ -195,6 +228,41 @@ export function EditCourseDialog({ open, onOpenChange, course, allTags }: EditCo
                   placeholder="e.g. Programming, Design"
                   maxLength={60}
                 />
+              </div>
+
+              {/* Author */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-course-author">Author</Label>
+                <Select
+                  value={authorId || '__none__'}
+                  onValueChange={v => setAuthorId(v === '__none__' ? '' : v)}
+                >
+                  <SelectTrigger
+                    id="edit-course-author"
+                    data-testid="edit-course-author"
+                    className="w-full"
+                  >
+                    <SelectValue placeholder="Select an author" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">
+                      <span className="text-muted-foreground">Unknown Author</span>
+                    </SelectItem>
+                    {authors.map(a => (
+                      <SelectItem key={a.id} value={a.id}>
+                        <span className="flex items-center gap-2">
+                          <Avatar className="size-5 inline-flex">
+                            <AvatarImage {...getAvatarSrc(a.photoUrl ?? '', 20)} alt="" />
+                            <AvatarFallback className="text-[8px]">
+                              {getInitials(a.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          {a.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Tags */}

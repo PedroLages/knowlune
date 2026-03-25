@@ -17,6 +17,7 @@ export interface CourseDetailsUpdate {
   description?: string
   category?: string
   tags?: string[]
+  authorId?: string | null // null to unlink, string to set, undefined to leave unchanged
 }
 
 interface CourseImportState {
@@ -179,6 +180,7 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
       patch.description = details.description.trim() || undefined
     if (details.category !== undefined) patch.category = details.category.trim()
     if (normalizedTags !== undefined) patch.tags = normalizedTags
+    if (details.authorId !== undefined) patch.authorId = details.authorId ?? undefined
 
     // Optimistic update
     set(state => ({

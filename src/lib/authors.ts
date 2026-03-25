@@ -171,6 +171,25 @@ export function getAuthorForCourse(course: Course): CourseAuthor | undefined {
   }
 }
 
+/**
+ * Look up the author for an imported course by its authorId.
+ * Same lazy-load pattern as getAuthorForCourse.
+ */
+export function getAuthorForImportedCourse(authorId?: string): CourseAuthor | undefined {
+  if (!authorId) return undefined
+  const state = useAuthorStore.getState()
+  if (!state.isLoaded && !state.isLoading) {
+    void state.loadAuthors()
+  }
+  const author = state.getAuthorById(authorId)
+  if (!author) return undefined
+  return {
+    id: author.id,
+    name: author.name,
+    avatar: author.photoUrl ?? '',
+  }
+}
+
 /** Available responsive avatar widths (px) */
 const AVATAR_WIDTHS = [48, 96, 192, 256] as const
 
