@@ -17,10 +17,10 @@ editHistory:
       - '_bmad-output/planning-artifacts/research/market-youtube-content-handling-research-2026-03-25.md'
       - 'docs/design/office-hours-2026-03-25-full-platform-youtube-hook.md'
 inputDocuments:
-  - 'docs/planning-artifacts/prd.md'
+  - '_bmad-output/planning-artifacts/prd.md'
   - '_bmad-output/planning-artifacts/product-brief-Elearningplatformwireframes-2026-03-01.md'
   - '_bmad-output/planning-artifacts/ux-design-specification.md'
-  - 'docs/planning-artifacts/ux-design-specification.md'
+  - '_bmad-output/planning-artifacts/ux-design-specification.md'
   - 'docs/project-context.md'
   - '_bmad-output/planning-artifacts/research/domain-lms-personal-learning-dashboards-research-2026-02-28.md'
   - '_bmad-output/planning-artifacts/research/domain-elearning-platform-improvement-research-2026-03-07.md'
@@ -937,9 +937,9 @@ User Query → useAIStore.query() → useAIInference() hook
 
 **Epic Coverage:** All 7 remaining epics (5-11) have complete architectural support — stores, services, components, Dexie migrations, and page routes mapped. Epic 23 (YouTube Course Builder) added via 2026-03-25 addendum with 10 decision areas, 3 new Dexie tables, and 12-story implementation sequence.
 
-**Functional Requirements (101 FRs):** All FR categories have architectural homes. Course management (existing), content viewing (existing), progress tracking (existing + extensions), gamification (Epic 5 stores/services), challenges (Epic 6), analytics (Epic 7 lazy-loaded page + computed metrics), AI assistant (Epic 8 workers + RAG + 3-tier fallback), spaced repetition (Epic 9 FSRS), onboarding (Epic 10), data portability (Epic 11 export + xAPI).
+**Functional Requirements (123 FRs):** All FR categories have architectural homes. Course management (existing), content viewing (existing), progress tracking (existing + extensions), gamification (Epic 5 stores/services), challenges (Epic 6), analytics (Epic 7 lazy-loaded page + computed metrics), AI assistant (Epic 8 workers + RAG + 3-tier fallback), spaced repetition (Epic 9 FSRS), onboarding (Epic 10), data portability (Epic 11 export + xAPI), platform & entitlement (Epic 19 — Supabase Auth + Stripe), learning pathways (Epic 20 — career paths + flashcards + FSRS), YouTube Course Builder (Epic 23 — YouTube Data API v3 + transcript pipeline + AI structuring).
 
-**Non-Functional Requirements (68 NFRs):** All architecturally critical NFRs addressed — performance (code splitting, lazy loading), bundle size (dynamic imports), memory (monitoring + eviction), accessibility (WCAG 2.2 AA enforcement), data integrity (migrations + rollback), privacy (local-first + encryption), AI quality (RAG-only + attribution).
+**Non-Functional Requirements (74 NFRs):** All architecturally critical NFRs addressed — performance (code splitting, lazy loading), bundle size (dynamic imports), memory (monitoring + eviction), accessibility (WCAG 2.2 AA enforcement), data integrity (migrations + rollback), privacy (local-first + encryption), AI quality (RAG-only + attribution), YouTube integration (NFR69-NFR74 — API quota, metadata perf, transcript extraction, offline caching).
 
 ### Implementation Readiness Validation
 
@@ -1024,6 +1024,275 @@ User Query → useAIStore.query() → useAIInference() hook
 - Check `docs/project-context.md` for existing rules that still apply
 
 **First Implementation Priority:** Epic 5 (Gamification) — establishes the first new Zustand store, first new service, and first Dexie migration, setting the template for all subsequent epics.
+
+## Authentication & Identity Architecture (Epic 19)
+
+_Merged from docs/planning-artifacts/architecture.md on 2026-03-25._
+
+#### Auth Provider: Supabase Auth
+
+**Decision:** Use Supabase Auth for user authentication with email/password, magic link, and Google OAuth support.
+
+**Rationale:**
+- Managed auth service with zero backend maintenance (no auth server to deploy or scale)
+- Built-in support for email/password, magic link (passwordless), and OAuth providers
+- Generous free tier (50,000 MAUs) covers solo-dev launch phase
+- JavaScript SDK handles token storage, refresh, and session management automatically
+- Row Level Security (RLS) available if server-side data is added later
+- Open-source (can self-host if vendor lock-in becomes a concern)
+
+**Bundle Size:** ~40 KB gzipped (@supabase/supabase-js)
+
+**Implementation Pattern:**
+```typescript
+// src/lib/auth/supabase.ts — Supabase client singleton
+import { createClient } from '@supabase/supabase-js'
+
+export const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+)
+
+// src/stores/useAuthStore.ts — Auth state (Zustand)
+interface AuthState {
+  user: User | null
+  session: Session | null
+  loading: boolean
+  signIn: (email: string, password: string) => Promise<void>
+  signUp: (email: string, password: string) => Promise<void>
+  signInWithGoogle: () => Promise<void>
+  signInWithMagicLink: (email: string) => Promise<void>
+  signOut: () => Promise<void>
+}
+```
+
+#### Entitlement System: Local Cache with Server Validation
+
+**Decision:** Validate premium entitlement against a serverless function on app launch (when online), cache result in IndexedDB with 7-day TTL, and expose a `useIsPremium()` reactive hook for UI gating.
+
+**Implementation Pattern:**
+```typescript
+// src/lib/entitlement/isPremium.ts
+interface EntitlementCache {
+  tier: 'free' | 'trial' | 'premium'
+  expiresAt: string       // ISO date, server-set
+  cachedAt: string        // ISO date, client-set
+  stripeCustomerId: string
+  planId: string | null
+}
+
+// React hook for components
+export function useIsPremium(): { isPremium: boolean; loading: boolean; tier: string } {
+  const tier = useEntitlementStore((s) => s.tier)
+  const loading = useEntitlementStore((s) => s.loading)
+  return { isPremium: tier !== 'free', loading, tier }
+}
+```
+
+- Local-first: cached entitlement allows premium features to work offline for up to 7 days
+- Distinguishes server-unreachable (honor cache) from server-returns-denied (disable premium)
+
+#### Payment Processing: Stripe Checkout + Customer Portal
+
+**Decision:** Stripe Checkout (hosted) for payment collection, Stripe Customer Portal for subscription management. Supabase Edge Functions handle webhooks.
+
+- Zero PCI scope (no card data touches Knowlune)
+- Checkout session created by Edge Function (protects Stripe secret key)
+- Webhook events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
+- Trial support: Stripe natively supports 14-day free trials
+
+#### Premium Code Boundary: Vite Build Exclusion
+
+**Decision:** Premium features live in `src/premium/` with proprietary license. AGPL core build excludes this directory via Vite plugin.
+
+- `npm run build` → AGPL core build (excludes `src/premium/`)
+- `npm run build:premium` → Full build (includes `src/premium/`)
+- ESLint rule errors if `src/` (non-premium) imports from `@/premium/*`
+- Core components use `useIsPremium()` + `React.lazy()` to conditionally load premium features
+
+---
+
+## Specialized Algorithms
+
+_Merged from docs/planning-artifacts/architecture.md on 2026-03-25._
+
+#### Session Quality Scoring (FR84)
+
+```typescript
+// src/lib/sessionQuality.ts
+export interface SessionMetrics {
+  totalDuration: number        // seconds
+  activeTime: number           // seconds (video playing + editor focused)
+  interactions: number         // count (play, pause, note edit, mark complete)
+  breaks: number               // count (pauses > 60 seconds)
+}
+
+export function scoreSession(metrics: SessionMetrics): number {
+  const minutes = metrics.totalDuration / 60
+
+  // 1. Active time ratio (40% weight)
+  const activeRatio = Math.min(metrics.activeTime / metrics.totalDuration, 1)
+  const activeScore = activeRatio * 100
+
+  // 2. Interaction density (30% weight) — per 10 minutes
+  const densityPer10Min = (metrics.interactions / minutes) * 10
+  const densityScore = Math.min(densityPer10Min / 8, 1) * 100
+
+  // 3. Optimal length (15% weight) — 25-52 min sweet spot
+  let lengthScore: number
+  if (minutes >= 25 && minutes <= 52) lengthScore = 100
+  else if (minutes < 25) lengthScore = (minutes / 25) * 100
+  else lengthScore = Math.max(0, 100 - ((minutes - 52) / 38) * 100)
+
+  // 4. Breaks taken (15% weight) — 1 break per 30 min is ideal
+  const idealBreaks = Math.floor(minutes / 30)
+  const breakDiff = Math.abs(metrics.breaks - idealBreaks)
+  const breakScore = Math.max(0, 100 - breakDiff * 25)
+
+  return Math.round(
+    activeScore * 0.4 +
+    densityScore * 0.3 +
+    lengthScore * 0.15 +
+    breakScore * 0.15
+  )
+}
+```
+
+- Score is 0-100 integer, stored in `studySessions.qualityScore`
+- Calculated on session end, never mid-session
+
+#### Engagement Decay Detection (FR83)
+
+```typescript
+// src/lib/engagementDecay.ts
+export interface DecaySignal {
+  type: 'frequency' | 'duration' | 'velocity'
+  message: string
+  severity: 'warning' | 'alert'
+}
+
+export function detectDecay(
+  recentSessions: StudySession[],  // Last 4 weeks
+  weeklyCompletions: number[]       // Last 4 weeks [newest...oldest]
+): DecaySignal[] {
+  const signals: DecaySignal[] = []
+
+  // 1. Frequency: current 2-week avg < 50% of prior 2-week avg
+  const recent2wk = sessionsPerDay(recentSessions, 0, 14)
+  const prior2wk = sessionsPerDay(recentSessions, 14, 28)
+  if (prior2wk > 0 && recent2wk / prior2wk < 0.5) {
+    signals.push({
+      type: 'frequency',
+      message: `Study frequency dropped to ${Math.round(recent2wk / prior2wk * 100)}% of your usual pace`,
+      severity: 'warning',
+    })
+  }
+
+  // 2. Velocity: completion count negative for 3+ consecutive weeks
+  const velocityNegative = weeklyCompletions
+    .slice(0, 3)
+    .every((count, i) => i === 0 || count < weeklyCompletions[i - 1])
+
+  if (velocityNegative && weeklyCompletions.length >= 3) {
+    signals.push({
+      type: 'velocity',
+      message: 'Completion rate has declined for 3 consecutive weeks',
+      severity: 'alert',
+    })
+  }
+
+  return signals
+}
+```
+
+- Alert display: Dashboard card (NOT toast) — persistent, dismissible
+- Re-trigger cooldown: Same signal type cannot re-fire for 7 days after dismissal
+- Never show during first 14 days of app usage (insufficient data)
+
+---
+
+## Accessibility Patterns (NFR57-62, NFR68)
+
+_Merged from docs/planning-artifacts/architecture.md on 2026-03-25._
+
+**`prefers-reduced-motion` Strategy:**
+- Applied globally in `src/styles/index.css` — individual components do NOT handle this
+- canvas-confetti: Check `window.matchMedia('(prefers-reduced-motion: reduce)').matches` before firing
+- Framer Motion: Use `useReducedMotion()` hook, set `transition={{ duration: 0 }}`
+
+**Target Size (24x24px minimum — NFR57 SC 2.5.8):**
+- All clickable elements: minimum `min-w-6 min-h-6` (24px)
+- Icon-only buttons: `p-2` padding on 16px icons = 32px target
+
+**Focus Not Obscured (NFR57 SC 2.4.11):**
+- `scroll-padding-top: 4rem` for sticky header
+- Floating panels: Must have `aria-modal="true"` or trap focus inside
+
+**Progress Bar ARIA (NFR60):** Always include `role="progressbar"`, `aria-valuenow/min/max`, `sr-only` text equivalent, and `aria-label` describing what is measured.
+
+**Chart Accessibility (NFR61):** `role="img"` + `aria-labelledby` title/desc. Complex charts: toggle data table view. Never color-only differentiation. 3:1 contrast for graphical objects.
+
+---
+
+## AI Layer Architecture (Epic 9/9B)
+
+_Merged from docs/planning-artifacts/architecture.md on 2026-03-25. Documents the AI architecture as built._
+
+### AI Provider Abstraction
+
+```
+Settings UI → AIConfigStore (Zustand) → Web Crypto API → IndexedDB (encrypted)
+                    ↓
+              AI Client Factory → Provider-specific client (OpenAI / Anthropic)
+                    ↓
+              Feature Components (Summary, Q&A, Learning Path, etc.)
+```
+
+- **API key storage:** Web Crypto API with session-scoped encryption keys
+- **Cross-tab sync:** `storage` event + custom `CustomEvent` for same-tab updates
+- **Consent model:** Per-feature consent toggles
+- **Data minimization:** Only content being analyzed is sent. No user metadata, file paths, or PII
+
+### Streaming Response Architecture
+
+All AI features use Vercel AI SDK: `useChat` for conversational features, `useCompletion` for single-shot features. Structured output via Zod schemas. 30-second timeout with retry.
+
+### Graceful Degradation
+
+| Feature | AI Mode | Fallback Mode |
+|---------|---------|---------------|
+| Video Summary | LLM-generated 100-300 word summary | "Summary unavailable" with retry |
+| Q&A from Notes | RAG with citation extraction | Manual full-text note search |
+| Learning Path | LLM-inferred prerequisite ordering | Alphabetical course list |
+| Knowledge Gaps | AI-enriched gap analysis | Rule-based (note ratio + watch %) |
+| Note Organization | AI auto-tag + topical overlap | Tag-based matching only |
+| Related Concepts | AI topical similarity | Shared tag matching only |
+
+### Vector Search
+
+`BruteForceVectorStore` in `src/lib/vectorSearch.ts` (~200 lines). 10.27ms p50 @ 10K vectors, 100% recall. Stored in IndexedDB with Float32Array embeddings. Migration trigger: >50K vectors OR >200ms latency → EdgeVec library.
+
+### Web Worker Architecture
+
+Workers lazy-spawned via `WorkerCoordinator`. Auto-terminate after 60s idle. Terminated on `visibilitychange` (tab hidden). Pool size limited by `navigator.hardwareConcurrency`.
+
+### CSP Requirements
+
+External AI providers require CSP allowlists in `connect-src`: `https://api.openai.com`, `https://api.anthropic.com`. Must be configured before feature stories call external APIs.
+
+---
+
+## Future: Premium Tier Architecture
+
+_Merged from docs/planning-artifacts/architecture.md on 2026-03-25._
+
+### Cloud Sync Layer (Future)
+
+- **Sync engine:** CRDTs via Yjs or simple last-write-wins
+- **Backend:** Supabase Postgres or Cloudflare D1
+- **Sync scope:** Notes, progress, streaks, settings only (not video/PDF files)
+- **Conflict resolution:** Per-field timestamps; user-visible merge UI for note conflicts
+- **Core value:** Local IndexedDB remains primary. Cloud is backup/sync, not requirement
 
 ---
 

@@ -913,6 +913,9 @@ shadcn/ui provides the foundation — these components are already built and sty
 | **Phase 3: Deep Features** | E09 | AIChatPanel, CitationLink, AIConsentToggle | AI is a power feature — deferred until core loop is solid |
 | **Phase 3: Deep Features** | E11 | ReviewCard, GradeButtons, ReviewQueue | Spaced repetition adds a new "Act" path to the loop |
 | **Phase 4: Polish** | E10 | OnboardingChecklist, ContextualTooltip, EmptyState | Onboarding comes last — you need the features before you can onboard to them |
+| **Phase 2: YouTube** | E23 | YouTubeImportDialog, URLInputStep, MetadataPreview, ChapterEditor, TranscriptPanel | YouTube Course Builder — 4-step wizard + post-import transcript panel |
+| **Post-MVP: Auth** | E19 | AuthDialog, SubscriptionStatus, UpgradeCTA, TrialIndicator | Platform & Entitlement — sign-up/in, billing, premium gating |
+| **Post-MVP: Pathways** | E20 | CareerPathCard, CareerPathDetail, ReviewCard, GradeButtons, FlashcardLibrary, SkillRadarChart, ActivityHeatmap | Learning Pathways — career paths, flashcards, analytics visualizations |
 
 ## UX Consistency Patterns
 
@@ -1868,3 +1871,598 @@ flowchart TD
 | Progress indicators | `role="progressbar"`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-label` |
 | Error messages | `aria-live="assertive"` for validation errors, `aria-live="polite"` for status updates |
 | AI badges | Decorative only (`aria-hidden="true"` on sparkles icon), information conveyed through text |
+
+---
+
+_Bookmarks Page UX Specification merged from docs/planning-artifacts/ux-design-specification.md on 2026-03-25._
+
+## Addendum: Bookmarks Page UX Specification
+
+**Story Reference:** Story 3.7 — Lesson Bookmarks
+**Date Added:** 2026-02-14
+
+### Overview
+
+The Bookmarks page provides a dedicated space for users to access lessons they have bookmarked for quick revisit. It surfaces key lesson metadata (title, course name, thumbnail, duration, progress, bookmark date) in a scannable list, with sort controls and responsive deletion patterns. The page reinforces the "intentional learner" ethos: bookmarks are conscious decisions to revisit material, not passive collecting.
+
+**Key Design Goals:**
+- Zero-friction access to saved lessons — one click from sidebar to bookmark, one click from bookmark to video player
+- Consistent card language with the rest of the platform (rounded-[24px], warm off-white, 8px grid)
+- Accessible deletion on all devices — hover trash on desktop, swipe-to-delete + three-dot menu on mobile
+- Clear empty state that guides new users toward bookmarking their first lesson
+
+### Sidebar Navigation Placement
+
+**Position:** Between "Library" and "Messages" in the sidebar navigation order.
+
+**Rationale:** Bookmarks are a personal content collection — logically grouped with content-centric nav items (Courses, Library) rather than communication (Messages) or analytics (Reports). Placing it after Library creates a natural progression: browse (Courses) → collect (Library) → save (Bookmarks).
+
+**Nav Item Specification:**
+- **Label:** "Bookmarks"
+- **Icon:** Lucide `Bookmark` (outline in inactive state)
+- **Path:** `/bookmarks`
+- **Active State:** `bg-blue-600 text-white rounded-xl` (matches all other nav items)
+- **Inactive State:** `text-muted-foreground hover:bg-accent`
+
+**Mobile Bottom Nav:** Bookmarks is NOT included in the 4-item mobile bottom bar (Overview, My Classes, Courses, Library remain primary). Bookmarks is accessible via the "More" overflow drawer on mobile, consistent with Messages, Instructors, Reports, and Settings.
+
+**Updated Navigation Order:**
+1. Overview (`/`)
+2. My Classes (`/my-class`)
+3. Courses (`/courses`)
+4. Library (`/library`)
+5. **Bookmarks (`/bookmarks`)** — NEW
+6. Messages (`/messages`)
+7. Instructors (`/instructors`)
+8. Reports (`/reports`)
+9. Settings (`/settings`)
+
+### Page Layout
+
+**Page Header:**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Bookmarks                              [Sort: ▼]       │
+│  {bookmark count} saved lessons                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+- **Title:** "Bookmarks" — `text-2xl font-bold` (matches page title pattern used on Overview, Courses, etc.)
+- **Subtitle:** Dynamic count — "{N} saved lessons" in `text-muted-foreground text-sm`
+- **Sort Control:** shadcn/ui `Select` dropdown, right-aligned in the header row on desktop, full-width below title on mobile
+
+**Content Area — Desktop (≥1024px):**
+
+Single-column vertical list of bookmark cards within the main content area (sidebar persistent on left). Cards are full-width within the content column, stacked vertically with `gap-4` (16px) spacing.
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ ┌──────┐                                                        │
+│ │ thumb│  Lesson Title                        [Trash2] on hover │
+│ │      │  Course Name  ·  12:34  ·  65%  ·  2 days ago         │
+│ └──────┘                                                        │
+├──────────────────────────────────────────────────────────────────┤
+│ ┌──────┐                                                        │
+│ │ thumb│  Another Lesson Title                                  │
+│ │      │  Course Name  ·  8:21  ·  Completed  ·  1 week ago    │
+│ └──────┘                                                        │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Content Area — Mobile (<1024px):**
+
+Full-width stacked cards with touch-optimized spacing (`gap-3`). Each card includes a visible three-dot menu icon (right side). Swipe-left reveals red "Remove" action.
+
+### Bookmark Card Component
+
+**BookmarkCard** — Horizontal card displaying a single bookmarked lesson with metadata and contextual actions.
+
+**Anatomy:**
+- **Container:** `rounded-[24px] bg-card border border-border p-4` — matches platform card language
+- **Layout:** Horizontal flex — thumbnail (left), content (center, flex-1), action area (right)
+- **Thumbnail:** `w-20 h-14 rounded-xl object-cover` with `ImageWithFallback` gradient placeholder
+- **Content Stack** (vertical):
+  - Lesson title — `text-sm font-semibold line-clamp-1`
+  - Metadata row — `text-xs text-muted-foreground` with dot separators:
+    - Course name
+    - Video duration (formatted HH:MM:SS or MM:SS)
+    - Completion: progress percentage (`text-blue-600`) or "Completed" badge (`text-green-600` with `CheckCircle` icon)
+    - Bookmark date (relative time via `date-fns formatDistanceToNow`: "2 days ago", "1 week ago")
+- **Action Area:** Context-dependent (see Desktop vs. Mobile deletion patterns)
+
+**States:**
+- **Default:** Card at rest with subtle border
+- **Hover (Desktop):** `shadow-lg border-blue-200` transition (300ms), Trash2 icon fades in (`opacity-0 → opacity-100`)
+- **Focus:** `ring-2 ring-blue-600 ring-offset-2` visible focus ring on the card
+- **Active/Pressed:** `scale-[0.98]` subtle press feedback (150ms)
+- **Swipe-Active (Mobile):** Card slides right-to-left revealing red action panel behind
+
+**Interaction:**
+- **Click/Tap card body:** Navigate to lesson video player (`/courses/:courseId/lessons/:lessonId`)
+- **Click Trash2 (Desktop):** Remove bookmark immediately with exit animation
+- **Swipe left (Mobile):** Reveal "Remove" action button
+- **Three-dot menu (Mobile):** Open dropdown with "Remove Bookmark" option
+- **Keyboard Enter:** Navigate to lesson
+- **Keyboard Delete:** Trigger remove bookmark
+
+### Sort Controls
+
+**Position:** Right side of page header (desktop), full-width below title (mobile)
+
+**Component:** shadcn/ui `Select` dropdown
+
+**Options:**
+1. **"Most Recent"** (default) — `createdAt` descending (newest bookmarks first)
+2. **"Course Name"** — Alphabetical by course name; within same course, `createdAt` descending
+3. **"Alphabetical (A-Z)"** — Alphabetical by lesson title
+
+**Visual:**
+- Select trigger: `w-[180px]` desktop, `w-full` mobile
+- Label prefix: "Sort by:" in `text-xs text-muted-foreground` above the select on mobile
+- Default shows "Most Recent" as placeholder text
+
+**Behavior:**
+- Sort applies immediately on selection (no "Apply" button)
+- When sorted by "Course Name," bookmarks with the same course are visually grouped with a subtle course name subheading (`text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 mt-4`)
+- Sort preference persists in localStorage (`levelup-bookmarks-sort`)
+
+### Deletion Patterns
+
+#### Desktop (≥1024px) — Hover Trash Icon
+
+- **Trigger:** Mouse hover over bookmark card
+- **Visual:** Lucide `Trash2` icon (w-4 h-4) appears on the right side of the card with `opacity-0 group-hover:opacity-100 transition-opacity duration-200`
+- **States:** Default `text-muted-foreground`, hover `text-red-500`
+- **ARIA:** `aria-label="Remove bookmark"` on the button
+- **Click action:** Bookmark deleted immediately from storage, card exits the list with a smooth collapse animation (200ms ease-out, height collapses to 0 with opacity fade)
+- **No confirmation dialog** — action is lightweight and easily reversible (user can re-bookmark from the lesson). Toast notification "Bookmark removed" with no undo (per story spec).
+
+#### Mobile (<1024px) — Swipe-to-Delete + Three-Dot Menu
+
+**Swipe Gesture (convenience shortcut):**
+- **Trigger:** Touch swipe left on bookmark card (minimum 60px horizontal threshold)
+- **Reveal:** Red action panel (`bg-red-500 text-white`) slides in from right, showing "Remove" text with `Trash2` icon
+- **Panel width:** 80px
+- **Tap "Remove":** Deletes bookmark, card collapses with exit animation (200ms)
+- **Release without tapping:** Card springs back to original position (200ms ease-out)
+
+**Three-Dot Menu (accessible alternative — WCAG 2.5.1 compliance):**
+- **Trigger:** Visible three-dot icon (`MoreVertical` from Lucide) on every bookmark card (always visible on mobile, not hidden behind hover)
+- **Position:** Top-right corner of card, `w-8 h-8` touch target (minimum 44x44px hit area via padding)
+- **Tap action:** Opens shadcn/ui `DropdownMenu` with single option: "Remove Bookmark" with `Trash2` icon
+- **Keyboard:** Menu opens with Enter/Space, navigable with arrow keys, Escape to close
+- **Screen reader:** Button announces "Bookmark options for {lesson title}"
+
+**Implementation Note:** The swipe gesture is a progressive enhancement. The three-dot menu is the primary accessible path. Both call the same `removeBookmark` function.
+
+### Empty State
+
+Displayed when no bookmarks exist (zero records in bookmarks storage).
+
+**Layout:** Centered vertically and horizontally within the content area.
+
+```
+         ┌─────────────┐
+         │  BookmarkX   │  64px, text-muted-foreground
+         │   (icon)     │
+         └─────────────┘
+         No bookmarks yet
+   Bookmark lessons while watching
+   to find them quickly later.
+
+        [ Browse Courses ]
+```
+
+**Specification:**
+- **Icon:** Lucide `BookmarkX` — `w-16 h-16 text-muted-foreground mx-auto`
+- **Heading:** "No bookmarks yet" — `text-lg font-semibold mt-4`
+- **Body:** "Bookmark lessons while watching to find them quickly later." — `text-sm text-muted-foreground mt-2 max-w-[280px] mx-auto text-center`
+- **CTA:** shadcn/ui `Button` variant="default" — "Browse Courses" — navigates to `/courses`
+  - `mt-6`, `bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-6 h-11`
+- **Container:** `flex flex-col items-center justify-center py-20`
+
+**Consistency:** Follows the Empty States pattern from the UX spec — centered icon + heading + description + CTA, matching the same visual weight as "No courses in progress" and other empty states across the platform.
+
+### Loading State
+
+**Skeleton Pattern:** 4-6 skeleton bookmark cards matching final card dimensions to prevent layout shift.
+
+```
+┌──────────────────────────────────────────────────┐
+│ ┌──────┐  ████████████████████                   │
+│ │ ░░░░ │  ████████  ·  ████  ·  ████            │
+│ └──────┘                                         │
+└──────────────────────────────────────────────────┘
+```
+
+- **Skeleton card:** `rounded-[24px] bg-muted/50 p-4 animate-pulse`
+- **Thumbnail placeholder:** `w-20 h-14 rounded-xl bg-muted`
+- **Text placeholders:** `h-4 w-48 bg-muted rounded` (title), `h-3 w-32 bg-muted rounded` (metadata)
+- **Delay:** 500ms before showing skeletons (fast loads skip skeleton entirely)
+- **ARIA:** Container has `aria-busy="true"` and `aria-label="Loading bookmarks"`
+
+### Responsive Behavior
+
+**Desktop (≥1024px):**
+- Persistent sidebar + full-width bookmark list in content area
+- Sort dropdown right-aligned in header row
+- Hover reveals Trash2 delete icon on each card
+- Three-dot menu hidden (hover trash is primary)
+
+**Tablet (640–1023px):**
+- Collapsible sidebar (sheet), full-width content
+- Sort dropdown right-aligned in header row
+- Three-dot menu visible on each card (no hover interaction on touch)
+- Swipe-to-delete enabled
+
+**Mobile (<640px):**
+- Bottom nav (Bookmarks via "More" overflow), no sidebar
+- Sort dropdown full-width below page title
+- Three-dot menu always visible on each card
+- Swipe-to-delete enabled
+- Cards stack full-width with `p-3` reduced padding
+- Thumbnail size reduces to `w-16 h-11`
+
+### Keyboard & Accessibility
+
+**Keyboard Navigation:**
+- **Tab:** Moves focus between bookmark cards sequentially
+- **Enter:** On focused card, navigates to lesson video player
+- **Delete:** On focused card, removes bookmark (no confirmation)
+- **Tab into sort control:** Standard Select keyboard interaction (Space to open, arrow keys to select)
+
+**Focus Management:**
+- Each card receives `ring-2 ring-blue-600 ring-offset-2` focus ring
+- After deletion, focus moves to the next card in the list (or previous if last item deleted)
+- If all bookmarks deleted, focus moves to the empty state CTA button
+
+**Screen Reader Support:**
+- Bookmark list wrapped in `<section aria-label="Bookmarked lessons">`
+- Each card is a `role="article"` with `aria-label` combining lesson title and course name
+- Delete button: `aria-label="Remove bookmark for {lesson title}"`
+- Sort control: `aria-label="Sort bookmarks"`
+- Count subtitle uses `aria-live="polite"` to announce updates after sort changes or deletions
+- Three-dot menu button: `aria-label="Bookmark options for {lesson title}"`, `aria-haspopup="menu"`
+
+**WCAG 2.5.1 Compliance:** Swipe-to-delete is a convenience gesture, not the only deletion path. The three-dot menu and keyboard Delete key provide equivalent functionality without gesture dependency.
+
+### Animations & Transitions
+
+| Interaction | Animation | Duration | Easing |
+|---|---|---|---|
+| Card hover (desktop) | Shadow elevation + border color | 300ms | ease |
+| Card press | scale(0.98) | 150ms | ease-out |
+| Trash2 icon appear | Opacity 0→1 | 200ms | ease |
+| Card deletion exit | Height collapse + opacity fade | 200ms | ease-out |
+| Swipe reveal | translateX with spring physics | 200ms | ease-out |
+| Swipe snap-back | translateX return to 0 | 200ms | ease-out |
+| Empty state entrance | Fade in + translateY(8px→0) | 300ms | ease-out |
+
+All animations respect `prefers-reduced-motion: reduce` — replaced with instant state changes (0ms duration).
+
+### Orphan Cleanup
+
+When the Bookmarks page mounts (or on app startup), bookmarks are validated against existing course/lesson records:
+- Bookmarks referencing deleted courses or lessons are purged automatically in batch
+- If orphans are cleaned: toast notification "Removed {N} bookmarks for deleted lessons"
+- If a user clicks an orphaned bookmark before cleanup: toast "This lesson is no longer available. Bookmark removed." + fade-out animation on the card
+
+### Virtual Scrolling
+
+For lists exceeding 50 bookmarks, implement virtual scrolling using `@tanstack/react-virtual`:
+- **Window:** Render only visible cards + 5-item overscan buffer
+- **Row height:** Estimated at 82px (card height + gap) — adjusted dynamically
+- **Scroll restoration:** Preserve scroll position when returning from lesson video player
+- **Trigger:** Conditional — only activate virtualization when bookmark count > 50; below that threshold, render all cards directly for simplicity
+
+## Platform & Entitlement (Epic 19)
+
+**Added 2026-03-26**
+
+The Platform & Entitlement system adds authentication, subscription management, and premium feature gating to Knowlune — enabling the open-core business model while preserving the fully-functional free experience.
+
+**PRD Requirements:** FR102–FR107
+**Design Principle:** Auth is additive, never gates core workflows. Every premium touchpoint must feel like an invitation, not a barrier.
+
+### 1. Authentication Flows
+
+**Sign-Up / Sign-In Dialog:**
+
+The auth dialog is a centered `Dialog` (`sm:max-w-md`) triggered by clicking any upgrade CTA or "Sign Up" in the header. Two tabs: "Sign Up" and "Sign In."
+
+```
+┌─────────────────────────────────────────┐
+│  LevelUp                                │
+│─────────────────────────────────────────│
+│  [Sign Up]  [Sign In]                   │
+│                                         │
+│  Email                                  │
+│  ┌─────────────────────────────────┐    │
+│  │ pedro@example.com               │    │
+│  └─────────────────────────────────┘    │
+│                                         │
+│  Password                               │
+│  ┌─────────────────────────────────┐    │
+│  │ ••••••••••                      │    │
+│  └─────────────────────────────────┘    │
+│  Min. 8 characters                      │
+│                                         │
+│  [Sign Up]  (brand variant, full-width) │
+│                                         │
+│  By signing up you agree to our         │
+│  Privacy Policy and Terms of Service    │
+└─────────────────────────────────────────┘
+```
+
+**Behavior:**
+- Form validation: inline errors on blur (email format, password length)
+- Submit button shows loading spinner, form inputs disabled during request
+- On success: dialog closes, user redirected to previous location
+- On error: inline error message below form (e.g., "Email already registered — sign in instead")
+- Legal links open `/privacy` and `/terms` in new tabs
+
+**Sign-In Tab:**
+Same layout, no password confirmation field. "Forgot password?" link below password field triggers password reset email via Supabase.
+
+**Session Restoration:**
+On app launch with existing session, a brief loading indicator appears in the header (not blocking — core features load immediately). If session is expired, auth state silently resets to unauthenticated.
+
+### 2. Subscription Management (Settings Page)
+
+**Subscription Section in Settings:**
+
+```
+┌─────────────────────────────────────────────────┐
+│  Subscription                                    │
+│─────────────────────────────────────────────────│
+│                                                  │
+│  Plan: Premium                                   │
+│  Billing: Monthly ($9.99/month)                  │
+│  Next billing: April 15, 2026                    │
+│  Status: Active ✓                                │
+│                                                  │
+│  [Manage Billing]  [Cancel Subscription]         │
+│                                                  │
+└─────────────────────────────────────────────────┘
+```
+
+**Free Tier View:**
+```
+┌─────────────────────────────────────────────────┐
+│  Subscription                                    │
+│─────────────────────────────────────────────────│
+│                                                  │
+│  Plan: Free                                      │
+│                                                  │
+│  Unlock AI features, spaced repetition,          │
+│  and advanced export with Premium.               │
+│                                                  │
+│  [Upgrade to Premium]  (brand variant)           │
+│                                                  │
+│  ┌─────────────────────────────────────────┐     │
+│  │ ✓ AI Summaries    ✓ Note Q&A           │     │
+│  │ ✓ Spaced Review   ✓ Advanced Export    │     │
+│  │ ✓ Learning Paths  ✓ Priority Support   │     │
+│  └─────────────────────────────────────────┘     │
+│                                                  │
+└─────────────────────────────────────────────────┘
+```
+
+**Trial Indicator (Header):**
+When on a free trial, a subtle indicator appears in the header: "Trial: 9 days left" with `text-warning` styling. Clicking opens Settings > Subscription.
+
+### 3. Upgrade CTAs (Premium Feature Gating)
+
+**Design Pattern:** When a free-tier user encounters a premium feature, the feature area is replaced by an upgrade CTA — never a broken UI or error.
+
+**CTA Component (`UpgradeCTA`):**
+```
+┌─────────────────────────────────────────┐
+│  🔒  AI Video Summaries                 │
+│                                         │
+│  Get AI-generated summaries of video    │
+│  content to review key concepts faster. │
+│                                         │
+│  [Upgrade to Premium]                   │
+└─────────────────────────────────────────┘
+```
+
+**Placement rules:**
+- AI Summary button → replaced by CTA inline
+- AI Q&A panel → locked state with feature preview
+- Spaced Review entry → CTA card on Flashcards page
+- Premium features in nav: subtle lock icon + "Premium" badge
+
+**Click behavior:**
+1. If authenticated → Stripe Checkout
+2. If not authenticated → Auth dialog → then Stripe Checkout
+3. After payment → return to exact feature location
+
+### 4. Legal Pages
+
+`/privacy` and `/terms` are public routes (no auth required). Rendered from MDX files. Consistent page layout with the rest of the app (sidebar + header).
+
+Change notification: when legal documents are updated, an in-app banner appears at the top of the page with "Updated [date]" link and "Dismiss" button.
+
+## Learning Pathways & Knowledge Retention (Epic 20)
+
+**Added 2026-03-26**
+
+Learning Pathways adds structured multi-course journeys, spaced repetition flashcards, and advanced analytics visualizations — transforming Knowlune from a course tracker into a learning system.
+
+**PRD Requirements:** FR108–FR111
+**Design Inspiration:** Duolingo learning paths (staged progression), Mochi (beautiful flashcard review), GitHub contribution graph (activity heatmap)
+
+### 1. Career Paths (Multi-Course Journeys)
+
+**Career Paths List Page (`/career-paths`):**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Career Paths                                                │
+│  Structured journeys to build skills systematically          │
+│─────────────────────────────────────────────────────────────│
+│                                                              │
+│  ┌─────────────────────────┐  ┌─────────────────────────┐   │
+│  │  Web Development         │  │  Data Science            │   │
+│  │  5 courses · 48 hours    │  │  4 courses · 36 hours    │   │
+│  │  ████████░░ 65%          │  │  ██░░░░░░░░ 20%          │   │
+│  │  [Continue Path]         │  │  [Continue Path]         │   │
+│  └─────────────────────────┘  └─────────────────────────┘   │
+│                                                              │
+│  ┌─────────────────────────┐  ┌─────────────────────────┐   │
+│  │  DevOps                  │  │  Mobile Development      │   │
+│  │  3 courses · 28 hours    │  │  4 courses · 32 hours    │   │
+│  │  ░░░░░░░░░░ Not started  │  │  ░░░░░░░░░░ Not started  │   │
+│  │  [Start Path]            │  │  [Start Path]            │   │
+│  └─────────────────────────┘  └─────────────────────────┘   │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Path Detail Page (`/career-paths/:id`):**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  ← Back to Career Paths                                      │
+│                                                              │
+│  Web Development                                             │
+│  5 courses · 48 hours · 65% complete                         │
+│  ████████████████████████░░░░░░░░ 65%                        │
+│─────────────────────────────────────────────────────────────│
+│                                                              │
+│  Stage 1: Foundations ✅                                      │
+│  ┌──────────────────┐  ┌──────────────────┐                  │
+│  │ HTML & CSS ✅     │  │ JavaScript ✅    │                  │
+│  │ 12h · Complete    │  │ 16h · Complete   │                  │
+│  └──────────────────┘  └──────────────────┘                  │
+│                                                              │
+│  Stage 2: Frameworks 🔓                                      │
+│  ┌──────────────────┐  ┌──────────────────┐                  │
+│  │ React 🔥         │  │ TypeScript       │                  │
+│  │ 12h · 60%        │  │ 8h · Not started │                  │
+│  └──────────────────┘  └──────────────────┘                  │
+│                                                              │
+│  Stage 3: Advanced 🔒                                        │
+│  Complete Stage 2 to unlock                                  │
+│  ┌──────────────────┐                                        │
+│  │ System Design     │  (grayed out, lock icon)              │
+│  │ 12h · Locked      │                                       │
+│  └──────────────────┘                                        │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Stage indicators:** ✅ complete, 🔓 unlocked/in progress, 🔒 locked (requires previous stage)
+**Course card states:** Green border (complete), brand border (in progress), gray border + lock icon (locked)
+
+### 2. Flashcard Review (Mochi-Inspired)
+
+**Review Interface (`/flashcards`):**
+
+The review experience prioritizes beauty and simplicity over flashcard-app density. Cards are generous in size with soft shadows — this should feel like flipping through highlighted notes, not doing homework.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Review Queue                          3 of 12 reviewed      │
+│  ████████░░░░░░░░░░░░░░░░░░░░░░                             │
+│─────────────────────────────────────────────────────────────│
+│                                                              │
+│  ┌─────────────────────────────────────────────────────┐     │
+│  │                                                     │     │
+│  │   What is the purpose of useEffect cleanup?         │     │
+│  │                                                     │     │
+│  │   📚 React Course · Video 12: Hooks Deep Dive       │     │
+│  │   🎯 Retention: 72%                                 │     │
+│  │                                                     │     │
+│  │              [Show Answer]                          │     │
+│  │                                                     │     │
+│  └─────────────────────────────────────────────────────┘     │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**After revealing answer:**
+
+```
+│  ┌─────────────────────────────────────────────────────┐     │
+│  │                                                     │     │
+│  │   What is the purpose of useEffect cleanup?         │     │
+│  │   ─────────────────────────────────────────────     │     │
+│  │   Cleanup functions run before the component        │     │
+│  │   unmounts or before the effect re-runs. Used to    │     │
+│  │   cancel subscriptions, timers, or event listeners. │     │
+│  │                                                     │     │
+│  │   📚 React Course · Video 12: Hooks Deep Dive       │     │
+│  │                                                     │     │
+│  └─────────────────────────────────────────────────────┘     │
+│                                                              │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐                   │
+│  │  Hard     │  │  Good     │  │  Easy     │                   │
+│  │  1 day    │  │  3 days   │  │  7 days   │                   │
+│  └──────────┘  └──────────┘  └──────────┘                   │
+│                                                              │
+```
+
+**Grade button styling:**
+- Hard: `bg-warning/10 text-warning border-warning/30` → orange flash animation
+- Good: `bg-success/10 text-success border-success/30` → green flash animation
+- Easy: `bg-brand-soft text-brand-soft-foreground border-brand/30` → blue flash animation
+
+**Completion summary:**
+```
+  Review Complete! 🎉
+  12 cards reviewed
+  Hard: 2 · Good: 8 · Easy: 2
+  Next review: tomorrow
+```
+
+### 3. Activity Heatmap (GitHub-Style)
+
+**Placement:** Reports page (full-width) and Overview page (compact widget)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Study Activity                                Last 12 months│
+│                                                              │
+│  Mar  Apr  May  Jun  Jul  Aug  Sep  Oct  Nov  Dec  Jan  Feb │
+│  ░░█░ ░██░ █░██ ░░░░ █░░░ ██░█ █░██ ████ ██░█ ████ █████ ██│
+│  ░░░░ █░░░ ░░░░ █░██ ░░█░ ░░░░ ██░░ ░░██ █░░░ ████ █████ ██│
+│  ░░░░ ░░░░ ██░░ ░░░░ █░░░ ░██░ ░░██ █░░░ ████ ████ █████ ██│
+│  ░░░░ █░░░ ░░██ █░░░ ░░░░ ░░░░ █░░░ ░██░ ░░██ ████ █████ ██│
+│  ░░░░ ░░░░ ░░░░ ░░░░ ░░░░ ░██░ ░░░░ ░░░░ ████ ████ █████ ██│
+│  ░░░░ ░█░░ ░░░░ ░░██ ░░░░ ░░░░ ░░░░ █░░░ ████ ████ █████ ██│
+│  ░░░░ ░░░░ ░░░░ ░░░░ ░░░░ ░░█░ ░░░░ ░░██ ████ ████ █████ ██│
+│                                                              │
+│  Less ░░██████ More          Total: 847 hours studied        │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Color scale (5 levels):**
+- Level 0: `hsl(40, 20%, 94%)` — neutral warm gray (no activity)
+- Level 1: `hsl(142, 40%, 80%)` — light green (1-15 min)
+- Level 2: `hsl(142, 50%, 60%)` — medium green (16-30 min)
+- Level 3: `hsl(142, 55%, 40%)` — dark green (31-60 min)
+- Level 4: `hsl(142, 60%, 28%)` — intense green (60+ min)
+
+**Hover tooltip:** Shows date, study time, and notes taken count. Positioned above cell.
+
+**Responsive:** 12 months (≥1024px), 6 months (640-1023px), 3 months (<640px)
+
+**Accessibility:** `role="img"` with `aria-label`, keyboard navigable, 3:1 contrast between levels, screen reader announces "March 7, 2026: 45 minutes studied, 3 notes"
+
+### 4. Skill Proficiency Radar Chart
+
+**Placement:** Overview dashboard (compact card) and Analytics page (full-size)
+
+Uses Recharts `RadarChart` component. 5-7 axes representing skill domains derived from course tags. Warm color fill with 50% opacity, dotted outline for target proficiency (when set in Story 20.6).
+
+**Tooltip on hover:** Skill name, proficiency %, completed course count
+
+**Empty state:** All axes at 0% with message: "Complete courses to build your skill profile!"
+
+**Responsive:** Chart scales proportionally; compact labels on mobile (<640px)
+
+**Accessibility:** `role="img"`, data table alternative available via "View as table" link, 3:1 contrast

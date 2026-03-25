@@ -109,6 +109,8 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
   },
 
   dismiss: () => {
-    set({ isActive: false })
+    const now = new Date().toISOString()
+    persistCompletion(now, true)
+    set({ isActive: false, completedAt: now, skipped: true })
   },
 }))
