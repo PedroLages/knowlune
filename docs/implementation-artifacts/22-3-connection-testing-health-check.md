@@ -1,12 +1,12 @@
 ---
 story_id: E22-S03
 story_name: "Connection Testing & Health Check"
-status: in-progress
-started:
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+status: done
+started: 2026-03-25
+completed: 2026-03-25
+reviewed: true
+review_started: 2026-03-25
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests-skipped, design-review, code-review, code-review-testing]
 burn_in_validated: false
 ---
 
