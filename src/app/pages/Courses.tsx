@@ -156,6 +156,13 @@ export function Courses() {
       )
     }
 
+    // AC3: Apply topic filter to pre-seeded courses too
+    if (selectedTopics.length > 0) {
+      courses = courses.filter(c =>
+        selectedTopics.every(topic => c.tags.some(t => t.toLowerCase() === topic))
+      )
+    }
+
     return courses
   })()
 
@@ -166,6 +173,36 @@ export function Courses() {
     )
   }, [filtered, sortMode, momentumMap])
 
+  // AC1+AC2: Merge tags from both pre-seeded and imported courses,
+  // deduplicate, and sort by frequency (most courses first)
+  const { mergedTags, tagCounts } = useMemo(() => {
+    const counts = new Map<string, number>()
+
+    // Count tags from pre-seeded courses
+    for (const course of allCourses) {
+      for (const tag of course.tags) {
+        const normalized = tag.trim().toLowerCase()
+        if (normalized) counts.set(normalized, (counts.get(normalized) ?? 0) + 1)
+      }
+    }
+
+    // Count tags from imported courses (AI-generated tags)
+    for (const course of importedCourses) {
+      for (const tag of course.tags) {
+        const normalized = tag.trim().toLowerCase()
+        if (normalized) counts.set(normalized, (counts.get(normalized) ?? 0) + 1)
+      }
+    }
+
+    // Sort by frequency descending, then alphabetically for ties
+    const sorted = [...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([tag]) => tag)
+
+    return { mergedTags: sorted, tagCounts: counts }
+  }, [allCourses, importedCourses])
+
+  // Keep legacy allTags for ImportedCourseCard (imported-only tags)
   const allTags = useMemo(() => getAllTags(), [getAllTags])
 
   const filteredImportedCourses = (() => {
@@ -270,19 +307,21 @@ export function Courses() {
             </div>
           </Card>
 
-          {importedCourses.length > 0 && (
-            <div className="flex flex-wrap gap-x-6 gap-y-2 items-start">
-              <TopicFilter
-                availableTags={allTags}
-                selectedTags={selectedTopics}
-                onSelectedTagsChange={setSelectedTopics}
-              />
+          {/* AC1: Show unified topic filter with merged tags from both course types */}
+          <div className="flex flex-wrap gap-x-6 gap-y-2 items-start">
+            <TopicFilter
+              availableTags={mergedTags}
+              selectedTags={selectedTopics}
+              onSelectedTagsChange={setSelectedTopics}
+              tagCounts={tagCounts}
+            />
+            {importedCourses.length > 0 && (
               <StatusFilter
                 selectedStatuses={selectedStatuses}
                 onSelectedStatusesChange={setSelectedStatuses}
               />
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Imported Courses Section */}
           {(importedCourses.length > 0 || !searchQuery.trim()) && (
