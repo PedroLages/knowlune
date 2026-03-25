@@ -19,6 +19,7 @@ describe('settings', () => {
         displayName: 'Student',
         bio: '',
         theme: 'system',
+        colorScheme: 'professional',
       })
     })
 
@@ -29,6 +30,7 @@ describe('settings', () => {
         displayName: 'Student',
         bio: '',
         theme: 'system',
+        colorScheme: 'professional',
       })
     })
 
@@ -80,12 +82,25 @@ describe('settings', () => {
         displayName: 'Operator',
         bio: 'Field agent',
         theme: 'dark',
+        colorScheme: 'vibrant',
       })
       expect(result).toEqual({
         displayName: 'Operator',
         bio: 'Field agent',
         theme: 'dark',
+        colorScheme: 'vibrant',
       })
+    })
+
+    it('persists colorScheme "vibrant" and reads it back', () => {
+      saveSettings({ colorScheme: 'vibrant' })
+      expect(getSettings().colorScheme).toBe('vibrant')
+    })
+
+    it('defaults colorScheme to "professional" for existing users without it', () => {
+      // Simulate legacy settings without colorScheme
+      localStorage.setItem('app-settings', JSON.stringify({ displayName: 'Legacy' }))
+      expect(getSettings().colorScheme).toBe('professional')
     })
   })
 

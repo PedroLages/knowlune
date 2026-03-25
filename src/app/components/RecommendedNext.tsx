@@ -62,6 +62,7 @@ export function RecommendedNext() {
 
   useEffect(() => {
     loadSessionStats().catch((err: unknown) => {
+      // silent-catch-ok — error state handled by component (isLoading)
       console.error('[RecommendedNext] Failed to load sessions:', err)
     })
   }, [loadSessionStats])

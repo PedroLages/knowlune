@@ -28,13 +28,20 @@ export function QuizActions({
         className="rounded-xl min-h-[44px]"
         disabled={isFirst}
         onClick={onPrevious}
+        aria-label="Previous question"
       >
         <ChevronLeft className="size-4 mr-1" aria-hidden="true" />
         Previous
       </Button>
 
       {!isLast && (
-        <Button ref={ref} variant="outline" className="rounded-xl min-h-[44px]" onClick={onNext}>
+        <Button
+          ref={ref}
+          variant="outline"
+          className="rounded-xl min-h-[44px]"
+          onClick={onNext}
+          aria-label="Next question"
+        >
           Next
           <ChevronRight className="size-4 ml-1" aria-hidden="true" />
         </Button>

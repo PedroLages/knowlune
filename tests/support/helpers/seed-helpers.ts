@@ -12,7 +12,6 @@
 import type { Page } from '@playwright/test'
 import type { ImportedCourseTestData } from '../fixtures/factories/imported-course-factory'
 import { goToCourses } from './navigation'
-import { closeSidebar } from '../fixtures/constants/sidebar-constants'
 import { RETRY_CONFIG } from '../../utils/constants'
 
 const DB_NAME = 'ElearningDB'
@@ -204,11 +203,7 @@ export async function seedAndReload(
   indexedDB: IndexedDBSeed,
   courses: ImportedCourseTestData[]
 ): Promise<void> {
-  await page.evaluate(sidebarState => {
-    Object.entries(sidebarState).forEach(([key, value]) => {
-      localStorage.setItem(key, value)
-    })
-  }, closeSidebar())
+  // goToCourses already handles sidebar state via addInitScript
   await goToCourses(page)
   await indexedDB.seedImportedCourses(courses)
   await page.reload({ waitUntil: 'domcontentloaded' })

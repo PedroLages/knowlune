@@ -147,6 +147,7 @@ export interface PdfMetadata {
 export interface ImportedCourse {
   id: string
   name: string
+  description?: string // AI-suggested or user-entered course description
   importedAt: string // ISO 8601
   category: string
   tags: string[]
@@ -155,6 +156,7 @@ export interface ImportedCourse {
   pdfCount: number
   directoryHandle: FileSystemDirectoryHandle
   authorId?: string // FK to ImportedAuthor.id (E25-S01 AC2)
+  coverImageHandle?: FileSystemFileHandle // User-selected cover image from folder
 }
 
 export interface ImportedVideo {

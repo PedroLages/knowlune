@@ -84,6 +84,7 @@ export function usePdfSearch(
     }
 
     extract().catch(() => {
+      // silent-catch-ok — non-critical background text extraction for search
       if (!extractionCancelledRef.current) {
         setIsExtracting(false)
       }
