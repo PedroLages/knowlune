@@ -148,13 +148,6 @@ export function OnboardingOverlay() {
               </Button>
             )}
 
-            {/* Welcome header (only on first view) */}
-            {currentStep === 1 && !isComplete && (
-              <p className="mb-6 text-center text-sm font-medium text-muted-foreground">
-                Welcome to Knowlune! Let's get you started in 3 quick steps.
-              </p>
-            )}
-
             {/* Step indicator */}
             <div className="mb-6">
               <StepIndicator currentStep={currentStep} isComplete={isComplete} />

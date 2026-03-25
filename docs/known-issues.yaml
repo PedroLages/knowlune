@@ -1,0 +1,172 @@
+# Known Issues Register
+#
+# Pre-existing issues discovered during /review-story that were NOT caused
+# by the story under review. Tracked here for later triage.
+#
+# Lifecycle:
+#   /review-story  → auto-appends when pre-existing issues are found
+#   /start-story   → warns if open issues match files being changed
+#   /sprint-status → reports open issue count as a health metric
+#   Post-epic      → triage session: schedule, wont-fix, or close items
+#
+# Fields:
+#   id:              KI-NNN (auto-increment)
+#   type:            test | lint | typecheck | build | design | code
+#   summary:         One-line description
+#   file:            file:line where the issue manifests
+#   severity:        low | medium | high
+#   discovered_by:   Story ID that found it (e.g., E27-S01)
+#   discovered_on:   YYYY-MM-DD
+#   status:          open | scheduled | fixed | wont-fix
+#   scheduled_for:   Epic/sprint when planned to fix (null if unscheduled)
+#   fixed_by:        Story ID or commit that resolved it (null if open)
+#   notes:           Additional context
+
+issues:
+  - id: KI-001
+    type: test
+    summary: "Courses.test.tsx — 13 unit tests failing (status filtering, collapse state)"
+    file: "src/app/pages/__tests__/Courses.test.tsx"
+    severity: medium
+    discovered_by: E25-S04
+    discovered_on: 2026-03-25
+    status: fixed
+    scheduled_for: null
+    fixed_by: E25-S06
+    notes: "Fixed in E25-S06 — added missing autoAnalysisStatus and updateCourseDetails mocks."
+
+  - id: KI-002
+    type: test
+    summary: "autoAnalysis.test.ts — 9 unit tests failing (stale db mock missing get())"
+    file: "src/lib/__tests__/autoAnalysis.test.ts"
+    severity: medium
+    discovered_by: E25-S04
+    discovered_on: 2026-03-25
+    status: fixed
+    scheduled_for: null
+    fixed_by: post-epic-cleanup-2026-03-25
+    notes: "Fixed — added db.importedCourses.get mock to match production code's fresh IDB read pattern."
+
+  - id: KI-003
+    type: test
+    summary: "schema.test.ts — 1 unit test failing (v20 migration dedup)"
+    file: "src/db/__tests__/schema.test.ts"
+    severity: low
+    discovered_by: E25-S04
+    discovered_on: 2026-03-25
+    status: fixed
+    scheduled_for: null
+    fixed_by: post-epic-cleanup-2026-03-25
+    notes: "Investigated — test passes consistently after schema stabilization. Marked fixed."
+
+  - id: KI-004
+    type: test
+    summary: "E2E overview.spec.ts — 'should display library section' blocked by onboarding overlay"
+    file: "tests/e2e/overview.spec.ts:27"
+    severity: medium
+    discovered_by: E25-S04
+    discovered_on: 2026-03-25
+    status: fixed
+    scheduled_for: null
+    fixed_by: post-epic-cleanup-2026-03-25
+    notes: "Fixed — added overlay dismissal fallback in navigateAndWait() for race condition where onboarding shows despite localStorage seed."
+
+  - id: KI-005
+    type: test
+    summary: "E2E courses.spec.ts — 'should display courses heading' blocked by onboarding overlay"
+    file: "tests/e2e/courses.spec.ts:14"
+    severity: medium
+    discovered_by: E25-S04
+    discovered_on: 2026-03-25
+    status: fixed
+    scheduled_for: null
+    fixed_by: post-epic-cleanup-2026-03-25
+    notes: "Fixed — same overlay dismissal fix as KI-004."
+
+  # --- 3-Epic Close-or-Fix Decisions (E22 → E24 → E25) ---
+
+  - id: KI-006
+    type: code
+    summary: "courseTagger SSRF bypass — direct Ollama requests skip proxy validation"
+    file: "src/ai/courseTagger.ts"
+    severity: high
+    discovered_by: E22-adversarial
+    discovered_on: 2026-03-25
+    status: fixed
+    scheduled_for: null
+    fixed_by: post-epic-E22-critical-fixes
+    notes: "Fixed during E22 post-epic — courseTagger now routes through /api/ai/ollama/chat proxy by default. Direct mode only when user explicitly opts in."
+
+  - id: KI-007
+    type: code
+    summary: "No batch concurrency control for Ollama tagging requests"
+    file: "src/lib/ollamaTagging.ts"
+    severity: high
+    discovered_by: E22-adversarial
+    discovered_on: 2026-03-25
+    status: fixed
+    scheduled_for: null
+    fixed_by: post-epic-E22-critical-fixes
+    notes: "Fixed during E22 post-epic — PromiseQueue(1) serializes tagging requests to prevent timeout cascades."
+
+  - id: KI-008
+    type: code
+    summary: "tagSource discrimination (AI vs manual) not implemented on tag records"
+    file: "src/data/types.ts"
+    severity: low
+    discovered_by: E22-adversarial
+    discovered_on: 2026-03-25
+    status: wont-fix
+    scheduled_for: null
+    fixed_by: null
+    notes: "Closed as wont-fix per 3-epic rule. UI sparkle badges distinguish AI vs manual tags visually. No feature currently needs tagSource in data model. Reopen if re-tag or confidence features are built."
+
+  - id: KI-009
+    type: code
+    summary: "matchOrCreateAuthor() read-then-write without Dexie transaction"
+    file: "src/lib/authorDetection.ts:63-93"
+    severity: medium
+    discovered_by: E25-adversarial
+    discovered_on: 2026-03-25
+    status: fixed
+    scheduled_for: null
+    fixed_by: post-epic-cleanup-2026-03-25
+    notes: "Fixed — wrapped in db.transaction('rw', db.authors, ...) to prevent duplicate author creation on concurrent calls."
+
+  # --- Documented Waivers ---
+
+  - id: KI-010
+    type: test
+    summary: "Import wizard has zero E2E tests — File System Access API cannot be automated"
+    file: "src/app/components/figma/ImportWizardDialog.tsx"
+    severity: medium
+    discovered_by: E24-adversarial
+    discovered_on: 2026-03-25
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Documented waiver — showDirectoryPicker() cannot be mocked in Playwright. 160+ unit tests cover component logic. Backfill when testable import path exists (drag-and-drop or URL-based)."
+
+  - id: KI-011
+    type: design
+    summary: "Courses page topic filter tags render as unreadable single-line text"
+    file: "src/app/components/figma/TopicFilter.tsx"
+    severity: medium
+    discovered_by: E19-S01
+    discovered_on: 2026-03-25
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Pre-existing on main — ToggleGroup items in TopicFilter lose spacing/wrapping, rendering all tags as a garbled single line. Likely a Radix ToggleGroup + Tailwind flex-wrap interaction issue."
+
+  - id: KI-012
+    type: design
+    summary: "AI model selector dropdown has broken CSS — missing borders and padding"
+    file: "src/app/components/figma/AIConfigurationSettings.tsx"
+    severity: medium
+    discovered_by: E19-S01
+    discovered_on: 2026-03-25
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Pre-existing on main — the Ollama model selector ('Select a model...' combobox) lacks proper styling. Search input and options area appear unstyled with no borders or background contrast."

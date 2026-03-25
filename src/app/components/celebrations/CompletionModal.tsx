@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import confetti from 'canvas-confetti'
 import { Trophy, CheckCircle2, Star } from 'lucide-react'
+import { useEngagementPrefsStore } from '@/stores/useEngagementPrefsStore'
 import {
   Dialog,
   DialogContent,
@@ -81,16 +82,18 @@ export function CompletionModal({
   stats,
   onContinue,
 }: CompletionModalProps) {
+  const animationsEnabled = useEngagementPrefsStore(s => s.animations)
+
   // Trigger confetti when modal opens
   useEffect(() => {
-    if (open) {
+    if (open && animationsEnabled) {
       // Small delay to let modal render
       const timeoutId = setTimeout(() => {
         triggerConfetti(type)
       }, 100)
       return () => clearTimeout(timeoutId)
     }
-  }, [open, type])
+  }, [open, type, animationsEnabled])
 
   const getIcon = () => {
     switch (type) {
@@ -192,8 +195,11 @@ export function CompletionModal({
 }
 
 /**
- * Lightweight confetti celebration without modal (for inline celebrations)
+ * Lightweight confetti celebration without modal (for inline celebrations).
+ * Respects the user's animations engagement preference.
  */
 export function celebrateCompletion(type: CelebrationType) {
+  const animationsEnabled = useEngagementPrefsStore.getState().animations
+  if (!animationsEnabled) return
   triggerConfetti(type)
 }

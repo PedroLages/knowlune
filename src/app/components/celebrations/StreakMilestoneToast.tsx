@@ -3,6 +3,7 @@ import confetti from 'canvas-confetti'
 import type { StreakMilestone } from '@/data/types'
 import { getTierConfig } from '@/lib/streakMilestones'
 import { cn } from '@/app/components/ui/utils'
+import { useEngagementPrefsStore } from '@/stores/useEngagementPrefsStore'
 
 // ── Toast component ──────────────────────────────────────────
 
@@ -13,12 +14,13 @@ interface StreakMilestoneToastProps {
 export function StreakMilestoneToast({ milestone }: StreakMilestoneToastProps) {
   const tier = getTierConfig(milestone.milestoneValue)
   const Icon = tier.icon
+  const animationsEnabled = useEngagementPrefsStore(s => s.animations)
 
   // Key on milestone.id (unique per achievement), NOT milestoneValue —
   // the same milestone value can be earned multiple times after streak resets.
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (!prefersReducedMotion) {
+    if (!prefersReducedMotion && animationsEnabled) {
       confetti({
         particleCount: tier.particleCount,
         spread: tier.spread,
@@ -26,7 +28,7 @@ export function StreakMilestoneToast({ milestone }: StreakMilestoneToastProps) {
         colors: tier.confettiColors,
       })
     }
-  }, [milestone.id, tier.particleCount, tier.spread, tier.confettiColors])
+  }, [milestone.id, tier.particleCount, tier.spread, tier.confettiColors, animationsEnabled])
 
   return (
     <div

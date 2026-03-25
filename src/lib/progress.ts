@@ -3,6 +3,7 @@ import { db } from '@/db'
 import { logStudyAction, getStudyLog } from './studyLog'
 import { addToIndex, updateInIndex, removeFromIndex } from '@/lib/noteSearch'
 import { triggerNoteLinkSuggestions } from '@/ai/knowledgeGaps/noteLinkSuggestions'
+import { unlockSidebarItem } from '@/app/hooks/useProgressiveDisclosure'
 
 const STORAGE_KEY = 'course-progress'
 const MINUTES_PER_LESSON = 15
@@ -173,6 +174,7 @@ export function markLessonComplete(courseId: string, lessonId: string) {
     lessonId,
     timestamp: new Date().toISOString(),
   })
+  unlockSidebarItem('lesson-completed')
 }
 
 export function markLessonIncomplete(courseId: string, lessonId: string) {
@@ -347,6 +349,7 @@ export async function addNote(
     await db.notes.add(newNote)
     addToIndex(newNote)
     logStudyAction({ type: 'note_saved', courseId, lessonId, timestamp: new Date().toISOString() })
+    unlockSidebarItem('note-created')
   } catch (error) {
     console.error('[Progress] Failed to add note to Dexie:', error)
   }

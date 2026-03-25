@@ -15,7 +15,8 @@ import { useIsMobile, useIsTablet, useIsDesktop } from '@/app/hooks/useMediaQuer
 import { Sheet, SheetContent, SheetTitle } from './ui/sheet'
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip'
 import { navigationGroups, settingsItem, getIsActive } from '@/app/config/navigation'
-import type { NavigationItem } from '@/app/config/navigation'
+import type { NavigationItem, NavigationGroup } from '@/app/config/navigation'
+import { useProgressiveDisclosure } from '@/app/hooks/useProgressiveDisclosure'
 import { getSettings } from '@/lib/settings'
 import { getInitials } from '@/lib/textUtils'
 import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
@@ -23,6 +24,7 @@ import { useCourseStore } from '@/stores/useCourseStore'
 import { toast } from 'sonner'
 import { QualityScoreDialog } from './session/QualityScoreDialog'
 import type { QualityScoreResult } from '@/lib/qualityScore'
+import { OnboardingOverlay } from './onboarding/OnboardingOverlay'
 
 // Individual nav link — wraps in Tooltip when collapsed
 function NavLink({
@@ -85,7 +87,15 @@ function NavLink({
 }
 
 // Reusable sidebar content component
-function SidebarContent({ onNavigate, iconOnly }: { onNavigate?: () => void; iconOnly?: boolean }) {
+function SidebarContent({
+  onNavigate,
+  iconOnly,
+  visibleGroups,
+}: {
+  onNavigate?: () => void
+  iconOnly?: boolean
+  visibleGroups: NavigationGroup[]
+}) {
   return (
     <>
       {/* Logo + tagline */}
@@ -105,7 +115,7 @@ function SidebarContent({ onNavigate, iconOnly }: { onNavigate?: () => void; ico
       {/* Grouped Navigation */}
       <nav className="flex-1 overflow-y-auto" aria-label="Main navigation">
         <div className="space-y-5">
-          {navigationGroups.map((group, idx) => (
+          {visibleGroups.map((group, idx) => (
             <div key={group.label}>
               {/* Group label — hidden in collapsed mode, replaced by separator */}
               {iconOnly ? (
@@ -161,6 +171,10 @@ export function Layout() {
 
   useStudyReminders()
   useCourseReminders()
+
+  // Progressive sidebar disclosure
+  const { filterGroups } = useProgressiveDisclosure()
+  const visibleGroups = filterGroups(navigationGroups)
 
   // Ensure courses are loaded from IndexedDB (backup for deferInit race)
   const loadCourses = useCourseStore(s => s.loadCourses)
@@ -321,7 +335,7 @@ export function Layout() {
             className={`${sidebarCollapsed ? 'w-[72px] px-0 py-6' : 'w-[220px] p-6'} bg-card flex flex-col overflow-hidden transition-[width] duration-200 ease-out h-full`}
             aria-label="Sidebar"
           >
-            <SidebarContent iconOnly={sidebarCollapsed} />
+            <SidebarContent iconOnly={sidebarCollapsed} visibleGroups={visibleGroups} />
           </aside>
 
           {/* Edge notch toggle */}
@@ -347,7 +361,10 @@ export function Layout() {
         <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
           <SheetContent side="left" className="w-[280px] p-6 flex flex-col" aria-label="Sidebar">
             <SheetTitle className="sr-only">Navigation</SheetTitle>
-            <SidebarContent onNavigate={() => setSidebarOpen(false)} />
+            <SidebarContent
+              onNavigate={() => setSidebarOpen(false)}
+              visibleGroups={visibleGroups}
+            />
           </SheetContent>
         </Sheet>
       )}
@@ -499,6 +516,9 @@ export function Layout() {
           factors={qualityResult.factors}
         />
       )}
+
+      {/* First-use onboarding overlay (E25-S07) */}
+      <OnboardingOverlay />
     </div>
   )
 }

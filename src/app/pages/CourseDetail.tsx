@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useParams, Link } from 'react-router'
 import { Clock, Video, FileText, BookOpen, Play, CheckCircle } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
@@ -18,8 +19,8 @@ import { ModuleAccordion } from '@/app/components/figma/ModuleAccordion'
 import { CourseNotesTab } from '@/app/components/notes/CourseNotesTab'
 import { categoryLabels, categoryColors } from '@/app/components/figma/CourseCard'
 import { useCourseStore } from '@/stores/useCourseStore'
-import { getAuthorById } from '@/data/authors'
 import { getAvatarSrc } from '@/lib/authors'
+import { useAuthorStore } from '@/stores/useAuthorStore'
 import { getProgress, getCourseCompletionPercent } from '@/lib/progress'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 
@@ -30,6 +31,12 @@ export function CourseDetail() {
   // Subscribe to statusMap changes to trigger re-render when content status updates
   // This ensures the progress bar reflects changes made via StatusSelector
   useContentProgressStore(s => s.statusMap)
+
+  // Subscribe to author store reactively and ensure authors are loaded
+  const { loadAuthors, getAuthorById } = useAuthorStore()
+  useEffect(() => {
+    loadAuthors()
+  }, [loadAuthors])
 
   if (!course) {
     return (
@@ -93,7 +100,7 @@ export function CourseDetail() {
                   className="inline-flex items-center gap-2.5 mb-5 px-3 py-2 rounded-xl bg-muted/50 hover:bg-muted transition-colors w-fit"
                 >
                   <Avatar className="size-8">
-                    <AvatarImage {...getAvatarSrc(author.avatar, 32)} alt={author.name} />
+                    <AvatarImage {...getAvatarSrc(author.photoUrl ?? '', 32)} alt={author.name} />
                     <AvatarFallback className="text-xs">
                       {author.name
                         .split(' ')
@@ -103,7 +110,6 @@ export function CourseDetail() {
                   </Avatar>
                   <div className="text-left">
                     <p className="text-sm font-medium leading-tight">{author.name}</p>
-                    <p className="text-xs text-muted-foreground leading-tight">{author.title}</p>
                   </div>
                 </Link>
               )

@@ -110,6 +110,7 @@ import {
   getCategoryColorMap,
   computeSkillsDimensions,
   computeWeeklyGoalProgress,
+  getSkillProficiencyForOverview,
 } from '@/lib/reportStats'
 
 /* ------------------------------------------------------------------ */
@@ -617,5 +618,80 @@ describe('computeWeeklyGoalProgress', () => {
     const result = await computeWeeklyGoalProgress()
 
     expect(result.currentMinutes).toBe(0) // (undefined ?? 0) / 60 = 0
+  })
+})
+
+describe('getSkillProficiencyForOverview', () => {
+  it('returns empty array when no courses exist', () => {
+    setCourses([])
+    const result = getSkillProficiencyForOverview()
+    expect(result).toEqual([])
+  })
+
+  it('returns empty array when only one category is populated', () => {
+    setCourses([makeCourse({ id: 'c1', category: 'behavioral-analysis' })])
+    mockGetCourseCompletionPercent.mockReturnValue(50)
+    const result = getSkillProficiencyForOverview()
+    expect(result).toEqual([])
+  })
+
+  it('returns proficiency data when 2+ categories exist', () => {
+    setCourses([
+      makeCourse({ id: 'c1', category: 'behavioral-analysis' }),
+      makeCourse({ id: 'c2', category: 'confidence-mastery' }),
+    ])
+    mockGetCourseCompletionPercent
+      .mockReturnValueOnce(80) // c1
+      .mockReturnValueOnce(60) // c2
+    const result = getSkillProficiencyForOverview()
+    expect(result).toHaveLength(2)
+    expect(result[0]).toEqual({
+      domain: 'Behavioral Analysis',
+      proficiency: 80,
+      fullMark: 100,
+    })
+    expect(result[1]).toEqual({
+      domain: 'Confidence Mastery',
+      proficiency: 60,
+      fullMark: 100,
+    })
+  })
+
+  it('averages completion across multiple courses in same category', () => {
+    setCourses([
+      makeCourse({ id: 'c1', category: 'behavioral-analysis' }),
+      makeCourse({ id: 'c2', category: 'behavioral-analysis' }),
+      makeCourse({ id: 'c3', category: 'confidence-mastery' }),
+    ])
+    mockGetCourseCompletionPercent
+      .mockReturnValueOnce(40) // c1
+      .mockReturnValueOnce(80) // c2
+      .mockReturnValueOnce(100) // c3
+    const result = getSkillProficiencyForOverview()
+    expect(result).toHaveLength(2)
+    const ba = result.find(d => d.domain === 'Behavioral Analysis')
+    expect(ba!.proficiency).toBe(60) // (40+80)/2
+  })
+
+  it('formats domain labels from category slugs', () => {
+    setCourses([
+      makeCourse({ id: 'c1', category: 'influence-authority' }),
+      makeCourse({ id: 'c2', category: 'operative-training' }),
+    ])
+    mockGetCourseCompletionPercent.mockReturnValue(50)
+    const result = getSkillProficiencyForOverview()
+    expect(result.map(d => d.domain)).toEqual(
+      expect.arrayContaining(['Influence Authority', 'Operative Training'])
+    )
+  })
+
+  it('includes fullMark: 100 on all entries', () => {
+    setCourses([
+      makeCourse({ id: 'c1', category: 'behavioral-analysis' }),
+      makeCourse({ id: 'c2', category: 'confidence-mastery' }),
+    ])
+    mockGetCourseCompletionPercent.mockReturnValue(0)
+    const result = getSkillProficiencyForOverview()
+    expect(result.every(d => d.fullMark === 100)).toBe(true)
   })
 })
