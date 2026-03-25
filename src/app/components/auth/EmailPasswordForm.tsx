@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react'
 import { Input } from '@/app/components/ui/input'
 import { Label } from '@/app/components/ui/label'
 import { Button } from '@/app/components/ui/button'
-import { useAuthStore } from '@/stores/useAuthStore'
+import { useAuthStore, NETWORK_ERROR_MESSAGE } from '@/stores/useAuthStore'
 import { toastSuccess } from '@/lib/toastHelpers'
 
 interface EmailPasswordFormProps {
@@ -54,15 +54,28 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
   }
 
   const displayError = validationError || error
+  const errorId = displayError ? 'auth-form-error' : undefined
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" aria-busy={loading}>
       {displayError && (
         <div
+          id="auth-form-error"
           role="alert"
           className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive"
         >
-          {displayError}
+          <p>{displayError}</p>
+          {error === NETWORK_ERROR_MESSAGE && (
+            <Button
+              type="submit"
+              variant="outline"
+              size="sm"
+              className="mt-2 min-h-[44px]"
+              disabled={loading}
+            >
+              Retry
+            </Button>
+          )}
         </div>
       )}
 
@@ -78,6 +91,7 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
           required
           autoComplete={isSignUp ? 'email' : 'username'}
           aria-invalid={displayError?.toLowerCase().includes('email') || undefined}
+          aria-describedby={displayError?.toLowerCase().includes('email') ? errorId : undefined}
           className="min-h-[44px]"
         />
       </div>
@@ -95,6 +109,7 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
           minLength={8}
           autoComplete={isSignUp ? 'new-password' : 'current-password'}
           aria-invalid={displayError?.toLowerCase().includes('password') || undefined}
+          aria-describedby={displayError?.toLowerCase().includes('password') ? errorId : undefined}
           className="min-h-[44px]"
         />
       </div>
@@ -112,6 +127,7 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
             required
             autoComplete="new-password"
             aria-invalid={displayError?.toLowerCase().includes('match') || undefined}
+            aria-describedby={displayError?.toLowerCase().includes('match') ? errorId : undefined}
             className="min-h-[44px]"
           />
         </div>

@@ -484,8 +484,12 @@ export default function Settings() {
                   size="sm"
                   className="gap-2 min-h-[44px]"
                   onClick={async () => {
-                    await authSignOut()
-                    toastSuccess.saved('Signed out successfully')
+                    const result = await authSignOut()
+                    if (result.error) {
+                      toastError.saveFailed(result.error)
+                    } else {
+                      toastSuccess.saved('Signed out successfully')
+                    }
                   }}
                 >
                   <LogOut className="size-4" />

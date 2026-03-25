@@ -3,7 +3,7 @@ import { CheckCircle, Loader2 } from 'lucide-react'
 import { Input } from '@/app/components/ui/input'
 import { Label } from '@/app/components/ui/label'
 import { Button } from '@/app/components/ui/button'
-import { useAuthStore } from '@/stores/useAuthStore'
+import { useAuthStore, NETWORK_ERROR_MESSAGE } from '@/stores/useAuthStore'
 
 const RESEND_COOLDOWN_SECONDS = 60
 
@@ -77,12 +77,24 @@ export function MagicLinkForm() {
   }
 
   const displayError = validationError || error
+  const errorId = displayError ? 'magic-link-error' : undefined
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" aria-busy={loading}>
       {displayError && (
-        <div role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
-          {displayError}
+        <div id="magic-link-error" role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
+          <p>{displayError}</p>
+          {error === NETWORK_ERROR_MESSAGE && (
+            <Button
+              type="submit"
+              variant="outline"
+              size="sm"
+              className="mt-2 min-h-[44px]"
+              disabled={loading}
+            >
+              Retry
+            </Button>
+          )}
         </div>
       )}
 
@@ -98,6 +110,7 @@ export function MagicLinkForm() {
           required
           autoComplete="email"
           aria-invalid={displayError?.toLowerCase().includes('email') || undefined}
+          aria-describedby={displayError?.toLowerCase().includes('email') ? errorId : undefined}
           className="min-h-[44px]"
         />
       </div>

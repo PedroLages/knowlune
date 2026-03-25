@@ -1,6 +1,6 @@
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
-import { useAuthStore } from '@/stores/useAuthStore'
+import { useAuthStore, NETWORK_ERROR_MESSAGE } from '@/stores/useAuthStore'
 
 function GoogleIcon() {
   return (
@@ -37,7 +37,18 @@ export function GoogleAuthButton() {
     <div className="space-y-4">
       {error && (
         <div role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
-          {error}
+          <p>{error}</p>
+          {error === NETWORK_ERROR_MESSAGE && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2 min-h-[44px]"
+              onClick={handleClick}
+              disabled={loading}
+            >
+              Retry
+            </Button>
+          )}
         </div>
       )}
 

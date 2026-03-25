@@ -176,7 +176,7 @@ Add an "Account" card section to Settings.tsx following the existing card patter
 
 ## Implementation Plan
 
-See [plan](plans/e19-s01-authentication-setup.md) for implementation approach.
+See [Epic 19 prerequisites plan](../plans/2026-03-14-epic-19-prerequisites.md) for architectural context.
 
 ## Implementation Notes
 

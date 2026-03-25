@@ -16,13 +16,17 @@ interface AuthActions {
   signIn: (email: string, password: string) => Promise<{ error?: string }>
   signInWithMagicLink: (email: string) => Promise<{ error?: string }>
   signInWithGoogle: () => Promise<{ error?: string }>
-  signOut: () => Promise<void>
+  signOut: () => Promise<{ error?: string }>
   /** Called by onAuthStateChange listener — do not call directly */
   setSession: (session: Session | null) => void
   clearError: () => void
 }
 
 type AuthStore = AuthState & AuthActions
+
+/** Matches the mapped network error message — used by auth form components to show Retry buttons */
+export const NETWORK_ERROR_MESSAGE =
+  'Unable to connect. Please check your internet connection and try again.'
 
 function mapSupabaseError(message: string): string {
   if (message.includes('User already registered')) {
@@ -34,8 +38,11 @@ function mapSupabaseError(message: string): string {
   if (message.includes('Email not confirmed')) {
     return 'Please check your email and confirm your account before signing in.'
   }
+  if (message.includes('Token has expired') || message.includes('already used')) {
+    return 'This link has expired or was already used. Please request a new one.'
+  }
   if (message.includes('Network')) {
-    return 'Unable to connect. Please check your internet connection and try again.'
+    return NETWORK_ERROR_MESSAGE
   }
   return message
 }
@@ -100,8 +107,14 @@ export const useAuthStore = create<AuthStore>((set) => ({
 
   signOut: async () => {
     set({ loading: true, error: null })
-    await supabase.auth.signOut()
+    const { error } = await supabase.auth.signOut()
+    if (error) {
+      const mapped = mapSupabaseError(error.message)
+      set({ loading: false, error: mapped })
+      return { error: mapped }
+    }
     set({ user: null, session: null, loading: false })
+    return {}
   },
 
   setSession: (session) => {
