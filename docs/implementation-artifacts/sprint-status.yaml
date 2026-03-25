@@ -269,7 +269,7 @@ development_status:
   # Epic 18: Accessible and Integrated Quiz Experience
   # ──────────────────────────────────────────────────
   epic-18: in-progress
-  18-1-implement-complete-keyboard-navigation: backlog
+  18-1-implement-complete-keyboard-navigation: done
   18-2-implement-aria-live-regions-for-dynamic-content: backlog
   18-3-ensure-semantic-html-and-proper-aria-attributes: backlog
   18-4-verify-contrast-ratios-and-touch-targets: backlog
