@@ -1202,7 +1202,12 @@ describe('calculateQuizAnalytics', () => {
 
   it('resolves quiz title fallback to "Unknown Quiz" for orphaned attempts', async () => {
     mockToArray.mockResolvedValue([
-      makeAttempt({ id: 'a1', quizId: 'missing-id', percentage: 60, completedAt: '2026-01-01T00:00:00Z' }),
+      makeAttempt({
+        id: 'a1',
+        quizId: 'missing-id',
+        percentage: 60,
+        completedAt: '2026-01-01T00:00:00Z',
+      }),
     ])
     mockQuizzesToArray.mockResolvedValue([])
 

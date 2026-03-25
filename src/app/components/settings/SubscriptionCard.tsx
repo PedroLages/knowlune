@@ -47,7 +47,9 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
     }
 
     loadEntitlement()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [user])
 
   // Handle checkout return
@@ -79,13 +81,15 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
           // Timeout — webhook hasn't processed yet
           setState('free')
           toastError.saveFailed(
-            'Subscription is being processed. It may take a moment — please refresh the page.',
+            'Subscription is being processed. It may take a moment — please refresh the page.'
           )
         }
       }
 
       activate()
-      return () => { cancelled = true }
+      return () => {
+        cancelled = true
+      }
     }
   }, [checkoutStatus, user])
 
@@ -111,19 +115,14 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
         <div className="flex items-center gap-3">
           <div className="rounded-full bg-gold-muted p-2">
             {state === 'activating' ? (
-              <Loader2
-                className="size-5 text-gold animate-spin"
-                aria-hidden="true"
-              />
+              <Loader2 className="size-5 text-gold animate-spin" aria-hidden="true" />
             ) : (
               <Crown className="size-5 text-gold" aria-hidden="true" />
             )}
           </div>
           <div>
             <CardTitle className="text-lg font-display leading-none">
-              {state === 'activating'
-                ? 'Activating...'
-                : 'Subscription'}
+              {state === 'activating' ? 'Activating...' : 'Subscription'}
             </CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
               {state === 'activating'
@@ -171,12 +170,8 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
             <div className="rounded-full bg-success-soft p-3">
               <CheckCircle className="size-8 text-success" />
             </div>
-            <p className="text-lg font-display font-semibold">
-              Welcome to Premium!
-            </p>
-            <p className="text-sm text-muted-foreground">
-              All premium features are now unlocked.
-            </p>
+            <p className="text-lg font-display font-semibold">Welcome to Premium!</p>
+            <p className="text-sm text-muted-foreground">All premium features are now unlocked.</p>
           </div>
         )}
 
@@ -185,9 +180,7 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <Badge variant="secondary">Free</Badge>
-              <span className="text-sm text-muted-foreground">
-                Basic features included
-              </span>
+              <span className="text-sm text-muted-foreground">Basic features included</span>
             </div>
 
             <ul className="space-y-2" role="list">
@@ -207,9 +200,7 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
               aria-label="Upgrade to Premium plan"
               aria-busy={isCheckoutLoading}
             >
-              {isCheckoutLoading && (
-                <Loader2 className="size-4 animate-spin mr-2" />
-              )}
+              {isCheckoutLoading && <Loader2 className="size-4 animate-spin mr-2" />}
               {isCheckoutLoading ? 'Starting checkout...' : 'Upgrade to Premium'}
             </Button>
           </div>
@@ -219,9 +210,7 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
         {state === 'premium' && entitlement && (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <Badge className="bg-brand text-brand-foreground border-transparent">
-                Premium
-              </Badge>
+              <Badge className="bg-brand text-brand-foreground border-transparent">Premium</Badge>
               <span className="text-sm text-muted-foreground">Monthly</span>
             </div>
 

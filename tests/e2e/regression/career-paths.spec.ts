@@ -91,9 +91,7 @@ test.describe('Career Path detail page (AC2)', () => {
     await goToCareerPaths(page)
     await getPathCards(page).first().locator('a').first().click()
     await page.waitForLoadState('networkidle')
-    const stageLabels = page
-      .getByRole('list', { name: 'Learning stages' })
-      .getByText(/^Stage \d/)
+    const stageLabels = page.getByRole('list', { name: 'Learning stages' }).getByText(/^Stage \d/)
     await expect(stageLabels.first()).toBeVisible()
     const count = await stageLabels.count()
     expect(count).toBeGreaterThanOrEqual(2)

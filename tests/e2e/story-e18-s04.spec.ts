@@ -12,7 +12,13 @@
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { seedQuizzes, seedQuizAttempts } from '../support/helpers/seed-helpers'
-import { makeQuiz, makeQuestion, makeAttempt, makeCorrectAnswer, makeWrongAnswer } from '../support/fixtures/factories/quiz-factory'
+import {
+  makeQuiz,
+  makeQuestion,
+  makeAttempt,
+  makeCorrectAnswer,
+  makeWrongAnswer,
+} from '../support/fixtures/factories/quiz-factory'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -207,7 +213,9 @@ test.describe('E18-S04: Contrast Ratios — Dark Mode', () => {
     await seedAndNavigateToQuizStart(page)
 
     // Disable transitions and apply dark mode (deterministic — no CSS timing uncertainty)
-    await page.addStyleTag({ content: '* { transition: none !important; animation: none !important; }' })
+    await page.addStyleTag({
+      content: '* { transition: none !important; animation: none !important; }',
+    })
     await page.evaluate(() => document.documentElement.classList.add('dark'))
 
     const results = await new AxeBuilder({ page })
@@ -223,7 +231,9 @@ test.describe('E18-S04: Contrast Ratios — Dark Mode', () => {
     await seedAndNavigateToQuizStart(page)
 
     // Disable transitions and apply dark mode (deterministic — no CSS timing uncertainty)
-    await page.addStyleTag({ content: '* { transition: none !important; animation: none !important; }' })
+    await page.addStyleTag({
+      content: '* { transition: none !important; animation: none !important; }',
+    })
     await page.evaluate(() => document.documentElement.classList.add('dark'))
     await startQuiz(page)
 
@@ -459,7 +469,9 @@ test.describe('E18-S04: Contrast Ratios — QuizResults Page', () => {
   test('AC5: QuizResults page passes WCAG 2.1 AA axe-core audit (dark mode)', async ({ page }) => {
     await completeQuizAndNavigateToResults(page)
 
-    await page.addStyleTag({ content: '* { transition: none !important; animation: none !important; }' })
+    await page.addStyleTag({
+      content: '* { transition: none !important; animation: none !important; }',
+    })
     await page.evaluate(() => document.documentElement.classList.add('dark'))
 
     const results = await new AxeBuilder({ page })
@@ -476,9 +488,29 @@ const REVIEW_QUIZ_ID = 'quiz-e18-s04-review'
 const REVIEW_ATTEMPT_ID = 'attempt-e18-s04-review'
 
 function buildReviewTestData() {
-  const q1 = makeQuestion({ id: 'rq1', order: 1, type: 'multiple-choice', text: 'What is WCAG?', options: ['Web accessibility standard', 'A color model', 'A font system', 'A browser'], correctAnswer: 'Web accessibility standard' })
-  const q2 = makeQuestion({ id: 'rq2', order: 2, type: 'true-false', text: 'WCAG 2.1 AA requires 4.5:1 contrast for normal text.', options: ['True', 'False'], correctAnswer: 'True' })
-  const quiz = makeQuiz({ id: REVIEW_QUIZ_ID, lessonId: `${LESSON_ID}-review`, title: 'WCAG Review Quiz', questions: [q1, q2], shuffleQuestions: false })
+  const q1 = makeQuestion({
+    id: 'rq1',
+    order: 1,
+    type: 'multiple-choice',
+    text: 'What is WCAG?',
+    options: ['Web accessibility standard', 'A color model', 'A font system', 'A browser'],
+    correctAnswer: 'Web accessibility standard',
+  })
+  const q2 = makeQuestion({
+    id: 'rq2',
+    order: 2,
+    type: 'true-false',
+    text: 'WCAG 2.1 AA requires 4.5:1 contrast for normal text.',
+    options: ['True', 'False'],
+    correctAnswer: 'True',
+  })
+  const quiz = makeQuiz({
+    id: REVIEW_QUIZ_ID,
+    lessonId: `${LESSON_ID}-review`,
+    title: 'WCAG Review Quiz',
+    questions: [q1, q2],
+    shuffleQuestions: false,
+  })
   const attempt = makeAttempt({
     id: REVIEW_ATTEMPT_ID,
     quizId: REVIEW_QUIZ_ID,
@@ -503,7 +535,9 @@ test.describe('E18-S04: Contrast Ratios — QuizReview Page', () => {
     await page.evaluate(() => localStorage.setItem('knowlune-sidebar-v1', 'false'))
     await seedQuizzes(page, [quiz as unknown as Record<string, unknown>])
     await seedQuizAttempts(page, [attempt as unknown as Record<string, unknown>])
-    await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}-review/quiz/review/${REVIEW_ATTEMPT_ID}`)
+    await page.goto(
+      `/courses/${COURSE_ID}/lessons/${LESSON_ID}-review/quiz/review/${REVIEW_ATTEMPT_ID}`
+    )
     await page.getByRole('heading').first().waitFor({ state: 'visible' })
 
     const results = await new AxeBuilder({ page })
@@ -515,14 +549,18 @@ test.describe('E18-S04: Contrast Ratios — QuizReview Page', () => {
     expect(results.violations).toEqual([])
   })
 
-  test('AC4: ReviewQuestionGrid buttons show brand focus ring (not ring-ring)', async ({ page }) => {
+  test('AC4: ReviewQuestionGrid buttons show brand focus ring (not ring-ring)', async ({
+    page,
+  }) => {
     const { quiz, attempt } = buildReviewTestData()
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
     await page.evaluate(() => localStorage.setItem('knowlune-sidebar-v1', 'false'))
     await seedQuizzes(page, [quiz as unknown as Record<string, unknown>])
     await seedQuizAttempts(page, [attempt as unknown as Record<string, unknown>])
-    await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}-review/quiz/review/${REVIEW_ATTEMPT_ID}`)
+    await page.goto(
+      `/courses/${COURSE_ID}/lessons/${LESSON_ID}-review/quiz/review/${REVIEW_ATTEMPT_ID}`
+    )
     await page.getByRole('heading').first().waitFor({ state: 'visible' })
 
     // Focus a ReviewQuestionGrid button (toolbar buttons)
@@ -545,10 +583,14 @@ test.describe('E18-S04: Contrast Ratios — QuizReview Page', () => {
     await page.evaluate(() => localStorage.setItem('knowlune-sidebar-v1', 'false'))
     await seedQuizzes(page, [quiz as unknown as Record<string, unknown>])
     await seedQuizAttempts(page, [attempt as unknown as Record<string, unknown>])
-    await page.goto(`/courses/${COURSE_ID}/lessons/${LESSON_ID}-review/quiz/review/${REVIEW_ATTEMPT_ID}`)
+    await page.goto(
+      `/courses/${COURSE_ID}/lessons/${LESSON_ID}-review/quiz/review/${REVIEW_ATTEMPT_ID}`
+    )
     await page.getByRole('heading').first().waitFor({ state: 'visible' })
 
-    await page.addStyleTag({ content: '* { transition: none !important; animation: none !important; }' })
+    await page.addStyleTag({
+      content: '* { transition: none !important; animation: none !important; }',
+    })
     await page.evaluate(() => document.documentElement.classList.add('dark'))
 
     const results = await new AxeBuilder({ page })

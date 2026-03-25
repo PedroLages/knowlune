@@ -46,7 +46,7 @@ export async function startCheckout(): Promise<{ url: string } | { error: string
  */
 export async function pollEntitlement(
   maxWaitMs = 10_000,
-  intervalMs = 1_000,
+  intervalMs = 1_000
 ): Promise<CachedEntitlement | null> {
   if (!supabase) return null
 

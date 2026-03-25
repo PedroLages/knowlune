@@ -32,9 +32,7 @@ test.describe('E18-S07: Quiz Analytics Tab', () => {
   })
 
   test('AC1: Quiz Analytics tab exists and activates on click', async ({ page }) => {
-    await seedQuizAttempts(page, [
-      makeAttempt({ id: 'e18s07-a1', quizId: QUIZ_A, percentage: 80 }),
-    ])
+    await seedQuizAttempts(page, [makeAttempt({ id: 'e18s07-a1', quizId: QUIZ_A, percentage: 80 })])
 
     await page.goto('/reports', { waitUntil: 'domcontentloaded' })
 
@@ -113,9 +111,7 @@ test.describe('E18-S07: Quiz Analytics Tab', () => {
   test('AC1: navigating directly to /reports?tab=quizzes activates Quiz Analytics tab', async ({
     page,
   }) => {
-    await seedQuizAttempts(page, [
-      makeAttempt({ id: 'e18s07-e1', quizId: QUIZ_A, percentage: 80 }),
-    ])
+    await seedQuizAttempts(page, [makeAttempt({ id: 'e18s07-e1', quizId: QUIZ_A, percentage: 80 })])
 
     await page.goto('/reports?tab=quizzes', { waitUntil: 'domcontentloaded' })
 
@@ -129,9 +125,7 @@ test.describe('E18-S07: Quiz Analytics Tab', () => {
     // still has activity (retakeData resolves synchronously via the seeded
     // attempts in the beforeEach navigation), but the analytics call returns empty.
     // Simpler: seed one attempt for hasActivity, reload after clearing it.
-    await seedQuizAttempts(page, [
-      makeAttempt({ id: 'e18s07-f1', quizId: QUIZ_A, percentage: 70 }),
-    ])
+    await seedQuizAttempts(page, [makeAttempt({ id: 'e18s07-f1', quizId: QUIZ_A, percentage: 70 })])
 
     // Navigate once to initialise hasActivity = true (retake card visible)
     await page.goto('/reports', { waitUntil: 'domcontentloaded' })
@@ -148,9 +142,7 @@ test.describe('E18-S07: Quiz Analytics Tab', () => {
   })
 
   test('AC4: metric cards collapse to 1 column on mobile viewport', async ({ page }) => {
-    await seedQuizAttempts(page, [
-      makeAttempt({ id: 'e18s07-g1', quizId: QUIZ_A, percentage: 80 }),
-    ])
+    await seedQuizAttempts(page, [makeAttempt({ id: 'e18s07-g1', quizId: QUIZ_A, percentage: 80 })])
 
     await page.setViewportSize({ width: 375, height: 812 })
     await page.goto('/reports?tab=quizzes', { waitUntil: 'domcontentloaded' })
