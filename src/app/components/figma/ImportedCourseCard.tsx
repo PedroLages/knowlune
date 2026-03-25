@@ -44,9 +44,12 @@ import { TagEditor } from '@/app/components/figma/TagEditor'
 import { VideoPlayer } from '@/app/components/figma/VideoPlayer'
 import { ThumbnailPickerDialog } from '@/app/components/figma/ThumbnailPickerDialog'
 import { EditCourseDialog } from '@/app/components/figma/EditCourseDialog'
+import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { useAuthorStore } from '@/stores/useAuthorStore'
 import { useCourseCardPreview } from '@/hooks/useCourseCardPreview'
 import { useVideoFromHandle } from '@/hooks/useVideoFromHandle'
+import { getAvatarSrc } from '@/lib/authors'
 import { db } from '@/db/schema'
 import { MomentumBadge } from './MomentumBadge'
 import type { ImportedCourse, ImportedVideo, LearnerCourseStatus } from '@/data/types'
@@ -86,6 +89,14 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
   const thumbnailUrls = useCourseImportStore(state => state.thumbnailUrls)
   const analysisStatus = useCourseImportStore(state => state.autoAnalysisStatus[course.id])
   const navigate = useNavigate()
+
+  // Subscribe to author store so card re-renders when authors load
+  const storeAuthors = useAuthorStore(state => state.authors)
+  const loadAuthors = useAuthorStore(state => state.loadAuthors)
+  useEffect(() => { loadAuthors() }, [loadAuthors])
+  const authorData = course.authorId
+    ? storeAuthors.find(a => a.id === course.authorId)
+    : undefined
 
   const [thumbnailPickerOpen, setThumbnailPickerOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -408,6 +419,31 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
             >
               {course.name}
             </h3>
+            {authorData ? (
+              <button
+                type="button"
+                data-testid="course-card-author"
+                onClick={e => {
+                  e.stopPropagation()
+                  navigate(`/authors/${authorData.id}`)
+                }}
+                className="flex items-center gap-1.5 mb-1 text-xs text-muted-foreground hover:text-brand transition-colors w-fit"
+              >
+                <Avatar className="size-5">
+                  <AvatarImage {...getAvatarSrc(authorData.photoUrl ?? '', 20)} alt="" />
+                  <AvatarFallback className="text-[8px]">
+                    {authorData.name
+                      .split(' ')
+                      .map(n => n[0])
+                      .join('')
+                      .toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <span>{authorData.name}</span>
+              </button>
+            ) : (
+              <p data-testid="course-card-unknown-author" className="text-xs text-muted-foreground mb-1">Unknown Author</p>
+            )}
             <p className="text-sm text-muted-foreground mb-2">
               Imported {new Date(course.importedAt).toLocaleDateString()}
             </p>

@@ -43,10 +43,12 @@ const storeState = {
   importError: null as string | null,
   importProgress: null,
   thumbnailUrls: {} as Record<string, string>,
+  autoAnalysisStatus: {} as Record<string, string>,
   addImportedCourse: vi.fn(),
   removeImportedCourse: vi.fn(),
   updateCourseTags: vi.fn(),
   updateCourseStatus: vi.fn(),
+  updateCourseDetails: vi.fn().mockResolvedValue(true),
   getAllTags: () => [] as string[],
   loadImportedCourses: vi.fn(),
   setImporting: vi.fn(),
@@ -138,6 +140,21 @@ vi.mock('@/app/components/figma/ThumbnailPickerDialog', () => ({
 
 vi.mock('@/app/components/figma/MomentumBadge', () => ({
   MomentumBadge: () => null,
+}))
+
+vi.mock('@/stores/useAuthorStore', () => ({
+  useAuthorStore: (selector: (state: Record<string, unknown>) => unknown) =>
+    selector({
+      authors: [],
+      loadAuthors: vi.fn(),
+    }),
+}))
+
+vi.mock('@/lib/authors', () => ({
+  getAuthorForCourse: () => undefined,
+  getAuthorForImportedCourse: () => undefined,
+  getAvatarSrc: () => ({ src: '' }),
+  getInitials: (name: string) => name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
 }))
 
 // Import component AFTER all mocks

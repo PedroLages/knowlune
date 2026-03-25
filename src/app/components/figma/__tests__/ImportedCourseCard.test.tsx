@@ -45,6 +45,19 @@ vi.mock('@/hooks/useVideoFromHandle', () => ({
   useVideoFromHandle: () => ({ blobUrl: null, error: null, loading: false }),
 }))
 
+vi.mock('@/stores/useAuthorStore', () => ({
+  useAuthorStore: (selector: (state: Record<string, unknown>) => unknown) =>
+    selector({
+      authors: [],
+      loadAuthors: vi.fn(),
+    }),
+}))
+
+vi.mock('@/lib/authors', () => ({
+  getAvatarSrc: () => ({ src: '' }),
+  getInitials: (name: string) => name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+}))
+
 vi.mock('@/db/schema', () => ({
   db: {
     importedVideos: {
