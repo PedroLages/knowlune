@@ -92,4 +92,8 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **CORS detection in browsers is indirect.** Browser fetch throws a generic `TypeError: Failed to fetch` for both network errors and CORS blocks. The solution: when in direct-connection mode, surface a CORS-specific message with the `OLLAMA_ORIGINS=*` fix since it's the most likely cause. Proxy mode rules out CORS, so the message switches to "server unreachable."
+- **Separate health check module from UI.** Extracting `ollamaHealthCheck.ts` as a standalone module made unit testing straightforward (12 tests, no component rendering needed). The UI component just calls the module and displays results.
+- **AbortController timeout pattern.** Used `AbortSignal.timeout(ms)` for connection tests. Code review flagged the 10s timeout vs. the 5s spec — documented as intentional for LAN servers with slower cold starts.
+- **Deferred startup initialization.** Running the health check in `main.tsx` via `setTimeout(..., 0)` keeps it off the critical rendering path. Silent failure (no toast) was AC4's explicit requirement.
+- **Dead interface fields accumulate.** Code review caught `serverVersion` declared but never populated — removed in the fix commit. Worth checking interface fields match actual usage during implementation, not just at review time.
