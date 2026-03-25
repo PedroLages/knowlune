@@ -1,6 +1,7 @@
 import { db } from '@/db'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { triggerAutoAnalysis } from '@/lib/autoAnalysis'
+import { unlockSidebarItem } from '@/app/hooks/useProgressiveDisclosure'
 import {
   showDirectoryPicker,
   scanDirectory,
@@ -198,6 +199,9 @@ export async function importCourseFromFolder(): Promise<ImportedCourse> {
 
     // Step 9: Trigger auto-analysis (fire-and-forget, consent-gated)
     triggerAutoAnalysis(course)
+
+    // Step 10: Unlock sidebar items via progressive disclosure
+    unlockSidebarItem('course-imported')
 
     return course
   } catch (error) {

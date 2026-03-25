@@ -16,12 +16,15 @@ import {
   Settings as SettingsIcon,
   type LucideIcon,
 } from 'lucide-react'
+import type { DisclosureKey } from '@/app/hooks/useProgressiveDisclosure'
 
 export interface NavigationItem {
   name: string
   path: string
   icon: LucideIcon
   tab?: string // optional: when set, link navigates to path?tab=tab and is active only when search matches
+  /** When set, item is hidden until this key is unlocked via progressive disclosure. */
+  disclosureKey?: DisclosureKey
 }
 
 /** Pure function to calculate whether a navigation item is active given current location. */
@@ -51,25 +54,25 @@ export const navigationGroups: NavigationGroup[] = [
       { name: 'Overview', path: '/', icon: LayoutDashboard },
       { name: 'My Courses', path: '/my-class', icon: BookOpen },
       { name: 'Courses', path: '/courses', icon: GraduationCap },
-      { name: 'Learning Path', path: '/ai-learning-path', icon: Sparkles },
-      { name: 'Knowledge Gaps', path: '/knowledge-gaps', icon: Brain },
-      { name: 'Notes', path: '/notes', icon: StickyNote },
-      { name: 'Review', path: '/review', icon: RotateCcw },
-      { name: 'Retention', path: '/retention', icon: ShieldCheck },
+      { name: 'Learning Path', path: '/ai-learning-path', icon: Sparkles, disclosureKey: 'ai-used' },
+      { name: 'Knowledge Gaps', path: '/knowledge-gaps', icon: Brain, disclosureKey: 'ai-used' },
+      { name: 'Notes', path: '/notes', icon: StickyNote, disclosureKey: 'note-created' },
+      { name: 'Review', path: '/review', icon: RotateCcw, disclosureKey: 'review-used' },
+      { name: 'Retention', path: '/retention', icon: ShieldCheck, disclosureKey: 'review-used' },
     ],
   },
   {
     label: 'Connect',
-    items: [{ name: 'Authors', path: '/authors', icon: Users }],
+    items: [{ name: 'Authors', path: '/authors', icon: Users, disclosureKey: 'course-imported' }],
   },
   {
     label: 'Track',
     items: [
-      { name: 'Challenges', path: '/challenges', icon: Target },
-      { name: 'Session History', path: '/session-history', icon: History },
-      { name: 'Study Analytics', path: '/reports', tab: 'study', icon: BarChart3 },
-      { name: 'Quiz Analytics', path: '/reports', tab: 'quizzes', icon: ClipboardList },
-      { name: 'AI Analytics', path: '/reports', tab: 'ai', icon: BrainCircuit },
+      { name: 'Challenges', path: '/challenges', icon: Target, disclosureKey: 'challenge-used' },
+      { name: 'Session History', path: '/session-history', icon: History, disclosureKey: 'challenge-used' },
+      { name: 'Study Analytics', path: '/reports', tab: 'study', icon: BarChart3, disclosureKey: 'lesson-completed' },
+      { name: 'Quiz Analytics', path: '/reports', tab: 'quizzes', icon: ClipboardList, disclosureKey: 'lesson-completed' },
+      { name: 'AI Analytics', path: '/reports', tab: 'ai', icon: BrainCircuit, disclosureKey: 'ai-used' },
     ],
   },
 ]

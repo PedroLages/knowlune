@@ -4,14 +4,16 @@ import { MoreHorizontal } from 'lucide-react'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/app/components/ui/drawer'
 import { cn } from '@/app/components/ui/utils'
 import { getPrimaryNav, getOverflowNav, getIsActive } from '@/app/config/navigation'
-
-// Get navigation items from shared config
-const primaryNav = getPrimaryNav()
-const overflowNav = getOverflowNav()
+import { useProgressiveDisclosure } from '@/app/hooks/useProgressiveDisclosure'
 
 export function BottomNav() {
   const location = useLocation()
   const [moreOpen, setMoreOpen] = useState(false)
+  const { isVisible } = useProgressiveDisclosure()
+
+  // Filter nav items by progressive disclosure
+  const primaryNav = getPrimaryNav().filter(item => isVisible(item.disclosureKey))
+  const overflowNav = getOverflowNav().filter(item => isVisible(item.disclosureKey))
 
   // Check if any overflow item is active
   const isMoreActive = overflowNav.some(item =>
