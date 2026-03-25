@@ -1,12 +1,12 @@
 ---
 story_id: E22-S05
 story_name: "Dynamic Filter Chips from AI Tags"
-status: in-progress
+status: done
 started: 2026-03-23
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-03-25
+reviewed: true
+review_started: 2026-03-25
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review-skipped, code-review, code-review-testing]
 burn_in_validated: false
 ---
 
