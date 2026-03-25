@@ -179,6 +179,19 @@ Mark the first todo as `in_progress` and proceed:
 
    If no retro file found or no debt items: skip silently.
 
+7d. **Known issues warning** (shift-left from /review-story):
+
+   Read `docs/known-issues.yaml`. If the file exists and has `open` issues, get the list of files this story will likely touch (from epic tasks/subtasks or the story file). Cross-reference against the `file` field of open known issues. If any match:
+
+   ```
+   ⚠️ Known Issues in Files You May Touch:
+   - [KI-NNN] [severity] file:line — summary
+   - [KI-NNN] [severity] file:line — summary
+   Tip: Consider fixing these during implementation. Mark as fixed_by: E##-S## in known-issues.yaml.
+   ```
+
+   If no open issues or no file overlap: skip silently.
+
    Mark "Suggest ATDD tests" → `in_progress`.
 
 8. **ATDD test suggestion** (idempotent):

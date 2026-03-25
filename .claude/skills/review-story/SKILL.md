@@ -180,7 +180,7 @@ Mark the first todo as `in_progress` and proceed:
       - Note in output: "Auto-fixed N ESLint issues."
    d. **Type check** — `npx tsc --noEmit`. If errors found:
       - Auto-fix: attempt to resolve type errors in files changed by the current branch (`git diff --name-only main...HEAD`). Only fix errors in branch-changed files — do not fix pre-existing errors in other files.
-      - Re-run `npx tsc --noEmit`. If errors remain only in files NOT changed by the branch, note them as pre-existing and continue. If errors remain in branch-changed files, STOP with error output.
+      - Re-run `npx tsc --noEmit`. If errors remain only in files NOT changed by the branch, log them to `docs/known-issues.yaml` (see "Known Issues Register" section below) and continue. If errors remain in branch-changed files, STOP with error output.
    e. `npm run build` — STOP on failure with build errors.
    f. `npm run test:unit -- --run` — STOP on failure. If no unit test script or no test files, note and continue.
    g. E2E tests — run smoke specs + current story's spec on Chromium only:
@@ -579,6 +579,50 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
     ```
 
 After fixing issues, re-run `/review-story` — completed agent reviews are preserved and reused.
+
+## Known Issues Register
+
+During review, you may encounter **pre-existing issues** — failures in files NOT changed by this story that already exist on `main`. These must NOT block the story but should be tracked for later triage.
+
+**Register file**: `docs/known-issues.yaml`
+
+### When to log
+
+Log a known issue when:
+- **Pre-check** finds errors only in files NOT changed by the branch (typecheck, lint, build failures in untouched files)
+- **E2E smoke tests** fail on specs unrelated to the current story (pre-existing flakiness or regressions)
+- **Review agents** classify a finding as "pre-existing" or "in files not changed by this story"
+
+Do NOT log:
+- Issues in files changed by the current branch (these are story-related — fix them)
+- Dependency audit warnings (tracked separately via `npm audit`)
+
+### How to log
+
+Append to the `issues` array in `docs/known-issues.yaml`:
+
+```yaml
+- id: KI-NNN          # increment from last entry (KI-001, KI-002, ...)
+  type: typecheck      # test | lint | typecheck | build | design | code
+  summary: "Brief description of the issue"
+  file: "path/to/file.ts:42"
+  severity: low        # low | medium | high
+  discovered_by: E##-S##
+  discovered_on: YYYY-MM-DD
+  status: open
+  scheduled_for: null
+  fixed_by: null
+  notes: "Additional context — why this is pre-existing, not story-related"
+```
+
+### Completion output
+
+If any known issues were logged during this review, add a summary line after the gate table:
+
+```
+**Known issues logged**: N pre-existing issue(s) added to docs/known-issues.yaml (KI-NNN, KI-NNN)
+These are NOT caused by this story — triage during post-epic review.
+```
 
 ## Route Map
 
