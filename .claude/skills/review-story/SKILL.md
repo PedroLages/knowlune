@@ -532,10 +532,11 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
 
     | Gate                  | Result                    |
     | --------------------- | ------------------------- |
-    | Build                 | [pass/fail]               |
+    | Dependency audit      | [clean/N warnings]        |
+    | Format check          | [pass/auto-fixed N files/fail] |
     | Lint                  | [pass/fail/skipped]       |
     | Type check            | [pass/auto-fixed/fail]    |
-    | Format check          | [pass/auto-fixed N files/fail] |
+    | Build                 | [pass/fail]               |
     | Unit tests            | [pass (N tests)/skipped]  |
     | E2E tests             | [pass (N tests)/skipped]  |
     | Design review         | [pass/N warnings/skipped] |
