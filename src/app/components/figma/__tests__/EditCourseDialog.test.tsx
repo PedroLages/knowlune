@@ -6,6 +6,26 @@ import type { ImportedCourse } from '@/data/types'
 
 const mockUpdateCourseDetails = vi.fn().mockResolvedValue(undefined)
 
+vi.mock('@/db', () => ({
+  db: {
+    importedVideos: {
+      where: () => ({
+        equals: () => ({
+          sortBy: () => Promise.resolve([]),
+        }),
+      }),
+    },
+  },
+}))
+
+vi.mock('../VideoReorderList', () => ({
+  VideoReorderList: ({ videos }: { videos: unknown[] }) => (
+    <div data-testid="video-reorder-list">
+      {videos.length === 0 ? 'No videos in this course.' : `${videos.length} videos`}
+    </div>
+  ),
+}))
+
 vi.mock('@/stores/useCourseImportStore', () => ({
   useCourseImportStore: Object.assign(
     (selector: (state: Record<string, unknown>) => unknown) =>
@@ -161,5 +181,22 @@ describe('EditCourseDialog', () => {
     await user.clear(catInput)
     await user.type(catInput, 'design')
     expect(screen.getByTestId('edit-course-save')).toBeEnabled()
+  })
+
+  it('renders Details and Video Order tabs', () => {
+    renderDialog()
+    expect(screen.getByTestId('edit-course-tabs')).toBeInTheDocument()
+    expect(screen.getByTestId('tab-details')).toBeInTheDocument()
+    expect(screen.getByTestId('tab-videos')).toBeInTheDocument()
+  })
+
+  it('switches to Video Order tab', async () => {
+    const user = userEvent.setup()
+    renderDialog()
+    await user.click(screen.getByTestId('tab-videos'))
+    expect(screen.getByTestId('video-reorder-list')).toBeInTheDocument()
+    expect(screen.getByTestId('edit-course-done')).toBeInTheDocument()
+    // Save button should not be visible on videos tab
+    expect(screen.queryByTestId('edit-course-save')).not.toBeInTheDocument()
   })
 })
