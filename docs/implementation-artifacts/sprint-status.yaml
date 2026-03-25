@@ -354,7 +354,7 @@ development_status:
   24-4-ai-metadata-suggestions-during-import: done
   24-5-post-import-course-editing-dialog: done
   24-6-video-drag-and-drop-reorder: done
-  epic-24-retrospective: optional
+  epic-24-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 25: Author Management & New User Experience
