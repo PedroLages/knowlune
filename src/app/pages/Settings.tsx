@@ -198,16 +198,21 @@ export default function Settings() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [checkoutStatus, setCheckoutStatus] = useState<'success' | 'cancel' | null>(null)
 
+  // Run once on mount — intentionally reads searchParams only on initial load
+  const checkoutParamRef = useRef(searchParams.get('checkout'))
   useEffect(() => {
-    const status = searchParams.get('checkout') as 'success' | 'cancel' | null
+    const status = checkoutParamRef.current as 'success' | 'cancel' | null
     if (status) {
       setCheckoutStatus(status)
-      // Clean up query params from URL
-      searchParams.delete('checkout')
-      searchParams.delete('session_id')
-      setSearchParams(searchParams, { replace: true })
+      const cleaned = new URLSearchParams(window.location.search)
+      cleaned.delete('checkout')
+      cleaned.delete('session_id')
+      const newUrl = cleaned.toString()
+        ? `${window.location.pathname}?${cleaned}`
+        : window.location.pathname
+      window.history.replaceState({}, '', newUrl)
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
   // Export state
   const [isExporting, setIsExporting] = useState(false)
