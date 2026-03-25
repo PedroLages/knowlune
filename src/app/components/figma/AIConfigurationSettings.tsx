@@ -546,13 +546,13 @@ export function AIConfigurationSettings() {
                 {settings.ollamaSettings?.directConnection && (
                   <div className="text-xs space-y-1" role="alert">
                     <p className="text-warning">
-                      Direct mode active. Ensure your Ollama server has CORS enabled.
+                      Direct mode active. Ensure your Ollama server has{' '}
+                      <code className="bg-muted px-1 rounded">OLLAMA_ORIGINS=*</code> set.
                     </p>
                     {isPrivateNetworkUrl(ollamaUrl || settings.ollamaSettings?.serverUrl || '') && (
-                      <p className="text-destructive">
-                        Warning: Direct mode may not work with LAN addresses (192.168.x, 10.x, 172.x)
-                        due to Chrome&apos;s Private Network Access policy. Use proxy mode (default)
-                        instead, which requires the backend server (<code className="bg-muted px-1 rounded">npm run server</code>).
+                      <p className="text-muted-foreground">
+                        Your browser may ask permission to access your local network — click
+                        Allow when prompted. This is normal for LAN connections.
                       </p>
                     )}
                   </div>

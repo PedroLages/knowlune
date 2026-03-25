@@ -913,6 +913,9 @@ shadcn/ui provides the foundation — these components are already built and sty
 | **Phase 3: Deep Features** | E09 | AIChatPanel, CitationLink, AIConsentToggle | AI is a power feature — deferred until core loop is solid |
 | **Phase 3: Deep Features** | E11 | ReviewCard, GradeButtons, ReviewQueue | Spaced repetition adds a new "Act" path to the loop |
 | **Phase 4: Polish** | E10 | OnboardingChecklist, ContextualTooltip, EmptyState | Onboarding comes last — you need the features before you can onboard to them |
+| **Phase 2: YouTube** | E23 | YouTubeImportDialog, URLInputStep, MetadataPreview, ChapterEditor, TranscriptPanel | YouTube Course Builder — 4-step wizard + post-import transcript panel |
+| **Post-MVP: Auth** | E19 | AuthDialog, SubscriptionStatus, UpgradeCTA, TrialIndicator | Platform & Entitlement — sign-up/in, billing, premium gating |
+| **Post-MVP: Pathways** | E20 | CareerPathCard, CareerPathDetail, ReviewCard, GradeButtons, FlashcardLibrary, SkillRadarChart, ActivityHeatmap | Learning Pathways — career paths, flashcards, analytics visualizations |
 
 ## UX Consistency Patterns
 
@@ -1276,3 +1279,1190 @@ LevelUp is a personal learning tool — accessibility isn't just compliance, it'
 - Skip link: First focusable element on every page, hidden until focused
 - `tabIndex` only: `0` (natural order) or `-1` (programmatic focus) — never positive values
 - Heading hierarchy: One `h1` per page, sequential `h2`→`h3`→`h4` — never skip levels
+
+---
+
+## YouTube Course Builder
+
+**Feature 12 (Epic 23) — Added 2026-03-25**
+
+The YouTube Course Builder transforms YouTube playlists and individual videos into structured courses with chapters, transcripts, and full feature parity with local courses. It serves as both the primary acquisition funnel (free core feature) and a key differentiator — no competitor combines YouTube content capture, AI-powered organization, transcript search, and spaced-repetition study in a single local-first application.
+
+**PRD Requirements:** FR112–FR123, NFR69–NFR74
+**Technical Architecture:** YouTube Data API v3 (metadata) + `youtube-transcript` npm (captions, ~90% coverage) + faster-whisper on Unraid (Whisper fallback for ~10% without captions) + Ollama/BYOK LLM (AI structuring)
+
+### 1. Entry Point & Source Selection
+
+**Current State:** The Courses page has a single "Import Course" button (`Courses.tsx:303-310`) that opens `ImportWizardDialog` for local folder import.
+
+**Design Change:** Replace the single button with a `DropdownMenu` offering two import paths:
+
+```
+┌─────────────────────────────────┐
+│  + Add Course              ▾    │
+├─────────────────────────────────┤
+│  📁  Import from Folder         │
+│      Import a local course      │
+│─────────────────────────────────│
+│  ▶️  Build from YouTube         │
+│      Paste a URL or playlist    │
+└─────────────────────────────────┘
+```
+
+**Behavior:**
+- "Import from Folder" opens the existing `ImportWizardDialog` (unchanged)
+- "Build from YouTube" opens a new `YouTubeImportDialog` (separate component — see rationale below)
+- The dropdown trigger uses `variant="brand"` (primary CTA) with a chevron-down icon
+- Icons: `FolderOpen` for folder, `Youtube` from lucide-react for YouTube
+
+**Empty State Update:**
+The Courses page empty state CTA should also offer both paths. Update the empty state illustration and action buttons:
+```
+      [illustration: course import]
+  "Start building your library"
+  [📁 Import from Folder]  [▶️ Build from YouTube]
+```
+
+**Why a Separate Dialog (Not Extending ImportWizardDialog):**
+The existing wizard is a 2-step flow tightly coupled to `FileSystemDirectoryHandle` and `scanCourseFolder()`. YouTube import is fundamentally different: URL-based input, async metadata fetching over network, AI-powered structuring with a review step, and chapter editing. Forcing both into one dialog would create confusing conditional branches. Shared patterns (step indicators, AI suggestions, course details form) are better extracted as reusable components.
+
+### 2. URL Input & Validation (Wizard Step 1)
+
+The YouTube import wizard is a **4-step dialog** using `sm:max-w-3xl` (768px), wider than the existing `sm:max-w-lg` to accommodate video thumbnails and the chapter editor.
+
+**Step Indicator:** Reuse the numbered-circle-with-chevron pattern from `ImportWizardDialog:280-308`:
+
+```
+  ① Paste URLs  ›  ② Preview  ›  ③ Organize  ›  ④ Details
+  ─────────────    ─────────     ──────────     ────────
+     (active)      (upcoming)    (upcoming)    (upcoming)
+```
+
+**URL Input Interface:**
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  ① Paste URLs  ›  ② Preview  ›  ③ Organize  ›  ④ Details       │
+│─────────────────────────────────────────────────────────────────│
+│                                                                  │
+│  Build a course from YouTube                                     │
+│                                                                  │
+│  Paste a YouTube video URL, playlist URL, or multiple            │
+│  video URLs (one per line)                                       │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │ https://youtube.com/playlist?list=PLxyz...                 │  │
+│  │                                                            │  │
+│  │                                                            │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│  ✅ Playlist detected — 22 videos                                │
+│                                                                  │
+│                                          [Cancel]  [Next →]      │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Input Component:** `Textarea` (multi-line) with placeholder text: "Paste a YouTube video URL, playlist URL, or multiple video URLs (one per line)"
+
+**Auto-Detection on Paste:** Parse input immediately on change to identify:
+
+| Input Type | Detection Pattern | Feedback |
+|---|---|---|
+| Single video URL | `youtube.com/watch?v=` or `youtu.be/` | ✅ "1 video detected" (green text) |
+| Playlist URL | `youtube.com/playlist?list=` or `&list=` in video URL | ✅ "Playlist detected" (green text) |
+| Multiple video URLs | Multiple lines, each a valid video URL | ✅ "3 videos detected" (green text) |
+| Invalid URL | No YouTube URL pattern matched | ❌ "Not a valid YouTube URL" (`text-destructive`, `border-destructive` on textarea) |
+| Mixed valid/invalid | Some lines valid, some not | ⚠️ "2 videos detected, 1 invalid URL skipped" (`text-warning`) |
+| Empty | No input | Neutral state, "Next" button disabled |
+
+**Auto-Fetch Behavior:** Begin metadata fetch immediately when input is valid (debounced 500ms after last keystroke). No separate "Fetch" button — matches the existing pattern where `ImportWizardDialog` auto-scans immediately after folder selection. The "Next" button enables once at least 1 valid URL is detected.
+
+**Playlist URL with Video:** When a user pastes a video URL that includes a `&list=` parameter, show a choice:
+```
+This video is part of a playlist (22 videos).
+[Import full playlist]  [Import this video only]
+```
+
+### 3. Metadata Preview (Wizard Step 2)
+
+**Loading State:**
+Use skeleton screens matching the video list layout. Each skeleton row: 16:9 thumbnail placeholder (80px wide, `rounded-lg`) + two text line skeletons + duration skeleton badge.
+
+Show a determinate `Progress` bar with count:
+```
+Fetching video info... 12 of 22
+[████████████░░░░░░░░░░░░░░░░░░] 55%
+```
+
+Per NFR70: metadata should complete within 3s/video, 5s for a 200-video playlist. If over 5 seconds elapsed, show supplementary text: "This might take a moment for large playlists..."
+
+**Preview Layout:**
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  ① Paste URLs  ›  ② Preview  ›  ③ Organize  ›  ④ Details       │
+│─────────────────────────────────────────────────────────────────│
+│                                                                  │
+│  🎬 Microservices Architecture Series                            │
+│  Tech Channel • 22 videos • 8h 42m total                        │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │ [thumb] Introduction to Microservices          12:34     │    │
+│  │ [thumb] Service Boundaries & Context Maps      18:45     │    │
+│  │ [thumb] API Design Patterns                    22:10     │    │
+│  │ [thumb] Domain-Driven Design Basics            15:30     │    │
+│  │ [thumb] ⚠️ [Private video — will be skipped]            │    │
+│  │ [thumb] Hands-on: Building Your First Service  14:24     │    │
+│  │ ...                                                      │    │
+│  └──────────────────────────────────────────────────────────┘    │
+│                                                                  │
+│  ⚠️ 2 of 22 videos are unavailable and will be skipped          │
+│                                                                  │
+│                                     [← Back]  [Next →]          │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Video Row Anatomy:**
+- Thumbnail: 80px wide, 16:9 aspect, `rounded-lg`, loaded from YouTube API `thumbnails.default.url`
+- Title: `text-sm font-medium`, truncated with ellipsis at 2 lines
+- Duration: `text-xs text-muted-foreground tabular-nums`, right-aligned badge
+- Channel name: shown per-video only when multiple channels; shown once at the top as summary for single-channel playlists
+
+**Unavailable Videos:**
+- Private/deleted videos: dimmed row (`opacity-50`), strikethrough title, `AlertTriangle` warning icon
+- Summary banner below the list: "⚠️ 2 of 22 videos are unavailable and will be skipped" (`text-warning`)
+- User can manually remove any video row via an X button (hover-revealed)
+
+**Scrollable List:** `max-h-[50vh] overflow-y-auto` with scroll shadows (matches existing `ImportWizardDialog:341` pattern)
+
+### 4. AI Organization & Chapter Structure (Wizard Step 3)
+
+This is the core differentiator step. Two paths exist depending on whether an AI provider is configured.
+
+**When AI Provider IS Configured (Premium Path):**
+
+Loading state: "AI is analyzing video metadata and organizing your course..." with Sparkles icon animation on `bg-brand-soft` background (reuses `ImportWizardDialog:363-378` pattern). Duration: 3-10s depending on playlist size and LLM speed.
+
+Result display:
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  ① Paste URLs  ›  ② Preview  ›  ③ Organize  ›  ④ Details       │
+│─────────────────────────────────────────────────────────────────│
+│                                                                  │
+│  ✨ AI organized 20 videos into 5 chapters                       │
+│  Drag to reorder, click to rename, or edit as needed             │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │ ≡ ▶ Service Design Fundamentals    5 videos • 1h 23m    │    │
+│  │   ├── ≡ 1. Introduction to Microservices       12:34    │    │
+│  │   ├── ≡ 2. Service Boundaries                  18:45    │    │
+│  │   ├── ≡ 3. API Design Patterns                 22:10    │    │
+│  │   ├── ≡ 4. Domain-Driven Design Basics          15:30   │    │
+│  │   └── ≡ 5. Building Your First Service         14:24    │    │
+│  │                                          [✨ AI Suggested]│    │
+│  │──────────────────────────────────────────────────────────│    │
+│  │ ▶ Communication Patterns             4 videos • 58m     │    │
+│  │   (collapsed)                                 [✨ AI Suggested]│
+│  │──────────────────────────────────────────────────────────│    │
+│  │ ▶ Data Management                    4 videos • 1h 05m  │    │
+│  │   (collapsed)                                 [✨ AI Suggested]│
+│  │──────────────────────────────────────────────────────────│    │
+│  │ ...                                                      │    │
+│  └──────────────────────────────────────────────────────────┘    │
+│                                                                  │
+│  [+ Add Chapter]                       [← Back]  [Next →]       │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**When AI Provider is NOT Configured (Free Path):**
+
+Same visual structure (Accordion with chapters) but with different badging and an informational banner:
+
+```
+  ┌───────────────────────────────────────────────────────────┐
+  │ ℹ️ Videos grouped by keyword similarity from titles.       │
+  │ Set up an AI provider in Settings for smarter             │
+  │ chapter organization.                    [Go to Settings] │
+  └───────────────────────────────────────────────────────────┘
+
+  ≡ ▶ Microservices Basics           8 videos • 2h 10m  [Auto-grouped]
+  ≡ ▶ Advanced Patterns              6 videos • 1h 45m  [Auto-grouped]
+  ≡ ▶ Hands-on Projects              6 videos • 1h 47m  [Auto-grouped]
+```
+
+The info banner uses `text-xs text-muted-foreground` with `Info` icon and a `variant="link"` button to Settings. The "Auto-grouped" badge uses `variant="secondary"` (no sparkles).
+
+**AI Optional Communication Pattern:** Follow the established `useAISuggestions` principle — AI auto-populates when available, the user always has manual control regardless. Never block the flow on AI availability.
+
+### 5. Course Structure Editor
+
+The chapter editor on Step 3 supports full structural manipulation. This is the same component used for both initial creation and post-import editing (FR119).
+
+**Chapter-Level Operations:**
+
+| Operation | Interaction | Visual Feedback |
+|---|---|---|
+| **Rename** | Click chapter title → inline `Input` appears | Title text replaces with Input, auto-focused, Enter to confirm, Escape to cancel |
+| **Reorder** | Drag via `GripVertical` handle on chapter header | Ghost preview follows cursor, drop zone indicators between chapters |
+| **Add** | "Add Chapter" ghost button at bottom of list | New empty chapter appended, title auto-focused for naming |
+| **Remove** | X button on chapter header (hover-revealed) | Confirmation toast: "Chapter removed. 4 videos moved to Uncategorized." with Undo action |
+| **Split** | Right-click or `...` menu → "Split after video N" | Chapter splits at selected position, second half gets name "{Original} (continued)" |
+| **Merge** | `...` menu → "Merge with chapter below" | Videos from next chapter appended, next chapter removed |
+
+**Video-Level Operations (within/between chapters):**
+
+| Operation | Interaction | Visual Feedback |
+|---|---|---|
+| **Reorder within chapter** | Drag via `GripVertical` handle | Same as existing `VideoReorderList` — position numbers update live |
+| **Move between chapters** | Drag video to a different chapter's drop zone | Drop zone highlights when hovering over target chapter |
+| **Remove** | X button on video row (hover-revealed) | Sonner toast: "Video removed" with Undo (lightweight, no dialog) |
+
+**Implementation:** Uses `@dnd-kit/core` + `@dnd-kit/sortable` with multiple `SortableContext` containers (one per chapter). Extends the existing single-list pattern from `VideoReorderList.tsx`.
+
+**Visual Hierarchy:**
+```
+Chapter: {name} ({count} videos, {duration})  [badge] [grip] [⋯] [×]
+  ├── [grip] [#] [thumb] {video title}           {duration}    [×]
+  ├── [grip] [#] [thumb] {video title}           {duration}    [×]
+  └── [grip] [#] [thumb] {video title}           {duration}    [×]
+```
+
+**Uncategorized Section:** If videos are removed from all chapters or if the rule-based grouping can't classify some videos, they appear in a special "Uncategorized" section at the bottom that the user can drag videos out of into named chapters.
+
+**Post-Import Editing:** After course creation, the existing `EditCourseDialog` is extended with a "Chapters" tab (alongside "Details" and "Video Order") for YouTube-sourced courses. The `ChapterEditor` component is shared between the import wizard and the edit dialog.
+
+### 6. Course Details (Wizard Step 4)
+
+The final step collects course metadata. This mirrors the existing `ImportWizardDialog` details step (`ImportWizardDialog:340-620`) with YouTube-specific adaptations.
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  ① Paste URLs  ›  ② Preview  ›  ③ Organize  ›  ④ Details       │
+│─────────────────────────────────────────────────────────────────│
+│                                                                  │
+│  Course Details                                                  │
+│                                                                  │
+│  Course Name                                                     │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │ Microservices Architecture Series                          │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  Description                                    [✨ AI Suggested] │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │ A comprehensive 20-video series covering microservices     │  │
+│  │ architecture from fundamentals to advanced patterns...     │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  Tags                                           [✨ AI Suggested] │
+│  [ microservices ] [ architecture ] [ backend ] [ + add tag ]    │
+│                                                                  │
+│  Cover Image                                                     │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐                         │
+│  │ playlist │ │ video 1  │ │ video 2  │                          │
+│  │ thumb ✓  │ │ thumb    │ │ thumb    │                          │
+│  └──────────┘ └──────────┘ └──────────┘                          │
+│                                                                  │
+│  Author                                                          │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │ Tech Channel (auto-detected from YouTube)                  │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│                               [← Back]  [Create Course]         │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Pre-Filled Values:**
+- **Course Name:** Playlist title (if playlist) or channel name + " Course" (if individual videos)
+- **Description:** AI-generated from video metadata if AI provider configured; empty otherwise
+- **Tags:** AI-suggested if available (per existing `useAISuggestions` pattern); empty otherwise
+- **Cover Image:** Gallery of playlist thumbnail + first 5 video thumbnails. Playlist thumbnail selected by default. Loaded from YouTube API URLs (not `FileSystemFileHandle`).
+- **Author:** Auto-detected from YouTube channel name. Creates a new author entry or links to existing if channel name matches.
+
+**AI Suggestion Pattern:** Identical to existing `ImportWizardDialog` — sparkles badge appears next to AI-populated fields, fields are editable regardless, AI suggestions auto-apply only when user hasn't manually edited.
+
+**Create Course Action:** Button uses `variant="brand"` with text "Create Course". On click:
+1. Course saved to IndexedDB (Dexie)
+2. Dialog closes
+3. Course appears immediately in the Courses page library
+4. Background transcript extraction begins (see Progress section)
+5. Sonner success toast: "Course created! Extracting transcripts in the background..."
+
+### 7. Progress & Error Feedback
+
+The YouTube import has three distinct async phases, each with tailored feedback.
+
+**Phase 1: Metadata Fetch (Step 1 → Step 2 transition)**
+
+| Aspect | Specification |
+|---|---|
+| Trigger | Valid URL detected (debounced 500ms) |
+| Duration | 1-5s (NFR70) |
+| Feedback | Determinate `Progress` bar: "Fetching video info... 12 of 22" |
+| Slow threshold | >5s shows "This might take a moment for large playlists..." |
+| Component | shadcn/ui `Progress` + count text |
+
+**Phase 2: AI Structuring (Step 2 → Step 3 transition)**
+
+| Aspect | Specification |
+|---|---|
+| Trigger | User clicks "Next" from preview step (AI path only) |
+| Duration | 3-10s |
+| Feedback | Indeterminate: `Sparkles` icon with `animate-pulse` on `bg-brand-soft` + "AI is organizing your course..." |
+| Fallback | If AI times out (>15s) or errors, auto-fall back to rule-based grouping + info toast |
+| Component | Custom loading state (reuses `ImportWizardDialog:363-378` pattern) |
+
+**Phase 3: Transcript Extraction (Background, Post-Import)**
+
+| Aspect | Specification |
+|---|---|
+| Trigger | Course creation confirmed |
+| Duration | 1-60s per video (NFR71: <2s for `youtube-transcript`, up to 60s for Whisper) |
+| Feedback | Persistent banner on course detail page + per-video status icons |
+| Component | Inline progress indicator on course detail page |
+
+**Per-Video Transcript Status Icons:**
+
+| Status | Icon | Color | Meaning |
+|---|---|---|---|
+| Available | `Check` | `text-success` | Transcript extracted and searchable |
+| Extracting | `Loader2` (spinning) | `text-muted-foreground` | Currently fetching captions |
+| Queued for Whisper | `Clock` | `text-warning` | No captions available, queued for Whisper transcription |
+| Whisper not configured | `AlertTriangle` | `text-muted-foreground` | No captions, no Whisper endpoint — shows "Set up Whisper in Settings" on hover |
+| Failed | `XCircle` | `text-destructive` | Extraction failed — shows error detail on hover |
+
+**Course Detail Page Banner:**
+```
+┌────────────────────────────────────────────────────────────────┐
+│ 📝 Extracting transcripts... 18 of 20 complete                 │
+│ [████████████████████████████████████░░░░] 90%                  │
+└────────────────────────────────────────────────────────────────┘
+```
+
+Banner uses `bg-brand-soft text-brand-soft-foreground rounded-xl p-4` and dismisses automatically when all transcripts complete.
+
+**Error States:**
+
+| Error | Display Location | Message | Recovery |
+|---|---|---|---|
+| Invalid YouTube URL | Below textarea (Step 1) | "Not a valid YouTube URL. Paste a link like youtube.com/watch?v=..." | User corrects input |
+| API quota exceeded | Sonner toast (persistent) + Step 2 banner | "YouTube API limit reached. Try again tomorrow or use a different API key." | Wait 24h or configure different key in Settings |
+| Network error | Sonner toast (persistent) | "Couldn't reach YouTube. Check your connection." + [Retry] button | Click Retry |
+| Private/deleted video | Dimmed row in Step 2 list | "⚠️ This video is unavailable and will be skipped" | Auto-excluded, user can manually remove |
+| Transcript extraction failed | Warning icon on video row in course detail | Tooltip: "Captions unavailable for this video" | Queue for Whisper or accept no transcript |
+| AI structuring failed | Info toast + auto-fallback | "AI unavailable, using keyword grouping instead" + [Go to Settings] | Set up AI provider or accept rule-based grouping |
+
+### 8. Transcript Panel (Post-Import)
+
+The transcript panel provides synchronized text alongside YouTube video playback, supporting search and click-to-seek (FR122).
+
+**Responsive Hybrid Layout:**
+
+**Desktop (>1024px):** Right-side panel alongside the YouTube player
+
+```
+┌─────────────────────────────────────┬──────────────────────────┐
+│                                     │  [Transcript] [Summary]  │
+│                                     │  [Notes]                 │
+│       YouTube Player                │──────────────────────────│
+│       (16:9 iframe)                 │  🔍 Search transcript    │
+│                                     │──────────────────────────│
+│                                     │  0:00  Hello and welcome │
+│                                     │  0:15  Today we cover... │
+├─────────────────────────────────────┤  ▶0:32  Let's start with │◄ active
+│                                     │  0:48  The key concept   │
+│  Course Info / Chapter Navigation   │  1:05  Moving on to...   │
+│                                     │  ...                     │
+└─────────────────────────────────────┴──────────────────────────┘
+```
+
+Layout: CSS Grid with `grid-cols-[1fr_480px]`. Panel width: 480px fixed. Player maintains 16:9 aspect ratio within remaining space.
+
+**Tablet/Mobile (≤1024px):** Stacked below the video
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│                                                                │
+│              YouTube Player (16:9 iframe)                       │
+│                                                                │
+├────────────────────────────────────────────────────────────────┤
+│  [Transcript] [Summary] [Notes]                                │
+│────────────────────────────────────────────────────────────────│
+│  🔍 Search transcript                                          │
+│────────────────────────────────────────────────────────────────│
+│  0:00  Hello and welcome to this course...                     │
+│  0:15  Today we're going to cover several key topics...        │
+│  ▶0:32  Let's start with the fundamentals of...          ◄ active
+│  0:48  The key concept here is that services should...         │
+│  ...                                                           │
+└────────────────────────────────────────────────────────────────┘
+```
+
+On mobile, the transcript section uses `max-h-[40vh] overflow-y-auto` to keep both video and transcript visible. A toggle button collapses/expands the transcript.
+
+**Tab Structure:**
+
+| Tab | Content | Availability |
+|---|---|---|
+| **Transcript** | Synchronized scrolling text with timestamps | Free (when transcript available) |
+| **Summary** | AI-generated course/video summary | Premium (requires AI provider + transcript) |
+| **Notes** | User's timestamped notes for this video | Free (existing functionality) |
+
+**Transcript Display:**
+
+Each transcript segment is a clickable block:
+
+```
+┌────────────────────────────────────────────────────┐
+│  0:32   Let's start with the fundamentals of       │  ← clickable
+│         service-oriented architecture. The key      │
+│         principle is loose coupling between...      │
+└────────────────────────────────────────────────────┘
+```
+
+- Timestamp: left-aligned, `text-xs text-muted-foreground tabular-nums`, fixed width (48px)
+- Text: right of timestamp, `text-sm`, wrapping
+- Active segment (matching current playback position): `bg-brand-soft rounded-lg` background
+- Auto-scroll: transcript scrolls to keep active segment in view. User scroll interrupts auto-scroll; re-engages after 5 seconds of inactivity or on segment click.
+
+**Click-to-Seek:**
+- Clicking any segment seeks the YouTube iframe player to that timestamp via the YouTube IFrame Player API (`player.seekTo(seconds)`)
+- Visual feedback: clicked segment briefly pulses with `bg-brand-soft` transition (200ms ease-in-out)
+
+**Search Within Transcript:**
+
+```
+┌────────────────────────────────────────────────┐
+│  🔍 circuit breaker          3 of 47 matches ▲▼│
+└────────────────────────────────────────────────┘
+```
+
+- `Input` with `Search` icon (matches existing Courses page search pattern)
+- Match highlight: `bg-yellow-100 dark:bg-yellow-900/30` on matching text spans
+- Result count: "3 of 47 matches" with up/down navigation arrows (`ChevronUp`/`ChevronDown`)
+- Navigating between matches scrolls the transcript and seeks the video to that timestamp
+- Debounced search (300ms after last keystroke)
+
+**AI Summary Display (Premium — Summary Tab):**
+
+```
+┌────────────────────────────────────────────────┐
+│  ✨ AI-Generated Summary                        │
+│────────────────────────────────────────────────│
+│                                                │
+│  Key Topics                                    │
+│  • Service boundaries and bounded contexts     │
+│  • API design patterns (REST, gRPC, GraphQL)   │
+│  • Domain-driven design fundamentals           │
+│                                                │
+│  Main Takeaways                                │
+│  • Loose coupling enables independent deploy   │  [@ 4:32] ← citation
+│  • Start with a monolith, extract services     │  [@ 8:15]
+│  • API versioning prevents breaking changes    │  [@ 12:01]
+│                                                │
+│  Key Terms                                     │
+│  • Bounded Context — a DDD term for...         │
+│  • Saga Pattern — distributed transaction...   │
+└────────────────────────────────────────────────┘
+```
+
+- "AI-Generated" badge with `Sparkles` icon (per existing pattern)
+- Collapsible sections: Key Topics, Main Takeaways, Key Terms
+- Citation links (e.g., `[@ 4:32]`) click to seek the video to that timestamp
+- Generated per-video on first view (lazy), cached in IndexedDB
+
+**YouTube Player Component:**
+
+Embedded using the YouTube IFrame Player API (`<iframe>` with `enablejsapi=1`). The component wraps the iframe and exposes:
+- `seekTo(seconds)` — for transcript click-to-seek
+- `getCurrentTime()` — for transcript synchronization (polled every 500ms)
+- `onStateChange` — for play/pause/end events
+- `origin` parameter set for security
+
+**Accessibility:**
+- Transcript segments: `role="button"`, `tabIndex={0}`, `aria-label="Seek to {timestamp}"`, keyboard Enter/Space to activate
+- Active segment: `aria-current="true"`
+- Search: `role="search"`, `aria-label="Search transcript"`
+- Auto-scroll: respects `prefers-reduced-motion` — disables smooth scrolling if set
+- Tab panel: proper `role="tabpanel"` with `aria-labelledby` linking to tab triggers
+
+### 9. Component Inventory
+
+**New Components:**
+
+| Component | Location | Base | Purpose |
+|---|---|---|---|
+| `YouTubeImportDialog` | `components/figma/` | `Dialog` | 4-step wizard for YouTube course creation |
+| `YouTubeVideoRow` | `components/figma/` | Custom | Video preview row: thumbnail + title + duration + status icon |
+| `ChapterEditor` | `components/figma/` | `Accordion` + `@dnd-kit` | Nested drag-reorder for chapters and videos |
+| `ChapterAccordionItem` | `components/figma/` | `AccordionItem` | Single chapter with drag handle, inline rename, remove |
+| `TranscriptPanel` | `components/figma/` | `ScrollArea` + `Tabs` | Synchronized transcript with search, seek, tabs |
+| `TranscriptSegment` | `components/figma/` | Custom | Single clickable transcript line with timestamp |
+| `TranscriptSearch` | `components/figma/` | `Input` | Search within transcript with match count and navigation |
+| `YouTubePlayer` | `components/figma/` | Custom (`iframe`) | Embedded YouTube player with IFrame API integration |
+
+**Extended Components:**
+
+| Component | Change |
+|---|---|
+| `EditCourseDialog` | Add "Chapters" tab for YouTube-sourced courses (uses shared `ChapterEditor`) |
+| `Courses.tsx` | Replace "Import Course" button with `DropdownMenu` (two import paths) |
+| `CourseEmptyState` | Add YouTube-specific empty state variant with both action buttons |
+
+**Data Model Extensions:**
+
+| Type | Fields | Storage |
+|---|---|---|
+| `Chapter` | `id, courseId, name, order` | New Dexie table |
+| `Transcript` | `id, videoId, segments: { start, end, text }[], fullText` | New Dexie table (fullText indexed for search) |
+| `YouTubeVideo` extends `ImportedVideo` | `youtubeId, thumbnailUrl, channelName, channelId, transcriptStatus, chapterId` | Extended in existing `importedVideos` table |
+| `YouTubeCourse` extends `ImportedCourse` | `playlistId, playlistUrl, youtubeApiKeyId` | Extended in existing `importedCourses` table |
+
+### 10. Journey Flow Diagram
+
+```mermaid
+flowchart TD
+    A[User on Courses page] --> B[Clicks 'Add Course' dropdown]
+    B --> C{Selection}
+    C -->|Import from Folder| D[Existing ImportWizardDialog]
+    C -->|Build from YouTube| E[YouTubeImportDialog opens]
+
+    E --> F["Step 1: Paste URL/playlist"]
+    F --> G{URL valid?}
+    G -->|No| H[Inline error + guidance]
+    H --> F
+    G -->|Yes| I[Auto-fetch metadata begins]
+
+    I --> J["Step 2: Video preview with progress bar"]
+    J --> K{All metadata loaded?}
+    K -->|Some unavailable| L[Show unavailable warnings]
+    L --> M[User reviews video list]
+    K -->|All loaded| M
+    M --> N[User clicks Next]
+
+    N --> O{AI provider configured?}
+    O -->|Yes| P["AI analyzes + proposes chapters (3-10s)"]
+    O -->|No| Q[Rule-based keyword grouping]
+    P --> R["Step 3: Chapter structure editor"]
+    Q --> R
+
+    R --> S["User edits: rename, reorder, split, merge chapters"]
+    S --> T[User clicks Next]
+
+    T --> U["Step 4: Course details form"]
+    U --> V["Name, description, tags, cover — AI-suggested if available"]
+    V --> W["User clicks 'Create Course'"]
+
+    W --> X[Course saved to IndexedDB]
+    X --> Y[Dialog closes — course appears in library]
+    Y --> Z[Background: transcript extraction begins]
+    Z --> AA["Per-video status icons on course detail page"]
+    AA --> AB["Course ready — full feature parity with local courses"]
+```
+
+### 11. Accessibility Checklist
+
+| Requirement | Implementation |
+|---|---|
+| Wizard step navigation | Arrow keys between steps, Enter to select, `aria-current="step"` on active |
+| Drag-and-drop chapters/videos | `GripVertical` handle with `aria-label="Drag to reorder"`, keyboard: Space to grab, Arrow keys to move, Space to drop |
+| Video preview list | `role="list"`, each row `role="listitem"`, thumbnail `alt="{video title} thumbnail"` |
+| Transcript segments | `role="button"`, `tabIndex={0}`, keyboard Enter/Space to seek |
+| Search | `role="search"`, `aria-label="Search transcript"`, live region announces match count |
+| Progress indicators | `role="progressbar"`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-label` |
+| Error messages | `aria-live="assertive"` for validation errors, `aria-live="polite"` for status updates |
+| AI badges | Decorative only (`aria-hidden="true"` on sparkles icon), information conveyed through text |
+
+---
+
+_Bookmarks Page UX Specification merged from docs/planning-artifacts/ux-design-specification.md on 2026-03-25._
+
+## Addendum: Bookmarks Page UX Specification
+
+**Story Reference:** Story 3.7 — Lesson Bookmarks
+**Date Added:** 2026-02-14
+
+### Overview
+
+The Bookmarks page provides a dedicated space for users to access lessons they have bookmarked for quick revisit. It surfaces key lesson metadata (title, course name, thumbnail, duration, progress, bookmark date) in a scannable list, with sort controls and responsive deletion patterns. The page reinforces the "intentional learner" ethos: bookmarks are conscious decisions to revisit material, not passive collecting.
+
+**Key Design Goals:**
+- Zero-friction access to saved lessons — one click from sidebar to bookmark, one click from bookmark to video player
+- Consistent card language with the rest of the platform (rounded-[24px], warm off-white, 8px grid)
+- Accessible deletion on all devices — hover trash on desktop, swipe-to-delete + three-dot menu on mobile
+- Clear empty state that guides new users toward bookmarking their first lesson
+
+### Sidebar Navigation Placement
+
+**Position:** Between "Library" and "Messages" in the sidebar navigation order.
+
+**Rationale:** Bookmarks are a personal content collection — logically grouped with content-centric nav items (Courses, Library) rather than communication (Messages) or analytics (Reports). Placing it after Library creates a natural progression: browse (Courses) → collect (Library) → save (Bookmarks).
+
+**Nav Item Specification:**
+- **Label:** "Bookmarks"
+- **Icon:** Lucide `Bookmark` (outline in inactive state)
+- **Path:** `/bookmarks`
+- **Active State:** `bg-blue-600 text-white rounded-xl` (matches all other nav items)
+- **Inactive State:** `text-muted-foreground hover:bg-accent`
+
+**Mobile Bottom Nav:** Bookmarks is NOT included in the 4-item mobile bottom bar (Overview, My Classes, Courses, Library remain primary). Bookmarks is accessible via the "More" overflow drawer on mobile, consistent with Messages, Instructors, Reports, and Settings.
+
+**Updated Navigation Order:**
+1. Overview (`/`)
+2. My Classes (`/my-class`)
+3. Courses (`/courses`)
+4. Library (`/library`)
+5. **Bookmarks (`/bookmarks`)** — NEW
+6. Messages (`/messages`)
+7. Instructors (`/instructors`)
+8. Reports (`/reports`)
+9. Settings (`/settings`)
+
+### Page Layout
+
+**Page Header:**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Bookmarks                              [Sort: ▼]       │
+│  {bookmark count} saved lessons                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+- **Title:** "Bookmarks" — `text-2xl font-bold` (matches page title pattern used on Overview, Courses, etc.)
+- **Subtitle:** Dynamic count — "{N} saved lessons" in `text-muted-foreground text-sm`
+- **Sort Control:** shadcn/ui `Select` dropdown, right-aligned in the header row on desktop, full-width below title on mobile
+
+**Content Area — Desktop (≥1024px):**
+
+Single-column vertical list of bookmark cards within the main content area (sidebar persistent on left). Cards are full-width within the content column, stacked vertically with `gap-4` (16px) spacing.
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ ┌──────┐                                                        │
+│ │ thumb│  Lesson Title                        [Trash2] on hover │
+│ │      │  Course Name  ·  12:34  ·  65%  ·  2 days ago         │
+│ └──────┘                                                        │
+├──────────────────────────────────────────────────────────────────┤
+│ ┌──────┐                                                        │
+│ │ thumb│  Another Lesson Title                                  │
+│ │      │  Course Name  ·  8:21  ·  Completed  ·  1 week ago    │
+│ └──────┘                                                        │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Content Area — Mobile (<1024px):**
+
+Full-width stacked cards with touch-optimized spacing (`gap-3`). Each card includes a visible three-dot menu icon (right side). Swipe-left reveals red "Remove" action.
+
+### Bookmark Card Component
+
+**BookmarkCard** — Horizontal card displaying a single bookmarked lesson with metadata and contextual actions.
+
+**Anatomy:**
+- **Container:** `rounded-[24px] bg-card border border-border p-4` — matches platform card language
+- **Layout:** Horizontal flex — thumbnail (left), content (center, flex-1), action area (right)
+- **Thumbnail:** `w-20 h-14 rounded-xl object-cover` with `ImageWithFallback` gradient placeholder
+- **Content Stack** (vertical):
+  - Lesson title — `text-sm font-semibold line-clamp-1`
+  - Metadata row — `text-xs text-muted-foreground` with dot separators:
+    - Course name
+    - Video duration (formatted HH:MM:SS or MM:SS)
+    - Completion: progress percentage (`text-blue-600`) or "Completed" badge (`text-green-600` with `CheckCircle` icon)
+    - Bookmark date (relative time via `date-fns formatDistanceToNow`: "2 days ago", "1 week ago")
+- **Action Area:** Context-dependent (see Desktop vs. Mobile deletion patterns)
+
+**States:**
+- **Default:** Card at rest with subtle border
+- **Hover (Desktop):** `shadow-lg border-blue-200` transition (300ms), Trash2 icon fades in (`opacity-0 → opacity-100`)
+- **Focus:** `ring-2 ring-blue-600 ring-offset-2` visible focus ring on the card
+- **Active/Pressed:** `scale-[0.98]` subtle press feedback (150ms)
+- **Swipe-Active (Mobile):** Card slides right-to-left revealing red action panel behind
+
+**Interaction:**
+- **Click/Tap card body:** Navigate to lesson video player (`/courses/:courseId/lessons/:lessonId`)
+- **Click Trash2 (Desktop):** Remove bookmark immediately with exit animation
+- **Swipe left (Mobile):** Reveal "Remove" action button
+- **Three-dot menu (Mobile):** Open dropdown with "Remove Bookmark" option
+- **Keyboard Enter:** Navigate to lesson
+- **Keyboard Delete:** Trigger remove bookmark
+
+### Sort Controls
+
+**Position:** Right side of page header (desktop), full-width below title (mobile)
+
+**Component:** shadcn/ui `Select` dropdown
+
+**Options:**
+1. **"Most Recent"** (default) — `createdAt` descending (newest bookmarks first)
+2. **"Course Name"** — Alphabetical by course name; within same course, `createdAt` descending
+3. **"Alphabetical (A-Z)"** — Alphabetical by lesson title
+
+**Visual:**
+- Select trigger: `w-[180px]` desktop, `w-full` mobile
+- Label prefix: "Sort by:" in `text-xs text-muted-foreground` above the select on mobile
+- Default shows "Most Recent" as placeholder text
+
+**Behavior:**
+- Sort applies immediately on selection (no "Apply" button)
+- When sorted by "Course Name," bookmarks with the same course are visually grouped with a subtle course name subheading (`text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 mt-4`)
+- Sort preference persists in localStorage (`levelup-bookmarks-sort`)
+
+### Deletion Patterns
+
+#### Desktop (≥1024px) — Hover Trash Icon
+
+- **Trigger:** Mouse hover over bookmark card
+- **Visual:** Lucide `Trash2` icon (w-4 h-4) appears on the right side of the card with `opacity-0 group-hover:opacity-100 transition-opacity duration-200`
+- **States:** Default `text-muted-foreground`, hover `text-red-500`
+- **ARIA:** `aria-label="Remove bookmark"` on the button
+- **Click action:** Bookmark deleted immediately from storage, card exits the list with a smooth collapse animation (200ms ease-out, height collapses to 0 with opacity fade)
+- **No confirmation dialog** — action is lightweight and easily reversible (user can re-bookmark from the lesson). Toast notification "Bookmark removed" with no undo (per story spec).
+
+#### Mobile (<1024px) — Swipe-to-Delete + Three-Dot Menu
+
+**Swipe Gesture (convenience shortcut):**
+- **Trigger:** Touch swipe left on bookmark card (minimum 60px horizontal threshold)
+- **Reveal:** Red action panel (`bg-red-500 text-white`) slides in from right, showing "Remove" text with `Trash2` icon
+- **Panel width:** 80px
+- **Tap "Remove":** Deletes bookmark, card collapses with exit animation (200ms)
+- **Release without tapping:** Card springs back to original position (200ms ease-out)
+
+**Three-Dot Menu (accessible alternative — WCAG 2.5.1 compliance):**
+- **Trigger:** Visible three-dot icon (`MoreVertical` from Lucide) on every bookmark card (always visible on mobile, not hidden behind hover)
+- **Position:** Top-right corner of card, `w-8 h-8` touch target (minimum 44x44px hit area via padding)
+- **Tap action:** Opens shadcn/ui `DropdownMenu` with single option: "Remove Bookmark" with `Trash2` icon
+- **Keyboard:** Menu opens with Enter/Space, navigable with arrow keys, Escape to close
+- **Screen reader:** Button announces "Bookmark options for {lesson title}"
+
+**Implementation Note:** The swipe gesture is a progressive enhancement. The three-dot menu is the primary accessible path. Both call the same `removeBookmark` function.
+
+### Empty State
+
+Displayed when no bookmarks exist (zero records in bookmarks storage).
+
+**Layout:** Centered vertically and horizontally within the content area.
+
+```
+         ┌─────────────┐
+         │  BookmarkX   │  64px, text-muted-foreground
+         │   (icon)     │
+         └─────────────┘
+         No bookmarks yet
+   Bookmark lessons while watching
+   to find them quickly later.
+
+        [ Browse Courses ]
+```
+
+**Specification:**
+- **Icon:** Lucide `BookmarkX` — `w-16 h-16 text-muted-foreground mx-auto`
+- **Heading:** "No bookmarks yet" — `text-lg font-semibold mt-4`
+- **Body:** "Bookmark lessons while watching to find them quickly later." — `text-sm text-muted-foreground mt-2 max-w-[280px] mx-auto text-center`
+- **CTA:** shadcn/ui `Button` variant="default" — "Browse Courses" — navigates to `/courses`
+  - `mt-6`, `bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-6 h-11`
+- **Container:** `flex flex-col items-center justify-center py-20`
+
+**Consistency:** Follows the Empty States pattern from the UX spec — centered icon + heading + description + CTA, matching the same visual weight as "No courses in progress" and other empty states across the platform.
+
+### Loading State
+
+**Skeleton Pattern:** 4-6 skeleton bookmark cards matching final card dimensions to prevent layout shift.
+
+```
+┌──────────────────────────────────────────────────┐
+│ ┌──────┐  ████████████████████                   │
+│ │ ░░░░ │  ████████  ·  ████  ·  ████            │
+│ └──────┘                                         │
+└──────────────────────────────────────────────────┘
+```
+
+- **Skeleton card:** `rounded-[24px] bg-muted/50 p-4 animate-pulse`
+- **Thumbnail placeholder:** `w-20 h-14 rounded-xl bg-muted`
+- **Text placeholders:** `h-4 w-48 bg-muted rounded` (title), `h-3 w-32 bg-muted rounded` (metadata)
+- **Delay:** 500ms before showing skeletons (fast loads skip skeleton entirely)
+- **ARIA:** Container has `aria-busy="true"` and `aria-label="Loading bookmarks"`
+
+### Responsive Behavior
+
+**Desktop (≥1024px):**
+- Persistent sidebar + full-width bookmark list in content area
+- Sort dropdown right-aligned in header row
+- Hover reveals Trash2 delete icon on each card
+- Three-dot menu hidden (hover trash is primary)
+
+**Tablet (640–1023px):**
+- Collapsible sidebar (sheet), full-width content
+- Sort dropdown right-aligned in header row
+- Three-dot menu visible on each card (no hover interaction on touch)
+- Swipe-to-delete enabled
+
+**Mobile (<640px):**
+- Bottom nav (Bookmarks via "More" overflow), no sidebar
+- Sort dropdown full-width below page title
+- Three-dot menu always visible on each card
+- Swipe-to-delete enabled
+- Cards stack full-width with `p-3` reduced padding
+- Thumbnail size reduces to `w-16 h-11`
+
+### Keyboard & Accessibility
+
+**Keyboard Navigation:**
+- **Tab:** Moves focus between bookmark cards sequentially
+- **Enter:** On focused card, navigates to lesson video player
+- **Delete:** On focused card, removes bookmark (no confirmation)
+- **Tab into sort control:** Standard Select keyboard interaction (Space to open, arrow keys to select)
+
+**Focus Management:**
+- Each card receives `ring-2 ring-blue-600 ring-offset-2` focus ring
+- After deletion, focus moves to the next card in the list (or previous if last item deleted)
+- If all bookmarks deleted, focus moves to the empty state CTA button
+
+**Screen Reader Support:**
+- Bookmark list wrapped in `<section aria-label="Bookmarked lessons">`
+- Each card is a `role="article"` with `aria-label` combining lesson title and course name
+- Delete button: `aria-label="Remove bookmark for {lesson title}"`
+- Sort control: `aria-label="Sort bookmarks"`
+- Count subtitle uses `aria-live="polite"` to announce updates after sort changes or deletions
+- Three-dot menu button: `aria-label="Bookmark options for {lesson title}"`, `aria-haspopup="menu"`
+
+**WCAG 2.5.1 Compliance:** Swipe-to-delete is a convenience gesture, not the only deletion path. The three-dot menu and keyboard Delete key provide equivalent functionality without gesture dependency.
+
+### Animations & Transitions
+
+| Interaction | Animation | Duration | Easing |
+|---|---|---|---|
+| Card hover (desktop) | Shadow elevation + border color | 300ms | ease |
+| Card press | scale(0.98) | 150ms | ease-out |
+| Trash2 icon appear | Opacity 0→1 | 200ms | ease |
+| Card deletion exit | Height collapse + opacity fade | 200ms | ease-out |
+| Swipe reveal | translateX with spring physics | 200ms | ease-out |
+| Swipe snap-back | translateX return to 0 | 200ms | ease-out |
+| Empty state entrance | Fade in + translateY(8px→0) | 300ms | ease-out |
+
+All animations respect `prefers-reduced-motion: reduce` — replaced with instant state changes (0ms duration).
+
+### Orphan Cleanup
+
+When the Bookmarks page mounts (or on app startup), bookmarks are validated against existing course/lesson records:
+- Bookmarks referencing deleted courses or lessons are purged automatically in batch
+- If orphans are cleaned: toast notification "Removed {N} bookmarks for deleted lessons"
+- If a user clicks an orphaned bookmark before cleanup: toast "This lesson is no longer available. Bookmark removed." + fade-out animation on the card
+
+### Virtual Scrolling
+
+For lists exceeding 50 bookmarks, implement virtual scrolling using `@tanstack/react-virtual`:
+- **Window:** Render only visible cards + 5-item overscan buffer
+- **Row height:** Estimated at 82px (card height + gap) — adjusted dynamically
+- **Scroll restoration:** Preserve scroll position when returning from lesson video player
+- **Trigger:** Conditional — only activate virtualization when bookmark count > 50; below that threshold, render all cards directly for simplicity
+
+## Platform & Entitlement (Epic 19)
+
+**Added 2026-03-26**
+
+The Platform & Entitlement system adds authentication, subscription management, and premium feature gating to Knowlune — enabling the open-core business model while preserving the fully-functional free experience.
+
+**PRD Requirements:** FR102–FR107
+**Design Principle:** Auth is additive, never gates core workflows. Every premium touchpoint must feel like an invitation, not a barrier.
+
+### 1. Authentication Flows
+
+**Sign-Up / Sign-In Dialog:**
+
+The auth dialog is a centered `Dialog` (`sm:max-w-md`) triggered by clicking any upgrade CTA or "Sign Up" in the header. Two tabs: "Sign Up" and "Sign In."
+
+```
+┌─────────────────────────────────────────┐
+│  LevelUp                                │
+│─────────────────────────────────────────│
+│  [Sign Up]  [Sign In]                   │
+│                                         │
+│  Email                                  │
+│  ┌─────────────────────────────────┐    │
+│  │ pedro@example.com               │    │
+│  └─────────────────────────────────┘    │
+│                                         │
+│  Password                               │
+│  ┌─────────────────────────────────┐    │
+│  │ ••••••••••                      │    │
+│  └─────────────────────────────────┘    │
+│  Min. 8 characters                      │
+│                                         │
+│  [Sign Up]  (brand variant, full-width) │
+│                                         │
+│  By signing up you agree to our         │
+│  Privacy Policy and Terms of Service    │
+└─────────────────────────────────────────┘
+```
+
+**Behavior:**
+- Form validation: inline errors on blur (email format, password length)
+- Submit button shows loading spinner, form inputs disabled during request
+- On success: dialog closes, user redirected to previous location
+- On error: inline error message below form (e.g., "Email already registered — sign in instead")
+- Legal links open `/privacy` and `/terms` in new tabs
+
+**Sign-In Tab:**
+Same layout, no password confirmation field. "Forgot password?" link below password field triggers password reset email via Supabase.
+
+**Session Restoration:**
+On app launch with existing session, a brief loading indicator appears in the header (not blocking — core features load immediately). If session is expired, auth state silently resets to unauthenticated.
+
+### 2. Subscription Management (Settings Page)
+
+**Subscription Section in Settings:**
+
+```
+┌─────────────────────────────────────────────────┐
+│  Subscription                                    │
+│─────────────────────────────────────────────────│
+│                                                  │
+│  Plan: Premium                                   │
+│  Billing: Monthly ($9.99/month)                  │
+│  Next billing: April 15, 2026                    │
+│  Status: Active ✓                                │
+│                                                  │
+│  [Manage Billing]  [Cancel Subscription]         │
+│                                                  │
+└─────────────────────────────────────────────────┘
+```
+
+**Free Tier View:**
+```
+┌─────────────────────────────────────────────────┐
+│  Subscription                                    │
+│─────────────────────────────────────────────────│
+│                                                  │
+│  Plan: Free                                      │
+│                                                  │
+│  Unlock AI features, spaced repetition,          │
+│  and advanced export with Premium.               │
+│                                                  │
+│  [Upgrade to Premium]  (brand variant)           │
+│                                                  │
+│  ┌─────────────────────────────────────────┐     │
+│  │ ✓ AI Summaries    ✓ Note Q&A           │     │
+│  │ ✓ Spaced Review   ✓ Advanced Export    │     │
+│  │ ✓ Learning Paths  ✓ Priority Support   │     │
+│  └─────────────────────────────────────────┘     │
+│                                                  │
+└─────────────────────────────────────────────────┘
+```
+
+**Trial Indicator (Header):**
+When on a free trial, a subtle indicator appears in the header: "Trial: 9 days left" with `text-warning` styling. Clicking opens Settings > Subscription.
+
+### 3. Upgrade CTAs (Premium Feature Gating)
+
+**Design Pattern:** When a free-tier user encounters a premium feature, the feature area is replaced by an upgrade CTA — never a broken UI or error.
+
+**CTA Component (`UpgradeCTA`):**
+```
+┌─────────────────────────────────────────┐
+│  🔒  AI Video Summaries                 │
+│                                         │
+│  Get AI-generated summaries of video    │
+│  content to review key concepts faster. │
+│                                         │
+│  [Upgrade to Premium]                   │
+└─────────────────────────────────────────┘
+```
+
+**Placement rules:**
+- AI Summary button → replaced by CTA inline
+- AI Q&A panel → locked state with feature preview
+- Spaced Review entry → CTA card on Flashcards page
+- Premium features in nav: subtle lock icon + "Premium" badge
+
+**Click behavior:**
+1. If authenticated → Stripe Checkout
+2. If not authenticated → Auth dialog → then Stripe Checkout
+3. After payment → return to exact feature location
+
+### 4. Legal Pages
+
+`/privacy` and `/terms` are public routes (no auth required). Rendered from MDX files. Consistent page layout with the rest of the app (sidebar + header).
+
+Change notification: when legal documents are updated, an in-app banner appears at the top of the page with "Updated [date]" link and "Dismiss" button.
+
+## Learning Pathways & Knowledge Retention (Epic 20)
+
+**Added 2026-03-26**
+
+Learning Pathways adds structured multi-course journeys, spaced repetition flashcards, and advanced analytics visualizations — transforming Knowlune from a course tracker into a learning system.
+
+**PRD Requirements:** FR108–FR111
+**Design Inspiration:** Duolingo learning paths (staged progression), Mochi (beautiful flashcard review), GitHub contribution graph (activity heatmap)
+
+### 1. Career Paths (Multi-Course Journeys)
+
+**Career Paths List Page (`/career-paths`):**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Career Paths                                                │
+│  Structured journeys to build skills systematically          │
+│─────────────────────────────────────────────────────────────│
+│                                                              │
+│  ┌─────────────────────────┐  ┌─────────────────────────┐   │
+│  │  Web Development         │  │  Data Science            │   │
+│  │  5 courses · 48 hours    │  │  4 courses · 36 hours    │   │
+│  │  ████████░░ 65%          │  │  ██░░░░░░░░ 20%          │   │
+│  │  [Continue Path]         │  │  [Continue Path]         │   │
+│  └─────────────────────────┘  └─────────────────────────┘   │
+│                                                              │
+│  ┌─────────────────────────┐  ┌─────────────────────────┐   │
+│  │  DevOps                  │  │  Mobile Development      │   │
+│  │  3 courses · 28 hours    │  │  4 courses · 32 hours    │   │
+│  │  ░░░░░░░░░░ Not started  │  │  ░░░░░░░░░░ Not started  │   │
+│  │  [Start Path]            │  │  [Start Path]            │   │
+│  └─────────────────────────┘  └─────────────────────────┘   │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Path Detail Page (`/career-paths/:id`):**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  ← Back to Career Paths                                      │
+│                                                              │
+│  Web Development                                             │
+│  5 courses · 48 hours · 65% complete                         │
+│  ████████████████████████░░░░░░░░ 65%                        │
+│─────────────────────────────────────────────────────────────│
+│                                                              │
+│  Stage 1: Foundations ✅                                      │
+│  ┌──────────────────┐  ┌──────────────────┐                  │
+│  │ HTML & CSS ✅     │  │ JavaScript ✅    │                  │
+│  │ 12h · Complete    │  │ 16h · Complete   │                  │
+│  └──────────────────┘  └──────────────────┘                  │
+│                                                              │
+│  Stage 2: Frameworks 🔓                                      │
+│  ┌──────────────────┐  ┌──────────────────┐                  │
+│  │ React 🔥         │  │ TypeScript       │                  │
+│  │ 12h · 60%        │  │ 8h · Not started │                  │
+│  └──────────────────┘  └──────────────────┘                  │
+│                                                              │
+│  Stage 3: Advanced 🔒                                        │
+│  Complete Stage 2 to unlock                                  │
+│  ┌──────────────────┐                                        │
+│  │ System Design     │  (grayed out, lock icon)              │
+│  │ 12h · Locked      │                                       │
+│  └──────────────────┘                                        │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Stage indicators:** ✅ complete, 🔓 unlocked/in progress, 🔒 locked (requires previous stage)
+**Course card states:** Green border (complete), brand border (in progress), gray border + lock icon (locked)
+
+### 2. Flashcard Review (Mochi-Inspired)
+
+**Review Interface (`/flashcards`):**
+
+The review experience prioritizes beauty and simplicity over flashcard-app density. Cards are generous in size with soft shadows — this should feel like flipping through highlighted notes, not doing homework.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Review Queue                          3 of 12 reviewed      │
+│  ████████░░░░░░░░░░░░░░░░░░░░░░                             │
+│─────────────────────────────────────────────────────────────│
+│                                                              │
+│  ┌─────────────────────────────────────────────────────┐     │
+│  │                                                     │     │
+│  │   What is the purpose of useEffect cleanup?         │     │
+│  │                                                     │     │
+│  │   📚 React Course · Video 12: Hooks Deep Dive       │     │
+│  │   🎯 Retention: 72%                                 │     │
+│  │                                                     │     │
+│  │              [Show Answer]                          │     │
+│  │                                                     │     │
+│  └─────────────────────────────────────────────────────┘     │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**After revealing answer:**
+
+```
+│  ┌─────────────────────────────────────────────────────┐     │
+│  │                                                     │     │
+│  │   What is the purpose of useEffect cleanup?         │     │
+│  │   ─────────────────────────────────────────────     │     │
+│  │   Cleanup functions run before the component        │     │
+│  │   unmounts or before the effect re-runs. Used to    │     │
+│  │   cancel subscriptions, timers, or event listeners. │     │
+│  │                                                     │     │
+│  │   📚 React Course · Video 12: Hooks Deep Dive       │     │
+│  │                                                     │     │
+│  └─────────────────────────────────────────────────────┘     │
+│                                                              │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐                   │
+│  │  Hard     │  │  Good     │  │  Easy     │                   │
+│  │  1 day    │  │  3 days   │  │  7 days   │                   │
+│  └──────────┘  └──────────┘  └──────────┘                   │
+│                                                              │
+```
+
+**Grade button styling:**
+- Hard: `bg-warning/10 text-warning border-warning/30` → orange flash animation
+- Good: `bg-success/10 text-success border-success/30` → green flash animation
+- Easy: `bg-brand-soft text-brand-soft-foreground border-brand/30` → blue flash animation
+
+**Completion summary:**
+```
+  Review Complete! 🎉
+  12 cards reviewed
+  Hard: 2 · Good: 8 · Easy: 2
+  Next review: tomorrow
+```
+
+### 3. Activity Heatmap (GitHub-Style)
+
+**Placement:** Reports page (full-width) and Overview page (compact widget)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Study Activity                                Last 12 months│
+│                                                              │
+│  Mar  Apr  May  Jun  Jul  Aug  Sep  Oct  Nov  Dec  Jan  Feb │
+│  ░░█░ ░██░ █░██ ░░░░ █░░░ ██░█ █░██ ████ ██░█ ████ █████ ██│
+│  ░░░░ █░░░ ░░░░ █░██ ░░█░ ░░░░ ██░░ ░░██ █░░░ ████ █████ ██│
+│  ░░░░ ░░░░ ██░░ ░░░░ █░░░ ░██░ ░░██ █░░░ ████ ████ █████ ██│
+│  ░░░░ █░░░ ░░██ █░░░ ░░░░ ░░░░ █░░░ ░██░ ░░██ ████ █████ ██│
+│  ░░░░ ░░░░ ░░░░ ░░░░ ░░░░ ░██░ ░░░░ ░░░░ ████ ████ █████ ██│
+│  ░░░░ ░█░░ ░░░░ ░░██ ░░░░ ░░░░ ░░░░ █░░░ ████ ████ █████ ██│
+│  ░░░░ ░░░░ ░░░░ ░░░░ ░░░░ ░░█░ ░░░░ ░░██ ████ ████ █████ ██│
+│                                                              │
+│  Less ░░██████ More          Total: 847 hours studied        │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Color scale (5 levels):**
+- Level 0: `hsl(40, 20%, 94%)` — neutral warm gray (no activity)
+- Level 1: `hsl(142, 40%, 80%)` — light green (1-15 min)
+- Level 2: `hsl(142, 50%, 60%)` — medium green (16-30 min)
+- Level 3: `hsl(142, 55%, 40%)` — dark green (31-60 min)
+- Level 4: `hsl(142, 60%, 28%)` — intense green (60+ min)
+
+**Hover tooltip:** Shows date, study time, and notes taken count. Positioned above cell.
+
+**Responsive:** 12 months (≥1024px), 6 months (640-1023px), 3 months (<640px)
+
+**Accessibility:** `role="img"` with `aria-label`, keyboard navigable, 3:1 contrast between levels, screen reader announces "March 7, 2026: 45 minutes studied, 3 notes"
+
+### 4. Skill Proficiency Radar Chart
+
+**Placement:** Overview dashboard (compact card) and Analytics page (full-size)
+
+Uses Recharts `RadarChart` component. 5-7 axes representing skill domains derived from course tags. Warm color fill with 50% opacity, dotted outline for target proficiency (when set in Story 20.6).
+
+**Tooltip on hover:** Skill name, proficiency %, completed course count
+
+**Empty state:** All axes at 0% with message: "Complete courses to build your skill profile!"
+
+**Responsive:** Chart scales proportionally; compact labels on mobile (<640px)
+
+**Accessibility:** `role="img"`, data table alternative available via "View as table" link, 3:1 contrast

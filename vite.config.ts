@@ -12,6 +12,183 @@ const __dirname = typeof globalThis.__dirname !== 'undefined'
   ? globalThis.__dirname
   : path.dirname(fileURLToPath(import.meta.url));
 const COURSES_ROOT = '/Volumes/SSD/GFX/Chase Hughes - The Operative Kit';
+
+/**
+ * SSRF protection for Ollama proxy — blocks loopback and cloud metadata addresses.
+ * Private LAN ranges (192.168.x, 10.x, 172.16-31.x) are allowed for home Ollama servers.
+ */
+function isAllowedOllamaUrl(urlString: string): boolean {
+  try {
+    const parsed = new URL(urlString);
+    const hostname = parsed.hostname.toLowerCase();
+    if (
+      hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0' ||
+      hostname === '[::1]' || hostname === '::1' || hostname.startsWith('127.') ||
+      hostname.startsWith('169.254.')
+    ) return false;
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch { return false; }
+}
+
+/**
+ * Vite plugin that embeds Ollama proxy endpoints directly into the dev server.
+ * Eliminates the need for a separate `npm run server` when using Ollama.
+ *
+ * Endpoints:
+ *   GET  /api/ai/ollama/tags?serverUrl=...  — List available models
+ *   GET  /api/ai/ollama/health?serverUrl=... — Health check
+ *   POST /api/ai/ollama/chat                 — Chat completions (non-streaming)
+ */
+function ollamaDevProxy(): Plugin {
+  return {
+    name: 'ollama-dev-proxy',
+    configureServer(server) {
+      // Helper to read JSON body from IncomingMessage
+      function readBody(req: import('http').IncomingMessage): Promise<string> {
+        return new Promise((resolve, reject) => {
+          let data = '';
+          req.on('data', (chunk: Buffer) => { data += chunk.toString(); });
+          req.on('end', () => resolve(data));
+          req.on('error', reject);
+        });
+      }
+
+      // Helper to validate serverUrl query param
+      function getValidatedServerUrl(
+        reqUrl: string,
+        host: string,
+        res: import('http').ServerResponse
+      ): string | null {
+        const url = new URL(reqUrl, `http://${host}`);
+        const serverUrl = url.searchParams.get('serverUrl');
+        if (!serverUrl) {
+          res.statusCode = 400;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'serverUrl query parameter is required' }));
+          return null;
+        }
+        if (!isAllowedOllamaUrl(serverUrl)) {
+          res.statusCode = 403;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'Ollama server URL targets a disallowed address' }));
+          return null;
+        }
+        return serverUrl.replace(/\/+$/, '');
+      }
+
+      // Helper for proxy error responses
+      function handleProxyError(
+        res: import('http').ServerResponse,
+        error: unknown,
+        endpoint: string
+      ) {
+        console.error(`[ollama-dev-proxy ${endpoint}]`, (error as Error).message);
+        const name = (error as Error).name;
+        const msg = (error as Error).message;
+        if (name === 'AbortError' || name === 'TimeoutError') {
+          res.statusCode = 504;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'Ollama server timed out' }));
+          return;
+        }
+        if (msg.includes('fetch failed') || msg.includes('ECONNREFUSED')) {
+          res.statusCode = 502;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'Cannot reach Ollama server. Is it running?' }));
+          return;
+        }
+        res.statusCode = 500;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ error: msg }));
+      }
+
+      // GET /api/ai/ollama/tags — proxy model list
+      server.middlewares.use('/api/ai/ollama/tags', async (req, res, next) => {
+        if (req.method !== 'GET') { next(); return; }
+        const serverUrl = getValidatedServerUrl(req.url || '', req.headers.host || '', res);
+        if (!serverUrl) return;
+        try {
+          const response = await fetch(`${serverUrl}/api/tags`, {
+            signal: AbortSignal.timeout(15_000),
+          });
+          if (!response.ok) {
+            const errorText = await response.text().catch(() => response.statusText);
+            res.statusCode = response.status;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: `Ollama returned ${response.status}: ${errorText}` }));
+            return;
+          }
+          const data = await response.text();
+          res.setHeader('Content-Type', 'application/json');
+          res.end(data);
+        } catch (error) { handleProxyError(res, error, '/tags'); }
+      });
+
+      // GET /api/ai/ollama/health — health check
+      server.middlewares.use('/api/ai/ollama/health', async (req, res, next) => {
+        if (req.method !== 'GET') { next(); return; }
+        const serverUrl = getValidatedServerUrl(req.url || '', req.headers.host || '', res);
+        if (!serverUrl) return;
+        try {
+          const response = await fetch(serverUrl, {
+            signal: AbortSignal.timeout(10_000),
+          });
+          if (!response.ok) {
+            const errorText = await response.text().catch(() => response.statusText);
+            res.statusCode = response.status;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: `Ollama returned ${response.status}: ${errorText}` }));
+            return;
+          }
+          const body = await response.text();
+          res.end(body);
+        } catch (error) { handleProxyError(res, error, '/health'); }
+      });
+
+      // POST /api/ai/ollama/chat — chat completions (non-streaming)
+      server.middlewares.use('/api/ai/ollama/chat', async (req, res, next) => {
+        if (req.method !== 'POST') { next(); return; }
+        try {
+          const rawBody = await readBody(req);
+          const { ollamaServerUrl, ...ollamaPayload } = JSON.parse(rawBody) as {
+            ollamaServerUrl?: string;
+            [key: string]: unknown;
+          };
+          if (!ollamaServerUrl || typeof ollamaServerUrl !== 'string') {
+            res.statusCode = 400;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'ollamaServerUrl is required in request body' }));
+            return;
+          }
+          if (!isAllowedOllamaUrl(ollamaServerUrl)) {
+            res.statusCode = 403;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Ollama server URL targets a disallowed address' }));
+            return;
+          }
+          const normalizedUrl = ollamaServerUrl.replace(/\/+$/, '');
+          const response = await fetch(`${normalizedUrl}/api/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(ollamaPayload),
+            signal: AbortSignal.timeout(30_000),
+          });
+          if (!response.ok) {
+            const errorText = await response.text().catch(() => response.statusText);
+            res.statusCode = response.status;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: `Ollama returned ${response.status}: ${errorText}` }));
+            return;
+          }
+          const data = await response.text();
+          res.setHeader('Content-Type', 'application/json');
+          res.end(data);
+        } catch (error) { handleProxyError(res, error, '/chat'); }
+      });
+    }
+  };
+}
+
 function serveLocalMedia(): Plugin {
   return {
     name: 'serve-local-media',
@@ -97,6 +274,7 @@ export default defineConfig({
   }),
   tailwindcss(),
   serveLocalMedia(),
+  ollamaDevProxy(),
   VitePWA({
     registerType: 'prompt',
     includeAssets: ['favicon.svg', 'apple-touch-icon-180x180.png'],
@@ -168,15 +346,16 @@ export default defineConfig({
     }
   },
   server: {
+    // Ollama proxy endpoints are handled by the ollamaDevProxy() plugin above.
+    // Non-Ollama AI providers (Anthropic, OpenAI, Groq, Gemini) still need
+    // the Express server on :3001 for API key proxying — but that's optional
+    // and only affects cloud AI providers, not Ollama.
     proxy: {
-      '/api/ai': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-      },
+      // Non-Ollama AI providers still proxy to Express server on :3001 (if running).
+      // Ollama tags/health/chat are handled by the ollamaDevProxy() middleware above.
+      // The Ollama SSE streaming endpoint (POST /api/ai/ollama) also proxies to Express.
+      '/api/ai': { target: 'http://localhost:3001', changeOrigin: true },
     },
-    // CSP allowlist for Ollama direct connections is managed dynamically via
-    // meta tag in index.html — no static config needed here since proxy mode
-    // is the default and routes through /api/ai/ollama.
     headers: {
       // XSS Protection
       'X-Content-Type-Options': 'nosniff',
