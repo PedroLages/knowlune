@@ -10,10 +10,7 @@
  * @module
  */
 
-import {
-  getOllamaServerUrl,
-  getOllamaSelectedModel,
-} from '@/lib/aiConfiguration'
+import { getOllamaServerUrl, getOllamaSelectedModel } from '@/lib/aiConfiguration'
 
 /** Result from AI course tagging */
 export interface CourseTagResult {
@@ -67,7 +64,7 @@ const SYSTEM_PROMPT =
  */
 export async function generateCourseTags(
   courseMetadata: { title: string; fileNames: string[] },
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<CourseTagResult> {
   const ollamaConfig = getOllamaConfig()
   if (!ollamaConfig) {
@@ -213,12 +210,14 @@ export function parseTagResponse(content: string | undefined): string[] {
  * Normalize tags: trim, lowercase, deduplicate, limit to MAX_TAGS.
  */
 function normalizeTags(raw: unknown[]): string[] {
-  return [...new Set(
-    raw
-      .filter((t): t is string => typeof t === 'string')
-      .map(t => t.trim().toLowerCase())
-      .filter(Boolean),
-  )].slice(0, MAX_TAGS)
+  return [
+    ...new Set(
+      raw
+        .filter((t): t is string => typeof t === 'string')
+        .map(t => t.trim().toLowerCase())
+        .filter(Boolean)
+    ),
+  ].slice(0, MAX_TAGS)
 }
 
 /**

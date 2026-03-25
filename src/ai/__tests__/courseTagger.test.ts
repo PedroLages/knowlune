@@ -18,17 +18,11 @@ vi.mock('@/lib/aiConfiguration', () => ({
 // --- Import SUT + mocked modules ---
 
 import { generateCourseTags, parseTagResponse, isOllamaTaggingAvailable } from '../courseTagger'
-import {
-  getOllamaServerUrl,
-  getOllamaSelectedModel,
-} from '@/lib/aiConfiguration'
+import { getOllamaServerUrl, getOllamaSelectedModel } from '@/lib/aiConfiguration'
 
 // --- Test Helpers ---
 
-function mockOllamaConfigured(
-  serverUrl = 'http://192.168.2.200:11434',
-  model = 'llama3.2:latest',
-) {
+function mockOllamaConfigured(serverUrl = 'http://192.168.2.200:11434', model = 'llama3.2:latest') {
   ;(getOllamaServerUrl as Mock).mockReturnValue(serverUrl)
   ;(getOllamaSelectedModel as Mock).mockReturnValue(model)
 }
@@ -44,8 +38,8 @@ function mockFetchSuccess(tags: string[]) {
       JSON.stringify({
         message: { content: JSON.stringify({ tags }) },
       }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
-    ),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    )
   )
 }
 
@@ -78,7 +72,7 @@ describe('generateCourseTags', () => {
       expect.objectContaining({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-      }),
+      })
     )
   })
 
@@ -97,7 +91,7 @@ describe('generateCourseTags', () => {
         properties: expect.objectContaining({
           tags: expect.objectContaining({ type: 'array' }),
         }),
-      }),
+      })
     )
     expect(callBody.messages[1].content).toContain('Introduction to Machine Learning')
     expect(callBody.messages[1].content).toContain('01-overview.mp4')
@@ -125,7 +119,7 @@ describe('generateCourseTags', () => {
   it('returns empty tags on HTTP error', async () => {
     mockOllamaConfigured()
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response('Model not found', { status: 404 }),
+      new Response('Model not found', { status: 404 })
     )
 
     const result = await generateCourseTags(courseMetadata)
@@ -174,7 +168,7 @@ describe('generateCourseTags', () => {
     controller.abort()
 
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(
-      new DOMException('The operation was aborted', 'AbortError'),
+      new DOMException('The operation was aborted', 'AbortError')
     )
 
     const result = await generateCourseTags(courseMetadata, controller.signal)
@@ -236,10 +230,7 @@ describe('parseTagResponse', () => {
   })
 
   it('filters non-string values', () => {
-    expect(parseTagResponse('{"tags": ["Python", 42, null, true, "ML"]}')).toEqual([
-      'python',
-      'ml',
-    ])
+    expect(parseTagResponse('{"tags": ["Python", 42, null, true, "ML"]}')).toEqual(['python', 'ml'])
   })
 
   it('filters empty strings', () => {

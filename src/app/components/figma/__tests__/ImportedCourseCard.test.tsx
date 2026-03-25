@@ -17,6 +17,7 @@ vi.mock('@/stores/useCourseImportStore', () => ({
         updateCourseStatus: mockUpdateCourseStatus,
         removeImportedCourse: mockRemoveImportedCourse,
         thumbnailUrls: {},
+        autoAnalysisStatus: {},
       }),
     {
       getState: () => ({ importError: null }),

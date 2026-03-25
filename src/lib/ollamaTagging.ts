@@ -26,28 +26,25 @@ import type { ImportedCourse, ImportedVideo, ImportedPdf } from '@/data/types'
 export function triggerOllamaTagging(
   course: ImportedCourse,
   videos: ImportedVideo[],
-  pdfs: ImportedPdf[],
+  pdfs: ImportedPdf[]
 ): void {
   if (!isOllamaTaggingAvailable()) return
 
   runOllamaTagging(course, videos, pdfs).catch(error => {
-    console.warn('[OllamaTagging] Unhandled error:', error)
+    console.error('[OllamaTagging] Unhandled error:', error)
   })
 }
 
 async function runOllamaTagging(
   course: ImportedCourse,
   videos: ImportedVideo[],
-  pdfs: ImportedPdf[],
+  pdfs: ImportedPdf[]
 ): Promise<void> {
   const store = useCourseImportStore.getState()
   store.setAutoAnalysisStatus(course.id, 'analyzing')
 
   try {
-    const fileNames = [
-      ...videos.map(v => v.filename),
-      ...pdfs.map(p => p.filename),
-    ]
+    const fileNames = [...videos.map(v => v.filename), ...pdfs.map(p => p.filename)]
 
     const result = await generateCourseTags({
       title: course.name,
@@ -55,8 +52,9 @@ async function runOllamaTagging(
     })
 
     if (result.tags.length > 0) {
-      // Merge with existing tags (from cloud auto-analysis or manual)
-      const existingTags = course.tags || []
+      // Read fresh tags from IndexedDB to avoid race with concurrent triggerAutoAnalysis
+      const freshCourse = await db.importedCourses.get(course.id)
+      const existingTags = freshCourse?.tags || []
       const merged = [...new Set([...existingTags, ...result.tags])]
 
       // Persist to IndexedDB
@@ -65,7 +63,7 @@ async function runOllamaTagging(
       // Update Zustand store
       useCourseImportStore.setState(state => ({
         importedCourses: state.importedCourses.map(c =>
-          c.id === course.id ? { ...c, tags: merged } : c,
+          c.id === course.id ? { ...c, tags: merged } : c
         ),
       }))
 
@@ -73,6 +71,14 @@ async function runOllamaTagging(
     }
 
     store.setAutoAnalysisStatus(course.id, 'complete')
+
+    // Clean up status entry after UI has time to react
+    setTimeout(() => {
+      useCourseImportStore.setState(state => {
+        const { [course.id]: _, ...rest } = state.autoAnalysisStatus
+        return { autoAnalysisStatus: rest }
+      })
+    }, 5000)
   } catch (error) {
     console.error('[OllamaTagging] Failed:', error)
     store.setAutoAnalysisStatus(course.id, 'error')

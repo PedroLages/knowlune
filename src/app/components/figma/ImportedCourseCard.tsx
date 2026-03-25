@@ -398,16 +398,22 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
               Imported {new Date(course.importedAt).toLocaleDateString()}
             </p>
             <div className="flex items-center gap-1.5 mb-3">
-              {analysisStatus === 'analyzing' && (
-                <span
-                  data-testid="ai-tagging-indicator"
-                  className="text-xs text-muted-foreground animate-pulse flex items-center gap-1"
-                  aria-live="polite"
-                >
-                  <Loader2 className="size-3 animate-spin" aria-hidden="true" />
-                  AI tagging...
-                </span>
-              )}
+              <span aria-live="polite" className="contents">
+                {analysisStatus === 'analyzing' && (
+                  <span
+                    data-testid="ai-tagging-indicator"
+                    className="text-xs text-muted-foreground animate-pulse flex items-center gap-1"
+                  >
+                    <Loader2 className="size-3 animate-spin" aria-hidden="true" />
+                    AI tagging...
+                  </span>
+                )}
+                {analysisStatus === 'complete' && course.tags.length > 0 && (
+                  <span className="sr-only">
+                    AI tagging complete. {course.tags.length} tags added.
+                  </span>
+                )}
+              </span>
               <TagBadgeList tags={course.tags} onRemove={handleRemoveTag} maxVisible={3} />
               <TagEditor currentTags={course.tags} allTags={allTags} onAddTag={handleAddTag} />
             </div>
