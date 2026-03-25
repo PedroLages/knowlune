@@ -23,7 +23,7 @@ const SEED_COURSE_PROGRESS = JSON.stringify({
 
 test.describe('E27-S01: URL-aware Reports tabs', () => {
   test.beforeEach(async ({ page }) => {
-    await page.addInitScript((progressData) => {
+    await page.addInitScript(progressData => {
       localStorage.setItem('course-progress', progressData)
       localStorage.setItem('knowlune-sidebar-v1', 'false')
     }, SEED_COURSE_PROGRESS)

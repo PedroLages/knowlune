@@ -215,17 +215,29 @@ afterEach(() => {
 
 describe('Reports page', () => {
   it('renders without crashing', () => {
-    const { container } = render(<MemoryRouter><Reports /></MemoryRouter>)
+    const { container } = render(
+      <MemoryRouter>
+        <Reports />
+      </MemoryRouter>
+    )
     expect(container).toBeTruthy()
   })
 
   it('displays the page heading "Reports"', () => {
-    render(<MemoryRouter><Reports /></MemoryRouter>)
+    render(
+      <MemoryRouter>
+        <Reports />
+      </MemoryRouter>
+    )
     expect(screen.getByText('Reports')).toBeInTheDocument()
   })
 
   it('renders stat labels', () => {
-    render(<MemoryRouter><Reports /></MemoryRouter>)
+    render(
+      <MemoryRouter>
+        <Reports />
+      </MemoryRouter>
+    )
     expect(screen.getByText('Lessons Completed')).toBeInTheDocument()
     expect(screen.getByText('Courses In Progress')).toBeInTheDocument()
     expect(screen.getByText('Courses Completed')).toBeInTheDocument()
@@ -233,7 +245,11 @@ describe('Reports page', () => {
   })
 
   it('renders chart section headings', () => {
-    render(<MemoryRouter><Reports /></MemoryRouter>)
+    render(
+      <MemoryRouter>
+        <Reports />
+      </MemoryRouter>
+    )
     expect(screen.getByText('Course Completion')).toBeInTheDocument()
     expect(screen.getByText('Progress by Category')).toBeInTheDocument()
     expect(screen.getByText('Study Activity (Last 30 Days)')).toBeInTheDocument()

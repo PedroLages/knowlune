@@ -133,9 +133,7 @@ export function EngagementPreferences() {
               <RadioGroupItem value="vibrant" className="sr-only" />
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Vibrant</span>
-                {colorScheme === 'vibrant' && (
-                  <div className="w-2 h-2 bg-brand rounded-full" />
-                )}
+                {colorScheme === 'vibrant' && <div className="w-2 h-2 bg-brand rounded-full" />}
               </div>
               <p className="text-xs text-muted-foreground">
                 High-contrast vibrant colors for an energized experience

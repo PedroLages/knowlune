@@ -7,11 +7,7 @@
  * - Calculation: 3 completed + 1 in-progress = 75% (3/4)
  */
 import { test, expect } from '../../support/fixtures'
-import {
-  makeQuiz,
-  makeQuestion,
-  makeAttempt,
-} from '../../support/fixtures/factories/quiz-factory'
+import { makeQuiz, makeQuestion, makeAttempt } from '../../support/fixtures/factories/quiz-factory'
 import { seedQuizzes, seedQuizAttempts, seedNotes } from '../../support/helpers/indexeddb-seed'
 import { goToReports } from '../../support/helpers/navigation'
 import { FIXED_DATE } from '../../utils/test-time'
@@ -22,14 +18,58 @@ import { FIXED_DATE } from '../../utils/test-time'
 
 const q1 = makeQuestion({ id: 'q1-e17s01', text: 'Q1?', correctAnswer: 'A', options: ['A', 'B'] })
 
-const quiz1 = makeQuiz({ id: 'quiz-e17s01-1', lessonId: 'lesson-1', title: 'Quiz 1', questions: [q1] })
-const quiz2 = makeQuiz({ id: 'quiz-e17s01-2', lessonId: 'lesson-2', title: 'Quiz 2', questions: [q1] })
-const quiz3 = makeQuiz({ id: 'quiz-e17s01-3', lessonId: 'lesson-3', title: 'Quiz 3', questions: [q1] })
-const quiz4 = makeQuiz({ id: 'quiz-e17s01-4', lessonId: 'lesson-4', title: 'Quiz 4', questions: [q1] })
+const quiz1 = makeQuiz({
+  id: 'quiz-e17s01-1',
+  lessonId: 'lesson-1',
+  title: 'Quiz 1',
+  questions: [q1],
+})
+const quiz2 = makeQuiz({
+  id: 'quiz-e17s01-2',
+  lessonId: 'lesson-2',
+  title: 'Quiz 2',
+  questions: [q1],
+})
+const quiz3 = makeQuiz({
+  id: 'quiz-e17s01-3',
+  lessonId: 'lesson-3',
+  title: 'Quiz 3',
+  questions: [q1],
+})
+const quiz4 = makeQuiz({
+  id: 'quiz-e17s01-4',
+  lessonId: 'lesson-4',
+  title: 'Quiz 4',
+  questions: [q1],
+})
 
-const attempt1 = makeAttempt({ id: 'att-e17s01-1', quizId: quiz1.id, score: 1, percentage: 100, passed: true, completedAt: FIXED_DATE, startedAt: FIXED_DATE })
-const attempt2 = makeAttempt({ id: 'att-e17s01-2', quizId: quiz2.id, score: 1, percentage: 100, passed: true, completedAt: FIXED_DATE, startedAt: FIXED_DATE })
-const attempt3 = makeAttempt({ id: 'att-e17s01-3', quizId: quiz3.id, score: 1, percentage: 100, passed: true, completedAt: FIXED_DATE, startedAt: FIXED_DATE })
+const attempt1 = makeAttempt({
+  id: 'att-e17s01-1',
+  quizId: quiz1.id,
+  score: 1,
+  percentage: 100,
+  passed: true,
+  completedAt: FIXED_DATE,
+  startedAt: FIXED_DATE,
+})
+const attempt2 = makeAttempt({
+  id: 'att-e17s01-2',
+  quizId: quiz2.id,
+  score: 1,
+  percentage: 100,
+  passed: true,
+  completedAt: FIXED_DATE,
+  startedAt: FIXED_DATE,
+})
+const attempt3 = makeAttempt({
+  id: 'att-e17s01-3',
+  quizId: quiz3.id,
+  score: 1,
+  percentage: 100,
+  passed: true,
+  completedAt: FIXED_DATE,
+  startedAt: FIXED_DATE,
+})
 
 // ---------------------------------------------------------------------------
 // Tests

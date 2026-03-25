@@ -23,10 +23,7 @@ import {
   getWeeklyChange,
 } from '@/lib/progress'
 import { getActionsPerDay } from '@/lib/studyLog'
-import {
-  calculateCompletionRate,
-  type CompletionRateResult,
-} from '@/lib/analytics'
+import { calculateCompletionRate, type CompletionRateResult } from '@/lib/analytics'
 import {
   getCourseCompletionData,
   getCategoryColorMap,
@@ -202,7 +199,7 @@ export default function Reports() {
         ) : (
           <Tabs
             value={activeTab}
-            onValueChange={(value) => setSearchParams({ tab: value }, { replace: true })}
+            onValueChange={value => setSearchParams({ tab: value }, { replace: true })}
             className="mb-6"
           >
             <motion.div variants={fadeUp}>

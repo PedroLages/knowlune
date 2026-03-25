@@ -280,8 +280,8 @@ test.describe('E21-S04: Visual Energy Boost', () => {
       expect(durationMs).toBeLessThanOrEqual(0.01)
 
       // Also verify on <html> element itself
-      const rootTransition = await page.evaluate(() =>
-        getComputedStyle(document.documentElement).transitionDuration
+      const rootTransition = await page.evaluate(
+        () => getComputedStyle(document.documentElement).transitionDuration
       )
       const rootDurationMs = parseFloat(rootTransition)
       expect(rootDurationMs).toBeLessThanOrEqual(0.01)
