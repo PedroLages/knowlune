@@ -124,4 +124,8 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Pure function + DB layer separation** — Splitting detection into a pure `detectAuthorFromFolderName()` and an async `matchOrCreateAuthor()` made unit testing straightforward: the pure function got 15 fast tests with zero mocking, while the integration tests only needed fake-indexeddb.
+- **Unicode-aware name validation** — Used `\p{L}` Unicode property escape in the person name regex to support non-ASCII author names (accented characters, CJK names). This required the `/u` flag on the regex.
+- **Non-critical author detection** — Wrapping the detection flow in try/catch within `persistScannedCourse()` ensures import never fails due to author detection bugs. This "best-effort" pattern (log + continue) is appropriate for enrichment features that shouldn't block core functionality.
+- **Separator priority order** — The `SEPARATORS` array uses ordered iteration (` - `, ` — `, ` – `) with first-match-wins semantics. This avoids ambiguity when multiple separators appear in a folder name.
+- **Reusing seed helpers** — Added `seedAuthors()` to the shared seed-helpers module rather than writing inline IDB seeding in the E2E spec, keeping test code DRY and consistent with established patterns.
