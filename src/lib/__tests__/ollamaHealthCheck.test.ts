@@ -47,20 +47,16 @@ describe('testOllamaConnection', () => {
 
     await testOllamaConnection('http://192.168.2.200:11434', true)
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      'http://192.168.2.200:11434',
-      expect.any(Object)
-    )
+    expect(mockFetch).toHaveBeenCalledWith('http://192.168.2.200:11434', expect.any(Object))
   })
 
   it('returns unreachable error on timeout', async () => {
-    const timeoutError = Object.assign(new Error('The operation timed out'), { name: 'TimeoutError' })
+    const timeoutError = Object.assign(new Error('The operation timed out'), {
+      name: 'TimeoutError',
+    })
     mockFetch.mockRejectedValueOnce(timeoutError)
 
-    const result = await testOllamaConnection(
-      'http://192.168.2.200:11434',
-      true
-    )
+    const result = await testOllamaConnection('http://192.168.2.200:11434', true)
 
     expect(result.success).toBe(false)
     expect(result.errorType).toBe('unreachable')
@@ -134,17 +130,11 @@ describe('testOllamaConnection', () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        models: [
-          { name: 'llama3.2:latest', size: 2000000000 },
-        ],
+        models: [{ name: 'llama3.2:latest', size: 2000000000 }],
       }),
     })
 
-    const result = await testOllamaConnection(
-      'http://192.168.2.200:11434',
-      true,
-      'llama3.2:latest'
-    )
+    const result = await testOllamaConnection('http://192.168.2.200:11434', true, 'llama3.2:latest')
 
     expect(result.success).toBe(true)
   })
@@ -158,11 +148,7 @@ describe('testOllamaConnection', () => {
     // Tags endpoint fails
     mockFetch.mockRejectedValueOnce(new Error('network error'))
 
-    const result = await testOllamaConnection(
-      'http://192.168.2.200:11434',
-      true,
-      'llama3.2:latest'
-    )
+    const result = await testOllamaConnection('http://192.168.2.200:11434', true, 'llama3.2:latest')
 
     // Connection is still considered successful since server is reachable
     expect(result.success).toBe(true)
@@ -175,10 +161,7 @@ describe('testOllamaConnection', () => {
       text: async () => 'Internal Server Error',
     })
 
-    const result = await testOllamaConnection(
-      'http://192.168.2.200:11434',
-      true
-    )
+    const result = await testOllamaConnection('http://192.168.2.200:11434', true)
 
     expect(result.success).toBe(false)
     expect(result.message).toContain('HTTP 500')
@@ -190,10 +173,7 @@ describe('testOllamaConnection', () => {
       text: async () => '<html>Some other web page</html>',
     })
 
-    const result = await testOllamaConnection(
-      'http://192.168.2.200:11434',
-      true
-    )
+    const result = await testOllamaConnection('http://192.168.2.200:11434', true)
 
     expect(result.success).toBe(false)
     expect(result.message).toContain('does not appear to be Ollama')
@@ -207,10 +187,7 @@ describe('testOllamaConnection', () => {
 
     await testOllamaConnection('http://192.168.2.200:11434/', true)
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      'http://192.168.2.200:11434',
-      expect.any(Object)
-    )
+    expect(mockFetch).toHaveBeenCalledWith('http://192.168.2.200:11434', expect.any(Object))
   })
 })
 
@@ -225,10 +202,7 @@ describe('runStartupHealthCheck', () => {
   })
 
   it('does nothing when provider is not ollama', async () => {
-    localStorage.setItem(
-      'ai-configuration',
-      JSON.stringify({ provider: 'openai' })
-    )
+    localStorage.setItem('ai-configuration', JSON.stringify({ provider: 'openai' }))
 
     await runStartupHealthCheck()
 
