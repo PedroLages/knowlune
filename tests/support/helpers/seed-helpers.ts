@@ -183,6 +183,11 @@ export async function seedVectorEmbeddings(
   await seedIndexedDBStore(page, DB_NAME, 'embeddings', embeddings)
 }
 
+/** Seed authors into the authors store. */
+export async function seedAuthors(page: Page, authors: Record<string, unknown>[]): Promise<void> {
+  await seedIndexedDBStore(page, DB_NAME, 'authors', authors)
+}
+
 /** Clear the learningPaths store. */
 export async function clearLearningPath(page: Page): Promise<void> {
   await clearIndexedDBStore(page, DB_NAME, 'learningPaths')

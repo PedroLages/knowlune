@@ -2,6 +2,7 @@ import { db } from '@/db'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { triggerAutoAnalysis } from '@/lib/autoAnalysis'
 import { triggerOllamaTagging } from '@/lib/ollamaTagging'
+import { detectAuthorFromFolderName, matchOrCreateAuthor } from '@/lib/authorDetection'
 import {
   showDirectoryPicker,
   scanDirectory,
@@ -289,6 +290,7 @@ export async function persistScannedCourse(
     category?: string
     tags?: string[]
     coverImageHandle?: FileSystemFileHandle
+    authorId?: string
   }
 ): Promise<ImportedCourse> {
   const now = new Date().toISOString()
@@ -315,6 +317,22 @@ export async function persistScannedCourse(
     fileHandle: p.fileHandle,
   }))
 
+  // Author detection: use explicit override, or auto-detect from folder name (AC1-AC3, AC5)
+  let authorId: string | undefined = overrides?.authorId
+  let detectedAuthorName: string | null = null
+  if (!authorId) {
+    try {
+      detectedAuthorName = detectAuthorFromFolderName(scanned.name)
+      const matchedId = await matchOrCreateAuthor(detectedAuthorName)
+      if (matchedId) {
+        authorId = matchedId
+      }
+    } catch (error) {
+      // Author detection is non-critical — log and continue (AC5)
+      console.warn('[Import] Author detection failed:', error)
+    }
+  }
+
   const course: ImportedCourse = {
     id: scanned.id,
     name: overrides?.name ?? scanned.name,
@@ -327,6 +345,7 @@ export async function persistScannedCourse(
     pdfCount: pdfs.length,
     directoryHandle: scanned.directoryHandle,
     ...(overrides?.coverImageHandle ? { coverImageHandle: overrides.coverImageHandle } : {}),
+    ...(authorId ? { authorId } : {}),
   }
 
   try {
@@ -347,14 +366,31 @@ export async function persistScannedCourse(
     throw error
   }
 
+  // Link course to author if detected (AC2)
+  if (authorId) {
+    try {
+      const author = await db.authors.get(authorId)
+      if (author && !author.courseIds.includes(course.id)) {
+        await db.authors.update(authorId, {
+          courseIds: [...author.courseIds, course.id],
+          updatedAt: now,
+        })
+      }
+    } catch (error) {
+      // Non-critical — author link is best-effort
+      console.warn('[Import] Failed to link course to author:', error)
+    }
+  }
+
   // Update Zustand store
   useCourseImportStore.setState(state => ({
     importedCourses: [...state.importedCourses, course],
   }))
 
-  // Show success toast
+  // Show success toast (AC4: include author name when detected)
+  const authorSuffix = detectedAuthorName ? ` by ${detectedAuthorName}` : ''
   toast.success(
-    `Imported: ${course.name} — ${videos.length} ${videos.length === 1 ? 'video' : 'videos'}, ${pdfs.length} ${pdfs.length === 1 ? 'PDF' : 'PDFs'}`
+    `Imported: ${course.name}${authorSuffix} — ${videos.length} ${videos.length === 1 ? 'video' : 'videos'}, ${pdfs.length} ${pdfs.length === 1 ? 'PDF' : 'PDFs'}`
   )
 
   // Trigger auto-analysis (fire-and-forget, consent-gated)
