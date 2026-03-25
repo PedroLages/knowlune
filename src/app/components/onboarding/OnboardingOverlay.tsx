@@ -144,7 +144,7 @@ export function OnboardingOverlay() {
                 className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
                 aria-label="Skip onboarding"
               >
-                <X className="h-4 w-4" />
+                <X className="size-4" />
               </Button>
             )}
 

@@ -18,7 +18,7 @@ const BASE_ANNULUS =
 const CRESCENT = 'M 20 8 A 12 12 0 0 0 20 32 A 13.6 13.6 0 0 1 20 8 Z'
 
 /** Standalone lunar eclipse mark. */
-export function KnowluneIcon({ className = 'w-7 h-7' }: { className?: string }) {
+export function KnowluneIcon({ className = 'size-7' }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 40 40"

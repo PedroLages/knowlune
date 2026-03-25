@@ -46,7 +46,7 @@ export function HybridCourses() {
       {/* Search card */}
       <div className="bg-white rounded-xl border border-neutral-100 p-4 mb-8">
         <div className="flex items-center gap-3">
-          <Search className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+          <Search className="size-4 text-neutral-400 flex-shrink-0" />
           <input
             type="text"
             placeholder="Search courses..."

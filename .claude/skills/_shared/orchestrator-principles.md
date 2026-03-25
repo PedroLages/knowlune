@@ -56,3 +56,11 @@ Provide actionable feedback:
 - Include file paths and commands
 - Explain blockers with fix instructions
 - Use TodoWrite to show progress visibility
+
+### 6. Noise Reduction
+Sub-agents generate heavy tool call output that floods the conversation. Reduce noise by:
+- **Always use `run_in_background: true`** when dispatching sub-agents via the Agent tool
+- **Output a status banner** before and after each agent dispatch (see epic-orchestrator Output Discipline)
+- **Print the progress dashboard** after each story/step status change
+- **Never run high-output commands directly** (git diff, npm run build, lint) — delegate these to sub-agents where the verbose output stays isolated
+- **Extract only structured data** from agent returns (counts, verdicts, paths) — never retain raw output

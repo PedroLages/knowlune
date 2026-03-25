@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react'
-import { createBrowserRouter, Navigate } from 'react-router'
+import { createBrowserRouter, Navigate, useParams } from 'react-router'
 import { Layout } from './components/Layout'
 import { DelayedFallback } from './components/DelayedFallback'
 import { Skeleton } from './components/ui/skeleton'
@@ -82,6 +82,12 @@ function PageLoader() {
 
 function SuspensePage({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<PageLoader />}>{children}</Suspense>
+}
+
+/** Preserves :authorId param when redirecting /instructors/:authorId → /authors/:authorId */
+function InstructorProfileRedirect() {
+  const { authorId } = useParams()
+  return <Navigate to={`/authors/${authorId}`} replace />
 }
 
 export const router = createBrowserRouter([
@@ -212,7 +218,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'instructors/:authorId',
-        element: <Navigate to="/authors" replace />,
+        element: <InstructorProfileRedirect />,
       },
       {
         path: 'challenges',
@@ -237,6 +243,19 @@ export const router = createBrowserRouter([
             <Reports />
           </SuspensePage>
         ),
+      },
+      // Legacy path-based redirects → query-param tabs (E27-S02)
+      {
+        path: 'reports/study',
+        element: <Navigate to="/reports?tab=study" replace />,
+      },
+      {
+        path: 'reports/quizzes',
+        element: <Navigate to="/reports?tab=quizzes" replace />,
+      },
+      {
+        path: 'reports/ai',
+        element: <Navigate to="/reports?tab=ai" replace />,
       },
       {
         path: 'settings',

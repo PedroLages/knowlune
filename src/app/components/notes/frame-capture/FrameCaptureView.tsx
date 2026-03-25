@@ -34,6 +34,7 @@ export function FrameCaptureView({ node, editor }: NodeViewProps) {
         }
       })
       .catch(error => {
+        // silent-catch-ok — error state handled by component
         console.error('Failed to load frame thumbnail:', error)
         if (!cancelled) setStatus('error')
       })

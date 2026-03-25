@@ -41,11 +41,14 @@ When invoked with a story ID (e.g., `E01-S03`):
 ```
 [ ] Look up story and validate sprint status
 [ ] Set up branch and story file
+[ ] Environment pre-flight check
+[ ] Carried debt reminder
 [ ] Suggest ATDD tests
 [ ] Suggest design guidance
 [ ] Research: story context (Agent)
 [ ] Research: code patterns (Agent)
 [ ] Research: test + UX patterns (Agent)
+[ ] Complexity estimate
 [ ] Enter plan mode
 [ ] Link plan, commit, and output
 ```
@@ -148,7 +151,48 @@ Mark the first todo as `in_progress` and proceed:
    - **Already `in-progress`**: Skip update. Inform user: "Sprint status already in-progress."
    - **Not `in-progress`**: Set story → `in-progress`. If this is the first story in the epic, set epic → `in-progress`.
 
-   **TodoWrite**: Mark "Set up branch and story file" → `completed`. Mark "Suggest ATDD tests" → `in_progress`.
+   **TodoWrite**: Mark "Set up branch and story file" → `completed`.
+
+7b. **Environment pre-flight check** (fast validation that dev environment is healthy):
+
+   ```bash
+   npm install --prefer-offline 2>&1 | tail -3
+   npm run build 2>&1 | tail -5
+   ```
+
+   - If `npm install` fails: warn "Dependencies may be stale — check package.json changes" but continue (non-blocking)
+   - If `npm run build` fails: STOP — "Build broken on new branch. Fix build errors before starting implementation." This catches issues inherited from main before the developer writes any code.
+   - If both pass: note "Environment healthy — build passes on branch" and continue
+
+7c. **Carried debt reminder** (shift-left from /review-story):
+
+   Extract the epic number from the story ID (e.g., E16-S03 → epic 16). Find the most recent retrospective file matching `docs/implementation-artifacts/epic-*-retro-*.md` for the PREVIOUS epic (epic number - 1). If found, scan the "Technical Debt" or "Technical Debt Resolution" section for items marked HIGH or MEDIUM priority. If any exist, display a non-blocking reminder:
+
+   ```
+   📋 Carried Debt Reminder (from Epic {N-1} retro):
+   - [HIGH] {debt item description}
+   - [MEDIUM] {debt item description}
+   Tip: If this story touches related files, consider addressing these items during implementation.
+   ```
+
+   This is informational only — does NOT block story setup. Its purpose is to surface debt when it can still influence the implementation plan (shift-left from /review-story's debt reminder).
+
+   If no retro file found or no debt items: skip silently.
+
+7d. **Known issues warning** (shift-left from /review-story):
+
+   Read `docs/known-issues.yaml`. If the file exists and has `open` issues, get the list of files this story will likely touch (from epic tasks/subtasks or the story file). Cross-reference against the `file` field of open known issues. If any match:
+
+   ```
+   ⚠️ Known Issues in Files You May Touch:
+   - [KI-NNN] [severity] file:line — summary
+   - [KI-NNN] [severity] file:line — summary
+   Tip: Consider fixing these during implementation. Mark as fixed_by: E##-S## in known-issues.yaml.
+   ```
+
+   If no open issues or no file overlap: skip silently.
+
+   Mark "Suggest ATDD tests" → `in_progress`.
 
 8. **ATDD test suggestion** (idempotent):
    - Check if `tests/e2e/story-{id}.spec.ts` already exists.
@@ -247,14 +291,36 @@ Mark the first todo as `in_progress` and proceed:
 
    **TodoWrite**: Mark "Suggest design guidance" → `completed`. Mark all 3 research agent todos → `in_progress` simultaneously.
 
-9. **Launch 3 parallel Explore agents** via Task tool (dispatch all in a single message):
-   - **Agent 1 — Story context**: Read story ACs, dependencies, related stories in `docs/planning-artifacts/epics.md`. Check if dependent stories are `done` in sprint-status.
-   - **Agent 2 — Existing code audit + patterns**: Search affected source directories (`src/app/pages/`, `src/app/components/`, `src/stores/`, `src/db/`, `src/lib/`) for relevant patterns, types, and utilities. **Important: explicitly identify pre-existing code that already implements parts of the story** — search for store actions, type definitions, and components that overlap with the story's tasks. Report what already exists vs. what needs building. (See `docs/engineering-patterns.md` § "Inventory Existing Code Before Story Planning".)
-   - **Agent 3 — Test patterns + UX specs**: Read test patterns from `tests/` and `tests/support/`, plus UX design specs from `docs/planning-artifacts/ux-design-specification.md` for relevant sections.
+9. **Launch 3 parallel Explore agents** via Task tool (dispatch all in a single message).
+
+   **Important**: Feed each agent the specific ACs and affected file paths from Step 1, not generic search mandates. Targeted context produces 40% fewer errors and 55% faster task completion (Anthropic 2026 Agentic Coding report).
+
+   - **Agent 1 — Story context**: Read story ACs, dependencies, related stories in `docs/planning-artifacts/epics.md`. Check if dependent stories are `done` in sprint-status. **Provide**: the exact AC text and dependency list from Step 1.
+   - **Agent 2 — Existing code audit + patterns**: Search affected source directories (`src/app/pages/`, `src/app/components/`, `src/stores/`, `src/db/`, `src/lib/`) for relevant patterns, types, and utilities. **Provide**: the specific ACs and task descriptions so the agent searches for exact matches (e.g., "AC says 'persist quiz results' — find existing Dexie.js quiz stores"). **Important: explicitly identify pre-existing code that already implements parts of the story** — search for store actions, type definitions, and components that overlap with the story's tasks. Report what already exists vs. what needs building. (See `docs/engineering-patterns.md` § "Inventory Existing Code Before Story Planning".)
+   - **Agent 3 — Test patterns + UX specs**: Read test patterns from `tests/` and `tests/support/`, plus UX design specs from `docs/planning-artifacts/ux-design-specification.md` for relevant sections. **Provide**: the affected route(s) from the route map so the agent finds existing E2E tests for those specific pages.
 
    As each agent returns, mark its corresponding todo → `completed`. Wait for all 3 to complete before proceeding.
 
-   **TodoWrite**: Mark all 3 research todos → `completed`. Mark "Enter plan mode" → `in_progress`.
+   **TodoWrite**: Mark all 3 research todos → `completed`.
+
+9b. **Complexity estimate** (informational — output after exploration completes):
+
+   Based on research from the 3 agents, output a brief complexity signal:
+   ```
+   Complexity estimate: [LOW / MEDIUM / HIGH]
+   - {N} ACs ({breakdown: N UI, N data, N test})
+   - Touches {N} existing files + {N} new
+   - {Similar to E##-S## if a comparable story exists, or "No close precedent"}
+   ```
+
+   Criteria:
+   - **LOW**: 1-2 ACs, 1-2 tasks, single area of codebase, existing patterns cover it
+   - **MEDIUM**: 3-4 ACs, 3-4 tasks, touches 2 areas, some new patterns needed
+   - **HIGH**: 5+ ACs, 5+ tasks, touches 3+ areas, new architecture or patterns required
+
+   This is informational only — no gates. Purpose is to calibrate expectations and help the workflow recommendation in Step 13.
+
+   Mark "Enter plan mode" → `in_progress`.
 
 10. **Enter plan mode** with gathered context. Combine research from all 3 agents into a plan. Include:
     - Story overview and ACs
