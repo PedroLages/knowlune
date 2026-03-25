@@ -52,7 +52,7 @@ import {
   savePdfPage,
   getPdfPage,
   saveNote,
-  getNote,
+  getNotes,
   isLessonComplete,
   getCourseCompletionPercent,
 } from '@/lib/progress'
@@ -101,6 +101,7 @@ export function LessonPlayer() {
     courseId && lessonId ? isLessonComplete(courseId, lessonId) : false
   )
   const [noteText, setNoteText] = useState('')
+  const [noteId, setNoteId] = useState<string | undefined>(undefined)
   const [notesOpen, setNotesOpen] = useState(() => searchParams.get('panel') === 'notes')
   const [noteFullScreen, setNoteFullScreen] = useState(false)
   const [pendingNoteFocus, setPendingNoteFocus] = useState(false)
@@ -229,7 +230,12 @@ export function LessonPlayer() {
     setActiveTab(pdfResources.length > 0 ? 'materials' : 'notes')
     if (courseId && lessonId) {
       setCompleted(isLessonComplete(courseId, lessonId))
-      getNote(courseId, lessonId).then(setNoteText)
+      setNoteId(undefined)
+      getNotes(courseId, lessonId).then(notes => {
+        const latest = notes[notes.length - 1]
+        setNoteText(latest?.content ?? '')
+        setNoteId(latest?.id)
+      })
     }
   }, [courseId, lessonId])
 
@@ -788,6 +794,7 @@ export function LessonPlayer() {
             <NoteEditor
               courseId={courseId || ''}
               lessonId={lessonId || ''}
+              noteId={noteId}
               initialContent={noteText}
               currentVideoTime={videoCurrentTime}
               onSave={handleNoteChange}
@@ -910,6 +917,7 @@ export function LessonPlayer() {
                 <NoteEditor
                   courseId={courseId || ''}
                   lessonId={lessonId || ''}
+                  noteId={noteId}
                   initialContent={noteText}
                   currentVideoTime={videoCurrentTime}
                   onSave={handleNoteChange}
@@ -956,6 +964,7 @@ export function LessonPlayer() {
             <NoteEditor
               courseId={courseId || ''}
               lessonId={lessonId || ''}
+              noteId={noteId}
               initialContent={noteText}
               currentVideoTime={videoCurrentTime}
               onSave={handleNoteChange}
@@ -1019,6 +1028,7 @@ export function LessonPlayer() {
               <NoteEditor
                 courseId={courseId || ''}
                 lessonId={lessonId || ''}
+                noteId={noteId}
                 initialContent={noteText}
                 currentVideoTime={videoCurrentTime}
                 onSave={handleNoteChange}

@@ -388,6 +388,23 @@ export interface ReviewRecord {
   reviewCount: number // Cumulative number of reviews
 }
 
+export interface Flashcard {
+  id: string // UUID
+  courseId: string // FK to ImportedCourse.id
+  noteId?: string // Optional: provenance from note (for traceability)
+  front: string // Question / prompt text
+  back: string // Answer text
+  // Embedded SM-2 fields — self-contained, no join needed
+  interval: number // Days until next review (default 0)
+  easeFactor: number // SM-2 ease factor (default 2.5, min 1.3)
+  reviewCount: number // Cumulative reviews (default 0)
+  lastRating?: ReviewRating // Most recent rating
+  reviewedAt?: string // ISO 8601 — when last reviewed (undefined = never)
+  nextReviewAt?: string // ISO 8601 — when next review is due (undefined = immediately due)
+  createdAt: string // ISO 8601
+  updatedAt: string // ISO 8601
+}
+
 // --- Career Paths (Story 20.1) ---
 
 export interface CareerPathStage {

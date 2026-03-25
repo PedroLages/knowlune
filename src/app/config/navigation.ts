@@ -13,6 +13,7 @@ import {
   BrainCircuit,
   Sparkles,
   Brain,
+  Layers,
   Milestone,
   Settings as SettingsIcon,
   type LucideIcon,
@@ -74,6 +75,7 @@ export const navigationGroups: NavigationGroup[] = [
       { name: 'Knowledge Gaps', path: '/knowledge-gaps', icon: Brain, disclosureKey: 'ai-used' },
       { name: 'Review', path: '/review', icon: RotateCcw, disclosureKey: 'review-used' },
       { name: 'Retention', path: '/retention', icon: ShieldCheck, disclosureKey: 'review-used' },
+      { name: 'Flashcards', path: '/flashcards', icon: Layers },
     ],
   },
   {

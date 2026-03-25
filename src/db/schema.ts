@@ -18,6 +18,7 @@ import type {
   CourseReminder,
   Course,
   VideoCaptionRecord,
+  Flashcard,
   ImportedAuthor,
   CareerPath,
   PathEnrollment,
@@ -45,6 +46,7 @@ const db = new Dexie('ElearningDB') as Dexie & {
   quizzes: EntityTable<Quiz, 'id'>
   quizAttempts: EntityTable<QuizAttempt, 'id'>
   videoCaptions: Table<VideoCaptionRecord> // compound PK: [courseId+videoId]
+  flashcards: EntityTable<Flashcard, 'id'>
   authors: EntityTable<ImportedAuthor, 'id'>
   careerPaths: EntityTable<CareerPath, 'id'>
   pathEnrollments: EntityTable<PathEnrollment, 'id'>
@@ -628,6 +630,36 @@ db.version(21).stores({
   // NEW: Career Paths tables
   careerPaths: 'id',
   pathEnrollments: 'id, pathId, status',
+})
+
+// v22: Add flashcards table for SM-2 spaced repetition flashcard system (E20-S02)
+db.version(22).stores({
+  // All 24 existing v21 tables (unchanged — must redeclare or Dexie deletes them)
+  importedCourses: 'id, name, importedAt, status, *tags',
+  importedVideos: 'id, courseId, filename',
+  importedPdfs: 'id, courseId, filename',
+  progress: '[courseId+videoId], courseId, videoId',
+  bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+  screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+  contentProgress: '[courseId+itemId], courseId, itemId, status',
+  challenges: 'id, type, deadline, createdAt',
+  embeddings: 'noteId, createdAt',
+  learningPath: 'courseId, position, generatedAt',
+  courseThumbnails: 'courseId',
+  aiUsageEvents: 'id, featureType, timestamp, courseId',
+  reviewRecords: 'id, noteId, nextReviewAt, reviewedAt',
+  courseReminders: 'id, courseId',
+  courses: 'id, category, difficulty, authorId',
+  quizzes: 'id, lessonId, createdAt',
+  quizAttempts: 'id, quizId, [quizId+completedAt], completedAt',
+  videoCaptions: '[courseId+videoId], courseId, videoId',
+  authors: 'id, name, createdAt',
+  careerPaths: 'id',
+  pathEnrollments: 'id, pathId, status',
+  // NEW: Flashcard system with SM-2 spaced repetition
+  flashcards: 'id, courseId, noteId, nextReviewAt, createdAt',
 })
 
 export { db }
