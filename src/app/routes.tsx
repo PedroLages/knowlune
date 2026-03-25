@@ -244,6 +244,19 @@ export const router = createBrowserRouter([
           </SuspensePage>
         ),
       },
+      // Legacy path-based redirects → query-param tabs (E27-S02)
+      {
+        path: 'reports/study',
+        element: <Navigate to="/reports?tab=study" replace />,
+      },
+      {
+        path: 'reports/quizzes',
+        element: <Navigate to="/reports?tab=quizzes" replace />,
+      },
+      {
+        path: 'reports/ai',
+        element: <Navigate to="/reports?tab=ai" replace />,
+      },
       {
         path: 'settings',
         element: (
