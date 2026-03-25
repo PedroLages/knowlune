@@ -159,3 +159,6 @@ N/A — data model story, no UI changes.
 - Type alignment between spec and implementation requires careful attention — AC5 divergence was caught in review
 - Migration upgrade functions need comprehensive edge case tests from the start (empty data, duplicates, whitespace)
 - Error handling in stores should always include user-facing feedback (toast), not just console.error
+- When adding required fields to a type (like `isPreseeded`), all test fixtures that construct that type must be updated — TypeScript catches this but only if `tsc --noEmit` is run before shipping
+- Data model stories with no UI changes benefit from skipping design review — saves time without sacrificing quality
+- Dexie migration tests can be flaky when run in parallel due to shared IndexedDB state; they pass reliably in isolation
