@@ -29,7 +29,7 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
   const [entitlement, setEntitlement] = useState<CachedEntitlement | null>(null)
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false)
   const checkoutInProgress = useRef(false)
-  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   // Load cached entitlement on mount
   useEffect(() => {

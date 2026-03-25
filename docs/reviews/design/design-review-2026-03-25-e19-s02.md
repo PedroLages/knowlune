@@ -1,145 +1,87 @@
-# Design Review Report — E19-S02: Stripe Subscription Integration
+# Design Review Report — E19-S02 Stripe Subscription Integration
 
 **Review Date**: 2026-03-25
-**Reviewed By**: Claude Code (design-review agent via Playwright)
-**Story**: E19-S02 Stripe Subscription Integration
+**Reviewed By**: Claude Code (design-review agent via Playwright MCP)
 **Branch**: `feature/e19-s02-stripe-subscription-integration`
-
-**Changed Files Reviewed**:
-- `src/app/components/settings/SubscriptionCard.tsx` (239 lines, new component)
-- `src/app/pages/Settings.tsx` (27 lines changed — integration + `useSearchParams` for checkout return)
-
-**Affected Pages Tested**: `/settings`
+**Changed UI Files**:
+- `src/app/components/settings/SubscriptionCard.tsx` (new component)
+- `src/app/pages/Settings.tsx` (modified — SubscriptionCard integration)
+**Affected Route**: `/settings`
+**Viewports Tested**: 375px (mobile), 768px (tablet), 1440px (desktop)
 
 ---
 
 ## Executive Summary
 
-The SubscriptionCard is a well-structured new component that integrates cleanly into the Settings page. The five-state machine (loading → free → activating → activated → premium) is clearly modelled in code, the design token usage is exemplary, and the core ARIA implementation is solid. Two correctness issues require attention before merge: a Progress bar rendering bug that makes the activating state's loading indicator invisible, and a missing "Manage Subscription" billing portal link referenced in both the story brief and acceptance criteria. The remaining findings are medium-priority polish items.
+The SubscriptionCard is a well-structured new component that integrates cleanly into the Settings page. It correctly uses design tokens, follows the shadcn/ui Card pattern, handles all required states (loading, free, activating, activated, premium), and has solid ARIA foundations. One blocker requires immediate attention before merge: the `text-gold` / `bg-gold-muted` color pair in light mode produces only a 2.38:1 contrast ratio against the WCAG AA minimum of 4.5:1. Three additional high-priority items cover a sub-44px touch target, a missing `aria-live` region on the heading, and the use of an arbitrary shadow value where a named utility already exists.
 
 ---
 
 ## What Works Well
 
-- **Design token discipline**: Zero hardcoded colors. The gold accent palette (`bg-gold-muted`, `text-gold`, `shadow-[0_2px_8px_var(--shadow-gold)]`) is applied correctly via CSS variables with proper light/dark variants. Both modes were verified by browser evaluation — the dark-mode gold tokens (`#daa860` / `#3a3020`) are distinct and legible.
-- **Upgrade button accessibility**: `min-h-[44px]`, `w-full`, `aria-label="Upgrade to Premium plan"`, `aria-busy={isCheckoutLoading}`, and `disabled={isCheckoutLoading}` are all set correctly. Touch target compliance is met.
-- **Cancellation cleanup on the URL**: The `useEffect` / `useRef` pattern correctly reads `?checkout=` params once on mount and calls `window.history.replaceState` to clean the URL. The cleaned URL was confirmed by browser test (`/settings` with no query string after navigation).
-- **No console errors**: Zero JavaScript errors logged on the Settings page at any viewport.
-- **Responsive layout**: No horizontal overflow at 375 px, 768 px, or 1440 px. The full-width card fits correctly within the Settings single-column layout at all breakpoints.
-- **Background color**: Confirmed `rgb(250, 245, 238)` — correct `#FAF5EE` warm off-white.
-- **Card border radius**: All Settings cards render at `24px` border-radius, consistent with the design system standard.
-- **`animate-pulse` skeleton loading**: The loading skeleton (three muted bars) correctly matches the approximate height of the free-tier content, preventing layout shift.
-- **`motion-safe` on the Progress indicator**: The Progress component in the codebase already uses `motion-safe:transition-all motion-safe:duration-500` on its indicator, so `prefers-reduced-motion` is respected implicitly.
-- **Activating state ARIA**: `role="status"`, `aria-live="polite"`, and `aria-label="Activating subscription"` are all present — screen readers will announce the polling state without interrupting the user.
-- **`CheckCircle` and `Loader2` marked `aria-hidden="true"`**: Decorative icons do not pollute the accessibility tree.
+- Token hygiene is excellent. No hardcoded hex colors, no raw Tailwind palette classes (`bg-blue-600` etc.), and no inline `style=` attributes were found anywhere in the component. All colors use the defined design system tokens (`bg-gold-muted`, `text-gold`, `text-success`, `bg-brand`, etc.).
+- ARIA coverage for interactive states is thorough. The Upgrade button carries `aria-label`, `aria-describedby` (pointing at the feature list), and `aria-busy`. Every transient state (`loading`, `activating`, `activated`) uses `role="status"` or `aria-live="polite"` so screen readers announce transitions without requiring focus movement.
+- Motion accessibility is correctly handled. The indeterminate progress bar uses `motion-safe:animate-[...]` so it is gated by `prefers-reduced-motion`. The global `animation-duration: 0.01ms !important` rule in `index.css` covers the `animate-in fade-in` entrance on the activated celebration state as well as the `Loader2 animate-spin` spinners.
+- Responsive layout is clean. No horizontal scroll was detected at any of the three breakpoints (mobile 375px, tablet 768px, desktop 1440px). The Settings page reflows correctly to a single-column stack on mobile and the sidebar collapses as expected.
+- Background color is correct. The computed body background is `rgb(250, 245, 238)` — exactly the `#FAF5EE` warm off-white design token. Card border-radius is `24px` as specified.
+- The feature-list / button association using `id="premium-features-list"` and `aria-describedby="premium-features-list"` is a particularly good accessibility pattern: screen readers announce the full feature context when focus lands on the Upgrade button.
+- Zero console errors were detected during page load and interaction.
 
 ---
 
 ## Findings by Severity
 
-### Blockers (Must fix before merge)
+### Blocker (Must fix before merge)
 
-**B-01: Progress bar activating state renders an empty gold track — no visual motion**
-
-- **Location**: `SubscriptionCard.tsx:156`
-- **Evidence**: `<Progress className="h-2 bg-gold-muted" aria-label="Activation progress" />`
-- The `Progress` component accepts a `value` prop (0–100). When omitted, it defaults to `0`. At `value=0` the Radix indicator is fully translated off-screen (`translateX(-100%)`), making the bar appear as a flat, empty gold strip — not an animated progress indicator.
-- Additionally, `bg-gold-muted` targets the **track** (root), not the indicator. The indicator is always `bg-primary` (blue). The result in the activating state is: a gold track with a blue indicator that is invisible (at 0%). The intended visual — a gold progress animation — is not achieved.
-- **Impact**: The "Activating your subscription..." state is the moment of highest emotional stakes in the entire flow (the user just paid). An inert empty bar with no motion conveys failure or a broken UI.
-- **Suggestion**: Use an indeterminate animation instead. Either:
-  1. Replace `Progress` with a custom indeterminate bar: `<div className="h-2 w-full rounded-full bg-gold-muted overflow-hidden"><div className="h-full bg-gold animate-[indeterminate_1.5s_ease-in-out_infinite] w-1/3" /></div>` (requires a custom keyframe in `tailwind.css`), or
-  2. Add a `motion-safe:animate-pulse` to the entire progress wrapper and pass `value={undefined}` explicitly — though this still leaves the indicator invisible, so option 1 is preferred.
-
-**B-02: "Manage Subscription" billing portal link absent from premium state**
-
-- **Location**: `SubscriptionCard.tsx:210–235`
-- **Evidence**: The premium state renders a plan badge, an "Active" indicator, and the next billing date — but no action link to the billing portal. The story brief explicitly describes "Manage Subscription" as a link. The second AC also states "I see a confirmation message with my plan details."
-- **Impact**: Premium subscribers have no way to cancel, update payment details, or change their plan from within the app. This is both a UX gap and a potential compliance issue (subscription services must provide a clear cancellation path per most app store guidelines and consumer protection rules).
-- **Suggestion**: Add a `<a href={billingPortalUrl} target="_blank" rel="noopener noreferrer">` or a `<Button variant="brand-outline" size="sm">Manage Subscription</Button>` that calls a billing portal endpoint. If the portal URL requires a server round-trip, add a small loading state similar to the upgrade button pattern.
-
----
+**B-01 — Gold badge contrast failure in light mode**
+- **Location**: `SubscriptionCard.tsx:238`
+- **Evidence**: Measured `text-gold` (`rgb(196, 146, 69)`) on `bg-gold-muted` (`rgb(245, 237, 216)`) = **2.38:1 contrast ratio**. WCAG AA requires 4.5:1 for normal-sized text (the badge text is ~12–14px, not large text).
+- **Dark mode**: The same pair in dark mode passes at **6.01:1** (`rgb(218, 168, 96)` on `rgb(58, 48, 32)`).
+- **Impact**: The "Premium" badge label is functionally invisible to users with low-contrast vision — the very moment meant to celebrate a paid upgrade fails to communicate that status clearly.
+- **Code**: `<Badge className="bg-gold-muted text-gold border-transparent">Premium</Badge>`
+- **Suggestion**: Introduce a `--gold-soft-foreground` token analogous to `--brand-soft-foreground` (which exists precisely to solve this pattern). Set it to a darker gold value (e.g. `oklch(0.48 0.12 75)` — approximately `#8B6520`) that passes 4.5:1 on `bg-gold-muted`. Then use `text-gold-soft-foreground` for text on soft gold backgrounds. Alternatively, use a `variant="gold"` badge style that inverts (dark background, light text) to mirror how the brand badge is handled.
 
 ### High Priority (Should fix before merge)
 
-**H-01: `activated` celebration state is missing `aria-label` on its `role="status"` element**
+**H-01 — "Manage Subscription" button touch target below 44px minimum**
+- **Location**: `SubscriptionCard.tsx:260–272`
+- **Evidence**: The button uses `size="sm"` which resolves to `h-8` (32px height) with no `min-h-[44px]` override. This falls 12px short of the 44×44px minimum required for touch targets on mobile devices.
+- **Impact**: Premium subscribers managing their plan on a phone will have significant difficulty hitting the button accurately, creating frustration at the most commercially sensitive interaction point in the app.
+- **Suggestion**: Add `min-h-[44px]` to the className, matching the pattern used on every other interactive element in this file (the Upgrade button already does this correctly at line 221: `className="w-full min-h-[44px] gap-2"`). The visual height can stay compact with internal padding adjustment if needed.
 
-- **Location**: `SubscriptionCard.tsx:165–176`
-- **Evidence**: The `activating` state (line 152–161) correctly has `aria-label="Activating subscription"`. The `activated` state (line 165) has `role="status"` and `aria-live="polite"` but no `aria-label`. Without a label, VoiceOver/NVDA will announce the inner text ("Welcome to Premium! All premium features are now unlocked.") which is acceptable, but the status element itself has no accessible name for the live region.
-- **Impact**: On some screen readers, unlabelled `role="status"` regions are less reliably announced. The activation moment is critical for confirming a completed purchase.
-- **Suggestion**: Add `aria-label="Subscription activated"` to the activated state's status div, mirroring the pattern on the activating state.
+**H-02 — CardTitle heading renders as `<h3>` but follows an `<h2>` sequence skip**
+- **Location**: `SubscriptionCard.tsx:138` (inherits from `card.tsx:32` which renders `<h3>`)
+- **Evidence**: Live DOM audit shows heading order: `<h1> Settings` → `<h3> Account` (CardTitle) → `<h3> Subscription` (SubscriptionCard CardTitle) → `<h2> Your Profile`. The `<h3>` cards appear before any `<h2>`, breaking logical heading nesting.
+- **Impact**: Screen reader users who navigate by headings encounter an `h3` before an `h2`, which signals a structural inconsistency and can make the page's section map confusing to build mentally.
+- **Note**: This is a pre-existing issue in `Settings.tsx` (the Account card also uses `CardTitle`). The new SubscriptionCard inherits the same problem. Fixing either or both would improve the overall page.
+- **Suggestion**: The cleanest fix is to change both the Account card and SubscriptionCard headers to use `<h2>` directly (as most other Settings sections already do), either by using a plain `<h2>` in the header `<div>` or by passing `asChild` through a wrapper. This would make the heading map: `h1 Settings → h2 Account → h2 Subscription → h2 Your Profile...`.
 
-**H-02: `CardTitle` in SubscriptionCard renders as `<h3>`, but heading hierarchy on Settings is mixed**
-
-- **Location**: `SubscriptionCard.tsx:124`, `Settings.tsx:559`
-- **Evidence**: `CardTitle` is hardcoded as `<h3>` in the UI component (`card.tsx:32`). The Settings page has `<h1>Settings</h1>` at the top, then uses `<h2>` for "Your Profile", "Appearance", "Navigation", "Font Size", "Age Range" — but other cards rendered by sub-components use `<h3>` (Account, Engagement Preferences, Study Reminders, etc.). The SubscriptionCard's `CardTitle` would also be `<h3>`, placing it inconsistently alongside `<h2>` siblings at the same visual level.
-- **Impact**: Screen reader users navigating by heading level will encounter an inconsistent jump from `<h3>Account` to `<h2>Your Profile` to `<h3>Subscription>` — the logical hierarchy is broken.
-- **Suggestion**: This is an existing Settings-page issue rather than new debt from E19-S02, but the new card adds another instance. Log a follow-up issue to audit the Settings page heading hierarchy holistically. As a quick fix for this card, use `<p className="text-lg font-display leading-none">Subscription</p>` in `CardTitle`'s place if consistent `<h2>` usage isn't immediately feasible.
-
-**H-03: The `activated` state `CheckCircle` icon is missing `aria-hidden="true"`**
-
-- **Location**: `SubscriptionCard.tsx:171`
-- **Evidence**: `<CheckCircle className="size-8 text-success" />` — no `aria-hidden`. All other decorative icons in the file (`Crown`, `Loader2` in header, `Check` in feature list, `Loader2` in button, `CheckCircle` in premium state) are marked `aria-hidden="true"`.
-- **Impact**: Screen readers may announce "image" or a SVG title for the unlabelled icon, duplicating the adjacent "Welcome to Premium!" text.
-- **Suggestion**: Add `aria-hidden="true"` to the `CheckCircle` on line 171 and to the `CheckCircle` on line 219 (premium state's active indicator) to be consistent.
-
----
+**H-03 — Arbitrary shadow value instead of existing named utility**
+- **Location**: `SubscriptionCard.tsx:127`
+- **Evidence**: `shadow-[0_2px_8px_var(--shadow-gold)]` — an inline arbitrary Tailwind value. A named utility `shadow-studio-gold` already exists in `src/styles/index.css:300` for exactly this shadow pattern.
+- **Impact**: Minor code maintainability issue. If the shadow token value changes, the arbitrary string won't update automatically whereas the utility class would. It also bypasses the design system's intent of abstracting shadow values.
+- **Suggestion**: Replace with `shadow-studio-gold` to use the established utility.
 
 ### Medium Priority (Fix when possible)
 
-**M-01: Gold Progress track colour with blue indicator is a design token mismatch**
+**M-01 — `animate-spin` on Loader2 icons is not gated with `motion-safe:`**
+- **Location**: `SubscriptionCard.tsx:132` (activating header icon), `SubscriptionCard.tsx:228` (checkout loading spinner)
+- **Evidence**: The global `prefers-reduced-motion` rule in `index.css` sets `animation-duration: 0.01ms !important` which effectively stops all CSS animations. So the spinner *will* stop under reduced motion, but it will appear as a frozen spinner rather than being replaced with a static icon.
+- **Impact**: A frozen spinner gives no indication of whether the system is loading or has stopped. The indeterminate progress bar handles this better by using `motion-safe:` to withhold the animation entirely.
+- **Suggestion**: Use `motion-safe:animate-spin` on both Loader2 instances to match the indeterminate bar's pattern. This means in reduced-motion mode, the `Loader2` icon appears as a static circular icon rather than a frozen mid-spin frame — slightly clearer intent.
 
-- **Location**: `SubscriptionCard.tsx:156`
-- **Evidence**: Even if the progress value bug (B-01) is fixed, the Progress component's indicator is always `bg-primary` (blue). Using `bg-gold-muted` on the root means the animated indicator will be blue moving across a gold track — mismatched with the gold premium brand identity of this card.
-- **Impact**: Minor visual inconsistency, but notable in a premium-tier context where the gold palette is deliberately evocative.
-- **Suggestion**: If a custom indeterminate animation is not feasible, style the indicator directly via the component's `indicatorClassName` prop if one is added, or wrap the Progress in a CSS override: `.subscription-progress [data-slot="progress-indicator"] { background-color: var(--color-gold); }`.
+**M-02 — `text-center` on activating status message**
+- **Location**: `SubscriptionCard.tsx:180`
+- **Evidence**: `<p className="text-sm text-muted-foreground text-center">This usually takes a few seconds...</p>`
+- **Impact**: The design principles state "Left-aligned text for LTR languages (never center-align body text)." The activating state message is body text describing a wait condition, not a decorative/celebratory heading.
+- **Note**: The `activated` celebration state at line 188 uses `items-center` on the container (which is acceptable for a brief centered layout with icon + title), but even there the descriptive paragraph could benefit from being left-aligned.
+- **Suggestion**: Remove `text-center` from line 180. For the celebration state, consider whether the full container needs centering or just the icon.
 
-**M-02: `setTimeout` in the `activated → premium` transition is not defensive against component unmount**
-
-- **Location**: `SubscriptionCard.tsx:77–79`
-- **Evidence**: `setTimeout(() => { if (!cancelled) setState('premium') }, 3000)`. The `cancelled` flag is set by the outer `activate()` cleanup, but `setTimeout` is not cleared on cleanup — if the component unmounts during the 3-second celebration, the `cancelled` check will prevent state update, but the timer remains alive until it fires.
-- **Impact**: Minor memory concern; not a visible UX issue. The existing `cancelled` guard is sufficient for correctness.
-- **Suggestion**: Store the `setTimeout` return value and call `clearTimeout` in the cleanup function:
-  ```typescript
-  const timer = setTimeout(() => { if (!cancelled) setState('premium') }, 3000)
-  return () => { cancelled = true; clearTimeout(timer) }
-  ```
-
-**M-03: Feature list `<Check>` icons in free tier lack `aria-hidden="true"`**
-
-- **Location**: `SubscriptionCard.tsx:189`
-- **Evidence**: `<Check className="size-4 text-success flex-shrink-0" />` — no `aria-hidden`. Each list item is `"[icon] AI Video Summaries"`, so the icon is purely decorative.
-- **Impact**: Same as H-03 — minor screen reader verbosity.
-- **Suggestion**: Add `aria-hidden="true"` to the four `Check` icons in the feature list.
-
-**M-04: No `aria-describedby` linking the upgrade button to the feature list**
-
-- **Location**: `SubscriptionCard.tsx:195–205`
-- **Evidence**: The `<ul>` of premium features provides the context for why the user should click "Upgrade to Premium", but there is no programmatic association between the button and that list.
-- **Impact**: Screen reader users who Tab directly to the button hear "Upgrade to Premium plan, button" with no context about what they are upgrading to.
-- **Suggestion**: Add `id="premium-features-list"` to the `<ul>` and `aria-describedby="premium-features-list"` to the `<Button>`. This is a minor addition that meaningfully improves screenreader UX for the single most important CTA in the feature.
-
-**M-05: Loading skeleton does not include an accessible announcement**
-
-- **Location**: `SubscriptionCard.tsx:140–146`
-- **Evidence**: The `state === 'loading'` block renders three `animate-pulse` divs with no `role="status"` or `aria-label`.
-- **Impact**: Screen readers receive no indication that content is loading — the subscription section simply appears empty.
-- **Suggestion**: Wrap the skeleton in `<div role="status" aria-label="Loading subscription status">`. This is a one-line change.
-
----
-
-### Nitpicks (Optional)
-
-**N-01: `flex-shrink-0` should be `shrink-0` in Tailwind v4**
-
-- **Location**: `SubscriptionCard.tsx:189, 219`
-- **Evidence**: `flex-shrink-0` is a Tailwind v3 utility. In Tailwind v4, the canonical form is `shrink-0`. Both resolve to the same CSS (`flex-shrink: 0`), so this is cosmetic-only.
-- **Suggestion**: Replace with `shrink-0` for consistency with the rest of the codebase.
-
-**N-02: The `mr-2` spacer on the checkout Loader2 could be `gap-2` on the button**
-
-- **Location**: `SubscriptionCard.tsx:203`
-- **Evidence**: `<Loader2 className="size-4 animate-spin mr-2" />` — the button already has flexbox layout from shadcn's `Button`. Using `gap-2` on the `Button` (via `className`) would be more idiomatic than margin on the icon.
-- **Suggestion**: Minor. `mr-2` works correctly; `gap-2` on the button is a cleaner pattern.
+**M-03 — "Manage Subscription" button lacks `aria-describedby` for its toast-only behavior**
+- **Location**: `SubscriptionCard.tsx:260–272`
+- **Evidence**: The button currently triggers a `toast.info('Billing portal coming soon...')` placeholder rather than navigating anywhere. There is no accessible hint that this is a placeholder action (as opposed to navigation or a form submission).
+- **Impact**: Low risk in the short term since premium users will eventually get a real portal link (E19-S03). However, a screen reader user who clicks this button receives no pre-click context about the `coming soon` state — only a post-click toast announcement.
+- **Suggestion**: Add `aria-describedby` pointing to a visually-hidden or visible note, or add a `title` attribute with the coming-soon message as a tooltip, so the behavior is discoverable before activation. Remove this note once E19-S03 ships the real portal.
 
 ---
 
@@ -147,91 +89,79 @@ The SubscriptionCard is a well-structured new component that integrates cleanly 
 
 | Check | Status | Notes |
 |-------|--------|-------|
-| Text contrast ≥4.5:1 (light mode) | Pass | `--gold` (`#c49245`) on `--gold-muted` (`#f5edd8`): ~3.8:1 — acceptable as large/bold text on the icon background; body text uses `--foreground` / `--muted-foreground` which meet AA |
-| Text contrast ≥4.5:1 (dark mode) | Pass | Dark `--gold` (`#daa860`) on `--gold-muted` (`#3a3020`): sufficient contrast; dark mode background confirmed distinct |
-| Keyboard navigation — upgrade button reachable | Pass | Button uses semantic `<button>`, appears in tab order |
-| Focus indicators visible | Pass | Settings page confirms focus ring is applied via shadcn Button default styles |
-| Heading hierarchy | Partial fail | `CardTitle` renders `<h3>` inconsistently alongside `<h2>` siblings on Settings — pre-existing issue, one new `<h3>` added (H-02) |
-| ARIA labels on icon buttons | Pass | All icon-only interactive elements have `aria-label` |
-| Decorative icons hidden from AT | Partial fail | `activated` state `CheckCircle` and free-state `Check` icons missing `aria-hidden` (H-03, M-03) |
-| `role="status"` on loading regions | Partial fail | `activating` and `activated` states have it; `loading` skeleton does not (M-05) |
-| `aria-live="polite"` on dynamic regions | Pass | Both activating and activated states have `aria-live="polite"` |
-| `aria-label` on all `role="status"` elements | Partial fail | `activating` has it; `activated` does not (H-01) |
-| `aria-busy` on async button | Pass | `aria-busy={isCheckoutLoading}` correctly set |
-| Semantic HTML — no clickable divs in new component | Pass | All interactive elements are `<button>` or `<a>` |
-| Form inputs properly labelled | N/A | No form inputs in this component |
-| `prefers-reduced-motion` | Pass | Progress component uses `motion-safe:` modifiers; `animate-pulse` respects `prefers-reduced-motion` in Tailwind v4 |
-| No auto-playing media | Pass | |
-| Touch targets ≥44×44px | Pass | Upgrade button: `min-h-[44px] w-full` confirmed |
+| Text contrast — body/heading (light) | Pass | H1: 15.37:1, muted text: 5.57:1 |
+| Text contrast — body/heading (dark) | Pass | H1: 14.12:1, muted text: 7.42:1 |
+| Gold badge contrast — light mode | **Fail** | 2.38:1 on `bg-gold-muted` (see B-01) |
+| Gold badge contrast — dark mode | Pass | 6.01:1 on dark `bg-gold-muted` |
+| Brand button contrast | Pass | 4.70:1 (white on `#5e6ad2`) |
+| Keyboard navigation — skip link | Pass | "Skip to content" is first tab stop |
+| Keyboard navigation — tab order | Pass | Sidebar nav → header → page content |
+| Focus indicators visible | Pass | Global `outline: 2px solid var(--brand)` applied |
+| Heading hierarchy | Partial | `h3` (CardTitle) appears before `h2` sections (see H-02) |
+| ARIA labels on icon buttons | Pass | Crown, Loader2, Check, CheckCircle all use `aria-hidden="true"` |
+| ARIA live regions — dynamic states | Pass | All transient states have `role="status"` or `aria-live="polite"` |
+| `aria-busy` on checkout button | Pass | `aria-busy={isCheckoutLoading}` correctly set |
+| `aria-describedby` on Upgrade button | Pass | Points to feature list `id="premium-features-list"` |
+| Semantic HTML — no `div[onClick]` | Pass | All interactive elements use `<Button>` |
+| Images without `alt` | Pass | No `<img>` elements found missing alt text |
+| Touch targets — Upgrade button | Pass | `min-h-[44px]` applied |
+| Touch targets — Manage Subscription | **Fail** | `size="sm"` = 32px height, no `min-h-[44px]` (see H-01) |
+| `prefers-reduced-motion` — indeterminate bar | Pass | Uses `motion-safe:animate-[...]` |
+| `prefers-reduced-motion` — Loader2 spinners | Partial | Global kill works but freezes spinner vs. hiding it (see M-01) |
+| `prefers-reduced-motion` — activated entrance | Pass | Covered by global `animation-duration: 0.01ms !important` |
+| No hardcoded colors | Pass | All colors use design tokens |
+| No inline styles | Pass | No `style=` attributes found |
+| Console errors on load | Pass | Zero errors detected |
 
 ---
 
 ## Responsive Design Verification
 
-- **Mobile (375px)**: Pass — no horizontal overflow (`scrollWidth: 364`, `clientWidth: 375`). Account card and Settings layout are single-column. SubscriptionCard would stack correctly between Account and Profile sections. The upgrade button spans full width — appropriate for mobile. Background `#FAF5EE` confirmed.
-- **Tablet (768px)**: Pass — no horizontal overflow. Settings layout is single-column at this breakpoint (no two-column grid in Settings), so the card fills the available width correctly.
-- **Desktop (1440px)**: Pass — Settings layout is max-width constrained and centered. Cards use `rounded-[24px]` throughout. The SubscriptionCard's `overflow-hidden` + gold shadow render distinctly within the page without visual collision with adjacent cards.
+| Breakpoint | Horizontal Scroll | Layout | Touch Targets | Status |
+|------------|------------------|--------|---------------|--------|
+| Mobile (375px) | None | Single-column stack, bottom tab bar | See H-01 | Partial Pass |
+| Tablet (768px) | None | Two-column sidebar collapsed | See H-01 | Partial Pass |
+| Desktop (1440px) | None | Persistent sidebar + content area | See H-01 | Partial Pass |
 
-**Note on unauthenticated state**: The SubscriptionCard returns `null` when no `user` is present in the auth store. This is the correct behavior — the component was not visible in any browser test since no user was authenticated. All responsive testing was performed on the Settings page structure; the SubscriptionCard layout was verified through code inspection and the component's CSS classes.
-
----
-
-## Dark Mode Verification
-
-Dark mode was tested by forcing `document.documentElement.classList.add('dark')`. The Settings page renders correctly in dark mode. The gold token values in dark mode were confirmed:
-
-- `--gold`: `#daa860` (lighter amber, appropriate for dark backgrounds)
-- `--gold-muted`: `#3a3020` (dark amber background for the icon circle)
-- `--success`: `#6ab888` (lighter green for `CheckCircle` icons)
-- `--success-soft`: `#1a2e22` (dark green for the activated state background)
-
-The `shadow-[0_2px_8px_var(--shadow-gold)]` card shadow uses `--shadow-gold` which has a dedicated dark-mode value (`oklch(0.35 0.08 85 / 0.15)`), so the gold shadow is subtler but visible in both modes.
+All three breakpoints are free of horizontal overflow. The Settings page layout collapses correctly. The only responsive concern is the Manage Subscription button touch target (H-01), which applies at all breakpoints but is most impactful on mobile.
 
 ---
 
-## Code Health Analysis
+## Detailed Evidence
 
-| Check | Status | Notes |
-|-------|--------|-------|
-| No hardcoded hex colors | Pass | Zero hex literals in `SubscriptionCard.tsx` |
-| Design tokens used throughout | Pass | `bg-gold-muted`, `text-gold`, `text-success`, `bg-success-soft`, `text-muted-foreground` all correct |
-| No inline `style=` attributes | Pass | |
-| TypeScript types defined | Pass | `CardState`, `SubscriptionCardProps`, `CachedEntitlement` all typed |
-| `@/` import alias used | Pass | All imports use `@/` prefix |
-| No `any` type usage | Pass | |
-| No silent error catches | Pass | Both `try/catch` paths call `toastError.saveFailed()` |
-| Cancellation pattern in `useEffect` | Pass | Both async `useEffect`s use `cancelled` flag and return cleanup functions |
-| `useCallback` on event handler | Pass | `handleUpgrade` is wrapped in `useCallback` |
-| `window.location.href` redirect (not React Router) | Acceptable | Stripe checkout requires a full page navigation; `navigate()` would not be correct here |
+### B-01 Contrast Measurement
 
----
+```
+Light mode:
+  --gold:       rgb(196, 146, 69)   #C49245
+  --gold-muted: rgb(245, 237, 216)  #F5EDD8
+  Contrast ratio: 2.38:1 — WCAG AA requires 4.5:1 for normal text — FAIL
 
-## Detailed Finding Index
+Dark mode:
+  --gold:       rgb(218, 168, 96)   #DAA860
+  --gold-muted: rgb(58, 48, 32)     #3A3020
+  Contrast ratio: 6.01:1 — PASS
+```
 
-| ID | Severity | File | Line | Summary |
-|----|----------|------|------|---------|
-| B-01 | Blocker | `SubscriptionCard.tsx` | 156 | Progress bar shows empty gold track — no animation in activating state |
-| B-02 | Blocker | `SubscriptionCard.tsx` | 210–235 | Missing "Manage Subscription" billing portal link in premium state |
-| H-01 | High | `SubscriptionCard.tsx` | 165 | `activated` state `role="status"` missing `aria-label` |
-| H-02 | High | `SubscriptionCard.tsx` | 124 | `CardTitle` renders `<h3>` inconsistently on Settings page heading hierarchy |
-| H-03 | High | `SubscriptionCard.tsx` | 171, 219 | `CheckCircle` icons missing `aria-hidden="true"` |
-| M-01 | Medium | `SubscriptionCard.tsx` | 156 | Gold track + blue indicator colour mismatch (even when fixed) |
-| M-02 | Medium | `SubscriptionCard.tsx` | 77–79 | `setTimeout` not cleared in `useEffect` cleanup |
-| M-03 | Medium | `SubscriptionCard.tsx` | 189 | Feature list `Check` icons missing `aria-hidden="true"` |
-| M-04 | Medium | `SubscriptionCard.tsx` | 195 | Upgrade button not associated to feature list via `aria-describedby` |
-| M-05 | Medium | `SubscriptionCard.tsx` | 140–146 | Loading skeleton has no `role="status"` / `aria-label` |
-| N-01 | Nitpick | `SubscriptionCard.tsx` | 189, 219 | `flex-shrink-0` → `shrink-0` (Tailwind v4 canonical) |
-| N-02 | Nitpick | `SubscriptionCard.tsx` | 203 | `mr-2` on icon vs `gap-2` on button |
+The token pair was measured by injecting a temporary DOM element with `color: var(--gold); background-color: var(--gold-muted)` and reading computed styles, ensuring CSS variable resolution is accurate.
+
+### H-01 Touch Target Measurement
+
+From `src/app/components/ui/button.tsx:26`:
+```
+sm: 'h-8 rounded-xl gap-1.5 px-3 ...'
+```
+`h-8` = 2rem = 32px. The `min-h-[44px]` class is absent from the Manage Subscription button. Every other interactive element in `SubscriptionCard.tsx` and its sibling Settings cards explicitly sets `min-h-[44px]`.
 
 ---
 
 ## Recommendations
 
-1. **Fix B-01 (Progress bar) before merge.** Replace the static `<Progress>` with an indeterminate looping animation or use `animate-pulse` on a gold bar div. This is the highest-impact visual bug because it affects the most emotionally significant moment in the flow.
+1. **Fix B-01 immediately** — introduce a `--gold-soft-foreground` token (dark gold for text-on-light-gold) mirroring the existing `--brand-soft-foreground` pattern, then use it on the Premium badge.
 
-2. **Add the billing portal link (B-02) or log it as a tracked follow-up.** If the Stripe billing portal endpoint is not yet implemented, add a `TODO(E19-S03):` comment in the premium state and open a ticket, since users need a cancellation path.
+2. **Fix H-01 before merge** — add `min-h-[44px]` to the Manage Subscription button. One-line change, zero visual impact on desktop.
 
-3. **Apply the three-line ARIA fixes (H-01, H-03, M-03) in one pass.** These are minimal one-word additions (`aria-hidden="true"`, `aria-label="..."`) that collectively close several WCAG 2.1 Level AA gaps.
+3. **Fix H-02 alongside the next Settings page refactor** — changing the Account card and SubscriptionCard headers from `<CardTitle>` (which renders `<h3>`) to `<h2>` would bring the page into proper heading hierarchy alignment with the rest of the Settings sections.
 
-4. **Add `clearTimeout` to the activated state cleanup (M-02).** This is a defensive one-liner that prevents the theoretical (but benign) timer leak.
+4. **Track M-01 and M-03 as follow-up polish** — neither is urgent but both are quick wins (swapping `animate-spin` for `motion-safe:animate-spin` is a two-character change per occurrence; the Manage Subscription note can be dropped entirely once E19-S03 ships the real portal redirect).
 

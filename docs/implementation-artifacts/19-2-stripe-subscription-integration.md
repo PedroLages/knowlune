@@ -1,9 +1,9 @@
 ---
 story_id: E19-S02
 story_name: "Stripe Subscription Integration"
-status: in-progress
+status: done
 started: 2026-03-25
-completed:
+completed: 2026-03-25
 reviewed: true
 review_started: 2026-03-25
 review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests-skipped, design-review, code-review, code-review-testing]
