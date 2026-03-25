@@ -22,6 +22,12 @@ export interface CourseTagResult {
   tags: string[]
 }
 
+/** Result from AI course description generation */
+export interface CourseDescriptionResult {
+  /** 1-2 sentence course description */
+  description: string
+}
+
 /** Default timeout for tagging requests (10 seconds) */
 const TAGGER_TIMEOUT_MS = 10_000
 
@@ -243,4 +249,147 @@ function normalizeTags(raw: unknown[]): string[] {
  */
 export function isOllamaTaggingAvailable(): boolean {
   return getOllamaConfig() !== null
+}
+
+/**
+ * JSON schema for Ollama's `format` parameter for descriptions.
+ */
+const DESCRIPTION_RESPONSE_SCHEMA = {
+  type: 'object' as const,
+  properties: {
+    description: {
+      type: 'string' as const,
+    },
+  },
+  required: ['description'] as const,
+}
+
+/** System prompt for course description generation. */
+const DESCRIPTION_SYSTEM_PROMPT =
+  'You are a course summarizer. Given a course title and file list, write a concise 1-2 sentence description of what the course teaches. Focus on the main topics and skills covered. Return JSON only.'
+
+/**
+ * Generate a course description using Ollama.
+ *
+ * Returns `{ description: '' }` (never throws) when:
+ * - Ollama is not configured
+ * - The request times out
+ * - The model returns invalid output
+ * - Any network error occurs
+ *
+ * @param courseMetadata - Course title and file names to analyze
+ * @param signal - Optional AbortSignal for external cancellation
+ * @returns Parsed description or empty string on failure
+ */
+export async function generateCourseDescription(
+  courseMetadata: { title: string; fileNames: string[] },
+  signal?: AbortSignal
+): Promise<CourseDescriptionResult> {
+  const ollamaConfig = getOllamaConfig()
+  if (!ollamaConfig) {
+    return { description: '' }
+  }
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), TAGGER_TIMEOUT_MS)
+
+  if (signal) {
+    signal.addEventListener('abort', () => controller.abort(), { once: true })
+  }
+
+  try {
+    const fileList = courseMetadata.fileNames.slice(0, MAX_FILE_NAMES).join(', ')
+    const userPrompt = `Title: "${courseMetadata.title}"\nFiles: ${fileList || '(none)'}`
+
+    const useDirectConnection = isOllamaDirectConnection()
+    const fetchUrl = useDirectConnection
+      ? `${ollamaConfig.url}/api/chat`
+      : '/api/ai/ollama/chat'
+
+    const requestBody: Record<string, unknown> = {
+      model: ollamaConfig.model,
+      messages: [
+        { role: 'system', content: DESCRIPTION_SYSTEM_PROMPT },
+        { role: 'user', content: userPrompt },
+      ],
+      format: DESCRIPTION_RESPONSE_SCHEMA,
+      stream: false,
+      options: { temperature: 0.3, num_predict: 300 },
+    }
+
+    if (!useDirectConnection) {
+      requestBody.ollamaServerUrl = ollamaConfig.url
+    }
+
+    const response = await fetch(fetchUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+      signal: controller.signal,
+    })
+
+    if (!response.ok) {
+      console.warn(`[CourseTagger] Description: Ollama returned ${response.status}`)
+      return { description: '' }
+    }
+
+    const data = (await response.json()) as {
+      message?: { content?: string }
+    }
+
+    const description = parseDescriptionResponse(data.message?.content)
+    return { description }
+  } catch (error) {
+    if ((error as Error).name === 'AbortError') {
+      console.warn('[CourseTagger] Description request timed out or was cancelled')
+    } else {
+      console.warn('[CourseTagger] Description failed:', (error as Error).message)
+    }
+    return { description: '' }
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
+/**
+ * Parse the description response from Ollama with defensive fallbacks.
+ */
+export function parseDescriptionResponse(content: string | undefined): string {
+  if (!content) return ''
+
+  try {
+    const parsed = JSON.parse(content)
+    if (parsed && typeof parsed.description === 'string') {
+      return parsed.description.trim()
+    }
+  } catch {
+    // Fall through to fallback strategies
+  }
+
+  try {
+    const fenceMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/)
+    if (fenceMatch) {
+      const parsed = JSON.parse(fenceMatch[1])
+      if (parsed?.description && typeof parsed.description === 'string') {
+        return parsed.description.trim()
+      }
+    }
+  } catch {
+    // Fall through
+  }
+
+  try {
+    const braceMatch = content.match(/\{[\s\S]*\}/)
+    if (braceMatch) {
+      const parsed = JSON.parse(braceMatch[0])
+      if (parsed?.description && typeof parsed.description === 'string') {
+        return parsed.description.trim()
+      }
+    }
+  } catch {
+    // Fall through
+  }
+
+  console.warn('[CourseTagger] Could not parse description from response:', content)
+  return ''
 }

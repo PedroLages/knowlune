@@ -19,6 +19,18 @@ vi.mock('sonner', () => ({
   },
 }))
 
+const mockAISuggestions = {
+  isAvailable: false,
+  isLoading: false,
+  suggestedTags: [] as string[],
+  suggestedDescription: '',
+  hasFetched: false,
+}
+
+vi.mock('@/ai/hooks/useAISuggestions', () => ({
+  useAISuggestions: () => mockAISuggestions,
+}))
+
 vi.mock('@/stores/useCourseImportStore', () => ({
   useCourseImportStore: Object.assign(
     (selector: (state: Record<string, unknown>) => unknown) =>
@@ -95,6 +107,12 @@ describe('ImportWizardDialog', () => {
     // Mock URL.createObjectURL / revokeObjectURL for image previews
     global.URL.createObjectURL = vi.fn().mockReturnValue('blob:mock-url')
     global.URL.revokeObjectURL = vi.fn()
+    // Reset AI suggestions mock to defaults
+    mockAISuggestions.isAvailable = false
+    mockAISuggestions.isLoading = false
+    mockAISuggestions.suggestedTags = []
+    mockAISuggestions.suggestedDescription = ''
+    mockAISuggestions.hasFetched = false
   })
 
   it('renders the dialog when open', () => {
@@ -624,5 +642,162 @@ describe('ImportWizardDialog', () => {
       expect(screen.getByTestId('wizard-cover-selected')).toBeInTheDocument()
     })
     expect(screen.getByTestId('wizard-cover-selected')).toHaveTextContent('Cover: cover.jpg')
+  })
+
+  // --- AI suggestions tests ---
+
+  it('shows AI loading indicator when Ollama is available and loading', async () => {
+    const user = userEvent.setup()
+    mockAISuggestions.isAvailable = true
+    mockAISuggestions.isLoading = true
+    mockScanCourseFolder.mockResolvedValueOnce(makeScannedCourse())
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-ai-loading')).toBeInTheDocument()
+    })
+    expect(screen.getByText(/AI is generating tag and description suggestions/i)).toBeInTheDocument()
+  })
+
+  it('does not show AI loading indicator when Ollama is not available', async () => {
+    const user = userEvent.setup()
+    mockAISuggestions.isAvailable = false
+    mockAISuggestions.isLoading = false
+    mockScanCourseFolder.mockResolvedValueOnce(makeScannedCourse())
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-details-step')).toBeInTheDocument()
+    })
+    expect(screen.queryByTestId('wizard-ai-loading')).not.toBeInTheDocument()
+  })
+
+  it('shows AI-suggested tags with sparkle badge when suggestions arrive', async () => {
+    const user = userEvent.setup()
+    mockAISuggestions.isAvailable = true
+    mockAISuggestions.isLoading = false
+    mockAISuggestions.suggestedTags = ['react', 'typescript']
+    mockAISuggestions.hasFetched = true
+    mockScanCourseFolder.mockResolvedValueOnce(makeScannedCourse())
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+    // AI tags get auto-applied via the useEffect
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-tag-react')).toBeInTheDocument()
+      expect(screen.getByTestId('wizard-tag-typescript')).toBeInTheDocument()
+    })
+
+    // Should show AI Suggested badge on the tags section
+    expect(screen.getByTestId('wizard-ai-tags-badge')).toBeInTheDocument()
+    expect(screen.getByTestId('wizard-ai-tags-badge')).toHaveTextContent('AI Suggested')
+  })
+
+  it('shows description field on details step', async () => {
+    const user = userEvent.setup()
+    mockScanCourseFolder.mockResolvedValueOnce(makeScannedCourse())
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-description-section')).toBeInTheDocument()
+    })
+    expect(screen.getByTestId('wizard-description-input')).toBeInTheDocument()
+  })
+
+  it('shows AI Suggested badge on description when AI provides one', async () => {
+    const user = userEvent.setup()
+    mockAISuggestions.isAvailable = true
+    mockAISuggestions.isLoading = false
+    mockAISuggestions.suggestedDescription = 'A course about React and TypeScript.'
+    mockAISuggestions.hasFetched = true
+    mockScanCourseFolder.mockResolvedValueOnce(makeScannedCourse())
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-description-input')).toHaveValue(
+        'A course about React and TypeScript.'
+      )
+    })
+    expect(screen.getByTestId('wizard-ai-description-badge')).toBeInTheDocument()
+  })
+
+  it('passes description to persistScannedCourse on import', async () => {
+    const user = userEvent.setup()
+    const scanned = makeScannedCourse()
+    mockAISuggestions.isAvailable = true
+    mockAISuggestions.isLoading = false
+    mockAISuggestions.suggestedDescription = 'AI generated description'
+    mockAISuggestions.hasFetched = true
+    mockScanCourseFolder.mockResolvedValueOnce(scanned)
+    mockPersistScannedCourse.mockResolvedValueOnce({
+      ...scanned,
+      description: 'AI generated description',
+      importedAt: '2026-03-25T10:00:00.000Z',
+      category: '',
+      tags: [],
+      status: 'active',
+      videoCount: 2,
+      pdfCount: 1,
+    })
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-description-input')).toHaveValue(
+        'AI generated description'
+      )
+    })
+
+    await user.click(screen.getByTestId('wizard-import-btn'))
+
+    await waitFor(() => {
+      expect(mockPersistScannedCourse).toHaveBeenCalledWith(scanned, {
+        description: 'AI generated description',
+      })
+    })
+  })
+
+  it('works without AI when Ollama is not configured', async () => {
+    const user = userEvent.setup()
+    const scanned = makeScannedCourse()
+    mockAISuggestions.isAvailable = false
+    mockScanCourseFolder.mockResolvedValueOnce(scanned)
+    mockPersistScannedCourse.mockResolvedValueOnce({
+      ...scanned,
+      importedAt: '2026-03-25T10:00:00.000Z',
+      category: '',
+      tags: [],
+      status: 'active',
+      videoCount: 2,
+      pdfCount: 1,
+    })
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-import-btn')).toBeInTheDocument()
+    })
+
+    // No AI indicators
+    expect(screen.queryByTestId('wizard-ai-loading')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('wizard-ai-tags-badge')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('wizard-ai-description-badge')).not.toBeInTheDocument()
+
+    // Import should still work
+    await user.click(screen.getByTestId('wizard-import-btn'))
+    await waitFor(() => {
+      expect(mockPersistScannedCourse).toHaveBeenCalledWith(scanned, undefined)
+    })
   })
 })

@@ -285,6 +285,7 @@ export async function persistScannedCourse(
   scanned: ScannedCourse,
   overrides?: {
     name?: string
+    description?: string
     category?: string
     tags?: string[]
     coverImageHandle?: FileSystemFileHandle
@@ -317,6 +318,7 @@ export async function persistScannedCourse(
   const course: ImportedCourse = {
     id: scanned.id,
     name: overrides?.name ?? scanned.name,
+    ...(overrides?.description ? { description: overrides.description } : {}),
     importedAt: now,
     category: overrides?.category ?? '',
     tags: overrides?.tags ?? [],
