@@ -93,10 +93,14 @@ Deno.serve(async (req: Request) => {
           break
         }
 
-        // Retrieve the subscription for plan details
-        const subscription = session.subscription
-          ? await stripe.subscriptions.retrieve(session.subscription as string)
-          : null
+        // Retrieve the subscription and copy user ID into its metadata
+        // so that future subscription lifecycle events can identify the user
+        let subscription: Stripe.Subscription | null = null
+        if (session.subscription) {
+          subscription = await stripe.subscriptions.update(session.subscription as string, {
+            metadata: { supabase_user_id: userId },
+          })
+        }
 
         await upsertEntitlement({
           userId,
