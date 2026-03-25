@@ -34,7 +34,10 @@ export function TopicFilter({
           >
             {tag}
             {tagCounts && tagCounts.has(tag) && (
-              <span className="ml-1 text-[10px] opacity-60" aria-label={`${tagCounts.get(tag)} courses`}>
+              <span
+                className="ml-1 text-[10px] opacity-60"
+                aria-label={`${tagCounts.get(tag)} courses`}
+              >
                 ({tagCounts.get(tag)})
               </span>
             )}

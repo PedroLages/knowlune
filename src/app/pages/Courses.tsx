@@ -216,7 +216,9 @@ export function Courses() {
     }
 
     if (selectedTopics.length > 0) {
-      courses = courses.filter(c => selectedTopics.every(topic => c.tags.includes(topic)))
+      courses = courses.filter(c =>
+        selectedTopics.every(topic => c.tags.some(t => t.toLowerCase() === topic))
+      )
     }
 
     if (selectedStatuses.length > 0) {

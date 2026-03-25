@@ -103,10 +103,7 @@ test.describe('E22-S05: Dynamic Filter Chips from AI Tags', () => {
     await expect(page.getByText('Course B')).toBeVisible()
   })
 
-  test('AC5: new tags appear after importing a course (reactive)', async ({
-    page,
-    indexedDB,
-  }) => {
+  test('AC5: new tags appear after importing a course (reactive)', async ({ page, indexedDB }) => {
     // Start with one course
     const initialCourse = createImportedCourse({ tags: ['python'] })
     await seedAndReload(page, indexedDB, [initialCourse])
@@ -115,7 +112,9 @@ test.describe('E22-S05: Dynamic Filter Chips from AI Tags', () => {
     await expect(filterBar).toBeVisible()
 
     // Initially only "python" chip should exist
-    await expect(filterBar.getByTestId('topic-filter-button').filter({ hasText: 'python' })).toBeVisible()
+    await expect(
+      filterBar.getByTestId('topic-filter-button').filter({ hasText: 'python' })
+    ).toBeVisible()
 
     // Add another course with a new tag via IndexedDB seeding + reload
     const newCourse = createImportedCourse({ tags: ['rust', 'systems programming'] })
@@ -126,7 +125,9 @@ test.describe('E22-S05: Dynamic Filter Chips from AI Tags', () => {
     await expect(filterBar).toBeVisible()
 
     // New tags should now appear
-    await expect(filterBar.getByTestId('topic-filter-button').filter({ hasText: 'rust' })).toBeVisible()
+    await expect(
+      filterBar.getByTestId('topic-filter-button').filter({ hasText: 'rust' })
+    ).toBeVisible()
     await expect(
       filterBar.getByTestId('topic-filter-button').filter({ hasText: 'systems programming' })
     ).toBeVisible()
@@ -149,8 +150,8 @@ test.describe('E22-S05: Dynamic Filter Chips from AI Tags', () => {
     await expect(pythonChip).toBeVisible()
     await expect(pythonChip).toContainText('(2)')
 
-    // AI chip should show count of 2
-    const aiChip = filterBar.getByTestId('topic-filter-button').filter({ hasText: 'ai' })
+    // AI chip should show count of 2 (use regex with word boundary to avoid matching "entrainment" etc.)
+    const aiChip = filterBar.getByTestId('topic-filter-button').filter({ hasText: /^ai\b/ })
     await expect(aiChip).toBeVisible()
     await expect(aiChip).toContainText('(2)')
   })
