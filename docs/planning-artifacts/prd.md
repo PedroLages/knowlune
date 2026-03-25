@@ -1,5 +1,5 @@
 ---
-stepsCompleted: ['step-01-init', 'step-02-discovery', 'step-03-success', 'step-04-journeys', 'step-05-domain', 'step-06-innovation', 'step-07-project-type', 'step-08-scoping', 'step-09-functional', 'step-10-nonfunctional', 'step-11-polish', 'step-e-validation-edit-2026-02-28', 'step-e-domain-research-edit-2026-02-28']
+stepsCompleted: ['step-01-init', 'step-02-discovery', 'step-03-success', 'step-04-journeys', 'step-05-domain', 'step-06-innovation', 'step-07-project-type', 'step-08-scoping', 'step-09-functional', 'step-10-nonfunctional', 'step-11-polish', 'step-e-validation-edit-2026-02-28', 'step-e-domain-research-edit-2026-02-28', 'step-e-youtube-promotion-2026-03-25']
 editHistory:
   - date: '2026-02-28'
     scope: 'Domain research integration'
@@ -44,13 +44,31 @@ editHistory:
       - 'FR97: defined "key terms" as nouns/noun phrases excluding stop words, cross-referenced FR53'
       - 'Added cross-references: NFR23↔NFR62 (confirmation scope), NFR37↔NFR48 (element vs workflow level)'
     validationInput: 'docs/planning-artifacts/prd-validation-report.md'
+  - date: '2026-03-25'
+    scope: 'YouTube Course Builder promotion (Epic 23)'
+    changes:
+      - 'Promoted YouTube from Vision (Future) to MVP feature 12 with full requirements'
+      - 'Added Executive Summary YouTube differentiator and content source acknowledgment'
+      - 'Added YouTube-specific 6-month and 9-month success metrics'
+      - 'Added feature 12 (YouTube Course Builder) to Product Scope MVP'
+      - 'Updated Phase timeline and validation milestones to include YouTube'
+      - 'Removed YouTube from Vision (Future) External Integrations (promoted)'
+      - 'Added Journey 7: The YouTube Learner'
+      - 'Added 12 YouTube FRs (FR112-FR123) with free/premium tier annotations'
+      - 'Added 6 YouTube NFRs (NFR69-NFR74) for API quota, performance, security, offline'
+      - 'Added 3 YouTube-specific risks with mitigations'
+      - 'Updated researchCount from 1 to 3'
+    researchInput:
+      - 'docs/research/technical-youtube-content-handling-research-2026-03-25.md'
+      - 'docs/research/market-youtube-content-handling-research-2026-03-25.md'
+      - 'docs/design/office-hours-2026-03-25-full-platform-youtube-hook.md'
 inputDocuments:
   - CLAUDE.md
   - README.md
   - ATTRIBUTIONS.md
 workflowType: 'prd'
 briefCount: 0
-researchCount: 1
+researchCount: 3
 brainstormingCount: 0
 projectDocsCount: 3
 classification:
@@ -61,6 +79,7 @@ classification:
   specialCharacteristics:
     - 'Single-user personal learning management system'
     - 'Local file integration (videos/PDFs from disk)'
+    - 'YouTube content integration (playlists, transcripts)'
     - 'Focus on course completion and knowledge retention'
   coreFeatures:
     - 'Study Streak Tracker'
@@ -69,11 +88,13 @@ classification:
     - 'Course Momentum Score'
     - 'Learning Challenges'
     - 'AI-Powered Learning Assistant'
+    - 'YouTube Course Builder'
   technicalApproach:
     architecture: 'Web app (React + Vite)'
-    import: 'Manual course import'
+    import: 'Manual course import + YouTube URL/playlist import'
     storage: 'IndexedDB'
-    contentViewing: 'HTML5 video + react-pdf'
+    contentViewing: 'HTML5 video + react-pdf + embedded YouTube player'
+    youtubeIntegration: 'YouTube Data API v3 + youtube-transcript npm package'
 ---
 
 # Product Requirements Document - Elearningplatformwireframes
@@ -83,15 +104,16 @@ classification:
 
 ## Executive Summary
 
-LevelUp is a personal learning platform for self-directed learners who accumulate locally-stored courses (video tutorials, PDFs) but struggle to complete them. The core problem is "course collection paralysis" — users download or purchase courses that remain unfinished for months or years, with no system for tracking progress, maintaining momentum, or retaining knowledge across courses.
+LevelUp is a personal learning platform for self-directed learners who accumulate courses from multiple sources — locally-stored video tutorials, PDFs, and YouTube playlists/series — but struggle to complete them. The core problem is "course collection paralysis" — users download, purchase, or bookmark courses that remain unfinished for months or years, with no unified system for tracking progress, maintaining momentum, or retaining knowledge across courses and content sources.
 
-**Target User:** Self-directed solo learner managing a personal library of locally-stored educational content.
+**Target User:** Self-directed solo learner managing a personal library of educational content from local files and YouTube.
 
-**Core Solution:** A local-first web application that combines course management, progress tracking, study streaks, gamified motivation, and AI-powered learning assistance to transform passive course collection into active, measurable learning.
+**Core Solution:** A local-first web application that combines course management (local files + YouTube), progress tracking, study streaks, gamified motivation, and AI-powered learning assistance to transform passive course collection into active, measurable learning. The YouTube Course Builder lets users paste a playlist URL and have AI organize it into a structured course with chapters, transcripts, and full progress tracking.
 
 **Key Differentiators:**
 
 - **Local-first:** All data stays on the user's device — no account, no cloud dependency
+- **YouTube → structured courses:** Paste a playlist URL, AI builds chapters and extracts transcripts — no tool in the market bridges YouTube content with completion tracking
 - **Gamified momentum:** Study streaks, learning challenges, and momentum scoring sustain motivation
 - **AI-augmented:** AI summaries, Q&A, and cross-course connections enhance comprehension and retention
 - **Completion-focused:** Every feature drives course completion, not just consumption
@@ -176,6 +198,8 @@ LevelUp is a personal learning platform for self-directed learners who accumulat
 - ✅ Measurable improvement in learning speed/efficiency
 - ✅ Using momentum scores and challenges to choose what to study (not random browsing)
 - ✅ Analytics dashboard consulted at least weekly
+- ✅ 3+ courses built from YouTube playlists using YouTube Course Builder
+- ✅ Transcript search used at least weekly for YouTube-sourced courses
 
 **9-Month Success Metrics:**
 
@@ -184,6 +208,8 @@ LevelUp is a personal learning platform for self-directed learners who accumulat
 - ✅ Cross-course concept connections surfaced and acted on
 - ✅ Learning velocity shows measurable upward trend over 3+ months
 - ✅ Knowledge gap suggestions lead to revisiting and completing skipped content
+- ✅ YouTube-sourced courses show completion rates within 20% of local course completion rates
+- ✅ At least 50% of new courses added via YouTube Course Builder (adoption over local import)
 
 ## Product Scope
 
@@ -257,6 +283,16 @@ LevelUp is a personal learning platform for self-directed learners who accumulat
     - Adaptive difficulty recommendations (AI identifies knowledge gaps and suggests reinforcement)
     - Intelligent note enhancement (AI helps organize and connect concepts across courses)
 
+12. **YouTube Course Builder** *(Epic 23)*
+    - Paste YouTube video URLs or playlist URLs to create structured courses
+    - AI-powered course structuring: analyzes video metadata and proposes chapters with ordered lessons *(Premium)*
+    - Rule-based fallback for users without AI configured: groups videos by keyword similarity from titles *(Free)*
+    - Transcript extraction for notes, search, and AI features (~90% caption coverage for educational content)
+    - Whisper-based transcription fallback for videos without captions via user-configured endpoint *(Premium)*
+    - User can edit course structure (drag-reorder, rename chapters, remove videos) before and after creation
+    - Full feature parity with local courses: progress tracking, notes, streaks, momentum, challenges, analytics
+    - Metadata caching to minimize YouTube API quota usage
+
 **Technical Foundation:**
 
 - React + TypeScript + Vite architecture
@@ -265,6 +301,8 @@ LevelUp is a personal learning platform for self-directed learners who accumulat
 - shadcn/ui component library
 - Web File System Access API for local file integration
 - AI API integration (OpenAI, Anthropic, or local models)
+- YouTube Data API v3 for video/playlist metadata
+- youtube-transcript npm package for caption extraction
 
 ### Growth Features (Post-MVP)
 
@@ -332,8 +370,8 @@ LevelUp is a personal learning platform for self-directed learners who accumulat
    - Learning community integration
 
 2. **External Integrations**
-   - Sync with Udemy, Coursera, YouTube playlists
-   - Import course metadata automatically
+   - Sync with Udemy, Coursera course libraries
+   - Import course metadata automatically from external platforms
    - Integration with note-taking apps (Notion, Obsidian)
 
 3. **Cross-Platform**
@@ -545,6 +583,37 @@ Pedro finishes his session with deeper understanding than he'd have achieved alo
 
 ---
 
+### Journey 7: The YouTube Learner — Pedro Turns a YouTube Playlist into a Structured Course
+
+**Meet Pedro (Month 5):** Five months in. Pedro has completed 4 local courses and is comfortable with streaks, challenges, and momentum tracking. He discovers a 22-video YouTube series on microservices architecture by a channel he trusts. Previously, he would have bookmarked the playlist and never finished it.
+
+**Opening Scene - The YouTube Graveyard:**
+Saturday afternoon. Pedro opens YouTube and sees his "Watch Later" playlist: 47 videos across 6 different series. He's watched the first 2-3 of each and abandoned the rest. No progress tracking. No notes. No accountability. Just a growing list of good intentions.
+
+He opens Knowlune and clicks "Add Course."
+
+**Rising Action - Building a Course from YouTube:**
+
+1. **Paste and Build:** Pedro selects "Build from YouTube" and pastes the playlist URL. Within seconds, Knowlune fetches all 22 video titles, durations, thumbnails, and descriptions from YouTube.
+
+2. **AI Structures the Course:** Pedro's configured AI provider analyzes the video metadata and proposes 5 chapters: "Service Design Fundamentals," "Communication Patterns," "Data Management," "Resilience & Fault Tolerance," "Deployment & Observability." Each chapter has 4-5 videos ordered by detected prerequisites.
+
+3. **Review and Edit:** Pedro drags "Deployment & Observability" before "Resilience" — he wants to understand observability first for his current project. He renames "Communication Patterns" to "Sync vs Async Communication." He removes 2 introductory videos he's already watched. Confirms.
+
+4. **Transcripts Load:** Knowlune extracts transcripts for 20 of the 22 videos (auto-generated captions available). For the remaining 2, it queues them for Whisper transcription on his Unraid server. Within a minute, all transcripts are ready.
+
+5. **Full Course Experience:** The course appears in Pedro's library — indistinguishable from local courses. Progress tracking, study streak integration, momentum scoring, note-taking — all working. Pedro starts the first video, which plays via embedded YouTube player. He takes timestamped notes as he watches. His streak counter ticks up.
+
+**Climax - The Transcript Advantage:**
+Halfway through the series, Pedro searches his notes for "circuit breaker." Knowlune finds not just his notes but also the relevant transcript passages from 3 different videos — with clickable timestamps. He jumps directly to the 14:32 mark of a video he watched last week. This kind of cross-referencing was impossible with YouTube alone.
+
+**Resolution - YouTube Tamed:**
+Pedro finishes the microservices series in 3 weeks — his fastest YouTube completion ever. His momentum score stayed green the entire time. He built 2 more YouTube courses the following week: one on Kubernetes from a conference talk playlist, another from scattered individual videos on GraphQL that AI organized into a coherent sequence.
+
+**His YouTube "Watch Later" graveyard is now a managed learning library with structure, progress, and accountability.**
+
+---
+
 ### Journey Requirements Summary
 
 These journeys reveal the following core capabilities needed:
@@ -596,6 +665,14 @@ These journeys reveal the following core capabilities needed:
 - Knowledge gap detection (low note density, skipped sections)
 - Cross-course concept connections and related notes panel
 - AI-assisted note organization with preview before applying
+
+**YouTube Course Building (Journey 7):**
+- Paste YouTube URL or playlist URL to create courses
+- AI-powered chapter structuring from video metadata
+- Rule-based fallback for users without AI configured
+- Transcript extraction with searchable text and clickable timestamps
+- Full feature parity with local courses (progress, notes, streaks, momentum)
+- Course structure editing (drag-reorder, rename, remove)
 
 ## Web App Specific Requirements
 
@@ -862,26 +939,29 @@ Beyond the existing WCAG 2.1 AA+ target, WCAG 2.2 adds edtech-relevant criteria:
 
 **Validation Milestone:** You can use this to study daily. If not, fix UX before proceeding.
 
-#### Phase 2: Intelligence & Gamification (Months 4-6)
+#### Phase 2: Intelligence, Gamification & YouTube (Months 4-6)
 
 **Enhanced Features:**
 7. Course Momentum Score (hot/warm/cold algorithm based on recency + completion + frequency)
 8. Learning Challenges (personal goals: completion-based, time-based, streak-based)
 9. Learning Intelligence (basic course recommendations based on patterns)
 10. Enhanced note search (full-text, timestamp linking to video positions)
+12. YouTube Course Builder (paste URL/playlist → AI structures course → full tracking parity) *(Epic 23)*
 
 **Success Criteria:**
 - ✅ App actively motivates you to study
 - ✅ Using challenges and momentum indicators to decide what to study
 - ✅ Recommendations are helpful, not noise
+- ✅ Successfully built 1+ course from YouTube playlist with progress tracking
+- ✅ YouTube courses feel equivalent to local courses in daily use
 
-**Validation Milestone:** Are you using it daily? Is it helping completion rates? If yes, continue.
+**Validation Milestone:** Are you using it daily? Is it helping completion rates? Can you build a YouTube course in under 2 minutes? If yes, continue.
 
 #### Phase 3: AI & Advanced Analytics (Months 7-9)
 
 **Advanced Features:**
 11. Advanced Analytics & Insights (study time charts, completion trends, learning velocity)
-12. AI-Powered Learning Assistant:
+13. AI-Powered Learning Assistant:
     - Note Q&A (query your notes using semantic search)
     - Video summaries (AI-generated overviews)
     - Learning path optimization (AI suggests course sequence)
@@ -914,6 +994,7 @@ Beyond the existing WCAG 2.1 AA+ target, WCAG 2.2 adds edtech-relevant criteria:
 - Personal learning challenges
 - Smart course recommendations
 - Advanced note search with timestamps
+- YouTube Course Builder (paste URL → structured course with transcripts)
 
 **Advanced Capabilities (Phase 3):**
 - Study time analytics and insights
@@ -943,6 +1024,33 @@ Beyond the existing WCAG 2.1 AA+ target, WCAG 2.2 adds edtech-relevant criteria:
 - Iterate based on your own usage - you'll immediately see if it's useful or noise
 - Adjust weights based on what actually motivates you to study
 
+**Risk 3: YouTube API Quota Limits**
+
+**Mitigation:**
+- Default quota is 10,000 units/day; typical single-user workflow uses ~300 units/day (well within budget)
+- Aggressive metadata caching with configurable TTL (default 7 days) eliminates redundant API calls
+- oEmbed endpoint as fallback for title/thumbnail (free, no quota)
+- At scale (1,000+ daily users): apply for quota increase at 500+ DAU
+- **Fallback:** If quota is consistently exceeded, batch metadata fetches during off-peak hours
+
+**Risk 4: YouTube Caption Access Restrictions**
+
+**Mitigation:**
+- Official YouTube API cannot download captions for videos you don't own (blocked since 2024)
+- Use `youtube-transcript` npm package (unofficial but industry-standard — used by Readwise, Glasp, Open WebUI, Obsidian plugins)
+- ~90% caption coverage for educational content (auto-generated + manual captions)
+- For the remaining ~10%: Whisper-based transcription via user-configured faster-whisper endpoint
+- **Fallback:** If youtube-transcript library breaks due to YouTube UI changes, pin versions and monitor for updates; course structure still works without transcripts (metadata-only mode)
+
+**Risk 5: Unofficial Library Breakage (youtube-transcript, yt-dlp)**
+
+**Mitigation:**
+- YouTube periodically changes its frontend, breaking unofficial scrapers
+- Pin dependency versions; do not auto-update without testing
+- Monitor GitHub issues on `youtube-transcript` and `yt-dlp` for breakage reports
+- Graceful degradation: if transcript extraction fails, display "Transcripts temporarily unavailable" and allow course creation from metadata only
+- Community response time for fixes is typically 24-72 hours for major libraries
+
 #### Market Risks
 
 **Risk: Over-Engineering for Personal Tool**
@@ -959,18 +1067,18 @@ Beyond the existing WCAG 2.1 AA+ target, WCAG 2.2 adds edtech-relevant criteria:
 
 #### Resource Risks
 
-**Risk: Running Out of Steam Before Completing All 11 Features**
+**Risk: Running Out of Steam Before Completing All 12 Features**
 
 **Mitigation:**
 
 **Phase 1 Fallback:**
 - If you run out of steam after Phase 1: **Ship what you have**
 - Features 1-6 still deliver a functional learning platform that solves core problem
-- AI features can always be added later once you're actively using the platform
+- AI and YouTube features can always be added later once you're actively using the platform
 
 **Phase 2 Fallback:**
 - If you complete Phase 2 but can't finish Phase 3: **Ship without AI**
-- Features 1-9 provide complete gamification + intelligence
+- Features 1-10 + 12 provide complete gamification + intelligence + YouTube
 - Analytics can be simple (basic charts)
 - AI is "nice-to-have" enhancement, not core value
 
@@ -996,7 +1104,9 @@ Beyond the existing WCAG 2.1 AA+ target, WCAG 2.2 adds edtech-relevant criteria:
 - Are you using challenges and momentum indicators?
 - Is it helping you complete courses faster?
 - Do recommendations feel helpful?
-- **If NO:** Iterate on gamification. If YES: Continue to Phase 3.
+- Have you built at least 1 course from a YouTube playlist?
+- Does the YouTube Course Builder feel as natural as local import?
+- **If NO:** Iterate on gamification and YouTube UX. If YES: Continue to Phase 3.
 
 **Phase 3 Validation (Month 9):**
 - Does AI provide actual value or is it a distraction?
@@ -1006,7 +1116,7 @@ Beyond the existing WCAG 2.1 AA+ target, WCAG 2.2 adds edtech-relevant criteria:
 
 ### Final Scope Decision
 
-**Commitment:** Build all 11 features over 6-9 months using phased approach.
+**Commitment:** Build all 12 features over 6-9 months using phased approach.
 
 **Why This Works:**
 - Personal tool with immediate feedback loop
@@ -1016,9 +1126,9 @@ Beyond the existing WCAG 2.1 AA+ target, WCAG 2.2 adds edtech-relevant criteria:
 
 **What Success Looks Like:**
 - Month 3: Using daily for studying (Phase 1 validated)
-- Month 6: Completing courses consistently (Phase 2 validated)
+- Month 6: Completing courses consistently, YouTube courses built and tracked (Phase 2 validated)
 - Month 9: Full MVP with AI assistance (Phase 3 complete)
-- Month 12: Measurable improvement in course completion rates
+- Month 12: Measurable improvement in course completion rates across local and YouTube sources
 
 ## Functional Requirements
 
@@ -1160,6 +1270,21 @@ Beyond the existing WCAG 2.1 AA+ target, WCAG 2.2 adds edtech-relevant criteria:
 - FR110: User can view a 365-day activity heatmap (GitHub-style contribution graph) showing daily study activity with 5-level color intensity based on session duration and hover tooltips showing date and hours studied *(extends FR93 heatmap from 12 months to full year with enhanced visualization)*
 - FR111: User can view a skill proficiency radar chart showing 5-7 skill domains with proficiency calculated from course completion percentage per domain
 
+### YouTube Course Builder *(Epic 23)*
+
+- FR112: User can paste a YouTube video URL or playlist URL to initiate course creation *(Free — acquisition funnel)*
+- FR113: System fetches video metadata (title, duration, thumbnail URL, description, chapter markers) via YouTube Data API v3 for each video in the import *(Free)*
+- FR114: System fetches playlist contents and orders videos by playlist position; for individual video URLs, system groups them in submission order *(Free)*
+- FR115: System analyzes video metadata via the user's configured AI provider and proposes chapter groupings with ordered lessons; user reviews the proposed structure, can edit (rename chapters, reorder videos, remove videos), and confirms before course creation *(Premium — requires AI provider)*
+- FR116: When no AI provider is configured, system groups videos by keyword similarity extracted from titles and descriptions, using the original playlist order within groups *(Free — rule-based fallback)*
+- FR117: System extracts video transcripts via the youtube-transcript library for videos with available captions (auto-generated or manual); transcript text is stored locally and indexed for full-text search *(Free)*
+- FR118: For videos without available captions, system queues audio for transcription via a user-configured Whisper endpoint (e.g., faster-whisper on local server); processing runs asynchronously with a progress indicator, completing within 60 seconds per video *(Premium — requires Whisper endpoint)*
+- FR119: User can edit course structure (drag-reorder videos between and within chapters, rename chapters, add/remove videos, split/merge chapters) both during initial creation and after the course is saved *(Free)*
+- FR120: YouTube-sourced courses have full feature parity with local courses: progress tracking (Not Started / In Progress / Completed per video), notes with timestamps, study streak integration, momentum scoring, learning challenges, and analytics *(Free)*
+- FR121: System caches YouTube video metadata in IndexedDB with a configurable TTL (default 7 days); subsequent views of the same video use cached data without additional API calls *(Free)*
+- FR122: User can view transcript text alongside YouTube video playback in a synchronized panel, search within transcripts via full-text search, and click any transcript segment to seek the video to that timestamp *(Free)*
+- FR123: System generates AI-powered course summary and per-video summaries from transcript data for YouTube courses, displayed in collapsible panels alongside the video *(Premium — requires AI provider; extends FR48 to YouTube content)*
+
 ## Non-Functional Requirements
 
 ### Performance
@@ -1284,4 +1409,18 @@ Beyond the existing WCAG 2.1 AA+ target, WCAG 2.2 adds edtech-relevant criteria:
 - NFR66: Cloud AI features transmit only aggregated or anonymized data (never raw personal notes or full session logs); each AI feature has an independent user consent toggle
 - NFR67: Exported data can be re-imported into the application with ≥95% semantic fidelity (no loss of notes, progress, tags, or timestamps)
 - NFR68: All animations and transitions respect the `prefers-reduced-motion` media query by disabling or reducing motion to static alternatives
+
+### YouTube Integration *(Epic 23)*
+
+**API & Performance:**
+- NFR69: YouTube API quota usage remains under 500 units/day for a typical single-user workflow (up to 50 playlist imports and 200 video metadata fetches per day), as measured by API console monitoring
+- NFR70: Video metadata fetch (title, duration, thumbnail, description, chapters) completes within 3 seconds per video; playlist metadata fetch completes within 5 seconds for playlists of up to 200 videos
+- NFR71: Transcript extraction via youtube-transcript library completes within 2 seconds per video for caption-available content; failures display a user-visible message within 3 seconds
+
+**Security:**
+- NFR72: YouTube API key follows the same security treatment as AI API keys (per NFR27 and NFR52): never present in source code, build output, or client-accessible storage; loaded from environment configuration at runtime
+
+**Reliability & Offline:**
+- NFR73: When YouTube API is unavailable or rate-limited, previously cached course metadata and transcripts remain accessible for offline use; new import attempts display "YouTube unavailable — check connection and try again" with a retry button
+- NFR74: YouTube course data (metadata, transcripts, proposed structure, user edits) is stored entirely in IndexedDB; no YouTube content is transmitted to any server other than the user's configured AI provider (for course structuring) and configured Whisper endpoint (for transcription)
 
