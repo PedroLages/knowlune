@@ -351,7 +351,7 @@ development_status:
   24-1-refactor-import-function-into-scan-and-persist: done
   24-2-import-wizard-folder-selection-and-course-details: done
   24-3-import-wizard-tags-cover-image-and-confirmation: done
-  24-4-ai-metadata-suggestions-during-import: backlog
+  24-4-ai-metadata-suggestions-during-import: done
   24-5-post-import-course-editing-dialog: backlog
   24-6-video-drag-and-drop-reorder: backlog
   epic-24-retrospective: optional
