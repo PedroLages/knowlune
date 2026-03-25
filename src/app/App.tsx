@@ -40,6 +40,7 @@ export default function App() {
 
   // E19-S01: Subscribe to Supabase auth state changes (session restore, token refresh, cross-tab sync)
   useEffect(() => {
+    if (!supabase) return
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {

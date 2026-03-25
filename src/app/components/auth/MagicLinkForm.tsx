@@ -7,13 +7,30 @@ import { useAuthStore, NETWORK_ERROR_MESSAGE } from '@/stores/useAuthStore'
 
 const RESEND_COOLDOWN_SECONDS = 60
 
-export function MagicLinkForm() {
+interface MagicLinkFormProps {
+  /** Incremented when dialog reopens — resets form state */
+  resetKey?: number
+}
+
+export function MagicLinkForm({ resetKey }: MagicLinkFormProps) {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
   const [cooldown, setCooldown] = useState(0)
   const [validationError, setValidationError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const { loading, error, signInWithMagicLink, clearError } = useAuthStore()
+  const signInWithMagicLink = useAuthStore(s => s.signInWithMagicLink)
+
+  // Reset form state when dialog reopens
+  useEffect(() => {
+    setEmail('')
+    setSent(false)
+    setCooldown(0)
+    setValidationError(null)
+    setLoading(false)
+    setError(null)
+  }, [resetKey])
 
   // Countdown timer for resend
   useEffect(() => {
@@ -24,25 +41,37 @@ export function MagicLinkForm() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    if (loading) return // double-submit guard
     setValidationError(null)
-    clearError()
+    setError(null)
 
     if (!email.includes('@') || !email.includes('.')) {
       setValidationError('Enter a valid email address')
       return
     }
 
+    setLoading(true)
     const result = await signInWithMagicLink(email)
-    if (!result.error) {
+    setLoading(false)
+
+    if (result.error) {
+      setError(result.error)
+    } else {
       setSent(true)
       setCooldown(RESEND_COOLDOWN_SECONDS)
     }
   }
 
   async function handleResend() {
-    clearError()
+    if (loading) return
+    setError(null)
+    setLoading(true)
     const result = await signInWithMagicLink(email)
-    if (!result.error) {
+    setLoading(false)
+
+    if (result.error) {
+      setError(result.error)
+    } else {
       setCooldown(RESEND_COOLDOWN_SECONDS)
     }
   }

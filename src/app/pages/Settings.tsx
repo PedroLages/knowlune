@@ -19,8 +19,8 @@ import {
   Type,
   Users,
   RotateCcw,
+  LogOut,
 } from 'lucide-react'
-import { LogOut } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import { Input } from '@/app/components/ui/input'
@@ -187,7 +187,8 @@ export default function Settings() {
   const importFileRef = useRef<HTMLInputElement>(null)
 
   // Auth state
-  const { user, signOut: authSignOut } = useAuthStore()
+  const user = useAuthStore(s => s.user)
+  const authSignOut = useAuthStore(s => s.signOut)
   const [authDialogOpen, setAuthDialogOpen] = useState(false)
   const [authDialogMode, setAuthDialogMode] = useState<AuthMode>('sign-in')
 
@@ -461,7 +462,7 @@ export default function Settings() {
                 )}
               </div>
               <div>
-                <h2 className="text-lg font-display leading-none">Account</h2>
+                <CardTitle className="text-lg font-display leading-none">Account</CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">
                   {user ? `Signed in as ${user.email}` : 'Sign in to access premium features'}
                 </p>

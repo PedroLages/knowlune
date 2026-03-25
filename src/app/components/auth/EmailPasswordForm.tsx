@@ -16,8 +16,11 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [validationError, setValidationError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const { loading, error, signUp, signIn, clearError } = useAuthStore()
+  const signUp = useAuthStore(s => s.signUp)
+  const signIn = useAuthStore(s => s.signIn)
 
   const isSignUp = mode === 'sign-up'
 
@@ -36,8 +39,9 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    if (loading) return // double-submit guard
     setValidationError(null)
-    clearError()
+    setError(null)
 
     const validationErr = validate()
     if (validationErr) {
@@ -45,9 +49,13 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
       return
     }
 
+    setLoading(true)
     const result = isSignUp ? await signUp(email, password) : await signIn(email, password)
+    setLoading(false)
 
-    if (!result.error) {
+    if (result.error) {
+      setError(result.error)
+    } else {
       toastSuccess.saved(isSignUp ? 'Account created successfully' : 'Signed in successfully')
       onSuccess()
     }
@@ -89,7 +97,7 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
           onChange={e => setEmail(e.target.value)}
           disabled={loading}
           required
-          autoComplete={isSignUp ? 'email' : 'username'}
+          autoComplete="email"
           aria-invalid={displayError?.toLowerCase().includes('email') || undefined}
           aria-describedby={displayError?.toLowerCase().includes('email') ? errorId : undefined}
           className="min-h-[44px]"
@@ -109,9 +117,16 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
           minLength={8}
           autoComplete={isSignUp ? 'new-password' : 'current-password'}
           aria-invalid={displayError?.toLowerCase().includes('password') || undefined}
-          aria-describedby={displayError?.toLowerCase().includes('password') ? errorId : undefined}
+          aria-describedby={
+            displayError?.toLowerCase().includes('password')
+              ? errorId
+              : 'auth-password-hint'
+          }
           className="min-h-[44px]"
         />
+        <p id="auth-password-hint" className="text-xs text-muted-foreground">
+          Must be at least 8 characters
+        </p>
       </div>
 
       {isSignUp && (

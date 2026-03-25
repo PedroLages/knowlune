@@ -5,8 +5,6 @@ import { supabase } from '@/lib/auth/supabase'
 interface AuthState {
   user: User | null
   session: Session | null
-  loading: boolean
-  error: string | null
   /** True after first session check completes — prevents flash of unauthenticated state */
   initialized: boolean
 }
@@ -19,7 +17,6 @@ interface AuthActions {
   signOut: () => Promise<{ error?: string }>
   /** Called by onAuthStateChange listener — do not call directly */
   setSession: (session: Session | null) => void
-  clearError: () => void
 }
 
 type AuthStore = AuthState & AuthActions
@@ -28,7 +25,10 @@ type AuthStore = AuthState & AuthActions
 export const NETWORK_ERROR_MESSAGE =
   'Unable to connect. Please check your internet connection and try again.'
 
-function mapSupabaseError(message: string): string {
+const NOT_CONFIGURED_MESSAGE =
+  'Authentication is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.'
+
+export function mapSupabaseError(message: string): string {
   if (message.includes('User already registered')) {
     return 'This email is already registered. Try signing in instead.'
   }
@@ -41,7 +41,12 @@ function mapSupabaseError(message: string): string {
   if (message.includes('Token has expired') || message.includes('already used')) {
     return 'This link has expired or was already used. Please request a new one.'
   }
-  if (message.includes('Network')) {
+  if (
+    message.includes('Failed to fetch') ||
+    message.includes('NetworkError') ||
+    message.includes('network request failed') ||
+    message.includes('Network request failed')
+  ) {
     return NETWORK_ERROR_MESSAGE
   }
   return message
@@ -50,71 +55,76 @@ function mapSupabaseError(message: string): string {
 export const useAuthStore = create<AuthStore>(set => ({
   user: null,
   session: null,
-  loading: false,
-  error: null,
   initialized: false,
 
   signUp: async (email, password) => {
-    set({ loading: true, error: null })
-    const { error } = await supabase.auth.signUp({ email, password })
-    if (error) {
-      const mapped = mapSupabaseError(error.message)
-      set({ loading: false, error: mapped })
-      return { error: mapped }
+    if (!supabase) return { error: NOT_CONFIGURED_MESSAGE }
+    try {
+      const { error } = await supabase.auth.signUp({ email, password })
+      if (error) {
+        return { error: mapSupabaseError(error.message) }
+      }
+      return {}
+    } catch {
+      return { error: NETWORK_ERROR_MESSAGE }
     }
-    set({ loading: false })
-    return {}
   },
 
   signIn: async (email, password) => {
-    set({ loading: true, error: null })
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      const mapped = mapSupabaseError(error.message)
-      set({ loading: false, error: mapped })
-      return { error: mapped }
+    if (!supabase) return { error: NOT_CONFIGURED_MESSAGE }
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
+        return { error: mapSupabaseError(error.message) }
+      }
+      return {}
+    } catch {
+      return { error: NETWORK_ERROR_MESSAGE }
     }
-    set({ loading: false })
-    return {}
   },
 
   signInWithMagicLink: async email => {
-    set({ loading: true, error: null })
-    const { error } = await supabase.auth.signInWithOtp({ email })
-    if (error) {
-      const mapped = mapSupabaseError(error.message)
-      set({ loading: false, error: mapped })
-      return { error: mapped }
+    if (!supabase) return { error: NOT_CONFIGURED_MESSAGE }
+    try {
+      const { error } = await supabase.auth.signInWithOtp({ email })
+      if (error) {
+        return { error: mapSupabaseError(error.message) }
+      }
+      return {}
+    } catch {
+      return { error: NETWORK_ERROR_MESSAGE }
     }
-    set({ loading: false })
-    return {}
   },
 
   signInWithGoogle: async () => {
-    set({ loading: true, error: null })
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin },
-    })
-    if (error) {
-      const mapped = mapSupabaseError(error.message)
-      set({ loading: false, error: mapped })
-      return { error: mapped }
+    if (!supabase) return { error: NOT_CONFIGURED_MESSAGE }
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin },
+      })
+      if (error) {
+        return { error: mapSupabaseError(error.message) }
+      }
+      // OAuth redirects — no further state change needed
+      return {}
+    } catch {
+      return { error: NETWORK_ERROR_MESSAGE }
     }
-    // OAuth redirects — loading state persists until redirect
-    return {}
   },
 
   signOut: async () => {
-    set({ loading: true, error: null })
-    const { error } = await supabase.auth.signOut()
-    if (error) {
-      const mapped = mapSupabaseError(error.message)
-      set({ loading: false, error: mapped })
-      return { error: mapped }
+    if (!supabase) return { error: NOT_CONFIGURED_MESSAGE }
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        return { error: mapSupabaseError(error.message) }
+      }
+      set({ user: null, session: null })
+      return {}
+    } catch {
+      return { error: NETWORK_ERROR_MESSAGE }
     }
-    set({ user: null, session: null, loading: false })
-    return {}
   },
 
   setSession: session => {
@@ -122,9 +132,6 @@ export const useAuthStore = create<AuthStore>(set => ({
       session,
       user: session?.user ?? null,
       initialized: true,
-      loading: false,
     })
   },
-
-  clearError: () => set({ error: null }),
 }))
