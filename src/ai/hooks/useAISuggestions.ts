@@ -7,7 +7,7 @@
  * @module
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
   generateCourseTags,
   generateCourseDescription,
@@ -45,7 +45,7 @@ export function useAISuggestions(scannedCourse: ScannedCourse | null): AISuggest
   const [hasFetched, setHasFetched] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
 
-  const isAvailable = isOllamaTaggingAvailable()
+  const isAvailable = useMemo(() => isOllamaTaggingAvailable(), [])
 
   // Reset when course changes
   const reset = useCallback(() => {
@@ -85,19 +85,21 @@ export function useAISuggestions(scannedCourse: ScannedCourse | null): AISuggest
     Promise.all([
       generateCourseTags(metadata, controller.signal),
       generateCourseDescription(metadata, controller.signal),
-    ]).then(([tagResult, descResult]) => {
-      if (cancelled) return
-      setSuggestedTags(tagResult.tags)
-      setSuggestedDescription(descResult.description)
-      setHasFetched(true)
-      setIsLoading(false)
-    }).catch(() => {
-      // silent-catch-ok: generateCourseTags/Description never throw; this catches AbortError
-      if (!cancelled) {
-        setIsLoading(false)
+    ])
+      .then(([tagResult, descResult]) => {
+        if (cancelled) return
+        setSuggestedTags(tagResult.tags)
+        setSuggestedDescription(descResult.description)
         setHasFetched(true)
-      }
-    })
+        setIsLoading(false)
+      })
+      .catch(() => {
+        // silent-catch-ok: generateCourseTags/Description never throw; this catches AbortError
+        if (!cancelled) {
+          setIsLoading(false)
+          setHasFetched(true)
+        }
+      })
 
     return () => {
       cancelled = true

@@ -59,6 +59,96 @@ const TAG_RESPONSE_SCHEMA = {
 const SYSTEM_PROMPT =
   'You are a course classifier. Given a course title and file list, assign 1-5 short, descriptive topic tags. Focus on the subject matter, programming languages, frameworks, or skills taught. Return JSON only.'
 
+/** Options for a single Ollama chat request */
+interface OllamaChatOptions {
+  /** System prompt for the model */
+  systemPrompt: string
+  /** User prompt with course metadata */
+  userPrompt: string
+  /** JSON schema for structured output */
+  format: Record<string, unknown>
+  /** Model generation options (temperature, num_predict, etc.) */
+  options: Record<string, unknown>
+  /** Optional AbortSignal for external cancellation */
+  signal?: AbortSignal
+  /** Log prefix for warnings (e.g. "[CourseTagger]") */
+  logPrefix: string
+}
+
+/**
+ * Send a chat request to Ollama and return the raw content string.
+ *
+ * Handles timeout, abort signal linking, proxy routing, and error logging.
+ * Returns `null` on any failure (never throws).
+ */
+async function callOllamaChat(
+  ollamaConfig: { url: string; model: string },
+  opts: OllamaChatOptions
+): Promise<string | null> {
+  // Bail early if the caller already aborted
+  if (opts.signal?.aborted) {
+    console.warn(`${opts.logPrefix} Request already aborted`)
+    return null
+  }
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), TAGGER_TIMEOUT_MS)
+
+  // Link external signal to our controller
+  if (opts.signal) {
+    opts.signal.addEventListener('abort', () => controller.abort(), { once: true })
+  }
+
+  try {
+    // Route through the Express proxy for SSRF validation, unless direct connection is enabled
+    const useDirectConnection = isOllamaDirectConnection()
+    const fetchUrl = useDirectConnection ? `${ollamaConfig.url}/api/chat` : '/api/ai/ollama/chat'
+
+    const requestBody: Record<string, unknown> = {
+      model: ollamaConfig.model,
+      messages: [
+        { role: 'system', content: opts.systemPrompt },
+        { role: 'user', content: opts.userPrompt },
+      ],
+      format: opts.format,
+      stream: false,
+      options: opts.options,
+    }
+
+    // Include serverUrl so the proxy knows where to forward
+    if (!useDirectConnection) {
+      requestBody.ollamaServerUrl = ollamaConfig.url
+    }
+
+    const response = await fetch(fetchUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+      signal: controller.signal,
+    })
+
+    if (!response.ok) {
+      console.warn(`${opts.logPrefix} Ollama returned ${response.status}`)
+      return null
+    }
+
+    const data = (await response.json()) as {
+      message?: { content?: string }
+    }
+
+    return data.message?.content ?? null
+  } catch (error) {
+    if ((error as Error).name === 'AbortError') {
+      console.warn(`${opts.logPrefix} Request timed out or was cancelled`)
+    } else {
+      console.warn(`${opts.logPrefix} Failed:`, (error as Error).message)
+    }
+    return null
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
 /**
  * Generate topic tags for an imported course using Ollama.
  *
@@ -81,68 +171,20 @@ export async function generateCourseTags(
     return { tags: [] }
   }
 
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), TAGGER_TIMEOUT_MS)
+  const fileList = courseMetadata.fileNames.slice(0, MAX_FILE_NAMES).join(', ')
+  const userPrompt = `Title: "${courseMetadata.title}"\nFiles: ${fileList || '(none)'}`
 
-  // Link external signal to our controller
-  if (signal) {
-    signal.addEventListener('abort', () => controller.abort(), { once: true })
-  }
+  const content = await callOllamaChat(ollamaConfig, {
+    systemPrompt: SYSTEM_PROMPT,
+    userPrompt,
+    format: TAG_RESPONSE_SCHEMA,
+    options: { temperature: 0, num_predict: 200 },
+    signal,
+    logPrefix: '[CourseTagger]',
+  })
 
-  try {
-    const fileList = courseMetadata.fileNames.slice(0, MAX_FILE_NAMES).join(', ')
-    const userPrompt = `Title: "${courseMetadata.title}"\nFiles: ${fileList || '(none)'}`
-
-    // Route through the Express proxy for SSRF validation, unless direct connection is enabled
-    const useDirectConnection = isOllamaDirectConnection()
-    const fetchUrl = useDirectConnection
-      ? `${ollamaConfig.url}/api/chat`
-      : '/api/ai/ollama/chat'
-
-    const requestBody: Record<string, unknown> = {
-      model: ollamaConfig.model,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: userPrompt },
-      ],
-      format: TAG_RESPONSE_SCHEMA,
-      stream: false,
-      options: { temperature: 0, num_predict: 200 },
-    }
-
-    // Include serverUrl so the proxy knows where to forward
-    if (!useDirectConnection) {
-      requestBody.ollamaServerUrl = ollamaConfig.url
-    }
-
-    const response = await fetch(fetchUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody),
-      signal: controller.signal,
-    })
-
-    if (!response.ok) {
-      console.warn(`[CourseTagger] Ollama returned ${response.status}`)
-      return { tags: [] }
-    }
-
-    const data = (await response.json()) as {
-      message?: { content?: string }
-    }
-
-    const tags = parseTagResponse(data.message?.content)
-    return { tags }
-  } catch (error) {
-    if ((error as Error).name === 'AbortError') {
-      console.warn('[CourseTagger] Request timed out or was cancelled')
-    } else {
-      console.warn('[CourseTagger] Failed:', (error as Error).message)
-    }
-    return { tags: [] }
-  } finally {
-    clearTimeout(timeoutId)
-  }
+  const tags = parseTagResponse(content ?? undefined)
+  return { tags }
 }
 
 /**
@@ -290,65 +332,20 @@ export async function generateCourseDescription(
     return { description: '' }
   }
 
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), TAGGER_TIMEOUT_MS)
+  const fileList = courseMetadata.fileNames.slice(0, MAX_FILE_NAMES).join(', ')
+  const userPrompt = `Title: "${courseMetadata.title}"\nFiles: ${fileList || '(none)'}`
 
-  if (signal) {
-    signal.addEventListener('abort', () => controller.abort(), { once: true })
-  }
+  const content = await callOllamaChat(ollamaConfig, {
+    systemPrompt: DESCRIPTION_SYSTEM_PROMPT,
+    userPrompt,
+    format: DESCRIPTION_RESPONSE_SCHEMA,
+    options: { temperature: 0.3, num_predict: 300 },
+    signal,
+    logPrefix: '[CourseTagger] Description:',
+  })
 
-  try {
-    const fileList = courseMetadata.fileNames.slice(0, MAX_FILE_NAMES).join(', ')
-    const userPrompt = `Title: "${courseMetadata.title}"\nFiles: ${fileList || '(none)'}`
-
-    const useDirectConnection = isOllamaDirectConnection()
-    const fetchUrl = useDirectConnection
-      ? `${ollamaConfig.url}/api/chat`
-      : '/api/ai/ollama/chat'
-
-    const requestBody: Record<string, unknown> = {
-      model: ollamaConfig.model,
-      messages: [
-        { role: 'system', content: DESCRIPTION_SYSTEM_PROMPT },
-        { role: 'user', content: userPrompt },
-      ],
-      format: DESCRIPTION_RESPONSE_SCHEMA,
-      stream: false,
-      options: { temperature: 0.3, num_predict: 300 },
-    }
-
-    if (!useDirectConnection) {
-      requestBody.ollamaServerUrl = ollamaConfig.url
-    }
-
-    const response = await fetch(fetchUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody),
-      signal: controller.signal,
-    })
-
-    if (!response.ok) {
-      console.warn(`[CourseTagger] Description: Ollama returned ${response.status}`)
-      return { description: '' }
-    }
-
-    const data = (await response.json()) as {
-      message?: { content?: string }
-    }
-
-    const description = parseDescriptionResponse(data.message?.content)
-    return { description }
-  } catch (error) {
-    if ((error as Error).name === 'AbortError') {
-      console.warn('[CourseTagger] Description request timed out or was cancelled')
-    } else {
-      console.warn('[CourseTagger] Description failed:', (error as Error).message)
-    }
-    return { description: '' }
-  } finally {
-    clearTimeout(timeoutId)
-  }
+  const description = parseDescriptionResponse(content ?? undefined)
+  return { description }
 }
 
 /**

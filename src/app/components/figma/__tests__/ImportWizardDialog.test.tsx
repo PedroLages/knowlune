@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ImportWizardDialog } from '../ImportWizardDialog'
@@ -102,6 +102,21 @@ function makeScannedCourse(overrides: Partial<ScannedCourse> = {}): ScannedCours
 }
 
 describe('ImportWizardDialog', () => {
+  // Suppress Radix UI aria-describedby warning — the component provides
+  // both aria-describedby and DialogDescription, but Radix emits a console
+  // warning during the render cycle before DialogDescription mounts.
+  const originalWarn = console.warn
+  beforeAll(() => {
+    console.warn = (...args: unknown[]) => {
+      const msg = typeof args[0] === 'string' ? args[0] : ''
+      if (msg.includes('aria-describedby')) return
+      originalWarn(...args)
+    }
+  })
+  afterAll(() => {
+    console.warn = originalWarn
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     // Mock URL.createObjectURL / revokeObjectURL for image previews
@@ -658,7 +673,9 @@ describe('ImportWizardDialog', () => {
     await waitFor(() => {
       expect(screen.getByTestId('wizard-ai-loading')).toBeInTheDocument()
     })
-    expect(screen.getByText(/AI is generating tag and description suggestions/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(/AI is generating tag and description suggestions/i)
+    ).toBeInTheDocument()
   })
 
   it('does not show AI loading indicator when Ollama is not available', async () => {
@@ -753,9 +770,7 @@ describe('ImportWizardDialog', () => {
     await user.click(screen.getByTestId('wizard-select-folder-btn'))
 
     await waitFor(() => {
-      expect(screen.getByTestId('wizard-description-input')).toHaveValue(
-        'AI generated description'
-      )
+      expect(screen.getByTestId('wizard-description-input')).toHaveValue('AI generated description')
     })
 
     await user.click(screen.getByTestId('wizard-import-btn'))

@@ -64,9 +64,11 @@ export function triggerOllamaTagging(
 ): void {
   if (!isOllamaTaggingAvailable()) return
 
-  taggingQueue.add(() => runOllamaTagging(course, videos, pdfs)).catch(error => {
-    console.error('[OllamaTagging] Unhandled error:', error)
-  })
+  taggingQueue
+    .add(() => runOllamaTagging(course, videos, pdfs))
+    .catch(error => {
+      console.error('[OllamaTagging] Unhandled error:', error)
+    })
 }
 
 async function runOllamaTagging(

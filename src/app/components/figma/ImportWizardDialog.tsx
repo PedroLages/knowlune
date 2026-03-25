@@ -367,7 +367,10 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
                   role="status"
                   aria-live="polite"
                 >
-                  <Loader2 className="size-4 animate-spin text-brand-soft-foreground" aria-hidden="true" />
+                  <Loader2
+                    className="size-4 animate-spin text-brand-soft-foreground"
+                    aria-hidden="true"
+                  />
                   <span className="text-xs text-brand-soft-foreground">
                     AI is generating tag and description suggestions...
                   </span>
@@ -412,16 +415,18 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
                   <span className="flex items-center gap-1.5">
                     <Tag className="size-3.5" aria-hidden="true" />
                     Tags
-                    {aiTagsApplied && tags.length > 0 && tags.some(t => aiSuggestions.suggestedTags.includes(t)) && (
-                      <Badge
-                        variant="secondary"
-                        className="gap-1 rounded-full px-1.5 py-0 text-[10px] font-normal bg-brand-soft text-brand-soft-foreground"
-                        data-testid="wizard-ai-tags-badge"
-                      >
-                        <Sparkles className="size-2.5" aria-hidden="true" />
-                        AI Suggested
-                      </Badge>
-                    )}
+                    {aiTagsApplied &&
+                      tags.length > 0 &&
+                      tags.some(t => aiSuggestions.suggestedTags.includes(t)) && (
+                        <Badge
+                          variant="secondary"
+                          className="gap-1 rounded-full px-1.5 py-0 text-[10px] font-normal bg-brand-soft text-brand-soft-foreground"
+                          data-testid="wizard-ai-tags-badge"
+                        >
+                          <Sparkles className="size-2.5" aria-hidden="true" />
+                          AI Suggested
+                        </Badge>
+                      )}
                   </span>
                 </Label>
                 <div className="flex flex-wrap items-center gap-1.5 min-h-[2.25rem] rounded-xl border border-border bg-background px-3 py-1.5 focus-within:ring-2 focus-within:ring-ring">
