@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { toast } from 'sonner'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,12 +10,12 @@ import {
   AlertDialogTitle,
 } from '@/app/components/ui/alert-dialog'
 import { useAuthorStore } from '@/stores/useAuthorStore'
-import type { Author } from '@/data/types'
+import type { ImportedAuthor } from '@/data/types'
 
 interface DeleteAuthorDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  author: Author
+  author: ImportedAuthor
   onDeleted?: () => void
 }
 
@@ -35,11 +34,11 @@ export function DeleteAuthorDialog({
 
     try {
       await deleteAuthor(author.id)
-      toast.success('Author deleted')
+      // Store's deleteAuthor already shows an undo toast — no additional toast needed
       onOpenChange(false)
       onDeleted?.()
     } catch (error) {
-      // Store already shows toast.error
+      // silent-catch-ok: store already shows toast.error to user; log for debugging
       console.error('[DeleteAuthorDialog] Delete failed:', error)
     } finally {
       setDeleting(false)
@@ -52,7 +51,7 @@ export function DeleteAuthorDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete &ldquo;{author.name}&rdquo;?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will permanently remove the author profile. This action cannot be undone.
+            This will remove the author profile. You can undo this action briefly after deletion.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

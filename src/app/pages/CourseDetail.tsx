@@ -100,7 +100,7 @@ export function CourseDetail() {
                   className="inline-flex items-center gap-2.5 mb-5 px-3 py-2 rounded-xl bg-muted/50 hover:bg-muted transition-colors w-fit"
                 >
                   <Avatar className="size-8">
-                    <AvatarImage {...getAvatarSrc(author.avatar, 32)} alt={author.name} />
+                    <AvatarImage {...getAvatarSrc(author.photoUrl ?? '', 32)} alt={author.name} />
                     <AvatarFallback className="text-xs">
                       {author.name
                         .split(' ')
@@ -110,7 +110,6 @@ export function CourseDetail() {
                   </Avatar>
                   <div className="text-left">
                     <p className="text-sm font-medium leading-tight">{author.name}</p>
-                    <p className="text-xs text-muted-foreground leading-tight">{author.title}</p>
                   </div>
                 </Link>
               )

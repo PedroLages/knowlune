@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AuthorFormDialog } from '../AuthorFormDialog'
 import { useAuthorStore } from '@/stores/useAuthorStore'
-import type { Author } from '@/data/types'
+import type { ImportedAuthor } from '@/data/types'
 
 // Mock the store
 vi.mock('@/stores/useAuthorStore', () => ({
@@ -26,7 +26,7 @@ const defaultStoreReturn = {
   updateAuthor: mockUpdateAuthor,
 }
 
-const sampleAuthor: Author = {
+const sampleAuthor: ImportedAuthor = {
   id: 'author-1',
   name: 'Jane Smith',
   title: 'Software Engineer',
@@ -34,9 +34,13 @@ const sampleAuthor: Author = {
   shortBio: 'Short bio',
   specialties: ['React', 'TypeScript'],
   yearsExperience: 10,
-  avatar: 'https://example.com/avatar.jpg',
+  photoUrl: 'https://example.com/avatar.jpg',
   socialLinks: { website: 'https://example.com' },
   featuredQuote: 'Keep learning.',
+  courseIds: [],
+  isPreseeded: false,
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
 }
 
 beforeEach(() => {

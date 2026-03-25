@@ -16,7 +16,7 @@ import { Textarea } from '@/app/components/ui/textarea'
 import { Badge } from '@/app/components/ui/badge'
 import { Separator } from '@/app/components/ui/separator'
 import { useAuthorStore } from '@/stores/useAuthorStore'
-import type { Author, AuthorSocialLinks } from '@/data/types'
+import type { AuthorSocialLinks, ImportedAuthor } from '@/data/types'
 
 interface FormErrors {
   name?: string
@@ -26,10 +26,13 @@ interface FormErrors {
   twitter?: string
 }
 
+/** Accept ImportedAuthor for edit mode */
+type EditableAuthor = ImportedAuthor
+
 interface AuthorFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  author?: Author // undefined = create mode, defined = edit mode
+  author?: EditableAuthor // undefined = create mode, defined = edit mode
 }
 
 function isValidUrl(value: string): boolean {
@@ -38,6 +41,7 @@ function isValidUrl(value: string): boolean {
     new URL(value)
     return true
   } catch {
+    // silent-catch-ok: URL validation — invalid URL means false, no user feedback needed
     return false
   }
 }
@@ -66,18 +70,18 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
   useEffect(() => {
     if (open && author) {
       setName(author.name)
-      setTitle(author.title || '')
-      setBio(author.bio || '')
-      setShortBio(author.shortBio || '')
-      setSpecialties([...author.specialties])
+      setTitle(author.title ?? '')
+      setBio(author.bio ?? '')
+      setShortBio(author.shortBio ?? '')
+      setSpecialties([...(author.specialties ?? [])])
       setSpecialtyInput('')
       setYearsExperience(author.yearsExperience ? String(author.yearsExperience) : '')
-      setEducation(author.education || '')
-      setAvatar(author.avatar || '')
-      setWebsite(author.socialLinks?.website || '')
-      setLinkedin(author.socialLinks?.linkedin || '')
-      setTwitter(author.socialLinks?.twitter || '')
-      setFeaturedQuote(author.featuredQuote || '')
+      setEducation(author.education ?? '')
+      setAvatar(author.photoUrl ?? '')
+      setWebsite(author.socialLinks?.website ?? '')
+      setLinkedin(author.socialLinks?.linkedin ?? '')
+      setTwitter(author.socialLinks?.twitter ?? '')
+      setFeaturedQuote(author.featuredQuote ?? '')
       setErrors({})
     }
   }, [open, author])
@@ -160,17 +164,18 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
     if (linkedin.trim()) socialLinks.linkedin = linkedin.trim()
     if (twitter.trim()) socialLinks.twitter = twitter.trim()
 
-    const authorData: Omit<Author, 'id'> = {
+    const authorData = {
       name: name.trim(),
-      title: title.trim(),
-      bio: bio.trim(),
-      shortBio: shortBio.trim(),
+      title: title.trim() || undefined,
+      bio: bio.trim() || undefined,
+      shortBio: shortBio.trim() || undefined,
       specialties,
-      yearsExperience: yearsExperience && Number(yearsExperience) > 0 ? Number(yearsExperience) : 0,
-      avatar: avatar.trim(),
+      yearsExperience:
+        yearsExperience && Number(yearsExperience) > 0 ? Number(yearsExperience) : undefined,
+      photoUrl: avatar.trim() || undefined,
       socialLinks,
-      ...(education.trim() ? { education: education.trim() } : {}),
-      ...(featuredQuote.trim() ? { featuredQuote: featuredQuote.trim() } : {}),
+      education: education.trim() || undefined,
+      featuredQuote: featuredQuote.trim() || undefined,
     }
 
     try {
@@ -184,7 +189,7 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
       resetForm()
       onOpenChange(false)
     } catch (error) {
-      // Store already shows toast.error
+      // silent-catch-ok: store already shows toast.error to user; log for debugging
       console.error('[AuthorFormDialog] Submit failed:', error)
     } finally {
       setIsSubmitting(false)

@@ -7,28 +7,39 @@ import { toastWithUndo, toastError } from '@/lib/toastHelpers'
 
 interface NewAuthorData {
   name: string
+  title?: string
   bio?: string
+  shortBio?: string
   photoUrl?: string
   photoHandle?: FileSystemFileHandle
   courseIds?: string[]
   specialties?: string[]
+  yearsExperience?: number
+  education?: string
   socialLinks?: { website?: string; twitter?: string; linkedin?: string }
+  featuredQuote?: string
   isPreseeded?: boolean
 }
 
 interface UpdateAuthorData {
   name?: string
+  title?: string
   bio?: string
+  shortBio?: string
   photoUrl?: string
   photoHandle?: FileSystemFileHandle
   courseIds?: string[]
   specialties?: string[]
+  yearsExperience?: number
+  education?: string
   socialLinks?: { website?: string; twitter?: string; linkedin?: string }
+  featuredQuote?: string
 }
 
 interface AuthorStoreState {
   authors: ImportedAuthor[]
   isLoading: boolean
+  isLoaded: boolean
   error: string | null
 
   loadAuthors: () => Promise<void>
@@ -43,15 +54,17 @@ interface AuthorStoreState {
 export const useAuthorStore = create<AuthorStoreState>((set, get) => ({
   authors: [],
   isLoading: false,
+  isLoaded: false,
   error: null,
 
   loadAuthors: async () => {
+    if (get().isLoaded) return
     set({ isLoading: true, error: null })
     try {
       const authors = await db.authors.orderBy('createdAt').reverse().toArray()
-      set({ authors, isLoading: false })
+      set({ authors, isLoading: false, isLoaded: true })
     } catch (error) {
-      set({ isLoading: false, error: 'Failed to load authors' })
+      set({ isLoading: false, isLoaded: true, error: 'Failed to load authors' })
       console.error('[AuthorStore] Failed to load authors:', error)
       toast.error('Failed to load authors. Please try refreshing the page.')
     }
@@ -62,12 +75,17 @@ export const useAuthorStore = create<AuthorStoreState>((set, get) => ({
     const author: ImportedAuthor = {
       id: crypto.randomUUID(),
       name: data.name,
+      title: data.title,
       bio: data.bio,
+      shortBio: data.shortBio,
       photoUrl: data.photoUrl,
       photoHandle: data.photoHandle,
       courseIds: data.courseIds ?? [],
       specialties: data.specialties,
+      yearsExperience: data.yearsExperience,
+      education: data.education,
       socialLinks: data.socialLinks,
+      featuredQuote: data.featuredQuote,
       isPreseeded: data.isPreseeded ?? false,
       createdAt: now,
       updatedAt: now,

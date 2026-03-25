@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { DeleteAuthorDialog } from '../DeleteAuthorDialog'
 import { useAuthorStore } from '@/stores/useAuthorStore'
-import type { Author } from '@/data/types'
+import type { ImportedAuthor } from '@/data/types'
 
 // Mock the store
 vi.mock('@/stores/useAuthorStore', () => ({
@@ -20,7 +20,7 @@ vi.mock('sonner', () => ({
 
 const mockDeleteAuthor = vi.fn()
 
-const sampleAuthor: Author = {
+const sampleAuthor: ImportedAuthor = {
   id: 'author-1',
   name: 'Jane Smith',
   title: 'Software Engineer',
@@ -28,8 +28,12 @@ const sampleAuthor: Author = {
   shortBio: 'Short bio',
   specialties: ['React'],
   yearsExperience: 10,
-  avatar: 'https://example.com/avatar.jpg',
+  photoUrl: 'https://example.com/avatar.jpg',
   socialLinks: {},
+  courseIds: [],
+  isPreseeded: false,
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
 }
 
 beforeEach(() => {
@@ -42,8 +46,8 @@ describe('DeleteAuthorDialog', () => {
     render(<DeleteAuthorDialog open={true} onOpenChange={vi.fn()} author={sampleAuthor} />)
 
     expect(screen.getByText(/jane smith/i)).toBeInTheDocument()
-    expect(screen.getByText(/permanently remove/i)).toBeInTheDocument()
-    expect(screen.getByText(/cannot be undone/i)).toBeInTheDocument()
+    expect(screen.getByText(/remove the author profile/i)).toBeInTheDocument()
+    expect(screen.getByText(/undo this action/i)).toBeInTheDocument()
   })
 
   it('calls deleteAuthor on confirm', async () => {

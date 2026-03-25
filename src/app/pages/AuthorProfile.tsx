@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link, useNavigate } from 'react-router'
 import {
   BookOpen,
@@ -26,7 +26,8 @@ import {
 } from '@/app/components/ui/breadcrumb'
 import { CourseCard } from '@/app/components/figma/CourseCard'
 import { useAuthorStore } from '@/stores/useAuthorStore'
-import { getAuthorStats, getAvatarSrc, getInitials } from '@/lib/authors'
+import { useCourseStore } from '@/stores/useCourseStore'
+import { getMergedAuthors, getAvatarSrc, getInitials, type AuthorView } from '@/lib/authors'
 import { getCourseCompletionPercent } from '@/lib/progress'
 import { AuthorFormDialog } from '@/app/components/authors/AuthorFormDialog'
 import { DeleteAuthorDialog } from '@/app/components/authors/DeleteAuthorDialog'
@@ -34,7 +35,8 @@ import { DeleteAuthorDialog } from '@/app/components/authors/DeleteAuthorDialog'
 export function AuthorProfile() {
   const { authorId } = useParams<{ authorId: string }>()
   const navigate = useNavigate()
-  const { isLoaded, isLoading, loadAuthors, getAuthorById } = useAuthorStore()
+  const { authors: storeAuthors, isLoaded, isLoading, loadAuthors } = useAuthorStore()
+  const courses = useCourseStore(s => s.courses)
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
 
@@ -42,7 +44,15 @@ export function AuthorProfile() {
     loadAuthors()
   }, [loadAuthors])
 
-  const author = getAuthorById(authorId!)
+  // Merge pre-seeded + store authors and find the one matching the URL param
+  const allAuthors = useMemo(() => getMergedAuthors(storeAuthors), [storeAuthors])
+  const author: AuthorView | undefined = allAuthors.find(a => a.id === authorId)
+
+  // Get courses by this author
+  const authorCourses = useMemo(
+    () => courses.filter(c => c.authorId === authorId),
+    [courses, authorId]
+  )
 
   if (isLoading && !isLoaded) {
     return (
@@ -73,7 +83,6 @@ export function AuthorProfile() {
     )
   }
 
-  const stats = getAuthorStats(author)
   const socialEntries = Object.entries(author.socialLinks).filter(([, url]) => url)
 
   return (
@@ -109,30 +118,32 @@ export function AuthorProfile() {
             <div className="flex-1 text-center sm:text-left">
               <div className="flex items-start gap-3 justify-center sm:justify-start">
                 <h1 className="text-2xl font-bold mb-1">{author.name}</h1>
-                <div className="flex gap-1 shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-8"
-                    onClick={() => setEditOpen(true)}
-                    aria-label={`Edit ${author.name}`}
-                    data-testid="profile-edit-button"
-                  >
-                    <Pencil className="size-4" aria-hidden="true" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-8 hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => setDeleteOpen(true)}
-                    aria-label={`Delete ${author.name}`}
-                    data-testid="profile-delete-button"
-                  >
-                    <Trash2 className="size-4" aria-hidden="true" />
-                  </Button>
-                </div>
+                {author.importedAuthor && (
+                  <div className="flex gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8"
+                      onClick={() => setEditOpen(true)}
+                      aria-label={`Edit ${author.name}`}
+                      data-testid="profile-edit-button"
+                    >
+                      <Pencil className="size-4" aria-hidden="true" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => setDeleteOpen(true)}
+                      aria-label={`Delete ${author.name}`}
+                      data-testid="profile-delete-button"
+                    >
+                      <Trash2 className="size-4" aria-hidden="true" />
+                    </Button>
+                  </div>
+                )}
               </div>
-              <p className="text-muted-foreground mb-3">{author.title}</p>
+              {author.title && <p className="text-muted-foreground mb-3">{author.title}</p>}
 
               {/* Featured Quote */}
               {author.featuredQuote && (
@@ -142,13 +153,15 @@ export function AuthorProfile() {
               )}
 
               {/* Specialty Badges */}
-              <div className="flex flex-wrap justify-center sm:justify-start gap-1.5 mb-4">
-                {author.specialties.map(specialty => (
-                  <Badge key={specialty} variant="secondary" className="text-xs">
-                    {specialty}
-                  </Badge>
-                ))}
-              </div>
+              {author.specialties.length > 0 && (
+                <div className="flex flex-wrap justify-center sm:justify-start gap-1.5 mb-4">
+                  {author.specialties.map(specialty => (
+                    <Badge key={specialty} variant="secondary" className="text-xs">
+                      {specialty}
+                    </Badge>
+                  ))}
+                </div>
+              )}
 
               {/* Social Links */}
               {socialEntries.length > 0 && (
@@ -176,65 +189,94 @@ export function AuthorProfile() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <StatCard
           icon={BookOpen}
-          value={stats.courseCount}
-          label={stats.courseCount === 1 ? 'Course' : 'Courses'}
+          value={authorCourses.length}
+          label={authorCourses.length === 1 ? 'Course' : 'Courses'}
         />
-        <StatCard icon={Clock} value={`${Math.round(stats.totalHours)}h`} label="Content" />
-        <StatCard icon={GraduationCap} value={stats.totalLessons} label="Lessons" />
+        <StatCard
+          icon={Clock}
+          value={`${Math.round(authorCourses.reduce((sum, c) => sum + c.estimatedHours, 0))}h`}
+          label="Content"
+        />
+        <StatCard
+          icon={GraduationCap}
+          value={authorCourses.reduce((sum, c) => sum + c.totalLessons, 0)}
+          label="Lessons"
+        />
         <StatCard
           icon={Award}
-          value={author.yearsExperience > 0 ? `${author.yearsExperience}y` : '—'}
+          value={author.yearsExperience > 0 ? `${author.yearsExperience}y` : '\u2014'}
           label="Experience"
         />
       </div>
 
       {/* Bio Section */}
-      <Card className="rounded-3xl border-0 shadow-sm mb-6">
-        <CardContent className="p-6 sm:p-8">
-          <h2 className="text-lg font-semibold mb-4">About</h2>
-          <div className="space-y-3 text-muted-foreground leading-relaxed">
-            {author.bio.split('\n\n').map((paragraph, i) => (
-              <p key={i}>{paragraph}</p>
-            ))}
-          </div>
-          {author.education && (
-            <>
-              <Separator className="my-5" />
-              <div className="flex items-center gap-2 text-sm">
-                <Award className="size-4 text-brand" aria-hidden="true" />
-                <span className="font-medium">Education:</span>
-                <span className="text-muted-foreground">{author.education}</span>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+      {author.bio && (
+        <Card className="rounded-3xl border-0 shadow-sm mb-6">
+          <CardContent className="p-6 sm:p-8">
+            <h2 className="text-lg font-semibold mb-4">About</h2>
+            <div className="space-y-3 text-muted-foreground leading-relaxed">
+              {author.bio.split('\n\n').map((paragraph, i) => (
+                <p key={i}>{paragraph}</p>
+              ))}
+            </div>
+            {author.education && (
+              <>
+                <Separator className="my-5" />
+                <div className="flex items-center gap-2 text-sm">
+                  <Award className="size-4 text-brand" aria-hidden="true" />
+                  <span className="font-medium">Education:</span>
+                  <span className="text-muted-foreground">{author.education}</span>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Courses Section */}
-      <div>
-        <h2 className="text-lg font-semibold mb-4">Courses by {author.name}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {stats.courses.map(course => (
-            <CourseCard
-              key={course.id}
-              course={course}
-              variant="library"
-              completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
-            />
-          ))}
+      {authorCourses.length > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold mb-4">Courses by {author.name}</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {authorCourses.map(course => (
+              <CourseCard
+                key={course.id}
+                course={course}
+                variant="library"
+                completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {authorCourses.length === 0 && (
+        <Card className="rounded-3xl border-0 shadow-sm">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <BookOpen className="size-12 text-muted-foreground/50 mb-3" aria-hidden="true" />
+            <p className="text-muted-foreground">No courses linked to this author yet.</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Edit Dialog */}
-      <AuthorFormDialog open={editOpen} onOpenChange={setEditOpen} author={author} />
+      {author.importedAuthor && (
+        <AuthorFormDialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          author={author.importedAuthor}
+        />
+      )}
 
       {/* Delete Dialog */}
-      <DeleteAuthorDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        author={author}
-        onDeleted={() => navigate('/authors')}
-      />
+      {author.importedAuthor && (
+        <DeleteAuthorDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          author={author.importedAuthor}
+          onDeleted={() => navigate('/authors')}
+        />
+      )}
     </div>
   )
 }
