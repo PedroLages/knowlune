@@ -6,7 +6,7 @@ started: 2026-03-25
 completed:
 reviewed: in-progress
 review_started: 2026-03-25
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
 burn_in_validated: false
 ---
 
@@ -214,4 +214,12 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Welcome wizard blocks E2E tests**: The onboarding Welcome Wizard (`knowlune-welcome-wizard-v1` in localStorage) auto-opens on fresh page visits, causing auth tests to fail because the dialog intercepts interactions. Fix: use `navigateAndWait()` helper which seeds localStorage to dismiss wizard/onboarding, or add `addInitScript` in `beforeEach`. This is the same pattern used by navigation, overview, and courses specs.
+
+- **Radix Tabs render all tab content**: The AuthDialog uses shadcn Tabs which renders all tab panels in the DOM (hidden via CSS). This means `getByLabel(/email/i)` matches both the email/password tab's email field AND the magic link tab's email field, causing Playwright strict mode violations. Fix: use specific element IDs (`#auth-email`, `#auth-password`) instead of generic label matchers.
+
+- **Sign-out error handling was missing**: The original `signOut()` action was fire-and-forget (`await supabase.auth.signOut()`) with no error return. Changed to return `{ error?: string }` matching the sign-in/sign-up pattern, allowing Settings to show toast errors on sign-out failure.
+
+- **Network error constant extraction**: Exported `NETWORK_ERROR_MESSAGE` as a constant from `useAuthStore.ts` so form components can compare against it to conditionally show Retry buttons, rather than duplicating the error string across 3 components.
+
+- **Google icon replacement**: Replaced the generic `Chrome` lucide icon with an inline SVG of the actual Google logo (4-color "G") for brand accuracy. Inline SVG avoids adding a new icon dependency.
