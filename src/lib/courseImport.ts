@@ -1,6 +1,7 @@
 import { db } from '@/db'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { triggerAutoAnalysis } from '@/lib/autoAnalysis'
+import { triggerOllamaTagging } from '@/lib/ollamaTagging'
 import {
   showDirectoryPicker,
   scanDirectory,
@@ -198,6 +199,11 @@ export async function importCourseFromFolder(): Promise<ImportedCourse> {
 
     // Step 9: Trigger auto-analysis (fire-and-forget, consent-gated)
     triggerAutoAnalysis(course)
+
+    // Step 10: Trigger Ollama auto-tagging (fire-and-forget, independent of cloud AI)
+    // Uses local Ollama for fast, structured JSON tag generation.
+    // Runs alongside cloud auto-analysis — tags are merged with dedup.
+    triggerOllamaTagging(course, videos, pdfs)
 
     return course
   } catch (error) {
