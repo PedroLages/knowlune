@@ -84,42 +84,10 @@ export function OllamaModelPicker({
 
   // Fetch models when serverUrl changes or connection is established (AC1, AC5)
   useEffect(() => {
-    let cancelled = false
-
     if (isConnected && serverUrl && serverUrl !== lastFetchedUrl.current) {
-      void (async () => {
-        if (!serverUrl || !isConnected) return
-
-        setIsLoading(true)
-        setError(null)
-
-        try {
-          const result = await OllamaLLMClient.fetchModels(serverUrl, directConnection)
-          if (cancelled) return
-          setModels(result)
-          lastFetchedUrl.current = serverUrl
-
-          if (!selectedModel && result.length > 0) {
-            onModelSelect(result[0].name)
-          }
-        } catch (err) {
-          if (cancelled) return
-          // silent-catch-ok — error state rendered inline via the error alert below the picker
-          const message = err instanceof Error ? err.message : 'Failed to fetch models'
-          setError(message)
-          setModels([])
-        } finally {
-          if (!cancelled) {
-            setIsLoading(false)
-          }
-        }
-      })()
+      void fetchModels()
     }
-
-    return () => {
-      cancelled = true
-    }
-  }, [serverUrl, isConnected, directConnection, selectedModel, onModelSelect])
+  }, [fetchModels])
 
   // Don't render if not connected
   if (!isConnected) return null
