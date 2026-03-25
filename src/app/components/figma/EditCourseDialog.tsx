@@ -130,7 +130,11 @@ export function EditCourseDialog({ open, onOpenChange, course, allTags }: EditCo
               aria-invalid={!nameValid && name !== course.name}
               maxLength={120}
             />
-            {!nameValid && <p className="text-xs text-destructive" aria-live="polite">Course name is required.</p>}
+            {!nameValid && (
+              <p className="text-xs text-destructive" aria-live="polite">
+                Course name is required.
+              </p>
+            )}
           </div>
 
           {/* Description */}
