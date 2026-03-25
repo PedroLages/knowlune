@@ -61,10 +61,6 @@ Before requesting `/review-story`, verify:
 
 [Populated by /review-story — adversarial code review findings]
 
-## Web Design Guidelines Review
-
-[Populated by /review-story — Web Interface Guidelines compliance findings]
-
 ## Challenges and Lessons Learned
 
 [Document issues, solutions, and patterns worth remembering]
