@@ -19,11 +19,11 @@ import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
 import { TopicFilter } from '@/app/components/figma/TopicFilter'
 import { StatusFilter } from '@/app/components/figma/StatusFilter'
 import { ToggleGroup, ToggleGroupItem } from '@/app/components/ui/toggle-group'
-import { Search, FolderOpen, Loader2, BookOpen, ChevronDown } from 'lucide-react'
+import { Search, FolderOpen, BookOpen, ChevronDown } from 'lucide-react'
 import { useCourseStore } from '@/stores/useCourseStore'
 import { getCourseCompletionPercent, getProgress } from '@/lib/progress'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
-import { importCourseFromFolder } from '@/lib/courseImport'
+import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
 import { db } from '@/db'
 import { calculateMomentumScore } from '@/lib/momentum'
 import { calculateAtRiskStatus } from '@/lib/atRisk'
@@ -46,6 +46,7 @@ export function Courses() {
   const [selectedTopics, setSelectedTopics] = useState<string[]>([])
   const [selectedStatuses, setSelectedStatuses] = useState<LearnerCourseStatus[]>([])
   const [sortMode, setSortMode] = useState<SortMode>('recent')
+  const [wizardOpen, setWizardOpen] = useState(false)
   const [momentumMap, setMomentumMap] = useState<Map<string, MomentumScore>>(new Map())
   const [atRiskMap, setAtRiskMap] = useState<Map<string, AtRiskStatus>>(new Map())
   const [estimateMap, setEstimateMap] = useState<Map<string, CompletionEstimate>>(new Map())
@@ -62,7 +63,6 @@ export function Courses() {
   })
 
   const importedCourses = useCourseImportStore(state => state.importedCourses)
-  const isImporting = useCourseImportStore(state => state.isImporting)
   const loadImportedCourses = useCourseImportStore(state => state.loadImportedCourses)
   const getAllTags = useCourseImportStore(state => state.getAllTags)
 
@@ -273,12 +273,8 @@ export function Courses() {
     (a, b) => new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime()
   )
 
-  async function handleImportCourse() {
-    try {
-      await importCourseFromFolder()
-    } catch {
-      // silent-catch-ok: errors are surfaced by importCourseFromFolder via toasts
-    }
+  function handleOpenWizard() {
+    setWizardOpen(true)
   }
 
   function handleCollapseToggle(open: boolean) {
@@ -306,23 +302,15 @@ export function Courses() {
         </div>
         <Button
           variant="brand"
-          onClick={handleImportCourse}
-          disabled={isImporting}
+          onClick={handleOpenWizard}
           className="hover:scale-[1.02] hover:shadow-md rounded-xl transition-[transform,box-shadow] duration-200"
         >
-          {isImporting ? (
-            <>
-              <Loader2 className="size-4 mr-2 animate-spin" />
-              Scanning\u2026
-            </>
-          ) : (
-            <>
-              <FolderOpen className="size-4 mr-2" />
-              Import Course
-            </>
-          )}
+          <FolderOpen className="size-4 mr-2" />
+          Import Course
         </Button>
       </div>
+
+      <ImportWizardDialog open={wizardOpen} onOpenChange={setWizardOpen} />
 
       {totalCourses === 0 ? (
         <EmptyState
@@ -330,7 +318,7 @@ export function Courses() {
           title="No courses yet"
           description="Import a course folder to get started"
           actionLabel="Import Course"
-          onAction={handleImportCourse}
+          onAction={handleOpenWizard}
           data-testid="courses-empty-state"
         />
       ) : (
@@ -394,18 +382,10 @@ export function Courses() {
                     size="sm"
                     data-testid="import-first-course-cta"
                     aria-label="Import your first course"
-                    onClick={handleImportCourse}
-                    disabled={isImporting}
+                    onClick={handleOpenWizard}
                     className="text-brand-soft-foreground h-auto p-0"
                   >
-                    {isImporting ? (
-                      <>
-                        <Loader2 className="size-4 mr-1 animate-spin" />
-                        Scanning\u2026
-                      </>
-                    ) : (
-                      'Import a course \u2192'
-                    )}
+                    Import a course &rarr;
                   </Button>
                 </div>
               ) : filteredImportedCourses.length === 0 ? (
