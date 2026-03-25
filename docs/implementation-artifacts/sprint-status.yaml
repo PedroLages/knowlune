@@ -359,7 +359,7 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 25: Author Management & New User Experience
   # ──────────────────────────────────────────────────
-  epic-25: in-progress
+  epic-25: done
   25-1-author-data-model-and-migration: done
   25-2-author-crud-dialog: done
   25-3-authors-page-from-indexeddb: done
