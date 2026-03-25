@@ -14,6 +14,40 @@ import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import type { ImportedCourse, ImportedVideo, ImportedPdf } from '@/data/types'
 
 /**
+ * Simple promise queue with concurrency control.
+ * Ollama processes inference sequentially, so concurrent requests would timeout.
+ * Concurrency of 1 ensures requests are processed one at a time.
+ */
+class PromiseQueue {
+  private concurrency: number
+  private running = 0
+  private queue: (() => void)[] = []
+
+  constructor(concurrency: number) {
+    this.concurrency = concurrency
+  }
+
+  async add<T>(fn: () => Promise<T>): Promise<T> {
+    // Wait for a slot to open up
+    if (this.running >= this.concurrency) {
+      await new Promise<void>(resolve => this.queue.push(resolve))
+    }
+
+    this.running++
+    try {
+      return await fn()
+    } finally {
+      this.running--
+      const next = this.queue.shift()
+      if (next) next()
+    }
+  }
+}
+
+/** Singleton queue — concurrency 1 since Ollama processes inference sequentially */
+const taggingQueue = new PromiseQueue(1)
+
+/**
  * Trigger Ollama-based auto-tagging for an imported course.
  *
  * Fire-and-forget — never throws. Errors are caught, logged, and shown as toasts.
@@ -30,7 +64,7 @@ export function triggerOllamaTagging(
 ): void {
   if (!isOllamaTaggingAvailable()) return
 
-  runOllamaTagging(course, videos, pdfs).catch(error => {
+  taggingQueue.add(() => runOllamaTagging(course, videos, pdfs)).catch(error => {
     console.error('[OllamaTagging] Unhandled error:', error)
   })
 }

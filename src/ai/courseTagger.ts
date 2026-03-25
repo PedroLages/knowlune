@@ -10,7 +10,11 @@
  * @module
  */
 
-import { getOllamaServerUrl, getOllamaSelectedModel } from '@/lib/aiConfiguration'
+import {
+  getOllamaServerUrl,
+  getOllamaSelectedModel,
+  isOllamaDirectConnection,
+} from '@/lib/aiConfiguration'
 
 /** Result from AI course tagging */
 export interface CourseTagResult {
@@ -83,19 +87,32 @@ export async function generateCourseTags(
     const fileList = courseMetadata.fileNames.slice(0, MAX_FILE_NAMES).join(', ')
     const userPrompt = `Title: "${courseMetadata.title}"\nFiles: ${fileList || '(none)'}`
 
-    const response = await fetch(`${ollamaConfig.url}/api/chat`, {
+    // Route through the Express proxy for SSRF validation, unless direct connection is enabled
+    const useDirectConnection = isOllamaDirectConnection()
+    const fetchUrl = useDirectConnection
+      ? `${ollamaConfig.url}/api/chat`
+      : '/api/ai/ollama/chat'
+
+    const requestBody: Record<string, unknown> = {
+      model: ollamaConfig.model,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: userPrompt },
+      ],
+      format: TAG_RESPONSE_SCHEMA,
+      stream: false,
+      options: { temperature: 0, num_predict: 200 },
+    }
+
+    // Include serverUrl so the proxy knows where to forward
+    if (!useDirectConnection) {
+      requestBody.ollamaServerUrl = ollamaConfig.url
+    }
+
+    const response = await fetch(fetchUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: ollamaConfig.model,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: userPrompt },
-        ],
-        format: TAG_RESPONSE_SCHEMA,
-        stream: false,
-        options: { temperature: 0, num_predict: 200 },
-      }),
+      body: JSON.stringify(requestBody),
       signal: controller.signal,
     })
 

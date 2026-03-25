@@ -350,22 +350,22 @@ export function AIConfigurationSettings() {
 
   /**
    * Handles Ollama model selection (AC3: persist in AI configuration)
+   * Wrapped in useCallback with correct dependencies to avoid stale closures.
    */
-  async function handleModelSelect(modelName: string) {
-    await saveAIConfiguration({
-      ollamaSettings: {
-        serverUrl: ollamaUrl || settings.ollamaSettings?.serverUrl || '',
-        directConnection: settings.ollamaSettings?.directConnection ?? false,
-        selectedModel: modelName,
-      },
-    })
-    setSettings(getAIConfiguration())
-  }
-
   const handleModelSelectCallback = useCallback(
     (model: string) => {
+      const doSelect = async () => {
+        await saveAIConfiguration({
+          ollamaSettings: {
+            serverUrl: ollamaUrl || settings.ollamaSettings?.serverUrl || '',
+            directConnection: settings.ollamaSettings?.directConnection ?? false,
+            selectedModel: model,
+          },
+        })
+        setSettings(getAIConfiguration())
+      }
       // silent-catch-ok — model selection errors are non-critical, picker shows error state
-      handleModelSelect(model).catch(err => {
+      doSelect().catch(err => {
         console.error('Failed to select model:', err)
       })
     },

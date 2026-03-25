@@ -12,19 +12,24 @@ import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vite
 vi.mock('@/lib/aiConfiguration', () => ({
   getOllamaServerUrl: vi.fn(),
   getOllamaSelectedModel: vi.fn(),
-  isOllamaDirectConnection: vi.fn(),
+  isOllamaDirectConnection: vi.fn(() => false),
 }))
 
 // --- Import SUT + mocked modules ---
 
 import { generateCourseTags, parseTagResponse, isOllamaTaggingAvailable } from '../courseTagger'
-import { getOllamaServerUrl, getOllamaSelectedModel } from '@/lib/aiConfiguration'
+import {
+  getOllamaServerUrl,
+  getOllamaSelectedModel,
+  isOllamaDirectConnection,
+} from '@/lib/aiConfiguration'
 
 // --- Test Helpers ---
 
 function mockOllamaConfigured(serverUrl = 'http://192.168.2.200:11434', model = 'llama3.2:latest') {
   ;(getOllamaServerUrl as Mock).mockReturnValue(serverUrl)
   ;(getOllamaSelectedModel as Mock).mockReturnValue(model)
+  ;(isOllamaDirectConnection as Mock).mockReturnValue(false)
 }
 
 function mockOllamaNotConfigured() {
@@ -59,7 +64,7 @@ afterEach(() => {
 })
 
 describe('generateCourseTags', () => {
-  it('returns tags from Ollama when configured', async () => {
+  it('returns tags from Ollama when configured (routes through proxy)', async () => {
     mockOllamaConfigured()
     mockFetchSuccess(['machine learning', 'python', 'data science'])
 
@@ -67,17 +72,38 @@ describe('generateCourseTags', () => {
 
     expect(result.tags).toEqual(['machine learning', 'python', 'data science'])
     expect(fetch).toHaveBeenCalledOnce()
+    // Should route through the Express proxy, not directly to Ollama
     expect(fetch).toHaveBeenCalledWith(
-      'http://192.168.2.200:11434/api/chat',
+      '/api/ai/ollama/chat',
       expect.objectContaining({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       })
     )
+    // Proxy request should include ollamaServerUrl in body
+    const callBody = JSON.parse((fetch as Mock).mock.calls[0][1].body)
+    expect(callBody.ollamaServerUrl).toBe('http://192.168.2.200:11434')
+  })
+
+  it('routes directly to Ollama when direct connection is enabled', async () => {
+    mockOllamaConfigured()
+    ;(isOllamaDirectConnection as Mock).mockReturnValue(true)
+    mockFetchSuccess(['machine learning', 'python'])
+
+    const result = await generateCourseTags(courseMetadata)
+
+    expect(result.tags).toEqual(['machine learning', 'python'])
+    expect(fetch).toHaveBeenCalledWith(
+      'http://192.168.2.200:11434/api/chat',
+      expect.objectContaining({ method: 'POST' })
+    )
+    // Direct mode should NOT include ollamaServerUrl in body
+    const callBody = JSON.parse((fetch as Mock).mock.calls[0][1].body)
+    expect(callBody.ollamaServerUrl).toBeUndefined()
   })
 
   it('sends correct request body with model, format, and prompt', async () => {
-    mockOllamaConfigured('http://localhost:11434', 'phi3:mini')
+    mockOllamaConfigured('http://192.168.2.200:11434', 'phi3:mini')
     mockFetchSuccess(['python'])
 
     await generateCourseTags(courseMetadata)
@@ -95,6 +121,8 @@ describe('generateCourseTags', () => {
     )
     expect(callBody.messages[1].content).toContain('Introduction to Machine Learning')
     expect(callBody.messages[1].content).toContain('01-overview.mp4')
+    // In proxy mode, ollamaServerUrl should be included
+    expect(callBody.ollamaServerUrl).toBe('http://192.168.2.200:11434')
   })
 
   it('returns empty tags when Ollama is not configured (AC4)', async () => {

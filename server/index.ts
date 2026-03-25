@@ -179,6 +179,71 @@ app.get('/api/ai/ollama/health', async (req, res) => {
   }
 })
 
+/**
+ * POST /api/ai/ollama/chat
+ *
+ * Proxy endpoint for Ollama's native /api/chat endpoint (non-streaming).
+ * Used by courseTagger.ts for auto-categorization with structured JSON output.
+ * Validates the target URL via isAllowedOllamaUrl() to prevent SSRF.
+ *
+ * Body:
+ *   ollamaServerUrl - The Ollama server URL
+ *   model, messages, format, stream, options - Forwarded directly to Ollama
+ */
+app.post('/api/ai/ollama/chat', async (req, res) => {
+  try {
+    const { ollamaServerUrl, ...ollamaPayload } = req.body as {
+      ollamaServerUrl?: string
+      [key: string]: unknown
+    }
+
+    if (!ollamaServerUrl || typeof ollamaServerUrl !== 'string') {
+      res.status(400).json({ error: 'ollamaServerUrl is required in request body' })
+      return
+    }
+
+    if (!isAllowedOllamaUrl(ollamaServerUrl)) {
+      res.status(403).json({ error: 'Ollama server URL targets a disallowed address' })
+      return
+    }
+
+    const normalizedUrl = ollamaServerUrl.replace(/\/+$/, '')
+    const response = await fetch(`${normalizedUrl}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(ollamaPayload),
+      signal: AbortSignal.timeout(30_000),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => response.statusText)
+      res.status(response.status).json({ error: `Ollama returned ${response.status}: ${errorText}` })
+      return
+    }
+
+    const data = await response.json()
+    res.json(data)
+  } catch (error) {
+    // silent-catch-ok — logs to console and returns error response to client
+    console.error('[/api/ai/ollama/chat] Error:', (error as Error).message)
+
+    if ((error as Error).name === 'AbortError' || (error as Error).name === 'TimeoutError') {
+      res.status(504).json({ error: 'Ollama server timed out' })
+      return
+    }
+
+    const msg = (error as Error).message
+    if (msg.includes('fetch failed') || msg.includes('ECONNREFUSED')) {
+      res.status(502).json({
+        error: `Cannot reach Ollama server. Is it running at the specified URL?`,
+      })
+      return
+    }
+
+    res.status(500).json({ error: (error as Error).message })
+  }
+})
+
 /** Ollama request body schema */
 const OllamaRequestSchema = z.object({
   ollamaServerUrl: z.string().url('Valid Ollama server URL is required'),
