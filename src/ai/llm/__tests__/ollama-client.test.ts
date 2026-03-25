@@ -114,7 +114,7 @@ describe('OllamaLLMClient', () => {
       expect(body.ollamaServerUrl).toBe('http://192.168.2.200:11434')
       expect(body.model).toBe('llama3.2')
       expect(body.messages).toEqual(defaultMessages)
-      expect(body.stream).toBe(true)
+      expect(body.stream).toBeUndefined()
     })
 
     it('should stream content chunks from proxy SSE response', async () => {

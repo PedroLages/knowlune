@@ -138,7 +138,8 @@ app.post('/api/ai/ollama', async (req, res) => {
     // Signal stream end
     res.write('data: [DONE]\n\n')
     res.end()
-  } catch (error) { // silent-catch-ok — logs to console and returns error response to client
+  } catch (error) {
+    // silent-catch-ok — logs to console and returns error response to client
     console.error('[/api/ai/ollama] Error:', (error as Error).message)
 
     if (!res.headersSent) {
