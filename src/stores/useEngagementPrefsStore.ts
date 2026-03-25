@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { saveSettings } from '@/lib/settings'
 
 const STORAGE_KEY = 'levelup-engagement-prefs-v1'
 
@@ -73,10 +74,18 @@ export const useEngagementPrefsStore = create<EngagementPrefsStore>((set, get) =
       colorScheme: state.colorScheme,
     }
     persistPrefs(prefs)
+    // Bridge colorScheme to AppSettings so useColorScheme hook picks it up
+    if (key === 'colorScheme') {
+      saveSettings({ colorScheme: value as ColorScheme })
+      window.dispatchEvent(new Event('settingsUpdated'))
+    }
   },
 
   resetToDefaults: () => {
     set({ ...defaults })
     persistPrefs({ ...defaults })
+    // Bridge reset to AppSettings
+    saveSettings({ colorScheme: defaults.colorScheme })
+    window.dispatchEvent(new Event('settingsUpdated'))
   },
 }))

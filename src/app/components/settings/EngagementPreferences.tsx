@@ -120,21 +120,25 @@ export function EngagementPreferences() {
               </p>
             </label>
 
-            {/* Vibrant (disabled until E21-S04) */}
+            {/* Vibrant */}
             <label
               className={cn(
-                'relative flex flex-col gap-2 p-4 border-2 rounded-xl',
-                'transition-all duration-200',
-                'border-border bg-muted/50 opacity-60 cursor-not-allowed'
+                'relative flex flex-col gap-2 p-4 border-2 rounded-xl cursor-pointer',
+                'transition-all duration-200 hover:shadow-sm',
+                colorScheme === 'vibrant'
+                  ? 'border-brand bg-brand-soft shadow-sm'
+                  : 'border-border bg-background hover:border-brand/50'
               )}
-              aria-disabled="true"
             >
-              <RadioGroupItem value="vibrant" className="sr-only" disabled />
+              <RadioGroupItem value="vibrant" className="sr-only" />
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-muted-foreground">Vibrant</span>
+                <span className="text-sm font-medium">Vibrant</span>
+                {colorScheme === 'vibrant' && (
+                  <div className="w-2 h-2 bg-brand rounded-full" />
+                )}
               </div>
               <p className="text-xs text-muted-foreground">
-                High-contrast vibrant colors — coming soon
+                High-contrast vibrant colors for an energized experience
               </p>
             </label>
           </RadioGroup>

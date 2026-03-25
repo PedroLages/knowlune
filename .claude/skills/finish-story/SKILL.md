@@ -158,6 +158,11 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
    - Set `reviewed: true` if not already.
 
 8. **Update sprint status**: In `${BASE_PATH}/docs/implementation-artifacts/sprint-status.yaml`, set story → `done`.
+   **Merge conflict prevention**: Before editing, pull the latest version from main to avoid stale statuses for other stories:
+   ```bash
+   git checkout main -- docs/implementation-artifacts/sprint-status.yaml
+   ```
+   Then apply the story status change on top of the fresh copy.
 
 9. **Commit**: Stage story file, sprint-status.yaml, and any review reports.
    Apply `writing-clearly-and-concisely` rules to the commit message — active voice, omit needless words:
