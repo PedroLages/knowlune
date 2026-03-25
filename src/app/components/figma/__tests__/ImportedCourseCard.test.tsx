@@ -214,6 +214,49 @@ describe('ImportedCourseCard', () => {
     })
   })
 
+  describe('E22-S04 AC5: AI-generated tag editing/removal', () => {
+    it('renders AI-generated tags on the course card', () => {
+      renderCard({ tags: ['Python', 'Machine Learning', 'Data Science'] })
+      const tagContainer = screen.getByTestId('course-card-tags')
+      expect(tagContainer).toBeInTheDocument()
+      expect(screen.getByText('Python')).toBeInTheDocument()
+      expect(screen.getByText('Machine Learning')).toBeInTheDocument()
+      expect(screen.getByText('Data Science')).toBeInTheDocument()
+    })
+
+    it('renders remove buttons on tag badges', () => {
+      renderCard({ tags: ['Python', 'AI'] })
+      const removeButtons = screen.getAllByRole('button', { name: /Remove tag:/ })
+      expect(removeButtons.length).toBe(2)
+      expect(screen.getByRole('button', { name: 'Remove tag: Python' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Remove tag: AI' })).toBeInTheDocument()
+    })
+
+    it('calls updateCourseTags without the removed tag when X is clicked', async () => {
+      const user = userEvent.setup()
+      renderCard({ id: 'c1', tags: ['Python', 'AI', 'Web'] })
+
+      const removeButton = screen.getByRole('button', { name: 'Remove tag: AI' })
+      await user.click(removeButton)
+
+      expect(mockUpdateCourseTags).toHaveBeenCalledWith('c1', ['Python', 'Web'])
+    })
+
+    it('renders an add-tag button for adding new tags', () => {
+      renderCard({ tags: ['Python'] })
+      expect(screen.getByTestId('add-tag-button')).toBeInTheDocument()
+    })
+
+    it('respects maxVisible and shows overflow badge', () => {
+      renderCard({ tags: ['Python', 'AI', 'Web', 'Data', 'ML'] })
+      // TagBadgeList maxVisible=3, so 3 visible + overflow badge
+      const tagBadges = screen.getAllByTestId('tag-badge')
+      expect(tagBadges.length).toBe(3)
+      expect(screen.getByTestId('tag-overflow-badge')).toBeInTheDocument()
+      expect(screen.getByText('+2 more')).toBeInTheDocument()
+    })
+  })
+
   describe('status dropdown', () => {
     it('opens dropdown with all three status options and delete on click', async () => {
       const user = userEvent.setup()
