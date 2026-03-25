@@ -89,4 +89,8 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Async cleanup in useEffect is non-negotiable**: The initial implementation lacked a `cancelled` flag for the fetch-in-useEffect pattern. Code review caught this as a MEDIUM issue. Always use a cleanup function with a cancellation flag when fetching inside useEffect to prevent state updates on unmounted components.
+- **DRY fetch logic early**: The useEffect inlined fetch logic instead of calling the existing `fetchModels` callback, creating duplicate code paths. A bug fix in one path would need manual duplication. Consolidating fetch logic into a single function (called by both useEffect and manual refresh) eliminated this risk.
+- **Stable callback identity matters for child components**: `onModelSelect` was recreated on every render, causing unnecessary re-renders in the model picker. Wrapping in `useCallback` stabilized the reference. This is especially important for callbacks passed to components with search/filter state.
+- **Guard utility functions at boundaries**: `formatModelSize` didn't handle negative or zero byte values. Adding an early return for `bytes <= 0` prevents displaying nonsensical sizes like "-2.0 GB" from malformed API responses.
+- **No E2E spec is acceptable for external-dependency features**: Model auto-discovery requires a running Ollama server. Unit tests (18 tests covering all ACs) provide sufficient coverage without the flakiness of mocking an external API in E2E.
