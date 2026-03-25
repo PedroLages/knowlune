@@ -27,7 +27,7 @@
 # - SM typically creates next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 #
-# REFRESH NOTES (2026-03-22):
+# REFRESH NOTES (2026-03-26):
 # ===========================
 # - Epics 1-10: done, all stories completed
 # - Epic 9 split into Epic 9 (infrastructure) + Epic 9B (AI features) per updated epics.md
@@ -35,9 +35,15 @@
 # - Implementation-only stories preserved (2-6..2-9, 3-0, 3-8..3-14)
 # - Deferred stories retained: 1-5 (file detection), 2-10 (captions)
 # - Epic 7 gap coverage stories (7-8..7-11) deferred indefinitely — risk accepted for error-path edge cases
+# - NEW: Epic 1B (Library Enhancements) — 4 stories, backlog
+# - NEW: Epic 1C (Course Library Management) — 6 stories, backlog
+# - NEW: Epic 28 (YouTube Course Builder) — 12 stories, backlog
+#   Numbered as Epic 28 to avoid collision with Epic 23 (Platform Identity).
+#   Defined as "Epic 23" in epics.md but renumbered here for sprint tracking clarity.
+# - E18-S03 detected story file → ready-for-dev
 
 generated: 2026-03-15
-last_updated: 2026-03-25  # E18-S10 merge
+last_updated: 2026-03-26  # Sprint planning refresh — added Epics 1B, 1C, 28 (YouTube Course Builder)
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -55,6 +61,28 @@ development_status:
   1-5-detect-missing-or-relocated-files: done
   1-6-delete-imported-course: done
   epic-1-retrospective: done
+
+  # ──────────────────────────────────────────────────
+  # Epic 1B: Library Enhancements
+  # ──────────────────────────────────────────────────
+  epic-1b: backlog
+  1b-1-bulk-course-import: backlog
+  1b-2-auto-extract-video-metadata: backlog
+  1b-3-import-progress-indicator: backlog
+  1b-4-course-card-thumbnails: backlog
+  epic-1b-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 1C: Course Library Management (Delete, Edit, Sort, Search)
+  # ──────────────────────────────────────────────────
+  epic-1c: backlog
+  1c-1-delete-course-and-direct-navigation-fix: backlog
+  1c-2-edit-course-title: backlog
+  1c-3-touch-target-and-filter-accessibility-fix: backlog
+  1c-4-tag-management-global-rename-and-delete: backlog
+  1c-5-momentum-sort-for-imported-courses: backlog
+  1c-6-search-and-filter-inside-course-detail-page: backlog
+  epic-1c-retrospective: optional
 
   # ──────────────────────────────────────────────────
   # Epic 2: Lesson Player & Content Consumption
@@ -271,7 +299,7 @@ development_status:
   epic-18: in-progress
   18-1-implement-complete-keyboard-navigation: done
   18-2-implement-aria-live-regions-for-dynamic-content: backlog
-  18-3-ensure-semantic-html-and-proper-aria-attributes: backlog
+  18-3-ensure-semantic-html-and-proper-aria-attributes: ready-for-dev  # story file exists
   18-4-verify-contrast-ratios-and-touch-targets: done
   18-5-integrate-quiz-completion-with-study-streaks: done
   18-6-display-quiz-performance-in-overview-dashboard: done
@@ -390,3 +418,24 @@ development_status:
   27-2-route-redirects-for-legacy-paths: done
   27-3-update-sidebar-links-to-reports-tabs: done
   epic-27-retrospective: done
+
+  # ──────────────────────────────────────────────────
+  # Epic 28: YouTube Course Builder
+  # NOTE: Defined as "Epic 23" in epics.md; renumbered to 28 to avoid
+  #       collision with Epic 23 (Platform Identity & Navigation Cleanup).
+  # Depends on: Epic 1 (course data model), Epic 2 (player), Epic 9 (AI — Premium only)
+  # ──────────────────────────────────────────────────
+  epic-28: backlog
+  28-1-dexie-v24-schema-migration-and-youtube-types: backlog
+  28-2-youtube-url-parser-and-configuration-settings: backlog
+  28-3-youtube-data-api-v3-client-with-rate-limiting: backlog
+  28-4-transcript-pipeline-tier-1-youtube-transcript: backlog
+  28-5-import-wizard-steps-1-and-2-url-input-metadata-preview: backlog
+  28-6-rule-based-video-grouping-and-chapter-editor: backlog
+  28-7-ai-powered-course-structuring-premium: backlog
+  28-8-import-wizard-step-4-course-details-and-save: backlog
+  28-9-youtube-iframe-player-and-progress-tracking: backlog
+  28-10-transcript-panel-with-search-and-click-to-seek: backlog
+  28-11-transcript-fallback-tier-2-ytdlp-and-tier-3-whisper: backlog
+  28-12-offline-support-metadata-refresh-and-security-hardening: backlog
+  epic-28-retrospective: optional

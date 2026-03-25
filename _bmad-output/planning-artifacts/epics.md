@@ -1,12 +1,25 @@
 ---
 stepsCompleted: ['step-01-validate-prerequisites', 'step-02-design-epics', 'step-03-create-stories', 'step-04-final-validation']
 inputDocuments:
-  - 'docs/planning-artifacts/prd.md'
+  - '_bmad-output/planning-artifacts/prd.md'
   - '_bmad-output/planning-artifacts/architecture.md'
   - '_bmad-output/planning-artifacts/ux-design-specification.md'
 updateMode: 'incremental'
-updateDate: '2026-03-07'
-updateReason: 'Architecture updated to local-first AI (WebLLM/whisper.cpp/3-tier fallback); UX updated with spaced repetition components, activity heatmap, onboarding system, streak freeze mechanic'
+updateDate: '2026-03-26'
+updateReason: 'YouTube Course Builder promoted to MVP (Epic 23): FR112-FR123, NFR69-NFR74, architecture addendum with 3-tier BYOK infrastructure'
+editHistory:
+  - date: '2026-03-07'
+    scope: 'Architecture + UX updated to local-first AI'
+    changes:
+      - 'Full epic breakdown for Epics 1-20'
+  - date: '2026-03-26'
+    scope: 'YouTube Course Builder (Epic 23) incremental addition'
+    changes:
+      - 'Added 12 YouTube FRs (FR112-FR123) to Requirements Inventory'
+      - 'Added 6 YouTube NFRs (NFR69-NFR74) to Requirements Inventory'
+      - 'Added 6 UX Design Requirements (UX-DR1 to UX-DR6) from YouTube UX specification'
+      - 'Added YouTube Architecture requirements from architecture addendum'
+      - 'Added Epic 23 with stories to Epic List and FR Coverage Map'
 ---
 
 # Elearningplatformwireframes - Epic Breakdown
@@ -141,6 +154,37 @@ This document provides the complete epic and story breakdown for Elearningplatfo
 - FR100: User can configure per-course study reminders with selectable days and times independent of the streak reminder
 - FR101: User can view weekly adherence percentage (study days / target days) on the dashboard and in analytics
 
+**Platform & Entitlement (6 Requirements — Epic 19):**
+
+- FR102: User can create an account with email and password for premium features
+- FR103: User can subscribe to premium tier via Stripe Checkout
+- FR104: System validates premium entitlement on app launch with 7-day offline cache
+- FR105: User can view subscription status, manage billing via Stripe Customer Portal
+- FR106: System displays upgrade CTAs for free-tier users with feature previews
+- FR107: Premium code isolation in src/premium/ with separate build config
+
+**Learning Pathways & Knowledge Retention (4 Requirements — Epic 20):**
+
+- FR108: User can browse curated multi-course learning paths (Career Paths)
+- FR109: User can create flashcards from notes with SM-2 spaced repetition
+- FR110: User can view 365-day activity heatmap with 5-level color intensity
+- FR111: User can view skill proficiency radar chart (5-7 domains)
+
+**YouTube Course Builder (12 Requirements — Epic 23):**
+
+- FR112: User can paste a YouTube video URL or playlist URL to initiate course creation (Free)
+- FR113: System fetches video metadata (title, duration, thumbnail, description, chapters) via YouTube Data API v3 (Free)
+- FR114: System fetches playlist contents ordered by playlist position; individual URLs grouped by submission order (Free)
+- FR115: System analyzes video metadata via AI provider and proposes chapter groupings with ordered lessons; user reviews, edits, and confirms (Premium)
+- FR116: When no AI provider configured, system groups videos by keyword similarity from titles/descriptions using playlist order within groups (Free)
+- FR117: System extracts video transcripts via youtube-transcript for caption-available videos; stored locally and indexed for full-text search (Free)
+- FR118: For captionless videos, system queues audio for Whisper transcription via user-configured endpoint; async with progress indicator, ≤60s per video (Premium)
+- FR119: User can edit course structure (drag-reorder, rename chapters, add/remove videos, split/merge chapters) during creation and after save (Free)
+- FR120: YouTube-sourced courses have full feature parity with local courses: progress tracking, notes, streaks, momentum, challenges, analytics (Free)
+- FR121: System caches YouTube video metadata in IndexedDB with configurable TTL (7-day default); subsequent views use cached data (Free)
+- FR122: User can view synchronized transcript panel alongside YouTube video, search within transcripts, and click segments to seek video (Free)
+- FR123: System generates AI-powered course and per-video summaries from transcript data (Premium — extends FR48 to YouTube content)
+
 ### Non-Functional Requirements
 
 **Performance (7 Requirements):**
@@ -238,6 +282,15 @@ This document provides the complete epic and story breakdown for Elearningplatfo
 - NFR67: Exported data re-importable with ≥95% semantic fidelity
 - NFR68: All animations respect prefers-reduced-motion media query
 
+**YouTube Integration (6 Requirements — Epic 23):**
+
+- NFR69: YouTube API quota usage remains under 500 units/day for typical single-user workflow
+- NFR70: Video metadata fetch completes within 3s per video; playlist metadata within 5s for up to 200 videos
+- NFR71: Transcript extraction completes within 2s per video for caption-available content
+- NFR72: YouTube API key follows same security treatment as AI API keys (NFR27, NFR52)
+- NFR73: When YouTube API unavailable, cached metadata and transcripts remain accessible offline
+- NFR74: YouTube course data stored entirely in IndexedDB; no transmission except to configured AI/Whisper endpoints
+
 ### Additional Requirements
 
 **From Architecture Document:**
@@ -278,6 +331,32 @@ This document provides the complete epic and story breakdown for Elearningplatfo
 - Onboarding flow: first-time import → first study session → first challenge creation
 - Emotional design priorities: Motivated/Inspired, Empowered/In Control, Supported/Guided, Confident/Capable
 - Anti-patterns to avoid: overwhelming dashboards, guilt-based motivation, hidden playback position, manual save buttons
+
+**From Architecture Document (YouTube Course Builder Addendum — 2026-03-25):**
+
+- 3-tier BYOK server architecture: Tier 1 (youtube-transcript, zero-config, ~90% coverage), Tier 2 (yt-dlp on user server), Tier 3 (faster-whisper on user GPU server)
+- Vite middleware plugin `youtubeDevProxy()` following established `ollamaDevProxy()` pattern for transcript/subtitle/whisper API routes
+- YouTube Data API v3 calls direct from browser (CORS supported, API key client-side)
+- Client-side token bucket rate limiter at 3 req/s; quota tracking with midnight PT reset; oEmbed fallback for quota exhaustion
+- Hybrid source discriminator on shared Dexie tables (`importedCourses`, `importedVideos`) with `source: 'local' | 'youtube'` field for zero-code-change feature parity
+- New Dexie tables: `youtube_video_cache` (TTL-managed metadata), `youtube_transcripts` (cue storage + full-text index), `youtube_import_queue` (async job tracking)
+- Schema migration to v24 with backward-compatible optional fields on existing tables
+- `react-youtube` for IFrame Player API wrapper; COEP `credentialless` instead of `require-corp` for SharedArrayBuffer + YouTube IFrame coexistence
+- New `useYouTubeImportStore` Zustand store (separate from course import — fundamentally different network-based flow)
+- SSRF protection: generalized `isAllowedProxyUrl()` shared between Ollama and YouTube server endpoints
+- Transcript cleanup via existing `getLLMClient()` factory (proper punctuation, paragraph breaks, ASR error correction)
+- Existing `TranscriptCue`, `TranscriptPanel`, `parseVTT()`, `useCaptionLoader`, `Chapter` types reused directly
+
+### UX Design Requirements
+
+**From UX Design Specification (YouTube Course Builder — 2026-03-25):**
+
+- UX-DR1: YouTube import wizard with 4-step flow: Paste URL → Preview metadata → AI/rule-based structuring → Review & Edit → Confirm. Progressive disclosure keeps each step focused.
+- UX-DR2: Embedded YouTube player with `react-youtube` wrapper providing consistent UI controls, timestamp note integration, and synchronized transcript panel matching local video player experience.
+- UX-DR3: Drag-and-drop course structure editor with chapter groupings, video reordering, rename/remove/split/merge operations; keyboard-accessible alternatives for all drag interactions (WCAG 2.5.7).
+- UX-DR4: Transcript panel with real-time highlight during playback, click-to-seek interaction, full-text search within transcripts, and expandable/collapsible segments.
+- UX-DR5: Free vs. Premium feature differentiation with clear tier badges, graceful degradation when AI/Whisper unavailable, and upgrade CTAs that preview (not block) premium capabilities.
+- UX-DR6: Offline graceful degradation — cached metadata and transcripts available for notes/search/progress; playback requires network; clear "offline" indicators on unavailable actions.
 
 ### FR Coverage Map
 
@@ -370,6 +449,18 @@ FR108: Epic 20 - Browse curated multi-course learning paths (Career Paths)
 FR109: Epic 20 - Create flashcards from notes with SM-2 spaced repetition
 FR110: Epic 20 - View 365-day activity heatmap with 5-level color intensity
 FR111: Epic 20 - View skill proficiency radar chart (5-7 domains)
+FR112: Epic 23 - Paste YouTube video URL or playlist URL to initiate course creation
+FR113: Epic 23 - Fetch video metadata via YouTube Data API v3
+FR114: Epic 23 - Fetch playlist contents ordered by playlist position
+FR115: Epic 23 - AI-powered chapter groupings with ordered lessons (Premium)
+FR116: Epic 23 - Rule-based keyword similarity grouping fallback (Free)
+FR117: Epic 23 - Extract video transcripts via youtube-transcript for caption-available videos
+FR118: Epic 23 - Whisper transcription fallback for captionless videos (Premium)
+FR119: Epic 23 - Edit course structure (drag-reorder, rename, add/remove, split/merge)
+FR120: Epic 23 - Full feature parity with local courses (progress, notes, streaks, momentum)
+FR121: Epic 23 - Cache YouTube metadata in IndexedDB with configurable TTL (7-day default)
+FR122: Epic 23 - Synchronized transcript panel with search and click-to-seek
+FR123: Epic 23 - AI-powered course and per-video summaries from transcript data (Premium)
 
 ## Epic List
 
@@ -488,6 +579,17 @@ Provide structured multi-course learning journeys with prerequisites, skill prog
 
 **FRs covered:** FR108, FR109, FR110, FR111
 **Phase:** Post-MVP (Learning Pathways)
+
+### Epic 23: YouTube Course Builder
+
+Users can paste YouTube video URLs or playlist URLs to create structured courses with AI-powered chapter organization, transcript extraction for notes and search, synchronized transcript panel during playback, and full feature parity with local courses — turning YouTube's "Watch Later" graveyard into a managed learning library.
+
+**FRs covered:** FR112, FR113, FR114, FR115, FR116, FR117, FR118, FR119, FR120, FR121, FR122, FR123
+**NFRs addressed:** NFR69, NFR70, NFR71, NFR72, NFR73, NFR74
+**UX-DRs addressed:** UX-DR1, UX-DR2, UX-DR3, UX-DR4, UX-DR5, UX-DR6
+**Phase:** MVP (Feature 12 — promoted from Vision 2026-03-25)
+**Depends on:** Epic 1 (course data model), Epic 2 (player infrastructure), Epic 9 (AI infrastructure — for Premium features only)
+**Architecture:** 3-tier BYOK server (youtube-transcript → yt-dlp → Whisper), source discriminator on shared Dexie tables, react-youtube IFrame wrapper, new useYouTubeImportStore
 
 ---
 
@@ -9671,5 +9773,690 @@ E2E tests:
 
 **Design Review Focus:**
 - N/A (integration logic only)
+
+---
+
+## Epic 23: YouTube Course Builder
+
+Users can paste YouTube video URLs or playlist URLs to create structured courses with AI-powered chapter organization, transcript extraction for notes and search, synchronized transcript panel during playback, and full feature parity with local courses — turning YouTube's "Watch Later" graveyard into a managed learning library.
+
+**FRs covered:** FR112, FR113, FR114, FR115, FR116, FR117, FR118, FR119, FR120, FR121, FR122, FR123
+**NFRs addressed:** NFR69, NFR70, NFR71, NFR72, NFR73, NFR74
+**UX-DRs addressed:** UX-DR1, UX-DR2, UX-DR3, UX-DR4, UX-DR5, UX-DR6
+**Phase:** MVP (Feature 12 — promoted from Vision 2026-03-25)
+**Depends on:** Epic 1 (course data model), Epic 2 (player infrastructure), Epic 9 (AI infrastructure — for Premium features only)
+
+### Story 23.1: Dexie v24 Schema Migration & YouTube Types
+
+As a developer,
+I want the database schema extended with YouTube-specific tables and a source discriminator on shared tables,
+So that YouTube courses can be stored alongside local courses with full feature parity and zero changes to existing code paths.
+
+**Acceptance Criteria:**
+
+**Given** the application is running on Dexie schema v23
+**When** the app initializes for the first time after the upgrade
+**Then** Dexie automatically migrates to v24
+**And** all existing courses in `importedCourses` gain `source: 'local'` via the `upgrade()` callback
+**And** no existing course data is lost or modified (titles, progress, notes, tags all intact)
+
+**Given** schema v24 is active
+**When** inspecting the IndexedDB via DevTools
+**Then** three new tables exist: `youtubeVideoCache` (PK: `videoId`, index: `expiresAt`), `youtubeTranscripts` (compound PK: `[courseId+videoId]`, indexes: `courseId`, `videoId`), `youtubeChapters` (PK: `id`, indexes: `courseId`, `order`)
+**And** `importedCourses` has a new index on `source`
+**And** `importedVideos` has a new index on `youtubeVideoId`
+
+**Given** the TypeScript types in `src/data/types.ts`
+**When** a developer creates an `ImportedCourse` with `source: 'youtube'`
+**Then** the optional YouTube fields (`youtubePlaylistId`, `youtubeChannelId`, `youtubeChannelName`, `lastRefreshedAt`) are available
+**And** `source` is typed as `'local' | 'youtube'`
+
+**Given** the TypeScript types in `src/data/types.ts`
+**When** a developer creates an `ImportedVideo` with YouTube fields
+**Then** the optional fields (`youtubeVideoId`, `youtubeUrl`, `thumbnailUrl`, `description`, `chapters`) are available
+**And** existing code that reads `ImportedVideo` without YouTube fields continues to compile
+
+**Given** the new YouTube-specific types
+**When** a developer imports `YouTubeVideoCache`, `YouTubeTranscriptRecord`, or `YouTubeCourseChapter`
+**Then** each type includes all fields defined in the architecture document
+**And** `CourseSource` type is exported from `src/data/types.ts`
+
+**Technical Notes:**
+- Architecture reference: YouTube Dexie Schema (v24) section
+- Must redeclare all 27 existing v23 table store definitions in v24 declaration
+- `source` field is optional on `ImportedCourse` — `undefined` treated as `'local'` for backward compatibility
+- Key files: `src/db/schema.ts`, `src/data/types.ts`
+
+---
+
+### Story 23.2: YouTube URL Parser & Configuration Settings
+
+As a learner,
+I want to configure my YouTube API key and server endpoints in Settings,
+So that I can use the YouTube Course Builder with my own credentials and infrastructure.
+
+**Acceptance Criteria:**
+
+**Given** a user is on the Settings page
+**When** they navigate to a "YouTube" configuration section
+**Then** they see fields for: YouTube Data API v3 key, yt-dlp server URL (optional), Whisper endpoint URL (optional), and metadata cache TTL (default 7 days)
+**And** the API key field uses the same encrypted storage pattern as AI API keys (Web Crypto AES-GCM via `src/lib/crypto.ts`)
+
+**Given** a user enters a YouTube API key
+**When** they save the configuration
+**Then** the key is encrypted and stored in IndexedDB (never plaintext)
+**And** the key is never visible in source code, build output, or client-accessible storage (NFR72)
+
+**Given** a user enters a yt-dlp or Whisper server URL
+**When** they save the configuration
+**Then** the URL is validated against `isAllowedProxyUrl()` (SSRF protection)
+**And** loopback and metadata addresses are blocked
+**And** private LAN ranges (192.168.x, 10.x, 172.16-31.x) are allowed for home servers
+
+**Given** the `youtubeUrlParser` module
+**When** a user pastes `https://youtube.com/watch?v=abc123`
+**Then** it is detected as a single video URL with videoId `abc123`
+
+**Given** the `youtubeUrlParser` module
+**When** a user pastes `https://youtube.com/playlist?list=PLxyz`
+**Then** it is detected as a playlist URL with playlistId `PLxyz`
+
+**Given** the `youtubeUrlParser` module
+**When** a user pastes `https://youtu.be/abc123`
+**Then** it is detected as a single video URL with videoId `abc123`
+
+**Given** the `youtubeUrlParser` module
+**When** a user pastes `https://youtube.com/watch?v=abc123&list=PLxyz`
+**Then** it is detected as a video URL within a playlist, returning both videoId and playlistId
+
+**Given** the `youtubeUrlParser` module
+**When** a user pastes an invalid URL (e.g., `https://example.com`)
+**Then** it returns an invalid result with no videoId or playlistId
+
+**Given** the `youtubeUrlParser` module
+**When** a user pastes multiple URLs (one per line), some valid and some invalid
+**Then** it returns an array of parsed results, each marked as valid or invalid
+
+**Technical Notes:**
+- Architecture reference: YouTube Data API v3 Integration, YouTube Security sections
+- Follows `src/lib/aiConfiguration.ts` pattern for encrypted key management
+- Extract `isAllowedProxyUrl()` from existing `isAllowedOllamaUrl()` in `vite.config.ts` into shared `src/lib/ssrfProtection.ts`
+- Key files: `src/lib/youtubeUrlParser.ts`, `src/lib/youtubeConfiguration.ts`, `src/lib/ssrfProtection.ts`
+
+---
+
+### Story 23.3: YouTube Data API v3 Client with Rate Limiting
+
+As a learner,
+I want the app to fetch video metadata and playlist contents from YouTube efficiently,
+So that I can preview videos before creating a course without hitting API quota limits.
+
+**Acceptance Criteria:**
+
+**Given** a valid YouTube API key is configured
+**When** requesting metadata for a single video ID
+**Then** the client returns title, duration, thumbnail URL, description, chapter markers, channel ID, channel name, and published date
+**And** the response is cached in `youtubeVideoCache` with the configured TTL (default 7 days)
+
+**Given** a valid YouTube API key is configured
+**When** requesting metadata for multiple video IDs (e.g., 25 videos)
+**Then** the client batches requests into groups of up to 50 video IDs per API call (1 quota unit per batch)
+**And** the total response completes within 3 seconds per video (NFR70)
+
+**Given** a valid YouTube API key is configured
+**When** requesting a playlist's contents
+**Then** the client paginates through all pages (50 items per page, 1 quota unit per page)
+**And** videos are returned in playlist order
+**And** the total response completes within 5 seconds for playlists of up to 200 videos (NFR70)
+
+**Given** the rate limiter is active
+**When** multiple API calls are made in rapid succession
+**Then** the client-side token bucket limits requests to 3 per second
+**And** excess requests queue and execute when tokens become available
+**And** 429 responses trigger exponential backoff
+
+**Given** the quota tracker
+**When** API calls are made throughout the day
+**Then** daily quota usage is tracked in localStorage with midnight PT reset
+**And** a warning is surfaced when usage exceeds 400 of the 500-unit daily target (NFR69)
+
+**Given** the API quota is exhausted or the API key is invalid
+**When** a metadata request is made
+**Then** the client falls back to YouTube oEmbed (`youtube.com/oembed?url=...`) for basic metadata (title, author, thumbnail)
+**And** a toast notification warns: "YouTube API quota exceeded — showing limited metadata"
+
+**Given** video metadata was previously cached
+**When** requesting the same video within the TTL period
+**Then** the cached data is returned without making an API call
+
+**Given** video metadata was previously cached
+**When** the TTL has expired
+**Then** the client fetches fresh metadata from the API
+**And** updates the cache with the new data
+
+**Technical Notes:**
+- Architecture reference: YouTube Data API v3 Integration, daily quota budget table
+- Key files: `src/lib/youtubeApi.ts`, `src/lib/youtubeRateLimiter.ts`, `src/lib/youtubeQuotaTracker.ts`
+- YouTube API calls go direct from browser (CORS supported) — not proxied through Vite middleware
+
+---
+
+### Story 23.4: Transcript Pipeline — Tier 1 (youtube-transcript)
+
+As a learner,
+I want transcripts automatically extracted from YouTube videos,
+So that I can search within video content, read along during playback, and use transcripts for AI features.
+
+**Acceptance Criteria:**
+
+**Given** a YouTube video with available captions (auto-generated or manual)
+**When** the transcript pipeline is invoked for that video
+**Then** the transcript is fetched via `youtube-transcript` npm library through a Vite middleware endpoint (`POST /api/youtube/transcript`)
+**And** the transcript is returned as an array of `TranscriptCue` objects (reusing existing type from `src/data/types.ts:24-28`)
+**And** extraction completes within 2 seconds per video (NFR71)
+
+**Given** a successfully fetched transcript
+**When** it is processed for storage
+**Then** the cues are stored in `youtubeTranscripts` table with `courseId`, `videoId`, `cues`, `fullText` (concatenated for search), `source: 'youtube-transcript'`, `language`, and `fetchedAt`
+**And** the `fullText` field is indexed for full-text search
+
+**Given** a YouTube video without available captions
+**When** the Tier 1 transcript pipeline is invoked
+**Then** the pipeline returns a failure result with reason `'no-captions-available'`
+**And** the video is marked with `status: 'failed'` in the transcript store (not silently ignored)
+
+**Given** the Vite dev server is running
+**When** a `POST /api/youtube/transcript` request is made with a valid video ID
+**Then** the middleware uses `youtube-transcript` npm to fetch the transcript server-side (avoiding CORS issues)
+**And** the middleware follows the established `ollamaDevProxy()` pattern in `vite.config.ts`
+
+**Given** a network error or YouTube API issue during transcript fetch
+**When** the pipeline encounters the error
+**Then** it returns a `Result<T>` failure with error code and message
+**And** a user-visible message is displayed within 3 seconds (NFR71)
+
+**Given** multiple videos in a newly created course
+**When** the user confirms course creation
+**Then** transcripts are batch-fetched in the background (not blocking the wizard)
+**And** the `useYouTubeTranscriptStore` tracks per-video status (`pending`, `fetching`, `done`, `failed`)
+**And** a progress indicator shows "Fetching transcripts... 12 of 20"
+
+**Technical Notes:**
+- Architecture reference: YouTube Transcript Pipeline, Transcript Fallback Chain
+- `youtube-transcript` runs server-side in Vite middleware to bypass CORS restrictions
+- Tier 2 (yt-dlp) and Tier 3 (Whisper) are handled in Story 23.11
+- Key files: `vite.config.ts` (middleware), `src/lib/youtubeTranscriptPipeline.ts`, `src/stores/useYouTubeTranscriptStore.ts`
+
+---
+
+### Story 23.5: Import Wizard — Steps 1 & 2 (URL Input + Metadata Preview)
+
+As a learner,
+I want to paste YouTube URLs and preview the detected videos before creating a course,
+So that I can verify the content is correct and remove unwanted videos before proceeding.
+
+**Acceptance Criteria:**
+
+**Given** the user is on the Courses page
+**When** they click the "Add Course" button
+**Then** a dropdown menu appears with two options: "Import from Folder" (existing) and "Build from YouTube"
+**And** "Import from Folder" opens the existing `ImportWizardDialog`
+**And** "Build from YouTube" opens a new `YouTubeImportDialog`
+
+**Given** the Courses page shows the empty state
+**When** there are no imported courses
+**Then** both import options are shown as separate action buttons below the empty state illustration
+
+**Given** the `YouTubeImportDialog` is open on Step 1
+**When** the user pastes a valid playlist URL
+**Then** the URL is parsed and validated within 500ms (debounced)
+**And** feedback text shows "Playlist detected — N videos" in success color
+**And** the "Next" button becomes enabled
+
+**Given** the user pastes a video URL that includes a `&list=` parameter
+**When** the URL is detected
+**Then** the dialog shows a choice: "This video is part of a playlist (N videos). [Import full playlist] [Import this video only]"
+
+**Given** the user pastes multiple video URLs (one per line)
+**When** some URLs are valid and some are invalid
+**Then** feedback shows "N videos detected, M invalid URLs skipped" in warning color
+**And** the "Next" button enables if at least 1 valid URL exists
+
+**Given** the user pastes an invalid URL
+**When** no YouTube URL pattern matches
+**Then** feedback shows "Not a valid YouTube URL" in destructive color
+**And** the textarea border becomes `border-destructive`
+**And** the "Next" button remains disabled
+
+**Given** the user clicks "Next" from Step 1 with valid URLs
+**When** Step 2 (Preview) loads
+**Then** skeleton loading placeholders appear matching the video list layout (thumbnail + text lines + duration badge)
+**And** a determinate progress bar shows "Fetching video info... N of M" with percentage
+
+**Given** metadata is loaded for all videos in Step 2
+**When** the preview renders
+**Then** each video row shows: thumbnail (80px, 16:9, rounded-lg), title (truncated at 2 lines), duration badge (tabular-nums), and channel name
+**And** unavailable videos (private/deleted) show dimmed with strikethrough title and AlertTriangle icon
+**And** a summary banner shows unavailable count if any
+**And** the list is scrollable with `max-h-[50vh]` and scroll shadows
+
+**Given** the user hovers over a video row in the preview
+**When** they click the X button
+**Then** the video is removed from the import list
+**And** the count updates accordingly
+
+**Given** the 4-step wizard dialog
+**When** displayed
+**Then** the step indicator shows: 1 Paste URLs > 2 Preview > 3 Organize > 4 Details
+**And** the dialog uses `sm:max-w-3xl` width (768px)
+**And** all interactive elements are keyboard accessible (WCAG 2.5.8: targets >= 24x24px)
+
+**Technical Notes:**
+- Architecture reference: YouTube Component Architecture, YouTube Store Architecture
+- UX reference: UX-DR1 (4-step wizard), UX-DR5 (free/premium differentiation)
+- The dialog is a separate component from `ImportWizardDialog` (architecture rationale: fundamentally different flows)
+- Key files: `YouTubeImportDialog.tsx`, `YouTubeUrlInput.tsx`, `YouTubeMetadataPreview.tsx`, `useYouTubeImportStore.ts`
+
+---
+
+### Story 23.6: Rule-Based Video Grouping & Chapter Editor
+
+As a learner,
+I want videos automatically grouped into chapters by keyword similarity, with the ability to drag-and-drop to reorganize,
+So that my YouTube course has a logical structure even without AI, and I can customize it to match my learning goals.
+
+**Acceptance Criteria:**
+
+**Given** the user reaches wizard Step 3 (Organize) without an AI provider configured
+**When** the grouping algorithm runs
+**Then** videos are clustered by keyword similarity extracted from titles and descriptions (TF-IDF + cosine similarity)
+**And** original playlist order is preserved within each cluster
+**And** chapters are named by top keywords from the cluster
+**And** each chapter displays a badge: "[Rule-based]"
+
+**Given** the grouping algorithm processes fewer than 3 videos
+**When** clustering produces poor results (single cluster or each video in its own cluster)
+**Then** all videos are placed in a single flat chapter titled "All Videos"
+
+**Given** an informational banner is shown for rule-based grouping
+**When** no AI provider is configured
+**Then** a banner reads: "Videos grouped by keyword similarity from titles. Set up an AI provider in Settings for smarter organization."
+**And** the banner links to the Settings page YouTube configuration section
+
+**Given** the chapter editor is displayed (Step 3)
+**When** the user views the chapter structure
+**Then** chapters are shown as collapsible accordion sections with: chapter title, video count, total duration
+**And** each video row within a chapter shows: drag handle, video title, duration
+**And** the first chapter is expanded by default; others are collapsed
+
+**Given** the user wants to reorder videos
+**When** they drag a video within the same chapter
+**Then** the video moves to the new position within that chapter
+
+**Given** the user wants to move a video between chapters
+**When** they drag a video from one chapter to another
+**Then** the video is removed from the source chapter and inserted at the drop position in the target chapter
+
+**Given** the user wants to reorder chapters
+**When** they drag a chapter header
+**Then** the entire chapter (with all its videos) moves to the new position
+
+**Given** the user clicks on a chapter title
+**When** the title becomes editable (inline edit)
+**Then** the user can rename the chapter
+**And** pressing Enter or clicking away saves the new name
+
+**Given** the user clicks "+ Add Chapter"
+**When** a new empty chapter is created
+**Then** it appears at the bottom with a default name "New Chapter"
+**And** the title is immediately editable
+
+**Given** the user clicks "Remove" on a chapter
+**When** the chapter has videos
+**Then** a confirmation dialog asks whether to delete the chapter and move videos to an "Uncategorized" chapter, or delete the chapter and its videos from the import
+
+**Given** the chapter editor
+**When** keyboard navigation is used
+**Then** all drag interactions have single-pointer alternatives (WCAG 2.5.7)
+**And** chapters can be reordered via keyboard (arrow keys + Enter)
+**And** videos can be moved via keyboard (context menu with "Move to chapter..." option)
+
+**Technical Notes:**
+- Architecture reference: Rule-Based Fallback, YouTube Component Architecture
+- Uses `@dnd-kit/core` + `@dnd-kit/sortable` for nested chapter/video reordering
+- `YouTubeChapterEditor` is a shared component — used in wizard Step 3 AND as a post-import edit dialog (FR119)
+- Key files: `YouTubeChapterEditor.tsx`, `src/lib/youtubeRuleBasedGrouping.ts`
+
+---
+
+### Story 23.7: AI-Powered Course Structuring (Premium)
+
+As a learner with an AI provider configured,
+I want AI to analyze my YouTube videos and propose an intelligent chapter structure,
+So that my course is organized by pedagogical progression rather than just keyword similarity.
+
+**Acceptance Criteria:**
+
+**Given** the user reaches wizard Step 3 (Organize) with an AI provider configured and consent granted
+**When** the AI structuring begins
+**Then** a loading state shows: "AI is analyzing video metadata and organizing your course..." with a Sparkles icon animation on `bg-brand-soft` background
+**And** the loading matches the existing `ImportWizardDialog` AI analysis pattern
+
+**Given** the AI structuring completes successfully
+**When** the result is displayed
+**Then** a banner shows "AI organized N videos into M chapters"
+**And** each chapter displays an "AI Suggested" badge
+**And** each chapter includes a rationale explaining why those videos were grouped together (visible on expand)
+
+**Given** the AI structuring input
+**When** the LLM is invoked via `getLLMClient()` factory
+**Then** it receives video titles, descriptions, chapter markers, and durations
+**And** it returns a `CourseStructureProposal` with chapters (title, videoIds, rationale), suggested course title, description, and tags
+**And** structured output uses Zod schema validation (existing pattern)
+
+**Given** an AI provider is configured but consent is denied for AI features
+**When** Step 3 loads
+**Then** the rule-based fallback (Story 23.6) is used instead
+**And** no AI call is made
+
+**Given** an AI provider is configured but the LLM call times out (30s) or errors
+**When** the AI structuring fails
+**Then** the system automatically falls back to rule-based grouping
+**And** a toast notification warns: "AI structuring unavailable — using keyword-based grouping"
+**And** the chapter badges show "[Rule-based]" instead of "[AI Suggested]"
+
+**Given** the AI has proposed a chapter structure
+**When** the user views Step 3
+**Then** the same `YouTubeChapterEditor` from Story 23.6 is displayed with AI-generated chapters
+**And** the user can freely modify the AI proposal (drag, rename, add/remove chapters)
+**And** modifications change the chapter `source` from `'ai'` to `'manual'`
+
+**Given** fewer than 3 videos or a single video
+**When** AI structuring is attempted
+**Then** the system skips AI and places all videos in a single chapter
+**And** no unnecessary LLM call is made
+
+**Technical Notes:**
+- Architecture reference: YouTube AI Course Structuring section
+- Uses existing `getLLMClient()` factory from `src/ai/llm/factory.ts`
+- Follows BYOK philosophy — works with any provider (Ollama, OpenAI, Anthropic)
+- Key files: `src/ai/youtube/courseStructurer.ts`
+
+---
+
+### Story 23.8: Import Wizard Step 4 — Course Details & Save
+
+As a learner,
+I want to finalize my YouTube course with a name, description, tags, and thumbnail before saving,
+So that the course appears in my library with proper metadata and is immediately available for study.
+
+**Acceptance Criteria:**
+
+**Given** the user reaches wizard Step 4 (Details)
+**When** the form renders
+**Then** it pre-fills: course name (from playlist title or AI suggestion), description (from playlist description or AI suggestion), tags (from AI suggestion or empty), and thumbnail (from first video or user-selectable)
+**And** all fields are editable
+
+**Given** the user modifies the course name
+**When** they clear the name field
+**Then** the "Create Course" button is disabled
+**And** inline validation shows "Course name is required" (within 200ms per NFR25)
+
+**Given** the user clicks "Create Course"
+**When** the save flow executes
+**Then** a new `ImportedCourse` record is created in `importedCourses` with `source: 'youtube'`, the YouTube-specific fields (`youtubePlaylistId`, `youtubeChannelId`, `youtubeChannelName`, `lastRefreshedAt`), and user-provided metadata
+**And** `ImportedVideo` records are created for each video with YouTube-specific fields (`youtubeVideoId`, `youtubeUrl`, `thumbnailUrl`, `description`, `chapters`)
+**And** `YouTubeCourseChapter` records are created in `youtubeChapters` with the finalized chapter structure
+**And** video metadata is written to `youtubeVideoCache` with the configured TTL
+
+**Given** the course is saved successfully
+**When** the dialog closes
+**Then** the new course appears in the course library alongside local courses
+**And** a success toast shows: "Course created — N videos ready to study"
+**And** the `useYouTubeImportStore` resets to initial state
+**And** background transcript fetching begins (Story 23.4) without blocking the UI
+
+**Given** the course is saved
+**When** viewing the course library
+**Then** YouTube courses are visually distinguishable with a small YouTube icon badge on the course card
+**And** YouTube courses can be filtered, sorted, and managed identically to local courses
+**And** all existing course operations (categorize, tag, search, momentum sort) work for YouTube courses (FR120)
+
+**Given** a save operation fails (e.g., IndexedDB write error)
+**When** the error occurs
+**Then** a toast notification displays the error with a retry option
+**And** the wizard stays open with the user's data intact (no data loss)
+
+**Technical Notes:**
+- Architecture reference: useYouTubeImportStore `saveCourse()` action, YouTube Store Architecture
+- After `saveCourse()`, data is in shared tables — `useCourseImportStore.loadImportedCourses()` picks it up
+- Key files: `YouTubeCourseDetailsForm.tsx`, `useYouTubeImportStore.ts`
+
+---
+
+### Story 23.9: YouTube IFrame Player & Progress Tracking
+
+As a learner,
+I want to watch YouTube videos within Knowlune with the same progress tracking as local videos,
+So that my study streaks, session logging, and completion tracking work seamlessly for YouTube courses.
+
+**Acceptance Criteria:**
+
+**Given** a YouTube course exists in the library
+**When** the user navigates to a YouTube lesson
+**Then** the `YouTubeLessonPlayer` page loads at route `youtube-courses/:courseId/lessons/:lessonId`
+**And** the YouTube video plays via an embedded `react-youtube` IFrame player
+**And** the player UI matches the local video player layout (video left/top, notes right/bottom)
+
+**Given** the YouTube player is active
+**When** the video is playing
+**Then** the player polls `getCurrentTime()` every 1 second
+**And** the current position is stored in the `progress` table (same table as local videos) using the compound key `[courseId+videoId]`
+**And** the user can resume from the last position on their next visit (FR120 parity with FR10)
+
+**Given** the user watches more than 90% of a video's duration
+**When** they navigate away or the video ends
+**Then** the video is automatically marked as "Completed" in the `progress` table
+**And** the course completion percentage updates accordingly
+
+**Given** the user marks a YouTube video as complete manually
+**When** they click the completion toggle
+**Then** the progress state updates identically to local videos (Not Started / In Progress / Completed)
+**And** study session logging captures the duration and content covered (FR16 parity)
+
+**Given** the COEP header conflict
+**When** the YouTube IFrame and WebLLM SharedArrayBuffer coexist
+**Then** the `Cross-Origin-Embedder-Policy` is set to `credentialless` (not `require-corp`)
+**And** YouTube IFrame embeds render correctly
+**And** WebLLM model loading still works with SharedArrayBuffer support
+
+**Given** CSP headers need updating
+**When** YouTube content is embedded
+**Then** `frame-src` includes `https://www.youtube.com` and `https://www.youtube-nocookie.com`
+**And** `img-src` includes `https://i.ytimg.com` and `https://img.youtube.com`
+**And** `connect-src` includes `https://www.googleapis.com/youtube/`
+
+**Given** the user is offline
+**When** they navigate to a YouTube lesson
+**Then** a placeholder appears: "Connect to the internet to watch" with a WifiOff icon
+**And** the notes panel, progress indicators, and transcript (if cached) remain accessible
+
+**Given** the YouTube course detail page
+**When** the user views the course at route `youtube-courses/:courseId`
+**Then** the page shows the chapter structure with expandable sections, per-video progress indicators, and overall course completion percentage
+**And** the layout matches the existing course detail page pattern
+
+**Technical Notes:**
+- Architecture reference: YouTube IFrame Player section, COEP/YouTube IFrame Conflict resolution
+- Progress polling at 1s matches `ImportedLessonPlayer` interval
+- COEP change from `require-corp` to `credentialless` in `vite.config.ts:370`
+- Key files: `YouTubePlayer.tsx`, `YouTubeLessonPlayer.tsx`, `YouTubeCourseDetail.tsx`, `vite.config.ts`
+
+---
+
+### Story 23.10: Transcript Panel with Search & Click-to-Seek
+
+As a learner,
+I want to see synchronized transcripts alongside YouTube videos, search within them, and click to jump to specific moments,
+So that I can study video content more efficiently and find specific information without rewatching.
+
+**Acceptance Criteria:**
+
+**Given** a YouTube video with a successfully fetched transcript
+**When** the lesson player page renders
+**Then** the `TranscriptPanel` (existing shared component) displays the transcript cues alongside the video
+**And** the currently active cue is highlighted based on the player's current time
+**And** the panel auto-scrolls to keep the active cue visible
+
+**Given** the transcript panel is visible during playback
+**When** the user clicks on any transcript segment
+**Then** the YouTube player seeks to that segment's timestamp
+**And** playback continues from the new position
+
+**Given** the transcript panel has a search input
+**When** the user types a search query
+**Then** matching segments are highlighted in the transcript
+**And** results appear within 100ms (NFR21 parity)
+**And** the search filters/highlights matching cues while preserving the full transcript context
+
+**Given** a video's transcript was fetched and stored
+**When** the user searches across all notes and transcripts (global search)
+**Then** YouTube transcript `fullText` matches appear in search results
+**And** each result links to the specific video at the matching timestamp
+
+**Given** a YouTube video without a transcript (fetch failed or no captions)
+**When** the lesson player renders
+**Then** the transcript panel shows an empty state: "No transcript available for this video"
+**And** if Whisper is not configured: "Set up a Whisper endpoint in Settings to transcribe videos without captions"
+
+**Given** transcripts are being fetched in the background for a newly created course
+**When** the user opens a video whose transcript is still pending
+**Then** the transcript panel shows a loading skeleton with "Fetching transcript..."
+**And** once the transcript is ready, it appears without requiring a page refresh (reactive via `useYouTubeTranscriptStore`)
+
+**Given** the transcript panel
+**When** navigated via keyboard
+**Then** transcript segments are focusable via Tab
+**And** pressing Enter on a focused segment seeks the video to that timestamp
+**And** all interactions meet WCAG 2.2 AA requirements
+
+**Technical Notes:**
+- Architecture reference: YouTube Transcript Pipeline (storage format), Existing Infrastructure Reused
+- The existing `TranscriptPanel` component already supports `TranscriptCue` format — YouTube cues match directly
+- `parseVTT()` function can parse yt-dlp VTT output if needed
+- Key files: `TranscriptPanel.tsx` (extend), `useYouTubeTranscriptStore.ts`
+
+---
+
+### Story 23.11: Transcript Fallback — Tier 2 (yt-dlp) & Tier 3 (Whisper)
+
+As a learner with a home server,
+I want transcripts for videos that don't have YouTube captions,
+So that I can search and study all my YouTube course content, not just the ~90% with auto-generated captions.
+
+**Acceptance Criteria:**
+
+**Given** the Tier 1 transcript fetch (youtube-transcript) fails with `no-captions-available`
+**When** the user has a yt-dlp server URL configured in Settings
+**Then** the pipeline automatically falls back to Tier 2: `POST /api/youtube/ytdlp/subtitles` to the user's server
+**And** the Vite middleware proxies the request to the configured server URL
+**And** SSRF validation runs via `isAllowedProxyUrl()` before proxying
+
+**Given** yt-dlp successfully extracts subtitles (VTT format)
+**When** the subtitles are returned
+**Then** the VTT is parsed using the existing `parseVTT()` function
+**And** cues are stored in `youtubeTranscripts` with `source: 'ytdlp'`
+
+**Given** Tier 1 and Tier 2 both fail
+**When** the user has a Whisper endpoint URL configured in Settings
+**Then** the pipeline falls back to Tier 3: `POST /api/youtube/whisper/transcribe`
+**And** the request is proxied to the user's faster-whisper Docker container
+**And** processing runs asynchronously with a progress indicator
+**And** transcription completes within 60 seconds per video (FR118)
+
+**Given** Whisper transcription completes
+**When** the result is returned
+**Then** cues are stored in `youtubeTranscripts` with `source: 'whisper'`
+**And** the transcript panel updates reactively without requiring page refresh
+
+**Given** all three tiers fail
+**When** no transcript can be obtained
+**Then** the video is marked with `status: 'unavailable'` and `reason` string
+**And** the transcript panel shows "No transcript available" (handled in Story 23.10)
+
+**Given** the yt-dlp server is also used for enriched metadata
+**When** `POST /api/youtube/ytdlp/metadata` is called
+**Then** additional metadata (chapter markers, cleaned descriptions) is returned from the user's server
+**And** the response enhances existing YouTube API data
+
+**Given** a Vite middleware proxy request
+**When** the target URL fails SSRF validation
+**Then** the request is rejected with a 403 error
+**And** no network request is made to the target
+
+**Given** the user does NOT have yt-dlp or Whisper configured
+**When** Tier 1 fails
+**Then** the fallback chain terminates gracefully
+**And** no error is thrown for unconfigured tiers (they are optional)
+
+**Technical Notes:**
+- Architecture reference: Transcript Fallback Chain, SSRF Protection, YouTube Server-Side Architecture
+- Tier 2 and Tier 3 are Premium features — require user-provided infrastructure
+- Vite middleware follows established `ollamaDevProxy()` pattern
+- SSRF protection shared between Ollama and YouTube endpoints via `src/lib/ssrfProtection.ts`
+- Key files: `src/lib/youtubeTranscriptPipeline.ts`, `src/lib/ssrfProtection.ts`, `vite.config.ts`
+
+---
+
+### Story 23.12: Offline Support, Metadata Refresh & Security Hardening
+
+As a learner,
+I want my YouTube course data available offline and my metadata kept fresh per YouTube's terms,
+So that I can study notes and transcripts without internet and remain compliant with YouTube API Terms of Service.
+
+**Acceptance Criteria:**
+
+**Given** the user has previously imported a YouTube course
+**When** the device is offline
+**Then** the course detail page shows full chapter structure with progress bars
+**And** cached transcript text is available for reading and searching
+**And** notes, progress, bookmarks, streaks, and flashcards work normally
+**And** the video player area shows "Connect to the internet to watch" with WifiOff icon (UX-DR6)
+**And** the "Refresh metadata" button is disabled with tooltip "Requires internet connection"
+
+**Given** a YouTube course's `lastRefreshedAt` is older than 30 days
+**When** the app starts with internet connectivity
+**Then** the metadata refresh service queues a background refresh (non-blocking)
+**And** the refresh is rate-limited and does not interfere with user activity
+**And** refreshed metadata updates in `youtubeVideoCache` and `importedVideos` (title, duration, thumbnail changes)
+
+**Given** the 30-day refresh runs
+**When** a video has been removed from YouTube (deleted/private)
+**Then** the video is marked with a "removed from YouTube" badge in the course view
+**And** the user's progress, notes, and transcript for that video are preserved (not deleted)
+
+**Given** the app has YouTube features enabled
+**When** CSP headers are evaluated
+**Then** `frame-src` allows `https://www.youtube.com` and `https://www.youtube-nocookie.com`
+**And** `img-src` allows `https://i.ytimg.com` and `https://img.youtube.com`
+**And** `connect-src` allows `https://www.googleapis.com/youtube/`
+**And** no other YouTube-related domains are permitted
+
+**Given** a user has AI configured (Premium)
+**When** they create a YouTube course
+**Then** AI-powered course and per-video summaries can be generated from transcript data (FR123)
+**And** summaries follow the same pattern as local video summaries (FR48) — displayed in collapsible panels alongside the video
+**And** the AI summary uses only transcript text as input (NFR54 — no user metadata transmitted)
+
+**Given** all YouTube data
+**When** evaluating data locality (NFR74)
+**Then** YouTube course data (metadata, transcripts, structure, user edits) is stored entirely in IndexedDB
+**And** no YouTube content is transmitted to any server other than: YouTube API (Google), user's configured AI provider (for structuring/summaries), and user's configured Whisper endpoint (for transcription)
+
+**Technical Notes:**
+- Architecture reference: YouTube Offline-First Design, 30-Day Metadata Refresh, YouTube Security, CSP Updates
+- `refreshStaleMetadata()` runs on app startup, queries courses where `lastRefreshedAt < 30 days ago`
+- FR123 (AI summaries) extends FR48 pattern to YouTube transcript data — reuses existing AI summary UI
+- Key files: `src/lib/youtubeMetadataRefresh.ts`, `vite.config.ts` (CSP headers)
 
 ---
