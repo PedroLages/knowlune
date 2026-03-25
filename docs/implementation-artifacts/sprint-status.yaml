@@ -37,7 +37,7 @@
 # - Epic 7 gap coverage stories (7-8..7-11) deferred indefinitely — risk accepted for error-path edge cases
 
 generated: 2026-03-15
-last_updated: 2026-03-25  # E24-S05 done
+last_updated: 2026-03-25  # E24-S06 done, Epic 24 complete
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -347,13 +347,13 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 24: Course Import Wizard & Editing
   # ──────────────────────────────────────────────────
-  epic-24: in-progress
+  epic-24: done
   24-1-refactor-import-function-into-scan-and-persist: done
   24-2-import-wizard-folder-selection-and-course-details: done
   24-3-import-wizard-tags-cover-image-and-confirmation: done
   24-4-ai-metadata-suggestions-during-import: done
   24-5-post-import-course-editing-dialog: done
-  24-6-video-drag-and-drop-reorder: backlog
+  24-6-video-drag-and-drop-reorder: done
   epic-24-retrospective: optional
 
   # ──────────────────────────────────────────────────
