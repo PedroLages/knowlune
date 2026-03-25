@@ -272,9 +272,7 @@ describe('importCourseFromFolder', () => {
 
     await importCourseFromFolder()
 
-    expect(toastMocks.success).toHaveBeenCalledWith(
-      expect.stringContaining('by John Doe')
-    )
+    expect(toastMocks.success).toHaveBeenCalledWith(expect.stringContaining('by John Doe'))
   })
 
   it('should import without authorId when folder name has no author pattern', async () => {

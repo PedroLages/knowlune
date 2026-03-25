@@ -46,9 +46,7 @@ test.describe('E25-S04: Author Auto-Detection During Import', () => {
     await page.reload({ waitUntil: 'domcontentloaded' })
 
     // Verify author appears on the page as an author card
-    const janeCard = page
-      .locator('[data-testid="author-card"]')
-      .filter({ hasText: 'Jane Smith' })
+    const janeCard = page.locator('[data-testid="author-card"]').filter({ hasText: 'Jane Smith' })
     await expect(janeCard).toBeVisible()
   })
 
