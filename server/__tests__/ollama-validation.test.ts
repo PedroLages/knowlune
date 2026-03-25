@@ -80,12 +80,13 @@ describe('isAllowedOllamaUrl', () => {
     })
 
     it('blocks cloud metadata IP 169.254.169.254', () => {
-      // AWS/GCP/Azure metadata endpoint — should be allowed per current implementation
-      // since only loopback is blocked, but documenting the behavior
-      // Note: 169.254.169.254 is a link-local address used for cloud metadata services.
-      // The current implementation allows it because it's not a loopback address.
-      // If cloud deployment is planned, this should be reconsidered.
-      expect(isAllowedOllamaUrl('http://169.254.169.254/latest/meta-data/')).toBe(true)
+      // AWS/GCP/Azure metadata endpoint — blocked as defense-in-depth against SSRF
+      expect(isAllowedOllamaUrl('http://169.254.169.254/latest/meta-data/')).toBe(false)
+    })
+
+    it('blocks entire link-local range 169.254.0.0/16', () => {
+      expect(isAllowedOllamaUrl('http://169.254.0.1:11434')).toBe(false)
+      expect(isAllowedOllamaUrl('http://169.254.255.255:11434')).toBe(false)
     })
   })
 })

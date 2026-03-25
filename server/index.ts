@@ -46,6 +46,12 @@ export function isAllowedOllamaUrl(urlString: string): boolean {
       return false
     }
 
+    // Block link-local range 169.254.0.0/16 — includes cloud metadata endpoint
+    // (169.254.169.254) used by AWS/GCP/Azure. Defense-in-depth against SSRF.
+    if (hostname.startsWith('169.254.')) {
+      return false
+    }
+
     // Only allow http/https protocols
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
       return false
