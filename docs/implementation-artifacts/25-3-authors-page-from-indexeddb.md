@@ -139,4 +139,8 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Type cascade from prop changes**: Changing `AuthorFormDialog` and `DeleteAuthorDialog` props from `Author` to `ImportedAuthor` broke E25-S02 tests that used the old type. When a component's prop interface changes, always check sibling test files for type alignment — TypeScript catches it, but only if `tsc --noEmit` runs before pushing.
+- **Unified view type pattern**: `AuthorView` + `getMergedAuthors()` proved effective for merging static fallback data with IndexedDB records. This pattern (normalize disparate sources into a single view type) avoids `as unknown as` casts and gives callers a consistent shape.
+- **Fire-and-forget async in synchronous functions**: `getAuthorForCourse()` calls `loadAuthors()` without awaiting. This lazy-init pattern works because React re-renders when the store updates, but it causes a brief `undefined` return on first call. Documenting the pattern with a `void` prefix and inline comment prevented code review from flagging it as a bug.
+- **Form field persistence gap**: The original `addAuthor()` store method accepted `NewAuthorData` which lacked fields the form collected (title, shortBio, yearsExperience, education, featuredQuote). Code review caught this — data was silently dropped. Extending `ImportedAuthor` and the store resolved it. Lesson: when a form collects data, verify the store method accepts all collected fields.
+- **Double toast on delete**: The store's `toastWithUndo()` and the dialog's `toast.success()` both fired on delete. Removing the dialog toast and updating confirmation text ("You can undo this") improved UX accuracy.
