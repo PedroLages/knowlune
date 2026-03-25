@@ -13,7 +13,7 @@
 import { encryptData, decryptData, type EncryptedData } from './crypto'
 
 /** Supported AI provider IDs */
-export type AIProviderId = 'openai' | 'anthropic' | 'groq' | 'glm' | 'gemini'
+export type AIProviderId = 'openai' | 'anthropic' | 'groq' | 'glm' | 'gemini' | 'ollama'
 
 /** AI provider configuration and validation */
 export interface AIProvider {
@@ -21,10 +21,12 @@ export interface AIProvider {
   id: AIProviderId
   /** Display name for UI */
   name: string
-  /** Validates API key format without making network calls */
-  validateApiKey: (key: string) => boolean
+  /** Whether this provider uses a server URL instead of an API key */
+  usesServerUrl?: boolean
+  /** Validates credential format without making network calls (API key or server URL for Ollama) */
+  validateApiKey: (keyOrUrl: string) => boolean
   /** Tests provider connectivity (stub for S01, real implementation in S02-S07) */
-  testConnection: (key: string) => Promise<boolean>
+  testConnection: (keyOrUrl: string) => Promise<boolean>
 }
 
 /** Connection status states */
@@ -50,6 +52,14 @@ export interface ConsentSettings {
   analytics: boolean
 }
 
+/** Ollama-specific configuration */
+export interface OllamaSettings {
+  /** Ollama server URL (e.g., http://192.168.1.x:11434) */
+  serverUrl: string
+  /** Use direct browser-to-Ollama connection (requires CORS on server) */
+  directConnection: boolean
+}
+
 /** Complete AI configuration state */
 export interface AIConfigurationSettings {
   /** Selected AI provider */
@@ -62,6 +72,8 @@ export interface AIConfigurationSettings {
   errorMessage?: string
   /** Per-feature consent toggles */
   consentSettings: ConsentSettings
+  /** Ollama-specific settings (only used when provider === 'ollama') */
+  ollamaSettings?: OllamaSettings
   /**
    * E2E test-only plaintext API key bypass (DEV mode only)
    * @internal Only works when import.meta.env.DEV = true
@@ -146,6 +158,30 @@ export const AI_PROVIDERS: Record<AIProviderId, AIProvider> = {
       // Stub: Real Gemini API call implemented in future stories (S02-S07)
       // For now, validate format only
       return Promise.resolve(key.startsWith('AIza'))
+    },
+  },
+  ollama: {
+    id: 'ollama',
+    name: 'Ollama (Local)',
+    usesServerUrl: true,
+    validateApiKey: (url: string) => {
+      // Validates URL format: must be http:// or https:// with optional port
+      try {
+        const parsed = new URL(url)
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+      } catch {
+        return false
+      }
+    },
+    testConnection: async (url: string) => {
+      // Stub: Real Ollama API call implemented in E22-S03
+      // For now, validate URL format only
+      try {
+        const parsed = new URL(url)
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+      } catch {
+        return false
+      }
     },
   },
 }
@@ -235,6 +271,12 @@ export async function getDecryptedApiKey(): Promise<string | null> {
     return config._testApiKey
   }
 
+  // Ollama uses server URL instead of API key — return a dummy key
+  // since Ollama ignores auth but the AI SDK requires a non-empty string
+  if (config.provider === 'ollama') {
+    return config.ollamaSettings?.serverUrl ? 'ollama' : null
+  }
+
   if (!config.apiKeyEncrypted) return null
 
   try {
@@ -286,6 +328,27 @@ export function isFeatureEnabled(feature: keyof ConsentSettings): boolean {
 export function isAIAvailable(): boolean {
   const config = getAIConfiguration()
   return config.connectionStatus === 'connected'
+}
+
+/**
+ * Gets the Ollama server URL from configuration
+ *
+ * @returns Ollama server URL (e.g., "http://192.168.1.100:11434") or null
+ */
+export function getOllamaServerUrl(): string | null {
+  const config = getAIConfiguration()
+  if (config.provider !== 'ollama') return null
+  return config.ollamaSettings?.serverUrl || null
+}
+
+/**
+ * Gets the Ollama connection mode (proxy or direct)
+ *
+ * @returns True if direct connection mode is enabled
+ */
+export function isOllamaDirectConnection(): boolean {
+  const config = getAIConfiguration()
+  return config.ollamaSettings?.directConnection ?? false
 }
 
 /**

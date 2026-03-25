@@ -16,12 +16,63 @@
 import express from 'express'
 import { generateText, streamText } from 'ai'
 import { z } from 'zod'
-import { getProviderModel } from './providers.js'
+import { getProviderModel, getOllamaProviderModel } from './providers.js'
 
 const app = express()
 const PORT = 3001
 
 app.use(express.json({ limit: '1mb' }))
+
+/**
+ * Validates that a URL targets a non-loopback, plausible Ollama server.
+ * Blocks localhost / 127.x / [::1] to prevent SSRF against the proxy host itself.
+ * Private-network ranges (192.168.x, 10.x, 172.16-31.x) are intentionally allowed
+ * because Ollama servers are typically on the user's LAN.
+ */
+export function isAllowedOllamaUrl(urlString: string): boolean {
+  try {
+    const parsed = new URL(urlString)
+    const hostname = parsed.hostname.toLowerCase()
+
+    // Block loopback addresses — proxy should not call itself
+    if (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '0.0.0.0' ||
+      hostname === '[::1]' ||
+      hostname === '::1' ||
+      hostname.startsWith('127.')
+    ) {
+      return false
+    }
+
+    // Only allow http/https protocols
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return false
+    }
+
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Ollama request body schema */
+const OllamaRequestSchema = z.object({
+  ollamaServerUrl: z.string().url('Valid Ollama server URL is required'),
+  messages: z
+    .array(
+      z.object({
+        role: z.enum(['system', 'user', 'assistant']),
+        content: z.string(),
+      })
+    )
+    .min(1, 'At least one message is required'),
+  model: z.string().optional(),
+  temperature: z.number().min(0).max(2).optional(),
+  maxTokens: z.number().int().positive().optional(),
+  stream: z.boolean().optional(),
+})
 
 /** Request body schema — validated on every request */
 const RequestSchema = z.object({
@@ -38,6 +89,68 @@ const RequestSchema = z.object({
   model: z.string().optional(),
   temperature: z.number().min(0).max(2).optional(),
   maxTokens: z.number().int().positive().optional(),
+})
+
+/**
+ * POST /api/ai/ollama
+ *
+ * Proxy endpoint for Ollama requests. Forwards to the user's Ollama server
+ * using the OpenAI-compatible /v1/ endpoint. This avoids CORS issues since
+ * the request goes: browser → Express proxy → Ollama server.
+ *
+ * Streams SSE events in the same format as /api/ai/stream for client compatibility.
+ */
+app.post('/api/ai/ollama', async (req, res) => {
+  try {
+    const parsed = OllamaRequestSchema.safeParse(req.body)
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten().fieldErrors })
+      return
+    }
+
+    const { ollamaServerUrl, messages, model, temperature, maxTokens } = parsed.data
+
+    if (!isAllowedOllamaUrl(ollamaServerUrl)) {
+      res.status(403).json({ error: 'Ollama server URL targets a disallowed address' })
+      return
+    }
+
+    const providerModel = getOllamaProviderModel(ollamaServerUrl, model)
+
+    const result = streamText({
+      model: providerModel,
+      messages,
+      temperature: temperature ?? 0.7,
+      maxTokens: maxTokens ?? 4096,
+    })
+
+    // Set SSE headers
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    })
+
+    // Stream text chunks as SSE events
+    for await (const chunk of result.textStream) {
+      res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`)
+    }
+
+    // Signal stream end
+    res.write('data: [DONE]\n\n')
+    res.end()
+  } catch (error) {
+    // silent-catch-ok — logs to console and returns error response to client
+    console.error('[/api/ai/ollama] Error:', (error as Error).message)
+
+    if (!res.headersSent) {
+      const status = getErrorStatus(error as Error)
+      res.status(status).json({ error: (error as Error).message })
+    } else {
+      res.write(`data: ${JSON.stringify({ error: (error as Error).message })}\n\n`)
+      res.end()
+    }
+  }
 })
 
 /**
