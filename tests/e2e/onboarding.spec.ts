@@ -11,7 +11,7 @@
 import { test, expect } from '../support/fixtures'
 import { navigateAndWait } from '../support/helpers/navigation'
 
-const ONBOARDING_KEY = 'levelup-onboarding-v1'
+const ONBOARDING_KEY = 'knowlune-onboarding-v1'
 
 test.describe('First-Use Onboarding Flow', () => {
   test.beforeEach(async ({ page }) => {

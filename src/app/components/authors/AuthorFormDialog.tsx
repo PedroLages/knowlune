@@ -38,8 +38,9 @@ interface AuthorFormDialogProps {
 function isValidUrl(value: string): boolean {
   if (!value.trim()) return true // empty is valid (optional)
   try {
-    new URL(value)
-    return true
+    const parsed = new URL(value)
+    // Only allow http(s) protocols to prevent javascript: injection
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
   } catch {
     // silent-catch-ok: URL validation — invalid URL means false, no user feedback needed
     return false
@@ -113,19 +114,19 @@ export function AuthorFormDialog({ open, onOpenChange, author }: AuthorFormDialo
     }
 
     if (avatar.trim() && !isValidUrl(avatar)) {
-      errs.avatar = 'Please enter a valid URL'
+      errs.avatar = 'Please enter a valid URL (https://…)'
     }
 
     if (!isValidUrl(website)) {
-      errs.website = 'Please enter a valid URL'
+      errs.website = 'Please enter a valid URL (https://…)'
     }
 
     if (!isValidUrl(linkedin)) {
-      errs.linkedin = 'Please enter a valid URL'
+      errs.linkedin = 'Please enter a valid URL (https://…)'
     }
 
     if (!isValidUrl(twitter)) {
-      errs.twitter = 'Please enter a valid URL'
+      errs.twitter = 'Please enter a valid URL (https://…)'
     }
 
     return errs

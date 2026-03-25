@@ -18,13 +18,23 @@ export async function navigateAndWait(page: Page, path: string): Promise<void> {
     localStorage.setItem('knowlune-sidebar-v1', 'false')
     if (!localStorage.getItem('__test_show_onboarding')) {
       localStorage.setItem(
-        'levelup-onboarding-v1',
+        'knowlune-onboarding-v1',
         JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true })
       )
     }
   })
   await page.goto(path)
   await page.waitForLoadState('load')
+
+  // Fallback: if onboarding overlay still appears despite localStorage seed,
+  // dismiss it by clicking "Skip for now" or the close button.
+  // This handles race conditions where the store initializes before addInitScript runs.
+  const skipButton = page.getByRole('button', { name: 'Skip for now' })
+  if (await skipButton.isVisible({ timeout: 500 }).catch(() => false)) {
+    await skipButton.click()
+    // Wait for dialog to close
+    await page.getByRole('dialog', { name: 'Welcome to Knowlune' }).waitFor({ state: 'hidden', timeout: 2000 }).catch(() => {})
+  }
 }
 
 /** Navigate to the Overview (home) page. */

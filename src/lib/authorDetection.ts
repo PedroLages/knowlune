@@ -68,28 +68,32 @@ export async function matchOrCreateAuthor(authorName: string | null): Promise<st
 
   const normalizedInput = trimmed.toLowerCase()
 
-  // Search all authors for case-insensitive match
-  const allAuthors = await db.authors.toArray()
-  const existing = allAuthors.find(a => a.name.toLowerCase() === normalizedInput)
+  return db.transaction('rw', db.authors, async () => {
+    // Case-insensitive lookup via indexed query instead of full table scan
+    const existing = await db.authors
+      .where('name')
+      .equalsIgnoreCase(normalizedInput)
+      .first()
 
-  if (existing) {
-    return existing.id
-  }
+    if (existing) {
+      return existing.id
+    }
 
-  // Create new author with slug-based ID
-  const id = crypto.randomUUID()
-  const now = new Date().toISOString()
+    // Create new author with slug-based ID
+    const id = crypto.randomUUID()
+    const now = new Date().toISOString()
 
-  await db.authors.add({
-    id,
-    name: trimmed,
-    courseIds: [],
-    isPreseeded: false,
-    createdAt: now,
-    updatedAt: now,
+    await db.authors.add({
+      id,
+      name: trimmed,
+      courseIds: [],
+      isPreseeded: false,
+      createdAt: now,
+      updatedAt: now,
+    })
+
+    return id
   })
-
-  return id
 }
 
 // --- Author Photo Detection ---
