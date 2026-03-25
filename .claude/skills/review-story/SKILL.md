@@ -58,10 +58,10 @@ The orchestrator should NOT:
 ```
 [ ] Identify story and detect resumption
 [ ] Pre-checks: dependency audit
-[ ] Pre-checks: build
+[ ] Pre-checks: format-check
 [ ] Pre-checks: lint
 [ ] Pre-checks: type-check
-[ ] Pre-checks: format-check
+[ ] Pre-checks: build
 [ ] Pre-checks: unit tests
 [ ] Pre-checks: E2E tests
 [ ] Optional: burn-in validation (if applicable)
@@ -169,8 +169,11 @@ Mark the first todo as `in_progress` and proceed:
       - List affected packages and CVEs in the output
       - This is a **warning, not a blocker** — dependency issues are often upstream and not fixable immediately
       - Note in output: "⚠️ Dependency vulnerabilities: N high/critical. Run `npm audit` for details."
-      - Continue to build step (do not STOP)
-   b. `npm run build` — STOP on failure with build errors.
+      - Continue (do not STOP)
+   b. **Format check** — `npx prettier --check "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}"`. If formatting issues found:
+      - Auto-fix: run `npx prettier --write "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}"` to format all files.
+      - Re-run the check to verify. If still failing, STOP with error output.
+      - Note in output: "Auto-formatted N files with Prettier."
    c. **Lint** — `npm run lint`. If lint errors found (if lint script exists, otherwise skip):
       - Auto-fix: run `npx eslint . --fix` to fix auto-fixable issues (unused vars, import order, etc.).
       - Re-run `npm run lint` to verify. If errors remain, STOP with error output and suggest manual fixes.
@@ -178,10 +181,7 @@ Mark the first todo as `in_progress` and proceed:
    d. **Type check** — `npx tsc --noEmit`. If errors found:
       - Auto-fix: attempt to resolve type errors in files changed by the current branch (`git diff --name-only main...HEAD`). Only fix errors in branch-changed files — do not fix pre-existing errors in other files.
       - Re-run `npx tsc --noEmit`. If errors remain only in files NOT changed by the branch, note them as pre-existing and continue. If errors remain in branch-changed files, STOP with error output.
-   e. **Format check** — `npx prettier --check "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}"`. If formatting issues found:
-      - Auto-fix: run `npx prettier --write "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}"` to format all files.
-      - Re-run the check to verify. If still failing, STOP with error output.
-      - Note in output: "Auto-formatted N files with Prettier."
+   e. `npm run build` — STOP on failure with build errors.
    f. `npm run test:unit -- --run` — STOP on failure. If no unit test script or no test files, note and continue.
    g. E2E tests — run smoke specs + current story's spec on Chromium only:
       ```
@@ -279,6 +279,19 @@ Mark the first todo as `in_progress` and proceed:
 
    If any pre-check fails: show the error output, suggest fixes, and STOP. Do not proceed to reviews. Keep `reviewed: in-progress` so next run resumes.
 
+   **Pre-check timing summary** (output after all pre-checks pass):
+   ```
+   Pre-checks completed in {total}s:
+     Dependency audit: {N}s
+     Format: {N}s {auto-fixed note if applicable}
+     Lint: {N}s {auto-fixed note if applicable}
+     Type check: {N}s {auto-fixed note if applicable}
+     Build: {N}s
+     Unit tests: {N}s ({N} tests)
+     E2E tests: {N}s ({N} tests)
+   ```
+   This is informational only — no gates or thresholds. Purpose is to surface regressions (e.g., build time growing from 15s to 60s signals a config issue).
+
    On success: update `review_gates_passed` using canonical gate names:
    - Always add: `build`
    - Add `lint` if lint ran and passed, or `lint-skipped` if no lint script exists
@@ -342,6 +355,28 @@ Mark the first todo as `in_progress` and proceed:
 7. **Review agent swarm** (parallel dispatch — design + code + testing):
 
    After pre-checks pass, dispatch ALL applicable review agents **in a single message** for maximum parallelism. Design review, code review, and test coverage review are fully independent — they use different tools (Playwright MCP vs git diff) and analyze different aspects.
+
+   **Change scope assessment** (determines full vs lightweight review):
+
+   Calculate diff size and classify change types:
+   ```bash
+   DIFF_LINES=$(git diff main...HEAD --stat | tail -1 | grep -oE '[0-9]+ insertion' | grep -oE '[0-9]+')
+   CHANGED_FILES=$(git diff --name-only main...HEAD)
+   ```
+
+   - **Lightweight review** (ALL 3 conditions must be true):
+     - Total lines changed < 50
+     - No changes to `src/app/pages/`, `src/app/components/`, `tests/`
+     - Changes limited to: docs, config files, renames, story files, style-only tweaks
+     → Skip: design-review, code-review-testing, edge-case-review
+     → Run only: code-review (always required)
+     → Tag story file: `review_scope: lightweight`
+     → Note in output: "Lightweight review — trivial change (<50 lines, no logic/UI changes)"
+     → Add `-skipped` gates for skipped agents
+
+   - **Full review** (default):
+     → All agents dispatched per existing logic
+     → Tag story file: `review_scope: full`
 
    **Pre-dispatch checks** (determine which agents to dispatch):
 
@@ -407,7 +442,13 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
    - `${BASE_PATH}/docs/reviews/code/code-review-testing-{YYYY-MM-DD}-{story-id}.md`
    - `${BASE_PATH}/docs/reviews/code/edge-case-review-{YYYY-MM-DD}-{story-id}.md`
 
-   **Deduplicate**: If code-review and code-review-testing flag the same file:line, keep the finding with the higher confidence score. Prefix deduplicated findings with their source agent. Edge case review findings are additive (different format — location + trigger condition), so include them in the consolidated report under a dedicated "Edge Cases" section. Treat each edge case finding as HIGH severity for blocker assessment.
+   **Deduplicate with consensus scoring**: If code-review and code-review-testing flag the same file:line:
+   - Keep the finding with the higher confidence score
+   - **Boost severity by one level** (Nit→Medium, Medium→High, High→Blocker) — independent agents converging on the same location is stronger signal than a single detection
+   - Tag as `[Consensus: N agents]` in the consolidated report
+   - Prefix with source agents (e.g., "[code-review + code-review-testing]")
+
+   Edge case review findings are additive (different format — location + trigger condition), so include them in the consolidated report under a dedicated "Edge Cases" section. Treat each edge case finding as HIGH severity for blocker assessment.
 
 8. **Merge test quality findings**:
 
@@ -423,10 +464,11 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
    ## Review Summary: E##-S## — [Story Name]
 
    ### Pre-checks
-   - Build: [pass/fail]
+   - Dependency audit: [clean/N warnings]
+   - Format check: [pass/auto-fixed N files/fail]
    - Lint: [pass/fail/skipped]
    - Type check: [pass/auto-fixed/fail]
-   - Format check: [pass/auto-fixed N files/fail]
+   - Build: [pass/fail]
    - Unit tests: [pass/fail/skipped] ([N] tests)
    - E2E tests: [pass/fail/skipped] ([N] tests)
 

@@ -23,10 +23,11 @@ Combine all findings into a single severity-triaged view:
 ## Review Summary: E##-S## — [Story Name]
 
 ### Pre-checks
-- Build: [pass/fail]
+- Dependency audit: [clean/N warnings]
+- Format check: [pass/auto-fixed N files/fail]
 - Lint: [pass/fail/skipped]
 - Type check: [pass/auto-fixed/fail]
-- Format check: [pass/auto-fixed N files/fail]
+- Build: [pass/fail]
 - Unit tests: [pass/fail/skipped] ([N] tests)
 - E2E tests: [pass/fail/skipped] ([N] tests)
 
