@@ -108,4 +108,8 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Custom client justified despite OpenAI-compat API**: Initial plan assumed Ollama's OpenAI-compatible endpoints would let us reuse the existing OpenAI client. In practice, dual connection modes (proxy vs direct), Ollama-specific timeouts (2 min for local inference vs 30s for cloud), and tailored error messages for common LAN issues required a dedicated `OllamaLLMClient`.
+- **SSRF validation needed on proxy endpoints**: Code review flagged that the `/api/ai/ollama` proxy accepted arbitrary user-provided URLs. Added `isAllowedOllamaUrl()` to block loopback, link-local, and `0.0.0.0` addresses. Pattern: any proxy endpoint that forwards to user-supplied URLs needs an allowlist.
+- **JSDoc placement breaks when inserting functions mid-file**: Inserting `getOllamaServerUrl` between a JSDoc block and its target function caused the JSDoc to attach to the wrong function. Fix: keep JSDoc immediately above its function, no intervening code.
+- **Server-side test infrastructure gap**: `isAllowedOllamaUrl` is security-critical but the project lacked server-side test tooling. Added `server/__tests__/ollama-validation.test.ts` with a custom Vitest config (`vite.config.ts` test.include for `server/**`). Future server-side logic should follow this pattern.
+- **3 review rounds needed**: Round 1 caught SSRF, orphaned JSDoc, and missing `// silent-catch-ok`. Round 2 caught `0.0.0.0` bypass and missing server tests. Round 3 verified all fixes. The iterative review process surfaced progressively deeper issues.
