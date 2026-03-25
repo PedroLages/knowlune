@@ -7,6 +7,7 @@ import type { ImportedCourse } from '@/data/types'
 
 const mockUpdateCourseTags = vi.fn()
 const mockUpdateCourseStatus = vi.fn()
+const mockUpdateCourseDetails = vi.fn().mockResolvedValue(undefined)
 const mockRemoveImportedCourse = vi.fn().mockResolvedValue(undefined)
 
 vi.mock('@/stores/useCourseImportStore', () => ({
@@ -15,6 +16,7 @@ vi.mock('@/stores/useCourseImportStore', () => ({
       selector({
         updateCourseTags: mockUpdateCourseTags,
         updateCourseStatus: mockUpdateCourseStatus,
+        updateCourseDetails: mockUpdateCourseDetails,
         removeImportedCourse: mockRemoveImportedCourse,
         thumbnailUrls: {},
         autoAnalysisStatus: {},
@@ -264,7 +266,7 @@ describe('ImportedCourseCard', () => {
 
       await user.click(screen.getByTestId('status-badge'))
 
-      expect(screen.getAllByRole('menuitem')).toHaveLength(4)
+      expect(screen.getAllByRole('menuitem')).toHaveLength(5)
     })
 
     it('calls updateCourseStatus when a different status is selected', async () => {
@@ -305,6 +307,28 @@ describe('ImportedCourseCard', () => {
       // The current status item should contain a checkmark icon (extra SVG)
       const svgs = completedItem?.querySelectorAll('svg')
       expect(svgs?.length).toBeGreaterThanOrEqual(2) // status icon + checkmark
+    })
+  })
+
+  describe('edit course menu item', () => {
+    it('shows Edit details option in the dropdown menu', async () => {
+      const user = userEvent.setup()
+      renderCard()
+
+      await user.click(screen.getByTestId('status-badge'))
+
+      expect(screen.getByTestId('edit-course-menu-item')).toBeInTheDocument()
+      expect(screen.getByText('Edit details')).toBeInTheDocument()
+    })
+
+    it('opens edit dialog when Edit details is clicked', async () => {
+      const user = userEvent.setup()
+      renderCard()
+
+      await user.click(screen.getByTestId('status-badge'))
+      await user.click(screen.getByTestId('edit-course-menu-item'))
+
+      expect(screen.getByTestId('edit-course-dialog')).toBeInTheDocument()
     })
   })
 })
