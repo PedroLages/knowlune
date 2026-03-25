@@ -41,7 +41,7 @@ so that I can navigate directly to the analytics view I need via URL and the sid
 **Given** I click a tab on the Reports page
 **When** the tab switches
 **Then** the URL updates to reflect the selected tab (`?tab=study`, `?tab=quizzes`, or `?tab=ai`)
-**And** the browser back button returns to the previous tab
+**And** the URL is replaced (not pushed) so tab switches don't pollute browser history
 
 **Given** I navigate to `/reports?tab=quizzes` with no quiz data
 **When** the page loads
