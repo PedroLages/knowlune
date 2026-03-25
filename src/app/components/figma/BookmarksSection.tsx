@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
-import { Trash2, Clock, AlertTriangle } from 'lucide-react'
+import { Trash2, BookmarkIcon, AlertTriangle } from 'lucide-react'
+import { EmptyState } from '@/app/components/EmptyState'
 import { Button } from '@/app/components/ui/button'
 import {
   getAllBookmarks,
@@ -42,6 +43,7 @@ export function BookmarksSection() {
         }
       })
       .catch(() => {
+        // silent-catch-ok — error state handled by component
         if (!ignore) {
           setError('Failed to load bookmarks')
           setIsLoading(false)
@@ -104,11 +106,14 @@ export function BookmarksSection() {
 
   if (bookmarks.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-        <Clock className="mb-3 size-12 opacity-40" />
-        <p>No bookmarks yet</p>
-        <p className="text-xs mt-1">Bookmark important moments in videos to find them later</p>
-      </div>
+      <EmptyState
+        data-testid="empty-state-bookmarks"
+        icon={BookmarkIcon}
+        title="No bookmarks yet"
+        description="Bookmark important moments in videos to find them later"
+        actionLabel="Browse Courses"
+        actionHref="/courses"
+      />
     )
   }
 

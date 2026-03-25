@@ -111,6 +111,7 @@ const PROVIDER_MODELS: Record<AIProviderId, string> = {
   groq: 'llama-3.3-70b-versatile',
   glm: 'glm-4-flash',
   gemini: 'gemini-1.5-flash',
+  ollama: 'llama3.2',
 }
 
 /**

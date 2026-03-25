@@ -424,14 +424,15 @@ export function SessionHistory() {
 
             {/* Filtered empty state */}
             {filteredSessions.length === 0 && hasActiveFilters && (
-              <li className="list-none rounded-[24px] border border-border bg-card p-8 text-center">
-                <p className="text-muted-foreground">No sessions match your current filters.</p>
-                <button
-                  onClick={handleClearFilters}
-                  className="mt-4 rounded-xl border border-border px-4 py-2 text-sm font-medium hover:bg-accent"
-                >
-                  Clear all filters
-                </button>
+              <li className="list-none" data-testid="empty-state-filtered-sessions">
+                <EmptyState
+                  icon={History}
+                  headingLevel={3}
+                  title="No sessions match your filters"
+                  description="Try adjusting your filters to find what you're looking for."
+                  actionLabel="Clear all filters"
+                  onAction={handleClearFilters}
+                />
               </li>
             )}
           </ul>

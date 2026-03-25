@@ -63,3 +63,12 @@ deferInit(() => {
     initPerformanceMonitoring()
   })
 })
+
+// AC4: Run Ollama health check on startup if configured (deferred — non-critical)
+deferInit(() => {
+  import('@/lib/ollamaHealthCheck').then(({ runStartupHealthCheck }) => {
+    runStartupHealthCheck().catch(err => {
+      console.warn('[Ollama] Startup health check failed:', err)
+    })
+  })
+})

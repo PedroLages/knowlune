@@ -51,7 +51,7 @@ export function NextCourseSuggestion({ completedCourseId, onDismiss }: NextCours
         aria-label="All courses completed"
       >
         <div className="flex flex-col items-center text-center gap-3">
-          <Trophy className="h-12 w-12 text-brand" aria-hidden="true" />
+          <Trophy className="size-12 text-brand" aria-hidden="true" />
           <h2 className="text-lg font-bold">You've completed all active courses!</h2>
           <p className="text-sm text-muted-foreground">
             Explore your course library to find your next adventure.
@@ -94,7 +94,7 @@ export function NextCourseSuggestion({ completedCourseId, onDismiss }: NextCours
         aria-label="Dismiss course suggestion"
         className="absolute top-3 right-3 rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus-visible:outline-2 focus-visible:outline-brand"
       >
-        <X className="h-4 w-4" aria-hidden="true" />
+        <X className="size-4" aria-hidden="true" />
       </button>
 
       {/* Header */}
@@ -114,13 +114,13 @@ export function NextCourseSuggestion({ completedCourseId, onDismiss }: NextCours
       <div className="flex items-center gap-3 mb-3 flex-wrap">
         {/* Category badge */}
         <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-medium text-brand capitalize">
-          <BookOpen className="h-3 w-3" aria-hidden="true" />
+          <BookOpen className="size-3" aria-hidden="true" />
           {course.category.replace(/-/g, ' ')}
         </span>
 
         {/* Estimated hours */}
         <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-          <Clock className="h-3 w-3" aria-hidden="true" />
+          <Clock className="size-3" aria-hidden="true" />
           {course.estimatedHours}h
         </span>
       </div>
