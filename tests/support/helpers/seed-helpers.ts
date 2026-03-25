@@ -12,7 +12,6 @@
 import type { Page } from '@playwright/test'
 import type { ImportedCourseTestData } from '../fixtures/factories/imported-course-factory'
 import { goToCourses } from './navigation'
-import { closeSidebar } from '../fixtures/constants/sidebar-constants'
 import { RETRY_CONFIG } from '../../utils/constants'
 
 const DB_NAME = 'ElearningDB'
@@ -184,6 +183,11 @@ export async function seedVectorEmbeddings(
   await seedIndexedDBStore(page, DB_NAME, 'embeddings', embeddings)
 }
 
+/** Seed authors into the authors store. */
+export async function seedAuthors(page: Page, authors: Record<string, unknown>[]): Promise<void> {
+  await seedIndexedDBStore(page, DB_NAME, 'authors', authors)
+}
+
 /** Clear the learningPaths store. */
 export async function clearLearningPath(page: Page): Promise<void> {
   await clearIndexedDBStore(page, DB_NAME, 'learningPaths')
@@ -204,11 +208,7 @@ export async function seedAndReload(
   indexedDB: IndexedDBSeed,
   courses: ImportedCourseTestData[]
 ): Promise<void> {
-  await page.evaluate(sidebarState => {
-    Object.entries(sidebarState).forEach(([key, value]) => {
-      localStorage.setItem(key, value)
-    })
-  }, closeSidebar())
+  // goToCourses already handles sidebar state via addInitScript
   await goToCourses(page)
   await indexedDB.seedImportedCourses(courses)
   await page.reload({ waitUntil: 'domcontentloaded' })

@@ -94,8 +94,9 @@ async function runAutoAnalysis(course: ImportedCourse): Promise<void> {
     const tags = parseTagsFromProxyResponse((data as { text: string }).text)
 
     if (tags.length > 0) {
-      // Update course tags in Dexie
-      const existingTags = course.tags || []
+      // Read fresh tags from IndexedDB to avoid race with concurrent triggerOllamaTagging
+      const freshCourse = await db.importedCourses.get(course.id)
+      const existingTags = freshCourse?.tags || []
       const merged = [...new Set([...existingTags, ...tags])]
       await db.importedCourses.update(course.id, { tags: merged })
 

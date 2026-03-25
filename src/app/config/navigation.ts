@@ -54,16 +54,20 @@ export const navigationGroups: NavigationGroup[] = [
       { name: 'Overview', path: '/', icon: LayoutDashboard },
       { name: 'My Courses', path: '/my-class', icon: BookOpen },
       { name: 'Courses', path: '/courses', icon: GraduationCap },
-      { name: 'Learning Path', path: '/ai-learning-path', icon: Sparkles, disclosureKey: 'ai-used' },
-      { name: 'Knowledge Gaps', path: '/knowledge-gaps', icon: Brain, disclosureKey: 'ai-used' },
+      { name: 'Authors', path: '/authors', icon: Users, disclosureKey: 'course-imported' },
       { name: 'Notes', path: '/notes', icon: StickyNote, disclosureKey: 'note-created' },
-      { name: 'Review', path: '/review', icon: RotateCcw, disclosureKey: 'review-used' },
-      { name: 'Retention', path: '/retention', icon: ShieldCheck, disclosureKey: 'review-used' },
     ],
   },
   {
-    label: 'Connect',
-    items: [{ name: 'Authors', path: '/authors', icon: Users, disclosureKey: 'course-imported' }],
+    // Note: group label 'Review' intentionally shares the name with the nav item 'Review'
+    // (path /review). They serve different roles: the label names the group, the item is a link.
+    label: 'Review',
+    items: [
+      { name: 'Learning Path', path: '/ai-learning-path', icon: Sparkles, disclosureKey: 'ai-used' },
+      { name: 'Knowledge Gaps', path: '/knowledge-gaps', icon: Brain, disclosureKey: 'ai-used' },
+      { name: 'Review', path: '/review', icon: RotateCcw, disclosureKey: 'review-used' },
+      { name: 'Retention', path: '/retention', icon: ShieldCheck, disclosureKey: 'review-used' },
+    ],
   },
   {
     label: 'Track',
@@ -90,8 +94,9 @@ export const navigationItems: NavigationItem[] = [
   settingsItem,
 ]
 
-// Paths for primary navigation (shown in mobile bottom bar)
-const primaryNavPaths = ['/', '/my-class', '/courses', '/notes']
+// Paths for primary navigation (shown in mobile bottom bar).
+// The bottom bar has exactly 4 slots — this list must stay at 4 entries.
+export const primaryNavPaths = ['/', '/my-class', '/courses', '/notes']
 
 // Get primary navigation items (for mobile bottom bar)
 export function getPrimaryNav(): NavigationItem[] {

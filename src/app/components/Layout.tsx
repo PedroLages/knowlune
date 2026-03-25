@@ -18,12 +18,13 @@ import { navigationGroups, settingsItem, getIsActive } from '@/app/config/naviga
 import type { NavigationItem, NavigationGroup } from '@/app/config/navigation'
 import { useProgressiveDisclosure } from '@/app/hooks/useProgressiveDisclosure'
 import { getSettings } from '@/lib/settings'
-import { getInitials } from '@/lib/avatarUpload'
+import { getInitials } from '@/lib/textUtils'
 import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
 import { useCourseStore } from '@/stores/useCourseStore'
 import { toast } from 'sonner'
 import { QualityScoreDialog } from './session/QualityScoreDialog'
 import type { QualityScoreResult } from '@/lib/qualityScore'
+import { OnboardingOverlay } from './onboarding/OnboardingOverlay'
 
 // Individual nav link — wraps in Tooltip when collapsed
 function NavLink({
@@ -52,7 +53,7 @@ function NavLink({
           : 'text-muted-foreground hover:bg-accent hover:text-foreground'
       }`}
     >
-      <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'stroke-[2.5px]' : ''}`} aria-hidden="true" />
+      <Icon className={`size-5 shrink-0 ${isActive ? 'stroke-[2.5px]' : ''}`} aria-hidden="true" />
       {!iconOnly && <span className="text-sm">{item.name}</span>}
     </Link>
   )
@@ -92,7 +93,7 @@ function SidebarContent({ onNavigate, iconOnly, visibleGroups }: { onNavigate?: 
       {/* Logo + tagline */}
       <div className={iconOnly ? 'mb-6 flex justify-center' : 'mb-6'}>
         {iconOnly ? (
-          <KnowluneIcon className="w-7 h-7" />
+          <KnowluneIcon className="size-7" />
         ) : (
           <div>
             <KnowluneLogo />
@@ -111,14 +112,24 @@ function SidebarContent({ onNavigate, iconOnly, visibleGroups }: { onNavigate?: 
               {/* Group label — hidden in collapsed mode, replaced by separator */}
               {iconOnly ? (
                 idx > 0 && (
-                  <div className="mx-4 mb-2 border-t border-border/50" aria-hidden="true" />
+                  <div
+                    className="mx-4 mb-2 border-t border-border/50"
+                    aria-hidden="true"
+                    data-testid="group-separator"
+                  />
                 )
               ) : (
-                <div className="px-4 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                <div
+                  id={`nav-group-${group.label.toLowerCase()}`}
+                  className="px-4 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground"
+                >
                   {group.label}
                 </div>
               )}
-              <ul className="space-y-0.5">
+              <ul
+                className="space-y-0.5"
+                aria-labelledby={!iconOnly ? `nav-group-${group.label.toLowerCase()}` : undefined}
+              >
                 {group.items.map(item => (
                   <NavLink
                     key={item.tab ? `${item.path}?tab=${item.tab}` : item.path}
@@ -324,14 +335,14 @@ export function Layout() {
             onClick={toggleSidebar}
             aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             aria-keyshortcuts="Meta+B Control+B"
-            className={`absolute top-1/2 -translate-y-1/2 -right-3 z-50 flex items-center justify-center w-6 h-6 rounded-full bg-card border border-border shadow-sm text-muted-foreground hover:text-foreground hover:scale-110 transition-all duration-150 cursor-pointer ${
+            className={`absolute top-1/2 -translate-y-1/2 -right-3 z-50 flex items-center justify-center size-6 rounded-full bg-card border border-border shadow-sm text-muted-foreground hover:text-foreground hover:scale-110 transition-all duration-150 cursor-pointer ${
               sidebarHovered || !sidebarCollapsed ? 'opacity-100' : 'opacity-0 pointer-events-none'
             }`}
           >
             {sidebarCollapsed ? (
-              <ChevronRight className="w-3 h-3" aria-hidden="true" />
+              <ChevronRight className="size-3" aria-hidden="true" />
             ) : (
-              <ChevronLeft className="w-3 h-3" aria-hidden="true" />
+              <ChevronLeft className="size-3" aria-hidden="true" />
             )}
           </button>
         </div>
@@ -364,7 +375,7 @@ export function Layout() {
               aria-label="Open navigation menu"
               aria-expanded={sidebarOpen}
             >
-              <Menu className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
+              <Menu className="size-5 text-muted-foreground" aria-hidden="true" />
             </Button>
           )}
 
@@ -384,7 +395,7 @@ export function Layout() {
               aria-label="Open search (Cmd+K)"
               aria-keyshortcuts="Meta+K Control+K"
             >
-              <Search className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
+              <Search className="size-5 text-muted-foreground" aria-hidden="true" />
             </Button>
 
             {/* Tablet/Desktop: Full search bar */}
@@ -396,7 +407,7 @@ export function Layout() {
               aria-keyshortcuts="Meta+K Control+K"
             >
               <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground"
+                className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground"
                 aria-hidden="true"
               />
               <span>Search...</span>
@@ -415,11 +426,8 @@ export function Layout() {
               className="min-h-[44px] min-w-[44px]"
               aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
             >
-              <Sun className="w-5 h-5 text-muted-foreground dark:hidden" aria-hidden="true" />
-              <Moon
-                className="w-5 h-5 text-muted-foreground hidden dark:block"
-                aria-hidden="true"
-              />
+              <Sun className="size-5 text-muted-foreground dark:hidden" aria-hidden="true" />
+              <Moon className="size-5 text-muted-foreground hidden dark:block" aria-hidden="true" />
             </Button>
 
             <Button
@@ -428,7 +436,7 @@ export function Layout() {
               className="relative min-h-[44px] min-w-[44px]"
               aria-label="Notifications"
             >
-              <Bell className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
+              <Bell className="size-5 text-muted-foreground" aria-hidden="true" />
             </Button>
 
             <div
@@ -436,7 +444,7 @@ export function Layout() {
               role="group"
               aria-label="User profile"
             >
-              <Avatar className="w-10 h-10 ring-2 ring-transparent transition-all duration-200 hover:ring-brand/30 hover:shadow-md">
+              <Avatar className="size-10 ring-2 ring-transparent transition-all duration-200 hover:ring-brand/30 hover:shadow-md">
                 {settings.profilePhotoDataUrl ? (
                   <AvatarImage
                     src={settings.profilePhotoDataUrl}
@@ -453,7 +461,7 @@ export function Layout() {
                 <div className="font-semibold text-sm">{settings.displayName}</div>
               </div>
               <ChevronDown
-                className="w-4 h-4 text-muted-foreground hidden sm:block"
+                className="size-4 text-muted-foreground hidden sm:block"
                 aria-hidden="true"
               />
             </div>
@@ -497,6 +505,9 @@ export function Layout() {
           factors={qualityResult.factors}
         />
       )}
+
+      {/* First-use onboarding overlay (E25-S07) */}
+      <OnboardingOverlay />
     </div>
   )
 }

@@ -30,6 +30,7 @@ export interface ImportedCourseTestData {
   status: 'active' | 'completed' | 'paused'
   videoCount: number
   pdfCount: number
+  authorId?: string
 }
 
 export function createImportedCourse(

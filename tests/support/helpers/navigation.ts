@@ -10,9 +10,18 @@ import type { Page } from '@playwright/test'
 export async function navigateAndWait(page: Page, path: string): Promise<void> {
   // Seed sidebar state BEFORE navigation to prevent overlay blocking on tablet/mobile viewports
   // (knowlune-sidebar-v1 defaults to open=true at 640-1023px, creating fullscreen Sheet overlay)
+  // Also dismiss onboarding overlay to prevent it from blocking test interactions (E25-S07).
+  // Tests that need the overlay visible (e.g., onboarding.spec.ts) set __test_show_onboarding=1
+  // before calling navigateAndWait; that flag tells us to skip seeding the dismissal.
   // Use addInitScript instead of evaluate to ensure localStorage is accessible before page loads
   await page.addInitScript(() => {
     localStorage.setItem('knowlune-sidebar-v1', 'false')
+    if (!localStorage.getItem('__test_show_onboarding')) {
+      localStorage.setItem(
+        'levelup-onboarding-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true })
+      )
+    }
   })
   await page.goto(path)
   await page.waitForLoadState('load')

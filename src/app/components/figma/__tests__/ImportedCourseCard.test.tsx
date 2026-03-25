@@ -7,6 +7,7 @@ import type { ImportedCourse } from '@/data/types'
 
 const mockUpdateCourseTags = vi.fn()
 const mockUpdateCourseStatus = vi.fn()
+const mockUpdateCourseDetails = vi.fn().mockResolvedValue(undefined)
 const mockRemoveImportedCourse = vi.fn().mockResolvedValue(undefined)
 
 vi.mock('@/stores/useCourseImportStore', () => ({
@@ -15,8 +16,10 @@ vi.mock('@/stores/useCourseImportStore', () => ({
       selector({
         updateCourseTags: mockUpdateCourseTags,
         updateCourseStatus: mockUpdateCourseStatus,
+        updateCourseDetails: mockUpdateCourseDetails,
         removeImportedCourse: mockRemoveImportedCourse,
         thumbnailUrls: {},
+        autoAnalysisStatus: {},
       }),
     {
       getState: () => ({ importError: null }),
@@ -40,6 +43,19 @@ vi.mock('@/hooks/useCourseCardPreview', () => ({
 
 vi.mock('@/hooks/useVideoFromHandle', () => ({
   useVideoFromHandle: () => ({ blobUrl: null, error: null, loading: false }),
+}))
+
+vi.mock('@/stores/useAuthorStore', () => ({
+  useAuthorStore: (selector: (state: Record<string, unknown>) => unknown) =>
+    selector({
+      authors: [],
+      loadAuthors: vi.fn(),
+    }),
+}))
+
+vi.mock('@/lib/authors', () => ({
+  getAvatarSrc: () => ({ src: '' }),
+  getInitials: (name: string) => name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
 }))
 
 vi.mock('@/db/schema', () => ({
@@ -213,6 +229,49 @@ describe('ImportedCourseCard', () => {
     })
   })
 
+  describe('E22-S04 AC5: AI-generated tag editing/removal', () => {
+    it('renders AI-generated tags on the course card', () => {
+      renderCard({ tags: ['Python', 'Machine Learning', 'Data Science'] })
+      const tagContainer = screen.getByTestId('course-card-tags')
+      expect(tagContainer).toBeInTheDocument()
+      expect(screen.getByText('Python')).toBeInTheDocument()
+      expect(screen.getByText('Machine Learning')).toBeInTheDocument()
+      expect(screen.getByText('Data Science')).toBeInTheDocument()
+    })
+
+    it('renders remove buttons on tag badges', () => {
+      renderCard({ tags: ['Python', 'AI'] })
+      const removeButtons = screen.getAllByRole('button', { name: /Remove tag:/ })
+      expect(removeButtons.length).toBe(2)
+      expect(screen.getByRole('button', { name: 'Remove tag: Python' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Remove tag: AI' })).toBeInTheDocument()
+    })
+
+    it('calls updateCourseTags without the removed tag when X is clicked', async () => {
+      const user = userEvent.setup()
+      renderCard({ id: 'c1', tags: ['Python', 'AI', 'Web'] })
+
+      const removeButton = screen.getByRole('button', { name: 'Remove tag: AI' })
+      await user.click(removeButton)
+
+      expect(mockUpdateCourseTags).toHaveBeenCalledWith('c1', ['Python', 'Web'])
+    })
+
+    it('renders an add-tag button for adding new tags', () => {
+      renderCard({ tags: ['Python'] })
+      expect(screen.getByTestId('add-tag-button')).toBeInTheDocument()
+    })
+
+    it('respects maxVisible and shows overflow badge', () => {
+      renderCard({ tags: ['Python', 'AI', 'Web', 'Data', 'ML'] })
+      // TagBadgeList maxVisible=3, so 3 visible + overflow badge
+      const tagBadges = screen.getAllByTestId('tag-badge')
+      expect(tagBadges.length).toBe(3)
+      expect(screen.getByTestId('tag-overflow-badge')).toBeInTheDocument()
+      expect(screen.getByText('+2 more')).toBeInTheDocument()
+    })
+  })
+
   describe('status dropdown', () => {
     it('opens dropdown with all three status options and delete on click', async () => {
       const user = userEvent.setup()
@@ -220,7 +279,7 @@ describe('ImportedCourseCard', () => {
 
       await user.click(screen.getByTestId('status-badge'))
 
-      expect(screen.getAllByRole('menuitem')).toHaveLength(4)
+      expect(screen.getAllByRole('menuitem')).toHaveLength(5)
     })
 
     it('calls updateCourseStatus when a different status is selected', async () => {
@@ -261,6 +320,28 @@ describe('ImportedCourseCard', () => {
       // The current status item should contain a checkmark icon (extra SVG)
       const svgs = completedItem?.querySelectorAll('svg')
       expect(svgs?.length).toBeGreaterThanOrEqual(2) // status icon + checkmark
+    })
+  })
+
+  describe('edit course menu item', () => {
+    it('shows Edit details option in the dropdown menu', async () => {
+      const user = userEvent.setup()
+      renderCard()
+
+      await user.click(screen.getByTestId('status-badge'))
+
+      expect(screen.getByTestId('edit-course-menu-item')).toBeInTheDocument()
+      expect(screen.getByText('Edit details')).toBeInTheDocument()
+    })
+
+    it('opens edit dialog when Edit details is clicked', async () => {
+      const user = userEvent.setup()
+      renderCard()
+
+      await user.click(screen.getByTestId('status-badge'))
+      await user.click(screen.getByTestId('edit-course-menu-item'))
+
+      expect(screen.getByTestId('edit-course-dialog')).toBeInTheDocument()
     })
   })
 })

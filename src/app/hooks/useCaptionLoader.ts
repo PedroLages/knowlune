@@ -36,6 +36,7 @@ export function useCaptionLoader(courseId: string | undefined, lessonId: string 
         }
       })
       .catch(err => {
+        // silent-catch-ok — error state handled by component (captions reset to null)
         if (cancelled) return
         console.error('[captions] Failed to restore persisted captions:', err)
         blobUrlRef.current = null

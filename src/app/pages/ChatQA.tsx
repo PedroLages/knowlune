@@ -46,7 +46,7 @@ export function ChatQA() {
       {!aiAvailable && (
         <div className="px-6 pt-4">
           <Alert variant="default" className="border-warning bg-warning/10">
-            <AlertCircle className="h-4 w-4 text-warning" />
+            <AlertCircle className="size-4 text-warning" />
             <AlertTitle className="text-warning">AI Provider Not Configured</AlertTitle>
             <AlertDescription className="text-muted-foreground">
               To use AI Q&A, please configure an AI provider in Settings. You can use manual search
@@ -59,7 +59,7 @@ export function ChatQA() {
                 onClick={() => navigate('/settings')}
                 className="border-warning text-warning hover:bg-warning/10"
               >
-                <Settings className="w-4 h-4 mr-2" />
+                <Settings className="size-4 mr-2" />
                 Configure AI
               </Button>
               <Button variant="outline" size="sm" onClick={() => navigate('/notes')}>
@@ -74,7 +74,7 @@ export function ChatQA() {
       {aiAvailable && !hasNotes && (
         <div className="px-6 pt-4">
           <Alert variant="default" className="border-warning bg-warning/10">
-            <AlertCircle className="h-4 w-4 text-warning" />
+            <AlertCircle className="size-4 text-warning" />
             <AlertTitle className="text-warning">No Notes Available</AlertTitle>
             <AlertDescription className="text-muted-foreground">
               You haven't created any notes yet. Start taking notes to use Q&A.

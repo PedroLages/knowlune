@@ -43,10 +43,12 @@ const storeState = {
   importError: null as string | null,
   importProgress: null,
   thumbnailUrls: {} as Record<string, string>,
+  autoAnalysisStatus: {} as Record<string, string>,
   addImportedCourse: vi.fn(),
   removeImportedCourse: vi.fn(),
   updateCourseTags: vi.fn(),
   updateCourseStatus: vi.fn(),
+  updateCourseDetails: vi.fn().mockResolvedValue(true),
   getAllTags: () => [] as string[],
   loadImportedCourses: vi.fn(),
   setImporting: vi.fn(),
@@ -60,6 +62,39 @@ vi.mock('@/stores/useCourseImportStore', () => ({
 
 vi.mock('@/lib/courseImport', () => ({
   importCourseFromFolder: vi.fn(),
+}))
+
+// Pre-seeded course mock data for Sample Courses section tests
+const mockPreSeededCourses = [
+  {
+    id: 'authority',
+    title: 'Authority',
+    shortTitle: 'Authority',
+    description: 'Influence',
+    category: 'influence-authority',
+    difficulty: 'intermediate',
+    totalLessons: 10,
+    totalVideos: 8,
+    totalPDFs: 2,
+    estimatedHours: 5,
+    tags: ['influence'],
+    coverImage: undefined,
+    modules: [],
+    isSequential: false,
+    basePath: '/courses/authority',
+    authorId: 'chase-hughes',
+  },
+]
+
+const courseStoreState = {
+  courses: [] as typeof mockPreSeededCourses,
+  isLoaded: false,
+  loadCourses: vi.fn(),
+}
+
+vi.mock('@/stores/useCourseStore', () => ({
+  useCourseStore: (selector: (state: typeof courseStoreState) => unknown) =>
+    selector(courseStoreState),
 }))
 
 vi.mock('@/lib/progress', () => ({
@@ -107,6 +142,21 @@ vi.mock('@/app/components/figma/MomentumBadge', () => ({
   MomentumBadge: () => null,
 }))
 
+vi.mock('@/stores/useAuthorStore', () => ({
+  useAuthorStore: (selector: (state: Record<string, unknown>) => unknown) =>
+    selector({
+      authors: [],
+      loadAuthors: vi.fn(),
+    }),
+}))
+
+vi.mock('@/lib/authors', () => ({
+  getAuthorForCourse: () => undefined,
+  getAuthorForImportedCourse: () => undefined,
+  getAvatarSrc: () => ({ src: '' }),
+  getInitials: (name: string) => name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+}))
+
 // Import component AFTER all mocks
 import { Courses } from '../Courses'
 
@@ -122,15 +172,15 @@ describe('Courses page', () => {
   beforeEach(() => {
     storeState.importedCourses = []
     storeState.loadImportedCourses = vi.fn()
+    courseStoreState.courses = []
+    localStorage.clear()
   })
 
   describe('empty state', () => {
     it('displays global empty state when no courses at all', () => {
       renderCourses()
       expect(screen.getByText('No courses yet')).toBeInTheDocument()
-      expect(
-        screen.getByText('Import a course folder to get started'),
-      ).toBeInTheDocument()
+      expect(screen.getByText('Import a course folder to get started')).toBeInTheDocument()
     })
 
     it('global empty state has correct test id', () => {
@@ -311,6 +361,63 @@ describe('Courses page', () => {
       statusButtons.forEach(button => {
         expect(button).toHaveAttribute('aria-pressed', 'false')
       })
+    })
+  })
+
+  describe('sample courses section', () => {
+    beforeEach(() => {
+      courseStoreState.courses = mockPreSeededCourses
+      localStorage.clear()
+    })
+
+    it('renders "Sample Courses (N)" heading with count', () => {
+      renderCourses()
+      expect(screen.getByRole('heading', { name: /sample courses \(1\)/i })).toBeInTheDocument()
+    })
+
+    it('renders the sample-courses-section container', () => {
+      renderCourses()
+      expect(screen.getByTestId('sample-courses-section')).toBeInTheDocument()
+    })
+
+    it('sample courses grid is visible by default when no imported courses', () => {
+      renderCourses()
+      expect(screen.getByTestId('sample-courses-grid')).toBeInTheDocument()
+    })
+
+    it('toggle button has correct aria-label when expanded', () => {
+      renderCourses()
+      const toggle = screen.getByTestId('sample-courses-toggle')
+      expect(toggle).toHaveAttribute('aria-label', 'Collapse sample courses')
+    })
+
+    it('sample courses section is not shown when allCourses is empty', () => {
+      courseStoreState.courses = []
+      renderCourses()
+      expect(screen.queryByTestId('sample-courses-section')).not.toBeInTheDocument()
+    })
+
+    it('reads collapse state from localStorage on mount and starts collapsed', () => {
+      // Need imported courses so auto-expand effect (importedCourses.length === 0 → expand) doesn't fire
+      storeState.importedCourses = mockCourses
+      localStorage.setItem('knowlune:sample-courses-collapsed', 'true')
+      renderCourses()
+      // Grid should not be present when collapsed
+      expect(screen.queryByTestId('sample-courses-grid')).not.toBeInTheDocument()
+    })
+
+    it('persists collapse state to localStorage when toggled', async () => {
+      // Need imported courses so auto-expand effect (importedCourses.length === 0 → expand) doesn't undo the toggle
+      storeState.importedCourses = mockCourses
+      // Pre-set localStorage so auto-collapse effect doesn't also write on mount
+      localStorage.setItem('knowlune:sample-courses-collapsed', 'false')
+      const user = userEvent.setup()
+      renderCourses()
+      // Starts expanded (grid visible)
+      expect(screen.getByTestId('sample-courses-grid')).toBeInTheDocument()
+      // Click toggle to collapse
+      await user.click(screen.getByTestId('sample-courses-toggle'))
+      expect(localStorage.getItem('knowlune:sample-courses-collapsed')).toBe('true')
     })
   })
 })

@@ -15,10 +15,14 @@ const ONBOARDING_KEY = 'levelup-onboarding-v1'
 
 test.describe('First-Use Onboarding Flow', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear onboarding state before each test
-    await page.addInitScript(key => {
-      localStorage.removeItem(key)
-    }, ONBOARDING_KEY)
+    // Signal to navigateAndWait that we want the onboarding overlay visible.
+    // We use a flag so that navigateAndWait skips auto-dismissing onboarding.
+    // Note: we do NOT remove the onboarding key here via addInitScript because
+    // init scripts persist across page.reload() — tests that verify persistence
+    // across reloads need the key to survive.
+    await page.addInitScript(() => {
+      localStorage.setItem('__test_show_onboarding', '1')
+    })
   })
 
   test('shows onboarding overlay on first visit', async ({ page }) => {
@@ -108,7 +112,7 @@ test.describe('First-Use Onboarding Flow', () => {
     await expect(dialog).toBeVisible()
 
     // Click the CTA for step 1
-    await page.getByRole('button', { name: /Go to Courses/i }).click()
+    await page.getByRole('button', { name: /Import a Course/i }).click()
 
     // Should navigate to courses
     await page.waitForURL('**/courses')
