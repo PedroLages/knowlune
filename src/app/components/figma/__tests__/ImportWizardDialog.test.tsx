@@ -42,6 +42,13 @@ vi.mock('@/stores/useCourseImportStore', () => ({
   ),
 }))
 
+function makeMockFileHandle(name: string): FileSystemFileHandle {
+  return {
+    name,
+    getFile: vi.fn().mockResolvedValue(new File([''], name)),
+  } as unknown as FileSystemFileHandle
+}
+
 function makeScannedCourse(overrides: Partial<ScannedCourse> = {}): ScannedCourse {
   return {
     id: 'course-123',
@@ -77,6 +84,7 @@ function makeScannedCourse(overrides: Partial<ScannedCourse> = {}): ScannedCours
         fileHandle: {} as FileSystemFileHandle,
       },
     ],
+    images: [],
     ...overrides,
   }
 }
@@ -84,6 +92,9 @@ function makeScannedCourse(overrides: Partial<ScannedCourse> = {}): ScannedCours
 describe('ImportWizardDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Mock URL.createObjectURL / revokeObjectURL for image previews
+    global.URL.createObjectURL = vi.fn().mockReturnValue('blob:mock-url')
+    global.URL.revokeObjectURL = vi.fn()
   })
 
   it('renders the dialog when open', () => {
@@ -351,5 +362,267 @@ describe('ImportWizardDialog', () => {
     await user.clear(nameInput)
 
     expect(screen.getByText('Course name is required.')).toBeInTheDocument()
+  })
+
+  // --- Tag management tests ---
+
+  it('shows tag input section on details step', async () => {
+    const user = userEvent.setup()
+    mockScanCourseFolder.mockResolvedValueOnce(makeScannedCourse())
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-tags-section')).toBeInTheDocument()
+    })
+    expect(screen.getByTestId('wizard-tag-input')).toBeInTheDocument()
+  })
+
+  it('adds a tag when Enter is pressed', async () => {
+    const user = userEvent.setup()
+    mockScanCourseFolder.mockResolvedValueOnce(makeScannedCourse())
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-tag-input')).toBeInTheDocument()
+    })
+
+    const tagInput = screen.getByTestId('wizard-tag-input')
+    await user.type(tagInput, 'react{Enter}')
+
+    expect(screen.getByTestId('wizard-tag-react')).toBeInTheDocument()
+    expect(screen.getByTestId('wizard-tag-react')).toHaveTextContent('react')
+  })
+
+  it('does not add duplicate tags', async () => {
+    const user = userEvent.setup()
+    mockScanCourseFolder.mockResolvedValueOnce(makeScannedCourse())
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-tag-input')).toBeInTheDocument()
+    })
+
+    const tagInput = screen.getByTestId('wizard-tag-input')
+    await user.type(tagInput, 'react{Enter}')
+    await user.type(tagInput, 'react{Enter}')
+
+    // Should only have one tag badge (the Badge component with data-slot="badge")
+    const tagSection = screen.getByTestId('wizard-tags-section')
+    const badges = tagSection.querySelectorAll('[data-slot="badge"]')
+    expect(badges).toHaveLength(1)
+  })
+
+  it('removes a tag when X is clicked', async () => {
+    const user = userEvent.setup()
+    mockScanCourseFolder.mockResolvedValueOnce(makeScannedCourse())
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-tag-input')).toBeInTheDocument()
+    })
+
+    const tagInput = screen.getByTestId('wizard-tag-input')
+    await user.type(tagInput, 'react{Enter}')
+    expect(screen.getByTestId('wizard-tag-react')).toBeInTheDocument()
+
+    await user.click(screen.getByTestId('wizard-remove-tag-react'))
+    expect(screen.queryByTestId('wizard-tag-react')).not.toBeInTheDocument()
+  })
+
+  it('removes last tag on Backspace when input is empty', async () => {
+    const user = userEvent.setup()
+    mockScanCourseFolder.mockResolvedValueOnce(makeScannedCourse())
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-tag-input')).toBeInTheDocument()
+    })
+
+    const tagInput = screen.getByTestId('wizard-tag-input')
+    await user.type(tagInput, 'react{Enter}')
+    await user.type(tagInput, 'typescript{Enter}')
+
+    expect(screen.getByTestId('wizard-tag-react')).toBeInTheDocument()
+    expect(screen.getByTestId('wizard-tag-typescript')).toBeInTheDocument()
+
+    // Focus the input and press Backspace
+    await user.click(tagInput)
+    await user.keyboard('{Backspace}')
+
+    expect(screen.getByTestId('wizard-tag-react')).toBeInTheDocument()
+    expect(screen.queryByTestId('wizard-tag-typescript')).not.toBeInTheDocument()
+  })
+
+  it('passes tags to persistScannedCourse', async () => {
+    const user = userEvent.setup()
+    const scanned = makeScannedCourse()
+    mockScanCourseFolder.mockResolvedValueOnce(scanned)
+    mockPersistScannedCourse.mockResolvedValueOnce({
+      ...scanned,
+      importedAt: '2026-03-25T10:00:00.000Z',
+      category: '',
+      tags: ['react', 'frontend'],
+      status: 'active',
+      videoCount: 2,
+      pdfCount: 1,
+    })
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-tag-input')).toBeInTheDocument()
+    })
+
+    const tagInput = screen.getByTestId('wizard-tag-input')
+    await user.type(tagInput, 'react{Enter}')
+    await user.type(tagInput, 'frontend{Enter}')
+
+    await user.click(screen.getByTestId('wizard-import-btn'))
+
+    await waitFor(() => {
+      expect(mockPersistScannedCourse).toHaveBeenCalledWith(scanned, {
+        tags: ['react', 'frontend'],
+      })
+    })
+  })
+
+  it('shows tag count in summary', async () => {
+    const user = userEvent.setup()
+    mockScanCourseFolder.mockResolvedValueOnce(makeScannedCourse())
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-tag-input')).toBeInTheDocument()
+    })
+
+    const tagInput = screen.getByTestId('wizard-tag-input')
+    await user.type(tagInput, 'react{Enter}')
+    await user.type(tagInput, 'frontend{Enter}')
+
+    expect(screen.getByTestId('wizard-tag-count')).toHaveTextContent('2 tags')
+  })
+
+  // --- Cover image tests ---
+
+  it('shows no-images placeholder when no images found', async () => {
+    const user = userEvent.setup()
+    mockScanCourseFolder.mockResolvedValueOnce(makeScannedCourse({ images: [] }))
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-no-images')).toBeInTheDocument()
+    })
+    expect(screen.getByText(/no images found in folder/i)).toBeInTheDocument()
+  })
+
+  it('shows image grid when images are found', async () => {
+    const user = userEvent.setup()
+    const scanned = makeScannedCourse({
+      images: [
+        { filename: 'cover.jpg', path: '/cover.jpg', fileHandle: makeMockFileHandle('cover.jpg') },
+        {
+          filename: 'banner.png',
+          path: '/banner.png',
+          fileHandle: makeMockFileHandle('banner.png'),
+        },
+      ],
+    })
+    mockScanCourseFolder.mockResolvedValueOnce(scanned)
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-image-grid')).toBeInTheDocument()
+    })
+
+    expect(screen.getByTestId('wizard-image-option-cover.jpg')).toBeInTheDocument()
+    expect(screen.getByTestId('wizard-image-option-banner.png')).toBeInTheDocument()
+  })
+
+  it('shows image count in summary when images exist', async () => {
+    const user = userEvent.setup()
+    const scanned = makeScannedCourse({
+      images: [
+        { filename: 'cover.jpg', path: '/cover.jpg', fileHandle: makeMockFileHandle('cover.jpg') },
+      ],
+    })
+    mockScanCourseFolder.mockResolvedValueOnce(scanned)
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-image-count')).toBeInTheDocument()
+    })
+    expect(screen.getByTestId('wizard-image-count')).toHaveTextContent('1 image')
+  })
+
+  it('passes coverImageHandle to persistScannedCourse when image selected', async () => {
+    const user = userEvent.setup()
+    const coverHandle = makeMockFileHandle('cover.jpg')
+    const scanned = makeScannedCourse({
+      images: [{ filename: 'cover.jpg', path: '/cover.jpg', fileHandle: coverHandle }],
+    })
+    mockScanCourseFolder.mockResolvedValueOnce(scanned)
+    mockPersistScannedCourse.mockResolvedValueOnce({
+      ...scanned,
+      importedAt: '2026-03-25T10:00:00.000Z',
+      category: '',
+      tags: [],
+      status: 'active',
+      videoCount: 2,
+      pdfCount: 1,
+    })
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-image-grid')).toBeInTheDocument()
+    })
+
+    // The first image is auto-selected, so just import directly
+    await user.click(screen.getByTestId('wizard-import-btn'))
+
+    await waitFor(() => {
+      expect(mockPersistScannedCourse).toHaveBeenCalledWith(scanned, {
+        coverImageHandle: coverHandle,
+      })
+    })
+  })
+
+  it('shows cover selected info in summary when image chosen', async () => {
+    const user = userEvent.setup()
+    const scanned = makeScannedCourse({
+      images: [
+        { filename: 'cover.jpg', path: '/cover.jpg', fileHandle: makeMockFileHandle('cover.jpg') },
+      ],
+    })
+    mockScanCourseFolder.mockResolvedValueOnce(scanned)
+
+    render(<ImportWizardDialog open={true} onOpenChange={vi.fn()} />)
+    await user.click(screen.getByTestId('wizard-select-folder-btn'))
+
+    // Auto-selects first image
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-cover-selected')).toBeInTheDocument()
+    })
+    expect(screen.getByTestId('wizard-cover-selected')).toHaveTextContent('Cover: cover.jpg')
   })
 })
