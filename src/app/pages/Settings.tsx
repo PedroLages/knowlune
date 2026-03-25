@@ -15,6 +15,7 @@ import {
   FileSpreadsheet,
   FileText,
   Award,
+  Eye,
   Type,
   Users,
   RotateCcw,
@@ -51,6 +52,8 @@ import { exportAllAsJson, exportAllAsCsv, exportNotesAsMarkdown } from '@/lib/ex
 import { importFullData } from '@/lib/importService'
 import { downloadJson, downloadZip } from '@/lib/fileDownload'
 import { exportAchievementsAsBadges } from '@/lib/openBadges'
+import { Switch } from '@/app/components/ui/switch'
+import { useProgressiveDisclosure } from '@/app/hooks/useProgressiveDisclosure'
 import { ReminderSettings } from '@/app/components/figma/ReminderSettings'
 import { CourseReminderSettings } from '@/app/components/figma/CourseReminderSettings'
 import { AIConfigurationSettings } from '@/app/components/figma/AIConfigurationSettings'
@@ -170,6 +173,7 @@ function AgeRangeSection({
 
 export default function Settings() {
   const { theme, setTheme } = useTheme()
+  const { showAll, toggleShowAll } = useProgressiveDisclosure()
   const [settings, setSettings] = useState(getSettings())
   const [saved, setSaved] = useState(false)
   const [uploadError, setUploadError] = useState<string>('')
@@ -671,6 +675,36 @@ export default function Settings() {
           </CardContent>
         </Card>
 
+        {/* Navigation */}
+        <Card>
+          <CardHeader>
+            <h2 className="text-base leading-none">Navigation</h2>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-brand-soft p-2 mt-0.5">
+                  <Eye className="size-4 text-brand" aria-hidden="true" />
+                </div>
+                <div>
+                  <Label htmlFor="show-all-nav" className="text-sm font-medium">
+                    Show all menu items
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Bypass progressive disclosure and show every sidebar item
+                  </p>
+                </div>
+              </div>
+              <Switch
+                id="show-all-nav"
+                checked={showAll}
+                onCheckedChange={toggleShowAll}
+                aria-label="Show all menu items"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Font Size */}
         <Card>
           <CardHeader className="border-b border-border/50 bg-surface-sunken/30">
@@ -727,6 +761,7 @@ export default function Settings() {
 
         {/* Engagement Preferences */}
         <EngagementPreferences />
+
 
         {/* Reminders */}
         <ReminderSettings />

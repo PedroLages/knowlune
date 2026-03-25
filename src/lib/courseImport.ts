@@ -1,6 +1,7 @@
 import { db } from '@/db'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { triggerAutoAnalysis } from '@/lib/autoAnalysis'
+import { unlockSidebarItem } from '@/app/hooks/useProgressiveDisclosure'
 import { triggerOllamaTagging } from '@/lib/ollamaTagging'
 import {
   detectAuthorFromFolderName,
@@ -420,6 +421,9 @@ export async function persistScannedCourse(
 
   // Trigger Ollama auto-tagging (fire-and-forget, independent of cloud AI)
   triggerOllamaTagging(course, videos, pdfs)
+
+  // Unlock sidebar items via progressive disclosure
+  unlockSidebarItem('course-imported')
 
   return course
 }
