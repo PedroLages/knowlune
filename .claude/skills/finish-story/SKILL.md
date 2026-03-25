@@ -206,45 +206,51 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
 
    Print the PR URL.
 
-13. **Check PR merge status**: Ask the developer via AskUserQuestion:
+13. **Merge PR to main**: Ask the developer via AskUserQuestion:
 
    ```
    What would you like to do next?
 
    Options:
-   1. "PR merged — cleanup worktree" (only if worktree used)
-      Description: "Clean up the worktree and switch to main (automatic cleanup)"
+   1. "Merge to main" (Recommended)
+      Description: "Merge the PR now and switch to main — prevents stale PR conflicts"
    2. "Keep working — make additional changes"
-      Description: "Keep worktree active for additional commits, re-run /finish-story after merge"
-   3. "Done — I'll cleanup manually later"
-      Description: "Exit without cleanup (use worktree-cleanup {story-key} later)"
+      Description: "Keep branch active for additional commits, re-run /finish-story later"
+   3. "Skip merge — I'll merge manually later"
+      Description: "Exit without merging (risk: unmerged PRs cause conflicts for subsequent stories)"
    ```
 
-13a. **If "Keep working" or "Done"**:
+13a. **If "Merge to main"** (recommended):
+
+   Merge the PR, then clean up:
+   ```bash
+   gh pr merge {PR_NUMBER} --merge
+   ```
+
+   If merge fails (e.g., branch protection rules), inform the user and fall back to manual merge.
+
+   After successful merge:
+   - Detect if running in a worktree: Check if `$(git rev-parse --show-toplevel)` contains `-worktrees/`.
+   - **If in worktree**: Run `worktree-cleanup "${STORY_KEY}"`, switch to main workspace, checkout main, pull.
+     **See:** [docs/worktree-cleanup.md](docs/worktree-cleanup.md) for complete worktree cleanup logic.
+   - **If NOT in worktree**: `git checkout main && git pull`.
+   - Continue to step 14.
+
+13b. **If "Keep working" or "Skip merge"**:
 
    - Inform the user:
      ```
-     👍 Keeping worktree active.
+     👍 Keeping branch active.
 
      You can:
      • Make additional changes and commit them
-     • Run /finish-story again after PR is merged
-     • Or manually cleanup: worktree-cleanup {story-key-lower}
+     • Run /finish-story again to merge later
+     • Or merge manually: gh pr merge {PR_NUMBER} --merge
 
      [If in worktree, show:]
      Worktree location: {worktree-path}
      ```
-   - **STOP here**. Exit workflow. User will re-run `/finish-story` after merge.
-
-13b. **If "PR merged"** (cleanup if in worktree):
-
-   **See:** [docs/worktree-cleanup.md](docs/worktree-cleanup.md) for complete worktree cleanup logic.
-
-   **Summary:**
-   - Detect if running in a worktree: Check if `$(git rev-parse --show-toplevel)` contains `-worktrees/`.
-   - **If in worktree**: Run `worktree-cleanup "${STORY_KEY}"`, switch to main workspace, checkout main, pull.
-   - **If NOT in worktree**: Just switch to main and pull.
-   - Continue to step 14.
+   - **STOP here**. Exit workflow. User will re-run `/finish-story` later.
 
 14. **Lessons learned** (optional): Ask the developer via AskUserQuestion with these options:
 
@@ -317,7 +323,7 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
    [If epic IS complete — output ALL 5 steps exactly as written, do not abbreviate or omit any:]
    ### Epic Complete!
 
-   All stories in Epic ## are done. Once the PR is merged, recommended next steps:
+   All stories in Epic ## are done. Recommended next steps:
    1. `/sprint-status` — Verify all stories are done, surface risks
    2. `/testarch-trace` — Requirements-to-tests traceability
    3. `/testarch-nfr` — Non-functional requirements validation
@@ -353,11 +359,11 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
 - **Step 4a/4b fail** (inline review): Story stays `reviewed: in-progress` with `review_gates_passed` tracking progress. Re-run resumes.
 - **Step 10 fail** (push): Check `git remote -v`, fix remote config, re-run.
 - **Step 12 fail** (PR): Check `gh auth status`, authenticate if needed, re-run.
-- **Step 13 (PR not merged yet)**: Re-run `/finish-story` after merge. Worktree stays active.
-- **Step 13b fail** (worktree cleanup): Manual cleanup: `git worktree remove {path} && git branch -D {branch}`.
+- **Step 13 (merge fails)**: Check branch protection rules or merge conflicts. Try `gh pr merge {number} --merge` manually.
+- **Step 13a fail** (worktree cleanup): Manual cleanup: `git worktree remove {path} && git branch -D {branch}`.
 
 ## Common Mistakes
 
 - **Running without implementation**: `/finish-story` is for completed stories. Implement first.
 - **Ignoring Blockers**: Fix all blockers before re-running. They will not go away.
-- **Auto-merging**: This creates a PR for human review. Do NOT auto-merge.
+- **Skipping merge**: Unmerged PRs accumulate conflicts (sprint-status.yaml, schema.ts, shared files). Always merge promptly — "Merge to main" is the recommended default.
