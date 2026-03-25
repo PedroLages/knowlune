@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Crown, Check, CheckCircle, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
@@ -6,6 +6,7 @@ import { Button } from '@/app/components/ui/button'
 import { Progress } from '@/app/components/ui/progress'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { startCheckout, pollEntitlement, getCachedEntitlement } from '@/lib/checkout'
+import { toast } from 'sonner'
 import { toastSuccess, toastError } from '@/lib/toastHelpers'
 import type { CachedEntitlement } from '@/data/types'
 
@@ -27,6 +28,7 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
   const [state, setState] = useState<CardState>('loading')
   const [entitlement, setEntitlement] = useState<CachedEntitlement | null>(null)
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false)
+  const checkoutInProgress = useRef(false)
 
   // Load cached entitlement on mount
   useEffect(() => {
@@ -57,7 +59,7 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
     if (!checkoutStatus || !user) return
 
     if (checkoutStatus === 'cancel') {
-      toastError.saveFailed('Upgrade not completed')
+      toast.error('Upgrade not completed')
       return
     }
 
@@ -65,8 +67,10 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
       setState('activating')
 
       let cancelled = false
+      const abortController = new AbortController()
+      let timerId: ReturnType<typeof setTimeout> | undefined
       async function activate() {
-        const result = await pollEntitlement()
+        const result = await pollEntitlement(30_000, 2_000, abortController.signal)
         if (cancelled) return
 
         if (result) {
@@ -74,7 +78,7 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
           setState('activated')
           toastSuccess.saved('Premium subscription activated!')
           // Transition to premium view after brief celebration
-          setTimeout(() => {
+          timerId = setTimeout(() => {
             if (!cancelled) setState('premium')
           }, 3000)
         } else {
@@ -89,22 +93,32 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
       activate()
       return () => {
         cancelled = true
+        abortController.abort()
+        clearTimeout(timerId)
       }
     }
   }, [checkoutStatus, user])
 
   const handleUpgrade = useCallback(async () => {
-    setIsCheckoutLoading(true)
-    const result = await startCheckout()
+    if (checkoutInProgress.current) return
+    checkoutInProgress.current = true
+    try {
+      setIsCheckoutLoading(true)
+      const result = await startCheckout()
 
-    if ('error' in result) {
-      toastError.saveFailed(result.error)
-      setIsCheckoutLoading(false)
-      return
+      if ('error' in result) {
+        toastError.saveFailed(result.error)
+        setIsCheckoutLoading(false)
+        return
+      }
+
+      // Redirect to Stripe Checkout
+      window.location.href = result.url
+      // Fallback: reset loading if redirect doesn't happen (popup blocker, etc.)
+      setTimeout(() => setIsCheckoutLoading(false), 5000)
+    } finally {
+      checkoutInProgress.current = false
     }
-
-    // Redirect to Stripe Checkout
-    window.location.href = result.url
   }, [])
 
   if (!user) return null
@@ -186,7 +200,7 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
             <ul className="space-y-2" role="list">
               {PREMIUM_FEATURES.map(feature => (
                 <li key={feature} className="flex items-center gap-2.5 text-sm">
-                  <Check className="size-4 text-success flex-shrink-0" />
+                  <Check className="size-4 text-success shrink-0" />
                   <span>{feature}</span>
                 </li>
               ))}
@@ -210,13 +224,13 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
         {state === 'premium' && entitlement && (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <Badge className="bg-brand text-brand-foreground border-transparent">Premium</Badge>
+              <Badge className="bg-gold-muted text-gold border-transparent">Premium</Badge>
               <span className="text-sm text-muted-foreground">Monthly</span>
             </div>
 
             <div className="space-y-1.5">
               <div className="flex items-center gap-2 text-sm">
-                <CheckCircle className="size-4 text-success flex-shrink-0" />
+                <CheckCircle className="size-4 text-success shrink-0" />
                 <span className="font-medium">Active</span>
               </div>
 
