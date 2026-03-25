@@ -133,7 +133,7 @@ function ScoreImprovementPanel({ data }: { data: ImprovementData }) {
     >
       {data.isNewBest && (
         <div className="flex items-center gap-1.5 mb-3 justify-center">
-          <Trophy className="h-4 w-4 text-success" aria-hidden="true" />
+          <Trophy className="size-4 text-success" aria-hidden="true" />
           <span className="text-success font-semibold">New personal best!</span>
         </div>
       )}

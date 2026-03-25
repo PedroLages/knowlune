@@ -22,7 +22,7 @@ export function SwissStatsCard({
   return (
     <div className="border border-neutral-200 bg-white p-5 transition-colors hover:border-neutral-900 relative">
       {/* Icon - top right */}
-      <Icon className="absolute top-5 right-5 w-5 h-5 text-black" strokeWidth={1.5} />
+      <Icon className="absolute top-5 right-5 size-5 text-black" strokeWidth={1.5} />
 
       {/* Label */}
       <p className="text-xs font-medium uppercase tracking-[0.1em] text-neutral-400 mb-2">

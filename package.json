@@ -58,6 +58,7 @@
     "@fontsource/dm-serif-display": "^5.2.8",
     "@mlc-ai/web-llm": "^0.2.81",
     "@number-flow/react": "^0.6.0",
+    "@supabase/supabase-js": "^2.100.0",
     "@tiptap/extension-bubble-menu": "^3.20.0",
     "@tiptap/extension-character-count": "^3.20.0",
     "@tiptap/extension-code-block-lowlight": "^3.20.0",

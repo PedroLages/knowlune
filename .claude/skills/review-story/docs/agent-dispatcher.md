@@ -107,18 +107,19 @@ Task({
 **Test coverage review:**
 `${BASE_PATH}/docs/reviews/code/code-review-testing-{YYYY-MM-DD}-{story-id}.md`
 
-## Finding Deduplication
+## Finding Deduplication with Consensus Scoring
 
-**If code-review and code-review-testing flag the same file:line:**
+**If 2+ agents flag the same file:line:**
 - Keep the finding with the higher confidence score
-- Prefix deduplicated findings with their source agent (e.g., "[code-review]" or "[code-review-testing]")
-- Include both agent names in the consolidated report's "Source" field
+- **Boost severity by one level** (Nit→Medium, Medium→High, High→Blocker) — independent agents converging on the same location is stronger signal than a single detection
+- Tag as `[Consensus: N agents]` in the consolidated report
+- Prefix with source agents (e.g., "[code-review + code-review-testing]")
 
 **Example:**
 ```
 Finding: Hardcoded color in StatsCard.tsx:42
 Source: code-review (confidence: 95), code-review-testing (confidence: 78)
-Severity: HIGH
+Original Severity: HIGH → Boosted to: BLOCKER [Consensus: 2 agents]
 Keeping: code-review finding (higher confidence)
 ```
 

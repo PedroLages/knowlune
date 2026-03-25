@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { db } from '@/db'
 import type { Quiz as QuizType, QuizProgress, TimerAccommodation } from '@/types/quiz'
 import { QuizProgressSchema, TimerAccommodationEnum } from '@/types/quiz'
+import { getQuizPreferences } from '@/lib/quizPreferences'
 import {
   useQuizStore,
   selectCurrentQuiz,
@@ -62,16 +63,20 @@ function loadSavedProgress(quizId: string): QuizProgress | null {
   }
 }
 
-/** Load persisted timer accommodation preference, validated via Zod */
+/** Load persisted timer accommodation preference, validated via Zod.
+ *  Falls back to global quiz preference, then 'standard' on error. */
 export function loadSavedAccommodation(lessonId: string): TimerAccommodation {
   try {
     const raw = localStorage.getItem(`quiz-accommodation-${lessonId}`)
-    if (!raw) return 'standard'
+    if (!raw) {
+      // No per-lesson preference saved — use global quiz preference as default
+      return getQuizPreferences().timerAccommodation
+    }
     const result = TimerAccommodationEnum.safeParse(raw)
-    return result.success ? result.data : 'standard'
+    return result.success ? result.data : getQuizPreferences().timerAccommodation
   } catch (e) {
     console.warn('[Quiz] Failed to load accommodation:', e)
-    return 'standard'
+    return getQuizPreferences().timerAccommodation
   }
 }
 
@@ -101,6 +106,8 @@ export function Quiz() {
   const [accommodation, setAccommodation] = useState<TimerAccommodation>(() =>
     loadSavedAccommodation(lessonId)
   )
+  // Freeze feedback preference at mount — prevents mid-quiz UX surprise if settings change in another tab
+  const [showImmediateFeedback] = useState(() => getQuizPreferences().showImmediateFeedback)
 
   // Store selectors — drives the active quiz view after startQuiz()
   const currentQuiz = useQuizStore(selectCurrentQuiz)
@@ -119,10 +126,9 @@ export function Quiz() {
   const [showSubmitDialog, setShowSubmitDialog] = useState(false)
   const nextBtnRef = useRef<HTMLButtonElement>(null)
   const rafRef = useRef<number>(0)
-  const questionTextRef = useRef<HTMLDivElement>(null)
-  // Tracks whether the last keydown was an Arrow key — suppresses auto-advance
-  // on Arrow navigation so focus stays in the radio group (AC #3 trade-off fix)
-  const isArrowNavRef = useRef(false)
+  // Ref for programmatic focus when question changes — tabIndex={-1} makes it
+  // focusable via .focus() but NOT reachable via Tab (WCAG 2.4.3 Focus Order)
+  const questionContainerRef = useRef<HTMLDivElement>(null)
 
   // Fetch quiz from Dexie on mount
   useEffect(() => {
@@ -318,17 +324,6 @@ export function Quiz() {
     handleTimerWarning
   )
 
-  // Move programmatic focus to question text container on question change.
-  // tabIndex={-1} makes it focusable via .focus() without entering Tab order.
-  // Keyed on currentQuestionIndex so screen readers re-announce on navigation.
-  useEffect(() => {
-    if (currentProgress?.currentQuestionIndex == null) return
-    // Reset arrow-nav flag when question changes (prevents isArrowNavRef sticking
-    // true if user Arrow-navigated and then moved to next question without selecting)
-    isArrowNavRef.current = false
-    questionTextRef.current?.focus()
-  }, [currentProgress?.currentQuestionIndex])
-
   // Safety net: sync progress to per-quiz localStorage on tab close/crash.
   // The subscribe listener in useQuizStore fires synchronously on every state change,
   // so the per-quiz key is always up-to-date. This beforeunload handler provides
@@ -363,6 +358,14 @@ export function Quiz() {
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [isQuizActive])
+
+  // Programmatic focus on question change (AC #2)
+  // Moves focus to the question container when the current question index changes.
+  // The container uses tabIndex={-1} so it is reachable via .focus() but not Tab.
+  useEffect(() => {
+    if (!isQuizActive) return
+    questionContainerRef.current?.focus()
+  }, [isQuizActive, currentProgress?.currentQuestionIndex])
 
   // ---------------------------------------------------------------------------
   // Loading state
@@ -436,72 +439,75 @@ export function Quiz() {
 
     const unansweredCount = countUnanswered(currentQuiz.questions, currentProgress.answers)
 
+    const totalQuestions = currentProgress.questionOrder.length || currentQuiz.questions.length
+
     return (
-      <div className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm">
-        <QuizHeader
-          quiz={currentQuiz}
-          progress={currentProgress}
-          timeRemaining={timerInitialSecondsRef.current > 0 ? timerRemaining : null}
-          totalTimeSeconds={totalTimeSeconds > 0 ? totalTimeSeconds : null}
-        />
-        <TimerWarnings
-          warningLevel={warningState?.level ?? null}
-          remainingSeconds={warningState?.remaining ?? 0}
-        />
-        {currentQuestion && currentQuestionId ? (
-          <>
-            {/* tabIndex={-1}: programmatically focusable so screen readers announce
-                the question text on navigation, but NOT reachable via Tab (AC #2) */}
-            <div
-              ref={questionTextRef}
-              tabIndex={-1}
-              className="outline-none"
-              data-testid="question-focus-target"
-              onKeyDown={e => {
-                // Track Arrow key presses so onChange can skip auto-advance.
-                // ArrowDown/Up are used for radio group navigation — auto-advancing
-                // to the Next button mid-navigation is disruptive (AC #3).
-                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-                  isArrowNavRef.current = true
-                }
-              }}
-            >
-              <QuestionDisplay
-                question={currentQuestion}
-                value={currentAnswer}
-                onChange={answer => {
-                  submitAnswer(currentQuestionId, answer)
-                  // Auto-focus Next/Submit button for single-answer types (MC, TF, FIB)
-                  // Skip for multiple-select — user needs to toggle multiple checkboxes
-                  // Skip for Arrow key navigation — user is browsing options, not confirming
-                  if (currentQuestion.type !== 'multiple-select' && !isArrowNavRef.current) {
-                    cancelAnimationFrame(rafRef.current)
-                    rafRef.current = requestAnimationFrame(() => nextBtnRef.current?.focus())
-                  }
-                  isArrowNavRef.current = false
-                }}
-                mode="active"
-              />
-            </div>
-            <QuestionHint hint={currentQuestion.hint} />
-            {!isUnanswered(currentAnswer) && (
-              <AnswerFeedback question={currentQuestion} userAnswer={currentAnswer} />
-            )}
-          </>
-        ) : (
-          <div className="mt-6 rounded-xl border border-border p-6 text-center text-muted-foreground text-sm">
-            No question found at index {currentProgress.currentQuestionIndex}
-          </div>
-        )}
-
-        {currentQuestionId && (
-          <MarkForReview
-            questionId={currentQuestionId}
-            isMarked={currentProgress.markedForReview.includes(currentQuestionId)}
-            onToggle={() => toggleReviewMark(currentQuestionId)}
+      <div
+        className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm"
+        data-testid="quiz-active-container"
+      >
+        <section aria-label="Quiz header">
+          <QuizHeader
+            quiz={currentQuiz}
+            progress={currentProgress}
+            timeRemaining={timerInitialSecondsRef.current > 0 ? timerRemaining : null}
+            totalTimeSeconds={totalTimeSeconds > 0 ? totalTimeSeconds : null}
           />
-        )}
+          <TimerWarnings
+            warningLevel={warningState?.level ?? null}
+            remainingSeconds={warningState?.remaining ?? 0}
+          />
+        </section>
+        <section aria-label="Question area">
+          {/* sr-only h2 establishes the heading for this section (h1 is quiz title in QuizHeader) */}
+          <h2 className="sr-only">
+            Question {currentProgress.currentQuestionIndex + 1} of {totalQuestions}
+          </h2>
+          {currentQuestion && currentQuestionId ? (
+            <>
+              {/* tabIndex={-1}: programmatically focusable on question change, not in tab order */}
+              <div
+                ref={questionContainerRef}
+                tabIndex={-1}
+                className="outline-none"
+                data-testid="question-container"
+              >
+                <QuestionDisplay
+                  question={currentQuestion}
+                  value={currentAnswer}
+                  onChange={answer => {
+                    submitAnswer(currentQuestionId, answer)
+                    // Auto-focus Next/Submit button for single-answer types (MC, TF, FIB)
+                    // Skip for multiple-select — user needs to toggle multiple checkboxes
+                    if (currentQuestion.type !== 'multiple-select') {
+                      cancelAnimationFrame(rafRef.current)
+                      rafRef.current = requestAnimationFrame(() => nextBtnRef.current?.focus())
+                    }
+                  }}
+                  mode="active"
+                />
+              </div>
+              <QuestionHint hint={currentQuestion.hint} />
+              {showImmediateFeedback && !isUnanswered(currentAnswer) && (
+                <AnswerFeedback question={currentQuestion} userAnswer={currentAnswer} />
+              )}
+            </>
+          ) : (
+            <div className="mt-6 rounded-xl border border-border p-6 text-center text-muted-foreground text-sm">
+              No question found at index {currentProgress.currentQuestionIndex}
+            </div>
+          )}
 
+          {currentQuestionId && (
+            <MarkForReview
+              questionId={currentQuestionId}
+              isMarked={currentProgress.markedForReview.includes(currentQuestionId)}
+              onToggle={() => toggleReviewMark(currentQuestionId)}
+            />
+          )}
+        </section>
+
+        {/* QuizNavigation renders <nav aria-label="Quiz navigation"> internally */}
         <QuizNavigation
           ref={nextBtnRef}
           quiz={currentQuiz}
@@ -514,14 +520,7 @@ export function Quiz() {
         />
 
         {/* Confirmation dialog for unanswered questions */}
-        <AlertDialog
-          open={showSubmitDialog}
-          onOpenChange={open => {
-            setShowSubmitDialog(open)
-            // Return focus to the Submit button when dialog closes (AC #6: focus returns to trigger)
-            if (!open) requestAnimationFrame(() => nextBtnRef.current?.focus())
-          }}
-        >
+        <AlertDialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Submit quiz?</AlertDialogTitle>

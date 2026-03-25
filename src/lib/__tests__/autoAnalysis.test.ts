@@ -31,6 +31,10 @@ vi.mock('@/stores/useCourseImportStore', () => {
 vi.mock('@/db', () => ({
   db: {
     importedCourses: {
+      get: vi.fn(async (id: string) => ({
+        id,
+        tags: ['existing-tag'],
+      })),
       update: vi.fn(async () => 1),
     },
   },
@@ -380,6 +384,8 @@ describe('autoAnalysis.ts', () => {
 
       const courseNoTags = { ...mockCourse, tags: [] }
 
+      // Mock get to return course with empty tags (matching courseNoTags)
+      ;(db.importedCourses.get as Mock).mockResolvedValue({ id: courseNoTags.id, tags: [] })
       ;(global.fetch as Mock).mockResolvedValue(mockProxyResponse(responseText))
 
       triggerAutoAnalysis(courseNoTags)

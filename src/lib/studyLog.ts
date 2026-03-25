@@ -6,7 +6,13 @@ export { toLocalDateString }
 const STORAGE_KEY = 'study-log'
 
 export interface StudyAction {
-  type: 'lesson_complete' | 'video_progress' | 'note_saved' | 'course_started' | 'pdf_progress'
+  type:
+    | 'lesson_complete'
+    | 'video_progress'
+    | 'note_saved'
+    | 'course_started'
+    | 'pdf_progress'
+    | 'quiz_complete'
   courseId: string
   lessonId?: string
   timestamp: string
@@ -207,7 +213,7 @@ function calculateStreakFromDate(
 function studyDaysFromLog(log: StudyAction[]): string[] {
   const days = new Set<string>()
   for (const a of log) {
-    if (a.type === 'lesson_complete') {
+    if (a.type === 'lesson_complete' || a.type === 'quiz_complete') {
       days.add(toLocalDateString(new Date(a.timestamp)))
     }
   }
@@ -311,7 +317,7 @@ function activityFromLog(
   // O(n): build count map in single pass
   const countMap = new Map<string, number>()
   for (const a of log) {
-    if (a.type === 'lesson_complete') {
+    if (a.type === 'lesson_complete' || a.type === 'quiz_complete') {
       const d = toLocalDateString(new Date(a.timestamp))
       countMap.set(d, (countMap.get(d) ?? 0) + 1)
     }
