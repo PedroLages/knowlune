@@ -11,7 +11,7 @@ import { createGroq } from '@ai-sdk/groq'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 
 /** Provider IDs matching the frontend AIProviderId type */
-export type ProviderId = 'openai' | 'anthropic' | 'groq' | 'glm' | 'gemini'
+export type ProviderId = 'openai' | 'anthropic' | 'groq' | 'glm' | 'gemini' | 'ollama'
 
 /** Default models per provider */
 const DEFAULT_MODELS: Record<string, string> = {
@@ -19,6 +19,7 @@ const DEFAULT_MODELS: Record<string, string> = {
   openai: 'gpt-4-turbo',
   groq: 'llama-3.3-70b-versatile',
   gemini: 'gemini-2.0-flash',
+  ollama: 'llama3.2',
 }
 
 /**
@@ -43,7 +44,27 @@ export function getProviderModel(providerId: string, apiKey: string, model?: str
     case 'gemini':
       return createGoogleGenerativeAI({ apiKey })(model || DEFAULT_MODELS.gemini)
 
+    case 'ollama':
+      // Ollama exposes an OpenAI-compatible API at /v1/
+      // Use createOpenAI with custom baseURL — no custom client needed
+      // apiKey is 'ollama' (Ollama ignores auth but SDK requires a value)
+      throw new Error('Ollama uses dedicated proxy route, not the generic provider handler')
+
     default:
       throw new Error(`Unsupported provider: ${providerId}`)
   }
+}
+
+/**
+ * Create an OpenAI-compatible model pointed at an Ollama server
+ *
+ * @param ollamaServerUrl - Ollama server URL (e.g., http://192.168.1.100:11434)
+ * @param model - Model name (e.g., llama3.2, qwen3:8b)
+ * @returns AI SDK LanguageModel ready for generateText/streamText
+ */
+export function getOllamaProviderModel(ollamaServerUrl: string, model?: string) {
+  return createOpenAI({
+    baseURL: `${ollamaServerUrl.replace(/\/+$/, '')}/v1`,
+    apiKey: 'ollama', // Ollama ignores this but SDK requires it
+  })(model || DEFAULT_MODELS.ollama)
 }

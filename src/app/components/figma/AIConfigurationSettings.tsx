@@ -2,16 +2,18 @@
  * AI Configuration Settings Component
  *
  * Provides secure AI provider configuration with:
- * - Provider selection (OpenAI, Anthropic)
- * - Encrypted API key storage
+ * - Provider selection (OpenAI, Anthropic, Ollama, etc.)
+ * - Encrypted API key storage (or URL-based config for Ollama)
  * - Connection testing and status feedback
  * - Per-feature consent toggles for data transmission control
+ * - Ollama-specific settings: server URL, direct connection toggle
  * - Cross-tab synchronization
  *
  * Follows ReminderSettings.tsx pattern for state management and accessibility.
  */
 
 import { useState, useEffect, useRef } from 'react'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import {
   Select,
@@ -24,13 +26,24 @@ import { Input } from '@/app/components/ui/input'
 import { Label } from '@/app/components/ui/label'
 import { Switch } from '@/app/components/ui/switch'
 import { Button } from '@/app/components/ui/button'
-import { CheckCircle2, AlertTriangle, Settings } from 'lucide-react'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/app/components/ui/collapsible'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/app/components/ui/tooltip'
+import { CheckCircle2, AlertTriangle, Settings, ChevronDown, Info, Server } from 'lucide-react'
 import {
   getAIConfiguration,
   saveAIConfiguration,
   testAIConnection,
   AI_PROVIDERS,
-  type AIConfigurationSettings,
+  type AIConfigurationSettings as AIConfigSettings,
   type AIProviderId,
   type ConsentSettings,
 } from '@/lib/aiConfiguration'
@@ -46,24 +59,35 @@ const FEATURE_LABELS: Record<keyof ConsentSettings, string> = {
 }
 
 export function AIConfigurationSettings() {
-  const [settings, setSettings] = useState<AIConfigurationSettings>(getAIConfiguration)
+  const [settings, setSettings] = useState<AIConfigSettings>(getAIConfiguration)
   const [apiKey, setApiKey] = useState('')
+  const [ollamaUrl, setOllamaUrl] = useState(
+    () => getAIConfiguration().ollamaSettings?.serverUrl || ''
+  )
   const [isValidating, setIsValidating] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
   const successTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
+
+  const isOllama = settings.provider === 'ollama'
 
   // Cross-tab synchronization
   useEffect(() => {
     function handleStorageUpdate(e: StorageEvent) {
       // Only respond to ai-configuration changes from other tabs
       if (e.key === 'ai-configuration') {
-        setSettings(getAIConfiguration())
+        const updated = getAIConfiguration()
+        setSettings(updated)
+        if (updated.provider === 'ollama') {
+          setOllamaUrl(updated.ollamaSettings?.serverUrl || '')
+        }
       }
     }
 
     function handleCustomUpdate() {
       // Same-tab updates (storage event doesn't fire in same tab)
-      setSettings(getAIConfiguration())
+      const updated = getAIConfiguration()
+      setSettings(updated)
     }
 
     window.addEventListener('storage', handleStorageUpdate)
@@ -85,12 +109,84 @@ export function AIConfigurationSettings() {
   async function handleProviderChange(provider: AIProviderId) {
     await saveAIConfiguration({ provider })
     setSettings(getAIConfiguration())
+    // Load Ollama URL if switching to Ollama
+    if (provider === 'ollama') {
+      setOllamaUrl(getAIConfiguration().ollamaSettings?.serverUrl || '')
+    }
   }
 
   /**
-   * Validates API key and tests connection
+   * Validates and saves Ollama server URL
+   */
+  async function handleOllamaSave() {
+    if (!ollamaUrl.trim()) {
+      setSettings({
+        ...settings,
+        connectionStatus: 'error',
+        errorMessage: 'Server URL is required',
+      })
+      return
+    }
+
+    // Validate URL format
+    const provider = AI_PROVIDERS.ollama
+    if (!provider.validateApiKey(ollamaUrl)) {
+      setSettings({
+        ...settings,
+        connectionStatus: 'error',
+        errorMessage: 'Invalid URL format. Use http://hostname:port (e.g., http://192.168.1.100:11434)',
+      })
+      return
+    }
+
+    setIsValidating(true)
+
+    try {
+      const isConnected = await testAIConnection('ollama', ollamaUrl)
+
+      if (isConnected) {
+        await saveAIConfiguration({
+          connectionStatus: 'connected',
+          ollamaSettings: {
+            serverUrl: ollamaUrl,
+            directConnection: settings.ollamaSettings?.directConnection ?? false,
+          },
+        })
+        setShowSuccess(true)
+        if (successTimeoutRef.current) {
+          clearTimeout(successTimeoutRef.current)
+        }
+        successTimeoutRef.current = setTimeout(() => setShowSuccess(false), 3000)
+      } else {
+        setSettings({
+          ...settings,
+          connectionStatus: 'error',
+          errorMessage: 'Connection test failed. Is Ollama running at this URL?',
+        })
+      }
+
+      setSettings(getAIConfiguration())
+    } catch (error) {
+      // silent-catch-ok — error state rendered inline via connectionStatus
+      setSettings({
+        ...settings,
+        connectionStatus: 'error',
+        errorMessage: error instanceof Error ? error.message : 'Connection test failed',
+      })
+    } finally {
+      setIsValidating(false)
+    }
+  }
+
+  /**
+   * Validates API key and tests connection (for non-Ollama providers)
    */
   async function handleSave() {
+    if (isOllama) {
+      await handleOllamaSave()
+      return
+    }
+
     if (!apiKey.trim()) {
       // Transient error - do NOT persist to localStorage
       setSettings({
@@ -139,6 +235,7 @@ export function AIConfigurationSettings() {
 
       setSettings(getAIConfiguration())
     } catch (error) {
+      // silent-catch-ok — error state rendered inline via connectionStatus
       // Transient error - do NOT persist to localStorage
       setSettings({
         ...settings,
@@ -149,6 +246,19 @@ export function AIConfigurationSettings() {
     } finally {
       setIsValidating(false)
     }
+  }
+
+  /**
+   * Toggles Ollama direct connection mode
+   */
+  async function handleDirectConnectionToggle(enabled: boolean) {
+    await saveAIConfiguration({
+      ollamaSettings: {
+        serverUrl: ollamaUrl || settings.ollamaSettings?.serverUrl || '',
+        directConnection: enabled,
+      },
+    })
+    setSettings(getAIConfiguration())
   }
 
   /**
@@ -165,6 +275,7 @@ export function AIConfigurationSettings() {
 
   const isConnected = settings.connectionStatus === 'connected'
   const hasError = settings.connectionStatus === 'error'
+  const saveDisabled = isOllama ? isValidating || !ollamaUrl.trim() : isValidating || !apiKey.trim()
 
   return (
     <Card>
@@ -181,9 +292,10 @@ export function AIConfigurationSettings() {
           <Select
             value={settings.provider}
             onValueChange={value =>
-              handleProviderChange(value as AIProviderId).catch(err =>
+              handleProviderChange(value as AIProviderId).catch(err => {
                 console.error('Failed to change AI provider:', err)
-              )
+                toast.error('Failed to change AI provider')
+              })
             }
           >
             <SelectTrigger
@@ -204,21 +316,105 @@ export function AIConfigurationSettings() {
           </Select>
         </div>
 
-        {/* API Key Input */}
-        <div>
-          <Label htmlFor="api-key">API Key</Label>
-          <Input
-            id="api-key"
-            type="password"
-            value={apiKey}
-            onChange={e => setApiKey(e.target.value)}
-            placeholder="Enter your API key"
-            className="mt-1"
-            data-testid="api-key-input"
-            aria-invalid={hasError}
-            aria-describedby={hasError ? 'connection-error' : undefined}
-          />
-        </div>
+        {/* Ollama Server URL Input */}
+        {isOllama ? (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="ollama-url" className="flex items-center gap-2">
+                <Server className="size-4" aria-hidden="true" />
+                Server URL
+              </Label>
+              <Input
+                id="ollama-url"
+                type="url"
+                value={ollamaUrl}
+                onChange={e => setOllamaUrl(e.target.value)}
+                placeholder="http://192.168.1.x:11434"
+                className="mt-1"
+                data-testid="ollama-url-input"
+                aria-invalid={hasError}
+                aria-describedby={hasError ? 'connection-error' : 'ollama-url-hint'}
+              />
+              <p id="ollama-url-hint" className="mt-1 text-xs text-muted-foreground">
+                Enter the URL of your Ollama server. Default port is 11434.
+              </p>
+            </div>
+
+            {/* Advanced: Direct Connection Toggle */}
+            <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+              <CollapsibleTrigger
+                className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors min-h-[44px]"
+                data-testid="ollama-advanced-toggle"
+              >
+                <ChevronDown
+                  className={`size-4 transition-transform ${advancedOpen ? 'rotate-180' : ''}`}
+                  aria-hidden="true"
+                />
+                Advanced Settings
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2 space-y-3 animate-in fade-in-0 slide-in-from-top-1 duration-200">
+                <div className="flex items-center justify-between min-h-[44px]">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="direct-connection" className="cursor-pointer">
+                      Direct Connection
+                    </Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info
+                            className="size-4 text-muted-foreground cursor-help"
+                            aria-label="Direct connection information"
+                          />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <p>
+                            Direct connection sends requests straight from your browser to Ollama.
+                            Requires CORS configured on your Ollama server
+                            (set <code className="text-xs bg-muted px-1 rounded">OLLAMA_ORIGINS=*</code>).
+                            Proxy mode (default) avoids CORS issues.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <Switch
+                    id="direct-connection"
+                    checked={settings.ollamaSettings?.directConnection ?? false}
+                    onCheckedChange={checked =>
+                      handleDirectConnectionToggle(checked).catch(err => {
+                        console.error('Failed to toggle direct connection:', err)
+                        toast.error('Failed to update connection mode')
+                      })
+                    }
+                    data-testid="ollama-direct-connection"
+                    aria-label="Enable direct browser-to-Ollama connection"
+                  />
+                </div>
+                {settings.ollamaSettings?.directConnection && (
+                  <p className="text-xs text-warning" role="alert">
+                    Direct mode active. Ensure your Ollama server has CORS enabled.
+                  </p>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+        ) : (
+          /* API Key Input (non-Ollama providers) */
+          <div>
+            <Label htmlFor="api-key">API Key</Label>
+            <Input
+              id="api-key"
+              type="password"
+              value={apiKey}
+              onChange={e => setApiKey(e.target.value)}
+              placeholder="Enter your API key"
+              className="mt-1"
+              data-testid="api-key-input"
+              aria-invalid={hasError}
+              aria-describedby={hasError ? 'connection-error' : undefined}
+            />
+          </div>
+        )}
 
         {/* Connection Status */}
         <div aria-live="polite" aria-atomic="true">
@@ -228,7 +424,7 @@ export function AIConfigurationSettings() {
               data-testid="connection-status"
             >
               <CheckCircle2 className="size-4" aria-hidden="true" />
-              Connected
+              Connected{isOllama ? ` to ${settings.ollamaSettings?.serverUrl}` : ''}
             </div>
           )}
           {hasError && settings.errorMessage && (
@@ -245,8 +441,13 @@ export function AIConfigurationSettings() {
 
         {/* Save Button */}
         <Button
-          onClick={handleSave}
-          disabled={isValidating || !apiKey.trim()}
+          onClick={() => {
+            handleSave().catch(err => {
+              console.error('Failed to save AI configuration:', err)
+              toast.error('Failed to save configuration')
+            })
+          }}
+          disabled={saveDisabled}
           data-testid="save-ai-config-button"
           className="min-h-[44px] rounded-lg"
         >
@@ -272,9 +473,10 @@ export function AIConfigurationSettings() {
                       id={`consent-${key}`}
                       checked={settings.consentSettings[key]}
                       onCheckedChange={checked =>
-                        updateConsent(key, checked).catch(err =>
+                        updateConsent(key, checked).catch(err => {
                           console.error(`Failed to update consent for ${key}:`, err)
-                        )
+                          toast.error('Failed to update consent setting')
+                        })
                       }
                       data-testid={`consent-${key}`}
                       aria-label={`${label} consent`}
