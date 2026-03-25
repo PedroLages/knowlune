@@ -435,3 +435,15 @@ export interface PathEnrollment {
   status: PathEnrollmentStatus
   completedAt?: string // ISO 8601 (set when all stages done)
 }
+
+export type EntitlementTier = 'free' | 'trial' | 'premium'
+
+export interface CachedEntitlement {
+  userId: string // PK — matches Supabase auth.users.id
+  tier: EntitlementTier
+  stripeCustomerId?: string
+  stripeSubscriptionId?: string
+  planId?: string
+  expiresAt?: string // ISO 8601
+  cachedAt: string // ISO 8601 — for 7-day TTL check
+}
