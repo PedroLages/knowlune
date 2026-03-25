@@ -11,6 +11,7 @@ import {
   Camera,
   Trash2,
   Loader2,
+  Pencil,
 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Card } from '@/app/components/ui/card'
@@ -42,6 +43,7 @@ import { TagBadgeList } from '@/app/components/figma/TagBadgeList'
 import { TagEditor } from '@/app/components/figma/TagEditor'
 import { VideoPlayer } from '@/app/components/figma/VideoPlayer'
 import { ThumbnailPickerDialog } from '@/app/components/figma/ThumbnailPickerDialog'
+import { EditCourseDialog } from '@/app/components/figma/EditCourseDialog'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useCourseCardPreview } from '@/hooks/useCourseCardPreview'
 import { useVideoFromHandle } from '@/hooks/useVideoFromHandle'
@@ -87,6 +89,7 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
 
   const [thumbnailPickerOpen, setThumbnailPickerOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const statusBadgeRef = useRef<HTMLButtonElement>(null)
   const thumbnailUrl = thumbnailUrls[course.id] ?? null
@@ -306,6 +309,17 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
+                    data-testid="edit-course-menu-item"
+                    className="gap-2 min-h-[44px]"
+                    onClick={e => {
+                      e.stopPropagation()
+                      setEditDialogOpen(true)
+                    }}
+                  >
+                    <Pencil className="size-4" aria-hidden="true" />
+                    Edit details
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
                     data-testid="delete-course-menu-item"
                     variant="destructive"
                     className="gap-2 min-h-[44px]"
@@ -475,6 +489,13 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
         courseId={course.id}
         courseName={course.name}
         firstVideo={firstVideo}
+      />
+
+      <EditCourseDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        course={course}
+        allTags={allTags}
       />
 
       <Dialog open={previewOpen} onOpenChange={handleDialogChange}>

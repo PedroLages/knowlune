@@ -12,6 +12,13 @@ function normalizeTags(tags: string[]): string[] {
   return unique
 }
 
+export interface CourseDetailsUpdate {
+  name?: string
+  description?: string
+  category?: string
+  tags?: string[]
+}
+
 interface CourseImportState {
   importedCourses: ImportedCourse[]
   isImporting: boolean
@@ -24,6 +31,7 @@ interface CourseImportState {
   removeImportedCourse: (courseId: string) => Promise<void>
   updateCourseTags: (courseId: string, tags: string[]) => Promise<void>
   updateCourseStatus: (courseId: string, status: LearnerCourseStatus) => Promise<void>
+  updateCourseDetails: (courseId: string, details: CourseDetailsUpdate) => Promise<boolean>
   updateCourseThumbnail: (courseId: string, blob: Blob, source: ThumbnailSource) => Promise<void>
   getAllTags: () => string[]
   loadImportedCourses: () => Promise<void>
@@ -155,6 +163,42 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
         importError: `Failed to update status`,
       }))
       console.error('[Database] Failed to update status:', error)
+    }
+  },
+
+  updateCourseDetails: async (courseId: string, details: CourseDetailsUpdate) => {
+    const { importedCourses } = get()
+    const course = importedCourses.find(c => c.id === courseId)
+    if (!course) return false
+
+    const oldCourse = structuredClone(course)
+    const normalizedTags = details.tags ? normalizeTags(details.tags) : undefined
+    const patch: Partial<ImportedCourse> = {}
+    if (details.name !== undefined) patch.name = details.name.trim()
+    if (details.description !== undefined)
+      patch.description = details.description.trim() || undefined
+    if (details.category !== undefined) patch.category = details.category.trim()
+    if (normalizedTags !== undefined) patch.tags = normalizedTags
+
+    // Optimistic update
+    set(state => ({
+      importedCourses: state.importedCourses.map(c => (c.id === courseId ? { ...c, ...patch } : c)),
+      importError: null,
+    }))
+
+    try {
+      await persistWithRetry(async () => {
+        await db.importedCourses.update(courseId, patch)
+      })
+      return true
+    } catch (error) {
+      // Rollback on failure
+      set(state => ({
+        importedCourses: state.importedCourses.map(c => (c.id === courseId ? oldCourse : c)),
+        importError: `Failed to update course details`,
+      }))
+      console.error('[Database] Failed to update course details:', error)
+      return false
     }
   },
 
