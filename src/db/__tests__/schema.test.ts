@@ -491,9 +491,7 @@ describe('v20 migration edge cases', () => {
    * Helper: create a v19 database with importedCourses data, then trigger v20 upgrade.
    * Returns the upgraded db instance.
    */
-  async function migrateFromV19(
-    courses: Array<Record<string, unknown>> = []
-  ) {
+  async function migrateFromV19(courses: Array<Record<string, unknown>> = []) {
     await Dexie.delete('ElearningDB')
 
     // Create a v19 database with importedCourses

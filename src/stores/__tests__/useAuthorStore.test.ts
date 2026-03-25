@@ -290,6 +290,7 @@ describe('loadAuthors', () => {
       bio: 'A bio',
       photoUrl: '',
       courseIds: [],
+      isPreseeded: false,
       createdAt: now,
       updatedAt: now,
     })
