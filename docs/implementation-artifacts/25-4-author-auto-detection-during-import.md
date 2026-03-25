@@ -1,9 +1,9 @@
 ---
 story_id: E25-S04
 story_name: "Author Auto-Detection During Import"
-status: in-progress
+status: done
 started: 2026-03-23
-completed:
+completed: 2026-03-25
 reviewed: true
 review_started: 2026-03-25
 review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review-skipped, code-review, code-review-testing]
