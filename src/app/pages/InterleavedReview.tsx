@@ -8,6 +8,7 @@ import { isDue } from '@/lib/spacedRepetition'
 import { useCourseStore } from '@/stores/useCourseStore'
 import { InterleavedCard } from '@/app/components/figma/InterleavedCard'
 import { InterleavedSummary } from '@/app/components/figma/InterleavedSummary'
+import { EmptyState as EmptyStateComponent } from '@/app/components/EmptyState'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { Button } from '@/app/components/ui/button'
@@ -271,18 +272,14 @@ export function InterleavedReview() {
       <main data-testid="interleaved-review" className="space-y-6 p-1">
         <PageHeader onBack={() => navigate('/review')} />
         <div className="mx-auto max-w-lg pt-12">
-          <Empty className="border-none">
-            <EmptyMedia variant="icon">
-              <Shuffle className="size-6" />
-            </EmptyMedia>
-            <EmptyHeader>
-              <EmptyTitle>No notes due for review</EmptyTitle>
-              <EmptyDescription>
-                Rate notes after studying to build your review queue, then come back for interleaved
-                practice.
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
+          <EmptyStateComponent
+            data-testid="empty-state-interleaved-review"
+            icon={Shuffle}
+            title="No notes due for review"
+            description="Rate notes after studying to build your review queue, then come back for interleaved practice."
+            actionLabel="Back to Review Queue"
+            onAction={() => navigate('/review')}
+          />
         </div>
       </main>
     )

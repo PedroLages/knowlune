@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import { Link } from 'react-router'
-import { Clock, CheckCircle, PlayCircle, ArrowRight } from 'lucide-react'
-import { Button } from '@/app/components/ui/button'
+import { Clock, CheckCircle, PlayCircle } from 'lucide-react'
+import { EmptyState } from '@/app/components/EmptyState'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/tabs'
 import {
   Select,
@@ -114,19 +113,14 @@ export default function MyClass() {
     return (
       <div>
         <h1 className="text-2xl font-bold mb-6">My Courses</h1>
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <PlayCircle className="size-12 text-muted-foreground mb-4" aria-hidden="true" />
-          <h2 className="text-xl font-semibold mb-2">Ready to start learning?</h2>
-          <p className="text-muted-foreground mb-6 max-w-md">
-            Browse our course catalog to find the perfect course to kickstart your learning journey.
-          </p>
-          <Button variant="brand" asChild>
-            <Link to="/courses">
-              Browse All Courses
-              <ArrowRight className="size-4 ml-2" />
-            </Link>
-          </Button>
-        </div>
+        <EmptyState
+          data-testid="empty-state-my-courses"
+          icon={PlayCircle}
+          title="Ready to start learning?"
+          description="Browse our course catalog to find the perfect course to kickstart your learning journey."
+          actionLabel="Browse All Courses"
+          actionHref="/courses"
+        />
       </div>
     )
   }
@@ -236,19 +230,15 @@ export default function MyClass() {
               )}
 
               {inProgress.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <Clock className="size-12 text-muted-foreground mb-4" aria-hidden="true" />
-                  <h2 className="text-xl font-semibold mb-2">No courses in progress</h2>
-                  <p className="text-muted-foreground mb-6 max-w-md">
-                    Start a new course to begin learning!
-                  </p>
-                  <Button variant="brand" asChild>
-                    <Link to="/courses">
-                      Browse Courses
-                      <ArrowRight className="size-4 ml-2" />
-                    </Link>
-                  </Button>
-                </div>
+                <EmptyState
+                  data-testid="empty-state-no-in-progress"
+                  icon={Clock}
+                  headingLevel={3}
+                  title="No courses in progress"
+                  description="Start a new course to begin learning!"
+                  actionLabel="Browse Courses"
+                  actionHref="/courses"
+                />
               )}
             </TabsContent>
 
