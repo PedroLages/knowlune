@@ -3,7 +3,7 @@ import { Crown, Check, CheckCircle, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
-import { Progress } from '@/app/components/ui/progress'
+// Progress removed — replaced with custom indeterminate gold bar (B-01)
 import { useAuthStore } from '@/stores/useAuthStore'
 import { startCheckout, pollEntitlement, getCachedEntitlement } from '@/lib/checkout'
 import { toast } from 'sonner'
@@ -152,7 +152,7 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
       <CardContent className="p-6" data-testid="subscription-section">
         {/* Loading state */}
         {state === 'loading' && (
-          <div className="space-y-3 animate-pulse">
+          <div className="space-y-3 animate-pulse" role="status" aria-label="Loading subscription status">
             <div className="h-6 w-20 bg-muted rounded-full" />
             <div className="h-4 w-48 bg-muted rounded" />
             <div className="h-10 w-full bg-muted rounded-xl" />
@@ -167,7 +167,9 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
             aria-live="polite"
             aria-label="Activating subscription"
           >
-            <Progress className="h-2 bg-gold-muted" aria-label="Activation progress" />
+            <div className="h-2 w-full rounded-full bg-gold-muted overflow-hidden" aria-label="Activation progress">
+              <div className="h-full w-1/3 rounded-full bg-gold motion-safe:animate-[indeterminate_1.5s_ease-in-out_infinite]" />
+            </div>
             <p className="text-sm text-muted-foreground text-center">
               This usually takes a few seconds...
             </p>
@@ -180,9 +182,10 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
             className="flex flex-col items-center gap-3 py-4 animate-in fade-in slide-in-from-bottom-2 duration-500"
             role="status"
             aria-live="polite"
+            aria-label="Subscription activated"
           >
             <div className="rounded-full bg-success-soft p-3">
-              <CheckCircle className="size-8 text-success" />
+              <CheckCircle className="size-8 text-success" aria-hidden="true" />
             </div>
             <p className="text-lg font-display font-semibold">Welcome to Premium!</p>
             <p className="text-sm text-muted-foreground">All premium features are now unlocked.</p>
@@ -197,10 +200,10 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
               <span className="text-sm text-muted-foreground">Basic features included</span>
             </div>
 
-            <ul className="space-y-2" role="list">
+            <ul className="space-y-2" role="list" id="premium-features-list">
               {PREMIUM_FEATURES.map(feature => (
                 <li key={feature} className="flex items-center gap-2.5 text-sm">
-                  <Check className="size-4 text-success shrink-0" />
+                  <Check className="size-4 text-success shrink-0" aria-hidden="true" />
                   <span>{feature}</span>
                 </li>
               ))}
@@ -208,13 +211,14 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
 
             <Button
               variant="brand"
-              className="w-full min-h-[44px]"
+              className="w-full min-h-[44px] gap-2"
               onClick={handleUpgrade}
               disabled={isCheckoutLoading}
               aria-label="Upgrade to Premium plan"
+              aria-describedby="premium-features-list"
               aria-busy={isCheckoutLoading}
             >
-              {isCheckoutLoading && <Loader2 className="size-4 animate-spin mr-2" />}
+              {isCheckoutLoading && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
               {isCheckoutLoading ? 'Starting checkout...' : 'Upgrade to Premium'}
             </Button>
           </div>
@@ -230,7 +234,7 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
 
             <div className="space-y-1.5">
               <div className="flex items-center gap-2 text-sm">
-                <CheckCircle className="size-4 text-success shrink-0" />
+                <CheckCircle className="size-4 text-success shrink-0" aria-hidden="true" />
                 <span className="font-medium">Active</span>
               </div>
 
@@ -245,6 +249,18 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
                 </p>
               )}
             </div>
+
+            <Button
+              variant="brand-outline"
+              size="sm"
+              className="mt-2"
+              onClick={() => {
+                // TODO(E19-S03): Implement Stripe billing portal redirect
+                toast.info('Billing portal coming soon — contact support to manage your subscription.')
+              }}
+            >
+              Manage Subscription
+            </Button>
           </div>
         )}
       </CardContent>
