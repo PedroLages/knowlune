@@ -3,6 +3,19 @@ stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8]
 lastStep: 8
 status: 'complete'
 completedAt: '2026-03-07'
+editHistory:
+  - date: '2026-03-25'
+    scope: 'YouTube Course Builder architecture addendum (Epic 23)'
+    changes:
+      - 'Added YouTube Course Builder Architecture section (10 decision areas)'
+      - 'Added Dexie v24 schema design (source discriminator + 3 new tables)'
+      - 'Added tiered server deployment architecture (BYOK infrastructure)'
+      - 'Added 12-story implementation sequence for Epic 23'
+      - 'Updated validation section with YouTube coverage'
+    researchInput:
+      - '_bmad-output/planning-artifacts/research/technical-youtube-content-handling-research-2026-03-25.md'
+      - '_bmad-output/planning-artifacts/research/market-youtube-content-handling-research-2026-03-25.md'
+      - 'docs/design/office-hours-2026-03-25-full-platform-youtube-hook.md'
 inputDocuments:
   - 'docs/planning-artifacts/prd.md'
   - '_bmad-output/planning-artifacts/product-brief-Elearningplatformwireframes-2026-03-01.md'
@@ -12,6 +25,9 @@ inputDocuments:
   - '_bmad-output/planning-artifacts/research/domain-lms-personal-learning-dashboards-research-2026-02-28.md'
   - '_bmad-output/planning-artifacts/research/domain-elearning-platform-improvement-research-2026-03-07.md'
   - '_bmad-output/planning-artifacts/research/technical-webllm-rag-ai-assistant-research-2026-03-07.md'
+  - '_bmad-output/planning-artifacts/research/technical-youtube-content-handling-research-2026-03-25.md'
+  - '_bmad-output/planning-artifacts/research/market-youtube-content-handling-research-2026-03-25.md'
+  - 'docs/design/office-hours-2026-03-25-full-platform-youtube-hook.md'
 workflowType: 'architecture'
 project_name: 'Elearningplatformwireframes'
 user_name: 'Pedro'
@@ -919,7 +935,7 @@ User Query → useAIStore.query() → useAIInference() hook
 
 ### Requirements Coverage Validation
 
-**Epic Coverage:** All 7 remaining epics (5-11) have complete architectural support — stores, services, components, Dexie migrations, and page routes mapped.
+**Epic Coverage:** All 7 remaining epics (5-11) have complete architectural support — stores, services, components, Dexie migrations, and page routes mapped. Epic 23 (YouTube Course Builder) added via 2026-03-25 addendum with 10 decision areas, 3 new Dexie tables, and 12-story implementation sequence.
 
 **Functional Requirements (101 FRs):** All FR categories have architectural homes. Course management (existing), content viewing (existing), progress tracking (existing + extensions), gamification (Epic 5 stores/services), challenges (Epic 6), analytics (Epic 7 lazy-loaded page + computed metrics), AI assistant (Epic 8 workers + RAG + 3-tier fallback), spaced repetition (Epic 9 FSRS), onboarding (Epic 10), data portability (Epic 11 export + xAPI).
 
@@ -935,7 +951,7 @@ User Query → useAIStore.query() → useAIInference() hook
 
 ### Gap Analysis Results
 
-**Critical Gaps:** None found.
+**Critical Gaps:** None found. (YouTube Course Builder gaps addressed in 2026-03-25 addendum.)
 
 **Important Gaps (2):**
 
@@ -1008,3 +1024,563 @@ User Query → useAIStore.query() → useAIInference() hook
 - Check `docs/project-context.md` for existing rules that still apply
 
 **First Implementation Priority:** Epic 5 (Gamification) — establishes the first new Zustand store, first new service, and first Dexie migration, setting the template for all subsequent epics.
+
+---
+
+## YouTube Course Builder Architecture (Epic 23)
+
+_Added 2026-03-25. This section extends the architecture for YouTube Course Builder (MVP Feature 12, FR112–FR123, NFR69–NFR74). YouTube introduces the first server-side dependency in Knowlune's previously client-only architecture._
+
+**Input Documents:**
+- PRD: Feature 12, FR112–FR123, NFR69–NFR74
+- Technical research: `_bmad-output/planning-artifacts/research/technical-youtube-content-handling-research-2026-03-25.md`
+- Market research: `_bmad-output/planning-artifacts/research/market-youtube-content-handling-research-2026-03-25.md`
+- UX spec: YouTube Course Builder section (`_bmad-output/planning-artifacts/ux-design-specification.md`, lines 1282–1579)
+- Office hours: `docs/design/office-hours-2026-03-25-full-platform-youtube-hook.md`
+
+### YouTube Decision Summary
+
+| Decision Area | Choice | Rationale |
+|---|---|---|
+| Server deployment | 3-tier BYOK infrastructure | 90% zero-config via youtube-transcript; yt-dlp/Whisper for users with servers |
+| YouTube API calls | Direct from browser (not proxied) | CORS supported, API key already client-side |
+| Transcript pipeline | youtube-transcript → yt-dlp → Whisper fallback | Tiered by capability: pure JS → binary → GPU |
+| Schema strategy | Hybrid source discriminator on shared tables | FR120 feature parity; zero existing code changes |
+| Video player | `react-youtube` (IFrame Player API wrapper) | Thin wrapper, React event binding, maintained |
+| AI structuring | Existing `getLLMClient()` + rule-based fallback | BYOK philosophy; works with and without AI |
+| Store architecture | New `useYouTubeImportStore` (separate from course import) | Fundamentally different flow (network vs. filesystem) |
+| Offline strategy | Cache metadata + transcripts in IDB; playback requires network | Graceful degradation; study features work offline |
+| COEP resolution | `credentialless` instead of `require-corp` | Enables both SharedArrayBuffer (WebLLM) and YouTube IFrame |
+
+### YouTube Server-Side Architecture
+
+#### Tiered Deployment Model
+
+The BYOK philosophy extends to infrastructure. Users without a server get 90% functionality; users with a server (Unraid, Docker, VPS) unlock the remaining 10%.
+
+| Tier | Dependency | Config Required | Coverage | Runs On |
+|---|---|---|---|---|
+| **Tier 1** (zero-config) | `youtube-transcript` npm (pure JS) | None | ~90% of videos with captions | Vite middleware / Vercel serverless |
+| **Tier 2** (user server) | `youtube-dl-exec` → yt-dlp binary | Server URL in Settings | Subtitle fallback + enriched metadata | User's server (Unraid, Docker, VPS) |
+| **Tier 3** (user Whisper) | faster-whisper Docker container | Whisper URL in Settings | ~10% of videos without captions | User's GPU server (Unraid w/ NVIDIA) |
+
+#### API Route Design
+
+Vite middleware plugin `youtubeDevProxy()` follows the established `ollamaDevProxy()` pattern (`vite.config.ts:42`):
+
+```
+POST /api/youtube/transcript          — Tier 1: youtube-transcript (pure JS, runs in Vite)
+POST /api/youtube/ytdlp/metadata      — Tier 2: proxy to user's yt-dlp server
+POST /api/youtube/ytdlp/subtitles     — Tier 2: proxy to user's yt-dlp server
+POST /api/youtube/whisper/transcribe  — Tier 3: proxy to user's Whisper endpoint
+```
+
+YouTube Data API v3 (metadata, playlists, channels) goes **direct from browser** — CORS is supported and the API key is already client-side.
+
+#### Transcript Fallback Chain
+
+```
+TranscriptPipeline.fetch(videoId)
+  │
+  ├─ Tier 1: youtube-transcript (npm)
+  │    → POST /api/youtube/transcript
+  │    → Success? Store in IDB, return
+  │    → Failure? Check if yt-dlp server configured
+  │
+  ├─ Tier 2: yt-dlp subtitle extraction
+  │    → POST /api/youtube/ytdlp/subtitles
+  │    → Success? Store in IDB, return
+  │    → Failure? Check if Whisper endpoint configured
+  │
+  ├─ Tier 3: faster-whisper transcription
+  │    → POST /api/youtube/whisper/transcribe
+  │    → Success? Store in IDB, return
+  │    → Failure? Mark "no transcript available"
+  │
+  └─ Final: { status: 'unavailable', reason: string }
+```
+
+#### SSRF Protection
+
+Generalize the existing `isAllowedOllamaUrl()` (`vite.config.ts:20-31`) to a shared `isAllowedProxyUrl()` function. Same rules apply: block loopback/metadata addresses, allow private LAN ranges (192.168.x, 10.x, 172.16-31.x) for home servers. Used by both Ollama and YouTube server endpoints.
+
+### YouTube Data API v3 Integration
+
+| Decision | Choice | Rationale |
+|---|---|---|
+| API key storage | Web Crypto AES-GCM (same as AI keys) | Follows `src/lib/crypto.ts` + `src/lib/aiConfiguration.ts` pattern |
+| Rate limiting | Client-side token bucket at 3 req/s | Prevents `rateLimitExceeded` errors; exponential backoff on 429 |
+| Quota tracking | localStorage counter, reset at midnight PT | Warn at 400/500 target; typical usage ~300 units/day |
+| Metadata caching | 7-day TTL (NFR121), 30-day mandatory refresh (YouTube ToS) | `expiresAt` on cache records, `lastRefreshedAt` on courses |
+| Quota fallback | oEmbed (`youtube.com/oembed?url=...`) | Free, no quota, basic metadata (title, author, thumbnail) |
+
+**API Client Design:**
+
+```typescript
+// src/lib/youtubeApi.ts
+export class YouTubeApiClient {
+  constructor(private apiKey: string, private rateLimiter: YouTubeRateLimiter)
+
+  // Batch up to 50 video IDs per call (1 quota unit)
+  async getVideoMetadata(videoIds: string[]): Promise<YouTubeVideoMetadata[]>
+
+  // Paginated playlist fetch (1 unit per page, 50 items/page)
+  async getPlaylistItems(playlistId: string): Promise<YouTubePlaylistItem[]>
+
+  // Channel info (1 quota unit)
+  async getChannelInfo(channelId: string): Promise<YouTubeChannelInfo>
+}
+```
+
+**Daily Quota Budget (single-user):**
+
+| Activity | Units/call | Typical calls/day | Total |
+|---|---|---|---|
+| Playlist imports | 1 | 50 | 50 |
+| Video metadata (batched) | 1 per 50 videos | 200 | 200 |
+| Channel info | 1 | 50 | 50 |
+| **Total** | | | **300 units** (~3% of 10,000 free quota) |
+
+### YouTube Transcript Pipeline
+
+#### Storage Format
+
+```typescript
+// Raw transcript: exact output from extraction tier
+interface YouTubeTranscriptRecord {
+  courseId: string                 // FK to ImportedCourse.id
+  videoId: string                 // YouTube video ID
+  cues: TranscriptCue[]           // Reuses existing type (src/data/types.ts:24-28)
+  fullText: string                // Concatenated text for full-text search indexing
+  source: 'youtube-transcript' | 'ytdlp' | 'whisper'
+  language: string                // e.g., 'en'
+  isCleaned: boolean              // True if LLM-cleaned
+  cleanedByModel: string | null   // e.g., 'llama3.2:latest'
+  fetchedAt: string               // ISO 8601
+}
+```
+
+#### Transcript Cleanup via LLM (Premium)
+
+Uses existing `getLLMClient()` factory from `src/ai/llm/factory.ts`. Sends raw auto-generated captions through Ollama/BYOK LLM for:
+- Proper punctuation and capitalization
+- Paragraph breaks at topic transitions
+- Common ASR error correction in technical vocabulary
+- Chapter headers from video chapter metadata
+
+Follows existing AI consent model. Falls back to raw cues if LLM unavailable.
+
+#### Existing Infrastructure Reused
+
+| Component | Location | How It's Reused |
+|---|---|---|
+| `TranscriptCue` type | `src/data/types.ts:24-28` | Exact match for youtube-transcript output format |
+| `TranscriptPanel` | `src/app/components/figma/TranscriptPanel.tsx` | Auto-scroll, click-to-seek, active cue highlighting — works directly with YouTube cues |
+| `parseVTT()` | `TranscriptPanel.tsx:19` | Parses yt-dlp VTT subtitle output |
+| `useCaptionLoader` | `src/app/hooks/useCaptionLoader.ts` | Pattern for async transcript loading with status tracking |
+| `Chapter` type | `src/data/types.ts:19-22` | YouTube chapter markers use the same `{ time, title }` shape |
+
+### YouTube Dexie Schema (v24)
+
+#### Source Discriminator Strategy
+
+YouTube courses share `importedCourses` and `importedVideos` tables with a `source` discriminator field. This ensures FR120 feature parity — all 15+ existing features (progress, notes, bookmarks, study sessions, streaks, challenges, flashcards, quizzes, embeddings, analytics, reminders, learning paths, content progress, captions, thumbnails) work automatically for YouTube courses with zero code changes.
+
+Source-specific fields (`directoryHandle`, `fileHandle` for local; `youtubeVideoId`, `youtubeUrl` for YouTube) are optional. Existing code paths that use filesystem handles already guard with null checks.
+
+#### Type Extensions
+
+```typescript
+// Added to src/data/types.ts
+
+export type CourseSource = 'local' | 'youtube'
+
+// ImportedCourse gains optional fields:
+export interface ImportedCourse {
+  // ... existing fields (id, name, description, importedAt, category, tags, status, etc.) ...
+  source?: CourseSource             // undefined treated as 'local' (backward compat)
+  youtubePlaylistId?: string        // For playlist-sourced courses
+  youtubeChannelId?: string         // Channel/author linkage
+  youtubeChannelName?: string       // Denormalized for display
+  lastRefreshedAt?: string          // ISO 8601 — YouTube ToS 30-day refresh tracking
+}
+
+// ImportedVideo gains optional fields:
+export interface ImportedVideo {
+  // ... existing fields (id, courseId, filename, path, duration, format, order, etc.) ...
+  youtubeVideoId?: string           // YouTube video ID
+  youtubeUrl?: string               // Full URL for IFrame embed
+  thumbnailUrl?: string             // YouTube thumbnail URL
+  description?: string              // Video description
+  chapters?: Chapter[]              // YouTube chapter markers (reuses existing Chapter type)
+}
+```
+
+#### New Tables
+
+```typescript
+// YouTube metadata cache (TTL-managed)
+export interface YouTubeVideoCache {
+  videoId: string                   // YouTube video ID (primary key)
+  title: string
+  description: string
+  duration: number                  // seconds
+  thumbnailUrl: string
+  channelId: string
+  channelName: string
+  chapters: Chapter[]               // YouTube chapter markers
+  publishedAt: string               // ISO 8601
+  fetchedAt: string                 // ISO 8601
+  expiresAt: string                 // ISO 8601 (fetchedAt + TTL)
+}
+
+// YouTube course chapters (user-editable structure)
+export interface YouTubeCourseChapter {
+  id: string                        // crypto.randomUUID()
+  courseId: string                   // FK to ImportedCourse.id
+  title: string                     // Chapter display name
+  order: number                     // Position in course
+  videoIds: string[]                // Ordered list of ImportedVideo.id within this chapter
+  source: 'ai' | 'rule-based' | 'manual'  // How this chapter was created
+  createdAt: string                 // ISO 8601
+}
+```
+
+#### Schema v24 Declaration
+
+```typescript
+db.version(24)
+  .stores({
+    // All 27 existing v23 tables (must redeclare)
+    importedCourses: 'id, name, importedAt, status, source, *tags',      // Added: source index
+    importedVideos: 'id, courseId, filename, youtubeVideoId',             // Added: youtubeVideoId index
+    importedPdfs: 'id, courseId, filename',
+    progress: '[courseId+videoId], courseId, videoId',
+    bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+    notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+    screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+    studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+    contentProgress: '[courseId+itemId], courseId, itemId, status',
+    challenges: 'id, type, deadline, createdAt',
+    embeddings: 'noteId, createdAt',
+    learningPath: 'courseId, position, generatedAt',
+    courseThumbnails: 'courseId',
+    aiUsageEvents: 'id, featureType, timestamp, courseId',
+    reviewRecords: 'id, noteId, nextReviewAt, reviewedAt',
+    courseReminders: 'id, courseId',
+    courses: 'id, category, difficulty, authorId',
+    quizzes: 'id, lessonId, createdAt',
+    quizAttempts: 'id, quizId, [quizId+completedAt], completedAt',
+    videoCaptions: '[courseId+videoId], courseId, videoId',
+    authors: 'id, name, createdAt',
+    careerPaths: 'id',
+    pathEnrollments: 'id, pathId, status',
+    flashcards: 'id, courseId, noteId, nextReviewAt, createdAt',
+    entitlements: 'userId',
+    // NEW: YouTube-specific tables
+    youtubeVideoCache: 'videoId, expiresAt',
+    youtubeTranscripts: '[courseId+videoId], courseId, videoId',
+    youtubeChapters: 'id, courseId, order',
+  })
+  .upgrade(async tx => {
+    // Migration: set source='local' on all existing courses
+    await tx.table('importedCourses').toCollection().modify(course => {
+      if (!course.source) {
+        course.source = 'local'
+      }
+    })
+    console.log('[Migration v24] Set source=local on existing courses')
+  })
+```
+
+#### DB Type Declaration
+
+```typescript
+const db = new Dexie('ElearningDB') as Dexie & {
+  // ... existing 27 tables ...
+  youtubeVideoCache: EntityTable<YouTubeVideoCache, 'videoId'>
+  youtubeTranscripts: Table<YouTubeTranscriptRecord>          // compound PK: [courseId+videoId]
+  youtubeChapters: EntityTable<YouTubeCourseChapter, 'id'>
+}
+```
+
+### YouTube IFrame Player
+
+| Decision | Choice | Rationale |
+|---|---|---|
+| Player library | `react-youtube` npm | Thin wrapper over YouTube IFrame Player API; React event binding; maintained |
+| Progress tracking | Poll `getCurrentTime()` every 1s while playing | YouTube API lacks continuous timeupdate events; matches `ImportedLessonPlayer` interval |
+| Progress storage | Same `progress` table (`[courseId+videoId]`) | Automatic parity with local video progress |
+| Transcript sync | Player current time → `TranscriptPanel` prop | Active cue highlighting + auto-scroll; click-to-seek calls `player.seekTo()` |
+
+#### COEP/YouTube IFrame Conflict
+
+**Problem:** `vite.config.ts:370` sets `Cross-Origin-Embedder-Policy: require-corp` for WebLLM SharedArrayBuffer support. This **blocks** YouTube IFrame embeds (cross-origin resource without CORP header).
+
+**Resolution:** Change COEP from `require-corp` to `credentialless`:
+
+```diff
+- 'Cross-Origin-Embedder-Policy': 'require-corp',
++ 'Cross-Origin-Embedder-Policy': 'credentialless',
+```
+
+`credentialless` still enables SharedArrayBuffer in Chrome (M110+) but allows cross-origin resources that don't carry credentials. YouTube IFrame embeds work because they don't require credentials from the embedding page.
+
+**Verification required:** Test WebLLM model loading with `credentialless` during E23-S09 implementation. If WebLLM breaks, fall back to conditional COEP (set header per-route via service worker or Vite middleware path matching).
+
+#### CSP Updates
+
+```
+frame-src: https://www.youtube.com https://www.youtube-nocookie.com
+img-src: https://i.ytimg.com https://img.youtube.com
+connect-src: https://www.googleapis.com/youtube/
+```
+
+### YouTube AI Course Structuring
+
+#### Two Paths (FR115/FR116)
+
+| Condition | Path | Function |
+|---|---|---|
+| AI configured + consent granted | AI-powered structuring | `structureCourseWithAI()` via `getLLMClient()` |
+| AI configured + consent denied | Rule-based fallback | `groupVideosByKeywords()` |
+| AI configured + timeout/error | Rule-based with toast warning | Automatic degradation |
+| No AI configured | Rule-based fallback | `groupVideosByKeywords()` |
+| Rule-based fails (< 3 videos) | Single flat chapter | All videos in one chapter |
+
+#### AI Structuring
+
+```typescript
+// src/ai/youtube/courseStructurer.ts
+export interface CourseStructureProposal {
+  chapters: Array<{
+    title: string
+    videoIds: string[]         // Ordered by suggested sequence
+    rationale: string          // AI explanation for grouping
+  }>
+  courseTitle: string           // Suggested course title
+  courseDescription: string    // Suggested description
+  tags: string[]               // Suggested tags
+}
+
+export async function structureCourseWithAI(
+  videos: Array<{
+    videoId: string
+    title: string
+    description: string
+    duration: number
+    chapters?: Chapter[]
+  }>
+): Promise<CourseStructureProposal>
+```
+
+Input: video titles, descriptions, chapter markers, durations. LLM proposes chapter groupings with pedagogical ordering. Uses structured output via existing Zod schema pattern.
+
+#### Rule-Based Fallback
+
+```typescript
+// src/lib/youtubeRuleBasedGrouping.ts
+export function groupVideosByKeywords(
+  videos: Array<{ videoId: string; title: string; description: string }>
+): CourseStructureProposal
+```
+
+Algorithm: Extract keywords from titles (TF-IDF word frequency) → compute pairwise cosine similarity → cluster above threshold → name chapters by top keywords → preserve original playlist order within clusters. Falls back to single "All Videos" chapter if clustering produces poor results.
+
+### YouTube Store Architecture
+
+#### useYouTubeImportStore
+
+New Zustand store managing the 4-step import wizard. **Separate from `useCourseImportStore`** because the YouTube flow is fundamentally different: network-based, multi-step async with AI structuring, vs. filesystem-based folder scanning.
+
+```typescript
+// src/stores/useYouTubeImportStore.ts
+export type ImportWizardStep = 'urls' | 'preview' | 'organize' | 'details'
+
+interface YouTubeImportState {
+  // Wizard navigation
+  step: ImportWizardStep
+  isOpen: boolean
+
+  // Step 1: URL input
+  rawInput: string
+  detectedUrls: ParsedYouTubeUrl[]
+  validationStatus: 'idle' | 'validating' | 'valid' | 'invalid' | 'mixed'
+
+  // Step 2: Metadata preview
+  videos: YouTubeVideoMetadata[]
+  isLoadingMetadata: boolean
+  metadataProgress: { current: number; total: number } | null
+  unavailableVideos: string[]
+
+  // Step 3: Organization
+  chapters: YouTubeCourseChapter[]
+  structureSource: 'ai' | 'rule-based' | 'manual'
+  isStructuring: boolean
+
+  // Step 4: Details
+  courseName: string
+  courseDescription: string
+  courseTags: string[]
+  selectedThumbnailUrl: string | null
+
+  // Actions
+  setStep: (step: ImportWizardStep) => void
+  setRawInput: (input: string) => void
+  fetchMetadata: () => Promise<void>
+  structureCourse: () => Promise<void>
+  saveCourse: () => Promise<string>            // Returns courseId
+  reset: () => void
+}
+```
+
+After `saveCourse()` completes, data is written to shared `importedCourses`/`importedVideos` tables and becomes accessible through existing `useCourseImportStore.loadImportedCourses()`.
+
+#### useYouTubeTranscriptStore
+
+Lightweight store managing background transcript fetching (continues after wizard closes):
+
+```typescript
+// src/stores/useYouTubeTranscriptStore.ts
+interface YouTubeTranscriptState {
+  status: Record<string, 'pending' | 'fetching' | 'done' | 'failed' | 'cleaning'>
+  activeFetches: number
+  fetchTranscript: (courseId: string, videoId: string) => Promise<void>
+  batchFetchTranscripts: (courseId: string, videoIds: string[]) => void
+  getTranscript: (courseId: string, videoId: string) => Promise<TranscriptCue[] | null>
+}
+```
+
+### YouTube Offline-First Design
+
+| Data | Available Offline | Storage | TTL |
+|---|---|---|---|
+| Course structure (chapters, video order) | ✅ Yes | IndexedDB `importedCourses` + `youtubeChapters` | Permanent (user data) |
+| Video metadata (title, duration) | ✅ Yes (text only) | IndexedDB `youtubeVideoCache` | 7d default, 30d max (ToS) |
+| Transcripts (cues + full text) | ✅ Yes | IndexedDB `youtubeTranscripts` | Permanent until course deleted |
+| Notes, progress, bookmarks | ✅ Yes | IndexedDB (shared tables) | Permanent |
+| Video playback | ❌ No (requires network) | YouTube IFrame | N/A |
+| Thumbnails | ⚠️ Partially (browser cache) | HTTP cache | Browser-managed |
+
+**When offline:**
+- Course detail page shows full structure with progress bars, chapter breakdown
+- Transcript panel shows cached transcript (if previously fetched)
+- Video player shows "Connect to the internet to watch" placeholder with `WifiOff` icon
+- Notes, progress, streaks, flashcards continue working normally
+- "Refresh metadata" button disabled with tooltip "Requires internet connection"
+
+**30-Day Metadata Refresh (YouTube ToS):**
+
+```typescript
+// src/lib/youtubeMetadataRefresh.ts — runs on app startup
+export async function refreshStaleMetadata(): Promise<void> {
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+  const staleCourses = await db.importedCourses
+    .where('source').equals('youtube')
+    .filter(c => (c.lastRefreshedAt ?? '') < thirtyDaysAgo)
+    .toArray()
+  // Queue refresh for each (rate-limited, non-blocking)
+}
+```
+
+### YouTube Component Architecture
+
+| Component | Location | Shared? | Description |
+|---|---|---|---|
+| `YouTubeImportDialog` | `src/app/components/figma/YouTubeImportDialog.tsx` | No | 4-step import wizard (`sm:max-w-3xl`) |
+| `YouTubeUrlInput` | `src/app/components/figma/YouTubeUrlInput.tsx` | No | Wizard Step 1: Textarea with auto-detection |
+| `YouTubeMetadataPreview` | `src/app/components/figma/YouTubeMetadataPreview.tsx` | No | Wizard Step 2: Video list with skeletons |
+| `YouTubeChapterEditor` | `src/app/components/figma/YouTubeChapterEditor.tsx` | **Yes** | Wizard Step 3 + post-import edit dialog (FR119) |
+| `YouTubeCourseDetailsForm` | `src/app/components/figma/YouTubeCourseDetailsForm.tsx` | No | Wizard Step 4: Name, tags, description, cover |
+| `YouTubePlayer` | `src/app/components/figma/YouTubePlayer.tsx` | No | IFrame Player API wrapper with progress polling |
+| `YouTubeLessonPlayer` | `src/app/pages/YouTubeLessonPlayer.tsx` | No | Route page: player + transcript + notes |
+| `YouTubeCourseDetail` | `src/app/pages/YouTubeCourseDetail.tsx` | No | Route page: course overview with chapters |
+| `TranscriptPanel` | `src/app/components/figma/TranscriptPanel.tsx` | **Yes** | Already generic — works with YouTube cues directly |
+
+**Drag-and-Drop:** `@dnd-kit/core` + `@dnd-kit/sortable` for nested chapter/video reordering. Multiple `SortableContext` containers (one per chapter). Extends existing `VideoReorderList.tsx` pattern.
+
+**Route Additions (`src/app/routes.tsx`):**
+```typescript
+{ path: 'youtube-courses/:courseId', element: <YouTubeCourseDetail /> }
+{ path: 'youtube-courses/:courseId/lessons/:lessonId', element: <YouTubeLessonPlayer /> }
+```
+
+### YouTube Security
+
+| Concern | Decision | Implementation |
+|---|---|---|
+| API key encryption | Web Crypto AES-GCM | Same pattern as `src/lib/crypto.ts`; session-scoped, never plaintext |
+| SSRF protection | Generalized `isAllowedProxyUrl()` | Shared by Ollama + YouTube server endpoints; blocks loopback/metadata |
+| CSP | Add YouTube domains | `frame-src youtube.com`, `img-src i.ytimg.com`, `connect-src googleapis.com` |
+| Data boundaries (NFR74) | YouTube data stays local | Exceptions: YouTube API (Google), user's AI provider, user's Whisper endpoint |
+| Server URL validation | Same as Ollama URL pattern | Block non-private addresses unless HTTPS; validate on save in Settings |
+
+### YouTube New File Summary
+
+```
+src/lib/
+├── youtubeApi.ts                    — YouTube Data API v3 client (batch, pagination)
+├── youtubeUrlParser.ts              — URL detection/validation (video, playlist, channel)
+├── youtubeConfiguration.ts          — Settings management (API key, server URLs, TTL)
+├── youtubeRateLimiter.ts            — Token bucket rate limiter (3 req/s)
+├── youtubeQuotaTracker.ts           — Daily quota tracking (localStorage)
+├── youtubeTranscriptPipeline.ts     — 3-tier fallback transcript orchestrator
+├── youtubeTranscriptCleanup.ts      — LLM-based transcript cleanup (premium)
+├── youtubeRuleBasedGrouping.ts      — TF-IDF keyword clustering (free fallback)
+├── youtubeMetadataRefresh.ts        — 30-day ToS compliance refresh
+└── ssrfProtection.ts                — Shared SSRF validation (extracted from vite.config.ts)
+
+src/ai/youtube/
+└── courseStructurer.ts              — LLM course structuring via getLLMClient()
+
+src/stores/
+├── useYouTubeImportStore.ts         — 4-step import wizard state
+└── useYouTubeTranscriptStore.ts     — Background transcript fetch progress
+
+src/app/components/figma/
+├── YouTubeImportDialog.tsx          — Import wizard dialog
+├── YouTubeUrlInput.tsx              — Step 1: URL input with auto-detection
+├── YouTubeMetadataPreview.tsx       — Step 2: Video list with thumbnails
+├── YouTubeChapterEditor.tsx         — Step 3: Nested drag-and-drop editor (shared)
+├── YouTubeCourseDetailsForm.tsx     — Step 4: Course details form
+└── YouTubePlayer.tsx                — IFrame Player API wrapper
+
+src/app/pages/
+├── YouTubeCourseDetail.tsx          — Course detail page with chapters
+└── YouTubeLessonPlayer.tsx          — Lesson player: YouTube + transcript + notes
+```
+
+### YouTube Implementation Sequence
+
+| Story | Scope | Dependencies | Key Files |
+|---|---|---|---|
+| E23-S01 | Dexie v24 schema + types + migration | None | `src/db/schema.ts`, `src/data/types.ts` |
+| E23-S02 | URL parser + configuration (Settings UI) | S01 | `src/lib/youtubeUrlParser.ts`, `src/lib/youtubeConfiguration.ts` |
+| E23-S03 | YouTube Data API v3 client + rate limiter + quota | S02 | `src/lib/youtubeApi.ts`, `src/lib/youtubeRateLimiter.ts` |
+| E23-S04 | youtube-transcript Vite middleware (Tier 1) | S01 | `vite.config.ts`, `src/lib/youtubeTranscriptPipeline.ts` |
+| E23-S05 | Import wizard Steps 1-2 (URL input + preview) | S02, S03 | `YouTubeImportDialog.tsx`, `YouTubeUrlInput.tsx`, `YouTubeMetadataPreview.tsx` |
+| E23-S06 | Rule-based grouping + ChapterEditor (`@dnd-kit`) | S01 | `YouTubeChapterEditor.tsx`, `src/lib/youtubeRuleBasedGrouping.ts` |
+| E23-S07 | AI course structuring + wizard Step 3 | S03, S06 | `src/ai/youtube/courseStructurer.ts` |
+| E23-S08 | Import wizard Step 4 (details) + save flow | S05, S06 | `YouTubeCourseDetailsForm.tsx`, `useYouTubeImportStore.ts` |
+| E23-S09 | YouTube IFrame player + progress + COEP fix | S01 | `YouTubePlayer.tsx`, `YouTubeLessonPlayer.tsx`, `vite.config.ts:370` |
+| E23-S10 | Transcript panel + search + click-to-seek | S04, S09 | `TranscriptPanel.tsx` (extend), `useYouTubeTranscriptStore.ts` |
+| E23-S11 | Tier 2 (yt-dlp) + Tier 3 (Whisper) integration | S04 | `src/lib/youtubeTranscriptPipeline.ts`, `src/lib/ssrfProtection.ts` |
+| E23-S12 | Offline support + 30-day refresh + CSP hardening | S03, S09 | `src/lib/youtubeMetadataRefresh.ts`, `vite.config.ts` |
+
+### YouTube Architecture Validation
+
+**Coherence with Existing Architecture:**
+- Follows all established patterns: Zustand individual selectors, `Result<T>` services, typed message protocols, `crypto.randomUUID()` IDs, ISO 8601 dates
+- Extends rather than modifies: source discriminator on shared tables, new YouTube-specific tables, new Vite middleware plugin alongside Ollama
+- Component architecture follows shadcn/ui patterns, `cn()` utility, design token system
+
+**Requirements Coverage:**
+- All 12 FRs (FR112–FR123) have architectural homes
+- All 6 NFRs (NFR69–NFR74) addressed: quota budget, performance targets, key security, offline access, data locality
+- Free/premium tier split matches PRD: core import is free, AI structuring and Whisper are premium
+
+**Risk Mitigations:**
+- `youtube-transcript` breaks → Tier 2 yt-dlp fallback
+- YouTube API quota exhaustion → oEmbed fallback + aggressive caching
+- COEP blocks YouTube IFrame → `credentialless` header (test in E23-S09)
+- Offline use → metadata + transcripts cached in IndexedDB
