@@ -6,7 +6,7 @@ started: 2026-03-25
 completed:
 reviewed: in-progress
 review_started: 2026-03-25
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests-skipped]
 burn_in_validated: false
 ---
 
@@ -216,4 +216,10 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Settings tests needed Router context after adding `useSearchParams`**: Adding checkout return handling via `useSearchParams` broke existing Settings unit tests. Fix was wrapping renders in `<MemoryRouter>` — a common pattern when page components gain routing hooks.
+- **Schema test versioning must track Dexie migrations**: Adding the `entitlements` table (v23) required updating both the expected table list and version number in `schema.test.ts`. This is easy to forget when adding new tables.
+- **Stripe Checkout is the right abstraction for PCI compliance**: By redirecting to Stripe's hosted page, no credit card data enters Knowlune's domain — simplifying security and avoiding PCI DSS scope entirely.
+- **Supabase Edge Functions for serverless webhook handling**: Using Deno-based edge functions for both `create-checkout` and `stripe-webhook` keeps the backend lightweight and serverless. Webhook signature verification via `Stripe.webhooks.constructEventAsync` is critical for security.
+- **Polling pattern for webhook race condition**: The checkout return handler polls entitlement status for up to 10 seconds because the Stripe webhook may arrive after the user is redirected back. This avoids showing stale "free tier" state while the webhook processes.
+- **CSP configuration for Stripe**: `index.html` needed `connect-src` and `frame-src` updates to allow Stripe Checkout redirects and API calls — missing this would silently block the checkout flow.
+- **Entitlement caching with 7-day TTL**: Local Dexie storage of entitlement status enables offline access to premium features. The TTL ensures stale entitlements are re-validated when the user comes back online.
