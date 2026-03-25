@@ -118,9 +118,7 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
           autoComplete={isSignUp ? 'new-password' : 'current-password'}
           aria-invalid={displayError?.toLowerCase().includes('password') || undefined}
           aria-describedby={
-            displayError?.toLowerCase().includes('password')
-              ? errorId
-              : 'auth-password-hint'
+            displayError?.toLowerCase().includes('password') ? errorId : 'auth-password-hint'
           }
           className="min-h-[44px]"
         />

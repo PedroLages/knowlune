@@ -28,7 +28,7 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem(
       'knowlune-welcome-wizard-v1',
-      JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' }),
+      JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' })
     )
   })
 })
