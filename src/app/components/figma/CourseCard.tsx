@@ -480,7 +480,7 @@ export function CourseCard({
             </picture>
           )
         ) : (
-          <BookOpen className="h-16 w-16 text-brand" />
+          <BookOpen className="size-16 text-brand" />
         )}
         {inlineVideoPreview}
         {renderThumbnailOverlays()}

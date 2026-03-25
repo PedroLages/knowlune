@@ -10,6 +10,8 @@ import {
   Info,
   Camera,
   Trash2,
+  Loader2,
+  Pencil,
 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Card } from '@/app/components/ui/card'
@@ -41,6 +43,7 @@ import { TagBadgeList } from '@/app/components/figma/TagBadgeList'
 import { TagEditor } from '@/app/components/figma/TagEditor'
 import { VideoPlayer } from '@/app/components/figma/VideoPlayer'
 import { ThumbnailPickerDialog } from '@/app/components/figma/ThumbnailPickerDialog'
+import { EditCourseDialog } from '@/app/components/figma/EditCourseDialog'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useCourseCardPreview } from '@/hooks/useCourseCardPreview'
 import { useVideoFromHandle } from '@/hooks/useVideoFromHandle'
@@ -81,10 +84,12 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
   const updateCourseStatus = useCourseImportStore(state => state.updateCourseStatus)
   const removeImportedCourse = useCourseImportStore(state => state.removeImportedCourse)
   const thumbnailUrls = useCourseImportStore(state => state.thumbnailUrls)
+  const analysisStatus = useCourseImportStore(state => state.autoAnalysisStatus[course.id])
   const navigate = useNavigate()
 
   const [thumbnailPickerOpen, setThumbnailPickerOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const statusBadgeRef = useRef<HTMLButtonElement>(null)
   const thumbnailUrl = thumbnailUrls[course.id] ?? null
@@ -304,6 +309,17 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
+                    data-testid="edit-course-menu-item"
+                    className="gap-2 min-h-[44px]"
+                    onClick={e => {
+                      e.stopPropagation()
+                      setEditDialogOpen(true)
+                    }}
+                  >
+                    <Pencil className="size-4" aria-hidden="true" />
+                    Edit details
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
                     data-testid="delete-course-menu-item"
                     variant="destructive"
                     className="gap-2 min-h-[44px]"
@@ -396,6 +412,22 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
               Imported {new Date(course.importedAt).toLocaleDateString()}
             </p>
             <div className="flex items-center gap-1.5 mb-3">
+              <span aria-live="polite" className="contents">
+                {analysisStatus === 'analyzing' && (
+                  <span
+                    data-testid="ai-tagging-indicator"
+                    className="text-xs text-muted-foreground animate-pulse flex items-center gap-1"
+                  >
+                    <Loader2 className="size-3 animate-spin" aria-hidden="true" />
+                    AI tagging...
+                  </span>
+                )}
+                {analysisStatus === 'complete' && course.tags.length > 0 && (
+                  <span className="sr-only">
+                    AI tagging complete. {course.tags.length} tags added.
+                  </span>
+                )}
+              </span>
               <TagBadgeList tags={course.tags} onRemove={handleRemoveTag} maxVisible={3} />
               <TagEditor currentTags={course.tags} allTags={allTags} onAddTag={handleAddTag} />
             </div>
@@ -457,6 +489,13 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
         courseId={course.id}
         courseName={course.name}
         firstVideo={firstVideo}
+      />
+
+      <EditCourseDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        course={course}
+        allTags={allTags}
       />
 
       <Dialog open={previewOpen} onOpenChange={handleDialogChange}>

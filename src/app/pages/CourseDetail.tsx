@@ -41,7 +41,7 @@ export function CourseDetail() {
   if (!course) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
-        <BookOpen className="mb-4 h-16 w-16 text-muted-foreground/50" />
+        <BookOpen className="mb-4 size-16 text-muted-foreground/50" />
         <h2 className="text-xl font-semibold mb-2">Course Not Found</h2>
         <p className="text-muted-foreground mb-6">The course you're looking for doesn't exist.</p>
         <Button asChild>
@@ -118,26 +118,26 @@ export function CourseDetail() {
 
             <div className="flex flex-wrap items-center gap-5 text-sm text-muted-foreground mb-6">
               <span className="flex items-center gap-1.5">
-                <BookOpen className="h-4 w-4" />
+                <BookOpen className="size-4" />
                 {course.totalLessons} lessons
               </span>
               <span className="flex items-center gap-1.5">
-                <Video className="h-4 w-4" />
+                <Video className="size-4" />
                 {course.totalVideos} videos
               </span>
               <span className="flex items-center gap-1.5">
-                <FileText className="h-4 w-4" />
+                <FileText className="size-4" />
                 {course.totalPDFs} documents
               </span>
               <span className="flex items-center gap-1.5">
-                <Clock className="h-4 w-4" />~{course.estimatedHours} hours
+                <Clock className="size-4" />~{course.estimatedHours} hours
               </span>
             </div>
 
             {resumeLesson && (
               <Button variant="brand" asChild>
                 <Link to={`/courses/${course.id}/${resumeLesson}`}>
-                  <Play className="mr-2 h-4 w-4" />
+                  <Play className="mr-2 size-4" />
                   {lastWatchedLesson ? 'Continue Learning' : 'Start Course'}
                 </Link>
               </Button>

@@ -1,12 +1,12 @@
 ---
 story_id: E22-S04
 story_name: "Auto-Categorize Courses on Import"
-status: draft
-started:
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+status: done
+started: 2026-03-23
+completed: 2026-03-25
+reviewed: true
+review_started: 2026-03-25
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests-skipped, design-review-skipped, code-review, code-review-testing]
 burn_in_validated: false
 ---
 
@@ -56,6 +56,10 @@ so that I don't have to manually organize my course library.
 - Show a brief "AI tagging..." indicator on the course card that resolves to tag pills
 - Tag pills: same style as TopicFilter chips (rounded-full, brand colors)
 - Tag editing: click X to remove, small + button or input to add
+
+## Implementation Plan
+
+[Full plan](../plans/2026-03-23-e22-s04-auto-categorize-courses-on-import.md)
 
 ## Implementation Notes
 
@@ -124,4 +128,8 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Schema-enforced JSON output is the right approach for Ollama.** Using the `format` parameter with a JSON schema guarantees structural validity (99%+), eliminating most parsing failures. The 4-level fallback chain in `parseTagResponse` is defensive-only — it rarely fires with schema enforcement.
+- **Fire-and-forget tagging keeps imports fast.** Running `triggerOllamaTagging` after import completion (not blocking it) means users never wait for AI. The tradeoff: a brief "AI tagging..." indicator on the card, which resolves within 0.5-2s on local models.
+- **Race condition between cloud and Ollama tag writers.** Both `autoAnalysis` and `ollamaTagging` read the course snapshot at call time (always `[]` for new imports), compute merged tags independently, and the last writer wins. Fixed by reading fresh tags from DB before merging. This pattern should be applied to any future concurrent writers.
+- **Test mock maintenance cost.** Adding `autoAnalysisStatus` to the Zustand store broke all 22 ImportedCourseCard tests because the mock store was missing the new field. Always update test mocks when adding store fields.
+- **`temperature: 0` for classification tasks.** Deterministic output is essential for consistent tagging across identical courses. Higher temperatures add noise without benefit for taxonomy classification.

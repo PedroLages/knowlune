@@ -1,0 +1,25 @@
+# Known Issues Register
+#
+# Pre-existing issues discovered during /review-story that were NOT caused
+# by the story under review. Tracked here for later triage.
+#
+# Lifecycle:
+#   /review-story  → auto-appends when pre-existing issues are found
+#   /start-story   → warns if open issues match files being changed
+#   /sprint-status → reports open issue count as a health metric
+#   Post-epic      → triage session: schedule, wont-fix, or close items
+#
+# Fields:
+#   id:              KI-NNN (auto-increment)
+#   type:            test | lint | typecheck | build | design | code
+#   summary:         One-line description
+#   file:            file:line where the issue manifests
+#   severity:        low | medium | high
+#   discovered_by:   Story ID that found it (e.g., E27-S01)
+#   discovered_on:   YYYY-MM-DD
+#   status:          open | scheduled | fixed | wont-fix
+#   scheduled_for:   Epic/sprint when planned to fix (null if unscheduled)
+#   fixed_by:        Story ID or commit that resolved it (null if open)
+#   notes:           Additional context
+
+issues: []

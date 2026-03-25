@@ -70,7 +70,7 @@ export function PdfSearchBar({
       className="flex items-center gap-2 border-b border-border bg-muted px-3 py-1.5"
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <Search className="size-4 shrink-0 text-muted-foreground" />
         <input
           ref={inputRef}
           data-testid="pdf-search-input"
@@ -90,35 +90,35 @@ export function PdfSearchBar({
         data-testid="pdf-search-prev"
         variant="ghost"
         size="icon"
-        className="h-8 w-8"
+        className="size-8"
         onClick={prevMatch}
         disabled={matches.length === 0}
         aria-label="Previous match"
       >
-        <ChevronUp className="h-4 w-4" />
+        <ChevronUp className="size-4" />
       </Button>
 
       <Button
         data-testid="pdf-search-next"
         variant="ghost"
         size="icon"
-        className="h-8 w-8"
+        className="size-8"
         onClick={nextMatch}
         disabled={matches.length === 0}
         aria-label="Next match"
       >
-        <ChevronDown className="h-4 w-4" />
+        <ChevronDown className="size-4" />
       </Button>
 
       <Button
         data-testid="pdf-search-close"
         variant="ghost"
         size="icon"
-        className="h-8 w-8"
+        className="size-8"
         onClick={closeSearch}
         aria-label="Close search"
       >
-        <X className="h-4 w-4" />
+        <X className="size-4" />
       </Button>
     </div>
   )

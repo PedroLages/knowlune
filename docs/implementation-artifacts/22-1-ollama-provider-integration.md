@@ -1,12 +1,12 @@
 ---
 story_id: E22-S01
 story_name: "Ollama Provider Integration"
-status: draft
-started:
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+status: done
+started: 2026-03-23
+completed: 2026-03-25
+reviewed: true
+review_started: 2026-03-25
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests-skipped, design-review, code-review, code-review-testing]
 burn_in_validated: false
 ---
 
@@ -56,18 +56,19 @@ so that I can use my own local models without API keys or costs.
 - "Direct Connection" toggle should be in a collapsible "Advanced" section
 - Show informational tooltip: "Direct connection requires CORS configured on your Ollama server"
 
+## Implementation Plan
+
+See [plans/e22-s01-ollama-provider-integration.md](plans/e22-s01-ollama-provider-integration.md) for the detailed step-by-step implementation plan.
+
 ## Implementation Notes
 
-- **KEY FINDING: No custom OllamaLLMClient needed.** Ollama exposes an OpenAI-compatible API at `/v1/`.
-  Use `createOpenAI` from `@ai-sdk/openai` (already in package.json) with a custom `baseURL`:
-  ```typescript
-  case 'ollama':
-    return createOpenAI({
-      baseURL: `${userOllamaUrl}/v1`,
-      apiKey: 'ollama',  // Ollama ignores this but SDK requires it
-    })(model || 'llama3.2')
-  ```
-- This gives streaming, chat, embeddings, and structured output for free — zero new dependencies
+- **UPDATE:** A custom `OllamaLLMClient` was implemented (`src/ai/llm/ollama-client.ts`) to handle
+  both proxy and direct connection modes with Ollama-specific error handling, timeout configuration
+  (2 min for local inference), and SSE streaming. The server-side proxy uses `createOpenAI` from
+  `@ai-sdk/openai` with a custom `baseURL` pointing at Ollama's OpenAI-compatible `/v1/` endpoint.
+- ~~Initial finding suggested no custom client was needed~~ — in practice, dual connection modes
+  (proxy vs direct) and Ollama-specific UX (longer timeouts, helpful network error messages) justified
+  a dedicated client class.
 - Community `ollama-ai-provider` packages are fragmented and stale — skip them
 - Ollama default port: 11434, no authentication required
 - OpenAI-compat endpoints: `/v1/chat/completions`, `/v1/embeddings`, `/v1/models`
@@ -107,4 +108,8 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Custom client justified despite OpenAI-compat API**: Initial plan assumed Ollama's OpenAI-compatible endpoints would let us reuse the existing OpenAI client. In practice, dual connection modes (proxy vs direct), Ollama-specific timeouts (2 min for local inference vs 30s for cloud), and tailored error messages for common LAN issues required a dedicated `OllamaLLMClient`.
+- **SSRF validation needed on proxy endpoints**: Code review flagged that the `/api/ai/ollama` proxy accepted arbitrary user-provided URLs. Added `isAllowedOllamaUrl()` to block loopback, link-local, and `0.0.0.0` addresses. Pattern: any proxy endpoint that forwards to user-supplied URLs needs an allowlist.
+- **JSDoc placement breaks when inserting functions mid-file**: Inserting `getOllamaServerUrl` between a JSDoc block and its target function caused the JSDoc to attach to the wrong function. Fix: keep JSDoc immediately above its function, no intervening code.
+- **Server-side test infrastructure gap**: `isAllowedOllamaUrl` is security-critical but the project lacked server-side test tooling. Added `server/__tests__/ollama-validation.test.ts` with a custom Vitest config (`vite.config.ts` test.include for `server/**`). Future server-side logic should follow this pattern.
+- **3 review rounds needed**: Round 1 caught SSRF, orphaned JSDoc, and missing `// silent-catch-ok`. Round 2 caught `0.0.0.0` bypass and missing server tests. Round 3 verified all fixes. The iterative review process surfaced progressively deeper issues.
