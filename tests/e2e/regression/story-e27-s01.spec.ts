@@ -6,6 +6,9 @@
  */
 import { test, expect } from '../../support/fixtures'
 import { navigateAndWait } from '../../support/helpers/navigation'
+import { makeQuiz, makeQuestion, makeAttempt } from '../../support/fixtures/factories/quiz-factory'
+import { seedQuizzes, seedQuizAttempts } from '../../support/helpers/indexeddb-seed'
+import { FIXED_DATE } from '../../utils/test-time'
 
 /**
  * Seed minimal study data so the Reports `hasActivity` guard passes
@@ -116,5 +119,73 @@ test.describe('E27-S01: URL-aware Reports tabs', () => {
     await expect(page.getByRole('tab', { name: 'Study Analytics' })).toBeVisible()
     await expect(page.getByRole('tab', { name: 'Quiz Analytics' })).toBeVisible()
     await expect(page.getByRole('tab', { name: 'AI Analytics' })).toBeVisible()
+  })
+
+  test('AC5: tab clicks update URL with replace semantics', async ({ page }) => {
+    // Tab switching uses replace: true (standard for in-page tabs).
+    // Back button returns to the page before /reports, not between tabs.
+    // This is a deliberate UX choice — React Router + PWA service worker
+    // causes double history entries with push semantics.
+    await navigateAndWait(page, '/reports')
+
+    await page.getByRole('tab', { name: 'Quiz Analytics' }).click()
+    await expect(page).toHaveURL(/\/reports\?tab=quizzes/)
+
+    await page.getByRole('tab', { name: 'AI Analytics' }).click()
+    await expect(page).toHaveURL(/\/reports\?tab=ai/)
+
+    await page.getByRole('tab', { name: 'Study Analytics' }).click()
+    await expect(page).toHaveURL(/\/reports\?tab=study/)
+  })
+
+  test('AC7: Quiz Analytics shows seeded quiz data with stat cards', async ({ page }) => {
+    // Navigate first so Dexie creates the DB schema
+    await navigateAndWait(page, '/reports')
+
+    // Create quiz and attempt test data
+    const q1 = makeQuestion({
+      id: 'q1-e27s01',
+      text: 'Test question?',
+      correctAnswer: 'A',
+      options: ['A', 'B'],
+    })
+    const quiz = makeQuiz({
+      id: 'quiz-e27s01-seed',
+      lessonId: 'lesson-seed-1',
+      title: 'Seeded Quiz',
+      questions: [q1],
+    })
+    const attempt = makeAttempt({
+      id: 'att-e27s01-seed',
+      quizId: quiz.id,
+      score: 1,
+      percentage: 85,
+      passed: true,
+      completedAt: FIXED_DATE,
+      startedAt: FIXED_DATE,
+    })
+
+    // Seed quiz data into IndexedDB
+    await seedQuizzes(page, [quiz] as Record<string, unknown>[])
+    await seedQuizAttempts(page, [attempt] as Record<string, unknown>[])
+
+    // Navigate to Quiz Analytics tab (reload to pick up seeded data)
+    await page.goto('/reports?tab=quizzes')
+    await page.waitForLoadState('domcontentloaded')
+
+    // Verify stat cards are visible
+    await expect(page.getByTestId('quiz-total-card')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByTestId('quiz-avg-score-card')).toBeVisible({ timeout: 10000 })
+
+    // Verify retake detail card is visible
+    await expect(page.getByTestId('quiz-retake-detail-card')).toBeVisible({ timeout: 10000 })
+
+    // Verify empty state is NOT shown
+    await expect(page.getByText('No quizzes taken yet')).not.toBeVisible()
+  })
+
+  test('AC7: Retake Frequency is not visible in Study tab', async ({ page }) => {
+    await navigateAndWait(page, '/reports?tab=study')
+    await expect(page.getByText('Retake Frequency')).not.toBeVisible()
   })
 })

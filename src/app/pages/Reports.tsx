@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/ta
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area } from 'recharts'
 import { MotionConfig, motion } from 'motion/react'
 import { format } from 'date-fns'
+import { db } from '@/db'
 import { useCourseStore } from '@/stores/useCourseStore'
 import {
   getCoursesInProgress,
@@ -80,6 +81,7 @@ export default function Reports() {
     completedCount: 0,
     startedCount: 0,
   })
+  const [quizAttemptCount, setQuizAttemptCount] = useState(0)
 
   useEffect(() => {
     let ignore = false
@@ -100,6 +102,16 @@ export default function Reports() {
       .catch(err => {
         console.error('Failed to load completion rate:', err)
         toast.error('Failed to load quiz completion data')
+      })
+
+    db.quizAttempts
+      .count()
+      .then(count => {
+        if (!ignore) setQuizAttemptCount(count)
+      })
+      .catch(err => {
+        console.error('Failed to load quiz attempt count:', err)
+        toast.error('Failed to load quiz attempt count')
       })
 
     return () => {
@@ -178,7 +190,8 @@ export default function Reports() {
     completedLessons > 0 ||
     studyNotes > 0 ||
     activityData.some(d => d.activities > 0) ||
-    completionData.startedCount > 0
+    completionData.startedCount > 0 ||
+    quizAttemptCount > 0
 
   return (
     <MotionConfig reducedMotion="user">
@@ -203,16 +216,10 @@ export default function Reports() {
             className="mb-6"
           >
             <motion.div variants={fadeUp}>
-              <TabsList className="h-11">
-                <TabsTrigger value="study" className="h-9">
-                  Study Analytics
-                </TabsTrigger>
-                <TabsTrigger value="quizzes" className="h-9">
-                  Quiz Analytics
-                </TabsTrigger>
-                <TabsTrigger value="ai" className="h-9">
-                  AI Analytics
-                </TabsTrigger>
+              <TabsList className="h-11" aria-label="Reports navigation">
+                <TabsTrigger value="study">Study Analytics</TabsTrigger>
+                <TabsTrigger value="quizzes">Quiz Analytics</TabsTrigger>
+                <TabsTrigger value="ai">AI Analytics</TabsTrigger>
               </TabsList>
             </motion.div>
 
