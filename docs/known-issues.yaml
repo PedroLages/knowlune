@@ -22,4 +22,63 @@
 #   fixed_by:        Story ID or commit that resolved it (null if open)
 #   notes:           Additional context
 
-issues: []
+issues:
+  - id: KI-001
+    type: test
+    summary: "Courses.test.tsx — 13 unit tests failing (status filtering, collapse state)"
+    file: "src/app/pages/__tests__/Courses.test.tsx"
+    severity: medium
+    discovered_by: E25-S04
+    discovered_on: 2026-03-25
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Pre-existing failures — Courses.test.tsx not changed by E25-S04. Likely stale mocks after recent page changes."
+
+  - id: KI-002
+    type: test
+    summary: "autoAnalysis.test.ts — 4+ unit tests failing (triggerAutoAnalysis)"
+    file: "src/lib/__tests__/autoAnalysis.test.ts"
+    severity: medium
+    discovered_by: E25-S04
+    discovered_on: 2026-03-25
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Pre-existing failures — autoAnalysis.test.ts not changed by E25-S04."
+
+  - id: KI-003
+    type: test
+    summary: "schema.test.ts — 1 unit test failing (v20 migration dedup)"
+    file: "src/db/__tests__/schema.test.ts"
+    severity: low
+    discovered_by: E25-S04
+    discovered_on: 2026-03-25
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Pre-existing failure — schema.test.ts not changed by E25-S04."
+
+  - id: KI-004
+    type: test
+    summary: "E2E overview.spec.ts — 'should display library section' flaky/failing"
+    file: "tests/e2e/overview.spec.ts:27"
+    severity: medium
+    discovered_by: E25-S04
+    discovered_on: 2026-03-25
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Pre-existing smoke spec failure. Looking for 'Your Library' heading that may have been renamed."
+
+  - id: KI-005
+    type: test
+    summary: "E2E courses.spec.ts — 'should display courses heading' failing"
+    file: "tests/e2e/courses.spec.ts:14"
+    severity: medium
+    discovered_by: E25-S04
+    discovered_on: 2026-03-25
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Pre-existing smoke spec failure. Not changed by E25-S04."
