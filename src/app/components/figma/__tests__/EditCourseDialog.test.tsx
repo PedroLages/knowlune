@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { EditCourseDialog } from '../EditCourseDialog'
 import type { ImportedCourse } from '@/data/types'
 
-const mockUpdateCourseDetails = vi.fn().mockResolvedValue(undefined)
+const mockUpdateCourseDetails = vi.fn().mockResolvedValue(true)
 
 vi.mock('@/db', () => ({
   db: {

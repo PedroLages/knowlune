@@ -60,6 +60,7 @@ function SortableVideoRow({ video, position }: { video: ImportedVideo; position:
       ref={setNodeRef}
       style={style}
       {...attributes}
+      role="listitem"
       className={cn(
         'flex items-center gap-3 rounded-xl border border-border/50 bg-card px-3 py-2.5',
         isDragging && 'opacity-50 shadow-lg z-10'
@@ -182,9 +183,7 @@ export function VideoReorderList({ videos, onReorder }: VideoReorderListProps) {
 
   if (videos.length === 0) {
     return (
-      <p className="py-4 text-center text-sm text-muted-foreground">
-        No videos in this course.
-      </p>
+      <p className="py-4 text-center text-sm text-muted-foreground">No videos in this course.</p>
     )
   }
 

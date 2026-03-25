@@ -50,16 +50,23 @@ export function EditCourseDialog({ open, onOpenChange, course, allTags }: EditCo
       setSaving(false)
       setActiveTab('details')
 
-      // Load videos for reorder tab
+      // Load videos for reorder tab with cancellation guard
+      let cancelled = false
       db.importedVideos
         .where('courseId')
         .equals(course.id)
         .sortBy('order')
-        .then(setVideos)
+        .then(result => {
+          if (!cancelled) setVideos(result)
+        })
         .catch(err => {
           // silent-catch-ok — non-critical: video tab will show empty state
-          console.error('[EditCourseDialog] Failed to load videos:', err)
+          if (!cancelled) console.error('[EditCourseDialog] Failed to load videos:', err)
         })
+
+      return () => {
+        cancelled = true
+      }
     }
   }, [open, course.id, course.name, course.description, course.category, course.tags])
 
@@ -129,9 +136,7 @@ export function EditCourseDialog({ open, onOpenChange, course, allTags }: EditCo
       >
         <DialogHeader>
           <DialogTitle>Edit Course</DialogTitle>
-          <DialogDescription>
-            Update course details or reorder videos.
-          </DialogDescription>
+          <DialogDescription>Update course details or reorder videos.</DialogDescription>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
