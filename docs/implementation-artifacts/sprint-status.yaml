@@ -272,7 +272,7 @@ development_status:
   18-1-implement-complete-keyboard-navigation: done
   18-2-implement-aria-live-regions-for-dynamic-content: backlog
   18-3-ensure-semantic-html-and-proper-aria-attributes: backlog
-  18-4-verify-contrast-ratios-and-touch-targets: backlog
+  18-4-verify-contrast-ratios-and-touch-targets: done
   18-5-integrate-quiz-completion-with-study-streaks: done
   18-6-display-quiz-performance-in-overview-dashboard: done
   18-7-surface-quiz-analytics-in-reports-section: backlog
