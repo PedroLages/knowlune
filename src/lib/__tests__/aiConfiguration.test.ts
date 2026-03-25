@@ -16,6 +16,9 @@ import {
   isFeatureEnabled,
   isAIAvailable,
   sanitizeAIRequestPayload,
+  getOllamaServerUrl,
+  isOllamaDirectConnection,
+  AI_PROVIDERS,
   DEFAULTS,
   type AIConfigurationSettings,
 } from '@/lib/aiConfiguration'
@@ -259,6 +262,96 @@ describe('aiConfiguration.ts', () => {
       localStorage.removeItem('ai-configuration')
 
       expect(isAIAvailable()).toBe(false)
+    })
+  })
+
+  // ===========================================================================
+  // Ollama Provider (E22-S01)
+  // ===========================================================================
+
+  describe('Ollama provider', () => {
+    it('includes ollama in AI_PROVIDERS registry', () => {
+      expect(AI_PROVIDERS.ollama).toBeDefined()
+      expect(AI_PROVIDERS.ollama.id).toBe('ollama')
+      expect(AI_PROVIDERS.ollama.name).toBe('Ollama (Local)')
+      expect(AI_PROVIDERS.ollama.usesServerUrl).toBe(true)
+    })
+
+    it('validates valid HTTP Ollama URLs', () => {
+      expect(AI_PROVIDERS.ollama.validateApiKey('http://192.168.1.100:11434')).toBe(true)
+      expect(AI_PROVIDERS.ollama.validateApiKey('http://localhost:11434')).toBe(true)
+      expect(AI_PROVIDERS.ollama.validateApiKey('https://ollama.example.com')).toBe(true)
+      expect(AI_PROVIDERS.ollama.validateApiKey('http://10.0.0.1:8080')).toBe(true)
+    })
+
+    it('rejects invalid Ollama URLs', () => {
+      expect(AI_PROVIDERS.ollama.validateApiKey('not-a-url')).toBe(false)
+      expect(AI_PROVIDERS.ollama.validateApiKey('ftp://server:11434')).toBe(false)
+      expect(AI_PROVIDERS.ollama.validateApiKey('')).toBe(false)
+    })
+
+    it('validates URLs with trailing slashes', () => {
+      expect(AI_PROVIDERS.ollama.validateApiKey('http://localhost:11434/')).toBe(true)
+    })
+  })
+
+  describe('getOllamaServerUrl', () => {
+    it('returns null when provider is not ollama', () => {
+      localStorage.setItem('ai-configuration', JSON.stringify({ ...DEFAULTS, provider: 'openai' }))
+      expect(getOllamaServerUrl()).toBeNull()
+    })
+
+    it('returns server URL when ollama is configured', () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          provider: 'ollama',
+          ollamaSettings: { serverUrl: 'http://192.168.2.200:11434', directConnection: false },
+        })
+      )
+      expect(getOllamaServerUrl()).toBe('http://192.168.2.200:11434')
+    })
+
+    it('returns null when ollama has no settings', () => {
+      localStorage.setItem('ai-configuration', JSON.stringify({ ...DEFAULTS, provider: 'ollama' }))
+      expect(getOllamaServerUrl()).toBeNull()
+    })
+  })
+
+  describe('isOllamaDirectConnection', () => {
+    it('returns false by default', () => {
+      localStorage.setItem('ai-configuration', JSON.stringify({ ...DEFAULTS, provider: 'ollama' }))
+      expect(isOllamaDirectConnection()).toBe(false)
+    })
+
+    it('returns true when direct connection is enabled', () => {
+      localStorage.setItem(
+        'ai-configuration',
+        JSON.stringify({
+          ...DEFAULTS,
+          provider: 'ollama',
+          ollamaSettings: { serverUrl: 'http://localhost:11434', directConnection: true },
+        })
+      )
+      expect(isOllamaDirectConnection()).toBe(true)
+    })
+  })
+
+  describe('saveAIConfiguration with Ollama settings', () => {
+    it('persists ollama settings to localStorage', async () => {
+      await saveAIConfiguration({
+        provider: 'ollama',
+        ollamaSettings: {
+          serverUrl: 'http://192.168.2.200:11434',
+          directConnection: false,
+        },
+      })
+
+      const stored = JSON.parse(localStorage.getItem('ai-configuration')!)
+      expect(stored.provider).toBe('ollama')
+      expect(stored.ollamaSettings.serverUrl).toBe('http://192.168.2.200:11434')
+      expect(stored.ollamaSettings.directConnection).toBe(false)
     })
   })
 
