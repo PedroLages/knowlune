@@ -4,9 +4,10 @@ story_name: "Stripe Subscription Integration"
 status: in-progress
 started: 2026-03-25
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-25
-review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests-skipped]
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests-skipped, design-review, code-review, code-review-testing]
+review_scope: full
 burn_in_validated: false
 ---
 
@@ -208,11 +209,30 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+**Report:** `docs/reviews/design/design-review-2026-03-25-e19-s02.md`
+
+All findings resolved:
+- B-01: Replaced static Progress with custom indeterminate gold animation
+- B-02: Added "Manage Subscription" button (portal endpoint TODO for E19-S03)
+- H-01: Added `aria-label="Subscription activated"` to activated state
+- H-02: Logged as KI-014 (pre-existing Settings heading hierarchy issue)
+- H-03: Added `aria-hidden="true"` to all decorative icons
+- M-01 through M-05: All accessibility and polish fixes applied
+- N-01, N-02: Tailwind v4 canonical classes applied
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**Reports:**
+- `docs/reviews/code/code-review-2026-03-25-e19-s02.md`
+- `docs/reviews/code/code-review-testing-2026-03-25-e19-s02.md`
+- `docs/reviews/code/edge-case-review-2026-03-25-e19-s02.md`
+
+All findings resolved:
+- **Security (8 fixes):** CORS restricted to APP_URL, open redirect prevented, method guards on both edge functions, env var validation, customer lookup by metadata (not email), duplicate subscription guard, webhook missing user ID returns 500
+- **Correctness (6 fixes):** Event replay protection, subscription.updated race condition fallback, session.subscription null check, polling AbortSignal support, timeout increased to 30s, empty catch logging
+- **UI/UX (7 fixes):** Premium badge gold tokens, toast message corrected, double-click guard, setTimeout cleanup, redirect failure fallback, URL param validation, indeterminate progress animation
+- **Infrastructure (4 fixes):** CSP for Stripe/Supabase, migration indexes on stripe_customer_id/subscription_id, DENY RLS policies
+- **Tests (28 new):** checkout.test.ts (17), SubscriptionCard.test.tsx (8), Settings.test.tsx (+2), schema.test.ts (+1)
 
 ## Challenges and Lessons Learned
 
