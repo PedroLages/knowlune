@@ -62,11 +62,14 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
   useEffect(() => {
     if (!scannedCourse?.images.length) return
 
-    const urls = new Map<string, string>()
+    let cancelled = false
     const objectUrls: string[] = []
 
     async function loadPreviews() {
+      const urls = new Map<string, string>()
+
       for (const image of scannedCourse!.images) {
+        if (cancelled) return
         try {
           const file = await image.fileHandle.getFile()
           const url = URL.createObjectURL(file)
@@ -76,23 +79,28 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
           // silent-catch-ok: image preview is optional, skip on error
         }
       }
+
+      if (cancelled) return
+
       setImagePreviewUrls(new Map(urls))
 
-      // Auto-select first image as cover if available
-      if (scannedCourse!.images.length > 0 && !selectedCoverImage) {
+      // Auto-select first image as cover if available (use ref-like callback to avoid stale closure)
+      setSelectedCoverImage(prev => {
+        if (prev) return prev // already selected, don't override
         const firstImage = scannedCourse!.images[0]
-        setSelectedCoverImage(firstImage)
         const firstUrl = urls.get(firstImage.path)
         if (firstUrl) setCoverPreviewUrl(firstUrl)
-      }
+        return firstImage
+      })
     }
 
     loadPreviews()
 
     return () => {
+      cancelled = true
       objectUrls.forEach(url => URL.revokeObjectURL(url))
     }
-  }, [scannedCourse?.images]) // Only re-run when images change (selectedCoverImage excluded intentionally)
+  }, [scannedCourse?.images]) // Only re-run when images change
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
@@ -453,14 +461,10 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
                     </span>
                     <span className="flex items-center gap-1.5" data-testid="wizard-pdf-count">
                       <FileText className="size-4" aria-hidden="true" />
-                      {scannedCourse.pdfs.length}{' '}
-                      {scannedCourse.pdfs.length === 1 ? 'PDF' : 'PDFs'}
+                      {scannedCourse.pdfs.length} {scannedCourse.pdfs.length === 1 ? 'PDF' : 'PDFs'}
                     </span>
                     {scannedCourse.images.length > 0 && (
-                      <span
-                        className="flex items-center gap-1.5"
-                        data-testid="wizard-image-count"
-                      >
+                      <span className="flex items-center gap-1.5" data-testid="wizard-image-count">
                         <ImageIcon className="size-4" aria-hidden="true" />
                         {scannedCourse.images.length}{' '}
                         {scannedCourse.images.length === 1 ? 'image' : 'images'}
@@ -474,10 +478,7 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
                     </div>
                   )}
                   {selectedCoverImage && (
-                    <div
-                      className="flex items-center gap-1.5"
-                      data-testid="wizard-cover-selected"
-                    >
+                    <div className="flex items-center gap-1.5" data-testid="wizard-cover-selected">
                       <ImageIcon className="size-4" aria-hidden="true" />
                       Cover: {selectedCoverImage.filename}
                     </div>
