@@ -26,6 +26,10 @@ test.describe('E27-S01: URL-aware Reports tabs', () => {
     await page.addInitScript(progressData => {
       localStorage.setItem('course-progress', progressData)
       localStorage.setItem('knowlune-sidebar-v1', 'false')
+      localStorage.setItem(
+        'knowlune-welcome-wizard-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' })
+      )
     }, SEED_COURSE_PROGRESS)
   })
 
