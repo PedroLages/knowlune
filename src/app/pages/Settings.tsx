@@ -195,7 +195,7 @@ export default function Settings() {
   const [authDialogMode, setAuthDialogMode] = useState<AuthMode>('sign-in')
 
   // Checkout return handling
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchParams] = useSearchParams()
   const [checkoutStatus, setCheckoutStatus] = useState<'success' | 'cancel' | null>(null)
 
   // Run once on mount — intentionally reads searchParams only on initial load
