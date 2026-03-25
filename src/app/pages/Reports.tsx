@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
-import { BookOpen, CheckCircle, FileText, TrendingUp, Clock, RotateCcw, Target } from 'lucide-react'
+import { useSearchParams } from 'react-router'
+import { BookOpen, CheckCircle, FileText, TrendingUp, Clock, Target } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import {
   ChartContainer,
@@ -25,9 +26,6 @@ import { getActionsPerDay } from '@/lib/studyLog'
 import {
   calculateCompletionRate,
   type CompletionRateResult,
-  calculateRetakeFrequency,
-  interpretRetakeFrequency,
-  type RetakeFrequencyResult,
 } from '@/lib/analytics'
 import {
   getCourseCompletionData,
@@ -39,6 +37,7 @@ import { StatsCard } from '@/app/components/StatsCard'
 import { EmptyState } from '@/app/components/EmptyState'
 import StudyTimeAnalytics from '@/app/components/StudyTimeAnalytics'
 import { AIAnalyticsTab } from '@/app/components/reports/AIAnalyticsTab'
+import { QuizAnalyticsTab } from '@/app/components/reports/QuizAnalyticsTab'
 import { CategoryRadar } from '@/app/components/reports/CategoryRadar'
 import { SkillsRadar } from '@/app/components/reports/SkillsRadar'
 import { WeeklyGoalRing } from '@/app/components/reports/WeeklyGoalRing'
@@ -68,18 +67,21 @@ const areaChartConfig = {
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
+const VALID_TABS = ['study', 'quizzes', 'ai'] as const
+
 export default function Reports() {
   const allCourses = useCourseStore(s => s.courses)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const rawTab = searchParams.get('tab')
+  const activeTab = VALID_TABS.includes(rawTab as (typeof VALID_TABS)[number])
+    ? (rawTab as string)
+    : 'study'
+
   const [studyNotes, setStudyNotes] = useState(0)
   const [completionData, setCompletionData] = useState<CompletionRateResult>({
     completionRate: 0,
     completedCount: 0,
     startedCount: 0,
-  })
-  const [retakeData, setRetakeData] = useState<RetakeFrequencyResult>({
-    averageRetakes: 0,
-    totalAttempts: 0,
-    uniqueQuizzes: 0,
   })
 
   useEffect(() => {
@@ -101,15 +103,6 @@ export default function Reports() {
       .catch(err => {
         console.error('Failed to load completion rate:', err)
         toast.error('Failed to load quiz completion data')
-      })
-
-    calculateRetakeFrequency()
-      .then(data => {
-        if (!ignore) setRetakeData(data)
-      })
-      .catch(err => {
-        console.error('Failed to load retake frequency:', err)
-        toast.error('Failed to load retake data')
       })
 
     return () => {
@@ -188,7 +181,6 @@ export default function Reports() {
     completedLessons > 0 ||
     studyNotes > 0 ||
     activityData.some(d => d.activities > 0) ||
-    retakeData.totalAttempts > 0 ||
     completionData.startedCount > 0
 
   return (
@@ -208,11 +200,18 @@ export default function Reports() {
             actionHref="/courses"
           />
         ) : (
-          <Tabs defaultValue="study" className="mb-6">
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => setSearchParams({ tab: value }, { replace: true })}
+            className="mb-6"
+          >
             <motion.div variants={fadeUp}>
               <TabsList className="h-11">
                 <TabsTrigger value="study" className="h-9">
                   Study Analytics
+                </TabsTrigger>
+                <TabsTrigger value="quizzes" className="h-9">
+                  Quiz Analytics
                 </TabsTrigger>
                 <TabsTrigger value="ai" className="h-9">
                   AI Analytics
@@ -222,6 +221,10 @@ export default function Reports() {
 
             <TabsContent value="ai" className="mt-6">
               <AIAnalyticsTab />
+            </TabsContent>
+
+            <TabsContent value="quizzes" className="mt-6">
+              <QuizAnalyticsTab />
             </TabsContent>
 
             <TabsContent value="study" className="mt-6 space-y-6">
@@ -463,34 +466,7 @@ export default function Reports() {
                 </Card>
               </motion.div>
 
-              {/* ── Row 6: Average Retake Frequency ── */}
-              <motion.div variants={fadeUp}>
-                <Card data-testid="quiz-retake-card">
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <RotateCcw className="size-4 text-muted-foreground" aria-hidden="true" />
-                      Average Retake Frequency
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {retakeData.totalAttempts === 0 ? (
-                      <p className="text-sm text-muted-foreground">No quizzes attempted yet</p>
-                    ) : (
-                      <>
-                        <div className="text-3xl font-bold">
-                          {retakeData.averageRetakes.toFixed(1)}
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-1">attempts per quiz</p>
-                        <p className="text-sm text-muted-foreground mt-2">
-                          {interpretRetakeFrequency(retakeData.averageRetakes)}
-                        </p>
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              {/* ── Row 7: Recent Activity Timeline ── */}
+              {/* ── Row 6: Recent Activity Timeline ── */}
               <motion.div variants={fadeUp}>
                 <Card>
                   <CardHeader>
