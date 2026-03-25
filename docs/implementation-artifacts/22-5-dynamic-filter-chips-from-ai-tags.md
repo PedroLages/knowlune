@@ -100,4 +100,7 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Case-insensitive normalization must be end-to-end.** Tag deduplication normalized to lowercase for chip display, but the filter comparison on imported courses used exact `includes()`. Always trace the normalized value through every comparison site, not just the display layer.
+- **E2E `hasText` substring matching causes false positives.** Short tag names like "ai" matched substrings in other button labels (e.g., "entrainment"). Use regex with word boundaries (`/^ai\b/`) for short filter text in Playwright locators.
+- **`seedAndReload` localStorage access before navigation fails.** Setting localStorage via `page.evaluate` on `about:blank` triggers SecurityError. Use `addInitScript` instead, which runs after navigation when the page origin is established.
+- **Zustand store subscriptions provide free reactivity for tag updates.** No special subscription or effect was needed for AC5 (reactive tag appearance) — the `useCourseImportStore` hook re-renders the component automatically when tags are added post-import.
