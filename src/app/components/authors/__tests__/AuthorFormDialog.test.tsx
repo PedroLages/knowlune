@@ -90,7 +90,7 @@ describe('AuthorFormDialog', () => {
         expect.objectContaining({
           name: 'Test Author',
           title: 'Expert',
-        }),
+        })
       )
     })
   })

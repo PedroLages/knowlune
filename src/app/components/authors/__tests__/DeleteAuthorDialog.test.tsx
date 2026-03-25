@@ -39,9 +39,7 @@ beforeEach(() => {
 
 describe('DeleteAuthorDialog', () => {
   it('renders warning text with author name', () => {
-    render(
-      <DeleteAuthorDialog open={true} onOpenChange={vi.fn()} author={sampleAuthor} />,
-    )
+    render(<DeleteAuthorDialog open={true} onOpenChange={vi.fn()} author={sampleAuthor} />)
 
     expect(screen.getByText(/jane smith/i)).toBeInTheDocument()
     expect(screen.getByText(/permanently remove/i)).toBeInTheDocument()
@@ -60,7 +58,7 @@ describe('DeleteAuthorDialog', () => {
         onOpenChange={onOpenChange}
         author={sampleAuthor}
         onDeleted={onDeleted}
-      />,
+      />
     )
 
     await user.click(screen.getByTestId('delete-author-confirm'))
@@ -71,9 +69,7 @@ describe('DeleteAuthorDialog', () => {
   })
 
   it('has a cancel button', () => {
-    render(
-      <DeleteAuthorDialog open={true} onOpenChange={vi.fn()} author={sampleAuthor} />,
-    )
+    render(<DeleteAuthorDialog open={true} onOpenChange={vi.fn()} author={sampleAuthor} />)
 
     expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument()
   })
@@ -89,7 +85,7 @@ describe('DeleteAuthorDialog', () => {
         onOpenChange={vi.fn()}
         author={sampleAuthor}
         onDeleted={onDeleted}
-      />,
+      />
     )
 
     await user.click(screen.getByTestId('delete-author-confirm'))
