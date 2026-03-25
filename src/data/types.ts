@@ -349,6 +349,21 @@ export interface CourseReminder {
   updatedAt: string // ISO 8601
 }
 
+// --- Imported Author Types (Epic 25) ---
+// These types support user-managed author profiles stored in IndexedDB.
+// They exist alongside the existing Author type used for pre-seeded data.
+
+export interface ImportedAuthor {
+  id: string
+  name: string
+  bio: string
+  photoUrl: string // URL or object URL for display
+  photoHandle?: FileSystemFileHandle // Optional: local file handle for photo
+  courseIds: string[] // Linked imported course IDs
+  createdAt: string // ISO 8601
+  updatedAt: string // ISO 8601
+}
+
 export type ReviewRating = 'hard' | 'good' | 'easy'
 
 export interface ReviewRecord {

@@ -49,6 +49,7 @@ describe('ElearningDB schema', () => {
     expect(db.name).toBe('ElearningDB')
     expect(db.tables.map(t => t.name).sort()).toEqual([
       'aiUsageEvents',
+      'authors',
       'bookmarks',
       'challenges',
       'contentProgress',
@@ -71,8 +72,8 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 19', () => {
-    expect(db.verno).toBe(19)
+  it('should be at version 20', () => {
+    expect(db.verno).toBe(20)
   })
 
   it('should preserve key indexes on existing v16 tables in v17 migration', async () => {
@@ -415,6 +416,72 @@ describe('v4 migration from localStorage', () => {
 
     // Clean up
     localStorage.removeItem('course-progress')
+  })
+})
+
+describe('authors table (v20)', () => {
+  function makeAuthor(overrides: Record<string, unknown> = {}) {
+    const now = new Date().toISOString()
+    return {
+      id: crypto.randomUUID(),
+      name: 'Test Author',
+      bio: 'A test bio',
+      photoUrl: '',
+      courseIds: [] as string[],
+      createdAt: now,
+      updatedAt: now,
+      ...overrides,
+    }
+  }
+
+  it('should add and retrieve an author', async () => {
+    const author = makeAuthor({ name: 'Jane Doe' })
+    await db.authors.add(author)
+
+    const retrieved = await db.authors.get(author.id)
+    expect(retrieved).toBeDefined()
+    expect(retrieved!.name).toBe('Jane Doe')
+    expect(retrieved!.courseIds).toEqual([])
+  })
+
+  it('should query authors by name index', async () => {
+    await db.authors.add(makeAuthor({ name: 'Alice' }))
+    await db.authors.add(makeAuthor({ name: 'Bob' }))
+
+    const results = await db.authors.where('name').equals('Alice').toArray()
+    expect(results).toHaveLength(1)
+    expect(results[0].name).toBe('Alice')
+  })
+
+  it('should query authors by createdAt index', async () => {
+    const ts1 = '2026-01-01T00:00:00.000Z'
+    const ts2 = '2026-06-01T00:00:00.000Z'
+    await db.authors.bulkAdd([
+      makeAuthor({ createdAt: ts1, updatedAt: ts1 }),
+      makeAuthor({ createdAt: ts2, updatedAt: ts2 }),
+    ])
+
+    const results = await db.authors.where('createdAt').above(ts1).toArray()
+    expect(results).toHaveLength(1)
+    expect(results[0].createdAt).toBe(ts2)
+  })
+
+  it('should delete an author by id', async () => {
+    const author = makeAuthor()
+    await db.authors.add(author)
+
+    await db.authors.delete(author.id)
+    const result = await db.authors.get(author.id)
+    expect(result).toBeUndefined()
+  })
+
+  it('should update an author', async () => {
+    const author = makeAuthor({ name: 'Original' })
+    await db.authors.add(author)
+
+    await db.authors.update(author.id, { name: 'Updated' })
+    const updated = await db.authors.get(author.id)
+    expect(updated!.name).toBe('Updated')
   })
 })
 
