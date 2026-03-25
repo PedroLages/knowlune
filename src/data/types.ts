@@ -359,12 +359,17 @@ export interface CourseReminder {
 export interface ImportedAuthor {
   id: string
   name: string
+  title?: string // Professional title (e.g., "Software Engineering Expert")
   bio?: string // Biographical text (optional)
+  shortBio?: string // Brief one-liner description
   photoUrl?: string // URL or object URL for display (optional)
   photoHandle?: FileSystemFileHandle // Optional: local file handle for photo
   courseIds: string[] // Linked imported course IDs
   specialties?: string[] // Specialty tags (E25-S01 AC5)
+  yearsExperience?: number // Professional experience in years
+  education?: string // Education background (e.g., "PhD Computer Science, MIT")
   socialLinks?: { website?: string; twitter?: string; linkedin?: string } // Social profile links (E25-S01 AC5)
+  featuredQuote?: string // Memorable quote from the author
   isPreseeded: boolean // Flag indicating if bundled (e.g., Chase Hughes) (E25-S01 AC5)
   createdAt: string // ISO 8601
   updatedAt: string // ISO 8601

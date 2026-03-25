@@ -1,15 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router'
-import {
-  ArrowDownAZ,
-  BookOpen,
-  Calendar,
-  Pencil,
-  Plus,
-  Search,
-  Trash2,
-  Users,
-} from 'lucide-react'
+import { ArrowDownAZ, BookOpen, Calendar, Pencil, Plus, Search, Trash2, Users } from 'lucide-react'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
@@ -24,12 +15,7 @@ import {
   SelectValue,
 } from '@/app/components/ui/select'
 import { useAuthorStore } from '@/stores/useAuthorStore'
-import {
-  getMergedAuthors,
-  getAvatarSrc,
-  getInitials,
-  type AuthorView,
-} from '@/lib/authors'
+import { getMergedAuthors, getAvatarSrc, getInitials, type AuthorView } from '@/lib/authors'
 import { AuthorFormDialog } from '@/app/components/authors/AuthorFormDialog'
 import { DeleteAuthorDialog } from '@/app/components/authors/DeleteAuthorDialog'
 import type { ImportedAuthor } from '@/data/types'
@@ -56,9 +42,7 @@ export function Authors() {
     if (!searchQuery.trim()) return allAuthors
     const q = searchQuery.toLowerCase()
     return allAuthors.filter(
-      a =>
-        a.name.toLowerCase().includes(q) ||
-        a.specialties.some(s => s.toLowerCase().includes(q))
+      a => a.name.toLowerCase().includes(q) || a.specialties.some(s => s.toLowerCase().includes(q))
     )
   }, [allAuthors, searchQuery])
 
@@ -140,10 +124,7 @@ export function Authors() {
               data-testid="author-search-input"
             />
           </div>
-          <Select
-            value={sortMode}
-            onValueChange={v => setSortMode(v as SortMode)}
-          >
+          <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
             <SelectTrigger
               className="w-full sm:w-48"
               aria-label="Sort authors"
@@ -218,14 +199,10 @@ export function Authors() {
               key={author.id}
               author={author}
               onEdit={
-                author.importedAuthor
-                  ? () => setEditAuthor(author.importedAuthor)
-                  : undefined
+                author.importedAuthor ? () => setEditAuthor(author.importedAuthor) : undefined
               }
               onDelete={
-                author.importedAuthor
-                  ? () => setDeleteAuthor(author.importedAuthor)
-                  : undefined
+                author.importedAuthor ? () => setDeleteAuthor(author.importedAuthor) : undefined
               }
             />
           ))}
@@ -288,9 +265,7 @@ function AuthorCard({
             <h2 className="text-lg font-semibold group-hover:text-brand transition-colors">
               {author.name}
             </h2>
-            {author.title && (
-              <p className="text-sm text-muted-foreground mt-1">{author.title}</p>
-            )}
+            {author.title && <p className="text-sm text-muted-foreground mt-1">{author.title}</p>}
 
             {/* Bio snippet for authors without a title */}
             {!author.title && author.bio && (

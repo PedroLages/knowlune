@@ -27,12 +27,7 @@ import {
 import { CourseCard } from '@/app/components/figma/CourseCard'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import { useCourseStore } from '@/stores/useCourseStore'
-import {
-  getMergedAuthors,
-  getAvatarSrc,
-  getInitials,
-  type AuthorView,
-} from '@/lib/authors'
+import { getMergedAuthors, getAvatarSrc, getInitials, type AuthorView } from '@/lib/authors'
 import { getCourseCompletionPercent } from '@/lib/progress'
 import { AuthorFormDialog } from '@/app/components/authors/AuthorFormDialog'
 import { DeleteAuthorDialog } from '@/app/components/authors/DeleteAuthorDialog'
@@ -148,9 +143,7 @@ export function AuthorProfile() {
                   </div>
                 )}
               </div>
-              {author.title && (
-                <p className="text-muted-foreground mb-3">{author.title}</p>
-              )}
+              {author.title && <p className="text-muted-foreground mb-3">{author.title}</p>}
 
               {/* Featured Quote */}
               {author.featuredQuote && (

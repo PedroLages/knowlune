@@ -53,18 +53,21 @@ function preseededToView(author: Author): AuthorView {
 /** Convert an ImportedAuthor to AuthorView */
 function importedToView(author: ImportedAuthor): AuthorView {
   const stats = getImportedAuthorStats(author)
+  const bioText = author.bio ?? ''
   return {
     id: author.id,
     name: author.name,
     avatar: author.photoUrl ?? '',
-    title: '', // ImportedAuthor has no title field
-    bio: author.bio ?? '',
-    shortBio: author.bio ? author.bio.slice(0, 120) + (author.bio.length > 120 ? '...' : '') : '',
+    title: author.title ?? '',
+    bio: bioText,
+    shortBio:
+      author.shortBio ??
+      (bioText ? bioText.slice(0, 120) + (bioText.length > 120 ? '...' : '') : ''),
     specialties: author.specialties ?? [],
-    yearsExperience: 0,
-    education: undefined,
+    yearsExperience: author.yearsExperience ?? 0,
+    education: author.education,
     socialLinks: author.socialLinks ?? {},
-    featuredQuote: undefined,
+    featuredQuote: author.featuredQuote,
     courseCount: stats.courseCount,
     isPreseeded: author.isPreseeded,
     createdAt: author.createdAt,
@@ -132,13 +135,40 @@ export function getImportedAuthorStats(author: ImportedAuthor) {
   }
 }
 
-export function getAuthorForCourse(course: Course): Author | undefined {
+/**
+ * Minimal author shape returned by getAuthorForCourse().
+ * Explicitly maps ImportedAuthor fields to Author-compatible fields
+ * needed by CourseCard (id, name, avatar).
+ */
+export interface CourseAuthor {
+  id: string
+  name: string
+  avatar: string
+}
+
+/**
+ * Look up the author for a given course from the store.
+ *
+ * Note: `loadAuthors()` is fired without await intentionally — this function
+ * is called synchronously during render. On first call with an empty store,
+ * it returns `undefined`; once the store loads, React re-renders with data.
+ * Callers (e.g. CourseCard) already handle `undefined` gracefully.
+ */
+export function getAuthorForCourse(course: Course): CourseAuthor | undefined {
   const state = useAuthorStore.getState()
   // Ensure authors are loaded -- loadAuthors is idempotent (no-ops if already loaded/loading)
   if (!state.isLoaded && !state.isLoading) {
-    state.loadAuthors()
+    // Fire-and-forget: store update triggers React re-render via subscription
+    void state.loadAuthors()
   }
-  return state.getAuthorById(course.authorId) as unknown as Author | undefined
+  const imported = state.getAuthorById(course.authorId)
+  if (!imported) return undefined
+  // Explicitly map ImportedAuthor fields to CourseAuthor shape
+  return {
+    id: imported.id,
+    name: imported.name,
+    avatar: imported.photoUrl ?? '',
+  }
 }
 
 /** Available responsive avatar widths (px) */

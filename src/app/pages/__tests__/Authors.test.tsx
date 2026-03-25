@@ -30,9 +30,7 @@ vi.mock('@/data/authors', () => ({
 // Mock useCourseStore for getAuthorStats / getMergedAuthors
 vi.mock('@/stores/useCourseStore', () => ({
   useCourseStore: Object.assign(
-    vi.fn((selector: (state: { courses: unknown[] }) => unknown) =>
-      selector({ courses: [] })
-    ),
+    vi.fn((selector: (state: { courses: unknown[] }) => unknown) => selector({ courses: [] })),
     {
       getState: () => ({ courses: [] }),
     }
@@ -118,9 +116,7 @@ describe('Authors page', () => {
 
     it('shows singular subtitle text', () => {
       renderAuthors()
-      expect(
-        screen.getByText('Meet the expert behind your learning journey')
-      ).toBeInTheDocument()
+      expect(screen.getByText('Meet the expert behind your learning journey')).toBeInTheDocument()
     })
 
     it('shows specialty badges', () => {

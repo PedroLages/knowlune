@@ -7,23 +7,33 @@ import { toastWithUndo, toastError } from '@/lib/toastHelpers'
 
 interface NewAuthorData {
   name: string
+  title?: string
   bio?: string
+  shortBio?: string
   photoUrl?: string
   photoHandle?: FileSystemFileHandle
   courseIds?: string[]
   specialties?: string[]
+  yearsExperience?: number
+  education?: string
   socialLinks?: { website?: string; twitter?: string; linkedin?: string }
+  featuredQuote?: string
   isPreseeded?: boolean
 }
 
 interface UpdateAuthorData {
   name?: string
+  title?: string
   bio?: string
+  shortBio?: string
   photoUrl?: string
   photoHandle?: FileSystemFileHandle
   courseIds?: string[]
   specialties?: string[]
+  yearsExperience?: number
+  education?: string
   socialLinks?: { website?: string; twitter?: string; linkedin?: string }
+  featuredQuote?: string
 }
 
 interface AuthorStoreState {
@@ -65,12 +75,17 @@ export const useAuthorStore = create<AuthorStoreState>((set, get) => ({
     const author: ImportedAuthor = {
       id: crypto.randomUUID(),
       name: data.name,
+      title: data.title,
       bio: data.bio,
+      shortBio: data.shortBio,
       photoUrl: data.photoUrl,
       photoHandle: data.photoHandle,
       courseIds: data.courseIds ?? [],
       specialties: data.specialties,
+      yearsExperience: data.yearsExperience,
+      education: data.education,
       socialLinks: data.socialLinks,
+      featuredQuote: data.featuredQuote,
       isPreseeded: data.isPreseeded ?? false,
       createdAt: now,
       updatedAt: now,
