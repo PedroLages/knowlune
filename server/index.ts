@@ -115,6 +115,64 @@ app.get('/api/ai/ollama/tags', async (req, res) => {
   }
 })
 
+/**
+ * GET /api/ai/ollama/health
+ *
+ * Proxy endpoint for Ollama health check. Pings the Ollama server root endpoint
+ * which returns "Ollama is running" when the server is healthy.
+ * Used by E22-S03 connection testing and startup health check.
+ *
+ * Query params:
+ *   serverUrl - The Ollama server URL (e.g., http://192.168.2.200:11434)
+ */
+app.get('/api/ai/ollama/health', async (req, res) => {
+  try {
+    const serverUrl = req.query.serverUrl as string
+    if (!serverUrl) {
+      res.status(400).json({ error: 'serverUrl query parameter is required' })
+      return
+    }
+
+    if (!isAllowedOllamaUrl(serverUrl)) {
+      res.status(403).json({ error: 'Ollama server URL targets a disallowed address' })
+      return
+    }
+
+    const normalizedUrl = serverUrl.replace(/\/+$/, '')
+    const response = await fetch(normalizedUrl, {
+      method: 'GET',
+      signal: AbortSignal.timeout(10_000),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => response.statusText)
+      res.status(response.status).json({ error: `Ollama returned ${response.status}: ${errorText}` })
+      return
+    }
+
+    const body = await response.text()
+    res.send(body)
+  } catch (error) {
+    // silent-catch-ok — logs to console and returns error response to client
+    console.error('[/api/ai/ollama/health] Error:', (error as Error).message)
+
+    if ((error as Error).name === 'AbortError' || (error as Error).name === 'TimeoutError') {
+      res.status(504).json({ error: 'Ollama server timed out' })
+      return
+    }
+
+    const msg = (error as Error).message
+    if (msg.includes('fetch failed') || msg.includes('ECONNREFUSED')) {
+      res.status(502).json({
+        error: `Cannot reach Ollama server. Is it running at the specified URL?`,
+      })
+      return
+    }
+
+    res.status(500).json({ error: (error as Error).message })
+  }
+})
+
 /** Ollama request body schema */
 const OllamaRequestSchema = z.object({
   ollamaServerUrl: z.string().url('Valid Ollama server URL is required'),

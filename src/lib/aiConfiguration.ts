@@ -188,14 +188,20 @@ export const AI_PROVIDERS: Record<AIProviderId, AIProvider> = {
       }
     },
     testConnection: async (url: string) => {
-      // Stub: Real Ollama API call implemented in E22-S03
-      // For now, validate URL format only
-      try {
-        const parsed = new URL(url)
-        return parsed.protocol === 'http:' || parsed.protocol === 'https:'
-      } catch {
-        return false
+      // Real Ollama connection test (E22-S03)
+      // Lazy-import to avoid circular dependencies and keep bundle small
+      const { testOllamaConnection } = await import('./ollamaHealthCheck')
+      const config = getAIConfiguration()
+      const result = await testOllamaConnection(
+        url,
+        config.ollamaSettings?.directConnection ?? false,
+        config.ollamaSettings?.selectedModel
+      )
+      // If connection test returned an error, throw so the UI can show the message
+      if (!result.success) {
+        throw new Error(result.message)
       }
+      return true
     },
   },
 }

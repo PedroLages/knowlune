@@ -37,7 +37,17 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/app/components/ui/tooltip'
-import { CheckCircle2, AlertTriangle, Settings, ChevronDown, Info, Server } from 'lucide-react'
+import {
+  CheckCircle2,
+  AlertTriangle,
+  Settings,
+  ChevronDown,
+  Info,
+  Server,
+  Loader2,
+  Wifi,
+  WifiOff,
+} from 'lucide-react'
 import { OllamaModelPicker } from './OllamaModelPicker'
 import {
   getAIConfiguration,
@@ -48,6 +58,8 @@ import {
   type AIProviderId,
   type ConsentSettings,
 } from '@/lib/aiConfiguration'
+import { cn } from '@/app/components/ui/utils'
+import { testOllamaConnection } from '@/lib/ollamaHealthCheck'
 
 /** Feature labels for consent toggles */
 const FEATURE_LABELS: Record<keyof ConsentSettings, string> = {
@@ -68,7 +80,14 @@ export function AIConfigurationSettings() {
   const [isValidating, setIsValidating] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [isTesting, setIsTesting] = useState(false)
+  const [testResult, setTestResult] = useState<{
+    success: boolean
+    message: string
+    errorType?: string
+  } | null>(null)
   const successTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
+  const testResultTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   const isOllama = settings.provider === 'ollama'
 
@@ -97,9 +116,12 @@ export function AIConfigurationSettings() {
     return () => {
       window.removeEventListener('storage', handleStorageUpdate)
       window.removeEventListener('ai-configuration-updated', handleCustomUpdate)
-      // Clear any pending success timeout on unmount
+      // Clear any pending timeouts on unmount
       if (successTimeoutRef.current) {
         clearTimeout(successTimeoutRef.current)
+      }
+      if (testResultTimeoutRef.current) {
+        clearTimeout(testResultTimeoutRef.current)
       }
     }
   }, [])
@@ -252,6 +274,67 @@ export function AIConfigurationSettings() {
   }
 
   /**
+   * Tests Ollama connection independently of save flow (AC1)
+   * Shows success/failure with actionable error messages (AC3)
+   */
+  async function handleTestConnection() {
+    const url = ollamaUrl || settings.ollamaSettings?.serverUrl || ''
+    if (!url) {
+      setTestResult({ success: false, message: 'Enter a server URL first.' })
+      return
+    }
+
+    setIsTesting(true)
+    setTestResult(null)
+
+    try {
+      const result = await testOllamaConnection(
+        url,
+        settings.ollamaSettings?.directConnection ?? false,
+        settings.ollamaSettings?.selectedModel
+      )
+
+      setTestResult(result)
+
+      // Update persisted connection status based on test result
+      if (result.success) {
+        await saveAIConfiguration({
+          connectionStatus: 'connected',
+          errorMessage: undefined,
+          ollamaSettings: {
+            serverUrl: url,
+            directConnection: settings.ollamaSettings?.directConnection ?? false,
+            selectedModel: settings.ollamaSettings?.selectedModel,
+          },
+        })
+        setSettings(getAIConfiguration())
+      } else {
+        await saveAIConfiguration({
+          connectionStatus: 'error',
+          errorMessage: result.message,
+        })
+        setSettings(getAIConfiguration())
+      }
+
+      // Auto-dismiss success results after 8 seconds; keep errors visible for reading
+      if (result.success) {
+        if (testResultTimeoutRef.current) {
+          clearTimeout(testResultTimeoutRef.current)
+        }
+        testResultTimeoutRef.current = setTimeout(() => setTestResult(null), 8000)
+      }
+    } catch (error) {
+      // silent-catch-ok — error displayed via testResult state
+      setTestResult({
+        success: false,
+        message: error instanceof Error ? error.message : 'Connection test failed',
+      })
+    } finally {
+      setIsTesting(false)
+    }
+  }
+
+  /**
    * Toggles Ollama direct connection mode
    */
   async function handleDirectConnectionToggle(enabled: boolean) {
@@ -311,6 +394,31 @@ export function AIConfigurationSettings() {
         <CardTitle className="flex items-center gap-2">
           <Settings className="size-5" aria-hidden="true" />
           AI Configuration
+          {/* AC2: Connection status indicator (green/red dot) */}
+          {isOllama && settings.ollamaSettings?.serverUrl && (
+            <span
+              className="ml-auto flex items-center gap-1.5"
+              data-testid="ollama-status-indicator"
+              aria-label={
+                isConnected
+                  ? 'Ollama connected'
+                  : hasError
+                    ? 'Ollama connection error'
+                    : 'Ollama not connected'
+              }
+            >
+              <span
+                className={cn(
+                  'size-2.5 rounded-full',
+                  isConnected ? 'bg-success' : hasError ? 'bg-destructive' : 'bg-muted-foreground'
+                )}
+                aria-hidden="true"
+              />
+              <span className="text-xs font-normal text-muted-foreground">
+                {isConnected ? 'Connected' : hasError ? 'Error' : 'Not tested'}
+              </span>
+            </span>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -476,6 +584,77 @@ export function AIConfigurationSettings() {
             onModelSelect={handleModelSelectCallback}
             isConnected={isConnected}
           />
+        )}
+
+        {/* AC1: Test Connection Button (Ollama only) */}
+        {isOllama && settings.ollamaSettings?.serverUrl && (
+          <div className="space-y-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                handleTestConnection().catch(err => {
+                  console.error('Test connection failed:', err)
+                  toast.error('Connection test failed unexpectedly')
+                })
+              }}
+              disabled={isTesting}
+              data-testid="test-connection-button"
+              className="min-h-[44px] rounded-lg"
+              aria-label="Test Ollama connection"
+            >
+              {isTesting ? (
+                <>
+                  <Loader2 className="size-4 mr-2 animate-spin" aria-hidden="true" />
+                  Testing connection...
+                </>
+              ) : (
+                <>
+                  <Wifi className="size-4 mr-2" aria-hidden="true" />
+                  Test Connection
+                </>
+              )}
+            </Button>
+
+            {/* AC3: Test result with actionable error messages */}
+            {testResult && (
+              <div
+                className={cn(
+                  'flex items-start gap-2 text-sm rounded-lg p-3',
+                  testResult.success
+                    ? 'bg-success/10 text-success'
+                    : 'bg-destructive/10 text-destructive'
+                )}
+                role="alert"
+                data-testid="test-connection-result"
+              >
+                {testResult.success ? (
+                  <CheckCircle2 className="size-4 mt-0.5 shrink-0" aria-hidden="true" />
+                ) : (
+                  <WifiOff className="size-4 mt-0.5 shrink-0" aria-hidden="true" />
+                )}
+                <div>
+                  <p>{testResult.message}</p>
+                  {testResult.errorType === 'cors' && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Run:{' '}
+                      <code className="bg-muted px-1 rounded text-xs">
+                        OLLAMA_ORIGINS=* ollama serve
+                      </code>{' '}
+                      or switch to proxy mode in Advanced Settings.
+                    </p>
+                  )}
+                  {testResult.errorType === 'unreachable' && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Verify the server is running:{' '}
+                      <code className="bg-muted px-1 rounded text-xs">
+                        curl {ollamaUrl || settings.ollamaSettings?.serverUrl}
+                      </code>
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Save Button */}
