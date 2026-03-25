@@ -4,6 +4,7 @@ import { db } from '@/db'
 import type { ImportedAuthor } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { toastWithUndo, toastError } from '@/lib/toastHelpers'
+import { resolvePhotoHandle, revokePhotoUrl } from '@/lib/authorPhotoResolver'
 
 interface NewAuthorData {
   name: string
@@ -62,7 +63,21 @@ export const useAuthorStore = create<AuthorStoreState>((set, get) => ({
     set({ isLoading: true, error: null })
     try {
       const authors = await db.authors.orderBy('createdAt').reverse().toArray()
-      set({ authors, isLoading: false, isLoaded: true })
+
+      // Resolve photoHandle → photoUrl for authors that have a handle but no URL (E25-S05)
+      const resolved = await Promise.all(
+        authors.map(async author => {
+          if (author.photoHandle && !author.photoUrl) {
+            const url = await resolvePhotoHandle(author.photoHandle)
+            if (url) {
+              return { ...author, photoUrl: url }
+            }
+          }
+          return author
+        })
+      )
+
+      set({ authors: resolved, isLoading: false, isLoaded: true })
     } catch (error) {
       set({ isLoading: false, isLoaded: true, error: 'Failed to load authors' })
       console.error('[AuthorStore] Failed to load authors:', error)
@@ -163,6 +178,11 @@ export const useAuthorStore = create<AuthorStoreState>((set, get) => ({
       await persistWithRetry(async () => {
         await db.authors.delete(id)
       })
+
+      // Revoke object URL to prevent memory leak
+      if (deletedAuthor.photoHandle) {
+        revokePhotoUrl(deletedAuthor.photoHandle)
+      }
 
       toastWithUndo({
         message: `Author "${deletedAuthor.name}" deleted`,

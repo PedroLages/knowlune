@@ -2,7 +2,11 @@ import { db } from '@/db'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { triggerAutoAnalysis } from '@/lib/autoAnalysis'
 import { triggerOllamaTagging } from '@/lib/ollamaTagging'
-import { detectAuthorFromFolderName, matchOrCreateAuthor } from '@/lib/authorDetection'
+import {
+  detectAuthorFromFolderName,
+  matchOrCreateAuthor,
+  detectAuthorPhoto,
+} from '@/lib/authorDetection'
 import {
   showDirectoryPicker,
   scanDirectory,
@@ -12,7 +16,7 @@ import {
   isImageFile,
   getVideoFormat,
 } from '@/lib/fileSystem'
-import type { ImportedCourse, ImportedVideo, ImportedPdf } from '@/data/types'
+import type { ImportedAuthor, ImportedCourse, ImportedVideo, ImportedPdf } from '@/data/types'
 import { toast } from 'sonner'
 
 // --- Error Types ---
@@ -366,15 +370,33 @@ export async function persistScannedCourse(
     throw error
   }
 
-  // Link course to author if detected (AC2)
+  // Link course to author if detected (AC2) + attach photo if found (E25-S05)
   if (authorId) {
     try {
       const author = await db.authors.get(authorId)
-      if (author && !author.courseIds.includes(course.id)) {
-        await db.authors.update(authorId, {
-          courseIds: [...author.courseIds, course.id],
-          updatedAt: now,
-        })
+      if (author) {
+        const updates: Partial<ImportedAuthor> = { updatedAt: now }
+
+        // Link course if not already linked
+        if (!author.courseIds.includes(course.id)) {
+          updates.courseIds = [...author.courseIds, course.id]
+        }
+
+        // Detect and attach author photo if author doesn't already have one (E25-S05)
+        if (!author.photoHandle && !author.photoUrl) {
+          const photoCandidate = detectAuthorPhoto(scanned.images)
+          if (photoCandidate) {
+            updates.photoHandle = photoCandidate.fileHandle
+            console.info(
+              `[Import] Auto-detected author photo: ${photoCandidate.path} for "${author.name}"`
+            )
+          }
+        }
+
+        if (Object.keys(updates).length > 1) {
+          // More than just updatedAt
+          await db.authors.update(authorId, updates)
+        }
       }
     } catch (error) {
       // Non-critical — author link is best-effort
