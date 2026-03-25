@@ -52,9 +52,7 @@ const mockGet = db.entitlements.get as ReturnType<typeof vi.fn>
 const mockDelete = db.entitlements.delete as ReturnType<typeof vi.fn>
 const mockGetState = useAuthStore.getState as ReturnType<typeof vi.fn>
 
-function makeCachedEntitlement(
-  overrides: Partial<CachedEntitlement> = {}
-): CachedEntitlement {
+function makeCachedEntitlement(overrides: Partial<CachedEntitlement> = {}): CachedEntitlement {
   return {
     userId: 'user-123',
     tier: 'premium',

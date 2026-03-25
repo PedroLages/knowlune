@@ -152,7 +152,11 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
       <CardContent className="p-6" data-testid="subscription-section">
         {/* Loading state */}
         {state === 'loading' && (
-          <div className="space-y-3 animate-pulse" role="status" aria-label="Loading subscription status">
+          <div
+            className="space-y-3 animate-pulse"
+            role="status"
+            aria-label="Loading subscription status"
+          >
             <div className="h-6 w-20 bg-muted rounded-full" />
             <div className="h-4 w-48 bg-muted rounded" />
             <div className="h-10 w-full bg-muted rounded-xl" />
@@ -167,7 +171,10 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
             aria-live="polite"
             aria-label="Activating subscription"
           >
-            <div className="h-2 w-full rounded-full bg-gold-muted overflow-hidden" aria-label="Activation progress">
+            <div
+              className="h-2 w-full rounded-full bg-gold-muted overflow-hidden"
+              aria-label="Activation progress"
+            >
               <div className="h-full w-1/3 rounded-full bg-gold motion-safe:animate-[indeterminate_1.5s_ease-in-out_infinite]" />
             </div>
             <p className="text-sm text-muted-foreground text-center">
@@ -256,7 +263,9 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
               className="mt-2"
               onClick={() => {
                 // TODO(E19-S03): Implement Stripe billing portal redirect
-                toast.info('Billing portal coming soon — contact support to manage your subscription.')
+                toast.info(
+                  'Billing portal coming soon — contact support to manage your subscription.'
+                )
               }}
             >
               Manage Subscription

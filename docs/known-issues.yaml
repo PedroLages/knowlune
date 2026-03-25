@@ -194,3 +194,14 @@ issues:
     scheduled_for: null
     fixed_by: null
     notes: "Pre-existing on main — CardTitle renders <h3> but some section headings are <h2>, creating inconsistent heading hierarchy. Affects all Settings card components including Account, Engagement Preferences, Study Reminders, and now Subscription. Needs holistic Settings page heading audit."
+  - id: KI-015
+    type: typecheck
+    summary: "AIConfigurationSettings.tsx references undefined isPrivateNetworkUrl"
+    file: "src/app/components/figma/AIConfigurationSettings.tsx:534"
+    severity: medium
+    discovered_by: E19-S02
+    discovered_on: 2026-03-25
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Pre-existing on main — function isPrivateNetworkUrl is referenced but not defined/imported. Not changed by E19-S02 branch."

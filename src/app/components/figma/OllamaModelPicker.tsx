@@ -15,6 +15,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Check, ChevronsUpDown, Loader2, RefreshCw, AlertTriangle } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/ui/popover'
 import {
@@ -72,11 +73,18 @@ export function OllamaModelPicker({
       if (!selectedModel && result.length > 0) {
         onModelSelect(result[0].name)
       }
+
+      // Toast feedback so user knows the refresh worked
+      if (result.length > 0) {
+        toast.success(`Found ${result.length} model${result.length === 1 ? '' : 's'}`)
+      } else {
+        toast.warning('No models found. Pull a model with: ollama pull llama3.2')
+      }
     } catch (err) {
-      // silent-catch-ok — error state rendered inline via the error alert below the picker
       const message = err instanceof Error ? err.message : 'Failed to fetch models'
       setError(message)
       setModels([])
+      toast.error(message)
     } finally {
       setIsLoading(false)
     }
@@ -103,15 +111,19 @@ export function OllamaModelPicker({
           size="sm"
           onClick={() => void fetchModels()}
           disabled={isLoading}
-          className="h-7 px-2 text-xs text-muted-foreground"
+          className={cn(
+            'h-7 px-2 text-xs',
+            isLoading ? 'text-brand' : 'text-muted-foreground'
+          )}
           data-testid="refresh-models-button"
-          aria-label="Refresh model list"
+          aria-label={isLoading ? 'Loading models...' : 'Refresh model list'}
         >
-          <RefreshCw
-            className={cn('size-3 mr-1', isLoading && 'animate-spin')}
-            aria-hidden="true"
-          />
-          Refresh
+          {isLoading ? (
+            <Loader2 className="size-3.5 mr-1 animate-spin" aria-hidden="true" />
+          ) : (
+            <RefreshCw className="size-3 mr-1" aria-hidden="true" />
+          )}
+          {isLoading ? 'Loading...' : 'Refresh'}
         </Button>
       </div>
 
@@ -150,8 +162,16 @@ export function OllamaModelPicker({
             <CommandInput placeholder="Search models..." data-testid="model-search-input" />
             <CommandList>
               <CommandEmpty>
-                {error ? (
-                  <span className="text-destructive">Failed to load models</span>
+                {isLoading ? (
+                  <span className="flex items-center justify-center gap-2 text-muted-foreground py-2">
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                    Loading models...
+                  </span>
+                ) : error ? (
+                  <div className="text-sm px-2 py-1">
+                    <p className="text-destructive font-medium">Failed to load models</p>
+                    <p className="text-xs text-muted-foreground mt-1">{error}</p>
+                  </div>
                 ) : (
                   'No models found. Pull a model with: ollama pull llama3.2'
                 )}

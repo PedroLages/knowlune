@@ -4,9 +4,9 @@ story_name: "Stripe Subscription Integration"
 status: in-progress
 started: 2026-03-25
 completed:
-reviewed: true
+reviewed: in-progress
 review_started: 2026-03-25
-review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests-skipped, design-review, code-review, code-review-testing]
+review_gates_passed: []
 review_scope: full
 burn_in_validated: false
 ---
