@@ -45,8 +45,9 @@ export async function startCheckout(): Promise<{ url: string } | { error: string
  * to wait for the webhook to process.
  */
 export async function pollEntitlement(
-  maxWaitMs = 10_000,
-  intervalMs = 1_000
+  maxWaitMs = 30_000,
+  intervalMs = 2_000,
+  signal?: AbortSignal
 ): Promise<CachedEntitlement | null> {
   if (!supabase) return null
 
@@ -56,6 +57,7 @@ export async function pollEntitlement(
   const deadline = Date.now() + maxWaitMs
 
   while (Date.now() < deadline) {
+    if (signal?.aborted) return null
     try {
       const { data, error } = await supabase
         .from('entitlements')
@@ -77,8 +79,8 @@ export async function pollEntitlement(
         await cacheEntitlement(entitlement)
         return entitlement
       }
-    } catch {
-      // Network error during poll — continue retrying
+    } catch (err) {
+      console.warn('Entitlement poll attempt failed:', err)
     }
 
     // Wait before next poll
