@@ -144,3 +144,6 @@ Before requesting `/review-story`, verify:
 
 - E27-S01 was merged to main before this story began implementation, which meant Tasks 1 and 3 were already complete. The plan was written before E27-S01 shipped, so the scope was larger than needed. Rebasing onto main resolved this cleanly.
 - The feature branch had a merge conflict in sprint-status.yaml due to E27-S01 marking itself as done while this branch had marked itself as in-progress. Straightforward resolution by taking both state changes.
+- Following an established routing pattern (`/library` -> `/notes?tab=bookmarks`) made the implementation trivial — three `<Navigate replace />` entries with no custom logic. Pattern reuse kept the diff small and review clean.
+- Design review was correctly skipped for a routing-only story with no visual changes. Recognizing when a gate adds no value avoids wasted effort.
+- Pre-existing test failures (Reports.test.tsx unit tests, navigation.spec.ts E2E) were identified and documented but not fixed in this story. Logging them in the code review report prevents confusion in future reviews.
