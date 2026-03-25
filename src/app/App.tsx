@@ -14,6 +14,8 @@ import { supportsWorkers } from '@/ai/lib/workerCapabilities'
 import { useFontScale } from '@/hooks/useFontScale'
 import { useWelcomeWizardStore } from '@/stores/useWelcomeWizardStore'
 import { useColorScheme } from '@/hooks/useColorScheme'
+import { supabase } from '@/lib/auth/supabase'
+import { useAuthStore } from '@/stores/useAuthStore'
 
 // Register global error handlers (window.onerror, unhandledrejection)
 initErrorTracking()
@@ -35,6 +37,17 @@ export default function App() {
   useEffect(() => {
     initWizard()
   }, [initWizard])
+
+  // E19-S01: Subscribe to Supabase auth state changes (session restore, token refresh, cross-tab sync)
+  useEffect(() => {
+    if (!supabase) return
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      useAuthStore.getState().setSession(session)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
 
   // Load vector embeddings from IndexedDB on startup
   useEffect(() => {

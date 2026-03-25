@@ -78,9 +78,7 @@ describe('scoreAuthorPhoto', () => {
   })
 
   it('scores 70 for partial name in author directory', () => {
-    expect(
-      scoreAuthorPhoto(makeImage('author-photo.jpg', 'about/author-photo.jpg'))
-    ).toBe(70)
+    expect(scoreAuthorPhoto(makeImage('author-photo.jpg', 'about/author-photo.jpg'))).toBe(70)
   })
 
   // --- No match ---
@@ -108,10 +106,10 @@ describe('detectAuthorPhoto', () => {
 
   it('returns the highest-scoring candidate', () => {
     const images = [
-      makeImage('cover.jpg'),           // 0
-      makeImage('author-photo.jpg'),    // 40
-      makeImage('author.jpg'),          // 100
-      makeImage('thumbnail.png'),       // 0
+      makeImage('cover.jpg'), // 0
+      makeImage('author-photo.jpg'), // 40
+      makeImage('author.jpg'), // 100
+      makeImage('thumbnail.png'), // 0
     ]
     const result = detectAuthorPhoto(images)
     expect(result).not.toBeNull()
@@ -119,18 +117,14 @@ describe('detectAuthorPhoto', () => {
   })
 
   it('returns null when no images match', () => {
-    const images = [
-      makeImage('cover.jpg'),
-      makeImage('thumbnail.png'),
-      makeImage('banner.gif'),
-    ]
+    const images = [makeImage('cover.jpg'), makeImage('thumbnail.png'), makeImage('banner.gif')]
     expect(detectAuthorPhoto(images)).toBeNull()
   })
 
   it('prefers exact match over partial match', () => {
     const images = [
-      makeImage('author-headshot.jpg'),  // 40
-      makeImage('profile.png'),          // 100
+      makeImage('author-headshot.jpg'), // 40
+      makeImage('profile.png'), // 100
     ]
     const result = detectAuthorPhoto(images)
     expect(result!.filename).toBe('profile.png')
@@ -138,8 +132,8 @@ describe('detectAuthorPhoto', () => {
 
   it('prefers root exact match over directory exact match', () => {
     const images = [
-      makeImage('avatar.jpg', 'images/avatar.jpg'),  // 60
-      makeImage('instructor.png'),                      // 100
+      makeImage('avatar.jpg', 'images/avatar.jpg'), // 60
+      makeImage('instructor.png'), // 100
     ]
     const result = detectAuthorPhoto(images)
     expect(result!.filename).toBe('instructor.png')
@@ -147,8 +141,8 @@ describe('detectAuthorPhoto', () => {
 
   it('returns the only matching candidate even with low score', () => {
     const images = [
-      makeImage('cover.jpg'),                          // 0
-      makeImage('slide.png', 'about/slide.png'),       // 20
+      makeImage('cover.jpg'), // 0
+      makeImage('slide.png', 'about/slide.png'), // 20
     ]
     const result = detectAuthorPhoto(images)
     expect(result).not.toBeNull()

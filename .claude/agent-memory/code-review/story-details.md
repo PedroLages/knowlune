@@ -343,4 +343,17 @@ See git history for these older reviews. Key recurring patterns captured in MEMO
 - M2: TODAY_STR derived from Intl.DateTimeFormat in Node runner, may diverge from browser toLocaleDateString in extreme timezones
 - M3: metadata object omits quizId and score fields specified in implementation plan
 - Positive: Correct architecture decision (extend existing pattern, not new store), solid fire-and-forget isolation, clean working tree, thorough lessons learned
->>>>>>> main
+
+## E19-S01: Authentication Setup (Round 1)
+- No uncommitted changes (positive -- clean working tree)
+- BLOCKER: Shared `loading`/`error` state in useAuthStore across all 3 auth methods -- race condition when switching tabs
+- BLOCKER: Supabase client created with empty strings when env vars missing -- silent runtime failures
+- H1: No try/catch around Supabase SDK calls -- unhandled rejections on network failures freeze loading state
+- H2: Full store destructuring causes unnecessary re-renders (should use individual selectors)
+- H3: Uncontrolled Tabs defaultValue not reset on dialog reopen (stale tab state)
+- H4: Account card uses raw `<h2>` instead of `<CardTitle>` (inconsistent with other Settings cards)
+- M1: Mode toggle button missing focus ring styles (keyboard accessibility)
+- M2: Duplicate `LogOut` import statement
+- M3: Network error detection too broad (`message.includes('Network')`)
+- M4: Google SVG icon duplicated in AuthDialog and GoogleAuthButton
+- Positive: Good error mapping, proper auth listener cleanup, strong accessibility baseline (aria-busy, role=alert, min-h-[44px], htmlFor associations)

@@ -68,28 +68,29 @@ export async function matchOrCreateAuthor(authorName: string | null): Promise<st
 
   const normalizedInput = trimmed.toLowerCase()
 
-  // Search all authors for case-insensitive match
-  const allAuthors = await db.authors.toArray()
-  const existing = allAuthors.find(a => a.name.toLowerCase() === normalizedInput)
+  return db.transaction('rw', db.authors, async () => {
+    // Case-insensitive lookup via indexed query instead of full table scan
+    const existing = await db.authors.where('name').equalsIgnoreCase(normalizedInput).first()
 
-  if (existing) {
-    return existing.id
-  }
+    if (existing) {
+      return existing.id
+    }
 
-  // Create new author with slug-based ID
-  const id = crypto.randomUUID()
-  const now = new Date().toISOString()
+    // Create new author with slug-based ID
+    const id = crypto.randomUUID()
+    const now = new Date().toISOString()
 
-  await db.authors.add({
-    id,
-    name: trimmed,
-    courseIds: [],
-    isPreseeded: false,
-    createdAt: now,
-    updatedAt: now,
+    await db.authors.add({
+      id,
+      name: trimmed,
+      courseIds: [],
+      isPreseeded: false,
+      createdAt: now,
+      updatedAt: now,
+    })
+
+    return id
   })
-
-  return id
 }
 
 // --- Author Photo Detection ---
@@ -114,14 +115,7 @@ const EXACT_PHOTO_NAMES = [
  * Directory names that suggest contained images are author-related.
  * Matched case-insensitively against each path segment.
  */
-const AUTHOR_DIRECTORIES = [
-  'about',
-  'instructor',
-  'author',
-  'profile',
-  'bio',
-  'teacher',
-] as const
+const AUTHOR_DIRECTORIES = ['about', 'instructor', 'author', 'profile', 'bio', 'teacher'] as const
 
 /**
  * Represents a scored photo candidate for ranking.
@@ -168,10 +162,10 @@ export function scoreAuthorPhoto(image: ScannedImage): number {
   const dirs = getPathDirectories(image.path)
 
   const isExactName = EXACT_PHOTO_NAMES.some(name => baseName === name)
-  const isPartialName = EXACT_PHOTO_NAMES.some(
-    name => baseName.includes(name) && baseName !== name
+  const isPartialName = EXACT_PHOTO_NAMES.some(name => baseName.includes(name) && baseName !== name)
+  const isInAuthorDir = dirs.some(dir =>
+    AUTHOR_DIRECTORIES.includes(dir as (typeof AUTHOR_DIRECTORIES)[number])
   )
-  const isInAuthorDir = dirs.some(dir => AUTHOR_DIRECTORIES.includes(dir as (typeof AUTHOR_DIRECTORIES)[number]))
 
   // Exact name in root or shallow path — strongest signal
   if (isExactName && dirs.length === 0) return 100

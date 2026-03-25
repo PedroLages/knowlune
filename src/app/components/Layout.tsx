@@ -87,7 +87,15 @@ function NavLink({
 }
 
 // Reusable sidebar content component
-function SidebarContent({ onNavigate, iconOnly, visibleGroups }: { onNavigate?: () => void; iconOnly?: boolean; visibleGroups: NavigationGroup[] }) {
+function SidebarContent({
+  onNavigate,
+  iconOnly,
+  visibleGroups,
+}: {
+  onNavigate?: () => void
+  iconOnly?: boolean
+  visibleGroups: NavigationGroup[]
+}) {
   return (
     <>
       {/* Logo + tagline */}
@@ -353,7 +361,10 @@ export function Layout() {
         <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
           <SheetContent side="left" className="w-[280px] p-6 flex flex-col" aria-label="Sidebar">
             <SheetTitle className="sr-only">Navigation</SheetTitle>
-            <SidebarContent onNavigate={() => setSidebarOpen(false)} visibleGroups={visibleGroups} />
+            <SidebarContent
+              onNavigate={() => setSidebarOpen(false)}
+              visibleGroups={visibleGroups}
+            />
           </SheetContent>
         </Sheet>
       )}

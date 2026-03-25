@@ -63,7 +63,12 @@ export const navigationGroups: NavigationGroup[] = [
     // (path /review). They serve different roles: the label names the group, the item is a link.
     label: 'Review',
     items: [
-      { name: 'Learning Path', path: '/ai-learning-path', icon: Sparkles, disclosureKey: 'ai-used' },
+      {
+        name: 'Learning Path',
+        path: '/ai-learning-path',
+        icon: Sparkles,
+        disclosureKey: 'ai-used',
+      },
       { name: 'Knowledge Gaps', path: '/knowledge-gaps', icon: Brain, disclosureKey: 'ai-used' },
       { name: 'Review', path: '/review', icon: RotateCcw, disclosureKey: 'review-used' },
       { name: 'Retention', path: '/retention', icon: ShieldCheck, disclosureKey: 'review-used' },
@@ -73,10 +78,33 @@ export const navigationGroups: NavigationGroup[] = [
     label: 'Track',
     items: [
       { name: 'Challenges', path: '/challenges', icon: Target, disclosureKey: 'challenge-used' },
-      { name: 'Session History', path: '/session-history', icon: History, disclosureKey: 'challenge-used' },
-      { name: 'Study Analytics', path: '/reports', tab: 'study', icon: BarChart3, disclosureKey: 'lesson-completed' },
-      { name: 'Quiz Analytics', path: '/reports', tab: 'quizzes', icon: ClipboardList, disclosureKey: 'lesson-completed' },
-      { name: 'AI Analytics', path: '/reports', tab: 'ai', icon: BrainCircuit, disclosureKey: 'ai-used' },
+      {
+        name: 'Session History',
+        path: '/session-history',
+        icon: History,
+        disclosureKey: 'challenge-used',
+      },
+      {
+        name: 'Study Analytics',
+        path: '/reports',
+        tab: 'study',
+        icon: BarChart3,
+        disclosureKey: 'lesson-completed',
+      },
+      {
+        name: 'Quiz Analytics',
+        path: '/reports',
+        tab: 'quizzes',
+        icon: ClipboardList,
+        disclosureKey: 'lesson-completed',
+      },
+      {
+        name: 'AI Analytics',
+        path: '/reports',
+        tab: 'ai',
+        icon: BrainCircuit,
+        disclosureKey: 'ai-used',
+      },
     ],
   },
 ]

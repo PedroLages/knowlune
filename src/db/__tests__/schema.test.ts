@@ -572,7 +572,10 @@ describe('v20 migration edge cases', () => {
     // 1 Chase Hughes (pre-seeded) + 1 John Smith (deduplicated)
     expect(authors).toHaveLength(2)
 
-    const johnSmith = authors.find(a => a.name === 'John Smith')
+    // Migration stores the first-seen name (after trim). Since toArray() returns
+    // records in primary-key (UUID) sort order, the first-seen variant is
+    // non-deterministic. Match case-insensitively to avoid flakiness.
+    const johnSmith = authors.find(a => a.name.toLowerCase() === 'john smith')
     expect(johnSmith).toBeDefined()
     expect(johnSmith!.courseIds).toHaveLength(3) // All 3 courses linked
     expect(johnSmith!.isPreseeded).toBe(false)

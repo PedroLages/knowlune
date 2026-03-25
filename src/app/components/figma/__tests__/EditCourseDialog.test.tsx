@@ -41,9 +41,7 @@ vi.mock('@/stores/useCourseImportStore', () => ({
 vi.mock('@/stores/useAuthorStore', () => ({
   useAuthorStore: (selector: (state: Record<string, unknown>) => unknown) =>
     selector({
-      authors: [
-        { id: 'author-1', name: 'Test Author', photoUrl: '', courseIds: [] },
-      ],
+      authors: [{ id: 'author-1', name: 'Test Author', photoUrl: '', courseIds: [] }],
       loadAuthors: vi.fn(),
       linkCourseToAuthor: vi.fn(),
       unlinkCourseFromAuthor: vi.fn(),
@@ -52,7 +50,12 @@ vi.mock('@/stores/useAuthorStore', () => ({
 
 vi.mock('@/lib/authors', () => ({
   getAvatarSrc: () => ({ src: '' }),
-  getInitials: (name: string) => name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+  getInitials: (name: string) =>
+    name
+      .split(' ')
+      .map((n: string) => n[0])
+      .join('')
+      .toUpperCase(),
 }))
 
 function makeCourse(overrides: Partial<ImportedCourse> = {}): ImportedCourse {

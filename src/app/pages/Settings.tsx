@@ -19,6 +19,7 @@ import {
   Type,
   Users,
   RotateCcw,
+  LogOut,
 } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
@@ -63,6 +64,8 @@ import { AvatarUploadZone } from '@/app/components/settings/avatar-upload-zone'
 import { EngagementPreferences } from '@/app/components/settings/EngagementPreferences'
 import { validateImageFile, compressAvatar, fileToDataUrl } from '@/lib/avatarUpload'
 import { toastSuccess, toastError } from '@/lib/toastHelpers'
+import { useAuthStore } from '@/stores/useAuthStore'
+import { AuthDialog, type AuthMode } from '@/app/components/auth/AuthDialog'
 
 const AGE_RANGE_OPTIONS: { value: AgeRange; label: string; description: string }[] = [
   { value: 'gen-z', label: 'Gen Z', description: 'Born 1997-2012' },
@@ -182,6 +185,12 @@ export default function Settings() {
   const [isCropDialogOpen, setIsCropDialogOpen] = useState(false)
   const [tempPhotoDataUrl, setTempPhotoDataUrl] = useState<string | null>(null)
   const importFileRef = useRef<HTMLInputElement>(null)
+
+  // Auth state
+  const user = useAuthStore(s => s.user)
+  const authSignOut = useAuthStore(s => s.signOut)
+  const [authDialogOpen, setAuthDialogOpen] = useState(false)
+  const [authDialogMode, setAuthDialogMode] = useState<AuthMode>('sign-in')
 
   // Export state
   const [isExporting, setIsExporting] = useState(false)
@@ -441,6 +450,84 @@ export default function Settings() {
       <h1 className="text-2xl font-bold mb-6">Settings</h1>
 
       <div className="max-w-2xl space-y-6">
+        {/* Account */}
+        <Card className="overflow-hidden">
+          <CardHeader className="border-b border-border/50 bg-surface-sunken/30">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-brand-soft p-2">
+                {user ? (
+                  <LogOut className="size-5 text-brand" aria-hidden="true" />
+                ) : (
+                  <Shield className="size-5 text-brand" aria-hidden="true" />
+                )}
+              </div>
+              <div>
+                <CardTitle className="text-lg font-display leading-none">Account</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {user ? `Signed in as ${user.email}` : 'Sign in to access premium features'}
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6" data-testid="account-section">
+            {user ? (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">{user.email}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Signed in via {user.app_metadata?.provider ?? 'email'}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 min-h-[44px]"
+                  onClick={async () => {
+                    const result = await authSignOut()
+                    if (result.error) {
+                      toastError.saveFailed(result.error)
+                    } else {
+                      toastSuccess.saved('Signed out successfully')
+                    }
+                  }}
+                >
+                  <LogOut className="size-4" />
+                  Sign Out
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="brand"
+                  className="min-h-[44px]"
+                  onClick={() => {
+                    setAuthDialogMode('sign-up')
+                    setAuthDialogOpen(true)
+                  }}
+                >
+                  Sign Up
+                </Button>
+                <Button
+                  variant="brand-outline"
+                  className="min-h-[44px]"
+                  onClick={() => {
+                    setAuthDialogMode('sign-in')
+                    setAuthDialogOpen(true)
+                  }}
+                >
+                  Sign In
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <AuthDialog
+          open={authDialogOpen}
+          onOpenChange={setAuthDialogOpen}
+          defaultMode={authDialogMode}
+        />
+
         {/* Profile */}
         <Card className="overflow-hidden">
           <CardHeader className="border-b border-border/50 bg-surface-sunken/30">
@@ -761,7 +848,6 @@ export default function Settings() {
 
         {/* Engagement Preferences */}
         <EngagementPreferences />
-
 
         {/* Reminders */}
         <ReminderSettings />

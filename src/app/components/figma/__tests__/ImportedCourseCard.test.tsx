@@ -55,7 +55,12 @@ vi.mock('@/stores/useAuthorStore', () => ({
 
 vi.mock('@/lib/authors', () => ({
   getAvatarSrc: () => ({ src: '' }),
-  getInitials: (name: string) => name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+  getInitials: (name: string) =>
+    name
+      .split(' ')
+      .map((n: string) => n[0])
+      .join('')
+      .toUpperCase(),
 }))
 
 vi.mock('@/db/schema', () => ({

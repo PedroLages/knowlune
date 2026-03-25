@@ -21,9 +21,7 @@ const resolvedUrls = new Map<FileSystemFileHandle, string>()
  * @param handle - The file handle to resolve
  * @returns Object URL string, or null if resolution fails
  */
-export async function resolvePhotoHandle(
-  handle: FileSystemFileHandle
-): Promise<string | null> {
+export async function resolvePhotoHandle(handle: FileSystemFileHandle): Promise<string | null> {
   // Return cached URL if available
   const cached = resolvedUrls.get(handle)
   if (cached) return cached

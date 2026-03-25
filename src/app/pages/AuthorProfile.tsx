@@ -261,11 +261,7 @@ export function AuthorProfile() {
               />
             ))}
             {authorImportedCourses.map(course => (
-              <ImportedCourseCard
-                key={course.id}
-                course={course}
-                allTags={allTags}
-              />
+              <ImportedCourseCard key={course.id} course={course} allTags={allTags} />
             ))}
           </div>
         </div>
