@@ -347,8 +347,8 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 24: Course Import Wizard & Editing
   # ──────────────────────────────────────────────────
-  epic-24: backlog
-  24-1-refactor-import-function-into-scan-and-persist: backlog
+  epic-24: in-progress
+  24-1-refactor-import-function-into-scan-and-persist: done
   24-2-import-wizard-folder-selection-and-course-details: backlog
   24-3-import-wizard-tags-cover-image-and-confirmation: backlog
   24-4-ai-metadata-suggestions-during-import: backlog
