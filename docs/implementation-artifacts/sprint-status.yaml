@@ -37,7 +37,7 @@
 # - Epic 7 gap coverage stories (7-8..7-11) deferred indefinitely — risk accepted for error-path edge cases
 
 generated: 2026-03-15
-last_updated: 2026-03-25  # E27-S01 done
+last_updated: 2026-03-25  # E22-S02 done
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -326,7 +326,7 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-22: in-progress
   22-1-ollama-provider-integration: done
-  22-2-model-auto-discovery: backlog
+  22-2-model-auto-discovery: done
   22-3-connection-testing-health-check: backlog
   22-4-auto-categorize-courses-on-import: backlog
   22-5-dynamic-filter-chips-from-ai-tags: backlog
