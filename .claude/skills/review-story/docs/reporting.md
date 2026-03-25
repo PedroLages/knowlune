@@ -157,7 +157,7 @@ Re-run `/review-story` to validate fixes. Pre-checks will re-run; completed agen
 
 ## Gate Validation Before Marking Reviewed
 
-**Validate all required gates** before marking `reviewed: true`. Check that `review_gates_passed` contains one entry (base or `-skipped` variant) for each of the 10 canonical gates: `build`, `lint`, `type-check`, `format-check`, `unit-tests`, `e2e-tests`, `design-review`, `code-review`, `code-review-testing`, `web-design-guidelines`.
+**Validate all required gates** before marking `reviewed: true`. Check that `review_gates_passed` contains one entry (base or `-skipped` variant) for each of the 9 canonical gates: `build`, `lint`, `type-check`, `format-check`, `unit-tests`, `e2e-tests`, `design-review`, `code-review`, `code-review-testing`. Ignore any legacy `web-design-guidelines` entries from older stories.
 
 **If all gates present:**
 - Set `reviewed: true`

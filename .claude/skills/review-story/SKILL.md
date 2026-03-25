@@ -31,7 +31,6 @@ All gates must use these exact names in `review_gates_passed`. No variants (e.g.
 | `design-review` | Design review agent completes | Yes (or `design-review-skipped` if no UI changes) |
 | `code-review` | Code review agent completes | Yes |
 | `code-review-testing` | Test coverage agent completes | Yes |
-| `web-design-guidelines` | Web design guidelines agent completes | Yes (or `web-design-guidelines-skipped` if no UI changes) |
 
 The `-skipped` suffix indicates the gate was intentionally skipped (no lint script, no test files, no UI changes). Both the base name and `-skipped` variant satisfy the requirement.
 
@@ -58,6 +57,7 @@ The orchestrator should NOT:
 
 ```
 [ ] Identify story and detect resumption
+[ ] Pre-checks: dependency audit
 [ ] Pre-checks: build
 [ ] Pre-checks: lint
 [ ] Pre-checks: type-check
@@ -69,7 +69,6 @@ The orchestrator should NOT:
 [ ] Design review (Agent)
 [ ] Code review — architecture (Agent)
 [ ] Code review — testing (Agent)
-[ ] Web design guidelines review (Agent)
 [ ] Consolidate findings and verdict
 ```
 
@@ -161,31 +160,36 @@ Mark the first todo as `in_progress` and proceed:
 
    Store the result as `HAS_UI_CHANGES` (boolean) for use in Step 7 (review agent swarm).
 
-   - If matches found → `HAS_UI_CHANGES=true` (dispatch design-review + web-design-guidelines)
-   - If no matches → `HAS_UI_CHANGES=false` (skip both agents, add `-skipped` suffix to gates)
+   - If matches found → `HAS_UI_CHANGES=true` (dispatch design-review)
+   - If no matches → `HAS_UI_CHANGES=false` (skip design-review, add `-skipped` suffix to gate)
 
    Run these sequentially — stop on first failure:
 
-   a. `npm run build` — STOP on failure with build errors.
-   b. **Lint** — `npm run lint`. If lint errors found (if lint script exists, otherwise skip):
+   a. **Dependency audit** — `npm audit --audit-level=high`. If HIGH or CRITICAL vulnerabilities found:
+      - List affected packages and CVEs in the output
+      - This is a **warning, not a blocker** — dependency issues are often upstream and not fixable immediately
+      - Note in output: "⚠️ Dependency vulnerabilities: N high/critical. Run `npm audit` for details."
+      - Continue to build step (do not STOP)
+   b. `npm run build` — STOP on failure with build errors.
+   c. **Lint** — `npm run lint`. If lint errors found (if lint script exists, otherwise skip):
       - Auto-fix: run `npx eslint . --fix` to fix auto-fixable issues (unused vars, import order, etc.).
       - Re-run `npm run lint` to verify. If errors remain, STOP with error output and suggest manual fixes.
       - Note in output: "Auto-fixed N ESLint issues."
-   c. **Type check** — `npx tsc --noEmit`. If errors found:
+   d. **Type check** — `npx tsc --noEmit`. If errors found:
       - Auto-fix: attempt to resolve type errors in files changed by the current branch (`git diff --name-only main...HEAD`). Only fix errors in branch-changed files — do not fix pre-existing errors in other files.
       - Re-run `npx tsc --noEmit`. If errors remain only in files NOT changed by the branch, note them as pre-existing and continue. If errors remain in branch-changed files, STOP with error output.
-   d. **Format check** — `npx prettier --check "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}"`. If formatting issues found:
+   e. **Format check** — `npx prettier --check "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}"`. If formatting issues found:
       - Auto-fix: run `npx prettier --write "src/**/*.{ts,tsx,js,jsx,css,md}" "tests/**/*.{ts,tsx}"` to format all files.
       - Re-run the check to verify. If still failing, STOP with error output.
       - Note in output: "Auto-formatted N files with Prettier."
-   e. `npm run test:unit -- --run` — STOP on failure. If no unit test script or no test files, note and continue.
-   f. E2E tests — run smoke specs + current story's spec on Chromium only:
+   f. `npm run test:unit -- --run` — STOP on failure. If no unit test script or no test files, note and continue.
+   g. E2E tests — run smoke specs + current story's spec on Chromium only:
       ```
       npx playwright test ${BASE_PATH}/tests/e2e/navigation.spec.ts ${BASE_PATH}/tests/e2e/overview.spec.ts ${BASE_PATH}/tests/e2e/courses.spec.ts ${BASE_PATH}/tests/e2e/story-{id}.spec.ts --project=chromium
       ```
       If the current story has no spec file in `${BASE_PATH}/tests/e2e/`, run smoke specs only. STOP on failure. Do NOT run `tests/design-review.spec.ts` or `${BASE_PATH}/tests/e2e/regression/` specs here — those are separate.
 
-   g. **Test pattern validation** (after E2E tests pass):
+   h. **Test pattern validation** (after E2E tests pass):
 
       If the story has an E2E spec file, run the test pattern validator:
       ```
@@ -205,11 +209,11 @@ Mark the first todo as `in_progress` and proceed:
 
       - Exit 0 (clean or LOW-only) → Continue to burn-in suggestion. Store findings in memory for code review agent context.
 
-   h. **Burn-in test suggestion** (after E2E tests and pattern validation pass):
+   i. **Burn-in test suggestion** (after E2E tests and pattern validation pass):
 
       If the story has an E2E spec file AND E2E tests passed AND `burn_in_validated` is NOT already `true` in story frontmatter, analyze whether burn-in testing would be valuable:
 
-      **Use validator findings from step g to determine confidence level:**
+      **Use validator findings from step h to determine confidence level:**
 
       - 🔴 **HIGH confidence** (LOW severity findings detected) — recommend burn-in:
         - Validator reported LOW severity issues (testFileSize, missingTestTimeImport, todoComments, debugConsole)
@@ -369,7 +373,7 @@ Mark the first todo as `in_progress` and proceed:
      subagent_type: "code-review",
      prompt: "Review story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run git diff main...HEAD for changes.
 
-Test anti-patterns detected (step g validation):
+Test anti-patterns detected (step h validation):
 [Insert validation findings if any LOW severity issues were found, or 'No anti-patterns detected' if clean]
 
 Focus on architecture, security, correctness, silent failures, test anti-patterns (section 5.5), and Knowlune stack patterns. Score each finding with confidence (0-100).",
@@ -462,6 +466,8 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
 10. **Mark reviewed** (with gate validation):
 
    **Validate all required gates** before marking `reviewed: true`. Check that `review_gates_passed` contains one entry (base or `-skipped` variant) for each of the 9 canonical gates: `build`, `lint`, `type-check`, `format-check`, `unit-tests`, `e2e-tests`, `design-review`, `code-review`, `code-review-testing`.
+
+   **Note**: The `web-design-guidelines` gate was removed (consolidated into design-review). For backward compatibility, existing stories with `web-design-guidelines` in their `review_gates_passed` are still valid — simply ignore that entry during validation.
 
    - **All gates present**: Set `reviewed: true`. Set `review_gates_passed` to the full list. Append review summary to `## Design Review Feedback` and `## Code Review Feedback` sections.
    - **Missing gates**: Do NOT set `reviewed: true`. Keep `reviewed: in-progress`. Warn the user:
