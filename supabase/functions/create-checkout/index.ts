@@ -58,6 +58,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // 2. Parse origin from request for redirect URLs
+    // silent-catch-ok — server-side edge function, no toast available
     const body = await req.json().catch(() => {
       console.warn('create-checkout: malformed request body')
       return {}
@@ -116,7 +117,7 @@ Deno.serve(async (req: Request) => {
       JSON.stringify({ url: session.url }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     )
-  } catch (err) {
+  } catch (err) { // silent-catch-ok — server-side edge function, returns error response
     console.error('create-checkout error:', err)
     return new Response(
       JSON.stringify({ error: 'Unable to start checkout. Please try again.' }),
