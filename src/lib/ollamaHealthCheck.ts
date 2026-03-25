@@ -11,11 +11,7 @@
  * @see E22-S03 Connection Testing & Health Check
  */
 
-import {
-  getAIConfiguration,
-  saveAIConfiguration,
-  getOllamaSelectedModel,
-} from './aiConfiguration'
+import { getAIConfiguration, saveAIConfiguration, getOllamaSelectedModel } from './aiConfiguration'
 
 /** Result of a connection test */
 export interface ConnectionTestResult {
@@ -25,12 +21,10 @@ export interface ConnectionTestResult {
   message: string
   /** Error category for UI handling */
   errorType?: 'unreachable' | 'cors' | 'model-not-found' | 'unknown'
-  /** Server version if available */
-  serverVersion?: string
 }
 
 /** Timeout for health check requests (shorter than full request timeout) */
-const HEALTH_CHECK_TIMEOUT = 10_000 // 10 seconds
+const HEALTH_CHECK_TIMEOUT = 5_000 // 5 seconds
 
 /**
  * Tests connectivity to an Ollama server with actionable error messages.
@@ -145,7 +139,10 @@ function classifyConnectionError(
   }
 
   // CORS error in direct mode — TypeError with "Failed to fetch" is the typical symptom
-  if (directConnection && (message.includes('Failed to fetch') || message.includes('NetworkError'))) {
+  if (
+    directConnection &&
+    (message.includes('Failed to fetch') || message.includes('NetworkError'))
+  ) {
     return {
       success: false,
       message: `CORS blocked. Set OLLAMA_ORIGINS=* on your Ollama server or use proxy mode.`,

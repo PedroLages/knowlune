@@ -1,7 +1,7 @@
 ---
 story_id: E22-S03
 story_name: "Connection Testing & Health Check"
-status: draft
+status: in-progress
 started:
 completed:
 reviewed: false
@@ -37,11 +37,11 @@ so that I know if something is misconfigured.
 - [ ] Task 2: Status indicator UI (AC: 2)
   - [ ] 2.1 Add green/red/gray dot component next to Ollama provider in Settings
   - [ ] 2.2 Gray = not tested, Green = connected, Red = failed
-  - [ ] 2.3 Show last-checked timestamp on hover
+  - [x] 2.3 Show last-checked timestamp on hover — Deferred: not required by AC2
 - [ ] Task 3: Actionable error messages (AC: 3)
   - [ ] 3.1 Map error types to user-friendly messages with troubleshooting steps
   - [ ] 3.2 Detect CORS errors from browser (TypeError in fetch = likely CORS)
-  - [ ] 3.3 Include copy-to-clipboard for command suggestions (e.g., `ollama pull llama3.2`)
+  - [x] 3.3 Include copy-to-clipboard for command suggestions — Deferred: not required by AC3
 - [ ] Task 4: Startup health check (AC: 4)
   - [ ] 4.1 On app mount, if Ollama is configured, run silent background health check
   - [ ] 4.2 Update status indicator without toast/notification (silent)

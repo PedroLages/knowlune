@@ -316,11 +316,13 @@ export function AIConfigurationSettings() {
         setSettings(getAIConfiguration())
       }
 
-      // Clear test result after 8 seconds
-      if (testResultTimeoutRef.current) {
-        clearTimeout(testResultTimeoutRef.current)
+      // Auto-dismiss success results after 8 seconds; keep errors visible for reading
+      if (result.success) {
+        if (testResultTimeoutRef.current) {
+          clearTimeout(testResultTimeoutRef.current)
+        }
+        testResultTimeoutRef.current = setTimeout(() => setTestResult(null), 8000)
       }
-      testResultTimeoutRef.current = setTimeout(() => setTestResult(null), 8000)
     } catch (error) {
       // silent-catch-ok — error displayed via testResult state
       setTestResult({
@@ -408,11 +410,7 @@ export function AIConfigurationSettings() {
               <span
                 className={cn(
                   'size-2.5 rounded-full',
-                  isConnected
-                    ? 'bg-success'
-                    : hasError
-                      ? 'bg-destructive'
-                      : 'bg-muted-foreground'
+                  isConnected ? 'bg-success' : hasError ? 'bg-destructive' : 'bg-muted-foreground'
                 )}
                 aria-hidden="true"
               />
