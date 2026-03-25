@@ -6,7 +6,7 @@ started: 2026-03-25
 completed:
 reviewed: in-progress
 review_started: 2026-03-25
-review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing]
 burn_in_validated: false
 ---
 
@@ -206,11 +206,21 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+- **BLOCKER**: Brand link text contrast fails WCAG AA in dark mode (3.48:1 vs 4.5:1 required) — use `text-brand-soft-foreground`
+- **HIGH**: Tab triggers 29px tall (need 44px touch targets) — add `h-11` to TabsList
+- **HIGH**: Redundant `aria-label` on DialogContent causes double screen reader announcement — remove it
+- **HIGH**: `autoComplete="username"` on sign-in email field breaks password managers — use `"email"`
+- Full report: `docs/reviews/design/design-review-2026-03-25-e19-s01.md`
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+- **BLOCKER**: Shared `loading`/`error` state across auth tabs creates race conditions — move to local component state
+- **BLOCKER**: Supabase client created with empty strings when env vars missing — fail fast or null guard
+- **BLOCKER** [Consensus: 2 agents]: No try/catch on Supabase SDK calls — network failures freeze loading state permanently
+- **BLOCKER**: AC coverage at 60% (below 80% minimum) — AC3, AC6, AC7, AC8 need behavioral tests
+- **HIGH**: Uncontrolled Tabs — tab state not reset when dialog reopens
+- **HIGH**: No double-submit guard on auth actions
+- Full reports: `docs/reviews/code/code-review-2026-03-25-e19-s01.md`, `docs/reviews/code/code-review-testing-2026-03-25-e19-s01.md`, `docs/reviews/code/edge-case-review-2026-03-25-e19-s01.md`
 
 ## Challenges and Lessons Learned
 
