@@ -48,7 +48,7 @@ function loadShowAll(): boolean {
 }
 
 function persistShowAll(val: boolean) {
-  localStorage.setItem(SHOW_ALL_KEY, JSON.stringify(val))
+  localStorage.setItem(SHOW_ALL_KEY, val ? 'true' : 'false')
 }
 
 // ── Hook ───────────────────────────────────────────────────────────────────
