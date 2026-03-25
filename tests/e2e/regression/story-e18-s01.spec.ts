@@ -272,9 +272,7 @@ test.describe('E18-S01: Complete Keyboard Navigation', () => {
     await expect(secondRadio).toBeChecked()
   })
 
-  test('AC4: Multiple-select — Tab navigates to each checkbox independently', async ({
-    page,
-  }) => {
+  test('AC4: Multiple-select — Tab navigates to each checkbox independently', async ({ page }) => {
     await navigateToQuiz(page)
     await startQuiz(page)
 

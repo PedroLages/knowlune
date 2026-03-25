@@ -58,6 +58,7 @@ describe('ElearningDB schema', () => {
       'courseThumbnails',
       'courses',
       'embeddings',
+      'entitlements',
       'flashcards',
       'importedCourses',
       'importedPdfs',
@@ -75,8 +76,12 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 22', () => {
-    expect(db.verno).toBe(22)
+  it('should be at version 23', () => {
+    expect(db.verno).toBe(23)
+  })
+
+  it('should have entitlements table with userId as primary key', () => {
+    expect(db.entitlements.schema.primKey.name).toBe('userId')
   })
 
   it('should preserve key indexes on existing v16 tables in v17 migration', async () => {

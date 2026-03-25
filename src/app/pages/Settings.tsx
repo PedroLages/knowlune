@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { useSearchParams } from 'react-router'
 import { useTheme } from 'next-themes'
 import {
   Download,
@@ -62,6 +63,7 @@ import { QuizPreferencesForm } from '@/app/components/settings/QuizPreferencesFo
 import { AvatarCropDialog } from '@/app/components/ui/avatar-crop-dialog'
 import { AvatarUploadZone } from '@/app/components/settings/avatar-upload-zone'
 import { EngagementPreferences } from '@/app/components/settings/EngagementPreferences'
+import { SubscriptionCard } from '@/app/components/settings/SubscriptionCard'
 import { validateImageFile, compressAvatar, fileToDataUrl } from '@/lib/avatarUpload'
 import { toastSuccess, toastError } from '@/lib/toastHelpers'
 import { useAuthStore } from '@/stores/useAuthStore'
@@ -191,6 +193,27 @@ export default function Settings() {
   const authSignOut = useAuthStore(s => s.signOut)
   const [authDialogOpen, setAuthDialogOpen] = useState(false)
   const [authDialogMode, setAuthDialogMode] = useState<AuthMode>('sign-in')
+
+  // Checkout return handling
+  const [searchParams] = useSearchParams()
+  const [checkoutStatus, setCheckoutStatus] = useState<'success' | 'cancel' | null>(null)
+
+  // Run once on mount — intentionally reads searchParams only on initial load
+  const checkoutParamRef = useRef(searchParams.get('checkout'))
+  useEffect(() => {
+    const raw = checkoutParamRef.current
+    const status = raw === 'success' || raw === 'cancel' ? raw : null
+    if (status) {
+      setCheckoutStatus(status)
+      const cleaned = new URLSearchParams(window.location.search)
+      cleaned.delete('checkout')
+      cleaned.delete('session_id')
+      const newUrl = cleaned.toString()
+        ? `${window.location.pathname}?${cleaned}`
+        : window.location.pathname
+      window.history.replaceState({}, '', newUrl)
+    }
+  }, [])
 
   // Export state
   const [isExporting, setIsExporting] = useState(false)
@@ -527,6 +550,9 @@ export default function Settings() {
           onOpenChange={setAuthDialogOpen}
           defaultMode={authDialogMode}
         />
+
+        {/* Subscription — only shown when authenticated */}
+        {user && <SubscriptionCard checkoutStatus={checkoutStatus} />}
 
         {/* Profile */}
         <Card className="overflow-hidden">

@@ -22,6 +22,7 @@ import type {
   ImportedAuthor,
   CareerPath,
   PathEnrollment,
+  CachedEntitlement,
 } from '@/data/types'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 
@@ -50,6 +51,7 @@ const db = new Dexie('ElearningDB') as Dexie & {
   authors: EntityTable<ImportedAuthor, 'id'>
   careerPaths: EntityTable<CareerPath, 'id'>
   pathEnrollments: EntityTable<PathEnrollment, 'id'>
+  entitlements: EntityTable<CachedEntitlement, 'userId'>
 }
 
 db.version(1).stores({
@@ -660,6 +662,37 @@ db.version(22).stores({
   pathEnrollments: 'id, pathId, status',
   // NEW: Flashcard system with SM-2 spaced repetition
   flashcards: 'id, courseId, noteId, nextReviewAt, createdAt',
+})
+
+// v23: Add entitlements table for local subscription cache (E19-S02)
+db.version(23).stores({
+  // All 26 existing v22 tables (unchanged — must redeclare or Dexie deletes them)
+  importedCourses: 'id, name, importedAt, status, *tags',
+  importedVideos: 'id, courseId, filename',
+  importedPdfs: 'id, courseId, filename',
+  progress: '[courseId+videoId], courseId, videoId',
+  bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+  screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+  contentProgress: '[courseId+itemId], courseId, itemId, status',
+  challenges: 'id, type, deadline, createdAt',
+  embeddings: 'noteId, createdAt',
+  learningPath: 'courseId, position, generatedAt',
+  courseThumbnails: 'courseId',
+  aiUsageEvents: 'id, featureType, timestamp, courseId',
+  reviewRecords: 'id, noteId, nextReviewAt, reviewedAt',
+  courseReminders: 'id, courseId',
+  courses: 'id, category, difficulty, authorId',
+  quizzes: 'id, lessonId, createdAt',
+  quizAttempts: 'id, quizId, [quizId+completedAt], completedAt',
+  videoCaptions: '[courseId+videoId], courseId, videoId',
+  authors: 'id, name, createdAt',
+  careerPaths: 'id',
+  pathEnrollments: 'id, pathId, status',
+  flashcards: 'id, courseId, noteId, nextReviewAt, createdAt',
+  // NEW: Local entitlement cache with 7-day TTL
+  entitlements: 'userId',
 })
 
 export { db }

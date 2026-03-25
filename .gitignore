@@ -39,7 +39,9 @@ coverage/
 
 # External tools
 .autoforge/
-supabase/
+supabase/*
+!supabase/migrations/
+!supabase/functions/
 StudyGy-Dashboard/
 
 # Git worktrees

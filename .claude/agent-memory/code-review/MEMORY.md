@@ -18,6 +18,13 @@
 - `.catch(() => {})` silently swallowing errors
 - Async event handlers without try/catch
 - `scrollIntoView()` and DOM APIs without element existence checks
+- Empty `catch {}` blocks (no variable) in polling/retry loops (E19-S02)
+
+## Edge Function Security Patterns (Epic 19+)
+- CORS `Access-Control-Allow-Origin: *` on sensitive endpoints -- found E19-S02
+- Missing HTTP method guards on Deno.serve handlers -- found E19-S02
+- Non-null assertions (`!`) on Deno.env.get() without validation -- found E19-S02
+- Customer lookup by email instead of user ID metadata -- found E19-S02
 
 ## Project Conventions
 - Import alias: `@/` resolves to `./src`

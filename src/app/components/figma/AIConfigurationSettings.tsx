@@ -61,6 +61,23 @@ import {
 import { cn } from '@/app/components/ui/utils'
 import { testOllamaConnection } from '@/lib/ollamaHealthCheck'
 
+/**
+ * Checks if a URL points to a private/LAN IP address.
+ * Used to warn about Chrome Private Network Access restrictions in direct mode.
+ */
+function isPrivateNetworkUrl(url: string): boolean {
+  try {
+    const hostname = new URL(url).hostname
+    return (
+      hostname.startsWith('192.168.') ||
+      hostname.startsWith('10.') ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(hostname)
+    )
+  } catch {
+    return false
+  }
+}
+
 /** Feature labels for consent toggles */
 const FEATURE_LABELS: Record<keyof ConsentSettings, string> = {
   videoSummary: 'AI Video Summaries',
@@ -527,9 +544,18 @@ export function AIConfigurationSettings() {
                   />
                 </div>
                 {settings.ollamaSettings?.directConnection && (
-                  <p className="text-xs text-warning" role="alert">
-                    Direct mode active. Ensure your Ollama server has CORS enabled.
-                  </p>
+                  <div className="text-xs space-y-1" role="alert">
+                    <p className="text-warning">
+                      Direct mode active. Ensure your Ollama server has CORS enabled.
+                    </p>
+                    {isPrivateNetworkUrl(ollamaUrl || settings.ollamaSettings?.serverUrl || '') && (
+                      <p className="text-destructive">
+                        Warning: Direct mode may not work with LAN addresses (192.168.x, 10.x, 172.x)
+                        due to Chrome&apos;s Private Network Access policy. Use proxy mode (default)
+                        instead, which requires the backend server (<code className="bg-muted px-1 rounded">npm run server</code>).
+                      </p>
+                    )}
+                  </div>
                 )}
               </CollapsibleContent>
             </Collapsible>

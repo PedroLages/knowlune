@@ -288,7 +288,7 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-19: in-progress
   19-1-authentication-setup: done
-  19-2-stripe-subscription-integration: backlog
+  19-2-stripe-subscription-integration: done
   19-3-entitlement-system-and-offline-caching: backlog
   19-4-subscription-management: backlog
   19-5-premium-feature-gating-and-upgrade-ctas: backlog

@@ -70,6 +70,7 @@
   --gold: #c49245;
   --gold-foreground: #ffffff;
   --gold-muted: #f5edd8;
+  --gold-soft-foreground: #8a6520;
   --study-day-text: #2d6b45;
   --freeze-day-text: #4a56a8;
   --accent-violet: #9a8cb8;
@@ -174,6 +175,7 @@
   --gold: #daa860;
   --gold-foreground: #1a1b26;
   --gold-muted: #3a3020;
+  --gold-soft-foreground: #daa860;
   --study-day-text: #6ab888;
   --freeze-day-text: #8b92da;
   --accent-violet: #b5a8cc;
@@ -245,6 +247,7 @@
   /* Gold — more saturated */
   --gold: oklch(0.65 0.16 75);
   --gold-muted: oklch(0.93 0.06 75);
+  --gold-soft-foreground: oklch(0.48 0.12 75);
 
   /* Destructive — vivid red */
   --destructive: oklch(0.52 0.2 25);
@@ -300,6 +303,7 @@
   /* Gold */
   --gold: oklch(0.72 0.15 75);
   --gold-muted: oklch(0.28 0.06 75);
+  --gold-soft-foreground: oklch(0.72 0.15 75);
 
   /* Destructive */
   --destructive: oklch(0.68 0.19 20);
@@ -389,6 +393,7 @@
   --color-gold: var(--gold);
   --color-gold-foreground: var(--gold-foreground);
   --color-gold-muted: var(--gold-muted);
+  --color-gold-soft-foreground: var(--gold-soft-foreground);
   --color-accent-violet: var(--accent-violet);
   --color-accent-violet-foreground: var(--accent-violet-foreground);
   --color-accent-violet-muted: var(--accent-violet-muted);
