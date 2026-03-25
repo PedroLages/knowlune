@@ -66,7 +66,7 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
    **If NOT reviewed (streamlined mode) — expanded:**
    ```
    [ ] Identify story and check status
-   [ ] Pre-checks: build, lint, type-check, format, tests
+   [ ] Pre-checks: dependency audit, format, lint, type-check, build, tests
    [ ] Design review (Agent)
    [ ] Code review — architecture (Agent)
    [ ] Code review — testing (Agent)
@@ -185,7 +185,20 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
    ```
    If no story spec exists in `${BASE_PATH}/tests/e2e/`, skip this step.
 
-11. **Push branch**: `git push -u origin feature/e##-s##-slug`.
+11. **Push branch**:
+
+   **PR size check** (informational warning before push):
+   ```bash
+   git diff main...HEAD --stat | tail -1
+   ```
+   If total lines changed > 400, warn:
+   ```
+   ⚠️ Large PR: {N} lines changed. PRs over 400 LOC have 84% finding rate vs 31% for small PRs.
+   Consider splitting into stacked PRs if changes are logically separable.
+   ```
+   This is a warning only — does not block push.
+
+   `git push -u origin feature/e##-s##-slug`.
 
 12. **Create PR**:
 
@@ -278,10 +291,11 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
 
    | Check                  | Result                      |
    | ---------------------- | --------------------------- |
-   | Build                  | passed                      |
+   | Dependency audit       | clean / N warnings          |
+   | Format check           | passed / auto-fixed N files |
    | Lint                   | passed / skipped            |
    | Type check             | passed / auto-fixed         |
-   | Format check           | passed / auto-fixed N files |
+   | Build                  | passed                      |
    | Unit tests             | passed (N) / skipped        |
    | E2E tests              | passed (N) / skipped        |
    | Design review          | passed / N warnings         |
