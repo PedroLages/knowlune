@@ -15,13 +15,13 @@
  * NOTE: Tests intercept Supabase auth endpoints via page.route() to
  * simulate server responses without requiring a live Supabase instance.
  */
-import { test, expect } from '../support/fixtures'
+import { test, expect } from '../../support/fixtures'
 import {
   goToOverview,
   goToCourses,
   goToSettings,
   navigateAndWait,
-} from '../support/helpers/navigation'
+} from '../../support/helpers/navigation'
 
 // Dismiss welcome wizard for all tests (appears on first visit)
 test.beforeEach(async ({ page }) => {
