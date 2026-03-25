@@ -4,9 +4,9 @@ story_name: "Author Auto-Detection During Import"
 status: in-progress
 started: 2026-03-23
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-25
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review-skipped, code-review, code-review-testing]
 burn_in_validated: false
 ---
 
@@ -112,15 +112,23 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+Skipped — no UI changes detected in this story (no files changed in `src/app/pages/` or `src/app/components/`).
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+**2 HIGH, 1 MEDIUM, 2 NITS** — No blockers.
+
+- **[HIGH]** Race condition in `matchOrCreateAuthor()` (read-then-write without transaction) — mitigated by single-import UX pattern. Fix: wrap in `db.transaction('rw', db.authors, ...)`.
+- **[HIGH]** `db.authors.toArray()` loads all authors for linear scan — acceptable for personal app scale (<100 authors).
+- **[MEDIUM]** Author `createdAt` and course `importedAt` may differ by milliseconds (cosmetic).
+- **[NIT]** Comment says "slug-based ID" but code uses UUID.
+- **[NIT]** `seedAuthors` uses `Record<string, unknown>[]` (consistent with other helpers but untyped).
+
+Full report: `docs/reviews/code/code-review-2026-03-25-e25-s04.md`
 
 ## Web Design Guidelines Review
 
-[Populated by /review-story — Web Interface Guidelines compliance findings]
+Skipped — no UI changes in this story.
 
 ## Challenges and Lessons Learned
 
