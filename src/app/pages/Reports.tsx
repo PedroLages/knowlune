@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useSearchParams } from 'react-router'
 import { BookOpen, CheckCircle, FileText, TrendingUp, Clock, RotateCcw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import {
@@ -64,8 +65,16 @@ const areaChartConfig = {
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
+const VALID_TABS = ['study', 'quizzes', 'ai'] as const
+
 export default function Reports() {
   const allCourses = useCourseStore(s => s.courses)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const rawTab = searchParams.get('tab')
+  const activeTab = VALID_TABS.includes(rawTab as (typeof VALID_TABS)[number])
+    ? (rawTab as string)
+    : 'study'
+
   const [studyNotes, setStudyNotes] = useState(0)
   const [retakeData, setRetakeData] = useState<RetakeFrequencyResult>({
     averageRetakes: 0,
@@ -185,7 +194,11 @@ export default function Reports() {
             actionHref="/courses"
           />
         ) : (
-          <Tabs defaultValue="study" className="mb-6">
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => setSearchParams({ tab: value }, { replace: true })}
+            className="mb-6"
+          >
             <motion.div variants={fadeUp}>
               <TabsList className="h-11">
                 <TabsTrigger value="study" className="h-9">
