@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { useCourseImportStore } from './useCourseImportStore'
 
 const STORAGE_KEY = 'levelup-onboarding-v1'
 
@@ -67,6 +68,16 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
       set({ completedAt: persisted.completedAt, skipped: persisted.skipped })
       return
     }
+
+    // If user already has imported courses, skip onboarding (existing user)
+    const { importedCourses } = useCourseImportStore.getState()
+    if (importedCourses.length > 0) {
+      const now = new Date().toISOString()
+      persistCompletion(now, true)
+      set({ completedAt: now, skipped: true })
+      return
+    }
+
     set({ isActive: true, currentStep: 1 })
   },
 
