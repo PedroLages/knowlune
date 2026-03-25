@@ -6,7 +6,7 @@ started: YYYY-MM-DD
 completed:
 reviewed: false          # false | in-progress | true
 review_started:          # YYYY-MM-DD — set when /review-story begins
-review_gates_passed: []  # tracks completed gates: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, web-design-guidelines]
+review_gates_passed: []  # tracks completed gates: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing]
 burn_in_validated: false # true if burn-in testing (10 iterations) passed
 ---
 
@@ -60,10 +60,6 @@ Before requesting `/review-story`, verify:
 ## Code Review Feedback
 
 [Populated by /review-story — adversarial code review findings]
-
-## Web Design Guidelines Review
-
-[Populated by /review-story — Web Interface Guidelines compliance findings]
 
 ## Challenges and Lessons Learned
 

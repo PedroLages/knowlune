@@ -6,7 +6,7 @@
 - Always check `git diff HEAD` for uncommitted changes as first review step
 
 ## Recurring Code Quality Patterns
-- String interpolation for className instead of `cn()` -- recurring since E01-S03
+- String interpolation for className instead of `cn()` -- recurring since E01-S03 (17+ instances through E18-S07)
 - `h-* w-*` instead of `size-*` Tailwind v4 shorthand -- recurring since E02-S05
 - Sub-44px touch targets on buttons/icons -- recurring since E02-S07
 - `formatTimestamp` duplicated across multiple files -- recurring since E02-S08

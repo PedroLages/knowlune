@@ -112,7 +112,10 @@ export function useQuizTimer(
         hasFiredRef.current = true
         clearInterval(interval)
         syncToStore(0)
-        Promise.resolve(onExpireRef.current()).catch(console.error)
+        Promise.resolve(onExpireRef.current()).catch(err => {
+          // silent-catch-ok — expiry callback error logged, timer already stopped
+          console.error(err)
+        })
       }
 
       return remaining

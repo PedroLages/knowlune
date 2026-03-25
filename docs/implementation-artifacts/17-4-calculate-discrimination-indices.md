@@ -1,7 +1,7 @@
 ---
 story_id: E17-S04
 story_name: "Calculate Discrimination Indices"
-status: reviewed
+status: done
 started: 2026-03-23
 completed: 2026-03-23
 reviewed: true

@@ -144,15 +144,8 @@ export function OnboardingOverlay() {
                 className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
                 aria-label="Skip onboarding"
               >
-                <X className="h-4 w-4" />
+                <X className="size-4" />
               </Button>
-            )}
-
-            {/* Welcome header (only on first view) */}
-            {currentStep === 1 && !isComplete && (
-              <p className="mb-6 text-center text-sm font-medium text-muted-foreground">
-                Welcome to Knowlune! Let's get you started in 3 quick steps.
-              </p>
             )}
 
             {/* Step indicator */}

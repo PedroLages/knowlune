@@ -10,6 +10,8 @@ import {
   Info,
   Camera,
   Trash2,
+  Loader2,
+  Pencil,
 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Card } from '@/app/components/ui/card'
@@ -41,9 +43,13 @@ import { TagBadgeList } from '@/app/components/figma/TagBadgeList'
 import { TagEditor } from '@/app/components/figma/TagEditor'
 import { VideoPlayer } from '@/app/components/figma/VideoPlayer'
 import { ThumbnailPickerDialog } from '@/app/components/figma/ThumbnailPickerDialog'
+import { EditCourseDialog } from '@/app/components/figma/EditCourseDialog'
+import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { useAuthorStore } from '@/stores/useAuthorStore'
 import { useCourseCardPreview } from '@/hooks/useCourseCardPreview'
 import { useVideoFromHandle } from '@/hooks/useVideoFromHandle'
+import { getAvatarSrc } from '@/lib/authors'
 import { db } from '@/db/schema'
 import { MomentumBadge } from './MomentumBadge'
 import type { ImportedCourse, ImportedVideo, LearnerCourseStatus } from '@/data/types'
@@ -81,10 +87,20 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
   const updateCourseStatus = useCourseImportStore(state => state.updateCourseStatus)
   const removeImportedCourse = useCourseImportStore(state => state.removeImportedCourse)
   const thumbnailUrls = useCourseImportStore(state => state.thumbnailUrls)
+  const analysisStatus = useCourseImportStore(state => state.autoAnalysisStatus[course.id])
   const navigate = useNavigate()
+
+  // Subscribe to author store so card re-renders when authors load
+  const storeAuthors = useAuthorStore(state => state.authors)
+  const loadAuthors = useAuthorStore(state => state.loadAuthors)
+  useEffect(() => {
+    loadAuthors()
+  }, [loadAuthors])
+  const authorData = course.authorId ? storeAuthors.find(a => a.id === course.authorId) : undefined
 
   const [thumbnailPickerOpen, setThumbnailPickerOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const statusBadgeRef = useRef<HTMLButtonElement>(null)
   const thumbnailUrl = thumbnailUrls[course.id] ?? null
@@ -304,6 +320,17 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
+                    data-testid="edit-course-menu-item"
+                    className="gap-2 min-h-[44px]"
+                    onClick={e => {
+                      e.stopPropagation()
+                      setEditDialogOpen(true)
+                    }}
+                  >
+                    <Pencil className="size-4" aria-hidden="true" />
+                    Edit details
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
                     data-testid="delete-course-menu-item"
                     variant="destructive"
                     className="gap-2 min-h-[44px]"
@@ -392,10 +419,56 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
             >
               {course.name}
             </h3>
+            {authorData ? (
+              <button
+                type="button"
+                data-testid="course-card-author"
+                onClick={e => {
+                  e.stopPropagation()
+                  navigate(`/authors/${authorData.id}`)
+                }}
+                className="flex items-center gap-1.5 mb-1 text-xs text-muted-foreground hover:text-brand transition-colors w-fit"
+              >
+                <Avatar className="size-5">
+                  <AvatarImage {...getAvatarSrc(authorData.photoUrl ?? '', 20)} alt="" />
+                  <AvatarFallback className="text-[8px]">
+                    {authorData.name
+                      .split(' ')
+                      .map(n => n[0])
+                      .join('')
+                      .toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <span>{authorData.name}</span>
+              </button>
+            ) : (
+              <p
+                data-testid="course-card-unknown-author"
+                className="text-xs text-muted-foreground mb-1"
+              >
+                Unknown Author
+              </p>
+            )}
             <p className="text-sm text-muted-foreground mb-2">
               Imported {new Date(course.importedAt).toLocaleDateString()}
             </p>
             <div className="flex items-center gap-1.5 mb-3">
+              <span aria-live="polite" className="contents">
+                {analysisStatus === 'analyzing' && (
+                  <span
+                    data-testid="ai-tagging-indicator"
+                    className="text-xs text-muted-foreground animate-pulse flex items-center gap-1"
+                  >
+                    <Loader2 className="size-3 animate-spin" aria-hidden="true" />
+                    AI tagging...
+                  </span>
+                )}
+                {analysisStatus === 'complete' && course.tags.length > 0 && (
+                  <span className="sr-only">
+                    AI tagging complete. {course.tags.length} tags added.
+                  </span>
+                )}
+              </span>
               <TagBadgeList tags={course.tags} onRemove={handleRemoveTag} maxVisible={3} />
               <TagEditor currentTags={course.tags} allTags={allTags} onAddTag={handleAddTag} />
             </div>
@@ -457,6 +530,13 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
         courseId={course.id}
         courseName={course.name}
         firstVideo={firstVideo}
+      />
+
+      <EditCourseDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        course={course}
+        allTags={allTags}
       />
 
       <Dialog open={previewOpen} onOpenChange={handleDialogChange}>

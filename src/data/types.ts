@@ -147,6 +147,7 @@ export interface PdfMetadata {
 export interface ImportedCourse {
   id: string
   name: string
+  description?: string // AI-suggested or user-entered course description
   importedAt: string // ISO 8601
   category: string
   tags: string[]
@@ -154,6 +155,8 @@ export interface ImportedCourse {
   videoCount: number
   pdfCount: number
   directoryHandle: FileSystemDirectoryHandle
+  authorId?: string // FK to ImportedAuthor.id (E25-S01 AC2)
+  coverImageHandle?: FileSystemFileHandle // User-selected cover image from folder
 }
 
 export interface ImportedVideo {
@@ -345,6 +348,29 @@ export interface CourseReminder {
   days: DayOfWeek[] // Selected days of the week
   time: string // "HH:MM" format
   enabled: boolean
+  createdAt: string // ISO 8601
+  updatedAt: string // ISO 8601
+}
+
+// --- Imported Author Types (Epic 25) ---
+// These types support user-managed author profiles stored in IndexedDB.
+// They exist alongside the existing Author type used for pre-seeded data.
+
+export interface ImportedAuthor {
+  id: string
+  name: string
+  title?: string // Professional title (e.g., "Software Engineering Expert")
+  bio?: string // Biographical text (optional)
+  shortBio?: string // Brief one-liner description
+  photoUrl?: string // URL or object URL for display (optional)
+  photoHandle?: FileSystemFileHandle // Optional: local file handle for photo
+  courseIds: string[] // Linked imported course IDs
+  specialties?: string[] // Specialty tags (E25-S01 AC5)
+  yearsExperience?: number // Professional experience in years
+  education?: string // Education background (e.g., "PhD Computer Science, MIT")
+  socialLinks?: { website?: string; twitter?: string; linkedin?: string } // Social profile links (E25-S01 AC5)
+  featuredQuote?: string // Memorable quote from the author
+  isPreseeded: boolean // Flag indicating if bundled (e.g., Chase Hughes) (E25-S01 AC5)
   createdAt: string // ISO 8601
   updatedAt: string // ISO 8601
 }

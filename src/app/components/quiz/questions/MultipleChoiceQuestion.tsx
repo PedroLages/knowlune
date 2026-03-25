@@ -1,4 +1,4 @@
-import { useEffect, useId } from 'react'
+import { useCallback, useEffect, useId, useRef } from 'react'
 import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group'
 import { cn } from '@/app/components/ui/utils'
 import type { Question } from '@/types/quiz'
@@ -46,8 +46,33 @@ export function MultipleChoiceQuestion({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [isActive, options, onChange])
 
+  // WAI-ARIA radio group spec: arrow keys should both focus AND select.
+  // Radix moves focus via roving tabindex on ArrowDown/Up but does NOT fire
+  // onValueChange. We read document.activeElement after Radix updates the DOM
+  // (via rAF) and call onChange explicitly to enforce selection-follows-focus.
+  const rafIdRef = useRef<number>(0)
+  useEffect(() => () => cancelAnimationFrame(rafIdRef.current), [])
+
+  const handleRadioGroupKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!isActive) return
+      if (!['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return
+      rafIdRef.current = requestAnimationFrame(() => {
+        const focused = document.activeElement as HTMLElement | null
+        if (focused?.getAttribute('role') === 'radio') {
+          const val = focused.getAttribute('value')
+          if (val != null && val !== '') onChange(val)
+        }
+      })
+    },
+    [isActive, onChange]
+  )
+
   return (
     <fieldset className="mt-6 min-w-0" aria-labelledby={labelId}>
+      {/* Empty legend satisfies semantic HTML requirement; aria-labelledby on fieldset
+          provides the accessible name so no duplicate text node is added to the DOM */}
+      <legend className="sr-only" />
       <div
         id={labelId}
         data-testid="question-text"
@@ -60,6 +85,7 @@ export function MultipleChoiceQuestion({
         value={value ?? ''}
         onValueChange={isActive ? onChange : undefined}
         disabled={!isActive}
+        onKeyDown={handleRadioGroupKeyDown}
       >
         {options.map((option, index) => {
           const isSelected = value === option
@@ -86,7 +112,7 @@ export function MultipleChoiceQuestion({
                 'flex items-center gap-3 rounded-xl p-4 min-h-12 transition-colors duration-150 motion-reduce:transition-none border-2',
                 isActive ? 'cursor-pointer' : 'cursor-default',
                 reviewStyle,
-                'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2'
+                'focus-within:ring-2 focus-within:ring-brand focus-within:ring-offset-2'
               )}
             >
               {isActive && shortcutNum <= 9 && (

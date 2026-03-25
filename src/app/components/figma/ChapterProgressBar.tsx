@@ -8,6 +8,8 @@ interface ChapterProgressBarProps {
   bookmarks?: { id: string; timestamp: number; label: string }[]
   onSeek: (percent: number) => void
   onBookmarkSeek?: (time: number) => void
+  loopStart?: number | null
+  loopEnd?: number | null
 }
 
 export function ChapterProgressBar({
@@ -17,6 +19,8 @@ export function ChapterProgressBar({
   bookmarks,
   onSeek,
   onBookmarkSeek,
+  loopStart,
+  loopEnd,
 }: ChapterProgressBarProps) {
   const handleChapterClick = (e: React.MouseEvent, time: number) => {
     e.stopPropagation()
@@ -34,6 +38,39 @@ export function ChapterProgressBar({
           className="absolute inset-y-0 left-0 bg-white rounded-full"
           style={{ width: `${progress}%` }}
         />
+
+        {/* AB-loop region: shaded band between A and B markers */}
+        {loopStart != null && loopEnd != null && duration > 0 && (
+          <div
+            data-testid="loop-region"
+            className="absolute inset-y-0 bg-brand/30 rounded-sm"
+            style={{
+              left: `${(loopStart / duration) * 100}%`,
+              width: `${((loopEnd - loopStart) / duration) * 100}%`,
+            }}
+            aria-hidden="true"
+          />
+        )}
+
+        {/* A marker */}
+        {loopStart != null && duration > 0 && (
+          <div
+            data-testid="loop-start-marker"
+            className="absolute inset-y-0 w-0.5 bg-brand -translate-x-1/2"
+            style={{ left: `${(loopStart / duration) * 100}%` }}
+            aria-hidden="true"
+          />
+        )}
+
+        {/* B marker */}
+        {loopEnd != null && duration > 0 && (
+          <div
+            data-testid="loop-end-marker"
+            className="absolute inset-y-0 w-0.5 bg-brand -translate-x-1/2"
+            style={{ left: `${(loopEnd / duration) * 100}%` }}
+            aria-hidden="true"
+          />
+        )}
       </div>
 
       {/* Chapter markers — above range input (z-20) for hover tooltips */}

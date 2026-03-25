@@ -638,4 +638,51 @@ describe('studyLog', () => {
       expect(snap.pauseStatus?.enabled).toBe(true)
     })
   })
+
+  // ── quiz_complete streak integration (E18-S05) ──
+
+  describe('quiz_complete actions count toward streak', () => {
+    it('quiz_complete today starts a streak', () => {
+      logStudyAction(makeAction({ type: 'quiz_complete' }))
+      expect(getCurrentStreak()).toBe(1)
+    })
+
+    it('quiz_complete yesterday starts a streak', () => {
+      const yesterday = new Date(FIXED_NOW)
+      yesterday.setDate(yesterday.getDate() - 1)
+      logStudyAction(makeAction({ type: 'quiz_complete', timestamp: yesterday.toISOString() }))
+      expect(getCurrentStreak()).toBe(1)
+    })
+
+    it('quiz_complete extends an existing lesson streak', () => {
+      // 3 consecutive lesson days, then quiz today
+      seedStudyDays([1, 2, 3]) // lesson_complete for 3 days ago, 2 days ago, yesterday
+      logStudyAction(makeAction({ type: 'quiz_complete' })) // quiz today
+      expect(getCurrentStreak()).toBe(4)
+    })
+
+    it('multiple quiz completions same day are idempotent (streak = 1)', () => {
+      // Submitting 3 quizzes on the same day should not inflate the streak.
+      // studyDaysFromLog deduplicates by date — 3 entries → 1 unique date.
+      logStudyAction(makeAction({ type: 'quiz_complete' }))
+      logStudyAction(makeAction({ type: 'quiz_complete' }))
+      logStudyAction(makeAction({ type: 'quiz_complete' }))
+      expect(getCurrentStreak()).toBe(1)
+    })
+
+    it('quiz_complete shows as active day in calendar snapshot', () => {
+      logStudyAction(makeAction({ type: 'quiz_complete' }))
+      const snap = getStreakSnapshot(7)
+      const today = toLocalDateString(FIXED_NOW)
+      const todayActivity = snap.activity.find(a => a.date === today)
+      expect(todayActivity?.hasActivity).toBe(true)
+      expect(todayActivity?.lessonCount).toBe(1)
+    })
+
+    it('quiz_complete and lesson_complete on same day count as one study day', () => {
+      logStudyAction(makeAction({ type: 'lesson_complete' }))
+      logStudyAction(makeAction({ type: 'quiz_complete' }))
+      expect(getCurrentStreak()).toBe(1)
+    })
+  })
 })

@@ -134,7 +134,7 @@ export function PdfOutlinePanel({ pdfDocument, onPageClick }: PdfOutlinePanelPro
   if (!outline || outline.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-2 p-6 text-center">
-        <FileText className="h-8 w-8 text-muted-foreground" />
+        <FileText className="size-8 text-muted-foreground" />
         <p className="text-sm text-muted-foreground">No bookmarks in this document</p>
       </div>
     )
