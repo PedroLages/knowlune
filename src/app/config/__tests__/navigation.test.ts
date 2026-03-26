@@ -2,38 +2,38 @@ import { describe, it, expect } from 'vitest'
 import { navigationGroups, getPrimaryNav, getOverflowNav } from '../navigation'
 
 describe('navigationGroups', () => {
-  it('has exactly 3 groups: Learn, Review, Track', () => {
+  it('has exactly 3 groups: Library, Study, Track', () => {
     expect(navigationGroups).toHaveLength(3)
-    expect(navigationGroups.map(g => g.label)).toEqual(['Learn', 'Review', 'Track'])
+    expect(navigationGroups.map(g => g.label)).toEqual(['Library', 'Study', 'Track'])
   })
 
-  it('Learn group has 6 items in correct order', () => {
-    const learn = navigationGroups[0]
-    expect(learn.items.map(i => i.name)).toEqual([
+  it('Library group has 4 items in correct order', () => {
+    const library = navigationGroups[0]
+    expect(library.items.map(i => i.name)).toEqual([
       'Overview',
-      'My Courses',
       'Courses',
       'Learning Paths',
       'Authors',
+    ])
+  })
+
+  it('Study group has 5 items in correct order', () => {
+    const study = navigationGroups[1]
+    expect(study.items.map(i => i.name)).toEqual([
+      'My Courses',
       'Notes',
-    ])
-  })
-
-  it('Review group has 5 items in correct order', () => {
-    const review = navigationGroups[1]
-    expect(review.items.map(i => i.name)).toEqual([
-      'Learning Path',
-      'Knowledge Gaps',
-      'Review',
-      'Retention',
       'Flashcards',
+      'Review',
+      'Learning Path',
     ])
   })
 
-  it('Track group has 5 items in correct order', () => {
+  it('Track group has 7 items in correct order', () => {
     const track = navigationGroups[2]
     expect(track.items.map(i => i.name)).toEqual([
       'Challenges',
+      'Knowledge Gaps',
+      'Retention',
       'Session History',
       'Study Analytics',
       'Quiz Analytics',
@@ -58,16 +58,15 @@ describe('getPrimaryNav', () => {
     const primary = getPrimaryNav()
     // The bottom bar has exactly 4 slots — length must stay at 4
     expect(primary).toHaveLength(4)
-    expect(primary.map(i => i.name)).toEqual(['Overview', 'My Courses', 'Courses', 'Notes'])
+    expect(primary.map(i => i.name)).toEqual(['Overview', 'Courses', 'My Courses', 'Notes'])
   })
 })
 
 describe('getOverflowNav', () => {
-  it('returns remaining items including Authors, Settings, and all Review items', () => {
+  it('returns remaining items including Authors, Settings, and all Study/Track items', () => {
     const overflow = getOverflowNav()
     const names = overflow.map(i => i.name)
-    // 17 total items (16 group items + Settings) - 4 primary = 13 overflow
-    // (Career Paths + Authors + 5 Review + 5 Track + Settings)
+    // 16 total group items + Settings = 17 - 4 primary = 13 overflow
     expect(overflow).toHaveLength(13)
     expect(names).toContain('Learning Paths')
     expect(names).toContain('Authors')

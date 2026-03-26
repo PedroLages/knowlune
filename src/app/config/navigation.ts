@@ -49,39 +49,38 @@ export interface NavigationGroup {
 }
 
 // Grouped navigation for sidebar
+// Groups: Library (browse content), Study (active learning), Track (progress & analytics)
 export const navigationGroups: NavigationGroup[] = [
   {
-    label: 'Learn',
+    label: 'Library',
     items: [
       { name: 'Overview', path: '/', icon: LayoutDashboard },
-      { name: 'My Courses', path: '/my-class', icon: BookOpen },
       { name: 'Courses', path: '/courses', icon: GraduationCap },
       { name: 'Learning Paths', path: '/career-paths', icon: Milestone },
       { name: 'Authors', path: '/authors', icon: Users, disclosureKey: 'course-imported' },
-      { name: 'Notes', path: '/notes', icon: StickyNote, disclosureKey: 'note-created' },
     ],
   },
   {
-    // Note: group label 'Review' intentionally shares the name with the nav item 'Review'
-    // (path /review). They serve different roles: the label names the group, the item is a link.
-    label: 'Review',
+    label: 'Study',
     items: [
+      { name: 'My Courses', path: '/my-class', icon: BookOpen },
+      { name: 'Notes', path: '/notes', icon: StickyNote, disclosureKey: 'note-created' },
+      { name: 'Flashcards', path: '/flashcards', icon: Layers },
+      { name: 'Review', path: '/review', icon: RotateCcw, disclosureKey: 'review-used' },
       {
         name: 'Learning Path',
         path: '/ai-learning-path',
         icon: Sparkles,
         disclosureKey: 'ai-used',
       },
-      { name: 'Knowledge Gaps', path: '/knowledge-gaps', icon: Brain, disclosureKey: 'ai-used' },
-      { name: 'Review', path: '/review', icon: RotateCcw, disclosureKey: 'review-used' },
-      { name: 'Retention', path: '/retention', icon: ShieldCheck, disclosureKey: 'review-used' },
-      { name: 'Flashcards', path: '/flashcards', icon: Layers },
     ],
   },
   {
     label: 'Track',
     items: [
       { name: 'Challenges', path: '/challenges', icon: Target, disclosureKey: 'challenge-used' },
+      { name: 'Knowledge Gaps', path: '/knowledge-gaps', icon: Brain, disclosureKey: 'ai-used' },
+      { name: 'Retention', path: '/retention', icon: ShieldCheck, disclosureKey: 'review-used' },
       {
         name: 'Session History',
         path: '/session-history',
