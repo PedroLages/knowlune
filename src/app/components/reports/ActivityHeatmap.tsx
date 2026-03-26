@@ -157,45 +157,42 @@ export function ActivityHeatmap() {
 
   // NIT #2: Roving tabindex — only the first cell gets tabIndex=0, others get -1.
   // Arrow key navigation within the grid.
-  const handleGridKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLDivElement>) => {
-      const target = e.target as HTMLElement
-      if (target.role !== 'img') return
+  const handleGridKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement
+    if (target.role !== 'img') return
 
-      const cells = gridRef.current?.querySelectorAll<HTMLElement>('[role="img"]')
-      if (!cells) return
+    const cells = gridRef.current?.querySelectorAll<HTMLElement>('[role="img"]')
+    if (!cells) return
 
-      const cellArray = Array.from(cells)
-      const currentIndex = cellArray.indexOf(target)
-      if (currentIndex === -1) return
+    const cellArray = Array.from(cells)
+    const currentIndex = cellArray.indexOf(target)
+    if (currentIndex === -1) return
 
-      let nextIndex: number | null = null
-      switch (e.key) {
-        case 'ArrowRight':
-          nextIndex = currentIndex + 7 < cellArray.length ? currentIndex + 7 : null
-          break
-        case 'ArrowLeft':
-          nextIndex = currentIndex - 7 >= 0 ? currentIndex - 7 : null
-          break
-        case 'ArrowDown':
-          nextIndex = currentIndex + 1 < cellArray.length ? currentIndex + 1 : null
-          break
-        case 'ArrowUp':
-          nextIndex = currentIndex - 1 >= 0 ? currentIndex - 1 : null
-          break
-        default:
-          return
-      }
+    let nextIndex: number | null = null
+    switch (e.key) {
+      case 'ArrowRight':
+        nextIndex = currentIndex + 7 < cellArray.length ? currentIndex + 7 : null
+        break
+      case 'ArrowLeft':
+        nextIndex = currentIndex - 7 >= 0 ? currentIndex - 7 : null
+        break
+      case 'ArrowDown':
+        nextIndex = currentIndex + 1 < cellArray.length ? currentIndex + 1 : null
+        break
+      case 'ArrowUp':
+        nextIndex = currentIndex - 1 >= 0 ? currentIndex - 1 : null
+        break
+      default:
+        return
+    }
 
-      if (nextIndex !== null) {
-        e.preventDefault()
-        target.tabIndex = -1
-        cellArray[nextIndex].tabIndex = 0
-        cellArray[nextIndex].focus()
-      }
-    },
-    []
-  )
+    if (nextIndex !== null) {
+      e.preventDefault()
+      target.tabIndex = -1
+      cellArray[nextIndex].tabIndex = 0
+      cellArray[nextIndex].focus()
+    }
+  }, [])
 
   if (isLoading) {
     return (
