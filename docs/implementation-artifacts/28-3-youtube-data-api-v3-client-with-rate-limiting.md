@@ -1,10 +1,10 @@
 ---
 story_id: E28-S03
 story_name: "YouTube Data API v3 Client with Rate Limiting"
-status: in-progress
+status: done
 started: 2026-03-26
-completed:
-reviewed: false
+completed: 2026-03-26
+reviewed: true
 review_started:
 review_gates_passed: []
 burn_in_validated: false
@@ -101,4 +101,7 @@ Unit tests cover rate limiter, quota tracker, and API client with mocked fetch.
 
 ## Challenges and Lessons Learned
 
-[To be populated after implementation]
+- **Mock pattern for vi.mock with vitest**: When multiple tests need different mock return values for the same module-level `vi.mock`, use intermediate mock functions (e.g., `const mockFn = vi.fn()`) that are referenced via closures in the mock factory. This avoids issues with module caching where dynamic `await import()` returns cached modules and `vi.mocked()` changes don't apply correctly.
+- **Token bucket rate limiter**: A simple token bucket with refill-on-demand is sufficient for YouTube API rate limiting. The key insight is that YouTube's 429 responses need exponential backoff with jitter, not just token waiting, since the server-side rate limit may differ from the client-side bucket.
+- **CSP allowlisting**: YouTube API calls from the browser require both `https://www.googleapis.com` (Data API) and `https://www.youtube.com` (oEmbed fallback) in the CSP `connect-src` directive. Missing either causes silent failures in production but clear errors in E2E tests.
+- **Pacific Time date key**: Using `Intl.DateTimeFormat` with `timeZone: 'America/Los_Angeles'` and `sv-SE` locale gives a clean YYYY-MM-DD string for midnight PT quota resets, avoiding manual timezone offset calculations.
