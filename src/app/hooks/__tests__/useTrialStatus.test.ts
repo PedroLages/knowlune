@@ -6,10 +6,18 @@ import { renderHook } from '@testing-library/react'
 // Mocks — must be declared before any imports that reference them
 // ---------------------------------------------------------------------------
 
-const mockIsPremiumReturn = {
+const mockIsPremiumReturn: {
+  isPremium: boolean
+  loading: boolean
+  tier: string
+  isStale: boolean
+  error: string | null
+  trialEnd: string | null
+  hadTrial: boolean
+} = {
   isPremium: false,
   loading: false,
-  tier: 'free' as const,
+  tier: 'free',
   isStale: false,
   error: null,
   trialEnd: null,
