@@ -329,12 +329,34 @@ export interface AIUsageEvent {
 
 // --- Learning Path (Story 9B.3) ---
 
+/** @deprecated Use LearningPath + LearningPathEntry instead (E26-S01 multi-path migration) */
 export interface LearningPathCourse {
   courseId: string // Primary key: course UUID
   position: number // 1-indexed sequence position
   justification: string // AI-provided reasoning for placement
   isManuallyOrdered: boolean // User manually reordered it
   generatedAt: string // ISO timestamp when path was generated
+}
+
+// --- Multi-Path Learning Journeys (E26-S01) ---
+
+export interface LearningPath {
+  id: string // Primary key: UUID
+  name: string // User-facing name (e.g., "My Learning Path")
+  description?: string // Optional description
+  createdAt: string // ISO timestamp
+  updatedAt: string // ISO timestamp
+  isAIGenerated: boolean // true if created by AI path generation
+}
+
+export interface LearningPathEntry {
+  id: string // Primary key: UUID
+  pathId: string // FK → LearningPath.id
+  courseId: string // FK → course UUID
+  courseType: 'imported' | 'catalog' // Which course source
+  position: number // 1-indexed sequence position
+  justification?: string // AI-provided reasoning for placement
+  isManuallyOrdered: boolean // User manually reordered it
 }
 
 // --- Spaced Review System (Story 11.1) ---

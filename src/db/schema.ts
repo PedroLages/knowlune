@@ -12,6 +12,8 @@ import type {
   Challenge,
   Embedding,
   LearningPathCourse,
+  LearningPath,
+  LearningPathEntry,
   CourseThumbnail,
   AIUsageEvent,
   ReviewRecord,
@@ -38,7 +40,9 @@ const db = new Dexie('ElearningDB') as Dexie & {
   contentProgress: Table<ContentProgress> // compound PK: [courseId+itemId]
   challenges: EntityTable<Challenge, 'id'>
   embeddings: EntityTable<Embedding, 'noteId'>
-  learningPath: EntityTable<LearningPathCourse, 'courseId'>
+  // learningPath table dropped in v25 (migrated to learningPaths + learningPathEntries)
+  learningPaths: EntityTable<LearningPath, 'id'>
+  learningPathEntries: EntityTable<LearningPathEntry, 'id'>
   courseThumbnails: EntityTable<CourseThumbnail, 'courseId'>
   aiUsageEvents: EntityTable<AIUsageEvent, 'id'>
   reviewRecords: EntityTable<ReviewRecord, 'id'>
@@ -693,6 +697,122 @@ db.version(23).stores({
   flashcards: 'id, courseId, noteId, nextReviewAt, createdAt',
   // NEW: Local entitlement cache with 7-day TTL
   entitlements: 'userId',
+})
+
+// v24: Multi-path learning journeys data model (E26-S01)
+// Creates learningPaths + learningPathEntries tables, migrates existing single-path data,
+// then drops the old learningPath table.
+db.version(24)
+  .stores({
+    // All existing v23 tables (unchanged — must redeclare or Dexie deletes them)
+    importedCourses: 'id, name, importedAt, status, *tags',
+    importedVideos: 'id, courseId, filename',
+    importedPdfs: 'id, courseId, filename',
+    progress: '[courseId+videoId], courseId, videoId',
+    bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+    notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+    screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+    studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+    contentProgress: '[courseId+itemId], courseId, itemId, status',
+    challenges: 'id, type, deadline, createdAt',
+    embeddings: 'noteId, createdAt',
+    // OLD learningPath table kept during migration (dropped in v25)
+    learningPath: 'courseId, position, generatedAt',
+    courseThumbnails: 'courseId',
+    aiUsageEvents: 'id, featureType, timestamp, courseId',
+    reviewRecords: 'id, noteId, nextReviewAt, reviewedAt',
+    courseReminders: 'id, courseId',
+    courses: 'id, category, difficulty, authorId',
+    quizzes: 'id, lessonId, createdAt',
+    quizAttempts: 'id, quizId, [quizId+completedAt], completedAt',
+    videoCaptions: '[courseId+videoId], courseId, videoId',
+    authors: 'id, name, createdAt',
+    careerPaths: 'id',
+    pathEnrollments: 'id, pathId, status',
+    flashcards: 'id, courseId, noteId, nextReviewAt, createdAt',
+    entitlements: 'userId',
+    // NEW: Multi-path learning journey tables
+    learningPaths: 'id, createdAt',
+    learningPathEntries: 'id, [pathId+courseId], pathId',
+  })
+  .upgrade(async tx => {
+    try {
+      const oldEntries = await tx.table('learningPath').toArray()
+
+      if (oldEntries.length === 0) {
+        console.log('[Migration v24] No existing learning path data to migrate')
+        return
+      }
+
+      const now = new Date().toISOString()
+      const defaultPathId = crypto.randomUUID()
+
+      // Create default "My Learning Path" from existing data
+      await tx.table('learningPaths').add({
+        id: defaultPathId,
+        name: 'My Learning Path',
+        description: 'Migrated from your original learning path',
+        createdAt: now,
+        updatedAt: now,
+        isAIGenerated: true, // Original was AI-generated
+      })
+
+      // Migrate each course entry to the new entries table
+      const sorted = oldEntries.sort(
+        (a: LearningPathCourse, b: LearningPathCourse) => a.position - b.position
+      )
+      const newEntries = sorted.map((entry: LearningPathCourse, index: number) => ({
+        id: crypto.randomUUID(),
+        pathId: defaultPathId,
+        courseId: entry.courseId,
+        courseType: 'imported' as const,
+        position: index + 1,
+        justification: entry.justification,
+        isManuallyOrdered: entry.isManuallyOrdered,
+      }))
+
+      await tx.table('learningPathEntries').bulkAdd(newEntries)
+
+      console.log(
+        `[Migration v24] Migrated ${newEntries.length} courses into default "My Learning Path"`
+      )
+    } catch (error) {
+      console.error('[Migration v24] Multi-path migration failed:', error)
+      // Graceful degradation: old learningPath table preserved, new tables empty
+      // App will function without migration data — user can recreate paths
+    }
+  })
+
+// v25: Drop old single-path learningPath table after successful migration (E26-S01)
+db.version(25).stores({
+  // All tables from v24 MINUS the old learningPath table (null = delete)
+  importedCourses: 'id, name, importedAt, status, *tags',
+  importedVideos: 'id, courseId, filename',
+  importedPdfs: 'id, courseId, filename',
+  progress: '[courseId+videoId], courseId, videoId',
+  bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+  screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+  contentProgress: '[courseId+itemId], courseId, itemId, status',
+  challenges: 'id, type, deadline, createdAt',
+  embeddings: 'noteId, createdAt',
+  learningPath: null, // DROP old single-path table
+  courseThumbnails: 'courseId',
+  aiUsageEvents: 'id, featureType, timestamp, courseId',
+  reviewRecords: 'id, noteId, nextReviewAt, reviewedAt',
+  courseReminders: 'id, courseId',
+  courses: 'id, category, difficulty, authorId',
+  quizzes: 'id, lessonId, createdAt',
+  quizAttempts: 'id, quizId, [quizId+completedAt], completedAt',
+  videoCaptions: '[courseId+videoId], courseId, videoId',
+  authors: 'id, name, createdAt',
+  careerPaths: 'id',
+  pathEnrollments: 'id, pathId, status',
+  flashcards: 'id, courseId, noteId, nextReviewAt, createdAt',
+  entitlements: 'userId',
+  learningPaths: 'id, createdAt',
+  learningPathEntries: 'id, [pathId+courseId], pathId',
 })
 
 export { db }

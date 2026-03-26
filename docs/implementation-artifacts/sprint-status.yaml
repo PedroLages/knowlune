@@ -43,7 +43,7 @@
 # - E18-S03 detected story file → ready-for-dev
 
 generated: 2026-03-15
-last_updated: 2026-03-26  # Epic 1B retrospective done; all 4 post-epic reports generated
+last_updated: 2026-03-26  # Epic 1C retrospective done; all 4 post-epic reports generated
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -82,7 +82,7 @@ development_status:
   1c-4-tag-management-global-rename-and-delete: done
   1c-5-momentum-sort-for-imported-courses: done
   1c-6-search-and-filter-inside-course-detail-page: done
-  epic-1c-retrospective: optional
+  epic-1c-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 2: Lesson Player & Content Consumption
@@ -402,8 +402,8 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 26: Multi-Path Learning Journeys
   # ──────────────────────────────────────────────────
-  epic-26: backlog
-  26-1-multi-path-data-model-and-migration: backlog
+  epic-26: in-progress
+  26-1-multi-path-data-model-and-migration: done
   26-2-learning-path-list-view: backlog
   26-3-path-detail-view-with-drag-drop-editor: backlog
   26-4-ai-path-placement-suggestion: backlog
