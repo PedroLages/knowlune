@@ -12,6 +12,7 @@ import {
   Trash2,
   Loader2,
   Pencil,
+  Clock,
 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Card } from '@/app/components/ui/card'
@@ -51,6 +52,13 @@ import { useCourseCardPreview } from '@/hooks/useCourseCardPreview'
 import { useVideoFromHandle } from '@/hooks/useVideoFromHandle'
 import { getAvatarSrc } from '@/lib/authors'
 import { db } from '@/db/schema'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/app/components/ui/tooltip'
+import { formatCourseDuration, formatFileSize, getResolutionLabel } from '@/lib/format'
 import { MomentumBadge } from './MomentumBadge'
 import type { ImportedCourse, ImportedVideo, LearnerCourseStatus } from '@/data/types'
 import type { MomentumScore } from '@/lib/momentum'
@@ -217,7 +225,7 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
     <>
       <article
         data-testid="imported-course-card"
-        aria-label={`${course.name} — ${course.videoCount} ${course.videoCount === 1 ? 'video' : 'videos'}, ${course.pdfCount} ${course.pdfCount === 1 ? 'PDF' : 'PDFs'}`}
+        aria-label={`${course.name} — ${course.videoCount} ${course.videoCount === 1 ? 'video' : 'videos'}${course.totalDuration ? `, ${formatCourseDuration(course.totalDuration)}` : ''}, ${course.pdfCount} ${course.pdfCount === 1 ? 'PDF' : 'PDFs'}`}
         tabIndex={0}
         onClick={handleCardClick}
         onKeyDown={handleCardKeyDown}
@@ -373,15 +381,26 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
                     {config.label}
                   </Badge>
 
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                     <span className="flex items-center gap-1">
                       <Video className="size-3.5" aria-hidden="true" />
                       {course.videoCount} {course.videoCount === 1 ? 'video' : 'videos'}
                     </span>
+                    {course.totalDuration != null && course.totalDuration > 0 && (
+                      <span className="flex items-center gap-1">
+                        <Clock className="size-3.5" aria-hidden="true" />
+                        {formatCourseDuration(course.totalDuration)}
+                      </span>
+                    )}
                     <span className="flex items-center gap-1">
                       <FileText className="size-3.5" aria-hidden="true" />
                       {course.pdfCount} {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
                     </span>
+                    {course.totalFileSize != null && course.totalFileSize > 0 && (
+                      <span className="text-muted-foreground/70">
+                        {formatFileSize(course.totalFileSize)}
+                      </span>
+                    )}
                   </div>
 
                   {course.tags.length > 0 && (
@@ -479,12 +498,43 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
                   {course.videoCount} {course.videoCount === 1 ? 'video' : 'videos'}
                 </span>
               </span>
+              {course.totalDuration != null && course.totalDuration > 0 && (
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span
+                        data-testid="course-card-duration"
+                        className="flex items-center gap-1 cursor-default"
+                      >
+                        <Clock className="size-3.5" aria-hidden="true" />
+                        <span>{formatCourseDuration(course.totalDuration)}</span>
+                      </span>
+                    </TooltipTrigger>
+                    {course.totalFileSize != null && course.totalFileSize > 0 && (
+                      <TooltipContent>
+                        <span data-testid="course-card-file-size">
+                          Total size: {formatFileSize(course.totalFileSize)}
+                        </span>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
+              )}
               <span data-testid="course-card-pdf-count" className="flex items-center gap-1">
                 <FileText className="size-3.5" aria-hidden="true" />
                 <span>
                   {course.pdfCount} {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
                 </span>
               </span>
+              {course.maxResolutionHeight != null && course.maxResolutionHeight > 0 && (
+                <Badge
+                  data-testid="course-card-resolution"
+                  variant="secondary"
+                  className="text-[10px] px-1.5 py-0 font-medium opacity-70"
+                >
+                  {getResolutionLabel(course.maxResolutionHeight)}
+                </Badge>
+              )}
             </div>
             {momentumScore && momentumScore.score > 0 && (
               <div className="mt-2">

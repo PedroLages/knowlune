@@ -271,6 +271,9 @@ describe('persistScannedCourse', () => {
           format: 'mp4',
           order: 1,
           fileHandle: createMockFileHandle('intro.mp4'),
+          fileSize: 25_000_000,
+          width: 1920,
+          height: 1080,
         },
       ],
       pdfs: [

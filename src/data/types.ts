@@ -138,6 +138,7 @@ export interface VideoMetadata {
   duration: number
   width: number
   height: number
+  fileSize: number // File size in bytes (E1B-S02)
 }
 
 export interface PdfMetadata {
@@ -157,6 +158,9 @@ export interface ImportedCourse {
   directoryHandle: FileSystemDirectoryHandle
   authorId?: string // FK to ImportedAuthor.id (E25-S01 AC2)
   coverImageHandle?: FileSystemFileHandle // User-selected cover image from folder
+  totalDuration?: number // Sum of all video durations in seconds (E1B-S02)
+  totalFileSize?: number // Sum of all video file sizes in bytes (E1B-S02)
+  maxResolutionHeight?: number // Highest video resolution height in px (E1B-S02)
 }
 
 export interface ImportedVideo {
@@ -168,6 +172,9 @@ export interface ImportedVideo {
   format: VideoFormat
   order: number
   fileHandle: FileSystemFileHandle
+  fileSize?: number // File size in bytes (E1B-S02)
+  width?: number // Video width in pixels (E1B-S02)
+  height?: number // Video height in pixels (E1B-S02)
 }
 
 export interface ImportedPdf {
