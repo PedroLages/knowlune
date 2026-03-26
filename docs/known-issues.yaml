@@ -154,10 +154,10 @@ issues:
     severity: medium
     discovered_by: E19-S01
     discovered_on: 2026-03-25
-    status: open
-    scheduled_for: null
+    status: scheduled
+    scheduled_for: production-readiness-audit-TODO4
     fixed_by: null
-    notes: "Pre-existing on main — ToggleGroup items in TopicFilter lose spacing/wrapping, rendering all tags as a garbled single line. Likely a Radix ToggleGroup + Tailwind flex-wrap interaction issue."
+    notes: "Fix in progress (TODO4 Agent 1) — root cause: shadcn ToggleGroup base class applies 'flex w-fit items-center' which overrides flex-wrap. Fix requires overriding ToggleGroup className to allow wrapping, and ToggleGroupItem to remove 'flex-1 shrink-0 rounded-none' that force single-line layout."
 
   - id: KI-012
     type: design
@@ -166,10 +166,10 @@ issues:
     severity: medium
     discovered_by: E19-S01
     discovered_on: 2026-03-25
-    status: open
-    scheduled_for: null
+    status: scheduled
+    scheduled_for: production-readiness-audit-TODO4
     fixed_by: null
-    notes: "Pre-existing on main — the Ollama model selector ('Select a model...' combobox) lacks proper styling. Search input and options area appear unstyled with no borders or background contrast."
+    notes: "Fix in progress (TODO4 Agent 1) — the OllamaModelPicker combobox uses a custom popover/command pattern. Fix requires adding proper border, background, and padding classes to the command list and input within OllamaModelPicker.tsx."
 
   - id: KI-013
     type: design
@@ -178,10 +178,10 @@ issues:
     severity: low
     discovered_by: E19-S02
     discovered_on: 2026-03-25
-    status: open
-    scheduled_for: null
+    status: scheduled
+    scheduled_for: production-readiness-audit-TODO4
     fixed_by: null
-    notes: "Pre-existing on main — the Direct Connection info tooltip in AI Configuration Settings has CSS issues. The code block (OLLAMA_ORIGINS=*) styling and tooltip background may need contrast/padding fixes in dark mode."
+    notes: "Fix in progress (TODO4 Agent 1) — tooltip code block uses 'bg-muted' which lacks contrast in dark mode. Fix: use 'bg-muted/50' or 'bg-background' with explicit border for the code element inside TooltipContent."
 
   - id: KI-014
     type: design
@@ -190,10 +190,11 @@ issues:
     severity: medium
     discovered_by: E19-S02
     discovered_on: 2026-03-25
-    status: open
-    scheduled_for: null
+    status: scheduled
+    scheduled_for: production-readiness-audit-TODO4
     fixed_by: null
-    notes: "Pre-existing on main — CardTitle renders <h3> but some section headings are <h2>, creating inconsistent heading hierarchy. Affects all Settings card components including Account, Engagement Preferences, Study Reminders, and now Subscription. Needs holistic Settings page heading audit."
+    notes: "Fix in progress (TODO4 Agent 1) — Settings.tsx has h1 (line 476), then mixed h2 (lines 580, 736, 814, 849) and CardTitle/h3 (lines 491, 921). Sub-sections use h4. Fix: standardize all top-level section headings as h2, CardTitle sections as h2, sub-sections as h3."
+
   - id: KI-015
     type: typecheck
     summary: "AIConfigurationSettings.tsx references undefined isPrivateNetworkUrl"
@@ -201,7 +202,129 @@ issues:
     severity: medium
     discovered_by: E19-S02
     discovered_on: 2026-03-25
+    status: scheduled
+    scheduled_for: production-readiness-audit-TODO4
+    fixed_by: null
+    notes: "Fix in progress (TODO4 Agent 1) — RESOLVED on inspection: isPrivateNetworkUrl IS defined at line 68-79 of AIConfigurationSettings.tsx. The original report referenced line 534 which is the call site, but the function exists locally. KI was filed incorrectly — the function was always present. Will verify with tsc --noEmit and close."
+
+  # --- Pre-existing test failures on main (2026-03-26 audit) ---
+
+  - id: KI-016
+    type: test
+    summary: "ImportWizardDialog.test.tsx — 28 unit tests failing (component render/interaction failures)"
+    file: "src/app/components/figma/__tests__/ImportWizardDialog.test.tsx"
+    severity: medium
+    discovered_by: production-readiness-audit
+    discovered_on: 2026-03-26
     status: open
     scheduled_for: null
     fixed_by: null
-    notes: "Pre-existing on main — function isPrivateNetworkUrl is referenced but not defined/imported. Not changed by E19-S02 branch."
+    notes: "All 28 tests in this file fail. Tests cover folder selection, course naming, tag management, image grid, AI suggestions, and description fields. Likely caused by component refactoring without corresponding test updates. Related to KI-010 (import wizard E2E waiver)."
+
+  - id: KI-017
+    type: test
+    summary: "Courses.test.tsx — 11 unit tests failing (empty state, imported courses, status filtering)"
+    file: "src/app/pages/__tests__/Courses.test.tsx"
+    severity: medium
+    discovered_by: production-readiness-audit
+    discovered_on: 2026-03-26
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Regression from KI-001 fix scope — 11 tests still failing covering empty state display, imported course rendering, sorting, grid layout, and status filtering with topic filter AND-semantics. May need additional mock updates."
+
+  - id: KI-018
+    type: test
+    summary: "useFlashcardStore.test.ts — 2 unit tests failing (loadFlashcards, error state)"
+    file: "src/stores/__tests__/useFlashcardStore.test.ts"
+    severity: medium
+    discovered_by: production-readiness-audit
+    discovered_on: 2026-03-26
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "loadFlashcards and error state tests failing. Likely stale IDB mock setup after store refactoring."
+
+  - id: KI-019
+    type: test
+    summary: "useReviewStore.test.ts — 4 unit tests failing (loadReviews, rateNote, rollback)"
+    file: "src/stores/__tests__/useReviewStore.test.ts"
+    severity: medium
+    discovered_by: production-readiness-audit
+    discovered_on: 2026-03-26
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "loadReviews, rateNote happy path (2 tests), and rollback on persistence failure all failing. Likely stale mock setup."
+
+  - id: KI-020
+    type: test
+    summary: "useSessionStore.test.ts — 3 unit tests failing (initial state, startSession, pauseSession)"
+    file: "src/stores/__tests__/useSessionStore.test.ts"
+    severity: medium
+    discovered_by: production-readiness-audit
+    discovered_on: 2026-03-26
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Initial state, startSession, and pauseSession tests failing. Likely stale mock setup after store changes."
+
+  - id: KI-021
+    type: test
+    summary: "E2E courses.spec.ts — 2 tests failing (heading, course cards)"
+    file: "tests/e2e/courses.spec.ts"
+    severity: medium
+    discovered_by: production-readiness-audit
+    discovered_on: 2026-03-26
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "KI-005 was marked fixed but courses.spec.ts:14 and :20 still fail. May be a different root cause than the onboarding overlay — possibly a Courses page rendering issue."
+
+  - id: KI-022
+    type: test
+    summary: "E2E navigation.spec.ts — 2 tests failing (navigate to Courses, highlight active route)"
+    file: "tests/e2e/navigation.spec.ts"
+    severity: medium
+    discovered_by: production-readiness-audit
+    discovered_on: 2026-03-26
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Navigation to Courses page (line 39) and active route highlighting (line 63) both fail. Likely related to KI-021 Courses page rendering issue."
+
+  - id: KI-023
+    type: test
+    summary: "E2E dashboard-reordering.spec.ts — 4 tests failing (unpin, reset, manual order, reset button)"
+    file: "tests/e2e/dashboard-reordering.spec.ts"
+    severity: medium
+    discovered_by: production-readiness-audit
+    discovered_on: 2026-03-26
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "4 of the dashboard reordering tests fail: unpin (line 86), reset (line 118), manual order (line 247), reset button visibility (line 288). May be timing/race condition or localStorage seeding issue."
+
+  - id: KI-024
+    type: test
+    summary: "E2E accessibility-courses.spec.ts — keyboard accessibility test failing"
+    file: "tests/e2e/accessibility-courses.spec.ts:152"
+    severity: medium
+    discovered_by: production-readiness-audit
+    discovered_on: 2026-03-26
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Courses page keyboard accessibility test fails. Likely cascading from KI-021 Courses page rendering issue."
+
+  - id: KI-025
+    type: test
+    summary: "E2E nfr35-export.spec.ts — note export button test failing"
+    file: "tests/e2e/nfr35-export.spec.ts:90"
+    severity: low
+    discovered_by: production-readiness-audit
+    discovered_on: 2026-03-26
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Export button in expanded note view test fails. May be a UI change that moved or renamed the button."
