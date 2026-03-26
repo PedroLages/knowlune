@@ -43,7 +43,7 @@
 # - E18-S03 detected story file → ready-for-dev
 
 generated: 2026-03-15
-last_updated: 2026-03-26  # Epic 26 retrospective done; all 4 post-epic reports generated
+last_updated: 2026-03-26  # Epic 28 retrospective done; completion report generated
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -425,7 +425,7 @@ development_status:
   #       collision with Epic 23 (Platform Identity & Navigation Cleanup).
   # Depends on: Epic 1 (course data model), Epic 2 (player), Epic 9 (AI — Premium only)
   # ──────────────────────────────────────────────────
-  epic-28: in-progress
+  epic-28: done
   28-1-dexie-v24-schema-migration-and-youtube-types: done
   28-2-youtube-url-parser-and-configuration-settings: done
   28-3-youtube-data-api-v3-client-with-rate-limiting: done
@@ -434,8 +434,8 @@ development_status:
   28-6-rule-based-video-grouping-and-chapter-editor: done
   28-7-ai-powered-course-structuring-premium: done
   28-8-import-wizard-step-4-course-details-and-save: done
-  28-9-youtube-iframe-player-and-progress-tracking: backlog
-  28-10-transcript-panel-with-search-and-click-to-seek: backlog
-  28-11-transcript-fallback-tier-2-ytdlp-and-tier-3-whisper: backlog
-  28-12-offline-support-metadata-refresh-and-security-hardening: backlog
-  epic-28-retrospective: optional
+  28-9-youtube-iframe-player-and-progress-tracking: done
+  28-10-transcript-panel-with-search-and-click-to-seek: done
+  28-11-transcript-fallback-tier-2-ytdlp-and-tier-3-whisper: done
+  28-12-offline-support-metadata-refresh-and-security-hardening: done
+  epic-28-retrospective: done
