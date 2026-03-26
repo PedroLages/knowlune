@@ -29,6 +29,7 @@ import {
 } from '@/lib/courseImport'
 import type { BulkScanResult, ScannedCourse } from '@/lib/courseImport'
 import { showDirectoryPicker } from '@/lib/fileSystem'
+import { useImportProgressStore } from '@/stores/useImportProgressStore'
 import { toast } from 'sonner'
 
 // --- Types ---
@@ -147,6 +148,7 @@ export function BulkImportDialog({ open, onOpenChange, onSingleImport }: BulkImp
     if (selectedFolders.length === 0) return
 
     abortRef.current = false
+    const progressStore = useImportProgressStore.getState()
 
     const items: ImportItem[] = selectedFolders.map(f => ({
       folderName: f.name,
@@ -155,6 +157,11 @@ export function BulkImportDialog({ open, onOpenChange, onSingleImport }: BulkImp
     }))
     setImportItems(items)
     setStep('importing')
+
+    // Start progress tracking for each course (AC3: bulk import progress)
+    for (const item of items) {
+      progressStore.startImport(item.folderName, item.folderName)
+    }
 
     // Concurrent import with max concurrency
     const queue = [...items]
@@ -169,27 +176,35 @@ export function BulkImportDialog({ open, onOpenChange, onSingleImport }: BulkImp
     }
 
     async function processFolder(item: ImportItem) {
-      if (abortRef.current) return
+      if (abortRef.current || useImportProgressStore.getState().cancelRequested) return
 
       updateItem(item.folderName, { status: 'scanning' })
+      progressStore.updateScanProgress(item.folderName, 0, null)
 
       // Phase 1: Scan
       const scanResult: BulkScanResult = await scanCourseFolderFromHandle(item.handle)
 
-      if (abortRef.current) return
+      if (abortRef.current || useImportProgressStore.getState().cancelRequested) {
+        updateItem(item.folderName, { status: 'error', error: 'Cancelled' })
+        progressStore.failCourse(item.folderName, 'Cancelled')
+        return
+      }
 
       if (scanResult.status === 'no-files') {
         updateItem(item.folderName, { status: 'no-files' })
+        progressStore.failCourse(item.folderName, 'No supported files')
         return
       }
 
       if (scanResult.status === 'duplicate') {
         updateItem(item.folderName, { status: 'duplicate', error: 'Already imported' })
+        progressStore.failCourse(item.folderName, 'Already imported')
         return
       }
 
       if (scanResult.status === 'error') {
         updateItem(item.folderName, { status: 'error', error: scanResult.message })
+        progressStore.failCourse(item.folderName, scanResult.message)
         return
       }
 
@@ -200,16 +215,20 @@ export function BulkImportDialog({ open, onOpenChange, onSingleImport }: BulkImp
         videoCount: scanResult.course.videos.length,
         pdfCount: scanResult.course.pdfs.length,
       })
+      const totalFiles = scanResult.course.videos.length + scanResult.course.pdfs.length
+      progressStore.updateProcessingProgress(item.folderName, totalFiles, totalFiles)
 
       try {
         await persistScannedCourse(scanResult.course)
         updateItem(item.folderName, { status: 'success' })
+        progressStore.completeCourse(item.folderName)
       } catch {
         // silent-catch-ok: persistScannedCourse already shows error toasts, we just update item status
         updateItem(item.folderName, {
           status: 'error',
           error: 'Failed to import',
         })
+        progressStore.failCourse(item.folderName, 'Failed to import')
       }
     }
 
@@ -217,7 +236,7 @@ export function BulkImportDialog({ open, onOpenChange, onSingleImport }: BulkImp
     const running: Promise<void>[] = []
     let queueIndex = 0
 
-    while (queueIndex < queue.length && !abortRef.current) {
+    while (queueIndex < queue.length && !abortRef.current && !useImportProgressStore.getState().cancelRequested) {
       while (running.length < MAX_CONCURRENCY && queueIndex < queue.length) {
         const item = queue[queueIndex++]
         const promise = processFolder(item).then(() => {
@@ -228,6 +247,18 @@ export function BulkImportDialog({ open, onOpenChange, onSingleImport }: BulkImp
       if (running.length > 0) {
         await Promise.race(running)
       }
+    }
+
+    // Handle cancellation for remaining items
+    if (useImportProgressStore.getState().cancelRequested) {
+      abortRef.current = true
+      for (const item of results) {
+        if (item.status === 'pending') {
+          updateItem(item.folderName, { status: 'error', error: 'Cancelled' })
+          progressStore.failCourse(item.folderName, 'Cancelled')
+        }
+      }
+      useImportProgressStore.getState().confirmCancellation()
     }
 
     // Wait for remaining
