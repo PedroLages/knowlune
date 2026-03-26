@@ -428,6 +428,168 @@ export async function persistScannedCourse(
   return course
 }
 
+// --- Bulk Scan Phase (from pre-selected handle) ---
+
+/**
+ * Result of scanning a single folder for bulk import.
+ * Separates success/failure for consolidated reporting.
+ */
+export type BulkScanResult =
+  | { status: 'success'; course: ScannedCourse }
+  | { status: 'no-files'; folderName: string }
+  | { status: 'duplicate'; folderName: string }
+  | { status: 'error'; folderName: string; message: string }
+
+/**
+ * Scans a directory handle directly (no picker prompt).
+ * Used by bulk import to scan sub-folders of a parent directory.
+ *
+ * Does NOT interact with the Zustand store or show toasts — the caller
+ * is responsible for aggregated UI updates.
+ */
+export async function scanCourseFolderFromHandle(
+  dirHandle: FileSystemDirectoryHandle
+): Promise<BulkScanResult> {
+  try {
+    // Check for duplicate import
+    const existingCourse = await db.importedCourses.where('name').equals(dirHandle.name).first()
+    if (existingCourse) {
+      return { status: 'duplicate', folderName: dirHandle.name }
+    }
+
+    // Scan directory for supported files
+    const videoFiles: { handle: FileSystemFileHandle; path: string }[] = []
+    const pdfFiles: { handle: FileSystemFileHandle; path: string }[] = []
+    const imageFiles: { handle: FileSystemFileHandle; path: string }[] = []
+
+    try {
+      for await (const entry of scanDirectory(dirHandle, '', { includeImages: true })) {
+        if (isSupportedVideoFormat(entry.handle.name)) {
+          videoFiles.push(entry)
+        } else if (isImageFile(entry.handle.name)) {
+          imageFiles.push(entry)
+        } else {
+          pdfFiles.push(entry)
+        }
+      }
+    } catch (error) {
+      console.error('[BulkImport] Directory scan failed:', error)
+      return { status: 'error', folderName: dirHandle.name, message: 'Failed to scan folder' }
+    }
+
+    // Check for supported files
+    if (videoFiles.length === 0 && pdfFiles.length === 0) {
+      return { status: 'no-files', folderName: dirHandle.name }
+    }
+
+    // Extract metadata in batches
+    const BATCH_SIZE = 10
+    async function extractInBatches<T, R>(
+      items: T[],
+      extractor: (item: T) => Promise<R>
+    ): Promise<PromiseSettledResult<R>[]> {
+      const results: PromiseSettledResult<R>[] = []
+      for (let i = 0; i < items.length; i += BATCH_SIZE) {
+        const batch = items.slice(i, i + BATCH_SIZE)
+        const batchResults = await Promise.allSettled(batch.map(extractor))
+        results.push(...batchResults)
+      }
+      return results
+    }
+
+    const videoResults = await extractInBatches(videoFiles, async entry => {
+      const metadata = await extractVideoMetadata(entry.handle)
+      return { entry, metadata }
+    })
+
+    const pdfResults = await extractInBatches(pdfFiles, async entry => {
+      const metadata = await extractPdfMetadata(entry.handle)
+      return { entry, metadata }
+    })
+
+    const courseId = crypto.randomUUID()
+    const now = new Date().toISOString()
+
+    const videos: ScannedVideo[] = videoResults
+      .filter(
+        (
+          r
+        ): r is PromiseFulfilledResult<{
+          entry: { handle: FileSystemFileHandle; path: string }
+          metadata: { duration: number; width: number; height: number }
+        }> => r.status === 'fulfilled'
+      )
+      .map((r, index) => ({
+        id: crypto.randomUUID(),
+        filename: r.value.entry.handle.name,
+        path: r.value.entry.path,
+        duration: r.value.metadata.duration,
+        format: getVideoFormat(r.value.entry.handle.name),
+        order: index + 1,
+        fileHandle: r.value.entry.handle,
+      }))
+
+    const pdfs: ScannedPdf[] = pdfResults
+      .filter(
+        (
+          r
+        ): r is PromiseFulfilledResult<{
+          entry: { handle: FileSystemFileHandle; path: string }
+          metadata: { pageCount: number }
+        }> => r.status === 'fulfilled'
+      )
+      .map(r => ({
+        id: crypto.randomUUID(),
+        filename: r.value.entry.handle.name,
+        path: r.value.entry.path,
+        pageCount: r.value.metadata.pageCount,
+        fileHandle: r.value.entry.handle,
+      }))
+
+    const images: ScannedImage[] = imageFiles.map(entry => ({
+      filename: entry.handle.name,
+      path: entry.path,
+      fileHandle: entry.handle,
+    }))
+
+    return {
+      status: 'success',
+      course: {
+        id: courseId,
+        name: dirHandle.name,
+        scannedAt: now,
+        directoryHandle: dirHandle,
+        videos,
+        pdfs,
+        images,
+      },
+    }
+  } catch (error) {
+    console.error('[BulkImport] Unexpected error:', error)
+    return {
+      status: 'error',
+      folderName: dirHandle.name,
+      message: error instanceof Error ? error.message : 'Unexpected error',
+    }
+  }
+}
+
+/**
+ * Enumerates immediate sub-directories of a parent directory.
+ * Used by bulk import to discover course folders.
+ */
+export async function listSubDirectories(
+  parentHandle: FileSystemDirectoryHandle
+): Promise<FileSystemDirectoryHandle[]> {
+  const dirs: FileSystemDirectoryHandle[] = []
+  for await (const entry of parentHandle.values()) {
+    if (entry.kind === 'directory') {
+      dirs.push(entry as FileSystemDirectoryHandle)
+    }
+  }
+  return dirs.sort((a, b) => a.name.localeCompare(b.name))
+}
+
 // --- Backwards-Compatible One-Shot Import ---
 
 /**

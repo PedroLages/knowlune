@@ -24,6 +24,7 @@ import { useCourseStore } from '@/stores/useCourseStore'
 import { getCourseCompletionPercent, getProgress } from '@/lib/progress'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
+import { BulkImportDialog } from '@/app/components/figma/BulkImportDialog'
 import { db } from '@/db'
 import { calculateMomentumScore } from '@/lib/momentum'
 import { calculateAtRiskStatus } from '@/lib/atRisk'
@@ -54,6 +55,7 @@ export function Courses() {
   const [selectedStatuses, setSelectedStatuses] = useState<LearnerCourseStatus[]>([])
   const [sortMode, setSortMode] = useState<SortMode>('recent')
   const [wizardOpen, setWizardOpen] = useState(false)
+  const [bulkImportOpen, setBulkImportOpen] = useState(false)
   const [momentumMap, setMomentumMap] = useState<Map<string, MomentumScore>>(new Map())
   const [atRiskMap, setAtRiskMap] = useState<Map<string, AtRiskStatus>>(new Map())
   const [estimateMap, setEstimateMap] = useState<Map<string, CompletionEstimate>>(new Map())
@@ -298,7 +300,12 @@ export function Courses() {
     (a, b) => new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime()
   )
 
-  function handleOpenWizard() {
+  function handleOpenBulkImport() {
+    setBulkImportOpen(true)
+  }
+
+  function handleSingleImportFromBulk() {
+    setBulkImportOpen(false)
     setWizardOpen(true)
   }
 
@@ -327,8 +334,9 @@ export function Courses() {
         </div>
         <Button
           variant="brand"
-          onClick={handleOpenWizard}
+          onClick={handleOpenBulkImport}
           className="hover:scale-[1.02] hover:shadow-md rounded-xl transition-[transform,box-shadow] duration-200"
+          data-testid="import-course-btn"
         >
           <FolderOpen className="size-4 mr-2" />
           Import Course
@@ -336,6 +344,11 @@ export function Courses() {
       </div>
 
       <ImportWizardDialog open={wizardOpen} onOpenChange={setWizardOpen} />
+      <BulkImportDialog
+        open={bulkImportOpen}
+        onOpenChange={setBulkImportOpen}
+        onSingleImport={handleSingleImportFromBulk}
+      />
 
       {totalCourses === 0 ? (
         <EmptyState
@@ -343,7 +356,7 @@ export function Courses() {
           title="No courses yet"
           description="Import a course folder to get started"
           actionLabel="Import Course"
-          onAction={handleOpenWizard}
+          onAction={handleOpenBulkImport}
           data-testid="courses-empty-state"
         />
       ) : (
@@ -410,7 +423,7 @@ export function Courses() {
                     size="sm"
                     data-testid="import-first-course-cta"
                     aria-label="Import your first course"
-                    onClick={handleOpenWizard}
+                    onClick={handleOpenBulkImport}
                     className="text-brand-soft-foreground h-auto p-0"
                   >
                     Import a course &rarr;
