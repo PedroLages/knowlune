@@ -128,4 +128,7 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Config-driven architecture pays off**: Restructuring 3 navigation groups required changes to only 1 production file (`navigation.ts`). Layout.tsx and BottomNav.tsx consume groups generically via `.map()`, so zero UI component changes were needed.
+- **E2E tests in `regression/` need `../../support/` imports**: When archiving story specs from `tests/e2e/` to `tests/e2e/regression/`, relative imports break. The `../support/` paths must become `../../support/`. Code review caught this as a blocker.
+- **Progressive disclosure must be seeded in E2E tests**: Tests asserting visibility of gated sidebar items fail without seeding `knowlune-sidebar-show-all-v1` in localStorage. This was the second blocker caught in review.
+- **Plan-implementation divergence is acceptable when documented**: The plan proposed Learn/Review/Track (5-4-5) but implementation landed on Library/Study/Track (4-5-7) after discovering better semantic groupings. Updated the plan to match.
