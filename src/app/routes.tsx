@@ -25,6 +25,12 @@ const ImportedCourseDetail = React.lazy(() =>
 const ImportedLessonPlayer = React.lazy(() =>
   import('./pages/ImportedLessonPlayer').then(m => ({ default: m.ImportedLessonPlayer }))
 )
+const YouTubeCourseDetail = React.lazy(() =>
+  import('./pages/YouTubeCourseDetail').then(m => ({ default: m.YouTubeCourseDetail }))
+)
+const YouTubeLessonPlayer = React.lazy(() =>
+  import('./pages/YouTubeLessonPlayer').then(m => ({ default: m.YouTubeLessonPlayer }))
+)
 const Notes = React.lazy(() => import('./pages/Notes').then(m => ({ default: m.Notes })))
 const ChatQA = React.lazy(() => import('./pages/ChatQA').then(m => ({ default: m.ChatQA })))
 const Authors = React.lazy(() => import('./pages/Authors').then(m => ({ default: m.Authors })))
@@ -236,6 +242,22 @@ export const router = createBrowserRouter([
         element: (
           <SuspensePage>
             <ImportedLessonPlayer />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'youtube-courses/:courseId',
+        element: (
+          <SuspensePage>
+            <YouTubeCourseDetail />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'youtube-courses/:courseId/lessons/:lessonId',
+        element: (
+          <SuspensePage>
+            <YouTubeLessonPlayer />
           </SuspensePage>
         ),
       },
