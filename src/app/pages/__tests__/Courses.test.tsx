@@ -50,10 +50,13 @@ const storeState = {
   updateCourseStatus: vi.fn(),
   updateCourseDetails: vi.fn().mockResolvedValue(true),
   getAllTags: () => [] as string[],
+  getTagsWithCounts: () => [] as { tag: string; count: number }[],
   loadImportedCourses: vi.fn(),
   setImporting: vi.fn(),
   setImportError: vi.fn(),
   setImportProgress: vi.fn(),
+  renameTagGlobally: vi.fn().mockResolvedValue(undefined),
+  deleteTagGlobally: vi.fn().mockResolvedValue(undefined),
 }
 
 vi.mock('@/stores/useCourseImportStore', () => ({
@@ -127,7 +130,17 @@ vi.mock('@/hooks/useVideoFromHandle', () => ({
 }))
 
 vi.mock('@/db/schema', () => ({
-  db: { importedVideos: { where: () => ({ toArray: () => Promise.resolve([]) }) } },
+  db: {
+    importedVideos: { where: () => ({ toArray: () => Promise.resolve([]) }) },
+    studySessions: { toArray: () => Promise.resolve([]) },
+  },
+}))
+
+vi.mock('@/db', () => ({
+  db: {
+    importedVideos: { where: () => ({ toArray: () => Promise.resolve([]) }) },
+    studySessions: { toArray: () => Promise.resolve([]) },
+  },
 }))
 
 vi.mock('@/app/components/figma/VideoPlayer', () => ({
@@ -366,6 +379,32 @@ describe('Courses page', () => {
       statusButtons.forEach(button => {
         expect(button).toHaveAttribute('aria-pressed', 'false')
       })
+    })
+  })
+
+  describe('momentum sort for imported courses (E1C-S05)', () => {
+    beforeEach(() => {
+      storeState.importedCourses = mockCourses
+    })
+
+    it('renders sort dropdown in filter bar', () => {
+      renderCourses()
+      expect(screen.getByTestId('sort-select')).toBeInTheDocument()
+    })
+
+    it('defaults to "Most Recent" sort (newest importedAt first)', () => {
+      renderCourses()
+      const headings = screen.getAllByRole('heading', { level: 3 })
+      const importedHeadings = headings.filter(
+        h => h.textContent === 'Newer Course' || h.textContent === 'Older Course'
+      )
+      expect(importedHeadings[0]).toHaveTextContent('Newer Course')
+      expect(importedHeadings[1]).toHaveTextContent('Older Course')
+    })
+
+    it('sort dropdown has accessible label', () => {
+      renderCourses()
+      expect(screen.getByLabelText('Sort courses')).toBeInTheDocument()
     })
   })
 
