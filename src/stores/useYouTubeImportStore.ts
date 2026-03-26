@@ -4,16 +4,18 @@
  * Manages state for the 4-step YouTube import wizard:
  * Step 1: URL input — parse and validate YouTube URLs
  * Step 2: Metadata preview — fetch video metadata, allow removal
- * Step 3: Organize (future — E28-S06)
- * Step 4: Details (future — E28-S07)
+ * Step 3: Organize — group videos into chapters (E28-S06)
+ * Step 4: Details (future — E28-S08)
  *
  * @see E28-S05 — Import Wizard Steps 1 & 2
+ * @see E28-S06 — Rule-Based Video Grouping & Chapter Editor
  */
 
 import { create } from 'zustand'
 
 import type { YouTubeVideoCache } from '@/data/types'
 import type { YouTubeUrlParseResult } from '@/lib/youtubeUrlParser'
+import type { VideoChapter } from '@/lib/youtubeRuleBasedGrouping'
 
 // --- Types ---
 
@@ -62,6 +64,10 @@ export interface YouTubeImportState {
   /** Whether metadata is currently being fetched */
   isFetchingMetadata: boolean
 
+  // --- Step 3: Organize (E28-S06) ---
+  /** Chapter structure for organizing videos */
+  chapters: VideoChapter[]
+
   // --- Wizard Navigation ---
   currentStep: YouTubeImportStep
   /** Whether the wizard dialog is open */
@@ -84,6 +90,15 @@ export interface YouTubeImportState {
   setIsFetchingMetadata: (isFetching: boolean) => void
   /** Remove a video from the import list */
   removeVideo: (videoId: string) => void
+
+  /** Set chapter structure (E28-S06) */
+  setChapters: (chapters: VideoChapter[]) => void
+  /** Update a single chapter */
+  updateChapter: (chapterId: string, update: Partial<VideoChapter>) => void
+  /** Add a new chapter */
+  addChapter: (chapter: VideoChapter) => void
+  /** Remove a chapter by ID */
+  removeChapter: (chapterId: string) => void
 
   /** Reset the entire wizard state */
   reset: () => void
@@ -108,6 +123,7 @@ const initialState = {
   metadataFetchedCount: 0,
   metadataTotal: 0,
   isFetchingMetadata: false,
+  chapters: [] as VideoChapter[],
   currentStep: 1 as YouTubeImportStep,
   isOpen: false,
 }
@@ -162,6 +178,28 @@ export const useYouTubeImportStore = create<YouTubeImportState>((set, get) => ({
       videos: state.videos.map(v =>
         v.videoId === videoId ? { ...v, removed: true } : v
       ),
+    }))
+  },
+
+  // --- Step 3: Chapter management (E28-S06) ---
+
+  setChapters: (chapters) => set({ chapters }),
+
+  updateChapter: (chapterId, update) => {
+    set(state => ({
+      chapters: state.chapters.map(c =>
+        c.id === chapterId ? { ...c, ...update } : c
+      ),
+    }))
+  },
+
+  addChapter: (chapter) => {
+    set(state => ({ chapters: [...state.chapters, chapter] }))
+  },
+
+  removeChapter: (chapterId) => {
+    set(state => ({
+      chapters: state.chapters.filter(c => c.id !== chapterId),
     }))
   },
 
