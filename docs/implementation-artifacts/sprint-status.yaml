@@ -407,7 +407,7 @@ development_status:
   26-2-learning-path-list-view: in-progress
   26-3-path-detail-view-with-drag-drop-editor: backlog
   26-4-ai-path-placement-suggestion: backlog
-  26-5-per-path-progress-tracking: backlog
+  26-5-per-path-progress-tracking: done
   epic-26-retrospective: optional
 
   # ──────────────────────────────────────────────────
