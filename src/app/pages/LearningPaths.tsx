@@ -46,9 +46,10 @@ import { EmptyState } from '@/app/components/EmptyState'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { cn } from '@/app/components/ui/utils'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
+import { useMultiPathProgress } from '@/app/hooks/usePathProgress'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 import { toast } from 'sonner'
-import type { LearningPath } from '@/data/types'
+import type { LearningPath, LearningPathEntry } from '@/data/types'
 
 // --- Create Path Dialog ---
 
@@ -416,19 +417,23 @@ function PathCard({
             </div>
 
             {/* Completion bar */}
-            <div className="mb-3">
-              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-brand transition-all duration-300"
-                  style={{ width: `${completionPct}%` }}
-                  role="progressbar"
-                  aria-valuenow={completionPct}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-label={`${completionPct}% completed`}
-                />
+            {courseCount > 0 ? (
+              <div className="mb-3">
+                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-brand transition-all duration-300"
+                    style={{ width: `${completionPct}%` }}
+                    role="progressbar"
+                    aria-valuenow={completionPct}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label={`${completionPct}% completed`}
+                  />
+                </div>
               </div>
-            </div>
+            ) : (
+              <p className="text-xs text-muted-foreground mb-3 italic">No courses added yet</p>
+            )}
 
             {/* Metadata row */}
             <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -437,7 +442,7 @@ function PathCard({
                   <BookOpen className="size-3.5" aria-hidden="true" />
                   {courseCount} {courseCount === 1 ? 'course' : 'courses'}
                 </span>
-                <span>{completionPct}% complete</span>
+                {courseCount > 0 && <span>{completionPct}% complete</span>}
               </div>
               <span>Updated {lastUpdated}</span>
             </div>
@@ -511,19 +516,31 @@ export function LearningPaths() {
     }
   }, [loadPaths])
 
-  // Compute course count and completion % per path
+  // Build a stable map of pathId → entries for useMultiPathProgress
+  const pathEntriesMap = useMemo(() => {
+    const map = new Map<string, LearningPathEntry[]>()
+    for (const path of paths) {
+      map.set(path.id, entries.filter(e => e.pathId === path.id))
+    }
+    return map
+  }, [paths, entries])
+
+  // Compute real progress from contentProgress (catalog) and progress table (imported)
+  const pathProgressMap = useMultiPathProgress(pathEntriesMap)
+
+  // Derive courseCount + completionPct per path
   const pathStats = useMemo(() => {
     const stats = new Map<string, { courseCount: number; completionPct: number }>()
     for (const path of paths) {
+      const progress = pathProgressMap.get(path.id)
       const pathEntries = entries.filter(e => e.pathId === path.id)
-      // Completion is always 0% for now — actual progress tracking will come in a future story
       stats.set(path.id, {
         courseCount: pathEntries.length,
-        completionPct: 0,
+        completionPct: progress?.completionPct ?? 0,
       })
     }
     return stats
-  }, [paths, entries])
+  }, [paths, entries, pathProgressMap])
 
   const filteredPaths = useMemo(() => {
     if (!search.trim()) return paths

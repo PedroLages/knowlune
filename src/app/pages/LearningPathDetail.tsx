@@ -30,6 +30,8 @@ import {
   Sparkles,
   Loader2,
   Settings,
+  Clock,
+  CheckCircle2,
 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
@@ -54,6 +56,7 @@ import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
+import { usePathProgress } from '@/app/hooks/usePathProgress'
 import { db } from '@/db'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 import { toast } from 'sonner'
@@ -171,9 +174,25 @@ function SortableCourseRow({
                 {authorName && (
                   <span className="text-xs text-muted-foreground truncate">{authorName}</span>
                 )}
-                <span className="text-xs text-muted-foreground">
-                  {completionPct}% complete
-                </span>
+                {completionPct === 0 ? (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] uppercase tracking-wider border-muted-foreground/30 text-muted-foreground"
+                  >
+                    Not Started
+                  </Badge>
+                ) : completionPct >= 100 ? (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] uppercase tracking-wider border-success/30 text-success"
+                  >
+                    Completed
+                  </Badge>
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    {completionPct}% complete
+                  </span>
+                )}
               </div>
             </div>
 
@@ -497,7 +516,10 @@ export function LearningPathDetail() {
     [courseEntries]
   )
 
-  // Build course info lookup
+  // Real progress tracking from contentProgress (catalog) + progress table (imported)
+  const pathProgress = usePathProgress(courseEntries)
+
+  // Build course info lookup — uses real progress data
   const courseInfo = useMemo(() => {
     const map = new Map<
       string,
@@ -506,21 +528,23 @@ export function LearningPathDetail() {
 
     for (const ic of importedCourses) {
       const authorName = ic.authorId ? authors.find(a => a.id === ic.authorId)?.name : undefined
+      const cpInfo = pathProgress.courseProgress.get(ic.id)
       map.set(ic.id, {
         name: ic.name,
         type: 'imported',
         authorName,
-        completionPct: ic.status === 'completed' ? 100 : 0,
+        completionPct: cpInfo?.completionPct ?? 0,
       })
     }
 
     for (const cc of catalogCourses) {
       const authorName = authors.find(a => a.id === cc.authorId)?.name
-      map.set(cc.id, { name: cc.title, type: 'catalog', authorName, completionPct: 0 })
+      const cpInfo = pathProgress.courseProgress.get(cc.id)
+      map.set(cc.id, { name: cc.title, type: 'catalog', authorName, completionPct: cpInfo?.completionPct ?? 0 })
     }
 
     return map
-  }, [importedCourses, catalogCourses, authors])
+  }, [importedCourses, catalogCourses, authors, pathProgress.courseProgress])
 
   // DnD sensors (same pattern as AILearningPath)
   const sensors = useSensors(
@@ -695,9 +719,6 @@ export function LearningPathDetail() {
             {path.description && (
               <p className="text-sm text-muted-foreground leading-relaxed">{path.description}</p>
             )}
-            <p className="text-xs text-muted-foreground mt-2">
-              {courseEntries.length} {courseEntries.length === 1 ? 'course' : 'courses'}
-            </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {/* Suggest Order button — shown when 2+ courses (E26-S04) */}
@@ -744,6 +765,53 @@ export function LearningPathDetail() {
             </Button>
           </div>
         </motion.div>
+
+        {/* Progress summary — only show when path has courses */}
+        {courseEntries.length > 0 && (
+          <motion.div variants={fadeUp}>
+            <Card>
+              <CardContent className="p-5">
+                {/* Overall progress bar */}
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Overall Progress</span>
+                  <span className="text-sm font-semibold text-brand-soft-foreground">
+                    {pathProgress.completionPct}%
+                  </span>
+                </div>
+                <div className="h-2 rounded-full bg-muted overflow-hidden mb-4">
+                  <div
+                    className="h-full rounded-full bg-brand transition-all duration-300"
+                    style={{ width: `${pathProgress.completionPct}%` }}
+                    role="progressbar"
+                    aria-valuenow={pathProgress.completionPct}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label={`${pathProgress.completionPct}% path completed`}
+                  />
+                </div>
+
+                {/* Stats row */}
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <BookOpen className="size-4" aria-hidden="true" />
+                    {pathProgress.completedCourses}/{pathProgress.totalCourses}{' '}
+                    {pathProgress.totalCourses === 1 ? 'course' : 'courses'} completed
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <CheckCircle2 className="size-4" aria-hidden="true" />
+                    {pathProgress.completedLessons}/{pathProgress.totalLessons} lessons
+                  </span>
+                  {pathProgress.estimatedRemainingHours > 0 && (
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="size-4" aria-hidden="true" />
+                      {pathProgress.estimatedRemainingHours}h remaining
+                    </span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Course list */}
         {courseEntries.length === 0 ? (
