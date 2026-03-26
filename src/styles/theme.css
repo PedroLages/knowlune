@@ -424,6 +424,11 @@
   --color-resource-image-bg: var(--resource-image-bg);
   --color-resource-notes: var(--resource-notes);
   --color-resource-notes-bg: var(--resource-notes-bg);
+  --color-heatmap-empty: var(--heatmap-empty);
+  --color-heatmap-level-1: var(--heatmap-level-1);
+  --color-heatmap-level-2: var(--heatmap-level-2);
+  --color-heatmap-level-3: var(--heatmap-level-3);
+  --color-heatmap-level-4: var(--heatmap-level-4);
   --font-sans: var(--font-body);
   --font-display: var(--font-heading);
 }
