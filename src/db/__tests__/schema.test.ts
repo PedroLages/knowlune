@@ -80,8 +80,8 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 26', () => {
-    expect(db.verno).toBe(26)
+  it('should be at version 27', () => {
+    expect(db.verno).toBe(27)
   })
 
   it('should have entitlements table with userId as primary key', () => {
@@ -810,6 +810,7 @@ describe('v26 YouTube schema', () => {
     const indexNames = db.youtubeTranscripts.schema.indexes.map(i => i.name)
     expect(indexNames).toContain('courseId')
     expect(indexNames).toContain('videoId')
+    expect(indexNames).toContain('status')
   })
 
   it('should have youtubeChapters table with id PK and courseId/order indexes', () => {
@@ -883,6 +884,9 @@ describe('v26 YouTube schema', () => {
       videoId: 'vid-abc',
       language: 'en',
       cues: [{ startTime: 0, endTime: 5, text: 'Hello' }],
+      fullText: 'Hello',
+      source: 'youtube-transcript' as const,
+      status: 'done' as const,
       fetchedAt: '2026-03-26T10:00:00.000Z',
     }
     await db.youtubeTranscripts.add(transcript)
@@ -890,6 +894,9 @@ describe('v26 YouTube schema', () => {
     expect(retrieved).toBeDefined()
     expect(retrieved!.language).toBe('en')
     expect(retrieved!.cues).toHaveLength(1)
+    expect(retrieved!.fullText).toBe('Hello')
+    expect(retrieved!.source).toBe('youtube-transcript')
+    expect(retrieved!.status).toBe('done')
   })
 
   it('should query youtubeTranscripts by courseId index', async () => {
@@ -899,6 +906,9 @@ describe('v26 YouTube schema', () => {
         videoId: 'v1',
         language: 'en',
         cues: [],
+        fullText: '',
+        source: 'youtube-transcript' as const,
+        status: 'done' as const,
         fetchedAt: '2026-03-26T10:00:00.000Z',
       },
       {
@@ -906,6 +916,9 @@ describe('v26 YouTube schema', () => {
         videoId: 'v2',
         language: 'en',
         cues: [],
+        fullText: '',
+        source: 'youtube-transcript' as const,
+        status: 'done' as const,
         fetchedAt: '2026-03-26T10:00:00.000Z',
       },
       {
@@ -913,6 +926,9 @@ describe('v26 YouTube schema', () => {
         videoId: 'v3',
         language: 'en',
         cues: [],
+        fullText: '',
+        source: 'youtube-transcript' as const,
+        status: 'done' as const,
         fetchedAt: '2026-03-26T10:00:00.000Z',
       },
     ])
