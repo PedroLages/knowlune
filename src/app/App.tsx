@@ -17,6 +17,7 @@ import { useWelcomeWizardStore } from '@/stores/useWelcomeWizardStore'
 import { useColorScheme } from '@/hooks/useColorScheme'
 import { supabase } from '@/lib/auth/supabase'
 import { useAuthStore } from '@/stores/useAuthStore'
+import { hydrateSettingsFromSupabase } from '@/lib/settings'
 
 // Register global error handlers (window.onerror, unhandledrejection)
 initErrorTracking()
@@ -44,8 +45,12 @@ export default function App() {
     if (!supabase) return
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       useAuthStore.getState().setSession(session)
+      // Hydrate localStorage settings from Supabase user_metadata on sign-in
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+        hydrateSettingsFromSupabase(session.user.user_metadata)
+      }
     })
     return () => subscription.unsubscribe()
   }, [])

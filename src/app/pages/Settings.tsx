@@ -66,6 +66,8 @@ import { AvatarUploadZone } from '@/app/components/settings/avatar-upload-zone'
 import { EngagementPreferences } from '@/app/components/settings/EngagementPreferences'
 import { SubscriptionCard } from '@/app/components/settings/SubscriptionCard'
 import { AccountDeletion } from '@/app/components/settings/AccountDeletion'
+import { ChangePassword } from '@/app/components/settings/ChangePassword'
+import { ChangeEmail } from '@/app/components/settings/ChangeEmail'
 import { MyDataSummary } from '@/app/components/settings/MyDataSummary'
 import { validateImageFile, compressAvatar, fileToDataUrl } from '@/lib/avatarUpload'
 import { toastSuccess, toastError } from '@/lib/toastHelpers'
@@ -524,6 +526,17 @@ export default function Settings() {
                     </Button>
                   </div>
                 </div>
+
+                {/* Change Password & Email — only for email/password users (not OAuth) */}
+                {user.app_metadata?.provider === 'email' && (
+                  <>
+                    <Separator />
+                    <ChangePassword />
+                    <Separator />
+                    <ChangeEmail />
+                  </>
+                )}
+
                 <Separator />
                 <div className="flex items-center justify-between">
                   <div>
