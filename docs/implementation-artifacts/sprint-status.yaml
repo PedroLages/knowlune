@@ -298,7 +298,7 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-18: in-progress
   18-1-implement-complete-keyboard-navigation: done
-  18-2-implement-aria-live-regions-for-dynamic-content: backlog
+  18-2-implement-aria-live-regions-for-dynamic-content: done
   18-3-ensure-semantic-html-and-proper-aria-attributes: ready-for-dev  # story file exists
   18-4-verify-contrast-ratios-and-touch-targets: done
   18-5-integrate-quiz-completion-with-study-streaks: done

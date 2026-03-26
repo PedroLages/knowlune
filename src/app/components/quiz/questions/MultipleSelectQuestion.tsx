@@ -4,6 +4,7 @@ import { cn } from '@/app/components/ui/utils'
 import type { Question } from '@/types/quiz'
 import type { QuestionDisplayMode } from '../QuestionDisplay'
 import { MarkdownRenderer } from '../MarkdownRenderer'
+import { useAriaLiveAnnouncer } from '@/hooks/useAriaLiveAnnouncer'
 
 interface MultipleSelectQuestionProps {
   question: Question
@@ -22,6 +23,7 @@ export function MultipleSelectQuestion({
   const isActive = mode === 'active'
   const labelId = useId()
   const hintId = useId()
+  const [selectionAnnouncement, announceSelection] = useAriaLiveAnnouncer()
 
   if (process.env.NODE_ENV !== 'production' && options.length < 2) {
     console.warn(
@@ -31,7 +33,12 @@ export function MultipleSelectQuestion({
 
   function handleToggle(option: string) {
     if (!isActive) return
-    const newValue = value.includes(option) ? value.filter(v => v !== option) : [...value, option]
+    const wasSelected = value.includes(option)
+    const newValue = wasSelected ? value.filter(v => v !== option) : [...value, option]
+    // Announce select/deselect to screen readers (AC2)
+    const optionIndex = options.indexOf(option)
+    const label = optionIndex >= 0 ? `Option ${optionIndex + 1}` : option
+    announceSelection(wasSelected ? `${label} deselected` : `${label} selected`)
     onChange(newValue)
   }
 
@@ -54,6 +61,15 @@ export function MultipleSelectQuestion({
       {/* Empty legend satisfies semantic HTML requirement; aria-labelledby on fieldset
           provides the accessible name so no duplicate text node is added to the DOM */}
       <legend className="sr-only" />
+      {/* Screen-reader-only: announces answer select/deselect changes */}
+      <span
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+        data-testid="selection-announcement"
+      >
+        {selectionAnnouncement}
+      </span>
       <div
         id={labelId}
         data-testid="question-text"

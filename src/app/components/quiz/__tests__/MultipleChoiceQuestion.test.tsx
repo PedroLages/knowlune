@@ -367,4 +367,39 @@ describe('MultipleChoiceQuestion', () => {
     expect(radios).toHaveLength(0)
     warnSpy.mockRestore()
   })
+
+  describe('ARIA live announcements (AC2)', () => {
+    it('has an aria-live="polite" region for selection announcements', () => {
+      render(
+        <MultipleChoiceQuestion
+          question={makeQuestion()}
+          value={undefined}
+          onChange={vi.fn()}
+          mode="active"
+        />
+      )
+
+      const liveRegion = screen.getByTestId('selection-announcement')
+      expect(liveRegion).toHaveAttribute('aria-live', 'polite')
+      expect(liveRegion).toHaveAttribute('aria-atomic', 'true')
+    })
+
+    it('announces "Option N selected" when an option is clicked', async () => {
+      const onChange = vi.fn()
+      render(
+        <MultipleChoiceQuestion
+          question={makeQuestion()}
+          value={undefined}
+          onChange={onChange}
+          mode="active"
+        />
+      )
+
+      const radios = screen.getAllByRole('radio')
+      await userEvent.click(radios[1]) // Click "London" (Option 2)
+
+      const liveRegion = screen.getByTestId('selection-announcement')
+      expect(liveRegion).toHaveTextContent('Option 2 selected')
+    })
+  })
 })

@@ -1,6 +1,8 @@
+import { useEffect, useRef } from 'react'
 import { Progress } from '@/app/components/ui/progress'
 import type { Quiz, QuizProgress } from '@/types/quiz'
 import { QuizTimer } from '@/app/components/quiz/QuizTimer'
+import { useAriaLiveAnnouncer } from '@/hooks/useAriaLiveAnnouncer'
 
 interface QuizHeaderProps {
   quiz: Quiz
@@ -16,6 +18,17 @@ export function QuizHeader({ quiz, progress, timeRemaining, totalTimeSeconds }: 
   const currentQuestion = progress.currentQuestionIndex + 1
   const progressValue =
     totalQuestions > 0 ? Math.round((currentQuestion / totalQuestions) * 100) : 0
+
+  // Announce question navigation changes to screen readers (AC8)
+  const [navAnnouncement, announceNav] = useAriaLiveAnnouncer()
+  const prevQuestionRef = useRef(currentQuestion)
+
+  useEffect(() => {
+    if (prevQuestionRef.current !== currentQuestion) {
+      prevQuestionRef.current = currentQuestion
+      announceNav(`Question ${currentQuestion} of ${totalQuestions}`)
+    }
+  }, [currentQuestion, totalQuestions, announceNav])
 
   return (
     <div className="mb-6">
@@ -53,6 +66,15 @@ export function QuizHeader({ quiz, progress, timeRemaining, totalTimeSeconds }: 
       <p className="text-sm text-muted-foreground mt-1">
         Question {currentQuestion} of {totalQuestions}
       </p>
+      {/* Screen-reader-only: announces question navigation changes */}
+      <span
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+        data-testid="nav-announcement"
+      >
+        {navAnnouncement}
+      </span>
     </div>
   )
 }
