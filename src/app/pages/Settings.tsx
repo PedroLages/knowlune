@@ -64,6 +64,8 @@ import { AvatarCropDialog } from '@/app/components/ui/avatar-crop-dialog'
 import { AvatarUploadZone } from '@/app/components/settings/avatar-upload-zone'
 import { EngagementPreferences } from '@/app/components/settings/EngagementPreferences'
 import { SubscriptionCard } from '@/app/components/settings/SubscriptionCard'
+import { AccountDeletion } from '@/app/components/settings/AccountDeletion'
+import { MyDataSummary } from '@/app/components/settings/MyDataSummary'
 import { validateImageFile, compressAvatar, fileToDataUrl } from '@/lib/avatarUpload'
 import { toastSuccess, toastError } from '@/lib/toastHelpers'
 import { useAuthStore } from '@/stores/useAuthStore'
@@ -494,29 +496,43 @@ export default function Settings() {
           </CardHeader>
           <CardContent className="p-6" data-testid="account-section">
             {user ? (
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">{user.email}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Signed in via {user.app_metadata?.provider ?? 'email'}
-                  </p>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">{user.email}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Signed in via {user.app_metadata?.provider ?? 'email'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 min-h-[44px]"
+                      onClick={async () => {
+                        const result = await authSignOut()
+                        if (result.error) {
+                          toastError.saveFailed(result.error)
+                        } else {
+                          toastSuccess.saved('Signed out successfully')
+                        }
+                      }}
+                    >
+                      <LogOut className="size-4" />
+                      Sign Out
+                    </Button>
+                  </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 min-h-[44px]"
-                  onClick={async () => {
-                    const result = await authSignOut()
-                    if (result.error) {
-                      toastError.saveFailed(result.error)
-                    } else {
-                      toastSuccess.saved('Signed out successfully')
-                    }
-                  }}
-                >
-                  <LogOut className="size-4" />
-                  Sign Out
-                </Button>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-destructive">Delete Account</p>
+                    <p className="text-xs text-muted-foreground">
+                      Permanently delete your account and all data
+                    </p>
+                  </div>
+                  <AccountDeletion />
+                </div>
               </div>
             ) : (
               <div className="flex items-center gap-3">
@@ -553,6 +569,9 @@ export default function Settings() {
 
         {/* Subscription — only shown when authenticated */}
         {user && <SubscriptionCard checkoutStatus={checkoutStatus} />}
+
+        {/* My Data — GDPR data summary, only shown when authenticated */}
+        {user && <MyDataSummary />}
 
         {/* Profile */}
         <Card className="overflow-hidden">
