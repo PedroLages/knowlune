@@ -11,12 +11,27 @@ const mockStartCheckout = vi.fn()
 const mockPollEntitlement = vi.fn()
 const mockGetCachedEntitlement = vi.fn()
 const mockCacheEntitlement = vi.fn()
+const mockCreatePortalSession = vi.fn()
 
 vi.mock('@/lib/checkout', () => ({
   startCheckout: (...args: unknown[]) => mockStartCheckout(...args),
   pollEntitlement: (...args: unknown[]) => mockPollEntitlement(...args),
   getCachedEntitlement: (...args: unknown[]) => mockGetCachedEntitlement(...args),
   cacheEntitlement: (...args: unknown[]) => mockCacheEntitlement(...args),
+  createPortalSession: (...args: unknown[]) => mockCreatePortalSession(...args),
+}))
+
+// Mock useIsPremium — returns non-stale, no error by default
+const mockUseIsPremium = vi.fn().mockReturnValue({
+  isPremium: false,
+  loading: false,
+  tier: 'free',
+  isStale: false,
+  error: null,
+})
+
+vi.mock('@/lib/entitlement/isPremium', () => ({
+  useIsPremium: () => mockUseIsPremium(),
 }))
 
 const mockToastError = vi.fn()
@@ -92,6 +107,14 @@ describe('SubscriptionCard', () => {
     mockGetCachedEntitlement.mockResolvedValue(null)
     mockStartCheckout.mockResolvedValue({ url: 'https://checkout.stripe.com/pay' })
     mockPollEntitlement.mockResolvedValue(null)
+    mockCreatePortalSession.mockResolvedValue({ url: 'https://billing.stripe.com/session/test' })
+    mockUseIsPremium.mockReturnValue({
+      isPremium: false,
+      loading: false,
+      tier: 'free',
+      isStale: false,
+      error: null,
+    })
   })
 
   // -------------------------------------------------------------------------
@@ -108,15 +131,15 @@ describe('SubscriptionCard', () => {
   // Loading / skeleton state
   // -------------------------------------------------------------------------
 
-  it('shows skeleton when entitlement is loading', () => {
+  it('shows skeleton loader when entitlement is loading', () => {
     // getCachedEntitlement is a promise that hasn't resolved yet
     mockGetCachedEntitlement.mockReturnValue(new Promise(() => {})) // never resolves
 
     renderCard()
 
-    // The loading skeleton has animate-pulse divs
-    const section = screen.getByTestId('subscription-section')
-    expect(section.querySelector('.animate-pulse')).not.toBeNull()
+    // The loading skeleton has aria-busy and aria-label
+    const loadingStatus = screen.getByLabelText('Loading subscription status')
+    expect(loadingStatus).toHaveAttribute('aria-busy', 'true')
   })
 
   // -------------------------------------------------------------------------
@@ -147,8 +170,15 @@ describe('SubscriptionCard', () => {
   // Premium state
   // -------------------------------------------------------------------------
 
-  it('shows plan details and badges when user is premium', async () => {
+  it('shows plan details, Manage Billing, and Cancel buttons when user is premium', async () => {
     mockGetCachedEntitlement.mockResolvedValue(makePremiumEntitlement())
+    mockUseIsPremium.mockReturnValue({
+      isPremium: true,
+      loading: false,
+      tier: 'premium',
+      isStale: false,
+      error: null,
+    })
 
     renderCard()
 
@@ -160,6 +190,146 @@ describe('SubscriptionCard', () => {
     expect(screen.getByText('Monthly')).toBeInTheDocument()
     // Next billing date should be shown
     expect(screen.getByText(/January 1, 2027/)).toBeInTheDocument()
+    // AC1: Manage Billing and Cancel buttons
+    expect(
+      screen.getByRole('button', { name: /manage.*billing|billing.*portal/i })
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /cancel.*subscription/i })).toBeInTheDocument()
+  })
+
+  // -------------------------------------------------------------------------
+  // Manage Billing (AC2, AC6)
+  // -------------------------------------------------------------------------
+
+  it('opens Stripe Portal when "Manage Billing" is clicked', async () => {
+    mockGetCachedEntitlement.mockResolvedValue(makePremiumEntitlement())
+    mockUseIsPremium.mockReturnValue({
+      isPremium: true,
+      loading: false,
+      tier: 'premium',
+      isStale: false,
+      error: null,
+    })
+
+    renderCard()
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: /manage.*billing|billing.*portal/i })
+      ).toBeInTheDocument()
+    })
+
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: /manage.*billing|billing.*portal/i }))
+
+    expect(mockCreatePortalSession).toHaveBeenCalledWith()
+  })
+
+  it('shows error with retry when portal creation fails', async () => {
+    mockGetCachedEntitlement.mockResolvedValue(makePremiumEntitlement())
+    mockUseIsPremium.mockReturnValue({
+      isPremium: true,
+      loading: false,
+      tier: 'premium',
+      isStale: false,
+      error: null,
+    })
+    mockCreatePortalSession.mockResolvedValue({
+      error: 'Unable to open billing portal. Please try again.',
+    })
+
+    renderCard()
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: /manage.*billing|billing.*portal/i })
+      ).toBeInTheDocument()
+    })
+
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: /manage.*billing|billing.*portal/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText(/unable to open billing portal/i)).toBeInTheDocument()
+    })
+
+    // AC6: Retry button should be visible
+    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument()
+  })
+
+  // -------------------------------------------------------------------------
+  // Cancel Subscription (AC3)
+  // -------------------------------------------------------------------------
+
+  it('shows confirmation dialog when Cancel Subscription is clicked', async () => {
+    mockGetCachedEntitlement.mockResolvedValue(makePremiumEntitlement())
+    mockUseIsPremium.mockReturnValue({
+      isPremium: true,
+      loading: false,
+      tier: 'premium',
+      isStale: false,
+      error: null,
+    })
+
+    renderCard()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /cancel.*subscription/i })).toBeInTheDocument()
+    })
+
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: /cancel.*subscription/i }))
+
+    // Confirmation dialog with what they lose/keep
+    await waitFor(() => {
+      expect(screen.getByText(/cancel your subscription/i)).toBeInTheDocument()
+    })
+
+    expect(screen.getByText(/keep premium access until/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(/progress, notes, and achievements are never deleted/i)
+    ).toBeInTheDocument()
+    expect(screen.getByText(/lose access to AI Summaries/i)).toBeInTheDocument()
+    expect(screen.getByText(/resubscribe anytime/i)).toBeInTheDocument()
+
+    // Keep Subscription button should be available
+    expect(screen.getByRole('button', { name: /keep subscription/i })).toBeInTheDocument()
+  })
+
+  // -------------------------------------------------------------------------
+  // Offline / stale cached state (AC7)
+  // -------------------------------------------------------------------------
+
+  it('shows cached status with "Last updated" note when offline', async () => {
+    mockGetCachedEntitlement.mockResolvedValue(makePremiumEntitlement())
+    mockUseIsPremium.mockReturnValue({
+      isPremium: true,
+      loading: false,
+      tier: 'premium',
+      isStale: true,
+      error: 'Offline',
+    })
+    // Simulate offline
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true })
+
+    renderCard()
+
+    await waitFor(() => {
+      expect(screen.getByText(/using cached subscription data/i)).toBeInTheDocument()
+    })
+
+    expect(screen.getByText(/last updated/i)).toBeInTheDocument()
+
+    // Buttons should be disabled
+    const manageBillingBtn = screen.getByRole('button', {
+      name: /manage.*billing|billing.*portal/i,
+    })
+    expect(manageBillingBtn).toBeDisabled()
+    const cancelBtn = screen.getByRole('button', { name: /cancel subscription/i })
+    expect(cancelBtn).toBeDisabled()
+
+    // Restore navigator
+    Object.defineProperty(navigator, 'onLine', { value: true, configurable: true })
   })
 
   // -------------------------------------------------------------------------
