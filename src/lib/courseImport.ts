@@ -1,5 +1,6 @@
 import { db } from '@/db'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { useImportProgressStore } from '@/stores/useImportProgressStore'
 import { triggerAutoAnalysis } from '@/lib/autoAnalysis'
 import { unlockSidebarItem } from '@/app/hooks/useProgressiveDisclosure'
 import { triggerOllamaTagging } from '@/lib/ollamaTagging'
@@ -98,10 +99,14 @@ export interface ScannedCourse {
  */
 export async function scanCourseFolder(): Promise<ScannedCourse> {
   const store = useCourseImportStore.getState()
+  const progressStore = useImportProgressStore.getState()
 
   store.setImporting(true)
   store.setImportError(null)
   store.setImportProgress(null)
+
+  // Generate a temporary courseId for progress tracking (will be replaced by actual ID later)
+  const tempCourseId = crypto.randomUUID()
 
   try {
     // Step 1: Show directory picker
@@ -118,6 +123,9 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
       )
     }
 
+    // Start progress tracking (AC1: "Scanning folder... 0 of ? files processed")
+    progressStore.startImport(tempCourseId, dirHandle.name)
+
     // Check for duplicate import
     const existingCourse = await db.importedCourses.where('name').equals(dirHandle.name).first()
     if (existingCourse) {
@@ -131,9 +139,16 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
     const videoFiles: { handle: FileSystemFileHandle; path: string }[] = []
     const pdfFiles: { handle: FileSystemFileHandle; path: string }[] = []
     const imageFiles: { handle: FileSystemFileHandle; path: string }[] = []
+    let scanCount = 0
 
     try {
       for await (const entry of scanDirectory(dirHandle, '', { includeImages: true })) {
+        // Check for cancellation during scan
+        if (useImportProgressStore.getState().cancelRequested) {
+          useImportProgressStore.getState().confirmCancellation()
+          throw new Error('Import cancelled by user')
+        }
+
         if (isSupportedVideoFormat(entry.handle.name)) {
           videoFiles.push(entry)
         } else if (isImageFile(entry.handle.name)) {
@@ -141,8 +156,16 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
         } else {
           pdfFiles.push(entry)
         }
+        scanCount++
+        // AC2: Update progress every 10 files during scan
+        if (scanCount % 10 === 0) {
+          progressStore.updateScanProgress(tempCourseId, scanCount, null)
+        }
       }
     } catch (error) {
+      if (error instanceof Error && error.message.includes('cancelled')) {
+        throw error
+      }
       console.error('[Import] Directory scan failed:', error)
       throw new ImportError('Failed to scan the selected folder. Please try again.', 'SCAN_ERROR')
     }
@@ -157,6 +180,8 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
 
     const totalFiles = videoFiles.length + pdfFiles.length
     store.setImportProgress({ current: 0, total: totalFiles })
+    // Update progress with known total (AC2: "45 of 120 files processed (38%)")
+    progressStore.updateProcessingProgress(tempCourseId, 0, totalFiles)
 
     // Step 4: Extract metadata in batches (max 10 concurrent to limit memory pressure)
     const BATCH_SIZE = 10
@@ -168,12 +193,20 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
     ): Promise<PromiseSettledResult<R>[]> {
       const results: PromiseSettledResult<R>[] = []
       for (let i = 0; i < items.length; i += BATCH_SIZE) {
+        // Check for cancellation between batches
+        if (useImportProgressStore.getState().cancelRequested) {
+          useImportProgressStore.getState().confirmCancellation()
+          throw new Error('Import cancelled by user')
+        }
+
         const batch = items.slice(i, i + BATCH_SIZE)
         const batchResults = await Promise.allSettled(
           batch.map(async item => {
             const result = await extractor(item)
             processedCount++
             store.setImportProgress({ current: processedCount, total: totalFiles })
+            // AC2: Update progress with file count and percentage
+            progressStore.updateProcessingProgress(tempCourseId, processedCount, totalFiles)
             return result
           })
         )
@@ -245,6 +278,9 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
       fileHandle: entry.handle,
     }))
 
+    // Mark scan complete in progress store
+    progressStore.completeCourse(tempCourseId)
+
     return {
       id: courseId,
       name: courseName,
@@ -257,6 +293,7 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
   } catch (error) {
     if (error instanceof ImportError) {
       store.setImportError(error.message)
+      progressStore.failCourse(tempCourseId, error.message)
       if (error.code === 'PERMISSION_DENIED') {
         toast.error(error.message, {
           action: {
@@ -270,10 +307,11 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
         toast.error(error.message)
       }
     } else if (error instanceof Error && error.message.includes('cancelled')) {
-      // User cancelled — don't show error
+      // User cancelled — don't show error (AC4: cancellation confirmed via overlay)
     } else {
       const message = 'An unexpected error occurred during import. Please try again.'
       store.setImportError(message)
+      progressStore.failCourse(tempCourseId, message)
       toast.error(message)
       console.error('[Import] Unexpected error:', error)
     }
@@ -478,9 +516,13 @@ export async function scanCourseFolderFromHandle(
     const videoFiles: { handle: FileSystemFileHandle; path: string }[] = []
     const pdfFiles: { handle: FileSystemFileHandle; path: string }[] = []
     const imageFiles: { handle: FileSystemFileHandle; path: string }[] = []
-
     try {
       for await (const entry of scanDirectory(dirHandle, '', { includeImages: true })) {
+        // Check for cancellation during scan (AC4)
+        if (useImportProgressStore.getState().cancelRequested) {
+          return { status: 'error', folderName: dirHandle.name, message: 'Cancelled' }
+        }
+
         if (isSupportedVideoFormat(entry.handle.name)) {
           videoFiles.push(entry)
         } else if (isImageFile(entry.handle.name)) {
@@ -507,6 +549,11 @@ export async function scanCourseFolderFromHandle(
     ): Promise<PromiseSettledResult<R>[]> {
       const results: PromiseSettledResult<R>[] = []
       for (let i = 0; i < items.length; i += BATCH_SIZE) {
+        // Check for cancellation between batches (AC4)
+        if (useImportProgressStore.getState().cancelRequested) {
+          return results // Return partial results, caller handles cancellation
+        }
+
         const batch = items.slice(i, i + BATCH_SIZE)
         const batchResults = await Promise.allSettled(batch.map(extractor))
         results.push(...batchResults)

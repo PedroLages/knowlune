@@ -49,6 +49,7 @@ import type { QualityScoreResult } from '@/lib/qualityScore'
 import { OnboardingOverlay } from './onboarding/OnboardingOverlay'
 import { TrialIndicator } from './trial/TrialIndicator'
 import { TrialReminderBanner } from './trial/TrialReminderBanner'
+import { ImportProgressOverlay } from './figma/ImportProgressOverlay'
 
 // Individual nav link — wraps in Tooltip when collapsed
 function NavLink({
@@ -579,6 +580,9 @@ export function Layout() {
 
       {/* First-use onboarding overlay (E25-S07) */}
       <OnboardingOverlay />
+
+      {/* Import progress indicator (E1B-S03) — non-blocking overlay */}
+      <ImportProgressOverlay />
     </div>
   )
 }
