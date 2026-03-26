@@ -428,7 +428,7 @@ development_status:
   epic-28: in-progress
   28-1-dexie-v24-schema-migration-and-youtube-types: done
   28-2-youtube-url-parser-and-configuration-settings: done
-  28-3-youtube-data-api-v3-client-with-rate-limiting: backlog
+  28-3-youtube-data-api-v3-client-with-rate-limiting: in-progress
   28-4-transcript-pipeline-tier-1-youtube-transcript: backlog
   28-5-import-wizard-steps-1-and-2-url-input-metadata-preview: backlog
   28-6-rule-based-video-grouping-and-chapter-editor: backlog
