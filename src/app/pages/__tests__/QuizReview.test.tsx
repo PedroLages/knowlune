@@ -118,7 +118,8 @@ describe('QuizReview', () => {
   it('loads attempt and renders first question', async () => {
     renderReview()
     await waitFor(() => expect(screen.getByText('First question?')).toBeInTheDocument())
-    expect(screen.getByText('Question 1 of 2')).toBeInTheDocument()
+    // Multiple matching elements: visible <p> and sr-only <h2> for semantic heading
+    expect(screen.getAllByText('Question 1 of 2').length).toBeGreaterThanOrEqual(1)
   })
 
   it('shows error state when attempt ID not found', async () => {
@@ -140,7 +141,8 @@ describe('QuizReview', () => {
     await userEvent.click(screen.getByRole('button', { name: /next/i }))
 
     expect(screen.getByText('Second question?')).toBeInTheDocument()
-    expect(screen.getByText('Question 2 of 2')).toBeInTheDocument()
+    // Multiple matching elements: visible <p> and sr-only <h2> for semantic heading
+    expect(screen.getAllByText('Question 2 of 2').length).toBeGreaterThanOrEqual(1)
   })
 
   it('Previous button is disabled on first question', async () => {

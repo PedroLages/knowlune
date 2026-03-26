@@ -47,28 +47,42 @@ export function QuizReviewContent({ quiz, attempt, courseId, lessonId }: QuizRev
 
   return (
     <div className="py-6">
-      <div className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm space-y-6">
+      <main className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm space-y-6">
         {/* Header */}
-        <div className="space-y-2">
+        <section aria-label="Review progress">
           <h1 className="text-2xl font-bold text-foreground">{quiz.title} — Review</h1>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mt-2">
             <Progress value={progressPct} className="flex-1 h-2" aria-hidden="true" />
             <p className="text-sm text-muted-foreground whitespace-nowrap">
               Question {currentIndex + 1} of {questions.length}
             </p>
           </div>
-        </div>
+          {/* sr-only progressbar with question-count values for screen readers */}
+          <div
+            role="progressbar"
+            aria-label="Review progress"
+            aria-valuenow={currentIndex + 1}
+            aria-valuemin={1}
+            aria-valuemax={questions.length}
+            className="sr-only"
+          />
+        </section>
 
         {/* Question (read-only) */}
-        <QuestionDisplay
-          question={currentQuestion}
-          value={userAnswer}
-          onChange={noop}
-          mode={mode}
-        />
+        <section aria-label="Question review">
+          <h2 className="sr-only">
+            Question {currentIndex + 1} of {questions.length}
+          </h2>
+          <QuestionDisplay
+            question={currentQuestion}
+            value={userAnswer}
+            onChange={noop}
+            mode={mode}
+          />
 
-        {/* Explanation / feedback */}
-        <AnswerFeedback question={currentQuestion} userAnswer={userAnswer} />
+          {/* Explanation / feedback */}
+          <AnswerFeedback question={currentQuestion} userAnswer={userAnswer} />
+        </section>
 
         {/* Navigation */}
         <nav aria-label="Review navigation" className="flex gap-3">
@@ -77,6 +91,7 @@ export function QuizReviewContent({ quiz, attempt, courseId, lessonId }: QuizRev
             disabled={isFirst}
             onClick={() => setCurrentIndex(i => i - 1)}
             className="rounded-xl min-h-[44px]"
+            aria-label="Previous question"
           >
             Previous
           </Button>
@@ -85,6 +100,7 @@ export function QuizReviewContent({ quiz, attempt, courseId, lessonId }: QuizRev
               variant="outline"
               onClick={() => setCurrentIndex(i => i + 1)}
               className="rounded-xl min-h-[44px]"
+              aria-label="Next question"
             >
               Next
             </Button>
@@ -111,7 +127,7 @@ export function QuizReviewContent({ quiz, attempt, courseId, lessonId }: QuizRev
           <ArrowLeft className="size-4" aria-hidden="true" />
           Back to Results
         </Link>
-      </div>
+      </main>
     </div>
   )
 }
