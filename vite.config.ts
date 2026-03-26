@@ -404,9 +404,17 @@ export default defineConfig({
       'Referrer-Policy': 'strict-origin-when-cross-origin',
       'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
 
-      // Required for WebLLM/WebGPU (SharedArrayBuffer)
-      'Cross-Origin-Embedder-Policy': 'require-corp',
+      // Required for WebLLM/WebGPU (SharedArrayBuffer) + YouTube IFrame coexistence
+      // `credentialless` allows cross-origin iframes (YouTube) while still enabling SharedArrayBuffer
+      'Cross-Origin-Embedder-Policy': 'credentialless',
       'Cross-Origin-Opener-Policy': 'same-origin',
+
+      // CSP: allow YouTube IFrame embeds, thumbnails, and API access (E28-S09)
+      'Content-Security-Policy': [
+        "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
+        "img-src 'self' data: blob: https://images.unsplash.com https://i.ytimg.com https://img.youtube.com",
+        "connect-src 'self' https://www.googleapis.com/youtube/ ws://localhost:* http://localhost:*",
+      ].join('; '),
     },
   },
   optimizeDeps: {
@@ -521,6 +529,10 @@ export default defineConfig({
           if (id.includes('@ai-sdk/groq')) return 'ai-groq'
           if (id.includes('@ai-sdk/google')) return 'ai-google'
           if (id.includes('zhipu-ai-provider')) return 'ai-zhipu'
+          // react-youtube (YouTube IFrame player)
+          if (id.includes('react-youtube')) {
+            return 'react-youtube'
+          }
           // sonner (toast notifications)
           if (id.includes('sonner')) {
             return 'sonner'
