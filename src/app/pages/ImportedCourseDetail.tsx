@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useParams, useNavigate } from 'react-router'
 import {
   ArrowLeft,
   Video,
@@ -8,13 +8,26 @@ import {
   ShieldAlert,
   RefreshCw,
   User,
+  Trash2,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { db } from '@/db/schema'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import { useFileStatusVerification } from '@/hooks/useFileStatusVerification'
 import { Badge } from '@/app/components/ui/badge'
+import { Button } from '@/app/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/app/components/ui/alert-dialog'
 import { cn } from '@/app/components/ui/utils'
 import { getAvatarSrc, getInitials } from '@/lib/authors'
 import type { ImportedVideo, ImportedPdf } from '@/data/types'
@@ -52,18 +65,37 @@ function FileStatusBadge({ status, itemId }: { status: FileStatus; itemId: strin
 
 export function ImportedCourseDetail() {
   const { courseId } = useParams<{ courseId: string }>()
+  const navigate = useNavigate()
 
   const importedCourses = useCourseImportStore(state => state.importedCourses)
   const loadImportedCourses = useCourseImportStore(state => state.loadImportedCourses)
+  const removeImportedCourse = useCourseImportStore(state => state.removeImportedCourse)
   const course = importedCourses.find(c => c.id === courseId)
 
   const storeAuthors = useAuthorStore(state => state.authors)
   const loadAuthors = useAuthorStore(state => state.loadAuthors)
 
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
   useEffect(() => {
     loadImportedCourses()
     loadAuthors()
   }, [loadImportedCourses, loadAuthors])
+
+  async function handleDelete() {
+    if (deleting || !courseId) return
+    setDeleting(true)
+    await removeImportedCourse(courseId)
+    const { importError } = useCourseImportStore.getState()
+    if (importError) {
+      toast.error('Failed to delete course')
+      setDeleting(false)
+    } else {
+      toast.success('Course deleted')
+      navigate('/courses')
+    }
+  }
 
   const authorData = course?.authorId ? storeAuthors.find(a => a.id === course.authorId) : undefined
 
@@ -119,9 +151,21 @@ export function ImportedCourseDetail() {
         Back to Courses
       </Link>
 
-      <h1 data-testid="course-detail-title" className="text-2xl font-bold mb-1">
-        {course.name}
-      </h1>
+      <div className="flex items-start justify-between gap-4 mb-1">
+        <h1 data-testid="course-detail-title" className="text-2xl font-bold">
+          {course.name}
+        </h1>
+        <Button
+          variant="ghost"
+          size="sm"
+          data-testid="detail-delete-course-button"
+          className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+          onClick={() => setDeleteDialogOpen(true)}
+        >
+          <Trash2 className="size-4 mr-1.5" aria-hidden="true" />
+          Delete
+        </Button>
+      </div>
       <p className="text-sm text-muted-foreground mb-4">
         Imported {new Date(course.importedAt).toLocaleDateString()} &middot; {course.videoCount}{' '}
         {course.videoCount === 1 ? 'video' : 'videos'}, {course.pdfCount}{' '}
@@ -293,6 +337,29 @@ export function ImportedCourseDetail() {
           </li>
         )}
       </ul>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent data-testid="delete-confirm-dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete &ldquo;{course.name}&rdquo;?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove the course and all its content from your library. This
+              action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              data-testid="delete-confirm-button"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleting}
+              onClick={handleDelete}
+            >
+              {deleting ? 'Deleting\u2026' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

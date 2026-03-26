@@ -2,7 +2,11 @@ import { create } from 'zustand'
 import { db } from '@/db'
 import type { ImportedCourse, LearnerCourseStatus } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
-import { saveCourseThumbnail, loadCourseThumbnailUrl } from '@/lib/thumbnailService'
+import {
+  saveCourseThumbnail,
+  loadCourseThumbnailUrl,
+  deleteCourseThumbnail,
+} from '@/lib/thumbnailService'
 import type { ThumbnailSource } from '@/data/types'
 import type { AutoAnalysisStatus } from '@/lib/autoAnalysis'
 
@@ -86,14 +90,24 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
       await persistWithRetry(async () => {
         await db.transaction(
           'rw',
-          [db.importedCourses, db.importedVideos, db.importedPdfs],
+          [db.importedCourses, db.importedVideos, db.importedPdfs, db.courseThumbnails],
           async () => {
             await db.importedCourses.delete(courseId)
             await db.importedVideos.where('courseId').equals(courseId).delete()
             await db.importedPdfs.where('courseId').equals(courseId).delete()
+            await deleteCourseThumbnail(courseId)
           }
         )
       })
+
+      // Revoke thumbnail object URL to free memory
+      const { thumbnailUrls } = get()
+      if (thumbnailUrls[courseId]) {
+        URL.revokeObjectURL(thumbnailUrls[courseId])
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { [courseId]: _removed, ...rest } = thumbnailUrls
+        set({ thumbnailUrls: rest })
+      }
     } catch (error) {
       // Rollback on failure
       if (courseToRemove) {
