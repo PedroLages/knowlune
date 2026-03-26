@@ -154,10 +154,10 @@ issues:
     severity: medium
     discovered_by: E19-S01
     discovered_on: 2026-03-25
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "Pre-existing on main — ToggleGroup items in TopicFilter lose spacing/wrapping, rendering all tags as a garbled single line. Likely a Radix ToggleGroup + Tailwind flex-wrap interaction issue."
+    fixed_by: post-epic-cleanup-2026-03-26
+    notes: "Fixed — added w-auto to ToggleGroup and flex-none to ToggleGroupItem to enable proper wrapping."
 
   - id: KI-012
     type: design
@@ -166,10 +166,10 @@ issues:
     severity: medium
     discovered_by: E19-S01
     discovered_on: 2026-03-25
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "Pre-existing on main — the Ollama model selector ('Select a model...' combobox) lacks proper styling. Search input and options area appear unstyled with no borders or background contrast."
+    fixed_by: post-epic-cleanup-2026-03-26
+    notes: "Fixed — added border/bg-popover/shadow styling to PopoverContent and CommandInput."
 
   - id: KI-013
     type: design
@@ -178,10 +178,10 @@ issues:
     severity: low
     discovered_by: E19-S02
     discovered_on: 2026-03-25
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "Pre-existing on main — the Direct Connection info tooltip in AI Configuration Settings has CSS issues. The code block (OLLAMA_ORIGINS=*) styling and tooltip background may need contrast/padding fixes in dark mode."
+    fixed_by: post-epic-cleanup-2026-03-26
+    notes: "Fixed — tooltip uses bg-popover/text-popover-foreground with proper dark mode contrast."
 
   - id: KI-014
     type: design
@@ -190,10 +190,10 @@ issues:
     severity: medium
     discovered_by: E19-S02
     discovered_on: 2026-03-25
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "Pre-existing on main — CardTitle renders <h3> but some section headings are <h2>, creating inconsistent heading hierarchy. Affects all Settings card components including Account, Engagement Preferences, Study Reminders, and now Subscription. Needs holistic Settings page heading audit."
+    fixed_by: post-epic-cleanup-2026-03-26
+    notes: "Fixed — normalized all Settings headings to consistent h2/h3 hierarchy."
   - id: KI-015
     type: typecheck
     summary: "AIConfigurationSettings.tsx references undefined isPrivateNetworkUrl"
@@ -201,7 +201,7 @@ issues:
     severity: medium
     discovered_by: E19-S02
     discovered_on: 2026-03-25
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "Pre-existing on main — function isPrivateNetworkUrl is referenced but not defined/imported. Not changed by E19-S02 branch."
+    fixed_by: post-epic-cleanup-2026-03-26
+    notes: "Resolved — function was already implemented at line 68. Issue was a false positive filed before implementation."
