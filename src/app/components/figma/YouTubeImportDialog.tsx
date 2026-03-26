@@ -438,9 +438,9 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
               </div>
             )}
 
-            {/* Video list */}
+            {/* Video list with scroll shadows */}
             <ScrollArea
-              className="max-h-[50vh]"
+              className="max-h-[50vh] [mask-image:linear-gradient(to_bottom,transparent_0,black_16px,black_calc(100%-16px),transparent_100%)]"
               data-testid="video-preview-list"
             >
               <div
