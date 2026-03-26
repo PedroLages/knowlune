@@ -70,6 +70,7 @@ export async function extractVideoMetadata(
   fileHandle: FileSystemFileHandle
 ): Promise<VideoMetadata> {
   const file = await fileHandle.getFile()
+  const fileSize = file.size
   const blobUrl = URL.createObjectURL(file)
   try {
     return await new Promise<VideoMetadata>((resolve, reject) => {
@@ -80,6 +81,7 @@ export async function extractVideoMetadata(
           duration: video.duration,
           width: video.videoWidth,
           height: video.videoHeight,
+          fileSize,
         })
         video.remove()
       }

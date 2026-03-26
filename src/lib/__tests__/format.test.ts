@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatTimestamp } from '../format'
+import { formatTimestamp, formatCourseDuration, formatFileSize, getResolutionLabel } from '../format'
 
 describe('formatTimestamp', () => {
   describe('under 1 hour (MM:SS format)', () => {
@@ -201,5 +201,96 @@ describe('formatTimestamp', () => {
       const result = formatTimestamp(610) // 10:10
       expect(result).toBe('10:10')
     })
+  })
+})
+
+describe('formatCourseDuration', () => {
+  it('formats hours and minutes', () => {
+    expect(formatCourseDuration(8 * 3600 + 24 * 60)).toBe('8h 24m')
+  })
+
+  it('formats hours only when no remaining minutes', () => {
+    expect(formatCourseDuration(3 * 3600)).toBe('3h')
+  })
+
+  it('formats minutes only when under an hour', () => {
+    expect(formatCourseDuration(45 * 60)).toBe('45m')
+  })
+
+  it('returns "< 1m" for very short durations', () => {
+    expect(formatCourseDuration(30)).toBe('< 1m')
+  })
+
+  it('returns "< 1m" for zero', () => {
+    expect(formatCourseDuration(0)).toBe('< 1m')
+  })
+
+  it('handles negative input gracefully', () => {
+    expect(formatCourseDuration(-100)).toBe('< 1m')
+  })
+
+  it('floors fractional seconds', () => {
+    expect(formatCourseDuration(3661.9)).toBe('1h 1m')
+  })
+})
+
+describe('formatFileSize', () => {
+  it('formats bytes', () => {
+    expect(formatFileSize(500)).toBe('500 B')
+  })
+
+  it('formats kilobytes', () => {
+    expect(formatFileSize(1024)).toBe('1.0 KB')
+  })
+
+  it('formats megabytes', () => {
+    expect(formatFileSize(350 * 1024 * 1024)).toBe('350 MB')
+  })
+
+  it('formats gigabytes with one decimal', () => {
+    expect(formatFileSize(2.4 * 1024 * 1024 * 1024)).toBe('2.4 GB')
+  })
+
+  it('formats large gigabyte values without decimal', () => {
+    expect(formatFileSize(15 * 1024 * 1024 * 1024)).toBe('15 GB')
+  })
+
+  it('returns "0 B" for zero bytes', () => {
+    expect(formatFileSize(0)).toBe('0 B')
+  })
+
+  it('handles negative input gracefully', () => {
+    expect(formatFileSize(-100)).toBe('0 B')
+  })
+})
+
+describe('getResolutionLabel', () => {
+  it('returns "4K" for 2160p and above', () => {
+    expect(getResolutionLabel(2160)).toBe('4K')
+    expect(getResolutionLabel(2880)).toBe('4K')
+  })
+
+  it('returns "1440p" for 1440p', () => {
+    expect(getResolutionLabel(1440)).toBe('1440p')
+  })
+
+  it('returns "1080p" for 1080p', () => {
+    expect(getResolutionLabel(1080)).toBe('1080p')
+  })
+
+  it('returns "720p" for 720p', () => {
+    expect(getResolutionLabel(720)).toBe('720p')
+  })
+
+  it('returns "480p" for 480p', () => {
+    expect(getResolutionLabel(480)).toBe('480p')
+  })
+
+  it('returns "360p" for 360p', () => {
+    expect(getResolutionLabel(360)).toBe('360p')
+  })
+
+  it('returns raw height for non-standard resolutions below 360', () => {
+    expect(getResolutionLabel(240)).toBe('240p')
   })
 })

@@ -43,6 +43,9 @@ export interface ScannedVideo {
   format: ImportedVideo['format']
   order: number
   fileHandle: FileSystemFileHandle
+  fileSize: number // File size in bytes (E1B-S02)
+  width: number // Video width in pixels (E1B-S02)
+  height: number // Video height in pixels (E1B-S02)
 }
 
 /** A PDF discovered during folder scan, before persistence. */
@@ -201,7 +204,7 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
           r
         ): r is PromiseFulfilledResult<{
           entry: { handle: FileSystemFileHandle; path: string }
-          metadata: { duration: number; width: number; height: number }
+          metadata: { duration: number; width: number; height: number; fileSize: number }
         }> => r.status === 'fulfilled'
       )
       .map((r, index) => ({
@@ -212,6 +215,9 @@ export async function scanCourseFolder(): Promise<ScannedCourse> {
         format: getVideoFormat(r.value.entry.handle.name),
         order: index + 1,
         fileHandle: r.value.entry.handle,
+        fileSize: r.value.metadata.fileSize,
+        width: r.value.metadata.width,
+        height: r.value.metadata.height,
       }))
 
     // Build PDF records from successful extractions
@@ -300,7 +306,7 @@ export async function persistScannedCourse(
 ): Promise<ImportedCourse> {
   const now = new Date().toISOString()
 
-  // Build ImportedVideo records (add courseId)
+  // Build ImportedVideo records (add courseId + metadata fields from E1B-S02)
   const videos: ImportedVideo[] = scanned.videos.map(v => ({
     id: v.id,
     courseId: scanned.id,
@@ -310,6 +316,9 @@ export async function persistScannedCourse(
     format: v.format,
     order: v.order,
     fileHandle: v.fileHandle,
+    fileSize: v.fileSize,
+    width: v.width,
+    height: v.height,
   }))
 
   // Build ImportedPdf records (add courseId)
@@ -338,6 +347,11 @@ export async function persistScannedCourse(
     }
   }
 
+  // Aggregate video metadata for course-level display (E1B-S02)
+  const totalDuration = videos.reduce((sum, v) => sum + (v.duration || 0), 0)
+  const totalFileSize = videos.reduce((sum, v) => sum + (v.fileSize || 0), 0)
+  const maxResolutionHeight = videos.reduce((max, v) => Math.max(max, v.height || 0), 0)
+
   const course: ImportedCourse = {
     id: scanned.id,
     name: overrides?.name ?? scanned.name,
@@ -351,6 +365,9 @@ export async function persistScannedCourse(
     directoryHandle: scanned.directoryHandle,
     ...(overrides?.coverImageHandle ? { coverImageHandle: overrides.coverImageHandle } : {}),
     ...(authorId ? { authorId } : {}),
+    totalDuration: totalDuration > 0 ? totalDuration : undefined,
+    totalFileSize: totalFileSize > 0 ? totalFileSize : undefined,
+    maxResolutionHeight: maxResolutionHeight > 0 ? maxResolutionHeight : undefined,
   }
 
   try {
@@ -516,7 +533,7 @@ export async function scanCourseFolderFromHandle(
           r
         ): r is PromiseFulfilledResult<{
           entry: { handle: FileSystemFileHandle; path: string }
-          metadata: { duration: number; width: number; height: number }
+          metadata: { duration: number; width: number; height: number; fileSize: number }
         }> => r.status === 'fulfilled'
       )
       .map((r, index) => ({
@@ -527,6 +544,9 @@ export async function scanCourseFolderFromHandle(
         format: getVideoFormat(r.value.entry.handle.name),
         order: index + 1,
         fileHandle: r.value.entry.handle,
+        fileSize: r.value.metadata.fileSize,
+        width: r.value.metadata.width,
+        height: r.value.metadata.height,
       }))
 
     const pdfs: ScannedPdf[] = pdfResults

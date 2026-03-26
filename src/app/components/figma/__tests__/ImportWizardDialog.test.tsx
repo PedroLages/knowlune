@@ -76,6 +76,9 @@ function makeScannedCourse(overrides: Partial<ScannedCourse> = {}): ScannedCours
         format: 'mp4',
         order: 1,
         fileHandle: {} as FileSystemFileHandle,
+        fileSize: 50_000_000,
+        width: 1920,
+        height: 1080,
       },
       {
         id: 'v2',
@@ -85,6 +88,9 @@ function makeScannedCourse(overrides: Partial<ScannedCourse> = {}): ScannedCours
         format: 'mp4',
         order: 2,
         fileHandle: {} as FileSystemFileHandle,
+        fileSize: 100_000_000,
+        width: 1920,
+        height: 1080,
       },
     ],
     pdfs: [
@@ -354,6 +360,9 @@ describe('ImportWizardDialog', () => {
           format: 'mp4',
           order: 1,
           fileHandle: {} as FileSystemFileHandle,
+          fileSize: 50_000_000,
+          width: 1920,
+          height: 1080,
         },
       ],
       pdfs: [
