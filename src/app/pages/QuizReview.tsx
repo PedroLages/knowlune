@@ -40,7 +40,10 @@ function QuizReviewError({ courseId, lessonId }: QuizReviewErrorProps) {
 
   return (
     <div className="py-6">
-      <div role="alert" className="bg-card rounded-[24px] p-8 max-w-2xl mx-auto shadow-sm text-center space-y-4">
+      <div
+        role="alert"
+        className="bg-card rounded-[24px] p-8 max-w-2xl mx-auto shadow-sm text-center space-y-4"
+      >
         <AlertCircle className="size-12 text-warning mx-auto" aria-hidden="true" />
         <h1 className="text-2xl font-bold text-foreground">Quiz attempt not found</h1>
         <p className="text-muted-foreground">

@@ -52,11 +52,7 @@ export function MultipleSelectQuestion({
   }
 
   return (
-    <fieldset
-      className="mt-6 min-w-0"
-      aria-describedby={hintId}
-      onKeyDown={handleKeyDown}
-    >
+    <fieldset className="mt-6 min-w-0" aria-describedby={hintId} onKeyDown={handleKeyDown}>
       <legend
         id={labelId}
         data-testid="question-text"
