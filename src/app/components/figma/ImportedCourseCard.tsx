@@ -49,6 +49,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import { useCourseCardPreview } from '@/hooks/useCourseCardPreview'
+import { useLazyVisible } from '@/hooks/useLazyVisible'
 import { useVideoFromHandle } from '@/hooks/useVideoFromHandle'
 import { getAvatarSrc } from '@/lib/authors'
 import { db } from '@/db/schema'
@@ -112,6 +113,9 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
   const [deleting, setDeleting] = useState(false)
   const statusBadgeRef = useRef<HTMLButtonElement>(null)
   const thumbnailUrl = thumbnailUrls[course.id] ?? null
+
+  // Lazy-load thumbnail: only render <img> when card enters viewport (E1B-S04 AC5)
+  const [lazyRef, isCardVisible] = useLazyVisible<HTMLElement>()
 
   const {
     showPreview,
@@ -224,6 +228,7 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
   return (
     <>
       <article
+        ref={lazyRef}
         data-testid="imported-course-card"
         aria-label={`${course.name} — ${course.videoCount} ${course.videoCount === 1 ? 'video' : 'videos'}${course.totalDuration ? `, ${formatCourseDuration(course.totalDuration)}` : ''}, ${course.pdfCount} ${course.pdfCount === 1 ? 'PDF' : 'PDFs'}`}
         tabIndex={0}
@@ -241,17 +246,18 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
             data-testid="course-card-placeholder"
             className="relative h-44 bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-950/50 dark:to-teal-950/50 flex items-center justify-center"
           >
-            {/* Static thumbnail image (when set) */}
-            {thumbnailUrl && !showPreview && (
+            {/* Static thumbnail image — lazy-loaded for performance (E1B-S04 AC2+AC5) */}
+            {thumbnailUrl && !showPreview && isCardVisible && (
               <img
                 src={thumbnailUrl}
                 alt=""
                 aria-hidden="true"
+                loading="lazy"
                 className="absolute inset-0 w-full h-full object-cover"
               />
             )}
-            {/* Gradient placeholder icon (shown when no thumbnail) */}
-            {!thumbnailUrl && (
+            {/* Gradient placeholder icon (shown when no thumbnail or not yet visible) — AC3 */}
+            {(!thumbnailUrl || !isCardVisible) && !showPreview && (
               <FolderOpen className="size-16 text-emerald-300 dark:text-emerald-600" />
             )}
             {/* Camera overlay — appears on hover to change thumbnail */}
