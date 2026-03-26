@@ -589,7 +589,10 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
                 })
 
                 if (result.ok) {
-                  const videoCount = store.getActiveVideos().filter(v => v.status === 'loaded').length
+                  // Capture video data BEFORE closing (handleOpenChange resets the store)
+                  const loadedVideos = store.getActiveVideos().filter(v => v.status === 'loaded')
+                  const videoCount = loadedVideos.length
+                  const videoIds = loadedVideos.map(v => v.videoId)
 
                   // Reload course library so the new course appears
                   await courseImportStore.loadImportedCourses()
@@ -601,9 +604,6 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
                   toast.success(`Course created — ${videoCount} ${videoCount === 1 ? 'video' : 'videos'} ready to study`)
 
                   // Start background transcript extraction (E28-S04 / Story 23.4)
-                  const videoIds = store.getActiveVideos()
-                    .filter(v => v.status === 'loaded')
-                    .map(v => v.videoId)
                   if (videoIds.length > 0) {
                     // Fire-and-forget — don't block the UI
                     // silent-catch-ok: transcript failures are non-blocking; user can retry later
