@@ -429,7 +429,7 @@ development_status:
   28-1-dexie-v24-schema-migration-and-youtube-types: done
   28-2-youtube-url-parser-and-configuration-settings: done
   28-3-youtube-data-api-v3-client-with-rate-limiting: done
-  28-4-transcript-pipeline-tier-1-youtube-transcript: backlog
+  28-4-transcript-pipeline-tier-1-youtube-transcript: done
   28-5-import-wizard-steps-1-and-2-url-input-metadata-preview: backlog
   28-6-rule-based-video-grouping-and-chapter-editor: backlog
   28-7-ai-powered-course-structuring-premium: backlog
