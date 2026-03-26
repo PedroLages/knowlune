@@ -67,9 +67,14 @@ export function QuizHeader({ quiz, progress, timeRemaining, totalTimeSeconds }: 
         Question {currentQuestion} of {totalQuestions}
       </p>
       {/* Screen-reader-only: announces question navigation changes */}
-      <div aria-live="polite" aria-atomic="true" className="sr-only" data-testid="nav-announcement">
+      <span
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+        data-testid="nav-announcement"
+      >
         {navAnnouncement}
-      </div>
+      </span>
     </div>
   )
 }
