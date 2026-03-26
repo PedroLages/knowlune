@@ -67,7 +67,7 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-1b: backlog
   1b-1-bulk-course-import: backlog
-  1b-2-auto-extract-video-metadata: backlog
+  1b-2-auto-extract-video-metadata: done
   1b-3-import-progress-indicator: backlog
   1b-4-course-card-thumbnails: backlog
   epic-1b-retrospective: optional
