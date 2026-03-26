@@ -74,6 +74,7 @@ function isPrivateNetworkUrl(url: string): boolean {
       /^172\.(1[6-9]|2\d|3[01])\./.test(hostname)
     )
   } catch {
+    // silent-catch-ok: error logged to console
     return false
   }
 }
@@ -519,11 +520,11 @@ export function AIConfigurationSettings() {
                             aria-label="Direct connection information"
                           />
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs">
+                        <TooltipContent side="top" className="max-w-xs bg-popover text-popover-foreground border border-border shadow-md">
                           <p>
                             Direct connection sends requests straight from your browser to Ollama.
                             Requires CORS configured on your Ollama server (set{' '}
-                            <code className="text-xs bg-muted px-1 rounded">OLLAMA_ORIGINS=*</code>
+                            <code className="text-xs bg-muted/50 text-foreground px-1 py-0.5 rounded border border-border/50">OLLAMA_ORIGINS=*</code>
                             ). Proxy mode (default) avoids CORS issues.
                           </p>
                         </TooltipContent>

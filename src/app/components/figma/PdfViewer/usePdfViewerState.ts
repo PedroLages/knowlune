@@ -28,6 +28,7 @@ export function usePdfViewerState(
     try {
       return localStorage.getItem('pdf-dark-mode') === 'true'
     } catch {
+      // silent-catch-ok: localStorage fallback is non-critical
       return false
     }
   })
@@ -249,6 +250,7 @@ export function usePdfViewerState(
       try {
         localStorage.setItem('pdf-dark-mode', String(next))
       } catch {
+        // silent-catch-ok: localStorage fallback is non-critical
         // localStorage unavailable
       }
       setAnnouncement(next ? 'Dark mode on' : 'Dark mode off')

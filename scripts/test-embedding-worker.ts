@@ -51,6 +51,7 @@ async function testEmbeddingGeneration() {
     }
 
   } catch (error) {
+    // silent-catch-ok: error logged to console in CLI script
     console.error('\n❌ Error:', error)
     console.log('\nTroubleshooting:')
     console.log('- Ensure internet connection is active (model downloads from HuggingFace)')

@@ -194,6 +194,7 @@ export function youtubeTranscriptProxy(): Plugin {
           })
 
           if (!proxyResponse.ok) {
+            // silent-catch-ok: build-time error logged to console
             const errText = await proxyResponse.text().catch(() => proxyResponse.statusText) // silent-catch-ok — fallback to statusText
             sendError(res, proxyResponse.status, `yt-dlp server: ${errText}`, 'ytdlp-fetch-error')
             return
@@ -237,6 +238,7 @@ export function youtubeTranscriptProxy(): Plugin {
           })
 
           if (!proxyResponse.ok) {
+            // silent-catch-ok: build-time error logged to console
             const errText = await proxyResponse.text().catch(() => proxyResponse.statusText) // silent-catch-ok — fallback to statusText
             sendError(res, proxyResponse.status, `yt-dlp server: ${errText}`, 'ytdlp-metadata-error')
             return
@@ -281,6 +283,7 @@ export function youtubeTranscriptProxy(): Plugin {
           })
 
           if (!proxyResponse.ok) {
+            // silent-catch-ok: build-time error logged to console
             const errText = await proxyResponse.text().catch(() => proxyResponse.statusText) // silent-catch-ok — fallback to statusText
             sendError(res, proxyResponse.status, `Whisper server: ${errText}`, 'whisper-fetch-error')
             return

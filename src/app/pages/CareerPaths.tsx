@@ -207,6 +207,7 @@ export function CareerPaths() {
 
   useEffect(() => {
     let ignore = false
+    // silent-catch-ok: error logged to console
     loadPaths().catch(err => {
       if (!ignore) console.error('[CareerPaths] Failed to load paths:', err)
     })

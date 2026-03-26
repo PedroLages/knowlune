@@ -92,6 +92,7 @@ export function OrganizePreviewDialog({
         await saveNote(updatedNote)
         appliedCount++
       } catch (err) {
+        // silent-catch-ok: error logged to console
         failedCount++
         console.error(`[OrganizePreview] Failed to update note ${note.id}:`, err)
       }

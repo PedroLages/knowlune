@@ -89,6 +89,7 @@ export function ThumbnailPickerDialog({
       const blob = await extractThumbnailFromVideo(firstVideo.fileHandle)
       await applyBlob(blob, 'auto')
     } catch (err) {
+      // silent-catch-ok: error state updated in component
       setError(err instanceof Error ? err.message : 'Failed to extract thumbnail.')
     } finally {
       setIsLoading(false)
@@ -105,6 +106,7 @@ export function ThumbnailPickerDialog({
       const blob = await loadThumbnailFromFile(file)
       await applyBlob(blob, 'local')
     } catch (err) {
+      // silent-catch-ok: error state updated in component
       setError(err instanceof Error ? err.message : 'Failed to load image.')
     } finally {
       setIsLoading(false)
@@ -124,6 +126,7 @@ export function ThumbnailPickerDialog({
       const blob = await loadThumbnailFromFile(file)
       await applyBlob(blob, 'local')
     } catch (err) {
+      // silent-catch-ok: error state updated in component
       setError(err instanceof Error ? err.message : 'Failed to load image.')
     } finally {
       setIsLoading(false)
@@ -140,6 +143,7 @@ export function ThumbnailPickerDialog({
       const blob = await fetchThumbnailFromUrl(url)
       await applyBlob(blob, 'url')
     } catch (err) {
+      // silent-catch-ok: error state updated in component
       setError(err instanceof Error ? err.message : 'Failed to fetch image from URL.')
     } finally {
       setIsLoading(false)
@@ -160,6 +164,7 @@ export function ThumbnailPickerDialog({
       const blob = await generateThumbnailWithGemini(prompt, apiKey)
       await applyBlob(blob, 'ai')
     } catch (err) {
+      // silent-catch-ok: error state updated in component
       setError(err instanceof Error ? err.message : 'AI generation failed.')
     } finally {
       setIsLoading(false)

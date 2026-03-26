@@ -157,9 +157,9 @@ export function OllamaModelPicker({
             <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" aria-hidden="true" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-          <Command>
-            <CommandInput placeholder="Search models..." data-testid="model-search-input" />
+        <PopoverContent className="w-[--radix-popover-trigger-width] border border-border bg-popover p-0 shadow-md" align="start">
+          <Command className="rounded-lg border-0">
+            <CommandInput placeholder="Search models..." data-testid="model-search-input" className="border-b border-border" />
             <CommandList>
               <CommandEmpty>
                 {isLoading ? (

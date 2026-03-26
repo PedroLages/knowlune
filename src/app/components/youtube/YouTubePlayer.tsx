@@ -67,6 +67,7 @@ export const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>
   // Load saved position from Dexie on mount
   useEffect(() => {
     let ignore = false
+    // silent-catch-ok: error logged to console
     db.progress
       .get({ courseId, videoId: lessonId })
       .then((record: VideoProgress | undefined) => {
@@ -100,6 +101,7 @@ export const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>
       try {
         await db.progress.put(record)
       } catch (error) {
+        // silent-catch-ok: error logged to console
         console.error('[YouTubePlayer] Failed to persist progress:', error)
       }
     },

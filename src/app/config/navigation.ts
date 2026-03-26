@@ -15,7 +15,6 @@ import {
   Brain,
   Route,
   Layers,
-  Milestone,
   Settings as SettingsIcon,
   type LucideIcon,
 } from 'lucide-react'

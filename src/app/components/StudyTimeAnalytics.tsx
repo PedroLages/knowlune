@@ -54,6 +54,7 @@ export default function StudyTimeAnalytics() {
         const allSessions = await db.studySessions.toArray()
         if (!ignore) setSessions(allSessions)
       } catch (error) {
+        // silent-catch-ok: error logged to console
         console.error('Failed to load study sessions:', error)
       } finally {
         if (!ignore) setLoading(false)

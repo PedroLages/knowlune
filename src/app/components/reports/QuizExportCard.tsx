@@ -48,6 +48,7 @@ export function QuizExportCard() {
       }
     }
 
+    // silent-catch-ok: error logged to console
     loadCounts().catch(err => console.error('Failed to load quiz counts:', err))
 
     return () => {

@@ -123,6 +123,7 @@ export function SessionHistory() {
           setSessions(enriched)
         }
       } catch (error) {
+        // silent-catch-ok: error logged to console
         console.error('[SessionHistory] Failed to load sessions:', error)
         if (!ignore) {
           setLoadError('Failed to load study sessions. Please try refreshing the page.')

@@ -111,6 +111,7 @@ async function runOllamaTagging(
     // Clean up status entry after UI has time to react
     setTimeout(() => {
       useCourseImportStore.setState(state => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { [course.id]: _, ...rest } = state.autoAnalysisStatus
         return { autoAnalysisStatus: rest }
       })

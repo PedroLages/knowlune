@@ -98,6 +98,7 @@ async function runSingleTest(
 
     return metrics
   } catch (error) {
+    // silent-catch-ok: error logged to console in CLI script
     console.error(`  Test failed:`, error)
     return null
   }
@@ -403,4 +404,5 @@ async function main() {
   }
 }
 
+// silent-catch-ok: error logged to console in CLI script
 main().catch(console.error)

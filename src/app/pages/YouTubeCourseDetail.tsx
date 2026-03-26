@@ -81,6 +81,7 @@ export function YouTubeCourseDetail() {
     if (!courseId) return
     let ignore = false
 
+    // silent-catch-ok: error logged to console
     Promise.all([
       db.importedVideos.where('courseId').equals(courseId).sortBy('order'),
       db.youtubeChapters.where('courseId').equals(courseId).sortBy('order'),

@@ -8,7 +8,6 @@
  * - Phase 4: Performance optimizations (memoization, accessibility)
  */
 import { test, expect } from '../support/fixtures'
-import { createCourseProgress } from '../support/fixtures/factories/course-factory'
 import { goToOverview } from '../support/helpers/navigation'
 
 test.describe('Overview Card Enhancements', () => {
@@ -231,7 +230,7 @@ test.describe('Overview Card Enhancements', () => {
   })
 
   test.describe('Phase 4: Accessibility & Performance', () => {
-    test('should respect prefers-reduced-motion for animations', async ({ page, browserName }) => {
+    test('should respect prefers-reduced-motion for animations', async ({ page }) => {
       // Enable reduced motion preference
       await page.emulateMedia({ reducedMotion: 'reduce' })
 

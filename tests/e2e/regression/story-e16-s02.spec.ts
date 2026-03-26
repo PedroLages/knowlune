@@ -79,7 +79,7 @@ async function seedIdbStore(
   data: unknown[]
 ) {
   await page.evaluate(
-    async ({ storeName: sName, data: d, maxRetries, retryDelay }) => {
+    async ({ storeName: sName, data: d, maxRetries, retryDelay: _retryDelay }) => {
       for (let i = 0; i < maxRetries; i++) {
         const result = await new Promise<'ok' | 'store-missing'>((resolve, reject) => {
           const req = indexedDB.open('ElearningDB')

@@ -47,6 +47,7 @@ async function verifyEmbeddings() {
 
     // Check if there's a Notes tab to click
     const notesTab = page.locator('[role="tab"]', { hasText: 'Notes' })
+    // silent-catch-ok: error logged to console in CLI script
     const isTabVisible = await notesTab.isVisible().catch(() => false)
     if (isTabVisible) {
       console.log('   Clicking Notes tab...')
@@ -150,6 +151,7 @@ async function verifyEmbeddings() {
     }
 
   } catch (error) {
+    // silent-catch-ok: error logged to console in CLI script
     console.error('\n❌ Error during verification:', error)
   } finally {
     console.log('\n🔄 Closing browser in 5 seconds...')
@@ -159,4 +161,5 @@ async function verifyEmbeddings() {
 }
 
 // Run verification
+// silent-catch-ok: error logged to console in CLI script
 verifyEmbeddings().catch(console.error)

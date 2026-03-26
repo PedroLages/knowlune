@@ -476,6 +476,7 @@ export function NoteEditor({
           .run()
       }
     } catch (error) {
+      // silent-catch-ok: error logged to console
       console.error('Frame capture failed:', error)
     }
   }, [editor])

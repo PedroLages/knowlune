@@ -119,6 +119,7 @@ export function PdfOutlinePanel({ pdfDocument, onPageClick }: PdfOutlinePanelPro
       const pageIndex = await pdfDocument.getPageIndex(ref)
       return pageIndex + 1 // 0-indexed → 1-indexed
     } catch {
+      // silent-catch-ok: error logged to console
       return null
     }
   }

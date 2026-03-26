@@ -43,6 +43,7 @@ export function CourseReminderSettings() {
       const data = await getCourseReminders()
       setReminders(data)
     } catch (error) {
+      // silent-catch-ok: error logged to console
       console.error('[CourseReminderSettings] Failed to load reminders:', error)
     }
   }, [])
@@ -52,6 +53,7 @@ export function CourseReminderSettings() {
       const data = await db.importedCourses.toArray()
       setCourses(data)
     } catch (error) {
+      // silent-catch-ok: error logged to console
       console.error('[CourseReminderSettings] Failed to load courses:', error)
     }
   }, [])

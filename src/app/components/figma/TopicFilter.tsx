@@ -23,14 +23,14 @@ export function TopicFilter({
         value={selectedTags}
         onValueChange={onSelectedTagsChange}
         aria-label="Filter by topic"
-        className="flex flex-wrap gap-2"
+        className="flex w-auto flex-wrap gap-2"
       >
         {availableTags.map(tag => (
           <ToggleGroupItem
             key={tag}
             value={tag}
             data-testid="topic-filter-button"
-            className="min-h-[44px] rounded-full border px-3 py-2 text-xs font-semibold transition-colors first:rounded-full last:rounded-full focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=on]:shadow-sm data-[state=off]:bg-transparent data-[state=off]:hover:bg-accent data-[state=off]:border-input cursor-pointer shadow-none"
+            className="flex-none min-h-[44px] rounded-full border px-3 py-2 text-xs font-semibold transition-colors first:rounded-full last:rounded-full focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=on]:shadow-sm data-[state=off]:bg-transparent data-[state=off]:hover:bg-accent data-[state=off]:border-input cursor-pointer shadow-none"
           >
             {tag}
             {tagCounts && tagCounts.has(tag) && (

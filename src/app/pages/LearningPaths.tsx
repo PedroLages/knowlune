@@ -501,6 +501,7 @@ export function LearningPaths() {
 
   useEffect(() => {
     let ignore = false
+    // silent-catch-ok: error logged to console
     loadPaths()
       .then(() => {
         if (!ignore) setIsLoaded(true)

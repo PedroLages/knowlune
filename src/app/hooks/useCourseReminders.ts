@@ -51,6 +51,7 @@ export function useCourseReminders(): void {
       remindersRef.current = await getCourseReminders()
       startScheduler()
     } catch (error) {
+      // silent-catch-ok: error logged to console
       console.error('[CourseReminders] Failed to load reminders:', error)
     }
   }, [startScheduler])

@@ -129,6 +129,7 @@ Deno.serve(async (req: Request) => {
     try {
       event = await stripe.webhooks.constructEventAsync(body, signature, WEBHOOK_SECRET)
     } catch (err) {
+      // silent-catch-ok: error logged server-side
       console.error('Webhook signature verification failed:', err)
       return new Response('Invalid signature', { status: 400 })
     }
@@ -274,6 +275,7 @@ Deno.serve(async (req: Request) => {
       headers: { 'Content-Type': 'application/json' },
     })
   } catch (err) {
+    // silent-catch-ok: error logged server-side
     console.error('Webhook handler error:', err)
     // Return 500 so Stripe retries
     return new Response(JSON.stringify({ error: 'Internal error' }), {

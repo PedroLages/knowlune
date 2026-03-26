@@ -38,6 +38,7 @@ export function RelatedConceptsPanel({ note, allNotes, courseNames }: RelatedCon
         setRelatedNotes(results)
         setIsTagOnly(results.length > 0 && results.every(r => r.tagOnly))
       } catch (err) {
+        // silent-catch-ok: error logged to console
         console.error('[RelatedConceptsPanel] Failed to find related notes:', err)
         if (!cancelled) setRelatedNotes([])
       } finally {

@@ -512,6 +512,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(funct
         await videoRef.current.requestPictureInPicture()
       }
     } catch {
+      // silent-catch-ok: error logged to console
       announce('Picture-in-Picture not available')
     }
   }

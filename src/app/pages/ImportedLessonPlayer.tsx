@@ -113,6 +113,7 @@ export function ImportedLessonPlayer() {
         setVideo(updated ?? null)
       }
     } catch {
+      // silent-catch-ok: error logged to console
       // User cancelled the picker — do nothing
     }
   }

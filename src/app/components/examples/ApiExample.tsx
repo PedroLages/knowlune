@@ -31,6 +31,7 @@ export function CoursesExample() {
           setCourses(data.courses)
         }
       } catch (err) {
+        // silent-catch-ok: error state updated in component
         if (!ignore) {
           if (err instanceof ApiClientError) {
             setError(`API Error: ${err.message}`)
@@ -118,6 +119,7 @@ export function CourseDetailExample({ courseId }: { courseId: string }) {
       const data = await api.courses.getById(courseId)
       setCourse(data)
     } catch (err) {
+      // silent-catch-ok: error state updated in component
       if (err instanceof ApiClientError) {
         if (err.statusCode === 404) {
           setError(`Course with ID "${courseId}" not found`)
@@ -204,6 +206,7 @@ export function ProgressUpdateExample({ lessonId = 'lesson-1', courseId = '1' })
 
       setResult(response)
     } catch (err) {
+      // silent-catch-ok: error state updated in component
       if (err instanceof ApiClientError) {
         setError(err.message)
       } else {
@@ -268,6 +271,7 @@ export function UserProfileExample() {
       const data = await api.user.getProfile()
       setProfile(data)
     } catch (err) {
+      // silent-catch-ok: error logged to console
       console.error('Failed to load profile:', err)
     } finally {
       setLoading(false)

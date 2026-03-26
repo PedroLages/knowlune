@@ -29,6 +29,7 @@ function loadUnlocked(): Set<DisclosureKey> {
       return new Set(arr)
     }
   } catch {
+    // silent-catch-ok: non-critical persistence error
     // corrupted — start fresh
   }
   return new Set()
@@ -43,6 +44,7 @@ function loadShowAll(): boolean {
     const raw = localStorage.getItem(SHOW_ALL_KEY)
     return raw === 'true'
   } catch {
+    // silent-catch-ok: localStorage fallback is non-critical
     return false
   }
 }
@@ -91,6 +93,7 @@ export function useProgressiveDisclosure() {
         try {
           setUnlocked(new Set(JSON.parse(e.newValue)))
         } catch {
+          // silent-catch-ok: non-critical persistence error
           /* ignore */
         }
       }

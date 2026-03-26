@@ -365,6 +365,7 @@ export function AvatarCropDialog({
 
       onCropConfirm(croppedBlob)
     } catch (error) {
+      // silent-catch-ok: error logged to console
       console.error('Failed to crop image:', error)
     } finally {
       setIsLoading(false)

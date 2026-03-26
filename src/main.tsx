@@ -67,6 +67,7 @@ deferInit(() => {
 // AC4: Run Ollama health check on startup if configured (deferred — non-critical)
 deferInit(() => {
   import('@/lib/ollamaHealthCheck').then(({ runStartupHealthCheck }) => {
+    // silent-catch-ok: startup error logged to console
     runStartupHealthCheck().catch(err => {
       console.warn('[Ollama] Startup health check failed:', err)
     })

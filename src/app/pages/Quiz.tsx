@@ -58,6 +58,7 @@ function loadSavedProgress(quizId: string): QuizProgress | null {
     if (Object.keys(result.data.answers).length === 0) return null
     return result.data
   } catch (e) {
+    // silent-catch-ok: error logged to console
     console.warn('[Quiz] Failed to parse saved progress:', e)
     return null
   }
@@ -75,6 +76,7 @@ export function loadSavedAccommodation(lessonId: string): TimerAccommodation {
     const result = TimerAccommodationEnum.safeParse(raw)
     return result.success ? result.data : getQuizPreferences().timerAccommodation
   } catch (e) {
+    // silent-catch-ok: error logged to console
     console.warn('[Quiz] Failed to load accommodation:', e)
     return getQuizPreferences().timerAccommodation
   }
@@ -155,11 +157,13 @@ export function Quiz() {
           const attemptCount = await db.quizAttempts.where('quizId').equals(found.id).count()
           if (!ignore) setHasCompletedBefore(attemptCount > 0)
         } catch (err) {
+          // silent-catch-ok: error logged to console
           console.warn('[Quiz] Failed to check attempt history:', err)
         }
 
         if (!ignore) setFetchState('found')
       } catch (err: unknown) {
+        // silent-catch-ok: error logged to console
         console.error('[Quiz] Failed to load quiz:', err)
         if (!ignore) setFetchState('error')
       }
@@ -178,6 +182,7 @@ export function Quiz() {
       try {
         localStorage.setItem(`quiz-accommodation-${lessonId}`, value)
       } catch (e) {
+        // silent-catch-ok: error logged to console
         console.warn('[Quiz] Failed to persist accommodation:', e)
       }
     },
@@ -229,6 +234,7 @@ export function Quiz() {
       await submitQuiz(courseId)
       navigate(`/courses/${courseId}/lessons/${lessonId}/quiz/results`)
     } catch {
+      // silent-catch-ok: error logged to console
       // Store already shows error toast; stay on quiz page with answers preserved
       isSubmittingRef.current = false
     }
@@ -263,6 +269,7 @@ export function Quiz() {
       toast.error("Time's up! Your quiz has been submitted.")
       navigate(`/courses/${courseId}/lessons/${lessonId}/quiz/results`)
     } catch {
+      // silent-catch-ok: error logged to console
       // Store already shows error toast; stay on quiz page with answers preserved
       isSubmittingRef.current = false
     }
@@ -343,6 +350,7 @@ export function Quiz() {
           try {
             localStorage.setItem(key, value)
           } catch (storageErr) {
+            // silent-catch-ok: localStorage fallback is non-critical
             if (isQuotaExceeded(storageErr)) {
               // QuotaExceededError — fall back to sessionStorage
               sessionStorage.setItem(key, value)
@@ -351,6 +359,7 @@ export function Quiz() {
           }
         }
       } catch (e) {
+        // silent-catch-ok: error logged to console
         // Storage completely inaccessible during unload — best effort
         console.warn('[Quiz] beforeunload storage save failed:', e)
       }

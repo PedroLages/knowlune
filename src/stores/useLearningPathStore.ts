@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { db } from '@/db'
-import type { LearningPath, LearningPathEntry, LearningPathCourse } from '@/data/types'
+import type { LearningPath, LearningPathEntry } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { trackAIUsage } from '@/lib/aiEventTracking'
 

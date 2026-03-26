@@ -164,6 +164,7 @@ async function testWebLLM() {
       },
     }
   } catch (error) {
+    // silent-catch-ok: error logged to console in CLI script
     console.error('Test failed:', error.message)
     await browser.close()
     return {
@@ -174,6 +175,7 @@ async function testWebLLM() {
 }
 
 // Run the test
+// silent-catch-ok: error logged to console in CLI script
 testWebLLM()
   .then(result => {
     console.log('\n' + '='.repeat(60))

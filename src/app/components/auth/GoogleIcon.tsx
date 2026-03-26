@@ -5,7 +5,6 @@ interface GoogleIconProps {
 }
 
 /** Google "G" brand logo — uses official brand hex colors (not design tokens). */
-// eslint-disable-next-line design-tokens/no-hardcoded-colors
 export function GoogleIcon({ className }: GoogleIconProps) {
   return (
     <svg className={cn('size-5', className)} viewBox="0 0 24 24" aria-hidden="true">

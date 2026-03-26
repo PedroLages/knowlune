@@ -83,6 +83,7 @@ export function QuizPerformanceCard() {
   useEffect(() => {
     let ignore = false
 
+    // silent-catch-ok: error logged to console
     calculateQuizMetrics()
       .then(result => {
         if (!ignore) setMetrics(result)

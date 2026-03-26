@@ -168,6 +168,7 @@ function main() {
         }
       }
     } catch (error) {
+      // silent-catch-ok: error logged to console in CLI script
       console.error(`${colors.red}Error reading ${file}: ${error.message}${colors.reset}`)
     }
   }

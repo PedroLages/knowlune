@@ -64,6 +64,7 @@ async function validateRule() {
         }
       }
     } catch (err) {
+      // silent-catch-ok: error logged to console in CLI script
       console.error(`❌ Error linting ${file}:`, err.message)
     }
   }
@@ -95,6 +96,7 @@ async function validateRule() {
   }
 }
 
+// silent-catch-ok: error logged to console in CLI script
 validateRule()
   .then(exitCode => {
     process.exit(exitCode)

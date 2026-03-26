@@ -150,6 +150,7 @@ export function KnowledgeGaps() {
         setPageState('completed')
       }
     } catch (err) {
+      // silent-catch-ok: error logged to console
       if (controller.signal.aborted) return
       const message = err instanceof Error ? err.message : 'Failed to analyze gaps'
       setErrorMessage(message)

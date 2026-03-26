@@ -133,6 +133,7 @@ export function AIAnalyticsTab() {
           setIsLoading(false)
         }
       } catch (err) {
+        // silent-catch-ok: error logged to console
         console.error('[AIAnalytics] Failed to load stats:', err)
         if (!ignore) {
           setError('Failed to load analytics data.')

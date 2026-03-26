@@ -255,7 +255,7 @@ test.describe('Spaced Review System (E11-S01)', () => {
       // Break IDBObjectStore.put to simulate a write failure (e.g., quota exceeded)
       await page.evaluate(() => {
         const origPut = IDBObjectStore.prototype.put
-        IDBObjectStore.prototype.put = function (...args) {
+        IDBObjectStore.prototype.put = function (..._args) {
           // Restore after first call so cleanup operations still work
           IDBObjectStore.prototype.put = origPut
           throw new DOMException('Simulated write failure', 'QuotaExceededError')

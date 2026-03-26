@@ -23,7 +23,7 @@ import {
   LogOut,
 } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
-import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/app/components/ui/card'
 import { Input } from '@/app/components/ui/input'
 import { Button } from '@/app/components/ui/button'
 import { Textarea } from '@/app/components/ui/textarea'
@@ -408,6 +408,7 @@ export default function Settings() {
       setTempPhotoDataUrl(dataUrl)
       setIsCropDialogOpen(true)
     } catch (error) {
+      // silent-catch-ok: error logged to console
       console.error('File selection error:', error)
       setUploadError('Failed to load image. Please try again.')
     }
@@ -488,7 +489,7 @@ export default function Settings() {
                 )}
               </div>
               <div>
-                <CardTitle className="text-lg font-display leading-none">Account</CardTitle>
+                <h2 className="text-lg font-display leading-none">Account</h2>
                 <p className="text-sm text-muted-foreground mt-1">
                   {user ? `Signed in as ${user.email}` : 'Sign in to access premium features'}
                 </p>
@@ -733,7 +734,7 @@ export default function Settings() {
         {/* Appearance */}
         <Card>
           <CardHeader>
-            <h2 className="text-base leading-none">Appearance</h2>
+            <h2 className="text-lg font-display leading-none">Appearance</h2>
           </CardHeader>
           <CardContent>
             <div>
@@ -811,7 +812,7 @@ export default function Settings() {
         {/* Navigation */}
         <Card>
           <CardHeader>
-            <h2 className="text-base leading-none">Navigation</h2>
+            <h2 className="text-lg font-display leading-none">Navigation</h2>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between gap-4">
@@ -918,7 +919,7 @@ export default function Settings() {
                 <HardDrive className="size-5 text-brand" aria-hidden="true" />
               </div>
               <div>
-                <CardTitle className="text-lg font-display">Data Management</CardTitle>
+                <h2 className="text-lg font-display">Data Management</h2>
                 <p className="text-sm text-muted-foreground mt-1">
                   Export, import, or reset your learning data
                 </p>
@@ -928,7 +929,7 @@ export default function Settings() {
           <CardContent className="space-y-6 pt-6" data-testid="data-export-section">
             {/* Export Your Data Section */}
             <div className="space-y-3">
-              <h4 className="text-sm font-medium">Export Your Data</h4>
+              <h3 className="text-sm font-medium">Export Your Data</h3>
 
               {/* Full Data Export — JSON */}
               <div className="rounded-xl border border-border bg-surface-elevated p-4 hover:bg-surface-elevated/80 transition-colors">
@@ -938,7 +939,7 @@ export default function Settings() {
                       <FileJson className="size-4 text-success" aria-hidden="true" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-medium">Full Data Export</h4>
+                      <h3 className="text-sm font-medium">Full Data Export</h3>
                       <p className="text-xs text-muted-foreground mt-1">
                         All sessions, progress, streaks, notes, and achievements
                       </p>
@@ -979,7 +980,7 @@ export default function Settings() {
                       <FileText className="size-4 text-brand" aria-hidden="true" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-medium">Notes Export</h4>
+                      <h3 className="text-sm font-medium">Notes Export</h3>
                       <p className="text-xs text-muted-foreground mt-1">
                         Individual Markdown files with YAML frontmatter
                       </p>
@@ -1007,7 +1008,7 @@ export default function Settings() {
                       <Award className="size-4 text-warning" aria-hidden="true" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-medium">Achievements Export</h4>
+                      <h3 className="text-sm font-medium">Achievements Export</h3>
                       <p className="text-xs text-muted-foreground mt-1">
                         Open Badges v3.0 compliant credentials
                       </p>
@@ -1051,7 +1052,7 @@ export default function Settings() {
 
             {/* Import Data Section */}
             <div className="space-y-3">
-              <h4 className="text-sm font-medium">Import Data</h4>
+              <h3 className="text-sm font-medium">Import Data</h3>
 
               <div className="rounded-xl border border-border bg-surface-elevated p-4 hover:bg-surface-elevated/80 transition-colors">
                 <div className="flex items-start justify-between">
@@ -1060,7 +1061,7 @@ export default function Settings() {
                       <Upload className="size-4 text-brand" aria-hidden="true" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-medium">Restore from Backup</h4>
+                      <h3 className="text-sm font-medium">Restore from Backup</h3>
                       <p className="text-xs text-muted-foreground mt-1">
                         Import a previously exported Knowlune JSON file
                       </p>
@@ -1097,7 +1098,7 @@ export default function Settings() {
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <Shield className="size-4 text-destructive" aria-hidden="true" />
-                <h4 className="text-sm font-medium text-destructive">Danger Zone</h4>
+                <h3 className="text-sm font-medium text-destructive">Danger Zone</h3>
               </div>
 
               <div className="rounded-xl border-2 border-destructive/20 bg-destructive/5 p-4">
@@ -1107,7 +1108,7 @@ export default function Settings() {
                       <Trash2 className="size-4 text-destructive" aria-hidden="true" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-medium text-destructive">Reset All Data</h4>
+                      <h3 className="text-sm font-medium text-destructive">Reset All Data</h3>
                       <p className="text-xs text-muted-foreground mt-1">
                         Permanently delete all your progress, journal entries, and settings
                       </p>

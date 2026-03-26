@@ -13,7 +13,7 @@
  */
 import { test, expect } from '../support/fixtures'
 import { closeSidebar } from '../support/fixtures/constants/sidebar-constants'
-import { FIXED_TIMESTAMP, getRelativeTimestamp } from '../utils/test-time'
+import { getRelativeTimestamp } from '../utils/test-time'
 
 // Seed sidebar state to prevent fullscreen Sheet overlay at tablet viewports
 async function seedSidebar(page: import('@playwright/test').Page) {

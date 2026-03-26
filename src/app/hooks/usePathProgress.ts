@@ -72,6 +72,7 @@ export function usePathProgress(entries: LearningPathEntry[]): PathProgressSumma
       const catalogCourseIds = catalogEntries.map(e => e.courseId)
 
       // Load catalog course metadata for totalLessons count
+      // silent-catch-ok: non-critical persistence error
       const catalogCourses = await db.courses
         .where('id')
         .anyOf(catalogCourseIds)
@@ -81,6 +82,7 @@ export function usePathProgress(entries: LearningPathEntry[]): PathProgressSumma
       const courseMap = new Map(catalogCourses.map(c => [c.id, c]))
 
       // Load contentProgress records for these courses
+      // silent-catch-ok: non-critical persistence error
       const allContentProgress = await db.contentProgress
         .where('courseId')
         .anyOf(catalogCourseIds)
@@ -128,6 +130,7 @@ export function usePathProgress(entries: LearningPathEntry[]): PathProgressSumma
       const importedCourseIds = importedEntries.map(e => e.courseId)
 
       // Load imported course metadata for video count (= lesson count)
+      // silent-catch-ok: non-critical persistence error
       const importedCourses = await db.importedCourses
         .where('id')
         .anyOf(importedCourseIds)
@@ -137,6 +140,7 @@ export function usePathProgress(entries: LearningPathEntry[]): PathProgressSumma
       const importedMap = new Map(importedCourses.map(c => [c.id, c]))
 
       // Load video progress from Dexie
+      // silent-catch-ok: non-critical persistence error
       const videoProgress = await db.progress
         .where('courseId')
         .anyOf(importedCourseIds)
@@ -251,15 +255,19 @@ export function useMultiPathProgress(
 
     const [catalogCourses, allContentProgress, importedCourses, videoProgress] = await Promise.all([
       catalogCourseIds.length > 0
+        // silent-catch-ok: non-critical persistence error
         ? db.courses.where('id').anyOf(catalogCourseIds).toArray().catch(() => [])
         : Promise.resolve([]),
       catalogCourseIds.length > 0
+        // silent-catch-ok: non-critical persistence error
         ? db.contentProgress.where('courseId').anyOf(catalogCourseIds).toArray().catch(() => [])
         : Promise.resolve([]),
       importedCourseIds.length > 0
+        // silent-catch-ok: non-critical persistence error
         ? db.importedCourses.where('id').anyOf(importedCourseIds).toArray().catch(() => [])
         : Promise.resolve([]),
       importedCourseIds.length > 0
+        // silent-catch-ok: non-critical persistence error
         ? db.progress.where('courseId').anyOf(importedCourseIds).toArray().catch(() => [])
         : Promise.resolve([]),
     ])

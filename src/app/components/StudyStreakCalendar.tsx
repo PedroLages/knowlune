@@ -168,6 +168,7 @@ export function StudyStreakCalendar({ weeks = 16, className }: StudyStreakCalend
         setTimeout(() => setShowConfetti(false), 3000)
       }
     } catch (err) {
+      // silent-catch-ok: error logged to console
       console.warn('Failed to detect/record milestones:', err)
     }
   }, [])

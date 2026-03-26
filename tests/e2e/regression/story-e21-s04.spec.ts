@@ -12,8 +12,6 @@
  */
 import { test, expect } from '../../support/fixtures'
 
-const APP_SETTINGS_KEY = 'app-settings'
-
 test.describe('E21-S04: Visual Energy Boost', () => {
   test.describe('AC1 — Default professional mode unchanged', () => {
     test('does not apply .vibrant class by default', async ({ page }) => {

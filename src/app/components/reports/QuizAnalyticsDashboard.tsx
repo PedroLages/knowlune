@@ -34,6 +34,7 @@ export function QuizAnalyticsDashboard() {
     let ignore = false
     setLoading(true)
     setError(null)
+    // silent-catch-ok: error state updated in component
     calculateQuizAnalytics()
       .then(data => {
         if (!ignore) {

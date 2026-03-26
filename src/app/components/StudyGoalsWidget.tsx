@@ -11,6 +11,7 @@ function getStudyLog(): Array<{ type: string; timestamp: string; durationMs?: nu
     const raw = localStorage.getItem('study-log')
     return raw ? JSON.parse(raw) : []
   } catch {
+    // silent-catch-ok: localStorage fallback is non-critical
     return []
   }
 }
