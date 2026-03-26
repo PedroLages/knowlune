@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Link } from 'react-router'
 import { MotionConfig, motion } from 'motion/react'
 import {
@@ -10,14 +10,17 @@ import {
   Search,
   ArrowRight,
   Route,
+  WifiOff,
   type LucideIcon,
 } from 'lucide-react'
 import { Badge } from '@/app/components/ui/badge'
+import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { EmptyState } from '@/app/components/EmptyState'
 import { cn } from '@/app/components/ui/utils'
 import { useCareerPathStore } from '@/stores/useCareerPathStore'
+import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 import type { CareerPath } from '@/data/types'
 
@@ -204,16 +207,32 @@ function PathRow({
 export function CareerPaths() {
   const { paths, isLoaded, loadPaths } = useCareerPathStore()
   const [search, setSearch] = useState('')
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const isOnline = useOnlineStatus()
+
+  const handleLoad = useCallback(async () => {
+    setLoadError(null)
+    try {
+      await loadPaths()
+    } catch (err) {
+      console.error('[CareerPaths] Failed to load paths:', err)
+      setLoadError(
+        isOnline
+          ? 'Failed to load learning paths. Please try again.'
+          : "You're offline. Please check your connection and try again."
+      )
+    }
+  }, [loadPaths, isOnline])
 
   useEffect(() => {
     let ignore = false
-    loadPaths().catch(err => {
-      if (!ignore) console.error('[CareerPaths] Failed to load paths:', err)
+    handleLoad().catch(err => {
+      if (!ignore) console.error('[CareerPaths] Load failed:', err)
     })
     return () => {
       ignore = true
     }
-  }, [loadPaths])
+  }, [handleLoad])
 
   const filteredPaths = useMemo(() => {
     if (!search.trim()) return [...paths]
@@ -225,7 +244,7 @@ export function CareerPaths() {
     )
   }, [paths, search])
 
-  if (!isLoaded) {
+  if (!isLoaded && !loadError) {
     return (
       <DelayedFallback>
         <div className="space-y-2">
@@ -238,6 +257,27 @@ export function CareerPaths() {
           </div>
         </div>
       </DelayedFallback>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="space-y-8">
+        <div className="space-y-4">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight font-display text-foreground">
+            Learning Paths
+          </h1>
+        </div>
+        <div className="rounded-[24px] border border-destructive/50 bg-destructive/10 p-8 text-center">
+          {!isOnline && (
+            <WifiOff className="mx-auto mb-3 size-6 text-destructive" aria-hidden="true" />
+          )}
+          <p className="text-sm text-destructive">{loadError}</p>
+          <Button variant="outline" size="sm" className="mt-4" onClick={handleLoad}>
+            Try Again
+          </Button>
+        </div>
+      </div>
     )
   }
 
