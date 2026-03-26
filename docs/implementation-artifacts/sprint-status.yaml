@@ -314,16 +314,16 @@ development_status:
   # Epic 19: Platform & Entitlement (Supabase Auth + Stripe)
   # NOTE: Requires Supabase + Stripe infrastructure — not suitable for auto-story
   # ──────────────────────────────────────────────────
-  epic-19: in-progress
+  epic-19: done
   19-1-authentication-setup: done
   19-2-stripe-subscription-integration: done
   19-3-entitlement-system-and-offline-caching: done
   19-4-subscription-management: done
   19-5-premium-feature-gating-and-upgrade-ctas: done
   19-6-premium-code-boundary-and-build-separation: done
-  19-7-legal-pages-and-compliance: backlog
-  19-8-free-trial-flow: backlog
-  19-9-gdpr-compliance-and-account-lifecycle: backlog
+  19-7-legal-pages-and-compliance: done
+  19-8-free-trial-flow: done
+  19-9-gdpr-compliance-and-account-lifecycle: done
   epic-19-retrospective: optional
 
   # ──────────────────────────────────────────────────
