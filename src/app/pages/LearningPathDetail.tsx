@@ -64,6 +64,7 @@ function SortableCourseRow({
   course,
   authorName,
   thumbnailUrl,
+  completionPct,
   index,
   totalCount,
   isAIGenerated,
@@ -75,6 +76,7 @@ function SortableCourseRow({
   course: { name: string; type: 'imported' | 'catalog' } | undefined
   authorName: string | undefined
   thumbnailUrl: string | undefined
+  completionPct: number
   index: number
   totalCount: number
   isAIGenerated: boolean
@@ -158,9 +160,14 @@ function SortableCourseRow({
                   </Badge>
                 )}
               </div>
-              {authorName && (
-                <p className="text-xs text-muted-foreground truncate">{authorName}</p>
-              )}
+              <div className="flex items-center gap-2 mt-0.5">
+                {authorName && (
+                  <span className="text-xs text-muted-foreground truncate">{authorName}</span>
+                )}
+                <span className="text-xs text-muted-foreground">
+                  {completionPct}% complete
+                </span>
+              </div>
             </div>
 
             {/* Keyboard move buttons */}
@@ -479,16 +486,24 @@ export function LearningPathDetail() {
 
   // Build course info lookup
   const courseInfo = useMemo(() => {
-    const map = new Map<string, { name: string; type: 'imported' | 'catalog'; authorName?: string }>()
+    const map = new Map<
+      string,
+      { name: string; type: 'imported' | 'catalog'; authorName?: string; completionPct: number }
+    >()
 
     for (const ic of importedCourses) {
       const authorName = ic.authorId ? authors.find(a => a.id === ic.authorId)?.name : undefined
-      map.set(ic.id, { name: ic.name, type: 'imported', authorName })
+      map.set(ic.id, {
+        name: ic.name,
+        type: 'imported',
+        authorName,
+        completionPct: ic.status === 'completed' ? 100 : 0,
+      })
     }
 
     for (const cc of catalogCourses) {
       const authorName = authors.find(a => a.id === cc.authorId)?.name
-      map.set(cc.id, { name: cc.title, type: 'catalog', authorName })
+      map.set(cc.id, { name: cc.title, type: 'catalog', authorName, completionPct: 0 })
     }
 
     return map
@@ -677,6 +692,7 @@ export function LearningPathDetail() {
                       course={info}
                       authorName={info?.authorName}
                       thumbnailUrl={thumbnailUrls[entry.courseId]}
+                      completionPct={info?.completionPct ?? 0}
                       index={index}
                       totalCount={courseEntries.length}
                       isAIGenerated={path.isAIGenerated}
