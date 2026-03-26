@@ -329,7 +329,7 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 20: Learning Pathways & Knowledge Retention
   # ──────────────────────────────────────────────────
-  epic-20: in-progress
+  epic-20: done
   20-1-career-paths-system: done
   20-2-flashcard-system-with-spaced-repetition: done
   20-3-365-day-activity-heatmap: done
