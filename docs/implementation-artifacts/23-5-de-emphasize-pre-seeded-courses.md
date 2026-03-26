@@ -3,10 +3,10 @@ story_id: E23-S05
 story_name: "De-Emphasize Pre-Seeded Courses"
 status: done
 started: 2026-03-23
-completed: 2026-03-23
+completed: 2026-03-26
 reviewed: true
-review_started:
-review_gates_passed: []
+review_started: 2026-03-23
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing]
 burn_in_validated: false
 ---
 
@@ -132,4 +132,7 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Auto-collapse guard with useRef**: The auto-collapse `useEffect` initially fired on every `importedCourses.length` change, overriding manual user expansion. Fixed by tracking auto-collapse state in a `useRef` flag so auto-restore only undoes auto-collapse, not manual toggle.
+- **IIFE-to-useMemo migration**: The `filtered` variable used an IIFE (`(() => { ... })()`) which re-computed on every render. Replaced with `useMemo` for proper memoization — a common pattern improvement when dependencies are well-defined.
+- **localStorage try/catch discipline**: Both `getItem` (in `useState` initializer) and `setItem` calls need try/catch for restricted browser contexts (private browsing, quota exceeded). The review flagged this correctly; wrapping with `// silent-catch-ok` comments satisfies the ESLint rule.
+- **Auto-expand on filter match**: When the sample section is collapsed and a user searches/filters, matching pre-seeded courses were hidden. Added a `useEffect` that auto-expands the section when active filters match pre-seeded courses, preventing invisible results.
