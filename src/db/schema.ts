@@ -12,6 +12,8 @@ import type {
   Challenge,
   Embedding,
   LearningPathCourse,
+  LearningPath,
+  LearningPathEntry,
   CourseThumbnail,
   AIUsageEvent,
   ReviewRecord,
@@ -42,6 +44,8 @@ const db = new Dexie('ElearningDB') as Dexie & {
   quizzes: EntityTable<Quiz, 'id'>
   quizAttempts: EntityTable<QuizAttempt, 'id'>
   videoCaptions: Table<VideoCaptionRecord> // compound PK: [courseId+videoId]
+  learningPaths: EntityTable<LearningPath, 'id'>
+  learningPathEntries: EntityTable<LearningPathEntry, 'id'>
 }
 
 db.version(1).stores({
@@ -475,5 +479,33 @@ db.version(19)
         }
       })
   })
+
+// v20: Multi-path learning journeys (E26-S01/S02)
+db.version(20).stores({
+  // All v19 tables (unchanged — must redeclare or Dexie deletes them)
+  importedCourses: 'id, name, importedAt, status, *tags',
+  importedVideos: 'id, courseId, filename',
+  importedPdfs: 'id, courseId, filename',
+  progress: '[courseId+videoId], courseId, videoId',
+  bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+  screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+  studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+  contentProgress: '[courseId+itemId], courseId, itemId, status',
+  challenges: 'id, type, deadline, createdAt',
+  embeddings: 'noteId, createdAt',
+  learningPath: 'courseId, position, generatedAt',
+  courseThumbnails: 'courseId',
+  aiUsageEvents: 'id, featureType, timestamp, courseId',
+  reviewRecords: 'id, noteId, nextReviewAt, reviewedAt',
+  courseReminders: 'id, courseId',
+  courses: 'id, category, difficulty, authorId',
+  quizzes: 'id, lessonId, createdAt',
+  quizAttempts: 'id, quizId, [quizId+completedAt], completedAt',
+  videoCaptions: '[courseId+videoId], courseId, videoId',
+  // NEW: Multi-path learning journeys
+  learningPaths: 'id, createdAt, updatedAt',
+  learningPathEntries: 'id, pathId, courseId, position',
+})
 
 export { db }

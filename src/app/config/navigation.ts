@@ -13,6 +13,7 @@ import {
   BrainCircuit,
   Sparkles,
   Brain,
+  Route,
   Settings as SettingsIcon,
   type LucideIcon,
 } from 'lucide-react'
@@ -51,7 +52,8 @@ export const navigationGroups: NavigationGroup[] = [
       { name: 'Overview', path: '/', icon: LayoutDashboard },
       { name: 'My Courses', path: '/my-class', icon: BookOpen },
       { name: 'Courses', path: '/courses', icon: GraduationCap },
-      { name: 'Learning Path', path: '/ai-learning-path', icon: Sparkles },
+      { name: 'Learning Paths', path: '/learning-paths', icon: Route },
+      { name: 'AI Learning Path', path: '/ai-learning-path', icon: Sparkles },
       { name: 'Knowledge Gaps', path: '/knowledge-gaps', icon: Brain },
       { name: 'Notes', path: '/notes', icon: StickyNote },
       { name: 'Review', path: '/review', icon: RotateCcw },
