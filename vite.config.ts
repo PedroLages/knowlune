@@ -23,7 +23,7 @@ const COURSES_ROOT = process.env.COURSES_ROOT || '';
  *   POST /api/ai/ollama/chat                 — Chat completions (non-streaming)
  *   POST /api/ai/ollama                      — Chat completions (SSE streaming)
  */
-function ollamaDevProxy(): Plugin {
+export function ollamaDevProxy(): Plugin {
   return {
     name: 'ollama-dev-proxy',
     configureServer(server) {
@@ -375,13 +375,19 @@ export default defineConfig({
     }
   },
   server: {
-    // Ollama proxy endpoints are handled by the ollamaDevProxy() plugin above.
-    // Non-Ollama AI providers (Anthropic, OpenAI, Groq, Gemini) still need
-    // the Express server on :3001 for API key proxying — but that's optional
-    // and only affects cloud AI providers, not Ollama.
+    // ┌─────────────────────────────────────────────────────────────┐
+    // │              Ollama Dev Proxy Architecture                  │
+    // ├─────────────────────────────────────────────────────────────┤
+    // │ Embedded in Vite (ollamaDevProxy plugin):                  │
+    // │   GET  /api/ai/ollama/tags      → Ollama /api/tags         │
+    // │   GET  /api/ai/ollama/health    → Ollama /                 │
+    // │   POST /api/ai/ollama/chat      → Ollama /api/chat         │
+    // │   POST /api/ai/ollama           → Ollama /v1/chat/... SSE  │
+    // ├─────────────────────────────────────────────────────────────┤
+    // │ Proxied to Express :3001 (if running):                     │
+    // │   /api/ai/* (non-Ollama)  — Anthropic, OpenAI, Groq, etc. │
+    // └─────────────────────────────────────────────────────────────┘
     proxy: {
-      // Non-Ollama AI providers still proxy to Express server on :3001 (if running).
-      // All Ollama endpoints (tags, health, chat, streaming) are handled by ollamaDevProxy() above.
       '/api/ai': { target: 'http://localhost:3001', changeOrigin: true },
     },
     headers: {
