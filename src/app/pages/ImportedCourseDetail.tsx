@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link, useParams, useNavigate } from 'react-router'
 import {
   ArrowLeft,
@@ -30,6 +30,7 @@ import {
 } from '@/app/components/ui/alert-dialog'
 import { cn } from '@/app/components/ui/utils'
 import { getAvatarSrc, getInitials } from '@/lib/authors'
+import { EditableTitle } from '@/app/components/figma/EditableTitle'
 import type { ImportedVideo, ImportedPdf } from '@/data/types'
 import type { FileStatus } from '@/lib/fileVerification'
 
@@ -70,6 +71,7 @@ export function ImportedCourseDetail() {
   const importedCourses = useCourseImportStore(state => state.importedCourses)
   const loadImportedCourses = useCourseImportStore(state => state.loadImportedCourses)
   const removeImportedCourse = useCourseImportStore(state => state.removeImportedCourse)
+  const updateCourseDetails = useCourseImportStore(state => state.updateCourseDetails)
   const course = importedCourses.find(c => c.id === courseId)
 
   const storeAuthors = useAuthorStore(state => state.authors)
@@ -82,6 +84,20 @@ export function ImportedCourseDetail() {
     loadImportedCourses()
     loadAuthors()
   }, [loadImportedCourses, loadAuthors])
+
+  // E1C-S02: Inline title editing — optimistic update to IndexedDB + Zustand store
+  const handleTitleSave = useCallback(
+    async (newTitle: string) => {
+      if (!courseId) return
+      const success = await updateCourseDetails(courseId, { name: newTitle })
+      if (success) {
+        toast.success('Title updated')
+      } else {
+        toast.error('Failed to update title')
+      }
+    },
+    [courseId, updateCourseDetails]
+  )
 
   async function handleDelete() {
     if (deleting || !courseId) return
@@ -152,9 +168,11 @@ export function ImportedCourseDetail() {
       </Link>
 
       <div className="flex items-start justify-between gap-4 mb-1">
-        <h1 data-testid="course-detail-title" className="text-2xl font-bold">
-          {course.name}
-        </h1>
+        <EditableTitle
+          value={course.name}
+          onSave={handleTitleSave}
+          data-testid="course-detail-title"
+        />
         <Button
           variant="ghost"
           size="sm"
