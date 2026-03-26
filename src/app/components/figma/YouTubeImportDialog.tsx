@@ -5,12 +5,13 @@
  * Steps 1 & 2 implemented in E28-S05:
  *   Step 1: URL Input — paste YouTube video/playlist URLs
  *   Step 2: Metadata Preview — view thumbnails, titles, durations
- *
- * Steps 3 & 4 are placeholders for future stories:
- *   Step 3: Organize — group videos into chapters (E28-S06)
- *   Step 4: Details — set course name, description, tags (E28-S07)
+ * Step 3 implemented in E28-S06:
+ *   Step 3: Organize — rule-based chapter grouping + chapter editor
+ * Step 4 placeholder:
+ *   Step 4: Details — set course name, description, tags (E28-S08)
  *
  * @see E28-S05 — Import Wizard Steps 1 & 2
+ * @see E28-S06 — Rule-Based Video Grouping & Chapter Editor
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react'
@@ -52,6 +53,8 @@ import {
   type YouTubeUrlEntry,
   type YouTubeImportVideo,
 } from '@/stores/useYouTubeImportStore'
+import { groupVideosByRules, type GroupingVideo } from '@/lib/youtubeRuleBasedGrouping'
+import { YouTubeChapterEditor } from '@/app/components/figma/YouTubeChapterEditor'
 
 // --- Constants ---
 
@@ -476,8 +479,20 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
           </div>
         )}
 
-        {/* Steps 3 & 4: Future placeholders */}
-        {(store.currentStep === 3 || store.currentStep === 4) && (
+        {/* Step 3: Organize — Chapter Editor (E28-S06) */}
+        {store.currentStep === 3 && (
+          <div className="py-2">
+            <YouTubeChapterEditor
+              chapters={store.chapters}
+              videos={activeVideos}
+              onChaptersChange={store.setChapters}
+              showAiBanner
+            />
+          </div>
+        )}
+
+        {/* Step 4: Future placeholder */}
+        {store.currentStep === 4 && (
           <div className="py-8 text-center text-muted-foreground">
             <p className="text-sm">Coming in a future update</p>
           </div>
@@ -510,6 +525,19 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
             onClick={() => {
               if (store.currentStep === 1) {
                 handleNextToPreview()
+              } else if (store.currentStep === 2) {
+                // Run rule-based grouping when entering Step 3
+                const groupingVideos: GroupingVideo[] = activeVideos
+                  .filter(v => v.metadata && v.status === 'loaded')
+                  .map(v => ({
+                    videoId: v.videoId,
+                    title: v.metadata!.title,
+                    description: v.metadata!.description,
+                    duration: v.metadata!.duration,
+                  }))
+                const chapters = groupVideosByRules(groupingVideos)
+                store.setChapters(chapters)
+                store.setCurrentStep(3)
               } else if (store.currentStep < 4) {
                 store.setCurrentStep((store.currentStep + 1) as 2 | 3 | 4)
               }
