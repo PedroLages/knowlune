@@ -1,0 +1,147 @@
+// E19-S03: PremiumGate component
+// Renders children for premium users, or an upgrade CTA for free users.
+// Handles loading state with skeleton placeholder.
+
+import { type ReactNode } from 'react'
+import { Crown, Loader2 } from 'lucide-react'
+import { Button } from '@/app/components/ui/button'
+import { Card, CardContent } from '@/app/components/ui/card'
+import { useIsPremium } from '@/lib/entitlement/isPremium'
+import { startCheckout } from '@/lib/checkout'
+import { toastError } from '@/lib/toastHelpers'
+import { useState, useCallback } from 'react'
+
+interface PremiumGateProps {
+  /** Content to render when user has premium access */
+  children: ReactNode
+  /** Optional label describing the gated feature (shown in upgrade CTA) */
+  featureLabel?: string
+  /** Optional custom fallback instead of the default upgrade CTA */
+  fallback?: ReactNode
+  /** If true, renders a skeleton placeholder while loading instead of nothing */
+  showSkeleton?: boolean
+}
+
+/**
+ * AC6: isPremium() guard — non-premium users see an upgrade CTA
+ * instead of premium content.
+ *
+ * AC9: Loading state — shows skeleton for premium content while
+ * entitlement status is being resolved, core content loads immediately.
+ */
+export function PremiumGate({
+  children,
+  featureLabel = 'this feature',
+  fallback,
+  showSkeleton = true,
+}: PremiumGateProps) {
+  const { isPremium, loading, isStale, error } = useIsPremium()
+
+  // Loading state (AC9)
+  if (loading) {
+    if (!showSkeleton) return null
+    return (
+      <div
+        className="animate-pulse space-y-3 rounded-[24px] border border-border/50 bg-surface-sunken/30 p-6"
+        role="status"
+        aria-label={`Loading ${featureLabel}`}
+      >
+        <div className="h-5 w-24 rounded bg-muted" />
+        <div className="h-4 w-48 rounded bg-muted" />
+        <div className="h-10 w-full rounded-xl bg-muted" />
+      </div>
+    )
+  }
+
+  // Premium user — render children
+  if (isPremium && !isStale) {
+    return <>{children}</>
+  }
+
+  // Custom fallback
+  if (fallback) {
+    return <>{fallback}</>
+  }
+
+  // Default upgrade CTA (AC6)
+  return <UpgradeCTA featureLabel={featureLabel} error={error} isStale={isStale} />
+}
+
+// --- Internal upgrade CTA component ---
+
+interface UpgradeCTAProps {
+  featureLabel: string
+  error: string | null
+  isStale: boolean
+}
+
+function UpgradeCTA({ featureLabel, error, isStale }: UpgradeCTAProps) {
+  const [isCheckoutLoading, setIsCheckoutLoading] = useState(false)
+
+  const handleUpgrade = useCallback(async () => {
+    setIsCheckoutLoading(true)
+    try {
+      const result = await startCheckout()
+      if ('error' in result) {
+        toastError.saveFailed(result.error)
+        return
+      }
+      if (!result.url.startsWith('https://checkout.stripe.com/')) {
+        toastError.saveFailed('Invalid checkout URL received.')
+        return
+      }
+      window.location.href = result.url
+    } catch {
+      // silent-catch-ok — startCheckout handles errors internally; this resets loading state
+    } finally {
+      setIsCheckoutLoading(false)
+    }
+  }, [])
+
+  return (
+    <Card
+      className="border-gold-muted/50 bg-gold-muted/10"
+      data-testid="premium-gate-cta"
+      role="region"
+      aria-label={`Upgrade required for ${featureLabel}`}
+    >
+      <CardContent className="flex flex-col items-center gap-4 p-6 text-center">
+        <div className="rounded-full bg-gold-muted p-3">
+          <Crown className="size-6 text-gold" aria-hidden="true" />
+        </div>
+
+        <div className="space-y-1">
+          <h3 className="text-base font-display font-semibold">Premium Feature</h3>
+          <p className="text-sm text-muted-foreground">
+            {isStale
+              ? 'Your subscription status is outdated. Connect to the internet to verify your access.'
+              : error
+                ? error
+                : `Upgrade to Premium to unlock ${featureLabel}.`}
+          </p>
+        </div>
+
+        <Button
+          variant="brand"
+          className="w-full max-w-xs min-h-[44px] gap-2"
+          onClick={handleUpgrade}
+          disabled={isCheckoutLoading}
+          aria-label={`Upgrade to Premium to unlock ${featureLabel}`}
+          aria-busy={isCheckoutLoading}
+        >
+          {isCheckoutLoading && (
+            <Loader2 className="size-4 motion-safe:animate-spin" aria-hidden="true" />
+          )}
+          {isCheckoutLoading ? 'Starting checkout...' : 'Upgrade to Premium'}
+        </Button>
+
+        {/* AC5: Resubscribe option for cancelled subscriptions */}
+        {isStale && (
+          <p className="text-xs text-muted-foreground">
+            If your subscription has expired, you can resubscribe by upgrading above.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
