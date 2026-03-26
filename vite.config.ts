@@ -7,6 +7,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { premiumImportGuard } from './vite-plugin-premium-guard';
+import { youtubeTranscriptProxy } from './vite-plugin-youtube-transcript';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = typeof globalThis.__dirname !== 'undefined'
@@ -305,6 +306,7 @@ export default defineConfig({
   tailwindcss(),
   serveLocalMedia(),
   ollamaDevProxy(),
+  youtubeTranscriptProxy(),
   premiumImportGuard({ enabled: !process.env.PREMIUM_BUILD }),
   VitePWA({
     registerType: 'prompt',

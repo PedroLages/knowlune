@@ -874,4 +874,58 @@ db.version(26)
       })
   })
 
+// v27: Transcript pipeline — add status index for per-video tracking (E28-S04)
+// - youtubeTranscripts: add `status` index for filtering by fetch state
+// - upgrade(): backfill existing transcript records with status: 'done' and source
+db.version(27)
+  .stores({
+    // All existing v26 tables (must redeclare or Dexie deletes them)
+    importedCourses: 'id, name, importedAt, status, *tags, source',
+    importedVideos: 'id, courseId, filename, youtubeVideoId',
+    importedPdfs: 'id, courseId, filename',
+    progress: '[courseId+videoId], courseId, videoId',
+    bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+    notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+    screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+    studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+    contentProgress: '[courseId+itemId], courseId, itemId, status',
+    challenges: 'id, type, deadline, createdAt',
+    embeddings: 'noteId, createdAt',
+    courseThumbnails: 'courseId',
+    aiUsageEvents: 'id, featureType, timestamp, courseId',
+    reviewRecords: 'id, noteId, nextReviewAt, reviewedAt',
+    courseReminders: 'id, courseId',
+    courses: 'id, category, difficulty, authorId',
+    quizzes: 'id, lessonId, createdAt',
+    quizAttempts: 'id, quizId, [quizId+completedAt], completedAt',
+    videoCaptions: '[courseId+videoId], courseId, videoId',
+    authors: 'id, name, createdAt',
+    careerPaths: 'id',
+    pathEnrollments: 'id, pathId, status',
+    flashcards: 'id, courseId, noteId, nextReviewAt, createdAt',
+    entitlements: 'userId',
+    learningPaths: 'id, createdAt',
+    learningPathEntries: 'id, [pathId+courseId], pathId',
+    youtubeVideoCache: 'videoId, expiresAt',
+    youtubeTranscripts: '[courseId+videoId], courseId, videoId, status',
+    youtubeChapters: 'id, courseId, order',
+  })
+  .upgrade(tx => {
+    // Backfill existing transcript records with new required fields
+    return tx
+      .table('youtubeTranscripts')
+      .toCollection()
+      .modify(record => {
+        if (record.fullText === undefined) {
+          record.fullText = (record.cues || []).map((c: { text: string }) => c.text).join(' ')
+        }
+        if (record.source === undefined) {
+          record.source = 'youtube-transcript'
+        }
+        if (record.status === undefined) {
+          record.status = 'done'
+        }
+      })
+  })
+
 export { db }
