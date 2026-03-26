@@ -13,6 +13,7 @@ import {
   BrainCircuit,
   Sparkles,
   Brain,
+  Route,
   Layers,
   Milestone,
   Settings as SettingsIcon,
@@ -56,7 +57,7 @@ export const navigationGroups: NavigationGroup[] = [
     items: [
       { name: 'Overview', path: '/', icon: LayoutDashboard },
       { name: 'Courses', path: '/courses', icon: GraduationCap },
-      { name: 'Learning Paths', path: '/career-paths', icon: Milestone },
+      { name: 'Learning Paths', path: '/learning-paths', icon: Route },
       { name: 'Authors', path: '/authors', icon: Users, disclosureKey: 'course-imported' },
     ],
   },

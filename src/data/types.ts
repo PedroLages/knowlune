@@ -344,8 +344,8 @@ export interface LearningPath {
   id: string // Primary key: UUID
   name: string // User-facing name (e.g., "My Learning Path")
   description?: string // Optional description
-  createdAt: string // ISO timestamp
-  updatedAt: string // ISO timestamp
+  createdAt: string // ISO 8601
+  updatedAt: string // ISO 8601
   isAIGenerated: boolean // true if created by AI path generation
 }
 

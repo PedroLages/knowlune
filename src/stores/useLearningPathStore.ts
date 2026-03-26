@@ -1,10 +1,11 @@
 import { create } from 'zustand'
 import { db } from '@/db'
-import type { LearningPath, LearningPathEntry } from '@/data/types'
+import type { LearningPath, LearningPathEntry, LearningPathCourse } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
 import { trackAIUsage } from '@/lib/aiEventTracking'
 
 interface LearningPathState {
+  // Multi-path state (E26-S01/S02)
   paths: LearningPath[]
   entries: LearningPathEntry[] // All entries across all paths
   activePath: LearningPath | null
@@ -15,6 +16,7 @@ interface LearningPathState {
   loadPaths: () => Promise<void>
   createPath: (name: string, description?: string) => Promise<LearningPath>
   renamePath: (pathId: string, name: string) => Promise<void>
+  updateDescription: (pathId: string, description: string) => Promise<void>
   deletePath: (pathId: string) => Promise<void>
   setActivePath: (pathId: string) => void
 
@@ -99,6 +101,25 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       activePath:
         state.activePath?.id === pathId
           ? { ...state.activePath, name, updatedAt: now }
+          : state.activePath,
+      error: null,
+    }))
+  },
+
+  updateDescription: async (pathId: string, description: string) => {
+    const now = new Date().toISOString()
+
+    await persistWithRetry(async () => {
+      await db.learningPaths.update(pathId, { description, updatedAt: now })
+    })
+
+    set(state => ({
+      paths: state.paths.map(p =>
+        p.id === pathId ? { ...p, description, updatedAt: now } : p
+      ),
+      activePath:
+        state.activePath?.id === pathId
+          ? { ...state.activePath, description, updatedAt: now }
           : state.activePath,
       error: null,
     }))
