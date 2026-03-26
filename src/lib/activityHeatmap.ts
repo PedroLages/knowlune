@@ -101,8 +101,8 @@ export function buildHeatmapGrid(
     isToday: date === today,
   }))
 
-  // Pad start so week columns are Sunday-aligned
-  const padded: (HeatmapDay | null)[] = [...Array<null>(firstDayOfWeek).fill(null), ...days]
+  // NIT #3: Pad start so week columns are Sunday-aligned
+  const padded: (HeatmapDay | null)[] = [...new Array(firstDayOfWeek).fill(null), ...days]
 
   // Pad end to make the last week complete
   while (padded.length % 7 !== 0) {
@@ -146,25 +146,38 @@ export function buildHeatmapGrid(
 
 /**
  * Summarise heatmap data into monthly totals for the accessible table view.
+ *
+ * Uses a YYYY-MM key (not locale-formatted string) to avoid fragile i18n
+ * dependency, then sorts explicitly for guaranteed chronological order.
  */
 export function getMonthlyHeatmapSummary(dayMap: Map<string, number>): MonthSummary[] {
   const monthMap = new Map<string, { activeDays: number; totalSeconds: number }>()
 
   for (const [date, seconds] of dayMap) {
-    const d = new Date(date + 'T12:00:00')
-    const label = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-    const entry = monthMap.get(label) ?? { activeDays: 0, totalSeconds: 0 }
+    // MEDIUM #5 & HIGH #4: Use YYYY-MM as key instead of locale string.
+    // This avoids locale fragility and guarantees sort order.
+    const key = date.slice(0, 7) // "YYYY-MM" from "YYYY-MM-DD"
+    const entry = monthMap.get(key) ?? { activeDays: 0, totalSeconds: 0 }
     entry.totalSeconds += seconds
     if (seconds > 0) entry.activeDays++
-    monthMap.set(label, entry)
+    monthMap.set(key, entry)
   }
 
-  // Return in chronological order (months come in insertion order since dates are sorted)
-  return Array.from(monthMap.entries()).map(([label, data]) => ({
-    label,
-    activeDays: data.activeDays,
-    totalSeconds: data.totalSeconds,
-  }))
+  // HIGH #4: Sort keys explicitly for guaranteed chronological order.
+  const sortedKeys = Array.from(monthMap.keys()).sort()
+
+  // Format label for display from YYYY-MM key.
+  const monthFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' })
+
+  return sortedKeys.map(key => {
+    const data = monthMap.get(key)!
+    const d = new Date(key + '-15T12:00:00') // mid-month avoids timezone edge cases
+    return {
+      label: monthFormatter.format(d),
+      activeDays: data.activeDays,
+      totalSeconds: data.totalSeconds,
+    }
+  })
 }
 
 /** Format seconds as "Xh Ym" or "Ym" or "< 1 min" */

@@ -95,18 +95,20 @@ test.describe('E20-S03: 365-Day Activity Heatmap', () => {
   test('AC2: tooltip shows date and study time on hover', async ({ page }) => {
     await goToReportsWithActivity(page)
 
-    // Find a cell with activity — look for aria-label containing the session date
-    // The session is on 2026-03-20, which has "30 min" of study time
+    // MEDIUM #3 & #4: Find the cell unconditionally — it must exist given seeded data.
+    // The session is on 2026-03-20, which has "30 min" of study time.
     const cellWithActivity = page.locator(
       '[data-testid="activity-heatmap"] [role="img"][aria-label*="Mar 20"]'
     )
 
-    if ((await cellWithActivity.count()) > 0) {
-      await cellWithActivity.hover()
-      // Tooltip should appear with the study time
-      await expect(page.getByRole('tooltip')).toContainText(/Mar 20/)
-      await expect(page.getByRole('tooltip')).toContainText(/30 min|No activity/)
-    }
+    // Cell MUST be present — fail loudly if not found (was silently passing before).
+    await expect(cellWithActivity).toHaveCount(1)
+
+    await cellWithActivity.hover()
+    // Tooltip should appear with the study time
+    await expect(page.getByRole('tooltip')).toContainText(/Mar 20/)
+    // MEDIUM #4: Assert specifically "30 min" — do NOT accept "No activity" for seeded data.
+    await expect(page.getByRole('tooltip')).toContainText('30 min')
   })
 
   test('AC3: "View as table" toggle switches to monthly summary table', async ({ page }) => {

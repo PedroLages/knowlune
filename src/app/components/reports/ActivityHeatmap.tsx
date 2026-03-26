@@ -1,4 +1,4 @@
-import { Fragment, useState, useEffect, useMemo } from 'react'
+import { Fragment, useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { cn } from '@/app/components/ui/utils'
 import {
   Tooltip,
@@ -35,19 +35,45 @@ const LEGEND_LABELS: Record<HeatmapLevel, string> = {
   4: '90+ min',
 }
 
+/** Shared date formatter — avoids creating Intl.DateTimeFormat per cell. */
+const cellDateFormatter = new Intl.DateTimeFormat('en-US', {
+  weekday: 'short',
+  month: 'short',
+  day: 'numeric',
+})
+
+/** Compute 365-day cutoff as ISO string for bounded DB query. */
+function getCutoffISOString(todayStr: string): string {
+  const d = new Date(todayStr + 'T00:00:00')
+  d.setDate(d.getDate() - 365)
+  return d.toISOString()
+}
+
 export function ActivityHeatmap() {
   const [dayMap, setDayMap] = useState<Map<string, number>>(new Map())
   const [isLoading, setIsLoading] = useState(true)
   const [showTable, setShowTable] = useState(false)
 
-  const today = useMemo(() => toLocalDateString(), [])
+  // HIGH #1: Recompute `today` on each render so it stays correct past midnight.
+  // toLocalDateString() is a cheap YYYY-MM-DD formatter — no memoization needed.
+  const today = toLocalDateString()
+
+  // Track the grid container for roving tabindex (NIT #2)
+  const gridRef = useRef<HTMLDivElement>(null)
+
+  /** Fetch sessions bounded to the 365-day window. */
+  const fetchSessions = useCallback(async (todayStr: string) => {
+    const cutoff = getCutoffISOString(todayStr)
+    // MEDIUM #2: Use indexed `.where('startTime').above(cutoff)` instead of `.toArray()`.
+    return db.studySessions.where('startTime').above(cutoff).toArray()
+  }, [])
 
   useEffect(() => {
     let ignore = false
 
     const load = async () => {
       try {
-        const sessions = await db.studySessions.toArray()
+        const sessions = await fetchSessions(today)
         if (!ignore) {
           setDayMap(aggregateSessionsByDay(sessions, today))
           setIsLoading(false)
@@ -63,22 +89,31 @@ export function ActivityHeatmap() {
     return () => {
       ignore = true
     }
-  }, [today])
+  }, [today, fetchSessions])
 
-  // Refresh when sessions change (new lesson completed, session ended, etc.)
+  // MEDIUM #1: Debounce `study-log-updated` events to avoid redundant full-table scans.
   useEffect(() => {
-    const handler = async () => {
-      try {
-        const sessions = await db.studySessions.toArray()
-        setDayMap(aggregateSessionsByDay(sessions, today))
-      } catch (err) {
-        // silent-catch-ok: background refresh on event — stale data shown, non-critical
-        console.error('[ActivityHeatmap] Failed to refresh study sessions:', err)
-      }
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null
+
+    const handler = () => {
+      if (debounceTimer) clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(async () => {
+        try {
+          const sessions = await fetchSessions(today)
+          setDayMap(aggregateSessionsByDay(sessions, today))
+        } catch (err) {
+          // silent-catch-ok: background refresh on event — stale data shown, non-critical
+          console.error('[ActivityHeatmap] Failed to refresh study sessions:', err)
+        }
+      }, 300)
     }
+
     window.addEventListener('study-log-updated', handler)
-    return () => window.removeEventListener('study-log-updated', handler)
-  }, [today])
+    return () => {
+      window.removeEventListener('study-log-updated', handler)
+      if (debounceTimer) clearTimeout(debounceTimer)
+    }
+  }, [today, fetchSessions])
 
   const { grid, monthLabels, totalWeeks } = useMemo(
     () => buildHeatmapGrid(dayMap, today),
@@ -95,6 +130,73 @@ export function ActivityHeatmap() {
     return count
   }, [dayMap])
 
+  // HIGH #2: Memoize grid style object keyed on `totalWeeks`.
+  const gridStyle = useMemo(
+    () => ({
+      gridTemplateColumns: `auto repeat(${totalWeeks}, minmax(8px, 1fr))`,
+      gridTemplateRows: 'auto repeat(7, 1fr)',
+    }),
+    [totalWeeks]
+  )
+
+  // HIGH #3: Pre-compute formatted dates for all cells to avoid Intl calls in the render loop.
+  const formattedDates = useMemo(() => {
+    const result = new Map<string, string>()
+    for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
+      const row = grid[dayIdx]
+      if (!row) continue
+      for (let wi = 0; wi < totalWeeks; wi++) {
+        const day = row[wi]
+        if (!day) continue
+        const d = new Date(day.date + 'T12:00:00')
+        result.set(day.date, cellDateFormatter.format(d))
+      }
+    }
+    return result
+  }, [grid, totalWeeks])
+
+  // NIT #2: Roving tabindex — only the first cell gets tabIndex=0, others get -1.
+  // Arrow key navigation within the grid.
+  const handleGridKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      const target = e.target as HTMLElement
+      if (target.role !== 'img') return
+
+      const cells = gridRef.current?.querySelectorAll<HTMLElement>('[role="img"]')
+      if (!cells) return
+
+      const cellArray = Array.from(cells)
+      const currentIndex = cellArray.indexOf(target)
+      if (currentIndex === -1) return
+
+      let nextIndex: number | null = null
+      switch (e.key) {
+        case 'ArrowRight':
+          nextIndex = currentIndex + 7 < cellArray.length ? currentIndex + 7 : null
+          break
+        case 'ArrowLeft':
+          nextIndex = currentIndex - 7 >= 0 ? currentIndex - 7 : null
+          break
+        case 'ArrowDown':
+          nextIndex = currentIndex + 1 < cellArray.length ? currentIndex + 1 : null
+          break
+        case 'ArrowUp':
+          nextIndex = currentIndex - 1 >= 0 ? currentIndex - 1 : null
+          break
+        default:
+          return
+      }
+
+      if (nextIndex !== null) {
+        e.preventDefault()
+        target.tabIndex = -1
+        cellArray[nextIndex].tabIndex = 0
+        cellArray[nextIndex].focus()
+      }
+    },
+    []
+  )
+
   if (isLoading) {
     return (
       <div
@@ -105,6 +207,9 @@ export function ActivityHeatmap() {
       />
     )
   }
+
+  // Track cell index for roving tabindex
+  let cellIndex = 0
 
   return (
     <div data-testid="activity-heatmap">
@@ -169,13 +274,12 @@ export function ActivityHeatmap() {
         <div className="overflow-x-auto -mx-1 px-1">
           <TooltipProvider>
             <div
+              ref={gridRef}
               role="group"
               aria-label={`Study activity heatmap — ${totalActiveDays} active day${totalActiveDays !== 1 ? 's' : ''} in the past year`}
               className="grid gap-[3px]"
-              style={{
-                gridTemplateColumns: `auto repeat(${totalWeeks}, minmax(8px, 1fr))`,
-                gridTemplateRows: 'auto repeat(7, 1fr)',
-              }}
+              style={gridStyle}
+              onKeyDown={handleGridKeyDown}
             >
               {/* Month labels row */}
               <div aria-hidden="true" /> {/* empty top-left corner */}
@@ -210,23 +314,22 @@ export function ActivityHeatmap() {
                       return <div key={`pad-${dayIdx}-${wi}`} aria-hidden="true" />
                     }
 
-                    const d = new Date(day.date + 'T12:00:00')
-                    const formattedDate = d.toLocaleDateString('en-US', {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric',
-                    })
+                    const formattedDate = formattedDates.get(day.date) ?? day.date
 
                     const ariaLabel =
                       day.totalSeconds > 0
                         ? `${formattedDate}: ${formatStudyTime(day.totalSeconds)} studied`
                         : `${formattedDate}: No activity`
 
+                    // NIT #2: roving tabindex — only first cell is tabbable
+                    const isFirstCell = cellIndex === 0
+                    cellIndex++
+
                     return (
                       <Tooltip key={day.date}>
                         <TooltipTrigger asChild>
                           <div
-                            tabIndex={0}
+                            tabIndex={isFirstCell ? 0 : -1}
                             role="img"
                             aria-label={ariaLabel}
                             className={cn(
@@ -263,7 +366,7 @@ export function ActivityHeatmap() {
                 <Tooltip key={level}>
                   <TooltipTrigger asChild>
                     <div
-                      className={cn('size-3 rounded-[3px] cursor-default', LEVEL_CLASSES[level])}
+                      className={cn('size-3 rounded-[3px] cursor-help', LEVEL_CLASSES[level])}
                       aria-label={LEGEND_LABELS[level]}
                     />
                   </TooltipTrigger>
