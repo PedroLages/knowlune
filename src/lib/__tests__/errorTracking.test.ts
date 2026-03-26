@@ -158,4 +158,51 @@ describe('errorTracking', () => {
       expect(log[0].context).toBe('UnhandledPromiseRejection')
     })
   })
+
+  describe('graceful degradation (no Sentry)', () => {
+    it('works entirely standalone without external error tracking services', () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      // The module should function without any Sentry SDK or external config
+      reportError(new Error('no sentry'), 'StandaloneCtx')
+
+      const log = getErrorLog()
+      expect(log).toHaveLength(1)
+      expect(log[0].message).toBe('no sentry')
+      expect(log[0].context).toBe('StandaloneCtx')
+    })
+
+    it('initErrorTracking does not throw when Sentry is absent', () => {
+      expect(() => initErrorTracking()).not.toThrow()
+    })
+  })
+
+  describe('export / serialization', () => {
+    it('getErrorLog returns entries that are JSON-serializable', () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      reportError(new Error('serialize-me'), 'ExportCtx')
+
+      const log = getErrorLog()
+      // Entries should serialize cleanly (raw may contain Error, but the rest is primitive)
+      const serialized = JSON.parse(
+        JSON.stringify(log, (_, v) => (v instanceof Error ? v.message : v))
+      )
+      expect(serialized).toHaveLength(1)
+      expect(serialized[0].message).toBe('serialize-me')
+      expect(serialized[0].context).toBe('ExportCtx')
+      expect(serialized[0].timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+    })
+
+    it('getErrorLog returns all accumulated entries in insertion order', () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      reportError(new Error('first'))
+      reportError(new Error('second'))
+      reportError(new Error('third'))
+
+      const log = getErrorLog()
+      expect(log.map(e => e.message)).toEqual(['first', 'second', 'third'])
+    })
+  })
 })
