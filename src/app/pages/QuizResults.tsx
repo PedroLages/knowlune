@@ -143,7 +143,7 @@ export function QuizResults() {
 
   return (
     <div className="py-6">
-      <main className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm text-center space-y-6">
+      <section aria-label="Quiz results" className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm text-center space-y-6">
         <h1 className="text-2xl font-bold text-foreground">{currentQuiz.title} — Results</h1>
 
         <section aria-label="Score summary">
@@ -222,7 +222,7 @@ export function QuizResults() {
             </Link>
           </div>
         </section>
-      </main>
+      </section>
     </div>
   )
 }

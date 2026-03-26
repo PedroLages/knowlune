@@ -47,7 +47,7 @@ export function QuizReviewContent({ quiz, attempt, courseId, lessonId }: QuizRev
 
   return (
     <div className="py-6">
-      <main className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm space-y-6">
+      <section aria-label="Quiz review" className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm space-y-6">
         {/* Header */}
         <section aria-label="Review progress">
           <h1 className="text-2xl font-bold text-foreground">{quiz.title} — Review</h1>
@@ -60,19 +60,17 @@ export function QuizReviewContent({ quiz, attempt, courseId, lessonId }: QuizRev
           {/* sr-only progressbar with question-count values for screen readers */}
           <div
             role="progressbar"
-            aria-label="Review progress"
+            aria-label="Question progress"
             aria-valuenow={currentIndex + 1}
             aria-valuemin={1}
             aria-valuemax={questions.length}
+            aria-valuetext={`Question ${currentIndex + 1} of ${questions.length}`}
             className="sr-only"
           />
         </section>
 
         {/* Question (read-only) */}
         <section aria-label="Question review">
-          <h2 className="sr-only">
-            Question {currentIndex + 1} of {questions.length}
-          </h2>
           <QuestionDisplay
             question={currentQuestion}
             value={userAnswer}
@@ -127,7 +125,7 @@ export function QuizReviewContent({ quiz, attempt, courseId, lessonId }: QuizRev
           <ArrowLeft className="size-4" aria-hidden="true" />
           Back to Results
         </Link>
-      </main>
+      </section>
     </div>
   )
 }
