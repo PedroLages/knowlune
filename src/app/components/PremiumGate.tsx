@@ -1,15 +1,18 @@
 // E19-S03: PremiumGate component
 // Renders children for premium users, or an upgrade CTA for free users.
 // Handles loading state with skeleton placeholder.
+// E19-S05: Added unauthenticated user flow — shows AuthDialog before checkout.
 
 import { type ReactNode } from 'react'
-import { Crown, Loader2 } from 'lucide-react'
+import { Crown, Loader2, LogIn } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { useIsPremium } from '@/lib/entitlement/isPremium'
+import { useAuthStore } from '@/stores/useAuthStore'
 import { startCheckout } from '@/lib/checkout'
 import { toastError } from '@/lib/toastHelpers'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { AuthDialog } from '@/app/components/auth/AuthDialog'
 
 interface PremiumGateProps {
   /** Content to render when user has premium access */
@@ -67,18 +70,22 @@ export function PremiumGate({
   return <UpgradeCTA featureLabel={featureLabel} error={error} isStale={isStale} />
 }
 
-// --- Internal upgrade CTA component ---
+// --- Exported upgrade CTA component ---
 
-interface UpgradeCTAProps {
+export interface UpgradeCTAProps {
   featureLabel: string
-  error: string | null
-  isStale: boolean
+  error?: string | null
+  isStale?: boolean
 }
 
-function UpgradeCTA({ featureLabel, error, isStale }: UpgradeCTAProps) {
+export function UpgradeCTA({ featureLabel, error = null, isStale = false }: UpgradeCTAProps) {
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false)
+  const [showAuthDialog, setShowAuthDialog] = useState(false)
+  const user = useAuthStore(s => s.user)
+  // Track whether the auth dialog was opened for upgrade flow
+  const pendingCheckoutRef = useRef(false)
 
-  const handleUpgrade = useCallback(async () => {
+  const handleCheckout = useCallback(async () => {
     setIsCheckoutLoading(true)
     try {
       const result = await startCheckout()
@@ -98,50 +105,98 @@ function UpgradeCTA({ featureLabel, error, isStale }: UpgradeCTAProps) {
     }
   }, [])
 
+  // E19-S05 AC5: When user signs in via AuthDialog, proceed to checkout automatically.
+  // Uses useEffect + subscribe to avoid race conditions with synchronous getState() reads.
+  useEffect(() => {
+    if (!pendingCheckoutRef.current) return
+    if (user) {
+      pendingCheckoutRef.current = false
+      setShowAuthDialog(false)
+      handleCheckout()
+    }
+  }, [user, handleCheckout])
+
+  // E19-S05 AC5: Unauthenticated user → show login first, then checkout
+  const handleUpgrade = useCallback(() => {
+    if (!user) {
+      pendingCheckoutRef.current = true
+      setShowAuthDialog(true)
+      return
+    }
+    handleCheckout()
+  }, [user, handleCheckout])
+
+  // When auth dialog closes, clear pending checkout if user didn't sign in
+  const handleAuthDialogChange = useCallback((open: boolean) => {
+    setShowAuthDialog(open)
+    if (!open) {
+      pendingCheckoutRef.current = false
+    }
+  }, [])
+
   return (
-    <Card
-      className="border-gold-muted/50 bg-gold-muted/10"
-      data-testid="premium-gate-cta"
-      role="region"
-      aria-label={`Upgrade required for ${featureLabel}`}
-    >
-      <CardContent className="flex flex-col items-center gap-4 p-6 text-center">
-        <div className="rounded-full bg-gold-muted p-3">
-          <Crown className="size-6 text-gold" aria-hidden="true" />
-        </div>
+    <>
+      <Card
+        className="border-gold-muted/50 bg-gold-muted/10"
+        data-testid="premium-gate-cta"
+        role="region"
+        aria-label={`Upgrade required for ${featureLabel}`}
+      >
+        <CardContent className="flex flex-col items-center gap-4 p-6 text-center">
+          <div className="rounded-full bg-gold-muted p-3">
+            <Crown className="size-6 text-gold" aria-hidden="true" />
+          </div>
 
-        <div className="space-y-1">
-          <h3 className="text-base font-display font-semibold">Premium Feature</h3>
-          <p className="text-sm text-muted-foreground">
-            {isStale
-              ? 'Your subscription status is outdated. Connect to the internet to verify your access.'
-              : error
-                ? error
-                : `Upgrade to Premium to unlock ${featureLabel}.`}
-          </p>
-        </div>
+          <div className="space-y-1">
+            <h3 className="text-base font-display font-semibold">Premium Feature</h3>
+            <p className="text-sm text-muted-foreground">
+              {isStale
+                ? 'Your subscription status is outdated. Connect to the internet to verify your access.'
+                : error
+                  ? error
+                  : `Upgrade to Premium to unlock ${featureLabel}.`}
+            </p>
+          </div>
 
-        <Button
-          variant="brand"
-          className="w-full max-w-xs min-h-[44px] gap-2"
-          onClick={handleUpgrade}
-          disabled={isCheckoutLoading}
-          aria-label={`Upgrade to Premium to unlock ${featureLabel}`}
-          aria-busy={isCheckoutLoading}
-        >
-          {isCheckoutLoading && (
-            <Loader2 className="size-4 motion-safe:animate-spin" aria-hidden="true" />
+          <Button
+            variant="brand"
+            className="w-full max-w-xs min-h-[44px] gap-2"
+            onClick={handleUpgrade}
+            disabled={isCheckoutLoading}
+            aria-label={
+              user
+                ? `Upgrade to Premium to unlock ${featureLabel}`
+                : `Sign in to upgrade to Premium and unlock ${featureLabel}`
+            }
+            aria-busy={isCheckoutLoading}
+          >
+            {isCheckoutLoading ? (
+              <Loader2 className="size-4 motion-safe:animate-spin" aria-hidden="true" />
+            ) : !user ? (
+              <LogIn className="size-4" aria-hidden="true" />
+            ) : null}
+            {isCheckoutLoading
+              ? 'Starting checkout...'
+              : user
+                ? 'Upgrade to Premium'
+                : 'Sign In to Upgrade'}
+          </Button>
+
+          {/* AC5: Resubscribe option for cancelled subscriptions */}
+          {isStale && (
+            <p className="text-xs text-muted-foreground">
+              If your subscription has expired, you can resubscribe by upgrading above.
+            </p>
           )}
-          {isCheckoutLoading ? 'Starting checkout...' : 'Upgrade to Premium'}
-        </Button>
+        </CardContent>
+      </Card>
 
-        {/* AC5: Resubscribe option for cancelled subscriptions */}
-        {isStale && (
-          <p className="text-xs text-muted-foreground">
-            If your subscription has expired, you can resubscribe by upgrading above.
-          </p>
-        )}
-      </CardContent>
-    </Card>
+      {/* E19-S05 AC5: Auth dialog for unauthenticated upgrade flow */}
+      <AuthDialog
+        open={showAuthDialog}
+        onOpenChange={handleAuthDialogChange}
+        defaultMode="sign-in"
+      />
+    </>
   )
 }
