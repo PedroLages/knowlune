@@ -57,7 +57,7 @@ export function QuestionBreakdown({ answers, questions }: QuestionBreakdownProps
         className={cn(
           'flex w-full items-center justify-between rounded-xl px-4 py-2 min-h-[44px]',
           'bg-muted hover:bg-accent transition-colors motion-reduce:transition-none',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand'
         )}
       >
         <span className="text-sm font-medium text-foreground">Question Breakdown</span>
@@ -126,6 +126,7 @@ export function QuestionBreakdown({ answers, questions }: QuestionBreakdownProps
                     className="flex w-full items-center gap-3 rounded-xl px-4 py-2 min-h-[44px] text-left cursor-pointer hover:bg-accent/50 transition-colors motion-reduce:transition-none"
                     onClick={() => setExpandedQuestion(isExpanded ? null : row.question.id)}
                     aria-expanded={isExpanded}
+                    aria-label={`Question ${row.question.order}: ${row.answer.isCorrect ? 'correct' : unanswered ? 'not answered' : 'incorrect'}, ${row.answer.pointsEarned} of ${row.answer.pointsPossible} points`}
                   >
                     {rowContent}
                   </button>

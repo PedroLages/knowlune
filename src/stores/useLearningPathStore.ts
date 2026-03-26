@@ -7,12 +7,8 @@ import { trackAIUsage } from '@/lib/aiEventTracking'
 interface LearningPathState {
   // Multi-path state (E26-S01/S02)
   paths: LearningPath[]
-  entries: LearningPathEntry[]
+  entries: LearningPathEntry[] // All entries across all paths
   activePath: LearningPath | null
-
-  // Legacy single-path state (backward compat)
-  courses: LearningPathCourse[]
-  generatedAt: string | null
   isGenerating: boolean
   error: string | null
 
@@ -32,22 +28,21 @@ interface LearningPathState {
     justification?: string
   ) => Promise<void>
   removeCourseFromPath: (pathId: string, courseId: string) => Promise<void>
-  reorderCourse: (fromIndex: number, toIndex: number) => void
-  getEntriesForPath: (pathId: string) => LearningPathEntry[]
+  reorderCourse: (pathId: string, fromIndex: number, toIndex: number) => Promise<void>
 
-  // AI generation
+  // AI generation (generates into active path)
   generatePath: () => Promise<void>
   regeneratePath: () => Promise<void>
-  clearPath: (pathId?: string) => Promise<void>
-  loadLearningPath: () => Promise<void>
+  clearPath: (pathId: string) => Promise<void>
+
+  // Helpers
+  getEntriesForPath: (pathId: string) => LearningPathEntry[]
 }
 
 export const useLearningPathStore = create<LearningPathState>((set, get) => ({
   paths: [],
   entries: [],
   activePath: null,
-  courses: [],
-  generatedAt: null,
   isGenerating: false,
   error: null,
 
@@ -164,6 +159,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
   ) => {
     const existingEntries = get().entries.filter(e => e.pathId === pathId)
 
+    // Prevent duplicate course in same path
     if (existingEntries.some(e => e.courseId === courseId)) {
       set({ error: 'Course is already in this learning path' })
       return
@@ -203,6 +199,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
 
     if (!entryToRemove) return
 
+    // Recalculate positions for remaining entries
     const remaining = pathEntries
       .filter(e => e.courseId !== courseId)
       .map((e, index) => ({ ...e, position: index + 1 }))
@@ -210,6 +207,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     await persistWithRetry(async () => {
       await db.transaction('rw', db.learningPathEntries, db.learningPaths, async () => {
         await db.learningPathEntries.delete(entryToRemove.id)
+        // Update positions of remaining entries
         for (const entry of remaining) {
           await db.learningPathEntries.update(entry.id, { position: entry.position })
         }
@@ -218,7 +216,10 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     })
 
     set(state => ({
-      entries: [...state.entries.filter(e => e.pathId !== pathId), ...remaining],
+      entries: [
+        ...state.entries.filter(e => e.pathId !== pathId),
+        ...remaining,
+      ],
       paths: state.paths.map(p =>
         p.id === pathId ? { ...p, updatedAt: new Date().toISOString() } : p
       ),
@@ -226,34 +227,52 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     }))
   },
 
-  getEntriesForPath: (pathId: string) => {
-    return get()
+  reorderCourse: async (pathId: string, fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return
+
+    const pathEntries = get()
       .entries.filter(e => e.pathId === pathId)
       .sort((a, b) => a.position - b.position)
-  },
 
-  // --- Legacy single-path methods (backward compat) ---
+    const reordered = [...pathEntries]
+    const [movedEntry] = reordered.splice(fromIndex, 1)
+    reordered.splice(toIndex, 0, movedEntry)
 
-  loadLearningPath: async () => {
-    try {
-      const learningPath = await db.learningPath.toArray()
-      if (learningPath.length > 0) {
-        const sorted = learningPath.sort((a, b) => a.position - b.position)
-        set({
-          courses: sorted,
-          generatedAt: sorted[0]?.generatedAt || null,
-          error: null,
-        })
-      }
-    } catch (error) {
-      console.error('[LearningPathStore] Failed to load learning path:', error)
-      set({ error: 'Failed to load learning path from database' })
-    }
+    const updated = reordered.map((entry, index) => ({
+      ...entry,
+      position: index + 1,
+      isManuallyOrdered:
+        entry.id === movedEntry.id ? true : entry.isManuallyOrdered,
+    }))
+
+    // Optimistic update
+    set(state => ({
+      entries: [
+        ...state.entries.filter(e => e.pathId !== pathId),
+        ...updated,
+      ],
+      error: null,
+    }))
+
+    await persistWithRetry(async () => {
+      await db.transaction('rw', db.learningPathEntries, db.learningPaths, async () => {
+        for (const entry of updated) {
+          await db.learningPathEntries.update(entry.id, {
+            position: entry.position,
+            isManuallyOrdered: entry.isManuallyOrdered,
+          })
+        }
+        await db.learningPaths.update(pathId, { updatedAt: new Date().toISOString() })
+      })
+    }).catch(error => {
+      console.error('[LearningPathStore] Failed to persist reordering:', error)
+      set({ error: 'Failed to save reordering' })
+    })
   },
 
   generatePath: async () => {
+    const { activePath } = get()
     set({ isGenerating: true, error: null })
-
     const startTime = Date.now()
 
     try {
@@ -269,31 +288,83 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
 
       const { generateLearningPath } = await import('@/ai/learningPath/generatePath')
 
-      const generatedCourses: LearningPathCourse[] = []
-      const generatedAt = new Date().toISOString()
+      // Create or use active path
+      let targetPath = activePath
+      if (!targetPath) {
+        targetPath = await get().createPath('AI Learning Path')
+        set(state => ({ ...state, activePath: targetPath }))
+      }
+      const pathId = targetPath!.id
 
-      const result = await generateLearningPath(importedCourses, (course: LearningPathCourse) => {
-        generatedCourses.push(course)
-        set({ courses: [...generatedCourses] })
+      // Clear existing entries for this path
+      await persistWithRetry(async () => {
+        await db.learningPathEntries.where('pathId').equals(pathId).delete()
+      })
+      set(state => ({
+        entries: state.entries.filter(e => e.pathId !== pathId),
+      }))
+
+      const generatedEntries: LearningPathEntry[] = []
+
+      const result = await generateLearningPath(importedCourses, course => {
+        const entry: LearningPathEntry = {
+          id: crypto.randomUUID(),
+          pathId,
+          courseId: course.courseId,
+          courseType: 'imported',
+          position: course.position,
+          justification: course.justification,
+          isManuallyOrdered: false,
+        }
+        generatedEntries.push(entry)
+        set(state => ({
+          entries: [
+            ...state.entries.filter(e => e.pathId !== pathId),
+            ...generatedEntries,
+          ],
+        }))
       })
 
+      // Build final entries from result
+      const finalEntries: LearningPathEntry[] = result.map(course => ({
+        id: crypto.randomUUID(),
+        pathId,
+        courseId: course.courseId,
+        courseType: 'imported' as const,
+        position: course.position,
+        justification: course.justification,
+        isManuallyOrdered: false,
+      }))
+
+      const now = new Date().toISOString()
+
       await persistWithRetry(async () => {
-        await db.transaction('rw', db.learningPath, async () => {
-          await db.learningPath.clear()
-          await db.learningPath.bulkAdd(result.map(course => ({ ...course, generatedAt })))
+        await db.transaction('rw', db.learningPathEntries, db.learningPaths, async () => {
+          // Clear any partial streaming entries
+          await db.learningPathEntries.where('pathId').equals(pathId).delete()
+          await db.learningPathEntries.bulkAdd(finalEntries)
+          await db.learningPaths.update(pathId, {
+            updatedAt: now,
+            isAIGenerated: true,
+          })
         })
       })
 
-      set({
-        courses: result,
-        generatedAt,
+      set(state => ({
+        entries: [
+          ...state.entries.filter(e => e.pathId !== pathId),
+          ...finalEntries,
+        ],
+        paths: state.paths.map(p =>
+          p.id === pathId ? { ...p, updatedAt: now, isAIGenerated: true } : p
+        ),
         isGenerating: false,
         error: null,
-      })
+      }))
 
       trackAIUsage('learning_path', {
         durationMs: Date.now() - startTime,
-        metadata: { courseCount: result.length },
+        metadata: { courseCount: result.length, pathId },
       }).catch(() => {})
     } catch (error) {
       console.error('[LearningPathStore] Failed to generate path:', error)
@@ -309,70 +380,33 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     }
   },
 
-  reorderCourse: async (fromIndex: number, toIndex: number) => {
-    const { courses } = get()
-    if (fromIndex === toIndex) return
-
-    const reordered = [...courses]
-    const [movedCourse] = reordered.splice(fromIndex, 1)
-    reordered.splice(toIndex, 0, movedCourse)
-
-    const updated = reordered.map((course, index) => ({
-      ...course,
-      position: index + 1,
-      isManuallyOrdered:
-        course.courseId === movedCourse.courseId ? true : course.isManuallyOrdered,
-    }))
-
-    set({ courses: updated, error: null })
-
-    await persistWithRetry(async () => {
-      await db.transaction('rw', db.learningPath, async () => {
-        await db.learningPath.clear()
-        await db.learningPath.bulkAdd(
-          updated.map(course => ({
-            ...course,
-            generatedAt: get().generatedAt || new Date().toISOString(),
-          }))
-        )
-      })
-    }).catch(error => {
-      console.error('[LearningPathStore] Failed to persist reordering:', error)
-      set({ error: 'Failed to save reordering' })
-    })
-  },
-
   regeneratePath: async () => {
-    await get().clearPath()
+    const { activePath } = get()
+    if (activePath) {
+      await get().clearPath(activePath.id)
+    }
     await get().generatePath()
   },
 
-  clearPath: async (pathId?: string) => {
-    if (pathId) {
-      // Multi-path clear
-      set(state => ({
-        entries: state.entries.filter(e => e.pathId !== pathId),
-        error: null,
-      }))
-      try {
-        await persistWithRetry(async () => {
-          await db.learningPathEntries.where('pathId').equals(pathId).delete()
-        })
-      } catch (error) {
-        console.error('[LearningPathStore] Failed to clear path:', error)
-        set({ error: 'Failed to clear learning path' })
-      }
-    } else {
-      // Legacy single-path clear
-      set({ courses: [], generatedAt: null, error: null })
-      try {
-        await persistWithRetry(async () => {
-          await db.learningPath.clear()
-        })
-      } catch (error) {
-        console.error('[LearningPathStore] Failed to clear path:', error)
-        set({ error: 'Failed to clear learning path' })
-      }
+  clearPath: async (pathId: string) => {
+    set(state => ({
+      entries: state.entries.filter(e => e.pathId !== pathId),
+      error: null,
+    }))
+
+    try {
+      await persistWithRetry(async () => {
+        await db.learningPathEntries.where('pathId').equals(pathId).delete()
+      })
+    } catch (error) {
+      console.error('[LearningPathStore] Failed to clear path:', error)
+      set({ error: 'Failed to clear learning path' })
     }
+  },
+
+  getEntriesForPath: (pathId: string) => {
+    return get()
+      .entries.filter(e => e.pathId === pathId)
+      .sort((a, b) => a.position - b.position)
   },
 }))

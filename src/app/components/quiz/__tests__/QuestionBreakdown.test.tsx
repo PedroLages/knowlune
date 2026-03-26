@@ -139,7 +139,7 @@ describe('QuestionBreakdown', () => {
       await user.click(screen.getByRole('button', { name: /question breakdown/i }))
 
       // Click incorrect question row to expand
-      const q2Row = screen.getByRole('button', { name: /Q2/ })
+      const q2Row = screen.getByRole('button', { name: /Question 2:.*incorrect/i })
       expect(q2Row).toHaveAttribute('aria-expanded', 'false')
       await user.click(q2Row)
 
@@ -163,7 +163,7 @@ describe('QuestionBreakdown', () => {
       render(<QuestionBreakdown answers={answers} questions={questions} />)
       await user.click(screen.getByRole('button', { name: /question breakdown/i }))
 
-      const q2Row = screen.getByRole('button', { name: /Q2/ })
+      const q2Row = screen.getByRole('button', { name: /Question 2:.*incorrect/i })
       await user.click(q2Row)
       expect(screen.getByRole('region')).toBeInTheDocument()
 
@@ -196,7 +196,7 @@ describe('QuestionBreakdown', () => {
       expect(screen.getByLabelText('Not answered in time')).toBeInTheDocument()
 
       // Expand to see details
-      const q1Row = screen.getByRole('button', { name: /Q1/ })
+      const q1Row = screen.getByRole('button', { name: /Question 1:.*not answered/i })
       await user.click(q1Row)
 
       expect(screen.getByText(/not answered in time/i)).toBeInTheDocument()
@@ -209,7 +209,7 @@ describe('QuestionBreakdown', () => {
       await user.click(screen.getByRole('button', { name: /question breakdown/i }))
 
       // Q1 is correct but HAS explanation — should be expandable
-      const q1Row = screen.getByRole('button', { name: /Q1/ })
+      const q1Row = screen.getByRole('button', { name: /Question 1:.*correct/i })
       await user.click(q1Row)
 
       expect(screen.getByText(/React is a JavaScript library/)).toBeInTheDocument()

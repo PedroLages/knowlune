@@ -54,7 +54,7 @@ export function StatusFilter({ selectedStatuses, onSelectedStatusesChange }: Sta
             value={value}
             data-testid="status-filter-button"
             className={cn(
-              'h-auto rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors first:rounded-full last:rounded-full gap-1 cursor-pointer shadow-none',
+              'min-h-[44px] rounded-full border px-3 py-2 text-xs font-semibold transition-colors first:rounded-full last:rounded-full gap-1 cursor-pointer shadow-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none',
               'data-[state=off]:bg-transparent data-[state=off]:hover:bg-accent data-[state=off]:border-input',
               'data-[state=on]:border-transparent',
               activeClass

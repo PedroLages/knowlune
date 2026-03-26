@@ -18,8 +18,10 @@ vi.mock('@/lib/fileSystem', () => ({
   extractPdfMetadata: vi.fn(),
   isSupportedVideoFormat: vi.fn(),
   getVideoFormat: vi.fn(),
+  isImageFile: vi.fn(),
   SUPPORTED_VIDEO_EXTENSIONS: ['.mp4', '.mkv', '.avi', '.webm'],
   SUPPORTED_DOCUMENT_EXTENSIONS: ['.pdf'],
+  SUPPORTED_IMAGE_EXTENSIONS: ['.jpg', '.jpeg', '.png', '.gif', '.webp'],
   SUPPORTED_FILE_EXTENSIONS: ['.mp4', '.mkv', '.avi', '.webm', '.pdf'],
 }))
 

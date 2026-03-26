@@ -133,7 +133,7 @@ export function HybridOverview() {
               </div>
 
               {/* Arrow */}
-              <ArrowRight className="w-4 h-4 text-neutral-300 mt-1 flex-shrink-0" />
+              <ArrowRight className="size-4 text-neutral-300 mt-1 flex-shrink-0" />
             </div>
           )
         })}
@@ -169,11 +169,11 @@ export function HybridOverview() {
                 <img
                   src={`${course.coverImage}-320w.webp`}
                   alt={course.title}
-                  className="w-14 h-14 rounded-lg object-cover"
+                  className="size-14 rounded-lg object-cover"
                 />
               ) : (
-                <div className="w-14 h-14 rounded-lg bg-brand-soft flex items-center justify-center">
-                  <BookOpen className="w-6 h-6 text-brand" />
+                <div className="size-14 rounded-lg bg-brand-soft flex items-center justify-center">
+                  <BookOpen className="size-6 text-brand" />
                 </div>
               )}
 

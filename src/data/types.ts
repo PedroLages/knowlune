@@ -138,6 +138,7 @@ export interface VideoMetadata {
   duration: number
   width: number
   height: number
+  fileSize: number // File size in bytes (E1B-S02)
 }
 
 export interface PdfMetadata {
@@ -147,6 +148,7 @@ export interface PdfMetadata {
 export interface ImportedCourse {
   id: string
   name: string
+  description?: string // AI-suggested or user-entered course description
   importedAt: string // ISO 8601
   category: string
   tags: string[]
@@ -154,6 +156,11 @@ export interface ImportedCourse {
   videoCount: number
   pdfCount: number
   directoryHandle: FileSystemDirectoryHandle
+  authorId?: string // FK to ImportedAuthor.id (E25-S01 AC2)
+  coverImageHandle?: FileSystemFileHandle // User-selected cover image from folder
+  totalDuration?: number // Sum of all video durations in seconds (E1B-S02)
+  totalFileSize?: number // Sum of all video file sizes in bytes (E1B-S02)
+  maxResolutionHeight?: number // Highest video resolution height in px (E1B-S02)
 }
 
 export interface ImportedVideo {
@@ -165,6 +172,9 @@ export interface ImportedVideo {
   format: VideoFormat
   order: number
   fileHandle: FileSystemFileHandle
+  fileSize?: number // File size in bytes (E1B-S02)
+  width?: number // Video width in pixels (E1B-S02)
+  height?: number // Video height in pixels (E1B-S02)
 }
 
 export interface ImportedPdf {
@@ -319,6 +329,7 @@ export interface AIUsageEvent {
 
 // --- Learning Path (Story 9B.3) ---
 
+/** @deprecated Use LearningPath + LearningPathEntry instead (E26-S01 multi-path migration) */
 export interface LearningPathCourse {
   courseId: string // Primary key: course UUID
   position: number // 1-indexed sequence position
@@ -370,6 +381,29 @@ export interface CourseReminder {
   updatedAt: string // ISO 8601
 }
 
+// --- Imported Author Types (Epic 25) ---
+// These types support user-managed author profiles stored in IndexedDB.
+// They exist alongside the existing Author type used for pre-seeded data.
+
+export interface ImportedAuthor {
+  id: string
+  name: string
+  title?: string // Professional title (e.g., "Software Engineering Expert")
+  bio?: string // Biographical text (optional)
+  shortBio?: string // Brief one-liner description
+  photoUrl?: string // URL or object URL for display (optional)
+  photoHandle?: FileSystemFileHandle // Optional: local file handle for photo
+  courseIds: string[] // Linked imported course IDs
+  specialties?: string[] // Specialty tags (E25-S01 AC5)
+  yearsExperience?: number // Professional experience in years
+  education?: string // Education background (e.g., "PhD Computer Science, MIT")
+  socialLinks?: { website?: string; twitter?: string; linkedin?: string } // Social profile links (E25-S01 AC5)
+  featuredQuote?: string // Memorable quote from the author
+  isPreseeded: boolean // Flag indicating if bundled (e.g., Chase Hughes) (E25-S01 AC5)
+  createdAt: string // ISO 8601
+  updatedAt: string // ISO 8601
+}
+
 export type ReviewRating = 'hard' | 'good' | 'easy'
 
 export interface ReviewRecord {
@@ -381,4 +415,66 @@ export interface ReviewRecord {
   interval: number // Days until next review
   easeFactor: number // SM-2 ease factor (starts at 2.5, min 1.3)
   reviewCount: number // Cumulative number of reviews
+}
+
+export interface Flashcard {
+  id: string // UUID
+  courseId: string // FK to ImportedCourse.id
+  noteId?: string // Optional: provenance from note (for traceability)
+  front: string // Question / prompt text
+  back: string // Answer text
+  // Embedded SM-2 fields — self-contained, no join needed
+  interval: number // Days until next review (default 0)
+  easeFactor: number // SM-2 ease factor (default 2.5, min 1.3)
+  reviewCount: number // Cumulative reviews (default 0)
+  lastRating?: ReviewRating // Most recent rating
+  reviewedAt?: string // ISO 8601 — when last reviewed (undefined = never)
+  nextReviewAt?: string // ISO 8601 — when next review is due (undefined = immediately due)
+  createdAt: string // ISO 8601
+  updatedAt: string // ISO 8601
+}
+
+// --- Career Paths (Story 20.1) ---
+
+export interface CareerPathStage {
+  id: string // e.g., 'web-dev-stage-1'
+  title: string // e.g., 'Foundations'
+  description: string
+  courseIds: string[] // References to Course.id or ImportedCourse.id
+  skills: string[] // Skill tags for this stage
+  estimatedHours: number
+}
+
+export interface CareerPath {
+  id: string // e.g., 'behavioral-intelligence'
+  title: string // e.g., 'Behavioral Intelligence'
+  description: string
+  icon: string // Lucide icon name (e.g., 'Brain')
+  stages: CareerPathStage[]
+  totalEstimatedHours: number
+  createdAt: string // ISO 8601
+}
+
+export type PathEnrollmentStatus = 'active' | 'completed' | 'dropped'
+
+export interface PathEnrollment {
+  id: string // UUID
+  pathId: string // FK to CareerPath.id
+  enrolledAt: string // ISO 8601
+  status: PathEnrollmentStatus
+  completedAt?: string // ISO 8601 (set when all stages done)
+}
+
+export type EntitlementTier = 'free' | 'trial' | 'premium'
+
+export interface CachedEntitlement {
+  userId: string // PK — matches Supabase auth.users.id
+  tier: EntitlementTier
+  stripeCustomerId?: string
+  stripeSubscriptionId?: string
+  planId?: string
+  expiresAt?: string // ISO 8601
+  trialEnd?: string // ISO 8601 — trial expiration date (E19-S08)
+  hadTrial?: boolean // true if user has previously used a free trial (E19-S08)
+  cachedAt: string // ISO 8601 — for 7-day TTL check
 }

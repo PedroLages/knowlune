@@ -6,7 +6,7 @@
 - Always check `git diff HEAD` for uncommitted changes as first review step
 
 ## Recurring Code Quality Patterns
-- String interpolation for className instead of `cn()` -- recurring since E01-S03
+- String interpolation for className instead of `cn()` -- recurring since E01-S03 (17+ instances through E18-S07)
 - `h-* w-*` instead of `size-*` Tailwind v4 shorthand -- recurring since E02-S05
 - Sub-44px touch targets on buttons/icons -- recurring since E02-S07
 - `formatTimestamp` duplicated across multiple files -- recurring since E02-S08
@@ -18,6 +18,13 @@
 - `.catch(() => {})` silently swallowing errors
 - Async event handlers without try/catch
 - `scrollIntoView()` and DOM APIs without element existence checks
+- Empty `catch {}` blocks (no variable) in polling/retry loops (E19-S02)
+
+## Edge Function Security Patterns (Epic 19+)
+- CORS `Access-Control-Allow-Origin: *` on sensitive endpoints -- found E19-S02
+- Missing HTTP method guards on Deno.serve handlers -- found E19-S02
+- Non-null assertions (`!`) on Deno.env.get() without validation -- found E19-S02
+- Customer lookup by email instead of user ID metadata -- found E19-S02
 
 ## Project Conventions
 - Import alias: `@/` resolves to `./src`

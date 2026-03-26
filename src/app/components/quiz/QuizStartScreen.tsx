@@ -72,7 +72,10 @@ export function QuizStartScreen({
   }, [hasResume])
 
   return (
-    <div className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm">
+    <section
+      aria-label="Quiz start"
+      className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm"
+    >
       <h1 className="text-2xl font-semibold">{quiz.title}</h1>
       {quiz.description && (
         <p className="text-base text-muted-foreground mt-2">{quiz.description}</p>
@@ -185,6 +188,6 @@ export function QuizStartScreen({
           </Button>
         )}
       </div>
-    </div>
+    </section>
   )
 }

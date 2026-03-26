@@ -14,15 +14,20 @@ import {
   Sparkles,
   Brain,
   Route,
+  Layers,
+  Milestone,
   Settings as SettingsIcon,
   type LucideIcon,
 } from 'lucide-react'
+import type { DisclosureKey } from '@/app/hooks/useProgressiveDisclosure'
 
 export interface NavigationItem {
   name: string
   path: string
   icon: LucideIcon
   tab?: string // optional: when set, link navigates to path?tab=tab and is active only when search matches
+  /** When set, item is hidden until this key is unlocked via progressive disclosure. */
+  disclosureKey?: DisclosureKey
 }
 
 /** Pure function to calculate whether a navigation item is active given current location. */
@@ -45,33 +50,65 @@ export interface NavigationGroup {
 }
 
 // Grouped navigation for sidebar
+// Groups: Library (browse content), Study (active learning), Track (progress & analytics)
 export const navigationGroups: NavigationGroup[] = [
   {
-    label: 'Learn',
+    label: 'Library',
     items: [
       { name: 'Overview', path: '/', icon: LayoutDashboard },
-      { name: 'My Courses', path: '/my-class', icon: BookOpen },
       { name: 'Courses', path: '/courses', icon: GraduationCap },
       { name: 'Learning Paths', path: '/learning-paths', icon: Route },
-      { name: 'AI Learning Path', path: '/ai-learning-path', icon: Sparkles },
-      { name: 'Knowledge Gaps', path: '/knowledge-gaps', icon: Brain },
-      { name: 'Notes', path: '/notes', icon: StickyNote },
-      { name: 'Review', path: '/review', icon: RotateCcw },
-      { name: 'Retention', path: '/retention', icon: ShieldCheck },
+      { name: 'Authors', path: '/authors', icon: Users, disclosureKey: 'course-imported' },
     ],
   },
   {
-    label: 'Connect',
-    items: [{ name: 'Authors', path: '/authors', icon: Users }],
+    label: 'Study',
+    items: [
+      { name: 'My Courses', path: '/my-class', icon: BookOpen },
+      { name: 'Notes', path: '/notes', icon: StickyNote, disclosureKey: 'note-created' },
+      { name: 'Flashcards', path: '/flashcards', icon: Layers },
+      { name: 'Review', path: '/review', icon: RotateCcw, disclosureKey: 'review-used' },
+      {
+        name: 'Learning Path',
+        path: '/ai-learning-path',
+        icon: Sparkles,
+        disclosureKey: 'ai-used',
+      },
+    ],
   },
   {
     label: 'Track',
     items: [
-      { name: 'Challenges', path: '/challenges', icon: Target },
-      { name: 'Session History', path: '/session-history', icon: History },
-      { name: 'Study Analytics', path: '/reports', tab: 'study', icon: BarChart3 },
-      { name: 'Quiz Analytics', path: '/reports', tab: 'quizzes', icon: ClipboardList },
-      { name: 'AI Analytics', path: '/reports', tab: 'ai', icon: BrainCircuit },
+      { name: 'Challenges', path: '/challenges', icon: Target, disclosureKey: 'challenge-used' },
+      { name: 'Knowledge Gaps', path: '/knowledge-gaps', icon: Brain, disclosureKey: 'ai-used' },
+      { name: 'Retention', path: '/retention', icon: ShieldCheck, disclosureKey: 'review-used' },
+      {
+        name: 'Session History',
+        path: '/session-history',
+        icon: History,
+        disclosureKey: 'challenge-used',
+      },
+      {
+        name: 'Study Analytics',
+        path: '/reports',
+        tab: 'study',
+        icon: BarChart3,
+        disclosureKey: 'lesson-completed',
+      },
+      {
+        name: 'Quiz Analytics',
+        path: '/reports',
+        tab: 'quizzes',
+        icon: ClipboardList,
+        disclosureKey: 'lesson-completed',
+      },
+      {
+        name: 'AI Analytics',
+        path: '/reports',
+        tab: 'ai',
+        icon: BrainCircuit,
+        disclosureKey: 'ai-used',
+      },
     ],
   },
 ]
@@ -89,8 +126,9 @@ export const navigationItems: NavigationItem[] = [
   settingsItem,
 ]
 
-// Paths for primary navigation (shown in mobile bottom bar)
-const primaryNavPaths = ['/', '/my-class', '/courses', '/notes']
+// Paths for primary navigation (shown in mobile bottom bar).
+// The bottom bar has exactly 4 slots — this list must stay at 4 entries.
+export const primaryNavPaths = ['/', '/my-class', '/courses', '/notes']
 
 // Get primary navigation items (for mobile bottom bar)
 export function getPrimaryNav(): NavigationItem[] {

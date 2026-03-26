@@ -118,6 +118,13 @@ Enter corrections (e.g., "1=in-progress, 2=backlog") or "skip" to continue witho
 - IF `last_updated` timestamp is more than 7 days old (or `last_updated` is missing, fall back to `generated`): warn "sprint-status.yaml may be stale"
 - IF any story key doesn't match an epic pattern (e.g., story "5-1-..." but no "epic-5"): warn "orphaned story detected"
 - IF any epic has status in-progress but has no associated stories: warn "in-progress epic has no stories"
+
+<action>Check known issues register (if exists):</action>
+
+- Read `docs/known-issues.yaml` if it exists
+- Count entries with `status: open`, grouped by severity (high, medium, low)
+- IF any `open` + `high` severity issues exist: warn "N high-severity known issues unresolved — consider scheduling fixes"
+- IF total `open` issues > 10: warn "Known issues register growing — triage recommended"
   </step>
 
 <step n="3" goal="Select next action recommendation">
@@ -143,6 +150,8 @@ Enter corrections (e.g., "1=in-progress, 2=backlog") or "skip" to continue witho
 **Stories:** backlog {{count_backlog}}, ready-for-dev {{count_ready}}, in-progress {{count_in_progress}}, review {{count_review}}, done {{count_done}}
 
 **Epics:** backlog {{epic_backlog}}, in-progress {{epic_in_progress}}, done {{epic_done}}
+
+**Known Issues:** {{known_issues_open}} open ({{known_issues_high}} high, {{known_issues_medium}} medium, {{known_issues_low}} low)
 
 **Next Recommendation:** /bmad:bmm:workflows:{{next_workflow_id}} ({{next_story_id}})
 
