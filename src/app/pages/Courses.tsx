@@ -303,13 +303,11 @@ export function Courses() {
   )
 
   function handleTagsChanged() {
-    // Clear any selected topics that no longer exist after rename/delete
+    // After a global rename/delete, selected topic filters may reference
+    // stale tag names. Clear them so the user sees the refreshed tag list
+    // without ghost filters. They can re-select from the updated pills.
     if (selectedTopics.length > 0) {
-      const currentTags = new Set(mergedTags)
-      const validTopics = selectedTopics.filter(t => currentTags.has(t))
-      if (validTopics.length !== selectedTopics.length) {
-        setSelectedTopics(validTopics)
-      }
+      setSelectedTopics([])
     }
   }
 
