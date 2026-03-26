@@ -14,7 +14,7 @@ import {
   type BatchProgress,
 } from '@/lib/youtubeTranscriptPipeline'
 
-type TranscriptStatus = 'pending' | 'fetching' | 'done' | 'failed'
+type TranscriptStatus = 'pending' | 'fetching' | 'done' | 'failed' | 'unavailable'
 
 interface VideoTranscriptState {
   status: TranscriptStatus

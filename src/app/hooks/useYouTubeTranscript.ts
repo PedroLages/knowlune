@@ -50,7 +50,7 @@ export function useYouTubeTranscript(
           return
         }
 
-        if (status === 'failed') {
+        if (status === 'failed' || status === 'unavailable') {
           setLoadingState('empty')
           setCues([])
           setFullText('')
