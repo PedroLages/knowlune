@@ -318,7 +318,7 @@ development_status:
   19-1-authentication-setup: done
   19-2-stripe-subscription-integration: done
   19-3-entitlement-system-and-offline-caching: done
-  19-4-subscription-management: backlog
+  19-4-subscription-management: done
   19-5-premium-feature-gating-and-upgrade-ctas: backlog
   19-6-premium-code-boundary-and-build-separation: backlog
   19-7-legal-pages-and-compliance: backlog
