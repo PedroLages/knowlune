@@ -12,17 +12,19 @@ Problems:
 2. **"Connect" has a single item** — wasteful as a group; "Connect" implies social features, but Authors is about content creators
 3. **Cognitive load** — users must scan 8 items in "Learn" to find retention features buried at the bottom
 
-This story reorganizes into a balanced 5-4-5 structure with semantically meaningful groups.
+This story reorganizes into a balanced 4-5-7 structure with semantically meaningful groups.
 
 ## Target State
 
 ```
-Learn (5)               Review (4)                Track (5)
-├ Overview              ├ Learning Path           ├ Challenges
-├ My Courses            ├ Knowledge Gaps          ├ Session History
-├ Courses               ├ Review                  ├ Study Analytics
-├ Authors               └ Retention               ├ Quiz Analytics
-└ Notes                                           └ AI Analytics
+Library (4)             Study (5)                 Track (7)
+├ Overview              ├ My Courses              ├ Challenges
+├ Courses               ├ Notes                   ├ Knowledge Gaps
+├ Learning Paths        ├ Flashcards              ├ Retention
+└ Authors               ├ Review                  ├ Session History
+                        └ Learning Path           ├ Study Analytics
+                                                  ├ Quiz Analytics
+                                                  └ AI Analytics
 ```
 
 **Settings** remains pinned at the bottom, separate from groups (unchanged).
@@ -54,37 +56,39 @@ Learn (5)               Review (4)                Track (5)
 
 **File:** `src/app/config/navigation.ts`
 
-Replace the `navigationGroups` array (lines 47-75) with the new 3-group structure:
+Replace the `navigationGroups` array with the new 3-group structure (Library/Study/Track):
 
 ```typescript
 export const navigationGroups: NavigationGroup[] = [
   {
-    label: 'Learn',
+    label: 'Library',
     items: [
       { name: 'Overview', path: '/', icon: LayoutDashboard },
-      { name: 'My Courses', path: '/my-class', icon: BookOpen },
       { name: 'Courses', path: '/courses', icon: GraduationCap },
-      { name: 'Authors', path: '/authors', icon: Users },
-      { name: 'Notes', path: '/notes', icon: StickyNote },
+      { name: 'Learning Paths', path: '/career-paths', icon: Milestone },
+      { name: 'Authors', path: '/authors', icon: Users, disclosureKey: 'course-imported' },
     ],
   },
   {
-    label: 'Review',
+    label: 'Study',
     items: [
-      { name: 'Learning Path', path: '/ai-learning-path', icon: Sparkles },
-      { name: 'Knowledge Gaps', path: '/knowledge-gaps', icon: Brain },
-      { name: 'Review', path: '/review', icon: RotateCcw },
-      { name: 'Retention', path: '/retention', icon: ShieldCheck },
+      { name: 'My Courses', path: '/my-class', icon: BookOpen },
+      { name: 'Notes', path: '/notes', icon: StickyNote, disclosureKey: 'note-created' },
+      { name: 'Flashcards', path: '/flashcards', icon: Layers },
+      { name: 'Review', path: '/review', icon: RotateCcw, disclosureKey: 'review-used' },
+      { name: 'Learning Path', path: '/ai-learning-path', icon: Sparkles, disclosureKey: 'ai-used' },
     ],
   },
   {
     label: 'Track',
     items: [
-      { name: 'Challenges', path: '/challenges', icon: Target },
-      { name: 'Session History', path: '/session-history', icon: History },
-      { name: 'Study Analytics', path: '/reports', tab: 'study', icon: BarChart3 },
-      { name: 'Quiz Analytics', path: '/reports', tab: 'quizzes', icon: ClipboardList },
-      { name: 'AI Analytics', path: '/reports', tab: 'ai', icon: BrainCircuit },
+      { name: 'Challenges', path: '/challenges', icon: Target, disclosureKey: 'challenge-used' },
+      { name: 'Knowledge Gaps', path: '/knowledge-gaps', icon: Brain, disclosureKey: 'ai-used' },
+      { name: 'Retention', path: '/retention', icon: ShieldCheck, disclosureKey: 'review-used' },
+      { name: 'Session History', path: '/session-history', icon: History, disclosureKey: 'challenge-used' },
+      { name: 'Study Analytics', path: '/reports', tab: 'study', icon: BarChart3, disclosureKey: 'lesson-completed' },
+      { name: 'Quiz Analytics', path: '/reports', tab: 'quizzes', icon: ClipboardList, disclosureKey: 'lesson-completed' },
+      { name: 'AI Analytics', path: '/reports', tab: 'ai', icon: BrainCircuit, disclosureKey: 'ai-used' },
     ],
   },
 ]
@@ -92,18 +96,19 @@ export const navigationGroups: NavigationGroup[] = [
 
 **Key changes:**
 - "Connect" group eliminated entirely
-- Authors moved to "Learn" (position 4, between Courses and Notes)
-- Learning Path, Knowledge Gaps, Review, Retention extracted to new "Review" group
-- "Track" items unchanged (same order)
-- No icon imports need adding/removing — all icons already imported
+- Groups renamed: Learn -> Library, Review -> Study (new), Track expanded
+- Authors moved to "Library" with progressive disclosure gating
+- Flashcards added to "Study" group
+- Knowledge Gaps and Retention moved to "Track" group
+- All items have appropriate `disclosureKey` values for progressive disclosure
 
 ### Step 2: Verify Mobile Bottom Bar (AC5)
 
 **File:** `src/app/config/navigation.ts` (lines 91-101)
 
-The `primaryNavPaths` array is `['/', '/my-class', '/courses', '/notes']` — all 4 items remain in the "Learn" group so no change is needed.
+The `primaryNavPaths` array is `['/', '/my-class', '/courses', '/notes']` — items span Library and Study groups so no change is needed.
 
-`getOverflowNav()` dynamically filters all items not in `primaryNavPaths` — it will automatically include Authors, all Review items, and all Track items in the overflow drawer.
+`getOverflowNav()` dynamically filters all items not in `primaryNavPaths` — it will automatically include Authors, Learning Paths, all Study items not in primary, and all Track items in the overflow drawer.
 
 **Verification only** — run existing E2E navigation tests to confirm.
 
@@ -120,7 +125,7 @@ The collapsed sidebar separator logic is:
 ) : (
 ```
 
-This renders a separator before groups with index > 0 — it works with any number of groups. With 3 groups, separators appear before "Review" and "Track" — correct behavior.
+This renders a separator before groups with index > 0 — it works with any number of groups. With 3 groups, separators appear before "Study" and "Track" — correct behavior.
 
 **Verification only** — no code change needed.
 
@@ -131,23 +136,23 @@ This renders a separator before groups with index > 0 — it works with any numb
 ```typescript
 test.describe('E23-S04: Restructure Sidebar Navigation Groups', () => {
   // AC1: Three groups exist with correct labels
-  test('sidebar shows Learn, Review, Track group labels', async ({ page }) => {
+  test('sidebar shows Library, Study, Track group labels', async ({ page }) => {
     // Navigate at desktop viewport, assert group labels visible
   })
 
-  // AC2: Learn group contains correct items in order
-  test('Learn group contains Overview, My Courses, Courses, Authors, Notes', async ({ page }) => {
-    // Assert 5 items in Learn group
+  // AC2: Library group contains correct items in order
+  test('Library group contains Overview, Courses, Learning Paths, Authors', async ({ page }) => {
+    // Assert 4 items in Library group
   })
 
-  // AC3: Review group contains correct items
-  test('Review group contains Learning Path, Knowledge Gaps, Review, Retention', async ({ page }) => {
-    // Assert 4 items in Review group
+  // AC3: Study group contains correct items
+  test('Study group contains My Courses, Notes, Flashcards, Review, Learning Path', async ({ page }) => {
+    // Assert 5 items in Study group
   })
 
   // AC4: Track group contains correct items
-  test('Track group contains Challenges, Session History, and 3 analytics tabs', async ({ page }) => {
-    // Assert 5 items in Track group
+  test('Track group contains Challenges, Knowledge Gaps, Retention, Session History, and 3 analytics tabs', async ({ page }) => {
+    // Assert 7 items in Track group
   })
 
   // AC5: Mobile overflow drawer works
@@ -181,29 +186,30 @@ test.describe('E23-S04: Restructure Sidebar Navigation Groups', () => {
 import { navigationGroups, getPrimaryNav, getOverflowNav } from '../navigation'
 
 describe('navigationGroups', () => {
-  it('has exactly 3 groups: Learn, Review, Track', () => {
+  it('has exactly 3 groups: Library, Study, Track', () => {
     expect(navigationGroups).toHaveLength(3)
-    expect(navigationGroups.map(g => g.label)).toEqual(['Learn', 'Review', 'Track'])
+    expect(navigationGroups.map(g => g.label)).toEqual(['Library', 'Study', 'Track'])
   })
 
-  it('Learn group has 5 items in correct order', () => {
-    const learn = navigationGroups[0]
-    expect(learn.items.map(i => i.name)).toEqual([
-      'Overview', 'My Courses', 'Courses', 'Authors', 'Notes',
+  it('Library group has 4 items in correct order', () => {
+    const library = navigationGroups[0]
+    expect(library.items.map(i => i.name)).toEqual([
+      'Overview', 'Courses', 'Learning Paths', 'Authors',
     ])
   })
 
-  it('Review group has 4 items in correct order', () => {
-    const review = navigationGroups[1]
-    expect(review.items.map(i => i.name)).toEqual([
-      'Learning Path', 'Knowledge Gaps', 'Review', 'Retention',
+  it('Study group has 5 items in correct order', () => {
+    const study = navigationGroups[1]
+    expect(study.items.map(i => i.name)).toEqual([
+      'My Courses', 'Notes', 'Flashcards', 'Review', 'Learning Path',
     ])
   })
 
-  it('Track group has 5 items in correct order', () => {
+  it('Track group has 7 items in correct order', () => {
     const track = navigationGroups[2]
     expect(track.items.map(i => i.name)).toEqual([
-      'Challenges', 'Session History', 'Study Analytics', 'Quiz Analytics', 'AI Analytics',
+      'Challenges', 'Knowledge Gaps', 'Retention', 'Session History',
+      'Study Analytics', 'Quiz Analytics', 'AI Analytics',
     ])
   })
 
@@ -267,8 +273,8 @@ Run all existing test suites to confirm no regressions:
 
 | Decision | Rationale | Alternative Considered |
 |----------|-----------|----------------------|
-| Authors in "Learn" not "Track" | Authors are content creators browsed alongside courses — fits the "content access" mental model | "Track" — rejected because tracking is about progress/analytics, not content |
-| "Review" label (not "Retain" or "Deepen") | "Review" is the clearest action verb matching what users do: review flashcards, review knowledge gaps, check retention | "Retain" — too passive; "Deepen" — too vague |
+| Authors in "Library" not "Track" | Authors are content creators browsed alongside courses — fits the "content access" mental model | "Track" — rejected because tracking is about progress/analytics, not content |
+| "Library/Study/Track" labels | "Library" = content browsing, "Study" = active learning activities, "Track" = progress analytics. Clear mental model for users. | "Learn/Review/Track" — rejected; "Review" was too narrow for a group containing Flashcards and Learning Path |
 | Keep Search palette decoupled | SearchCommandPalette has its own navigation list with different labels (e.g., "About" vs "Authors"). Syncing is out of scope for this story. | Refactor to import from navigation config — too large a scope |
 | No route changes | All routes stay the same (`/authors`, `/review`, `/retention`, etc.). Only group assignment and labels change. | Moving routes — unnecessary complexity |
 | Add unit tests for config | Navigation config drives 3 UI surfaces — structural unit test prevents regression in future stories | Skip unit tests — rejected because config is shared state worth protecting |

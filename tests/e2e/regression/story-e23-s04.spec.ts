@@ -8,8 +8,8 @@
  *
  * "Connect" group is eliminated.
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
 
 // Desktop viewport — sidebar visible at ≥1024px
 const DESKTOP = { width: 1440, height: 900 }
@@ -17,6 +17,18 @@ const MOBILE = { width: 375, height: 812 }
 const TABLET = { width: 768, height: 1024 }
 
 test.describe('E23-S04: Restructure Sidebar Navigation Groups', () => {
+  // Seed progressive disclosure "show all" so gated sidebar items are visible,
+  // and dismiss the welcome wizard so it doesn't block navigation.
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('knowlune-sidebar-show-all-v1', JSON.stringify(true))
+      localStorage.setItem(
+        'knowlune-welcome-wizard-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' })
+      )
+    })
+  })
+
   // ---------------------------------------------------------------------------
   // AC1: Sidebar shows Library, Study, Track group labels
   // ---------------------------------------------------------------------------
@@ -72,7 +84,7 @@ test.describe('E23-S04: Restructure Sidebar Navigation Groups', () => {
     await expect(sidebar.getByRole('link', { name: 'Notes' })).toBeVisible()
     await expect(sidebar.getByRole('link', { name: 'Flashcards' })).toBeVisible()
     await expect(sidebar.getByRole('link', { name: 'Review', exact: true })).toBeVisible()
-    await expect(sidebar.getByRole('link', { name: 'Learning Path' })).toBeVisible()
+    await expect(sidebar.getByRole('link', { name: 'Learning Path', exact: true })).toBeVisible()
   })
 
   // ---------------------------------------------------------------------------
@@ -108,7 +120,7 @@ test.describe('E23-S04: Restructure Sidebar Navigation Groups', () => {
     // Primary items visible in bottom bar
     await expect(bottomNav.getByText('Overview')).toBeVisible()
     await expect(bottomNav.getByText('My Courses')).toBeVisible()
-    await expect(bottomNav.getByText('Courses')).toBeVisible()
+    await expect(bottomNav.getByText('Courses', { exact: true })).toBeVisible()
     await expect(bottomNav.getByText('Notes')).toBeVisible()
 
     // More button visible
@@ -139,7 +151,7 @@ test.describe('E23-S04: Restructure Sidebar Navigation Groups', () => {
     // Study group items in overflow
     await expect(drawer.getByRole('link', { name: 'Flashcards' })).toBeVisible()
     await expect(drawer.getByRole('link', { name: 'Review', exact: true })).toBeVisible()
-    await expect(drawer.getByRole('link', { name: 'Learning Path' })).toBeVisible()
+    await expect(drawer.getByRole('link', { name: 'Learning Path', exact: true })).toBeVisible()
 
     // Track items in overflow
     await expect(drawer.getByRole('link', { name: 'Challenges' })).toBeVisible()
