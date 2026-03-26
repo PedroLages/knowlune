@@ -3,6 +3,8 @@ import { createBrowserRouter, Navigate, useParams } from 'react-router'
 import { Layout } from './components/Layout'
 import { DelayedFallback } from './components/DelayedFallback'
 import { Skeleton } from './components/ui/skeleton'
+import { PremiumFeaturePage, PREMIUM_FEATURES } from './components/PremiumFeaturePage'
+import { MessageSquare, Sparkles, Brain, RotateCcw, Shuffle, BarChart3, Layers } from 'lucide-react'
 
 // Lazy-loaded page components (code-splitting)
 // Named exports need .then(m => ({ default: m.ExportName }))
@@ -69,9 +71,7 @@ const CareerPaths = React.lazy(() =>
 const CareerPathDetail = React.lazy(() =>
   import('./pages/CareerPathDetail').then(m => ({ default: m.CareerPathDetail }))
 )
-const NotFound = React.lazy(() =>
-  import('./pages/NotFound').then(m => ({ default: m.NotFound }))
-)
+const NotFound = React.lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })))
 
 // Default exports work directly with React.lazy
 const MyClass = React.lazy(() => import('./pages/MyClass'))
@@ -230,7 +230,9 @@ export const router = createBrowserRouter([
         path: 'notes/chat',
         element: (
           <SuspensePage>
-            <ChatQA />
+            <PremiumFeaturePage {...PREMIUM_FEATURES.chatQA} icon={MessageSquare}>
+              <ChatQA />
+            </PremiumFeaturePage>
           </SuspensePage>
         ),
       },
@@ -308,7 +310,9 @@ export const router = createBrowserRouter([
         path: 'ai-learning-path',
         element: (
           <SuspensePage>
-            <AILearningPath />
+            <PremiumFeaturePage {...PREMIUM_FEATURES.aiLearningPath} icon={Sparkles}>
+              <AILearningPath />
+            </PremiumFeaturePage>
           </SuspensePage>
         ),
       },
@@ -316,7 +320,9 @@ export const router = createBrowserRouter([
         path: 'knowledge-gaps',
         element: (
           <SuspensePage>
-            <KnowledgeGaps />
+            <PremiumFeaturePage {...PREMIUM_FEATURES.knowledgeGaps} icon={Brain}>
+              <KnowledgeGaps />
+            </PremiumFeaturePage>
           </SuspensePage>
         ),
       },
@@ -324,7 +330,9 @@ export const router = createBrowserRouter([
         path: 'review',
         element: (
           <SuspensePage>
-            <ReviewQueue />
+            <PremiumFeaturePage {...PREMIUM_FEATURES.reviewQueue} icon={RotateCcw}>
+              <ReviewQueue />
+            </PremiumFeaturePage>
           </SuspensePage>
         ),
       },
@@ -332,7 +340,9 @@ export const router = createBrowserRouter([
         path: 'review/interleaved',
         element: (
           <SuspensePage>
-            <InterleavedReview />
+            <PremiumFeaturePage {...PREMIUM_FEATURES.interleavedReview} icon={Shuffle}>
+              <InterleavedReview />
+            </PremiumFeaturePage>
           </SuspensePage>
         ),
       },
@@ -340,7 +350,9 @@ export const router = createBrowserRouter([
         path: 'retention',
         element: (
           <SuspensePage>
-            <RetentionDashboard />
+            <PremiumFeaturePage {...PREMIUM_FEATURES.retentionDashboard} icon={BarChart3}>
+              <RetentionDashboard />
+            </PremiumFeaturePage>
           </SuspensePage>
         ),
       },
@@ -348,7 +360,9 @@ export const router = createBrowserRouter([
         path: 'flashcards',
         element: (
           <SuspensePage>
-            <Flashcards />
+            <PremiumFeaturePage {...PREMIUM_FEATURES.flashcards} icon={Layers}>
+              <Flashcards />
+            </PremiumFeaturePage>
           </SuspensePage>
         ),
       },

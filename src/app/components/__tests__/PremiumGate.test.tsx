@@ -37,6 +37,41 @@ vi.mock('@/lib/toastHelpers', () => ({
   toastError: { saveFailed: (...args: unknown[]) => mockToastError.saveFailed(...args) },
 }))
 
+// ---------------------------------------------------------------------------
+// Mock the auth store with controllable user value
+// ---------------------------------------------------------------------------
+
+let mockUser: { id: string; email: string } | null = null
+
+vi.mock('@/stores/useAuthStore', () => ({
+  useAuthStore: Object.assign(
+    (selector: (state: { user: typeof mockUser }) => unknown) => selector({ user: mockUser }),
+    {
+      getState: () => ({ user: mockUser }),
+      subscribe: vi.fn(() => vi.fn()),
+    }
+  ),
+}))
+
+// ---------------------------------------------------------------------------
+// Mock AuthDialog — renders a simple placeholder to avoid Radix internals
+// ---------------------------------------------------------------------------
+
+vi.mock('@/app/components/auth/AuthDialog', () => ({
+  AuthDialog: ({
+    open,
+    onOpenChange,
+  }: {
+    open: boolean
+    onOpenChange: (open: boolean) => void
+  }) =>
+    open ? (
+      <div data-testid="auth-dialog">
+        <button onClick={() => onOpenChange(false)}>Close Auth</button>
+      </div>
+    ) : null,
+}))
+
 import { PremiumGate } from '@/app/components/PremiumGate'
 
 // ---------------------------------------------------------------------------
@@ -50,6 +85,9 @@ describe('PremiumGate', () => {
     mockEntitlementStatus.tier = 'free'
     mockEntitlementStatus.isStale = false
     mockEntitlementStatus.error = null
+    mockUser = null
+    mockStartCheckout.mockReset()
+    mockToastError.saveFailed.mockReset()
   })
 
   it('renders children when user is premium', () => {
@@ -173,36 +211,87 @@ describe('PremiumGate', () => {
     expect(screen.getByRole('region', { name: /Knowledge Graphs/ })).toBeInTheDocument()
   })
 
-  it('upgrade button has accessible label', () => {
-    mockEntitlementStatus.isPremium = false
+  // --- Authenticated user tests ---
 
-    render(
-      <PremiumGate featureLabel="AI Analysis">
-        <div>Secret Content</div>
-      </PremiumGate>
-    )
+  describe('authenticated user', () => {
+    beforeEach(() => {
+      mockUser = { id: 'user-123', email: 'test@test.com' }
+    })
 
-    expect(
-      screen.getByRole('button', { name: /Upgrade to Premium to unlock AI Analysis/ })
-    ).toBeInTheDocument()
+    it('upgrade button shows "Upgrade to Premium" with accessible label', () => {
+      mockEntitlementStatus.isPremium = false
+
+      render(
+        <PremiumGate featureLabel="AI Analysis">
+          <div>Secret Content</div>
+        </PremiumGate>
+      )
+
+      expect(
+        screen.getByRole('button', { name: /Upgrade to Premium to unlock AI Analysis/ })
+      ).toBeInTheDocument()
+      expect(screen.getByText('Upgrade to Premium')).toBeInTheDocument()
+    })
+
+    it('calls startCheckout directly when clicking upgrade', async () => {
+      mockEntitlementStatus.isPremium = false
+      mockStartCheckout.mockRejectedValueOnce(new Error('Checkout unavailable'))
+
+      const user = userEvent.setup()
+
+      render(
+        <PremiumGate featureLabel="AI Analysis">
+          <div>Secret Content</div>
+        </PremiumGate>
+      )
+
+      const button = screen.getByRole('button', { name: /Upgrade to Premium/ })
+      await user.click(button)
+
+      expect(mockStartCheckout).toHaveBeenCalled()
+      // After rejection, loading state should be reset (button no longer shows "Starting checkout...")
+      expect(screen.getByRole('button', { name: /Upgrade to Premium/ })).not.toBeDisabled()
+    })
   })
 
-  it('handleUpgrade shows toast when startCheckout rejects', async () => {
-    mockEntitlementStatus.isPremium = false
-    mockStartCheckout.mockRejectedValueOnce(new Error('Checkout unavailable'))
+  // --- Unauthenticated user tests (AC5) ---
 
-    const user = userEvent.setup()
+  describe('unauthenticated user', () => {
+    beforeEach(() => {
+      mockUser = null
+    })
 
-    render(
-      <PremiumGate featureLabel="AI Analysis">
-        <div>Secret Content</div>
-      </PremiumGate>
-    )
+    it('shows "Sign In to Upgrade" button when not authenticated', () => {
+      mockEntitlementStatus.isPremium = false
 
-    const button = screen.getByRole('button', { name: /Upgrade to Premium/ })
-    await user.click(button)
+      render(
+        <PremiumGate featureLabel="AI Analysis">
+          <div>Secret Content</div>
+        </PremiumGate>
+      )
 
-    // After rejection, loading state should be reset (button no longer shows "Starting checkout...")
-    expect(screen.getByRole('button', { name: /Upgrade to Premium/ })).not.toBeDisabled()
+      expect(screen.getByText('Sign In to Upgrade')).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: /Sign in to upgrade to Premium/ })
+      ).toBeInTheDocument()
+    })
+
+    it('opens AuthDialog instead of starting checkout when clicking upgrade', async () => {
+      mockEntitlementStatus.isPremium = false
+
+      const user = userEvent.setup()
+
+      render(
+        <PremiumGate featureLabel="AI Analysis">
+          <div>Secret Content</div>
+        </PremiumGate>
+      )
+
+      const button = screen.getByRole('button', { name: /Sign in to upgrade/ })
+      await user.click(button)
+
+      expect(screen.getByTestId('auth-dialog')).toBeInTheDocument()
+      expect(mockStartCheckout).not.toHaveBeenCalled()
+    })
   })
 })
