@@ -290,54 +290,50 @@ export default function MyClass() {
 
             {/* All Courses View */}
             <TabsContent value="all">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {sortCourses(allCoursesWithStatus).map(course => (
-                  <CourseCard
-                    key={course.id}
-                    course={course}
-                    variant="progress"
-                    status={course.status}
-                    completionPercent={'completionPercent' in course ? course.completionPercent : 0}
-                    lastAccessedAt={'lastAccessedAt' in course ? course.lastAccessedAt : undefined}
-                  />
-                ))}
-              </div>
+              {allCoursesWithStatus.length === 0 ? (
+                <EmptyState
+                  icon={PlayCircle}
+                  headingLevel={3}
+                  title="No courses found"
+                  description="Browse the course catalog to add courses to your library."
+                  actionLabel="Browse Courses"
+                  actionHref="/courses"
+                />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  {sortCourses(allCoursesWithStatus).map(course => (
+                    <CourseCard
+                      key={course.id}
+                      course={course}
+                      variant="progress"
+                      status={course.status}
+                      completionPercent={
+                        'completionPercent' in course ? course.completionPercent : 0
+                      }
+                      lastAccessedAt={
+                        'lastAccessedAt' in course ? course.lastAccessedAt : undefined
+                      }
+                    />
+                  ))}
+                </div>
+              )}
             </TabsContent>
 
             {/* By Category View */}
             <TabsContent value="by-category">
-              {Object.entries(coursesByCategory).map(([category, courses]) => (
-                <section key={category} className="mb-8">
-                  <h2 className="text-lg font-semibold mb-4">{category}</h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    {sortCourses(courses).map(course => (
-                      <CourseCard
-                        key={course.id}
-                        course={course}
-                        variant="progress"
-                        status={course.status}
-                        completionPercent={
-                          'completionPercent' in course ? course.completionPercent : 0
-                        }
-                        lastAccessedAt={
-                          'lastAccessedAt' in course ? course.lastAccessedAt : undefined
-                        }
-                      />
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </TabsContent>
-
-            {/* By Difficulty View */}
-            <TabsContent value="by-difficulty">
-              {['Beginner', 'Intermediate', 'Advanced'].map(difficulty => {
-                const courses = coursesByDifficulty[difficulty]
-                if (!courses || courses.length === 0) return null
-
-                return (
-                  <section key={difficulty} className="mb-8">
-                    <h2 className="text-lg font-semibold mb-4">{difficulty}</h2>
+              {Object.keys(coursesByCategory).length === 0 ? (
+                <EmptyState
+                  icon={PlayCircle}
+                  headingLevel={3}
+                  title="No courses in any category"
+                  description="Start a course to see it organized by category."
+                  actionLabel="Browse Courses"
+                  actionHref="/courses"
+                />
+              ) : (
+                Object.entries(coursesByCategory).map(([category, courses]) => (
+                  <section key={category} className="mb-8">
+                    <h2 className="text-lg font-semibold mb-4">{category}</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                       {sortCourses(courses).map(course => (
                         <CourseCard
@@ -355,8 +351,51 @@ export default function MyClass() {
                       ))}
                     </div>
                   </section>
-                )
-              })}
+                ))
+              )}
+            </TabsContent>
+
+            {/* By Difficulty View */}
+            <TabsContent value="by-difficulty">
+              {['Beginner', 'Intermediate', 'Advanced'].every(
+                d => !coursesByDifficulty[d] || coursesByDifficulty[d].length === 0
+              ) ? (
+                <EmptyState
+                  icon={PlayCircle}
+                  headingLevel={3}
+                  title="No courses at any difficulty level"
+                  description="Start a course to see it organized by difficulty."
+                  actionLabel="Browse Courses"
+                  actionHref="/courses"
+                />
+              ) : (
+                ['Beginner', 'Intermediate', 'Advanced'].map(difficulty => {
+                  const courses = coursesByDifficulty[difficulty]
+                  if (!courses || courses.length === 0) return null
+
+                  return (
+                    <section key={difficulty} className="mb-8">
+                      <h2 className="text-lg font-semibold mb-4">{difficulty}</h2>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                        {sortCourses(courses).map(course => (
+                          <CourseCard
+                            key={course.id}
+                            course={course}
+                            variant="progress"
+                            status={course.status}
+                            completionPercent={
+                              'completionPercent' in course ? course.completionPercent : 0
+                            }
+                            lastAccessedAt={
+                              'lastAccessedAt' in course ? course.lastAccessedAt : undefined
+                            }
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  )
+                })
+              )}
             </TabsContent>
           </Tabs>
         </div>

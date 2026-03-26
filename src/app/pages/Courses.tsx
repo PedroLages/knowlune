@@ -332,15 +332,17 @@ export function Courses() {
             </p>
           )}
         </div>
-        <Button
-          variant="brand"
-          onClick={handleOpenBulkImport}
-          className="hover:scale-[1.02] hover:shadow-md rounded-xl transition-[transform,box-shadow] duration-200"
-          data-testid="import-course-btn"
-        >
-          <FolderOpen className="size-4 mr-2" />
-          Import Course
-        </Button>
+        {totalCourses > 0 && (
+          <Button
+            variant="brand"
+            onClick={handleOpenBulkImport}
+            className="hover:scale-[1.02] hover:shadow-md rounded-xl transition-[transform,box-shadow] duration-200"
+            data-testid="import-course-btn"
+          >
+            <FolderOpen className="size-4 mr-2" />
+            Import Course
+          </Button>
+        )}
       </div>
 
       <ImportWizardDialog open={wizardOpen} onOpenChange={setWizardOpen} />
@@ -513,7 +515,7 @@ export function Courses() {
                         <ToggleGroupItem
                           key={chip.value}
                           value={chip.value}
-                          className={`h-auto rounded-full! border px-3 sm:px-4 py-3 sm:py-1.5 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-card data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-accent data-[state=off]:hover:text-foreground data-[state=off]:border-border cursor-pointer shadow-none${i === 0 ? ' mr-1' : ''}`}
+                          className={`min-h-[44px] rounded-full! border px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:outline-none data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-card data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-accent data-[state=off]:hover:text-foreground data-[state=off]:border-border cursor-pointer shadow-none${i === 0 ? ' mr-1' : ''}`}
                         >
                           {chip.label}
                         </ToggleGroupItem>
