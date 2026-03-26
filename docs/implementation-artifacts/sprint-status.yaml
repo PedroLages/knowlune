@@ -426,7 +426,7 @@ development_status:
   # Depends on: Epic 1 (course data model), Epic 2 (player), Epic 9 (AI — Premium only)
   # ──────────────────────────────────────────────────
   epic-28: backlog
-  28-1-dexie-v24-schema-migration-and-youtube-types: backlog
+  28-1-dexie-v24-schema-migration-and-youtube-types: done
   28-2-youtube-url-parser-and-configuration-settings: backlog
   28-3-youtube-data-api-v3-client-with-rate-limiting: backlog
   28-4-transcript-pipeline-tier-1-youtube-transcript: backlog
