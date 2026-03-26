@@ -83,6 +83,7 @@ const CareerPaths = React.lazy(() =>
 const CareerPathDetail = React.lazy(() =>
   import('./pages/CareerPathDetail').then(m => ({ default: m.CareerPathDetail }))
 )
+const Login = React.lazy(() => import('./pages/Login').then(m => ({ default: m.Login })))
 const NotFound = React.lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })))
 const LegalLayout = React.lazy(() =>
   import('./pages/legal/LegalLayout').then(m => ({ default: m.LegalLayout }))
@@ -152,6 +153,15 @@ export const router = createBrowserRouter([
         ),
       },
     ],
+  },
+  // Standalone login page — outside Layout (no sidebar/header)
+  {
+    path: 'login',
+    element: (
+      <SuspensePage>
+        <Login />
+      </SuspensePage>
+    ),
   },
   {
     path: '/',

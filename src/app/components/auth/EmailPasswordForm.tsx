@@ -5,6 +5,8 @@ import { Label } from '@/app/components/ui/label'
 import { Button } from '@/app/components/ui/button'
 import { useAuthStore, NETWORK_ERROR_MESSAGE } from '@/stores/useAuthStore'
 import { toastSuccess } from '@/lib/toastHelpers'
+import { supabase } from '@/lib/auth/supabase'
+import { toast } from 'sonner'
 
 interface EmailPasswordFormProps {
   mode: 'sign-in' | 'sign-up'
@@ -18,11 +20,35 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
   const [validationError, setValidationError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [forgotLoading, setForgotLoading] = useState(false)
 
   const signUp = useAuthStore(s => s.signUp)
   const signIn = useAuthStore(s => s.signIn)
 
   const isSignUp = mode === 'sign-up'
+
+  async function handleForgotPassword() {
+    if (!email.includes('@') || !email.includes('.')) {
+      setValidationError('Enter your email address above, then click Forgot Password')
+      return
+    }
+    if (!supabase) {
+      toast.error('Authentication is not configured.')
+      return
+    }
+    setForgotLoading(true)
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email)
+      if (resetError) {
+        toast.error(resetError.message)
+      } else {
+        toastSuccess.saved('Password reset email sent. Check your inbox.')
+      }
+    } catch {
+      toast.error('Unable to send reset email. Please try again.')
+    }
+    setForgotLoading(false)
+  }
 
   function validate(): string | null {
     if (!email.includes('@') || !email.includes('.')) {
@@ -125,6 +151,16 @@ export function EmailPasswordForm({ mode, onSuccess }: EmailPasswordFormProps) {
         <p id="auth-password-hint" className="text-xs text-muted-foreground">
           Must be at least 8 characters
         </p>
+        {!isSignUp && (
+          <button
+            type="button"
+            onClick={handleForgotPassword}
+            disabled={forgotLoading}
+            className="min-h-[44px] text-sm font-medium text-brand-soft-foreground hover:underline focus-visible:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm disabled:opacity-50"
+          >
+            {forgotLoading ? 'Sending...' : 'Forgot Password?'}
+          </button>
+        )}
       </div>
 
       {isSignUp && (

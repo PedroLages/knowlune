@@ -9,6 +9,7 @@ import {
   Moon,
   Menu,
   Settings,
+  LogIn,
   LogOut,
   User,
 } from 'lucide-react'
@@ -472,70 +473,82 @@ export function Layout() {
 
             <NotificationCenter />
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  className="flex items-center gap-3 pl-4 border-l border-border cursor-pointer rounded-lg p-1 -m-1 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label="User menu"
-                >
-                  <Avatar className="size-10 ring-2 ring-transparent transition-all duration-200 hover:ring-brand/30 hover:shadow-md">
-                    {settings.profilePhotoDataUrl ? (
-                      <AvatarImage
-                        src={settings.profilePhotoDataUrl}
-                        alt={settings.displayName}
-                        className="object-cover"
-                      />
-                    ) : (
-                      <AvatarFallback className="bg-brand-soft text-brand-soft-foreground font-semibold transition-colors duration-200 hover:bg-brand hover:text-white">
-                        {getInitials(settings.displayName)}
-                      </AvatarFallback>
-                    )}
-                  </Avatar>
-                  <div className="text-left hidden sm:block">
-                    <div className="font-semibold text-sm">{settings.displayName}</div>
-                  </div>
-                  <ChevronDown
-                    className="size-4 text-muted-foreground hidden sm:block"
-                    aria-hidden="true"
-                  />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>
-                  <div className="flex flex-col gap-1">
-                    <span className="font-semibold text-sm">{settings.displayName}</span>
-                    {authUser?.email && (
-                      <span className="text-xs text-muted-foreground font-normal truncate">
-                        {authUser.email}
-                      </span>
-                    )}
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem onSelect={() => navigate('/settings')}>
-                    <User className="mr-2 size-4" aria-hidden="true" />
-                    Profile
+            {authUser ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="flex items-center gap-3 pl-4 border-l border-border cursor-pointer rounded-lg p-1 -m-1 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label="User menu"
+                  >
+                    <Avatar className="size-10 ring-2 ring-transparent transition-all duration-200 hover:ring-brand/30 hover:shadow-md">
+                      {settings.profilePhotoDataUrl ? (
+                        <AvatarImage
+                          src={settings.profilePhotoDataUrl}
+                          alt={settings.displayName}
+                          className="object-cover"
+                        />
+                      ) : (
+                        <AvatarFallback className="bg-brand-soft text-brand-soft-foreground font-semibold transition-colors duration-200 hover:bg-brand hover:text-white">
+                          {getInitials(settings.displayName)}
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                    <div className="text-left hidden sm:block">
+                      <div className="font-semibold text-sm">{settings.displayName}</div>
+                    </div>
+                    <ChevronDown
+                      className="size-4 text-muted-foreground hidden sm:block"
+                      aria-hidden="true"
+                    />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col gap-1">
+                      <span className="font-semibold text-sm">{settings.displayName}</span>
+                      {authUser?.email && (
+                        <span className="text-xs text-muted-foreground font-normal truncate">
+                          {authUser.email}
+                        </span>
+                      )}
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem onSelect={() => navigate('/settings')}>
+                      <User className="mr-2 size-4" aria-hidden="true" />
+                      Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => navigate('/settings')}>
+                      <Settings className="mr-2 size-4" aria-hidden="true" />
+                      Settings
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={async () => {
+                      const result = await signOut()
+                      if (result.error) {
+                        toast.error(result.error)
+                      }
+                    }}
+                  >
+                    <LogOut className="mr-2 size-4" aria-hidden="true" />
+                    Sign out
                   </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => navigate('/settings')}>
-                    <Settings className="mr-2 size-4" aria-hidden="true" />
-                    Settings
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onSelect={async () => {
-                    const result = await signOut()
-                    if (result.error) {
-                      toast.error(result.error)
-                    }
-                  }}
-                >
-                  <LogOut className="mr-2 size-4" aria-hidden="true" />
-                  Sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button
+                variant="brand"
+                className="min-h-[44px] gap-2"
+                onClick={() => navigate('/login')}
+                aria-label="Sign in to your account"
+              >
+                <LogIn className="size-4" aria-hidden="true" />
+                Sign In
+              </Button>
+            )}
           </div>
         </header>
 
