@@ -11,8 +11,12 @@ const NOT_CONFIGURED = 'Subscription service is not configured. Please check you
 /**
  * Initiates a Stripe Checkout session by calling the create-checkout Edge Function.
  * Returns the checkout URL for client redirect, or an error message.
+ *
+ * @param trial - If true, creates a checkout with 14-day free trial (E19-S08)
  */
-export async function startCheckout(): Promise<{ url: string } | { error: string }> {
+export async function startCheckout(
+  trial?: boolean
+): Promise<{ url: string } | { error: string }> {
   if (!supabase) return { error: NOT_CONFIGURED }
 
   const session = useAuthStore.getState().session
@@ -20,7 +24,10 @@ export async function startCheckout(): Promise<{ url: string } | { error: string
 
   try {
     const { data, error } = await supabase.functions.invoke('create-checkout', {
-      body: { origin: window.location.origin },
+      body: {
+        origin: window.location.origin,
+        ...(trial ? { trial: true } : {}),
+      },
     })
 
     if (error) {
@@ -100,7 +107,9 @@ export async function pollEntitlement(
     try {
       const { data, error } = await supabase
         .from('entitlements')
-        .select('user_id, tier, stripe_customer_id, stripe_subscription_id, plan_id, expires_at')
+        .select(
+          'user_id, tier, stripe_customer_id, stripe_subscription_id, plan_id, expires_at, trial_end, had_trial'
+        )
         .eq('user_id', user.id)
         .single()
 
@@ -112,6 +121,8 @@ export async function pollEntitlement(
           stripeSubscriptionId: data.stripe_subscription_id ?? undefined,
           planId: data.plan_id ?? undefined,
           expiresAt: data.expires_at ?? undefined,
+          trialEnd: data.trial_end ?? undefined,
+          hadTrial: data.had_trial ?? undefined,
           cachedAt: new Date().toISOString(),
         }
 

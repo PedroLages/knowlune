@@ -10,6 +10,7 @@ import {
   WifiOff,
   CreditCard,
   XCircle,
+  Clock,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
@@ -40,6 +41,7 @@ import {
   createPortalSession,
 } from '@/lib/checkout'
 import { useIsPremium } from '@/lib/entitlement/isPremium'
+import { useTrialStatus } from '@/app/hooks/useTrialStatus'
 import { toast } from 'sonner'
 import { toastSuccess, toastError } from '@/lib/toastHelpers'
 import type { CachedEntitlement } from '@/data/types'
@@ -86,7 +88,14 @@ const PREMIUM_FEATURES = [
   'Auto Note Organization',
 ]
 
-type CardState = 'loading' | 'free' | 'premium' | 'activating' | 'activated' | 'offline-cached'
+type CardState =
+  | 'loading'
+  | 'free'
+  | 'trial'
+  | 'premium'
+  | 'activating'
+  | 'activated'
+  | 'offline-cached'
 
 interface SubscriptionCardProps {
   checkoutStatus?: 'success' | 'cancel' | null
@@ -95,6 +104,7 @@ interface SubscriptionCardProps {
 export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
   const user = useAuthStore(s => s.user)
   const { isStale, error: entitlementError } = useIsPremium()
+  const { daysRemaining, canStartTrial, hadTrial, trialEnd } = useTrialStatus()
   const [state, setState] = useState<CardState>('loading')
   const [entitlement, setEntitlement] = useState<CachedEntitlement | null>(null)
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false)
@@ -119,6 +129,8 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
         // Check if we're offline with stale data
         if (!navigator.onLine || isStale) {
           setState('offline-cached')
+        } else if (cached.tier === 'trial') {
+          setState('trial')
         } else {
           setState('premium')
         }
@@ -140,6 +152,8 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
 
     if (!navigator.onLine || isStale || entitlementError) {
       setState('offline-cached')
+    } else if (entitlement.tier === 'trial') {
+      setState('trial')
     } else {
       setState('premium')
     }
@@ -190,42 +204,45 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
     }
   }, [checkoutStatus, user])
 
-  const handleUpgrade = useCallback(async () => {
-    if (checkoutInProgress.current) return
-    checkoutInProgress.current = true
-    try {
-      setIsCheckoutLoading(true)
-      const result = await startCheckout()
+  const handleUpgrade = useCallback(
+    async (trial?: boolean) => {
+      if (checkoutInProgress.current) return
+      checkoutInProgress.current = true
+      try {
+        setIsCheckoutLoading(true)
+        const result = await startCheckout(trial)
 
-      if ('error' in result) {
-        toastError.saveFailed(result.error)
+        if ('error' in result) {
+          toastError.saveFailed(result.error)
+          setIsCheckoutLoading(false)
+          checkoutInProgress.current = false
+          return
+        }
+
+        // Defense-in-depth: validate checkout URL before redirect
+        if (!result.url.startsWith('https://checkout.stripe.com/')) {
+          toastError.saveFailed('Invalid checkout URL received.')
+          setIsCheckoutLoading(false)
+          checkoutInProgress.current = false
+          return
+        }
+
+        // Redirect to Stripe Checkout
+        window.location.href = result.url
+        // Fallback: reset loading if redirect doesn't happen (popup blocker, etc.)
+        clearTimeout(fallbackTimerRef.current)
+        fallbackTimerRef.current = setTimeout(() => {
+          setIsCheckoutLoading(false)
+          checkoutInProgress.current = false
+        }, 5000)
+      } catch {
+        // silent-catch-ok — startCheckout handles its own errors with toastError above; this catch only resets loading state as a safety net
         setIsCheckoutLoading(false)
         checkoutInProgress.current = false
-        return
       }
-
-      // Defense-in-depth: validate checkout URL before redirect
-      if (!result.url.startsWith('https://checkout.stripe.com/')) {
-        toastError.saveFailed('Invalid checkout URL received.')
-        setIsCheckoutLoading(false)
-        checkoutInProgress.current = false
-        return
-      }
-
-      // Redirect to Stripe Checkout
-      window.location.href = result.url
-      // Fallback: reset loading if redirect doesn't happen (popup blocker, etc.)
-      clearTimeout(fallbackTimerRef.current)
-      fallbackTimerRef.current = setTimeout(() => {
-        setIsCheckoutLoading(false)
-        checkoutInProgress.current = false
-      }, 5000)
-    } catch {
-      // silent-catch-ok — startCheckout handles its own errors with toastError above; this catch only resets loading state as a safety net
-      setIsCheckoutLoading(false)
-      checkoutInProgress.current = false
-    }
-  }, [])
+    },
+    []
+  )
 
   const handleManageBilling = useCallback(async () => {
     setIsPortalLoading(true)
@@ -298,6 +315,8 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
               <Loader2 className="size-5 text-gold motion-safe:animate-spin" aria-hidden="true" />
             ) : state === 'offline-cached' ? (
               <WifiOff className="size-5 text-warning" aria-hidden="true" />
+            ) : state === 'trial' ? (
+              <Clock className="size-5 text-gold" aria-hidden="true" />
             ) : (
               <Crown className="size-5 text-gold" aria-hidden="true" />
             )}
@@ -311,9 +330,11 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
                 ? 'Setting up your premium subscription'
                 : state === 'offline-cached'
                   ? 'Showing cached subscription data'
-                  : state === 'premium' || state === 'activated'
-                    ? 'Manage your plan and billing'
-                    : 'Upgrade to unlock premium features'}
+                  : state === 'trial'
+                    ? 'Your free trial is active'
+                    : state === 'premium' || state === 'activated'
+                      ? 'Manage your plan and billing'
+                      : 'Upgrade to unlock premium features'}
             </p>
           </div>
         </div>
@@ -394,20 +415,243 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
               ))}
             </ul>
 
-            <Button
-              variant="brand"
-              className="w-full min-h-[44px] gap-2"
-              onClick={handleUpgrade}
-              disabled={isCheckoutLoading}
-              aria-label="Upgrade to Premium plan"
-              aria-describedby="premium-features-list"
-              aria-busy={isCheckoutLoading}
-            >
-              {isCheckoutLoading && (
-                <Loader2 className="size-4 motion-safe:animate-spin" aria-hidden="true" />
+            {/* AC1/AC8: Show "Start Free Trial" if eligible, otherwise "Subscribe" */}
+            {canStartTrial ? (
+              <div className="space-y-3">
+                <Button
+                  variant="brand"
+                  className="w-full min-h-[44px] gap-2"
+                  onClick={() => handleUpgrade(true)}
+                  disabled={isCheckoutLoading}
+                  aria-label="Start 14-day free trial"
+                  aria-describedby="premium-features-list"
+                  aria-busy={isCheckoutLoading}
+                >
+                  {isCheckoutLoading && (
+                    <Loader2 className="size-4 motion-safe:animate-spin" aria-hidden="true" />
+                  )}
+                  {isCheckoutLoading ? 'Starting checkout...' : 'Start Free Trial'}
+                </Button>
+                <p className="text-xs text-center text-muted-foreground">
+                  14-day free trial. No charge until trial ends.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <Button
+                  variant="brand"
+                  className="w-full min-h-[44px] gap-2"
+                  onClick={() => handleUpgrade(false)}
+                  disabled={isCheckoutLoading}
+                  aria-label={hadTrial ? 'Subscribe to Premium' : 'Upgrade to Premium plan'}
+                  aria-describedby="premium-features-list"
+                  aria-busy={isCheckoutLoading}
+                >
+                  {isCheckoutLoading && (
+                    <Loader2 className="size-4 motion-safe:animate-spin" aria-hidden="true" />
+                  )}
+                  {isCheckoutLoading ? 'Starting checkout...' : 'Subscribe'}
+                </Button>
+
+                {/* AC7: Post-trial charge failure — update payment method */}
+                {hadTrial && (
+                  <Button
+                    variant="brand-outline"
+                    className="w-full min-h-[44px] gap-2"
+                    onClick={handleManageBilling}
+                    disabled={isPortalLoading}
+                    aria-label="Update payment method in Stripe"
+                  >
+                    {isPortalLoading ? (
+                      <Loader2 className="size-4 motion-safe:animate-spin" aria-hidden="true" />
+                    ) : (
+                      <CreditCard className="size-4" aria-hidden="true" />
+                    )}
+                    {isPortalLoading ? 'Opening...' : 'Update Payment Method'}
+                    {!isPortalLoading && (
+                      <ExternalLink className="size-3.5" aria-hidden="true" />
+                    )}
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Trial state — active trial with management options */}
+        {state === 'trial' && entitlement && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Badge className="bg-gold-muted text-gold-soft-foreground border-transparent">
+                Trial
+              </Badge>
+              <span className="text-sm text-muted-foreground">
+                {daysRemaining === 0
+                  ? 'Ends today'
+                  : daysRemaining === 1
+                    ? '1 day remaining'
+                    : `${daysRemaining} days remaining`}
+              </span>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-sm">
+                <Clock className="size-4 text-gold shrink-0" aria-hidden="true" />
+                <span className="font-medium">Free trial active</span>
+              </div>
+              {trialEnd && (
+                <p className="text-sm text-muted-foreground ml-6">
+                  Trial ends:{' '}
+                  {new Date(trialEnd).toLocaleDateString(undefined, {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </p>
               )}
-              {isCheckoutLoading ? 'Starting checkout...' : 'Upgrade to Premium'}
-            </Button>
+              <p className="text-sm text-muted-foreground ml-6">
+                All premium features are unlocked during your trial.
+              </p>
+            </div>
+
+            {/* Trial progress bar */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Trial progress</span>
+                <span>{Math.max(0, 14 - daysRemaining)} of 14 days used</span>
+              </div>
+              <div
+                className="h-2 w-full rounded-full bg-gold-muted overflow-hidden"
+                role="progressbar"
+                aria-valuenow={Math.max(0, 14 - daysRemaining)}
+                aria-valuemin={0}
+                aria-valuemax={14}
+                aria-label="Trial progress"
+              >
+                <div
+                  className="h-full rounded-full bg-gold transition-all duration-300"
+                  style={{
+                    width: `${Math.min(100, ((14 - daysRemaining) / 14) * 100)}%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex flex-wrap gap-3 pt-1">
+              <Button
+                variant="brand"
+                size="sm"
+                className="min-h-[44px] gap-2"
+                onClick={() => handleUpgrade(false)}
+                disabled={isCheckoutLoading}
+                aria-label="Subscribe now to continue after trial"
+              >
+                {isCheckoutLoading ? (
+                  <Loader2 className="size-4 motion-safe:animate-spin" aria-hidden="true" />
+                ) : (
+                  <CreditCard className="size-4" aria-hidden="true" />
+                )}
+                {isCheckoutLoading ? 'Starting checkout...' : 'Subscribe Now'}
+              </Button>
+
+              {/* AC5: Cancel Trial */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="min-h-[44px] gap-2 text-muted-foreground hover:text-destructive"
+                    disabled={isCancelLoading}
+                    aria-label="Cancel your free trial"
+                  >
+                    {isCancelLoading ? (
+                      <Loader2 className="size-4 motion-safe:animate-spin" aria-hidden="true" />
+                    ) : (
+                      <XCircle className="size-4" aria-hidden="true" />
+                    )}
+                    {isCancelLoading ? 'Processing...' : 'Cancel Trial'}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="rounded-[24px]">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Cancel your free trial?</AlertDialogTitle>
+                    <AlertDialogDescription asChild>
+                      <div className="space-y-3">
+                        <p>If you cancel your trial:</p>
+                        <div className="space-y-2">
+                          <div className="flex items-start gap-2 text-sm">
+                            <CheckCircle
+                              className="size-4 text-success shrink-0 mt-0.5"
+                              aria-hidden="true"
+                            />
+                            <span>Your payment method will not be charged</span>
+                          </div>
+                          <div className="flex items-start gap-2 text-sm">
+                            <XCircle
+                              className="size-4 text-destructive shrink-0 mt-0.5"
+                              aria-hidden="true"
+                            />
+                            <span>You will lose access to premium features immediately</span>
+                          </div>
+                          <div className="flex items-start gap-2 text-sm">
+                            <CheckCircle
+                              className="size-4 text-success shrink-0 mt-0.5"
+                              aria-hidden="true"
+                            />
+                            <span>Your progress, notes, and achievements are never deleted</span>
+                          </div>
+                          <div className="flex items-start gap-2 text-sm">
+                            <XCircle
+                              className="size-4 text-destructive shrink-0 mt-0.5"
+                              aria-hidden="true"
+                            />
+                            <span>You cannot start another free trial in the future</span>
+                          </div>
+                        </div>
+                      </div>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep Trial</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleCancelSubscription}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Cancel Trial
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+
+            {/* Portal error banner */}
+            {portalError && (
+              <div
+                role="alert"
+                className="flex items-start gap-2 rounded-xl border border-destructive/20 bg-destructive/5 p-3 text-sm"
+              >
+                <AlertTriangle
+                  className="size-4 text-destructive shrink-0 mt-0.5"
+                  aria-hidden="true"
+                />
+                <div className="flex-1">
+                  <p className="text-destructive">{portalError}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 gap-1.5 text-destructive hover:text-destructive min-h-[36px]"
+                  onClick={() => {
+                    setPortalError(null)
+                  }}
+                  aria-label="Dismiss error"
+                >
+                  <RefreshCw className="size-3.5" aria-hidden="true" />
+                  Dismiss
+                </Button>
+              </div>
+            )}
           </div>
         )}
 

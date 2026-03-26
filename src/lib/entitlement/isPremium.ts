@@ -22,6 +22,10 @@ export interface EntitlementStatus {
   isStale: boolean
   /** Error message if validation failed */
   error: string | null
+  /** ISO 8601 trial expiration date (E19-S08) */
+  trialEnd: string | null
+  /** Whether the user has previously used a free trial (E19-S08) */
+  hadTrial: boolean
 }
 
 /** Checks if a cached entitlement is within the TTL window */
@@ -43,7 +47,9 @@ export async function validateEntitlementOnServer(
 
   const { data, error } = await supabase
     .from('entitlements')
-    .select('user_id, tier, stripe_customer_id, stripe_subscription_id, plan_id, expires_at')
+    .select(
+      'user_id, tier, stripe_customer_id, stripe_subscription_id, plan_id, expires_at, trial_end, had_trial'
+    )
     .eq('user_id', userId)
     .single()
 
@@ -56,6 +62,8 @@ export async function validateEntitlementOnServer(
     stripeSubscriptionId: data.stripe_subscription_id ?? undefined,
     planId: data.plan_id ?? undefined,
     expiresAt: data.expires_at ?? undefined,
+    trialEnd: data.trial_end ?? undefined,
+    hadTrial: data.had_trial ?? undefined,
     cachedAt: new Date().toISOString(),
   }
 
@@ -93,6 +101,8 @@ export function useIsPremium(): EntitlementStatus {
   const [loading, setLoading] = useState(true)
   const [isStale, setIsStale] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [trialEnd, setTrialEnd] = useState<string | null>(null)
+  const [hadTrial, setHadTrial] = useState(false)
   const validationInProgress = useRef(false)
   const pendingRevalidation = useRef(false)
 
@@ -112,6 +122,8 @@ export function useIsPremium(): EntitlementStatus {
         const fresh = isCacheFresh(cached)
         // Set cached value immediately (optimistic)
         setTier(cached.tier)
+        setTrialEnd(cached.trialEnd ?? null)
+        setHadTrial(cached.hadTrial ?? false)
         setIsStale(!fresh)
 
         if (!fresh) {
@@ -136,12 +148,16 @@ export function useIsPremium(): EntitlementStatus {
           if (serverResult.tier === 'free') {
             // AC8: Explicit denial — disable immediately, clear cache
             setTier('free')
+            setTrialEnd(null)
+            setHadTrial(serverResult.hadTrial ?? false)
             setIsStale(false)
             setError(null)
             await clearCachedEntitlement(user.id)
           } else {
             // AC1: Valid entitlement — cache and use
             setTier(serverResult.tier)
+            setTrialEnd(serverResult.trialEnd ?? null)
+            setHadTrial(serverResult.hadTrial ?? false)
             setIsStale(false)
             setError(null)
             await cacheEntitlement(serverResult)
@@ -194,6 +210,8 @@ export function useIsPremium(): EntitlementStatus {
       setLoading(false)
       setIsStale(false)
       setError(null)
+      setTrialEnd(null)
+      setHadTrial(false)
       return
     }
 
@@ -218,5 +236,7 @@ export function useIsPremium(): EntitlementStatus {
     tier,
     isStale,
     error,
+    trialEnd,
+    hadTrial,
   }
 }
