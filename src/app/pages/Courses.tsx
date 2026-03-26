@@ -19,16 +19,17 @@ import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
 import { TopicFilter } from '@/app/components/figma/TopicFilter'
 import { StatusFilter } from '@/app/components/figma/StatusFilter'
 import { ToggleGroup, ToggleGroupItem } from '@/app/components/ui/toggle-group'
-import { Search, FolderOpen, BookOpen, ChevronDown, Tags } from 'lucide-react'
+import { Search, FolderOpen, BookOpen, ChevronDown, Tags, Youtube } from 'lucide-react'
 import { useCourseStore } from '@/stores/useCourseStore'
 import { getCourseCompletionPercent, getProgress } from '@/lib/progress'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
 import { BulkImportDialog } from '@/app/components/figma/BulkImportDialog'
+import { YouTubeImportDialog } from '@/app/components/figma/YouTubeImportDialog'
 import { db } from '@/db'
 import { calculateMomentumScore } from '@/lib/momentum'
 import { calculateAtRiskStatus } from '@/lib/atRisk'
-import { EmptyState } from '@/app/components/EmptyState'
+
 import { TagManagementPanel } from '@/app/components/figma/TagManagementPanel'
 import { calculateCompletionEstimate } from '@/lib/completionEstimate'
 import type { LearnerCourseStatus } from '@/data/types'
@@ -57,6 +58,7 @@ export function Courses() {
   const [sortMode, setSortMode] = useState<SortMode>('recent')
   const [wizardOpen, setWizardOpen] = useState(false)
   const [bulkImportOpen, setBulkImportOpen] = useState(false)
+  const [youtubeImportOpen, setYoutubeImportOpen] = useState(false)
   const [tagManagementOpen, setTagManagementOpen] = useState(false)
   const [momentumMap, setMomentumMap] = useState<Map<string, MomentumScore>>(new Map())
   const [atRiskMap, setAtRiskMap] = useState<Map<string, AtRiskStatus>>(new Map())
@@ -332,6 +334,11 @@ export function Courses() {
     setWizardOpen(true)
   }
 
+  function handleYouTubeImportFromBulk() {
+    setBulkImportOpen(false)
+    setYoutubeImportOpen(true)
+  }
+
   function handleCollapseToggle(open: boolean) {
     const collapsed = !open
     setSampleCollapsed(collapsed)
@@ -373,17 +380,42 @@ export function Courses() {
         open={bulkImportOpen}
         onOpenChange={setBulkImportOpen}
         onSingleImport={handleSingleImportFromBulk}
+        onYouTubeImport={handleYouTubeImportFromBulk}
       />
+      <YouTubeImportDialog open={youtubeImportOpen} onOpenChange={setYoutubeImportOpen} />
 
       {totalCourses === 0 ? (
-        <EmptyState
-          icon={BookOpen}
-          title="No courses yet"
-          description="Import a course folder to get started"
-          actionLabel="Import Course"
-          onAction={handleOpenBulkImport}
-          data-testid="courses-empty-state"
-        />
+        <Card className="border-2 border-dashed" data-testid="courses-empty-state">
+          <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+            <div className="size-16 rounded-full bg-brand-soft flex items-center justify-center mb-4">
+              <BookOpen className="size-8 text-brand-muted" aria-hidden="true" />
+            </div>
+            <h2 className="font-display text-lg font-medium mb-2">No courses yet</h2>
+            <p className="text-muted-foreground mb-6 max-w-sm">
+              Import a course folder or build one from YouTube videos
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                variant="brand"
+                size="lg"
+                onClick={handleOpenBulkImport}
+                data-testid="empty-import-folder-btn"
+              >
+                <FolderOpen className="size-4 mr-2" aria-hidden="true" />
+                Import from Folder
+              </Button>
+              <Button
+                variant="brand-outline"
+                size="lg"
+                onClick={() => setYoutubeImportOpen(true)}
+                data-testid="empty-youtube-btn"
+              >
+                <Youtube className="size-4 mr-2" aria-hidden="true" />
+                Build from YouTube
+              </Button>
+            </div>
+          </div>
+        </Card>
       ) : (
         <>
           <Card className="bg-card rounded-[24px] border-0 shadow-sm p-6 mb-6">
