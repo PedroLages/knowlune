@@ -445,5 +445,7 @@ export interface CachedEntitlement {
   stripeSubscriptionId?: string
   planId?: string
   expiresAt?: string // ISO 8601
+  trialEnd?: string // ISO 8601 — trial expiration date (E19-S08)
+  hadTrial?: boolean // true if user has previously used a free trial (E19-S08)
   cachedAt: string // ISO 8601 — for 7-day TTL check
 }

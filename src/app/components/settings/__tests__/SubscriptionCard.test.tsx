@@ -28,10 +28,27 @@ const mockUseIsPremium = vi.fn().mockReturnValue({
   tier: 'free',
   isStale: false,
   error: null,
+  trialEnd: null,
+  hadTrial: false,
 })
 
 vi.mock('@/lib/entitlement/isPremium', () => ({
   useIsPremium: () => mockUseIsPremium(),
+}))
+
+// Mock useTrialStatus — default: had trial (shows "Subscribe" not "Start Free Trial")
+const mockUseTrialStatus = vi.fn().mockReturnValue({
+  isTrialing: false,
+  daysRemaining: 0,
+  showReminder: false,
+  hadTrial: true,
+  canStartTrial: false,
+  trialEnd: null,
+  dismissReminder: vi.fn(),
+})
+
+vi.mock('@/app/hooks/useTrialStatus', () => ({
+  useTrialStatus: () => mockUseTrialStatus(),
 }))
 
 const mockToastError = vi.fn()
@@ -114,6 +131,17 @@ describe('SubscriptionCard', () => {
       tier: 'free',
       isStale: false,
       error: null,
+      trialEnd: null,
+      hadTrial: false,
+    })
+    mockUseTrialStatus.mockReturnValue({
+      isTrialing: false,
+      daysRemaining: 0,
+      showReminder: false,
+      hadTrial: true,
+      canStartTrial: false,
+      trialEnd: null,
+      dismissReminder: vi.fn(),
     })
   })
 
@@ -146,14 +174,14 @@ describe('SubscriptionCard', () => {
   // Free tier state
   // -------------------------------------------------------------------------
 
-  it('shows "Upgrade to Premium" button and feature list when user is on free tier', async () => {
+  it('shows "Subscribe" button and feature list when user is on free tier with prior trial', async () => {
     mockGetCachedEntitlement.mockResolvedValue(null) // no cache = free tier
 
     renderCard()
 
     // Wait for the effect to resolve and state to settle
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /upgrade to premium/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /subscribe to premium/i })).toBeInTheDocument()
     })
 
     // Check feature list
@@ -164,6 +192,27 @@ describe('SubscriptionCard', () => {
 
     // Free badge
     expect(screen.getByText('Free')).toBeInTheDocument()
+  })
+
+  it('shows "Start Free Trial" button for users who never had a trial', async () => {
+    mockGetCachedEntitlement.mockResolvedValue(null)
+    mockUseTrialStatus.mockReturnValue({
+      isTrialing: false,
+      daysRemaining: 0,
+      showReminder: false,
+      hadTrial: false,
+      canStartTrial: true,
+      trialEnd: null,
+      dismissReminder: vi.fn(),
+    })
+
+    renderCard()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /start.*free trial/i })).toBeInTheDocument()
+    })
+
+    expect(screen.getByText(/14-day free trial/i)).toBeInTheDocument()
   })
 
   // -------------------------------------------------------------------------
@@ -344,11 +393,11 @@ describe('SubscriptionCard', () => {
     renderCard()
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /upgrade to premium/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /subscribe to premium/i })).toBeInTheDocument()
     })
 
     const user = userEvent.setup()
-    const button = screen.getByRole('button', { name: /upgrade to premium/i })
+    const button = screen.getByRole('button', { name: /subscribe to premium/i })
 
     await user.click(button)
 
@@ -357,7 +406,7 @@ describe('SubscriptionCard', () => {
     })
 
     // Button should be disabled and show aria-busy
-    const loadingButton = screen.getByRole('button', { name: /upgrade to premium/i })
+    const loadingButton = screen.getByRole('button', { name: /subscribe to premium/i })
     expect(loadingButton).toBeDisabled()
     expect(loadingButton).toHaveAttribute('aria-busy', 'true')
   })
@@ -442,7 +491,7 @@ describe('SubscriptionCard', () => {
 
     // Should be back on free tier
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /upgrade to premium/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /subscribe to premium/i })).toBeInTheDocument()
     })
   })
 
@@ -455,9 +504,54 @@ describe('SubscriptionCard', () => {
       expect(mockToastError).toHaveBeenCalledWith('Upgrade not completed')
     })
 
-    // Verify the card remains on free tier — upgrade button should still be visible
+    // Verify the card remains on free tier — subscribe button should still be visible
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /upgrade to premium/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /subscribe to premium/i })).toBeInTheDocument()
     })
+  })
+
+  // -------------------------------------------------------------------------
+  // Trial state (E19-S08)
+  // -------------------------------------------------------------------------
+
+  it('shows trial state with days remaining and Cancel Trial button', async () => {
+    const trialEnd = new Date()
+    trialEnd.setDate(trialEnd.getDate() + 10)
+    mockGetCachedEntitlement.mockResolvedValue({
+      userId: 'user-123',
+      tier: 'trial',
+      trialEnd: trialEnd.toISOString(),
+      hadTrial: true,
+      cachedAt: new Date().toISOString(),
+    })
+    mockUseIsPremium.mockReturnValue({
+      isPremium: true,
+      loading: false,
+      tier: 'trial',
+      isStale: false,
+      error: null,
+      trialEnd: trialEnd.toISOString(),
+      hadTrial: true,
+    })
+    mockUseTrialStatus.mockReturnValue({
+      isTrialing: true,
+      daysRemaining: 10,
+      showReminder: false,
+      hadTrial: true,
+      canStartTrial: false,
+      trialEnd: trialEnd.toISOString(),
+      dismissReminder: vi.fn(),
+    })
+
+    renderCard()
+
+    await waitFor(() => {
+      expect(screen.getByText('Trial')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('10 days remaining')).toBeInTheDocument()
+    expect(screen.getByText('Free trial active')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /cancel.*trial/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /subscribe now/i })).toBeInTheDocument()
   })
 })

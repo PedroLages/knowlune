@@ -47,6 +47,8 @@ import { toast } from 'sonner'
 import { QualityScoreDialog } from './session/QualityScoreDialog'
 import type { QualityScoreResult } from '@/lib/qualityScore'
 import { OnboardingOverlay } from './onboarding/OnboardingOverlay'
+import { TrialIndicator } from './trial/TrialIndicator'
+import { TrialReminderBanner } from './trial/TrialReminderBanner'
 
 // Individual nav link — wraps in Tooltip when collapsed
 function NavLink({
@@ -455,6 +457,7 @@ export function Layout() {
 
           {/* User Actions */}
           <div className="flex items-center gap-4">
+            <TrialIndicator />
             <Button
               variant="ghost"
               size="icon"
@@ -550,6 +553,7 @@ export function Layout() {
               You are offline. Some features may be limited.
             </div>
           )}
+          <TrialReminderBanner />
           <Outlet />
         </main>
       </div>

@@ -8,6 +8,7 @@ import { Crown, Loader2, LogIn } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { useIsPremium } from '@/lib/entitlement/isPremium'
+import { useTrialStatus } from '@/app/hooks/useTrialStatus'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { startCheckout } from '@/lib/checkout'
 import { toastError } from '@/lib/toastHelpers'
@@ -82,13 +83,15 @@ export function UpgradeCTA({ featureLabel, error = null, isStale = false }: Upgr
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false)
   const [showAuthDialog, setShowAuthDialog] = useState(false)
   const user = useAuthStore(s => s.user)
+  const { canStartTrial, hadTrial } = useTrialStatus()
   // Track whether the auth dialog was opened for upgrade flow
   const pendingCheckoutRef = useRef(false)
 
   const handleCheckout = useCallback(async () => {
     setIsCheckoutLoading(true)
     try {
-      const result = await startCheckout()
+      // AC1/AC8: Use trial checkout if eligible, otherwise paid checkout
+      const result = await startCheckout(canStartTrial)
       if ('error' in result) {
         toastError.saveFailed(result.error)
         return
@@ -103,7 +106,7 @@ export function UpgradeCTA({ featureLabel, error = null, isStale = false }: Upgr
     } finally {
       setIsCheckoutLoading(false)
     }
-  }, [])
+  }, [canStartTrial])
 
   // E19-S05 AC5: When user signs in via AuthDialog, proceed to checkout automatically.
   // Uses useEffect + subscribe to avoid race conditions with synchronous getState() reads.
@@ -165,7 +168,9 @@ export function UpgradeCTA({ featureLabel, error = null, isStale = false }: Upgr
             disabled={isCheckoutLoading}
             aria-label={
               user
-                ? `Upgrade to Premium to unlock ${featureLabel}`
+                ? canStartTrial
+                  ? `Start free trial to unlock ${featureLabel}`
+                  : `Subscribe to unlock ${featureLabel}`
                 : `Sign in to upgrade to Premium and unlock ${featureLabel}`
             }
             aria-busy={isCheckoutLoading}
@@ -177,10 +182,20 @@ export function UpgradeCTA({ featureLabel, error = null, isStale = false }: Upgr
             ) : null}
             {isCheckoutLoading
               ? 'Starting checkout...'
-              : user
-                ? 'Upgrade to Premium'
-                : 'Sign In to Upgrade'}
+              : !user
+                ? 'Sign In to Upgrade'
+                : canStartTrial
+                  ? 'Start Free Trial'
+                  : hadTrial
+                    ? 'Subscribe'
+                    : 'Upgrade to Premium'}
           </Button>
+          {/* AC1: Trial info text when eligible */}
+          {user && canStartTrial && (
+            <p className="text-xs text-muted-foreground">
+              14-day free trial. No charge until trial ends.
+            </p>
+          )}
 
           {/* AC5: Resubscribe option for cancelled subscriptions */}
           {isStale && (

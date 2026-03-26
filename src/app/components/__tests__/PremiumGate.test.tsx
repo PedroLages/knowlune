@@ -25,6 +25,21 @@ vi.mock('@/lib/entitlement/isPremium', () => ({
   useIsPremium: () => ({ ...mockEntitlementStatus }),
 }))
 
+// Mock useTrialStatus — default: had trial, cannot start trial
+const mockTrialStatus = {
+  isTrialing: false,
+  daysRemaining: 0,
+  showReminder: false,
+  hadTrial: true,
+  canStartTrial: false,
+  trialEnd: null,
+  dismissReminder: vi.fn(),
+}
+
+vi.mock('@/app/hooks/useTrialStatus', () => ({
+  useTrialStatus: () => ({ ...mockTrialStatus }),
+}))
+
 const mockStartCheckout = vi.fn()
 
 vi.mock('@/lib/checkout', () => ({
@@ -218,7 +233,7 @@ describe('PremiumGate', () => {
       mockUser = { id: 'user-123', email: 'test@test.com' }
     })
 
-    it('upgrade button shows "Upgrade to Premium" with accessible label', () => {
+    it('upgrade button shows "Subscribe" with accessible label for users who had trial', () => {
       mockEntitlementStatus.isPremium = false
 
       render(
@@ -228,12 +243,12 @@ describe('PremiumGate', () => {
       )
 
       expect(
-        screen.getByRole('button', { name: /Upgrade to Premium to unlock AI Analysis/ })
+        screen.getByRole('button', { name: /Subscribe to unlock AI Analysis/ })
       ).toBeInTheDocument()
-      expect(screen.getByText('Upgrade to Premium')).toBeInTheDocument()
+      expect(screen.getByText('Subscribe')).toBeInTheDocument()
     })
 
-    it('calls startCheckout directly when clicking upgrade', async () => {
+    it('calls startCheckout directly when clicking subscribe', async () => {
       mockEntitlementStatus.isPremium = false
       mockStartCheckout.mockRejectedValueOnce(new Error('Checkout unavailable'))
 
@@ -245,12 +260,12 @@ describe('PremiumGate', () => {
         </PremiumGate>
       )
 
-      const button = screen.getByRole('button', { name: /Upgrade to Premium/ })
+      const button = screen.getByRole('button', { name: /Subscribe/ })
       await user.click(button)
 
       expect(mockStartCheckout).toHaveBeenCalled()
       // After rejection, loading state should be reset (button no longer shows "Starting checkout...")
-      expect(screen.getByRole('button', { name: /Upgrade to Premium/ })).not.toBeDisabled()
+      expect(screen.getByRole('button', { name: /Subscribe/ })).not.toBeDisabled()
     })
   })
 
