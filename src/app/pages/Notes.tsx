@@ -193,7 +193,10 @@ export function Notes() {
       .then(tags => {
         if (!ignore) setAvailableTags(tags)
       })
-      .catch(err => console.error('[Notes] Failed to load tags:', err))
+      .catch(err => {
+        // silent-catch-ok — tags are supplementary UI; notes still display without them
+        console.error('[Notes] Failed to load tags:', err)
+      })
 
     return () => {
       ignore = true
@@ -228,6 +231,7 @@ export function Notes() {
         if (!cancelled) setSemanticResults(results)
       })
       .catch(err => {
+        // silent-catch-ok — graceful fallback to text search; not a user-blocking error
         console.error('[Notes] Semantic search failed:', err)
         if (!cancelled) setUseSemanticSearch(false) // Fallback to text search
       })

@@ -4,8 +4,18 @@
  * Pure functions for interval calculation and retention prediction.
  * No side effects — all persistence is handled by the store layer.
  */
-import type { ReviewRating, ReviewRecord } from '@/data/types'
+import type { ReviewRating } from '@/data/types'
 import { addDays } from 'date-fns'
+
+/**
+ * Minimal SM-2 state required for scheduling calculations.
+ * Both ReviewRecord and Flashcard satisfy this interface via structural typing.
+ */
+export interface SpacedRepetitionState {
+  reviewCount: number
+  easeFactor: number
+  interval: number
+}
 
 /** Quality mapping: rating → SM-2 quality value (0-5 scale) */
 const QUALITY_MAP: Record<ReviewRating, number> = {
@@ -35,9 +45,12 @@ const MIN_INTERVAL = 1
  *
  * For first reviews (no existing record), uses fixed intervals per rating.
  * For subsequent reviews, applies SM-2 formula to adjust interval and ease factor.
+ *
+ * Accepts any object satisfying SpacedRepetitionState — compatible with both
+ * ReviewRecord (note reviews) and Flashcard (flashcard reviews).
  */
 export function calculateNextReview(
-  record: ReviewRecord | null,
+  record: SpacedRepetitionState | null,
   rating: ReviewRating,
   now: Date = new Date()
 ): { interval: number; easeFactor: number; nextReviewAt: string } {
@@ -77,8 +90,14 @@ export function calculateNextReview(
  * Uses exponential forgetting curve: R = e^(-t/S)
  * where t = elapsed time since last review (days)
  * and S = stability (proportional to scheduled interval).
+ *
+ * Accepts any object with reviewedAt and interval — compatible with both
+ * ReviewRecord and Flashcard.
  */
-export function predictRetention(record: ReviewRecord, now: Date = new Date()): number {
+export function predictRetention(
+  record: SpacedRepetitionState & { reviewedAt: string },
+  now: Date = new Date()
+): number {
   const elapsedMs = now.getTime() - new Date(record.reviewedAt).getTime()
   const elapsedDays = elapsedMs / (1000 * 60 * 60 * 24)
 
@@ -96,8 +115,9 @@ export function predictRetention(record: ReviewRecord, now: Date = new Date()): 
 
 /**
  * Check if a review record is due for review.
+ * Accepts any object with nextReviewAt — compatible with ReviewRecord and Flashcard.
  */
-export function isDue(record: ReviewRecord, now: Date = new Date()): boolean {
+export function isDue(record: { nextReviewAt: string }, now: Date = new Date()): boolean {
   return new Date(record.nextReviewAt) <= now
 }
 

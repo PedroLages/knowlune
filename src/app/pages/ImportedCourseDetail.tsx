@@ -1,11 +1,22 @@
 import { useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router'
-import { ArrowLeft, Video, FileText, AlertTriangle, ShieldAlert, RefreshCw } from 'lucide-react'
+import {
+  ArrowLeft,
+  Video,
+  FileText,
+  AlertTriangle,
+  ShieldAlert,
+  RefreshCw,
+  User,
+} from 'lucide-react'
 import { db } from '@/db/schema'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { useAuthorStore } from '@/stores/useAuthorStore'
 import { useFileStatusVerification } from '@/hooks/useFileStatusVerification'
 import { Badge } from '@/app/components/ui/badge'
+import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { cn } from '@/app/components/ui/utils'
+import { getAvatarSrc, getInitials } from '@/lib/authors'
 import type { ImportedVideo, ImportedPdf } from '@/data/types'
 import type { FileStatus } from '@/lib/fileVerification'
 
@@ -46,9 +57,15 @@ export function ImportedCourseDetail() {
   const loadImportedCourses = useCourseImportStore(state => state.loadImportedCourses)
   const course = importedCourses.find(c => c.id === courseId)
 
+  const storeAuthors = useAuthorStore(state => state.authors)
+  const loadAuthors = useAuthorStore(state => state.loadAuthors)
+
   useEffect(() => {
     loadImportedCourses()
-  }, [loadImportedCourses])
+    loadAuthors()
+  }, [loadImportedCourses, loadAuthors])
+
+  const authorData = course?.authorId ? storeAuthors.find(a => a.id === course.authorId) : undefined
 
   const [videos, setVideos] = useState<ImportedVideo[]>([])
   const [pdfs, setPdfs] = useState<ImportedPdf[]>([])
@@ -69,6 +86,7 @@ export function ImportedCourseDetail() {
         }
       })
       .catch(err => {
+        // silent-catch-ok — error state handled by setLoadError UI
         console.error('Failed to load course content:', err)
         if (!ignore) setLoadError(true)
       })
@@ -104,11 +122,43 @@ export function ImportedCourseDetail() {
       <h1 data-testid="course-detail-title" className="text-2xl font-bold mb-1">
         {course.name}
       </h1>
-      <p className="text-sm text-muted-foreground mb-6">
+      <p className="text-sm text-muted-foreground mb-4">
         Imported {new Date(course.importedAt).toLocaleDateString()} &middot; {course.videoCount}{' '}
         {course.videoCount === 1 ? 'video' : 'videos'}, {course.pdfCount}{' '}
         {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
       </p>
+
+      {/* Author Section */}
+      <div data-testid="course-author-section" className="flex items-center gap-3 mb-6">
+        {authorData ? (
+          <Link
+            to={`/authors/${authorData.id}`}
+            className="flex items-center gap-2.5 rounded-xl bg-card border p-3 pr-5 hover:bg-accent transition-colors group/author"
+          >
+            <Avatar className="size-9 ring-1 ring-border/50">
+              <AvatarImage {...getAvatarSrc(authorData.photoUrl ?? '', 36)} alt="" />
+              <AvatarFallback className="text-xs font-semibold bg-brand/10 text-brand">
+                {getInitials(authorData.name)}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="text-sm font-medium group-hover/author:text-brand transition-colors">
+                {authorData.name}
+              </p>
+              {authorData.title && (
+                <p className="text-xs text-muted-foreground">{authorData.title}</p>
+              )}
+            </div>
+          </Link>
+        ) : (
+          <div className="flex items-center gap-2.5 rounded-xl bg-muted/50 p-3 pr-5">
+            <div className="size-9 rounded-full bg-muted flex items-center justify-center">
+              <User className="size-4 text-muted-foreground" aria-hidden="true" />
+            </div>
+            <p className="text-sm text-muted-foreground">Unknown Author</p>
+          </div>
+        )}
+      </div>
 
       {loadError && (
         <div

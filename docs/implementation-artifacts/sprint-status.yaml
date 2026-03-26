@@ -27,7 +27,7 @@
 # - SM typically creates next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 #
-# REFRESH NOTES (2026-03-22):
+# REFRESH NOTES (2026-03-26):
 # ===========================
 # - Epics 1-10: done, all stories completed
 # - Epic 9 split into Epic 9 (infrastructure) + Epic 9B (AI features) per updated epics.md
@@ -35,9 +35,15 @@
 # - Implementation-only stories preserved (2-6..2-9, 3-0, 3-8..3-14)
 # - Deferred stories retained: 1-5 (file detection), 2-10 (captions)
 # - Epic 7 gap coverage stories (7-8..7-11) deferred indefinitely — risk accepted for error-path edge cases
+# - NEW: Epic 1B (Library Enhancements) — 4 stories, backlog
+# - NEW: Epic 1C (Course Library Management) — 6 stories, backlog
+# - NEW: Epic 28 (YouTube Course Builder) — 12 stories, backlog
+#   Numbered as Epic 28 to avoid collision with Epic 23 (Platform Identity).
+#   Defined as "Epic 23" in epics.md but renumbered here for sprint tracking clarity.
+# - E18-S03 detected story file → ready-for-dev
 
 generated: 2026-03-15
-last_updated: 2026-03-24  # E20-S03 done (365-day activity heatmap)
+last_updated: 2026-03-26  # Sprint planning refresh — added Epics 1B, 1C, 28; E20-S03 done
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -55,6 +61,28 @@ development_status:
   1-5-detect-missing-or-relocated-files: done
   1-6-delete-imported-course: done
   epic-1-retrospective: done
+
+  # ──────────────────────────────────────────────────
+  # Epic 1B: Library Enhancements
+  # ──────────────────────────────────────────────────
+  epic-1b: backlog
+  1b-1-bulk-course-import: backlog
+  1b-2-auto-extract-video-metadata: backlog
+  1b-3-import-progress-indicator: backlog
+  1b-4-course-card-thumbnails: backlog
+  epic-1b-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 1C: Course Library Management (Delete, Edit, Sort, Search)
+  # ──────────────────────────────────────────────────
+  epic-1c: backlog
+  1c-1-delete-course-and-direct-navigation-fix: backlog
+  1c-2-edit-course-title: backlog
+  1c-3-touch-target-and-filter-accessibility-fix: backlog
+  1c-4-tag-management-global-rename-and-delete: backlog
+  1c-5-momentum-sort-for-imported-courses: backlog
+  1c-6-search-and-filter-inside-course-detail-page: backlog
+  epic-1c-retrospective: optional
 
   # ──────────────────────────────────────────────────
   # Epic 2: Lesson Player & Content Consumption
@@ -257,38 +285,38 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 17: Analyze Quiz Data and Patterns
   # ──────────────────────────────────────────────────
-  epic-17: in-progress
-  17-1-track-and-display-quiz-completion-rate: backlog
+  epic-17: done
+  17-1-track-and-display-quiz-completion-rate: done
   17-2-track-average-retake-frequency: done
   17-3-calculate-item-difficulty-p-values: done
-  17-4-calculate-discrimination-indices: in-progress
-  17-5-identify-learning-trajectory-patterns: backlog
-  epic-17-retrospective: optional
+  17-4-calculate-discrimination-indices: done
+  17-5-identify-learning-trajectory-patterns: done
+  epic-17-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 18: Accessible and Integrated Quiz Experience
   # ──────────────────────────────────────────────────
-  epic-18: backlog
-  18-1-implement-complete-keyboard-navigation: backlog
+  epic-18: in-progress
+  18-1-implement-complete-keyboard-navigation: done
   18-2-implement-aria-live-regions-for-dynamic-content: backlog
-  18-3-ensure-semantic-html-and-proper-aria-attributes: backlog
-  18-4-verify-contrast-ratios-and-touch-targets: backlog
-  18-5-integrate-quiz-completion-with-study-streaks: backlog
-  18-6-display-quiz-performance-in-overview-dashboard: backlog
-  18-7-surface-quiz-analytics-in-reports-section: backlog
-  18-8-display-quiz-availability-badges-on-courses-page: backlog
-  18-9-configure-quiz-preferences-in-settings: backlog
-  18-10-export-quiz-results: backlog
-  18-11-track-quiz-progress-in-content-completion: backlog
+  18-3-ensure-semantic-html-and-proper-aria-attributes: ready-for-dev  # story file exists
+  18-4-verify-contrast-ratios-and-touch-targets: done
+  18-5-integrate-quiz-completion-with-study-streaks: done
+  18-6-display-quiz-performance-in-overview-dashboard: done
+  18-7-surface-quiz-analytics-in-reports-section: done
+  18-8-display-quiz-availability-badges-on-courses-page: done
+  18-9-configure-quiz-preferences-in-settings: done
+  18-10-export-quiz-results: done
+  18-11-track-quiz-progress-in-content-completion: done
   epic-18-retrospective: optional
 
   # ──────────────────────────────────────────────────
   # Epic 19: Platform & Entitlement (Supabase Auth + Stripe)
   # NOTE: Requires Supabase + Stripe infrastructure — not suitable for auto-story
   # ──────────────────────────────────────────────────
-  epic-19: backlog
-  19-1-authentication-setup: backlog
-  19-2-stripe-subscription-integration: backlog
+  epic-19: in-progress
+  19-1-authentication-setup: done
+  19-2-stripe-subscription-integration: done
   19-3-entitlement-system-and-offline-caching: backlog
   19-4-subscription-management: backlog
   19-5-premium-feature-gating-and-upgrade-ctas: backlog
@@ -302,34 +330,34 @@ development_status:
   # Epic 20: Learning Pathways & Knowledge Retention
   # ──────────────────────────────────────────────────
   epic-20: in-progress
-  20-1-career-paths-system: backlog
-  20-2-flashcard-system-with-spaced-repetition: backlog
+  20-1-career-paths-system: done
+  20-2-flashcard-system-with-spaced-repetition: done
   20-3-365-day-activity-heatmap: done
-  20-4-skill-proficiency-radar-chart: backlog
+  20-4-skill-proficiency-radar-chart: done
   epic-20-retrospective: optional
 
   # ──────────────────────────────────────────────────
   # Epic 21: Engagement & Adaptive Experience
   # ──────────────────────────────────────────────────
-  epic-21: backlog
-  21-1-ab-loop-video-controls: backlog
-  21-2-enhanced-video-keyboard-shortcuts: backlog
-  21-3-pomodoro-focus-timer: backlog
-  21-4-visual-energy-boost: backlog
-  21-5-user-engagement-preference-controls: backlog
-  21-6-smart-dashboard-reordering: backlog
-  21-7-age-appropriate-defaults-and-font-scaling: backlog
-  epic-21-retrospective: optional
+  epic-21: done
+  21-1-ab-loop-video-controls: done
+  21-2-enhanced-video-keyboard-shortcuts: done
+  21-3-pomodoro-focus-timer: done
+  21-4-visual-energy-boost: done
+  21-5-user-engagement-preference-controls: done
+  21-6-smart-dashboard-reordering: done
+  21-7-age-appropriate-defaults-and-font-scaling: done
+  epic-21-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 22: Ollama Integration & Smart Course Categorization
   # ──────────────────────────────────────────────────
-  epic-22: backlog
-  22-1-ollama-provider-integration: backlog
-  22-2-model-auto-discovery: backlog
-  22-3-connection-testing-health-check: backlog
-  22-4-auto-categorize-courses-on-import: backlog
-  22-5-dynamic-filter-chips-from-ai-tags: backlog
+  epic-22: done
+  22-1-ollama-provider-integration: done
+  22-2-model-auto-discovery: done
+  22-3-connection-testing-health-check: done
+  22-4-auto-categorize-courses-on-import: done
+  22-5-dynamic-filter-chips-from-ai-tags: done
   epic-22-retrospective: optional
 
   # ──────────────────────────────────────────────────
@@ -347,28 +375,28 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 24: Course Import Wizard & Editing
   # ──────────────────────────────────────────────────
-  epic-24: backlog
-  24-1-refactor-import-function-into-scan-and-persist: backlog
-  24-2-import-wizard-folder-selection-and-course-details: backlog
-  24-3-import-wizard-tags-cover-image-and-confirmation: backlog
-  24-4-ai-metadata-suggestions-during-import: backlog
-  24-5-post-import-course-editing-dialog: backlog
-  24-6-video-drag-and-drop-reorder: backlog
-  epic-24-retrospective: optional
+  epic-24: done
+  24-1-refactor-import-function-into-scan-and-persist: done
+  24-2-import-wizard-folder-selection-and-course-details: done
+  24-3-import-wizard-tags-cover-image-and-confirmation: done
+  24-4-ai-metadata-suggestions-during-import: done
+  24-5-post-import-course-editing-dialog: done
+  24-6-video-drag-and-drop-reorder: done
+  epic-24-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 25: Author Management & New User Experience
   # ──────────────────────────────────────────────────
-  epic-25: backlog
-  25-1-author-data-model-and-migration: backlog
-  25-2-author-crud-dialog: backlog
-  25-3-authors-page-from-indexeddb: backlog
-  25-4-author-auto-detection-during-import: backlog
-  25-5-smart-author-photo-detection-from-course-folder: backlog
-  25-6-link-imported-courses-to-author-profiles: backlog
-  25-7-import-focused-onboarding-overlay: backlog
-  25-8-progressive-sidebar-disclosure: backlog
-  25-9-empty-state-improvements: backlog
+  epic-25: done
+  25-1-author-data-model-and-migration: done
+  25-2-author-crud-dialog: done
+  25-3-authors-page-from-indexeddb: done
+  25-4-author-auto-detection-during-import: done
+  25-5-smart-author-photo-detection-from-course-folder: done
+  25-6-link-imported-courses-to-author-profiles: done
+  25-7-import-focused-onboarding-overlay: done
+  25-8-progressive-sidebar-disclosure: done
+  25-9-empty-state-improvements: done
   epic-25-retrospective: optional
 
   # ──────────────────────────────────────────────────
@@ -385,8 +413,29 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 27: Analytics Consolidation
   # ──────────────────────────────────────────────────
-  epic-27: in-progress
-  27-1-add-analytics-tabs-to-reports-page: backlog
-  27-2-route-redirects-for-legacy-paths: backlog
+  epic-27: done
+  27-1-add-analytics-tabs-to-reports-page: done
+  27-2-route-redirects-for-legacy-paths: done
   27-3-update-sidebar-links-to-reports-tabs: done
-  epic-27-retrospective: optional
+  epic-27-retrospective: done
+
+  # ──────────────────────────────────────────────────
+  # Epic 28: YouTube Course Builder
+  # NOTE: Defined as "Epic 23" in epics.md; renumbered to 28 to avoid
+  #       collision with Epic 23 (Platform Identity & Navigation Cleanup).
+  # Depends on: Epic 1 (course data model), Epic 2 (player), Epic 9 (AI — Premium only)
+  # ──────────────────────────────────────────────────
+  epic-28: backlog
+  28-1-dexie-v24-schema-migration-and-youtube-types: backlog
+  28-2-youtube-url-parser-and-configuration-settings: backlog
+  28-3-youtube-data-api-v3-client-with-rate-limiting: backlog
+  28-4-transcript-pipeline-tier-1-youtube-transcript: backlog
+  28-5-import-wizard-steps-1-and-2-url-input-metadata-preview: backlog
+  28-6-rule-based-video-grouping-and-chapter-editor: backlog
+  28-7-ai-powered-course-structuring-premium: backlog
+  28-8-import-wizard-step-4-course-details-and-save: backlog
+  28-9-youtube-iframe-player-and-progress-tracking: backlog
+  28-10-transcript-panel-with-search-and-click-to-seek: backlog
+  28-11-transcript-fallback-tier-2-ytdlp-and-tier-3-whisper: backlog
+  28-12-offline-support-metadata-refresh-and-security-hardening: backlog
+  epic-28-retrospective: optional

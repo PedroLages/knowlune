@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Card } from '@/app/components/ui/card'
 import { Input } from '@/app/components/ui/input'
 import { Button } from '@/app/components/ui/button'
@@ -9,16 +9,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/app/components/ui/select'
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from '@/app/components/ui/collapsible'
 import { CourseCard, categoryLabels } from '@/app/components/figma/CourseCard'
 import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
 import { TopicFilter } from '@/app/components/figma/TopicFilter'
 import { StatusFilter } from '@/app/components/figma/StatusFilter'
 import { ToggleGroup, ToggleGroupItem } from '@/app/components/ui/toggle-group'
-import { Search, FolderOpen, Loader2, BookOpen } from 'lucide-react'
+import { Search, FolderOpen, BookOpen, ChevronDown } from 'lucide-react'
 import { useCourseStore } from '@/stores/useCourseStore'
 import { getCourseCompletionPercent, getProgress } from '@/lib/progress'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
-import { importCourseFromFolder } from '@/lib/courseImport'
+import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
 import { db } from '@/db'
 import { calculateMomentumScore } from '@/lib/momentum'
 import { calculateAtRiskStatus } from '@/lib/atRisk'
@@ -29,29 +34,72 @@ import type { MomentumScore } from '@/lib/momentum'
 import type { AtRiskStatus } from '@/lib/atRisk'
 import type { CompletionEstimate } from '@/lib/completionEstimate'
 
+
 const ESTIMATED_MINUTES_PER_LESSON = 15
+const COLLAPSE_KEY = 'knowlune:sample-courses-collapsed'
 
 type SortMode = 'recent' | 'momentum'
 
 export function Courses() {
   const allCourses = useCourseStore(s => s.courses)
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+
+  // Debounce search filtering by 250ms so filtering doesn't run on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 250)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [selectedTopics, setSelectedTopics] = useState<string[]>([])
   const [selectedStatuses, setSelectedStatuses] = useState<LearnerCourseStatus[]>([])
   const [sortMode, setSortMode] = useState<SortMode>('recent')
+  const [wizardOpen, setWizardOpen] = useState(false)
   const [momentumMap, setMomentumMap] = useState<Map<string, MomentumScore>>(new Map())
   const [atRiskMap, setAtRiskMap] = useState<Map<string, AtRiskStatus>>(new Map())
   const [estimateMap, setEstimateMap] = useState<Map<string, CompletionEstimate>>(new Map())
 
+  // Collapse state for sample courses section — persisted to localStorage
+  const [sampleCollapsed, setSampleCollapsed] = useState(() => {
+    try {
+      const stored = localStorage.getItem(COLLAPSE_KEY)
+      if (stored !== null) return stored === 'true'
+    } catch {
+      // silent-catch-ok: localStorage unavailable in restricted contexts — silent fallback is correct
+    }
+    return false // Will be re-evaluated in useEffect when importedCourses loads
+  })
+
   const importedCourses = useCourseImportStore(state => state.importedCourses)
-  const isImporting = useCourseImportStore(state => state.isImporting)
   const loadImportedCourses = useCourseImportStore(state => state.loadImportedCourses)
   const getAllTags = useCourseImportStore(state => state.getAllTags)
 
   useEffect(() => {
     loadImportedCourses()
   }, [loadImportedCourses])
+
+  // Auto-collapse when imported courses first appear; auto-expand when all imports removed.
+  // useRef prevents re-triggering the initial collapse on subsequent imports during the session.
+  const hasAutoCollapsed = useRef(false)
+  useEffect(() => {
+    try {
+      if (importedCourses.length > 0 && !hasAutoCollapsed.current) {
+        const stored = localStorage.getItem(COLLAPSE_KEY)
+        if (stored === null) {
+          hasAutoCollapsed.current = true
+          setSampleCollapsed(true)
+          localStorage.setItem(COLLAPSE_KEY, 'true')
+        }
+      } else if (importedCourses.length === 0 && sampleCollapsed) {
+        // All imports removed — restore sample courses visibility
+        setSampleCollapsed(false)
+        localStorage.removeItem(COLLAPSE_KEY)
+        hasAutoCollapsed.current = false
+      }
+    } catch {
+      // silent-catch-ok: localStorage unavailable — session still works without persistence
+    }
+  }, [importedCourses.length, sampleCollapsed])
 
   useEffect(() => {
     let ignore = false
@@ -119,7 +167,8 @@ export function Courses() {
         setAtRiskMap(atRiskMap)
         setEstimateMap(estimateMap)
       } catch (err) {
-        console.error('[Courses] Failed to load course metrics:', err)
+        // silent-catch-ok: metrics failure is non-fatal — courses still load without momentum/risk indicators
+        console.warn('[Courses] Failed to load course metrics:', err)
       }
     }
 
@@ -146,13 +195,20 @@ export function Courses() {
       courses = courses.filter(c => c.category === selectedCategory)
     }
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase()
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.toLowerCase()
       courses = courses.filter(
         c =>
           c.title.toLowerCase().includes(q) ||
           c.description.toLowerCase().includes(q) ||
           c.tags.some(t => t.toLowerCase().includes(q))
+      )
+    }
+
+    // AC3: Apply topic filter to pre-seeded courses too
+    if (selectedTopics.length > 0) {
+      courses = courses.filter(c =>
+        selectedTopics.every(topic => c.tags.some(t => t.toLowerCase() === topic))
       )
     }
 
@@ -166,20 +222,52 @@ export function Courses() {
     )
   }, [filtered, sortMode, momentumMap])
 
+  // AC1+AC2: Merge tags from both pre-seeded and imported courses,
+  // deduplicate, and sort by frequency (most courses first)
+  const { mergedTags, tagCounts } = useMemo(() => {
+    const counts = new Map<string, number>()
+
+    // Count tags from pre-seeded courses
+    for (const course of allCourses) {
+      for (const tag of course.tags) {
+        const normalized = tag.trim().toLowerCase()
+        if (normalized) counts.set(normalized, (counts.get(normalized) ?? 0) + 1)
+      }
+    }
+
+    // Count tags from imported courses (AI-generated tags)
+    for (const course of importedCourses) {
+      for (const tag of course.tags) {
+        const normalized = tag.trim().toLowerCase()
+        if (normalized) counts.set(normalized, (counts.get(normalized) ?? 0) + 1)
+      }
+    }
+
+    // Sort by frequency descending, then alphabetically for ties
+    const sorted = [...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([tag]) => tag)
+
+    return { mergedTags: sorted, tagCounts: counts }
+  }, [allCourses, importedCourses])
+
+  // Keep legacy allTags for ImportedCourseCard (imported-only tags)
   const allTags = useMemo(() => getAllTags(), [getAllTags])
 
   const filteredImportedCourses = (() => {
     let courses = importedCourses
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase()
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.toLowerCase()
       courses = courses.filter(
         c => c.name.toLowerCase().includes(q) || c.tags.some(t => t.toLowerCase().includes(q))
       )
     }
 
     if (selectedTopics.length > 0) {
-      courses = courses.filter(c => selectedTopics.every(topic => c.tags.includes(topic)))
+      courses = courses.filter(c =>
+        selectedTopics.every(topic => c.tags.some(t => t.toLowerCase() === topic))
+      )
     }
 
     if (selectedStatuses.length > 0) {
@@ -193,11 +281,17 @@ export function Courses() {
     (a, b) => new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime()
   )
 
-  async function handleImportCourse() {
+  function handleOpenWizard() {
+    setWizardOpen(true)
+  }
+
+  function handleCollapseToggle(open: boolean) {
+    const collapsed = !open
+    setSampleCollapsed(collapsed)
     try {
-      await importCourseFromFolder()
+      localStorage.setItem(COLLAPSE_KEY, String(collapsed))
     } catch {
-      // Errors handled by importCourseFromFolder via toasts
+      // silent-catch-ok: localStorage unavailable — collapse state still works for the session
     }
   }
 
@@ -216,23 +310,15 @@ export function Courses() {
         </div>
         <Button
           variant="brand"
-          onClick={handleImportCourse}
-          disabled={isImporting}
+          onClick={handleOpenWizard}
           className="hover:scale-[1.02] hover:shadow-md rounded-xl transition-[transform,box-shadow] duration-200"
         >
-          {isImporting ? (
-            <>
-              <Loader2 className="size-4 mr-2 animate-spin" />
-              Scanning\u2026
-            </>
-          ) : (
-            <>
-              <FolderOpen className="size-4 mr-2" />
-              Import Course
-            </>
-          )}
+          <FolderOpen className="size-4 mr-2" />
+          Import Course
         </Button>
       </div>
+
+      <ImportWizardDialog open={wizardOpen} onOpenChange={setWizardOpen} />
 
       {totalCourses === 0 ? (
         <EmptyState
@@ -240,7 +326,7 @@ export function Courses() {
           title="No courses yet"
           description="Import a course folder to get started"
           actionLabel="Import Course"
-          onAction={handleImportCourse}
+          onAction={handleOpenWizard}
           data-testid="courses-empty-state"
         />
       ) : (
@@ -262,7 +348,7 @@ export function Courses() {
               </div>
               <Button
                 variant="brand"
-                onClick={() => setSearchQuery('')}
+                onClick={() => { setSearchQuery(''); setDebouncedSearch('') }}
                 aria-label={searchQuery ? 'Clear search' : 'Search courses'}
               >
                 {searchQuery ? 'Clear' : 'Search'}
@@ -270,19 +356,21 @@ export function Courses() {
             </div>
           </Card>
 
-          {importedCourses.length > 0 && (
-            <div className="flex flex-wrap gap-x-6 gap-y-2 items-start">
-              <TopicFilter
-                availableTags={allTags}
-                selectedTags={selectedTopics}
-                onSelectedTagsChange={setSelectedTopics}
-              />
+          {/* AC1: Show unified topic filter with merged tags from both course types */}
+          <div className="flex flex-wrap gap-x-6 gap-y-2 items-start">
+            <TopicFilter
+              availableTags={mergedTags}
+              selectedTags={selectedTopics}
+              onSelectedTagsChange={setSelectedTopics}
+              tagCounts={tagCounts}
+            />
+            {importedCourses.length > 0 && (
               <StatusFilter
                 selectedStatuses={selectedStatuses}
                 onSelectedStatusesChange={setSelectedStatuses}
               />
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Imported Courses Section */}
           {(importedCourses.length > 0 || !searchQuery.trim()) && (
@@ -302,18 +390,10 @@ export function Courses() {
                     size="sm"
                     data-testid="import-first-course-cta"
                     aria-label="Import your first course"
-                    onClick={handleImportCourse}
-                    disabled={isImporting}
+                    onClick={handleOpenWizard}
                     className="text-brand-soft-foreground h-auto p-0"
                   >
-                    {isImporting ? (
-                      <>
-                        <Loader2 className="size-4 mr-1 animate-spin" />
-                        Scanning\u2026
-                      </>
-                    ) : (
-                      'Import a course \u2192'
-                    )}
+                    Import a course &rarr;
                   </Button>
                 </div>
               ) : filteredImportedCourses.length === 0 ? (
@@ -339,67 +419,116 @@ export function Courses() {
             </div>
           )}
 
-          <div className="mb-6">
-            <div className="flex items-center gap-4 mb-4 flex-wrap">
-              <div className="flex flex-wrap gap-2 items-center flex-1">
-                <ToggleGroup
-                  type="single"
-                  value={selectedCategory}
-                  onValueChange={v => setSelectedCategory(v || 'all')}
-                  aria-label="Filter by category"
-                  className="flex flex-wrap gap-2"
+          {/* Sample Courses Section */}
+          {allCourses.length > 0 && (
+            <Collapsible
+              open={!sampleCollapsed}
+              onOpenChange={handleCollapseToggle}
+              data-testid="sample-courses-section"
+              role="region"
+              aria-labelledby="sample-courses-heading"
+              className="mb-6 rounded-[24px] border border-border/50 p-4"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <h2
+                  id="sample-courses-heading"
+                  className="text-lg font-semibold text-muted-foreground"
                 >
-                  {[
-                    { value: 'all', label: 'All Courses' },
-                    ...availableCategories.map(cat => ({
-                      value: cat,
-                      label: categoryLabels[cat] ?? cat,
-                    })),
-                  ].map((chip, i) => (
-                    <ToggleGroupItem
-                      key={chip.value}
-                      value={chip.value}
-                      className={`h-auto rounded-full! border px-4 py-3 sm:py-1.5 text-sm font-medium transition-colors data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-card data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-accent data-[state=off]:hover:text-foreground data-[state=off]:border-border cursor-pointer shadow-none${i === 0 ? ' mr-1' : ''}`}
-                    >
-                      {chip.label}
-                    </ToggleGroupItem>
-                  ))}
-                </ToggleGroup>
+                  Sample Courses ({allCourses.length})
+                </h2>
+                <CollapsibleTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    data-testid="sample-courses-toggle"
+                    aria-label={
+                      sampleCollapsed ? 'Expand sample courses' : 'Collapse sample courses'
+                    }
+                    className="min-h-[44px] min-w-[44px] p-2"
+                  >
+                    <ChevronDown
+                      aria-hidden="true"
+                      className={`size-4 transition-transform duration-200 motion-reduce:transition-none ${
+                        !sampleCollapsed ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </Button>
+                </CollapsibleTrigger>
               </div>
-              <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
-                <SelectTrigger
-                  data-testid="sort-select"
-                  aria-label="Sort courses"
-                  className="w-[180px] rounded-xl"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="recent">Most Recent</SelectItem>
-                  <SelectItem value="momentum">Sort by Momentum</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
 
-            {sortedCourses.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                No courses match your search
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                {sortedCourses.map(course => (
-                  <CourseCard
-                    key={course.id}
-                    course={course}
-                    completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
-                    momentumScore={momentumMap.get(course.id)}
-                    atRiskStatus={atRiskMap.get(course.id)}
-                    completionEstimate={estimateMap.get(course.id)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+              <CollapsibleContent
+                className={`transition-opacity duration-200 motion-reduce:transition-none ${
+                  importedCourses.length > 0 ? 'opacity-60 hover:opacity-100' : ''
+                }`}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4">
+                  <div className="overflow-x-auto flex-1 min-w-0">
+                    <ToggleGroup
+                      type="single"
+                      value={selectedCategory}
+                      onValueChange={v => setSelectedCategory(v || 'all')}
+                      aria-label="Filter by category"
+                      className="flex flex-nowrap gap-1.5 sm:gap-2"
+                    >
+                      {[
+                        { value: 'all', label: 'All Courses' },
+                        ...availableCategories.map(cat => ({
+                          value: cat,
+                          label: categoryLabels[cat] ?? cat,
+                        })),
+                      ].map((chip, i) => (
+                        <ToggleGroupItem
+                          key={chip.value}
+                          value={chip.value}
+                          className={`h-auto rounded-full! border px-3 sm:px-4 py-3 sm:py-1.5 text-xs sm:text-sm font-medium whitespace-nowrap transition-colors data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:hover:bg-brand-hover data-[state=on]:border-transparent data-[state=off]:bg-card data-[state=off]:text-muted-foreground data-[state=off]:hover:bg-accent data-[state=off]:hover:text-foreground data-[state=off]:border-border cursor-pointer shadow-none${i === 0 ? ' mr-1' : ''}`}
+                        >
+                          {chip.label}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                  </div>
+                  <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
+                    <SelectTrigger
+                      data-testid="sort-select"
+                      aria-label="Sort courses"
+                      className="w-full sm:w-[180px] rounded-xl"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="recent">Most Recent</SelectItem>
+                      <SelectItem value="momentum">Sort by Momentum</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {sortedCourses.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    No courses match your search
+                  </div>
+                ) : (
+                  <div
+                    data-testid="sample-courses-grid"
+                    className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
+                  >
+                    {sortedCourses.map(course => (
+                      <CourseCard
+                        key={course.id}
+                        course={course}
+                        completionPercent={getCourseCompletionPercent(
+                          course.id,
+                          course.totalLessons
+                        )}
+                        momentumScore={momentumMap.get(course.id)}
+                        atRiskStatus={atRiskMap.get(course.id)}
+                        completionEstimate={estimateMap.get(course.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
+          )}
         </>
       )}
     </div>

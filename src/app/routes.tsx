@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react'
-import { createBrowserRouter, Navigate } from 'react-router'
+import { createBrowserRouter, Navigate, useParams } from 'react-router'
 import { Layout } from './components/Layout'
 import { DelayedFallback } from './components/DelayedFallback'
 import { Skeleton } from './components/ui/skeleton'
@@ -10,6 +10,9 @@ const Overview = React.lazy(() => import('./pages/Overview').then(m => ({ defaul
 const Courses = React.lazy(() => import('./pages/Courses').then(m => ({ default: m.Courses })))
 const CourseDetail = React.lazy(() =>
   import('./pages/CourseDetail').then(m => ({ default: m.CourseDetail }))
+)
+const CourseOverview = React.lazy(() =>
+  import('./pages/CourseOverview').then(m => ({ default: m.CourseOverview }))
 )
 const LessonPlayer = React.lazy(() =>
   import('./pages/LessonPlayer').then(m => ({ default: m.LessonPlayer }))
@@ -47,6 +50,9 @@ const ReviewQueue = React.lazy(() =>
 const RetentionDashboard = React.lazy(() =>
   import('./pages/RetentionDashboard').then(m => ({ default: m.RetentionDashboard }))
 )
+const Flashcards = React.lazy(() =>
+  import('./pages/Flashcards').then(m => ({ default: m.Flashcards }))
+)
 const InterleavedReview = React.lazy(() =>
   import('./pages/InterleavedReview').then(m => ({ default: m.InterleavedReview }))
 )
@@ -56,6 +62,15 @@ const QuizResults = React.lazy(() =>
 )
 const QuizReview = React.lazy(() =>
   import('./pages/QuizReview').then(m => ({ default: m.QuizReview }))
+)
+const CareerPaths = React.lazy(() =>
+  import('./pages/CareerPaths').then(m => ({ default: m.CareerPaths }))
+)
+const CareerPathDetail = React.lazy(() =>
+  import('./pages/CareerPathDetail').then(m => ({ default: m.CareerPathDetail }))
+)
+const NotFound = React.lazy(() =>
+  import('./pages/NotFound').then(m => ({ default: m.NotFound }))
 )
 
 // Default exports work directly with React.lazy
@@ -84,6 +99,12 @@ function SuspensePage({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<PageLoader />}>{children}</Suspense>
 }
 
+/** Preserves :authorId param when redirecting /instructors/:authorId → /authors/:authorId */
+function InstructorProfileRedirect() {
+  const { authorId } = useParams()
+  return <Navigate to={`/authors/${authorId}`} replace />
+}
+
 export const router = createBrowserRouter([
   {
     path: '/',
@@ -110,6 +131,14 @@ export const router = createBrowserRouter([
         element: (
           <SuspensePage>
             <Courses />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'courses/:courseId/overview',
+        element: (
+          <SuspensePage>
+            <CourseOverview />
           </SuspensePage>
         ),
       },
@@ -170,6 +199,22 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'career-paths',
+        element: (
+          <SuspensePage>
+            <CareerPaths />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'career-paths/:pathId',
+        element: (
+          <SuspensePage>
+            <CareerPathDetail />
+          </SuspensePage>
+        ),
+      },
+      {
         path: 'library',
         element: <Navigate to="/notes?tab=bookmarks" replace />,
       },
@@ -212,7 +257,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'instructors/:authorId',
-        element: <Navigate to="/authors" replace />,
+        element: <InstructorProfileRedirect />,
       },
       {
         path: 'challenges',
@@ -237,6 +282,19 @@ export const router = createBrowserRouter([
             <Reports />
           </SuspensePage>
         ),
+      },
+      // Legacy path-based redirects → query-param tabs (E27-S02)
+      {
+        path: 'reports/study',
+        element: <Navigate to="/reports?tab=study" replace />,
+      },
+      {
+        path: 'reports/quizzes',
+        element: <Navigate to="/reports?tab=quizzes" replace />,
+      },
+      {
+        path: 'reports/ai',
+        element: <Navigate to="/reports?tab=ai" replace />,
       },
       {
         path: 'settings',
@@ -287,6 +345,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'flashcards',
+        element: (
+          <SuspensePage>
+            <Flashcards />
+          </SuspensePage>
+        ),
+      },
+      {
         path: 'webllm-test',
         element: (
           <SuspensePage>
@@ -303,6 +369,14 @@ export const router = createBrowserRouter([
       //     </SuspensePage>
       //   ),
       // },
+      {
+        path: '*',
+        element: (
+          <SuspensePage>
+            <NotFound />
+          </SuspensePage>
+        ),
+      },
     ],
   },
 ])

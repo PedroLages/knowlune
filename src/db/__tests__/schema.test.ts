@@ -49,18 +49,23 @@ describe('ElearningDB schema', () => {
     expect(db.name).toBe('ElearningDB')
     expect(db.tables.map(t => t.name).sort()).toEqual([
       'aiUsageEvents',
+      'authors',
       'bookmarks',
+      'careerPaths',
       'challenges',
       'contentProgress',
       'courseReminders',
       'courseThumbnails',
       'courses',
       'embeddings',
+      'entitlements',
+      'flashcards',
       'importedCourses',
       'importedPdfs',
       'importedVideos',
       'learningPath',
       'notes',
+      'pathEnrollments',
       'progress',
       'quizAttempts',
       'quizzes',
@@ -71,8 +76,12 @@ describe('ElearningDB schema', () => {
     ])
   })
 
-  it('should be at version 19', () => {
-    expect(db.verno).toBe(19)
+  it('should be at version 23', () => {
+    expect(db.verno).toBe(23)
+  })
+
+  it('should have entitlements table with userId as primary key', () => {
+    expect(db.entitlements.schema.primKey.name).toBe('userId')
   })
 
   it('should preserve key indexes on existing v16 tables in v17 migration', async () => {
@@ -418,6 +427,187 @@ describe('v4 migration from localStorage', () => {
   })
 })
 
+describe('authors table (v20)', () => {
+  function makeAuthor(overrides: Record<string, unknown> = {}) {
+    const now = new Date().toISOString()
+    return {
+      id: crypto.randomUUID(),
+      name: 'Test Author',
+      bio: 'A test bio',
+      photoUrl: '',
+      courseIds: [] as string[],
+      isPreseeded: false,
+      createdAt: now,
+      updatedAt: now,
+      ...overrides,
+    }
+  }
+
+  it('should add and retrieve an author', async () => {
+    const author = makeAuthor({ name: 'Jane Doe' })
+    await db.authors.add(author)
+
+    const retrieved = await db.authors.get(author.id)
+    expect(retrieved).toBeDefined()
+    expect(retrieved!.name).toBe('Jane Doe')
+    expect(retrieved!.courseIds).toEqual([])
+  })
+
+  it('should query authors by name index', async () => {
+    await db.authors.add(makeAuthor({ name: 'Alice' }))
+    await db.authors.add(makeAuthor({ name: 'Bob' }))
+
+    const results = await db.authors.where('name').equals('Alice').toArray()
+    expect(results).toHaveLength(1)
+    expect(results[0].name).toBe('Alice')
+  })
+
+  it('should query authors by createdAt index', async () => {
+    const ts1 = '2026-01-01T00:00:00.000Z'
+    const ts2 = '2026-06-01T00:00:00.000Z'
+    await db.authors.bulkAdd([
+      makeAuthor({ createdAt: ts1, updatedAt: ts1 }),
+      makeAuthor({ createdAt: ts2, updatedAt: ts2 }),
+    ])
+
+    const results = await db.authors.where('createdAt').above(ts1).toArray()
+    expect(results).toHaveLength(1)
+    expect(results[0].createdAt).toBe(ts2)
+  })
+
+  it('should delete an author by id', async () => {
+    const author = makeAuthor()
+    await db.authors.add(author)
+
+    await db.authors.delete(author.id)
+    const result = await db.authors.get(author.id)
+    expect(result).toBeUndefined()
+  })
+
+  it('should update an author', async () => {
+    const author = makeAuthor({ name: 'Original' })
+    await db.authors.add(author)
+
+    await db.authors.update(author.id, { name: 'Updated' })
+    const updated = await db.authors.get(author.id)
+    expect(updated!.name).toBe('Updated')
+  })
+})
+
+describe('v20 migration edge cases', () => {
+  /**
+   * Helper: create a v19 database with importedCourses data, then trigger v20 upgrade.
+   * Returns the upgraded db instance.
+   */
+  async function migrateFromV19(courses: Array<Record<string, unknown>> = []) {
+    await Dexie.delete('ElearningDB')
+
+    // Create a v19 database with importedCourses
+    const v19Db = new Dexie('ElearningDB')
+    v19Db.version(19).stores({
+      importedCourses: 'id, name, importedAt, status, *tags',
+      importedVideos: 'id, courseId, filename',
+      importedPdfs: 'id, courseId, filename',
+      progress: '[courseId+videoId], courseId, videoId',
+      bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+      notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+      screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+      studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+      contentProgress: '[courseId+itemId], courseId, itemId, status',
+      challenges: 'id, type, deadline, createdAt',
+      embeddings: 'noteId, createdAt',
+      learningPath: 'courseId, position, generatedAt',
+      courseThumbnails: 'courseId',
+      aiUsageEvents: 'id, featureType, timestamp, courseId',
+      reviewRecords: 'id, noteId, nextReviewAt, reviewedAt',
+      courseReminders: 'id, courseId',
+      courses: 'id, category, difficulty, authorId',
+      quizzes: 'id, lessonId, createdAt',
+      quizAttempts: 'id, quizId, [quizId+completedAt], completedAt',
+      videoCaptions: '[courseId+videoId], courseId, videoId',
+    })
+    await v19Db.open()
+
+    // Seed importedCourses with authorName data
+    if (courses.length > 0) {
+      await v19Db.table('importedCourses').bulkAdd(courses)
+    }
+
+    v19Db.close()
+
+    // Re-import the real schema module (v20) to trigger upgrade
+    vi.resetModules()
+    const module = await import('@/db/schema')
+    db = module.db
+
+    return db
+  }
+
+  function makeMigrationCourse(overrides: Record<string, unknown> = {}) {
+    return {
+      id: crypto.randomUUID(),
+      name: 'Test Course',
+      importedAt: new Date().toISOString(),
+      category: '',
+      tags: [] as string[],
+      status: 'active',
+      videoCount: 0,
+      pdfCount: 0,
+      directoryHandle: {} as FileSystemDirectoryHandle,
+      ...overrides,
+    }
+  }
+
+  it('should handle 0 courses (empty library) — only Chase Hughes is seeded', async () => {
+    const upgradedDb = await migrateFromV19([])
+
+    const authors = await upgradedDb.authors.toArray()
+    expect(authors).toHaveLength(1)
+    expect(authors[0].name).toBe('Chase Hughes')
+    expect(authors[0].isPreseeded).toBe(true)
+  })
+
+  it('should deduplicate authorNames (case-insensitive, trimmed)', async () => {
+    const courses = [
+      makeMigrationCourse({ authorName: 'John Smith' }),
+      makeMigrationCourse({ authorName: 'john smith' }),
+      makeMigrationCourse({ authorName: ' John Smith ' }),
+    ]
+
+    const upgradedDb = await migrateFromV19(courses)
+
+    const authors = await upgradedDb.authors.toArray()
+    // 1 Chase Hughes (pre-seeded) + 1 John Smith (deduplicated)
+    expect(authors).toHaveLength(2)
+
+    // Migration stores the first-seen name (after trim). Since toArray() returns
+    // records in primary-key (UUID) sort order, the first-seen variant is
+    // non-deterministic. Match case-insensitively to avoid flakiness.
+    const johnSmith = authors.find(a => a.name.toLowerCase() === 'john smith')
+    expect(johnSmith).toBeDefined()
+    expect(johnSmith!.courseIds).toHaveLength(3) // All 3 courses linked
+    expect(johnSmith!.isPreseeded).toBe(false)
+  })
+
+  it('should skip empty authorName strings', async () => {
+    const courses = [
+      makeMigrationCourse({ authorName: '' }),
+      makeMigrationCourse({ authorName: '   ' }),
+      makeMigrationCourse({ authorName: 'Valid Author' }),
+    ]
+
+    const upgradedDb = await migrateFromV19(courses)
+
+    const authors = await upgradedDb.authors.toArray()
+    // 1 Chase Hughes + 1 Valid Author (empty strings skipped)
+    expect(authors).toHaveLength(2)
+
+    const validAuthor = authors.find(a => a.name === 'Valid Author')
+    expect(validAuthor).toBeDefined()
+    expect(validAuthor!.courseIds).toHaveLength(1)
+  })
+})
+
 describe('quizzes table', () => {
   // Schema-level fixture: questions intentionally empty — Dexie doesn't enforce Zod constraints at
   // write time, so these tests validate index behavior only, not quiz content validity.
@@ -521,5 +711,75 @@ describe('quizAttempts table', () => {
     const results = await db.quizAttempts.where('completedAt').above(t1).toArray()
     expect(results).toHaveLength(1)
     expect(results[0].completedAt).toBe(t2)
+  })
+})
+
+describe('flashcards table (v20)', () => {
+  function makeFlashcard(overrides: Record<string, unknown> = {}) {
+    return {
+      id: crypto.randomUUID(),
+      courseId: 'course-1',
+      front: 'What is spaced repetition?',
+      back: 'A learning technique that spaces reviews at increasing intervals.',
+      interval: 0,
+      easeFactor: 2.5,
+      reviewCount: 0,
+      createdAt: '2026-03-23T10:00:00.000Z',
+      updatedAt: '2026-03-23T10:00:00.000Z',
+      ...overrides,
+    }
+  }
+
+  it('should add and retrieve a flashcard', async () => {
+    const card = makeFlashcard({ front: 'What is SM-2?' })
+    await db.flashcards.add(card)
+    const retrieved = await db.flashcards.get(card.id)
+    expect(retrieved).toBeDefined()
+    expect(retrieved!.front).toBe('What is SM-2?')
+    expect(retrieved!.easeFactor).toBe(2.5)
+    expect(retrieved!.reviewCount).toBe(0)
+  })
+
+  it('should query flashcards by courseId index', async () => {
+    const courseId = crypto.randomUUID()
+    await db.flashcards.bulkAdd([
+      makeFlashcard({ courseId, front: 'Card 1' }),
+      makeFlashcard({ courseId, front: 'Card 2' }),
+      makeFlashcard({ courseId: 'other-course', front: 'Card 3' }),
+    ])
+    const results = await db.flashcards.where('courseId').equals(courseId).toArray()
+    expect(results).toHaveLength(2)
+  })
+
+  it('should query flashcards due for review by nextReviewAt index', async () => {
+    const past = '2026-01-01T00:00:00.000Z'
+    const future = '2030-01-01T00:00:00.000Z'
+    await db.flashcards.bulkAdd([
+      makeFlashcard({ nextReviewAt: past }),
+      makeFlashcard({ nextReviewAt: future }),
+    ])
+    const now = '2026-03-23T10:00:00.000Z'
+    const due = await db.flashcards.where('nextReviewAt').belowOrEqual(now).toArray()
+    expect(due).toHaveLength(1)
+    expect(due[0].nextReviewAt).toBe(past)
+  })
+
+  it('should query flashcards by optional noteId index', async () => {
+    const noteId = crypto.randomUUID()
+    await db.flashcards.bulkAdd([
+      makeFlashcard({ noteId, front: 'From note' }),
+      makeFlashcard({ front: 'Standalone' }),
+    ])
+    const fromNote = await db.flashcards.where('noteId').equals(noteId).toArray()
+    expect(fromNote).toHaveLength(1)
+    expect(fromNote[0].front).toBe('From note')
+  })
+
+  it('should delete a flashcard', async () => {
+    const card = makeFlashcard()
+    await db.flashcards.add(card)
+    await db.flashcards.delete(card.id)
+    const result = await db.flashcards.get(card.id)
+    expect(result).toBeUndefined()
   })
 })

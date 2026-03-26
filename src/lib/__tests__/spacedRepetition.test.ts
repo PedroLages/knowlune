@@ -158,3 +158,50 @@ describe('isDue', () => {
     expect(isDue(record, FIXED_DATE)).toBe(false)
   })
 })
+
+describe('SpacedRepetitionState compatibility (Flashcard-shaped objects)', () => {
+  // These tests verify the widened type signatures accept Flashcard-shaped objects
+  // (which only have the 3 SM-2 fields, not the full ReviewRecord shape)
+
+  function makeFlashcardState(overrides: Record<string, unknown> = {}) {
+    return {
+      reviewCount: 1,
+      easeFactor: 2.5,
+      interval: 3,
+      reviewedAt: FIXED_DATE.toISOString(),
+      nextReviewAt: new Date(FIXED_DATE.getTime() + 3 * 86400000).toISOString(),
+      ...overrides,
+    }
+  }
+
+  it('calculateNextReview accepts Flashcard-shaped state', () => {
+    const state = makeFlashcardState({ reviewCount: 1, easeFactor: 2.5, interval: 3 })
+    const result = calculateNextReview(state, 'good', FIXED_DATE)
+    expect(result.interval).toBeGreaterThan(1)
+    expect(result.easeFactor).toBeGreaterThan(1.3)
+    expect(result.nextReviewAt).toBeTruthy()
+  })
+
+  it('calculateNextReview with null (never reviewed flashcard) produces first-review intervals', () => {
+    expect(calculateNextReview(null, 'hard', FIXED_DATE).interval).toBe(1)
+    expect(calculateNextReview(null, 'good', FIXED_DATE).interval).toBe(3)
+    expect(calculateNextReview(null, 'easy', FIXED_DATE).interval).toBe(7)
+  })
+
+  it('predictRetention accepts Flashcard-shaped state', () => {
+    const state = makeFlashcardState({ interval: 7 })
+    const retention = predictRetention(state, FIXED_DATE)
+    expect(retention).toBe(100) // Just reviewed
+  })
+
+  it('isDue accepts Flashcard-shaped state', () => {
+    const past = makeFlashcardState({
+      nextReviewAt: new Date(FIXED_DATE.getTime() - 86400000).toISOString(),
+    })
+    const future = makeFlashcardState({
+      nextReviewAt: new Date(FIXED_DATE.getTime() + 86400000).toISOString(),
+    })
+    expect(isDue(past, FIXED_DATE)).toBe(true)
+    expect(isDue(future, FIXED_DATE)).toBe(false)
+  })
+})

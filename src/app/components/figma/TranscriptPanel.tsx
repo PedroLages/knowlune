@@ -78,6 +78,7 @@ export function TranscriptPanel({ src, currentTime, onSeek }: TranscriptPanelPro
         if (!cancelled) setCues(parseVTT(text))
       })
       .catch(() => {
+        // silent-catch-ok — error state handled by component
         if (!cancelled) setError(true)
       })
 

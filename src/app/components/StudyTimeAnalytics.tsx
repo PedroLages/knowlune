@@ -7,7 +7,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from '@/app/components/ui/chart'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts'
 import { Progress } from '@/app/components/ui/progress'
 import { db } from '@/db/schema'
 import type { StudySession } from '@/data/types'
@@ -186,7 +186,6 @@ export default function StudyTimeAnalytics() {
           {!showTable ? (
             <div data-testid="study-time-chart" role="img" aria-label={chartAltText}>
               <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis
@@ -213,7 +212,6 @@ export default function StudyTimeAnalytics() {
                       aria-label="Study time in minutes"
                     />
                   </BarChart>
-                </ResponsiveContainer>
               </ChartContainer>
             </div>
           ) : (

@@ -56,11 +56,11 @@ export function PdfViewer({
   if (state.loadError) {
     return (
       <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted p-12">
-        <FileText className="mb-4 h-12 w-12 text-muted-foreground" />
+        <FileText className="mb-4 size-12 text-muted-foreground" />
         <p className="mb-2 text-sm font-medium text-muted-foreground">{title || 'PDF Document'}</p>
         <p className="mb-4 text-xs text-muted-foreground">Unable to preview this document inline</p>
         <Button variant="outline" size="sm" onClick={() => window.open(src, '_blank')}>
-          <ExternalLink className="mr-2 h-4 w-4" />
+          <ExternalLink className="mr-2 size-4" />
           Open in New Tab
         </Button>
       </div>
@@ -187,9 +187,9 @@ export function PdfViewer({
                         onClick={() => state.goToPage(state.currentPage - 1)}
                         disabled={state.currentPage <= 1}
                         aria-label="Previous page"
-                        className="flex h-8 w-8 items-center justify-center rounded-full text-white transition-colors hover:bg-white/20 disabled:opacity-40 disabled:hover:bg-transparent sm:h-7 sm:w-7"
+                        className="flex size-8 items-center justify-center rounded-full text-white transition-colors hover:bg-white/20 disabled:opacity-40 disabled:hover:bg-transparent sm:h-7 sm:w-7"
                       >
-                        <ChevronLeft className="h-4 w-4" />
+                        <ChevronLeft className="size-4" />
                       </button>
 
                       <span className="min-w-[4rem] select-none text-center text-xs font-medium text-white">
@@ -200,9 +200,9 @@ export function PdfViewer({
                         onClick={() => state.goToPage(state.currentPage + 1)}
                         disabled={state.currentPage >= state.totalPages}
                         aria-label="Next page"
-                        className="flex h-8 w-8 items-center justify-center rounded-full text-white transition-colors hover:bg-white/20 disabled:opacity-40 disabled:hover:bg-transparent sm:h-7 sm:w-7"
+                        className="flex size-8 items-center justify-center rounded-full text-white transition-colors hover:bg-white/20 disabled:opacity-40 disabled:hover:bg-transparent sm:h-7 sm:w-7"
                       >
-                        <ChevronRight className="h-4 w-4" />
+                        <ChevronRight className="size-4" />
                       </button>
                     </div>
 

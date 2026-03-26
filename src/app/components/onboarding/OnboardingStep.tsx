@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router'
-import { BookOpen, Play, Trophy, PartyPopper } from 'lucide-react'
+import { FolderOpen, Play, Trophy, PartyPopper } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import type { OnboardingStep as StepNumber } from '@/stores/useOnboardingStore'
 
@@ -13,11 +13,11 @@ interface StepConfig {
 
 const STEPS: Record<1 | 2 | 3, StepConfig> = {
   1: {
-    icon: BookOpen,
-    title: 'Import your first course',
+    icon: FolderOpen,
+    title: 'Welcome to Knowlune',
     description:
-      'Add a folder with video lessons or PDFs to start building your personal learning library.',
-    cta: 'Go to Courses',
+      'Import your first course to get started. Point Knowlune at a folder of video lessons or PDFs and it will organise everything into a course you can track.',
+    cta: 'Import a Course',
     path: '/courses',
   },
   2: {
@@ -50,8 +50,8 @@ export function OnboardingStepContent({ step, isComplete, onNavigate }: Onboardi
   if (isComplete) {
     return (
       <div className="text-center space-y-4">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success-soft">
-          <PartyPopper className="h-8 w-8 text-success" aria-hidden="true" />
+        <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-success-soft">
+          <PartyPopper className="size-8 text-success" aria-hidden="true" />
         </div>
         <h2 className="text-2xl font-bold text-foreground">You're all set!</h2>
         <p className="text-muted-foreground">
@@ -72,12 +72,13 @@ export function OnboardingStepContent({ step, isComplete, onNavigate }: Onboardi
 
   return (
     <div className="text-center space-y-4">
-      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-soft">
-        <Icon className="h-8 w-8 text-brand" aria-hidden="true" />
+      <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-brand-soft">
+        <Icon className="size-8 text-brand" aria-hidden="true" />
       </div>
       <h2 className="text-2xl font-bold text-foreground">{config.title}</h2>
       <p className="text-muted-foreground">{config.description}</p>
       <Button
+        variant={step === 1 ? 'brand' : 'default'}
         onClick={() => {
           onNavigate()
           navigate(config.path)

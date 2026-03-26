@@ -42,9 +42,9 @@ export function LessonList({
                       }`}
                     >
                       {isComplete ? (
-                        <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
+                        <CheckCircle2 className="size-4 text-success shrink-0" />
                       ) : (
-                        <Circle className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+                        <Circle className="size-4 text-muted-foreground/40 shrink-0" />
                       )}
                       <span className="flex-1 truncate">{lesson.title}</span>
                       <div className="flex items-center gap-1 shrink-0">

@@ -260,7 +260,7 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
                 value={`note:${result.id}`}
                 onSelect={() => handleNoteSelect(result)}
               >
-                <StickyNote className="mr-2 h-4 w-4 shrink-0 text-gold" />
+                <StickyNote className="mr-2 size-4 shrink-0 text-gold" />
                 <div className="flex flex-col gap-0.5 min-w-0">
                   <span className="text-sm truncate">
                     {highlightMatches(truncateSnippet(result.content), highlightPatterns)}
@@ -297,7 +297,7 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
                 value={[item.label, ...item.keywords].join(' ')}
                 onSelect={() => handleSelect(item.path)}
               >
-                <Icon className="mr-2 h-4 w-4 shrink-0" />
+                <Icon className="mr-2 size-4 shrink-0" />
                 <span>{item.label}</span>
                 {item.id === 'page-settings' && (
                   <CommandShortcut>
@@ -318,7 +318,7 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
                 value={[item.label, ...item.keywords].join(' ')}
                 onSelect={() => handleSelect(item.path)}
               >
-                <Icon className="mr-2 h-4 w-4 shrink-0" />
+                <Icon className="mr-2 size-4 shrink-0" />
                 <div className="flex flex-col">
                   <span>{item.label}</span>
                   {item.sublabel && (
@@ -339,7 +339,7 @@ export function SearchCommandPalette({ open, onOpenChange }: SearchCommandPalett
                 value={[item.label, ...item.keywords].join(' ')}
                 onSelect={() => handleSelect(item.path)}
               >
-                <Icon className="mr-2 h-4 w-4 shrink-0" />
+                <Icon className="mr-2 size-4 shrink-0" />
                 <div className="flex flex-col">
                   <span>{item.label}</span>
                   {item.sublabel && (

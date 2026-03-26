@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useParams, Link } from 'react-router'
 import { Clock, Video, FileText, BookOpen, Play, CheckCircle } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
@@ -18,8 +19,8 @@ import { ModuleAccordion } from '@/app/components/figma/ModuleAccordion'
 import { CourseNotesTab } from '@/app/components/notes/CourseNotesTab'
 import { categoryLabels, categoryColors } from '@/app/components/figma/CourseCard'
 import { useCourseStore } from '@/stores/useCourseStore'
-import { getAuthorById } from '@/data/authors'
 import { getAvatarSrc } from '@/lib/authors'
+import { useAuthorStore } from '@/stores/useAuthorStore'
 import { getProgress, getCourseCompletionPercent } from '@/lib/progress'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 
@@ -31,10 +32,16 @@ export function CourseDetail() {
   // This ensures the progress bar reflects changes made via StatusSelector
   useContentProgressStore(s => s.statusMap)
 
+  // Subscribe to author store reactively and ensure authors are loaded
+  const { loadAuthors, getAuthorById } = useAuthorStore()
+  useEffect(() => {
+    loadAuthors()
+  }, [loadAuthors])
+
   if (!course) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
-        <BookOpen className="mb-4 h-16 w-16 text-muted-foreground/50" />
+        <BookOpen className="mb-4 size-16 text-muted-foreground/50" />
         <h2 className="text-xl font-semibold mb-2">Course Not Found</h2>
         <p className="text-muted-foreground mb-6">The course you're looking for doesn't exist.</p>
         <Button asChild>
@@ -93,7 +100,7 @@ export function CourseDetail() {
                   className="inline-flex items-center gap-2.5 mb-5 px-3 py-2 rounded-xl bg-muted/50 hover:bg-muted transition-colors w-fit"
                 >
                   <Avatar className="size-8">
-                    <AvatarImage {...getAvatarSrc(author.avatar, 32)} alt={author.name} />
+                    <AvatarImage {...getAvatarSrc(author.photoUrl ?? '', 32)} alt={author.name} />
                     <AvatarFallback className="text-xs">
                       {author.name
                         .split(' ')
@@ -103,7 +110,6 @@ export function CourseDetail() {
                   </Avatar>
                   <div className="text-left">
                     <p className="text-sm font-medium leading-tight">{author.name}</p>
-                    <p className="text-xs text-muted-foreground leading-tight">{author.title}</p>
                   </div>
                 </Link>
               )
@@ -111,26 +117,26 @@ export function CourseDetail() {
 
             <div className="flex flex-wrap items-center gap-5 text-sm text-muted-foreground mb-6">
               <span className="flex items-center gap-1.5">
-                <BookOpen className="h-4 w-4" />
+                <BookOpen className="size-4" />
                 {course.totalLessons} lessons
               </span>
               <span className="flex items-center gap-1.5">
-                <Video className="h-4 w-4" />
+                <Video className="size-4" />
                 {course.totalVideos} videos
               </span>
               <span className="flex items-center gap-1.5">
-                <FileText className="h-4 w-4" />
+                <FileText className="size-4" />
                 {course.totalPDFs} documents
               </span>
               <span className="flex items-center gap-1.5">
-                <Clock className="h-4 w-4" />~{course.estimatedHours} hours
+                <Clock className="size-4" />~{course.estimatedHours} hours
               </span>
             </div>
 
             {resumeLesson && (
               <Button variant="brand" asChild>
                 <Link to={`/courses/${course.id}/${resumeLesson}`}>
-                  <Play className="mr-2 h-4 w-4" />
+                  <Play className="mr-2 size-4" />
                   {lastWatchedLesson ? 'Continue Learning' : 'Start Course'}
                 </Link>
               </Button>

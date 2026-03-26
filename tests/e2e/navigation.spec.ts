@@ -18,6 +18,16 @@ import {
 } from '../support/helpers/navigation'
 
 test.describe('App Navigation', () => {
+  test.beforeEach(async ({ page }) => {
+    // Dismiss welcome wizard so it doesn't block navigation
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'knowlune-welcome-wizard-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z' })
+      )
+    })
+  })
+
   test('should load Overview page at root', async ({ page }) => {
     await goToOverview(page)
 
