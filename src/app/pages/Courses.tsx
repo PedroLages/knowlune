@@ -277,6 +277,24 @@ export function Courses() {
     return courses
   })()
 
+  // AC6 (E23-S05): Auto-expand pre-seeded section when a filter/search matches
+  // pre-seeded courses while the section is collapsed, so users don't miss results.
+  useEffect(() => {
+    if (!sampleCollapsed) return
+    const hasActiveFilter =
+      selectedTopics.length > 0 ||
+      debouncedSearch.trim() !== '' ||
+      (selectedCategory !== 'all' && selectedCategory !== '')
+    if (hasActiveFilter && filtered.length > 0) {
+      setSampleCollapsed(false)
+      try {
+        localStorage.setItem(COLLAPSE_KEY, 'false')
+      } catch {
+        // silent-catch-ok: localStorage unavailable — auto-expand still works for the session
+      }
+    }
+  }, [sampleCollapsed, selectedTopics, debouncedSearch, selectedCategory, filtered.length])
+
   const sortedImportedCourses = [...filteredImportedCourses].sort(
     (a, b) => new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime()
   )
