@@ -34,7 +34,6 @@ import type { MomentumScore } from '@/lib/momentum'
 import type { AtRiskStatus } from '@/lib/atRisk'
 import type { CompletionEstimate } from '@/lib/completionEstimate'
 
-
 const ESTIMATED_MINUTES_PER_LESSON = 15
 const COLLAPSE_KEY = 'knowlune:sample-courses-collapsed'
 
@@ -90,8 +89,8 @@ export function Courses() {
           setSampleCollapsed(true)
           localStorage.setItem(COLLAPSE_KEY, 'true')
         }
-      } else if (importedCourses.length === 0 && sampleCollapsed) {
-        // All imports removed — restore sample courses visibility
+      } else if (importedCourses.length === 0 && sampleCollapsed && hasAutoCollapsed.current) {
+        // All imports removed — restore sample courses visibility (only undo auto-collapse, not manual)
         setSampleCollapsed(false)
         localStorage.removeItem(COLLAPSE_KEY)
         hasAutoCollapsed.current = false
@@ -188,7 +187,7 @@ export function Courses() {
     [allCourses]
   )
 
-  const filtered = (() => {
+  const filtered = useMemo(() => {
     let courses = allCourses
 
     if (selectedCategory && selectedCategory !== 'all') {
@@ -213,7 +212,7 @@ export function Courses() {
     }
 
     return courses
-  })()
+  }, [allCourses, selectedCategory, debouncedSearch, selectedTopics])
 
   const sortedCourses = useMemo(() => {
     if (sortMode !== 'momentum') return filtered
@@ -288,7 +287,7 @@ export function Courses() {
     if (hasActiveFilter && filtered.length > 0) {
       setSampleCollapsed(false)
       try {
-        localStorage.setItem(COLLAPSE_KEY, 'false')
+        localStorage.removeItem(COLLAPSE_KEY)
       } catch {
         // silent-catch-ok: localStorage unavailable — auto-expand still works for the session
       }
@@ -366,7 +365,10 @@ export function Courses() {
               </div>
               <Button
                 variant="brand"
-                onClick={() => { setSearchQuery(''); setDebouncedSearch('') }}
+                onClick={() => {
+                  setSearchQuery('')
+                  setDebouncedSearch('')
+                }}
                 aria-label={searchQuery ? 'Clear search' : 'Search courses'}
               >
                 {searchQuery ? 'Clear' : 'Search'}

@@ -8,9 +8,9 @@
  * AC5: Collapse state persists across navigations
  * AC6: Responsive layout remains correct
  */
-import { test, expect } from '../support/fixtures'
-import { goToCourses, goToOverview } from '../support/helpers/navigation'
-import { seedImportedCourses } from '../support/helpers/seed-helpers'
+import { test, expect } from '../../support/fixtures'
+import { goToCourses, goToOverview } from '../../support/helpers/navigation'
+import { seedImportedCourses } from '../../support/helpers/seed-helpers'
 
 const SAMPLE_IMPORTED_COURSE = {
   id: 'test-imported-course',
