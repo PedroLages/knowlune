@@ -1,7 +1,7 @@
 // E19-S08: Free Trial Status Hook
 // Computes trial-specific derived state from entitlement data.
 
-import { useMemo } from 'react'
+import { useMemo, useCallback } from 'react'
 import { useIsPremium } from '@/lib/entitlement/isPremium'
 
 /** Trial reminder dismissal key prefix in localStorage */
@@ -55,10 +55,10 @@ export function useTrialStatus(): TrialStatus {
 
   const canStartTrial = !loading && !hadTrial && tier === 'free'
 
-  function dismissReminder() {
+  const dismissReminder = useCallback(() => {
     const today = new Date().toISOString().split('T')[0]
     localStorage.setItem(TRIAL_REMINDER_KEY, today)
-  }
+  }, [])
 
   return {
     isTrialing,
