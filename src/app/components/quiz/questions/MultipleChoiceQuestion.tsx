@@ -82,10 +82,14 @@ export function MultipleChoiceQuestion({
   )
 
   return (
-    <fieldset className="mt-6 min-w-0" aria-labelledby={labelId}>
-      {/* Empty legend satisfies semantic HTML requirement; aria-labelledby on fieldset
-          provides the accessible name so no duplicate text node is added to the DOM */}
-      <legend className="sr-only" />
+    <fieldset className="mt-6 min-w-0">
+      <legend
+        id={labelId}
+        data-testid="question-text"
+        className="text-lg lg:text-xl text-foreground leading-relaxed pb-4 w-full"
+      >
+        <MarkdownRenderer content={question.text} />
+      </legend>
       {/* Screen-reader-only: announces answer selection changes */}
       <span
         aria-live="polite"
@@ -95,13 +99,6 @@ export function MultipleChoiceQuestion({
       >
         {selectionAnnouncement}
       </span>
-      <div
-        id={labelId}
-        data-testid="question-text"
-        className="text-lg lg:text-xl text-foreground leading-relaxed pb-4"
-      >
-        <MarkdownRenderer content={question.text} />
-      </div>
 
       <RadioGroup
         value={value ?? ''}

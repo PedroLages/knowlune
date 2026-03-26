@@ -52,15 +52,14 @@ export function MultipleSelectQuestion({
   }
 
   return (
-    <fieldset
-      className="mt-6 min-w-0"
-      aria-labelledby={labelId}
-      aria-describedby={hintId}
-      onKeyDown={handleKeyDown}
-    >
-      {/* Empty legend satisfies semantic HTML requirement; aria-labelledby on fieldset
-          provides the accessible name so no duplicate text node is added to the DOM */}
-      <legend className="sr-only" />
+    <fieldset className="mt-6 min-w-0" aria-describedby={hintId} onKeyDown={handleKeyDown}>
+      <legend
+        id={labelId}
+        data-testid="question-text"
+        className="text-lg lg:text-xl text-foreground leading-relaxed pb-2 w-full"
+      >
+        <MarkdownRenderer content={question.text} />
+      </legend>
       {/* Screen-reader-only: announces answer select/deselect changes */}
       <span
         aria-live="polite"
@@ -70,13 +69,6 @@ export function MultipleSelectQuestion({
       >
         {selectionAnnouncement}
       </span>
-      <div
-        id={labelId}
-        data-testid="question-text"
-        className="text-lg lg:text-xl text-foreground leading-relaxed pb-2"
-      >
-        <MarkdownRenderer content={question.text} />
-      </div>
       <span id={hintId} className="text-sm text-muted-foreground italic block mb-4">
         Select all that apply
       </span>

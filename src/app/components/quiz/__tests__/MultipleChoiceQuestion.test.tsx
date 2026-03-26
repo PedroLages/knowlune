@@ -162,7 +162,7 @@ describe('MultipleChoiceQuestion', () => {
     expect(del.tagName).toBe('DEL')
   })
 
-  it('renders question text via MarkdownRenderer (no legend needed)', () => {
+  it('renders question text inside legend element for semantic fieldset labelling', () => {
     const { container } = render(
       <MultipleChoiceQuestion
         question={makeQuestion({ text: 'Simple question text' })}
@@ -172,10 +172,10 @@ describe('MultipleChoiceQuestion', () => {
       />
     )
 
-    // Question text is in a div (not legend) — block content is valid
+    // Question text is inside a <legend> — provides accessible name for the fieldset
     const questionText = container.querySelector('[data-testid="question-text"]')
     expect(questionText).toBeInTheDocument()
-    expect(questionText?.tagName).toBe('DIV')
+    expect(questionText?.tagName).toBe('LEGEND')
   })
 
   it('warns on console when fewer than 2 options', () => {
@@ -238,7 +238,7 @@ describe('MultipleChoiceQuestion', () => {
     warnSpy.mockRestore()
   })
 
-  it('renders with fieldset semantic structure and aria-labelledby', () => {
+  it('renders with fieldset and legend containing question text', () => {
     const { container } = render(
       <MultipleChoiceQuestion
         question={makeQuestion()}
@@ -250,14 +250,14 @@ describe('MultipleChoiceQuestion', () => {
 
     const fieldset = container.querySelector('fieldset')
     expect(fieldset).toBeInTheDocument()
-    expect(fieldset?.getAttribute('aria-labelledby')).toBeTruthy()
 
-    const labelId = fieldset?.getAttribute('aria-labelledby')
-    const label = container.querySelector(`#${CSS.escape(labelId!)}`)
-    expect(label).toBeInTheDocument()
+    // Legend provides the accessible name for the fieldset
+    const legend = fieldset?.querySelector('legend')
+    expect(legend).toBeInTheDocument()
+    expect(legend?.textContent).toContain('capital of France')
   })
 
-  it('has radiogroup inside fieldset with aria-labelledby (fieldset provides accessible name)', () => {
+  it('has radiogroup inside fieldset with legend (fieldset provides accessible name)', () => {
     const { container } = render(
       <MultipleChoiceQuestion
         question={makeQuestion()}

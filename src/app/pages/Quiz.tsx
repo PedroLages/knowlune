@@ -442,7 +442,8 @@ export function Quiz() {
     const totalQuestions = currentProgress.questionOrder.length || currentQuiz.questions.length
 
     return (
-      <div
+      <section
+        aria-label="Quiz questions"
         className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm"
         data-testid="quiz-active-container"
       >
@@ -550,7 +551,7 @@ export function Quiz() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </div>
+      </section>
     )
   }
 

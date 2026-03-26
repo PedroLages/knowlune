@@ -143,78 +143,89 @@ export function QuizResults() {
 
   return (
     <div className="py-6">
-      <div className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm text-center space-y-6">
+      <section
+        aria-label="Quiz results"
+        className="bg-card rounded-[24px] p-4 sm:p-8 max-w-2xl mx-auto shadow-sm text-center space-y-6"
+      >
         <h1 className="text-2xl font-bold text-foreground">{currentQuiz.title} — Results</h1>
 
-        <ScoreSummary
-          percentage={lastAttempt.percentage}
-          score={lastAttempt.score}
-          maxScore={maxScore}
-          passed={lastAttempt.passed}
-          passingScore={currentQuiz.passingScore}
-          timeSpent={lastAttempt.timeSpent}
-          improvementData={improvementData}
-          normalizedGain={normalizedGain}
-          showTimeSpent={
-            currentQuiz.timeLimit != null && lastAttempt.timerAccommodation !== 'untimed'
-          }
-          previousAttemptTimeSpent={previousAttemptTimeSpent}
-        />
-
-        {/* Score trajectory chart — only renders with 2+ attempts */}
-        <ScoreTrajectoryChart attempts={trajectoryData} passingScore={currentQuiz.passingScore} />
-
-        {/* Learning trajectory pattern detection — requires 3+ attempts */}
-        <ImprovementChart attempts={attempts} />
-
-        {/* Item difficulty analysis — shows when at least 1 attempt has been recorded */}
-        <ItemDifficultyAnalysis quiz={currentQuiz} attempts={attempts} />
-
-        {/* Discrimination analysis — requires 5+ attempts for meaningful results */}
-        <DiscriminationAnalysis quiz={currentQuiz} attempts={attempts} />
-
-        <QuestionBreakdown answers={lastAttempt.answers} questions={currentQuiz.questions} />
-
-        <PerformanceInsights
-          questions={currentQuiz.questions}
-          answers={lastAttempt.answers ?? []}
-        />
-
-        <AreasForGrowth incorrectItems={incorrectItems} />
-
-        <div
-          role="group"
-          aria-label="Quiz actions"
-          className="flex flex-col sm:flex-row gap-3 justify-center pt-2"
-        >
-          <Button variant="brand" className="rounded-xl min-h-[44px]" onClick={handleRetake}>
-            Retake Quiz
-          </Button>
-          <Button
-            variant="brand-outline"
-            className="rounded-xl min-h-[44px]"
-            onClick={handleReviewAnswers}
-          >
-            Review Answers
-          </Button>
-        </div>
-
-        <div className="flex flex-col items-center gap-2">
-          <AttemptHistory
-            attempts={attempts}
-            currentAttemptId={lastAttempt.id}
-            courseId={courseId}
-            lessonId={lessonId}
+        <section aria-label="Score summary">
+          <ScoreSummary
+            percentage={lastAttempt.percentage}
+            score={lastAttempt.score}
+            maxScore={maxScore}
+            passed={lastAttempt.passed}
+            passingScore={currentQuiz.passingScore}
+            timeSpent={lastAttempt.timeSpent}
+            improvementData={improvementData}
+            normalizedGain={normalizedGain}
+            showTimeSpent={
+              currentQuiz.timeLimit != null && lastAttempt.timerAccommodation !== 'untimed'
+            }
+            previousAttemptTimeSpent={previousAttemptTimeSpent}
           />
-          <Link
-            to={`/courses/${courseId}/lessons/${lessonId}`}
-            className="text-brand hover:underline text-sm font-medium inline-flex items-center gap-1 min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:rounded-sm"
+        </section>
+
+        <section aria-label="Score analytics">
+          {/* Score trajectory chart — only renders with 2+ attempts */}
+          <ScoreTrajectoryChart attempts={trajectoryData} passingScore={currentQuiz.passingScore} />
+
+          {/* Learning trajectory pattern detection — requires 3+ attempts */}
+          <ImprovementChart attempts={attempts} />
+
+          {/* Item difficulty analysis — shows when at least 1 attempt has been recorded */}
+          <ItemDifficultyAnalysis quiz={currentQuiz} attempts={attempts} />
+
+          {/* Discrimination analysis — requires 5+ attempts for meaningful results */}
+          <DiscriminationAnalysis quiz={currentQuiz} attempts={attempts} />
+        </section>
+
+        <section aria-label="Question details">
+          <QuestionBreakdown answers={lastAttempt.answers} questions={currentQuiz.questions} />
+
+          <PerformanceInsights
+            questions={currentQuiz.questions}
+            answers={lastAttempt.answers ?? []}
+          />
+
+          <AreasForGrowth incorrectItems={incorrectItems} />
+        </section>
+
+        <section aria-label="Quiz actions">
+          <div
+            role="group"
+            aria-label="Quiz actions"
+            className="flex flex-col sm:flex-row gap-3 justify-center pt-2"
           >
-            <ArrowLeft className="size-4" aria-hidden="true" />
-            Back to Lesson
-          </Link>
-        </div>
-      </div>
+            <Button variant="brand" className="rounded-xl min-h-[44px]" onClick={handleRetake}>
+              Retake Quiz
+            </Button>
+            <Button
+              variant="brand-outline"
+              className="rounded-xl min-h-[44px]"
+              onClick={handleReviewAnswers}
+            >
+              Review Answers
+            </Button>
+          </div>
+
+          <div className="flex flex-col items-center gap-2 mt-6">
+            <AttemptHistory
+              attempts={attempts}
+              currentAttemptId={lastAttempt.id}
+              courseId={courseId}
+              lessonId={lessonId}
+            />
+            <Link
+              to={`/courses/${courseId}/lessons/${lessonId}`}
+              className="text-brand hover:underline text-sm font-medium inline-flex items-center gap-1 min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:rounded-sm"
+            >
+              <ArrowLeft className="size-4" aria-hidden="true" />
+              Back to Lesson
+            </Link>
+          </div>
+        </section>
+      </section>
     </div>
   )
 }

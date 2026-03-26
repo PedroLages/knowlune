@@ -42,7 +42,7 @@ describe('FillInBlankQuestion', () => {
     expect(strong.tagName).toBe('STRONG')
   })
 
-  it('renders with fieldset and aria-labelledby referencing existing element', () => {
+  it('renders with fieldset and legend containing question text', () => {
     const { container } = render(
       <FillInBlankQuestion
         question={makeFillInBlankQuestion()}
@@ -54,11 +54,10 @@ describe('FillInBlankQuestion', () => {
 
     const fieldset = container.querySelector('fieldset')
     expect(fieldset).toBeInTheDocument()
-    const labelId = fieldset?.getAttribute('aria-labelledby')
-    expect(labelId).toBeTruthy()
 
-    const labelElement = container.querySelector(`#${labelId}`)
-    expect(labelElement).toBeInTheDocument()
-    expect(labelElement?.textContent).toContain('output')
+    // Legend provides the accessible name for the fieldset
+    const legend = fieldset?.querySelector('legend')
+    expect(legend).toBeInTheDocument()
+    expect(legend?.textContent).toContain('output')
   })
 })

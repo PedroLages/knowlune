@@ -47,9 +47,9 @@ describe('ReviewSummary', () => {
         onJumpToQuestion={vi.fn()}
       />
     )
-    expect(screen.getByRole('button', { name: 'Q1' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Q3' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Q2' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Jump to question 1' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Jump to question 3' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Jump to question 2' })).not.toBeInTheDocument()
   })
 
   it('renders buttons sorted by question order', () => {
@@ -74,7 +74,7 @@ describe('ReviewSummary', () => {
         onJumpToQuestion={onJumpToQuestion}
       />
     )
-    await userEvent.click(screen.getByRole('button', { name: 'Q3' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Jump to question 3' }))
     expect(onJumpToQuestion).toHaveBeenCalledWith(2)
   })
 
@@ -87,7 +87,7 @@ describe('ReviewSummary', () => {
       />
     )
     // Only q2 should appear since q-unknown is not in questionOrder
-    expect(screen.getByRole('button', { name: 'Q2' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Jump to question 2' })).toBeInTheDocument()
     expect(screen.getAllByRole('button')).toHaveLength(1)
     // Count uses filtered markedIndices, not raw markedForReview
     expect(screen.getByText(/1 question marked for review/i)).toBeInTheDocument()
