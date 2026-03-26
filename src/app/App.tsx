@@ -7,6 +7,7 @@ import { router } from './routes'
 import { useSessionStore } from '@/stores/useSessionStore'
 import { ErrorBoundary } from '@/app/components/ErrorBoundary'
 import { PWAUpdatePrompt } from '@/app/components/PWAUpdatePrompt'
+import { PWAInstallBanner } from '@/app/components/PWAInstallBanner'
 import { WelcomeWizard } from '@/app/components/WelcomeWizard'
 import { initErrorTracking } from '@/lib/errorTracking'
 import { vectorStorePersistence } from '@/ai/vector-store'
@@ -75,6 +76,7 @@ export default function App() {
         <Toaster />
         <WelcomeWizard />
         {import.meta.env.PROD && <PWAUpdatePrompt />}
+        <PWAInstallBanner />
         {process.env.NODE_ENV === 'development' && <Agentation />}
       </ThemeProvider>
     </ErrorBoundary>

@@ -1,6 +1,20 @@
+import * as Sentry from '@sentry/react'
 import { createRoot } from 'react-dom/client'
 import App from './app/App.tsx'
 import './styles/index.css'
+
+// Initialize Sentry error reporting (graceful no-op when DSN is not configured)
+const sentryDsn = import.meta.env.VITE_SENTRY_DSN
+if (sentryDsn) {
+  Sentry.init({
+    dsn: sentryDsn,
+    environment: import.meta.env.MODE,
+    integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
+    tracesSampleRate: import.meta.env.PROD ? 0.1 : 1.0,
+    replaysSessionSampleRate: 0,
+    replaysOnErrorSampleRate: 1.0,
+  })
+}
 
 // Render first, initialize data after — improves FCP/LCP by deferring heavy work
 createRoot(document.getElementById('root')!).render(<App />)
