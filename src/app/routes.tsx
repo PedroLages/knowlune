@@ -46,6 +46,9 @@ const AILearningPath = React.lazy(() =>
 const LearningPaths = React.lazy(() =>
   import('./pages/LearningPaths').then(m => ({ default: m.LearningPaths }))
 )
+const LearningPathDetail = React.lazy(() =>
+  import('./pages/LearningPathDetail').then(m => ({ default: m.LearningPathDetail }))
+)
 const KnowledgeGaps = React.lazy(() =>
   import('./pages/KnowledgeGaps').then(m => ({ default: m.KnowledgeGaps }))
 )
@@ -356,7 +359,7 @@ export const router = createBrowserRouter([
         path: 'learning-paths/:pathId',
         element: (
           <SuspensePage>
-            <LearningPaths />
+            <LearningPathDetail />
           </SuspensePage>
         ),
       },
