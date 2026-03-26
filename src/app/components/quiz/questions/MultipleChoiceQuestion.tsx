@@ -4,6 +4,7 @@ import { cn } from '@/app/components/ui/utils'
 import type { Question } from '@/types/quiz'
 import type { QuestionDisplayMode } from '../QuestionDisplay'
 import { MarkdownRenderer } from '../MarkdownRenderer'
+import { useAriaLiveAnnouncer } from '@/hooks/useAriaLiveAnnouncer'
 
 interface MultipleChoiceQuestionProps {
   question: Question
@@ -21,12 +22,24 @@ export function MultipleChoiceQuestion({
   const options = question.options ?? []
   const isActive = mode === 'active'
   const labelId = useId()
+  const [selectionAnnouncement, announceSelection] = useAriaLiveAnnouncer()
 
   if (process.env.NODE_ENV !== 'production' && (options.length < 2 || options.length > 6)) {
     console.warn(
       `[MultipleChoiceQuestion] Question "${question.id}" has ${options.length} options (expected 2-6)`
     )
   }
+
+  // Wrap onChange to also announce selection to screen readers (AC2)
+  const onChangeWithAnnounce = useCallback(
+    (answer: string) => {
+      const optionIndex = options.indexOf(answer)
+      const label = optionIndex >= 0 ? `Option ${optionIndex + 1}` : answer
+      announceSelection(`${label} selected`)
+      onChange(answer)
+    },
+    [onChange, options, announceSelection],
+  )
 
   // Document-level keyboard listener so number keys work regardless of focus
   useEffect(() => {
@@ -39,12 +52,12 @@ export function MultipleChoiceQuestion({
       const num = parseInt(e.key, 10)
       if (num >= 1 && num <= Math.min(options.length, 9)) {
         e.preventDefault()
-        onChange(options[num - 1])
+        onChangeWithAnnounce(options[num - 1])
       }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isActive, options, onChange])
+  }, [isActive, options, onChangeWithAnnounce])
 
   // WAI-ARIA radio group spec: arrow keys should both focus AND select.
   // Radix moves focus via roving tabindex on ArrowDown/Up but does NOT fire
@@ -61,11 +74,11 @@ export function MultipleChoiceQuestion({
         const focused = document.activeElement as HTMLElement | null
         if (focused?.getAttribute('role') === 'radio') {
           const val = focused.getAttribute('value')
-          if (val != null && val !== '') onChange(val)
+          if (val != null && val !== '') onChangeWithAnnounce(val)
         }
       })
     },
-    [isActive, onChange]
+    [isActive, onChangeWithAnnounce]
   )
 
   return (
@@ -73,6 +86,10 @@ export function MultipleChoiceQuestion({
       {/* Empty legend satisfies semantic HTML requirement; aria-labelledby on fieldset
           provides the accessible name so no duplicate text node is added to the DOM */}
       <legend className="sr-only" />
+      {/* Screen-reader-only: announces answer selection changes */}
+      <span aria-live="polite" aria-atomic="true" className="sr-only" data-testid="selection-announcement">
+        {selectionAnnouncement}
+      </span>
       <div
         id={labelId}
         data-testid="question-text"
@@ -83,7 +100,7 @@ export function MultipleChoiceQuestion({
 
       <RadioGroup
         value={value ?? ''}
-        onValueChange={isActive ? onChange : undefined}
+        onValueChange={isActive ? onChangeWithAnnounce : undefined}
         disabled={!isActive}
         onKeyDown={handleRadioGroupKeyDown}
       >
