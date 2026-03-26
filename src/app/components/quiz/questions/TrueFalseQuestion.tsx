@@ -32,7 +32,7 @@ export function TrueFalseQuestion({ question, value, onChange, mode }: TrueFalse
       announceSelection(`${displayLabel} selected`)
       onChange(answer)
     },
-    [onChange, announceSelection],
+    [onChange, announceSelection]
   )
 
   // Document-level keyboard listener so number keys work regardless of focus
@@ -78,7 +78,12 @@ export function TrueFalseQuestion({ question, value, onChange, mode }: TrueFalse
           provides the accessible name so no duplicate text node is added to the DOM */}
       <legend className="sr-only" />
       {/* Screen-reader-only: announces answer selection changes */}
-      <span aria-live="polite" aria-atomic="true" className="sr-only" data-testid="selection-announcement">
+      <span
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+        data-testid="selection-announcement"
+      >
         {selectionAnnouncement}
       </span>
       <div

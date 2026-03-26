@@ -38,7 +38,7 @@ export function MultipleChoiceQuestion({
       announceSelection(`${label} selected`)
       onChange(answer)
     },
-    [onChange, options, announceSelection],
+    [onChange, options, announceSelection]
   )
 
   // Document-level keyboard listener so number keys work regardless of focus
@@ -87,7 +87,12 @@ export function MultipleChoiceQuestion({
           provides the accessible name so no duplicate text node is added to the DOM */}
       <legend className="sr-only" />
       {/* Screen-reader-only: announces answer selection changes */}
-      <span aria-live="polite" aria-atomic="true" className="sr-only" data-testid="selection-announcement">
+      <span
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+        data-testid="selection-announcement"
+      >
         {selectionAnnouncement}
       </span>
       <div

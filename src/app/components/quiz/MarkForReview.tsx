@@ -42,7 +42,12 @@ export function MarkForReview({ questionId, isMarked, onToggle }: MarkForReviewP
         Mark for Review
       </Label>
       {/* Screen-reader-only: announces review toggle state changes */}
-      <span aria-live="polite" aria-atomic="true" className="sr-only" data-testid="review-announcement">
+      <span
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+        data-testid="review-announcement"
+      >
         {reviewAnnouncement}
       </span>
     </div>
