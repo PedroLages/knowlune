@@ -188,6 +188,28 @@ export function UpgradeCTA({ featureLabel, error = null, isStale = false }: Upgr
               If your subscription has expired, you can resubscribe by upgrading above.
             </p>
           )}
+
+          {/* E19-S07: Legal links for checkout flow */}
+          <p className="text-xs text-muted-foreground">
+            By upgrading you agree to our{' '}
+            <a
+              href="/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand-soft-foreground hover:underline focus-visible:underline focus-visible:outline-none"
+            >
+              Privacy Policy
+            </a>{' '}
+            and{' '}
+            <a
+              href="/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand-soft-foreground hover:underline focus-visible:underline focus-visible:outline-none"
+            >
+              Terms of Service
+            </a>
+          </p>
         </CardContent>
       </Card>
 

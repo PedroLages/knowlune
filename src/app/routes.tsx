@@ -72,6 +72,15 @@ const CareerPathDetail = React.lazy(() =>
   import('./pages/CareerPathDetail').then(m => ({ default: m.CareerPathDetail }))
 )
 const NotFound = React.lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })))
+const LegalLayout = React.lazy(() =>
+  import('./pages/legal/LegalLayout').then(m => ({ default: m.LegalLayout }))
+)
+const PrivacyPolicy = React.lazy(() =>
+  import('./pages/legal/PrivacyPolicy').then(m => ({ default: m.PrivacyPolicy }))
+)
+const TermsOfService = React.lazy(() =>
+  import('./pages/legal/TermsOfService').then(m => ({ default: m.TermsOfService }))
+)
 
 // Default exports work directly with React.lazy
 const MyClass = React.lazy(() => import('./pages/MyClass'))
@@ -106,6 +115,32 @@ function InstructorProfileRedirect() {
 }
 
 export const router = createBrowserRouter([
+  // Public legal pages — outside Layout (no auth required)
+  {
+    element: (
+      <Suspense fallback={<PageLoader />}>
+        <LegalLayout />
+      </Suspense>
+    ),
+    children: [
+      {
+        path: 'privacy',
+        element: (
+          <SuspensePage>
+            <PrivacyPolicy />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'terms',
+        element: (
+          <SuspensePage>
+            <TermsOfService />
+          </SuspensePage>
+        ),
+      },
+    ],
+  },
   {
     path: '/',
     Component: Layout,
