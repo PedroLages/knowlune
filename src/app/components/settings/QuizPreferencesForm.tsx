@@ -116,7 +116,7 @@ export function QuizPreferencesForm() {
                 className={cn(
                   'relative flex flex-col gap-1.5 p-4 border-2 rounded-xl cursor-pointer',
                   'transition-all duration-200 hover:shadow-sm',
-                  'has-[[data-radix-collection-item]:focus-visible]:ring-2 has-[[data-radix-collection-item]:focus-visible]:ring-ring has-[[data-radix-collection-item]:focus-visible]:ring-offset-2',
+                  'has-[[data-radix-collection-item]:focus-visible]:ring-2 has-[[data-radix-collection-item]:focus-visible]:ring-brand has-[[data-radix-collection-item]:focus-visible]:ring-offset-2',
                   prefs.timerAccommodation === option.value
                     ? 'border-brand bg-brand-soft shadow-sm'
                     : 'border-border bg-background hover:border-brand/50'

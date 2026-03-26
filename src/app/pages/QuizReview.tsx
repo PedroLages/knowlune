@@ -51,7 +51,7 @@ function QuizReviewError({ courseId, lessonId }: QuizReviewErrorProps) {
         </p>
         <Link
           to={backUrl}
-          className="text-brand hover:underline text-sm font-medium inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded-sm"
+          className="text-brand hover:underline text-sm font-medium inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:rounded-sm"
         >
           ← Back to Quiz
         </Link>

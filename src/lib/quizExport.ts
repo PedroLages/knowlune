@@ -89,10 +89,14 @@ export function calculateSummaryStats(bundles: QuizExportBundle[]): QuizSummaryS
 // CSV generation
 // ---------------------------------------------------------------------------
 
-/** Escape a value for RFC 4180 CSV */
+/** Escape a value for RFC 4180 CSV, with formula injection prevention */
 function escapeCsv(value: unknown): string {
   if (value === null || value === undefined) return ''
   const str = String(value)
+  // Prevent CSV formula injection: prefix dangerous leading characters with a single quote
+  if (/^[=+\-@\t\r]/.test(str)) {
+    return `"'${str.replace(/"/g, '""')}"`
+  }
   if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
     return `"${str.replace(/"/g, '""')}"`
   }
