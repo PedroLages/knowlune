@@ -59,6 +59,7 @@ test.describe('AC2: Empty state for no courses', () => {
           Object.defineProperty(req, 'onerror', { writable: true, value: null })
           return req as IDBRequest
         }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test/evaluate context with dynamic types
         return origAdd.apply(this, args as [any, IDBValidKey?])
       }
     })

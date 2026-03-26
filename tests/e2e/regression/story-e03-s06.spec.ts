@@ -28,6 +28,7 @@ async function goToCourseDetail(page: Parameters<typeof navigateAndWait>[0]) {
 
 /** Seed notes into IndexedDB for the operative-six course. */
 async function seedNotes(page: Parameters<typeof navigateAndWait>[0]) {
+  // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
   await page.evaluate(() => {
     return new Promise<void>((resolve, reject) => {
       const request = indexedDB.open('ElearningDB')
@@ -84,6 +85,7 @@ async function seedNotes(page: Parameters<typeof navigateAndWait>[0]) {
 
 /** Clear all notes from IndexedDB. */
 async function clearNotes(page: Parameters<typeof navigateAndWait>[0]) {
+  // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
   await page.evaluate(() => {
     return new Promise<void>((resolve, reject) => {
       const request = indexedDB.open('ElearningDB')

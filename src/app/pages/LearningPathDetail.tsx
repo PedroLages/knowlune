@@ -108,6 +108,7 @@ function SortableCourseRow({
   return (
     <motion.div
       ref={setNodeRef}
+      // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic value requires inline style
       style={style}
       {...attributes}
       variants={fadeUp}

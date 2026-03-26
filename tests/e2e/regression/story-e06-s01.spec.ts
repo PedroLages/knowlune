@@ -43,6 +43,7 @@ test.describe('Create Learning Challenges (E06-S01)', () => {
   })
 
   test.afterEach(async ({ page }) => {
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     await page.evaluate(
       () =>
         new Promise<void>((resolve, reject) => {
@@ -141,6 +142,7 @@ test.describe('Create Learning Challenges (E06-S01)', () => {
     await expect(page.getByText('Complete 5 Videos')).toBeVisible()
 
     // Verify IndexedDB record has correct structural fields
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     const record = await page.evaluate(async () => {
       const { indexedDB } = window
       return new Promise<Record<string, unknown> | null>((resolve, reject) => {

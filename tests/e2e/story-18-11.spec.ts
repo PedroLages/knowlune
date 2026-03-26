@@ -84,6 +84,7 @@ async function getContentProgressEntry(
   courseId: string,
   itemId: string
 ): Promise<{ courseId: string; itemId: string; status: string } | null> {
+  // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
   return page.evaluate(
     async ({ courseId, itemId }) => {
       return new Promise<{ courseId: string; itemId: string; status: string } | null>(

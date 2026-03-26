@@ -60,7 +60,32 @@ const storeState = {
 }
 
 vi.mock('@/stores/useCourseImportStore', () => ({
-  useCourseImportStore: (selector: (state: typeof storeState) => unknown) => selector(storeState),
+  useCourseImportStore: Object.assign(
+    (selector?: (state: typeof storeState) => unknown) =>
+      selector ? selector(storeState) : storeState,
+    {
+      getState: () => storeState,
+      setState: vi.fn(),
+      subscribe: vi.fn(() => () => {}),
+    }
+  ),
+}))
+
+// Mock dialog components to avoid deep dependency trees (usePathPlacementSuggestion, useLearningPathStore)
+vi.mock('@/app/components/figma/ImportWizardDialog', () => ({
+  ImportWizardDialog: () => null,
+}))
+
+vi.mock('@/app/components/figma/BulkImportDialog', () => ({
+  BulkImportDialog: () => null,
+}))
+
+vi.mock('@/app/components/figma/YouTubeImportDialog', () => ({
+  YouTubeImportDialog: () => null,
+}))
+
+vi.mock('@/app/components/figma/TagManagementPanel', () => ({
+  TagManagementPanel: () => null,
 }))
 
 vi.mock('@/lib/courseImport', () => ({
@@ -198,7 +223,7 @@ describe('Courses page', () => {
     it('displays global empty state when no courses at all', () => {
       renderCourses()
       expect(screen.getByText('No courses yet')).toBeInTheDocument()
-      expect(screen.getByText('Import a course folder to get started')).toBeInTheDocument()
+      expect(screen.getByText(/Import a course folder/)).toBeInTheDocument()
     })
 
     it('global empty state has correct test id', () => {

@@ -41,6 +41,7 @@ test.describe('NFR35: Note export as Markdown', () => {
     ])
 
     // Seed a test note
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     await page.evaluate(async () => {
       const request = indexedDB.open('ElearningDB')
       await new Promise<void>((resolve, reject) => {
@@ -180,6 +181,7 @@ test.describe('NFR35: Note export as Markdown', () => {
 
   test('should sanitize special characters in filename', async ({ page }) => {
     // Seed a note with special characters
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     await page.evaluate(async () => {
       const request = indexedDB.open('ElearningDB')
       await new Promise<void>((resolve, reject) => {

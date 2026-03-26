@@ -124,6 +124,7 @@ describe('quizPreferences', () => {
     it('validates patch with Zod and drops invalid values', () => {
       saveQuizPreferences({ timerAccommodation: '150%' })
       const result = saveQuizPreferences({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test/evaluate context with dynamic types
         timerAccommodation: 'invalid' as any,
       })
       expect(result).not.toBeNull()

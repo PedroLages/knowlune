@@ -54,6 +54,7 @@ test.describe('E09-S03: Embedding Pipeline & Vector Store', () => {
     await page.goto('/notes')
     await page.waitForLoadState('networkidle')
 
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     const hasEmbeddingsTable = await page.evaluate(async () => {
       return new Promise<boolean>(resolve => {
         const req = indexedDB.open('ElearningDB')
@@ -73,6 +74,7 @@ test.describe('E09-S03: Embedding Pipeline & Vector Store', () => {
     await page.goto('/notes')
     await page.waitForLoadState('networkidle')
 
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     const version = await page.evaluate(async () => {
       return new Promise<number>(resolve => {
         const req = indexedDB.open('ElearningDB')

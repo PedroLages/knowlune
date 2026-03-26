@@ -38,6 +38,7 @@ test.describe('E04-S01: Mark Content Completion Status', () => {
     }, closeSidebar())
     // Clear any previous contentProgress data
     await page.goto(`/courses/${COURSE_ID}`)
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     await page.evaluate(async () => {
       const request = indexedDB.open('ElearningDB')
       await new Promise<void>((resolve, reject) => {
@@ -99,6 +100,7 @@ test.describe('E04-S01: Mark Content Completion Status', () => {
     await expect
       .poll(
         async () => {
+          // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
           return page.evaluate(async () => {
             const request = indexedDB.open('ElearningDB')
             return new Promise<string | null>(resolve => {

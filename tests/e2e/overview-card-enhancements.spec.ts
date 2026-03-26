@@ -165,6 +165,7 @@ test.describe('Overview Card Enhancements', () => {
 
       // Close sheet (press Escape)
       await page.keyboard.press('Escape')
+      // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
       await page.waitForTimeout(300) // Wait for close animation
       await expect(sheet).not.toBeVisible()
     })
@@ -188,6 +189,7 @@ test.describe('Overview Card Enhancements', () => {
 
       // Click to open dropdown
       await periodSelector.click()
+      // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
       await page.waitForTimeout(200) // Wait for dropdown animation
 
       // Check for period options in dropdown
@@ -199,6 +201,7 @@ test.describe('Overview Card Enhancements', () => {
 
       // Close sheet
       await page.keyboard.press('Escape')
+      // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
       await page.waitForTimeout(300)
     })
 
@@ -214,6 +217,7 @@ test.describe('Overview Card Enhancements', () => {
       await expect(sheet).toBeVisible({ timeout: 3000 })
 
       // Wait for comparison component to render
+      // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
       await page.waitForTimeout(500)
 
       // Look for percentage change indicator (format: +X.X% or -X.X%)
@@ -225,6 +229,7 @@ test.describe('Overview Card Enhancements', () => {
 
       // Close sheet
       await page.keyboard.press('Escape')
+      // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
       await page.waitForTimeout(300)
     })
   })
@@ -293,6 +298,7 @@ test.describe('Overview Card Enhancements', () => {
       await expect(sheet).toBeVisible({ timeout: 3000 })
 
       // Wait for Sheet to fully render
+      // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
       await page.waitForTimeout(500)
 
       // Focus should be trapped inside Sheet - verify interactive elements exist
@@ -302,6 +308,7 @@ test.describe('Overview Card Enhancements', () => {
 
       // Press Escape to close
       await page.keyboard.press('Escape')
+      // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
       await page.waitForTimeout(300) // Wait for close animation
       await expect(sheet).not.toBeVisible()
 

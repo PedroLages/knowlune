@@ -105,6 +105,7 @@ async function setupWithNotes(page: Parameters<typeof navigateAndWait>[0]) {
 
 /** Clear seeded notes from IndexedDB to prevent test pollution. */
 async function clearSeededNotes(page: Parameters<typeof navigateAndWait>[0]) {
+  // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
   await page.evaluate(async () => {
     await new Promise<void>(resolve => {
       const request = indexedDB.open('ElearningDB')

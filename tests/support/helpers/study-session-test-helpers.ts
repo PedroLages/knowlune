@@ -151,6 +151,7 @@ export async function waitForSessionExists(
   maxRetries = 10,
   retryDelay = 200
 ): Promise<boolean> {
+  // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
   return await page.evaluate(
     async ({ maxRetries, retryDelay }) => {
       for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -209,6 +210,7 @@ export async function waitForSessionExists(
  * Get the latest study session from IndexedDB.
  */
 export async function getLatestSession(page: Page): Promise<StudySession | null> {
+  // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
   return await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open('ElearningDB')
@@ -238,6 +240,7 @@ export async function waitForSessionEnd(
   maxRetries = 20,
   retryDelay = 200
 ): Promise<boolean> {
+  // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
   return await page.evaluate(
     async ({ maxRetries, retryDelay }) => {
       for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -318,6 +321,7 @@ export async function waitForIdleTimeRecorded(
   maxRetries = 20,
   retryDelay = 200
 ): Promise<{ success: boolean; idleTime: number; duration: number }> {
+  // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
   return await page.evaluate(
     async ({ minIdleSeconds, maxRetries, retryDelay }) => {
       for (let attempt = 0; attempt < maxRetries; attempt++) {

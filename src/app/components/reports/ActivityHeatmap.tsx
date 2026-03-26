@@ -275,6 +275,7 @@ export function ActivityHeatmap() {
               role="group"
               aria-label={`Study activity heatmap — ${totalActiveDays} active day${totalActiveDays !== 1 ? 's' : ''} in the past year`}
               className="grid gap-[3px]"
+              // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic value requires inline style
               style={gridStyle}
               onKeyDown={handleGridKeyDown}
             >

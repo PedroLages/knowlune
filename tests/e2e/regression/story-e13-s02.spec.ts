@@ -61,6 +61,7 @@ const quiz = makeQuiz({
 // ---------------------------------------------------------------------------
 
 async function seedQuizData(page: import('@playwright/test').Page, quizData: unknown[]) {
+  // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
   await page.evaluate(
     async ({ data, maxRetries, retryDelay }) => {
       for (let attempt = 0; attempt < maxRetries; attempt++) {

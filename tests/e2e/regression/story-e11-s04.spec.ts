@@ -263,6 +263,7 @@ test.describe('E11-S04: Data Export', () => {
     const downloads: unknown[] = []
     page.on('download', d => downloads.push(d))
     // Brief wait to confirm no late download arrives
+    // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
     await page.waitForTimeout(1_000) // justified: confirming no download fires after error
     expect(downloads).toHaveLength(0)
   })

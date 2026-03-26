@@ -66,6 +66,7 @@ test.describe('E09B-S06: AI Feature Analytics & Auto-Analysis', () => {
   test.afterEach(async ({ page }) => {
     // Clear seeded aiUsageEvents to prevent test interference
     // (seedIndexedDBStore bypasses fixture auto-cleanup which only tracks importedCourses)
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     await page.evaluate(async () => {
       const dbs = await indexedDB.databases()
       const edb = dbs.find(d => d.name === 'ElearningDB')

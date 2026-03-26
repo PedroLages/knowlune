@@ -613,6 +613,7 @@ function SortableChapter({
   return (
     <div
       ref={setNodeRef}
+      // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic value requires inline style
       style={style}
       className={cn(
         'rounded-xl border border-border/50 bg-card overflow-hidden transition-shadow',
@@ -833,6 +834,7 @@ function SortableVideoRow({
   return (
     <div
       ref={setNodeRef}
+      // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic value requires inline style
       style={style}
       className={cn(
         'group flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-accent',

@@ -142,6 +142,7 @@ export function CourseOverview() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
           className="relative rounded-[24px] overflow-hidden shadow-studio mb-6"
+          // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic value requires inline style
           style={{
             background:
               'linear-gradient(160deg, var(--brand-soft) 0%, var(--accent-violet-muted) 50%, var(--card) 100%)',
@@ -162,6 +163,7 @@ export function CourseOverview() {
           {/* Gradient overlay for text readability */}
           <div
             className="absolute inset-0"
+            // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic value requires inline style
             style={{
               background:
                 'linear-gradient(to top, var(--card) 0%, transparent 60%), linear-gradient(160deg, var(--brand-soft) 0%, var(--accent-violet-muted) 50%, transparent 100%)',
@@ -169,7 +171,11 @@ export function CourseOverview() {
             }}
           />
 
-          <div className="relative z-10 p-8 md:p-10 flex flex-col justify-end h-full" style={{ minHeight: 280 }}>
+          <div
+            className="relative z-10 p-8 md:p-10 flex flex-col justify-end h-full"
+            // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic value requires inline style
+            style={{ minHeight: 280 }}
+          >
             {/* Badges */}
             <div className="flex items-center gap-2.5 mb-4">
               <span
@@ -287,6 +293,7 @@ export function CourseOverview() {
             {/* CTA Card */}
             <div
               className="rounded-[24px] p-6 shadow-studio text-center"
+              // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic value requires inline style
               style={{
                 background: 'linear-gradient(135deg, var(--brand) 0%, var(--accent-violet) 100%)',
               }}

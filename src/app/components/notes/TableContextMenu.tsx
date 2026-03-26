@@ -167,6 +167,7 @@ export function TableContextMenu({ editor, children }: TableContextMenuProps) {
           role="menu"
           aria-label="Table options"
           className="fixed bg-popover shadow-lg border border-border rounded-xl py-1 px-1 w-52 z-50"
+          // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic value requires inline style
           style={{ left: position.x, top: position.y }}
         >
           {menuItems.map((item, index) => {

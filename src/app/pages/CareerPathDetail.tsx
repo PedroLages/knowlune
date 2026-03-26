@@ -137,6 +137,7 @@ function ModuleRow({ module }: ModuleRowProps) {
       <div className="relative shrink-0 z-10">
         <div
           className="w-28 h-20 sm:w-40 sm:h-28 rounded-xl overflow-hidden"
+          // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic value requires inline style
           style={thumbnailStyle}
         >
           {/* Overlay for completed */}

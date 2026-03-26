@@ -1,5 +1,15 @@
 import '@testing-library/jest-dom'
 
+// jsdom does not implement ResizeObserver — required by Radix UI components
+// (Select, Dialog, Collapsible, etc.) that use @radix-ui/react-use-size.
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  globalThis.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+}
+
 // Node 22+ ships a native localStorage that conflicts with jsdom's
 // implementation — its API is incomplete (e.g. clear() is not a function).
 // Override globalThis.localStorage with a standards-compliant in-memory

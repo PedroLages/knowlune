@@ -92,7 +92,7 @@ export function ollamaDevProxy(): Plugin {
             signal: AbortSignal.timeout(15_000),
           });
           if (!response.ok) {
-            // silent-catch-ok: build-time error logged to console
+            // eslint-disable-next-line error-handling/no-silent-catch -- build-time error handling
             const errorText = await response.text().catch(() => response.statusText);
             res.statusCode = response.status;
             res.setHeader('Content-Type', 'application/json');
@@ -102,8 +102,8 @@ export function ollamaDevProxy(): Plugin {
           const data = await response.text();
           res.setHeader('Content-Type', 'application/json');
           res.end(data);
+        // eslint-disable-next-line error-handling/no-silent-catch -- build-time error handling
         } catch (error) { handleProxyError(res, error, '/tags'); }
-          // silent-catch-ok: build-time error logged to console
       });
 
       // GET /api/ai/ollama/health — health check
@@ -116,7 +116,7 @@ export function ollamaDevProxy(): Plugin {
             signal: AbortSignal.timeout(10_000),
           });
           if (!response.ok) {
-            // silent-catch-ok: build-time error logged to console
+            // eslint-disable-next-line error-handling/no-silent-catch -- build-time error handling
             const errorText = await response.text().catch(() => response.statusText);
             res.statusCode = response.status;
             res.setHeader('Content-Type', 'application/json');
@@ -125,8 +125,8 @@ export function ollamaDevProxy(): Plugin {
           }
           const body = await response.text();
           res.end(body);
+        // eslint-disable-next-line error-handling/no-silent-catch -- build-time error handling
         } catch (error) { handleProxyError(res, error, '/health'); }
-          // silent-catch-ok: build-time error logged to console
       });
 
       // POST /api/ai/ollama/chat — chat completions (non-streaming)
@@ -152,7 +152,7 @@ export function ollamaDevProxy(): Plugin {
             signal: AbortSignal.timeout(30_000),
           });
           if (!response.ok) {
-            // silent-catch-ok: build-time error logged to console
+            // eslint-disable-next-line error-handling/no-silent-catch -- build-time error handling
             const errorText = await response.text().catch(() => response.statusText);
             res.statusCode = response.status;
             res.setHeader('Content-Type', 'application/json');
@@ -162,8 +162,8 @@ export function ollamaDevProxy(): Plugin {
           const data = await response.text();
           res.setHeader('Content-Type', 'application/json');
           res.end(data);
+        // eslint-disable-next-line error-handling/no-silent-catch -- build-time error handling
         } catch (error) { handleProxyError(res, error, '/chat'); }
-          // silent-catch-ok: build-time error logged to console
       });
 
       // POST /api/ai/ollama — streaming chat (SSE pipe-through)
@@ -192,7 +192,7 @@ export function ollamaDevProxy(): Plugin {
             signal: AbortSignal.timeout(120_000),
           });
           if (!ollamaRes.ok || !ollamaRes.body) {
-            // silent-catch-ok: build-time error logged to console
+            // eslint-disable-next-line error-handling/no-silent-catch -- build-time error handling
             const errText = await ollamaRes.text().catch(() => ollamaRes.statusText);
             res.statusCode = ollamaRes.status;
             res.setHeader('Content-Type', 'application/json');
@@ -213,8 +213,8 @@ export function ollamaDevProxy(): Plugin {
               res.write(Buffer.from(value));
             }
           } finally { res.end(); }
+        // eslint-disable-next-line error-handling/no-silent-catch -- build-time error handling
         } catch (error) {
-          // silent-catch-ok: build-time error logged to console
           if (!(res as { headersSent?: boolean }).headersSent) {
             handleProxyError(res, error, '/ollama-stream');
           } else {

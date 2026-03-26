@@ -119,6 +119,7 @@ test.describe('Story E04-S03: Study Session History & Reporting', () => {
     await navigateAndWait(page, '/')
 
     // THEN aggregate total is calculated correctly
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     const totalStudyTime = await page.evaluate(async () => {
       const maxRetries = 10 // RETRY_CONFIG.MAX_ATTEMPTS
       const retryDelay = 200 // RETRY_CONFIG.POLL_INTERVAL
@@ -202,6 +203,7 @@ test.describe('Story E04-S03: Study Session History & Reporting', () => {
     await page.reload()
 
     // THEN orphaned sessions are closed with last activity timestamp
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     const orphanedSessionClosed = await page.evaluate(async () => {
       const maxRetries = 10 // RETRY_CONFIG.MAX_ATTEMPTS
       const retryDelay = 200 // RETRY_CONFIG.POLL_INTERVAL

@@ -68,6 +68,7 @@ function SortableSectionRow({
   return (
     <div
       ref={setNodeRef}
+      // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic value requires inline style
       style={style}
       {...attributes}
       className={cn(

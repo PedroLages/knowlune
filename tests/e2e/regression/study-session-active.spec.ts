@@ -150,6 +150,7 @@ test.describe('Story E04-S03: Active Study Session Logging', () => {
 
     // THEN a new study session record is created with metadata
     // Wait with retry for database to be ready
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     const sessionExists = await page.evaluate(async () => {
       const maxRetries = 10 // RETRY_CONFIG.MAX_ATTEMPTS
       const retryDelay = 200 // RETRY_CONFIG.POLL_INTERVAL
@@ -205,6 +206,7 @@ test.describe('Story E04-S03: Active Study Session Logging', () => {
     expect(sessionExists).toBe(true)
 
     // AND session has required fields
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     const session = await page.evaluate(async () => {
       const db = await new Promise<IDBDatabase>((resolve, reject) => {
         const request = indexedDB.open('ElearningDB')
@@ -242,6 +244,7 @@ test.describe('Story E04-S03: Active Study Session Logging', () => {
     await navigateAndWait(page, '/courses')
 
     // THEN session end timestamp is recorded (wait with retry for async persistence)
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     const sessionHasEndTime = await page.evaluate(async () => {
       const maxRetries = 20 // Longer wait for async endSession
       const retryDelay = 200
@@ -314,6 +317,7 @@ test.describe('Story E04-S03: Active Study Session Logging', () => {
     expect(sessionHasEndTime).toBe(true)
 
     // AND duration is calculated
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     const sessionHasDuration = await page.evaluate(async () => {
       const db = await new Promise<IDBDatabase>((resolve, reject) => {
         const request = indexedDB.open('ElearningDB')
@@ -355,6 +359,7 @@ test.describe('Story E04-S03: Active Study Session Logging', () => {
     await page.clock.runFor(2000)
 
     // THEN idle time should be recorded in the session
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     const idleTimeRecorded = await page.evaluate(async () => {
       const maxRetries = 20
       const retryDelay = 200
@@ -435,6 +440,7 @@ test.describe('Story E04-S03: Active Study Session Logging', () => {
     await page.mouse.move(100, 100)
 
     // AND session resumes correctly (still exists, endTime is undefined = still active)
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     const sessionResumed = await page.evaluate(async () => {
       const db = await new Promise<IDBDatabase>((resolve, reject) => {
         const request = indexedDB.open('ElearningDB')

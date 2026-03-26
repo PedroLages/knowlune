@@ -235,6 +235,7 @@ test.describe('E15-S03: Timer Warning at 1 Minute Remaining', () => {
 
     // Wait 3.5 seconds — persistent warning should still be visible (not auto-dismissed).
     // Longest auto-dismiss is 5s (10% toast), so 3.5s still proves non-dismissal.
+    // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
     await page.waitForTimeout(3500) // justified: verifying toast persistence
     await expect(toast.first()).toBeVisible()
   })
@@ -254,6 +255,7 @@ test.describe('E15-S03: Untimed Mode', () => {
     await expect(timer).toBeHidden()
 
     // No Sonner toast should appear
+    // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
     await page.waitForTimeout(2000) // justified: confirming absence of warnings
     await expect(sonnerToast(page)).toHaveCount(0)
   })
@@ -356,6 +358,7 @@ test.describe('E15-S03: Accommodation-Adjusted Warnings', () => {
     await triggerVisibilityChange(page)
 
     // At 12 min elapsed of 22:30 adjusted, 10:30 remaining = 46.7% — no 25% warning yet
+    // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
     await page.waitForTimeout(2000) // justified: confirming absence of premature warning
     await expect(sonnerToast(page)).toHaveCount(0)
 

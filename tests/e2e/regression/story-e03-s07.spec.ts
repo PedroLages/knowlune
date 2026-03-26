@@ -25,6 +25,7 @@ async function goToBookmarks(page: Parameters<typeof navigateAndWait>[0]) {
 
 /** Seed bookmarks into IndexedDB across multiple courses. */
 async function seedBookmarks(page: Parameters<typeof navigateAndWait>[0]) {
+  // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
   await page.evaluate(() => {
     return new Promise<void>((resolve, reject) => {
       const request = indexedDB.open('ElearningDB')
@@ -85,6 +86,7 @@ async function seedBookmarks(page: Parameters<typeof navigateAndWait>[0]) {
 
 /** Clear all bookmarks from IndexedDB. */
 async function clearBookmarks(page: Parameters<typeof navigateAndWait>[0]) {
+  // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
   await page.evaluate(() => {
     return new Promise<void>((resolve, reject) => {
       const request = indexedDB.open('ElearningDB')

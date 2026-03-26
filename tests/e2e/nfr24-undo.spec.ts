@@ -40,6 +40,7 @@ test.describe('NFR24: Note soft delete and restore', () => {
   })
 
   test('should have note in IndexedDB after seeding', async ({ page }) => {
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     const noteExists = await page.evaluate(async () => {
       return new Promise<boolean>((resolve, reject) => {
         const req = indexedDB.open('ElearningDB')
@@ -65,6 +66,7 @@ test.describe('NFR24: Note soft delete and restore', () => {
 
   test('should soft delete note (mark deleted=true in IndexedDB)', async ({ page }) => {
     // Soft delete via raw IndexedDB update
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     await page.evaluate(async () => {
       return new Promise<void>((resolve, reject) => {
         const req = indexedDB.open('ElearningDB')
@@ -95,6 +97,7 @@ test.describe('NFR24: Note soft delete and restore', () => {
     })
 
     // Verify note is soft-deleted but still exists
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     const noteData = await page.evaluate(async () => {
       return new Promise<{ deleted: boolean; deletedAt: string | undefined } | null>(
         (resolve, reject) => {
@@ -126,6 +129,7 @@ test.describe('NFR24: Note soft delete and restore', () => {
 
   test('should restore note (set deleted=false in IndexedDB)', async ({ page }) => {
     // First soft delete
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     await page.evaluate(async () => {
       return new Promise<void>((resolve, reject) => {
         const req = indexedDB.open('ElearningDB')
@@ -156,6 +160,7 @@ test.describe('NFR24: Note soft delete and restore', () => {
     })
 
     // Then restore (undo)
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     await page.evaluate(async () => {
       return new Promise<void>((resolve, reject) => {
         const req = indexedDB.open('ElearningDB')
@@ -186,6 +191,7 @@ test.describe('NFR24: Note soft delete and restore', () => {
     })
 
     // Verify note is restored
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     const noteData = await page.evaluate(async () => {
       return new Promise<{ deleted: boolean; deletedAt: string | undefined } | null>(
         (resolve, reject) => {
@@ -217,6 +223,7 @@ test.describe('NFR24: Note soft delete and restore', () => {
 
   test('should permanently delete note (remove from IndexedDB)', async ({ page }) => {
     // Permanently delete
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     await page.evaluate(async () => {
       return new Promise<void>((resolve, reject) => {
         const req = indexedDB.open('ElearningDB')
@@ -239,6 +246,7 @@ test.describe('NFR24: Note soft delete and restore', () => {
     })
 
     // Verify note is gone
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     const noteExists = await page.evaluate(async () => {
       return new Promise<boolean>((resolve, reject) => {
         const req = indexedDB.open('ElearningDB')

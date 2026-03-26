@@ -58,6 +58,7 @@ export function ProgressWidget() {
             textAnchor="middle"
             dy="0.3em"
             className="fill-current text-base font-bold transform rotate-90"
+            // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic value requires inline style
             style={{ transformOrigin: 'center' }}
           >
             {Math.round(percentage)}%

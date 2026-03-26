@@ -125,6 +125,7 @@ test.describe('AC1: 25% milestone celebration', () => {
     await expect(toast).toContainText('Watch 4 Videos')
 
     // Verify milestone recorded in IndexedDB
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     const challenges = await page.evaluate(async () => {
       return new Promise((resolve, reject) => {
         const request = indexedDB.open('ElearningDB')

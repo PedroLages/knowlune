@@ -212,6 +212,7 @@ test.describe('AC4: IndexedDB frame storage', () => {
     await expect(frameImage).toBeVisible({ timeout: TIMEOUTS.LONG })
 
     // THEN: Verify screenshot record exists in IndexedDB
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     const screenshotCount = await page.evaluate(async () => {
       const db = await new Promise<IDBDatabase>((resolve, reject) => {
         const req = indexedDB.open('ElearningDB')

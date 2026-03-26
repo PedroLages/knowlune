@@ -31,27 +31,66 @@ vi.mock('@/ai/hooks/useAISuggestions', () => ({
   useAISuggestions: () => mockAISuggestions,
 }))
 
+const mockImportStoreState = {
+  isImporting: false,
+  importError: null,
+  importProgress: null,
+  importedCourses: [],
+  setImporting: vi.fn(),
+  setImportError: vi.fn(),
+  setImportProgress: vi.fn(),
+}
+
 vi.mock('@/stores/useCourseImportStore', () => ({
   useCourseImportStore: Object.assign(
-    (selector: (state: Record<string, unknown>) => unknown) =>
-      selector({
-        isImporting: false,
-        importError: null,
-        importProgress: null,
-        importedCourses: [],
-      }),
+    (selector?: (state: typeof mockImportStoreState) => unknown) =>
+      selector ? selector(mockImportStoreState) : mockImportStoreState,
     {
-      getState: () => ({
-        isImporting: false,
-        importError: null,
-        importProgress: null,
-        setImporting: vi.fn(),
-        setImportError: vi.fn(),
-        setImportProgress: vi.fn(),
-      }),
+      getState: () => mockImportStoreState,
       setState: vi.fn(),
+      subscribe: vi.fn(() => () => {}),
     }
   ),
+}))
+
+vi.mock('@/stores/useLearningPathStore', () => ({
+  useLearningPathStore: Object.assign(
+    (selector?: (state: Record<string, unknown>) => unknown) => {
+      const state = {
+        paths: [],
+        entries: [],
+        activePath: null,
+        isGenerating: false,
+        error: null,
+        loadPaths: vi.fn(),
+        addCourseToPath: vi.fn(),
+        createPath: vi.fn(),
+      }
+      return selector ? selector(state) : state
+    },
+    {
+      getState: () => ({
+        paths: [],
+        loadPaths: vi.fn(),
+        addCourseToPath: vi.fn(),
+        createPath: vi.fn(),
+      }),
+      setState: vi.fn(),
+      subscribe: vi.fn(() => () => {}),
+    }
+  ),
+}))
+
+vi.mock('@/ai/hooks/usePathPlacementSuggestion', () => ({
+  usePathPlacementSuggestion: () => ({
+    suggestion: null,
+    isLoading: false,
+    error: null,
+  }),
+}))
+
+vi.mock('@/ai/learningPath/suggestPlacement', () => ({
+  isPathPlacementAvailable: () => false,
 }))
 
 function makeMockFileHandle(name: string): FileSystemFileHandle {

@@ -82,6 +82,7 @@ test.describe('E01-S06: Delete Imported Course', () => {
     expect(page.url()).toContain('/courses')
 
     // IndexedDB importedCourses store is empty
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     const count = await page.evaluate(async () => {
       return new Promise<number>((resolve, reject) => {
         const request = indexedDB.open('ElearningDB')

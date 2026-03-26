@@ -111,6 +111,7 @@ test.describe('WebLLM Streaming Performance', () => {
 
     // Select prompt
     await page.click(`button:has-text("${sizeLabel} Prompt")`)
+    // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
     await page.waitForTimeout(500)
 
     // Generate response
@@ -145,6 +146,7 @@ test.describe('WebLLM Streaming Performance', () => {
       await runSingleTest(testPage, 'short', run)
 
       // Wait between runs
+      // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
       if (run < 3) await testPage.waitForTimeout(2000)
     })
   }
@@ -157,6 +159,7 @@ test.describe('WebLLM Streaming Performance', () => {
       await runSingleTest(testPage, 'medium', run)
 
       // Wait between runs
+      // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
       if (run < 3) await testPage.waitForTimeout(2000)
     })
   }
@@ -169,6 +172,7 @@ test.describe('WebLLM Streaming Performance', () => {
       await runSingleTest(testPage, 'long', run)
 
       // Wait between runs
+      // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
       if (run < 3) await testPage.waitForTimeout(2000)
     })
   }

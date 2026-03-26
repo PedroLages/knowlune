@@ -65,7 +65,7 @@ Deno.serve(async (req: Request) => {
 
     // 2. Parse origin from request for redirect URLs
     // silent-catch-ok — server-side edge function, no toast available
-    // silent-catch-ok: error logged server-side
+    // eslint-disable-next-line error-handling/no-silent-catch -- server-side error handling
     const body = await req.json().catch(() => {
       console.warn('create-checkout: malformed request body')
       return {}

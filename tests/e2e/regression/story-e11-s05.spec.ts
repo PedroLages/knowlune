@@ -100,6 +100,7 @@ test.describe('E11-S05: Interleaved Review Mode', () => {
 
   test.afterEach(async ({ page }) => {
     // Clean up IndexedDB stores to prevent data leaking between tests
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     await page.evaluate(async () => {
       const dbReq = indexedDB.open('ElearningDB')
       const db = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -182,6 +183,7 @@ test.describe('E11-S05: Interleaved Review Mode', () => {
     await expect(page.getByTestId('interleaved-card-front')).toBeVisible()
 
     // Verify rating was persisted to IndexedDB (not just UI advancement)
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     const persisted = await page.evaluate(async () => {
       const dbReq = indexedDB.open('ElearningDB')
       const db = await new Promise<IDBDatabase>((resolve, reject) => {

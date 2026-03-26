@@ -58,8 +58,8 @@ export function isAllowedOllamaUrl(urlString: string): boolean {
     }
 
     return true
+  // eslint-disable-next-line error-handling/no-silent-catch -- server-side error handling
   } catch {
-    // silent-catch-ok: error logged server-side
     return false
   }
 }
@@ -94,7 +94,7 @@ app.get('/api/ai/ollama/tags', async (req, res) => {
     })
 
     if (!response.ok) {
-      // silent-catch-ok: error logged server-side
+      // eslint-disable-next-line error-handling/no-silent-catch -- server-side error handling
       const errorText = await response.text().catch(() => response.statusText)
       res.status(response.status).json({ error: `Ollama returned ${response.status}: ${errorText}` })
       return
@@ -153,7 +153,7 @@ app.get('/api/ai/ollama/health', async (req, res) => {
     })
 
     if (!response.ok) {
-      // silent-catch-ok: error logged server-side
+      // eslint-disable-next-line error-handling/no-silent-catch -- server-side error handling
       const errorText = await response.text().catch(() => response.statusText)
       res.status(response.status).json({ error: `Ollama returned ${response.status}: ${errorText}` })
       return
@@ -219,7 +219,7 @@ app.post('/api/ai/ollama/chat', async (req, res) => {
     })
 
     if (!response.ok) {
-      // silent-catch-ok: error logged server-side
+      // eslint-disable-next-line error-handling/no-silent-catch -- server-side error handling
       const errorText = await response.text().catch(() => response.statusText)
       res.status(response.status).json({ error: `Ollama returned ${response.status}: ${errorText}` })
       return
@@ -375,8 +375,8 @@ app.post('/api/ai/generate', async (req, res) => {
     })
 
     res.json({ text: result.text })
+  // eslint-disable-next-line error-handling/no-silent-catch -- server-side error handling
   } catch (error) {
-    // silent-catch-ok: error logged server-side
     console.error('[/api/ai/generate] Error:', (error as Error).message)
     const status = getErrorStatus(error as Error)
     res.status(status).json({ error: (error as Error).message })
@@ -429,8 +429,8 @@ app.post('/api/ai/stream', async (req, res) => {
     // Signal stream end
     res.write('data: [DONE]\n\n')
     res.end()
+  // eslint-disable-next-line error-handling/no-silent-catch -- server-side error handling
   } catch (error) {
-    // silent-catch-ok: error logged server-side
     console.error('[/api/ai/stream] Error:', (error as Error).message)
 
     // If headers haven't been sent yet, send JSON error

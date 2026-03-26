@@ -70,6 +70,7 @@ describe('useChatQA', () => {
     })
 
     vi.mocked(RAGCoordinator.prototype.retrieveContext).mockImplementation(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test/evaluate context with dynamic types
       mockRetrieveContext as any
     )
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

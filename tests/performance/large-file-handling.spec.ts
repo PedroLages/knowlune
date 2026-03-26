@@ -36,7 +36,9 @@ test.describe('NFR33: Large file memory efficiency', () => {
       const url = URL.createObjectURL(blob)
 
       // Hold references (simulates active video playback)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test/evaluate context with dynamic types
       ;(window as any).__testBlobUrl = url
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test/evaluate context with dynamic types
       ;(window as any).__testBlob = blob
     })
 
@@ -58,8 +60,11 @@ test.describe('NFR33: Large file memory efficiency', () => {
 
     // Cleanup
     await page.evaluate(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test/evaluate context with dynamic types
       URL.revokeObjectURL((window as any).__testBlobUrl)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test/evaluate context with dynamic types
       delete (window as any).__testBlobUrl
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test/evaluate context with dynamic types
       delete (window as any).__testBlob
     })
   })

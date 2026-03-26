@@ -55,6 +55,7 @@ async function seedCourseProgress(
     lastAccessedAt: string
   }>
 ) {
+  // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
   await page.evaluate(
     async ({ records }) => {
       const DB_NAME = 'ElearningDB'

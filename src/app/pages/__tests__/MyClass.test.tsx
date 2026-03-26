@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, act } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { useCourseStore } from '@/stores/useCourseStore'
 
@@ -19,9 +19,14 @@ vi.mock('@/app/components/figma/CourseCard', () => ({
   ),
 }))
 
+vi.mock('@/app/components/EmptyState', () => ({
+  EmptyState: () => <div data-testid="empty-state" />,
+}))
+
 import MyClass from '../MyClass'
 
 beforeEach(() => {
+  vi.useFakeTimers()
   useCourseStore.setState({
     courses: [
       {
@@ -72,15 +77,21 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.useRealTimers()
   useCourseStore.setState({ courses: [], isLoaded: false })
 })
 
 function renderMyClass() {
-  return render(
+  const result = render(
     <MemoryRouter>
       <MyClass />
     </MemoryRouter>
   )
+  // Advance past the 500ms loading timer so the real content renders
+  act(() => {
+    vi.advanceTimersByTime(600)
+  })
+  return result
 }
 
 describe('MyClass page', () => {

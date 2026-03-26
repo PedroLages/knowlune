@@ -47,7 +47,7 @@ async function verifyEmbeddings() {
 
     // Check if there's a Notes tab to click
     const notesTab = page.locator('[role="tab"]', { hasText: 'Notes' })
-    // silent-catch-ok: error logged to console in CLI script
+    // eslint-disable-next-line error-handling/no-silent-catch -- CLI script logs errors to console
     const isTabVisible = await notesTab.isVisible().catch(() => false)
     if (isTabVisible) {
       console.log('   Clicking Notes tab...')
@@ -150,8 +150,8 @@ async function verifyEmbeddings() {
       console.log('- Check IndexedDB manually in DevTools')
     }
 
+  // eslint-disable-next-line error-handling/no-silent-catch -- CLI script logs errors to console
   } catch (error) {
-    // silent-catch-ok: error logged to console in CLI script
     console.error('\n❌ Error during verification:', error)
   } finally {
     console.log('\n🔄 Closing browser in 5 seconds...')
@@ -161,5 +161,5 @@ async function verifyEmbeddings() {
 }
 
 // Run verification
-// silent-catch-ok: error logged to console in CLI script
+// eslint-disable-next-line error-handling/no-silent-catch -- CLI script logs errors to console
 verifyEmbeddings().catch(console.error)

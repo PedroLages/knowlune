@@ -51,6 +51,7 @@ async function seedCorruptedSessions(
   /** Session IDs that need NaN/Infinity constructed in-browser */
   specialValues?: { id: string; field: string; expr: 'NaN' | 'Infinity' | '-Infinity' }[]
 ) {
+  // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
   await page.evaluate(
     async ({ corruptedSessions, specials }) => {
       const DB_NAME = 'ElearningDB'

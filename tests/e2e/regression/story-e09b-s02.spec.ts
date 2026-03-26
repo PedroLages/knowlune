@@ -386,6 +386,7 @@ test.describe('Chat Q&A Interface', () => {
     await page.goto('/notes/chat')
 
     // Intercept API requests and capture payload
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test/evaluate context with dynamic types
     let capturedPayload: any = null
     await page.route('**/v1/messages', async route => {
       const request = route.request()
@@ -420,6 +421,7 @@ test.describe('Chat Q&A Interface', () => {
     expect(capturedPayload).not.toHaveProperty('courseId')
 
     // Verify messages contain only user query + system instructions (no note file paths)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test/evaluate context with dynamic types
     const systemMessage = capturedPayload.messages.find((m: any) => m.role === 'system')
     expect(systemMessage.content).not.toContain('filePath')
     expect(systemMessage.content).not.toContain('noteId')

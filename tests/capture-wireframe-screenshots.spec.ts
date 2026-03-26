@@ -80,6 +80,7 @@ test.describe('Stitch 2.0 Wireframe Screenshots', () => {
       }
 
       // Give animations/charts a moment to render
+      // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
       await pw.waitForTimeout(1500)
 
       await pw.screenshot({

@@ -46,6 +46,7 @@ async function mockOpenAIStreaming(
   await page.evaluate(
     ({ text, delay }) => {
       // Mock generator that yields word-by-word chunks with delay
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test/evaluate context with dynamic types
       ;(window as any).__mockAISummaryGenerator__ = async function* (
         _transcript: string,
         signal?: AbortSignal
@@ -222,6 +223,7 @@ test.describe('E09B-S01: AI Video Summary', () => {
     // Mock slow generator that exceeds timeout (3s for fast test execution)
     await page.evaluate(() => {
       // Mock generator with 3.5s delay that respects abort signal
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test/evaluate context with dynamic types
       ;(window as any).__mockAISummaryGenerator__ = async function* (
         _transcript: string,
         signal?: AbortSignal
@@ -260,7 +262,7 @@ test.describe('E09B-S01: AI Video Summary', () => {
 
     // Mock generator that throws error immediately
     await page.evaluate(() => {
-      // eslint-disable-next-line require-yield -- intentionally throws before yielding to test error path
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, require-yield -- intentionally throws before yielding to test error path
       ;(window as any).__mockAISummaryGenerator__ = async function* () {
         throw new Error('Internal server error')
       }
@@ -341,6 +343,7 @@ test.describe('E09B-S01: AI Video Summary', () => {
     await page.evaluate(
       ({ first, second }) => {
         let callCount = 0
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test/evaluate context with dynamic types
         ;(window as any).__mockAISummaryGenerator__ = async function* (
           _transcript: string,
           signal?: AbortSignal

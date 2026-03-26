@@ -29,6 +29,7 @@ async function seedSidebar(page: import('@playwright/test').Page) {
  * This bypasses factory validation to test error resilience
  */
 async function seedCorruptedCourses(page: import('@playwright/test').Page, courses: unknown[]) {
+  // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
   await page.evaluate(
     async ({ corruptedCourses }) => {
       const DB_NAME = 'ElearningDB'
@@ -72,6 +73,7 @@ async function seedCorruptedCourses(page: import('@playwright/test').Page, cours
  * Clear all courses from IndexedDB to test empty state
  */
 async function clearAllCourses(page: import('@playwright/test').Page) {
+  // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
   await page.evaluate(async () => {
     const DB_NAME = 'ElearningDB'
     const STORE_NAME = 'courses'

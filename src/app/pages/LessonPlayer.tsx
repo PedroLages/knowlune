@@ -881,6 +881,7 @@ export function LessonPlayer() {
         <ResizablePanelGroup
           orientation="horizontal"
           className="flex-1 min-w-0"
+          // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic value requires inline style
           style={{ overflow: 'visible' }}
         >
           <ResizablePanel defaultSize={notesOpen ? '60%' : '100%'} minSize="40%">

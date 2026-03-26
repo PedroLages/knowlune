@@ -82,6 +82,7 @@ async function seedStore(
   storeName: string,
   data: unknown[]
 ) {
+  // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
   await page.evaluate(
     async ({ storeName, data, maxRetries, retryDelay }) => {
       for (let i = 0; i < maxRetries; i++) {

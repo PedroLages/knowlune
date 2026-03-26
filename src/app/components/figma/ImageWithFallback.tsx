@@ -15,6 +15,7 @@ export function ImageWithFallback(props: React.ImgHTMLAttributes<HTMLImageElemen
   return didError ? (
     <div
       className={`inline-block bg-accent text-center align-middle ${className ?? ''}`}
+      // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic value requires inline style
       style={style}
     >
       <div className="flex items-center justify-center w-full h-full">
@@ -22,6 +23,7 @@ export function ImageWithFallback(props: React.ImgHTMLAttributes<HTMLImageElemen
       </div>
     </div>
   ) : (
+    // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic value requires inline style
     <img src={src} alt={alt} className={className} style={style} {...rest} onError={handleError} />
   )
 }

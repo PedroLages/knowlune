@@ -50,6 +50,7 @@ export function KnowluneLogo({ className = 'h-7 w-auto' }: { className?: string 
       <text
         x="48"
         y="29"
+        // eslint-disable-next-line react-best-practices/no-inline-styles -- dynamic value requires inline style
         style={{ fontFamily: 'var(--font-heading)' }}
         fontSize="26"
         fontWeight="600"

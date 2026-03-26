@@ -9,6 +9,7 @@ test.describe('E09-S02: Web Worker Infrastructure', () => {
   test('AC7: Dexie schema v9 has embeddings table', async ({ page }) => {
     await page.goto('/')
 
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     const hasTable = await page.evaluate(async () => {
       return new Promise<boolean>(resolve => {
         const request = indexedDB.open('ElearningDB')

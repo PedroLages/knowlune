@@ -40,6 +40,7 @@ async function navigateToBookmarks(page: Page) {
  * Seed a test bookmark to IndexedDB for deletion tests.
  */
 async function seedTestBookmark(page: Page) {
+  // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
   await page.evaluate(async () => {
     const bookmark = {
       id: 'test-bookmark-1',
@@ -78,6 +79,7 @@ async function seedTestBookmark(page: Page) {
  * Seed a test note to IndexedDB for deletion tests.
  */
 async function seedTestNote(page: Page) {
+  // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
   await page.evaluate(async () => {
     const note = {
       id: 'test-note-1',
@@ -394,6 +396,7 @@ test.describe('Toast Notifications', () => {
 
     // Wait for auto-dismiss (SHORT duration = 3000ms)
     // Add 500ms buffer for animation
+    // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
     await page.waitForTimeout(3500)
 
     // Verify toast is gone
@@ -421,11 +424,13 @@ test.describe('Toast Notifications', () => {
     await expect(toast).toBeVisible({ timeout: TIMEOUTS.NETWORK })
 
     // Wait 3.5 seconds (SHORT duration) - toast should still be visible
+    // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
     await page.waitForTimeout(3500)
     await expect(toast).toBeVisible()
 
     // Undo toast uses MEDIUM duration (5000ms)
     // Wait another 2 seconds (total 5.5s) - toast should be gone
+    // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
     await page.waitForTimeout(2000)
     await expect(toast).not.toBeVisible()
   })

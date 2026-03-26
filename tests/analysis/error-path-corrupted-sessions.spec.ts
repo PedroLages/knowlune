@@ -42,6 +42,7 @@ async function mockDateNow(page: import('@playwright/test').Page) {
  * This bypasses factory validation to test error resilience
  */
 async function seedCorruptedSessions(page: import('@playwright/test').Page, sessions: unknown[]) {
+  // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
   await page.evaluate(
     async ({ corruptedSessions }) => {
       const DB_NAME = 'ElearningDB'

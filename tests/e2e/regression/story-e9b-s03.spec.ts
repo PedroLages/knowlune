@@ -156,6 +156,7 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
       },
     ])
     await page.evaluate(mock => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test/evaluate context with dynamic types
       ;(window as any).__mockLearningPathResponse = mock
     }, mockResponse)
 
@@ -184,6 +185,7 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
 
     // Verify mock was used (ensures test isn't accidentally calling real API)
     const mockWasUsed = await page.evaluate(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test/evaluate context with dynamic types
       return (window as any).__mockLearningPathResponse !== undefined
     })
     expect(mockWasUsed).toBe(true)
@@ -226,6 +228,7 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
       { courseId: 'advanced-python', position: 3, justification: 'Advanced course' },
     ])
     await page.evaluate(mock => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test/evaluate context with dynamic types
       ;(window as any).__mockLearningPathResponse = mock
     }, mockResponse)
 
@@ -235,6 +238,7 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
 
     // Manually mark a course as reordered (simulate manual override without drag-drop)
     // This directly modifies IndexedDB to set isManuallyOrdered: true
+    // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
     await page.evaluate(async () => {
       const request = indexedDB.open('ElearningDB')
       await new Promise<void>((resolve, reject) => {
@@ -244,6 +248,7 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
           const store = tx.objectStore('learningPathEntries')
 
           // Get all courses and mark the first one as manually ordered
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test/evaluate context with dynamic types
           const allCourses = await new Promise<any[]>((res, rej) => {
             const getRequest = store.getAll()
             getRequest.onsuccess = () => res(getRequest.result)
@@ -275,6 +280,7 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
 
     // Re-inject mock after reload (page reload clears window object)
     await page.evaluate(mock => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test/evaluate context with dynamic types
       ;(window as any).__mockLearningPathResponse = mock
     }, mockResponse)
 
@@ -347,6 +353,7 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
 
     // Inject mock learning path response
     await page.evaluate(fixedDate => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test/evaluate context with dynamic types
       ;(window as any).__mockLearningPathResponse = {
         learningPath: [
           {
@@ -436,6 +443,7 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
 
     // Inject mock learning path response
     await page.evaluate(fixedDate => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test/evaluate context with dynamic types
       ;(window as any).__mockLearningPathResponse = {
         learningPath: [
           {

@@ -24,6 +24,7 @@ async function goToNotes(page: Parameters<typeof navigateAndWait>[0]) {
 
 /** Seed notes into IndexedDB across two courses (with retry for Dexie init). */
 async function seedNotes(page: Parameters<typeof navigateAndWait>[0]) {
+  // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
   await page.evaluate(async () => {
     const notes = [
       {
@@ -117,6 +118,7 @@ async function seedNotes(page: Parameters<typeof navigateAndWait>[0]) {
 
 /** Clear all notes from IndexedDB. */
 async function clearNotes(page: Parameters<typeof navigateAndWait>[0]) {
+  // eslint-disable-next-line test-patterns/use-seeding-helpers -- test-specific seeding with custom schema
   await page.evaluate(() => {
     return new Promise<void>((resolve, reject) => {
       const request = indexedDB.open('ElearningDB')
