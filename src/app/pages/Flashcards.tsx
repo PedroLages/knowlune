@@ -20,11 +20,10 @@ import {
 import { cn } from '@/app/components/ui/utils'
 import { fadeUp, scaleIn, staggerContainer } from '@/lib/motion'
 import type { ReviewRating } from '@/data/types'
+import { toast } from 'sonner'
 import type { FlashcardSessionSummary } from '@/stores/useFlashcardStore'
 
 type FlashcardPhase = 'loading' | 'dashboard' | 'reviewing' | 'summary'
-
-const FIXED_NOW = new Date()
 
 function formatNextReviewDate(dateStr: string | null): string {
   if (!dateStr) return '—'
@@ -74,7 +73,7 @@ export function Flashcards() {
   const [isRating, setIsRating] = useState(false)
   const [summary, setSummary] = useState<FlashcardSessionSummary | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
-  const now = FIXED_NOW
+  const now = useMemo(() => new Date(), [phase])
 
   const {
     flashcards,
@@ -134,21 +133,26 @@ export function Flashcards() {
   const handleRate = useCallback(
     async (rating: ReviewRating) => {
       setIsRating(true)
-      await rateFlashcard(rating, now)
-      setIsRating(false)
-      setIsFlipped(false)
+      try {
+        await rateFlashcard(rating, now)
+        setIsFlipped(false)
 
-      // Check if session is complete
-      const { reviewIndex: nextIndex, reviewQueue: queue } = useFlashcardStore.getState()
-      if (nextIndex >= queue.length) {
-        const sessionSummary = getSessionSummary()
-        setSummary(sessionSummary)
-        setPhase('summary')
-      } else {
-        // Focus the card front after flip animation (500ms)
-        setTimeout(() => {
-          cardRef.current?.querySelector<HTMLElement>('[data-testid="flashcard-front"]')?.focus()
-        }, 500)
+        // Check if session is complete
+        const { reviewIndex: nextIndex, reviewQueue: queue } = useFlashcardStore.getState()
+        if (nextIndex >= queue.length) {
+          const sessionSummary = getSessionSummary()
+          setSummary(sessionSummary)
+          setPhase('summary')
+        } else {
+          // Focus the card front after flip animation (500ms)
+          setTimeout(() => {
+            cardRef.current?.querySelector<HTMLElement>('[data-testid="flashcard-front"]')?.focus()
+          }, 500)
+        }
+      } catch {
+        toast.error('Failed to save your rating. Please try again.')
+      } finally {
+        setIsRating(false)
       }
     },
     [rateFlashcard, getSessionSummary, now]
