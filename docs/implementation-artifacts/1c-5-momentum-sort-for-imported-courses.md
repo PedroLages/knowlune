@@ -1,12 +1,12 @@
 ---
 story_id: E1C-S05
 story_name: "Momentum Sort for Imported Courses"
-status: in-progress
+status: done
 started: 2026-03-26
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-03-26
+reviewed: true
+review_started: 2026-03-26
+review_gates_passed: [build, lint, type-check, unit-tests]
 burn_in_validated: false
 ---
 
@@ -28,10 +28,10 @@ so that I can quickly find the courses I'm most actively studying.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Lift sort dropdown to shared position above both sections (AC: 1,3)
-- [ ] Task 2: Apply momentum sort to imported courses with tiebreaker (AC: 1,2,4)
-- [ ] Task 3: Verify sort interacts correctly with filters (AC: 5)
-- [ ] Task 4: Add unit tests for sort logic
+- [x] Task 1: Lift sort dropdown to shared position above both sections (AC: 1,3)
+- [x] Task 2: Apply momentum sort to imported courses with tiebreaker (AC: 1,2,4)
+- [x] Task 3: Verify sort interacts correctly with filters (AC: 5)
+- [x] Task 4: Add unit tests for sort logic + fix pre-existing test mock gaps
 
 ## Design Guidance
 
@@ -41,4 +41,7 @@ so that I can quickly find the courses I'm most actively studying.
 
 ## Lessons Learned
 
-(to be filled after implementation)
+- **Sort dropdown placement matters for UX**: Moving the sort dropdown from inside the sample courses collapsible to the shared filter bar ensures it applies to both imported and sample courses. Previously, users with collapsed sample courses would never see the sort control.
+- **Pre-existing test mock drift**: The Courses.test.tsx mocks were missing `getTagsWithCounts`, `renameTagGlobally`, and `deleteTagGlobally` from the store, plus `db.studySessions` from the DB mock. This caused all 16 tests to fail silently (the test file was likely not being run regularly). Fixing mock drift should be part of any story touching shared components.
+- **useMemo for sort stability**: Wrapping the sort in `useMemo` with proper dependencies (`filteredImportedCourses`, `sortMode`, `momentumMap`) prevents unnecessary re-sorts on unrelated state changes. The previous inline `.sort()` call ran on every render.
+- **Tiebreaker design**: Using `importedAt` as the tiebreaker for equal momentum scores (including zero-momentum) provides a stable, predictable secondary sort that matches user expectations (newer courses first when momentum is equal).
