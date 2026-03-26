@@ -417,9 +417,9 @@ function FeaturedAuthorProfile({
   const socialEntries = Object.entries(author.socialLinks).filter(([, url]) => url)
 
   return (
-    <div data-testid="featured-author-profile">
+    <div>
       {/* Hero Card */}
-      <Card className="rounded-3xl border-0 shadow-sm mb-6">
+      <Card className="rounded-3xl border-0 shadow-sm mb-6" data-testid="featured-author">
         <CardContent className="p-6 sm:p-8">
           <div className="flex flex-col sm:flex-row gap-6">
             {/* Large Avatar */}
@@ -464,9 +464,7 @@ function FeaturedAuthorProfile({
                 )}
               </div>
 
-              {author.title && (
-                <p className="text-muted-foreground mb-3">{author.title}</p>
-              )}
+              {author.title && <p className="text-muted-foreground mb-3">{author.title}</p>}
 
               {/* Featured Quote */}
               {author.featuredQuote && (
@@ -477,7 +475,10 @@ function FeaturedAuthorProfile({
 
               {/* Specialty Badges */}
               {author.specialties.length > 0 && (
-                <div className="flex flex-wrap justify-center sm:justify-start gap-1.5 mb-4">
+                <div
+                  className="flex flex-wrap justify-center sm:justify-start gap-1.5 mb-4"
+                  data-testid="specialty-badges"
+                >
                   {author.specialties.map(specialty => (
                     <Badge key={specialty} variant="secondary" className="text-xs">
                       {specialty}
@@ -504,6 +505,28 @@ function FeaturedAuthorProfile({
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Stats strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-6">
+            <div className="flex flex-col items-center gap-1 rounded-xl bg-muted ring-1 ring-border/20 p-4 shadow-sm">
+              <BookOpen className="size-5 text-brand mb-1" aria-hidden="true" />
+              <span className="text-xl font-bold tabular-nums">{totalCourseCount}</span>
+              <span className="text-xs text-muted-foreground">
+                {totalCourseCount === 1 ? 'Course' : 'Courses'}
+              </span>
+            </div>
+          </div>
+
+          {/* View Full Profile link */}
+          <div className="flex justify-end mt-4">
+            <Button
+              variant="brand"
+              asChild
+              className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            >
+              <Link to={`/authors/${author.id}`}>View Full Profile</Link>
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -535,9 +558,7 @@ function FeaturedAuthorProfile({
       {/* Courses Section */}
       {totalCourseCount > 0 && (
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-4">
-            Courses by {author.name}
-          </h3>
+          <h3 className="text-lg font-semibold mb-4">Courses by {author.name}</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {authorCourses.map(course => (
               <CourseCard
@@ -558,7 +579,10 @@ function FeaturedAuthorProfile({
       <Card className="rounded-3xl border-0 shadow-sm bg-brand-soft/30">
         <CardContent className="flex flex-col sm:flex-row items-center gap-4 p-6">
           <Import className="size-8 text-brand shrink-0" aria-hidden="true" />
-          <p className="text-sm text-muted-foreground text-center sm:text-left" data-testid="authors-teaser-cta">
+          <p
+            className="text-sm text-muted-foreground text-center sm:text-left"
+            data-testid="authors-teaser-cta"
+          >
             Authors are automatically detected when you import courses
           </p>
         </CardContent>
