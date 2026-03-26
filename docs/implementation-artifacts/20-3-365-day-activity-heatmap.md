@@ -6,7 +6,7 @@ started: 2026-03-23
 completed: 2026-03-24
 reviewed: done
 review_started: 2026-03-23
-review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing]
 burn_in_validated: false
 ---
 
@@ -138,4 +138,9 @@ Key HIGH: E2E tooltip test (1) uses `if` guard allowing silent pass, (2) asserti
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Roving tabindex for dense grids**: A 365-cell grid creates 365 tab stops. Roving tabindex with arrow key navigation reduces this to a single tab stop, improving keyboard accessibility without sacrificing cell-level focus.
+- **Pre-compute formatted dates in render loops**: Calling `new Date()` + `toLocaleDateString()` inside a 365-iteration render loop caused measurable jank. A `useMemo`-backed `Map<string, string>` of pre-formatted dates eliminated the per-render cost.
+- **Map insertion order is fragile for sort**: Monthly summary relied on `Map` insertion order matching chronological order. Switching to `YYYY-MM` string keys with explicit `sort()` made the ordering deterministic regardless of data arrival order.
+- **Hard assertions over silent guards in E2E**: An `if (cell)` guard in the tooltip test allowed the test to pass vacuously when no matching cell existed. Replacing with `await expect(cell).toHaveCount(1)` catches real rendering regressions.
+- **Debounce event-driven data refresh**: The `study-log-updated` custom event fires on every session save. Without debounce, rapid-fire events triggered redundant IndexedDB queries. A 300ms `setTimeout` debounce with cleanup prevents this.
+- **Query only the date range you need**: Loading the full `studySessions` table (`toArray()`) is wasteful when only the last 365 days matter. A `.where('startTime').above(cutoff)` index query scopes the read to relevant data.
