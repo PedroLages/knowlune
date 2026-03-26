@@ -320,7 +320,7 @@ development_status:
   19-3-entitlement-system-and-offline-caching: done
   19-4-subscription-management: done
   19-5-premium-feature-gating-and-upgrade-ctas: done
-  19-6-premium-code-boundary-and-build-separation: backlog
+  19-6-premium-code-boundary-and-build-separation: done
   19-7-legal-pages-and-compliance: backlog
   19-8-free-trial-flow: backlog
   19-9-gdpr-compliance-and-account-lifecycle: backlog

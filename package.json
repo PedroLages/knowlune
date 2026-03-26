@@ -24,6 +24,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "build:premium": "PREMIUM_BUILD=1 vite build --config vite.config.premium.ts",
     "dev": "vite",
     "server": "tsx server/index.ts",
     "lint": "eslint . --cache",
