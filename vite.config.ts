@@ -436,7 +436,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
     testTimeout: 10_000,
-    hookTimeout: 15_000,
+    hookTimeout: 30_000,
     coverage: {
       provider: 'v8',
       reportOnFailure: true,

@@ -42,6 +42,27 @@ vi.mock('@/lib/checkout', () => ({
   cacheEntitlement: vi.fn(),
 }))
 
+vi.mock('@/lib/entitlement/isPremium', () => ({
+  useIsPremium: () => ({
+    isPremium: false,
+    tier: 'free',
+    loading: false,
+    isStale: false,
+    error: null,
+    trialEnd: null,
+    hadTrial: false,
+  }),
+}))
+
+vi.mock('@/app/hooks/useTrialStatus', () => ({
+  useTrialStatus: () => ({
+    daysRemaining: 0,
+    canStartTrial: false,
+    hadTrial: false,
+    trialEnd: null,
+  }),
+}))
+
 vi.mock('sonner', () => ({
   toast: { error: vi.fn(), success: vi.fn(), info: vi.fn() },
 }))
@@ -162,8 +183,11 @@ describe('Settings page', () => {
     })
 
     // SubscriptionCard should render free tier (invalid param is ignored)
+    // With hadTrial=false, the button label is "Upgrade to Premium plan"
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /upgrade to premium/i })).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: /upgrade to premium plan/i })
+      ).toBeInTheDocument()
     })
   })
 })
