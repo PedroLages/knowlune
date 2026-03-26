@@ -298,9 +298,21 @@ export function Courses() {
     }
   }, [sampleCollapsed, selectedTopics, debouncedSearch, selectedCategory, filtered.length])
 
-  const sortedImportedCourses = [...filteredImportedCourses].sort(
-    (a, b) => new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime()
-  )
+  // AC1-AC4 (E1C-S05): Sort imported courses by momentum or importedAt
+  const sortedImportedCourses = useMemo(() => {
+    return [...filteredImportedCourses].sort((a, b) => {
+      if (sortMode === 'momentum') {
+        const scoreA = momentumMap.get(a.id)?.score ?? 0
+        const scoreB = momentumMap.get(b.id)?.score ?? 0
+        // AC1: Higher momentum first
+        if (scoreA !== scoreB) return scoreB - scoreA
+        // AC4: Zero-momentum (and equal-score) tiebreaker: importedAt newest first
+        return new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime()
+      }
+      // AC3: "Most Recent" sorts by importedAt (newest first)
+      return new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime()
+    })
+  }, [filteredImportedCourses, sortMode, momentumMap])
 
   function handleTagsChanged() {
     // After a global rename/delete, selected topic filters may reference
@@ -403,6 +415,7 @@ export function Courses() {
           </Card>
 
           {/* AC1: Show unified topic filter with merged tags from both course types */}
+          {/* AC5 (E1C-S05): Sort dropdown alongside filters — applies to both sections */}
           <div className="flex flex-wrap gap-x-6 gap-y-2 items-start">
             <TopicFilter
               availableTags={mergedTags}
@@ -416,6 +429,19 @@ export function Courses() {
                 onSelectedStatusesChange={setSelectedStatuses}
               />
             )}
+            <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
+              <SelectTrigger
+                data-testid="sort-select"
+                aria-label="Sort courses"
+                className="w-full sm:w-[180px] rounded-xl min-h-[44px]"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recent">Most Recent</SelectItem>
+                <SelectItem value="momentum">Sort by Momentum</SelectItem>
+              </SelectContent>
+            </Select>
             {mergedTags.length > 0 && (
               <Button
                 variant="ghost"
@@ -552,19 +578,6 @@ export function Courses() {
                       ))}
                     </ToggleGroup>
                   </div>
-                  <Select value={sortMode} onValueChange={v => setSortMode(v as SortMode)}>
-                    <SelectTrigger
-                      data-testid="sort-select"
-                      aria-label="Sort courses"
-                      className="w-full sm:w-[180px] rounded-xl"
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="recent">Most Recent</SelectItem>
-                      <SelectItem value="momentum">Sort by Momentum</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
 
                 {sortedCourses.length === 0 ? (
