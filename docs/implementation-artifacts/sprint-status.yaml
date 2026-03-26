@@ -75,13 +75,13 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 1C: Course Library Management (Delete, Edit, Sort, Search)
   # ──────────────────────────────────────────────────
-  epic-1c: in-progress
-  1c-1-delete-course-and-direct-navigation-fix: backlog
-  1c-2-edit-course-title: backlog
-  1c-3-touch-target-and-filter-accessibility-fix: backlog
-  1c-4-tag-management-global-rename-and-delete: backlog
+  epic-1c: done
+  1c-1-delete-course-and-direct-navigation-fix: done
+  1c-2-edit-course-title: done
+  1c-3-touch-target-and-filter-accessibility-fix: done
+  1c-4-tag-management-global-rename-and-delete: done
   1c-5-momentum-sort-for-imported-courses: done
-  1c-6-search-and-filter-inside-course-detail-page: backlog
+  1c-6-search-and-filter-inside-course-detail-page: done
   epic-1c-retrospective: optional
 
   # ──────────────────────────────────────────────────
