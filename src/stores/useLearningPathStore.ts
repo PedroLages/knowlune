@@ -35,6 +35,12 @@ interface LearningPathState {
   regeneratePath: () => Promise<void>
   clearPath: (pathId: string) => Promise<void>
 
+  // AI order suggestion (E26-S04)
+  applyAIOrder: (
+    pathId: string,
+    orderedEntries: Array<{ courseId: string; position: number; justification: string }>
+  ) => Promise<void>
+
   // Helpers
   getEntriesForPath: (pathId: string) => LearningPathEntry[]
 }
@@ -402,6 +408,58 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       console.error('[LearningPathStore] Failed to clear path:', error)
       set({ error: 'Failed to clear learning path' })
     }
+  },
+
+  applyAIOrder: async (
+    pathId: string,
+    orderedEntries: Array<{ courseId: string; position: number; justification: string }>
+  ) => {
+    const currentEntries = get()
+      .entries.filter(e => e.pathId === pathId)
+      .sort((a, b) => a.position - b.position)
+
+    // Build updated entries with AI positions and justifications
+    const updated = currentEntries.map(entry => {
+      const aiEntry = orderedEntries.find(o => o.courseId === entry.courseId)
+      if (aiEntry) {
+        return {
+          ...entry,
+          position: aiEntry.position,
+          justification: aiEntry.justification,
+          isManuallyOrdered: false,
+        }
+      }
+      return entry
+    }).sort((a, b) => a.position - b.position)
+
+    // Optimistic update
+    const now = new Date().toISOString()
+    set(state => ({
+      entries: [
+        ...state.entries.filter(e => e.pathId !== pathId),
+        ...updated,
+      ],
+      paths: state.paths.map(p =>
+        p.id === pathId ? { ...p, updatedAt: now, isAIGenerated: true } : p
+      ),
+      error: null,
+    }))
+
+    await persistWithRetry(async () => {
+      await db.transaction('rw', db.learningPathEntries, db.learningPaths, async () => {
+        for (const entry of updated) {
+          await db.learningPathEntries.update(entry.id, {
+            position: entry.position,
+            justification: entry.justification,
+            isManuallyOrdered: false,
+          })
+        }
+        await db.learningPaths.update(pathId, { updatedAt: now, isAIGenerated: true })
+      })
+    }).catch(error => {
+      console.error('[LearningPathStore] Failed to apply AI order:', error)
+      set({ error: 'Failed to save AI-suggested order' })
+    })
   },
 
   getEntriesForPath: (pathId: string) => {

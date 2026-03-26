@@ -28,6 +28,8 @@ import {
   BookOpen,
   ChevronRight,
   Sparkles,
+  Loader2,
+  Settings,
 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
@@ -55,6 +57,11 @@ import { useAuthorStore } from '@/stores/useAuthorStore'
 import { db } from '@/db'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 import { toast } from 'sonner'
+import {
+  isOrderSuggestionAvailable,
+  suggestPathOrder,
+  type OrderSuggestionResult,
+} from '@/ai/learningPath/suggestOrder'
 import type { LearningPathEntry, Course } from '@/data/types'
 
 // --- Sortable Course Row ---
@@ -432,6 +439,7 @@ export function LearningPathDetail() {
     reorderCourse,
     removeCourseFromPath,
     getEntriesForPath,
+    applyAIOrder,
   } = useLearningPathStore()
   const { importedCourses, loadImportedCourses, thumbnailUrls, loadThumbnailUrls } =
     useCourseImportStore()
@@ -440,6 +448,11 @@ export function LearningPathDetail() {
   const [isLoaded, setIsLoaded] = useState(false)
   const [catalogCourses, setCatalogCourses] = useState<Course[]>([])
   const [pickerOpen, setPickerOpen] = useState(false)
+
+  // AI Suggest Order state (E26-S04)
+  const [isSuggesting, setIsSuggesting] = useState(false)
+  const [orderSuggestion, setOrderSuggestion] = useState<OrderSuggestionResult | null>(null)
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
 
   // Load all data on mount
   useEffect(() => {
@@ -561,6 +574,49 @@ export function LearningPathDetail() {
     [pathId, removeCourseFromPath]
   )
 
+  // AI Suggest Order handler (E26-S04)
+  const handleSuggestOrder = useCallback(async () => {
+    if (!pathId || courseEntries.length < 2) return
+
+    setIsSuggesting(true)
+    try {
+      // Build course name and tag maps
+      const courseNames = new Map<string, string>()
+      const courseTags = new Map<string, string[]>()
+
+      for (const ic of importedCourses) {
+        courseNames.set(ic.id, ic.name)
+        courseTags.set(ic.id, ic.tags || [])
+      }
+
+      for (const cc of catalogCourses) {
+        courseNames.set(cc.id, cc.title)
+        courseTags.set(cc.id, [])
+      }
+
+      const result = await suggestPathOrder(courseEntries, courseNames, courseTags)
+      setOrderSuggestion(result)
+      setConfirmDialogOpen(true)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to suggest order')
+    } finally {
+      setIsSuggesting(false)
+    }
+  }, [pathId, courseEntries, importedCourses, catalogCourses])
+
+  const handleAcceptOrder = useCallback(async () => {
+    if (!pathId || !orderSuggestion) return
+
+    try {
+      await applyAIOrder(pathId, orderSuggestion.entries)
+      toast.success('AI-suggested order applied')
+      setConfirmDialogOpen(false)
+      setOrderSuggestion(null)
+    } catch {
+      toast.error('Failed to apply suggested order')
+    }
+  }, [pathId, orderSuggestion, applyAIOrder])
+
   // Loading state
   if (!isLoaded) {
     return (
@@ -643,14 +699,50 @@ export function LearningPathDetail() {
               {courseEntries.length} {courseEntries.length === 1 ? 'course' : 'courses'}
             </p>
           </div>
-          <Button
-            variant="brand"
-            onClick={() => setPickerOpen(true)}
-            data-testid="add-course-button"
-          >
-            <Plus className="size-4 mr-2" aria-hidden="true" />
-            Add Course
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Suggest Order button — shown when 2+ courses (E26-S04) */}
+            {courseEntries.length >= 2 && (
+              isOrderSuggestionAvailable() ? (
+                <Button
+                  variant="brand-outline"
+                  onClick={handleSuggestOrder}
+                  disabled={isSuggesting}
+                  data-testid="suggest-order-button"
+                >
+                  {isSuggesting ? (
+                    <>
+                      <Loader2 className="size-4 mr-2 animate-spin" aria-hidden="true" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="size-4 mr-2" aria-hidden="true" />
+                      Suggest Order
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Link
+                  to="/settings"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  data-testid="suggest-order-settings-link"
+                  aria-label="Configure AI to enable Suggest Order"
+                >
+                  <Settings className="size-4" aria-hidden="true" />
+                  <span className="hidden sm:inline">Configure AI for Suggest Order</span>
+                  <span className="sm:hidden">AI Settings</span>
+                </Link>
+              )
+            )}
+            <Button
+              variant="brand"
+              onClick={() => setPickerOpen(true)}
+              data-testid="add-course-button"
+            >
+              <Plus className="size-4 mr-2" aria-hidden="true" />
+              Add Course
+            </Button>
+          </div>
         </motion.div>
 
         {/* Course list */}
@@ -715,6 +807,85 @@ export function LearningPathDetail() {
         pathId={pathId!}
         existingCourseIds={existingCourseIds}
       />
+
+      {/* AI Order Suggestion Confirmation Dialog (E26-S04) */}
+      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <DialogContent className="sm:max-w-lg max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>
+              <span className="flex items-center gap-2">
+                <Sparkles className="size-5 text-brand" aria-hidden="true" />
+                AI-Suggested Order
+              </span>
+            </DialogTitle>
+            <DialogDescription>
+              Review the suggested course sequence. Accepting will reorder all courses and set
+              AI justifications.
+            </DialogDescription>
+          </DialogHeader>
+
+          {orderSuggestion && (
+            <div className="flex-1 overflow-y-auto min-h-0 -mx-6 px-6 space-y-3">
+              {/* Overall rationale */}
+              <div className="rounded-xl border border-brand/20 bg-brand-soft/30 p-3">
+                <p className="text-sm text-muted-foreground italic">
+                  {orderSuggestion.rationale}
+                </p>
+              </div>
+
+              {/* Suggested order list */}
+              <div
+                className="space-y-2"
+                role="list"
+                aria-label="Suggested course order"
+                data-testid="suggest-order-preview"
+              >
+                {orderSuggestion.entries.map(entry => {
+                  const info = courseInfo.get(entry.courseId)
+                  return (
+                    <div
+                      key={entry.courseId}
+                      role="listitem"
+                      className="flex items-start gap-3 p-3 rounded-lg border border-border"
+                    >
+                      <div className="size-7 shrink-0 rounded-full bg-brand-soft flex items-center justify-center text-sm font-semibold text-brand-soft-foreground">
+                        {entry.position}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">
+                          {info?.name || 'Unknown Course'}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5 italic leading-relaxed">
+                          {entry.justification}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setConfirmDialogOpen(false)
+                setOrderSuggestion(null)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="brand"
+              onClick={handleAcceptOrder}
+              data-testid="accept-order-button"
+            >
+              Accept Order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MotionConfig>
   )
 }

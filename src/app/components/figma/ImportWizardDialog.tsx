@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect, useRef, type KeyboardEvent } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo, type KeyboardEvent } from 'react'
+import { Link } from 'react-router'
 import {
   Dialog,
   DialogContent,
@@ -13,6 +14,13 @@ import { Label } from '@/app/components/ui/label'
 import { Badge } from '@/app/components/ui/badge'
 import { Textarea } from '@/app/components/ui/textarea'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/app/components/ui/select'
+import {
   FolderOpen,
   Loader2,
   Video,
@@ -23,12 +31,20 @@ import {
   Tag,
   Check,
   Sparkles,
+  Route,
+  Plus,
+  Settings,
+  AlertTriangle,
 } from 'lucide-react'
 import { scanCourseFolder, persistScannedCourse } from '@/lib/courseImport'
 import type { ScannedCourse, ScannedImage } from '@/lib/courseImport'
 import { useAISuggestions } from '@/ai/hooks/useAISuggestions'
+import { usePathPlacementSuggestion } from '@/ai/hooks/usePathPlacementSuggestion'
+import { useLearningPathStore } from '@/stores/useLearningPathStore'
+import { isPathPlacementAvailable } from '@/ai/learningPath/suggestPlacement'
+import { toast } from 'sonner'
 
-type WizardStep = 'select' | 'details'
+type WizardStep = 'select' | 'details' | 'path'
 
 interface ImportWizardDialogProps {
   open: boolean
@@ -51,8 +67,52 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
   const [aiDescriptionApplied, setAiDescriptionApplied] = useState(false)
   const tagInputRef = useRef<HTMLInputElement>(null)
 
+  // Path placement state (E26-S04)
+  const [selectedPathId, setSelectedPathId] = useState<string | null>(null)
+  const [selectedPosition, setSelectedPosition] = useState<number>(1)
+  const [pathChoice, setPathChoice] = useState<'accept' | 'choose' | 'skip' | 'new'>('accept')
+  const [newPathName, setNewPathName] = useState('')
+
+  // Learning path store
+  const {
+    paths: learningPaths,
+    loadPaths,
+    addCourseToPath,
+    createPath,
+  } = useLearningPathStore()
+
+  // Load paths when dialog opens
+  useEffect(() => {
+    if (open) {
+      loadPaths()
+    }
+  }, [open, loadPaths])
+
+  // Determine if path step should be shown
+  const showPathStep = useMemo(() => {
+    return learningPaths.length > 0 || isPathPlacementAvailable()
+  }, [learningPaths.length])
+
   // AI suggestions hook — fires automatically when Ollama is configured
   const aiSuggestions = useAISuggestions(scannedCourse)
+
+  // Path placement AI suggestion
+  const pathPlacement = usePathPlacementSuggestion(
+    courseName,
+    tags,
+    description,
+    step === 'path' && showPathStep
+  )
+
+  // Apply AI suggestion when it arrives
+  useEffect(() => {
+    if (pathPlacement.hasFetched && pathPlacement.suggestion && pathChoice === 'accept') {
+      if (pathPlacement.suggestion.pathId) {
+        setSelectedPathId(pathPlacement.suggestion.pathId)
+        setSelectedPosition(pathPlacement.suggestion.position)
+      }
+    }
+  }, [pathPlacement.hasFetched, pathPlacement.suggestion, pathChoice])
 
   const resetWizard = useCallback(() => {
     setStep('select')
@@ -68,6 +128,10 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
     setIsPersisting(false)
     setAiTagsApplied(false)
     setAiDescriptionApplied(false)
+    setSelectedPathId(null)
+    setSelectedPosition(1)
+    setPathChoice('accept')
+    setNewPathName('')
   }, [])
 
   // Apply AI-suggested tags when they arrive (only if user hasn't manually added tags yet)
@@ -176,6 +240,10 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
     }
   }, [])
 
+  const handleGoToPathStep = useCallback(() => {
+    setStep('path')
+  }, [])
+
   const handleImport = useCallback(async () => {
     if (!scannedCourse) return
 
@@ -198,14 +266,46 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
             }
           : undefined
 
-      await persistScannedCourse(scannedCourse, overrides)
+      const importedCourse = await persistScannedCourse(scannedCourse, overrides)
+
+      // Add to learning path if one was selected (E26-S04)
+      if (pathChoice !== 'skip' && importedCourse) {
+        const courseId = importedCourse.id
+        try {
+          if (pathChoice === 'new' && newPathName.trim()) {
+            const newPath = await createPath(newPathName.trim())
+            await addCourseToPath(newPath.id, courseId, 'imported')
+            toast.success(`Added to new path "${newPathName.trim()}"`)
+          } else if (selectedPathId) {
+            await addCourseToPath(selectedPathId, courseId, 'imported')
+            const pathName = learningPaths.find(p => p.id === selectedPathId)?.name
+            toast.success(`Added to "${pathName}"`)
+          }
+        } catch {
+          toast.error('Course imported, but failed to add to learning path')
+        }
+      }
+
       handleOpenChange(false)
     } catch {
       // silent-catch-ok: persistScannedCourse already shows error toasts
     } finally {
       setIsPersisting(false)
     }
-  }, [scannedCourse, courseName, description, tags, selectedCoverImage, handleOpenChange])
+  }, [
+    scannedCourse,
+    courseName,
+    description,
+    tags,
+    selectedCoverImage,
+    handleOpenChange,
+    pathChoice,
+    selectedPathId,
+    newPathName,
+    createPath,
+    addCourseToPath,
+    learningPaths,
+  ])
 
   const handleRescan = useCallback(() => {
     setScannedCourse(null)
@@ -268,44 +368,64 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
         aria-describedby="import-wizard-description"
       >
         <DialogHeader>
-          <DialogTitle>{step === 'select' ? 'Import Course' : 'Course Details'}</DialogTitle>
+          <DialogTitle>
+            {step === 'select'
+              ? 'Import Course'
+              : step === 'details'
+                ? 'Course Details'
+                : 'Learning Path'}
+          </DialogTitle>
           <DialogDescription id="import-wizard-description">
             {step === 'select'
               ? 'Select a folder containing your course videos and PDFs.'
-              : 'Review and edit the course details before importing.'}
+              : step === 'details'
+                ? 'Review and edit the course details before importing.'
+                : 'Choose where to place this course in your learning journey.'}
           </DialogDescription>
         </DialogHeader>
 
         {/* Step indicator */}
-        <div
-          className="flex items-center gap-2 text-xs text-muted-foreground"
-          aria-label={`Step ${step === 'select' ? '1' : '2'} of 2`}
-          role="status"
-        >
-          <span
-            className={`inline-flex items-center justify-center size-5 rounded-full text-xs font-medium ${
-              step === 'select'
-                ? 'bg-brand text-brand-foreground'
-                : 'bg-muted text-muted-foreground'
-            }`}
-          >
-            1
-          </span>
-          <span className={step === 'select' ? 'font-medium text-foreground' : ''}>
-            Select Folder
-          </span>
-          <ChevronRight className="size-3" aria-hidden="true" />
-          <span
-            className={`inline-flex items-center justify-center size-5 rounded-full text-xs font-medium ${
-              step === 'details'
-                ? 'bg-brand text-brand-foreground'
-                : 'bg-muted text-muted-foreground'
-            }`}
-          >
-            2
-          </span>
-          <span className={step === 'details' ? 'font-medium text-foreground' : ''}>Details</span>
-        </div>
+        {(() => {
+          const totalSteps = showPathStep ? 3 : 2
+          const currentStep = step === 'select' ? 1 : step === 'details' ? 2 : 3
+          const steps = [
+            { num: 1, label: 'Select Folder' },
+            { num: 2, label: 'Details' },
+            ...(showPathStep ? [{ num: 3, label: 'Learning Path' }] : []),
+          ]
+
+          return (
+            <div
+              className="flex items-center gap-2 text-xs text-muted-foreground"
+              aria-label={`Step ${currentStep} of ${totalSteps}`}
+              role="status"
+            >
+              {steps.map((s, i) => (
+                <span key={s.num} className="contents">
+                  {i > 0 && <ChevronRight className="size-3" aria-hidden="true" />}
+                  <span
+                    className={`inline-flex items-center justify-center size-5 rounded-full text-xs font-medium ${
+                      currentStep === s.num
+                        ? 'bg-brand text-brand-foreground'
+                        : currentStep > s.num
+                          ? 'bg-brand-soft text-brand-soft-foreground'
+                          : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    {currentStep > s.num ? (
+                      <Check className="size-3" aria-hidden="true" />
+                    ) : (
+                      s.num
+                    )}
+                  </span>
+                  <span className={currentStep === s.num ? 'font-medium text-foreground' : ''}>
+                    {s.label}
+                  </span>
+                </span>
+              ))}
+            </div>
+          )
+        })()}
 
         {step === 'select' && (
           <div className="flex flex-col items-center gap-4 py-6">
@@ -622,6 +742,176 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
           </div>
         )}
 
+        {/* Learning Path Step (E26-S04) */}
+        {step === 'path' && (
+          <div className="max-h-[60vh] overflow-y-auto">
+            <div className="flex flex-col gap-4 pr-1" data-testid="wizard-path-step">
+              {/* AI suggestion */}
+              {pathPlacement.isAvailable && pathPlacement.isLoading && (
+                <div
+                  className="flex items-center gap-2 rounded-xl border border-brand/20 bg-brand-soft/30 px-3 py-2"
+                  data-testid="wizard-path-ai-loading"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <Loader2
+                    className="size-4 animate-spin text-brand-soft-foreground"
+                    aria-hidden="true"
+                  />
+                  <span className="text-xs text-brand-soft-foreground">
+                    AI is analyzing path placement...
+                  </span>
+                </div>
+              )}
+
+              {/* AI suggestion card */}
+              {pathPlacement.hasFetched &&
+                pathPlacement.suggestion &&
+                pathPlacement.suggestion.pathId && (
+                  <div
+                    className="rounded-xl border border-brand/20 bg-brand-soft/30 p-4 space-y-3"
+                    data-testid="wizard-path-ai-suggestion"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="size-4 text-brand" aria-hidden="true" />
+                      <span className="text-sm font-medium">AI Suggestion</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Place in{' '}
+                      <span className="font-medium text-foreground">
+                        {pathPlacement.suggestion.pathName}
+                      </span>{' '}
+                      at position{' '}
+                      <span className="font-medium text-foreground">
+                        #{pathPlacement.suggestion.position}
+                      </span>
+                    </p>
+                    <p className="text-xs text-muted-foreground italic">
+                      {pathPlacement.suggestion.justification}
+                    </p>
+                    <Button
+                      variant="brand"
+                      size="sm"
+                      onClick={() => {
+                        setPathChoice('accept')
+                        setSelectedPathId(pathPlacement.suggestion!.pathId)
+                        setSelectedPosition(pathPlacement.suggestion!.position)
+                      }}
+                      data-testid="wizard-path-accept-suggestion"
+                      className="rounded-xl"
+                    >
+                      <Check className="size-4 mr-1.5" aria-hidden="true" />
+                      Accept Suggestion
+                    </Button>
+                  </div>
+                )}
+
+              {/* AI not configured message */}
+              {!pathPlacement.isAvailable && learningPaths.length > 0 && (
+                <div
+                  className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/5 p-3"
+                  data-testid="wizard-path-no-ai"
+                >
+                  <AlertTriangle
+                    className="size-4 mt-0.5 shrink-0 text-warning"
+                    aria-hidden="true"
+                  />
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">
+                      AI placement suggestions require a configured AI provider.
+                    </p>
+                    <Link
+                      to="/settings"
+                      className="text-xs text-brand hover:underline"
+                      onClick={() => handleOpenChange(false)}
+                    >
+                      <Settings className="size-3 inline mr-1" aria-hidden="true" />
+                      Configure in Settings
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              {/* Manual path selection */}
+              {learningPaths.length > 0 && (
+                <div className="space-y-3">
+                  <Label>Choose a Learning Path</Label>
+                  <Select
+                    value={selectedPathId || ''}
+                    onValueChange={value => {
+                      setSelectedPathId(value)
+                      setPathChoice('choose')
+                    }}
+                  >
+                    <SelectTrigger
+                      data-testid="wizard-path-select"
+                      className="rounded-xl"
+                      aria-label="Select a learning path"
+                    >
+                      <SelectValue placeholder="Select a path..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {learningPaths.map(path => (
+                        <SelectItem key={path.id} value={path.id}>
+                          <span className="flex items-center gap-2">
+                            <Route className="size-3.5" aria-hidden="true" />
+                            {path.name}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {selectedPathId && pathChoice !== 'skip' && pathChoice !== 'new' && (
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="wizard-position" className="shrink-0">
+                        Position
+                      </Label>
+                      <Input
+                        id="wizard-position"
+                        data-testid="wizard-path-position"
+                        type="number"
+                        min={1}
+                        value={selectedPosition}
+                        onChange={e =>
+                          setSelectedPosition(Math.max(1, parseInt(e.target.value) || 1))
+                        }
+                        className="w-20 rounded-xl"
+                        aria-label="Position in path"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Create new path option */}
+              <div className="space-y-2">
+                <Button
+                  variant={pathChoice === 'new' ? 'brand-outline' : 'outline'}
+                  size="sm"
+                  onClick={() => setPathChoice('new')}
+                  data-testid="wizard-path-create-new"
+                  className="rounded-xl"
+                >
+                  <Plus className="size-4 mr-1.5" aria-hidden="true" />
+                  Create New Path
+                </Button>
+                {pathChoice === 'new' && (
+                  <Input
+                    data-testid="wizard-new-path-name"
+                    value={newPathName}
+                    onChange={e => setNewPathName(e.target.value)}
+                    placeholder="e.g., Web Development Fundamentals"
+                    className="rounded-xl"
+                    autoFocus
+                    aria-label="New path name"
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {step === 'details' && (
           <DialogFooter>
             <Button
@@ -633,11 +923,70 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
             >
               Back
             </Button>
+            {showPathStep ? (
+              <Button
+                variant="brand"
+                onClick={handleGoToPathStep}
+                disabled={!isNameValid}
+                data-testid="wizard-next-btn"
+                className="rounded-xl"
+              >
+                Next
+                <ChevronRight className="size-4 ml-1" aria-hidden="true" />
+              </Button>
+            ) : (
+              <Button
+                variant="brand"
+                onClick={handleImport}
+                disabled={!isNameValid || isPersisting}
+                data-testid="wizard-import-btn"
+                className="rounded-xl"
+              >
+                {isPersisting ? (
+                  <>
+                    <Loader2 className="size-4 mr-2 animate-spin" />
+                    Importing...
+                  </>
+                ) : (
+                  'Import Course'
+                )}
+              </Button>
+            )}
+          </DialogFooter>
+        )}
+
+        {step === 'path' && (
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setPathChoice('skip')
+                handleImport()
+              }}
+              disabled={isPersisting}
+              data-testid="wizard-path-skip"
+              className="rounded-xl sm:mr-auto"
+            >
+              Add Later
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setStep('details')}
+              disabled={isPersisting}
+              data-testid="wizard-path-back"
+              className="rounded-xl"
+            >
+              Back
+            </Button>
             <Button
               variant="brand"
               onClick={handleImport}
-              disabled={!isNameValid || isPersisting}
-              data-testid="wizard-import-btn"
+              disabled={
+                isPersisting ||
+                (pathChoice === 'new' && !newPathName.trim()) ||
+                (pathChoice !== 'skip' && pathChoice !== 'new' && !selectedPathId)
+              }
+              data-testid="wizard-path-import-btn"
               className="rounded-xl"
             >
               {isPersisting ? (
