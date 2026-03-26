@@ -216,10 +216,10 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
     await removeImportedCourse(course.id)
     const { importError } = useCourseImportStore.getState()
     if (importError) {
-      toast.error('Failed to remove course')
+      toast.error('Failed to delete course')
       setDeleting(false)
     } else {
-      toast.success('Course removed')
+      toast.success('Course deleted')
     }
   }
 
