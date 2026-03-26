@@ -59,6 +59,7 @@ import { useProgressiveDisclosure } from '@/app/hooks/useProgressiveDisclosure'
 import { ReminderSettings } from '@/app/components/figma/ReminderSettings'
 import { CourseReminderSettings } from '@/app/components/figma/CourseReminderSettings'
 import { AIConfigurationSettings } from '@/app/components/figma/AIConfigurationSettings'
+import { YouTubeConfigurationSettings } from '@/app/components/figma/YouTubeConfigurationSettings'
 import { QuizPreferencesForm } from '@/app/components/settings/QuizPreferencesForm'
 import { AvatarCropDialog } from '@/app/components/ui/avatar-crop-dialog'
 import { AvatarUploadZone } from '@/app/components/settings/avatar-upload-zone'
@@ -902,6 +903,9 @@ export default function Settings() {
 
         {/* AI Configuration */}
         <AIConfigurationSettings />
+
+        {/* YouTube Configuration */}
+        <YouTubeConfigurationSettings />
 
         {/* Quiz Preferences */}
         <QuizPreferencesForm />
