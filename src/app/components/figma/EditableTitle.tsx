@@ -85,26 +85,28 @@ export function EditableTitle({
   if (isEditing) {
     return (
       <div data-testid={testId ? `${testId}-editing` : undefined}>
-        <input
-          ref={inputRef}
-          type="text"
-          value={draft}
-          onChange={e => {
-            setDraft(e.target.value)
-            if (validationError) setValidationError(null)
-          }}
-          onBlur={saveTitle}
-          onKeyDown={handleKeyDown}
-          aria-label="Edit course title"
-          aria-invalid={!!validationError}
-          maxLength={120}
-          data-testid={testId ? `${testId}-input` : undefined}
-          className={cn(
-            'w-full text-2xl font-bold bg-transparent border-b-2 border-brand outline-none py-0.5 px-0',
-            'focus:border-brand focus:ring-0',
-            className
-          )}
-        />
+        <h1>
+          <input
+            ref={inputRef}
+            type="text"
+            value={draft}
+            onChange={e => {
+              setDraft(e.target.value)
+              if (validationError) setValidationError(null)
+            }}
+            onBlur={saveTitle}
+            onKeyDown={handleKeyDown}
+            aria-label="Edit course title"
+            aria-invalid={!!validationError}
+            maxLength={120}
+            data-testid={testId ? `${testId}-input` : undefined}
+            className={cn(
+              'w-full text-2xl font-bold bg-transparent border-b-2 border-brand outline-none py-0.5 px-0',
+              'focus:border-brand focus:ring-0',
+              className
+            )}
+          />
+        </h1>
         {validationError && (
           <p
             className="text-xs text-destructive mt-1"
@@ -121,24 +123,26 @@ export function EditableTitle({
 
   return (
     <div data-testid={testId ? `${testId}-display` : undefined}>
-      <button
-        type="button"
-        onClick={startEditing}
-        aria-label={`Edit title: ${value}`}
-        data-testid={testId}
-        className={cn(
-          'group/title inline-flex items-center gap-2 text-left cursor-pointer rounded-md',
-          '-ml-1 px-1 py-0.5',
-          'hover:bg-muted/60 transition-colors duration-150',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2'
-        )}
-      >
-        <span className={cn('text-2xl font-bold', className)}>{value}</span>
-        <Pencil
-          className="size-4 text-muted-foreground opacity-0 group-hover/title:opacity-100 transition-opacity duration-150 shrink-0"
-          aria-hidden="true"
-        />
-      </button>
+      <h1 className="inline">
+        <button
+          type="button"
+          onClick={startEditing}
+          aria-label={`Edit title: ${value}`}
+          data-testid={testId}
+          className={cn(
+            'group/title inline-flex items-center gap-2 text-left cursor-pointer rounded-md',
+            '-ml-1 px-1 py-0.5',
+            'hover:bg-muted/60 transition-colors duration-150',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2'
+          )}
+        >
+          <span className={cn('text-2xl font-bold', className)}>{value}</span>
+          <Pencil
+            className="size-4 text-muted-foreground opacity-0 group-hover/title:opacity-100 transition-opacity duration-150 shrink-0"
+            aria-hidden="true"
+          />
+        </button>
+      </h1>
       {validationError && (
         <p
           className="text-xs text-destructive mt-1"
