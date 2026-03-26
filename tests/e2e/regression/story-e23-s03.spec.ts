@@ -11,11 +11,7 @@ test.describe('E23-S03: Rename Instructors to Authors', () => {
   // AC1: All text labels, navigation items, and headings use "Author" / "Authors"
   test('AC1: no "Instructor" text appears anywhere in the app', async ({ page }) => {
     // Check multiple key pages for stray "Instructor" references
-    const pagesToCheck = [
-      '/authors',
-      '/authors/chase-hughes',
-      '/courses/operative-six',
-    ]
+    const pagesToCheck = ['/authors', '/authors/chase-hughes', '/courses/operative-six']
 
     for (const route of pagesToCheck) {
       await navigateAndWait(page, route)
@@ -70,14 +66,14 @@ test.describe('E23-S03: Rename Instructors to Authors', () => {
       // Page should render content
       await expect(
         page.getByRole('heading', { level: 1 }),
-        `Heading not visible at ${label} (${width}px)`,
+        `Heading not visible at ${label} (${width}px)`
       ).toBeVisible()
 
       // No horizontal overflow
       const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth)
       const clientWidth = await page.evaluate(() => document.documentElement.clientWidth)
       expect(scrollWidth, `Horizontal overflow at ${label} (${width}px)`).toBeLessThanOrEqual(
-        clientWidth,
+        clientWidth
       )
     }
   })

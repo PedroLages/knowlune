@@ -66,14 +66,14 @@ export function FillInBlankQuestion({ question, value, onChange, mode }: FillInB
   }
 
   return (
-    <fieldset className="mt-6 min-w-0" aria-labelledby={labelId}>
-      <div
+    <fieldset className="mt-6 min-w-0">
+      <legend
         id={labelId}
         data-testid="question-text"
-        className="text-lg lg:text-xl text-foreground leading-relaxed pb-4"
+        className="text-lg lg:text-xl text-foreground leading-relaxed pb-4 w-full"
       >
         <MarkdownRenderer content={question.text} />
-      </div>
+      </legend>
 
       <div className="space-y-2">
         <Input
@@ -113,6 +113,8 @@ export function FillInBlankQuestion({ question, value, onChange, mode }: FillInB
             const isCorrect = exactMatch || caseInsensitiveMatch
             return (
               <div
+                role="status"
+                aria-atomic="true"
                 className={`mt-2 rounded-lg p-3 text-sm ${isCorrect ? 'bg-success-soft text-foreground' : 'bg-warning/10 text-foreground'}`}
               >
                 {isCorrect ? (

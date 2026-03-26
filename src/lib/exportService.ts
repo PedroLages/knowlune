@@ -20,7 +20,8 @@ import type {
   ContentProgress,
   Challenge,
   ReviewRecord,
-  LearningPathCourse,
+  LearningPath,
+  LearningPathEntry,
   AIUsageEvent,
 } from '@/data/types'
 import { sessionsToCSV, progressToCSV, deriveStreakDays, streakDaysToCSV } from './csvSerializer'
@@ -45,7 +46,8 @@ export interface KnowluneExport {
     contentProgress: ContentProgress[]
     challenges: Challenge[]
     reviewRecords: ReviewRecord[]
-    learningPath: LearningPathCourse[]
+    learningPaths: LearningPath[]
+    learningPathEntries: LearningPathEntry[]
     aiUsageEvents: AIUsageEvent[]
   }
 }
@@ -119,7 +121,8 @@ export async function exportAllAsJson(
     'contentProgress',
     'challenges',
     'reviewRecords',
-    'learningPath',
+    'learningPaths',
+    'learningPathEntries',
     'aiUsageEvents',
   ] as const
   const totalSteps = tables.length + 1 // +1 for localStorage
@@ -157,7 +160,8 @@ export async function exportAllAsJson(
       contentProgress: tableData.contentProgress as ContentProgress[],
       challenges: tableData.challenges as Challenge[],
       reviewRecords: tableData.reviewRecords as ReviewRecord[],
-      learningPath: tableData.learningPath as LearningPathCourse[],
+      learningPaths: tableData.learningPaths as LearningPath[],
+      learningPathEntries: tableData.learningPathEntries as LearningPathEntry[],
       aiUsageEvents: tableData.aiUsageEvents as AIUsageEvent[],
     },
   }

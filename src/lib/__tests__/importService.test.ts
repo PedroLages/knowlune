@@ -23,7 +23,8 @@ vi.mock('@/db/schema', () => ({
     contentProgress: { clear: mockClear },
     challenges: { clear: mockClear },
     reviewRecords: { clear: mockClear },
-    learningPath: { clear: mockClear },
+    learningPaths: { clear: mockClear },
+    learningPathEntries: { clear: mockClear },
     aiUsageEvents: { clear: mockClear },
   },
 }))
@@ -67,7 +68,8 @@ describe('importService', () => {
         contentProgress: [],
         challenges: [],
         reviewRecords: [],
-        learningPath: [],
+        learningPaths: [],
+        learningPathEntries: [],
         aiUsageEvents: [],
       },
     }
@@ -96,7 +98,8 @@ describe('importService', () => {
         contentProgress: [],
         challenges: [],
         reviewRecords: [],
-        learningPath: [],
+        learningPaths: [],
+        learningPathEntries: [],
         aiUsageEvents: [],
       },
     }

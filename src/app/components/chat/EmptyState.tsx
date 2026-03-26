@@ -15,8 +15,8 @@ export function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center h-full px-4 text-center">
       <div className="relative mb-6">
-        <MessageSquare className="w-16 h-16 text-brand" strokeWidth={1.5} />
-        <Sparkles className="w-6 h-6 text-warning absolute -top-1 -right-1" />
+        <MessageSquare className="size-16 text-brand" strokeWidth={1.5} />
+        <Sparkles className="size-6 text-warning absolute -top-1 -right-1" />
       </div>
 
       <h2 className="text-2xl font-semibold text-foreground mb-3">
@@ -44,7 +44,7 @@ export function EmptyState() {
       </div>
 
       <div className="mt-8 flex items-center gap-2 text-xs text-muted-foreground bg-muted px-4 py-2 rounded-lg">
-        <Sparkles className="w-4 h-4" />
+        <Sparkles className="size-4" />
         <span>Answers are generated from your personal note corpus only</span>
       </div>
     </div>

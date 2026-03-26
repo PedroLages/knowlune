@@ -78,7 +78,7 @@ export function QuestionDisplay({
     default:
       return (
         <div
-          role="status"
+          role="alert"
           className="mt-6 rounded-xl border border-border p-6 text-center text-muted-foreground text-sm"
         >
           Unsupported question type: {question.type}

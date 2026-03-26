@@ -127,13 +127,11 @@ describe('TrueFalseQuestion', () => {
 
     const fieldset = container.querySelector('fieldset')
     expect(fieldset).toBeInTheDocument()
-    const labelId = fieldset?.getAttribute('aria-labelledby')
-    expect(labelId).toBeTruthy()
 
-    // Verify the referenced element exists and contains question text
-    const labelElement = container.querySelector(`#${labelId}`)
-    expect(labelElement).toBeInTheDocument()
-    expect(labelElement?.textContent).toContain('Photosynthesis')
+    // Legend provides the accessible name for the fieldset
+    const legend = fieldset?.querySelector('legend')
+    expect(legend).toBeInTheDocument()
+    expect(legend?.textContent).toContain('Photosynthesis')
   })
 
   it('has radiogroup inside fieldset with legend (fieldset provides accessible name)', () => {
@@ -242,5 +240,56 @@ describe('TrueFalseQuestion', () => {
 
     expect(warnSpy).not.toHaveBeenCalled()
     warnSpy.mockRestore()
+  })
+
+  describe('ARIA live announcements (AC2)', () => {
+    it('has an aria-live="polite" region for selection announcements', () => {
+      render(
+        <TrueFalseQuestion
+          question={makeTrueFalseQuestion()}
+          value={undefined}
+          onChange={vi.fn()}
+          mode="active"
+        />
+      )
+
+      const liveRegion = screen.getByTestId('selection-announcement')
+      expect(liveRegion).toHaveAttribute('aria-live', 'polite')
+      expect(liveRegion).toHaveAttribute('aria-atomic', 'true')
+    })
+
+    it('announces "True selected" when True is clicked', async () => {
+      const onChange = vi.fn()
+      render(
+        <TrueFalseQuestion
+          question={makeTrueFalseQuestion()}
+          value={undefined}
+          onChange={onChange}
+          mode="active"
+        />
+      )
+
+      await userEvent.click(screen.getByText('True'))
+
+      const liveRegion = screen.getByTestId('selection-announcement')
+      expect(liveRegion).toHaveTextContent('True selected')
+    })
+
+    it('announces "False selected" when False is clicked', async () => {
+      const onChange = vi.fn()
+      render(
+        <TrueFalseQuestion
+          question={makeTrueFalseQuestion()}
+          value={undefined}
+          onChange={onChange}
+          mode="active"
+        />
+      )
+
+      await userEvent.click(screen.getByText('False'))
+
+      const liveRegion = screen.getByTestId('selection-announcement')
+      expect(liveRegion).toHaveTextContent('False selected')
+    })
   })
 })

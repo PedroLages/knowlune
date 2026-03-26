@@ -1,7 +1,7 @@
-import { useState } from 'react'
-import { Link } from 'react-router'
-import { Clock, CheckCircle, PlayCircle, ArrowRight } from 'lucide-react'
-import { Button } from '@/app/components/ui/button'
+import { useState, useEffect } from 'react'
+import { Clock, CheckCircle, PlayCircle } from 'lucide-react'
+import { Skeleton } from '@/app/components/ui/skeleton'
+import { EmptyState } from '@/app/components/EmptyState'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/tabs'
 import {
   Select,
@@ -20,6 +20,12 @@ type SortOption = 'recent' | 'progress-high' | 'progress-low' | 'alpha' | 'time'
 export default function MyClass() {
   const allCourses = useCourseStore(s => s.courses)
   const [sortBy, setSortBy] = useState<SortOption>('recent')
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 500)
+    return () => clearTimeout(timer)
+  }, [])
 
   const inProgress = getCoursesInProgress(allCourses)
   const completed = getCompletedCourses(allCourses)
@@ -110,23 +116,57 @@ export default function MyClass() {
   const completedWithStatus = allCoursesWithStatus.filter(c => c.status === 'completed')
   const notStartedWithStatus = allCoursesWithStatus.filter(c => c.status === 'not-started')
 
+  if (isLoading) {
+    return (
+      <div className="space-y-6" aria-busy="true" aria-label="Loading my courses">
+        {/* Title skeleton */}
+        <Skeleton className="h-8 w-40" />
+
+        {/* ProgressStats skeleton */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="rounded-2xl border border-border/50 p-4">
+              <Skeleton className="h-3 w-20 mb-2" />
+              <Skeleton className="h-7 w-12" />
+            </div>
+          ))}
+        </div>
+
+        {/* Tabs + Sort skeleton */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <Skeleton className="h-10 w-80 rounded-lg" />
+          <Skeleton className="h-10 w-[200px] rounded-lg" />
+        </div>
+
+        {/* Course cards grid skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="rounded-2xl border border-border/50 overflow-hidden">
+              <Skeleton className="w-full h-36" />
+              <div className="p-4">
+                <Skeleton className="h-4 w-20 mb-2" />
+                <Skeleton className="h-5 w-full mb-2" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   if (!hasAnyCourses) {
     return (
       <div>
         <h1 className="text-2xl font-bold mb-6">My Courses</h1>
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <PlayCircle className="w-12 h-12 text-muted-foreground mb-4" aria-hidden="true" />
-          <h2 className="text-xl font-semibold mb-2">Ready to start learning?</h2>
-          <p className="text-muted-foreground mb-6 max-w-md">
-            Browse our course catalog to find the perfect course to kickstart your learning journey.
-          </p>
-          <Button variant="brand" asChild>
-            <Link to="/courses">
-              Browse All Courses
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Link>
-          </Button>
-        </div>
+        <EmptyState
+          data-testid="empty-state-my-courses"
+          icon={PlayCircle}
+          title="Ready to start learning?"
+          description="Browse our course catalog to find the perfect course to kickstart your learning journey."
+          actionLabel="Browse All Courses"
+          actionHref="/courses"
+        />
       </div>
     )
   }
@@ -170,7 +210,7 @@ export default function MyClass() {
                 <section className="mb-8">
                   <div className="bg-brand-soft p-4 rounded-xl mb-4">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
-                      <Clock className="w-6 h-6 text-brand" />
+                      <Clock className="size-6 text-brand" />
                       In Progress
                     </h2>
                   </div>
@@ -197,7 +237,7 @@ export default function MyClass() {
                 <section className="mb-8">
                   <div className="bg-success-soft p-4 rounded-xl mb-4">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
-                      <CheckCircle className="w-6 h-6 text-success" />
+                      <CheckCircle className="size-6 text-success" />
                       Completed
                     </h2>
                   </div>
@@ -218,7 +258,7 @@ export default function MyClass() {
                 <section>
                   <div className="bg-muted p-4 rounded-xl mb-4">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
-                      <PlayCircle className="w-6 h-6 text-muted-foreground" />
+                      <PlayCircle className="size-6 text-muted-foreground" />
                       Not Started
                     </h2>
                   </div>
@@ -236,72 +276,64 @@ export default function MyClass() {
               )}
 
               {inProgress.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <Clock className="w-12 h-12 text-muted-foreground mb-4" aria-hidden="true" />
-                  <h2 className="text-xl font-semibold mb-2">No courses in progress</h2>
-                  <p className="text-muted-foreground mb-6 max-w-md">
-                    Start a new course to begin learning!
-                  </p>
-                  <Button variant="brand" asChild>
-                    <Link to="/courses">
-                      Browse Courses
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Link>
-                  </Button>
-                </div>
+                <EmptyState
+                  data-testid="empty-state-no-in-progress"
+                  icon={Clock}
+                  headingLevel={3}
+                  title="No courses in progress"
+                  description="Start a new course to begin learning!"
+                  actionLabel="Browse Courses"
+                  actionHref="/courses"
+                />
               )}
             </TabsContent>
 
             {/* All Courses View */}
             <TabsContent value="all">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {sortCourses(allCoursesWithStatus).map(course => (
-                  <CourseCard
-                    key={course.id}
-                    course={course}
-                    variant="progress"
-                    status={course.status}
-                    completionPercent={'completionPercent' in course ? course.completionPercent : 0}
-                    lastAccessedAt={'lastAccessedAt' in course ? course.lastAccessedAt : undefined}
-                  />
-                ))}
-              </div>
+              {allCoursesWithStatus.length === 0 ? (
+                <EmptyState
+                  icon={PlayCircle}
+                  headingLevel={3}
+                  title="No courses found"
+                  description="Browse the course catalog to add courses to your library."
+                  actionLabel="Browse Courses"
+                  actionHref="/courses"
+                />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  {sortCourses(allCoursesWithStatus).map(course => (
+                    <CourseCard
+                      key={course.id}
+                      course={course}
+                      variant="progress"
+                      status={course.status}
+                      completionPercent={
+                        'completionPercent' in course ? course.completionPercent : 0
+                      }
+                      lastAccessedAt={
+                        'lastAccessedAt' in course ? course.lastAccessedAt : undefined
+                      }
+                    />
+                  ))}
+                </div>
+              )}
             </TabsContent>
 
             {/* By Category View */}
             <TabsContent value="by-category">
-              {Object.entries(coursesByCategory).map(([category, courses]) => (
-                <section key={category} className="mb-8">
-                  <h2 className="text-lg font-semibold mb-4">{category}</h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    {sortCourses(courses).map(course => (
-                      <CourseCard
-                        key={course.id}
-                        course={course}
-                        variant="progress"
-                        status={course.status}
-                        completionPercent={
-                          'completionPercent' in course ? course.completionPercent : 0
-                        }
-                        lastAccessedAt={
-                          'lastAccessedAt' in course ? course.lastAccessedAt : undefined
-                        }
-                      />
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </TabsContent>
-
-            {/* By Difficulty View */}
-            <TabsContent value="by-difficulty">
-              {['Beginner', 'Intermediate', 'Advanced'].map(difficulty => {
-                const courses = coursesByDifficulty[difficulty]
-                if (!courses || courses.length === 0) return null
-
-                return (
-                  <section key={difficulty} className="mb-8">
-                    <h2 className="text-lg font-semibold mb-4">{difficulty}</h2>
+              {Object.keys(coursesByCategory).length === 0 ? (
+                <EmptyState
+                  icon={PlayCircle}
+                  headingLevel={3}
+                  title="No courses in any category"
+                  description="Start a course to see it organized by category."
+                  actionLabel="Browse Courses"
+                  actionHref="/courses"
+                />
+              ) : (
+                Object.entries(coursesByCategory).map(([category, courses]) => (
+                  <section key={category} className="mb-8">
+                    <h2 className="text-lg font-semibold mb-4">{category}</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                       {sortCourses(courses).map(course => (
                         <CourseCard
@@ -319,8 +351,51 @@ export default function MyClass() {
                       ))}
                     </div>
                   </section>
-                )
-              })}
+                ))
+              )}
+            </TabsContent>
+
+            {/* By Difficulty View */}
+            <TabsContent value="by-difficulty">
+              {['Beginner', 'Intermediate', 'Advanced'].every(
+                d => !coursesByDifficulty[d] || coursesByDifficulty[d].length === 0
+              ) ? (
+                <EmptyState
+                  icon={PlayCircle}
+                  headingLevel={3}
+                  title="No courses at any difficulty level"
+                  description="Start a course to see it organized by difficulty."
+                  actionLabel="Browse Courses"
+                  actionHref="/courses"
+                />
+              ) : (
+                ['Beginner', 'Intermediate', 'Advanced'].map(difficulty => {
+                  const courses = coursesByDifficulty[difficulty]
+                  if (!courses || courses.length === 0) return null
+
+                  return (
+                    <section key={difficulty} className="mb-8">
+                      <h2 className="text-lg font-semibold mb-4">{difficulty}</h2>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                        {sortCourses(courses).map(course => (
+                          <CourseCard
+                            key={course.id}
+                            course={course}
+                            variant="progress"
+                            status={course.status}
+                            completionPercent={
+                              'completionPercent' in course ? course.completionPercent : 0
+                            }
+                            lastAccessedAt={
+                              'lastAccessedAt' in course ? course.lastAccessedAt : undefined
+                            }
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  )
+                })
+              )}
             </TabsContent>
           </Tabs>
         </div>

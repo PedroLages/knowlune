@@ -10,6 +10,9 @@ import {
   Info,
   Camera,
   Trash2,
+  Loader2,
+  Pencil,
+  Clock,
 } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { Card } from '@/app/components/ui/card'
@@ -41,10 +44,22 @@ import { TagBadgeList } from '@/app/components/figma/TagBadgeList'
 import { TagEditor } from '@/app/components/figma/TagEditor'
 import { VideoPlayer } from '@/app/components/figma/VideoPlayer'
 import { ThumbnailPickerDialog } from '@/app/components/figma/ThumbnailPickerDialog'
+import { EditCourseDialog } from '@/app/components/figma/EditCourseDialog'
+import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { useAuthorStore } from '@/stores/useAuthorStore'
 import { useCourseCardPreview } from '@/hooks/useCourseCardPreview'
+import { useLazyVisible } from '@/hooks/useLazyVisible'
 import { useVideoFromHandle } from '@/hooks/useVideoFromHandle'
+import { getAvatarSrc } from '@/lib/authors'
 import { db } from '@/db/schema'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/app/components/ui/tooltip'
+import { formatCourseDuration, formatFileSize, getResolutionLabel } from '@/lib/format'
 import { MomentumBadge } from './MomentumBadge'
 import type { ImportedCourse, ImportedVideo, LearnerCourseStatus } from '@/data/types'
 import type { MomentumScore } from '@/lib/momentum'
@@ -81,13 +96,26 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
   const updateCourseStatus = useCourseImportStore(state => state.updateCourseStatus)
   const removeImportedCourse = useCourseImportStore(state => state.removeImportedCourse)
   const thumbnailUrls = useCourseImportStore(state => state.thumbnailUrls)
+  const analysisStatus = useCourseImportStore(state => state.autoAnalysisStatus[course.id])
   const navigate = useNavigate()
+
+  // Subscribe to author store so card re-renders when authors load
+  const storeAuthors = useAuthorStore(state => state.authors)
+  const loadAuthors = useAuthorStore(state => state.loadAuthors)
+  useEffect(() => {
+    loadAuthors()
+  }, [loadAuthors])
+  const authorData = course.authorId ? storeAuthors.find(a => a.id === course.authorId) : undefined
 
   const [thumbnailPickerOpen, setThumbnailPickerOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const statusBadgeRef = useRef<HTMLButtonElement>(null)
   const thumbnailUrl = thumbnailUrls[course.id] ?? null
+
+  // Lazy-load thumbnail: only render <img> when card enters viewport (E1B-S04 AC5)
+  const [lazyRef, isCardVisible] = useLazyVisible<HTMLElement>()
 
   const {
     showPreview,
@@ -188,10 +216,10 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
     await removeImportedCourse(course.id)
     const { importError } = useCourseImportStore.getState()
     if (importError) {
-      toast.error('Failed to remove course')
+      toast.error('Failed to delete course')
       setDeleting(false)
     } else {
-      toast.success('Course removed')
+      toast.success('Course deleted')
     }
   }
 
@@ -200,8 +228,9 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
   return (
     <>
       <article
+        ref={lazyRef}
         data-testid="imported-course-card"
-        aria-label={`${course.name} — ${course.videoCount} ${course.videoCount === 1 ? 'video' : 'videos'}, ${course.pdfCount} ${course.pdfCount === 1 ? 'PDF' : 'PDFs'}`}
+        aria-label={`${course.name} — ${course.videoCount} ${course.videoCount === 1 ? 'video' : 'videos'}${course.totalDuration ? `, ${formatCourseDuration(course.totalDuration)}` : ''}, ${course.pdfCount} ${course.pdfCount === 1 ? 'PDF' : 'PDFs'}`}
         tabIndex={0}
         onClick={handleCardClick}
         onKeyDown={handleCardKeyDown}
@@ -217,17 +246,18 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
             data-testid="course-card-placeholder"
             className="relative h-44 bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-950/50 dark:to-teal-950/50 flex items-center justify-center"
           >
-            {/* Static thumbnail image (when set) */}
-            {thumbnailUrl && !showPreview && (
+            {/* Static thumbnail image — lazy-loaded for performance (E1B-S04 AC2+AC5) */}
+            {thumbnailUrl && !showPreview && isCardVisible && (
               <img
                 src={thumbnailUrl}
                 alt=""
                 aria-hidden="true"
+                loading="lazy"
                 className="absolute inset-0 w-full h-full object-cover"
               />
             )}
-            {/* Gradient placeholder icon (shown when no thumbnail) */}
-            {!thumbnailUrl && (
+            {/* Gradient placeholder icon (shown when no thumbnail or not yet visible) — AC3 */}
+            {(!thumbnailUrl || !isCardVisible) && !showPreview && (
               <FolderOpen className="size-16 text-emerald-300 dark:text-emerald-600" />
             )}
             {/* Camera overlay — appears on hover to change thumbnail */}
@@ -304,6 +334,17 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
+                    data-testid="edit-course-menu-item"
+                    className="gap-2 min-h-[44px]"
+                    onClick={e => {
+                      e.stopPropagation()
+                      setEditDialogOpen(true)
+                    }}
+                  >
+                    <Pencil className="size-4" aria-hidden="true" />
+                    Edit details
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
                     data-testid="delete-course-menu-item"
                     variant="destructive"
                     className="gap-2 min-h-[44px]"
@@ -346,15 +387,26 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
                     {config.label}
                   </Badge>
 
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                     <span className="flex items-center gap-1">
                       <Video className="size-3.5" aria-hidden="true" />
                       {course.videoCount} {course.videoCount === 1 ? 'video' : 'videos'}
                     </span>
+                    {course.totalDuration != null && course.totalDuration > 0 && (
+                      <span className="flex items-center gap-1">
+                        <Clock className="size-3.5" aria-hidden="true" />
+                        {formatCourseDuration(course.totalDuration)}
+                      </span>
+                    )}
                     <span className="flex items-center gap-1">
                       <FileText className="size-3.5" aria-hidden="true" />
                       {course.pdfCount} {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
                     </span>
+                    {course.totalFileSize != null && course.totalFileSize > 0 && (
+                      <span className="text-muted-foreground/70">
+                        {formatFileSize(course.totalFileSize)}
+                      </span>
+                    )}
                   </div>
 
                   {course.tags.length > 0 && (
@@ -392,10 +444,56 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
             >
               {course.name}
             </h3>
+            {authorData ? (
+              <button
+                type="button"
+                data-testid="course-card-author"
+                onClick={e => {
+                  e.stopPropagation()
+                  navigate(`/authors/${authorData.id}`)
+                }}
+                className="flex items-center gap-1.5 mb-1 text-xs text-muted-foreground hover:text-brand transition-colors w-fit"
+              >
+                <Avatar className="size-5">
+                  <AvatarImage {...getAvatarSrc(authorData.photoUrl ?? '', 20)} alt="" />
+                  <AvatarFallback className="text-[8px]">
+                    {authorData.name
+                      .split(' ')
+                      .map(n => n[0])
+                      .join('')
+                      .toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <span>{authorData.name}</span>
+              </button>
+            ) : (
+              <p
+                data-testid="course-card-unknown-author"
+                className="text-xs text-muted-foreground mb-1"
+              >
+                Unknown Author
+              </p>
+            )}
             <p className="text-sm text-muted-foreground mb-2">
               Imported {new Date(course.importedAt).toLocaleDateString()}
             </p>
             <div className="flex items-center gap-1.5 mb-3">
+              <span aria-live="polite" className="contents">
+                {analysisStatus === 'analyzing' && (
+                  <span
+                    data-testid="ai-tagging-indicator"
+                    className="text-xs text-muted-foreground animate-pulse flex items-center gap-1"
+                  >
+                    <Loader2 className="size-3 animate-spin" aria-hidden="true" />
+                    AI tagging...
+                  </span>
+                )}
+                {analysisStatus === 'complete' && course.tags.length > 0 && (
+                  <span className="sr-only">
+                    AI tagging complete. {course.tags.length} tags added.
+                  </span>
+                )}
+              </span>
               <TagBadgeList tags={course.tags} onRemove={handleRemoveTag} maxVisible={3} />
               <TagEditor currentTags={course.tags} allTags={allTags} onAddTag={handleAddTag} />
             </div>
@@ -406,12 +504,43 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
                   {course.videoCount} {course.videoCount === 1 ? 'video' : 'videos'}
                 </span>
               </span>
+              {course.totalDuration != null && course.totalDuration > 0 && (
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span
+                        data-testid="course-card-duration"
+                        className="flex items-center gap-1 cursor-default"
+                      >
+                        <Clock className="size-3.5" aria-hidden="true" />
+                        <span>{formatCourseDuration(course.totalDuration)}</span>
+                      </span>
+                    </TooltipTrigger>
+                    {course.totalFileSize != null && course.totalFileSize > 0 && (
+                      <TooltipContent>
+                        <span data-testid="course-card-file-size">
+                          Total size: {formatFileSize(course.totalFileSize)}
+                        </span>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
+              )}
               <span data-testid="course-card-pdf-count" className="flex items-center gap-1">
                 <FileText className="size-3.5" aria-hidden="true" />
                 <span>
                   {course.pdfCount} {course.pdfCount === 1 ? 'PDF' : 'PDFs'}
                 </span>
               </span>
+              {course.maxResolutionHeight != null && course.maxResolutionHeight > 0 && (
+                <Badge
+                  data-testid="course-card-resolution"
+                  variant="secondary"
+                  className="text-[10px] px-1.5 py-0 font-medium opacity-70"
+                >
+                  {getResolutionLabel(course.maxResolutionHeight)}
+                </Badge>
+              )}
             </div>
             {momentumScore && momentumScore.score > 0 && (
               <div className="mt-2">
@@ -457,6 +586,13 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
         courseId={course.id}
         courseName={course.name}
         firstVideo={firstVideo}
+      />
+
+      <EditCourseDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        course={course}
+        allTags={allTags}
       />
 
       <Dialog open={previewOpen} onOpenChange={handleDialogChange}>

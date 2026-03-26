@@ -5,9 +5,16 @@
  */
 
 import type { AIProviderId } from '@/lib/aiConfiguration'
-import { getAIConfiguration, getDecryptedApiKey } from '@/lib/aiConfiguration'
+import {
+  getAIConfiguration,
+  getDecryptedApiKey,
+  getOllamaServerUrl,
+  getOllamaSelectedModel,
+  isOllamaDirectConnection,
+} from '@/lib/aiConfiguration'
 import type { LLMClient } from './client'
 import { ProxyLLMClient } from './proxy-client'
+import { OllamaLLMClient } from './ollama-client'
 import { LLMError } from './types'
 
 /**
@@ -33,6 +40,21 @@ export async function getLLMClient(): Promise<LLMClient> {
   }
 
   const config = getAIConfiguration()
+
+  // Ollama uses server URL, not API key
+  if (config.provider === 'ollama') {
+    const serverUrl = getOllamaServerUrl()
+    if (!serverUrl) {
+      throw new LLMError(
+        'No Ollama server URL configured. Please configure the Ollama URL in Settings.',
+        'AUTH_ERROR',
+        'ollama'
+      )
+    }
+    const selectedModel = getOllamaSelectedModel() || undefined
+    return new OllamaLLMClient(serverUrl, isOllamaDirectConnection(), selectedModel)
+  }
+
   const apiKey = await getDecryptedApiKey()
 
   if (!apiKey) {
@@ -58,9 +80,17 @@ export async function getLLMClient(): Promise<LLMClient> {
  * const client = getLLMClientForProvider('openai', 'sk-...')
  */
 export function getLLMClientForProvider(providerId: AIProviderId, apiKey: string): LLMClient {
-  const supported: AIProviderId[] = ['openai', 'anthropic', 'groq', 'gemini']
+  const supported: AIProviderId[] = ['openai', 'anthropic', 'groq', 'gemini', 'ollama']
   if (!supported.includes(providerId)) {
     throw new LLMError(`Unsupported AI provider: ${providerId}`, 'UNKNOWN', providerId)
   }
+
+  if (providerId === 'ollama') {
+    // For Ollama, apiKey is actually the server URL when called from proxy
+    const serverUrl = getOllamaServerUrl() || 'http://localhost:11434'
+    const selectedModel = getOllamaSelectedModel() || undefined
+    return new OllamaLLMClient(serverUrl, isOllamaDirectConnection(), selectedModel)
+  }
+
   return new ProxyLLMClient(providerId, apiKey)
 }

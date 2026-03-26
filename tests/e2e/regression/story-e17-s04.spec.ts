@@ -54,7 +54,15 @@ const fiveAttempts = [
     passed: false,
     completedAt: '2026-01-01T10:00:00.000Z',
     startedAt: '2026-01-01T10:00:00.000Z',
-    answers: [{ questionId: 'q1-e17s04', userAnswer: '3', isCorrect: false, pointsEarned: 0, pointsPossible: 1 }],
+    answers: [
+      {
+        questionId: 'q1-e17s04',
+        userAnswer: '3',
+        isCorrect: false,
+        pointsEarned: 0,
+        pointsPossible: 1,
+      },
+    ],
   }),
   makeAttempt({
     id: 'att2-e17s04',
@@ -64,7 +72,15 @@ const fiveAttempts = [
     passed: false,
     completedAt: '2026-01-02T10:00:00.000Z',
     startedAt: '2026-01-02T10:00:00.000Z',
-    answers: [{ questionId: 'q1-e17s04', userAnswer: '3', isCorrect: false, pointsEarned: 0, pointsPossible: 1 }],
+    answers: [
+      {
+        questionId: 'q1-e17s04',
+        userAnswer: '3',
+        isCorrect: false,
+        pointsEarned: 0,
+        pointsPossible: 1,
+      },
+    ],
   }),
   makeAttempt({
     id: 'att3-e17s04',
@@ -74,7 +90,15 @@ const fiveAttempts = [
     passed: true,
     completedAt: '2026-01-03T10:00:00.000Z',
     startedAt: '2026-01-03T10:00:00.000Z',
-    answers: [{ questionId: 'q1-e17s04', userAnswer: '4', isCorrect: true, pointsEarned: 1, pointsPossible: 1 }],
+    answers: [
+      {
+        questionId: 'q1-e17s04',
+        userAnswer: '4',
+        isCorrect: true,
+        pointsEarned: 1,
+        pointsPossible: 1,
+      },
+    ],
   }),
   makeAttempt({
     id: 'att4-e17s04',
@@ -84,7 +108,15 @@ const fiveAttempts = [
     passed: true,
     completedAt: '2026-01-04T10:00:00.000Z',
     startedAt: '2026-01-04T10:00:00.000Z',
-    answers: [{ questionId: 'q1-e17s04', userAnswer: '4', isCorrect: true, pointsEarned: 1, pointsPossible: 1 }],
+    answers: [
+      {
+        questionId: 'q1-e17s04',
+        userAnswer: '4',
+        isCorrect: true,
+        pointsEarned: 1,
+        pointsPossible: 1,
+      },
+    ],
   }),
   makeAttempt({
     id: 'att5-e17s04',
@@ -94,7 +126,15 @@ const fiveAttempts = [
     passed: true,
     completedAt: '2026-01-05T10:00:00.000Z',
     startedAt: '2026-01-05T10:00:00.000Z',
-    answers: [{ questionId: 'q1-e17s04', userAnswer: '4', isCorrect: true, pointsEarned: 1, pointsPossible: 1 }],
+    answers: [
+      {
+        questionId: 'q1-e17s04',
+        userAnswer: '4',
+        isCorrect: true,
+        pointsEarned: 1,
+        pointsPossible: 1,
+      },
+    ],
   }),
 ]
 
@@ -110,7 +150,15 @@ const moderateAttempts = [
     passed: false,
     completedAt: '2026-01-01T10:00:00.000Z',
     startedAt: '2026-01-01T10:00:00.000Z',
-    answers: [{ questionId: 'q1-e17s04', userAnswer: '3', isCorrect: false, pointsEarned: 0, pointsPossible: 1 }],
+    answers: [
+      {
+        questionId: 'q1-e17s04',
+        userAnswer: '3',
+        isCorrect: false,
+        pointsEarned: 0,
+        pointsPossible: 1,
+      },
+    ],
   }),
   makeAttempt({
     id: 'mod2-e17s04',
@@ -120,7 +168,15 @@ const moderateAttempts = [
     passed: false,
     completedAt: '2026-01-02T10:00:00.000Z',
     startedAt: '2026-01-02T10:00:00.000Z',
-    answers: [{ questionId: 'q1-e17s04', userAnswer: '4', isCorrect: true, pointsEarned: 1, pointsPossible: 1 }],
+    answers: [
+      {
+        questionId: 'q1-e17s04',
+        userAnswer: '4',
+        isCorrect: true,
+        pointsEarned: 1,
+        pointsPossible: 1,
+      },
+    ],
   }),
   makeAttempt({
     id: 'mod3-e17s04',
@@ -130,7 +186,15 @@ const moderateAttempts = [
     passed: false,
     completedAt: '2026-01-03T10:00:00.000Z',
     startedAt: '2026-01-03T10:00:00.000Z',
-    answers: [{ questionId: 'q1-e17s04', userAnswer: '3', isCorrect: false, pointsEarned: 0, pointsPossible: 1 }],
+    answers: [
+      {
+        questionId: 'q1-e17s04',
+        userAnswer: '3',
+        isCorrect: false,
+        pointsEarned: 0,
+        pointsPossible: 1,
+      },
+    ],
   }),
   makeAttempt({
     id: 'mod4-e17s04',
@@ -140,7 +204,15 @@ const moderateAttempts = [
     passed: false,
     completedAt: '2026-01-04T10:00:00.000Z',
     startedAt: '2026-01-04T10:00:00.000Z',
-    answers: [{ questionId: 'q1-e17s04', userAnswer: '4', isCorrect: true, pointsEarned: 1, pointsPossible: 1 }],
+    answers: [
+      {
+        questionId: 'q1-e17s04',
+        userAnswer: '4',
+        isCorrect: true,
+        pointsEarned: 1,
+        pointsPossible: 1,
+      },
+    ],
   }),
   makeAttempt({
     id: 'mod5-e17s04',
@@ -150,7 +222,15 @@ const moderateAttempts = [
     passed: false,
     completedAt: '2026-01-05T10:00:00.000Z',
     startedAt: '2026-01-05T10:00:00.000Z',
-    answers: [{ questionId: 'q1-e17s04', userAnswer: '4', isCorrect: true, pointsEarned: 1, pointsPossible: 1 }],
+    answers: [
+      {
+        questionId: 'q1-e17s04',
+        userAnswer: '4',
+        isCorrect: true,
+        pointsEarned: 1,
+        pointsPossible: 1,
+      },
+    ],
   }),
 ]
 
@@ -166,7 +246,15 @@ const lowAttempts = [
     passed: false,
     completedAt: '2026-01-01T10:00:00.000Z',
     startedAt: '2026-01-01T10:00:00.000Z',
-    answers: [{ questionId: 'q1-e17s04', userAnswer: '3', isCorrect: false, pointsEarned: 0, pointsPossible: 1 }],
+    answers: [
+      {
+        questionId: 'q1-e17s04',
+        userAnswer: '3',
+        isCorrect: false,
+        pointsEarned: 0,
+        pointsPossible: 1,
+      },
+    ],
   }),
   makeAttempt({
     id: 'low2-e17s04',
@@ -176,7 +264,15 @@ const lowAttempts = [
     passed: false,
     completedAt: '2026-01-02T10:00:00.000Z',
     startedAt: '2026-01-02T10:00:00.000Z',
-    answers: [{ questionId: 'q1-e17s04', userAnswer: '3', isCorrect: false, pointsEarned: 0, pointsPossible: 1 }],
+    answers: [
+      {
+        questionId: 'q1-e17s04',
+        userAnswer: '3',
+        isCorrect: false,
+        pointsEarned: 0,
+        pointsPossible: 1,
+      },
+    ],
   }),
   makeAttempt({
     id: 'low3-e17s04',
@@ -186,7 +282,15 @@ const lowAttempts = [
     passed: false,
     completedAt: '2026-01-03T10:00:00.000Z',
     startedAt: '2026-01-03T10:00:00.000Z',
-    answers: [{ questionId: 'q1-e17s04', userAnswer: '4', isCorrect: true, pointsEarned: 1, pointsPossible: 1 }],
+    answers: [
+      {
+        questionId: 'q1-e17s04',
+        userAnswer: '4',
+        isCorrect: true,
+        pointsEarned: 1,
+        pointsPossible: 1,
+      },
+    ],
   }),
   makeAttempt({
     id: 'low4-e17s04',
@@ -196,7 +300,15 @@ const lowAttempts = [
     passed: false,
     completedAt: '2026-01-04T10:00:00.000Z',
     startedAt: '2026-01-04T10:00:00.000Z',
-    answers: [{ questionId: 'q1-e17s04', userAnswer: '4', isCorrect: true, pointsEarned: 1, pointsPossible: 1 }],
+    answers: [
+      {
+        questionId: 'q1-e17s04',
+        userAnswer: '4',
+        isCorrect: true,
+        pointsEarned: 1,
+        pointsPossible: 1,
+      },
+    ],
   }),
   makeAttempt({
     id: 'low5-e17s04',
@@ -206,7 +318,15 @@ const lowAttempts = [
     passed: false,
     completedAt: '2026-01-05T10:00:00.000Z',
     startedAt: '2026-01-05T10:00:00.000Z',
-    answers: [{ questionId: 'q1-e17s04', userAnswer: '3', isCorrect: false, pointsEarned: 0, pointsPossible: 1 }],
+    answers: [
+      {
+        questionId: 'q1-e17s04',
+        userAnswer: '3',
+        isCorrect: false,
+        pointsEarned: 0,
+        pointsPossible: 1,
+      },
+    ],
   }),
 ]
 

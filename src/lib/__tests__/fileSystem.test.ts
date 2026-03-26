@@ -228,7 +228,7 @@ describe('extractVideoMetadata', () => {
 
     const result = await extractVideoMetadata(mockHandle)
 
-    expect(result).toEqual({ duration: 125.5, width: 1920, height: 1080 })
+    expect(result).toEqual({ duration: 125.5, width: 1920, height: 1080, fileSize: 0 })
     expect(URL.createObjectURL).toHaveBeenCalledWith(mockFile)
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url')
     expect(mockVideo.remove).toHaveBeenCalled()

@@ -2,6 +2,7 @@ import type { VideoMetadata, PdfMetadata, VideoFormat, SupportedFileExtension } 
 
 export const SUPPORTED_VIDEO_EXTENSIONS = ['.mp4', '.mkv', '.avi', '.webm'] as const
 export const SUPPORTED_DOCUMENT_EXTENSIONS = ['.pdf'] as const
+export const SUPPORTED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'] as const
 export const SUPPORTED_FILE_EXTENSIONS: readonly SupportedFileExtension[] = [
   ...SUPPORTED_VIDEO_EXTENSIONS,
   ...SUPPORTED_DOCUMENT_EXTENSIONS,
@@ -20,6 +21,11 @@ export function isSupportedFile(filename: string): boolean {
 export function getVideoFormat(filename: string): VideoFormat {
   const ext = filename.toLowerCase().slice(filename.lastIndexOf('.') + 1)
   return ext as VideoFormat
+}
+
+export function isImageFile(filename: string): boolean {
+  const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'))
+  return (SUPPORTED_IMAGE_EXTENSIONS as readonly string[]).includes(ext)
 }
 
 export function getFileExtension(filename: string): string {
@@ -45,16 +51,17 @@ export async function showDirectoryPicker(): Promise<FileSystemDirectoryHandle> 
 
 export async function* scanDirectory(
   dirHandle: FileSystemDirectoryHandle,
-  basePath = ''
+  basePath = '',
+  options?: { includeImages?: boolean }
 ): AsyncGenerator<{ handle: FileSystemFileHandle; path: string }> {
   for await (const entry of dirHandle.values()) {
     const entryPath = basePath ? `${basePath}/${entry.name}` : entry.name
     if (entry.kind === 'file') {
-      if (isSupportedFile(entry.name)) {
+      if (isSupportedFile(entry.name) || (options?.includeImages && isImageFile(entry.name))) {
         yield { handle: entry as FileSystemFileHandle, path: entryPath }
       }
     } else if (entry.kind === 'directory') {
-      yield* scanDirectory(entry as FileSystemDirectoryHandle, entryPath)
+      yield* scanDirectory(entry as FileSystemDirectoryHandle, entryPath, options)
     }
   }
 }
@@ -63,6 +70,7 @@ export async function extractVideoMetadata(
   fileHandle: FileSystemFileHandle
 ): Promise<VideoMetadata> {
   const file = await fileHandle.getFile()
+  const fileSize = file.size
   const blobUrl = URL.createObjectURL(file)
   try {
     return await new Promise<VideoMetadata>((resolve, reject) => {
@@ -73,6 +81,7 @@ export async function extractVideoMetadata(
           duration: video.duration,
           width: video.videoWidth,
           height: video.videoHeight,
+          fileSize,
         })
         video.remove()
       }

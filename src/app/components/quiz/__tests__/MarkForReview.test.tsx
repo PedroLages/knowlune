@@ -56,4 +56,33 @@ describe('MarkForReview', () => {
     const checkbox = screen.getByRole('checkbox')
     expect(checkbox).toHaveAttribute('aria-labelledby', 'mark-review-q1-label')
   })
+
+  describe('ARIA live announcements (AC3)', () => {
+    it('has an aria-live="polite" region for review state', () => {
+      render(<MarkForReview {...defaultProps} />)
+      const liveRegion = screen.getByTestId('review-announcement')
+      expect(liveRegion).toHaveAttribute('aria-live', 'polite')
+      expect(liveRegion).toHaveAttribute('aria-atomic', 'true')
+    })
+
+    it('does not announce on initial render', () => {
+      render(<MarkForReview {...defaultProps} isMarked={false} />)
+      const liveRegion = screen.getByTestId('review-announcement')
+      expect(liveRegion).toHaveTextContent('')
+    })
+
+    it('announces "Marked for review" when toggled on', () => {
+      const { rerender } = render(<MarkForReview {...defaultProps} isMarked={false} />)
+      rerender(<MarkForReview {...defaultProps} isMarked={true} />)
+      const liveRegion = screen.getByTestId('review-announcement')
+      expect(liveRegion).toHaveTextContent('Marked for review')
+    })
+
+    it('announces "Removed from review" when toggled off', () => {
+      const { rerender } = render(<MarkForReview {...defaultProps} isMarked={true} />)
+      rerender(<MarkForReview {...defaultProps} isMarked={false} />)
+      const liveRegion = screen.getByTestId('review-announcement')
+      expect(liveRegion).toHaveTextContent('Removed from review')
+    })
+  })
 })

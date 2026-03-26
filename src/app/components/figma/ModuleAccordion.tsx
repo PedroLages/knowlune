@@ -14,6 +14,8 @@ import type { CompletionStatus, Module } from '@/data/types'
 import { StatusIndicator } from './StatusIndicator'
 import { StatusSelector } from './StatusSelector'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
+import { QuizBadge } from '@/app/components/courses/QuizBadge'
+import { useQuizScoresForCourse } from '@/hooks/useQuizScoresForCourse'
 
 interface ModuleAccordionProps {
   modules: Module[]
@@ -40,6 +42,7 @@ export function ModuleAccordion({
   const statusMap = useContentProgressStore(state => state.statusMap)
   const setItemStatus = useContentProgressStore(state => state.setItemStatus)
   const loadCourseProgress = useContentProgressStore(state => state.loadCourseProgress)
+  const quizScoreMap = useQuizScoresForCourse(courseId, modules)
 
   const getStatus = (itemId: string): CompletionStatus =>
     statusMap[`${courseId}:${itemId}`] ?? 'not-started'
@@ -161,6 +164,14 @@ export function ModuleAccordion({
                             {hasPdf && <FileText className="size-4 text-destructive" />}
                           </div>
                         </Link>
+                        {quizScoreMap.has(lesson.id) && (
+                          <QuizBadge
+                            courseId={courseId}
+                            lessonId={lesson.id}
+                            lessonTitle={lesson.title}
+                            bestScore={quizScoreMap.get(lesson.id) ?? null}
+                          />
+                        )}
                       </div>
                     </li>
                   )

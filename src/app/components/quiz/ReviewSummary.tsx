@@ -27,6 +27,7 @@ export function ReviewSummary({
           <li key={i}>
             <button
               onClick={() => onJumpToQuestion(i)}
+              aria-label={`Jump to question ${i + 1}`}
               className="text-sm text-brand hover:underline hover:bg-brand-soft underline-offset-2 min-h-[44px] min-w-[44px] px-2 rounded-lg"
             >
               Q{i + 1}

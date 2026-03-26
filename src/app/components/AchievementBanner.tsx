@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Trophy } from 'lucide-react'
 import confetti from 'canvas-confetti'
+import { useEngagementPrefsStore } from '@/stores/useEngagementPrefsStore'
 
 interface AchievementBannerProps {
   completedLessons: number
@@ -34,6 +35,7 @@ function getNextMilestone(completed: number): {
 
 export function AchievementBanner({ completedLessons }: AchievementBannerProps) {
   const prevMilestoneRef = useRef<number | null>(null)
+  const animationsEnabled = useEngagementPrefsStore(s => s.animations)
 
   // Fire confetti when crossing a milestone
   useEffect(() => {
@@ -48,7 +50,7 @@ export function AchievementBanner({ completedLessons }: AchievementBannerProps) 
       reachedMilestoneIndex > prevMilestoneRef.current
     ) {
       const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      if (!prefersReducedMotion) {
+      if (!prefersReducedMotion && animationsEnabled) {
         confetti({
           particleCount: 80,
           spread: 60,
@@ -58,7 +60,7 @@ export function AchievementBanner({ completedLessons }: AchievementBannerProps) 
       }
     }
     prevMilestoneRef.current = reachedMilestoneIndex
-  }, [completedLessons])
+  }, [completedLessons, animationsEnabled])
 
   if (completedLessons === 0) return null
 
