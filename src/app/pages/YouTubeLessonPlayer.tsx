@@ -9,10 +9,11 @@
  * - Manual completion toggle (Not Started / In Progress / Completed)
  * - Study session logging
  * - Offline placeholder with WifiOff icon
+ * - Synchronized transcript panel with search & click-to-seek
  *
- * @see E28-S09
+ * @see E28-S09, E28-S10
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link, useParams } from 'react-router'
 import {
   ArrowLeft,
@@ -29,6 +30,10 @@ import { useIdleDetection } from '@/app/hooks/useIdleDetection'
 import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
 import { YouTubePlayer } from '@/app/components/youtube/YouTubePlayer'
+import type { YouTubePlayerHandle } from '@/app/components/youtube/YouTubePlayer'
+import { TranscriptPanel } from '@/app/components/youtube/TranscriptPanel'
+import { useYouTubeTranscript } from '@/app/hooks/useYouTubeTranscript'
+import { useYouTubeTranscriptStore } from '@/stores/useYouTubeTranscriptStore'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Skeleton } from '@/app/components/ui/skeleton'
@@ -156,6 +161,30 @@ export function YouTubeLessonPlayer() {
       toast.success('Lesson auto-completed (>90% watched)')
     }
   }, [courseId, lessonId, currentStatus, setItemStatus])
+
+  // Transcript state (E28-S10)
+  const [currentTime, setCurrentTime] = useState(0)
+  const playerRef = useRef<YouTubePlayerHandle>(null)
+  const { cues: transcriptCues, loadingState: transcriptLoadingState } =
+    useYouTubeTranscript(courseId, video?.youtubeVideoId)
+
+  // Load transcript store states for this course
+  const loadCourseStates = useYouTubeTranscriptStore(s => s.loadCourseStates)
+  useEffect(() => {
+    if (courseId) {
+      loadCourseStates(courseId)
+    }
+  }, [courseId, loadCourseStates])
+
+  const handleTimeUpdate = useCallback((time: number) => {
+    setCurrentTime(time)
+  }, [])
+
+  const handleTranscriptSeek = useCallback((time: number) => {
+    if (playerRef.current) {
+      playerRef.current.seekTo(time)
+    }
+  }, [])
 
   // Loading state
   if (video === undefined) {
@@ -288,6 +317,8 @@ export function YouTubeLessonPlayer() {
                 courseId={courseId!}
                 lessonId={lessonId!}
                 onAutoComplete={handleAutoComplete}
+                onTimeUpdate={handleTimeUpdate}
+                ref={playerRef}
               />
 
               {/* Video info below player */}
@@ -311,15 +342,14 @@ export function YouTubeLessonPlayer() {
               </div>
             </div>
 
-            {/* Notes panel (right/bottom) */}
-            <aside className="lg:w-80 xl:w-96 shrink-0" aria-label="Lesson notes">
-              <div className="rounded-xl border bg-card p-4 h-full">
-                <h2 className="font-semibold text-sm mb-3">Notes</h2>
-                <p className="text-xs text-muted-foreground">
-                  Notes panel coming soon for YouTube lessons. Use the Notes section in the
-                  sidebar to take notes.
-                </p>
-              </div>
+            {/* Transcript panel (right/bottom) */}
+            <aside className="lg:w-80 xl:w-96 shrink-0 lg:max-h-[calc(100vh-10rem)] max-h-80" aria-label="Video transcript">
+              <TranscriptPanel
+                cues={transcriptCues}
+                currentTime={currentTime}
+                onSeek={handleTranscriptSeek}
+                loadingState={transcriptLoadingState}
+              />
             </aside>
           </div>
         ) : (

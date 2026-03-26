@@ -7,7 +7,7 @@
  *
  * @see E28-S09
  */
-import { useEffect, useRef, useCallback, useState } from 'react'
+import { useEffect, useRef, useCallback, useState, useImperativeHandle, forwardRef } from 'react'
 import YouTube from 'react-youtube'
 import type { YouTubeEvent, YouTubePlayer as YTPlayer } from 'react-youtube'
 import { db } from '@/db'
@@ -26,23 +26,43 @@ export interface YouTubePlayerProps {
   onPlayStateChange?: (isPlaying: boolean) => void
 }
 
+/** Imperative handle exposed via ref for external seek control */
+export interface YouTubePlayerHandle {
+  seekTo: (time: number) => void
+}
+
 const POLL_INTERVAL_MS = 1000
 const AUTO_COMPLETE_THRESHOLD = 0.9
 
-export function YouTubePlayer({
+export const YouTubePlayer = forwardRef<YouTubePlayerHandle, YouTubePlayerProps>(function YouTubePlayer({
   videoId,
   courseId,
   lessonId,
   onTimeUpdate,
   onAutoComplete,
   onPlayStateChange,
-}: YouTubePlayerProps) {
+}, ref) {
   const playerRef = useRef<YTPlayer | null>(null)
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const durationRef = useRef(0)
   const hasAutoCompletedRef = useRef(false)
   const [initialPosition, setInitialPosition] = useState<number | null>(null)
   const [isReady, setIsReady] = useState(false)
+
+  // Expose seekTo to parent via ref (E28-S10: transcript click-to-seek)
+  useImperativeHandle(ref, () => ({
+    seekTo: (time: number) => {
+      const player = playerRef.current
+      if (player) {
+        try {
+          player.seekTo(time, true)
+          onTimeUpdate?.(time)
+        } catch {
+          // silent-catch-ok — player may not be ready
+        }
+      }
+    },
+  }), [onTimeUpdate])
 
   // Load saved position from Dexie on mount
   useEffect(() => {
@@ -224,4 +244,4 @@ export function YouTubePlayer({
       )}
     </div>
   )
-}
+})
