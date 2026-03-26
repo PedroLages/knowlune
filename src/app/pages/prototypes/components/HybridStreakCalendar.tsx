@@ -18,7 +18,7 @@ export function HybridStreakCalendar({ days = 30, className }: HybridStreakCalen
         {/* Current Streak */}
         <div className="bg-warning/10 rounded-xl p-4 border border-warning/20">
           <div className="flex items-center gap-2 mb-2">
-            <Flame className="h-5 w-5 text-warning" aria-hidden="true" />
+            <Flame className="size-5 text-warning" aria-hidden="true" />
             <span className="text-sm font-medium text-foreground">Current Streak</span>
           </div>
           <div className="text-3xl font-bold text-warning">{currentStreak}</div>
@@ -30,7 +30,7 @@ export function HybridStreakCalendar({ days = 30, className }: HybridStreakCalen
         {/* Longest Streak */}
         <div className="bg-brand-soft rounded-xl p-4 border border-brand/20">
           <div className="flex items-center gap-2 mb-2">
-            <Award className="h-5 w-5 text-brand" aria-hidden="true" />
+            <Award className="size-5 text-brand" aria-hidden="true" />
             <span className="text-sm font-medium text-foreground">Longest Streak</span>
           </div>
           <div className="text-3xl font-bold text-brand">{longestStreak}</div>

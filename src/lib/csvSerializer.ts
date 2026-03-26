@@ -6,10 +6,14 @@
  */
 import type { StudySession, ContentProgress } from '@/data/types'
 
-/** Escape a value for CSV (RFC 4180) */
+/** Escape a value for CSV (RFC 4180), with formula injection prevention */
 function escapeCsvValue(value: unknown): string {
   if (value === null || value === undefined) return ''
   const str = String(value)
+  // Prevent CSV formula injection: prefix dangerous leading characters with a single quote
+  if (/^[=+\-@\t\r]/.test(str)) {
+    return `"'${str.replace(/"/g, '""')}"`
+  }
   if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
     return `"${str.replace(/"/g, '""')}"`
   }

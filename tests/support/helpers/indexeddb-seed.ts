@@ -218,13 +218,14 @@ export async function clearIndexedDBStore(
 }
 
 /**
- * Clears the learningPath object store in ElearningDB.
+ * Clears the learningPaths and learningPathEntries object stores in ElearningDB.
  * Convenience wrapper around clearIndexedDBStore.
  *
  * @param page - Playwright Page instance
  */
 export async function clearLearningPath(page: Page): Promise<void> {
-  await clearIndexedDBStore(page, 'ElearningDB', 'learningPath')
+  await clearIndexedDBStore(page, 'ElearningDB', 'learningPaths')
+  await clearIndexedDBStore(page, 'ElearningDB', 'learningPathEntries')
 }
 
 /**
@@ -263,4 +264,15 @@ export async function seedQuizAttempts(
   attempts: Record<string, unknown>[]
 ): Promise<void> {
   await seedIndexedDBStore(page, 'ElearningDB', 'quizAttempts', attempts)
+}
+
+/**
+ * Seeds the pathEnrollments object store in ElearningDB (E20-S01).
+ * Convenience wrapper around seedIndexedDBStore.
+ */
+export async function seedPathEnrollments(
+  page: Page,
+  enrollments: Record<string, unknown>[]
+): Promise<void> {
+  await seedIndexedDBStore(page, 'ElearningDB', 'pathEnrollments', enrollments)
 }

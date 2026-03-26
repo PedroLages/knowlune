@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import confetti from 'canvas-confetti'
 import type { ChallengeTierConfig } from '@/lib/challengeMilestones'
 import { cn } from '@/app/components/ui/utils'
+import { useEngagementPrefsStore } from '@/stores/useEngagementPrefsStore'
 
 interface ChallengeMilestoneToastProps {
   challengeName: string
@@ -15,6 +16,7 @@ export function ChallengeMilestoneToast({
   tierConfig,
 }: ChallengeMilestoneToastProps) {
   const Icon = tierConfig.icon
+  const animationsEnabled = useEngagementPrefsStore(s => s.animations)
 
   const hasFiredRef = useRef(false)
 
@@ -22,7 +24,7 @@ export function ChallengeMilestoneToast({
     if (hasFiredRef.current) return
     hasFiredRef.current = true
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (!prefersReducedMotion) {
+    if (!prefersReducedMotion && animationsEnabled) {
       confetti({
         particleCount: tierConfig.particleCount,
         spread: tierConfig.spread,
@@ -30,7 +32,7 @@ export function ChallengeMilestoneToast({
         colors: tierConfig.confettiColors,
       })
     }
-  }, [milestone])
+  }, [milestone, animationsEnabled])
 
   return (
     <div

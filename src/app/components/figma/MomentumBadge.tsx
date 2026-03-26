@@ -2,6 +2,7 @@ import { Flame, Sun, Snowflake } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/tooltip'
 import { cn } from '@/app/components/ui/utils'
 import type { MomentumTier } from '@/lib/momentum'
+import { useEngagementPrefsStore } from '@/stores/useEngagementPrefsStore'
 
 interface MomentumBadgeProps {
   score: number
@@ -27,6 +28,10 @@ const tierConfig: Record<MomentumTier, { label: string; icon: typeof Flame; clas
 }
 
 export function MomentumBadge({ score, tier }: MomentumBadgeProps) {
+  const badgesEnabled = useEngagementPrefsStore(s => s.badges)
+
+  if (!badgesEnabled) return null
+
   const { label, icon: Icon, className } = tierConfig[tier]
 
   return (

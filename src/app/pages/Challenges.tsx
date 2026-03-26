@@ -140,7 +140,10 @@ export function Challenges() {
           timerIdsRef.current = fireMilestoneToasts(milestoneMap, current)
         }
       })
-      .catch(err => console.error('[Challenges] milestone detection failed:', err))
+      .catch(err => {
+        // silent-catch-ok — non-critical milestone detection; challenges still display
+        console.error('[Challenges] milestone detection failed:', err)
+      })
     return () => {
       ignore = true
       timerIdsRef.current.forEach(id => clearTimeout(id))

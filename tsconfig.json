@@ -27,5 +27,6 @@
     }
   },
   "include": ["src"],
+  "exclude": ["src/premium"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

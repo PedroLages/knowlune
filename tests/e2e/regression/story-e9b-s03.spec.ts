@@ -240,8 +240,8 @@ test.describe('E9B-S03: AI Learning Path Generation', () => {
       await new Promise<void>((resolve, reject) => {
         request.onsuccess = async () => {
           const db = request.result
-          const tx = db.transaction('learningPath', 'readwrite')
-          const store = tx.objectStore('learningPath')
+          const tx = db.transaction('learningPathEntries', 'readwrite')
+          const store = tx.objectStore('learningPathEntries')
 
           // Get all courses and mark the first one as manually ordered
           const allCourses = await new Promise<any[]>((res, rej) => {

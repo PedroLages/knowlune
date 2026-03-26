@@ -106,7 +106,7 @@ describe('QuestionDisplay', () => {
     expect(screen.getByText(/unsupported question type/i)).toBeInTheDocument()
   })
 
-  it('unsupported type fallback has role="status"', () => {
+  it('unsupported type fallback has role="alert"', () => {
     render(
       <QuestionDisplay
         question={makeQuestion({ type: 'essay' as Question['type'] })}
@@ -116,7 +116,7 @@ describe('QuestionDisplay', () => {
       />
     )
 
-    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toBeInTheDocument()
   })
 
   it('defaults mode to active when not provided', () => {

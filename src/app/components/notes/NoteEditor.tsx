@@ -26,6 +26,7 @@ import { toast } from 'sonner'
 import { CodeBlockView } from './CodeBlockView'
 import { DragHandle } from '@tiptap/extension-drag-handle-react'
 import { BubbleMenuBar } from './BubbleMenuBar'
+import { CreateFlashcardDialog } from './CreateFlashcardDialog'
 import { SlashCommand, getSlashCommandItems } from './slash-command'
 import { createSlashCommandRender } from './slash-command/suggestion-render'
 import { Emoji, emojis as emojiData } from '@tiptap/extension-emoji'
@@ -102,6 +103,7 @@ const IMAGE_MAX_SIZE = 5 * 1024 * 1024 // 5MB
 interface NoteEditorProps {
   courseId: string
   lessonId: string
+  noteId?: string
   initialContent?: string
   currentVideoTime?: number
   onSave?: (content: string, tags: string[]) => void
@@ -147,6 +149,7 @@ function isValidYoutubeUrl(url: string): boolean {
 export function NoteEditor({
   courseId,
   lessonId,
+  noteId,
   initialContent = '',
   currentVideoTime = 0,
   onSave,
@@ -161,6 +164,8 @@ export function NoteEditor({
   const [linkUrl, setLinkUrl] = useState('')
   const [youtubeDialogOpen, setYoutubeDialogOpen] = useState(false)
   const [youtubeUrl, setYoutubeUrl] = useState('')
+  const [flashcardDialogOpen, setFlashcardDialogOpen] = useState(false)
+  const [selectedTextForFlashcard, setSelectedTextForFlashcard] = useState('')
   const [findReplaceOpen, setFindReplaceOpen] = useState(false)
   const [tablePickerOpen, setTablePickerOpen] = useState(false)
   const [, setTocVersion] = useState(0)
@@ -542,6 +547,14 @@ export function NoteEditor({
       }
     }
     setLinkDialogOpen(true)
+  }, [editor])
+
+  const openFlashcardDialog = useCallback(() => {
+    if (!editor) return
+    const { from, to } = editor.state.selection
+    const selectedText = editor.state.doc.textBetween(from, to)
+    setSelectedTextForFlashcard(selectedText)
+    setFlashcardDialogOpen(true)
   }, [editor])
 
   const handleInsertLink = useCallback(() => {
@@ -949,7 +962,11 @@ export function NoteEditor({
       />
 
       {/* Bubble Menu (appears on text selection) */}
-      <BubbleMenuBar editor={editor} onOpenLinkDialog={openLinkDialog} />
+      <BubbleMenuBar
+        editor={editor}
+        onOpenLinkDialog={openLinkDialog}
+        onCreateFlashcard={openFlashcardDialog}
+      />
 
       {/* Drag Handle (appears on block hover in left gutter) */}
       <DragHandle editor={editor}>
@@ -1055,6 +1072,15 @@ export function NoteEditor({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Flashcard creation dialog (triggered from BubbleMenuBar text selection) */}
+      <CreateFlashcardDialog
+        open={flashcardDialogOpen}
+        onOpenChange={setFlashcardDialogOpen}
+        defaultFront={selectedTextForFlashcard}
+        courseId={courseId}
+        noteId={noteId}
+      />
     </div>
   )
 }

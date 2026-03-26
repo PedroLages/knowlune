@@ -4,6 +4,7 @@ import { cn } from '@/app/components/ui/utils'
 import type { Question } from '@/types/quiz'
 import type { QuestionDisplayMode } from '../QuestionDisplay'
 import { MarkdownRenderer } from '../MarkdownRenderer'
+import { useAriaLiveAnnouncer } from '@/hooks/useAriaLiveAnnouncer'
 
 interface MultipleSelectQuestionProps {
   question: Question
@@ -22,6 +23,7 @@ export function MultipleSelectQuestion({
   const isActive = mode === 'active'
   const labelId = useId()
   const hintId = useId()
+  const [selectionAnnouncement, announceSelection] = useAriaLiveAnnouncer()
 
   if (process.env.NODE_ENV !== 'production' && options.length < 2) {
     console.warn(
@@ -31,7 +33,12 @@ export function MultipleSelectQuestion({
 
   function handleToggle(option: string) {
     if (!isActive) return
-    const newValue = value.includes(option) ? value.filter(v => v !== option) : [...value, option]
+    const wasSelected = value.includes(option)
+    const newValue = wasSelected ? value.filter(v => v !== option) : [...value, option]
+    // Announce select/deselect to screen readers (AC2)
+    const optionIndex = options.indexOf(option)
+    const label = optionIndex >= 0 ? `Option ${optionIndex + 1}` : option
+    announceSelection(wasSelected ? `${label} deselected` : `${label} selected`)
     onChange(newValue)
   }
 
@@ -45,19 +52,23 @@ export function MultipleSelectQuestion({
   }
 
   return (
-    <fieldset
-      className="mt-6 min-w-0"
-      aria-labelledby={labelId}
-      aria-describedby={hintId}
-      onKeyDown={handleKeyDown}
-    >
-      <div
+    <fieldset className="mt-6 min-w-0" aria-describedby={hintId} onKeyDown={handleKeyDown}>
+      <legend
         id={labelId}
         data-testid="question-text"
-        className="text-lg lg:text-xl text-foreground leading-relaxed pb-2"
+        className="text-lg lg:text-xl text-foreground leading-relaxed pb-2 w-full"
       >
         <MarkdownRenderer content={question.text} />
-      </div>
+      </legend>
+      {/* Screen-reader-only: announces answer select/deselect changes */}
+      <span
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+        data-testid="selection-announcement"
+      >
+        {selectionAnnouncement}
+      </span>
       <span id={hintId} className="text-sm text-muted-foreground italic block mb-4">
         Select all that apply
       </span>
@@ -91,7 +102,7 @@ export function MultipleSelectQuestion({
                 'flex items-center gap-3 rounded-xl p-4 min-h-12 transition-colors duration-150 motion-reduce:transition-none border-2',
                 isActive ? 'cursor-pointer' : 'cursor-default',
                 reviewStyle,
-                'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2'
+                'focus-within:ring-2 focus-within:ring-brand focus-within:ring-offset-2'
               )}
             >
               {isActive && shortcutNum <= 9 && (

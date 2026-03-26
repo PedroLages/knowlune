@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MultipleSelectQuestion } from '../questions/MultipleSelectQuestion'
 import { makeQuestion } from '../../../../../tests/support/fixtures/factories/quiz-factory'
 
@@ -42,7 +43,7 @@ describe('MultipleSelectQuestion', () => {
     expect(strong.tagName).toBe('STRONG')
   })
 
-  it('renders with fieldset and aria-labelledby referencing existing element', () => {
+  it('renders with fieldset and legend containing question text', () => {
     const { container } = render(
       <MultipleSelectQuestion
         question={makeMultiSelectQuestion()}
@@ -54,11 +55,63 @@ describe('MultipleSelectQuestion', () => {
 
     const fieldset = container.querySelector('fieldset')
     expect(fieldset).toBeInTheDocument()
-    const labelId = fieldset?.getAttribute('aria-labelledby')
-    expect(labelId).toBeTruthy()
 
-    const labelElement = container.querySelector(`#${labelId}`)
-    expect(labelElement).toBeInTheDocument()
-    expect(labelElement?.textContent).toContain('valid')
+    // Legend provides the accessible name for the fieldset
+    const legend = fieldset?.querySelector('legend')
+    expect(legend).toBeInTheDocument()
+    expect(legend?.textContent).toContain('valid')
+  })
+
+  describe('ARIA live announcements (AC2)', () => {
+    it('has an aria-live="polite" region for selection announcements', () => {
+      render(
+        <MultipleSelectQuestion
+          question={makeMultiSelectQuestion()}
+          value={undefined}
+          onChange={vi.fn()}
+          mode="active"
+        />
+      )
+
+      const liveRegion = screen.getByTestId('selection-announcement')
+      expect(liveRegion).toHaveAttribute('aria-live', 'polite')
+      expect(liveRegion).toHaveAttribute('aria-atomic', 'true')
+    })
+
+    it('announces "Option N selected" when an option is checked', async () => {
+      const onChange = vi.fn()
+      render(
+        <MultipleSelectQuestion
+          question={makeMultiSelectQuestion()}
+          value={[]}
+          onChange={onChange}
+          mode="active"
+        />
+      )
+
+      const checkboxes = screen.getAllByRole('checkbox')
+      await userEvent.click(checkboxes[0]) // Click "Option A" (Option 1)
+
+      const liveRegion = screen.getByTestId('selection-announcement')
+      expect(liveRegion).toHaveTextContent('Option 1 selected')
+    })
+
+    it('announces "Option N deselected" when an option is unchecked', async () => {
+      const onChange = vi.fn()
+      render(
+        <MultipleSelectQuestion
+          question={makeMultiSelectQuestion()}
+          value={['Option A']}
+          onChange={onChange}
+          mode="active"
+        />
+      )
+
+      const checkboxes = screen.getAllByRole('checkbox')
+      await userEvent.click(checkboxes[0]) // Uncheck "Option A" (Option 1)
+
+      const liveRegion = screen.getByTestId('selection-announcement')
+      expect(liveRegion).toHaveTextContent('Option 1 deselected')
+    })
   })
 })

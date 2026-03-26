@@ -39,7 +39,9 @@ coverage/
 
 # External tools
 .autoforge/
-supabase/
+supabase/*
+!supabase/migrations/
+!supabase/functions/
 StudyGy-Dashboard/
 
 # Git worktrees
@@ -64,3 +66,5 @@ experiments/
 .claude/session-memory/archived/*
 !.claude/session-memory/archived/.gitkeep
 __pycache__/
+scripts/auto-story-run-*.md
+.claude/scheduled_tasks.lock

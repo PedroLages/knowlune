@@ -18,10 +18,11 @@ gh pr create \
 
 | Check                  | Result                      |
 | ---------------------- | --------------------------- |
-| Build                  | passed                      |
+| Dependency audit       | clean / N warnings          |
+| Format check           | passed / auto-fixed N files |
 | Lint                   | passed / skipped            |
 | Type check             | passed / auto-fixed         |
-| Format check           | passed / auto-fixed N files |
+| Build                  | passed                      |
 | Unit tests             | passed (N) / skipped        |
 | E2E tests              | passed (N) / skipped        |
 | Design review          | passed / N warnings         |
@@ -171,10 +172,11 @@ Check these before running `gh pr create`:
 
 | Check                  | Result                      |
 | ---------------------- | --------------------------- |
-| Build                  | passed                      |
+| Dependency audit       | clean                       |
+| Format check           | passed                      |
 | Lint                   | passed                      |
 | Type check             | passed                      |
-| Format check           | passed                      |
+| Build                  | passed                      |
 | Unit tests             | passed (12)                 |
 | E2E tests              | passed (8)                  |
 | Design review          | passed                      |

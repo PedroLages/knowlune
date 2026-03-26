@@ -101,7 +101,8 @@ export async function importFullData(json: string): Promise<ImportResult> {
         db.contentProgress,
         db.challenges,
         db.reviewRecords,
-        db.learningPath,
+        db.learningPaths,
+        db.learningPathEntries,
         db.aiUsageEvents,
       ],
       async () => {
@@ -117,7 +118,8 @@ export async function importFullData(json: string): Promise<ImportResult> {
           db.contentProgress.clear(),
           db.challenges.clear(),
           db.reviewRecords.clear(),
-          db.learningPath.clear(),
+          db.learningPaths.clear(),
+          db.learningPathEntries.clear(),
           db.aiUsageEvents.clear(),
         ])
 
@@ -133,7 +135,8 @@ export async function importFullData(json: string): Promise<ImportResult> {
           { name: 'contentProgress', records: data.contentProgress || [] },
           { name: 'challenges', records: data.challenges || [] },
           { name: 'reviewRecords', records: data.reviewRecords || [] },
-          { name: 'learningPath', records: data.learningPath || [] },
+          { name: 'learningPaths', records: data.learningPaths || [] },
+          { name: 'learningPathEntries', records: data.learningPathEntries || [] },
           { name: 'aiUsageEvents', records: data.aiUsageEvents || [] },
         ]
 
