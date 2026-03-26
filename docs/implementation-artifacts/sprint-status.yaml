@@ -43,7 +43,7 @@
 # - E18-S03 detected story file → ready-for-dev
 
 generated: 2026-03-15
-last_updated: 2026-03-26  # Epic 1B retrospective done; all 4 post-epic reports generated
+last_updated: 2026-03-26  # Epic 1C retrospective done; all 4 post-epic reports generated
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -82,7 +82,7 @@ development_status:
   1c-4-tag-management-global-rename-and-delete: done
   1c-5-momentum-sort-for-imported-courses: done
   1c-6-search-and-filter-inside-course-detail-page: done
-  epic-1c-retrospective: optional
+  epic-1c-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 2: Lesson Player & Content Consumption
