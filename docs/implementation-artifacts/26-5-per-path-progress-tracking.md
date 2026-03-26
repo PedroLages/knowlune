@@ -1,10 +1,10 @@
 ---
 story_id: E26-S05
 story_name: "Per Path Progress Tracking"
-status: in-progress
+status: done
 started: 2026-03-23
-completed:
-reviewed: false
+completed: 2026-03-26
+reviewed: true
 review_started:
 review_gates_passed: []
 burn_in_validated: false
@@ -185,7 +185,13 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+1. **Dual progress sources require careful reconciliation.** Catalog courses use `contentProgress` (Dexie, lesson-level status), while imported courses use the `progress` table (Dexie, video completion) plus localStorage fallback. Taking `Math.max` of both sources avoids under-counting when data exists in only one.
+
+2. **Batch data loading for list views prevents N+1 queries.** The `useMultiPathProgress` hook loads all course and progress data once, then distributes it per-path, rather than making separate queries per path. This matters when the user has many paths.
+
+3. **Reactive progress updates via custom events.** The existing `PROGRESS_UPDATED_EVENT` dispatched by `progress.ts` on save enables the path progress hooks to re-compute without polling or store subscriptions. The `storage` event listener covers cross-tab updates.
+
+4. **Map stability for hook dependencies.** `useMultiPathProgress` accepts a `Map<string, LearningPathEntry[]>` parameter. The caller must `useMemo` this map to avoid infinite re-render loops from new Map instances on every render.
 
 ## Plan
 
