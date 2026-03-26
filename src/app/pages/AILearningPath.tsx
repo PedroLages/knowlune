@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Link } from 'react-router'
 import { motion, MotionConfig } from 'motion/react'
 import {
@@ -33,7 +33,7 @@ import {
 } from '@/app/components/ui/alert-dialog'
 import { Sparkles, RotateCw, Loader2, AlertCircle, BookOpen, GripVertical } from 'lucide-react'
 import { staggerContainer, fadeUp } from '@/lib/motion'
-import type { LearningPathCourse, ImportedCourse } from '@/data/types'
+import type { LearningPathEntry, ImportedCourse } from '@/data/types'
 
 /** Sortable wrapper for course cards */
 function SortableCourseCard({
@@ -41,7 +41,7 @@ function SortableCourseCard({
   courseData,
   index,
 }: {
-  course: LearningPathCourse
+  course: LearningPathEntry
   courseData: ImportedCourse | undefined
   index: number
 }) {
@@ -94,9 +94,11 @@ function SortableCourseCard({
         </h3>
 
         {/* AI Justification */}
-        <p className="text-muted-foreground italic" data-testid="course-justification">
-          {course.justification}
-        </p>
+        {course.justification && (
+          <p className="text-muted-foreground italic" data-testid="course-justification">
+            {course.justification}
+          </p>
+        )}
       </div>
     </motion.div>
   )
@@ -104,22 +106,29 @@ function SortableCourseCard({
 
 export function AILearningPath() {
   const {
-    courses,
+    activePath,
     isGenerating,
     error,
     generatePath,
     reorderCourse,
     regeneratePath,
-    loadLearningPath,
+    loadPaths,
+    getEntriesForPath,
   } = useLearningPathStore()
   const { importedCourses, loadImportedCourses } = useCourseImportStore()
   const [showRegenerateDialog, setShowRegenerateDialog] = useState(false)
 
+  // Get entries for the active path
+  const courses = useMemo(
+    () => (activePath ? getEntriesForPath(activePath.id) : []),
+    [activePath, getEntriesForPath]
+  )
+
   // Load data on mount
   useEffect(() => {
     loadImportedCourses()
-    loadLearningPath()
-  }, [loadImportedCourses, loadLearningPath])
+    loadPaths()
+  }, [loadImportedCourses, loadPaths])
 
   // Drag-and-drop sensors
   const sensors = useSensors(
@@ -136,12 +145,12 @@ export function AILearningPath() {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
 
-    if (over && active.id !== over.id) {
+    if (over && active.id !== over.id && activePath) {
       const oldIndex = courses.findIndex(c => c.courseId === active.id)
       const newIndex = courses.findIndex(c => c.courseId === over.id)
 
       if (oldIndex !== -1 && newIndex !== -1) {
-        reorderCourse(oldIndex, newIndex)
+        reorderCourse(activePath.id, oldIndex, newIndex)
       }
     }
   }

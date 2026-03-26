@@ -218,13 +218,14 @@ export async function clearIndexedDBStore(
 }
 
 /**
- * Clears the learningPath object store in ElearningDB.
+ * Clears the learningPaths and learningPathEntries object stores in ElearningDB.
  * Convenience wrapper around clearIndexedDBStore.
  *
  * @param page - Playwright Page instance
  */
 export async function clearLearningPath(page: Page): Promise<void> {
-  await clearIndexedDBStore(page, 'ElearningDB', 'learningPath')
+  await clearIndexedDBStore(page, 'ElearningDB', 'learningPaths')
+  await clearIndexedDBStore(page, 'ElearningDB', 'learningPathEntries')
 }
 
 /**

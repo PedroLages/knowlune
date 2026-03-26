@@ -81,7 +81,8 @@ describe('exportService', () => {
         'contentProgress',
         'challenges',
         'reviewRecords',
-        'learningPath',
+        'learningPaths',
+        'learningPathEntries',
         'aiUsageEvents',
       ]
       for (const key of expectedKeys) {
@@ -89,7 +90,7 @@ describe('exportService', () => {
       }
     })
 
-    it('queries all 12 IndexedDB tables', async () => {
+    it('queries all 13 IndexedDB tables', async () => {
       await exportAllAsJson()
 
       const expectedTables = [
@@ -103,7 +104,8 @@ describe('exportService', () => {
         'contentProgress',
         'challenges',
         'reviewRecords',
-        'learningPath',
+        'learningPaths',
+        'learningPathEntries',
         'aiUsageEvents',
       ]
       for (const tableName of expectedTables) {
