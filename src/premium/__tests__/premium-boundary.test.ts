@@ -13,7 +13,11 @@ const PREMIUM_DIR = path.resolve(__dirname, '..')
 const PREMIUM_LICENSE_HEADER = 'SPDX-License-Identifier: LicenseRef-LevelUp-Premium'
 
 /** Recursively collects all .ts and .tsx files under a directory, excluding __tests__ */
-function collectFiles(dir: string, ext: string[] = ['.ts', '.tsx'], excludeDirs: string[] = ['__tests__']): string[] {
+function collectFiles(
+  dir: string,
+  ext: string[] = ['.ts', '.tsx'],
+  excludeDirs: string[] = ['__tests__']
+): string[] {
   const results: string[] = []
   if (!fs.existsSync(dir)) return results
 

@@ -33,9 +33,7 @@ describe('premiumImportGuard', () => {
     it('throws on @/premium import (without trailing slash)', () => {
       const plugin = premiumImportGuard({ enabled: true })
       const resolveId = plugin.resolveId as (source: string, importer?: string) => null
-      expect(() => resolveId('@/premium', '/src/app/routes.tsx')).toThrow(
-        'premium-import-guard'
-      )
+      expect(() => resolveId('@/premium', '/src/app/routes.tsx')).toThrow('premium-import-guard')
     })
 
     it('allows non-premium imports', () => {
@@ -47,14 +45,17 @@ describe('premiumImportGuard', () => {
     it('allows imports from @/lib/entitlement', () => {
       const plugin = premiumImportGuard({ enabled: true })
       const resolveId = plugin.resolveId as (source: string, importer?: string) => null
-      expect(resolveId('@/lib/entitlement/isPremium', '/src/app/components/PremiumGate.tsx')).toBeNull()
+      expect(
+        resolveId('@/lib/entitlement/isPremium', '/src/app/components/PremiumGate.tsx')
+      ).toBeNull()
     })
 
     it('includes the offending import path in the error message', () => {
       const plugin = premiumImportGuard({ enabled: true })
       const resolveId = plugin.resolveId as (source: string, importer?: string) => null
-      expect(() => resolveId('@/premium/components/PremiumAnalyticsDashboard', '/src/app/routes.tsx'))
-        .toThrow('Import: "@/premium/components/PremiumAnalyticsDashboard"')
+      expect(() =>
+        resolveId('@/premium/components/PremiumAnalyticsDashboard', '/src/app/routes.tsx')
+      ).toThrow('Import: "@/premium/components/PremiumAnalyticsDashboard"')
     })
   })
 
@@ -71,9 +72,7 @@ describe('premiumImportGuard', () => {
       const plugin = premiumImportGuard({ enabled: true })
       const transform = plugin.transform as (code: string, id: string) => null
       const code = `import { PremiumDashboard } from '@/premium/components/PremiumDashboard'`
-      expect(() => transform(code, '/src/app/routes.tsx')).toThrow(
-        'premium-import-guard'
-      )
+      expect(() => transform(code, '/src/app/routes.tsx')).toThrow('premium-import-guard')
     })
 
     it('throws when source code contains relative premium import', () => {

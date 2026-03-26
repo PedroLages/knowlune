@@ -27,10 +27,7 @@ export interface PremiumGuardOptions {
  * - `src/premium/` (relative path)
  * - `./premium/` or `../premium/` (relative from within src/)
  */
-const PREMIUM_IMPORT_PATTERNS = [
-  /['"]@\/premium\//,
-  /from\s+['"]\.\.?\/.*premium\//,
-]
+const PREMIUM_IMPORT_PATTERNS = [/['"]@\/premium\//, /from\s+['"]\.\.?\/.*premium\//]
 
 export function premiumImportGuard(options: PremiumGuardOptions = {}): Plugin {
   const { enabled = true } = options
@@ -44,16 +41,14 @@ export function premiumImportGuard(options: PremiumGuardOptions = {}): Plugin {
 
       // Check if this import targets the premium directory
       if (source.startsWith('@/premium/') || source.startsWith('@/premium')) {
-        const importerDisplay = importer
-          ? importer.replace(process.cwd() + '/', '')
-          : 'unknown'
+        const importerDisplay = importer ? importer.replace(process.cwd() + '/', '') : 'unknown'
         throw new Error(
           `[premium-import-guard] Importing from premium directory is not allowed in the core build.\n` +
-          `  Import: "${source}"\n` +
-          `  Importer: ${importerDisplay}\n` +
-          `\n` +
-          `Premium code must only be referenced through isPremium() guards with lazy loading.\n` +
-          `Use \`npm run build:premium\` for premium builds.`
+            `  Import: "${source}"\n` +
+            `  Importer: ${importerDisplay}\n` +
+            `\n` +
+            `Premium code must only be referenced through isPremium() guards with lazy loading.\n` +
+            `Use \`npm run build:premium\` for premium builds.`
         )
       }
 
@@ -81,10 +76,10 @@ export function premiumImportGuard(options: PremiumGuardOptions = {}): Plugin {
           const idDisplay = id.replace(process.cwd() + '/', '')
           throw new Error(
             `[premium-import-guard] File contains import from premium directory (core build).\n` +
-            `  File: ${idDisplay}\n` +
-            `  Pattern matched: ${pattern.source}\n` +
-            `\n` +
-            `Remove the premium import or use \`npm run build:premium\`.`
+              `  File: ${idDisplay}\n` +
+              `  Pattern matched: ${pattern.source}\n` +
+              `\n` +
+              `Remove the premium import or use \`npm run build:premium\`.`
           )
         }
       }

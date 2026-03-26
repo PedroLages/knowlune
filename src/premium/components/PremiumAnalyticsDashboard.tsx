@@ -15,9 +15,7 @@
 export default function PremiumAnalyticsDashboard() {
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-display font-bold text-foreground">
-        Advanced Analytics
-      </h1>
+      <h1 className="text-2xl font-display font-bold text-foreground">Advanced Analytics</h1>
       <p className="text-muted-foreground">
         Premium analytics dashboard with trend analysis and predictive insights.
       </p>
