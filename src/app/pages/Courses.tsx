@@ -25,6 +25,7 @@ import { getCourseCompletionPercent, getProgress } from '@/lib/progress'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
 import { BulkImportDialog } from '@/app/components/figma/BulkImportDialog'
+import { YouTubeImportDialog } from '@/app/components/figma/YouTubeImportDialog'
 import { db } from '@/db'
 import { calculateMomentumScore } from '@/lib/momentum'
 import { calculateAtRiskStatus } from '@/lib/atRisk'
@@ -57,6 +58,7 @@ export function Courses() {
   const [sortMode, setSortMode] = useState<SortMode>('recent')
   const [wizardOpen, setWizardOpen] = useState(false)
   const [bulkImportOpen, setBulkImportOpen] = useState(false)
+  const [youtubeImportOpen, setYoutubeImportOpen] = useState(false)
   const [tagManagementOpen, setTagManagementOpen] = useState(false)
   const [momentumMap, setMomentumMap] = useState<Map<string, MomentumScore>>(new Map())
   const [atRiskMap, setAtRiskMap] = useState<Map<string, AtRiskStatus>>(new Map())
@@ -332,6 +334,11 @@ export function Courses() {
     setWizardOpen(true)
   }
 
+  function handleYouTubeImportFromBulk() {
+    setBulkImportOpen(false)
+    setYoutubeImportOpen(true)
+  }
+
   function handleCollapseToggle(open: boolean) {
     const collapsed = !open
     setSampleCollapsed(collapsed)
@@ -373,7 +380,9 @@ export function Courses() {
         open={bulkImportOpen}
         onOpenChange={setBulkImportOpen}
         onSingleImport={handleSingleImportFromBulk}
+        onYouTubeImport={handleYouTubeImportFromBulk}
       />
+      <YouTubeImportDialog open={youtubeImportOpen} onOpenChange={setYoutubeImportOpen} />
 
       {totalCourses === 0 ? (
         <EmptyState

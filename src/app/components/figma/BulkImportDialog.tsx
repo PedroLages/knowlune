@@ -21,6 +21,7 @@ import {
   RotateCcw,
   Video,
   FileText,
+  Youtube,
 } from 'lucide-react'
 import {
   scanCourseFolderFromHandle,
@@ -62,9 +63,10 @@ interface BulkImportDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSingleImport: () => void // Delegate to existing ImportWizardDialog
+  onYouTubeImport?: () => void // Delegate to YouTubeImportDialog (E28-S05)
 }
 
-export function BulkImportDialog({ open, onOpenChange, onSingleImport }: BulkImportDialogProps) {
+export function BulkImportDialog({ open, onOpenChange, onSingleImport, onYouTubeImport }: BulkImportDialogProps) {
   const [step, setStep] = useState<DialogStep>('choose')
   const [folders, setFolders] = useState<FolderEntry[]>([])
   const [importItems, setImportItems] = useState<ImportItem[]>([])
@@ -93,6 +95,11 @@ export function BulkImportDialog({ open, onOpenChange, onSingleImport }: BulkImp
     handleOpenChange(false)
     onSingleImport()
   }, [handleOpenChange, onSingleImport])
+
+  const handleYouTubeImport = useCallback(() => {
+    handleOpenChange(false)
+    onYouTubeImport?.()
+  }, [handleOpenChange, onYouTubeImport])
 
   // Step 1 → Step 2: Pick parent folder and list sub-dirs
   const handleSelectParentFolder = useCallback(async () => {
@@ -441,6 +448,25 @@ export function BulkImportDialog({ open, onOpenChange, onSingleImport }: BulkImp
                 </p>
               </div>
             </button>
+
+            {onYouTubeImport && (
+              <button
+                type="button"
+                onClick={handleYouTubeImport}
+                className="flex items-center gap-4 rounded-xl border border-border p-4 text-left transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                data-testid="import-youtube-btn"
+              >
+                <div className="flex items-center justify-center size-12 rounded-full bg-brand-soft shrink-0">
+                  <Youtube className="size-6 text-brand-soft-foreground" aria-hidden="true" />
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">Build from YouTube</p>
+                  <p className="text-sm text-muted-foreground">
+                    Create a course from YouTube videos or playlists
+                  </p>
+                </div>
+              </button>
+            )}
           </div>
         )}
 
