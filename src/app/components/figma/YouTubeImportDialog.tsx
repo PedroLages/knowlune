@@ -56,9 +56,15 @@ import {
 } from '@/stores/useYouTubeImportStore'
 import { groupVideosByRules, type GroupingVideo } from '@/lib/youtubeRuleBasedGrouping'
 import { YouTubeChapterEditor } from '@/app/components/figma/YouTubeChapterEditor'
+import {
+  YouTubeCourseDetailsForm,
+  type CourseDetailsFormData,
+} from '@/app/components/figma/YouTubeCourseDetailsForm'
 import { isAIAvailable } from '@/lib/aiConfiguration'
 import { useIsPremium } from '@/lib/entitlement/isPremium'
 import { structureCourseWithAI, aiChaptersToVideoChapters, type StructuringVideo } from '@/ai/youtube/courseStructurer'
+import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { useYouTubeTranscriptStore } from '@/stores/useYouTubeTranscriptStore'
 import { toast } from 'sonner'
 
 // --- Constants ---
@@ -113,6 +119,16 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
   const [isAIStructuring, setIsAIStructuring] = useState(false)
   const [aiBannerMessage, setAiBannerMessage] = useState<string | undefined>(undefined)
 
+  // Step 4: Course details form state (E28-S08)
+  const [courseDetails, setCourseDetails] = useState<CourseDetailsFormData>({
+    name: '',
+    description: '',
+    tags: [],
+    selectedThumbnailVideoId: null,
+  })
+  const courseImportStore = useCourseImportStore()
+  const transcriptStore = useYouTubeTranscriptStore()
+
   // Clean up on close
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
@@ -124,6 +140,7 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
         aiAbortRef.current = null
         setIsAIStructuring(false)
         setAiBannerMessage(undefined)
+        setCourseDetails({ name: '', description: '', tags: [], selectedThumbnailVideoId: null })
         if (debounceRef.current) clearTimeout(debounceRef.current)
       } else {
         fetchAbortRef.current = false
@@ -527,10 +544,17 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
           </div>
         )}
 
-        {/* Step 4: Future placeholder */}
+        {/* Step 4: Course Details (E28-S08) */}
         {store.currentStep === 4 && (
-          <div className="py-8 text-center text-muted-foreground">
-            <p className="text-sm">Coming in a future update</p>
+          <div className="py-2">
+            <YouTubeCourseDetailsForm
+              initialName={courseDetails.name}
+              initialDescription={courseDetails.description}
+              videos={activeVideos}
+              chapters={store.chapters}
+              onChange={setCourseDetails}
+              formData={courseDetails}
+            />
           </div>
         )}
 
@@ -552,92 +576,187 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
               </Button>
             )}
           </div>
-          <Button
-            variant="brand"
-            disabled={
-              (store.currentStep === 1 && !canProceed) ||
-              (store.currentStep === 2 && (store.isFetchingMetadata || activeVideos.length === 0))
-            }
-            onClick={async () => {
-              if (store.currentStep === 1) {
-                handleNextToPreview()
-              } else if (store.currentStep === 2) {
-                // Build video list for grouping
-                const groupingVideos: GroupingVideo[] = activeVideos
-                  .filter(v => v.metadata && v.status === 'loaded')
-                  .map(v => ({
-                    videoId: v.videoId,
-                    title: v.metadata!.title,
-                    description: v.metadata!.description,
-                    duration: v.metadata!.duration,
-                  }))
+          {store.currentStep === 4 ? (
+            <Button
+              variant="brand"
+              disabled={!courseDetails.name.trim() || store.isSaving}
+              onClick={async () => {
+                const result = await store.saveCourse({
+                  name: courseDetails.name,
+                  description: courseDetails.description,
+                  tags: courseDetails.tags,
+                  selectedThumbnailVideoId: courseDetails.selectedThumbnailVideoId,
+                })
 
-                store.setCurrentStep(3)
+                if (result.ok) {
+                  // Capture video data BEFORE closing (handleOpenChange resets the store)
+                  const loadedVideos = store.getActiveVideos().filter(v => v.status === 'loaded')
+                  const videoCount = loadedVideos.length
+                  const videoIds = loadedVideos.map(v => v.videoId)
 
-                // E28-S07: Try AI structuring if premium + AI configured + 3+ videos
-                const aiAvailable = isAIAvailable()
-                if (isPremium && aiAvailable && groupingVideos.length >= 3) {
-                  setIsAIStructuring(true)
-                  setAiBannerMessage(undefined)
+                  // Reload course library so the new course appears
+                  await courseImportStore.loadImportedCourses()
 
-                  // Use rule-based as initial/fallback
-                  const ruleChapters = groupVideosByRules(groupingVideos)
-                  store.setChapters(ruleChapters)
+                  // Close wizard and reset
+                  handleOpenChange(false)
 
-                  // Attempt AI structuring
-                  const controller = new AbortController()
-                  aiAbortRef.current = controller
+                  // Show success toast
+                  toast.success(`Course created — ${videoCount} ${videoCount === 1 ? 'video' : 'videos'} ready to study`)
 
-                  const structuringVideos: StructuringVideo[] = groupingVideos.map(v => ({
-                    videoId: v.videoId,
-                    title: v.title,
-                    description: v.description,
-                    duration: v.duration,
-                  }))
-
-                  const result = await structureCourseWithAI(structuringVideos, controller.signal)
-
-                  setIsAIStructuring(false)
-
-                  if (result.ok) {
-                    const aiChapters = aiChaptersToVideoChapters(result.proposal.chapters)
-                    store.setChapters(aiChapters)
-                    const videoCount = structuringVideos.length
-                    const chapterCount = aiChapters.length
-                    setAiBannerMessage(
-                      `AI organized ${videoCount} videos into ${chapterCount} chapters`
-                    )
-                  } else {
-                    // Fallback to rule-based (already set above)
-                    toast.warning('AI structuring unavailable — using keyword-based grouping', {
-                      description: result.error,
-                    })
+                  // Start background transcript extraction (E28-S04 / Story 23.4)
+                  if (videoIds.length > 0) {
+                    // Fire-and-forget — don't block the UI
+                    // silent-catch-ok: transcript failures are non-blocking; user can retry later
+                    transcriptStore.fetchBatch(result.courseId, videoIds).catch(() => {})
                   }
                 } else {
-                  // Rule-based grouping (free users or no AI configured)
-                  const chapters = groupVideosByRules(groupingVideos)
-                  store.setChapters(chapters)
-                  setAiBannerMessage(undefined)
+                  toast.error('Failed to create course', {
+                    description: result.error,
+                    action: {
+                      label: 'Retry',
+                      onClick: () => {
+                        // Re-trigger the button click via the same path
+                        const btn = document.querySelector('[data-testid="wizard-save-btn"]') as HTMLButtonElement
+                        btn?.click()
+                      },
+                    },
+                  })
                 }
-              } else if (store.currentStep < 4) {
-                store.setCurrentStep((store.currentStep + 1) as 2 | 3 | 4)
+              }}
+              className="rounded-xl min-h-[44px]"
+              data-testid="wizard-save-btn"
+            >
+              {store.isSaving ? (
+                <>
+                  <Loader2 className="size-4 mr-1.5 animate-spin" aria-hidden="true" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="size-4 mr-1.5" aria-hidden="true" />
+                  Create Course
+                </>
+              )}
+            </Button>
+          ) : (
+            <Button
+              variant="brand"
+              disabled={
+                (store.currentStep === 1 && !canProceed) ||
+                (store.currentStep === 2 && (store.isFetchingMetadata || activeVideos.length === 0))
               }
-            }}
-            className="rounded-xl min-h-[44px]"
-            data-testid="wizard-next-btn"
-          >
-            {store.currentStep === 1 && store.isFetchingMetadata ? (
-              <>
-                <Loader2 className="size-4 mr-1.5 animate-spin" aria-hidden="true" />
-                Loading...
-              </>
-            ) : (
-              <>
-                Next
-                <ChevronRight className="size-4 ml-1" aria-hidden="true" />
-              </>
-            )}
-          </Button>
+              onClick={async () => {
+                if (store.currentStep === 1) {
+                  handleNextToPreview()
+                } else if (store.currentStep === 2) {
+                  // Build video list for grouping
+                  const groupingVideos: GroupingVideo[] = activeVideos
+                    .filter(v => v.metadata && v.status === 'loaded')
+                    .map(v => ({
+                      videoId: v.videoId,
+                      title: v.metadata!.title,
+                      description: v.metadata!.description,
+                      duration: v.metadata!.duration,
+                    }))
+
+                  store.setCurrentStep(3)
+
+                  // E28-S07: Try AI structuring if premium + AI configured + 3+ videos
+                  const aiAvailable = isAIAvailable()
+                  if (isPremium && aiAvailable && groupingVideos.length >= 3) {
+                    setIsAIStructuring(true)
+                    setAiBannerMessage(undefined)
+
+                    // Use rule-based as initial/fallback
+                    const ruleChapters = groupVideosByRules(groupingVideos)
+                    store.setChapters(ruleChapters)
+
+                    // Attempt AI structuring
+                    const controller = new AbortController()
+                    aiAbortRef.current = controller
+
+                    const structuringVideos: StructuringVideo[] = groupingVideos.map(v => ({
+                      videoId: v.videoId,
+                      title: v.title,
+                      description: v.description,
+                      duration: v.duration,
+                    }))
+
+                    const result = await structureCourseWithAI(structuringVideos, controller.signal)
+
+                    setIsAIStructuring(false)
+
+                    if (result.ok) {
+                      const aiChapters = aiChaptersToVideoChapters(result.proposal.chapters)
+                      store.setChapters(aiChapters)
+                      const videoCount = structuringVideos.length
+                      const chapterCount = aiChapters.length
+                      setAiBannerMessage(
+                        `AI organized ${videoCount} videos into ${chapterCount} chapters`
+                      )
+                    } else {
+                      // Fallback to rule-based (already set above)
+                      toast.warning('AI structuring unavailable — using keyword-based grouping', {
+                        description: result.error,
+                      })
+                    }
+                  } else {
+                    // Rule-based grouping (free users or no AI configured)
+                    const chapters = groupVideosByRules(groupingVideos)
+                    store.setChapters(chapters)
+                    setAiBannerMessage(undefined)
+                  }
+                } else if (store.currentStep === 3) {
+                  // Step 3 → Step 4: Pre-fill course details from metadata (E28-S08)
+                  const loadedVideos = activeVideos.filter(v => v.metadata && v.status === 'loaded')
+                  const playlistEntry = store.parsedUrls.find(
+                    e => e.parseResult.type === 'playlist' || e.playlistChoice === 'full-playlist'
+                  )
+
+                  // Pre-fill name from playlist or first video channel
+                  let defaultName = ''
+                  if (playlistEntry?.parseResult.valid) {
+                    // For playlists, use channel title + "Playlist" as fallback
+                    defaultName = loadedVideos[0]?.metadata?.channelTitle
+                      ? `${loadedVideos[0].metadata.channelTitle} Course`
+                      : 'YouTube Course'
+                  } else if (loadedVideos.length === 1) {
+                    defaultName = loadedVideos[0]?.metadata?.title ?? 'YouTube Course'
+                  } else {
+                    defaultName = loadedVideos[0]?.metadata?.channelTitle
+                      ? `${loadedVideos[0].metadata.channelTitle} Course`
+                      : 'YouTube Course'
+                  }
+
+                  // Pre-fill description from first video
+                  const defaultDescription = loadedVideos[0]?.metadata?.description?.slice(0, 500) ?? ''
+
+                  setCourseDetails({
+                    name: defaultName,
+                    description: defaultDescription,
+                    tags: [],
+                    selectedThumbnailVideoId: loadedVideos[0]?.videoId ?? null,
+                  })
+
+                  store.setCurrentStep(4)
+                }
+              }}
+              className="rounded-xl min-h-[44px]"
+              data-testid="wizard-next-btn"
+            >
+              {store.currentStep === 1 && store.isFetchingMetadata ? (
+                <>
+                  <Loader2 className="size-4 mr-1.5 animate-spin" aria-hidden="true" />
+                  Loading...
+                </>
+              ) : (
+                <>
+                  Next
+                  <ChevronRight className="size-4 ml-1" aria-hidden="true" />
+                </>
+              )}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
