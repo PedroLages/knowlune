@@ -107,6 +107,7 @@ function SortableCourseCard({
 export function AILearningPath() {
   const {
     activePath,
+    entries,
     isGenerating,
     error,
     generatePath,
@@ -118,10 +119,10 @@ export function AILearningPath() {
   const { importedCourses, loadImportedCourses } = useCourseImportStore()
   const [showRegenerateDialog, setShowRegenerateDialog] = useState(false)
 
-  // Get entries for the active path
+  // Get entries for the active path (entries dependency triggers recalc on add/remove/reorder)
   const courses = useMemo(
     () => (activePath ? getEntriesForPath(activePath.id) : []),
-    [activePath, getEntriesForPath]
+    [activePath, entries, getEntriesForPath]
   )
 
   // Load data on mount

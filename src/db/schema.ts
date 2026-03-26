@@ -40,7 +40,7 @@ const db = new Dexie('ElearningDB') as Dexie & {
   contentProgress: Table<ContentProgress> // compound PK: [courseId+itemId]
   challenges: EntityTable<Challenge, 'id'>
   embeddings: EntityTable<Embedding, 'noteId'>
-  learningPath: EntityTable<LearningPathCourse, 'courseId'>
+  // learningPath table dropped in v25 (migrated to learningPaths + learningPathEntries)
   learningPaths: EntityTable<LearningPath, 'id'>
   learningPathEntries: EntityTable<LearningPathEntry, 'id'>
   courseThumbnails: EntityTable<CourseThumbnail, 'courseId'>
