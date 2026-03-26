@@ -25,6 +25,9 @@ import type {
   CareerPath,
   PathEnrollment,
   CachedEntitlement,
+  YouTubeVideoCache,
+  YouTubeTranscriptRecord,
+  YouTubeCourseChapter,
 } from '@/data/types'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
 
@@ -56,6 +59,9 @@ const db = new Dexie('ElearningDB') as Dexie & {
   careerPaths: EntityTable<CareerPath, 'id'>
   pathEnrollments: EntityTable<PathEnrollment, 'id'>
   entitlements: EntityTable<CachedEntitlement, 'userId'>
+  youtubeVideoCache: EntityTable<YouTubeVideoCache, 'videoId'>
+  youtubeTranscripts: Table<YouTubeTranscriptRecord> // compound PK: [courseId+videoId]
+  youtubeChapters: EntityTable<YouTubeCourseChapter, 'id'>
 }
 
 db.version(1).stores({
@@ -814,5 +820,58 @@ db.version(25).stores({
   learningPaths: 'id, createdAt',
   learningPathEntries: 'id, [pathId+courseId], pathId',
 })
+
+// v26: YouTube integration schema — new tables, indexes, and source field (E28-S01)
+// - importedCourses: add `source` index for filtering local vs. YouTube courses
+// - importedVideos: add `youtubeVideoId` index for YouTube video lookups
+// - youtubeVideoCache: API response cache with TTL expiry
+// - youtubeTranscripts: per-course transcript storage (compound PK)
+// - youtubeChapters: course-level chapter markers with ordering
+// - upgrade(): backfill existing courses with `source: 'local'`
+db.version(26)
+  .stores({
+    // All existing v25 tables (must redeclare or Dexie deletes them)
+    importedCourses: 'id, name, importedAt, status, *tags, source',
+    importedVideos: 'id, courseId, filename, youtubeVideoId',
+    importedPdfs: 'id, courseId, filename',
+    progress: '[courseId+videoId], courseId, videoId',
+    bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+    notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt',
+    screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
+    studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
+    contentProgress: '[courseId+itemId], courseId, itemId, status',
+    challenges: 'id, type, deadline, createdAt',
+    embeddings: 'noteId, createdAt',
+    courseThumbnails: 'courseId',
+    aiUsageEvents: 'id, featureType, timestamp, courseId',
+    reviewRecords: 'id, noteId, nextReviewAt, reviewedAt',
+    courseReminders: 'id, courseId',
+    courses: 'id, category, difficulty, authorId',
+    quizzes: 'id, lessonId, createdAt',
+    quizAttempts: 'id, quizId, [quizId+completedAt], completedAt',
+    videoCaptions: '[courseId+videoId], courseId, videoId',
+    authors: 'id, name, createdAt',
+    careerPaths: 'id',
+    pathEnrollments: 'id, pathId, status',
+    flashcards: 'id, courseId, noteId, nextReviewAt, createdAt',
+    entitlements: 'userId',
+    learningPaths: 'id, createdAt',
+    learningPathEntries: 'id, [pathId+courseId], pathId',
+    // NEW: YouTube integration tables
+    youtubeVideoCache: 'videoId, expiresAt',
+    youtubeTranscripts: '[courseId+videoId], courseId, videoId',
+    youtubeChapters: 'id, courseId, order',
+  })
+  .upgrade(tx => {
+    // Backfill existing courses with source: 'local' (no data loss)
+    return tx
+      .table('importedCourses')
+      .toCollection()
+      .modify(course => {
+        if (course.source === undefined) {
+          course.source = 'local'
+        }
+      })
+  })
 
 export { db }

@@ -145,6 +145,8 @@ export interface PdfMetadata {
   pageCount: number
 }
 
+export type CourseSource = 'local' | 'youtube'
+
 export interface ImportedCourse {
   id: string
   name: string
@@ -161,6 +163,13 @@ export interface ImportedCourse {
   totalDuration?: number // Sum of all video durations in seconds (E1B-S02)
   totalFileSize?: number // Sum of all video file sizes in bytes (E1B-S02)
   maxResolutionHeight?: number // Highest video resolution height in px (E1B-S02)
+  // YouTube fields (E28-S01)
+  source?: CourseSource // undefined = 'local' (backward-compatible)
+  youtubePlaylistId?: string // YouTube playlist ID
+  youtubeChannelId?: string // YouTube channel ID
+  youtubeChannelTitle?: string // Channel display name
+  youtubeThumbnailUrl?: string // Playlist/channel thumbnail URL
+  youtubePublishedAt?: string // ISO 8601 — playlist publish date
 }
 
 export interface ImportedVideo {
@@ -175,6 +184,12 @@ export interface ImportedVideo {
   fileSize?: number // File size in bytes (E1B-S02)
   width?: number // Video width in pixels (E1B-S02)
   height?: number // Video height in pixels (E1B-S02)
+  // YouTube fields (E28-S01)
+  youtubeVideoId?: string // YouTube video ID (e.g., 'dQw4w9WgXcQ')
+  youtubeUrl?: string // Full YouTube URL
+  thumbnailUrl?: string // YouTube thumbnail URL
+  description?: string // YouTube video description
+  chapters?: Chapter[] // YouTube auto-detected chapters
 }
 
 export interface ImportedPdf {
@@ -477,4 +492,38 @@ export interface CachedEntitlement {
   trialEnd?: string // ISO 8601 — trial expiration date (E19-S08)
   hadTrial?: boolean // true if user has previously used a free trial (E19-S08)
   cachedAt: string // ISO 8601 — for 7-day TTL check
+}
+
+// --- YouTube Types (E28-S01) ---
+
+export interface YouTubeVideoCache {
+  videoId: string // PK — YouTube video ID
+  title: string
+  description: string
+  channelId: string
+  channelTitle: string
+  thumbnailUrl: string
+  duration: number // seconds
+  publishedAt: string // ISO 8601
+  chapters: Chapter[]
+  fetchedAt: string // ISO 8601
+  expiresAt: string // ISO 8601 — cache TTL expiry
+}
+
+export interface YouTubeTranscriptRecord {
+  courseId: string // Compound PK part 1
+  videoId: string // Compound PK part 2 (YouTube video ID)
+  language: string // e.g., 'en', 'es'
+  cues: TranscriptCue[]
+  fetchedAt: string // ISO 8601
+}
+
+export interface YouTubeCourseChapter {
+  id: string // PK — UUID
+  courseId: string // FK to ImportedCourse.id
+  videoId: string // YouTube video ID
+  title: string
+  startTime: number // seconds
+  endTime?: number // seconds (derived from next chapter or video duration)
+  order: number // Display order within the course
 }
