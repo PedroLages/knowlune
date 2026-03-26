@@ -431,7 +431,7 @@ development_status:
   28-3-youtube-data-api-v3-client-with-rate-limiting: done
   28-4-transcript-pipeline-tier-1-youtube-transcript: done
   28-5-import-wizard-steps-1-and-2-url-input-metadata-preview: done
-  28-6-rule-based-video-grouping-and-chapter-editor: in-progress
+  28-6-rule-based-video-grouping-and-chapter-editor: done
   28-7-ai-powered-course-structuring-premium: backlog
   28-8-import-wizard-step-4-course-details-and-save: backlog
   28-9-youtube-iframe-player-and-progress-tracking: backlog
