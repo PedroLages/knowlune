@@ -40,6 +40,45 @@ export async function startCheckout(): Promise<{ url: string } | { error: string
 }
 
 /**
+ * Creates a Stripe Customer Portal session by calling the create-portal Edge Function.
+ * The portal lets users manage billing, update payment methods, view invoices, and cancel.
+ * Returns the portal URL for redirect, or an error message.
+ *
+ * @param flow - Optional portal flow type. Use 'cancel' to deep-link to the cancellation flow.
+ */
+export async function createPortalSession(
+  flow?: 'cancel'
+): Promise<{ url: string } | { error: string }> {
+  if (!supabase) return { error: NOT_CONFIGURED }
+
+  const session = useAuthStore.getState().session
+  if (!session) return { error: 'You must be signed in to manage billing.' }
+
+  try {
+    const { data, error } = await supabase.functions.invoke('create-portal', {
+      body: {
+        returnUrl: window.location.href,
+        ...(flow === 'cancel' ? { flow: 'cancel' } : {}),
+      },
+    })
+
+    if (error) {
+      console.error('create-portal invoke error:', error)
+      return { error: 'Unable to open billing portal. Please try again.' }
+    }
+
+    if (!data?.url) {
+      return { error: 'Unable to open billing portal. Please try again.' }
+    }
+
+    return { url: data.url }
+  } catch (err) {
+    console.error('createPortalSession error:', err)
+    return { error: 'Unable to open billing portal. Please try again.' }
+  }
+}
+
+/**
  * Polls the Supabase entitlements table until the user's tier is not 'free',
  * or until the timeout expires. Used after Stripe Checkout redirect return
  * to wait for the webhook to process.
