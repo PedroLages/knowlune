@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Link, useParams, useNavigate } from 'react-router'
 import {
   ArrowLeft,
@@ -9,6 +9,8 @@ import {
   RefreshCw,
   User,
   Trash2,
+  Search,
+  X,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { db } from '@/db/schema'
@@ -17,6 +19,7 @@ import { useAuthorStore } from '@/stores/useAuthorStore'
 import { useFileStatusVerification } from '@/hooks/useFileStatusVerification'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
+import { Input } from '@/app/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import {
   AlertDialog,
@@ -64,6 +67,34 @@ function FileStatusBadge({ status, itemId }: { status: FileStatus; itemId: strin
   return null
 }
 
+/** Renders text with matched characters wrapped in <mark> for search highlighting */
+function HighlightedText({ text, query }: { text: string; query: string }) {
+  if (!query) return <>{text}</>
+
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const splitRegex = new RegExp(`(${escaped})`, 'gi')
+  const parts = text.split(splitRegex)
+
+  return (
+    <>
+      {parts.map((part, i) => {
+        // Check each part independently (avoids regex.lastIndex statefulness)
+        const isMatch = part.length > 0 && part.toLowerCase() === query.toLowerCase()
+        return isMatch ? (
+          <mark key={i} className="bg-warning/30 text-inherit rounded-sm px-0.5">
+            {part}
+          </mark>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      })}
+    </>
+  )
+}
+
+/** Minimum number of content items required to show the search input */
+const SEARCH_THRESHOLD = 10
+
 export function ImportedCourseDetail() {
   const { courseId } = useParams<{ courseId: string }>()
   const navigate = useNavigate()
@@ -79,6 +110,8 @@ export function ImportedCourseDetail() {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const contentListRef = useRef<HTMLUListElement>(null)
 
   useEffect(() => {
     loadImportedCourses()
@@ -145,6 +178,28 @@ export function ImportedCourseDetail() {
   }, [courseId])
 
   const fileStatuses = useFileStatusVerification(videos, pdfs)
+
+  const totalItems = videos.length + pdfs.length
+  const showSearch = totalItems >= SEARCH_THRESHOLD
+
+  const filteredVideos = useMemo(() => {
+    if (!searchQuery) return videos
+    const q = searchQuery.toLowerCase()
+    return videos.filter(v => v.filename.toLowerCase().includes(q))
+  }, [videos, searchQuery])
+
+  const filteredPdfs = useMemo(() => {
+    if (!searchQuery) return pdfs
+    const q = searchQuery.toLowerCase()
+    return pdfs.filter(p => p.filename.toLowerCase().includes(q))
+  }, [pdfs, searchQuery])
+
+  const hasResults = filteredVideos.length > 0 || filteredPdfs.length > 0
+
+  const handleClearSearch = useCallback(() => {
+    setSearchQuery('')
+    contentListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
 
   if (!course) {
     return (
@@ -241,12 +296,43 @@ export function ImportedCourseDetail() {
         </div>
       )}
 
+      {/* E1C-S06: Search/filter input — shown only when 10+ content items */}
+      {showSearch && (
+        <div data-testid="content-search-container" className="relative mb-4">
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
+            aria-hidden="true"
+          />
+          <Input
+            data-testid="content-search-input"
+            type="search"
+            placeholder="Search videos and PDFs\u2026"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="pl-9 pr-9 rounded-xl"
+            aria-label="Filter course content by filename"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              data-testid="content-search-clear"
+              onClick={handleClearSearch}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Clear search"
+            >
+              <X className="size-4" />
+            </button>
+          )}
+        </div>
+      )}
+
       <ul
+        ref={contentListRef}
         data-testid="course-content-list"
         aria-label="Course content"
         className="flex flex-col gap-2"
       >
-        {videos.map(video => {
+        {filteredVideos.map(video => {
           const status = fileStatuses.get(video.id) ?? 'checking'
           const isUnavailable = status === 'missing' || status === 'permission-denied'
 
@@ -268,7 +354,7 @@ export function ImportedCourseDetail() {
                   !isUnavailable && 'group-hover:text-brand transition-colors'
                 )}
               >
-                {video.filename}
+                <HighlightedText text={video.filename} query={searchQuery} />
               </span>
               <FileStatusBadge status={status} itemId={video.id} />
               {video.duration > 0 && (
@@ -300,7 +386,7 @@ export function ImportedCourseDetail() {
           )
         })}
 
-        {pdfs.map(pdf => {
+        {filteredPdfs.map(pdf => {
           const status = fileStatuses.get(pdf.id) ?? 'checking'
           const isUnavailable = status === 'missing' || status === 'permission-denied'
 
@@ -326,7 +412,7 @@ export function ImportedCourseDetail() {
                   data-status={status}
                   className="flex-1 font-medium text-sm"
                 >
-                  {pdf.filename}
+                  <HighlightedText text={pdf.filename} query={searchQuery} />
                 </span>
                 {isUnavailable ? (
                   <FileStatusBadge status={status} itemId={pdf.id} />
@@ -349,7 +435,27 @@ export function ImportedCourseDetail() {
           )
         })}
 
-        {videos.length === 0 && pdfs.length === 0 && (
+        {/* Empty state: no matches from search filter */}
+        {searchQuery && !hasResults && (
+          <li
+            data-testid="content-search-empty"
+            className="flex flex-col items-center gap-3 text-sm text-muted-foreground text-center py-12"
+          >
+            <Search className="size-8 text-muted-foreground/50" aria-hidden="true" />
+            <p>No videos or PDFs match your search</p>
+            <Button
+              variant="outline"
+              size="sm"
+              data-testid="content-search-clear-empty"
+              onClick={handleClearSearch}
+            >
+              Clear search
+            </Button>
+          </li>
+        )}
+
+        {/* Empty state: course has no content at all */}
+        {!searchQuery && videos.length === 0 && pdfs.length === 0 && (
           <li className="text-sm text-muted-foreground text-center py-8">
             No content found in this course.
           </li>
