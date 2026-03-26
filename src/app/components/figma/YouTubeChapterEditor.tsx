@@ -52,6 +52,7 @@ import {
   FolderOpen,
   Info,
   Settings,
+  Sparkles,
 } from 'lucide-react'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
@@ -86,6 +87,8 @@ interface YouTubeChapterEditorProps {
   onChaptersChange: (chapters: VideoChapter[]) => void
   /** Whether to show the info banner about AI provider */
   showAiBanner?: boolean
+  /** AI result banner: "AI organized N videos into M chapters" (E28-S07) */
+  aiBannerMessage?: string
 }
 
 interface RemoveDialogState {
@@ -121,6 +124,7 @@ export function YouTubeChapterEditor({
   videos,
   onChaptersChange,
   showAiBanner = false,
+  aiBannerMessage,
 }: YouTubeChapterEditorProps) {
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(() => {
     // First chapter expanded by default
@@ -392,8 +396,22 @@ export function YouTubeChapterEditor({
 
   return (
     <div className="space-y-3" data-testid="chapter-editor">
+      {/* AI success banner (E28-S07) */}
+      {aiBannerMessage && (
+        <div
+          className="flex items-start gap-3 rounded-xl border border-brand/20 bg-brand-soft px-4 py-3"
+          role="status"
+          data-testid="ai-structure-banner"
+        >
+          <Sparkles className="size-4 shrink-0 mt-0.5 text-brand-soft-foreground" aria-hidden="true" />
+          <p className="text-sm text-brand-soft-foreground font-medium">
+            {aiBannerMessage}
+          </p>
+        </div>
+      )}
+
       {/* Info banner for rule-based grouping */}
-      {showAiBanner && (
+      {showAiBanner && !aiBannerMessage && (
         <div
           className="flex items-start gap-3 rounded-xl border border-info/20 bg-info/5 px-4 py-3"
           role="status"
@@ -677,8 +695,12 @@ function SortableChapter({
           {/* Source badge */}
           <Badge
             variant="secondary"
-            className="shrink-0 text-xs"
+            className={cn(
+              'shrink-0 text-xs gap-1',
+              chapter.source === 'ai' && 'bg-brand-soft text-brand-soft-foreground'
+            )}
           >
+            {chapter.source === 'ai' && <Sparkles className="size-3" aria-hidden="true" />}
             {chapter.source === 'ai' ? 'AI Suggested' : chapter.source === 'rule-based' ? 'Rule-based' : 'Manual'}
           </Badge>
         </div>
@@ -737,9 +759,19 @@ function SortableChapter({
         </div>
       </div>
 
-      {/* Expanded video list */}
+      {/* Expanded: AI rationale + video list */}
       {isExpanded && (
         <div className="px-2 py-1.5" data-testid={`chapter-videos-${chapter.id}`}>
+          {/* AI rationale (E28-S07) */}
+          {chapter.rationale && chapter.source === 'ai' && (
+            <div
+              className="mb-2 flex items-start gap-2 rounded-lg bg-brand-soft/30 px-3 py-2"
+              data-testid={`chapter-rationale-${chapter.id}`}
+            >
+              <Sparkles className="size-3.5 shrink-0 mt-0.5 text-brand-soft-foreground" aria-hidden="true" />
+              <p className="text-xs text-muted-foreground italic">{chapter.rationale}</p>
+            </div>
+          )}
           {chapter.videoIds.length === 0 ? (
             <p className="py-3 text-center text-xs text-muted-foreground">
               No videos in this chapter. Drag videos here to add them.

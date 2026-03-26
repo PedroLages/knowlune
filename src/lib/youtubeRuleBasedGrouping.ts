@@ -26,6 +26,8 @@ export interface VideoChapter {
   title: string
   videoIds: string[]
   source: 'rule-based' | 'ai' | 'manual'
+  /** AI-generated rationale explaining why these videos are grouped (E28-S07) */
+  rationale?: string
 }
 
 /**

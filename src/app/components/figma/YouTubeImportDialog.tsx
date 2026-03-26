@@ -39,6 +39,7 @@ import {
   CheckCircle2,
   ListVideo,
   Play,
+  Sparkles,
 } from 'lucide-react'
 import {
   parseMultipleYouTubeUrls,
@@ -55,6 +56,10 @@ import {
 } from '@/stores/useYouTubeImportStore'
 import { groupVideosByRules, type GroupingVideo } from '@/lib/youtubeRuleBasedGrouping'
 import { YouTubeChapterEditor } from '@/app/components/figma/YouTubeChapterEditor'
+import { isAIAvailable } from '@/lib/aiConfiguration'
+import { useIsPremium } from '@/lib/entitlement/isPremium'
+import { structureCourseWithAI, aiChaptersToVideoChapters, type StructuringVideo } from '@/ai/youtube/courseStructurer'
+import { toast } from 'sonner'
 
 // --- Constants ---
 
@@ -95,12 +100,18 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
   const store = useYouTubeImportStore()
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const fetchAbortRef = useRef(false)
+  const aiAbortRef = useRef<AbortController | null>(null)
+  const { isPremium } = useIsPremium()
 
   // Local state for playlist choice prompt
   const [playlistPrompt, setPlaylistPrompt] = useState<{
     parseResult: YouTubeUrlParseResult
     index: number
   } | null>(null)
+
+  // AI structuring state (E28-S07)
+  const [isAIStructuring, setIsAIStructuring] = useState(false)
+  const [aiBannerMessage, setAiBannerMessage] = useState<string | undefined>(undefined)
 
   // Clean up on close
   const handleOpenChange = useCallback(
@@ -109,6 +120,10 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
         store.reset()
         setPlaylistPrompt(null)
         fetchAbortRef.current = true
+        aiAbortRef.current?.abort()
+        aiAbortRef.current = null
+        setIsAIStructuring(false)
+        setAiBannerMessage(undefined)
         if (debounceRef.current) clearTimeout(debounceRef.current)
       } else {
         fetchAbortRef.current = false
@@ -309,7 +324,10 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
           <DialogDescription id="youtube-import-description">
             {store.currentStep === 1 && 'Paste YouTube video or playlist URLs to get started.'}
             {store.currentStep === 2 && 'Preview the detected videos before organizing your course.'}
-            {store.currentStep === 3 && 'Organize videos into chapters.'}
+            {store.currentStep === 3 &&
+              (isAIStructuring
+                ? 'AI is organizing your videos into chapters...'
+                : 'Organize videos into chapters.')}
             {store.currentStep === 4 && 'Set course details.'}
           </DialogDescription>
         </DialogHeader>
@@ -479,14 +497,32 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
           </div>
         )}
 
-        {/* Step 3: Organize — Chapter Editor (E28-S06) */}
+        {/* Step 3: Organize — Chapter Editor (E28-S06, E28-S07 AI) */}
         {store.currentStep === 3 && (
-          <div className="py-2">
+          <div className="py-2 space-y-3">
+            {/* AI structuring loading state (E28-S07) */}
+            {isAIStructuring && (
+              <div
+                className="flex items-center gap-3 rounded-xl bg-brand-soft px-4 py-3"
+                role="status"
+                aria-busy="true"
+                aria-label="AI is analyzing video metadata"
+                data-testid="ai-structuring-loading"
+              >
+                <Sparkles className="size-4 text-brand-soft-foreground motion-safe:animate-pulse" aria-hidden="true" />
+                <p className="text-sm text-brand-soft-foreground font-medium">
+                  AI is analyzing video metadata and organizing your course...
+                </p>
+                <Loader2 className="size-4 text-brand-soft-foreground ml-auto motion-safe:animate-spin" aria-hidden="true" />
+              </div>
+            )}
+
             <YouTubeChapterEditor
               chapters={store.chapters}
               videos={activeVideos}
               onChaptersChange={store.setChapters}
-              showAiBanner
+              showAiBanner={!isPremium || !isAIAvailable()}
+              aiBannerMessage={aiBannerMessage}
             />
           </div>
         )}
@@ -522,11 +558,11 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
               (store.currentStep === 1 && !canProceed) ||
               (store.currentStep === 2 && (store.isFetchingMetadata || activeVideos.length === 0))
             }
-            onClick={() => {
+            onClick={async () => {
               if (store.currentStep === 1) {
                 handleNextToPreview()
               } else if (store.currentStep === 2) {
-                // Run rule-based grouping when entering Step 3
+                // Build video list for grouping
                 const groupingVideos: GroupingVideo[] = activeVideos
                   .filter(v => v.metadata && v.status === 'loaded')
                   .map(v => ({
@@ -535,9 +571,54 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
                     description: v.metadata!.description,
                     duration: v.metadata!.duration,
                   }))
-                const chapters = groupVideosByRules(groupingVideos)
-                store.setChapters(chapters)
+
                 store.setCurrentStep(3)
+
+                // E28-S07: Try AI structuring if premium + AI configured + 3+ videos
+                const aiAvailable = isAIAvailable()
+                if (isPremium && aiAvailable && groupingVideos.length >= 3) {
+                  setIsAIStructuring(true)
+                  setAiBannerMessage(undefined)
+
+                  // Use rule-based as initial/fallback
+                  const ruleChapters = groupVideosByRules(groupingVideos)
+                  store.setChapters(ruleChapters)
+
+                  // Attempt AI structuring
+                  const controller = new AbortController()
+                  aiAbortRef.current = controller
+
+                  const structuringVideos: StructuringVideo[] = groupingVideos.map(v => ({
+                    videoId: v.videoId,
+                    title: v.title,
+                    description: v.description,
+                    duration: v.duration,
+                  }))
+
+                  const result = await structureCourseWithAI(structuringVideos, controller.signal)
+
+                  setIsAIStructuring(false)
+
+                  if (result.ok) {
+                    const aiChapters = aiChaptersToVideoChapters(result.proposal.chapters)
+                    store.setChapters(aiChapters)
+                    const videoCount = structuringVideos.length
+                    const chapterCount = aiChapters.length
+                    setAiBannerMessage(
+                      `AI organized ${videoCount} videos into ${chapterCount} chapters`
+                    )
+                  } else {
+                    // Fallback to rule-based (already set above)
+                    toast.warning('AI structuring unavailable — using keyword-based grouping', {
+                      description: result.error,
+                    })
+                  }
+                } else {
+                  // Rule-based grouping (free users or no AI configured)
+                  const chapters = groupVideosByRules(groupingVideos)
+                  store.setChapters(chapters)
+                  setAiBannerMessage(undefined)
+                }
               } else if (store.currentStep < 4) {
                 store.setCurrentStep((store.currentStep + 1) as 2 | 3 | 4)
               }
