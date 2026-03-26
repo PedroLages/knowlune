@@ -1,12 +1,16 @@
 /**
  * Unit Tests: youtubeTranscriptPipeline.ts
  *
- * Tests the Tier 1 YouTube transcript pipeline:
- * - Single video transcript fetching
- * - Batch transcript fetching with progress tracking
- * - Error handling (no captions, network errors, timeouts)
+ * Tests the tiered YouTube transcript pipeline:
+ * - Tier 1: youtube-transcript (single video + batch)
+ * - Tier 2: yt-dlp fallback (when Tier 1 returns no-captions-available)
+ * - Tier 3: Whisper fallback (when Tier 1 + Tier 2 fail)
+ * - All-tiers-exhausted → unavailable status
+ * - Unconfigured tiers skipped gracefully
+ * - Error handling (network errors, timeouts)
  * - Dexie storage (success and failure records)
  * - Query helpers (getTranscript, searchTranscripts)
+ * - yt-dlp metadata enrichment
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
@@ -39,6 +43,12 @@ vi.mock('@/db/schema', () => ({
   },
 }))
 
+// Mock youtubeConfiguration — control what tiers are configured
+const mockGetConfig = vi.hoisted(() => vi.fn())
+vi.mock('@/lib/youtubeConfiguration', () => ({
+  getYouTubeConfiguration: mockGetConfig,
+}))
+
 // Import after mocks
 import {
   fetchTranscript,
@@ -46,7 +56,15 @@ import {
   getTranscript,
   getCourseTranscripts,
   searchTranscripts,
+  fetchYtDlpMetadata,
 } from '../youtubeTranscriptPipeline'
+
+// Default config: no Tier 2/3 configured
+const BASE_CONFIG = {
+  cacheTtlDays: 7,
+  ytDlpServerUrl: undefined,
+  whisperEndpointUrl: undefined,
+}
 
 describe('youtubeTranscriptPipeline', () => {
   beforeEach(() => {
@@ -54,6 +72,7 @@ describe('youtubeTranscriptPipeline', () => {
     vi.restoreAllMocks()
     mockGet.mockResolvedValue(undefined)
     mockToArray.mockResolvedValue([])
+    mockGetConfig.mockReturnValue({ ...BASE_CONFIG })
     // Re-wire mockWhere chain after clearAllMocks
     mockWhere.mockReturnValue({
       equals: vi.fn().mockReturnValue({
@@ -62,7 +81,11 @@ describe('youtubeTranscriptPipeline', () => {
     })
   })
 
-  describe('fetchTranscript', () => {
+  // =========================================================================
+  // Tier 1: youtube-transcript
+  // =========================================================================
+
+  describe('Tier 1: youtube-transcript', () => {
     it('fetches and stores a transcript successfully', async () => {
       const mockCues = [
         { startTime: 0, endTime: 5, text: 'Hello world' },
@@ -92,33 +115,7 @@ describe('youtubeTranscriptPipeline', () => {
       expect(mockPut).toHaveBeenCalledOnce()
     })
 
-    it('handles no-captions-available error', async () => {
-      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({ error: 'Transcript not available', code: 'no-captions-available' }),
-          { status: 404, headers: { 'Content-Type': 'application/json' } }
-        )
-      )
-
-      const result = await fetchTranscript('course-1', 'abc12345678')
-
-      expect(result.ok).toBe(false)
-      if (!result.ok) {
-        expect(result.code).toBe('no-captions-available')
-      }
-
-      // Should store failure record
-      expect(mockPut).toHaveBeenCalledWith(
-        expect.objectContaining({
-          status: 'failed',
-          failureReason: 'no-captions-available',
-          courseId: 'course-1',
-          videoId: 'abc12345678',
-        })
-      )
-    })
-
-    it('handles network errors', async () => {
+    it('stores failure for non-fallbackable errors (network)', async () => {
       vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('fetch failed'))
 
       const result = await fetchTranscript('course-1', 'abc12345678')
@@ -136,7 +133,7 @@ describe('youtubeTranscriptPipeline', () => {
       )
     })
 
-    it('handles timeout errors', async () => {
+    it('stores failure for timeout errors without fallback', async () => {
       const abortError = new DOMException('The operation was aborted', 'AbortError')
       vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(abortError)
 
@@ -148,23 +145,28 @@ describe('youtubeTranscriptPipeline', () => {
       }
     })
 
-    it('decodes HTML entities in cue text', async () => {
-      const mockCues = [
-        { startTime: 0, endTime: 5, text: 'Tom &amp; Jerry &lt;3' },
-      ]
-
+    it('stores failure for rate-limit without fallback', async () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-        new Response(JSON.stringify({ cues: mockCues, language: 'en' }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        })
+        new Response(
+          JSON.stringify({ error: 'Rate limited', code: 'rate-limited' }),
+          { status: 429, headers: { 'Content-Type': 'application/json' } }
+        )
       )
 
       const result = await fetchTranscript('course-1', 'abc12345678')
 
-      // HTML entities should NOT be decoded by the pipeline — that's the proxy's job
-      // But the pipeline passes through whatever the proxy returns
-      expect(result.ok).toBe(true)
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.code).toBe('rate-limited')
+      }
+
+      // Should store as failed, not trigger fallback
+      expect(mockPut).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'failed',
+          failureReason: 'rate-limited',
+        })
+      )
     })
 
     it('passes language parameter to the endpoint', async () => {
@@ -182,6 +184,351 @@ describe('youtubeTranscriptPipeline', () => {
       expect(body.lang).toBe('es')
     })
   })
+
+  // =========================================================================
+  // Tier 2: yt-dlp fallback
+  // =========================================================================
+
+  describe('Tier 2: yt-dlp fallback', () => {
+    it('falls back to Tier 2 when Tier 1 returns no-captions-available', async () => {
+      mockGetConfig.mockReturnValue({
+        ...BASE_CONFIG,
+        ytDlpServerUrl: 'http://192.168.1.100:5000',
+      })
+
+      const vttContent = `WEBVTT
+
+00:00:00.000 --> 00:00:05.000
+Hello from yt-dlp
+
+00:00:05.000 --> 00:00:10.000
+Second cue`
+
+      vi.spyOn(globalThis, 'fetch')
+        // Tier 1: no captions
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ error: 'No captions', code: 'no-captions-available' }),
+            { status: 404, headers: { 'Content-Type': 'application/json' } }
+          )
+        )
+        // Tier 2: success with VTT
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ vtt: vttContent, language: 'en' }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } }
+          )
+        )
+
+      const result = await fetchTranscript('course-1', 'abc12345678')
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.record.source).toBe('yt-dlp')
+        expect(result.record.cues).toHaveLength(2)
+        expect(result.record.cues[0].text).toBe('Hello from yt-dlp')
+        expect(result.record.fullText).toContain('Hello from yt-dlp')
+      }
+    })
+
+    it('falls back to Tier 2 when Tier 1 returns captions-disabled', async () => {
+      mockGetConfig.mockReturnValue({
+        ...BASE_CONFIG,
+        ytDlpServerUrl: 'http://192.168.1.100:5000',
+      })
+
+      vi.spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ error: 'Captions disabled', code: 'captions-disabled' }),
+            { status: 403, headers: { 'Content-Type': 'application/json' } }
+          )
+        )
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ vtt: 'WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nTest', language: 'en' }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } }
+          )
+        )
+
+      const result = await fetchTranscript('course-1', 'abc12345678')
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.record.source).toBe('yt-dlp')
+      }
+    })
+
+    it('skips Tier 2 when yt-dlp is not configured', async () => {
+      // No ytDlpServerUrl configured
+      mockGetConfig.mockReturnValue({ ...BASE_CONFIG })
+
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ error: 'No captions', code: 'no-captions-available' }),
+          { status: 404, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+
+      const result = await fetchTranscript('course-1', 'abc12345678')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.code).toBe('all-tiers-exhausted')
+      }
+
+      // Should mark as unavailable
+      expect(mockPut).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'unavailable',
+          failureReason: 'all-tiers-exhausted',
+        })
+      )
+    })
+  })
+
+  // =========================================================================
+  // Tier 3: Whisper fallback
+  // =========================================================================
+
+  describe('Tier 3: Whisper fallback', () => {
+    it('falls back to Tier 3 when Tier 1 and Tier 2 both fail', async () => {
+      mockGetConfig.mockReturnValue({
+        ...BASE_CONFIG,
+        ytDlpServerUrl: 'http://192.168.1.100:5000',
+        whisperEndpointUrl: 'http://192.168.1.100:9000',
+      })
+
+      const whisperVtt = `WEBVTT
+
+00:00:00.000 --> 00:00:05.000
+Whisper transcription result`
+
+      vi.spyOn(globalThis, 'fetch')
+        // Tier 1: no captions
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ error: 'No captions', code: 'no-captions-available' }),
+            { status: 404, headers: { 'Content-Type': 'application/json' } }
+          )
+        )
+        // Tier 2: also fails
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ error: 'No subtitles', code: 'ytdlp-fetch-error' }),
+            { status: 500, headers: { 'Content-Type': 'application/json' } }
+          )
+        )
+        // Tier 3: Whisper success
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ vtt: whisperVtt, language: 'en', duration: 120 }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } }
+          )
+        )
+
+      const result = await fetchTranscript('course-1', 'abc12345678')
+
+      expect(result.ok).toBe(true)
+      if (result.ok) {
+        expect(result.record.source).toBe('whisper')
+        expect(result.record.cues).toHaveLength(1)
+        expect(result.record.cues[0].text).toBe('Whisper transcription result')
+      }
+    })
+
+    it('skips Tier 3 when Whisper is not configured', async () => {
+      mockGetConfig.mockReturnValue({
+        ...BASE_CONFIG,
+        ytDlpServerUrl: 'http://192.168.1.100:5000',
+        // No whisperEndpointUrl
+      })
+
+      vi.spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ error: 'No captions', code: 'no-captions-available' }),
+            { status: 404, headers: { 'Content-Type': 'application/json' } }
+          )
+        )
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ error: 'Failed', code: 'ytdlp-fetch-error' }),
+            { status: 500, headers: { 'Content-Type': 'application/json' } }
+          )
+        )
+
+      const result = await fetchTranscript('course-1', 'abc12345678')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.code).toBe('all-tiers-exhausted')
+      }
+    })
+
+    it('handles Tier 3 network error gracefully', async () => {
+      mockGetConfig.mockReturnValue({
+        ...BASE_CONFIG,
+        ytDlpServerUrl: 'http://192.168.1.100:5000',
+        whisperEndpointUrl: 'http://192.168.1.100:9000',
+      })
+
+      vi.spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ error: 'No captions', code: 'no-captions-available' }),
+            { status: 404, headers: { 'Content-Type': 'application/json' } }
+          )
+        )
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ error: 'Failed', code: 'ytdlp-fetch-error' }),
+            { status: 500, headers: { 'Content-Type': 'application/json' } }
+          )
+        )
+        // Tier 3 throws network error
+        .mockRejectedValueOnce(new Error('ECONNREFUSED'))
+
+      const result = await fetchTranscript('course-1', 'abc12345678')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.code).toBe('all-tiers-exhausted')
+      }
+
+      // Should mark as unavailable
+      expect(mockPut).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'unavailable',
+        })
+      )
+    })
+  })
+
+  // =========================================================================
+  // All tiers exhausted
+  // =========================================================================
+
+  describe('all tiers exhausted', () => {
+    it('marks video as unavailable when all configured tiers fail', async () => {
+      mockGetConfig.mockReturnValue({
+        ...BASE_CONFIG,
+        ytDlpServerUrl: 'http://192.168.1.100:5000',
+        whisperEndpointUrl: 'http://192.168.1.100:9000',
+      })
+
+      vi.spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ error: 'No captions', code: 'no-captions-available' }),
+            { status: 404, headers: { 'Content-Type': 'application/json' } }
+          )
+        )
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ error: 'No subs', code: 'ytdlp-fetch-error' }),
+            { status: 500, headers: { 'Content-Type': 'application/json' } }
+          )
+        )
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ error: 'Whisper failed', code: 'whisper-fetch-error' }),
+            { status: 500, headers: { 'Content-Type': 'application/json' } }
+          )
+        )
+
+      const result = await fetchTranscript('course-1', 'abc12345678')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.code).toBe('all-tiers-exhausted')
+        expect(result.message).toContain('No transcript source available')
+      }
+
+      expect(mockPut).toHaveBeenCalledWith(
+        expect.objectContaining({
+          courseId: 'course-1',
+          videoId: 'abc12345678',
+          status: 'unavailable',
+          failureReason: 'all-tiers-exhausted',
+        })
+      )
+    })
+
+    it('marks unavailable with only Tier 1 configured', async () => {
+      mockGetConfig.mockReturnValue({ ...BASE_CONFIG })
+
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ error: 'No captions', code: 'no-captions-available' }),
+          { status: 404, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+
+      const result = await fetchTranscript('course-1', 'abc12345678')
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.code).toBe('all-tiers-exhausted')
+      }
+    })
+  })
+
+  // =========================================================================
+  // yt-dlp metadata enrichment
+  // =========================================================================
+
+  describe('fetchYtDlpMetadata', () => {
+    it('returns null when yt-dlp is not configured', async () => {
+      mockGetConfig.mockReturnValue({ ...BASE_CONFIG })
+
+      const result = await fetchYtDlpMetadata('abc12345678')
+
+      expect(result).toBeNull()
+    })
+
+    it('fetches metadata when yt-dlp is configured', async () => {
+      mockGetConfig.mockReturnValue({
+        ...BASE_CONFIG,
+        ytDlpServerUrl: 'http://192.168.1.100:5000',
+      })
+
+      const metadata = {
+        title: 'Test Video',
+        description: 'A great video',
+        chapters: [{ title: 'Intro', startTime: 0, endTime: 60 }],
+        duration: 600,
+      }
+
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        new Response(JSON.stringify(metadata), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+
+      const result = await fetchYtDlpMetadata('abc12345678')
+
+      expect(result).toEqual(metadata)
+    })
+
+    it('returns null on fetch error', async () => {
+      mockGetConfig.mockReturnValue({
+        ...BASE_CONFIG,
+        ytDlpServerUrl: 'http://192.168.1.100:5000',
+      })
+
+      vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('Network error'))
+
+      const result = await fetchYtDlpMetadata('abc12345678')
+
+      expect(result).toBeNull()
+    })
+  })
+
+  // =========================================================================
+  // Batch fetch
+  // =========================================================================
 
   describe('fetchTranscriptsBatch', () => {
     it('fetches multiple transcripts with progress callbacks', async () => {
@@ -202,7 +549,6 @@ describe('youtubeTranscriptPipeline', () => {
 
       expect(results).toHaveLength(2)
       expect(results.every(r => r.ok)).toBe(true)
-      // Should have progress updates (pending init + per-video updates)
       expect(progressUpdates.length).toBeGreaterThan(0)
     })
 
@@ -227,12 +573,7 @@ describe('youtubeTranscriptPipeline', () => {
     })
 
     it('handles mixed success and failure in batch', async () => {
-      // First call for pending check: return undefined (not fetched yet)
-      let callCount = 0
-      mockGet.mockImplementation(async () => {
-        callCount++
-        return undefined
-      })
+      mockGet.mockResolvedValue(undefined)
 
       vi.spyOn(globalThis, 'fetch')
         .mockResolvedValueOnce(
@@ -255,6 +596,10 @@ describe('youtubeTranscriptPipeline', () => {
       expect(results[1].ok).toBe(false)
     })
   })
+
+  // =========================================================================
+  // Query helpers
+  // =========================================================================
 
   describe('query helpers', () => {
     it('getTranscript retrieves from Dexie by compound key', async () => {

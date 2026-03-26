@@ -517,7 +517,7 @@ export interface YouTubeTranscriptRecord {
   cues: TranscriptCue[]
   fullText: string // Concatenated cue text for full-text search
   source: 'youtube-transcript' | 'yt-dlp' | 'whisper' // Transcript extraction tier
-  status: 'pending' | 'fetching' | 'done' | 'failed'
+  status: 'pending' | 'fetching' | 'done' | 'failed' | 'unavailable'
   failureReason?: string // e.g., 'no-captions-available', 'network-error'
   fetchedAt: string // ISO 8601
 }
