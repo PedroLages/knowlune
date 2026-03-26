@@ -39,6 +39,9 @@ interface CourseImportState {
   updateCourseDetails: (courseId: string, details: CourseDetailsUpdate) => Promise<boolean>
   updateCourseThumbnail: (courseId: string, blob: Blob, source: ThumbnailSource) => Promise<void>
   getAllTags: () => string[]
+  getTagsWithCounts: () => { tag: string; count: number }[]
+  renameTagGlobally: (oldTag: string, newTag: string) => Promise<'renamed' | 'merged'>
+  deleteTagGlobally: (tag: string) => Promise<void>
   loadImportedCourses: () => Promise<void>
   loadThumbnailUrls: (courseIds: string[]) => Promise<void>
   setImporting: (isImporting: boolean) => void
@@ -249,6 +252,121 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
       }
     }
     return [...tagSet].sort()
+  },
+
+  getTagsWithCounts: () => {
+    const { importedCourses } = get()
+    const counts = new Map<string, number>()
+    for (const course of importedCourses) {
+      for (const tag of course.tags) {
+        const normalized = tag.trim().toLowerCase()
+        if (normalized) counts.set(normalized, (counts.get(normalized) ?? 0) + 1)
+      }
+    }
+    return [...counts.entries()]
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => a.tag.localeCompare(b.tag))
+  },
+
+  renameTagGlobally: async (oldTag: string, newTag: string) => {
+    const normalizedOld = oldTag.trim().toLowerCase()
+    const normalizedNew = newTag.trim().toLowerCase()
+    if (!normalizedOld || !normalizedNew || normalizedOld === normalizedNew) return 'renamed'
+
+    const { importedCourses } = get()
+    const existingTags = new Set<string>()
+    for (const course of importedCourses) {
+      for (const tag of course.tags) existingTags.add(tag.trim().toLowerCase())
+    }
+    const isMerge = existingTags.has(normalizedNew)
+
+    // Find courses that have the old tag
+    const affectedCourses = importedCourses.filter(c =>
+      c.tags.some(t => t.trim().toLowerCase() === normalizedOld)
+    )
+    if (affectedCourses.length === 0) return 'renamed'
+
+    // Build updated courses
+    const updatedCourses = affectedCourses.map(course => {
+      const newTags = course.tags.map(t =>
+        t.trim().toLowerCase() === normalizedOld ? normalizedNew : t
+      )
+      return { ...course, tags: normalizeTags(newTags) }
+    })
+
+    // Optimistic update
+    set(state => ({
+      importedCourses: state.importedCourses.map(c => {
+        const updated = updatedCourses.find(u => u.id === c.id)
+        return updated ?? c
+      }),
+    }))
+
+    try {
+      await persistWithRetry(async () => {
+        await db.transaction('rw', db.importedCourses, async () => {
+          for (const course of updatedCourses) {
+            await db.importedCourses.update(course.id, { tags: course.tags })
+          }
+        })
+      })
+      return isMerge ? 'merged' : 'renamed'
+    } catch (error) {
+      // Rollback
+      set(state => ({
+        importedCourses: state.importedCourses.map(c => {
+          const original = affectedCourses.find(o => o.id === c.id)
+          return original ?? c
+        }),
+        importError: 'Failed to rename tag',
+      }))
+      console.error('[Database] Failed to rename tag globally:', error)
+      return 'renamed'
+    }
+  },
+
+  deleteTagGlobally: async (tag: string) => {
+    const normalized = tag.trim().toLowerCase()
+    if (!normalized) return
+
+    const { importedCourses } = get()
+    const affectedCourses = importedCourses.filter(c =>
+      c.tags.some(t => t.trim().toLowerCase() === normalized)
+    )
+    if (affectedCourses.length === 0) return
+
+    const updatedCourses = affectedCourses.map(course => ({
+      ...course,
+      tags: course.tags.filter(t => t.trim().toLowerCase() !== normalized),
+    }))
+
+    // Optimistic update
+    set(state => ({
+      importedCourses: state.importedCourses.map(c => {
+        const updated = updatedCourses.find(u => u.id === c.id)
+        return updated ?? c
+      }),
+    }))
+
+    try {
+      await persistWithRetry(async () => {
+        await db.transaction('rw', db.importedCourses, async () => {
+          for (const course of updatedCourses) {
+            await db.importedCourses.update(course.id, { tags: course.tags })
+          }
+        })
+      })
+    } catch (error) {
+      // Rollback
+      set(state => ({
+        importedCourses: state.importedCourses.map(c => {
+          const original = affectedCourses.find(o => o.id === c.id)
+          return original ?? c
+        }),
+        importError: 'Failed to delete tag',
+      }))
+      console.error('[Database] Failed to delete tag globally:', error)
+    }
   },
 
   loadImportedCourses: async () => {

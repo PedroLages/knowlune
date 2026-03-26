@@ -19,7 +19,7 @@ import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
 import { TopicFilter } from '@/app/components/figma/TopicFilter'
 import { StatusFilter } from '@/app/components/figma/StatusFilter'
 import { ToggleGroup, ToggleGroupItem } from '@/app/components/ui/toggle-group'
-import { Search, FolderOpen, BookOpen, ChevronDown } from 'lucide-react'
+import { Search, FolderOpen, BookOpen, ChevronDown, Tags } from 'lucide-react'
 import { useCourseStore } from '@/stores/useCourseStore'
 import { getCourseCompletionPercent, getProgress } from '@/lib/progress'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
@@ -29,6 +29,7 @@ import { db } from '@/db'
 import { calculateMomentumScore } from '@/lib/momentum'
 import { calculateAtRiskStatus } from '@/lib/atRisk'
 import { EmptyState } from '@/app/components/EmptyState'
+import { TagManagementPanel } from '@/app/components/figma/TagManagementPanel'
 import { calculateCompletionEstimate } from '@/lib/completionEstimate'
 import type { LearnerCourseStatus } from '@/data/types'
 import type { MomentumScore } from '@/lib/momentum'
@@ -56,6 +57,7 @@ export function Courses() {
   const [sortMode, setSortMode] = useState<SortMode>('recent')
   const [wizardOpen, setWizardOpen] = useState(false)
   const [bulkImportOpen, setBulkImportOpen] = useState(false)
+  const [tagManagementOpen, setTagManagementOpen] = useState(false)
   const [momentumMap, setMomentumMap] = useState<Map<string, MomentumScore>>(new Map())
   const [atRiskMap, setAtRiskMap] = useState<Map<string, AtRiskStatus>>(new Map())
   const [estimateMap, setEstimateMap] = useState<Map<string, CompletionEstimate>>(new Map())
@@ -300,6 +302,17 @@ export function Courses() {
     (a, b) => new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime()
   )
 
+  function handleTagsChanged() {
+    // Clear any selected topics that no longer exist after rename/delete
+    if (selectedTopics.length > 0) {
+      const currentTags = new Set(mergedTags)
+      const validTopics = selectedTopics.filter(t => currentTags.has(t))
+      if (validTopics.length !== selectedTopics.length) {
+        setSelectedTopics(validTopics)
+      }
+    }
+  }
+
   function handleOpenBulkImport() {
     setBulkImportOpen(true)
   }
@@ -405,7 +418,26 @@ export function Courses() {
                 onSelectedStatusesChange={setSelectedStatuses}
               />
             )}
+            {mergedTags.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="min-h-[44px] text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => setTagManagementOpen(true)}
+                data-testid="manage-tags-btn"
+                aria-label="Manage tags"
+              >
+                <Tags className="size-4 mr-1.5" aria-hidden="true" />
+                Manage Tags
+              </Button>
+            )}
           </div>
+
+          <TagManagementPanel
+            open={tagManagementOpen}
+            onOpenChange={setTagManagementOpen}
+            onTagsChanged={handleTagsChanged}
+          />
 
           {/* Imported Courses Section */}
           {(importedCourses.length > 0 || !searchQuery.trim()) && (
