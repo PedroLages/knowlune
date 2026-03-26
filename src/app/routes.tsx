@@ -11,6 +11,9 @@ const Courses = React.lazy(() => import('./pages/Courses').then(m => ({ default:
 const CourseDetail = React.lazy(() =>
   import('./pages/CourseDetail').then(m => ({ default: m.CourseDetail }))
 )
+const CourseOverview = React.lazy(() =>
+  import('./pages/CourseOverview').then(m => ({ default: m.CourseOverview }))
+)
 const LessonPlayer = React.lazy(() =>
   import('./pages/LessonPlayer').then(m => ({ default: m.LessonPlayer }))
 )
@@ -128,6 +131,14 @@ export const router = createBrowserRouter([
         element: (
           <SuspensePage>
             <Courses />
+          </SuspensePage>
+        ),
+      },
+      {
+        path: 'courses/:courseId/overview',
+        element: (
+          <SuspensePage>
+            <CourseOverview />
           </SuspensePage>
         ),
       },

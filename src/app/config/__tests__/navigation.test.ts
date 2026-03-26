@@ -13,7 +13,7 @@ describe('navigationGroups', () => {
       'Overview',
       'My Courses',
       'Courses',
-      'Career Paths',
+      'Learning Paths',
       'Authors',
       'Notes',
     ])
@@ -69,7 +69,7 @@ describe('getOverflowNav', () => {
     // 17 total items (16 group items + Settings) - 4 primary = 13 overflow
     // (Career Paths + Authors + 5 Review + 5 Track + Settings)
     expect(overflow).toHaveLength(13)
-    expect(names).toContain('Career Paths')
+    expect(names).toContain('Learning Paths')
     expect(names).toContain('Authors')
     expect(names).toContain('Settings')
     expect(names).toContain('Learning Path')

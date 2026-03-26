@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router'
 import { MotionConfig, motion } from 'motion/react'
 import {
@@ -6,17 +6,17 @@ import {
   Shield,
   Crosshair,
   Trophy,
-  Clock,
   BookOpen,
+  Search,
+  ArrowRight,
   Route,
   type LucideIcon,
 } from 'lucide-react'
-import { Card, CardContent } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
-import { Progress } from '@/app/components/ui/progress'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { EmptyState } from '@/app/components/EmptyState'
+import { cn } from '@/app/components/ui/utils'
 import { useCareerPathStore } from '@/stores/useCareerPathStore'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 import type { CareerPath } from '@/data/types'
@@ -29,85 +29,173 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Trophy,
 }
 
-function PathCardSkeleton() {
+/** Per-path accent tokens for icon badges. */
+const PATH_ACCENT: Record<string, { softBg: string; fg: string }> = {
+  'behavioral-intelligence': {
+    softBg: 'bg-brand-soft',
+    fg: 'text-brand-soft-foreground',
+  },
+  'influence-authority': {
+    softBg: 'bg-gold-muted',
+    fg: 'text-gold-soft-foreground',
+  },
+  'operative-foundations': {
+    softBg: 'bg-success-soft',
+    fg: 'text-success',
+  },
+  'complete-mastery': {
+    softBg: 'bg-accent-violet-muted',
+    fg: 'text-accent-violet',
+  },
+}
+
+const DEFAULT_ACCENT = {
+  softBg: 'bg-brand-soft',
+  fg: 'text-brand-soft-foreground',
+}
+
+/** Format number to zero-padded index string: 0 → "01" */
+function padIndex(i: number): string {
+  return String(i + 1).padStart(2, '0')
+}
+
+function PathRowSkeleton() {
   return (
-    <div className="space-y-3 p-6 rounded-[24px] border bg-card">
-      <Skeleton className="h-10 w-10 rounded-xl" />
-      <Skeleton className="h-5 w-3/4" />
-      <Skeleton className="h-4 w-full" />
-      <Skeleton className="h-4 w-2/3" />
-      <div className="flex gap-4 pt-2">
-        <Skeleton className="h-4 w-20" />
-        <Skeleton className="h-4 w-20" />
+    <div className="py-10 border-b border-border">
+      <div className="flex items-center justify-between gap-8">
+        <div className="flex items-center gap-6 flex-1 min-w-0">
+          <Skeleton className="size-8 rounded-full shrink-0" />
+          <div className="space-y-2 flex-1">
+            <Skeleton className="h-6 w-64" />
+            <Skeleton className="h-4 w-96 max-w-full" />
+            <Skeleton className="h-3 w-32" />
+          </div>
+        </div>
+        <Skeleton className="size-12 rounded-full shrink-0" />
       </div>
     </div>
   )
 }
 
-function PathCard({ path }: { path: CareerPath }) {
+function PathRow({
+  path,
+  index,
+}: {
+  path: CareerPath
+  index: number
+}) {
   const { getEnrollmentForPath, getPathProgress } = useCareerPathStore()
   const enrollment = getEnrollmentForPath(path.id)
   const progress = getPathProgress(path.id)
   const Icon = ICON_MAP[path.icon] ?? BookOpen
-
+  const accent = PATH_ACCENT[path.id] ?? DEFAULT_ACCENT
   const totalCourses = path.stages.reduce((acc, s) => acc + s.courseIds.length, 0)
   const isEnrolled = !!enrollment
 
   return (
-    <motion.div variants={fadeUp}>
+    <motion.div variants={fadeUp} role="listitem">
       <Link
         to={`/career-paths/${path.id}`}
-        className="block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-[24px]"
-        aria-label={`${path.title} — ${totalCourses} courses, ${path.totalEstimatedHours} hours`}
+        className={cn(
+          'group relative block py-10 border-b border-border',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4 focus-visible:ring-offset-background rounded-sm',
+          'transition-colors hover:bg-muted/30'
+        )}
+        aria-label={`${path.title} — ${totalCourses} courses, ${path.totalEstimatedHours} hours${isEnrolled ? `, ${progress.percentage}% completed` : ''}`}
       >
-        <Card className="h-full hover:shadow-md transition-shadow duration-200 rounded-[24px] group">
-          <CardContent className="p-6 flex flex-col h-full gap-4">
-            {/* Icon */}
-            <div className="size-10 rounded-xl bg-brand-soft flex items-center justify-center shrink-0">
-              <Icon className="size-5 text-brand-soft-foreground" aria-hidden="true" />
+        {/* Large decorative number */}
+        <span
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-[120px] font-display font-bold text-muted-foreground opacity-[0.07] leading-none pointer-events-none select-none hidden sm:block"
+          aria-hidden="true"
+        >
+          {padIndex(index)}
+        </span>
+
+        <div className="relative z-10 flex items-center justify-between gap-6 sm:gap-8">
+          {/* Left section: icon + content */}
+          <div className="flex items-start gap-4 sm:gap-6 flex-1 min-w-0">
+            {/* Icon badge */}
+            <div
+              className={cn(
+                'size-8 rounded-full flex items-center justify-center shrink-0 mt-1',
+                accent.softBg
+              )}
+            >
+              <Icon className={cn('size-4', accent.fg)} aria-hidden="true" />
             </div>
 
-            {/* Title + description */}
-            <div className="flex-1 min-w-0">
-              <h2 className="font-semibold text-base mb-1 group-hover:text-brand transition-colors">
+            {/* Text content */}
+            <div className="min-w-0 flex-1 space-y-2">
+              <h2 className="text-lg sm:text-xl font-semibold tracking-tight group-hover:text-brand transition-colors">
                 {path.title}
               </h2>
-              <p className="text-sm text-muted-foreground line-clamp-2">{path.description}</p>
-            </div>
+              <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 max-w-2xl">
+                {path.description}
+              </p>
 
-            {/* Meta */}
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <BookOpen className="size-3.5" aria-hidden="true" />
-                {totalCourses} courses
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock className="size-3.5" aria-hidden="true" />
-                {path.totalEstimatedHours}h
-              </span>
-              <span>{path.stages.length} stages</span>
+              {/* Metadata row */}
+              <div className="flex items-center gap-2 pt-1">
+                {isEnrolled && (
+                  <Badge
+                    className={cn(
+                      'text-[10px] uppercase tracking-[0.15em] border-0 font-medium',
+                      accent.softBg,
+                      accent.fg
+                    )}
+                  >
+                    {progress.percentage >= 100 ? 'Completed' : 'In Progress'}
+                  </Badge>
+                )}
+                <span className="text-[11px] uppercase tracking-[0.15em] text-muted-foreground font-medium">
+                  {totalCourses} Courses
+                </span>
+                <span
+                  className="text-muted-foreground text-[11px]"
+                  aria-hidden="true"
+                >
+                  &bull;
+                </span>
+                <span className="text-[11px] uppercase tracking-[0.15em] text-muted-foreground font-medium">
+                  {path.totalEstimatedHours}H
+                </span>
+                <span
+                  className="text-muted-foreground text-[11px]"
+                  aria-hidden="true"
+                >
+                  &bull;
+                </span>
+                <span className="text-[11px] uppercase tracking-[0.15em] text-muted-foreground font-medium">
+                  {path.stages.length} Stages
+                </span>
+              </div>
             </div>
+          </div>
 
-            {/* Progress or enroll badge */}
+          {/* Right section: progress percentage or arrow button */}
+          <div className="shrink-0">
             {isEnrolled ? (
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Progress</span>
-                  <span>{progress.percentage}%</span>
+              <div className="text-right">
+                <div className="text-5xl font-display font-bold text-foreground leading-none">
+                  {progress.percentage}
+                  <span className="text-3xl">%</span>
                 </div>
-                <Progress
-                  value={progress.percentage}
-                  className="h-1.5"
-                  aria-label={`${progress.percentage}% complete`}
-                />
+                <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mt-1 block">
+                  Completed
+                </span>
               </div>
             ) : (
-              <Badge variant="outline" className="self-start text-xs">
-                Start learning
-              </Badge>
+              <div
+                className={cn(
+                  'size-12 rounded-full border border-border flex items-center justify-center',
+                  'group-hover:border-brand group-hover:text-brand transition-colors'
+                )}
+                aria-hidden="true"
+              >
+                <ArrowRight className="size-5 group-hover:translate-x-0.5 transition-transform" />
+              </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </Link>
     </motion.div>
   )
@@ -115,6 +203,7 @@ function PathCard({ path }: { path: CareerPath }) {
 
 export function CareerPaths() {
   const { paths, isLoaded, loadPaths } = useCareerPathStore()
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     let ignore = false
@@ -126,16 +215,25 @@ export function CareerPaths() {
     }
   }, [loadPaths])
 
-  const sortedPaths = useMemo(() => [...paths], [paths])
+  const filteredPaths = useMemo(() => {
+    if (!search.trim()) return [...paths]
+    const q = search.toLowerCase()
+    return paths.filter(
+      p =>
+        p.title.toLowerCase().includes(q) ||
+        p.description.toLowerCase().includes(q)
+    )
+  }, [paths, search])
 
   if (!isLoaded) {
     return (
       <DelayedFallback>
-        <div className="space-y-6">
-          <Skeleton className="h-8 w-48" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+        <div className="space-y-2">
+          <Skeleton className="h-14 w-80" />
+          <Skeleton className="h-5 w-96" />
+          <div className="pt-8">
             {Array.from({ length: 4 }, (_, i) => (
-              <PathCardSkeleton key={i} />
+              <PathRowSkeleton key={i} />
             ))}
           </div>
         </div>
@@ -149,34 +247,68 @@ export function CareerPaths() {
         variants={staggerContainer}
         initial="hidden"
         animate="visible"
-        className="space-y-6"
+        className="space-y-8"
       >
-        {/* Header */}
-        <motion.div variants={fadeUp}>
-          <h1 className="text-2xl font-bold tracking-tight">Career Paths</h1>
-          <p className="text-muted-foreground mt-1">
-            Structured multi-course journeys with staged progression and prerequisite tracking.
+        {/* Page header — editorial display type */}
+        <motion.div variants={fadeUp} className="space-y-4">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight font-display text-foreground">
+            Learning Paths
+          </h1>
+          <p className="text-muted-foreground text-base max-w-xl leading-relaxed">
+            Structured multi-course journeys with staged progression and
+            prerequisite tracking.
           </p>
         </motion.div>
 
-        {sortedPaths.length === 0 ? (
+        {/* Search bar — underline style */}
+        <motion.div variants={fadeUp}>
+          <div className="relative max-w-md">
+            <Search
+              className="absolute left-0 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search paths..."
+              aria-label="Search learning paths"
+              className={cn(
+                'w-full bg-transparent border-0 border-b border-border pl-7 pr-2 py-2',
+                'text-sm text-foreground placeholder:text-muted-foreground',
+                'focus:outline-none focus:border-brand transition-colors'
+              )}
+            />
+          </div>
+        </motion.div>
+
+        {/* Path list */}
+        {filteredPaths.length === 0 && search.trim() ? (
+          <motion.div variants={fadeUp}>
+            <EmptyState
+              icon={Search}
+              title="No paths match your search"
+              description={`No learning paths found for "${search}". Try a different search term.`}
+            />
+          </motion.div>
+        ) : filteredPaths.length === 0 ? (
           <EmptyState
             icon={Route}
-            title="No career paths available"
+            title="No learning paths available"
             description="Curated learning paths will appear here once they are available."
           />
         ) : (
-          <div
-            className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5"
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
             role="list"
-            aria-label="Career paths"
+            aria-label="Learning paths"
           >
-            {sortedPaths.map(path => (
-              <div key={path.id} role="listitem">
-                <PathCard path={path} />
-              </div>
+            {filteredPaths.map((path, index) => (
+              <PathRow key={path.id} path={path} index={index} />
             ))}
-          </div>
+          </motion.div>
         )}
       </motion.div>
     </MotionConfig>

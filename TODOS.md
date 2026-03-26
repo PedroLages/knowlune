@@ -111,6 +111,37 @@ for full implementation details on each.
 - **Depends on:** Nothing
 - **Source:** /plan-ceo-review 2026-03-26 — user requested cost analysis
 
+## Phase 3: Cloud Storage Integration
+
+### 14. Cloud Storage for Course Content
+- **What:** Allow users to store and access their learning content (videos, PDFs, notes) via cloud storage services — Google Drive, iCloud, Dropbox, OneDrive, and similar providers
+- **Why:** Currently content is served from local filesystem paths (`basePath` on each course). Cloud storage removes the dependency on a specific machine, enables cross-device access, and makes the platform viable for users who don't want to manage local files
+- **Key considerations:**
+  - **Read-only integration first** — users point Knowlune at an existing cloud folder, Knowlune indexes and streams content from it
+  - **Provider APIs:** Google Drive API v3, Dropbox API v2, iCloud (CloudKit JS — limited), OneDrive (Microsoft Graph API)
+  - **Authentication:** OAuth 2.0 per provider, store tokens securely (Supabase auth or encrypted local storage)
+  - **Offline support:** Cache recently accessed content via Service Worker for offline study sessions
+  - **Bandwidth:** Stream video directly from cloud provider CDNs rather than proxying through Knowlune servers
+- **Architecture options:**
+  - **Option A:** Browser-direct — use provider SDKs client-side, no backend needed (works with Vercel static deploy)
+  - **Option B:** Proxy through Supabase Edge Functions — more control, can normalize across providers, adds latency
+- **Priority:** P2 — after YouTube Course Builder (Phase 2) proves the content model
+- **Depends on:** Vercel deployment (item #7), potentially Supabase auth (Epic 19)
+
+### 15. Offline Video Downloads
+- **What:** Allow users to download course videos to their device for offline viewing — study anywhere without internet
+- **Why:** Learning happens on planes, trains, and places with spotty connectivity. Offline access is a top-requested feature on every learning platform (Udemy, Coursera, Netflix all support it)
+- **Key considerations:**
+  - **Storage API:** Use the Cache API or Origin Private File System (OPFS) for large file storage in the browser; IndexedDB for metadata tracking
+  - **Download manager UI:** Progress indicator per video, queue system for batch downloads (e.g., "Download entire module"), storage usage display
+  - **Selective sync:** Let users choose which modules/lessons to download — don't auto-download everything
+  - **Expiry policy:** Downloaded content should respect any licensing constraints; consider TTL-based re-validation when back online
+  - **Service Worker:** Intercept video requests and serve from cache when offline; fall back to network when online
+  - **Storage limits:** Browser storage quotas vary (Chrome ~60% of disk, Safari ~1GB). Show clear warnings when approaching limits and let users manage downloaded content
+  - **Mobile PWA:** This becomes especially powerful when Knowlune is installed as a PWA — native-app-like offline experience
+- **Priority:** P2 — pairs naturally with cloud storage (item #14)
+- **Depends on:** Service Worker infrastructure (already in place via PWA plugin), cloud storage integration (item #14) for non-local content
+
 ## Code Quality (Non-Blocking)
 
 ### 13. Proxy Handler Deduplication

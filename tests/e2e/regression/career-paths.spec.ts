@@ -22,7 +22,7 @@ async function goToCareerPaths(page: import('@playwright/test').Page) {
 
 /** Returns the listitem locator scoped to the career paths grid (avoids sidebar listitems). */
 function getPathCards(page: import('@playwright/test').Page) {
-  return page.getByRole('list', { name: 'Career paths' }).getByRole('listitem')
+  return page.getByRole('list', { name: 'Learning paths' }).getByRole('listitem')
 }
 
 async function getPathId(page: import('@playwright/test').Page, index = 0): Promise<string> {
@@ -39,7 +39,7 @@ async function getPathId(page: import('@playwright/test').Page, index = 0): Prom
 test.describe('Career Paths list page (AC1)', () => {
   test('shows page heading', async ({ page }) => {
     await goToCareerPaths(page)
-    await expect(page.getByRole('heading', { name: 'Career Paths', level: 1 })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Learning Paths', level: 1 })).toBeVisible()
   })
 
   test('displays at least 3 career path cards', async ({ page }) => {
@@ -238,15 +238,15 @@ test.describe('Navigation integration (AC6)', () => {
   test('"Career Paths" link appears in sidebar', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
-    await expect(page.getByRole('link', { name: 'Career Paths' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Learning Paths' })).toBeVisible()
   })
 
   test('sidebar link navigates to career paths list', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
-    await page.getByRole('link', { name: 'Career Paths' }).click()
+    await page.getByRole('link', { name: 'Learning Paths' }).click()
     await expect(page).toHaveURL('/career-paths')
-    await expect(page.getByRole('heading', { name: 'Career Paths', level: 1 })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Learning Paths', level: 1 })).toBeVisible()
   })
 
   test('/career-paths/:pathId loads detail page', async ({ page }) => {
