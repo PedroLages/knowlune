@@ -11,24 +11,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = typeof globalThis.__dirname !== 'undefined'
   ? globalThis.__dirname
   : path.dirname(fileURLToPath(import.meta.url));
-const COURSES_ROOT = '/Volumes/SSD/GFX/Chase Hughes - The Operative Kit';
-
-/**
- * SSRF protection for Ollama proxy — blocks loopback and cloud metadata addresses.
- * Private LAN ranges (192.168.x, 10.x, 172.16-31.x) are allowed for home Ollama servers.
- */
-function isAllowedOllamaUrl(urlString: string): boolean {
-  try {
-    const parsed = new URL(urlString);
-    const hostname = parsed.hostname.toLowerCase();
-    if (
-      hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0' ||
-      hostname === '[::1]' || hostname === '::1' || hostname.startsWith('127.') ||
-      hostname.startsWith('169.254.')
-    ) return false;
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-  } catch { return false; }
-}
+const COURSES_ROOT = process.env.COURSES_ROOT || '';
 
 /**
  * Vite plugin that embeds Ollama proxy endpoints directly into the dev server.
@@ -38,6 +21,7 @@ function isAllowedOllamaUrl(urlString: string): boolean {
  *   GET  /api/ai/ollama/tags?serverUrl=...  — List available models
  *   GET  /api/ai/ollama/health?serverUrl=... — Health check
  *   POST /api/ai/ollama/chat                 — Chat completions (non-streaming)
+ *   POST /api/ai/ollama                      — Chat completions (SSE streaming)
  */
 function ollamaDevProxy(): Plugin {
   return {
@@ -65,12 +49,6 @@ function ollamaDevProxy(): Plugin {
           res.statusCode = 400;
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({ error: 'serverUrl query parameter is required' }));
-          return null;
-        }
-        if (!isAllowedOllamaUrl(serverUrl)) {
-          res.statusCode = 403;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ error: 'Ollama server URL targets a disallowed address' }));
           return null;
         }
         return serverUrl.replace(/\/+$/, '');
@@ -160,12 +138,6 @@ function ollamaDevProxy(): Plugin {
             res.end(JSON.stringify({ error: 'ollamaServerUrl is required in request body' }));
             return;
           }
-          if (!isAllowedOllamaUrl(ollamaServerUrl)) {
-            res.statusCode = 403;
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ error: 'Ollama server URL targets a disallowed address' }));
-            return;
-          }
           const normalizedUrl = ollamaServerUrl.replace(/\/+$/, '');
           const response = await fetch(`${normalizedUrl}/api/chat`, {
             method: 'POST',
@@ -184,6 +156,63 @@ function ollamaDevProxy(): Plugin {
           res.setHeader('Content-Type', 'application/json');
           res.end(data);
         } catch (error) { handleProxyError(res, error, '/chat'); }
+      });
+
+      // POST /api/ai/ollama — streaming chat (SSE pipe-through)
+      server.middlewares.use('/api/ai/ollama', async (req, res, next) => {
+        // Only handle POST to exact /api/ai/ollama (subpaths caught by earlier middleware)
+        if (req.method !== 'POST' || (req.url && req.url !== '/' && req.url !== '')) {
+          next(); return;
+        }
+        try {
+          const rawBody = await readBody(req);
+          const { ollamaServerUrl, ...payload } = JSON.parse(rawBody) as {
+            ollamaServerUrl?: string;
+            [key: string]: unknown;
+          };
+          if (!ollamaServerUrl || typeof ollamaServerUrl !== 'string') {
+            res.statusCode = 400;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'ollamaServerUrl is required in request body' }));
+            return;
+          }
+          const url = `${ollamaServerUrl.replace(/\/+$/, '')}/v1/chat/completions`;
+          const ollamaRes = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...payload, stream: true }),
+            signal: AbortSignal.timeout(120_000),
+          });
+          if (!ollamaRes.ok || !ollamaRes.body) {
+            const errText = await ollamaRes.text().catch(() => ollamaRes.statusText);
+            res.statusCode = ollamaRes.status;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: `Ollama returned ${ollamaRes.status}: ${errText}` }));
+            return;
+          }
+          // Pipe SSE stream from Ollama directly to browser
+          res.writeHead(200, {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+          });
+          const reader = ollamaRes.body.getReader();
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              res.write(Buffer.from(value));
+            }
+          } finally { res.end(); }
+        } catch (error) {
+          if (!(res as { headersSent?: boolean }).headersSent) {
+            handleProxyError(res, error, '/ollama-stream');
+          } else {
+            // Mid-stream error: send SSE error event and close
+            res.write(`data: ${JSON.stringify({ error: (error as Error).message })}\n\n`);
+            res.end();
+          }
+        }
       });
     }
   };
@@ -352,8 +381,7 @@ export default defineConfig({
     // and only affects cloud AI providers, not Ollama.
     proxy: {
       // Non-Ollama AI providers still proxy to Express server on :3001 (if running).
-      // Ollama tags/health/chat are handled by the ollamaDevProxy() middleware above.
-      // The Ollama SSE streaming endpoint (POST /api/ai/ollama) also proxies to Express.
+      // All Ollama endpoints (tags, health, chat, streaming) are handled by ollamaDevProxy() above.
       '/api/ai': { target: 'http://localhost:3001', changeOrigin: true },
     },
     headers: {
