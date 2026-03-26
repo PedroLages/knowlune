@@ -37,6 +37,33 @@ vi.mock('@/stores/useCourseStore', () => ({
   ),
 }))
 
+// Mock useCourseImportStore for FeaturedAuthorProfile
+vi.mock('@/stores/useCourseImportStore', () => ({
+  useCourseImportStore: Object.assign(
+    vi.fn(
+      (
+        selector: (state: {
+          importedCourses: unknown[]
+          loadImportedCourses: () => void
+          getAllTags: () => string[]
+        }) => unknown
+      ) =>
+        selector({
+          importedCourses: [],
+          loadImportedCourses: () => {},
+          getAllTags: () => [],
+        })
+    ),
+    {
+      getState: () => ({
+        importedCourses: [],
+        loadImportedCourses: () => {},
+        getAllTags: () => [],
+      }),
+    }
+  ),
+}))
+
 // Import component AFTER all mocks
 import { Authors } from '../Authors'
 
@@ -125,16 +152,15 @@ describe('Authors page', () => {
       expect(screen.getByText('React')).toBeInTheDocument()
     })
 
-    it('shows course count', () => {
+    it('renders featured author layout', () => {
       renderAuthors()
-      const countEl = screen.getByTestId('author-course-count')
-      expect(countEl).toHaveTextContent('0')
+      expect(screen.getByTestId('featured-author')).toBeInTheDocument()
     })
 
-    it('links to author profile page', () => {
+    it('links to author profile page via View Full Profile', () => {
       renderAuthors()
-      const card = screen.getByTestId('author-card')
-      expect(card).toHaveAttribute('href', '/authors/imported-1')
+      const link = screen.getByRole('link', { name: /view full profile/i })
+      expect(link).toHaveAttribute('href', '/authors/imported-1')
     })
   })
 

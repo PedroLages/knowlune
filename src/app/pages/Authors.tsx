@@ -1,11 +1,23 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router'
-import { ArrowDownAZ, BookOpen, Calendar, Pencil, Plus, Search, Trash2, Users } from 'lucide-react'
+import {
+  ArrowDownAZ,
+  BookOpen,
+  Calendar,
+  ExternalLink,
+  Import,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  Users,
+} from 'lucide-react'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
+import { Separator } from '@/app/components/ui/separator'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import {
   Select,
@@ -14,8 +26,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/app/components/ui/select'
+import { CourseCard } from '@/app/components/figma/CourseCard'
+import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
 import { useAuthorStore } from '@/stores/useAuthorStore'
+import { useCourseStore } from '@/stores/useCourseStore'
+import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { getMergedAuthors, getAvatarSrc, getInitials, type AuthorView } from '@/lib/authors'
+import { getCourseCompletionPercent } from '@/lib/progress'
 import { AuthorFormDialog } from '@/app/components/authors/AuthorFormDialog'
 import { DeleteAuthorDialog } from '@/app/components/authors/DeleteAuthorDialog'
 import type { ImportedAuthor } from '@/data/types'
@@ -107,8 +124,25 @@ export function Authors() {
         </Button>
       </div>
 
-      {/* Search & Sort Bar */}
-      {allAuthors.length > 0 && (
+      {/* Featured Author Layout (single author) */}
+      {allAuthors.length === 1 && (
+        <FeaturedAuthorProfile
+          author={allAuthors[0]}
+          onEdit={
+            allAuthors[0].importedAuthor
+              ? () => setEditAuthor(allAuthors[0].importedAuthor)
+              : undefined
+          }
+          onDelete={
+            allAuthors[0].importedAuthor
+              ? () => setDeleteAuthor(allAuthors[0].importedAuthor)
+              : undefined
+          }
+        />
+      )}
+
+      {/* Search & Sort Bar (multi-author only) */}
+      {allAuthors.length > 1 && (
         <div className="mb-6 flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search
@@ -178,8 +212,8 @@ export function Authors() {
         </Card>
       )}
 
-      {/* No search results */}
-      {allAuthors.length > 0 && sorted.length === 0 && searchQuery.trim() && (
+      {/* No search results (multi-author only) */}
+      {allAuthors.length > 1 && sorted.length === 0 && searchQuery.trim() && (
         <Card className="rounded-[24px] border-0 shadow-sm">
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <Search className="size-12 text-muted-foreground/50 mb-4" aria-hidden="true" />
@@ -191,8 +225,8 @@ export function Authors() {
         </Card>
       )}
 
-      {/* Author Grid */}
-      {sorted.length > 0 && (
+      {/* Author Grid (multi-author only) */}
+      {allAuthors.length > 1 && sorted.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {sorted.map(author => (
             <AuthorCard
@@ -342,6 +376,217 @@ function AuthorCard({
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * Featured author layout shown when there is exactly 1 author.
+ * Displays a rich profile with larger avatar, full bio, specialties,
+ * social links, and their course list — making the page feel intentional
+ * rather than sparse.
+ */
+function FeaturedAuthorProfile({
+  author,
+  onEdit,
+  onDelete,
+}: {
+  author: AuthorView
+  onEdit?: () => void
+  onDelete?: () => void
+}) {
+  const courses = useCourseStore(s => s.courses)
+  const importedCourses = useCourseImportStore(s => s.importedCourses)
+  const loadImportedCourses = useCourseImportStore(s => s.loadImportedCourses)
+  const getAllTags = useCourseImportStore(s => s.getAllTags)
+
+  useEffect(() => {
+    loadImportedCourses()
+  }, [loadImportedCourses])
+
+  const authorCourses = useMemo(
+    () => courses.filter(c => c.authorId === author.id),
+    [courses, author.id]
+  )
+  const authorImportedCourses = useMemo(
+    () => importedCourses.filter(c => c.authorId === author.id),
+    [importedCourses, author.id]
+  )
+  const allTags = useMemo(() => getAllTags(), [getAllTags])
+  const totalCourseCount = authorCourses.length + authorImportedCourses.length
+  const socialEntries = Object.entries(author.socialLinks).filter(([, url]) => url)
+
+  return (
+    <div>
+      {/* Hero Card */}
+      <Card className="rounded-3xl border-0 shadow-sm mb-6" data-testid="featured-author">
+        <CardContent className="p-6 sm:p-8">
+          <div className="flex flex-col sm:flex-row gap-6">
+            {/* Large Avatar */}
+            <Avatar className="size-28 sm:size-36 shrink-0 ring-2 ring-border/50 self-center sm:self-start">
+              <AvatarImage {...getAvatarSrc(author.avatar, 192)} alt={author.name} />
+              <AvatarFallback className="text-3xl font-semibold bg-brand/10 text-brand">
+                {getInitials(author.name)}
+              </AvatarFallback>
+            </Avatar>
+
+            {/* Author Info */}
+            <div className="flex-1 text-center sm:text-left">
+              <div className="flex items-start gap-3 justify-center sm:justify-start">
+                <h2 className="text-2xl font-bold mb-1">{author.name}</h2>
+                {(onEdit || onDelete) && (
+                  <div className="flex gap-1 shrink-0">
+                    {onEdit && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8"
+                        onClick={onEdit}
+                        aria-label={`Edit ${author.name}`}
+                        data-testid="featured-edit-button"
+                      >
+                        <Pencil className="size-4" aria-hidden="true" />
+                      </Button>
+                    )}
+                    {onDelete && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 hover:bg-destructive/10 hover:text-destructive"
+                        onClick={onDelete}
+                        aria-label={`Delete ${author.name}`}
+                        data-testid="featured-delete-button"
+                      >
+                        <Trash2 className="size-4" aria-hidden="true" />
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {author.title && <p className="text-muted-foreground mb-3">{author.title}</p>}
+
+              {/* Featured Quote */}
+              {author.featuredQuote && (
+                <blockquote className="text-sm italic text-muted-foreground border-l-2 border-brand pl-3 mb-4">
+                  &ldquo;{author.featuredQuote}&rdquo;
+                </blockquote>
+              )}
+
+              {/* Specialty Badges */}
+              {author.specialties.length > 0 && (
+                <div
+                  className="flex flex-wrap justify-center sm:justify-start gap-1.5 mb-4"
+                  data-testid="specialty-badges"
+                >
+                  {author.specialties.map(specialty => (
+                    <Badge key={specialty} variant="secondary" className="text-xs">
+                      {specialty}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              {/* Social Links */}
+              {socialEntries.length > 0 && (
+                <div className="flex justify-center sm:justify-start gap-3">
+                  {socialEntries.map(([platform, url]) => (
+                    <a
+                      key={platform}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-sm text-brand hover:underline capitalize"
+                    >
+                      {platform}
+                      <ExternalLink className="size-3" aria-hidden="true" />
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Stats strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-6">
+            <div className="flex flex-col items-center gap-1 rounded-xl bg-muted ring-1 ring-border/20 p-4 shadow-sm">
+              <BookOpen className="size-5 text-brand mb-1" aria-hidden="true" />
+              <span className="text-xl font-bold tabular-nums">{totalCourseCount}</span>
+              <span className="text-xs text-muted-foreground">
+                {totalCourseCount === 1 ? 'Course' : 'Courses'}
+              </span>
+            </div>
+          </div>
+
+          {/* View Full Profile link */}
+          <div className="flex justify-end mt-4">
+            <Button
+              variant="brand"
+              asChild
+              className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            >
+              <Link to={`/authors/${author.id}`}>View Full Profile</Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Bio Section */}
+      {author.bio && (
+        <Card className="rounded-3xl border-0 shadow-sm mb-6">
+          <CardContent className="p-6 sm:p-8">
+            <h3 className="text-lg font-semibold mb-4">About</h3>
+            <div className="space-y-3 text-muted-foreground leading-relaxed">
+              {author.bio.split('\n\n').map((paragraph, i) => (
+                <p key={i}>{paragraph}</p>
+              ))}
+            </div>
+            {author.education && (
+              <>
+                <Separator className="my-5" />
+                <div className="flex items-center gap-2 text-sm">
+                  <BookOpen className="size-4 text-brand" aria-hidden="true" />
+                  <span className="font-medium">Education:</span>
+                  <span className="text-muted-foreground">{author.education}</span>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Courses Section */}
+      {totalCourseCount > 0 && (
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-4">Courses by {author.name}</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {authorCourses.map(course => (
+              <CourseCard
+                key={course.id}
+                course={course}
+                variant="library"
+                completionPercent={getCourseCompletionPercent(course.id, course.totalLessons)}
+              />
+            ))}
+            {authorImportedCourses.map(course => (
+              <ImportedCourseCard key={course.id} course={course} allTags={allTags} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Teaser CTA */}
+      <Card className="rounded-3xl border-0 shadow-sm bg-brand-soft/30">
+        <CardContent className="flex flex-col sm:flex-row items-center gap-4 p-6">
+          <Import className="size-8 text-brand shrink-0" aria-hidden="true" />
+          <p
+            className="text-sm text-muted-foreground text-center sm:text-left"
+            data-testid="authors-teaser-cta"
+          >
+            Authors are automatically detected when you import courses
+          </p>
+        </CardContent>
+      </Card>
     </div>
   )
 }
