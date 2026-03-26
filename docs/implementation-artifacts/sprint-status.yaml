@@ -402,8 +402,8 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 26: Multi-Path Learning Journeys
   # ──────────────────────────────────────────────────
-  epic-26: backlog
-  26-1-multi-path-data-model-and-migration: backlog
+  epic-26: in-progress
+  26-1-multi-path-data-model-and-migration: done
   26-2-learning-path-list-view: backlog
   26-3-path-detail-view-with-drag-drop-editor: backlog
   26-4-ai-path-placement-suggestion: backlog
