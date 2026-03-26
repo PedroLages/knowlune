@@ -1,28 +1,40 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import type { EntitlementTier } from '@/data/types'
 
 // ---------------------------------------------------------------------------
 // Mock the useIsPremium hook
 // ---------------------------------------------------------------------------
 
-const mockEntitlementStatus = {
+const mockEntitlementStatus: {
+  isPremium: boolean
+  loading: boolean
+  tier: EntitlementTier
+  isStale: boolean
+  error: string | null
+} = {
   isPremium: false,
   loading: false,
-  tier: 'free' as const,
+  tier: 'free',
   isStale: false,
-  error: null as string | null,
+  error: null,
 }
 
 vi.mock('@/lib/entitlement/isPremium', () => ({
   useIsPremium: () => ({ ...mockEntitlementStatus }),
 }))
 
+const mockStartCheckout = vi.fn()
+
 vi.mock('@/lib/checkout', () => ({
-  startCheckout: vi.fn(),
+  startCheckout: (...args: unknown[]) => mockStartCheckout(...args),
 }))
 
+const mockToastError = { saveFailed: vi.fn() }
+
 vi.mock('@/lib/toastHelpers', () => ({
-  toastError: { saveFailed: vi.fn() },
+  toastError: { saveFailed: (...args: unknown[]) => mockToastError.saveFailed(...args) },
 }))
 
 import { PremiumGate } from '@/app/components/PremiumGate'
@@ -173,5 +185,24 @@ describe('PremiumGate', () => {
     expect(
       screen.getByRole('button', { name: /Upgrade to Premium to unlock AI Analysis/ })
     ).toBeInTheDocument()
+  })
+
+  it('handleUpgrade shows toast when startCheckout rejects', async () => {
+    mockEntitlementStatus.isPremium = false
+    mockStartCheckout.mockRejectedValueOnce(new Error('Checkout unavailable'))
+
+    const user = userEvent.setup()
+
+    render(
+      <PremiumGate featureLabel="AI Analysis">
+        <div>Secret Content</div>
+      </PremiumGate>
+    )
+
+    const button = screen.getByRole('button', { name: /Upgrade to Premium/ })
+    await user.click(button)
+
+    // After rejection, loading state should be reset (button no longer shows "Starting checkout...")
+    expect(screen.getByRole('button', { name: /Upgrade to Premium/ })).not.toBeDisabled()
   })
 })

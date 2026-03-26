@@ -94,9 +94,14 @@ export function useIsPremium(): EntitlementStatus {
   const [isStale, setIsStale] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const validationInProgress = useRef(false)
+  const pendingRevalidation = useRef(false)
 
   const validate = useCallback(async () => {
-    if (!user || validationInProgress.current) return
+    if (!user) return
+    if (validationInProgress.current) {
+      pendingRevalidation.current = true
+      return
+    }
     validationInProgress.current = true
 
     try {
@@ -112,7 +117,9 @@ export function useIsPremium(): EntitlementStatus {
         if (!fresh) {
           // AC3: Stale cache — disable premium, show message
           setTier('free')
-          setError('Your subscription status is outdated. Please connect to the internet to verify.')
+          setError(
+            'Your subscription status is outdated. Please connect to the internet to verify.'
+          )
           setLoading(false)
           // Don't return — try to revalidate below
         } else {
@@ -169,6 +176,12 @@ export function useIsPremium(): EntitlementStatus {
     } finally {
       setLoading(false)
       validationInProgress.current = false
+
+      // If a revalidation was requested while we were in progress, run it now
+      if (pendingRevalidation.current) {
+        pendingRevalidation.current = false
+        validate()
+      }
     }
   }, [user])
 

@@ -410,6 +410,32 @@ describe('useIsPremium', () => {
     })
   })
 
+  it('AC8: clears cached entitlement when server returns free for previously-premium user', async () => {
+    const premiumCache = makeCachedEntitlement({ tier: 'premium' })
+    mockGetCachedEntitlement.mockResolvedValue(premiumCache)
+    mockServerResponse({
+      user_id: 'user-123',
+      tier: 'free',
+      stripe_customer_id: 'cus_123',
+      stripe_subscription_id: null,
+      plan_id: null,
+      expires_at: null,
+    })
+
+    const { result } = renderHook(() => useIsPremium())
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false)
+    })
+
+    await waitFor(() => {
+      expect(result.current.tier).toBe('free')
+    })
+
+    // Cache should have been cleared (explicit denial)
+    expect(mockDelete).toHaveBeenCalledWith('user-123')
+  })
+
   it('AC7: network error with no cache — returns free without error', async () => {
     mockGetCachedEntitlement.mockResolvedValue(null)
     mockServerError()
