@@ -11,6 +11,7 @@ import { WelcomeWizard } from '@/app/components/WelcomeWizard'
 import { initErrorTracking } from '@/lib/errorTracking'
 import { vectorStorePersistence } from '@/ai/vector-store'
 import { supportsWorkers } from '@/ai/lib/workerCapabilities'
+import { refreshStaleMetadata } from '@/lib/youtubeMetadataRefresh'
 import { useFontScale } from '@/hooks/useFontScale'
 import { useWelcomeWizardStore } from '@/stores/useWelcomeWizardStore'
 import { useColorScheme } from '@/hooks/useColorScheme'
@@ -57,6 +58,14 @@ export default function App() {
         console.error('[App] Vector store init failed:', err)
       })
     }
+  }, [])
+
+  // E28-S12: Background refresh of stale YouTube metadata (non-blocking, rate-limited)
+  useEffect(() => {
+    refreshStaleMetadata().catch(err => {
+      // silent-catch-ok — non-critical background task
+      console.warn('[App] YouTube metadata refresh failed:', err)
+    })
   }, [])
 
   return (

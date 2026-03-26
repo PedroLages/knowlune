@@ -1,10 +1,11 @@
 /**
  * YouTubeCourseDetail — course detail page with chapter structure,
- * per-video progress bars, and overall completion tracking.
+ * per-video progress bars, offline support, metadata refresh, and
+ * removed-video badges.
  *
- * @see E28-S09 AC12
+ * @see E28-S09 AC12, E28-S12
  */
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Link, useParams } from 'react-router'
 import {
   ArrowLeft,
@@ -12,12 +13,31 @@ import {
   CheckCircle2,
   Clock,
   Youtube,
+  RefreshCw,
+  WifiOff,
+  AlertTriangle,
+  ChevronDown,
+  Sparkles,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { db } from '@/db'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
+import { refreshCourseMetadata } from '@/lib/youtubeMetadataRefresh'
 import { Progress } from '@/app/components/ui/progress'
 import { Badge } from '@/app/components/ui/badge'
+import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/app/components/ui/tooltip'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/app/components/ui/collapsible'
 import { cn } from '@/app/components/ui/utils'
 import type { ImportedVideo, VideoProgress, YouTubeCourseChapter } from '@/data/types'
 
@@ -39,6 +59,7 @@ interface ChapterGroup {
 
 export function YouTubeCourseDetail() {
   const { courseId } = useParams<{ courseId: string }>()
+  const isOnline = useOnlineStatus()
 
   const importedCourses = useCourseImportStore(state => state.importedCourses)
   const loadImportedCourses = useCourseImportStore(state => state.loadImportedCourses)
@@ -48,6 +69,8 @@ export function YouTubeCourseDetail() {
   const [chapters, setChapters] = useState<YouTubeCourseChapter[]>([])
   const [progressMap, setProgressMap] = useState<Map<string, VideoProgress>>(new Map())
   const [loading, setLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [aiSummaryOpen, setAiSummaryOpen] = useState(false)
 
   useEffect(() => {
     loadImportedCourses()
@@ -84,6 +107,33 @@ export function YouTubeCourseDetail() {
       ignore = true
     }
   }, [courseId])
+
+  // Handle manual metadata refresh
+  const handleRefresh = useCallback(async () => {
+    if (!course || !isOnline || isRefreshing) return
+    setIsRefreshing(true)
+    try {
+      const { updated, removed } = await refreshCourseMetadata(course)
+      if (updated > 0 || removed > 0) {
+        toast.success(`Metadata refreshed: ${updated} updated, ${removed} removed`)
+        // Reload videos to reflect changes
+        if (courseId) {
+          const freshVideos = await db.importedVideos
+            .where('courseId')
+            .equals(courseId)
+            .sortBy('order')
+          setVideos(freshVideos)
+        }
+      } else {
+        toast.info('Metadata is already up to date')
+      }
+    } catch (error) {
+      console.error('[YouTubeCourseDetail] Metadata refresh failed:', error)
+      toast.error('Failed to refresh metadata')
+    } finally {
+      setIsRefreshing(false)
+    }
+  }, [course, isOnline, isRefreshing, courseId])
 
   // Group videos by chapter
   const chapterGroups = useMemo((): ChapterGroup[] => {
@@ -162,6 +212,7 @@ export function YouTubeCourseDetail() {
   }
 
   const totalDuration = videos.reduce((sum, v) => sum + (v.duration || 0), 0)
+  const isYouTubeCourse = course?.source === 'youtube'
 
   return (
     <div data-testid="youtube-course-detail" className="max-w-3xl mx-auto px-4 py-8">
@@ -172,6 +223,21 @@ export function YouTubeCourseDetail() {
         <ArrowLeft className="size-4" />
         Back to Courses
       </Link>
+
+      {/* Offline banner */}
+      {!isOnline && isYouTubeCourse && (
+        <div
+          className="flex items-center gap-2 rounded-xl border border-warning/30 bg-warning/10 p-3 mb-4"
+          role="status"
+          aria-live="polite"
+          data-testid="offline-banner"
+        >
+          <WifiOff className="size-4 text-warning shrink-0" aria-hidden="true" />
+          <p className="text-sm text-warning">
+            You are offline. Cached data is shown below. Video playback requires an internet connection.
+          </p>
+        </div>
+      )}
 
       {/* Course header */}
       <div className="flex items-start gap-4 mb-6">
@@ -205,6 +271,46 @@ export function YouTubeCourseDetail() {
               </>
             )}
           </div>
+
+          {/* Refresh metadata button (YouTube courses only) */}
+          {isYouTubeCourse && (
+            <div className="mt-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-block">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={handleRefresh}
+                      disabled={!isOnline || isRefreshing}
+                      data-testid="refresh-metadata-button"
+                      aria-label={
+                        !isOnline
+                          ? 'Refresh metadata — requires internet connection'
+                          : isRefreshing
+                            ? 'Refreshing metadata...'
+                            : 'Refresh metadata from YouTube'
+                      }
+                    >
+                      <RefreshCw
+                        className={cn('size-3.5', isRefreshing && 'animate-spin')}
+                        aria-hidden="true"
+                      />
+                      <span className="hidden sm:inline">
+                        {isRefreshing ? 'Refreshing...' : 'Refresh metadata'}
+                      </span>
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {!isOnline && (
+                  <TooltipContent>
+                    <p>Requires internet connection</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </div>
+          )}
         </div>
       </div>
 
@@ -220,6 +326,43 @@ export function YouTubeCourseDetail() {
         <p className="text-xs text-muted-foreground mt-1">{overallPercent}% complete</p>
       </div>
 
+      {/* AI Summary panel (Premium feature — AC8) */}
+      {isYouTubeCourse && (
+        <Collapsible open={aiSummaryOpen} onOpenChange={setAiSummaryOpen}>
+          <div className="rounded-xl border bg-card mb-6" data-testid="ai-summary-panel">
+            <CollapsibleTrigger asChild>
+              <button
+                className="flex items-center justify-between w-full p-4 text-left hover:bg-accent/50 transition-colors rounded-xl"
+                aria-label="Toggle AI course summary"
+              >
+                <div className="flex items-center gap-2">
+                  <Sparkles className="size-4 text-brand" aria-hidden="true" />
+                  <span className="text-sm font-medium">AI Course Summary</span>
+                  <Badge variant="secondary" className="text-xs bg-brand-soft text-brand-soft-foreground">
+                    Premium
+                  </Badge>
+                </div>
+                <ChevronDown
+                  className={cn(
+                    'size-4 text-muted-foreground transition-transform',
+                    aiSummaryOpen && 'rotate-180'
+                  )}
+                  aria-hidden="true"
+                />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="px-4 pb-4 text-sm text-muted-foreground">
+                <p>
+                  AI-generated summaries are created from transcript data. Import transcripts
+                  for this course to enable AI summaries.
+                </p>
+              </div>
+            </CollapsibleContent>
+          </div>
+        </Collapsible>
+      )}
+
       {/* Chapter groups and video list */}
       <div className="space-y-6" data-testid="course-content-list" aria-label="Course content">
         {chapterGroups.map((group, groupIndex) => (
@@ -234,12 +377,16 @@ export function YouTubeCourseDetail() {
                 const prog = progressMap.get(video.id)
                 const percent = prog?.completionPercentage ?? 0
                 const isCompleted = percent >= 90
+                const isRemoved = video.removedFromYouTube === true
 
                 return (
                   <li key={video.id}>
                     <Link
                       to={`/youtube-courses/${courseId}/lessons/${video.id}`}
-                      className="flex items-center gap-3 p-4 rounded-xl border bg-card hover:bg-accent transition-colors group"
+                      className={cn(
+                        'flex items-center gap-3 p-4 rounded-xl border bg-card hover:bg-accent transition-colors group',
+                        isRemoved && 'opacity-75'
+                      )}
                       data-testid={`course-video-item-${video.id}`}
                     >
                       {/* Index / completion indicator */}
@@ -274,9 +421,21 @@ export function YouTubeCourseDetail() {
 
                       {/* Video info */}
                       <div className="flex-1 min-w-0">
-                        <span className="text-sm font-medium group-hover:text-brand transition-colors line-clamp-2">
-                          {video.filename}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium group-hover:text-brand transition-colors line-clamp-2">
+                            {video.filename}
+                          </span>
+                          {isRemoved && (
+                            <Badge
+                              variant="destructive"
+                              className="text-xs shrink-0"
+                              data-testid={`removed-badge-${video.id}`}
+                            >
+                              <AlertTriangle className="size-3 mr-1" aria-hidden="true" />
+                              Removed from YouTube
+                            </Badge>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 mt-0.5">
                           {video.duration > 0 && (
                             <span className="text-xs text-muted-foreground tabular-nums">

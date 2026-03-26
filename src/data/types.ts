@@ -170,6 +170,7 @@ export interface ImportedCourse {
   youtubeChannelTitle?: string // Channel display name
   youtubeThumbnailUrl?: string // Playlist/channel thumbnail URL
   youtubePublishedAt?: string // ISO 8601 — playlist publish date
+  lastRefreshedAt?: string // ISO 8601 — last metadata refresh timestamp (E28-S12)
 }
 
 export interface ImportedVideo {
@@ -190,6 +191,7 @@ export interface ImportedVideo {
   thumbnailUrl?: string // YouTube thumbnail URL
   description?: string // YouTube video description
   chapters?: Chapter[] // YouTube auto-detected chapters
+  removedFromYouTube?: boolean // True if video was removed from YouTube (E28-S12)
 }
 
 export interface ImportedPdf {
