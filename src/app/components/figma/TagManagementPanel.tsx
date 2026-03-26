@@ -29,11 +29,7 @@ interface TagManagementPanelProps {
   onTagsChanged?: () => void
 }
 
-export function TagManagementPanel({
-  open,
-  onOpenChange,
-  onTagsChanged,
-}: TagManagementPanelProps) {
+export function TagManagementPanel({ open, onOpenChange, onTagsChanged }: TagManagementPanelProps) {
   const tagsWithCounts = useCourseImportStore(s => s.getTagsWithCounts())
   const renameTagGlobally = useCourseImportStore(s => s.renameTagGlobally)
   const deleteTagGlobally = useCourseImportStore(s => s.deleteTagGlobally)
@@ -113,9 +109,7 @@ export function TagManagementPanel({
               <Tags className="size-5" aria-hidden="true" />
               Manage Tags
             </SheetTitle>
-            <SheetDescription>
-              Rename or delete tags across all your courses.
-            </SheetDescription>
+            <SheetDescription>Rename or delete tags across all your courses.</SheetDescription>
           </SheetHeader>
 
           <div className="mt-6 space-y-1">
@@ -125,16 +119,10 @@ export function TagManagementPanel({
                 className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground"
               >
                 <Tags className="size-8 mb-3 opacity-40" aria-hidden="true" />
-                <p className="text-sm">
-                  No tags yet. Add tags to your courses to organize them.
-                </p>
+                <p className="text-sm">No tags yet. Add tags to your courses to organize them.</p>
               </div>
             ) : (
-              <ul
-                className="space-y-1"
-                role="list"
-                aria-label="Tags list"
-              >
+              <ul className="space-y-1" role="list" aria-label="Tags list">
                 {tagsWithCounts.map(({ tag, count }) => (
                   <li
                     key={tag}
@@ -175,9 +163,7 @@ export function TagManagementPanel({
                       </>
                     ) : (
                       <>
-                        <span className="flex-1 text-sm font-medium truncate">
-                          {tag}
-                        </span>
+                        <span className="flex-1 text-sm font-medium truncate">{tag}</span>
                         <span
                           className="text-xs text-muted-foreground tabular-nums"
                           aria-label={`${count} ${count === 1 ? 'course' : 'courses'}`}
