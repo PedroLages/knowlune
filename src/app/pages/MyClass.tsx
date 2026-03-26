@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Clock, CheckCircle, PlayCircle } from 'lucide-react'
+import { Skeleton } from '@/app/components/ui/skeleton'
 import { EmptyState } from '@/app/components/EmptyState'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/app/components/ui/tabs'
 import {
@@ -19,6 +20,12 @@ type SortOption = 'recent' | 'progress-high' | 'progress-low' | 'alpha' | 'time'
 export default function MyClass() {
   const allCourses = useCourseStore(s => s.courses)
   const [sortBy, setSortBy] = useState<SortOption>('recent')
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 500)
+    return () => clearTimeout(timer)
+  }, [])
 
   const inProgress = getCoursesInProgress(allCourses)
   const completed = getCompletedCourses(allCourses)
@@ -108,6 +115,45 @@ export default function MyClass() {
   const inProgressWithStatus = allCoursesWithStatus.filter(c => c.status === 'in-progress')
   const completedWithStatus = allCoursesWithStatus.filter(c => c.status === 'completed')
   const notStartedWithStatus = allCoursesWithStatus.filter(c => c.status === 'not-started')
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6" aria-busy="true" aria-label="Loading my courses">
+        {/* Title skeleton */}
+        <Skeleton className="h-8 w-40" />
+
+        {/* ProgressStats skeleton */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="rounded-2xl border border-border/50 p-4">
+              <Skeleton className="h-3 w-20 mb-2" />
+              <Skeleton className="h-7 w-12" />
+            </div>
+          ))}
+        </div>
+
+        {/* Tabs + Sort skeleton */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <Skeleton className="h-10 w-80 rounded-lg" />
+          <Skeleton className="h-10 w-[200px] rounded-lg" />
+        </div>
+
+        {/* Course cards grid skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="rounded-2xl border border-border/50 overflow-hidden">
+              <Skeleton className="w-full h-36" />
+              <div className="p-4">
+                <Skeleton className="h-4 w-20 mb-2" />
+                <Skeleton className="h-5 w-full mb-2" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   if (!hasAnyCourses) {
     return (

@@ -66,6 +66,9 @@ const CareerPaths = React.lazy(() =>
 const CareerPathDetail = React.lazy(() =>
   import('./pages/CareerPathDetail').then(m => ({ default: m.CareerPathDetail }))
 )
+const NotFound = React.lazy(() =>
+  import('./pages/NotFound').then(m => ({ default: m.NotFound }))
+)
 
 // Default exports work directly with React.lazy
 const MyClass = React.lazy(() => import('./pages/MyClass'))
@@ -355,6 +358,14 @@ export const router = createBrowserRouter([
       //     </SuspensePage>
       //   ),
       // },
+      {
+        path: '*',
+        element: (
+          <SuspensePage>
+            <NotFound />
+          </SuspensePage>
+        ),
+      },
     ],
   },
 ])

@@ -87,7 +87,7 @@ export function Overview() {
       })
       .catch(err => {
         // silent-catch-ok — non-critical stat; dashboard still renders with default value
-        console.error('[Overview] Failed to load study notes count:', err)
+        console.warn('[Overview] Failed to load study notes count:', err)
       })
 
     return () => {

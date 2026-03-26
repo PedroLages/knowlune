@@ -34,6 +34,7 @@ import type { MomentumScore } from '@/lib/momentum'
 import type { AtRiskStatus } from '@/lib/atRisk'
 import type { CompletionEstimate } from '@/lib/completionEstimate'
 
+
 const ESTIMATED_MINUTES_PER_LESSON = 15
 const COLLAPSE_KEY = 'knowlune:sample-courses-collapsed'
 
@@ -42,6 +43,13 @@ type SortMode = 'recent' | 'momentum'
 export function Courses() {
   const allCourses = useCourseStore(s => s.courses)
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+
+  // Debounce search filtering by 250ms so filtering doesn't run on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 250)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [selectedTopics, setSelectedTopics] = useState<string[]>([])
   const [selectedStatuses, setSelectedStatuses] = useState<LearnerCourseStatus[]>([])
@@ -160,7 +168,7 @@ export function Courses() {
         setEstimateMap(estimateMap)
       } catch (err) {
         // silent-catch-ok: metrics failure is non-fatal — courses still load without momentum/risk indicators
-        console.error('[Courses] Failed to load course metrics:', err)
+        console.warn('[Courses] Failed to load course metrics:', err)
       }
     }
 
@@ -187,8 +195,8 @@ export function Courses() {
       courses = courses.filter(c => c.category === selectedCategory)
     }
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase()
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.toLowerCase()
       courses = courses.filter(
         c =>
           c.title.toLowerCase().includes(q) ||
@@ -249,8 +257,8 @@ export function Courses() {
   const filteredImportedCourses = (() => {
     let courses = importedCourses
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase()
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.toLowerCase()
       courses = courses.filter(
         c => c.name.toLowerCase().includes(q) || c.tags.some(t => t.toLowerCase().includes(q))
       )
@@ -340,7 +348,7 @@ export function Courses() {
               </div>
               <Button
                 variant="brand"
-                onClick={() => setSearchQuery('')}
+                onClick={() => { setSearchQuery(''); setDebouncedSearch('') }}
                 aria-label={searchQuery ? 'Clear search' : 'Search courses'}
               >
                 {searchQuery ? 'Clear' : 'Search'}

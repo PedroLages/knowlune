@@ -1,10 +1,30 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router'
-import { Search, Bell, ChevronDown, ChevronLeft, ChevronRight, Sun, Moon, Menu } from 'lucide-react'
+import {
+  Search,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Sun,
+  Moon,
+  Menu,
+  Settings,
+  LogOut,
+  User,
+} from 'lucide-react'
 import { KnowluneLogo, KnowluneIcon } from './figma/KnowluneLogo'
 import { Button } from './ui/button'
 import { Kbd } from './ui/kbd'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu'
 import { useTheme } from 'next-themes'
 import { SearchCommandPalette } from './figma/SearchCommandPalette'
 import { KeyboardShortcutsDialog } from './figma/KeyboardShortcutsDialog'
@@ -20,7 +40,9 @@ import { useProgressiveDisclosure } from '@/app/hooks/useProgressiveDisclosure'
 import { getSettings } from '@/lib/settings'
 import { getInitials } from '@/lib/textUtils'
 import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
+import { NotificationCenter } from './figma/NotificationCenter'
 import { useCourseStore } from '@/stores/useCourseStore'
+import { useAuthStore } from '@/stores/useAuthStore'
 import { toast } from 'sonner'
 import { QualityScoreDialog } from './session/QualityScoreDialog'
 import type { QualityScoreResult } from '@/lib/qualityScore'
@@ -181,6 +203,9 @@ export function Layout() {
   useEffect(() => {
     loadCourses()
   }, [loadCourses])
+
+  const signOut = useAuthStore(s => s.signOut)
+  const authUser = useAuthStore(s => s.user)
 
   const isOnline = useOnlineStatus()
   const isInitialRender = useRef(true)
@@ -343,7 +368,7 @@ export function Layout() {
             onClick={toggleSidebar}
             aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             aria-keyshortcuts="Meta+B Control+B"
-            className={`absolute top-1/2 -translate-y-1/2 -right-3 z-50 flex items-center justify-center size-6 rounded-full bg-card border border-border shadow-sm text-muted-foreground hover:text-foreground hover:scale-110 transition-all duration-150 cursor-pointer ${
+            className={`absolute top-1/2 -translate-y-1/2 -right-3 z-50 flex items-center justify-center size-6 rounded-full bg-card border border-border shadow-sm text-muted-foreground hover:text-foreground hover:scale-110 focus-visible:opacity-100 focus-visible:pointer-events-auto focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none transition-all duration-150 cursor-pointer ${
               sidebarHovered || !sidebarCollapsed ? 'opacity-100' : 'opacity-0 pointer-events-none'
             }`}
           >
@@ -441,41 +466,72 @@ export function Layout() {
               <Moon className="size-5 text-muted-foreground hidden dark:block" aria-hidden="true" />
             </Button>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative min-h-[44px] min-w-[44px]"
-              aria-label="Notifications"
-            >
-              <Bell className="size-5 text-muted-foreground" aria-hidden="true" />
-            </Button>
+            <NotificationCenter />
 
-            <div
-              className="flex items-center gap-3 pl-4 border-l border-border"
-              role="group"
-              aria-label="User profile"
-            >
-              <Avatar className="size-10 ring-2 ring-transparent transition-all duration-200 hover:ring-brand/30 hover:shadow-md">
-                {settings.profilePhotoDataUrl ? (
-                  <AvatarImage
-                    src={settings.profilePhotoDataUrl}
-                    alt={settings.displayName}
-                    className="object-cover"
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="flex items-center gap-3 pl-4 border-l border-border cursor-pointer rounded-lg p-1 -m-1 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label="User menu"
+                >
+                  <Avatar className="size-10 ring-2 ring-transparent transition-all duration-200 hover:ring-brand/30 hover:shadow-md">
+                    {settings.profilePhotoDataUrl ? (
+                      <AvatarImage
+                        src={settings.profilePhotoDataUrl}
+                        alt={settings.displayName}
+                        className="object-cover"
+                      />
+                    ) : (
+                      <AvatarFallback className="bg-brand-soft text-brand-soft-foreground font-semibold transition-colors duration-200 hover:bg-brand hover:text-white">
+                        {getInitials(settings.displayName)}
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
+                  <div className="text-left hidden sm:block">
+                    <div className="font-semibold text-sm">{settings.displayName}</div>
+                  </div>
+                  <ChevronDown
+                    className="size-4 text-muted-foreground hidden sm:block"
+                    aria-hidden="true"
                   />
-                ) : (
-                  <AvatarFallback className="bg-brand-soft text-brand-soft-foreground font-semibold transition-colors duration-200 hover:bg-brand hover:text-white">
-                    {getInitials(settings.displayName)}
-                  </AvatarFallback>
-                )}
-              </Avatar>
-              <div className="text-left hidden sm:block">
-                <div className="font-semibold text-sm">{settings.displayName}</div>
-              </div>
-              <ChevronDown
-                className="size-4 text-muted-foreground hidden sm:block"
-                aria-hidden="true"
-              />
-            </div>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col gap-1">
+                    <span className="font-semibold text-sm">{settings.displayName}</span>
+                    {authUser?.email && (
+                      <span className="text-xs text-muted-foreground font-normal truncate">
+                        {authUser.email}
+                      </span>
+                    )}
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem onSelect={() => navigate('/settings')}>
+                    <User className="mr-2 size-4" aria-hidden="true" />
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => navigate('/settings')}>
+                    <Settings className="mr-2 size-4" aria-hidden="true" />
+                    Settings
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={async () => {
+                    const result = await signOut()
+                    if (result.error) {
+                      toast.error(result.error)
+                    }
+                  }}
+                >
+                  <LogOut className="mr-2 size-4" aria-hidden="true" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 
