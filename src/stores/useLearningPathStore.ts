@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { toast } from 'sonner'
 import { db } from '@/db'
 import type { LearningPath, LearningPathEntry } from '@/data/types'
 import { persistWithRetry } from '@/lib/persistWithRetry'
@@ -82,26 +83,36 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       isAIGenerated: false,
     }
 
-    await persistWithRetry(async () => {
-      await db.learningPaths.add(path)
-    })
+    const prevPaths = get().paths
+    const prevActivePath = get().activePath
 
+    // Optimistic update
     set(state => ({
       paths: [...state.paths, path],
       activePath: state.activePath || path,
       error: null,
     }))
 
+    try {
+      await persistWithRetry(async () => {
+        await db.learningPaths.add(path)
+      })
+    } catch (error) {
+      console.error('[LearningPathStore] Failed to create path:', error)
+      set({ paths: prevPaths, activePath: prevActivePath, error: 'Failed to create learning path' })
+      toast.error('Failed to create learning path')
+      throw error
+    }
+
     return path
   },
 
   renamePath: async (pathId: string, name: string) => {
     const now = new Date().toISOString()
+    const prevPaths = get().paths
+    const prevActivePath = get().activePath
 
-    await persistWithRetry(async () => {
-      await db.learningPaths.update(pathId, { name, updatedAt: now })
-    })
-
+    // Optimistic update
     set(state => ({
       paths: state.paths.map(p => (p.id === pathId ? { ...p, name, updatedAt: now } : p)),
       activePath:
@@ -110,15 +121,24 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
           : state.activePath,
       error: null,
     }))
+
+    try {
+      await persistWithRetry(async () => {
+        await db.learningPaths.update(pathId, { name, updatedAt: now })
+      })
+    } catch (error) {
+      console.error('[LearningPathStore] Failed to rename path:', error)
+      set({ paths: prevPaths, activePath: prevActivePath, error: 'Failed to rename learning path' })
+      toast.error('Failed to rename learning path')
+    }
   },
 
   updateDescription: async (pathId: string, description: string) => {
     const now = new Date().toISOString()
+    const prevPaths = get().paths
+    const prevActivePath = get().activePath
 
-    await persistWithRetry(async () => {
-      await db.learningPaths.update(pathId, { description, updatedAt: now })
-    })
-
+    // Optimistic update
     set(state => ({
       paths: state.paths.map(p =>
         p.id === pathId ? { ...p, description, updatedAt: now } : p
@@ -129,6 +149,16 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
           : state.activePath,
       error: null,
     }))
+
+    try {
+      await persistWithRetry(async () => {
+        await db.learningPaths.update(pathId, { description, updatedAt: now })
+      })
+    } catch (error) {
+      console.error('[LearningPathStore] Failed to update description:', error)
+      set({ paths: prevPaths, activePath: prevActivePath, error: 'Failed to update path description' })
+      toast.error('Failed to update path description')
+    }
   },
 
   deletePath: async (pathId: string) => {
@@ -181,13 +211,10 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       isManuallyOrdered: false,
     }
 
-    await persistWithRetry(async () => {
-      await db.transaction('rw', db.learningPathEntries, db.learningPaths, async () => {
-        await db.learningPathEntries.add(entry)
-        await db.learningPaths.update(pathId, { updatedAt: new Date().toISOString() })
-      })
-    })
+    const prevEntries = get().entries
+    const prevPaths = get().paths
 
+    // Optimistic update
     set(state => ({
       entries: [...state.entries, entry],
       paths: state.paths.map(p =>
@@ -195,6 +222,19 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       ),
       error: null,
     }))
+
+    try {
+      await persistWithRetry(async () => {
+        await db.transaction('rw', db.learningPathEntries, db.learningPaths, async () => {
+          await db.learningPathEntries.add(entry)
+          await db.learningPaths.update(pathId, { updatedAt: new Date().toISOString() })
+        })
+      })
+    } catch (error) {
+      console.error('[LearningPathStore] Failed to add course to path:', error)
+      set({ entries: prevEntries, paths: prevPaths, error: 'Failed to add course to learning path' })
+      toast.error('Failed to add course to learning path')
+    }
   },
 
   removeCourseFromPath: async (pathId: string, courseId: string) => {
@@ -210,17 +250,10 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       .filter(e => e.courseId !== courseId)
       .map((e, index) => ({ ...e, position: index + 1 }))
 
-    await persistWithRetry(async () => {
-      await db.transaction('rw', db.learningPathEntries, db.learningPaths, async () => {
-        await db.learningPathEntries.delete(entryToRemove.id)
-        // Update positions of remaining entries
-        for (const entry of remaining) {
-          await db.learningPathEntries.update(entry.id, { position: entry.position })
-        }
-        await db.learningPaths.update(pathId, { updatedAt: new Date().toISOString() })
-      })
-    })
+    const prevEntries = get().entries
+    const prevPaths = get().paths
 
+    // Optimistic update
     set(state => ({
       entries: [
         ...state.entries.filter(e => e.pathId !== pathId),
@@ -231,6 +264,23 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       ),
       error: null,
     }))
+
+    try {
+      await persistWithRetry(async () => {
+        await db.transaction('rw', db.learningPathEntries, db.learningPaths, async () => {
+          await db.learningPathEntries.delete(entryToRemove.id)
+          // Update positions of remaining entries
+          for (const entry of remaining) {
+            await db.learningPathEntries.update(entry.id, { position: entry.position })
+          }
+          await db.learningPaths.update(pathId, { updatedAt: new Date().toISOString() })
+        })
+      })
+    } catch (error) {
+      console.error('[LearningPathStore] Failed to remove course from path:', error)
+      set({ entries: prevEntries, paths: prevPaths, error: 'Failed to remove course from learning path' })
+      toast.error('Failed to remove course from learning path')
+    }
   },
 
   reorderCourse: async (pathId: string, fromIndex: number, toIndex: number) => {
