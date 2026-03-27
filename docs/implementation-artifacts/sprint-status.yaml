@@ -444,10 +444,10 @@ development_status:
   # Epic 29: Audit Blockers & Critical Fixes
   # Source: epics-audit-hardening.md (P0 — Must fix)
   # ──────────────────────────────────────────────────
-  epic-29: backlog
+  epic-29: in-progress
   29-1-fix-courses-page-crash-tagmanagementpanel-infinite-loop: backlog
   29-2-add-error-handling-to-uselearningpathstore-mutations: backlog
-  29-3-fix-careerpaths-mislabelling-and-add-sidebar-nav-entry: backlog
+  29-3-fix-careerpaths-mislabelling-and-add-sidebar-nav-entry: done
   29-4-remove-focus-visible-outline-none-from-legal-pages: backlog
   29-5-guard-json-parse-in-layout-sidebar-state-parsing: backlog
   epic-29-retrospective: optional

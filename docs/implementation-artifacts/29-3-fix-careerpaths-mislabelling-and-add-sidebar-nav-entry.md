@@ -1,12 +1,12 @@
 ---
 story_id: E29-S03
 story_name: "Fix CareerPaths Mislabelling and Add Missing Sidebar Nav Entry"
-status: ready-for-dev
+status: done
 started: 2026-03-27
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-03-27
+reviewed: true
+review_started: 2026-03-27
+review_gates_passed: [build, lint, typecheck, format, unit-tests, e2e-tests, design-review, code-review, test-coverage-review]
 burn_in_validated: false
 ---
 
@@ -37,18 +37,18 @@ So that I can find and navigate to it without confusion.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Fix heading mislabel in CareerPaths.tsx (AC: 1)
-  - [ ] 1.1 Open `CareerPaths.tsx:255` and change `<h1>` from "Learning Paths" to "Career Paths"
-  - [ ] 1.2 Verify screen reader announcement matches (check `document.title` or `aria-label` if applicable)
-- [ ] Task 2: Add sidebar nav entry for Career Paths (AC: 2)
-  - [ ] 2.1 Open `navigation.ts` and add a "Career Paths" entry to the Library group
-  - [ ] 2.2 Set the correct icon (match existing navigation pattern)
-  - [ ] 2.3 Set route to `/career-paths`
-  - [ ] 2.4 Verify active state highlights on both `/career-paths` and `/career-paths/:id`
-  - [ ] 2.5 Verify keyboard Tab navigation reaches the new entry
-- [ ] Task 3: Fix back-link text in CareerPathDetail.tsx (AC: 3)
-  - [ ] 3.1 Open `CareerPathDetail.tsx:354` and change "Back to learning paths" to "Back to career paths"
-  - [ ] 3.2 Verify the link navigates to `/career-paths`
+- [x] Task 1: Fix heading mislabel in CareerPaths.tsx (AC: 1)
+  - [x] 1.1 Open `CareerPaths.tsx:255` and change `<h1>` from "Learning Paths" to "Career Paths"
+  - [x] 1.2 Verify screen reader announcement matches (check `document.title` or `aria-label` if applicable)
+- [x] Task 2: Add sidebar nav entry for Career Paths (AC: 2)
+  - [x] 2.1 Open `navigation.ts` and add a "Career Paths" entry to the Library group
+  - [x] 2.2 Set the correct icon (match existing navigation pattern)
+  - [x] 2.3 Set route to `/career-paths`
+  - [x] 2.4 Verify active state highlights on both `/career-paths` and `/career-paths/:id`
+  - [x] 2.5 Verify keyboard Tab navigation reaches the new entry
+- [x] Task 3: Fix back-link text in CareerPathDetail.tsx (AC: 3)
+  - [x] 3.1 Open `CareerPathDetail.tsx:354` and change "Back to learning paths" to "Back to career paths"
+  - [x] 3.2 Verify the link navigates to `/career-paths`
 
 ## Implementation Notes
 
