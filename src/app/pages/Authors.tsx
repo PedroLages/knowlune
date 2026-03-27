@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { VirtualizedGrid } from '@/app/components/VirtualizedGrid'
 import { Link } from 'react-router'
 import {
   ArrowDownAZ,
@@ -225,12 +226,13 @@ export function Authors() {
         </Card>
       )}
 
-      {/* Author Grid (multi-author only) */}
+      {/* Author Grid (multi-author only, virtualized) */}
       {allAuthors.length > 1 && sorted.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sorted.map(author => (
+        <VirtualizedGrid
+          items={sorted}
+          getItemKey={author => author.id}
+          renderItem={author => (
             <AuthorCard
-              key={author.id}
               author={author}
               onEdit={
                 author.importedAuthor ? () => setEditAuthor(author.importedAuthor) : undefined
@@ -239,8 +241,11 @@ export function Authors() {
                 author.importedAuthor ? () => setDeleteAuthor(author.importedAuthor) : undefined
               }
             />
-          ))}
-        </div>
+          )}
+          gridClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+          estimateRowHeight={320}
+          data-testid="authors-virtual-grid"
+        />
       )}
 
       {/* Create Dialog */}

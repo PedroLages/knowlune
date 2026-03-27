@@ -45,6 +45,7 @@ import { useCourseStore } from '@/stores/useCourseStore'
 import { formatTimestamp } from '@/lib/format'
 import { stripHtml } from '@/lib/textUtils'
 import { supportsWorkers } from '@/ai/lib/workerCapabilities'
+import { VirtualizedList } from '@/app/components/VirtualizedList'
 import type { Note } from '@/data/types'
 
 // Lazy-loaded heavy components (TipTap renderer pulls ~400KB, QAChatPanel pulls AI infra)
@@ -667,18 +668,23 @@ export function Notes() {
               </div>
             )}
 
-            {/* Note list — grouped by course or flat */}
+            {/* Note list — grouped by course or flat (virtualized) */}
             {courseGroups ? (
-              <div className="space-y-8">
-                {Array.from(courseGroups.entries()).map(([courseName, items]) => (
-                  <div key={courseName}>
-                    <h2 className="text-lg font-semibold mb-3">{courseName}</h2>
-                    <div className="space-y-3">{items.map(renderNoteCard)}</div>
-                  </div>
-                ))}
-              </div>
+              <VirtualizedGroupedNotes
+                courseGroups={courseGroups}
+                renderNoteCard={renderNoteCard}
+              />
             ) : (
-              <div className="space-y-3">{displayedNotes.map(renderNoteCard)}</div>
+              <VirtualizedList
+                items={displayedNotes}
+                getItemKey={item => item.note.id}
+                renderItem={item => (
+                  <div className="pb-3">{renderNoteCard(item)}</div>
+                )}
+                estimateSize={140}
+                overscan={5}
+                data-testid="notes-virtual-list"
+              />
             )}
           </TabsContent>
 
@@ -689,5 +695,55 @@ export function Notes() {
         </Tabs>
       </div>
     </TooltipProvider>
+  )
+}
+
+/**
+ * Virtualized grouped notes view.
+ * Flattens course groups + note cards into a single virtual list
+ * with group headers rendered as special items.
+ */
+type GroupedItem =
+  | { type: 'header'; courseName: string }
+  | { type: 'note'; item: EnrichedNote }
+
+function VirtualizedGroupedNotes({
+  courseGroups,
+  renderNoteCard,
+}: {
+  courseGroups: Map<string, EnrichedNote[]>
+  renderNoteCard: (item: EnrichedNote) => React.ReactNode
+}) {
+  const flatItems = useMemo(() => {
+    const result: GroupedItem[] = []
+    for (const [courseName, items] of courseGroups.entries()) {
+      result.push({ type: 'header', courseName })
+      for (const item of items) {
+        result.push({ type: 'note', item })
+      }
+    }
+    return result
+  }, [courseGroups])
+
+  return (
+    <VirtualizedList
+      items={flatItems}
+      getItemKey={entry =>
+        entry.type === 'header' ? `header-${entry.courseName}` : `note-${entry.item.note.id}`
+      }
+      renderItem={entry => {
+        if (entry.type === 'header') {
+          return (
+            <div className="pt-6 first:pt-0 pb-3">
+              <h2 className="text-lg font-semibold">{entry.courseName}</h2>
+            </div>
+          )
+        }
+        return <div className="pb-3">{renderNoteCard(entry.item)}</div>
+      }}
+      estimateSize={140}
+      overscan={5}
+      data-testid="notes-grouped-virtual-list"
+    />
   )
 }

@@ -483,8 +483,8 @@ development_status:
   # Epic 32: Performance & Scalability
   # Source: epics-audit-hardening.md (P2 — Scale-proofing)
   # ──────────────────────────────────────────────────
-  epic-32: backlog
-  32-1-add-list-virtualization-with-tanstack-react-virtual: backlog
+  epic-32: in-progress
+  32-1-add-list-virtualization-with-tanstack-react-virtual: done
   32-2-implement-lazy-zustand-store-loading: backlog
   32-3-add-indexeddb-quota-monitoring-with-user-warnings: backlog
   32-4-implement-data-pruning-for-studysessions-aiusageevents-embeddings: backlog
