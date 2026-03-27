@@ -61,7 +61,9 @@ export function getRetentionSettings(): DataRetentionSettings {
   }
 }
 
-export function saveRetentionSettings(settings: Partial<DataRetentionSettings>): DataRetentionSettings {
+export function saveRetentionSettings(
+  settings: Partial<DataRetentionSettings>
+): DataRetentionSettings {
   const current = getRetentionSettings()
   const updated = { ...current, ...settings }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
@@ -87,10 +89,7 @@ async function pruneStudySessions(ttlDays: RetentionDays): Promise<number> {
   if (ttlDays === 0) return 0
 
   const cutoff = cutoffDate(ttlDays)
-  const count = await db.studySessions
-    .where('startTime')
-    .below(cutoff)
-    .delete()
+  const count = await db.studySessions.where('startTime').below(cutoff).delete()
 
   if (count > 0) {
     console.log(`[DataPruning] Pruned ${count} study sessions older than ${ttlDays} days`)
@@ -106,10 +105,7 @@ async function pruneAIUsageEvents(ttlDays: RetentionDays): Promise<number> {
   if (ttlDays === 0) return 0
 
   const cutoff = cutoffDate(ttlDays)
-  const count = await db.aiUsageEvents
-    .where('timestamp')
-    .below(cutoff)
-    .delete()
+  const count = await db.aiUsageEvents.where('timestamp').below(cutoff).delete()
 
   if (count > 0) {
     console.log(`[DataPruning] Pruned ${count} AI usage events older than ${ttlDays} days`)
@@ -129,9 +125,7 @@ async function pruneOrphanedEmbeddings(): Promise<number> {
   const noteIds = new Set(await db.notes.toCollection().primaryKeys())
 
   // Find orphaned embedding noteIds
-  const orphanedNoteIds = allEmbeddings
-    .filter(e => !noteIds.has(e.noteId))
-    .map(e => e.noteId)
+  const orphanedNoteIds = allEmbeddings.filter(e => !noteIds.has(e.noteId)).map(e => e.noteId)
 
   if (orphanedNoteIds.length === 0) return 0
 
