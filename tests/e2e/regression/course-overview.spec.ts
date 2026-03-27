@@ -368,8 +368,6 @@ test.describe('CourseOverview — sequential course locking', () => {
     await seedSequentialCourse(page)
     await navigateAndWait(page, '/courses/test-course-sequential/overview')
 
-    // The first module should show its number "1"
-    const curriculumSection = page.locator('text=Curriculum').locator('..')
     // Module 1 header should be visible with module number
     await expect(page.getByText('Foundations of Behavioral Analysis')).toBeVisible()
   })

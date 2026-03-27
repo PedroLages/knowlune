@@ -17,7 +17,7 @@ import {
   seedIndexedDBStore,
   clearLearningPath,
   seedImportedCourses,
-} from '../../support/helpers/indexeddb-seed'
+} from '../../support/helpers/seed-helpers'
 import { navigateAndWait } from '../../support/helpers/navigation'
 import { FIXED_DATE, getRelativeDate } from '../../utils/test-time'
 
