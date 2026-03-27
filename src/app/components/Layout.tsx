@@ -253,11 +253,25 @@ export function Layout() {
       if (legacy !== null) {
         localStorage.setItem('knowlune-sidebar-v1', legacy)
         localStorage.removeItem('eduvi-sidebar-v1')
-        return JSON.parse(legacy)
+        const parsed = JSON.parse(legacy)
+        if (typeof parsed !== 'boolean') {
+          localStorage.removeItem('knowlune-sidebar-v1')
+          return true
+        }
+        return parsed
       }
       const saved = localStorage.getItem('knowlune-sidebar-v1')
-      return saved !== null ? JSON.parse(saved) : true
+      if (saved !== null) {
+        const parsed = JSON.parse(saved)
+        if (typeof parsed !== 'boolean') {
+          localStorage.removeItem('knowlune-sidebar-v1')
+          return true
+        }
+        return parsed
+      }
+      return true
     } catch {
+      console.warn('Corrupted sidebar state in localStorage, resetting to default')
       localStorage.removeItem('eduvi-sidebar-v1')
       localStorage.removeItem('knowlune-sidebar-v1')
       return true
@@ -271,11 +285,25 @@ export function Layout() {
       if (legacy !== null) {
         localStorage.setItem('knowlune-sidebar-collapsed-v1', legacy)
         localStorage.removeItem('eduvi-sidebar-collapsed-v1')
-        return JSON.parse(legacy)
+        const parsed = JSON.parse(legacy)
+        if (typeof parsed !== 'boolean') {
+          localStorage.removeItem('knowlune-sidebar-collapsed-v1')
+          return false
+        }
+        return parsed
       }
       const saved = localStorage.getItem('knowlune-sidebar-collapsed-v1')
-      return saved !== null ? JSON.parse(saved) : false
+      if (saved !== null) {
+        const parsed = JSON.parse(saved)
+        if (typeof parsed !== 'boolean') {
+          localStorage.removeItem('knowlune-sidebar-collapsed-v1')
+          return false
+        }
+        return parsed
+      }
+      return false
     } catch {
+      console.warn('Corrupted sidebar collapsed state in localStorage, resetting to default')
       localStorage.removeItem('eduvi-sidebar-collapsed-v1')
       localStorage.removeItem('knowlune-sidebar-collapsed-v1')
       return false
