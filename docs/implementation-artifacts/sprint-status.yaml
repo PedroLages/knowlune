@@ -487,7 +487,7 @@ development_status:
   32-1-add-list-virtualization-with-tanstack-react-virtual: done
   32-2-implement-lazy-zustand-store-loading: done
   32-3-add-indexeddb-quota-monitoring-with-user-warnings: done
-  32-4-implement-data-pruning-for-studysessions-aiusageevents-embeddings: in-progress
+  32-4-implement-data-pruning-for-studysessions-aiusageevents-embeddings: done
   32-5-create-dexie-migration-checkpoint-at-v27: backlog
   epic-32-retrospective: optional
 
