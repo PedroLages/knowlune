@@ -135,14 +135,19 @@ export function ImportedCourseDetail() {
   async function handleDelete() {
     if (deleting || !courseId) return
     setDeleting(true)
-    await removeImportedCourse(courseId)
-    const { importError } = useCourseImportStore.getState()
-    if (importError) {
+    try {
+      await removeImportedCourse(courseId)
+      const { importError } = useCourseImportStore.getState()
+      if (importError) {
+        toast.error('Failed to delete course')
+        setDeleting(false)
+      } else {
+        toast.success('Course deleted')
+        navigate('/courses')
+      }
+    } catch {
       toast.error('Failed to delete course')
       setDeleting(false)
-    } else {
-      toast.success('Course deleted')
-      navigate('/courses')
     }
   }
 
