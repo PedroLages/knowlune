@@ -218,7 +218,7 @@ export function CareerPaths() {
       console.error('[CareerPaths] Failed to load paths:', err)
       setLoadError(
         isOnline
-          ? 'Failed to load learning paths. Please try again.'
+          ? 'Failed to load career paths. Please try again.'
           : "You're offline. Please check your connection and try again."
       )
     }
@@ -265,7 +265,7 @@ export function CareerPaths() {
       <div className="space-y-8">
         <div className="space-y-4">
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight font-display text-foreground">
-            Learning Paths
+            Career Paths
           </h1>
         </div>
         <div className="rounded-[24px] border border-destructive/50 bg-destructive/10 p-8 text-center">
@@ -292,7 +292,7 @@ export function CareerPaths() {
         {/* Page header — editorial display type */}
         <motion.div variants={fadeUp} className="space-y-4">
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight font-display text-foreground">
-            Learning Paths
+            Career Paths
           </h1>
           <p className="text-muted-foreground text-base max-w-xl leading-relaxed">
             Structured multi-course journeys with staged progression and
@@ -312,7 +312,7 @@ export function CareerPaths() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search paths..."
-              aria-label="Search learning paths"
+              aria-label="Search career paths"
               className={cn(
                 'w-full bg-transparent border-0 border-b border-border pl-7 pr-2 py-2',
                 'text-sm text-foreground placeholder:text-muted-foreground',
@@ -328,14 +328,14 @@ export function CareerPaths() {
             <EmptyState
               icon={Search}
               title="No paths match your search"
-              description={`No learning paths found for "${search}". Try a different search term.`}
+              description={`No career paths found for "${search}". Try a different search term.`}
             />
           </motion.div>
         ) : filteredPaths.length === 0 ? (
           <EmptyState
             icon={Route}
-            title="No learning paths available"
-            description="Curated learning paths will appear here once they are available."
+            title="No career paths available"
+            description="Curated career paths will appear here once they are available."
           />
         ) : (
           <motion.div
@@ -343,7 +343,7 @@ export function CareerPaths() {
             initial="hidden"
             animate="visible"
             role="list"
-            aria-label="Learning paths"
+            aria-label="Career paths"
           >
             {filteredPaths.map((path, index) => (
               <PathRow key={path.id} path={path} index={index} />

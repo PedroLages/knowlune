@@ -43,7 +43,7 @@
 # - E18-S03 detected story file → ready-for-dev
 
 generated: 2026-03-15
-last_updated: 2026-03-27  # Added E35 (server-side entitlement enforcement, 4 stories) to backlog
+last_updated: 2026-03-27  # Added E29-E33 (audit hardening epics, 29 stories) to backlog
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -445,9 +445,9 @@ development_status:
   # Source: epics-audit-hardening.md (P0 — Must fix)
   # ──────────────────────────────────────────────────
   epic-29: in-progress
-  29-1-fix-courses-page-crash-tagmanagementpanel-infinite-loop: done
-  29-2-add-error-handling-to-uselearningpathstore-mutations: done
-  29-3-fix-careerpaths-mislabelling-and-add-sidebar-nav-entry: backlog
+  29-1-fix-courses-page-crash-tagmanagementpanel-infinite-loop: backlog
+  29-2-add-error-handling-to-uselearningpathstore-mutations: backlog
+  29-3-fix-careerpaths-mislabelling-and-add-sidebar-nav-entry: done
   29-4-remove-focus-visible-outline-none-from-legal-pages: backlog
   29-5-guard-json-parse-in-layout-sidebar-state-parsing: backlog
   epic-29-retrospective: optional
@@ -503,16 +503,3 @@ development_status:
   33-5-add-e2e-coverage-for-youtube-course-creation-flow: backlog
   33-6-add-testable-import-path-drag-and-drop-file-import: backlog
   epic-33-retrospective: optional
-
-  # ──────────────────────────────────────────────────
-  # Epic 35: Server-Side Entitlement Enforcement
-  # Source: Architecture addendum (Adversarial Finding #9)
-  # Depends on: Epic 19 (Supabase auth + Stripe), Epic 22 (Express AI proxy)
-  # NOTE: E34 reserved (no epic assigned yet)
-  # ──────────────────────────────────────────────────
-  epic-35: backlog
-  35-1-entitlement-middleware-foundation: backlog
-  35-2-express-proxy-entitlement-guard: backlog
-  35-3-byok-pass-through-logic: backlog
-  35-4-client-ispremium-refactor-and-dev-proxy: backlog
-  epic-35-retrospective: optional
