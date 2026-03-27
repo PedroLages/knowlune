@@ -30,8 +30,10 @@ import type {
   YouTubeCourseChapter,
 } from '@/data/types'
 import type { Quiz, QuizAttempt } from '@/types/quiz'
+import { CHECKPOINT_VERSION, CHECKPOINT_SCHEMA } from './checkpoint'
 
-const db = new Dexie('ElearningDB') as Dexie & {
+/** Typed Dexie database interface for ElearningDB */
+export type ElearningDatabase = Dexie & {
   importedCourses: EntityTable<ImportedCourse, 'id'>
   importedVideos: EntityTable<ImportedVideo, 'id'>
   importedPdfs: EntityTable<ImportedPdf, 'id'>
@@ -64,13 +66,42 @@ const db = new Dexie('ElearningDB') as Dexie & {
   youtubeChapters: EntityTable<YouTubeCourseChapter, 'id'>
 }
 
-db.version(1).stores({
+/**
+ * Declare all incremental migration versions (v1–v27) on a Dexie instance.
+ * Required for existing users who need to upgrade from any prior version.
+ * Exported for testing: allows comparing migration-built schema vs checkpoint schema.
+ */
+export function declareLegacyMigrations(database: Dexie): void {
+  _declareLegacyMigrations(database)
+}
+
+/**
+ * Create a fresh Dexie instance using only the checkpoint schema (no migration history).
+ * This is what new installs get — a single version declaration with the full schema.
+ * Exported for testing: allows comparing checkpoint schema vs migration-built schema.
+ */
+export function createCheckpointDb(dbName: string): ElearningDatabase {
+  const freshDb = new Dexie(dbName) as ElearningDatabase
+  freshDb.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)
+  return freshDb
+}
+
+const db = new Dexie('ElearningDB') as ElearningDatabase
+
+// Declare all legacy migrations for backward compatibility with existing users.
+// For fresh installs, Dexie already optimizes by creating the latest schema
+// directly without running any upgrade() callbacks.
+_declareLegacyMigrations(db)
+
+function _declareLegacyMigrations(database: Dexie): void {
+
+database.version(1).stores({
   importedCourses: 'id, name, importedAt, *tags',
   importedVideos: 'id, courseId, filename',
   importedPdfs: 'id, courseId, filename',
 })
 
-db.version(2)
+database.version(2)
   .stores({
     importedCourses: 'id, name, importedAt, status, *tags',
     importedVideos: 'id, courseId, filename',
@@ -87,7 +118,7 @@ db.version(2)
       })
   })
 
-db.version(3).stores({
+database.version(3).stores({
   importedCourses: 'id, name, importedAt, status, *tags',
   importedVideos: 'id, courseId, filename',
   importedPdfs: 'id, courseId, filename',
@@ -147,7 +178,7 @@ function isValidMigrationProgress(data: unknown): data is MigrationProgress {
   })
 }
 
-db.version(4)
+database.version(4)
   .stores({
     importedCourses: 'id, name, importedAt, status, *tags',
     importedVideos: 'id, courseId, filename',
@@ -220,7 +251,7 @@ db.version(4)
     }
   })
 
-db.version(5).stores({
+database.version(5).stores({
   importedCourses: 'id, name, importedAt, status, *tags',
   importedVideos: 'id, courseId, filename',
   importedPdfs: 'id, courseId, filename',
@@ -230,7 +261,7 @@ db.version(5).stores({
   screenshots: 'id, [courseId+lessonId], courseId, lessonId, createdAt',
 })
 
-db.version(6).stores({
+database.version(6).stores({
   importedCourses: 'id, name, importedAt, status, *tags',
   importedVideos: 'id, courseId, filename',
   importedPdfs: 'id, courseId, filename',
@@ -241,7 +272,7 @@ db.version(6).stores({
   studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime',
 })
 
-db.version(7).stores({
+database.version(7).stores({
   importedCourses: 'id, name, importedAt, status, *tags',
   importedVideos: 'id, courseId, filename',
   importedPdfs: 'id, courseId, filename',
@@ -253,7 +284,7 @@ db.version(7).stores({
   contentProgress: '[courseId+itemId], courseId, itemId, status',
 })
 
-db.version(8).stores({
+database.version(8).stores({
   importedCourses: 'id, name, importedAt, status, *tags',
   importedVideos: 'id, courseId, filename',
   importedPdfs: 'id, courseId, filename',
@@ -266,7 +297,7 @@ db.version(8).stores({
   challenges: 'id, type, deadline, createdAt',
 })
 
-db.version(9).stores({
+database.version(9).stores({
   importedCourses: 'id, name, importedAt, status, *tags',
   importedVideos: 'id, courseId, filename',
   importedPdfs: 'id, courseId, filename',
@@ -280,7 +311,7 @@ db.version(9).stores({
   embeddings: 'noteId, createdAt',
 })
 
-db.version(10).stores({
+database.version(10).stores({
   importedCourses: 'id, name, importedAt, status, *tags',
   importedVideos: 'id, courseId, filename',
   importedPdfs: 'id, courseId, filename',
@@ -295,7 +326,7 @@ db.version(10).stores({
   learningPath: 'courseId, position, generatedAt',
 })
 
-db.version(11).stores({
+database.version(11).stores({
   importedCourses: 'id, name, importedAt, status, *tags',
   importedVideos: 'id, courseId, filename',
   importedPdfs: 'id, courseId, filename',
@@ -311,7 +342,7 @@ db.version(11).stores({
   courseThumbnails: 'courseId',
 })
 
-db.version(12).stores({
+database.version(12).stores({
   importedCourses: 'id, name, importedAt, status, *tags',
   importedVideos: 'id, courseId, filename',
   importedPdfs: 'id, courseId, filename',
@@ -328,7 +359,7 @@ db.version(12).stores({
   aiUsageEvents: 'id, featureType, timestamp, courseId',
 })
 
-db.version(13).stores({
+database.version(13).stores({
   importedCourses: 'id, name, importedAt, status, *tags',
   importedVideos: 'id, courseId, filename',
   importedPdfs: 'id, courseId, filename',
@@ -349,7 +380,7 @@ db.version(13).stores({
 // v14: Quality scoring fields added to StudySession (E11-S03)
 // No new indexes needed — quality score fields are stored inline, not queried by index.
 // New optional fields: interactionCount, breakCount, qualityScore, qualityFactors
-db.version(14).stores({
+database.version(14).stores({
   importedCourses: 'id, name, importedAt, status, *tags',
   importedVideos: 'id, courseId, filename',
   importedPdfs: 'id, courseId, filename',
@@ -368,7 +399,7 @@ db.version(14).stores({
 })
 
 // v15: Per-course study reminders (E11-S06)
-db.version(15).stores({
+database.version(15).stores({
   importedCourses: 'id, name, importedAt, status, *tags',
   importedVideos: 'id, courseId, filename',
   importedPdfs: 'id, courseId, filename',
@@ -388,7 +419,7 @@ db.version(15).stores({
 })
 
 // v16: Seed courses table — moves hardcoded Course[] from src/data/courses into IndexedDB
-db.version(16).stores({
+database.version(16).stores({
   importedCourses: 'id, name, importedAt, status, *tags',
   importedVideos: 'id, courseId, filename',
   importedPdfs: 'id, courseId, filename',
@@ -409,7 +440,7 @@ db.version(16).stores({
 })
 
 // v17: Quiz tables for quiz subsystem (E12-S02)
-db.version(17).stores({
+database.version(17).stores({
   // All 17 existing v16 tables (unchanged — must redeclare or Dexie deletes them)
   importedCourses: 'id, name, importedAt, status, *tags',
   importedVideos: 'id, courseId, filename',
@@ -434,7 +465,7 @@ db.version(17).stores({
 })
 
 // v18: Caption file associations for user-loaded subtitles (E02-S10)
-db.version(18).stores({
+database.version(18).stores({
   // All 19 existing v17 tables (unchanged — must redeclare or Dexie deletes them)
   importedCourses: 'id, name, importedAt, status, *tags',
   importedVideos: 'id, courseId, filename',
@@ -460,7 +491,7 @@ db.version(18).stores({
 })
 
 // v19: Rename instructorId → authorId in courses table
-db.version(19)
+database.version(19)
   .stores({
     // All 20 existing v18 tables (unchanged — must redeclare or Dexie deletes them)
     importedCourses: 'id, name, importedAt, status, *tags',
@@ -498,7 +529,7 @@ db.version(19)
 
 // v20: Authors table for user-managed author profiles (E25-S01)
 // Migration: pre-seeds Chase Hughes, migrates importedCourses authorName → ImportedAuthor records
-db.version(20)
+database.version(20)
   .stores({
     // All 21 existing v19 tables (unchanged — must redeclare or Dexie deletes them)
     importedCourses: 'id, name, importedAt, status, *tags',
@@ -616,7 +647,7 @@ db.version(20)
   })
 
 // v21: Career Paths system — curated multi-course learning journeys (E20-S01)
-db.version(21).stores({
+database.version(21).stores({
   // All 22 existing v20 tables (unchanged — must redeclare or Dexie deletes them)
   importedCourses: 'id, name, importedAt, status, *tags',
   importedVideos: 'id, courseId, filename',
@@ -645,7 +676,7 @@ db.version(21).stores({
 })
 
 // v22: Add flashcards table for SM-2 spaced repetition flashcard system (E20-S02)
-db.version(22).stores({
+database.version(22).stores({
   // All 24 existing v21 tables (unchanged — must redeclare or Dexie deletes them)
   importedCourses: 'id, name, importedAt, status, *tags',
   importedVideos: 'id, courseId, filename',
@@ -675,7 +706,7 @@ db.version(22).stores({
 })
 
 // v23: Add entitlements table for local subscription cache (E19-S02)
-db.version(23).stores({
+database.version(23).stores({
   // All 26 existing v22 tables (unchanged — must redeclare or Dexie deletes them)
   importedCourses: 'id, name, importedAt, status, *tags',
   importedVideos: 'id, courseId, filename',
@@ -708,7 +739,7 @@ db.version(23).stores({
 // v24: Multi-path learning journeys data model (E26-S01)
 // Creates learningPaths + learningPathEntries tables, migrates existing single-path data,
 // then drops the old learningPath table.
-db.version(24)
+database.version(24)
   .stores({
     // All existing v23 tables (unchanged — must redeclare or Dexie deletes them)
     importedCourses: 'id, name, importedAt, status, *tags',
@@ -790,7 +821,7 @@ db.version(24)
   })
 
 // v25: Drop old single-path learningPath table after successful migration (E26-S01)
-db.version(25).stores({
+database.version(25).stores({
   // All tables from v24 MINUS the old learningPath table (null = delete)
   importedCourses: 'id, name, importedAt, status, *tags',
   importedVideos: 'id, courseId, filename',
@@ -828,7 +859,7 @@ db.version(25).stores({
 // - youtubeTranscripts: per-course transcript storage (compound PK)
 // - youtubeChapters: course-level chapter markers with ordering
 // - upgrade(): backfill existing courses with `source: 'local'`
-db.version(26)
+database.version(26)
   .stores({
     // All existing v25 tables (must redeclare or Dexie deletes them)
     importedCourses: 'id, name, importedAt, status, *tags, source',
@@ -877,7 +908,7 @@ db.version(26)
 // v27: Transcript pipeline — add status index for per-video tracking (E28-S04)
 // - youtubeTranscripts: add `status` index for filtering by fetch state
 // - upgrade(): backfill existing transcript records with status: 'done' and source
-db.version(27)
+database.version(27)
   .stores({
     // All existing v26 tables (must redeclare or Dexie deletes them)
     importedCourses: 'id, name, importedAt, status, *tags, source',
@@ -928,4 +959,6 @@ db.version(27)
       })
   })
 
-export { db }
+} // end _declareLegacyMigrations
+
+export { db, CHECKPOINT_VERSION, CHECKPOINT_SCHEMA }
