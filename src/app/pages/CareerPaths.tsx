@@ -265,7 +265,7 @@ export function CareerPaths() {
       <div className="space-y-8">
         <div className="space-y-4">
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight font-display text-foreground">
-            Learning Paths
+            Career Paths
           </h1>
         </div>
         <div className="rounded-[24px] border border-destructive/50 bg-destructive/10 p-8 text-center">
@@ -292,7 +292,7 @@ export function CareerPaths() {
         {/* Page header — editorial display type */}
         <motion.div variants={fadeUp} className="space-y-4">
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight font-display text-foreground">
-            Learning Paths
+            Career Paths
           </h1>
           <p className="text-muted-foreground text-base max-w-xl leading-relaxed">
             Structured multi-course journeys with staged progression and

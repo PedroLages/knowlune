@@ -353,7 +353,7 @@ export function CareerPathDetail() {
               to="/career-paths"
               data-testid="back-link"
               className="size-10 rounded-full border border-border bg-card flex items-center justify-center hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-              aria-label="Back to learning paths"
+              aria-label="Back to career paths"
             >
               <ChevronLeft className="size-5 text-foreground" aria-hidden="true" />
             </Link>
@@ -361,7 +361,7 @@ export function CareerPathDetail() {
               variant="secondary"
               className="text-[10px] uppercase tracking-[0.2em] font-semibold"
             >
-              Learning Path
+              Career Path
             </Badge>
           </div>
 
