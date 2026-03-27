@@ -1,12 +1,12 @@
 ---
 story_id: E30-S03
 story_name: "Fix Heading Hierarchy in CourseDetail, Settings, PremiumFeaturePage"
-status: complete
+status: done
 started: 2026-03-27
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-03-27
+reviewed: true
+review_started: 2026-03-27
+review_gates_passed: [build, lint, typecheck, format, unit-tests, e2e-tests, design-review, code-review, code-review-testing]
 burn_in_validated: false
 ---
 
