@@ -61,6 +61,17 @@ const setupTestData = async page => {
 
 test.describe('Accessibility - Overview Page', () => {
   test.beforeEach(async ({ page }) => {
+    // Seed sidebar state to prevent overlay blocking on tablet/mobile viewports
+    // (knowlune-sidebar-v1 defaults to open=true at 640-1023px, creating fullscreen Sheet overlay)
+    // Also dismiss onboarding overlay to prevent it from blocking test interactions
+    await page.addInitScript(() => {
+      localStorage.setItem('knowlune-sidebar-v1', 'false')
+      localStorage.setItem(
+        'knowlune-onboarding-v1',
+        JSON.stringify({ completedAt: '2026-01-01T00:00:00.000Z', skipped: true })
+      )
+    })
+
     // Suppress console errors from missing media files
     page.on('console', msg => {
       if (msg.type() === 'error') {
@@ -85,15 +96,18 @@ test.describe('Accessibility - Overview Page', () => {
   })
 
   test.skip('Overview page - Tab key navigation', async ({ page }) => {
-    // FIXME: Pre-existing failure - only 1 unique element found when tabbing
-    // See: https://github.com/PedroLages/Elearningplatformwireframes/issues/XXX
+    // SKIPPED: Overview page sidebar links all share the same tagName+role pattern,
+    // so tabbing through them appears as 1 unique element type. The test needs to be
+    // redesigned to check focus-moves-forward rather than unique-element-types.
+    // Additionally, TagManagementPanel "Maximum update depth exceeded" crash on Courses
+    // page can cascade and cause the overview page to render in error boundary state.
     await page.goto('/')
     await setupTestData(page)
     await page.reload()
     await page.waitForLoadState('networkidle')
 
-    // Press Tab multiple times and verify focus indicators are visible
-    const focusableElements = []
+    // Press Tab multiple times and verify focus moves through elements
+    const focusableElements: Array<{ tagName: string | undefined; role: string | null; ariaLabel: string | null }> = []
 
     // Start from body
     await page.evaluate(() => document.body.focus())
@@ -107,7 +121,6 @@ test.describe('Accessibility - Overview Page', () => {
           tagName: el?.tagName,
           role: el?.getAttribute('role'),
           ariaLabel: el?.getAttribute('aria-label'),
-          text: el?.textContent?.substring(0, 50),
         }
       })
       focusableElements.push(focusedElement)
@@ -116,8 +129,11 @@ test.describe('Accessibility - Overview Page', () => {
     // Verify we moved through different elements
     expect(focusableElements.length).toBeGreaterThan(0)
 
-    // Verify at least some navigation occurred (not all elements are the same)
-    const uniqueElements = new Set(focusableElements.map(el => `${el.tagName}-${el.role}`))
+    // Verify at least some navigation occurred - use tagName + ariaLabel for uniqueness
+    // (multiple elements may share the same tagName+role but differ by ariaLabel)
+    const uniqueElements = new Set(
+      focusableElements.map(el => `${el.tagName}-${el.role}-${el.ariaLabel}`)
+    )
     expect(uniqueElements.size).toBeGreaterThan(1)
   })
 
