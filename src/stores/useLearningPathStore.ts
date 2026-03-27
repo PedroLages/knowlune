@@ -99,8 +99,13 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       })
     } catch (error) {
       console.error('[LearningPathStore] Failed to create path:', error)
-      set({ paths: prevPaths, activePath: prevActivePath, error: 'Failed to create learning path' })
+      set({
+        paths: prevPaths,
+        activePath: prevActivePath,
+        error: 'Failed to create learning path',
+      })
       toast.error('Failed to create learning path')
+      // Re-throw so callers like generatePath can handle the error
       throw error
     }
 
@@ -128,7 +133,11 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       })
     } catch (error) {
       console.error('[LearningPathStore] Failed to rename path:', error)
-      set({ paths: prevPaths, activePath: prevActivePath, error: 'Failed to rename learning path' })
+      set({
+        paths: prevPaths,
+        activePath: prevActivePath,
+        error: 'Failed to rename learning path',
+      })
       toast.error('Failed to rename learning path')
     }
   },
@@ -156,7 +165,11 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       })
     } catch (error) {
       console.error('[LearningPathStore] Failed to update description:', error)
-      set({ paths: prevPaths, activePath: prevActivePath, error: 'Failed to update path description' })
+      set({
+        paths: prevPaths,
+        activePath: prevActivePath,
+        error: 'Failed to update path description',
+      })
       toast.error('Failed to update path description')
     }
   },
@@ -232,7 +245,11 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       })
     } catch (error) {
       console.error('[LearningPathStore] Failed to add course to path:', error)
-      set({ entries: prevEntries, paths: prevPaths, error: 'Failed to add course to learning path' })
+      set({
+        entries: prevEntries,
+        paths: prevPaths,
+        error: 'Failed to add course to learning path',
+      })
       toast.error('Failed to add course to learning path')
     }
   },
@@ -278,7 +295,11 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       })
     } catch (error) {
       console.error('[LearningPathStore] Failed to remove course from path:', error)
-      set({ entries: prevEntries, paths: prevPaths, error: 'Failed to remove course from learning path' })
+      set({
+        entries: prevEntries,
+        paths: prevPaths,
+        error: 'Failed to remove course from learning path',
+      })
       toast.error('Failed to remove course from learning path')
     }
   },
