@@ -475,7 +475,7 @@ development_status:
   31-3-fix-zustand-state-mutation-in-usesessionstore: backlog
   31-4-fix-unsafe-type-cast-in-useyoutubeimportstore: backlog
   31-5-fix-silent-catch-in-usecourseimportstore: backlog
-  31-6-fix-api-client-abortsignal-composition: in-progress
+  31-6-fix-api-client-abortsignal-composition: done
   31-7-add-route-level-error-boundaries-to-suspensepage-wrappers: backlog
   epic-31-retrospective: optional
 

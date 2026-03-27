@@ -1,9 +1,9 @@
 ---
 story_id: E31-S06
 story_name: "Fix API Client AbortSignal Composition"
-status: in-progress
+status: done
 started: 2026-03-27
-completed:
+completed: 2026-03-27
 reviewed: true
 review_started: 2026-03-27
 review_gates_passed: [build, lint, type-check, format-check, unit-tests-skipped, e2e-tests-skipped, design-review-skipped, code-review, code-review-testing]
