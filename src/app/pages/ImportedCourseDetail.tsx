@@ -16,6 +16,7 @@ import { toast } from 'sonner'
 import { db } from '@/db/schema'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
+import { useLazyStore } from '@/hooks/useLazyStore'
 import { useFileStatusVerification } from '@/hooks/useFileStatusVerification'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
@@ -113,10 +114,9 @@ export function ImportedCourseDetail() {
   const [searchQuery, setSearchQuery] = useState('')
   const contentListRef = useRef<HTMLUListElement>(null)
 
-  useEffect(() => {
-    loadImportedCourses()
-    loadAuthors()
-  }, [loadImportedCourses, loadAuthors])
+  // Lazy-load imported courses + authors on mount (deferred — not critical for initial app load)
+  useLazyStore(loadImportedCourses)
+  useLazyStore(loadAuthors)
 
   // E1C-S02: Inline title editing — optimistic update to IndexedDB + Zustand store
   const handleTitleSave = useCallback(

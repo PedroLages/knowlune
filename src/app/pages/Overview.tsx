@@ -23,6 +23,7 @@ import { ProgressChart } from '@/app/components/charts/ProgressChart'
 import { DashboardCustomizer } from '@/app/components/DashboardCustomizer'
 import { SkillProficiencyRadar } from '@/app/components/overview/SkillProficiencyRadar'
 import { useCourseStore } from '@/stores/useCourseStore'
+import { useLazyStore } from '@/hooks/useLazyStore'
 import {
   getCoursesInProgress,
   getCompletedCourses,
@@ -99,13 +100,9 @@ export function Overview() {
   const importedCourses = useCourseImportStore(s => s.importedCourses)
   const loadImportedCourses = useCourseImportStore(s => s.loadImportedCourses)
 
-  useEffect(() => {
-    loadSessionStats()
-  }, [loadSessionStats])
-
-  useEffect(() => {
-    loadImportedCourses()
-  }, [loadImportedCourses])
+  // Lazy-load session stats + imported courses (deferred — not critical for initial app load)
+  useLazyStore(loadSessionStats)
+  useLazyStore(loadImportedCourses)
 
   const totalStudyTimeSeconds = getTotalStudyTime()
   const totalStudyTimeHours = Math.round((totalStudyTimeSeconds / 3600) * 10) / 10
