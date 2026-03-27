@@ -52,13 +52,19 @@ async function fetchApi<T>(
   const url = `${API_BASE_URL}${endpoint}`
 
   // Create AbortController for timeout handling
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+  const timeoutController = new AbortController()
+  const timeoutId = setTimeout(() => timeoutController.abort(), timeoutMs)
+
+  // Compose caller signal with timeout signal so either can abort the request.
+  // AbortSignal.any() is baseline 2024 (Chrome 116+, Firefox 124+, Safari 17.4+).
+  const signal = options.signal
+    ? AbortSignal.any([options.signal, timeoutController.signal])
+    : timeoutController.signal
 
   try {
     const response = await fetch(url, {
       ...options,
-      signal: controller.signal, // Attach abort signal
+      signal,
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
