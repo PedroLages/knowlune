@@ -1,12 +1,12 @@
 ---
 story_id: E31-S04
 story_name: "Fix Unsafe Type Cast in useYouTubeImportStore"
-status: ready-for-dev
+status: done
 started: 2026-03-27
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-03-27
+reviewed: true
+review_started: 2026-03-27
+review_gates_passed: [build, lint, typecheck, unit-tests, code-review]
 burn_in_validated: false
 ---
 
@@ -32,30 +32,30 @@ so that calling methods on a null handle doesn't cause runtime TypeErrors.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Fix the type declaration at line 278 (AC: 1)
-  - [ ] 1.1 Change `null as unknown as FileSystemDirectoryHandle` to simply `null`
-  - [ ] 1.2 Update the type annotation to `FileSystemDirectoryHandle | null`
-  - [ ] 1.3 Verify TypeScript compiles without errors
+- [x] Task 1: Fix the type declaration at line 278 (AC: 1)
+  - [x] 1.1 Change `null as unknown as FileSystemDirectoryHandle` to simply `null`
+  - [x] 1.2 Update the type annotation to `FileSystemDirectoryHandle | null`
+  - [x] 1.3 Verify TypeScript compiles without errors
 
-- [ ] Task 2: Fix the type declaration at line 296 (AC: 1)
-  - [ ] 2.1 Apply the same fix as Task 1 to the second occurrence
-  - [ ] 2.2 Ensure both locations use `| null` type consistently
+- [x] Task 2: Fix the type declaration at line 296 (AC: 1)
+  - [x] 2.1 Apply the same fix as Task 1 to the second occurrence
+  - [x] 2.2 Ensure both locations use `| null` type consistently
 
-- [ ] Task 3: Add null guards to all consumers of the handle (AC: 2)
-  - [ ] 3.1 Search for all usages of the directory handle property in the store
-  - [ ] 3.2 Add `if (handle === null) return` or `if (!handle) return` guards before any method calls
-  - [ ] 3.3 Add appropriate error handling or early returns when handle is null
-  - [ ] 3.4 Verify no code path can call `.getDirectoryHandle()`, `.getFileHandle()`, or similar methods on null
+- [x] Task 3: Add null guards to all consumers of the handle (AC: 2)
+  - [x] 3.1 Search for all usages of the directory handle property in the store
+  - [x] 3.2 Add `if (handle === null) return` or `if (!handle) return` guards before any method calls
+  - [x] 3.3 Add appropriate error handling or early returns when handle is null
+  - [x] 3.4 Verify no code path can call `.getDirectoryHandle()`, `.getFileHandle()`, or similar methods on null
 
-- [ ] Task 4: Update the store's TypeScript interface (AC: 1)
-  - [ ] 4.1 Update the store's state type definition to use `FileSystemDirectoryHandle | null`
-  - [ ] 4.2 Run `npx tsc --noEmit` to verify no type errors throughout the codebase
-  - [ ] 4.3 Fix any downstream type errors caused by the change
+- [x] Task 4: Update the store's TypeScript interface (AC: 1)
+  - [x] 4.1 Update the store's state type definition to use `FileSystemDirectoryHandle | null`
+  - [x] 4.2 Run `npx tsc --noEmit` to verify no type errors throughout the codebase
+  - [x] 4.3 Fix any downstream type errors caused by the change
 
-- [ ] Task 5: Write unit tests for null handle scenarios (AC: 2)
-  - [ ] 5.1 Test that accessing the handle when null does not throw
-  - [ ] 5.2 Test that store methods gracefully handle null handle state
-  - [ ] 5.3 Test that after selecting a directory, the handle is properly typed and usable
+- [x] Task 5: Write unit tests for null handle scenarios (AC: 2)
+  - [x] 5.1 Test that accessing the handle when null does not throw
+  - [x] 5.2 Test that store methods gracefully handle null handle state
+  - [x] 5.3 Test that after selecting a directory, the handle is properly typed and usable
 
 ## Implementation Notes
 
@@ -87,13 +87,13 @@ so that calling methods on a null handle doesn't cause runtime TypeErrors.
 ## Pre-Review Checklist
 
 Before requesting `/review-story`, verify:
-- [ ] All changes committed (`git status` clean)
-- [ ] No error swallowing — catch blocks log AND surface errors
-- [ ] useEffect hooks have cleanup functions (ignore flags for async, event listener removal)
-- [ ] No optimistic UI updates before persistence — state updates after DB write succeeds
-- [ ] Type guards on all dynamic lookups (e.g., `LABELS[type]` when type can be empty)
-- [ ] E2E afterEach cleanup uses `await` (not fire-and-forget)
-- [ ] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
+- [x] All changes committed (`git status` clean)
+- [x] No error swallowing — catch blocks log AND surface errors
+- [x] useEffect hooks have cleanup functions (ignore flags for async, event listener removal)
+- [x] No optimistic UI updates before persistence — state updates after DB write succeeds
+- [x] Type guards on all dynamic lookups (e.g., `LABELS[type]` when type can be empty)
+- [x] E2E afterEach cleanup uses `await` (not fire-and-forget)
+- [x] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
 
 ## Design Review Feedback
 
