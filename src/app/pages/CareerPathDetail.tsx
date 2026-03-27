@@ -1,15 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { MotionConfig, motion } from 'motion/react'
-import {
-  BookOpen,
-  Clock,
-  ChevronLeft,
-  Check,
-  Lock,
-  Play,
-  ArrowRight,
-} from 'lucide-react'
+import { BookOpen, Clock, ChevronLeft, Check, Lock, Play, ArrowRight } from 'lucide-react'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
@@ -18,7 +10,6 @@ import { cn } from '@/app/components/ui/utils'
 import { useCareerPathStore } from '@/stores/useCareerPathStore'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 // CareerPath type used implicitly via useCareerPathStore
-
 
 /** Gradient pairs using CSS variable references for course thumbnails. */
 const GRADIENT_PAIRS = [
@@ -118,7 +109,8 @@ function ModuleRow({ module }: ModuleRowProps) {
       variants={fadeUp}
       className={cn(
         'group/row relative flex items-center gap-6 sm:gap-8 py-6 transition-all duration-200',
-        isCurrent && 'ring-1 ring-brand/20 rounded-2xl px-4 sm:px-6 -mx-4 sm:-mx-6 bg-card shadow-sm',
+        isCurrent &&
+          'ring-1 ring-brand/20 rounded-2xl px-4 sm:px-6 -mx-4 sm:-mx-6 bg-card shadow-sm',
         isLocked && 'opacity-50',
         !isLocked && !isCurrent && 'hover:bg-card/50 rounded-2xl px-4 sm:px-6 -mx-4 sm:-mx-6'
       )}
@@ -453,10 +445,7 @@ export function CareerPathDetail() {
 
         {/* ── Empty state (no modules) ── */}
         {flatModules.length === 0 && (
-          <motion.div
-            variants={fadeUp}
-            className="text-center py-16 text-muted-foreground"
-          >
+          <motion.div variants={fadeUp} className="text-center py-16 text-muted-foreground">
             <BookOpen className="size-12 mx-auto mb-4 opacity-30" aria-hidden="true" />
             <p className="text-lg font-medium">No modules in this path yet.</p>
           </motion.div>

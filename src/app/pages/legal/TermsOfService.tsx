@@ -64,7 +64,8 @@ export function TermsOfService() {
       <div className="space-y-4 text-foreground leading-relaxed">
         <p>
           Welcome to Knowlune. These Terms of Service (&quot;Terms&quot;) govern your access to and
-          use of the Knowlune learning platform. Please read them carefully before using our service.
+          use of the Knowlune learning platform. Please read them carefully before using our
+          service.
         </p>
       </div>
 
@@ -93,8 +94,9 @@ export function TermsOfService() {
         </h2>
         <p className="text-foreground leading-relaxed">
           Knowlune is a personal learning platform that provides course management, progress
-          tracking, study streaks, achievement analytics, and AI-powered learning tools. The platform
-          offers both free and premium subscription tiers with varying levels of functionality.
+          tracking, study streaks, achievement analytics, and AI-powered learning tools. The
+          platform offers both free and premium subscription tiers with varying levels of
+          functionality.
         </p>
       </section>
 
@@ -146,9 +148,7 @@ export function TermsOfService() {
         <ul className="list-disc list-inside space-y-1 text-foreground leading-relaxed pl-2">
           <li>Use the platform for any unlawful purpose</li>
           <li>Attempt to reverse-engineer, decompile, or disassemble the platform</li>
-          <li>
-            Share, redistribute, or commercially exploit course content without authorization
-          </li>
+          <li>Share, redistribute, or commercially exploit course content without authorization</li>
           <li>Interfere with or disrupt the platform or its infrastructure</li>
           <li>Create multiple accounts for the purpose of abusing free-tier limitations</li>
           <li>Scrape, crawl, or use automated tools to extract content from the platform</li>
@@ -219,9 +219,7 @@ export function TermsOfService() {
 
       {/* Section 11 */}
       <section id="changes" className="scroll-mt-24 space-y-4">
-        <h2 className="font-display text-xl font-semibold text-foreground">
-          11. Changes to Terms
-        </h2>
+        <h2 className="font-display text-xl font-semibold text-foreground">11. Changes to Terms</h2>
         <p className="text-foreground leading-relaxed">
           We may update these Terms from time to time. When we make material changes, we will notify
           you by displaying a banner on this page and updating the effective date. Continued use of

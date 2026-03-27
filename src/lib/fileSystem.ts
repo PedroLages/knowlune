@@ -70,6 +70,14 @@ export async function extractVideoMetadata(
   fileHandle: FileSystemFileHandle
 ): Promise<VideoMetadata> {
   const file = await fileHandle.getFile()
+  return extractVideoMetadataFromFile(file)
+}
+
+/**
+ * Extract video metadata directly from a File object.
+ * Used by drag-and-drop import path where FileSystemFileHandle is not available.
+ */
+export async function extractVideoMetadataFromFile(file: File): Promise<VideoMetadata> {
   const fileSize = file.size
   const blobUrl = URL.createObjectURL(file)
   try {
@@ -87,7 +95,7 @@ export async function extractVideoMetadata(
       }
       video.onerror = () => {
         video.remove()
-        reject(new Error(`Cannot read metadata: ${fileHandle.name}`))
+        reject(new Error(`Cannot read metadata: ${file.name}`))
       }
       video.src = blobUrl
     })
@@ -98,6 +106,14 @@ export async function extractVideoMetadata(
 
 export async function extractPdfMetadata(fileHandle: FileSystemFileHandle): Promise<PdfMetadata> {
   const file = await fileHandle.getFile()
+  return extractPdfMetadataFromFile(file)
+}
+
+/**
+ * Extract PDF metadata directly from a File object.
+ * Used by drag-and-drop import path where FileSystemFileHandle is not available.
+ */
+export async function extractPdfMetadataFromFile(file: File): Promise<PdfMetadata> {
   const arrayBuffer = await file.arrayBuffer()
 
   // Use pdf.js (pdfjs-dist) to get page count

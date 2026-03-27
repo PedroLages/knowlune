@@ -21,9 +21,7 @@ function extractSchema(db: Dexie): Record<string, string> {
   const schema: Record<string, string> = {}
   for (const table of db.tables) {
     const primKey = table.schema.primKey.src
-    const indexes = table.schema.indexes
-      .map(idx => idx.src)
-      .sort()
+    const indexes = table.schema.indexes.map(idx => idx.src).sort()
     schema[table.name] = [primKey, ...indexes].join(', ')
   }
   return schema
@@ -89,16 +87,13 @@ describe('Dexie migration checkpoint', () => {
     checkpointDb.close()
 
     // 3. Both should produce identical table names
-    expect(Object.keys(checkpointSchema).sort()).toEqual(
-      Object.keys(migrationSchema).sort()
-    )
+    expect(Object.keys(checkpointSchema).sort()).toEqual(Object.keys(migrationSchema).sort())
 
     // 4. Both should produce identical indexes per table
     for (const tableName of Object.keys(migrationSchema).sort()) {
-      expect(
-        checkpointSchema[tableName],
-        `Schema mismatch for table "${tableName}"`
-      ).toBe(migrationSchema[tableName])
+      expect(checkpointSchema[tableName], `Schema mismatch for table "${tableName}"`).toBe(
+        migrationSchema[tableName]
+      )
     }
 
     // 5. Both should be at the same version

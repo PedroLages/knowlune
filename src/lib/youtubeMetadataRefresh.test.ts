@@ -4,10 +4,7 @@
  * @see E28-S12 — Offline Support, Metadata Refresh & Security Hardening
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import {
-  isMetadataStale,
-  STALE_THRESHOLD_MS,
-} from './youtubeMetadataRefresh'
+import { isMetadataStale, STALE_THRESHOLD_MS } from './youtubeMetadataRefresh'
 import type { ImportedCourse } from '@/data/types'
 
 // Minimal course factory for tests

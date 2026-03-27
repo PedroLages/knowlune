@@ -93,19 +93,22 @@ export function YouTubeLessonPlayer() {
     setVideo(undefined)
     setDexieLoading(true)
     let ignore = false
-    db.importedVideos.get(lessonId).then(v => {
-      if (!ignore) {
-        setVideo(v ?? null)
-        setDexieLoading(false)
-      }
-    }).catch((err: unknown) => {
-      if (!ignore) {
-        const message = err instanceof Error ? err.message : 'Failed to load lesson data'
-        setLoadError(message)
-        setDexieLoading(false)
-        toast.error('Failed to load lesson data')
-      }
-    })
+    db.importedVideos
+      .get(lessonId)
+      .then(v => {
+        if (!ignore) {
+          setVideo(v ?? null)
+          setDexieLoading(false)
+        }
+      })
+      .catch((err: unknown) => {
+        if (!ignore) {
+          const message = err instanceof Error ? err.message : 'Failed to load lesson data'
+          setLoadError(message)
+          setDexieLoading(false)
+          toast.error('Failed to load lesson data')
+        }
+      })
     return () => {
       ignore = true
     }
@@ -186,8 +189,10 @@ export function YouTubeLessonPlayer() {
   // Transcript state (E28-S10)
   const [currentTime, setCurrentTime] = useState(0)
   const playerRef = useRef<YouTubePlayerHandle>(null)
-  const { cues: transcriptCues, loadingState: transcriptLoadingState } =
-    useYouTubeTranscript(courseId, video?.youtubeVideoId)
+  const { cues: transcriptCues, loadingState: transcriptLoadingState } = useYouTubeTranscript(
+    courseId,
+    video?.youtubeVideoId
+  )
 
   // Load transcript store states for this course
   const loadCourseStates = useYouTubeTranscriptStore(s => s.loadCourseStates)
@@ -255,10 +260,7 @@ export function YouTubeLessonPlayer() {
         className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground"
       >
         <p>Video not found.</p>
-        <Link
-          to={`/youtube-courses/${courseId}`}
-          className="text-sm text-brand hover:underline"
-        >
+        <Link to={`/youtube-courses/${courseId}`} className="text-sm text-brand hover:underline">
           Back to Course
         </Link>
       </div>
@@ -281,10 +283,7 @@ export function YouTubeLessonPlayer() {
           <ArrowLeft className="size-4" />
         </Link>
         <div className="flex flex-col min-w-0 flex-1">
-          <span
-            data-testid="lesson-header-title"
-            className="font-semibold text-sm truncate"
-          >
+          <span data-testid="lesson-header-title" className="font-semibold text-sm truncate">
             {video.filename}
           </span>
           {course && (
@@ -342,8 +341,8 @@ export function YouTubeLessonPlayer() {
             <WifiOff className="size-16 text-muted-foreground/50" aria-hidden="true" />
             <p className="text-lg font-medium text-foreground">No internet connection</p>
             <p className="text-sm text-center max-w-sm">
-              Connect to the internet to watch this YouTube video. Your progress will be saved
-              when you resume.
+              Connect to the internet to watch this YouTube video. Your progress will be saved when
+              you resume.
             </p>
           </div>
         ) : youtubeVideoId ? (
@@ -363,9 +362,7 @@ export function YouTubeLessonPlayer() {
               <div className="mt-3 space-y-2">
                 <h1 className="text-lg font-semibold">{video.filename}</h1>
                 {video.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-3">
-                    {video.description}
-                  </p>
+                  <p className="text-sm text-muted-foreground line-clamp-3">{video.description}</p>
                 )}
                 {currentStatus === 'completed' && (
                   <Badge
@@ -381,7 +378,10 @@ export function YouTubeLessonPlayer() {
             </div>
 
             {/* Transcript panel (right/bottom) */}
-            <aside className="lg:w-80 xl:w-96 shrink-0 lg:max-h-[calc(100vh-10rem)] max-h-80" aria-label="Video transcript">
+            <aside
+              className="lg:w-80 xl:w-96 shrink-0 lg:max-h-[calc(100vh-10rem)] max-h-80"
+              aria-label="Video transcript"
+            >
               <TranscriptPanel
                 cues={transcriptCues}
                 currentTime={currentTime}

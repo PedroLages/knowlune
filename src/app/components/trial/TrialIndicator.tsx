@@ -3,11 +3,7 @@
 
 import { Crown } from 'lucide-react'
 import { Badge } from '@/app/components/ui/badge'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/app/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/tooltip'
 import { useTrialStatus } from '@/app/hooks/useTrialStatus'
 
 /**
@@ -47,8 +43,8 @@ export function TrialIndicator() {
       </TooltipTrigger>
       <TooltipContent>
         <p>
-          Free trial {formattedEnd ? `ends ${formattedEnd}` : 'active'}. All
-          premium features are unlocked.
+          Free trial {formattedEnd ? `ends ${formattedEnd}` : 'active'}. All premium features are
+          unlocked.
         </p>
       </TooltipContent>
     </Tooltip>

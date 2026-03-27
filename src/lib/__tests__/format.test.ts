@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { formatTimestamp, formatCourseDuration, formatFileSize, getResolutionLabel } from '../format'
+import {
+  formatTimestamp,
+  formatCourseDuration,
+  formatFileSize,
+  getResolutionLabel,
+} from '../format'
 
 describe('formatTimestamp', () => {
   describe('under 1 hour (MM:SS format)', () => {

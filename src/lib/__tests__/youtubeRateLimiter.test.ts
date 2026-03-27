@@ -35,9 +35,18 @@ describe('youtubeRateLimiter.ts', () => {
 
       // Should all execute immediately (3 tokens available)
       await Promise.all([
-        limiter.execute(async () => { results.push(1); return 1 }),
-        limiter.execute(async () => { results.push(2); return 2 }),
-        limiter.execute(async () => { results.push(3); return 3 }),
+        limiter.execute(async () => {
+          results.push(1)
+          return 1
+        }),
+        limiter.execute(async () => {
+          results.push(2)
+          return 2
+        }),
+        limiter.execute(async () => {
+          results.push(3)
+          return 3
+        }),
       ])
 
       expect(results).toHaveLength(3)
@@ -48,8 +57,14 @@ describe('youtubeRateLimiter.ts', () => {
       const order: number[] = []
 
       // First executes immediately, second queues
-      const p1 = limiter.execute(async () => { order.push(1); return 1 })
-      const p2 = limiter.execute(async () => { order.push(2); return 2 })
+      const p1 = limiter.execute(async () => {
+        order.push(1)
+        return 1
+      })
+      const p2 = limiter.execute(async () => {
+        order.push(2)
+        return 2
+      })
 
       const [r1, r2] = await Promise.all([p1, p2])
       expect(r1).toBe(1)
@@ -79,7 +94,9 @@ describe('youtubeRateLimiter.ts', () => {
     it('propagates errors from executed functions', async () => {
       const limiter = new YouTubeRateLimiter()
       await expect(
-        limiter.execute(async () => { throw new Error('test error') })
+        limiter.execute(async () => {
+          throw new Error('test error')
+        })
       ).rejects.toThrow('test error')
     })
   })

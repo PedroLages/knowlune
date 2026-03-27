@@ -204,45 +204,42 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
     }
   }, [checkoutStatus, user])
 
-  const handleUpgrade = useCallback(
-    async (trial?: boolean) => {
-      if (checkoutInProgress.current) return
-      checkoutInProgress.current = true
-      try {
-        setIsCheckoutLoading(true)
-        const result = await startCheckout(trial)
+  const handleUpgrade = useCallback(async (trial?: boolean) => {
+    if (checkoutInProgress.current) return
+    checkoutInProgress.current = true
+    try {
+      setIsCheckoutLoading(true)
+      const result = await startCheckout(trial)
 
-        if ('error' in result) {
-          toastError.saveFailed(result.error)
-          setIsCheckoutLoading(false)
-          checkoutInProgress.current = false
-          return
-        }
-
-        // Defense-in-depth: validate checkout URL before redirect
-        if (!result.url.startsWith('https://checkout.stripe.com/')) {
-          toastError.saveFailed('Invalid checkout URL received.')
-          setIsCheckoutLoading(false)
-          checkoutInProgress.current = false
-          return
-        }
-
-        // Redirect to Stripe Checkout
-        window.location.href = result.url
-        // Fallback: reset loading if redirect doesn't happen (popup blocker, etc.)
-        clearTimeout(fallbackTimerRef.current)
-        fallbackTimerRef.current = setTimeout(() => {
-          setIsCheckoutLoading(false)
-          checkoutInProgress.current = false
-        }, 5000)
-      } catch {
-        // silent-catch-ok — startCheckout handles its own errors with toastError above; this catch only resets loading state as a safety net
+      if ('error' in result) {
+        toastError.saveFailed(result.error)
         setIsCheckoutLoading(false)
         checkoutInProgress.current = false
+        return
       }
-    },
-    []
-  )
+
+      // Defense-in-depth: validate checkout URL before redirect
+      if (!result.url.startsWith('https://checkout.stripe.com/')) {
+        toastError.saveFailed('Invalid checkout URL received.')
+        setIsCheckoutLoading(false)
+        checkoutInProgress.current = false
+        return
+      }
+
+      // Redirect to Stripe Checkout
+      window.location.href = result.url
+      // Fallback: reset loading if redirect doesn't happen (popup blocker, etc.)
+      clearTimeout(fallbackTimerRef.current)
+      fallbackTimerRef.current = setTimeout(() => {
+        setIsCheckoutLoading(false)
+        checkoutInProgress.current = false
+      }, 5000)
+    } catch {
+      // silent-catch-ok — startCheckout handles its own errors with toastError above; this catch only resets loading state as a safety net
+      setIsCheckoutLoading(false)
+      checkoutInProgress.current = false
+    }
+  }, [])
 
   const handleManageBilling = useCallback(async () => {
     setIsPortalLoading(true)
@@ -468,9 +465,7 @@ export function SubscriptionCard({ checkoutStatus }: SubscriptionCardProps) {
                       <CreditCard className="size-4" aria-hidden="true" />
                     )}
                     {isPortalLoading ? 'Opening...' : 'Update Payment Method'}
-                    {!isPortalLoading && (
-                      <ExternalLink className="size-3.5" aria-hidden="true" />
-                    )}
+                    {!isPortalLoading && <ExternalLink className="size-3.5" aria-hidden="true" />}
                   </Button>
                 )}
               </div>

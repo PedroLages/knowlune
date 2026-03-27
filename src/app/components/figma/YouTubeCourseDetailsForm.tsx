@@ -15,12 +15,7 @@ import { Input } from '@/app/components/ui/input'
 import { Textarea } from '@/app/components/ui/textarea'
 import { Badge } from '@/app/components/ui/badge'
 import { ScrollArea } from '@/app/components/ui/scroll-area'
-import {
-  Image as ImageIcon,
-  X,
-  Plus,
-  Check,
-} from 'lucide-react'
+import { Image as ImageIcon, X, Plus, Check } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import type { YouTubeImportVideo } from '@/stores/useYouTubeImportStore'
 import type { VideoChapter } from '@/lib/youtubeRuleBasedGrouping'
@@ -112,8 +107,7 @@ export function YouTubeCourseDetailsForm({
     (videoId: string) => {
       onChange({
         ...formData,
-        selectedThumbnailVideoId:
-          formData.selectedThumbnailVideoId === videoId ? null : videoId,
+        selectedThumbnailVideoId: formData.selectedThumbnailVideoId === videoId ? null : videoId,
       })
     },
     [onChange, formData]
@@ -129,10 +123,7 @@ export function YouTubeCourseDetailsForm({
     <div className="space-y-5" data-testid="course-details-form">
       {/* Course Name */}
       <div className="space-y-1.5">
-        <label
-          htmlFor="course-name"
-          className="text-sm font-medium text-foreground"
-        >
+        <label htmlFor="course-name" className="text-sm font-medium text-foreground">
           Course Name <span className="text-destructive">*</span>
         </label>
         <Input
@@ -160,10 +151,7 @@ export function YouTubeCourseDetailsForm({
 
       {/* Description */}
       <div className="space-y-1.5">
-        <label
-          htmlFor="course-description"
-          className="text-sm font-medium text-foreground"
-        >
+        <label htmlFor="course-description" className="text-sm font-medium text-foreground">
           Description
         </label>
         <Textarea
@@ -178,19 +166,12 @@ export function YouTubeCourseDetailsForm({
 
       {/* Tags */}
       <div className="space-y-1.5">
-        <label
-          htmlFor="course-tags"
-          className="text-sm font-medium text-foreground"
-        >
+        <label htmlFor="course-tags" className="text-sm font-medium text-foreground">
           Tags
         </label>
         <div className="flex flex-wrap gap-1.5 rounded-xl border border-input bg-background px-3 py-2 min-h-[44px] focus-within:ring-2 focus-within:ring-ring">
           {formData.tags.map(tag => (
-            <Badge
-              key={tag}
-              variant="secondary"
-              className="gap-1 text-xs"
-            >
+            <Badge key={tag} variant="secondary" className="gap-1 text-xs">
               {tag}
               <button
                 type="button"
@@ -208,7 +189,9 @@ export function YouTubeCourseDetailsForm({
             value={tagInput}
             onChange={e => setTagInput(e.target.value)}
             onKeyDown={handleTagKeyDown}
-            placeholder={formData.tags.length === 0 ? 'Type and press Enter to add tags' : 'Add tag...'}
+            placeholder={
+              formData.tags.length === 0 ? 'Type and press Enter to add tags' : 'Add tag...'
+            }
             className="flex-1 min-w-[120px] bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             data-testid="course-tags-input"
           />
@@ -230,9 +213,7 @@ export function YouTubeCourseDetailsForm({
       {/* Thumbnail Selection */}
       {thumbnailVideos.length > 0 && (
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">
-            Cover Image
-          </label>
+          <label className="text-sm font-medium text-foreground">Cover Image</label>
           <p className="text-xs text-muted-foreground">
             Select a video thumbnail as the course cover image.
           </p>
@@ -267,7 +248,10 @@ export function YouTubeCourseDetailsForm({
                     />
                     {isSelected && (
                       <div className="absolute inset-0 bg-brand/20 flex items-center justify-center">
-                        <Check className="size-5 text-brand-foreground drop-shadow-md" aria-hidden="true" />
+                        <Check
+                          className="size-5 text-brand-foreground drop-shadow-md"
+                          aria-hidden="true"
+                        />
                       </div>
                     )}
                   </button>

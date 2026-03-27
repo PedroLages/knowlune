@@ -185,9 +185,7 @@ describe('Settings page', () => {
     // SubscriptionCard should render free tier (invalid param is ignored)
     // With hadTrial=false, the button label is "Upgrade to Premium plan"
     await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: /upgrade to premium plan/i })
-      ).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /upgrade to premium plan/i })).toBeInTheDocument()
     })
   })
 })

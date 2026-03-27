@@ -75,8 +75,8 @@ export function PrivacyPolicy() {
           1. Information We Collect
         </h2>
         <p className="text-foreground leading-relaxed">
-          We collect information that you provide directly and information generated through your use
-          of the platform:
+          We collect information that you provide directly and information generated through your
+          use of the platform:
         </p>
         <h3 className="font-display text-base font-medium text-foreground">
           1.1 Information You Provide
@@ -160,8 +160,8 @@ export function PrivacyPolicy() {
           </li>
         </ul>
         <p className="text-foreground leading-relaxed">
-          Each of these services has their own privacy policy. We encourage you to review them. We do
-          not sell your personal information to any third party.
+          Each of these services has their own privacy policy. We encourage you to review them. We
+          do not sell your personal information to any third party.
         </p>
       </section>
 
@@ -196,8 +196,9 @@ export function PrivacyPolicy() {
         <h2 className="font-display text-xl font-semibold text-foreground">6. Data Retention</h2>
         <p className="text-foreground leading-relaxed">
           We retain your personal information for as long as your account is active or as needed to
-          provide you with our services. Locally stored data (IndexedDB) remains on your device until
-          you clear it. Cloud-stored data is deleted within 30 days of account deletion request.
+          provide you with our services. Locally stored data (IndexedDB) remains on your device
+          until you clear it. Cloud-stored data is deleted within 30 days of account deletion
+          request.
         </p>
       </section>
 
@@ -230,9 +231,9 @@ export function PrivacyPolicy() {
           9. Changes to This Policy
         </h2>
         <p className="text-foreground leading-relaxed">
-          We may update this Privacy Policy from time to time. When we make material changes, we will
-          notify you by displaying a banner on the privacy policy page and updating the effective
-          date. We encourage you to review this policy periodically.
+          We may update this Privacy Policy from time to time. When we make material changes, we
+          will notify you by displaying a banner on the privacy policy page and updating the
+          effective date. We encourage you to review this policy periodically.
         </p>
       </section>
 

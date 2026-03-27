@@ -432,7 +432,7 @@ function PathCard({
                 variant="secondary"
                 className={cn(
                   'text-[10px] uppercase tracking-wider',
-                  isCompleted && 'bg-success-soft text-success',
+                  isCompleted && 'bg-success-soft text-success'
                 )}
               >
                 {courseCount} {courseCount === 1 ? 'course' : 'courses'}
@@ -476,9 +476,14 @@ function PathCard({
               {isCompleted ? (
                 <span className="text-xs font-bold text-success uppercase">Review</span>
               ) : isNotStarted ? (
-                <span className="text-xs font-bold text-muted-foreground uppercase">Not Started</span>
+                <span className="text-xs font-bold text-muted-foreground uppercase">
+                  Not Started
+                </span>
               ) : (
-                <ArrowRight className="size-4 text-muted-foreground group-hover:text-brand transition-colors" aria-hidden="true" />
+                <ArrowRight
+                  className="size-4 text-muted-foreground group-hover:text-brand transition-colors"
+                  aria-hidden="true"
+                />
               )}
             </div>
           </Link>
@@ -558,7 +563,10 @@ export function LearningPaths() {
   const pathEntriesMap = useMemo(() => {
     const map = new Map<string, LearningPathEntry[]>()
     for (const path of paths) {
-      map.set(path.id, entries.filter(e => e.pathId === path.id))
+      map.set(
+        path.id,
+        entries.filter(e => e.pathId === path.id)
+      )
     }
     return map
   }, [paths, entries])
@@ -633,7 +641,10 @@ export function LearningPaths() {
         className="space-y-6"
       >
         {/* Header */}
-        <motion.div variants={fadeUp} className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <motion.div
+          variants={fadeUp}
+          className="flex flex-col md:flex-row md:items-end justify-between gap-6"
+        >
           <div>
             <h1 className="text-4xl font-extrabold tracking-tight font-display">Learning Paths</h1>
             <p className="text-muted-foreground text-lg mt-2">

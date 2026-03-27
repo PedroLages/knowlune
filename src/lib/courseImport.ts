@@ -15,7 +15,10 @@ import {
   scanDirectory,
   extractVideoMetadata,
   extractPdfMetadata,
+  extractVideoMetadataFromFile,
+  extractPdfMetadataFromFile,
   isSupportedVideoFormat,
+  isSupportedFile,
   isImageFile,
   getVideoFormat,
 } from '@/lib/fileSystem'
@@ -671,6 +674,137 @@ export async function listSubDirectories(
     }
   }
   return dirs.sort((a, b) => a.name.localeCompare(b.name))
+}
+
+// --- Drag-and-Drop File Import (E33-S06) ---
+
+/**
+ * Scans dropped files to create a ScannedCourse without showDirectoryPicker().
+ * Enables E2E test automation via Playwright's setInputFiles() or dispatchEvent('drop').
+ *
+ * Key differences from scanCourseFolder():
+ * - No directory picker prompt — files come from drag-and-drop or file input
+ * - No FileSystemDirectoryHandle — directoryHandle is null (file handles may be available)
+ * - Video/PDF metadata extracted directly from File objects
+ * - No duplicate detection (no folder name to check against)
+ *
+ * @param files Array of File objects from drop event or file input
+ * @param courseName Name to use for the course (defaults to "Dropped Course")
+ * @throws ImportError with code 'NO_FILES' if no supported files found
+ */
+export async function scanFromDroppedFiles(
+  files: File[],
+  courseName = 'Dropped Course'
+): Promise<ScannedCourse> {
+  const store = useCourseImportStore.getState()
+  store.setImporting(true)
+  store.setImportError(null)
+  store.setImportProgress(null)
+
+  try {
+    // Categorize files by type
+    const videoFiles: File[] = []
+    const pdfFiles: File[] = []
+    const imageFileList: File[] = []
+
+    for (const file of files) {
+      if (isSupportedVideoFormat(file.name)) {
+        videoFiles.push(file)
+      } else if (isSupportedFile(file.name) && !isSupportedVideoFormat(file.name)) {
+        // isSupportedFile includes PDFs and videos — exclude videos
+        pdfFiles.push(file)
+      } else if (isImageFile(file.name)) {
+        imageFileList.push(file)
+      }
+    }
+
+    if (videoFiles.length === 0 && pdfFiles.length === 0) {
+      throw new ImportError(
+        'No supported files found. Please drop video (MP4, MKV, AVI, WEBM) or PDF files.',
+        'NO_FILES'
+      )
+    }
+
+    const totalFiles = videoFiles.length + pdfFiles.length
+    store.setImportProgress({ current: 0, total: totalFiles })
+
+    // Extract video metadata from File objects
+    let processedCount = 0
+    const videos: ScannedVideo[] = []
+    for (const file of videoFiles) {
+      try {
+        const metadata = await extractVideoMetadataFromFile(file)
+        videos.push({
+          id: crypto.randomUUID(),
+          filename: file.name,
+          path: file.name,
+          duration: metadata.duration,
+          format: getVideoFormat(file.name),
+          order: videos.length + 1,
+          fileHandle: null as unknown as FileSystemFileHandle, // No handle for dropped files
+          fileSize: metadata.fileSize,
+          width: metadata.width,
+          height: metadata.height,
+        })
+      } catch {
+        // silent-catch-ok: skip files that fail metadata extraction
+        console.warn(`[Import] Failed to extract metadata for dropped file: ${file.name}`)
+      }
+      processedCount++
+      store.setImportProgress({ current: processedCount, total: totalFiles })
+    }
+
+    // Extract PDF metadata from File objects
+    const pdfs: ScannedPdf[] = []
+    for (const file of pdfFiles) {
+      try {
+        const metadata = await extractPdfMetadataFromFile(file)
+        pdfs.push({
+          id: crypto.randomUUID(),
+          filename: file.name,
+          path: file.name,
+          pageCount: metadata.pageCount,
+          fileHandle: null as unknown as FileSystemFileHandle, // No handle for dropped files
+        })
+      } catch {
+        // silent-catch-ok: skip files that fail metadata extraction
+        console.warn(`[Import] Failed to extract metadata for dropped file: ${file.name}`)
+      }
+      processedCount++
+      store.setImportProgress({ current: processedCount, total: totalFiles })
+    }
+
+    // Build image candidates (no metadata extraction needed)
+    const images: ScannedImage[] = imageFileList.map(file => ({
+      filename: file.name,
+      path: file.name,
+      fileHandle: null as unknown as FileSystemFileHandle, // No handle for dropped files
+    }))
+
+    return {
+      id: crypto.randomUUID(),
+      name: courseName,
+      scannedAt: new Date().toISOString(),
+      directoryHandle: null as unknown as FileSystemDirectoryHandle, // No directory handle for drops
+      videos,
+      pdfs,
+      images,
+    }
+  } catch (error) {
+    if (error instanceof ImportError) {
+      store.setImportError(error.message)
+      toast.error(error.message)
+    } else {
+      const message = 'An unexpected error occurred while processing dropped files.'
+      store.setImportError(message)
+      toast.error(message)
+      console.error('[Import] Drop processing error:', error)
+    }
+    throw error
+  } finally {
+    store.setImporting(false)
+    store.setImportProgress(null)
+  }
 }
 
 // --- Backwards-Compatible One-Shot Import ---

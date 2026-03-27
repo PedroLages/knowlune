@@ -57,8 +57,7 @@ vi.mock('@/lib/toastHelpers', () => ({
 // ---------------------------------------------------------------------------
 
 vi.mock('@/app/components/auth/AuthDialog', () => ({
-  AuthDialog: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="auth-dialog" /> : null,
+  AuthDialog: ({ open }: { open: boolean }) => (open ? <div data-testid="auth-dialog" /> : null),
 }))
 
 import { PremiumFeaturePage, PREMIUM_FEATURES } from '@/app/components/PremiumFeaturePage'
@@ -126,7 +125,10 @@ describe('PremiumFeaturePage', () => {
 
   it('renders UpgradeCTA with feature name (no nested PremiumGate double-loading)', () => {
     render(
-      <PremiumFeaturePage featureName="Knowledge Gap Detection" featureDescription="AI gap analysis">
+      <PremiumFeaturePage
+        featureName="Knowledge Gap Detection"
+        featureDescription="AI gap analysis"
+      >
         <div>Content</div>
       </PremiumFeaturePage>
     )
@@ -147,9 +149,7 @@ describe('PremiumFeaturePage', () => {
       </PremiumFeaturePage>
     )
 
-    expect(
-      screen.getByRole('region', { name: /AI Q&A — Premium feature/ })
-    ).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: /AI Q&A — Premium feature/ })).toBeInTheDocument()
   })
 
   describe('PREMIUM_FEATURES config', () => {

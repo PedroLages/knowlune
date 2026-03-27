@@ -22,11 +22,7 @@ export function RouteErrorFallback({ error, onRetry }: RouteErrorFallbackProps) 
   const isDev = import.meta.env.DEV
 
   return (
-    <div
-      className="flex flex-1 items-center justify-center p-6"
-      role="alert"
-      aria-live="assertive"
-    >
+    <div className="flex flex-1 items-center justify-center p-6" role="alert" aria-live="assertive">
       <div className="mx-auto w-full max-w-md rounded-[24px] border border-border bg-card p-8 text-center shadow-lg">
         {/* Icon */}
         <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-destructive/10">
@@ -51,19 +47,11 @@ export function RouteErrorFallback({ error, onRetry }: RouteErrorFallbackProps) 
 
         {/* Actions */}
         <div className="flex gap-3">
-          <Button
-            variant="outline"
-            onClick={onRetry}
-            className="flex-1 gap-2"
-          >
+          <Button variant="outline" onClick={onRetry} className="flex-1 gap-2">
             <RefreshCw className="size-4" aria-hidden="true" />
             Try again
           </Button>
-          <Button
-            variant="brand"
-            asChild
-            className="flex-1 gap-2"
-          >
+          <Button variant="brand" asChild className="flex-1 gap-2">
             <Link to="/">
               <Home className="size-4" aria-hidden="true" />
               Go to Overview
@@ -114,9 +102,7 @@ export class RouteErrorBoundary extends Component<
         .replace(/^at /, '')
         .split(' ')[0] ?? 'Unknown'
 
-    console.error(
-      `[RouteErrorBoundary] Component: ${componentName}, Error: ${error.message}`
-    )
+    console.error(`[RouteErrorBoundary] Component: ${componentName}, Error: ${error.message}`)
 
     reportError(error, `RouteErrorBoundary (${componentName})`)
   }
@@ -127,12 +113,7 @@ export class RouteErrorBoundary extends Component<
 
   render() {
     if (this.state.hasError) {
-      return (
-        <RouteErrorFallback
-          error={this.state.error}
-          onRetry={this.handleRetry}
-        />
-      )
+      return <RouteErrorFallback error={this.state.error} onRetry={this.handleRetry} />
     }
 
     return this.props.children

@@ -36,8 +36,9 @@ import {
   Settings,
   AlertTriangle,
 } from 'lucide-react'
-import { scanCourseFolder, persistScannedCourse } from '@/lib/courseImport'
+import { scanCourseFolder, scanFromDroppedFiles, persistScannedCourse } from '@/lib/courseImport'
 import type { ScannedCourse, ScannedImage } from '@/lib/courseImport'
+import { ImportDropZone } from './ImportDropZone'
 import { useAISuggestions } from '@/ai/hooks/useAISuggestions'
 import { usePathPlacementSuggestion } from '@/ai/hooks/usePathPlacementSuggestion'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
@@ -74,12 +75,7 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
   const [newPathName, setNewPathName] = useState('')
 
   // Learning path store
-  const {
-    paths: learningPaths,
-    loadPaths,
-    addCourseToPath,
-    createPath,
-  } = useLearningPathStore()
+  const { paths: learningPaths, loadPaths, addCourseToPath, createPath } = useLearningPathStore()
 
   // Load paths when dialog opens
   useEffect(() => {
@@ -235,6 +231,24 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
       if (error instanceof Error && error.message.includes('cancelled')) {
         // User cancelled the picker — stay on select step
       }
+    } finally {
+      setIsScanning(false)
+    }
+  }, [])
+
+  const handleFilesDropped = useCallback(async (files: File[]) => {
+    setIsScanning(true)
+    try {
+      const scanned = await scanFromDroppedFiles(files, 'Imported Course')
+      setScannedCourse(scanned)
+      setCourseName(scanned.name)
+      setTags([])
+      setDescription('')
+      setAiTagsApplied(false)
+      setAiDescriptionApplied(false)
+      setStep('details')
+    } catch {
+      // silent-catch-ok: scanFromDroppedFiles already handles toasts for ImportError
     } finally {
       setIsScanning(false)
     }
@@ -412,11 +426,7 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
                           : 'bg-muted text-muted-foreground'
                     }`}
                   >
-                    {currentStep > s.num ? (
-                      <Check className="size-3" aria-hidden="true" />
-                    ) : (
-                      s.num
-                    )}
+                    {currentStep > s.num ? <Check className="size-3" aria-hidden="true" /> : s.num}
                   </span>
                   <span className={currentStep === s.num ? 'font-medium text-foreground' : ''}>
                     {s.label}
@@ -454,6 +464,7 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
                 </>
               )}
             </Button>
+            <ImportDropZone onFilesDropped={handleFilesDropped} disabled={isScanning} />
           </div>
         )}
 

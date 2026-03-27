@@ -74,10 +74,7 @@ export function VirtualizedList<T>({
       style={{ maxHeight }}
       data-testid={testId}
     >
-      <div
-        className="relative w-full"
-        style={{ height: `${virtualizer.getTotalSize()}px` }}
-      >
+      <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
         {virtualItems.map(virtualRow => {
           const item = items[virtualRow.index]
           return (

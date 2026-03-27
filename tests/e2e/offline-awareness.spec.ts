@@ -18,9 +18,9 @@ test.describe('Offline Awareness', () => {
   test('should continue showing cached content when going offline', async ({ page, context }) => {
     // Load a page while online first
     await navigateAndWait(page, '/')
-    await expect(
-      page.getByRole('heading', { name: 'Your Learning Studio', level: 1 })
-    ).toBeVisible({ timeout: TIMEOUTS.NETWORK })
+    await expect(page.getByRole('heading', { name: 'Your Learning Studio', level: 1 })).toBeVisible(
+      { timeout: TIMEOUTS.NETWORK }
+    )
 
     // Go offline
     await context.setOffline(true)
@@ -38,9 +38,9 @@ test.describe('Offline Awareness', () => {
   test('should recover after going back online', async ({ page, context }) => {
     // Load overview while online
     await navigateAndWait(page, '/')
-    await expect(
-      page.getByRole('heading', { name: 'Your Learning Studio', level: 1 })
-    ).toBeVisible({ timeout: TIMEOUTS.NETWORK })
+    await expect(page.getByRole('heading', { name: 'Your Learning Studio', level: 1 })).toBeVisible(
+      { timeout: TIMEOUTS.NETWORK }
+    )
 
     // Go offline then back online
     await context.setOffline(true)
@@ -77,9 +77,9 @@ test.describe('Offline Awareness', () => {
   test('should handle offline state on CareerPaths page gracefully', async ({ page, context }) => {
     // Load page while online first (to cache assets)
     await navigateAndWait(page, '/career-paths')
-    await expect(
-      page.getByRole('heading', { name: 'Learning Paths', level: 1 })
-    ).toBeVisible({ timeout: TIMEOUTS.NETWORK })
+    await expect(page.getByRole('heading', { name: 'Learning Paths', level: 1 })).toBeVisible({
+      timeout: TIMEOUTS.NETWORK,
+    })
 
     // Go offline
     await context.setOffline(true)
@@ -93,8 +93,8 @@ test.describe('Offline Awareness', () => {
     await context.setOffline(false)
     await navigateAndWait(page, '/career-paths')
 
-    await expect(
-      page.getByRole('heading', { name: 'Learning Paths', level: 1 })
-    ).toBeVisible({ timeout: TIMEOUTS.NETWORK })
+    await expect(page.getByRole('heading', { name: 'Learning Paths', level: 1 })).toBeVisible({
+      timeout: TIMEOUTS.NETWORK,
+    })
   })
 })

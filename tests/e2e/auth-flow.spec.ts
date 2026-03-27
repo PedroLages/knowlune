@@ -67,10 +67,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 /** Open the auth dialog in the given mode from Settings page */
-async function openAuthDialog(
-  page: import('@playwright/test').Page,
-  mode: 'sign-up' | 'sign-in'
-) {
+async function openAuthDialog(page: import('@playwright/test').Page, mode: 'sign-up' | 'sign-in') {
   await goToSettings(page)
   const trigger = page.getByRole('button', {
     name: new RegExp(mode.replace('-', ' '), 'i'),

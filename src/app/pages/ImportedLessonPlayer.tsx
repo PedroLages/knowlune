@@ -45,19 +45,22 @@ export function ImportedLessonPlayer() {
     setDexieLoading(true)
     let ignore = false
 
-    db.importedVideos.get(lessonId).then(v => {
-      if (!ignore) {
-        setVideo(v ?? null)
-        setDexieLoading(false)
-      }
-    }).catch((err: unknown) => {
-      if (!ignore) {
-        const message = err instanceof Error ? err.message : 'Failed to load lesson data'
-        setLoadError(message)
-        setDexieLoading(false)
-        toast.error('Failed to load lesson data')
-      }
-    })
+    db.importedVideos
+      .get(lessonId)
+      .then(v => {
+        if (!ignore) {
+          setVideo(v ?? null)
+          setDexieLoading(false)
+        }
+      })
+      .catch((err: unknown) => {
+        if (!ignore) {
+          const message = err instanceof Error ? err.message : 'Failed to load lesson data'
+          setLoadError(message)
+          setDexieLoading(false)
+          toast.error('Failed to load lesson data')
+        }
+      })
 
     return () => {
       ignore = true

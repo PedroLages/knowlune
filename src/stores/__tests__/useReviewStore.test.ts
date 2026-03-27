@@ -247,8 +247,30 @@ describe('startInterleavedSession', () => {
     useReviewStore.setState({ allReviews: [review1, review2] })
 
     const noteMap = new Map([
-      ['note-1', { id: 'note-1', courseId: 'c1', videoId: 'v1', content: '', createdAt: '', updatedAt: '', tags: [] }],
-      ['note-2', { id: 'note-2', courseId: 'c2', videoId: 'v2', content: '', createdAt: '', updatedAt: '', tags: [] }],
+      [
+        'note-1',
+        {
+          id: 'note-1',
+          courseId: 'c1',
+          videoId: 'v1',
+          content: '',
+          createdAt: '',
+          updatedAt: '',
+          tags: [],
+        },
+      ],
+      [
+        'note-2',
+        {
+          id: 'note-2',
+          courseId: 'c2',
+          videoId: 'v2',
+          content: '',
+          createdAt: '',
+          updatedAt: '',
+          tags: [],
+        },
+      ],
     ])
 
     useReviewStore.getState().startInterleavedSession(noteMap, FIXED_DATE)
@@ -278,7 +300,18 @@ describe('rateInterleavedNote', () => {
     vi.spyOn(db.reviewRecords, 'put').mockResolvedValue(undefined as never)
 
     const noteMap = new Map([
-      ['note-1', { id: 'note-1', courseId: 'c1', videoId: 'v1', content: '', createdAt: '', updatedAt: '', tags: [] }],
+      [
+        'note-1',
+        {
+          id: 'note-1',
+          courseId: 'c1',
+          videoId: 'v1',
+          content: '',
+          createdAt: '',
+          updatedAt: '',
+          tags: [],
+        },
+      ],
     ])
 
     await useReviewStore.getState().rateInterleavedNote('good', noteMap, FIXED_DATE)
@@ -304,7 +337,18 @@ describe('rateInterleavedNote', () => {
     vi.spyOn(db.reviewRecords, 'put').mockRejectedValue(new Error('fail'))
 
     const noteMap = new Map([
-      ['note-1', { id: 'note-1', courseId: 'c1', videoId: 'v1', content: '', createdAt: '', updatedAt: '', tags: [] }],
+      [
+        'note-1',
+        {
+          id: 'note-1',
+          courseId: 'c1',
+          videoId: 'v1',
+          content: '',
+          createdAt: '',
+          updatedAt: '',
+          tags: [],
+        },
+      ],
     ])
 
     await useReviewStore.getState().rateInterleavedNote('good', noteMap, FIXED_DATE)
@@ -339,7 +383,18 @@ describe('rateInterleavedNote', () => {
     vi.spyOn(db.reviewRecords, 'put').mockResolvedValue(undefined as never)
 
     const noteMap = new Map([
-      ['note-1', { id: 'note-1', courseId: 'c1', videoId: 'v1', content: '', createdAt: '', updatedAt: '', tags: [] }],
+      [
+        'note-1',
+        {
+          id: 'note-1',
+          courseId: 'c1',
+          videoId: 'v1',
+          content: '',
+          createdAt: '',
+          updatedAt: '',
+          tags: [],
+        },
+      ],
     ])
 
     await useReviewStore.getState().rateInterleavedNote('good', noteMap, FIXED_DATE)

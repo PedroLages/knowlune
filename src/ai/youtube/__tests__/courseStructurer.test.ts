@@ -147,23 +147,25 @@ describe('parseAIResponse', () => {
 
   it('limits tags to 5 and lowercases them', () => {
     const response = JSON.stringify({
-      chapters: [
-        { title: 'All', videoIds: ['v1', 'v2', 'v3', 'v4', 'v5'], rationale: 'All' },
-      ],
+      chapters: [{ title: 'All', videoIds: ['v1', 'v2', 'v3', 'v4', 'v5'], rationale: 'All' }],
       suggestedTags: ['React', 'JavaScript', 'Frontend', 'Web Dev', 'TypeScript', 'Extra Tag'],
     })
 
     const result = parseAIResponse(response, VIDEOS)
     expect(result).not.toBeNull()
     expect(result!.suggestedTags).toHaveLength(5)
-    expect(result!.suggestedTags).toEqual(['react', 'javascript', 'frontend', 'web dev', 'typescript'])
+    expect(result!.suggestedTags).toEqual([
+      'react',
+      'javascript',
+      'frontend',
+      'web dev',
+      'typescript',
+    ])
   })
 
   it('handles missing rationale gracefully', () => {
     const response = JSON.stringify({
-      chapters: [
-        { title: 'Chapter 1', videoIds: ['v1', 'v2', 'v3', 'v4', 'v5'] },
-      ],
+      chapters: [{ title: 'Chapter 1', videoIds: ['v1', 'v2', 'v3', 'v4', 'v5'] }],
     })
 
     const result = parseAIResponse(response, VIDEOS)

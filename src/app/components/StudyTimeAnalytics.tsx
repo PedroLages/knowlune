@@ -187,32 +187,32 @@ export default function StudyTimeAnalytics() {
           {!showTable ? (
             <div data-testid="study-time-chart" role="img" aria-label={chartAltText}>
               <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                  <BarChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="period"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                      angle={-20}
-                      textAnchor="end"
-                      height={60}
-                      tick={{ fontSize: 12 }}
-                    />
-                    <YAxis
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                      label={{ value: 'Minutes', angle: -90, position: 'insideLeft' }}
-                    />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar
-                      dataKey="studyTime"
-                      fill="var(--color-studyTime)"
-                      radius={[4, 4, 0, 0]}
-                      aria-label="Study time in minutes"
-                    />
-                  </BarChart>
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="period"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    angle={-20}
+                    textAnchor="end"
+                    height={60}
+                    tick={{ fontSize: 12 }}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    label={{ value: 'Minutes', angle: -90, position: 'insideLeft' }}
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar
+                    dataKey="studyTime"
+                    fill="var(--color-studyTime)"
+                    radius={[4, 4, 0, 0]}
+                    aria-label="Study time in minutes"
+                  />
+                </BarChart>
               </ChartContainer>
             </div>
           ) : (

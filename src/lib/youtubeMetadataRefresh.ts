@@ -56,10 +56,7 @@ export async function refreshCourseMetadata(course: ImportedCourse): Promise<{
   }
 
   // Get all videos for this course
-  const videos = await db.importedVideos
-    .where('courseId')
-    .equals(course.id)
-    .toArray()
+  const videos = await db.importedVideos.where('courseId').equals(course.id).toArray()
 
   if (videos.length === 0) {
     // Update lastRefreshedAt even if no videos
@@ -172,10 +169,7 @@ export async function refreshStaleMetadata(): Promise<{
       totalRemoved += removed
     } catch (error) {
       // Non-blocking: log and continue with next course
-      console.warn(
-        `[MetadataRefresh] Failed to refresh course "${course.name}":`,
-        error
-      )
+      console.warn(`[MetadataRefresh] Failed to refresh course "${course.name}":`, error)
     }
   }
 

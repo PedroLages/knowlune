@@ -271,10 +271,7 @@ export function AccountDeletion() {
           <>
             <DialogHeader>
               <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-destructive/10 mb-2">
-                <Loader2
-                  className="size-6 text-destructive animate-spin"
-                  aria-hidden="true"
-                />
+                <Loader2 className="size-6 text-destructive animate-spin" aria-hidden="true" />
               </div>
               <DialogTitle className="text-center">Deleting Account</DialogTitle>
               <DialogDescription className="text-center">

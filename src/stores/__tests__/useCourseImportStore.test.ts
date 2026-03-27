@@ -275,7 +275,9 @@ describe('updateCourseTags', () => {
     })
 
     await act(async () => {
-      await useCourseImportStore.getState().updateCourseTags(course.id, ['React', 'JavaScript', 'react'])
+      await useCourseImportStore
+        .getState()
+        .updateCourseTags(course.id, ['React', 'JavaScript', 'react'])
     })
 
     const updated = useCourseImportStore.getState().importedCourses.find(c => c.id === course.id)
@@ -351,7 +353,9 @@ describe('updateCourseDetails', () => {
   })
 
   it('should return false for non-existent course', async () => {
-    const result = await useCourseImportStore.getState().updateCourseDetails('nonexistent', { name: 'X' })
+    const result = await useCourseImportStore
+      .getState()
+      .updateCourseDetails('nonexistent', { name: 'X' })
     expect(result).toBe(false)
   })
 

@@ -71,19 +71,13 @@ describe('youtubeConfiguration.ts', () => {
     })
 
     it('clamps TTL below minimum to MIN_CACHE_TTL_DAYS', () => {
-      localStorage.setItem(
-        'youtube-configuration',
-        JSON.stringify({ cacheTtlDays: 0 })
-      )
+      localStorage.setItem('youtube-configuration', JSON.stringify({ cacheTtlDays: 0 }))
       const config = getYouTubeConfiguration()
       expect(config.cacheTtlDays).toBe(MIN_CACHE_TTL_DAYS)
     })
 
     it('clamps TTL above maximum to MAX_CACHE_TTL_DAYS', () => {
-      localStorage.setItem(
-        'youtube-configuration',
-        JSON.stringify({ cacheTtlDays: 99 })
-      )
+      localStorage.setItem('youtube-configuration', JSON.stringify({ cacheTtlDays: 99 }))
       const config = getYouTubeConfiguration()
       expect(config.cacheTtlDays).toBe(MAX_CACHE_TTL_DAYS)
     })
@@ -163,10 +157,13 @@ describe('youtubeConfiguration.ts', () => {
     })
 
     it('preserves other settings when clearing key', async () => {
-      await saveYouTubeConfiguration({
-        cacheTtlDays: 14,
-        ytDlpServerUrl: 'http://192.168.1.100:5000',
-      }, 'AIzaTestKey1234567890123456789012345AB')
+      await saveYouTubeConfiguration(
+        {
+          cacheTtlDays: 14,
+          ytDlpServerUrl: 'http://192.168.1.100:5000',
+        },
+        'AIzaTestKey1234567890123456789012345AB'
+      )
 
       await clearYouTubeApiKey()
       const config = getYouTubeConfiguration()
