@@ -5,11 +5,12 @@ import { createRateLimiter } from '../../middleware/rate-limiter.js'
 // Helpers
 // ---------------------------------------------------------------------------
 
-function mockReq(userId?: string, ip?: string) {
+function mockReq(userId?: string, ip?: string, isBYOK?: boolean) {
   return {
     user: userId ? { sub: userId } : undefined,
     ip: ip ?? '127.0.0.1',
     headers: {},
+    isBYOK: isBYOK ?? false,
   } as never
 }
 
@@ -160,5 +161,83 @@ describe('createRateLimiter', () => {
     await middleware(req, res as never, next)
 
     expect(next).toHaveBeenCalled()
+  })
+
+  // -----------------------------------------------------------------------
+  // BYOK rate limit tier tests (E35-S03)
+  // -----------------------------------------------------------------------
+
+  it('BYOK requests use separate rate limiter with 30-point budget', async () => {
+    const middleware = createRateLimiter({ points: 2, duration: 60 })
+
+    const userId = `byok-rate-user-${Date.now()}`
+
+    // Non-BYOK: consume 2 points (exhausts default limiter)
+    for (let i = 0; i < 2; i++) {
+      const req = mockReq(userId, undefined, false)
+      const res = mockRes()
+      const next = vi.fn()
+      await middleware(req, res as never, next)
+      expect(next).toHaveBeenCalled()
+    }
+
+    // Non-BYOK should now be rate-limited
+    const reqLimited = mockReq(userId, undefined, false)
+    const resLimited = mockRes()
+    const nextLimited = vi.fn()
+    await middleware(reqLimited, resLimited as never, nextLimited)
+    expect(resLimited.status).toHaveBeenCalledWith(429)
+
+    // BYOK should STILL work (separate limiter)
+    const reqBYOK = mockReq(userId, undefined, true)
+    const resBYOK = mockRes()
+    const nextBYOK = vi.fn()
+    await middleware(reqBYOK, resBYOK as never, nextBYOK)
+    expect(nextBYOK).toHaveBeenCalled()
+  })
+
+  it('BYOK rate limiter is independent from default limiter', async () => {
+    const middleware = createRateLimiter({ points: 100, duration: 60 })
+
+    const userId = `byok-independent-${Date.now()}`
+
+    // Make several BYOK requests — should all pass (within 30-point budget)
+    for (let i = 0; i < 10; i++) {
+      const req = mockReq(userId, undefined, true)
+      const res = mockRes()
+      const next = vi.fn()
+      await middleware(req, res as never, next)
+      expect(next).toHaveBeenCalled()
+    }
+
+    // Non-BYOK should also pass (separate limiter, 100-point budget untouched)
+    const reqNonBYOK = mockReq(userId, undefined, false)
+    const resNonBYOK = mockRes()
+    const nextNonBYOK = vi.fn()
+    await middleware(reqNonBYOK, resNonBYOK as never, nextNonBYOK)
+    expect(nextNonBYOK).toHaveBeenCalled()
+  })
+
+  it('BYOK rate limit is exhausted after 30 requests', async () => {
+    const middleware = createRateLimiter({ points: 100, duration: 60 })
+
+    const userId = `byok-exhaust-${Date.now()}`
+
+    // Consume all 30 BYOK points
+    for (let i = 0; i < 30; i++) {
+      const req = mockReq(userId, undefined, true)
+      const res = mockRes()
+      const next = vi.fn()
+      await middleware(req, res as never, next)
+      expect(next).toHaveBeenCalled()
+    }
+
+    // 31st BYOK request should be rate-limited
+    const req31 = mockReq(userId, undefined, true)
+    const res31 = mockRes()
+    const next31 = vi.fn()
+    await middleware(req31, res31 as never, next31)
+    expect(res31.status).toHaveBeenCalledWith(429)
+    expect(next31).not.toHaveBeenCalled()
   })
 })

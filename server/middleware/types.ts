@@ -39,6 +39,8 @@ export interface AuthenticatedRequest extends Request {
   user: SupabaseJwtPayload
   /** User's current entitlement tier (set by entitlement middleware) */
   entitlement?: EntitlementTier
+  /** Whether the request is a BYOK (Bring Your Own Key) request — skips entitlement check */
+  isBYOK?: boolean
 }
 
 /**

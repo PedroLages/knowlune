@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createEntitlementMiddleware } from '../../middleware/entitlement.js'
+import { createEntitlementMiddleware, createDetectBYOKMiddleware } from '../../middleware/entitlement.js'
 import type { AuthenticatedRequest } from '../../middleware/types.js'
 
 // ---------------------------------------------------------------------------
@@ -13,10 +13,15 @@ vi.stubGlobal('fetch', mockFetch)
 // Helpers
 // ---------------------------------------------------------------------------
 
-function mockReq(userId?: string): AuthenticatedRequest {
+function mockReq(
+  userId?: string,
+  body?: Record<string, unknown>
+): AuthenticatedRequest {
   return {
     user: userId ? { sub: userId } : undefined,
     entitlement: undefined,
+    isBYOK: undefined,
+    body: body ?? {},
   } as unknown as AuthenticatedRequest
 }
 
@@ -42,7 +47,7 @@ const TEST_CONFIG = {
 }
 
 // ---------------------------------------------------------------------------
-// Tests
+// Entitlement Middleware Tests
 // ---------------------------------------------------------------------------
 
 describe('createEntitlementMiddleware', () => {
@@ -202,5 +207,269 @@ describe('createEntitlementMiddleware', () => {
 
     expect(req.entitlement).toBe('free')
     expect(next).toHaveBeenCalled()
+  })
+
+  // -----------------------------------------------------------------------
+  // BYOK pass-through tests (E35-S03)
+  // -----------------------------------------------------------------------
+
+  it('skips entitlement check when req.isBYOK is true', async () => {
+    const middleware = createEntitlementMiddleware(TEST_CONFIG)
+    const req = mockReq('byok-user')
+    req.isBYOK = true
+    const res = mockRes()
+    const next = vi.fn()
+
+    await middleware(req, res as never, next)
+
+    // Should proceed without calling Supabase
+    expect(next).toHaveBeenCalled()
+    expect(mockFetch).not.toHaveBeenCalled()
+    // Entitlement is not set for BYOK requests (not needed)
+    expect(req.entitlement).toBeUndefined()
+  })
+
+  it('BYOK skip works for free-tier users (no entitlement rejection)', async () => {
+    const middleware = createEntitlementMiddleware(TEST_CONFIG)
+    const req = mockReq('free-byok-user')
+    req.isBYOK = true
+    const res = mockRes()
+    const next = vi.fn()
+
+    await middleware(req, res as never, next)
+
+    expect(next).toHaveBeenCalled()
+    expect(res.status).not.toHaveBeenCalled()
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('BYOK skip works for premium users (entitlement not checked)', async () => {
+    const middleware = createEntitlementMiddleware(TEST_CONFIG)
+    const req = mockReq('premium-byok-user')
+    req.isBYOK = true
+    const res = mockRes()
+    const next = vi.fn()
+
+    await middleware(req, res as never, next)
+
+    expect(next).toHaveBeenCalled()
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('non-BYOK request still goes through entitlement check', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [{ tier: 'premium' }],
+    })
+
+    const middleware = createEntitlementMiddleware(TEST_CONFIG)
+    const req = mockReq('normal-user')
+    req.isBYOK = false
+    const res = mockRes()
+    const next = vi.fn()
+
+    await middleware(req, res as never, next)
+
+    expect(mockFetch).toHaveBeenCalledOnce()
+    expect(req.entitlement).toBe('premium')
+    expect(next).toHaveBeenCalled()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// BYOK Detection Middleware Tests (E35-S03)
+// ---------------------------------------------------------------------------
+
+describe('createDetectBYOKMiddleware', () => {
+  it('sets isBYOK=true when body.apiKey is present (cloud BYOK)', () => {
+    const middleware = createDetectBYOKMiddleware()
+    const req = mockReq('user-1', { apiKey: 'sk-test-123', provider: 'openai', messages: [] })
+    const res = mockRes()
+    const next = vi.fn()
+
+    middleware(req, res as never, next)
+
+    expect(req.isBYOK).toBe(true)
+    expect(next).toHaveBeenCalled()
+  })
+
+  it('sets isBYOK=true when body.ollamaServerUrl is present (self-hosted BYOK)', () => {
+    const middleware = createDetectBYOKMiddleware()
+    const req = mockReq('user-2', { ollamaServerUrl: 'http://192.168.2.200:11434', messages: [] })
+    const res = mockRes()
+    const next = vi.fn()
+
+    middleware(req, res as never, next)
+
+    expect(req.isBYOK).toBe(true)
+    expect(next).toHaveBeenCalled()
+  })
+
+  it('sets isBYOK=true when BOTH apiKey and ollamaServerUrl are present', () => {
+    const middleware = createDetectBYOKMiddleware()
+    const req = mockReq('user-3', {
+      apiKey: 'sk-test',
+      ollamaServerUrl: 'http://192.168.2.200:11434',
+      messages: [],
+    })
+    const res = mockRes()
+    const next = vi.fn()
+
+    middleware(req, res as never, next)
+
+    expect(req.isBYOK).toBe(true)
+    expect(next).toHaveBeenCalled()
+  })
+
+  it('sets isBYOK=false when neither apiKey nor ollamaServerUrl present', () => {
+    const middleware = createDetectBYOKMiddleware()
+    const req = mockReq('user-4', { messages: [] })
+    const res = mockRes()
+    const next = vi.fn()
+
+    middleware(req, res as never, next)
+
+    expect(req.isBYOK).toBe(false)
+    expect(next).toHaveBeenCalled()
+  })
+
+  it('sets isBYOK=false when apiKey is empty string', () => {
+    const middleware = createDetectBYOKMiddleware()
+    const req = mockReq('user-5', { apiKey: '', messages: [] })
+    const res = mockRes()
+    const next = vi.fn()
+
+    middleware(req, res as never, next)
+
+    expect(req.isBYOK).toBe(false)
+    expect(next).toHaveBeenCalled()
+  })
+
+  it('sets isBYOK=false when ollamaServerUrl is empty string', () => {
+    const middleware = createDetectBYOKMiddleware()
+    const req = mockReq('user-6', { ollamaServerUrl: '', messages: [] })
+    const res = mockRes()
+    const next = vi.fn()
+
+    middleware(req, res as never, next)
+
+    expect(req.isBYOK).toBe(false)
+    expect(next).toHaveBeenCalled()
+  })
+
+  it('sets isBYOK=false when apiKey is not a string', () => {
+    const middleware = createDetectBYOKMiddleware()
+    const req = mockReq('user-7', { apiKey: 123, messages: [] })
+    const res = mockRes()
+    const next = vi.fn()
+
+    middleware(req, res as never, next)
+
+    expect(req.isBYOK).toBe(false)
+    expect(next).toHaveBeenCalled()
+  })
+
+  it('handles request with no body gracefully', () => {
+    const middleware = createDetectBYOKMiddleware()
+    const req = mockReq('user-8')
+    const res = mockRes()
+    const next = vi.fn()
+
+    middleware(req, res as never, next)
+
+    expect(req.isBYOK).toBe(false)
+    expect(next).toHaveBeenCalled()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// BYOK + Entitlement integration scenario tests (E35-S03)
+// ---------------------------------------------------------------------------
+
+describe('BYOK + Entitlement integration', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('free-tier user with BYOK key bypasses entitlement (full chain simulation)', async () => {
+    // Simulate: detectBYOK sets isBYOK=true, then entitlement middleware skips check
+    const detectMiddleware = createDetectBYOKMiddleware()
+    const entitlementMiddleware = createEntitlementMiddleware(TEST_CONFIG)
+
+    const req = mockReq('free-user-byok', { apiKey: 'sk-test-key', provider: 'openai', messages: [] })
+    const res = mockRes()
+
+    // Step 1: Detect BYOK
+    const detectNext = vi.fn()
+    detectMiddleware(req, res as never, detectNext)
+    expect(req.isBYOK).toBe(true)
+
+    // Step 2: Entitlement middleware should skip
+    const entitlementNext = vi.fn()
+    await entitlementMiddleware(req, res as never, entitlementNext)
+
+    expect(entitlementNext).toHaveBeenCalled()
+    expect(mockFetch).not.toHaveBeenCalled() // No Supabase call
+    expect(res.status).not.toHaveBeenCalled() // No 403 rejection
+  })
+
+  it('premium user with BYOK key treated as BYOK (not hosted-AI)', async () => {
+    // Even premium users with apiKey should be treated as BYOK
+    const detectMiddleware = createDetectBYOKMiddleware()
+    const entitlementMiddleware = createEntitlementMiddleware(TEST_CONFIG)
+
+    const req = mockReq('premium-user-byok', { apiKey: 'sk-premium-key', provider: 'anthropic', messages: [] })
+    const res = mockRes()
+
+    const detectNext = vi.fn()
+    detectMiddleware(req, res as never, detectNext)
+    expect(req.isBYOK).toBe(true)
+
+    const entitlementNext = vi.fn()
+    await entitlementMiddleware(req, res as never, entitlementNext)
+
+    expect(entitlementNext).toHaveBeenCalled()
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('non-BYOK request from free user gets entitlement checked', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [],
+    })
+
+    const detectMiddleware = createDetectBYOKMiddleware()
+    const entitlementMiddleware = createEntitlementMiddleware(TEST_CONFIG)
+
+    const req = mockReq('free-user-no-byok', { messages: [] })
+    const res = mockRes()
+
+    const detectNext = vi.fn()
+    detectMiddleware(req, res as never, detectNext)
+    expect(req.isBYOK).toBe(false)
+
+    const entitlementNext = vi.fn()
+    await entitlementMiddleware(req, res as never, entitlementNext)
+
+    expect(mockFetch).toHaveBeenCalledOnce()
+    expect(req.entitlement).toBe('free')
+  })
+
+  it('Ollama BYOK with ollamaServerUrl skips entitlement', async () => {
+    const detectMiddleware = createDetectBYOKMiddleware()
+    const entitlementMiddleware = createEntitlementMiddleware(TEST_CONFIG)
+
+    const req = mockReq('ollama-user', { ollamaServerUrl: 'http://192.168.2.200:11434', messages: [] })
+    const res = mockRes()
+
+    const detectNext = vi.fn()
+    detectMiddleware(req, res as never, detectNext)
+    expect(req.isBYOK).toBe(true)
+
+    const entitlementNext = vi.fn()
+    await entitlementMiddleware(req, res as never, entitlementNext)
+
+    expect(entitlementNext).toHaveBeenCalled()
+    expect(mockFetch).not.toHaveBeenCalled()
   })
 })

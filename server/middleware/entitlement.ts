@@ -5,11 +5,16 @@
  * with Supabase as the source of truth. Cache entries expire after 5 minutes
  * to balance performance with freshness.
  *
+ * BYOK (Bring Your Own Key) detection:
+ *   Requests containing `apiKey` (cloud providers) or `ollamaServerUrl` (self-hosted)
+ *   in the request body skip the entitlement check entirely. BYOK requests still
+ *   require a valid JWT (no open relay). The BYOK flag is set on `req.isBYOK`.
+ *
  * Usage:
- *   app.use('/api/premium', createEntitlementMiddleware({
- *     supabaseUrl: process.env.VITE_SUPABASE_URL!,
- *     supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
- *   }))
+ *   app.use('/api/ai', createDetectBYOKMiddleware())
+ *   app.use('/api/ai', createEntitlementMiddleware({ ... }))
+ *
+ * Middleware chain: authenticateJWT -> detectBYOK -> [if !BYOK: checkEntitlement] -> rateLimitByTier
  *
  * After this middleware, `req.entitlement` contains the user's tier.
  * Requires `authenticate` middleware to have run first (needs req.user).
@@ -80,8 +85,43 @@ async function fetchEntitlementFromSupabase(
 }
 
 /**
+ * Creates an Express middleware that detects BYOK (Bring Your Own Key) requests.
+ *
+ * Detection keys:
+ *   - `body.apiKey` — cloud provider BYOK (OpenAI, Anthropic, Groq, Gemini)
+ *   - `body.ollamaServerUrl` — self-hosted Ollama BYOK
+ *
+ * Sets `req.isBYOK = true` when detected. Downstream entitlement middleware
+ * checks this flag to skip the subscription check.
+ *
+ * Critical design rule: BYOK detection is independent of entitlement state.
+ * A BYOK request must NEVER be rejected because of hosted-AI entitlement state.
+ */
+export function createDetectBYOKMiddleware() {
+  return function detectBYOK(
+    req: AuthenticatedRequest,
+    _res: Response,
+    next: NextFunction
+  ): void {
+    const body = req.body as Record<string, unknown> | undefined
+
+    const hasApiKey = typeof body?.apiKey === 'string' && body.apiKey.length > 0
+    const hasOllamaUrl =
+      typeof body?.ollamaServerUrl === 'string' && body.ollamaServerUrl.length > 0
+
+    req.isBYOK = hasApiKey || hasOllamaUrl
+
+    next()
+  }
+}
+
+/**
  * Creates an Express middleware that resolves and attaches entitlement tier.
  * Uses an LRU cache (5-min TTL, max 1000 entries) with Supabase fallback.
+ *
+ * BYOK requests (req.isBYOK === true) skip the entitlement check entirely
+ * and proceed directly to the next middleware. This ensures users who provide
+ * their own API keys are never blocked by subscription state.
  *
  * @param config - Supabase connection configuration
  * @returns Express middleware function
@@ -103,6 +143,13 @@ export function createEntitlementMiddleware(config: EntitlementConfig) {
     res: Response,
     next: NextFunction
   ): Promise<void> {
+    // BYOK requests skip entitlement check — user provides their own key/server.
+    // Critical: This check is independent of hosted-AI entitlement state.
+    if (req.isBYOK) {
+      next()
+      return
+    }
+
     if (!req.user?.sub) {
       res.status(401).json({ error: 'Authentication required for entitlement check' })
       return
