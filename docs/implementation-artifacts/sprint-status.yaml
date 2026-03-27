@@ -503,3 +503,9 @@ development_status:
   33-5-add-e2e-coverage-for-youtube-course-creation-flow: done
   33-6-add-testable-import-path-drag-and-drop-file-import: done
   epic-33-retrospective: optional
+
+  # ──────────────────────────────────────────────────
+  # Epic 35: Server-Side Premium Entitlement Enforcement
+  # ──────────────────────────────────────────────────
+  epic-35: in-progress
+  35-1-server-middleware-foundation: done
