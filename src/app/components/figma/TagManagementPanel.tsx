@@ -30,8 +30,9 @@ interface TagManagementPanelProps {
 }
 
 export function TagManagementPanel({ open, onOpenChange, onTagsChanged }: TagManagementPanelProps) {
+  const importedCourses = useCourseImportStore(s => s.importedCourses)
   const getTagsWithCounts = useCourseImportStore(s => s.getTagsWithCounts)
-  const tagsWithCounts = useMemo(() => getTagsWithCounts(), [getTagsWithCounts])
+  const tagsWithCounts = useMemo(() => getTagsWithCounts(), [getTagsWithCounts, importedCourses])
   const renameTagGlobally = useCourseImportStore(s => s.renameTagGlobally)
   const deleteTagGlobally = useCourseImportStore(s => s.deleteTagGlobally)
 
