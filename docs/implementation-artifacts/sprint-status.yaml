@@ -446,10 +446,10 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-29: in-progress
   29-1-fix-courses-page-crash-tagmanagementpanel-infinite-loop: done
-  29-2-add-error-handling-to-uselearningpathstore-mutations: ready-for-dev
-  29-3-fix-careerpaths-mislabelling-and-add-sidebar-nav-entry: ready-for-dev
-  29-4-remove-focus-visible-outline-none-from-legal-pages: ready-for-dev
-  29-5-guard-json-parse-in-layout-sidebar-state-parsing: ready-for-dev
+  29-2-add-error-handling-to-uselearningpathstore-mutations: done
+  29-3-fix-careerpaths-mislabelling-and-add-sidebar-nav-entry: backlog
+  29-4-remove-focus-visible-outline-none-from-legal-pages: backlog
+  29-5-guard-json-parse-in-layout-sidebar-state-parsing: backlog
   epic-29-retrospective: optional
 
   # ──────────────────────────────────────────────────
@@ -457,12 +457,12 @@ development_status:
   # Source: epics-audit-hardening.md (P1 — WCAG AA)
   # ──────────────────────────────────────────────────
   epic-30: backlog
-  30-1-global-touch-target-sweep-44px-minimum: ready-for-dev
-  30-2-add-aria-label-to-icon-only-buttons: ready-for-dev
-  30-3-fix-heading-hierarchy-in-coursedetail-settings-premiumfeaturepage: ready-for-dev
-  30-4-add-aria-expanded-to-module-toggles-and-collapsibles: ready-for-dev
-  30-5-add-aria-label-to-settings-radiogroups-and-switches: ready-for-dev
-  30-6-add-aria-live-regions-for-filter-search-results-and-fix-skip-link: ready-for-dev
+  30-1-global-touch-target-sweep-44px-minimum: backlog
+  30-2-add-aria-label-to-icon-only-buttons: backlog
+  30-3-fix-heading-hierarchy-in-coursedetail-settings-premiumfeaturepage: backlog
+  30-4-add-aria-expanded-to-module-toggles-and-collapsibles: backlog
+  30-5-add-aria-label-to-settings-radiogroups-and-switches: backlog
+  30-6-add-aria-live-regions-for-filter-search-results-and-fix-skip-link: backlog
   epic-30-retrospective: optional
 
   # ──────────────────────────────────────────────────
@@ -470,13 +470,13 @@ development_status:
   # Source: epics-audit-hardening.md (P1 — Resilience)
   # ──────────────────────────────────────────────────
   epic-31: backlog
-  31-1-add-catch-to-fire-and-forget-indexeddb-reads: ready-for-dev
-  31-2-fix-importedcoursedetail-handledelete-missing-try-catch: ready-for-dev
-  31-3-fix-zustand-state-mutation-in-usesessionstore: ready-for-dev
-  31-4-fix-unsafe-type-cast-in-useyoutubeimportstore: ready-for-dev
-  31-5-fix-silent-catch-in-usecourseimportstore: ready-for-dev
-  31-6-fix-api-client-abortsignal-composition: ready-for-dev
-  31-7-add-route-level-error-boundaries-to-suspensepage-wrappers: ready-for-dev
+  31-1-add-catch-to-fire-and-forget-indexeddb-reads: backlog
+  31-2-fix-importedcoursedetail-handledelete-missing-try-catch: backlog
+  31-3-fix-zustand-state-mutation-in-usesessionstore: backlog
+  31-4-fix-unsafe-type-cast-in-useyoutubeimportstore: backlog
+  31-5-fix-silent-catch-in-usecourseimportstore: backlog
+  31-6-fix-api-client-abortsignal-composition: backlog
+  31-7-add-route-level-error-boundaries-to-suspensepage-wrappers: backlog
   epic-31-retrospective: optional
 
   # ──────────────────────────────────────────────────
@@ -484,11 +484,11 @@ development_status:
   # Source: epics-audit-hardening.md (P2 — Scale-proofing)
   # ──────────────────────────────────────────────────
   epic-32: backlog
-  32-1-add-list-virtualization-with-tanstack-react-virtual: ready-for-dev
-  32-2-implement-lazy-zustand-store-loading: ready-for-dev
-  32-3-add-indexeddb-quota-monitoring-with-user-warnings: ready-for-dev
-  32-4-implement-data-pruning-for-studysessions-aiusageevents-embeddings: ready-for-dev
-  32-5-create-dexie-migration-checkpoint-at-v27: ready-for-dev
+  32-1-add-list-virtualization-with-tanstack-react-virtual: backlog
+  32-2-implement-lazy-zustand-store-loading: backlog
+  32-3-add-indexeddb-quota-monitoring-with-user-warnings: backlog
+  32-4-implement-data-pruning-for-studysessions-aiusageevents-embeddings: backlog
+  32-5-create-dexie-migration-checkpoint-at-v27: backlog
   epic-32-retrospective: optional
 
   # ──────────────────────────────────────────────────
@@ -496,22 +496,23 @@ development_status:
   # Source: epics-audit-hardening.md (P2 — Quality debt)
   # ──────────────────────────────────────────────────
   epic-33: backlog
-  33-1-validate-and-fix-94-generated-e2e-tests-from-audit: ready-for-dev
-  33-2-remove-hard-waits-and-fix-css-class-selectors-in-existing-tests: ready-for-dev
-  33-3-cross-store-integration-tests-for-import-quiz-session-workflows: ready-for-dev
-  33-4-store-branch-coverage-target-80-across-all-22-zustand-stores: ready-for-dev
-  33-5-add-e2e-coverage-for-youtube-course-creation-flow: ready-for-dev
-  33-6-add-testable-import-path-drag-and-drop-file-import: ready-for-dev
+  33-1-validate-and-fix-94-generated-e2e-tests-from-audit: backlog
+  33-2-remove-hard-waits-and-fix-css-class-selectors-in-existing-tests: backlog
+  33-3-cross-store-integration-tests-for-import-quiz-session-workflows: backlog
+  33-4-store-branch-coverage-target-80-across-all-22-zustand-stores: backlog
+  33-5-add-e2e-coverage-for-youtube-course-creation-flow: backlog
+  33-6-add-testable-import-path-drag-and-drop-file-import: backlog
   epic-33-retrospective: optional
 
   # ──────────────────────────────────────────────────
   # Epic 35: Server-Side Entitlement Enforcement
-  # Source: epics-server-entitlement.md (P1 — Security boundary)
-  # Dependencies: E19 (auth), E22 (Express proxy)
+  # Source: Architecture addendum (Adversarial Finding #9)
+  # Depends on: Epic 19 (Supabase auth + Stripe), Epic 22 (Express AI proxy)
+  # NOTE: E34 reserved (no epic assigned yet)
   # ──────────────────────────────────────────────────
   epic-35: backlog
-  35-1-entitlement-middleware-foundation: ready-for-dev
-  35-2-express-proxy-entitlement-guard: ready-for-dev
-  35-3-byok-pass-through-logic: ready-for-dev
-  35-4-client-side-ispremium-refactor-dev-proxy: ready-for-dev
+  35-1-entitlement-middleware-foundation: backlog
+  35-2-express-proxy-entitlement-guard: backlog
+  35-3-byok-pass-through-logic: backlog
+  35-4-client-ispremium-refactor-and-dev-proxy: backlog
   epic-35-retrospective: optional
