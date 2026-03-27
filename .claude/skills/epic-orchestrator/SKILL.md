@@ -1,6 +1,9 @@
 ---
 name: epic-orchestrator
 description: Use when executing an entire epic end-to-end — all stories from start through implementation, review, finish, merge, post-epic validation, and final report. Triggered by requests to run a full epic, batch-process stories, or automate the complete story lifecycle.
+color: red
+memory: project
+background: true
 ---
 
 # Epic Orchestrator

@@ -1,9 +1,11 @@
 /**
- * Lightweight error tracking infrastructure for LevelUp.
+ * Lightweight error tracking infrastructure for Knowlune.
  * Stores errors in an in-memory ring buffer and logs them
- * in a structured format. Designed as the foundation for
- * future external integrations (Sentry, etc.).
+ * in a structured format. When Sentry is configured (via
+ * VITE_SENTRY_DSN), errors are also forwarded to Sentry.
  */
+
+import * as Sentry from '@sentry/react'
 
 export interface ErrorEntry {
   timestamp: string
@@ -22,6 +24,7 @@ function formatTimestamp(): string {
 
 /**
  * Report and store a structured error.
+ * Also forwards to Sentry if configured.
  */
 export function reportError(error: unknown, context = 'Unknown'): void {
   const message = error instanceof Error ? error.message : String(error)
@@ -42,6 +45,13 @@ export function reportError(error: unknown, context = 'Unknown'): void {
   errorLog.push(entry)
 
   console.error(`[Knowlune:Error] ${entry.timestamp} | ${context} | ${message}`)
+
+  // Forward to Sentry if initialized
+  if (error instanceof Error) {
+    Sentry.captureException(error, { tags: { context } })
+  } else {
+    Sentry.captureMessage(message, { level: 'error', tags: { context } })
+  }
 }
 
 /**

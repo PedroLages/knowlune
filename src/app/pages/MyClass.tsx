@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Clock, CheckCircle, PlayCircle } from 'lucide-react'
 import { Skeleton } from '@/app/components/ui/skeleton'
 import { EmptyState } from '@/app/components/EmptyState'
@@ -27,68 +27,75 @@ export default function MyClass() {
     return () => clearTimeout(timer)
   }, [])
 
-  const inProgress = getCoursesInProgress(allCourses)
-  const completed = getCompletedCourses(allCourses)
-  const notStarted = getNotStartedCourses(allCourses)
+  const inProgress = useMemo(() => getCoursesInProgress(allCourses), [allCourses])
+  const completed = useMemo(() => getCompletedCourses(allCourses), [allCourses])
+  const notStarted = useMemo(() => getNotStartedCourses(allCourses), [allCourses])
 
   const hasAnyCourses = inProgress.length > 0 || completed.length > 0 || notStarted.length > 0
 
   // Get all courses with their status
-  const allCoursesWithStatus = allCourses.map(course => {
-    const inProgressCourse = inProgress.find(c => c.id === course.id)
-    const completedCourse = completed.find(c => c.id === course.id)
+  const allCoursesWithStatus = useMemo(
+    () =>
+      allCourses.map(course => {
+        const inProgressCourse = inProgress.find(c => c.id === course.id)
+        const completedCourse = completed.find(c => c.id === course.id)
 
-    if (inProgressCourse) {
-      return {
-        ...course,
-        status: 'in-progress' as const,
-        completionPercent: inProgressCourse.completionPercent,
-        lastAccessedAt: inProgressCourse.progress.lastAccessedAt,
-      }
-    }
-    if (completedCourse) {
-      return { ...course, status: 'completed' as const }
-    }
-    return { ...course, status: 'not-started' as const }
-  })
+        if (inProgressCourse) {
+          return {
+            ...course,
+            status: 'in-progress' as const,
+            completionPercent: inProgressCourse.completionPercent,
+            lastAccessedAt: inProgressCourse.progress.lastAccessedAt,
+          }
+        }
+        if (completedCourse) {
+          return { ...course, status: 'completed' as const }
+        }
+        return { ...course, status: 'not-started' as const }
+      }),
+    [allCourses, inProgress, completed]
+  )
 
   // Sort function
-  const sortCourses = (courses: typeof allCoursesWithStatus) => {
-    switch (sortBy) {
-      case 'recent':
-        return [...courses].sort((a, b) => {
-          const aTime = 'lastAccessedAt' in a ? new Date(a.lastAccessedAt).getTime() : 0
-          const bTime = 'lastAccessedAt' in b ? new Date(b.lastAccessedAt).getTime() : 0
-          return bTime - aTime
-        })
-      case 'progress-high':
-        return [...courses].sort((a, b) => {
-          const aProgress = 'completionPercent' in a ? a.completionPercent : 0
-          const bProgress = 'completionPercent' in b ? b.completionPercent : 0
-          return bProgress - aProgress
-        })
-      case 'progress-low':
-        return [...courses].sort((a, b) => {
-          const aProgress = 'completionPercent' in a ? a.completionPercent : 0
-          const bProgress = 'completionPercent' in b ? b.completionPercent : 0
-          return aProgress - bProgress
-        })
-      case 'alpha':
-        return [...courses].sort((a, b) => a.title.localeCompare(b.title))
-      case 'time':
-        // Sort by total lessons (estimated time)
-        return [...courses].sort((a, b) => {
-          const aLessons = a.modules.reduce((sum, m) => sum + m.lessons.length, 0)
-          const bLessons = b.modules.reduce((sum, m) => sum + m.lessons.length, 0)
-          return aLessons - bLessons
-        })
-      default:
-        return courses
-    }
-  }
+  const sortCourses = useCallback(
+    (courses: typeof allCoursesWithStatus) => {
+      switch (sortBy) {
+        case 'recent':
+          return [...courses].sort((a, b) => {
+            const aTime = 'lastAccessedAt' in a ? new Date(a.lastAccessedAt).getTime() : 0
+            const bTime = 'lastAccessedAt' in b ? new Date(b.lastAccessedAt).getTime() : 0
+            return bTime - aTime
+          })
+        case 'progress-high':
+          return [...courses].sort((a, b) => {
+            const aProgress = 'completionPercent' in a ? a.completionPercent : 0
+            const bProgress = 'completionPercent' in b ? b.completionPercent : 0
+            return bProgress - aProgress
+          })
+        case 'progress-low':
+          return [...courses].sort((a, b) => {
+            const aProgress = 'completionPercent' in a ? a.completionPercent : 0
+            const bProgress = 'completionPercent' in b ? b.completionPercent : 0
+            return aProgress - bProgress
+          })
+        case 'alpha':
+          return [...courses].sort((a, b) => a.title.localeCompare(b.title))
+        case 'time':
+          // Sort by total lessons (estimated time)
+          return [...courses].sort((a, b) => {
+            const aLessons = a.modules.reduce((sum, m) => sum + m.lessons.length, 0)
+            const bLessons = b.modules.reduce((sum, m) => sum + m.lessons.length, 0)
+            return aLessons - bLessons
+          })
+        default:
+          return courses
+      }
+    },
+    [sortBy]
+  )
 
   // Group courses by category
-  const coursesByCategory = (() => {
+  const coursesByCategory = useMemo(() => {
     const groups: Record<string, typeof allCoursesWithStatus> = {}
     allCoursesWithStatus.forEach(course => {
       if (!groups[course.category]) {
@@ -97,10 +104,10 @@ export default function MyClass() {
       groups[course.category].push(course)
     })
     return groups
-  })()
+  }, [allCoursesWithStatus])
 
   // Group courses by difficulty
-  const coursesByDifficulty = (() => {
+  const coursesByDifficulty = useMemo(() => {
     const groups: Record<string, typeof allCoursesWithStatus> = {}
     allCoursesWithStatus.forEach(course => {
       if (!groups[course.difficulty]) {
@@ -109,12 +116,25 @@ export default function MyClass() {
       groups[course.difficulty].push(course)
     })
     return groups
-  })()
+  }, [allCoursesWithStatus])
 
   // Filter courses by status from allCoursesWithStatus
-  const inProgressWithStatus = allCoursesWithStatus.filter(c => c.status === 'in-progress')
-  const completedWithStatus = allCoursesWithStatus.filter(c => c.status === 'completed')
-  const notStartedWithStatus = allCoursesWithStatus.filter(c => c.status === 'not-started')
+  const inProgressWithStatus = useMemo(
+    () => allCoursesWithStatus.filter(c => c.status === 'in-progress'),
+    [allCoursesWithStatus]
+  )
+  const completedWithStatus = useMemo(
+    () => allCoursesWithStatus.filter(c => c.status === 'completed'),
+    [allCoursesWithStatus]
+  )
+  const notStartedWithStatus = useMemo(
+    () => allCoursesWithStatus.filter(c => c.status === 'not-started'),
+    [allCoursesWithStatus]
+  )
+
+  const handleSortChange = useCallback((value: string) => {
+    setSortBy(value as SortOption)
+  }, [])
 
   if (isLoading) {
     return (
@@ -190,7 +210,7 @@ export default function MyClass() {
                 <TabsTrigger value="by-difficulty">By Difficulty</TabsTrigger>
               </TabsList>
 
-              <Select value={sortBy} onValueChange={value => setSortBy(value as SortOption)}>
+              <Select value={sortBy} onValueChange={handleSortChange}>
                 <SelectTrigger className="w-full sm:w-[200px]" aria-label="Sort courses">
                   <SelectValue placeholder="Sort by..." />
                 </SelectTrigger>

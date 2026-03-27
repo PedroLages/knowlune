@@ -19,6 +19,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import {
   ArrowLeft,
+  ArrowRight,
   GripVertical,
   ChevronUp,
   ChevronDown,
@@ -32,6 +33,9 @@ import {
   Settings,
   Clock,
   CheckCircle2,
+  Check,
+  Lock,
+  Flame,
 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
@@ -51,8 +55,10 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/app/components/ui/collapsible'
+import { cn } from '@/app/components/ui/utils'
 import { EmptyState } from '@/app/components/EmptyState'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
+import { TrailMap } from '@/app/components/figma/TrailMap'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
@@ -663,10 +669,10 @@ export function LearningPathDetail() {
   // Path not found
   if (!path) {
     return (
-      <div className="max-w-3xl mx-auto space-y-6">
+      <div className="space-y-6">
         <Link
           to="/learning-paths"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-2 text-brand font-medium hover:-translate-x-1 transition-transform"
         >
           <ArrowLeft className="size-4" aria-hidden="true" />
           Back to Learning Paths
@@ -684,19 +690,43 @@ export function LearningPathDetail() {
     )
   }
 
+  // Derived data for the new layout
+  const completedEntries = useMemo(
+    () => courseEntries.filter(e => (courseInfo.get(e.courseId)?.completionPct ?? 0) >= 100),
+    [courseEntries, courseInfo]
+  )
+  const currentEntry = useMemo(
+    () => courseEntries.find(e => {
+      const pct = courseInfo.get(e.courseId)?.completionPct ?? 0
+      return pct > 0 && pct < 100
+    }) ?? (courseEntries.length > completedEntries.length ? courseEntries[completedEntries.length] : null),
+    [courseEntries, courseInfo, completedEntries.length]
+  )
+  const upcomingEntries = useMemo(
+    () => courseEntries.filter(e => {
+      const pct = courseInfo.get(e.courseId)?.completionPct ?? 0
+      return pct === 0 && e !== currentEntry
+    }),
+    [courseEntries, courseInfo, currentEntry]
+  )
+  const currentIndex = currentEntry ? courseEntries.indexOf(currentEntry) : -1
+
+  // State for toggling reorder mode
+  const [showReorderList, setShowReorderList] = useState(false)
+
   return (
     <MotionConfig reducedMotion="user">
       <motion.div
         variants={staggerContainer}
         initial="hidden"
         animate="visible"
-        className="space-y-6 max-w-3xl mx-auto"
+        className="space-y-8"
       >
         {/* Back link */}
         <motion.div variants={fadeUp}>
           <Link
             to="/learning-paths"
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-2 text-brand font-medium hover:-translate-x-1 transition-transform"
           >
             <ArrowLeft className="size-4" aria-hidden="true" />
             Back to Learning Paths
@@ -704,117 +734,56 @@ export function LearningPathDetail() {
         </motion.div>
 
         {/* Header */}
-        <motion.div
-          variants={fadeUp}
-          className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4"
-        >
+        <motion.div variants={fadeUp} className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl font-bold tracking-tight font-display">{path.name}</h1>
-              {path.isAIGenerated && (
-                <Badge variant="secondary" className="text-[10px] uppercase tracking-wider">
-                  AI Generated
-                </Badge>
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight font-display mb-4">
+              {path.name}
+            </h1>
+            {path.description && (
+              <p className="text-muted-foreground leading-relaxed mb-4">{path.description}</p>
+            )}
+            <div className="flex flex-wrap items-center gap-4 text-muted-foreground font-medium text-sm">
+              <span className="flex items-center gap-1.5">
+                <Clock className="size-4 text-brand" aria-hidden="true" />
+                {pathProgress.completedLessons} lessons completed
+              </span>
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="size-4 text-brand" aria-hidden="true" />
+                {pathProgress.completedCourses}/{pathProgress.totalCourses} courses done
+              </span>
+              {pathProgress.estimatedRemainingHours > 0 && (
+                <span className="flex items-center gap-1.5">
+                  <Flame className="size-4 text-brand" aria-hidden="true" />
+                  ~{pathProgress.estimatedRemainingHours}h remaining
+                </span>
               )}
             </div>
-            {path.description && (
-              <p className="text-sm text-muted-foreground leading-relaxed">{path.description}</p>
-            )}
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Suggest Order button — shown when 2+ courses (E26-S04) */}
-            {courseEntries.length >= 2 && (
-              isOrderSuggestionAvailable() ? (
-                <Button
-                  variant="brand-outline"
-                  onClick={handleSuggestOrder}
-                  disabled={isSuggesting}
-                  data-testid="suggest-order-button"
-                >
-                  {isSuggesting ? (
-                    <>
-                      <Loader2 className="size-4 mr-2 animate-spin" aria-hidden="true" />
-                      Analyzing...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="size-4 mr-2" aria-hidden="true" />
-                      Suggest Order
-                    </>
-                  )}
-                </Button>
-              ) : (
-                <Link
-                  to="/settings"
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                  data-testid="suggest-order-settings-link"
-                  aria-label="Configure AI to enable Suggest Order"
-                >
-                  <Settings className="size-4" aria-hidden="true" />
-                  <span className="hidden sm:inline">Configure AI for Suggest Order</span>
-                  <span className="sm:hidden">AI Settings</span>
-                </Link>
-              )
-            )}
-            <Button
-              variant="brand"
-              onClick={() => setPickerOpen(true)}
-              data-testid="add-course-button"
-            >
-              <Plus className="size-4 mr-2" aria-hidden="true" />
-              Add Course
-            </Button>
+          <div className="text-right shrink-0">
+            <span className="block text-5xl font-black text-brand mb-1">
+              {pathProgress.completionPct}%
+            </span>
+            <span className="text-sm font-bold text-muted-foreground tracking-widest uppercase">
+              Completed
+            </span>
           </div>
         </motion.div>
 
-        {/* Progress summary — only show when path has courses */}
+        {/* Trail Map */}
         {courseEntries.length > 0 && (
           <motion.div variants={fadeUp}>
-            <Card>
-              <CardContent className="p-5">
-                {/* Overall progress bar */}
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Overall Progress</span>
-                  <span className="text-sm font-semibold text-brand-soft-foreground">
-                    {pathProgress.completionPct}%
-                  </span>
-                </div>
-                <div className="h-2 rounded-full bg-muted overflow-hidden mb-4">
-                  <div
-                    className="h-full rounded-full bg-brand transition-all duration-300"
-                    style={{ width: `${pathProgress.completionPct}%` }}
-                    role="progressbar"
-                    aria-valuenow={pathProgress.completionPct}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-label={`${pathProgress.completionPct}% path completed`}
-                  />
-                </div>
-
-                {/* Stats row */}
-                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1.5">
-                    <BookOpen className="size-4" aria-hidden="true" />
-                    {pathProgress.completedCourses}/{pathProgress.totalCourses}{' '}
-                    {pathProgress.totalCourses === 1 ? 'course' : 'courses'} completed
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <CheckCircle2 className="size-4" aria-hidden="true" />
-                    {pathProgress.completedLessons}/{pathProgress.totalLessons} lessons
-                  </span>
-                  {pathProgress.estimatedRemainingHours > 0 && (
-                    <span className="flex items-center gap-1.5">
-                      <Clock className="size-4" aria-hidden="true" />
-                      {pathProgress.estimatedRemainingHours}h remaining
-                    </span>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] mb-4 px-2">
+              Path Journey
+            </h2>
+            <TrailMap
+              totalCourses={courseEntries.length}
+              completedCount={completedEntries.length}
+              currentIndex={currentIndex}
+            />
           </motion.div>
         )}
 
-        {/* Course list */}
+        {/* Empty state */}
         {courseEntries.length === 0 ? (
           <motion.div variants={fadeUp}>
             <EmptyState
@@ -826,46 +795,262 @@ export function LearningPathDetail() {
             />
           </motion.div>
         ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={courseEntries.map(e => e.courseId)}
-              strategy={verticalListSortingStrategy}
-            >
-              <motion.div
-                variants={staggerContainer}
-                initial="hidden"
-                animate="visible"
-                className="space-y-3"
-                role="list"
-                aria-label="Courses in this learning path"
-                data-testid="path-course-list"
-              >
-                {courseEntries.map((entry, index) => {
-                  const info = courseInfo.get(entry.courseId)
-                  return (
-                    <SortableCourseRow
-                      key={entry.courseId}
-                      entry={entry}
-                      course={info}
-                      authorName={info?.authorName}
-                      thumbnailUrl={thumbnailUrls[entry.courseId]}
-                      completionPct={info?.completionPct ?? 0}
-                      index={index}
-                      totalCount={courseEntries.length}
-                      isAIGenerated={path.isAIGenerated}
-                      onMoveUp={handleMoveUp}
-                      onMoveDown={handleMoveDown}
-                      onRemove={handleRemove}
-                    />
-                  )
-                })}
-              </motion.div>
-            </SortableContext>
-          </DndContext>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+            {/* Left Column: Primary Content */}
+            <div className="lg:col-span-8 space-y-12">
+              {/* Hero: Now Learning */}
+              {currentEntry && (() => {
+                const info = courseInfo.get(currentEntry.courseId)
+                const pct = info?.completionPct ?? 0
+                return (
+                  <motion.section variants={fadeUp}>
+                    <Card className="overflow-hidden shadow-xl border-brand/20 rounded-[24px]">
+                      <div className="flex flex-col md:flex-row min-h-[280px]">
+                        {/* Thumbnail */}
+                        <div className="md:w-5/12 relative bg-muted">
+                          {thumbnailUrls[currentEntry.courseId] ? (
+                            <img
+                              src={thumbnailUrls[currentEntry.courseId]}
+                              alt=""
+                              className="h-full w-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="h-full min-h-[200px] flex items-center justify-center bg-gradient-to-br from-brand/10 to-brand/30">
+                              <BookOpen className="size-16 text-brand/40" aria-hidden="true" />
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
+                            <Badge className="bg-brand/80 backdrop-blur-sm text-brand-foreground text-xs uppercase tracking-wider">
+                              Now Learning
+                            </Badge>
+                          </div>
+                        </div>
+                        {/* Info */}
+                        <div className="md:w-7/12 p-8 flex flex-col justify-between">
+                          <div>
+                            <h3 className="text-2xl md:text-3xl font-bold mb-2">{info?.name || 'Unknown Course'}</h3>
+                            <p className="text-muted-foreground mb-6 flex items-center gap-2 font-medium">
+                              {info?.authorName && <>{info.authorName} • </>}
+                              <span className="text-brand">{pct}% Complete</span>
+                            </p>
+                            <div className="w-full bg-muted h-2.5 rounded-full mb-6">
+                              <div
+                                className="bg-brand h-full rounded-full transition-all duration-300"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          </div>
+                          <Button
+                            variant="brand"
+                            className="w-full md:w-fit px-8 py-4 shadow-lg shadow-brand/20"
+                            asChild
+                          >
+                            <Link to={`/courses/${currentEntry.courseId}`}>
+                              Continue Learning
+                              <ArrowRight className="size-4 ml-2" aria-hidden="true" />
+                            </Link>
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  </motion.section>
+                )
+              })()}
+
+              {/* Completed Courses Strip */}
+              {completedEntries.length > 0 && (
+                <motion.section variants={fadeUp}>
+                  <h2 className="text-xl font-bold mb-6 px-2">Completed Courses</h2>
+                  <div className="flex overflow-x-auto gap-4 pb-4 scrollbar-thin">
+                    {completedEntries.map(entry => {
+                      const info = courseInfo.get(entry.courseId)
+                      return (
+                        <div
+                          key={entry.courseId}
+                          className="min-w-[180px] bg-card p-4 rounded-[24px] shadow-sm border border-border flex-shrink-0"
+                        >
+                          <div className="relative w-full h-24 rounded-xl overflow-hidden mb-3 bg-muted">
+                            {thumbnailUrls[entry.courseId] ? (
+                              <img
+                                src={thumbnailUrls[entry.courseId]}
+                                alt=""
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <BookOpen className="size-6 text-muted-foreground" aria-hidden="true" />
+                              </div>
+                            )}
+                            <div className="absolute top-2 right-2 bg-success text-success-foreground rounded-full p-0.5">
+                              <Check className="size-3.5" aria-hidden="true" />
+                            </div>
+                          </div>
+                          <h4 className="font-bold text-sm leading-tight line-clamp-2">
+                            {info?.name || 'Unknown Course'}
+                          </h4>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </motion.section>
+              )}
+
+              {/* Full Reorder List (togglable) */}
+              {showReorderList && (
+                <motion.section variants={fadeUp}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-bold">All Courses (Reorder)</h2>
+                    <Button variant="outline" size="sm" onClick={() => setShowReorderList(false)}>
+                      Done Reordering
+                    </Button>
+                  </div>
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext
+                      items={courseEntries.map(e => e.courseId)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div
+                        className="space-y-3"
+                        role="list"
+                        aria-label="Courses in this learning path"
+                        data-testid="path-course-list"
+                      >
+                        {courseEntries.map((entry, index) => {
+                          const info = courseInfo.get(entry.courseId)
+                          return (
+                            <SortableCourseRow
+                              key={entry.courseId}
+                              entry={entry}
+                              course={info}
+                              authorName={info?.authorName}
+                              thumbnailUrl={thumbnailUrls[entry.courseId]}
+                              completionPct={info?.completionPct ?? 0}
+                              index={index}
+                              totalCount={courseEntries.length}
+                              isAIGenerated={path.isAIGenerated}
+                              onMoveUp={handleMoveUp}
+                              onMoveDown={handleMoveDown}
+                              onRemove={handleRemove}
+                            />
+                          )
+                        })}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                </motion.section>
+              )}
+            </div>
+
+            {/* Right Column: Sidebar */}
+            <aside className="lg:col-span-4 space-y-8">
+              {/* Action buttons */}
+              <div className="flex flex-col gap-3">
+                <Button
+                  variant="brand"
+                  onClick={() => setPickerOpen(true)}
+                  data-testid="add-course-button"
+                  className="w-full"
+                >
+                  <Plus className="size-4 mr-2" aria-hidden="true" />
+                  Add Course
+                </Button>
+              </div>
+
+              {/* Coming Up Next */}
+              {upcomingEntries.length > 0 && (
+                <Card className="rounded-[24px]">
+                  <CardContent className="p-8">
+                    <h3 className="text-lg font-bold mb-6">Coming Up Next</h3>
+                    <div className="space-y-6">
+                      {upcomingEntries.slice(0, 3).map((entry, i) => {
+                        const info = courseInfo.get(entry.courseId)
+                        return (
+                          <div key={entry.courseId} className={cn('flex items-start gap-4', i > 0 && 'opacity-60')}>
+                            <div className="size-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                              <Lock className="size-4 text-muted-foreground" aria-hidden="true" />
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-foreground">{info?.name || 'Unknown Course'}</h4>
+                              {info?.authorName && (
+                                <p className="text-xs text-muted-foreground font-medium mt-1">
+                                  {info.authorName}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="w-full mt-8"
+                      onClick={() => setShowReorderList(v => !v)}
+                    >
+                      {showReorderList ? 'Hide Curriculum' : 'View Full Curriculum'}
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Suggest Order */}
+              {courseEntries.length >= 2 && (
+                isOrderSuggestionAvailable() ? (
+                  <button
+                    className="w-full bg-brand-soft p-6 rounded-[24px] border border-brand/20 flex items-center justify-between group hover:bg-brand-muted transition-all text-left"
+                    onClick={handleSuggestOrder}
+                    disabled={isSuggesting}
+                    data-testid="suggest-order-button"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="size-10 rounded-full bg-card flex items-center justify-center text-brand shadow-sm">
+                        {isSuggesting ? (
+                          <Loader2 className="size-5 animate-spin" aria-hidden="true" />
+                        ) : (
+                          <Sparkles className="size-5" aria-hidden="true" />
+                        )}
+                      </div>
+                      <span className="font-bold text-foreground">
+                        {isSuggesting ? 'Analyzing...' : 'Suggest Order'}
+                      </span>
+                    </div>
+                    <ChevronRight className="size-5 text-muted-foreground group-hover:text-brand transition-colors" aria-hidden="true" />
+                  </button>
+                ) : (
+                  <Link
+                    to="/settings"
+                    className="w-full block bg-muted p-6 rounded-[24px] border border-border"
+                    data-testid="suggest-order-settings-link"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="size-10 rounded-full bg-card flex items-center justify-center text-muted-foreground shadow-sm">
+                        <Settings className="size-5" aria-hidden="true" />
+                      </div>
+                      <span className="font-medium text-muted-foreground">Configure AI for ordering</span>
+                    </div>
+                  </Link>
+                )
+              )}
+
+              {/* Daily Tip Card */}
+              <div className="p-6 bg-gradient-to-br from-brand to-brand-hover rounded-[24px] text-brand-foreground">
+                <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-2 py-0.5 rounded-full mb-4 inline-block">
+                  Study Tip
+                </span>
+                <h4 className="font-bold text-lg mb-2 italic">
+                  &quot;Focus on one concept at a time.&quot;
+                </h4>
+                <p className="text-brand-foreground/80 text-sm leading-relaxed">
+                  Multitasking while learning reduces retention. Master each course before moving to the next.
+                </p>
+              </div>
+            </aside>
+          </div>
         )}
       </motion.div>
 

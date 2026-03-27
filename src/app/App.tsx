@@ -7,6 +7,7 @@ import { router } from './routes'
 import { useSessionStore } from '@/stores/useSessionStore'
 import { ErrorBoundary } from '@/app/components/ErrorBoundary'
 import { PWAUpdatePrompt } from '@/app/components/PWAUpdatePrompt'
+import { PWAInstallBanner } from '@/app/components/PWAInstallBanner'
 import { WelcomeWizard } from '@/app/components/WelcomeWizard'
 import { initErrorTracking } from '@/lib/errorTracking'
 import { vectorStorePersistence } from '@/ai/vector-store'
@@ -17,6 +18,7 @@ import { useWelcomeWizardStore } from '@/stores/useWelcomeWizardStore'
 import { useColorScheme } from '@/hooks/useColorScheme'
 import { supabase } from '@/lib/auth/supabase'
 import { useAuthStore } from '@/stores/useAuthStore'
+import { hydrateSettingsFromSupabase } from '@/lib/settings'
 
 // Register global error handlers (window.onerror, unhandledrejection)
 initErrorTracking()
@@ -44,8 +46,12 @@ export default function App() {
     if (!supabase) return
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       useAuthStore.getState().setSession(session)
+      // Hydrate localStorage settings from Supabase user_metadata on sign-in
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+        hydrateSettingsFromSupabase(session.user.user_metadata)
+      }
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -75,6 +81,7 @@ export default function App() {
         <Toaster />
         <WelcomeWizard />
         {import.meta.env.PROD && <PWAUpdatePrompt />}
+        <PWAInstallBanner />
         {process.env.NODE_ENV === 'development' && <Agentation />}
       </ThemeProvider>
     </ErrorBoundary>
