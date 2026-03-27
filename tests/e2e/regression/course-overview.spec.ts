@@ -89,7 +89,8 @@ function buildTestCourse(overrides: Record<string, unknown> = {}) {
     ...createCourse({
       id: COURSE_ID,
       title: 'Behavioral Analysis Masterclass',
-      description: 'Master the art of reading people through behavioral cues and micro-expressions.',
+      description:
+        'Master the art of reading people through behavioral cues and micro-expressions.',
       category: 'behavioral-analysis',
       difficulty: 'intermediate',
       estimatedHours: 8,
@@ -121,7 +122,10 @@ async function seedCourseAndAuthor(page: import('@playwright/test').Page) {
   await navigateAndWait(page, '/')
 
   // Seed courses and authors
-  await seedIndexedDBStore(page, DB_NAME, 'courses', [buildTestCourse()] as Record<string, unknown>[])
+  await seedIndexedDBStore(page, DB_NAME, 'courses', [buildTestCourse()] as Record<
+    string,
+    unknown
+  >[])
   await seedAuthors(page, [buildTestAuthor()])
 }
 
@@ -141,7 +145,9 @@ test.describe('CourseOverview — hero and metadata', () => {
     await seedCourseAndAuthor(page)
     await goToCourseOverview(page)
 
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Behavioral Analysis Masterclass')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+      'Behavioral Analysis Masterclass'
+    )
   })
 
   test('shows category and difficulty badges', async ({ page }) => {
@@ -178,7 +184,9 @@ test.describe('CourseOverview — hero and metadata', () => {
 
     await expect(page.getByText('About This Course')).toBeVisible()
     await expect(
-      page.getByText('Master the art of reading people through behavioral cues and micro-expressions.')
+      page.getByText(
+        'Master the art of reading people through behavioral cues and micro-expressions.'
+      )
     ).toBeVisible()
   })
 })
@@ -200,9 +208,7 @@ test.describe('CourseOverview — author card', () => {
     await seedCourseAndAuthor(page)
     await goToCourseOverview(page)
 
-    await expect(
-      page.getByText('An expert in behavioral analysis and influence.')
-    ).toBeVisible()
+    await expect(page.getByText('An expert in behavioral analysis and influence.')).toBeVisible()
   })
 
   test('author card links to author profile', async ({ page }) => {
@@ -368,8 +374,6 @@ test.describe('CourseOverview — sequential course locking', () => {
     await seedSequentialCourse(page)
     await navigateAndWait(page, '/courses/test-course-sequential/overview')
 
-    // The first module should show its number "1"
-    const curriculumSection = page.locator('text=Curriculum').locator('..')
     // Module 1 header should be visible with module number
     await expect(page.getByText('Foundations of Behavioral Analysis')).toBeVisible()
   })
@@ -397,9 +401,7 @@ test.describe('CourseOverview — not-found state', () => {
     await navigateAndWait(page, '/courses/nonexistent-course-id-xyz/overview')
 
     await expect(page.getByText('Course Not Found')).toBeVisible()
-    await expect(
-      page.getByText('The course you are looking for does not exist.')
-    ).toBeVisible()
+    await expect(page.getByText('The course you are looking for does not exist.')).toBeVisible()
   })
 
   test('shows "Back to Courses" link in not-found state', async ({ page }) => {
