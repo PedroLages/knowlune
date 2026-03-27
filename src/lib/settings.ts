@@ -1,3 +1,5 @@
+import { supabase } from '@/lib/auth/supabase'
+
 const STORAGE_KEY = 'app-settings'
 
 export type FontSize = 'small' | 'medium' | 'large' | 'extra-large'
@@ -53,11 +55,67 @@ export function getSettings(): AppSettings {
   }
 }
 
-export function saveSettings(settings: Partial<AppSettings>): AppSettings {
+export function saveSettings(
+  settings: Partial<AppSettings>,
+  options?: { syncToSupabase?: boolean }
+): AppSettings {
   const current = getSettings()
   const updated = { ...current, ...settings }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+
+  // Sync profile fields to Supabase user_metadata (offline-first: localStorage is primary)
+  if (options?.syncToSupabase !== false && supabase) {
+    const profileFields: Record<string, unknown> = {}
+    if ('displayName' in settings) profileFields.displayName = updated.displayName
+    if ('bio' in settings) profileFields.bio = updated.bio
+    // TODO: Avatar sync — Supabase user_metadata has 1MB limit, so large base64 avatars
+    // should stay local. Migrate to Supabase Storage in a future epic for cloud avatar sync.
+
+    if (Object.keys(profileFields).length > 0) {
+      // Fire-and-forget — localStorage is source of truth, Supabase is best-effort sync
+      supabase.auth.updateUser({ data: profileFields }).catch(err => {
+        // silent-catch-ok — offline-first: local save succeeded, Supabase sync is non-blocking
+        console.warn('[settings] Supabase profile sync failed:', err)
+      })
+    }
+  }
+
   return updated
+}
+
+/**
+ * Hydrate localStorage settings from Supabase user_metadata on login.
+ * Only overwrites displayName/bio if Supabase has data and localStorage is at defaults.
+ * Called from the auth state listener in App.tsx.
+ */
+export function hydrateSettingsFromSupabase(userMetadata: Record<string, unknown> | undefined): void {
+  if (!userMetadata) return
+
+  const current = getSettings()
+  const updates: Partial<AppSettings> = {}
+
+  // Only hydrate if Supabase has data AND localStorage is at defaults (or empty)
+  if (
+    typeof userMetadata.displayName === 'string' &&
+    userMetadata.displayName.length > 0 &&
+    (current.displayName === defaults.displayName || current.displayName === '')
+  ) {
+    updates.displayName = userMetadata.displayName
+  }
+
+  if (
+    typeof userMetadata.bio === 'string' &&
+    userMetadata.bio.length > 0 &&
+    (current.bio === defaults.bio || current.bio === '')
+  ) {
+    updates.bio = userMetadata.bio
+  }
+
+  if (Object.keys(updates).length > 0) {
+    // Save without syncing back to Supabase (data came from there)
+    saveSettings(updates, { syncToSupabase: false })
+    window.dispatchEvent(new Event('settingsUpdated'))
+  }
 }
 
 export function exportAllData(): string {
