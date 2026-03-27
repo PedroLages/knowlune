@@ -71,7 +71,7 @@ function NavLink({
       to={item.tab ? `${item.path}?tab=${item.tab}` : item.path}
       onClick={onNavigate}
       aria-current={isActive ? 'page' : undefined}
-      className={`flex items-center rounded-xl transition-colors duration-150 ${
+      className={`flex items-center rounded-xl transition-colors duration-150 min-h-[44px] ${
         iconOnly ? 'justify-center py-2.5 mx-2' : 'gap-3 px-4 py-2.5'
       } ${
         isActive
@@ -412,7 +412,7 @@ export function Layout() {
             onClick={toggleSidebar}
             aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             aria-keyshortcuts="Meta+B Control+B"
-            className={`absolute top-1/2 -translate-y-1/2 -right-3 z-50 flex items-center justify-center size-6 rounded-full bg-card border border-border shadow-sm text-muted-foreground hover:text-foreground hover:scale-110 focus-visible:opacity-100 focus-visible:pointer-events-auto focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none transition-all duration-150 cursor-pointer ${
+            className={`absolute top-1/2 -translate-y-1/2 -right-5 z-50 flex items-center justify-center size-11 rounded-full bg-card border border-border shadow-sm text-muted-foreground hover:text-foreground hover:scale-110 focus-visible:opacity-100 focus-visible:pointer-events-auto focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none transition-all duration-150 cursor-pointer ${
               sidebarHovered || !sidebarCollapsed ? 'opacity-100' : 'opacity-0 pointer-events-none'
             }`}
           >
@@ -482,7 +482,7 @@ export function Layout() {
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
-              className="hidden sm:flex items-center w-full pl-10 pr-4 py-2 bg-muted rounded-md text-sm text-muted-foreground hover:bg-accent transition-colors duration-150 text-left cursor-pointer"
+              className="hidden sm:flex items-center w-full h-11 pl-10 pr-4 bg-muted rounded-md text-sm text-muted-foreground hover:bg-accent transition-colors duration-150 text-left cursor-pointer"
               aria-label="Open search (Cmd+K)"
               aria-keyshortcuts="Meta+K Control+K"
             >
@@ -517,7 +517,7 @@ export function Layout() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className="flex items-center gap-3 pl-4 border-l border-border cursor-pointer rounded-lg p-1 -m-1 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex items-center gap-3 pl-4 border-l border-border cursor-pointer rounded-lg p-1 -m-1 min-h-[44px] transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     aria-label="User menu"
                   >
                     <Avatar className="size-10 ring-2 ring-transparent transition-all duration-200 hover:ring-brand/30 hover:shadow-md">

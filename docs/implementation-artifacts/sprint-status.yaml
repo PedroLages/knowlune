@@ -444,11 +444,11 @@ development_status:
   # Epic 29: Audit Blockers & Critical Fixes
   # Source: epics-audit-hardening.md (P0 — Must fix)
   # ──────────────────────────────────────────────────
-  epic-29: backlog
-  29-1-fix-courses-page-crash-tagmanagementpanel-infinite-loop: backlog
-  29-2-add-error-handling-to-uselearningpathstore-mutations: backlog
-  29-3-fix-careerpaths-mislabelling-and-add-sidebar-nav-entry: backlog
-  29-4-remove-focus-visible-outline-none-from-legal-pages: backlog
+  epic-29: done
+  29-1-fix-courses-page-crash-tagmanagementpanel-infinite-loop: done
+  29-2-add-error-handling-to-uselearningpathstore-mutations: done
+  29-3-fix-careerpaths-mislabelling-and-add-sidebar-nav-entry: done
+  29-4-remove-focus-visible-outline-none-from-legal-pages: done
   29-5-guard-json-parse-in-layout-sidebar-state-parsing: done
   epic-29-retrospective: optional
 
@@ -456,8 +456,8 @@ development_status:
   # Epic 30: Accessibility Compliance
   # Source: epics-audit-hardening.md (P1 — WCAG AA)
   # ──────────────────────────────────────────────────
-  epic-30: backlog
-  30-1-global-touch-target-sweep-44px-minimum: backlog
+  epic-30: in-progress
+  30-1-global-touch-target-sweep-44px-minimum: done
   30-2-add-aria-label-to-icon-only-buttons: backlog
   30-3-fix-heading-hierarchy-in-coursedetail-settings-premiumfeaturepage: backlog
   30-4-add-aria-expanded-to-module-toggles-and-collapsibles: backlog
