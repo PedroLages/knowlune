@@ -205,3 +205,125 @@ issues:
     scheduled_for: null
     fixed_by: post-epic-cleanup-2026-03-26
     notes: "Resolved — function was already implemented at line 68. Issue was a false positive filed before implementation."
+
+  # --- Pre-existing test failures on main (2026-03-26 audit) ---
+
+  - id: KI-016
+    type: test
+    summary: "ImportWizardDialog.test.tsx — 28 unit tests failing (component render/interaction failures)"
+    file: "src/app/components/figma/__tests__/ImportWizardDialog.test.tsx"
+    severity: medium
+    discovered_by: production-readiness-audit
+    discovered_on: 2026-03-26
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "All 28 tests in this file fail. Tests cover folder selection, course naming, tag management, image grid, AI suggestions, and description fields. Likely caused by component refactoring without corresponding test updates. Related to KI-010 (import wizard E2E waiver)."
+
+  - id: KI-017
+    type: test
+    summary: "Courses.test.tsx — 11 unit tests failing (empty state, imported courses, status filtering)"
+    file: "src/app/pages/__tests__/Courses.test.tsx"
+    severity: medium
+    discovered_by: production-readiness-audit
+    discovered_on: 2026-03-26
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Regression from KI-001 fix scope — 11 tests still failing covering empty state display, imported course rendering, sorting, grid layout, and status filtering with topic filter AND-semantics. May need additional mock updates."
+
+  - id: KI-018
+    type: test
+    summary: "useFlashcardStore.test.ts — 2 unit tests failing (loadFlashcards, error state)"
+    file: "src/stores/__tests__/useFlashcardStore.test.ts"
+    severity: medium
+    discovered_by: production-readiness-audit
+    discovered_on: 2026-03-26
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "loadFlashcards and error state tests failing. Likely stale IDB mock setup after store refactoring."
+
+  - id: KI-019
+    type: test
+    summary: "useReviewStore.test.ts — 4 unit tests failing (loadReviews, rateNote, rollback)"
+    file: "src/stores/__tests__/useReviewStore.test.ts"
+    severity: medium
+    discovered_by: production-readiness-audit
+    discovered_on: 2026-03-26
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "loadReviews, rateNote happy path (2 tests), and rollback on persistence failure all failing. Likely stale mock setup."
+
+  - id: KI-020
+    type: test
+    summary: "useSessionStore.test.ts — 3 unit tests failing (initial state, startSession, pauseSession)"
+    file: "src/stores/__tests__/useSessionStore.test.ts"
+    severity: medium
+    discovered_by: production-readiness-audit
+    discovered_on: 2026-03-26
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Initial state, startSession, and pauseSession tests failing. Likely stale mock setup after store changes."
+
+  - id: KI-021
+    type: test
+    summary: "E2E courses.spec.ts — 2 tests failing (heading, course cards)"
+    file: "tests/e2e/courses.spec.ts"
+    severity: medium
+    discovered_by: production-readiness-audit
+    discovered_on: 2026-03-26
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "KI-005 was marked fixed but courses.spec.ts:14 and :20 still fail. May be a different root cause than the onboarding overlay — possibly a Courses page rendering issue."
+
+  - id: KI-022
+    type: test
+    summary: "E2E navigation.spec.ts — 2 tests failing (navigate to Courses, highlight active route)"
+    file: "tests/e2e/navigation.spec.ts"
+    severity: medium
+    discovered_by: production-readiness-audit
+    discovered_on: 2026-03-26
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Navigation to Courses page (line 39) and active route highlighting (line 63) both fail. Likely related to KI-021 Courses page rendering issue."
+
+  - id: KI-023
+    type: test
+    summary: "E2E dashboard-reordering.spec.ts — 4 tests failing (unpin, reset, manual order, reset button)"
+    file: "tests/e2e/dashboard-reordering.spec.ts"
+    severity: medium
+    discovered_by: production-readiness-audit
+    discovered_on: 2026-03-26
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "4 of the dashboard reordering tests fail: unpin (line 86), reset (line 118), manual order (line 247), reset button visibility (line 288). May be timing/race condition or localStorage seeding issue."
+
+  - id: KI-024
+    type: test
+    summary: "E2E accessibility-courses.spec.ts — keyboard accessibility test failing"
+    file: "tests/e2e/accessibility-courses.spec.ts:152"
+    severity: medium
+    discovered_by: production-readiness-audit
+    discovered_on: 2026-03-26
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Courses page keyboard accessibility test fails. Likely cascading from KI-021 Courses page rendering issue."
+
+  - id: KI-025
+    type: test
+    summary: "E2E nfr35-export.spec.ts — note export button test failing"
+    file: "tests/e2e/nfr35-export.spec.ts:90"
+    severity: low
+    discovered_by: production-readiness-audit
+    discovered_on: 2026-03-26
+    status: open
+    scheduled_for: null
+    fixed_by: null
+    notes: "Export button in expanded note view test fails. May be a UI change that moved or renamed the button."
