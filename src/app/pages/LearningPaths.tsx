@@ -668,6 +668,13 @@ export function LearningPaths() {
           </div>
         </motion.div>
 
+        {/* Live region for search result announcements */}
+        <span role="status" aria-live="polite" className="sr-only">
+          {search.trim()
+            ? `${filteredPaths.length} ${filteredPaths.length === 1 ? 'path' : 'paths'} found`
+            : ''}
+        </span>
+
         {/* Content */}
         {paths.length === 0 ? (
           /* Empty state — no paths at all */
