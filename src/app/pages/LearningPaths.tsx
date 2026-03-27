@@ -10,6 +10,8 @@ import {
   FileText,
   Trash2,
   BookOpen,
+  ArrowRight,
+  CheckCircle2,
 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Card, CardContent } from '@/app/components/ui/card'
@@ -45,7 +47,10 @@ import { Label } from '@/app/components/ui/label'
 import { EmptyState } from '@/app/components/EmptyState'
 import { DelayedFallback } from '@/app/components/DelayedFallback'
 import { cn } from '@/app/components/ui/utils'
+import { PathProgressRing } from '@/app/components/figma/PathProgressRing'
+import { PathCardHeader } from '@/app/components/figma/PathCardHeader'
 import { useLearningPathStore } from '@/stores/useLearningPathStore'
+import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useMultiPathProgress } from '@/app/hooks/usePathProgress'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 import { toast } from 'sonner'
@@ -334,6 +339,7 @@ function PathCard({
   path,
   courseCount,
   completionPct,
+  courseThumbnails,
   onRename,
   onEditDescription,
   onDelete,
@@ -341,121 +347,140 @@ function PathCard({
   path: LearningPath
   courseCount: number
   completionPct: number
+  courseThumbnails: string[]
   onRename: (path: LearningPath) => void
   onEditDescription: (path: LearningPath) => void
   onDelete: (path: LearningPath) => void
 }) {
-  const lastUpdated = new Date(path.updatedAt).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
+  const isNotStarted = completionPct === 0 && courseCount > 0
+  const isCompleted = completionPct >= 100
 
   return (
     <motion.div variants={fadeUp}>
       <Card
         className={cn(
-          'group relative transition-shadow hover:shadow-md',
-          'focus-within:ring-2 focus-within:ring-brand focus-within:ring-offset-2 focus-within:ring-offset-background'
+          'group relative transition-all duration-300 hover:shadow-xl overflow-hidden rounded-[24px]',
+          'focus-within:ring-2 focus-within:ring-brand focus-within:ring-offset-2 focus-within:ring-offset-background',
+          isNotStarted && 'opacity-70'
         )}
       >
-        <CardContent className="p-5">
-          {/* Dropdown menu — top right */}
-          <div className="absolute top-3 right-3 z-10">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-8 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
-                  aria-label={`Actions for ${path.name}`}
-                >
-                  <MoreHorizontal className="size-4" aria-hidden="true" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => onRename(path)}>
-                  <Pencil className="mr-2 size-4" aria-hidden="true" />
-                  Rename
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => onEditDescription(path)}>
-                  <FileText className="mr-2 size-4" aria-hidden="true" />
-                  Edit Description
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={() => onDelete(path)}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="mr-2 size-4" aria-hidden="true" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+        {/* Gradient header */}
+        <PathCardHeader
+          pathName={path.name}
+          completionPct={completionPct}
+          isAIGenerated={path.isAIGenerated}
+        />
+
+        {/* Dropdown menu — over gradient */}
+        <div className="absolute top-4 right-4 z-10">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8 bg-white/20 hover:bg-white/40 backdrop-blur-md text-white rounded-full"
+                aria-label={`Actions for ${path.name}`}
+              >
+                <MoreHorizontal className="size-4" aria-hidden="true" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => onRename(path)}>
+                <Pencil className="mr-2 size-4" aria-hidden="true" />
+                Rename
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onEditDescription(path)}>
+                <FileText className="mr-2 size-4" aria-hidden="true" />
+                Edit Description
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => onDelete(path)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 size-4" aria-hidden="true" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Card body */}
+        <CardContent className="px-6 pb-6 pt-1 relative">
+          {/* Progress ring — overlapping header */}
+          <div className="absolute -top-10 left-6">
+            <div className="bg-card rounded-full p-1.5 shadow-lg">
+              <PathProgressRing percentage={completionPct} size="md">
+                {isCompleted ? (
+                  <CheckCircle2 className="size-5 text-success" aria-hidden="true" />
+                ) : (
+                  <span className="text-xs font-bold text-foreground">
+                    {Math.round(completionPct)}%
+                  </span>
+                )}
+              </PathProgressRing>
+            </div>
           </div>
 
-          {/* Card link — navigates to path detail */}
           <Link
             to={`/learning-paths/${path.id}`}
-            className="block focus:outline-none"
-            aria-label={`${path.name} — ${courseCount} courses, ${completionPct}% completed, last updated ${lastUpdated}`}
+            className="block focus:outline-none mt-10"
+            aria-label={`${path.name} — ${courseCount} courses, ${completionPct}% completed`}
           >
-            {/* Icon + title */}
-            <div className="flex items-start gap-3 mb-3 pr-8">
-              <div className="size-9 rounded-full bg-brand-soft flex items-center justify-center shrink-0 mt-0.5">
-                <Route className="size-4.5 text-brand-soft-foreground" aria-hidden="true" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="font-semibold text-base leading-tight line-clamp-1 group-hover:text-brand transition-colors">
-                  {path.name}
-                </h3>
-                {path.description && (
-                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
-                    {path.description}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Completion bar */}
-            {courseCount > 0 ? (
-              <div className="mb-3">
-                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-brand transition-all duration-300"
-                    style={{ width: `${completionPct}%` }}
-                    role="progressbar"
-                    aria-valuenow={completionPct}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-label={`${completionPct}% completed`}
-                  />
-                </div>
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground mb-3 italic">No courses added yet</p>
-            )}
-
-            {/* Metadata row */}
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <div className="flex items-center gap-3">
-                <span className="flex items-center gap-1">
-                  <BookOpen className="size-3.5" aria-hidden="true" />
-                  {courseCount} {courseCount === 1 ? 'course' : 'courses'}
-                </span>
-                {courseCount > 0 && <span>{completionPct}% complete</span>}
-              </div>
-              <span>Updated {lastUpdated}</span>
-            </div>
-
-            {/* AI badge */}
-            {path.isAIGenerated && (
+            {/* Course count badge */}
+            <div className="flex items-center gap-2 mb-2">
               <Badge
                 variant="secondary"
-                className="mt-3 text-[10px] uppercase tracking-wider"
+                className={cn(
+                  'text-[10px] uppercase tracking-wider',
+                  isCompleted && 'bg-success-soft text-success',
+                )}
               >
-                AI Generated
+                {courseCount} {courseCount === 1 ? 'course' : 'courses'}
               </Badge>
+            </div>
+
+            {/* Title + description */}
+            <h3 className="text-xl font-bold leading-tight line-clamp-1 mb-2 group-hover:text-brand transition-colors">
+              {path.name}
+            </h3>
+            {path.description && (
+              <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed mb-6">
+                {path.description}
+              </p>
             )}
+            {!path.description && <div className="mb-6" />}
+
+            {/* Footer: course thumbnails + arrow */}
+            <div className="flex items-center justify-between border-t border-border pt-4">
+              <div className="flex -space-x-3">
+                {courseThumbnails.slice(0, 3).map((url, i) => (
+                  <img
+                    key={i}
+                    src={url}
+                    alt=""
+                    className="size-8 rounded-full border-2 border-card bg-muted object-cover"
+                    loading="lazy"
+                  />
+                ))}
+                {courseCount === 0 && (
+                  <div className="size-8 rounded-full border-2 border-card bg-muted flex items-center justify-center">
+                    <BookOpen className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                  </div>
+                )}
+                {courseCount > 3 && (
+                  <div className="size-8 rounded-full border-2 border-card bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground">
+                    +{courseCount - 3}
+                  </div>
+                )}
+              </div>
+              {isCompleted ? (
+                <span className="text-xs font-bold text-success uppercase">Review</span>
+              ) : isNotStarted ? (
+                <span className="text-xs font-bold text-muted-foreground uppercase">Not Started</span>
+              ) : (
+                <ArrowRight className="size-4 text-muted-foreground group-hover:text-brand transition-colors" aria-hidden="true" />
+              )}
+            </div>
           </Link>
         </CardContent>
       </Card>
@@ -467,19 +492,22 @@ function PathCard({
 
 function PathCardSkeleton() {
   return (
-    <Card>
-      <CardContent className="p-5 space-y-3">
-        <div className="flex items-start gap-3">
-          <Skeleton className="size-9 rounded-full shrink-0" />
-          <div className="flex-1 space-y-2">
-            <Skeleton className="h-5 w-3/4" />
-            <Skeleton className="h-4 w-full" />
+    <Card className="overflow-hidden rounded-[24px]">
+      <Skeleton className="h-32 w-full rounded-none" />
+      <CardContent className="px-6 pb-6 pt-1 relative">
+        <Skeleton className="absolute -top-10 left-6 size-[72px] rounded-full" />
+        <div className="mt-10 space-y-3">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-6 w-3/4" />
+          <Skeleton className="h-4 w-full" />
+          <div className="flex justify-between pt-4 border-t border-border">
+            <div className="flex -space-x-3">
+              <Skeleton className="size-8 rounded-full" />
+              <Skeleton className="size-8 rounded-full" />
+              <Skeleton className="size-8 rounded-full" />
+            </div>
+            <Skeleton className="h-4 w-4" />
           </div>
-        </div>
-        <Skeleton className="h-1.5 w-full rounded-full" />
-        <div className="flex justify-between">
-          <Skeleton className="h-3 w-24" />
-          <Skeleton className="h-3 w-20" />
         </div>
       </CardContent>
     </Card>
@@ -490,6 +518,8 @@ function PathCardSkeleton() {
 
 export function LearningPaths() {
   const { paths, entries, loadPaths } = useLearningPathStore()
+  const { importedCourses, loadImportedCourses, thumbnailUrls, loadThumbnailUrls } =
+    useCourseImportStore()
   const [isLoaded, setIsLoaded] = useState(false)
   const [search, setSearch] = useState('')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
@@ -501,8 +531,8 @@ export function LearningPaths() {
 
   useEffect(() => {
     let ignore = false
-    // silent-catch-ok: error logged to console
-    loadPaths()
+    // silent-catch-ok: error logged to console, page still renders with empty state
+    Promise.all([loadPaths(), loadImportedCourses()])
       .then(() => {
         if (!ignore) setIsLoaded(true)
       })
@@ -515,7 +545,14 @@ export function LearningPaths() {
     return () => {
       ignore = true
     }
-  }, [loadPaths])
+  }, [loadPaths, loadImportedCourses])
+
+  // Load thumbnail URLs when imported courses are available
+  useEffect(() => {
+    if (importedCourses.length > 0) {
+      loadThumbnailUrls(importedCourses.map(c => c.id))
+    }
+  }, [importedCourses, loadThumbnailUrls])
 
   // Build a stable map of pathId → entries for useMultiPathProgress
   const pathEntriesMap = useMemo(() => {
@@ -542,6 +579,22 @@ export function LearningPaths() {
     }
     return stats
   }, [paths, entries, pathProgressMap])
+
+  // Build thumbnail lists per path (first 4 course thumbnails)
+  const pathThumbnails = useMemo(() => {
+    const map = new Map<string, string[]>()
+    for (const path of paths) {
+      const pathEntries = entries.filter(e => e.pathId === path.id)
+      const thumbs: string[] = []
+      for (const entry of pathEntries) {
+        if (thumbs.length >= 4) break
+        const url = thumbnailUrls[entry.courseId]
+        if (url) thumbs.push(url)
+      }
+      map.set(path.id, thumbs)
+    }
+    return map
+  }, [paths, entries, thumbnailUrls])
 
   const filteredPaths = useMemo(() => {
     if (!search.trim()) return paths
@@ -580,38 +633,40 @@ export function LearningPaths() {
         className="space-y-6"
       >
         {/* Header */}
-        <motion.div variants={fadeUp} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <motion.div variants={fadeUp} className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight font-display">Learning Paths</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Organize courses into structured learning journeys.
+            <h1 className="text-4xl font-extrabold tracking-tight font-display">Learning Paths</h1>
+            <p className="text-muted-foreground text-lg mt-2">
+              Organize courses into structured learning journeys
             </p>
           </div>
-          <Button variant="brand" onClick={() => setCreateDialogOpen(true)}>
-            <Plus className="size-4 mr-2" aria-hidden="true" />
-            Create Path
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+            {paths.length > 0 && (
+              <div className="relative flex-grow">
+                <Search
+                  className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <Input
+                  type="text"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search paths..."
+                  aria-label="Search learning paths"
+                  className="pl-12 py-3"
+                />
+              </div>
+            )}
+            <Button
+              variant="brand"
+              onClick={() => setCreateDialogOpen(true)}
+              className="px-6 py-3 shadow-lg shadow-brand/20"
+            >
+              <Plus className="size-4 mr-2" aria-hidden="true" />
+              Create Path
+            </Button>
+          </div>
         </motion.div>
-
-        {/* Search — only show if there are paths */}
-        {paths.length > 0 && (
-          <motion.div variants={fadeUp}>
-            <div className="relative max-w-md">
-              <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <Input
-                type="text"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Search paths..."
-                aria-label="Search learning paths"
-                className="pl-9"
-              />
-            </div>
-          </motion.div>
-        )}
 
         {/* Content */}
         {paths.length === 0 ? (
@@ -640,7 +695,7 @@ export function LearningPaths() {
             variants={staggerContainer}
             initial="hidden"
             animate="visible"
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
             role="list"
             aria-label="Learning paths"
           >
@@ -652,6 +707,7 @@ export function LearningPaths() {
                     path={path}
                     courseCount={stats.courseCount}
                     completionPct={stats.completionPct}
+                    courseThumbnails={pathThumbnails.get(path.id) || []}
                     onRename={setRenamePath}
                     onEditDescription={setEditDescPath}
                     onDelete={setDeletePath}
