@@ -81,6 +81,7 @@ export function YouTubeLessonPlayer() {
 
   const [video, setVideo] = useState<ImportedVideo | null | undefined>(undefined)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [dexieLoading, setDexieLoading] = useState(false)
 
   // Load video record from Dexie
   const loadVideo = useCallback(() => {
@@ -90,13 +91,18 @@ export function YouTubeLessonPlayer() {
     }
     setLoadError(null)
     setVideo(undefined)
+    setDexieLoading(true)
     let ignore = false
     db.importedVideos.get(lessonId).then(v => {
-      if (!ignore) setVideo(v ?? null)
+      if (!ignore) {
+        setVideo(v ?? null)
+        setDexieLoading(false)
+      }
     }).catch((err: unknown) => {
       if (!ignore) {
         const message = err instanceof Error ? err.message : 'Failed to load lesson data'
         setLoadError(message)
+        setDexieLoading(false)
         toast.error('Failed to load lesson data')
       }
     })
@@ -201,6 +207,23 @@ export function YouTubeLessonPlayer() {
     }
   }, [])
 
+  // Dexie read failed — show error with retry (must be checked before loading guard)
+  if (loadError) {
+    return (
+      <div
+        data-testid="youtube-lesson-player-content"
+        className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground"
+      >
+        <FileWarning className="size-12 text-destructive" aria-hidden="true" />
+        <p className="text-sm">{loadError}</p>
+        <Button onClick={loadVideo} variant="outline" className="gap-2" disabled={dexieLoading}>
+          <RefreshCw className="size-4" aria-hidden="true" />
+          Retry
+        </Button>
+      </div>
+    )
+  }
+
   // Loading state
   if (video === undefined) {
     return (
@@ -221,23 +244,6 @@ export function YouTubeLessonPlayer() {
           <Skeleton className="flex-1 m-4 rounded-xl" />
         </div>
       </DelayedFallback>
-    )
-  }
-
-  // Dexie read failed — show error with retry
-  if (loadError) {
-    return (
-      <div
-        data-testid="youtube-lesson-player-content"
-        className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground"
-      >
-        <FileWarning className="size-12 text-destructive" aria-hidden="true" />
-        <p className="text-sm">{loadError}</p>
-        <Button onClick={loadVideo} variant="outline" className="gap-2">
-          <RefreshCw className="size-4" aria-hidden="true" />
-          Retry
-        </Button>
-      </div>
     )
   }
 
