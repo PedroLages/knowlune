@@ -1,12 +1,14 @@
 ---
 story_id: E29-S01
 story_name: "Fix Courses Page Crash — TagManagementPanel Zustand Selector Infinite Loop"
-status: ready-for-dev
+status: done
 started: 2026-03-27
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-03-27
+reviewed: true
+review_started: 2026-03-27
+review_gates_passed: [build, lint, typecheck, format, unit-tests, e2e-tests, lessons-learned, design-review, code-review]
+review_rounds: 2
+review_verdict: PASS
 burn_in_validated: false
 ---
 
