@@ -1,6 +1,9 @@
 ---
 name: auto-parallel
 description: Intelligent auto-parallelization with LLM-powered task decomposition and dependency detection
+color: blue
+memory: project
+background: true
 ---
 
 # Auto-Parallel Skill
