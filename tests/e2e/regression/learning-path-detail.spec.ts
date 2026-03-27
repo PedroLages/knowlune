@@ -238,9 +238,7 @@ test.describe('Learning Path Detail — empty courses', () => {
     await page.reload({ waitUntil: 'load' })
 
     await expect(page.getByText('No courses yet')).toBeVisible()
-    await expect(
-      page.getByText('Add courses to build your learning path')
-    ).toBeVisible()
+    await expect(page.getByText('Add courses to build your learning path')).toBeVisible()
   })
 
   test('empty state has Add Course button', async ({ page }) => {

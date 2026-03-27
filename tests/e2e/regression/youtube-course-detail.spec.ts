@@ -316,9 +316,7 @@ test.describe('YouTubeCourseDetail — Video List', () => {
 
     // THEN: Removed badge is visible on the removed video
     await expect(page.getByTestId('removed-badge-yt-vid-04')).toBeVisible()
-    await expect(page.getByTestId('removed-badge-yt-vid-04')).toContainText(
-      'Removed from YouTube'
-    )
+    await expect(page.getByTestId('removed-badge-yt-vid-04')).toContainText('Removed from YouTube')
   })
 })
 
@@ -395,9 +393,7 @@ test.describe('YouTubeCourseDetail — Navigation', () => {
     await page.getByText('Introduction to Patterns').click()
 
     // THEN: Navigated to YouTube lesson player route
-    await page.waitForURL(
-      /\/youtube-courses\/yt-course-react-patterns\/lessons\/yt-vid-01/
-    )
+    await page.waitForURL(/\/youtube-courses\/yt-course-react-patterns\/lessons\/yt-vid-01/)
   })
 
   test('should navigate back to courses when back link is clicked', async ({ page }) => {
@@ -423,9 +419,7 @@ test.describe('YouTubeCourseDetail — Navigation', () => {
     await page.keyboard.press('Enter')
 
     // THEN: Navigated to lesson player
-    await page.waitForURL(
-      /\/youtube-courses\/yt-course-react-patterns\/lessons\/yt-vid-01/
-    )
+    await page.waitForURL(/\/youtube-courses\/yt-course-react-patterns\/lessons\/yt-vid-01/)
   })
 })
 
