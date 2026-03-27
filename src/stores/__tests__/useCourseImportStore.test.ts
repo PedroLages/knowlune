@@ -211,6 +211,363 @@ describe('updateCourseStatus', () => {
   })
 })
 
+describe('addImportedCourse error handling', () => {
+  it('should rollback on DB failure', async () => {
+    const { db } = await import('@/db')
+    vi.spyOn(db.importedCourses, 'add').mockRejectedValue(new Error('Write fail'))
+
+    const course = makeCourse({ name: 'Failing course' })
+    await act(async () => {
+      await useCourseImportStore.getState().addImportedCourse(course)
+    })
+
+    expect(useCourseImportStore.getState().importedCourses).toHaveLength(0)
+    expect(useCourseImportStore.getState().importError).toContain('Failed to save course')
+  })
+})
+
+describe('removeImportedCourse error handling', () => {
+  it('should rollback on DB failure', async () => {
+    const course = makeCourse()
+    await act(async () => {
+      await useCourseImportStore.getState().addImportedCourse(course)
+    })
+
+    const { db } = await import('@/db')
+    vi.spyOn(db.importedCourses, 'delete').mockRejectedValue(new Error('fail'))
+
+    await act(async () => {
+      await useCourseImportStore.getState().removeImportedCourse(course.id)
+    })
+
+    expect(useCourseImportStore.getState().importedCourses).toHaveLength(1)
+    expect(useCourseImportStore.getState().importError).toBe('Failed to remove course')
+  })
+
+  it('should revoke thumbnail URL on successful removal', async () => {
+    const course = makeCourse()
+    await act(async () => {
+      await useCourseImportStore.getState().addImportedCourse(course)
+    })
+
+    // Set a thumbnail URL
+    useCourseImportStore.setState({
+      thumbnailUrls: { [course.id]: 'blob:http://localhost/fake' },
+    })
+
+    const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+
+    await act(async () => {
+      await useCourseImportStore.getState().removeImportedCourse(course.id)
+    })
+
+    expect(revokeSpy).toHaveBeenCalledWith('blob:http://localhost/fake')
+    expect(useCourseImportStore.getState().thumbnailUrls[course.id]).toBeUndefined()
+    revokeSpy.mockRestore()
+  })
+})
+
+describe('updateCourseTags', () => {
+  it('should normalize and persist tags', async () => {
+    const course = makeCourse({ tags: ['react'] })
+    await act(async () => {
+      await useCourseImportStore.getState().addImportedCourse(course)
+    })
+
+    await act(async () => {
+      await useCourseImportStore.getState().updateCourseTags(course.id, ['React', 'JavaScript', 'react'])
+    })
+
+    const updated = useCourseImportStore.getState().importedCourses.find(c => c.id === course.id)
+    // Normalized: lowercase, deduped, sorted
+    expect(updated?.tags).toEqual(['javascript', 'react'])
+  })
+
+  it('should not update if course not found', async () => {
+    await act(async () => {
+      await useCourseImportStore.getState().updateCourseTags('nonexistent', ['tag'])
+    })
+    // No crash
+  })
+
+  it('should rollback on DB failure', async () => {
+    const course = makeCourse({ tags: ['old'] })
+    await act(async () => {
+      await useCourseImportStore.getState().addImportedCourse(course)
+    })
+
+    const { db } = await import('@/db')
+    vi.spyOn(db.importedCourses, 'update').mockRejectedValue(new Error('fail'))
+
+    await act(async () => {
+      await useCourseImportStore.getState().updateCourseTags(course.id, ['new'])
+    })
+
+    expect(useCourseImportStore.getState().importedCourses[0].tags).toEqual(['old'])
+    expect(useCourseImportStore.getState().importError).toBe('Failed to update tags')
+  })
+})
+
+describe('updateCourseStatus error handling', () => {
+  it('should rollback on DB failure', async () => {
+    const course = makeCourse({ status: 'active' })
+    await act(async () => {
+      await useCourseImportStore.getState().addImportedCourse(course)
+    })
+
+    const { db } = await import('@/db')
+    vi.spyOn(db.importedCourses, 'update').mockRejectedValue(new Error('fail'))
+
+    await act(async () => {
+      await useCourseImportStore.getState().updateCourseStatus(course.id, 'completed')
+    })
+
+    expect(useCourseImportStore.getState().importedCourses[0].status).toBe('active')
+    expect(useCourseImportStore.getState().importError).toBe('Failed to update status')
+  })
+})
+
+describe('updateCourseDetails', () => {
+  it('should update multiple fields', async () => {
+    const course = makeCourse({ name: 'Old Name', category: 'old' })
+    await act(async () => {
+      await useCourseImportStore.getState().addImportedCourse(course)
+    })
+
+    await act(async () => {
+      await useCourseImportStore.getState().updateCourseDetails(course.id, {
+        name: 'New Name',
+        category: 'new',
+        tags: ['tag1', 'tag2'],
+        description: 'A description',
+      })
+    })
+
+    const updated = useCourseImportStore.getState().importedCourses[0]
+    expect(updated.name).toBe('New Name')
+    expect(updated.category).toBe('new')
+    expect(updated.tags).toEqual(['tag1', 'tag2'])
+    expect(updated.description).toBe('A description')
+  })
+
+  it('should return false for non-existent course', async () => {
+    const result = await useCourseImportStore.getState().updateCourseDetails('nonexistent', { name: 'X' })
+    expect(result).toBe(false)
+  })
+
+  it('should rollback on DB failure', async () => {
+    const course = makeCourse({ name: 'Original' })
+    await act(async () => {
+      await useCourseImportStore.getState().addImportedCourse(course)
+    })
+
+    const { db } = await import('@/db')
+    vi.spyOn(db.importedCourses, 'update').mockRejectedValue(new Error('fail'))
+
+    const result = await act(async () => {
+      return useCourseImportStore.getState().updateCourseDetails(course.id, { name: 'Changed' })
+    })
+
+    expect(result).toBe(false)
+    expect(useCourseImportStore.getState().importError).toBe('Failed to update course details')
+  })
+
+  it('should handle authorId=null to unlink', async () => {
+    const course = makeCourse({ authorId: 'a1' })
+    await act(async () => {
+      await useCourseImportStore.getState().addImportedCourse(course)
+    })
+
+    await act(async () => {
+      await useCourseImportStore.getState().updateCourseDetails(course.id, { authorId: null })
+    })
+
+    expect(useCourseImportStore.getState().importedCourses[0].authorId).toBeUndefined()
+  })
+
+  it('should trim empty description to undefined', async () => {
+    const course = makeCourse({ description: 'Old' })
+    await act(async () => {
+      await useCourseImportStore.getState().addImportedCourse(course)
+    })
+
+    await act(async () => {
+      await useCourseImportStore.getState().updateCourseDetails(course.id, { description: '  ' })
+    })
+
+    expect(useCourseImportStore.getState().importedCourses[0].description).toBeUndefined()
+  })
+})
+
+describe('getAllTags', () => {
+  it('should return sorted unique tags', async () => {
+    const c1 = makeCourse({ tags: ['react', 'typescript'] })
+    const c2 = makeCourse({ tags: ['react', 'node'] })
+
+    await act(async () => {
+      await useCourseImportStore.getState().addImportedCourse(c1)
+      await useCourseImportStore.getState().addImportedCourse(c2)
+    })
+
+    const tags = useCourseImportStore.getState().getAllTags()
+    expect(tags).toEqual(['node', 'react', 'typescript'])
+  })
+})
+
+describe('getTagsWithCounts', () => {
+  it('should return tags with counts, sorted alphabetically', async () => {
+    const c1 = makeCourse({ tags: ['react', 'typescript'] })
+    const c2 = makeCourse({ tags: ['react', 'node'] })
+
+    await act(async () => {
+      await useCourseImportStore.getState().addImportedCourse(c1)
+      await useCourseImportStore.getState().addImportedCourse(c2)
+    })
+
+    const tagsWithCounts = useCourseImportStore.getState().getTagsWithCounts()
+    expect(tagsWithCounts).toContainEqual({ tag: 'react', count: 2 })
+    expect(tagsWithCounts).toContainEqual({ tag: 'node', count: 1 })
+    expect(tagsWithCounts).toContainEqual({ tag: 'typescript', count: 1 })
+  })
+})
+
+describe('renameTagGlobally', () => {
+  it('should rename tag across all courses', async () => {
+    const c1 = makeCourse({ tags: ['react', 'js'] })
+    const c2 = makeCourse({ tags: ['react'] })
+
+    await act(async () => {
+      await useCourseImportStore.getState().addImportedCourse(c1)
+      await useCourseImportStore.getState().addImportedCourse(c2)
+    })
+
+    const result = await act(async () => {
+      return useCourseImportStore.getState().renameTagGlobally('react', 'reactjs')
+    })
+
+    expect(result).toBe('renamed')
+    const tags = useCourseImportStore.getState().getAllTags()
+    expect(tags).toContain('reactjs')
+    expect(tags).not.toContain('react')
+  })
+
+  it('should return merged when target tag already exists', async () => {
+    const c1 = makeCourse({ tags: ['react', 'reactjs'] })
+
+    await act(async () => {
+      await useCourseImportStore.getState().addImportedCourse(c1)
+    })
+
+    const result = await act(async () => {
+      return useCourseImportStore.getState().renameTagGlobally('react', 'reactjs')
+    })
+
+    expect(result).toBe('merged')
+  })
+
+  it('should handle same old and new tag', async () => {
+    const result = await useCourseImportStore.getState().renameTagGlobally('react', 'react')
+    expect(result).toBe('renamed')
+  })
+
+  it('should handle empty tags', async () => {
+    const result = await useCourseImportStore.getState().renameTagGlobally('', 'new')
+    expect(result).toBe('renamed')
+  })
+
+  it('should handle no affected courses', async () => {
+    const result = await useCourseImportStore.getState().renameTagGlobally('nonexistent', 'new')
+    expect(result).toBe('renamed')
+  })
+
+  it('should rollback on DB failure', async () => {
+    const c1 = makeCourse({ tags: ['react'] })
+    await act(async () => {
+      await useCourseImportStore.getState().addImportedCourse(c1)
+    })
+
+    const { db } = await import('@/db')
+    vi.spyOn(db.importedCourses, 'update').mockRejectedValue(new Error('fail'))
+
+    await act(async () => {
+      await useCourseImportStore.getState().renameTagGlobally('react', 'reactjs')
+    })
+
+    expect(useCourseImportStore.getState().importedCourses[0].tags).toContain('react')
+    expect(useCourseImportStore.getState().importError).toBe('Failed to rename tag')
+  })
+})
+
+describe('deleteTagGlobally', () => {
+  it('should remove tag from all courses', async () => {
+    const c1 = makeCourse({ tags: ['react', 'js'] })
+    const c2 = makeCourse({ tags: ['react', 'node'] })
+
+    await act(async () => {
+      await useCourseImportStore.getState().addImportedCourse(c1)
+      await useCourseImportStore.getState().addImportedCourse(c2)
+    })
+
+    await act(async () => {
+      await useCourseImportStore.getState().deleteTagGlobally('react')
+    })
+
+    const tags = useCourseImportStore.getState().getAllTags()
+    expect(tags).not.toContain('react')
+    expect(tags).toContain('js')
+  })
+
+  it('should handle empty tag', async () => {
+    await useCourseImportStore.getState().deleteTagGlobally('')
+    // No crash
+  })
+
+  it('should handle no affected courses', async () => {
+    await useCourseImportStore.getState().deleteTagGlobally('nonexistent')
+    // No crash
+  })
+
+  it('should rollback on DB failure', async () => {
+    const c1 = makeCourse({ tags: ['react'] })
+    await act(async () => {
+      await useCourseImportStore.getState().addImportedCourse(c1)
+    })
+
+    const { db } = await import('@/db')
+    vi.spyOn(db.importedCourses, 'update').mockRejectedValue(new Error('fail'))
+
+    await act(async () => {
+      await useCourseImportStore.getState().deleteTagGlobally('react')
+    })
+
+    expect(useCourseImportStore.getState().importedCourses[0].tags).toContain('react')
+    expect(useCourseImportStore.getState().importError).toBe('Failed to delete tag')
+  })
+})
+
+describe('loadImportedCourses error handling', () => {
+  it('should set error on DB failure', async () => {
+    const { db } = await import('@/db')
+    vi.spyOn(db.importedCourses, 'toArray').mockRejectedValue(new Error('DB crash'))
+
+    await act(async () => {
+      await useCourseImportStore.getState().loadImportedCourses()
+    })
+
+    expect(useCourseImportStore.getState().importError).toBe('Failed to load courses from database')
+  })
+})
+
+describe('setAutoAnalysisStatus', () => {
+  it('should set analysis status for a course', () => {
+    useCourseImportStore.getState().setAutoAnalysisStatus('c1', 'analyzing')
+    expect(useCourseImportStore.getState().autoAnalysisStatus['c1']).toBe('analyzing')
+
+    useCourseImportStore.getState().setAutoAnalysisStatus('c1', 'complete')
+    expect(useCourseImportStore.getState().autoAnalysisStatus['c1']).toBe('complete')
+  })
+})
+
 describe('setters', () => {
   it('should set importing state', () => {
     useCourseImportStore.getState().setImporting(true)
