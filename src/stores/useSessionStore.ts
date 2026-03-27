@@ -100,23 +100,27 @@ export const useSessionStore = create<SessionState>((set, get) => ({
         lastHeartbeat: currentTime,
       })
     } else {
-      // INTENTIONAL DIRECT MUTATION: Bypasses Zustand's immutable set() to avoid
-      // re-renders on every mouse move / activity event (~100s per session).
-      // This value is only read at pause/end/heartbeat time, never rendered directly.
-      // If a component ever needs to display lastActivity live, switch to set().
-      activeSession.lastActivity = now
+      // Immutable update without heartbeat advancement — ensures Zustand's
+      // shallow comparison detects the change and subscribers re-render.
+      // Previously this was a direct mutation which caused stale references.
+      set({
+        activeSession: { ...activeSession, lastActivity: now },
+      })
     }
   },
 
   recordInteraction: () => {
     const { activeSession } = get()
     if (!activeSession) return
-    // INTENTIONAL DIRECT MUTATION: Bypasses Zustand's immutable set() to avoid
-    // re-renders on every user interaction (video seeks, note edits, page changes).
-    // interactionCount is only consumed at endSession() for quality score calculation,
-    // never rendered during an active session. If a component ever needs to display
-    // the live count, switch to set({ activeSession: { ...activeSession, interactionCount } }).
-    activeSession.interactionCount = (activeSession.interactionCount ?? 0) + 1
+    // Immutable update — ensures Zustand detects the change via shallow comparison.
+    // Previously this was a direct mutation which meant subscribers holding a
+    // reference to activeSession would never see interactionCount change.
+    set({
+      activeSession: {
+        ...activeSession,
+        interactionCount: (activeSession.interactionCount ?? 0) + 1,
+      },
+    })
   },
 
   pauseSession: async () => {

@@ -430,9 +430,14 @@ describe('heartbeat', () => {
       await useSessionStore.getState().startSession('course-1', 'lesson-1', 'video')
     })
 
-    // Manually modify activeSession (simulating activity updates)
-    const state = useSessionStore.getState()
-    state.activeSession!.lastActivity = new Date().toISOString()
+    // Use immutable setState to simulate activity updates (matching production code)
+    const prevState = useSessionStore.getState()
+    useSessionStore.setState({
+      activeSession: {
+        ...prevState.activeSession!,
+        lastActivity: new Date().toISOString(),
+      },
+    })
 
     await act(async () => {
       await useSessionStore.getState().heartbeat()
@@ -441,7 +446,7 @@ describe('heartbeat', () => {
     const { db } = await import('@/db')
     const sessions = await db.studySessions.toArray()
     expect(sessions).toHaveLength(1)
-    expect(state.lastHeartbeat).toBeDefined()
+    expect(useSessionStore.getState().lastHeartbeat).toBeDefined()
   })
 
   it('should throttle to 30 seconds', async () => {
