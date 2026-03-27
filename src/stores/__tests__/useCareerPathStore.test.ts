@@ -411,10 +411,8 @@ describe('refreshCourseCompletion', () => {
     await db.contentProgress.add({
       courseId: 'c1',
       itemId: 'v1',
-      contentType: 'video',
       status: 'completed',
-      progressPercent: 100,
-      lastAccessedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     })
 
     await act(async () => {
@@ -430,10 +428,8 @@ describe('refreshCourseCompletion', () => {
     await db.contentProgress.add({
       courseId: 'c1',
       itemId: 'v1',
-      contentType: 'video',
       status: 'in-progress',
-      progressPercent: 50,
-      lastAccessedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     })
     // But imported course is marked completed
     await db.importedCourses.add({

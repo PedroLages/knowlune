@@ -13,12 +13,13 @@ let useYouTubeImportStore: (typeof import('@/stores/useYouTubeImportStore'))['us
 function makeParsedUrl(valid = true, type = 'video' as string) {
   return {
     parseResult: {
+      originalUrl: 'https://youtube.com/watch?v=test',
       valid,
       type,
       videoId: valid ? 'vid-' + Math.random().toString(36).slice(2) : undefined,
       playlistId: type === 'playlist' ? 'pl-123' : undefined,
     },
-  }
+  } as import('@/stores/useYouTubeImportStore').YouTubeUrlEntry
 }
 
 function makeVideoMetadata(videoId: string): YouTubeVideoCache {
@@ -32,8 +33,13 @@ function makeVideoMetadata(videoId: string): YouTubeVideoCache {
     duration: 600,
     publishedAt: '2026-01-01T00:00:00Z',
     expiresAt: '2026-12-01T00:00:00Z',
+    fetchedAt: '2026-01-01T00:00:00Z',
     chapters: [],
   }
+}
+
+function makeChapter(id: string, title: string, videoIds: string[]) {
+  return { id, title, videoIds, source: 'manual' as const }
 }
 
 beforeEach(async () => {
@@ -164,8 +170,8 @@ describe('Step 2 actions', () => {
 })
 
 describe('Step 3: Chapter management', () => {
-  const chapter1 = { id: 'ch1', title: 'Chapter 1', videoIds: ['v1'] }
-  const chapter2 = { id: 'ch2', title: 'Chapter 2', videoIds: ['v2'] }
+  const chapter1 = makeChapter('ch1', 'Chapter 1', ['v1'])
+  const chapter2 = makeChapter('ch2', 'Chapter 2', ['v2'])
 
   it('setChapters replaces all chapters', () => {
     useYouTubeImportStore.getState().setChapters([chapter1, chapter2])
@@ -279,7 +285,7 @@ describe('saveCourse', () => {
       status: 'loaded',
     })
     useYouTubeImportStore.getState().setChapters([
-      { id: 'ch1', title: 'Intro', videoIds: ['v1'] },
+      makeChapter('ch1', 'Intro', ['v1']),
     ])
 
     const result = await act(async () => {
@@ -334,7 +340,7 @@ describe('saveCourse', () => {
     useYouTubeImportStore.getState().setVideosForFetch(['v1'])
     useYouTubeImportStore.getState().updateVideoMetadata('v1', { metadata: meta, status: 'loaded' })
     useYouTubeImportStore.getState().setParsedUrls([{
-      parseResult: { valid: true, type: 'playlist', playlistId: 'PLabc123' },
+      parseResult: { originalUrl: 'https://youtube.com/playlist?list=PLabc123', valid: true, type: 'playlist', playlistId: 'PLabc123' },
     }])
     useYouTubeImportStore.getState().setChapters([])
 
@@ -363,7 +369,7 @@ describe('saveCourse', () => {
     useYouTubeImportStore.getState().setVideosForFetch(['v1'])
     useYouTubeImportStore.getState().updateVideoMetadata('v1', { metadata: meta, status: 'loaded' })
     useYouTubeImportStore.getState().setChapters([
-      { id: 'ch1', title: 'Module 1', videoIds: ['v1'] },
+      makeChapter('ch1', 'Module 1', ['v1']),
     ])
 
     await act(async () => {
@@ -456,7 +462,7 @@ describe('saveCourse', () => {
     useYouTubeImportStore.getState().setVideosForFetch(['v1'])
     useYouTubeImportStore.getState().updateVideoMetadata('v1', { metadata: meta, status: 'loaded' })
     useYouTubeImportStore.getState().setParsedUrls([{
-      parseResult: { valid: true, type: 'video', videoId: 'v1', playlistId: 'PL999' },
+      parseResult: { originalUrl: 'https://youtube.com/watch?v=v1&list=PL999', valid: true, type: 'video', videoId: 'v1', playlistId: 'PL999' },
       playlistChoice: 'full-playlist',
     }])
     useYouTubeImportStore.getState().setChapters([])

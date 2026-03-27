@@ -24,8 +24,8 @@ describe('loadCourses', () => {
   it('should load courses from IndexedDB', async () => {
     const { db } = await import('@/db')
     await db.courses.bulkAdd([
-      { id: 'c1', title: 'Course 1', description: '', image: '', category: '', rating: 0, author: '', duration: '' },
-      { id: 'c2', title: 'Course 2', description: '', image: '', category: '', rating: 0, author: '', duration: '' },
+      { id: 'c1', title: 'Course 1', description: '', image: '', category: 'behavioral-analysis', rating: 0, author: '', duration: '' } as never,
+      { id: 'c2', title: 'Course 2', description: '', image: '', category: 'behavioral-analysis', rating: 0, author: '', duration: '' } as never,
     ])
 
     await act(async () => {
@@ -39,7 +39,7 @@ describe('loadCourses', () => {
 
   it('should skip loading if already loaded with courses', async () => {
     const { db } = await import('@/db')
-    await db.courses.add({ id: 'c1', title: 'Course 1', description: '', image: '', category: '', rating: 0, author: '', duration: '' })
+    await db.courses.add({ id: 'c1', title: 'Course 1', description: '', image: '', category: 'behavioral-analysis', rating: 0, author: '', duration: '' } as never)
 
     await act(async () => {
       await useCourseStore.getState().loadCourses()
@@ -47,7 +47,7 @@ describe('loadCourses', () => {
     expect(useCourseStore.getState().courses).toHaveLength(1)
 
     // Add more to DB but load should skip (already loaded)
-    await db.courses.add({ id: 'c2', title: 'Course 2', description: '', image: '', category: '', rating: 0, author: '', duration: '' })
+    await db.courses.add({ id: 'c2', title: 'Course 2', description: '', image: '', category: 'behavioral-analysis', rating: 0, author: '', duration: '' } as never)
 
     await act(async () => {
       await useCourseStore.getState().loadCourses()
@@ -61,7 +61,7 @@ describe('loadCourses', () => {
     useCourseStore.setState({ isLoaded: true, courses: [] })
 
     const { db } = await import('@/db')
-    await db.courses.add({ id: 'c1', title: 'Course 1', description: '', image: '', category: '', rating: 0, author: '', duration: '' })
+    await db.courses.add({ id: 'c1', title: 'Course 1', description: '', image: '', category: 'behavioral-analysis', rating: 0, author: '', duration: '' } as never)
 
     await act(async () => {
       await useCourseStore.getState().loadCourses()

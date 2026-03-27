@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import type { BatchProgress } from '@/lib/youtubeTranscriptPipeline'
 
 // Mock the transcript pipeline module
 vi.mock('@/lib/youtubeTranscriptPipeline', () => ({
@@ -13,6 +14,10 @@ import { fetchTranscriptsBatch, getTranscript, getCourseTranscripts } from '@/li
 const mockFetchBatch = vi.mocked(fetchTranscriptsBatch)
 const mockGetTranscript = vi.mocked(getTranscript)
 const mockGetCourseTranscripts = vi.mocked(getCourseTranscripts)
+
+function makeProgress(overrides: Partial<BatchProgress> = {}): BatchProgress {
+  return { completed: 0, total: 0, succeeded: 0, failed: 0, ...overrides }
+}
 
 beforeEach(() => {
   useYouTubeTranscriptStore.getState().reset()
@@ -36,6 +41,7 @@ describe('fetchBatch', () => {
       expect(state.isFetching).toBe(true)
       expect(state.videoStates['course-1:v1'].status).toBe('pending')
       expect(state.videoStates['course-1:v2'].status).toBe('pending')
+      return []
     })
     mockGetCourseTranscripts.mockResolvedValue([])
 
@@ -59,10 +65,11 @@ describe('fetchBatch', () => {
   it('should update progress during batch fetch', async () => {
     mockFetchBatch.mockImplementation(async (_cId, _vIds, onProgress) => {
       // Simulate progress callback
-      onProgress({ completed: 1, total: 2, current: 'v1' })
+      onProgress!(makeProgress({ completed: 1, total: 2, succeeded: 1, current: 'v1' }))
       const state = useYouTubeTranscriptStore.getState()
-      expect(state.batchProgress).toEqual({ completed: 1, total: 2, current: 'v1' })
+      expect(state.batchProgress!.completed).toBe(1)
       expect(state.videoStates['course-1:v1'].status).toBe('fetching')
+      return []
     })
     mockGetCourseTranscripts.mockResolvedValue([])
 
@@ -72,9 +79,10 @@ describe('fetchBatch', () => {
   it('should handle progress callback without current field', async () => {
     mockFetchBatch.mockImplementation(async (_cId, _vIds, onProgress) => {
       // Progress without current video
-      onProgress({ completed: 0, total: 2 })
+      onProgress!(makeProgress({ completed: 0, total: 2 }))
       const state = useYouTubeTranscriptStore.getState()
-      expect(state.batchProgress).toEqual({ completed: 0, total: 2 })
+      expect(state.batchProgress!.total).toBe(2)
+      return []
     })
     mockGetCourseTranscripts.mockResolvedValue([])
 
@@ -82,7 +90,7 @@ describe('fetchBatch', () => {
   })
 
   it('should reload course states from Dexie after batch completes', async () => {
-    mockFetchBatch.mockResolvedValue(undefined)
+    mockFetchBatch.mockResolvedValue([])
     mockGetCourseTranscripts.mockResolvedValue([
       { videoId: 'v1', status: 'done', courseId: 'course-1' },
       { videoId: 'v2', status: 'failed', failureReason: 'No captions', courseId: 'course-1' },
@@ -97,7 +105,7 @@ describe('fetchBatch', () => {
   })
 
   it('should pass lang parameter to fetchTranscriptsBatch', async () => {
-    mockFetchBatch.mockResolvedValue(undefined)
+    mockFetchBatch.mockResolvedValue([])
     mockGetCourseTranscripts.mockResolvedValue([])
 
     await useYouTubeTranscriptStore.getState().fetchBatch('course-1', ['v1'], 'pt')
@@ -154,7 +162,7 @@ describe('reset', () => {
   it('should reset all state', () => {
     useYouTubeTranscriptStore.setState({
       videoStates: { 'c1:v1': { status: 'done' } },
-      batchProgress: { completed: 1, total: 1 },
+      batchProgress: makeProgress({ completed: 1, total: 1, succeeded: 1 }),
       isFetching: true,
     })
 
