@@ -208,7 +208,7 @@ function FeaturePreview({
                   Premium Feature
                 </span>
               </div>
-              <h2 className="text-xl font-display font-bold text-foreground">{featureName}</h2>
+              <h1 className="text-xl font-display font-bold text-foreground">{featureName}</h1>
               <p className="text-sm text-muted-foreground leading-relaxed max-w-sm mx-auto">
                 {featureDescription}
               </p>
