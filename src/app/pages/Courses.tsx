@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { Card } from '@/app/components/ui/card'
+import { VirtualizedGrid } from '@/app/components/VirtualizedGrid'
 import { Input } from '@/app/components/ui/input'
 import { Button } from '@/app/components/ui/button'
 import {
@@ -525,19 +526,19 @@ export function Courses() {
                   {selectedTopics.length > 0 || selectedStatuses.length > 0 ? 'filters' : 'search'}
                 </div>
               ) : (
-                <div
-                  data-testid="imported-courses-grid"
-                  className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
-                >
-                  {sortedImportedCourses.map(course => (
+                <VirtualizedGrid
+                  items={sortedImportedCourses}
+                  getItemKey={course => course.id}
+                  renderItem={course => (
                     <ImportedCourseCard
-                      key={course.id}
                       course={course}
                       allTags={allTags}
                       momentumScore={momentumMap.get(course.id)}
                     />
-                  ))}
-                </div>
+                  )}
+                  data-testid="imported-courses-grid"
+                  gridClassName="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
+                />
               )}
             </div>
           )}
@@ -617,13 +618,11 @@ export function Courses() {
                     No courses match your search
                   </div>
                 ) : (
-                  <div
-                    data-testid="sample-courses-grid"
-                    className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
-                  >
-                    {sortedCourses.map(course => (
+                  <VirtualizedGrid
+                    items={sortedCourses}
+                    getItemKey={course => course.id}
+                    renderItem={course => (
                       <CourseCard
-                        key={course.id}
                         course={course}
                         completionPercent={getCourseCompletionPercent(
                           course.id,
@@ -633,8 +632,10 @@ export function Courses() {
                         atRiskStatus={atRiskMap.get(course.id)}
                         completionEstimate={estimateMap.get(course.id)}
                       />
-                    ))}
-                  </div>
+                    )}
+                    data-testid="sample-courses-grid"
+                    gridClassName="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
+                  />
                 )}
               </CollapsibleContent>
             </Collapsible>
