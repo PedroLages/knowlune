@@ -86,6 +86,15 @@ export async function clearCachedEntitlement(userId: string): Promise<void> {
  * React hook that provides the current user's entitlement status
  * with server validation and offline caching.
  *
+ * **UX hint for fast rendering. Server-side middleware is the security boundary.**
+ *
+ * This hook determines whether to show premium UI elements (gates, badges,
+ * feature toggles). It is NOT a security mechanism — a determined user could
+ * patch this function to return `true`. All premium API endpoints are protected
+ * by the Express middleware chain (JWT + entitlement + rate limiter) in
+ * `server/middleware/`. Client-side checks exist solely to provide a responsive
+ * UI without waiting for server round-trips on every render.
+ *
  * Behavior:
  * - Online: validates against server, caches result in IndexedDB (7-day TTL)
  * - Offline with fresh cache (<7 days): honors cached entitlement
