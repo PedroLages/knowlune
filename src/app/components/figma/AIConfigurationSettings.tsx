@@ -515,10 +515,16 @@ export function AIConfigurationSettings() {
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Info
-                            className="size-4 text-muted-foreground cursor-help"
+                          <button
+                            type="button"
+                            className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-help"
                             aria-label="Direct connection information"
-                          />
+                          >
+                            <Info
+                              className="size-4 text-muted-foreground"
+                              aria-hidden="true"
+                            />
+                          </button>
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-xs bg-popover text-popover-foreground border border-border shadow-md">
                           <p>

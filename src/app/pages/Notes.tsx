@@ -589,7 +589,7 @@ export function Notes() {
                       <TooltipTrigger asChild>
                         <button
                           type="button"
-                          className="inline-flex items-center justify-center size-6 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           aria-label="Semantic search unavailable: no embeddings indexed yet"
                           data-testid="semantic-tooltip-trigger"
                         >
