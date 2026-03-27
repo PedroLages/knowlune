@@ -69,6 +69,7 @@ import { AccountDeletion } from '@/app/components/settings/AccountDeletion'
 import { ChangePassword } from '@/app/components/settings/ChangePassword'
 import { ChangeEmail } from '@/app/components/settings/ChangeEmail'
 import { MyDataSummary } from '@/app/components/settings/MyDataSummary'
+import { DataRetentionSettings } from '@/app/components/settings/DataRetentionSettings'
 import { validateImageFile, compressAvatar, fileToDataUrl } from '@/lib/avatarUpload'
 import { toastSuccess, toastError } from '@/lib/toastHelpers'
 import { useAuthStore } from '@/stores/useAuthStore'
@@ -1109,6 +1110,11 @@ export default function Settings() {
                 tabIndex={-1}
               />
             </div>
+
+            <Separator />
+
+            {/* Data Retention Settings */}
+            <DataRetentionSettings />
 
             <Separator />
 
