@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate, useParams } from 'react-router'
 import { Layout } from './components/Layout'
 import { DelayedFallback } from './components/DelayedFallback'
 import { Skeleton } from './components/ui/skeleton'
+import { RouteErrorBoundary } from './components/RouteErrorBoundary'
 import { PremiumFeaturePage, PREMIUM_FEATURES } from './components/PremiumFeaturePage'
 import { MessageSquare, Sparkles, Brain, RotateCcw, Shuffle, BarChart3, Layers } from 'lucide-react'
 
@@ -118,7 +119,11 @@ function PageLoader() {
 }
 
 function SuspensePage({ children }: { children: React.ReactNode }) {
-  return <Suspense fallback={<PageLoader />}>{children}</Suspense>
+  return (
+    <RouteErrorBoundary>
+      <Suspense fallback={<PageLoader />}>{children}</Suspense>
+    </RouteErrorBoundary>
+  )
 }
 
 /** Preserves :authorId param when redirecting /instructors/:authorId → /authors/:authorId */
