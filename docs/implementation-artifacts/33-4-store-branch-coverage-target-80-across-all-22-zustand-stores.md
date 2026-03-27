@@ -44,4 +44,14 @@ Focus on branch coverage — every if/else, try/catch, and conditional expressio
 
 ## Challenges and Lessons Learned
 
-[To be filled after implementation]
+1. **Dexie schema matters for tests**: When adding test data to IndexedDB tables with compound primary keys (e.g., `[courseId+itemId]`), the test data must match the exact schema fields. Using wrong field names like `id` or `contentId` causes DataError.
+
+2. **loadInFlight guards block re-testing**: Some stores use module-level `loadInFlight` flags that persist across test runs within the same import. Dynamic re-importing via `vi.resetModules()` is essential to get clean state.
+
+3. **Branch coverage vs line coverage**: Many stores have high line coverage but low branch coverage because error/catch paths are untested. Each `try/catch` with a rollback creates 2+ branches that need explicit failure simulation.
+
+4. **AI/embedding code is hard to unit test**: Stores like useNoteStore and useLearningPathStore have branches guarded by `supportsWorkers()` and dynamic imports (`import('@/ai/...')`). These require deep mocking that yields diminishing returns vs integration testing.
+
+5. **Toast mock needs all methods**: When mocking `sonner`, include all toast variants used by the store (`.error()`, `.success()`, `.warning()`). Missing a variant causes runtime errors in error-path tests.
+
+6. **Zustand `set()` callback form is important**: For stores using `set(state => ...)` pattern, concurrent operations during async tests can cause stale state. Tests should verify final state rather than intermediate states.
