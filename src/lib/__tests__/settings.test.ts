@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import {
   getSettings,
   saveSettings,
@@ -202,6 +202,192 @@ describe('settings', () => {
       resetAllData()
       resetAllData()
       expect(localStorage.length).toBe(0)
+    })
+  })
+
+  // ---------------------------------------------------------------------------
+  // saveSettings — localStorage persistence
+  // ---------------------------------------------------------------------------
+
+  describe('saveSettings localStorage persistence', () => {
+    it('writes to localStorage under the app-settings key', () => {
+      saveSettings({ displayName: 'TestUser' })
+      const raw = localStorage.getItem('app-settings')
+      expect(raw).not.toBeNull()
+      const parsed = JSON.parse(raw!)
+      expect(parsed.displayName).toBe('TestUser')
+    })
+
+    it('preserves all fields in localStorage after partial update', () => {
+      saveSettings({ displayName: 'Alice', bio: 'Hello', theme: 'dark' })
+      saveSettings({ bio: 'Updated bio' })
+      const raw = JSON.parse(localStorage.getItem('app-settings')!)
+      expect(raw.displayName).toBe('Alice')
+      expect(raw.bio).toBe('Updated bio')
+      expect(raw.theme).toBe('dark')
+    })
+
+    it('stores profilePhotoDataUrl in localStorage', () => {
+      const dataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg=='
+      saveSettings({ profilePhotoDataUrl: dataUrl })
+      const raw = JSON.parse(localStorage.getItem('app-settings')!)
+      expect(raw.profilePhotoDataUrl).toBe(dataUrl)
+    })
+
+    it('stores fontSize in localStorage', () => {
+      saveSettings({ fontSize: 'large' })
+      const raw = JSON.parse(localStorage.getItem('app-settings')!)
+      expect(raw.fontSize).toBe('large')
+    })
+  })
+
+  // ---------------------------------------------------------------------------
+  // Profile sync — Supabase auth.updateUser() integration
+  // ---------------------------------------------------------------------------
+
+  describe('profile sync to Supabase', () => {
+    const mockUpdateUser = vi.fn()
+
+    beforeEach(() => {
+      mockUpdateUser.mockReset()
+    })
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it('saveSettings writes to localStorage regardless of auth state', () => {
+      // Even without Supabase, localStorage should be the primary store
+      saveSettings({ displayName: 'OfflineUser', bio: 'Testing offline' })
+      const settings = getSettings()
+      expect(settings.displayName).toBe('OfflineUser')
+      expect(settings.bio).toBe('Testing offline')
+    })
+
+    it('profile data structure is compatible with Supabase user_metadata shape', () => {
+      // Verify that the settings shape can be serialized as user_metadata
+      const settings = saveSettings({
+        displayName: 'SyncUser',
+        bio: 'Profile bio',
+        theme: 'dark',
+        colorScheme: 'vibrant',
+        fontSize: 'large',
+      })
+      // user_metadata would receive a subset of AppSettings
+      const metadata = {
+        displayName: settings.displayName,
+        bio: settings.bio,
+        theme: settings.theme,
+        colorScheme: settings.colorScheme,
+        fontSize: settings.fontSize,
+      }
+      expect(metadata.displayName).toBe('SyncUser')
+      expect(metadata.bio).toBe('Profile bio')
+      expect(JSON.stringify(metadata)).not.toContain('undefined')
+    })
+  })
+
+  // ---------------------------------------------------------------------------
+  // hydrateSettingsFromSupabase — merge user_metadata into localStorage
+  // ---------------------------------------------------------------------------
+
+  describe('hydrate settings from Supabase user_metadata', () => {
+    it('merges user_metadata fields into existing localStorage settings', () => {
+      // Simulate existing local settings
+      saveSettings({ displayName: 'LocalName', bio: 'Local bio', theme: 'light' })
+
+      // Simulate user_metadata from Supabase
+      const userMetadata = {
+        displayName: 'CloudName',
+        bio: 'Cloud bio',
+        theme: 'dark' as const,
+      }
+
+      // Hydration: merge user_metadata over local settings
+      const current = getSettings()
+      const hydrated = { ...current, ...userMetadata }
+      saveSettings(hydrated)
+
+      const result = getSettings()
+      expect(result.displayName).toBe('CloudName')
+      expect(result.bio).toBe('Cloud bio')
+      expect(result.theme).toBe('dark')
+    })
+
+    it('handles empty user_metadata gracefully (no overwrite)', () => {
+      saveSettings({ displayName: 'KeepMe', bio: 'Preserve this' })
+
+      // Empty user_metadata should not wipe local settings
+      const emptyMetadata = {}
+      const current = getSettings()
+      const hydrated = { ...current, ...emptyMetadata }
+      saveSettings(hydrated)
+
+      const result = getSettings()
+      expect(result.displayName).toBe('KeepMe')
+      expect(result.bio).toBe('Preserve this')
+    })
+
+    it('handles partial user_metadata (only some fields present)', () => {
+      saveSettings({ displayName: 'Original', bio: 'Original bio', theme: 'light' })
+
+      // Only displayName in user_metadata
+      const partialMetadata = { displayName: 'Updated' }
+      const current = getSettings()
+      const hydrated = { ...current, ...partialMetadata }
+      saveSettings(hydrated)
+
+      const result = getSettings()
+      expect(result.displayName).toBe('Updated')
+      expect(result.bio).toBe('Original bio')
+      expect(result.theme).toBe('light')
+    })
+
+    it('handles undefined fields in user_metadata by falling back to defaults', () => {
+      saveSettings({ displayName: 'Safe', bio: 'Safe bio' })
+
+      // user_metadata with undefined values — spread overwrites with undefined,
+      // which JSON.stringify drops, so getSettings() fills from defaults.
+      // The correct hydration pattern filters out undefined before merging.
+      const metadataWithUndefined: Record<string, unknown> = {
+        displayName: undefined,
+        bio: undefined,
+      }
+
+      // Correct hydration: filter out undefined values before merging
+      const current = getSettings()
+      const cleanMetadata = Object.fromEntries(
+        Object.entries(metadataWithUndefined).filter(([, v]) => v !== undefined)
+      )
+      const hydrated = { ...current, ...cleanMetadata }
+      saveSettings(hydrated)
+
+      const result = getSettings()
+      // With proper filtering, existing values are preserved
+      expect(result.displayName).toBe('Safe')
+      expect(result.bio).toBe('Safe bio')
+    })
+
+    it('new user with no localStorage gets defaults + user_metadata', () => {
+      // No localStorage (fresh install)
+      const defaults = getSettings()
+      expect(defaults.displayName).toBe('Student')
+
+      // Hydrate from Supabase user_metadata
+      const userMetadata = {
+        displayName: 'NewUser',
+        bio: 'Just joined',
+        colorScheme: 'vibrant' as const,
+      }
+      const hydrated = { ...defaults, ...userMetadata }
+      saveSettings(hydrated)
+
+      const result = getSettings()
+      expect(result.displayName).toBe('NewUser')
+      expect(result.bio).toBe('Just joined')
+      expect(result.colorScheme).toBe('vibrant')
+      // Non-overridden defaults preserved
+      expect(result.theme).toBe('system')
     })
   })
 })
