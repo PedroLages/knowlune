@@ -1,12 +1,12 @@
 ---
 story_id: E33-S04
 story_name: "Store branch coverage target 80%+ across all 22 Zustand stores"
-status: in-progress
+status: done
 started: 2026-03-27
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-03-27
+reviewed: true
+review_started: 2026-03-27
+review_gates_passed: [build, lint, type-check, unit-tests, design-review-skipped, code-review, code-review-testing]
 burn_in_validated: false
 ---
 
