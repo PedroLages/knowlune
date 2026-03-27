@@ -456,13 +456,13 @@ development_status:
   # Epic 30: Accessibility Compliance
   # Source: epics-audit-hardening.md (P1 — WCAG AA)
   # ──────────────────────────────────────────────────
-  epic-30: in-progress
+  epic-30: done
   30-1-global-touch-target-sweep-44px-minimum: done
   30-2-add-aria-label-to-icon-only-buttons: done
   30-3-fix-heading-hierarchy-in-coursedetail-settings-premiumfeaturepage: done
   30-4-add-aria-expanded-to-module-toggles-and-collapsibles: done
   30-5-add-aria-label-to-settings-radiogroups-and-switches: done
-  30-6-add-aria-live-regions-for-filter-search-results-and-fix-skip-link: backlog
+  30-6-add-aria-live-regions-for-filter-search-results-and-fix-skip-link: done
   epic-30-retrospective: optional
 
   # ──────────────────────────────────────────────────
