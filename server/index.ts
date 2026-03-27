@@ -19,7 +19,7 @@ import { z } from 'zod'
 import { getProviderModel, getOllamaProviderModel } from './providers.js'
 import { createOriginCheck } from './middleware/origin-check.js'
 import { createAuthMiddleware } from './middleware/authenticate.js'
-import { createEntitlementMiddleware } from './middleware/entitlement.js'
+import { createDetectBYOKMiddleware, createEntitlementMiddleware } from './middleware/entitlement.js'
 import { createRateLimiter } from './middleware/rate-limiter.js'
 
 const app = express()
@@ -30,8 +30,12 @@ app.use(express.json({ limit: '1mb' }))
 // ──────────────────────────────────────────────────────────────────────────────
 // Middleware Chain Setup
 //
-// Order: 1. Origin check → 2. JWT auth → 3. Entitlement check → 4. Rate limiter
+// Order: 1. Origin check → 2. JWT auth → 3. BYOK detection → 4. Entitlement check (skipped for BYOK) → 5. Rate limiter
 // Applied to all /api/ai/* routes EXCEPT /api/ai/ollama/health (registered before chain).
+//
+// BYOK (Bring Your Own Key) requests provide their own API key or Ollama server URL.
+// These skip the entitlement check but still require valid JWT auth (no open relay).
+// BYOK uses a separate rate limit tier (30 burst, 15/min refill).
 //
 // Environment variables required:
 //   SUPABASE_JWT_SECRET     — JWT verification (from Supabase dashboard)
@@ -154,8 +158,9 @@ app.get('/api/ai/ollama/health', async (req, res) => {
 // Middleware order:
 //   1. Origin check — reject requests from disallowed origins
 //   2. JWT authentication — validate Supabase JWT, attach user to request
-//   3. Entitlement check — verify premium subscription (LRU cache + Supabase)
-//   4. Rate limiter — per-user token bucket rate limiting
+//   3. BYOK detection — detect body.apiKey or body.ollamaServerUrl, mark req.isBYOK
+//   4. Entitlement check — verify premium subscription (skipped for BYOK)
+//   5. Rate limiter — per-user token bucket (BYOK uses separate tier)
 // ──────────────────────────────────────────────────────────────────────────────
 if (isMiddlewareConfigured) {
   const allowedOrigins = process.env.ALLOWED_ORIGINS!.split(',').map((o) => o.trim())
@@ -166,7 +171,10 @@ if (isMiddlewareConfigured) {
   // 2. JWT authentication
   app.use('/api/ai', createAuthMiddleware({ jwtSecret: process.env.SUPABASE_JWT_SECRET }))
 
-  // 3. Entitlement check
+  // 3. BYOK detection — marks req.isBYOK for requests with apiKey or ollamaServerUrl
+  app.use('/api/ai', createDetectBYOKMiddleware())
+
+  // 4. Entitlement check (skipped for BYOK requests — user provides their own key/server)
   app.use(
     '/api/ai',
     createEntitlementMiddleware({
@@ -175,10 +183,10 @@ if (isMiddlewareConfigured) {
     })
   )
 
-  // 4. Rate limiter (100 requests per 60 seconds per user)
+  // 5. Rate limiter — BYOK uses separate tier (30 burst / 120s), default is 100/60s
   app.use('/api/ai', createRateLimiter({ points: 100, duration: 60 }))
 
-  console.log('Middleware chain active: origin-check → authenticate → entitlement → rate-limiter')
+  console.log('Middleware chain active: origin-check → authenticate → detectBYOK → entitlement → rate-limiter')
 } else {
   console.warn(
     'Middleware chain DISABLED — missing env vars (SUPABASE_JWT_SECRET, ALLOWED_ORIGINS, VITE_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY). AI endpoints are unprotected.'
