@@ -157,7 +157,7 @@ export interface ImportedCourse {
   status: LearnerCourseStatus
   videoCount: number
   pdfCount: number
-  directoryHandle: FileSystemDirectoryHandle
+  directoryHandle: FileSystemDirectoryHandle | null
   authorId?: string // FK to ImportedAuthor.id (E25-S01 AC2)
   coverImageHandle?: FileSystemFileHandle // User-selected cover image from folder
   totalDuration?: number // Sum of all video durations in seconds (E1B-S02)
@@ -181,7 +181,7 @@ export interface ImportedVideo {
   duration: number
   format: VideoFormat
   order: number
-  fileHandle: FileSystemFileHandle
+  fileHandle: FileSystemFileHandle | null
   fileSize?: number // File size in bytes (E1B-S02)
   width?: number // Video width in pixels (E1B-S02)
   height?: number // Video height in pixels (E1B-S02)

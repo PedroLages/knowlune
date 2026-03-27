@@ -275,7 +275,7 @@ export const useYouTubeImportStore = create<YouTubeImportState>((set, get) => ({
         status: 'active',
         videoCount: loadedVideos.length,
         pdfCount: 0,
-        directoryHandle: null as unknown as FileSystemDirectoryHandle, // YouTube courses don't use FS handles
+        directoryHandle: null, // YouTube courses don't use FS handles
         source: 'youtube',
         youtubePlaylistId: playlistId,
         youtubeChannelId: firstVideo.channelId,
@@ -293,7 +293,7 @@ export const useYouTubeImportStore = create<YouTubeImportState>((set, get) => ({
         duration: v.metadata!.duration,
         format: 'mp4' as const, // YouTube serves as MP4 via IFrame API
         order: index,
-        fileHandle: null as unknown as FileSystemFileHandle, // YouTube videos don't use FS handles
+        fileHandle: null, // YouTube videos don't use FS handles
         youtubeVideoId: v.videoId,
         youtubeUrl: `https://www.youtube.com/watch?v=${v.videoId}`,
         thumbnailUrl: v.metadata!.thumbnailUrl,
