@@ -28,8 +28,12 @@ function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
   )
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
-  return <h3 data-slot="card-title" className={cn('leading-none', className)} {...props} />
+function CardTitle({
+  className,
+  as: Comp = 'h3',
+  ...props
+}: React.ComponentProps<'div'> & { as?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' }) {
+  return <Comp data-slot="card-title" className={cn('leading-none', className)} {...props} />
 }
 
 function CardDescription({ className, ...props }: React.ComponentProps<'div'>) {
