@@ -165,8 +165,6 @@ test.describe('Overview Card Enhancements', () => {
 
       // Close sheet (press Escape)
       await page.keyboard.press('Escape')
-      // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
-      await page.waitForTimeout(300) // Wait for close animation
       await expect(sheet).not.toBeVisible()
     })
 
@@ -189,10 +187,8 @@ test.describe('Overview Card Enhancements', () => {
 
       // Click to open dropdown
       await periodSelector.click()
-      // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
-      await page.waitForTimeout(200) // Wait for dropdown animation
 
-      // Check for period options in dropdown
+      // Check for period options in dropdown (waits deterministically for visibility)
       const weekOption = page.getByRole('option', { name: /week/i })
       const monthOption = page.getByRole('option', { name: /month/i })
 
@@ -201,8 +197,7 @@ test.describe('Overview Card Enhancements', () => {
 
       // Close sheet
       await page.keyboard.press('Escape')
-      // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
-      await page.waitForTimeout(300)
+      await expect(sheet).not.toBeVisible()
     })
 
     test('should show comparison bars and percentage change', async ({ page }) => {
@@ -216,9 +211,14 @@ test.describe('Overview Card Enhancements', () => {
       const sheet = page.locator('[role="dialog"]')
       await expect(sheet).toBeVisible({ timeout: 3000 })
 
-      // Wait for comparison component to render
-      // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
-      await page.waitForTimeout(500)
+      // Wait for comparison component to render by checking for percentage content
+      await page.waitForFunction(
+        () => {
+          const dialog = document.querySelector('[role="dialog"]')
+          return dialog && /[+-]?\d+\.\d+%/.test(dialog.textContent || '')
+        },
+        { timeout: 5000 }
+      )
 
       // Look for percentage change indicator (format: +X.X% or -X.X%)
       const percentagePattern = /[+-]?\d+\.\d+%/
@@ -229,8 +229,7 @@ test.describe('Overview Card Enhancements', () => {
 
       // Close sheet
       await page.keyboard.press('Escape')
-      // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
-      await page.waitForTimeout(300)
+      await expect(sheet).not.toBeVisible()
     })
   })
 
@@ -297,10 +296,6 @@ test.describe('Overview Card Enhancements', () => {
       const sheet = page.locator('[role="dialog"]')
       await expect(sheet).toBeVisible({ timeout: 3000 })
 
-      // Wait for Sheet to fully render
-      // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
-      await page.waitForTimeout(500)
-
       // Focus should be trapped inside Sheet - verify interactive elements exist
       // Check for export button specifically (avoids strict mode violation with .or())
       const exportButton = sheet.getByRole('button', { name: /export/i })
@@ -308,8 +303,6 @@ test.describe('Overview Card Enhancements', () => {
 
       // Press Escape to close
       await page.keyboard.press('Escape')
-      // eslint-disable-next-line test-patterns/no-hard-waits -- necessary wait for animation/transition
-      await page.waitForTimeout(300) // Wait for close animation
       await expect(sheet).not.toBeVisible()
 
       // Focus should return to page (verify document has focus)
