@@ -337,8 +337,9 @@ export default function Reports() {
                       <CardTitle className="text-base">Course Completion</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="overflow-x-auto -mx-2 px-2">
+                      <div data-testid="bar-chart-scroll-container" className="overflow-x-auto -mx-2 px-2">
                         <ChartContainer
+                          data-testid="bar-chart-inner"
                           config={barChartConfig}
                           className={`min-w-[480px] w-full min-h-[1px]`}
                           style={{ height: barChartHeight }}
