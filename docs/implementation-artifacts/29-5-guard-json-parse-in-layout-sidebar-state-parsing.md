@@ -1,12 +1,12 @@
 ---
 story_id: E29-S05
 story_name: "Guard JSON.parse in Layout.tsx Sidebar State Parsing"
-status: ready-for-dev
+status: done
 started: 2026-03-27
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-03-27
+reviewed: true
+review_started: 2026-03-27
+review_gates_passed: [build, lint, type-check, format-check, unit-tests-skipped, e2e-tests-skipped, design-review-skipped, code-review, code-review-testing]
 burn_in_validated: false
 ---
 
