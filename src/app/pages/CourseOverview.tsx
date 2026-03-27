@@ -352,6 +352,8 @@ export function CourseOverview() {
                   {/* Module header */}
                   <button
                     onClick={() => toggleModule(mod.id)}
+                    aria-expanded={isExpanded}
+                    aria-controls={isExpanded ? `module-content-${mod.id}` : undefined}
                     className="w-full flex items-center gap-3 p-4 text-left hover:bg-muted/50 transition-colors"
                   >
                     <span className="flex-shrink-0 size-8 rounded-lg bg-brand-soft flex items-center justify-center">
@@ -374,7 +376,7 @@ export function CourseOverview() {
 
                   {/* Lessons */}
                   {isExpanded && (
-                    <div className="border-t border-border/50">
+                    <div id={`module-content-${mod.id}`} className="border-t border-border/50">
                       {mod.lessons.map((lesson, lessonIndex) => (
                         <div
                           key={lesson.id}
