@@ -73,13 +73,7 @@ vi.mock('@/stores/useAuthStore', () => ({
 // ---------------------------------------------------------------------------
 
 vi.mock('@/app/components/auth/AuthDialog', () => ({
-  AuthDialog: ({
-    open,
-    onOpenChange,
-  }: {
-    open: boolean
-    onOpenChange: (open: boolean) => void
-  }) =>
+  AuthDialog: ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) =>
     open ? (
       <div data-testid="auth-dialog">
         <button onClick={() => onOpenChange(false)}>Close Auth</button>

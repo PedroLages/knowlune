@@ -219,7 +219,9 @@ export function YouTubeChapterEditor({
           const newVideoIds = arrayMove(sourceChapter.videoIds, oldIdx, targetPosition)
           onChaptersChange(
             chapters.map(c =>
-              c.id === sourceChapter.id ? { ...c, videoIds: newVideoIds, source: 'manual' as const } : c
+              c.id === sourceChapter.id
+                ? { ...c, videoIds: newVideoIds, source: 'manual' as const }
+                : c
             )
           )
         } else {
@@ -326,9 +328,7 @@ export function YouTubeChapterEditor({
       updatedChapters = chapters
         .filter(c => c.id !== removeDialog.chapterId)
         .map(c =>
-          c.id === uncategorized!.id
-            ? { ...c, videoIds: [...c.videoIds, ...chapter.videoIds] }
-            : c
+          c.id === uncategorized!.id ? { ...c, videoIds: [...c.videoIds, ...chapter.videoIds] } : c
         )
     } else {
       uncategorized = {
@@ -337,10 +337,7 @@ export function YouTubeChapterEditor({
         videoIds: chapter.videoIds,
         source: 'manual',
       }
-      updatedChapters = [
-        ...chapters.filter(c => c.id !== removeDialog.chapterId),
-        uncategorized,
-      ]
+      updatedChapters = [...chapters.filter(c => c.id !== removeDialog.chapterId), uncategorized]
     }
 
     onChaptersChange(updatedChapters)
@@ -376,7 +373,11 @@ export function YouTubeChapterEditor({
       onChaptersChange(
         chapters.map(c => {
           if (c.id === sourceChapter.id) {
-            return { ...c, videoIds: c.videoIds.filter(id => id !== videoId), source: 'manual' as const }
+            return {
+              ...c,
+              videoIds: c.videoIds.filter(id => id !== videoId),
+              source: 'manual' as const,
+            }
           }
           if (c.id === targetChapterId) {
             return { ...c, videoIds: [...c.videoIds, videoId], source: 'manual' as const }
@@ -390,9 +391,7 @@ export function YouTubeChapterEditor({
 
   // Active video/chapter for drag overlay
   const activeVideo = activeVideoId ? videoMap.get(activeVideoId) : null
-  const activeChapter = activeChapterId
-    ? chapters.find(c => c.id === activeChapterId)
-    : null
+  const activeChapter = activeChapterId ? chapters.find(c => c.id === activeChapterId) : null
 
   return (
     <div className="space-y-3" data-testid="chapter-editor">
@@ -403,10 +402,11 @@ export function YouTubeChapterEditor({
           role="status"
           data-testid="ai-structure-banner"
         >
-          <Sparkles className="size-4 shrink-0 mt-0.5 text-brand-soft-foreground" aria-hidden="true" />
-          <p className="text-sm text-brand-soft-foreground font-medium">
-            {aiBannerMessage}
-          </p>
+          <Sparkles
+            className="size-4 shrink-0 mt-0.5 text-brand-soft-foreground"
+            aria-hidden="true"
+          />
+          <p className="text-sm text-brand-soft-foreground font-medium">{aiBannerMessage}</p>
         </div>
       )}
 
@@ -424,7 +424,10 @@ export function YouTubeChapterEditor({
               href="/settings"
               className="font-medium text-brand-soft-foreground underline underline-offset-2 hover:text-brand"
             >
-              <Settings className="inline-block size-3.5 mr-0.5 align-text-bottom" aria-hidden="true" />
+              <Settings
+                className="inline-block size-3.5 mr-0.5 align-text-bottom"
+                aria-hidden="true"
+              />
               Set up an AI provider
             </a>{' '}
             in Settings for smarter organization.
@@ -463,7 +466,7 @@ export function YouTubeChapterEditor({
                   onSaveTitle={saveTitle}
                   onCancelEdit={cancelEditing}
                   onRemove={() => confirmRemoveChapter(chapter.id)}
-                  onMoveChapter={(dir) => moveChapter(chapter.id, dir)}
+                  onMoveChapter={dir => moveChapter(chapter.id, dir)}
                   onMoveVideo={moveVideoToChapter}
                 />
               ))}
@@ -506,7 +509,7 @@ export function YouTubeChapterEditor({
       {/* Remove Chapter Confirmation Dialog */}
       <AlertDialog
         open={removeDialog !== null}
-        onOpenChange={(open) => !open && setRemoveDialog(null)}
+        onOpenChange={open => !open && setRemoveDialog(null)}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -580,8 +583,9 @@ function SortableChapter({
   onMoveChapter,
   onMoveVideo,
 }: SortableChapterProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: `chapter:${chapter.id}` })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: `chapter:${chapter.id}`,
+  })
 
   const titleInputRef = useRef<HTMLInputElement>(null)
 
@@ -702,7 +706,11 @@ function SortableChapter({
             )}
           >
             {chapter.source === 'ai' && <Sparkles className="size-3" aria-hidden="true" />}
-            {chapter.source === 'ai' ? 'AI Suggested' : chapter.source === 'rule-based' ? 'Rule-based' : 'Manual'}
+            {chapter.source === 'ai'
+              ? 'AI Suggested'
+              : chapter.source === 'rule-based'
+                ? 'Rule-based'
+                : 'Manual'}
           </Badge>
         </div>
 
@@ -769,7 +777,10 @@ function SortableChapter({
               className="mb-2 flex items-start gap-2 rounded-lg bg-brand-soft/30 px-3 py-2"
               data-testid={`chapter-rationale-${chapter.id}`}
             >
-              <Sparkles className="size-3.5 shrink-0 mt-0.5 text-brand-soft-foreground" aria-hidden="true" />
+              <Sparkles
+                className="size-3.5 shrink-0 mt-0.5 text-brand-soft-foreground"
+                aria-hidden="true"
+              />
               <p className="text-xs text-muted-foreground italic">{chapter.rationale}</p>
             </div>
           )}
@@ -820,8 +831,9 @@ function SortableVideoRow({
   allChapters,
   onMoveToChapter,
 }: SortableVideoRowProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: `video:${video.videoId}` })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: `video:${video.videoId}`,
+  })
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -854,7 +866,10 @@ function SortableVideoRow({
       </button>
 
       {/* Video title */}
-      <span className="flex-1 min-w-0 text-sm truncate" title={video.metadata?.title || video.videoId}>
+      <span
+        className="flex-1 min-w-0 text-sm truncate"
+        title={video.metadata?.title || video.videoId}
+      >
         {video.metadata?.title || video.videoId}
       </span>
 
@@ -881,10 +896,7 @@ function SortableVideoRow({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {otherChapters.map(c => (
-              <DropdownMenuItem
-                key={c.id}
-                onClick={() => onMoveToChapter(video.videoId, c.id)}
-              >
+              <DropdownMenuItem key={c.id} onClick={() => onMoveToChapter(video.videoId, c.id)}>
                 Move to {c.title}
               </DropdownMenuItem>
             ))}

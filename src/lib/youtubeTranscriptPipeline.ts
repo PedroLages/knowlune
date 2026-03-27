@@ -71,10 +71,7 @@ interface TranscriptError {
 /**
  * Tier 1: Fetch transcript via youtube-transcript npm package (server-side proxy).
  */
-async function fetchTier1(
-  videoId: string,
-  lang?: string
-): Promise<TranscriptResult> {
+async function fetchTier1(videoId: string, lang?: string): Promise<TranscriptResult> {
   const response = await fetch(TRANSCRIPT_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -83,14 +80,14 @@ async function fetchTier1(
   })
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({
+    const errorData = (await response.json().catch(() => ({
       error: `HTTP ${response.status}`,
       code: 'fetch-error',
-    })) as TranscriptError
+    }))) as TranscriptError
     return { ok: false, code: errorData.code, message: errorData.error }
   }
 
-  const data = await response.json() as TranscriptResponse
+  const data = (await response.json()) as TranscriptResponse
   const fullText = data.cues.map(c => c.text).join(' ')
 
   return {
@@ -134,14 +131,14 @@ async function fetchTier2(
   })
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({
+    const errorData = (await response.json().catch(() => ({
       error: `HTTP ${response.status}`,
       code: 'ytdlp-fetch-error',
-    })) as TranscriptError
+    }))) as TranscriptError
     return { ok: false, code: errorData.code, message: errorData.error }
   }
 
-  const data = await response.json() as YtDlpSubtitlesResponse
+  const data = (await response.json()) as YtDlpSubtitlesResponse
   const cues = parseVTT(data.vtt)
   const fullText = cues.map(c => c.text).join(' ')
 
@@ -187,14 +184,14 @@ async function fetchTier3(
   })
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({
+    const errorData = (await response.json().catch(() => ({
       error: `HTTP ${response.status}`,
       code: 'whisper-fetch-error',
-    })) as TranscriptError
+    }))) as TranscriptError
     return { ok: false, code: errorData.code, message: errorData.error }
   }
 
-  const data = await response.json() as WhisperTranscribeResponse
+  const data = (await response.json()) as WhisperTranscribeResponse
   const cues = parseVTT(data.vtt)
   const fullText = cues.map(c => c.text).join(' ')
 
@@ -244,7 +241,13 @@ export async function fetchTranscript(
     // Only fall back to Tier 2 for specific caption-unavailable errors
     if (!TIER2_FALLBACK_CODES.has(tier1.code)) {
       // Non-fallbackable error (network, timeout, rate-limit) — store as failed
-      const failureRecord = makeFailureRecord(courseId, videoId, lang, 'youtube-transcript', tier1.code)
+      const failureRecord = makeFailureRecord(
+        courseId,
+        videoId,
+        lang,
+        'youtube-transcript',
+        tier1.code
+      )
       await db.youtubeTranscripts.put(failureRecord)
       return tier1
     }
@@ -252,9 +255,8 @@ export async function fetchTranscript(
     // Continue to Tier 2...
   } catch (error) {
     const err = error as Error
-    const code = err.name === 'AbortError' || err.name === 'TimeoutError'
-      ? 'timeout'
-      : 'network-error'
+    const code =
+      err.name === 'AbortError' || err.name === 'TimeoutError' ? 'timeout' : 'network-error'
 
     // Network/timeout errors don't trigger fallback — infrastructure issue, not missing captions
     const failureRecord = makeFailureRecord(courseId, videoId, lang, 'youtube-transcript', code)
@@ -345,7 +347,7 @@ export async function fetchYtDlpMetadata(videoId: string): Promise<YtDlpMetadata
 
     if (!response.ok) return null
 
-    return await response.json() as YtDlpMetadata
+    return (await response.json()) as YtDlpMetadata
   } catch {
     return null
   }
@@ -451,9 +453,7 @@ export async function getTranscript(
 /**
  * Get all transcripts for a course.
  */
-export async function getCourseTranscripts(
-  courseId: string
-): Promise<YouTubeTranscriptRecord[]> {
+export async function getCourseTranscripts(courseId: string): Promise<YouTubeTranscriptRecord[]> {
   return db.youtubeTranscripts.where('courseId').equals(courseId).toArray()
 }
 

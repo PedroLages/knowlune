@@ -2,15 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { Button } from '@/app/components/ui/button'
 import { Progress } from '@/app/components/ui/progress'
 import { Card } from '@/app/components/ui/card'
-import {
-  X,
-  CheckCircle2,
-  Loader2,
-  XCircle,
-  ChevronDown,
-  ChevronUp,
-  FolderOpen,
-} from 'lucide-react'
+import { X, CheckCircle2, Loader2, XCircle, ChevronDown, ChevronUp, FolderOpen } from 'lucide-react'
 import { useImportProgressStore } from '@/stores/useImportProgressStore'
 import type { CourseImportProgress } from '@/stores/useImportProgressStore'
 import { toast } from 'sonner'
@@ -78,10 +70,7 @@ function CourseProgressItem({ course }: { course: CourseImportProgress }) {
             <CheckCircle2 className="size-4 text-success shrink-0" aria-hidden="true" />
           )}
           {(course.phase === 'scanning' || course.phase === 'processing') && !course.error && (
-            <Loader2
-              className="size-4 text-brand animate-spin shrink-0"
-              aria-hidden="true"
-            />
+            <Loader2 className="size-4 text-brand animate-spin shrink-0" aria-hidden="true" />
           )}
           {course.error && (
             <XCircle className="size-4 text-destructive shrink-0" aria-hidden="true" />
@@ -184,8 +173,7 @@ export function ImportProgressOverlay() {
   if (!isVisible || totalCourses === 0) return null
 
   // Overall progress for bulk imports (AC3)
-  const overallPercent =
-    totalCourses > 0 ? Math.round((completedCourses / totalCourses) * 100) : 0
+  const overallPercent = totalCourses > 0 ? Math.round((completedCourses / totalCourses) * 100) : 0
 
   const isBulk = totalCourses > 1
 
@@ -221,11 +209,7 @@ export function ImportProgressOverlay() {
                 className="size-7 p-0"
                 aria-label={expanded ? 'Collapse details' : 'Expand details'}
               >
-                {expanded ? (
-                  <ChevronDown className="size-4" />
-                ) : (
-                  <ChevronUp className="size-4" />
-                )}
+                {expanded ? <ChevronDown className="size-4" /> : <ChevronUp className="size-4" />}
               </Button>
             )}
             <Button

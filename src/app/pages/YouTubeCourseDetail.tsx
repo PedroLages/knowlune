@@ -28,11 +28,7 @@ import { Progress } from '@/app/components/ui/progress'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
 import { Skeleton } from '@/app/components/ui/skeleton'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/app/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/app/components/ui/tooltip'
 import {
   Collapsible,
   CollapsibleContent,
@@ -196,11 +192,7 @@ export function YouTubeCourseDetail() {
 
   if (loading) {
     return (
-      <div
-        className="max-w-3xl mx-auto px-4 py-8"
-        aria-busy="true"
-        aria-label="Loading course"
-      >
+      <div className="max-w-3xl mx-auto px-4 py-8" aria-busy="true" aria-label="Loading course">
         <Skeleton className="h-4 w-32 mb-6" />
         <Skeleton className="h-8 w-64 mb-2" />
         <Skeleton className="h-4 w-48 mb-6" />
@@ -235,7 +227,8 @@ export function YouTubeCourseDetail() {
         >
           <WifiOff className="size-4 text-warning shrink-0" aria-hidden="true" />
           <p className="text-sm text-warning">
-            You are offline. Cached data is shown below. Video playback requires an internet connection.
+            You are offline. Cached data is shown below. Video playback requires an internet
+            connection.
           </p>
         </div>
       )}
@@ -258,9 +251,7 @@ export function YouTubeCourseDetail() {
             {course?.name}
           </h1>
           <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-muted-foreground">
-            {course?.youtubeChannelTitle && (
-              <span>{course.youtubeChannelTitle}</span>
-            )}
+            {course?.youtubeChannelTitle && <span>{course.youtubeChannelTitle}</span>}
             <span aria-hidden="true">&middot;</span>
             <span>
               {videos.length} {videos.length === 1 ? 'video' : 'videos'}
@@ -340,7 +331,10 @@ export function YouTubeCourseDetail() {
                 <div className="flex items-center gap-2">
                   <Sparkles className="size-4 text-brand" aria-hidden="true" />
                   <span className="text-sm font-medium">AI Course Summary</span>
-                  <Badge variant="secondary" className="text-xs bg-brand-soft text-brand-soft-foreground">
+                  <Badge
+                    variant="secondary"
+                    className="text-xs bg-brand-soft text-brand-soft-foreground"
+                  >
                     Premium
                   </Badge>
                 </div>
@@ -356,8 +350,8 @@ export function YouTubeCourseDetail() {
             <CollapsibleContent>
               <div id="ai-summary-content" className="px-4 pb-4 text-sm text-muted-foreground">
                 <p>
-                  AI-generated summaries are created from transcript data. Import transcripts
-                  for this course to enable AI summaries.
+                  AI-generated summaries are created from transcript data. Import transcripts for
+                  this course to enable AI summaries.
                 </p>
               </div>
             </CollapsibleContent>

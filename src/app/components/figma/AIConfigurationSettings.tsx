@@ -520,17 +520,19 @@ export function AIConfigurationSettings() {
                             className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-help"
                             aria-label="Direct connection information"
                           >
-                            <Info
-                              className="size-4 text-muted-foreground"
-                              aria-hidden="true"
-                            />
+                            <Info className="size-4 text-muted-foreground" aria-hidden="true" />
                           </button>
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs bg-popover text-popover-foreground border border-border shadow-md">
+                        <TooltipContent
+                          side="top"
+                          className="max-w-xs bg-popover text-popover-foreground border border-border shadow-md"
+                        >
                           <p>
                             Direct connection sends requests straight from your browser to Ollama.
                             Requires CORS configured on your Ollama server (set{' '}
-                            <code className="text-xs bg-muted/50 text-foreground px-1 py-0.5 rounded border border-border/50">OLLAMA_ORIGINS=*</code>
+                            <code className="text-xs bg-muted/50 text-foreground px-1 py-0.5 rounded border border-border/50">
+                              OLLAMA_ORIGINS=*
+                            </code>
                             ). Proxy mode (default) avoids CORS issues.
                           </p>
                         </TooltipContent>
@@ -558,8 +560,8 @@ export function AIConfigurationSettings() {
                     </p>
                     {isPrivateNetworkUrl(ollamaUrl || settings.ollamaSettings?.serverUrl || '') && (
                       <p className="text-muted-foreground">
-                        Your browser may ask permission to access your local network — click
-                        Allow when prompted. This is normal for LAN connections.
+                        Your browser may ask permission to access your local network — click Allow
+                        when prompted. This is normal for LAN connections.
                       </p>
                     )}
                   </div>

@@ -185,9 +185,6 @@ describe('PWAInstallBanner', () => {
     const { unmount } = render(<PWAInstallBanner />)
     unmount()
 
-    expect(removeEventListenerSpy).toHaveBeenCalledWith(
-      'beforeinstallprompt',
-      expect.any(Function)
-    )
+    expect(removeEventListenerSpy).toHaveBeenCalledWith('beforeinstallprompt', expect.any(Function))
   })
 })

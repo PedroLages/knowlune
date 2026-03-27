@@ -75,12 +75,7 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
   const [newPathName, setNewPathName] = useState('')
 
   // Learning path store
-  const {
-    paths: learningPaths,
-    loadPaths,
-    addCourseToPath,
-    createPath,
-  } = useLearningPathStore()
+  const { paths: learningPaths, loadPaths, addCourseToPath, createPath } = useLearningPathStore()
 
   // Load paths when dialog opens
   useEffect(() => {
@@ -431,11 +426,7 @@ export function ImportWizardDialog({ open, onOpenChange }: ImportWizardDialogPro
                           : 'bg-muted text-muted-foreground'
                     }`}
                   >
-                    {currentStep > s.num ? (
-                      <Check className="size-3" aria-hidden="true" />
-                    ) : (
-                      s.num
-                    )}
+                    {currentStep > s.num ? <Check className="size-3" aria-hidden="true" /> : s.num}
                   </span>
                   <span className={currentStep === s.num ? 'font-medium text-foreground' : ''}>
                     {s.label}

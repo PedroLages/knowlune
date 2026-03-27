@@ -137,16 +137,13 @@ describe('useTrialStatus', () => {
     // Dismissed yesterday
     const yesterday = new Date()
     yesterday.setDate(yesterday.getDate() - 1)
-    localStorage.setItem(
-      'trial-reminder-dismissed-date',
-      yesterday.toISOString().split('T')[0]
-    )
+    localStorage.setItem('trial-reminder-dismissed-date', yesterday.toISOString().split('T')[0])
 
     const { result } = renderHook(() => useTrialStatus())
     expect(result.current.showReminder).toBe(true)
   })
 
-  it('dismissReminder should store today\'s date in localStorage', () => {
+  it("dismissReminder should store today's date in localStorage", () => {
     const futureDate = new Date()
     futureDate.setDate(futureDate.getDate() + 1)
     mockIsPremiumReturn.tier = 'trial'

@@ -13,11 +13,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import {
-  parseYouTubeUrl,
-  parseMultipleYouTubeUrls,
-  isYouTubeUrl,
-} from '@/lib/youtubeUrlParser'
+import { parseYouTubeUrl, parseMultipleYouTubeUrls, isYouTubeUrl } from '@/lib/youtubeUrlParser'
 
 describe('youtubeUrlParser.ts', () => {
   describe('parseYouTubeUrl', () => {

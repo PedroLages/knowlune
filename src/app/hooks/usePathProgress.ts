@@ -97,15 +97,11 @@ export function usePathProgress(entries: LearningPathEntry[]): PathProgressSumma
           : 0
 
         // Get all lesson IDs for this course to only count lesson-level progress
-        const lessonIds = new Set(
-          course?.modules.flatMap(m => m.lessons.map(l => l.id)) ?? []
-        )
+        const lessonIds = new Set(course?.modules.flatMap(m => m.lessons.map(l => l.id)) ?? [])
 
         const completedLessons = allContentProgress.filter(
           cp =>
-            cp.courseId === entry.courseId &&
-            cp.status === 'completed' &&
-            lessonIds.has(cp.itemId)
+            cp.courseId === entry.courseId && cp.status === 'completed' && lessonIds.has(cp.itemId)
         ).length
 
         const pct = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
@@ -187,9 +183,7 @@ export function usePathProgress(entries: LearningPathEntry[]): PathProgressSumma
     }
 
     const overallPct =
-      totalLessonsCount > 0
-        ? Math.round((totalCompletedLessons / totalLessonsCount) * 100)
-        : 0
+      totalLessonsCount > 0 ? Math.round((totalCompletedLessons / totalLessonsCount) * 100) : 0
 
     const remainingLessons = totalLessonsCount - totalCompletedLessons
     const estimatedRemainingHours =
@@ -255,20 +249,36 @@ export function useMultiPathProgress(
 
     const [catalogCourses, allContentProgress, importedCourses, videoProgress] = await Promise.all([
       catalogCourseIds.length > 0
-        // eslint-disable-next-line error-handling/no-silent-catch -- non-critical persistence error
-        ? db.courses.where('id').anyOf(catalogCourseIds).toArray().catch(() => [])
+        ? // eslint-disable-next-line error-handling/no-silent-catch -- non-critical persistence error
+          db.courses
+            .where('id')
+            .anyOf(catalogCourseIds)
+            .toArray()
+            .catch(() => [])
         : Promise.resolve([]),
       catalogCourseIds.length > 0
-        // eslint-disable-next-line error-handling/no-silent-catch -- non-critical persistence error
-        ? db.contentProgress.where('courseId').anyOf(catalogCourseIds).toArray().catch(() => [])
+        ? // eslint-disable-next-line error-handling/no-silent-catch -- non-critical persistence error
+          db.contentProgress
+            .where('courseId')
+            .anyOf(catalogCourseIds)
+            .toArray()
+            .catch(() => [])
         : Promise.resolve([]),
       importedCourseIds.length > 0
-        // eslint-disable-next-line error-handling/no-silent-catch -- non-critical persistence error
-        ? db.importedCourses.where('id').anyOf(importedCourseIds).toArray().catch(() => [])
+        ? // eslint-disable-next-line error-handling/no-silent-catch -- non-critical persistence error
+          db.importedCourses
+            .where('id')
+            .anyOf(importedCourseIds)
+            .toArray()
+            .catch(() => [])
         : Promise.resolve([]),
       importedCourseIds.length > 0
-        // eslint-disable-next-line error-handling/no-silent-catch -- non-critical persistence error
-        ? db.progress.where('courseId').anyOf(importedCourseIds).toArray().catch(() => [])
+        ? // eslint-disable-next-line error-handling/no-silent-catch -- non-critical persistence error
+          db.progress
+            .where('courseId')
+            .anyOf(importedCourseIds)
+            .toArray()
+            .catch(() => [])
         : Promise.resolve([]),
     ])
 
@@ -282,18 +292,19 @@ export function useMultiPathProgress(
     // Catalog courses
     for (const courseId of catalogCourseIds) {
       const course = catalogCourseMap.get(courseId)
-      const totalLessons = course
-        ? course.modules.reduce((sum, m) => sum + m.lessons.length, 0)
-        : 0
-      const lessonIds = new Set(
-        course?.modules.flatMap(m => m.lessons.map(l => l.id)) ?? []
-      )
+      const totalLessons = course ? course.modules.reduce((sum, m) => sum + m.lessons.length, 0) : 0
+      const lessonIds = new Set(course?.modules.flatMap(m => m.lessons.map(l => l.id)) ?? [])
       const completedLessons = allContentProgress.filter(
         cp => cp.courseId === courseId && cp.status === 'completed' && lessonIds.has(cp.itemId)
       ).length
       const pct = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
 
-      courseProgressLookup.set(courseId, { courseId, completedLessons, totalLessons, completionPct: pct })
+      courseProgressLookup.set(courseId, {
+        courseId,
+        completedLessons,
+        totalLessons,
+        completionPct: pct,
+      })
     }
 
     // Imported courses
@@ -305,10 +316,18 @@ export function useMultiPathProgress(
       ).length
       const localCp = localProgress[courseId]
       const completedFromLocal = localCp?.completedLessons?.length ?? 0
-      const completedLessons = Math.min(Math.max(completedFromDexie, completedFromLocal), totalLessons)
+      const completedLessons = Math.min(
+        Math.max(completedFromDexie, completedFromLocal),
+        totalLessons
+      )
       const pct = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
 
-      courseProgressLookup.set(courseId, { courseId, completedLessons, totalLessons, completionPct: pct })
+      courseProgressLookup.set(courseId, {
+        courseId,
+        completedLessons,
+        totalLessons,
+        completionPct: pct,
+      })
     }
 
     // Aggregate per path
@@ -363,7 +382,9 @@ export function useMultiPathProgress(
   useEffect(() => {
     computeAll()
 
-    const handleUpdate = () => { computeAll() }
+    const handleUpdate = () => {
+      computeAll()
+    }
     window.addEventListener(PROGRESS_UPDATED_EVENT, handleUpdate)
     window.addEventListener('storage', handleUpdate)
 

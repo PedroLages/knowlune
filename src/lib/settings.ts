@@ -88,7 +88,9 @@ export function saveSettings(
  * Only overwrites displayName/bio if Supabase has data and localStorage is at defaults.
  * Called from the auth state listener in App.tsx.
  */
-export function hydrateSettingsFromSupabase(userMetadata: Record<string, unknown> | undefined): void {
+export function hydrateSettingsFromSupabase(
+  userMetadata: Record<string, unknown> | undefined
+): void {
   if (!userMetadata) return
 
   const current = getSettings()

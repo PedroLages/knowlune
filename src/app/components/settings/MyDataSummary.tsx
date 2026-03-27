@@ -109,10 +109,7 @@ export function MyDataSummary() {
 
           {/* Account Created */}
           <div className="flex items-center gap-3">
-            <Calendar
-              className="size-4 text-muted-foreground flex-shrink-0"
-              aria-hidden="true"
-            />
+            <Calendar className="size-4 text-muted-foreground flex-shrink-0" aria-hidden="true" />
             <div>
               <p className="text-xs text-muted-foreground">Account Created</p>
               <p className="text-sm font-medium">{createdDate}</p>
@@ -142,9 +139,7 @@ export function MyDataSummary() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium">Export My Data</p>
-              <p className="text-xs text-muted-foreground">
-                Download all your data in JSON format
-              </p>
+              <p className="text-xs text-muted-foreground">Download all your data in JSON format</p>
             </div>
             <Button
               variant="outline"

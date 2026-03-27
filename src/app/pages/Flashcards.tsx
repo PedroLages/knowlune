@@ -1,6 +1,14 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { motion, MotionConfig } from 'motion/react'
-import { Layers, CheckCircle2, RotateCcw, ChevronRight, CalendarDays, BookOpen, WifiOff } from 'lucide-react'
+import {
+  Layers,
+  CheckCircle2,
+  RotateCcw,
+  ChevronRight,
+  CalendarDays,
+  BookOpen,
+  WifiOff,
+} from 'lucide-react'
 import { useFlashcardStore } from '@/stores/useFlashcardStore'
 import { useCourseStore } from '@/stores/useCourseStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'

@@ -27,18 +27,12 @@ test.describe('SessionHistory Error States', () => {
       const originalOpen = indexedDB.open.bind(indexedDB)
       indexedDB.open = function (...args: Parameters<typeof indexedDB.open>) {
         const request = originalOpen(...args)
-        const originalOnSuccess = Object.getOwnPropertyDescriptor(
-          IDBRequest.prototype,
-          'onsuccess'
-        )
+        const originalOnSuccess = Object.getOwnPropertyDescriptor(IDBRequest.prototype, 'onsuccess')
         // Intercept the Dexie DB and make studySessions.toArray() throw
         request.addEventListener('success', () => {
           const db = request.result
           const originalTransaction = db.transaction.bind(db)
-          db.transaction = function (
-            storeNames: string | string[],
-            mode?: IDBTransactionMode
-          ) {
+          db.transaction = function (storeNames: string | string[], mode?: IDBTransactionMode) {
             const stores = Array.isArray(storeNames) ? storeNames : [storeNames]
             if (stores.includes('studySessions')) {
               throw new DOMException('Test-induced IndexedDB error', 'InvalidStateError')
@@ -79,18 +73,18 @@ test.describe('CareerPaths States', () => {
 
     // CareerPaths loads curated paths from CURATED_CAREER_PATHS constant
     // so it should always render paths unless data is corrupted
-    await expect(
-      page.getByRole('heading', { name: 'Career Paths', level: 1 })
-    ).toBeVisible({ timeout: TIMEOUTS.NETWORK })
+    await expect(page.getByRole('heading', { name: 'Career Paths', level: 1 })).toBeVisible({
+      timeout: TIMEOUTS.NETWORK,
+    })
   })
 
   test('should show search empty state when no paths match query', async ({ page }) => {
     await navigateAndWait(page, '/career-paths')
 
     // Wait for page to load
-    await expect(
-      page.getByRole('heading', { name: 'Career Paths', level: 1 })
-    ).toBeVisible({ timeout: TIMEOUTS.NETWORK })
+    await expect(page.getByRole('heading', { name: 'Career Paths', level: 1 })).toBeVisible({
+      timeout: TIMEOUTS.NETWORK,
+    })
 
     // Type a search query that won't match any career paths
     const searchInput = page.getByPlaceholder('Search paths...')

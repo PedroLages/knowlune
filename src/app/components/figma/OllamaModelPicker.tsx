@@ -111,10 +111,7 @@ export function OllamaModelPicker({
           size="sm"
           onClick={() => void fetchModels()}
           disabled={isLoading}
-          className={cn(
-            'h-7 px-2 text-xs',
-            isLoading ? 'text-brand' : 'text-muted-foreground'
-          )}
+          className={cn('h-7 px-2 text-xs', isLoading ? 'text-brand' : 'text-muted-foreground')}
           data-testid="refresh-models-button"
           aria-label={isLoading ? 'Loading models...' : 'Refresh model list'}
         >
@@ -157,9 +154,16 @@ export function OllamaModelPicker({
             <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" aria-hidden="true" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] border border-border bg-popover p-0 shadow-md" align="start">
+        <PopoverContent
+          className="w-[--radix-popover-trigger-width] border border-border bg-popover p-0 shadow-md"
+          align="start"
+        >
           <Command className="rounded-lg border-0">
-            <CommandInput placeholder="Search models..." data-testid="model-search-input" className="border-b border-border" />
+            <CommandInput
+              placeholder="Search models..."
+              data-testid="model-search-input"
+              className="border-b border-border"
+            />
             <CommandList>
               <CommandEmpty>
                 {isLoading ? (

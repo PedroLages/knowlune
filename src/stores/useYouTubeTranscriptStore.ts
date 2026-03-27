@@ -71,7 +71,7 @@ export const useYouTubeTranscriptStore = create<YouTubeTranscriptStoreState>((se
     await fetchTranscriptsBatch(
       courseId,
       videoIds,
-      (progress) => {
+      progress => {
         set({ batchProgress: { ...progress } })
 
         // Update individual video states based on progress
@@ -95,7 +95,7 @@ export const useYouTubeTranscriptStore = create<YouTubeTranscriptStoreState>((se
     return get().videoStates[makeKey(courseId, videoId)]?.status
   },
 
-  loadCourseStates: async (courseId) => {
+  loadCourseStates: async courseId => {
     const records = await getCourseTranscripts(courseId)
     const states: Record<string, VideoTranscriptState> = { ...get().videoStates }
 

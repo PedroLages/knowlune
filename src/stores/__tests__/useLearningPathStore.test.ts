@@ -78,7 +78,9 @@ describe('loadPaths', () => {
       await useLearningPathStore.getState().loadPaths()
     })
 
-    expect(useLearningPathStore.getState().error).toBe('Failed to load learning paths from database')
+    expect(useLearningPathStore.getState().error).toBe(
+      'Failed to load learning paths from database'
+    )
   })
 })
 
@@ -195,10 +197,25 @@ describe('deletePath', () => {
     const pathId = useLearningPathStore.getState().paths[0].id
 
     await db.learningPathEntries.add({
-      id: 'e1', pathId, courseId: 'c1', courseType: 'imported', position: 1, isManuallyOrdered: false,
+      id: 'e1',
+      pathId,
+      courseId: 'c1',
+      courseType: 'imported',
+      position: 1,
+      isManuallyOrdered: false,
     })
     useLearningPathStore.setState(state => ({
-      entries: [...state.entries, { id: 'e1', pathId, courseId: 'c1', courseType: 'imported' as const, position: 1, isManuallyOrdered: false }],
+      entries: [
+        ...state.entries,
+        {
+          id: 'e1',
+          pathId,
+          courseId: 'c1',
+          courseType: 'imported' as const,
+          position: 1,
+          isManuallyOrdered: false,
+        },
+      ],
     }))
 
     await act(async () => {
@@ -482,8 +499,28 @@ describe('generatePath', () => {
   it('should handle AI generation error', async () => {
     // Add 2 courses to pass the length check
     await db.importedCourses.bulkAdd([
-      { id: 'c1', name: 'Course 1', importedAt: '2026-01-01', category: '', tags: [], status: 'active', videoCount: 1, pdfCount: 0, directoryHandle: null },
-      { id: 'c2', name: 'Course 2', importedAt: '2026-01-01', category: '', tags: [], status: 'active', videoCount: 1, pdfCount: 0, directoryHandle: null },
+      {
+        id: 'c1',
+        name: 'Course 1',
+        importedAt: '2026-01-01',
+        category: '',
+        tags: [],
+        status: 'active',
+        videoCount: 1,
+        pdfCount: 0,
+        directoryHandle: null,
+      },
+      {
+        id: 'c2',
+        name: 'Course 2',
+        importedAt: '2026-01-01',
+        category: '',
+        tags: [],
+        status: 'active',
+        videoCount: 1,
+        pdfCount: 0,
+        directoryHandle: null,
+      },
     ])
 
     // Create an active path
@@ -558,9 +595,9 @@ describe('applyAIOrder error handling', () => {
     vi.spyOn(db.learningPathEntries, 'update').mockRejectedValue(new Error('fail'))
 
     await act(async () => {
-      await useLearningPathStore.getState().applyAIOrder(pathId, [
-        { courseId: 'c1', position: 1, justification: 'test' },
-      ])
+      await useLearningPathStore
+        .getState()
+        .applyAIOrder(pathId, [{ courseId: 'c1', position: 1, justification: 'test' }])
     })
 
     expect(useLearningPathStore.getState().error).toBe('Failed to save AI-suggested order')

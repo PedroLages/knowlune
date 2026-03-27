@@ -84,9 +84,7 @@ describe('findActiveCueIndex', () => {
   })
 
   it('should return -1 when currentTime is before all cues', () => {
-    const cues: TranscriptCue[] = [
-      { startTime: 10, endTime: 20, text: 'First cue' },
-    ]
+    const cues: TranscriptCue[] = [{ startTime: 10, endTime: 20, text: 'First cue' }]
     expect(findActiveCueIndex(cues, 5)).toBe(-1)
   })
 

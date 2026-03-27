@@ -168,10 +168,7 @@ export function VirtualizedGrid<T>({
       style={{ maxHeight }}
       data-testid={testId}
     >
-      <div
-        className="relative w-full"
-        style={{ height: `${virtualizer.getTotalSize()}px` }}
-      >
+      <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
         {virtualRows.map(virtualRow => {
           const startIndex = virtualRow.index * columns
           const rowItems = items.slice(startIndex, startIndex + columns)
@@ -196,9 +193,7 @@ export function VirtualizedGrid<T>({
                 {rowItems.map((item, colIndex) => {
                   const globalIndex = startIndex + colIndex
                   return (
-                    <div key={getItemKey(item, globalIndex)}>
-                      {renderItem(item, globalIndex)}
-                    </div>
+                    <div key={getItemKey(item, globalIndex)}>{renderItem(item, globalIndex)}</div>
                   )
                 })}
               </div>

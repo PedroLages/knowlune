@@ -142,12 +142,7 @@ function SortableCourseRow({
             {/* Thumbnail */}
             <div className="size-12 shrink-0 rounded-lg bg-muted overflow-hidden">
               {thumbnailUrl ? (
-                <img
-                  src={thumbnailUrl}
-                  alt=""
-                  className="size-full object-cover"
-                  loading="lazy"
-                />
+                <img src={thumbnailUrl} alt="" className="size-full object-cover" loading="lazy" />
               ) : (
                 <div className="size-full flex items-center justify-center">
                   <BookOpen className="size-5 text-muted-foreground" aria-hidden="true" />
@@ -196,9 +191,7 @@ function SortableCourseRow({
                     Completed
                   </Badge>
                 ) : (
-                  <span className="text-xs text-muted-foreground">
-                    {completionPct}% complete
-                  </span>
+                  <span className="text-xs text-muted-foreground">{completionPct}% complete</span>
                 )}
               </div>
             </div>
@@ -298,7 +291,10 @@ function CoursePickerDialog({
   useEffect(() => {
     if (open) {
       // silent-catch-ok — fallback to empty array if catalog unavailable
-      db.courses.toArray().then(setCatalogCourses).catch(() => setCatalogCourses([]))
+      db.courses
+        .toArray()
+        .then(setCatalogCourses)
+        .catch(() => setCatalogCourses([]))
       setSearch('')
     }
   }, [open])
@@ -331,8 +327,7 @@ function CoursePickerDialog({
     if (!q) return all
     return all.filter(
       c =>
-        c.name.toLowerCase().includes(q) ||
-        (c.authorName && c.authorName.toLowerCase().includes(q))
+        c.name.toLowerCase().includes(q) || (c.authorName && c.authorName.toLowerCase().includes(q))
     )
   }, [importedCourses, catalogCourses, existingCourseIds, search, authors, thumbnailUrls])
 
@@ -356,9 +351,7 @@ function CoursePickerDialog({
       <DialogContent className="sm:max-w-lg max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Add Course</DialogTitle>
-          <DialogDescription>
-            Select a course to add to this learning path.
-          </DialogDescription>
+          <DialogDescription>Select a course to add to this learning path.</DialogDescription>
         </DialogHeader>
 
         <div className="relative">
@@ -488,14 +481,19 @@ export function LearningPathDetail() {
       loadImportedCourses(),
       loadAuthors(),
       // silent-catch-ok — fallback to empty array if catalog unavailable
-      db.courses.toArray().then(setCatalogCourses).catch(() => []),
-    ]).then(() => {
-      if (!ignore) setIsLoaded(true)
-    }).catch(err => {
-      console.error('[LearningPathDetail] Failed to load:', err)
-      toast.error('Failed to load path data')
-      if (!ignore) setIsLoaded(true)
-    })
+      db.courses
+        .toArray()
+        .then(setCatalogCourses)
+        .catch(() => []),
+    ])
+      .then(() => {
+        if (!ignore) setIsLoaded(true)
+      })
+      .catch(err => {
+        console.error('[LearningPathDetail] Failed to load:', err)
+        toast.error('Failed to load path data')
+        if (!ignore) setIsLoaded(true)
+      })
     return () => {
       ignore = true
     }
@@ -547,7 +545,12 @@ export function LearningPathDetail() {
     for (const cc of catalogCourses) {
       const authorName = authors.find(a => a.id === cc.authorId)?.name
       const cpInfo = pathProgress.courseProgress.get(cc.id)
-      map.set(cc.id, { name: cc.title, type: 'catalog', authorName, completionPct: cpInfo?.completionPct ?? 0 })
+      map.set(cc.id, {
+        name: cc.title,
+        type: 'catalog',
+        authorName,
+        completionPct: cpInfo?.completionPct ?? 0,
+      })
     }
 
     return map
@@ -696,17 +699,22 @@ export function LearningPathDetail() {
     [courseEntries, courseInfo]
   )
   const currentEntry = useMemo(
-    () => courseEntries.find(e => {
-      const pct = courseInfo.get(e.courseId)?.completionPct ?? 0
-      return pct > 0 && pct < 100
-    }) ?? (courseEntries.length > completedEntries.length ? courseEntries[completedEntries.length] : null),
+    () =>
+      courseEntries.find(e => {
+        const pct = courseInfo.get(e.courseId)?.completionPct ?? 0
+        return pct > 0 && pct < 100
+      }) ??
+      (courseEntries.length > completedEntries.length
+        ? courseEntries[completedEntries.length]
+        : null),
     [courseEntries, courseInfo, completedEntries.length]
   )
   const upcomingEntries = useMemo(
-    () => courseEntries.filter(e => {
-      const pct = courseInfo.get(e.courseId)?.completionPct ?? 0
-      return pct === 0 && e !== currentEntry
-    }),
+    () =>
+      courseEntries.filter(e => {
+        const pct = courseInfo.get(e.courseId)?.completionPct ?? 0
+        return pct === 0 && e !== currentEntry
+      }),
     [courseEntries, courseInfo, currentEntry]
   )
   const currentIndex = currentEntry ? courseEntries.indexOf(currentEntry) : -1
@@ -734,7 +742,10 @@ export function LearningPathDetail() {
         </motion.div>
 
         {/* Header */}
-        <motion.div variants={fadeUp} className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <motion.div
+          variants={fadeUp}
+          className="flex flex-col md:flex-row md:items-end justify-between gap-6"
+        >
           <div>
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight font-display mb-4">
               {path.name}
@@ -753,8 +764,8 @@ export function LearningPathDetail() {
               </span>
               {pathProgress.estimatedRemainingHours > 0 && (
                 <span className="flex items-center gap-1.5">
-                  <Flame className="size-4 text-brand" aria-hidden="true" />
-                  ~{pathProgress.estimatedRemainingHours}h remaining
+                  <Flame className="size-4 text-brand" aria-hidden="true" />~
+                  {pathProgress.estimatedRemainingHours}h remaining
                 </span>
               )}
             </div>
@@ -799,64 +810,67 @@ export function LearningPathDetail() {
             {/* Left Column: Primary Content */}
             <div className="lg:col-span-8 space-y-12">
               {/* Hero: Now Learning */}
-              {currentEntry && (() => {
-                const info = courseInfo.get(currentEntry.courseId)
-                const pct = info?.completionPct ?? 0
-                return (
-                  <motion.section variants={fadeUp}>
-                    <Card className="overflow-hidden shadow-xl border-brand/20 rounded-[24px]">
-                      <div className="flex flex-col md:flex-row min-h-[280px]">
-                        {/* Thumbnail */}
-                        <div className="md:w-5/12 relative bg-muted">
-                          {thumbnailUrls[currentEntry.courseId] ? (
-                            <img
-                              src={thumbnailUrls[currentEntry.courseId]}
-                              alt=""
-                              className="h-full w-full object-cover"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="h-full min-h-[200px] flex items-center justify-center bg-gradient-to-br from-brand/10 to-brand/30">
-                              <BookOpen className="size-16 text-brand/40" aria-hidden="true" />
-                            </div>
-                          )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
-                            <Badge className="bg-brand/80 backdrop-blur-sm text-brand-foreground text-xs uppercase tracking-wider">
-                              Now Learning
-                            </Badge>
-                          </div>
-                        </div>
-                        {/* Info */}
-                        <div className="md:w-7/12 p-8 flex flex-col justify-between">
-                          <div>
-                            <h3 className="text-2xl md:text-3xl font-bold mb-2">{info?.name || 'Unknown Course'}</h3>
-                            <p className="text-muted-foreground mb-6 flex items-center gap-2 font-medium">
-                              {info?.authorName && <>{info.authorName} • </>}
-                              <span className="text-brand">{pct}% Complete</span>
-                            </p>
-                            <div className="w-full bg-muted h-2.5 rounded-full mb-6">
-                              <div
-                                className="bg-brand h-full rounded-full transition-all duration-300"
-                                style={{ width: `${pct}%` }}
+              {currentEntry &&
+                (() => {
+                  const info = courseInfo.get(currentEntry.courseId)
+                  const pct = info?.completionPct ?? 0
+                  return (
+                    <motion.section variants={fadeUp}>
+                      <Card className="overflow-hidden shadow-xl border-brand/20 rounded-[24px]">
+                        <div className="flex flex-col md:flex-row min-h-[280px]">
+                          {/* Thumbnail */}
+                          <div className="md:w-5/12 relative bg-muted">
+                            {thumbnailUrls[currentEntry.courseId] ? (
+                              <img
+                                src={thumbnailUrls[currentEntry.courseId]}
+                                alt=""
+                                className="h-full w-full object-cover"
+                                loading="lazy"
                               />
+                            ) : (
+                              <div className="h-full min-h-[200px] flex items-center justify-center bg-gradient-to-br from-brand/10 to-brand/30">
+                                <BookOpen className="size-16 text-brand/40" aria-hidden="true" />
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
+                              <Badge className="bg-brand/80 backdrop-blur-sm text-brand-foreground text-xs uppercase tracking-wider">
+                                Now Learning
+                              </Badge>
                             </div>
                           </div>
-                          <Button
-                            variant="brand"
-                            className="w-full md:w-fit px-8 py-4 shadow-lg shadow-brand/20"
-                            asChild
-                          >
-                            <Link to={`/courses/${currentEntry.courseId}`}>
-                              Continue Learning
-                              <ArrowRight className="size-4 ml-2" aria-hidden="true" />
-                            </Link>
-                          </Button>
+                          {/* Info */}
+                          <div className="md:w-7/12 p-8 flex flex-col justify-between">
+                            <div>
+                              <h3 className="text-2xl md:text-3xl font-bold mb-2">
+                                {info?.name || 'Unknown Course'}
+                              </h3>
+                              <p className="text-muted-foreground mb-6 flex items-center gap-2 font-medium">
+                                {info?.authorName && <>{info.authorName} • </>}
+                                <span className="text-brand">{pct}% Complete</span>
+                              </p>
+                              <div className="w-full bg-muted h-2.5 rounded-full mb-6">
+                                <div
+                                  className="bg-brand h-full rounded-full transition-all duration-300"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                            </div>
+                            <Button
+                              variant="brand"
+                              className="w-full md:w-fit px-8 py-4 shadow-lg shadow-brand/20"
+                              asChild
+                            >
+                              <Link to={`/courses/${currentEntry.courseId}`}>
+                                Continue Learning
+                                <ArrowRight className="size-4 ml-2" aria-hidden="true" />
+                              </Link>
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    </Card>
-                  </motion.section>
-                )
-              })()}
+                      </Card>
+                    </motion.section>
+                  )
+                })()}
 
               {/* Completed Courses Strip */}
               {completedEntries.length > 0 && (
@@ -880,7 +894,10 @@ export function LearningPathDetail() {
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center">
-                                <BookOpen className="size-6 text-muted-foreground" aria-hidden="true" />
+                                <BookOpen
+                                  className="size-6 text-muted-foreground"
+                                  aria-hidden="true"
+                                />
                               </div>
                             )}
                             <div className="absolute top-2 right-2 bg-success text-success-foreground rounded-full p-0.5">
@@ -971,12 +988,17 @@ export function LearningPathDetail() {
                       {upcomingEntries.slice(0, 3).map((entry, i) => {
                         const info = courseInfo.get(entry.courseId)
                         return (
-                          <div key={entry.courseId} className={cn('flex items-start gap-4', i > 0 && 'opacity-60')}>
+                          <div
+                            key={entry.courseId}
+                            className={cn('flex items-start gap-4', i > 0 && 'opacity-60')}
+                          >
                             <div className="size-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
                               <Lock className="size-4 text-muted-foreground" aria-hidden="true" />
                             </div>
                             <div>
-                              <h4 className="font-bold text-foreground">{info?.name || 'Unknown Course'}</h4>
+                              <h4 className="font-bold text-foreground">
+                                {info?.name || 'Unknown Course'}
+                              </h4>
                               {info?.authorName && (
                                 <p className="text-xs text-muted-foreground font-medium mt-1">
                                   {info.authorName}
@@ -999,8 +1021,8 @@ export function LearningPathDetail() {
               )}
 
               {/* Suggest Order */}
-              {courseEntries.length >= 2 && (
-                isOrderSuggestionAvailable() ? (
+              {courseEntries.length >= 2 &&
+                (isOrderSuggestionAvailable() ? (
                   <button
                     className="w-full bg-brand-soft p-6 rounded-[24px] border border-brand/20 flex items-center justify-between group hover:bg-brand-muted transition-all text-left"
                     onClick={handleSuggestOrder}
@@ -1019,7 +1041,10 @@ export function LearningPathDetail() {
                         {isSuggesting ? 'Analyzing...' : 'Suggest Order'}
                       </span>
                     </div>
-                    <ChevronRight className="size-5 text-muted-foreground group-hover:text-brand transition-colors" aria-hidden="true" />
+                    <ChevronRight
+                      className="size-5 text-muted-foreground group-hover:text-brand transition-colors"
+                      aria-hidden="true"
+                    />
                   </button>
                 ) : (
                   <Link
@@ -1031,11 +1056,12 @@ export function LearningPathDetail() {
                       <div className="size-10 rounded-full bg-card flex items-center justify-center text-muted-foreground shadow-sm">
                         <Settings className="size-5" aria-hidden="true" />
                       </div>
-                      <span className="font-medium text-muted-foreground">Configure AI for ordering</span>
+                      <span className="font-medium text-muted-foreground">
+                        Configure AI for ordering
+                      </span>
                     </div>
                   </Link>
-                )
-              )}
+                ))}
 
               {/* Daily Tip Card */}
               <div className="p-6 bg-gradient-to-br from-brand to-brand-hover rounded-[24px] text-brand-foreground">
@@ -1046,7 +1072,8 @@ export function LearningPathDetail() {
                   &quot;Focus on one concept at a time.&quot;
                 </h4>
                 <p className="text-brand-foreground/80 text-sm leading-relaxed">
-                  Multitasking while learning reduces retention. Master each course before moving to the next.
+                  Multitasking while learning reduces retention. Master each course before moving to
+                  the next.
                 </p>
               </div>
             </aside>
@@ -1073,8 +1100,8 @@ export function LearningPathDetail() {
               </span>
             </DialogTitle>
             <DialogDescription>
-              Review the suggested course sequence. Accepting will reorder all courses and set
-              AI justifications.
+              Review the suggested course sequence. Accepting will reorder all courses and set AI
+              justifications.
             </DialogDescription>
           </DialogHeader>
 
@@ -1082,9 +1109,7 @@ export function LearningPathDetail() {
             <div className="flex-1 overflow-y-auto min-h-0 -mx-6 px-6 space-y-3">
               {/* Overall rationale */}
               <div className="rounded-xl border border-brand/20 bg-brand-soft/30 p-3">
-                <p className="text-sm text-muted-foreground italic">
-                  {orderSuggestion.rationale}
-                </p>
+                <p className="text-sm text-muted-foreground italic">{orderSuggestion.rationale}</p>
               </div>
 
               {/* Suggested order list */}
@@ -1130,11 +1155,7 @@ export function LearningPathDetail() {
             >
               Cancel
             </Button>
-            <Button
-              variant="brand"
-              onClick={handleAcceptOrder}
-              data-testid="accept-order-button"
-            >
+            <Button variant="brand" onClick={handleAcceptOrder} data-testid="accept-order-button">
               Accept Order
             </Button>
           </DialogFooter>

@@ -86,7 +86,10 @@ function detectNumberedSequences(videos: GroupingVideo[]): VideoChapter[] {
       if (match) {
         // Extract the prefix before the number for grouping
         const prefixEnd = video.title.indexOf(match[0])
-        const prefix = video.title.slice(0, prefixEnd).replace(/[-–—:,\s]+$/, '').trim()
+        const prefix = video.title
+          .slice(0, prefixEnd)
+          .replace(/[-–—:,\s]+$/, '')
+          .trim()
         const groupKey = prefix || 'Series'
         if (!groups.has(groupKey)) groups.set(groupKey, [])
         groups.get(groupKey)!.push(video)
@@ -102,9 +105,7 @@ function detectNumberedSequences(videos: GroupingVideo[]): VideoChapter[] {
   }
 
   // Only return if we found meaningful groups (at least one with >1 video)
-  const meaningfulGroups = [...groups.entries()].filter(
-    ([key]) => key !== '__ungrouped__'
-  )
+  const meaningfulGroups = [...groups.entries()].filter(([key]) => key !== '__ungrouped__')
   if (meaningfulGroups.length === 0) return []
 
   const chapters: VideoChapter[] = []
@@ -172,12 +173,57 @@ function detectCommonPrefixes(videos: GroupingVideo[]): VideoChapter[] {
 
 /** Stop words to filter from TF-IDF analysis */
 const STOP_WORDS = new Set([
-  'a', 'an', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-  'of', 'with', 'by', 'from', 'is', 'it', 'this', 'that', 'are', 'was',
-  'be', 'has', 'have', 'had', 'do', 'does', 'did', 'will', 'would',
-  'could', 'should', 'may', 'might', 'how', 'what', 'why', 'when',
-  'where', 'who', 'which', 'part', 'lesson', 'chapter', 'episode',
-  'tutorial', 'introduction', 'intro', 'video', 'full', 'complete',
+  'a',
+  'an',
+  'the',
+  'and',
+  'or',
+  'but',
+  'in',
+  'on',
+  'at',
+  'to',
+  'for',
+  'of',
+  'with',
+  'by',
+  'from',
+  'is',
+  'it',
+  'this',
+  'that',
+  'are',
+  'was',
+  'be',
+  'has',
+  'have',
+  'had',
+  'do',
+  'does',
+  'did',
+  'will',
+  'would',
+  'could',
+  'should',
+  'may',
+  'might',
+  'how',
+  'what',
+  'why',
+  'when',
+  'where',
+  'who',
+  'which',
+  'part',
+  'lesson',
+  'chapter',
+  'episode',
+  'tutorial',
+  'introduction',
+  'intro',
+  'video',
+  'full',
+  'complete',
 ])
 
 /** Tokenize a string into lowercase words, filtering stop words and short tokens */

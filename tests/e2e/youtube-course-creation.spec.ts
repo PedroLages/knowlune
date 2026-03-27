@@ -25,7 +25,12 @@ const DELETED_VIDEO_URL = 'https://www.youtube.com/watch?v=deleted_vid_01'
 
 // --- Mock Data ---
 
-function buildMockVideoResponse(videoId: string, title: string, channel: string, durationIso: string) {
+function buildMockVideoResponse(
+  videoId: string,
+  title: string,
+  channel: string,
+  durationIso: string
+) {
   return {
     id: videoId,
     snippet: {
@@ -60,10 +65,13 @@ const MOCK_VIDEOS = [
  */
 async function seedYouTubeApiKey(page: import('@playwright/test').Page) {
   await page.addInitScript(() => {
-    localStorage.setItem('youtube-configuration', JSON.stringify({
-      cacheTtlDays: 7,
-      _testApiKey: 'AIzaFAKEtest00000000000000000000000000',
-    }))
+    localStorage.setItem(
+      'youtube-configuration',
+      JSON.stringify({
+        cacheTtlDays: 7,
+        _testApiKey: 'AIzaFAKEtest00000000000000000000000000',
+      })
+    )
   })
 }
 
@@ -71,11 +79,14 @@ async function seedYouTubeApiKey(page: import('@playwright/test').Page) {
  * Sets up page.route() to intercept YouTube Data API v3 video requests.
  * Returns mock metadata for known video IDs; errors for special IDs.
  */
-async function mockYouTubeApi(page: import('@playwright/test').Page, opts?: {
-  rateLimitAll?: boolean
-}) {
+async function mockYouTubeApi(
+  page: import('@playwright/test').Page,
+  opts?: {
+    rateLimitAll?: boolean
+  }
+) {
   // Mock YouTube Data API v3 videos endpoint
-  await page.route('**/googleapis.com/youtube/v3/videos**', async (route) => {
+  await page.route('**/googleapis.com/youtube/v3/videos**', async route => {
     if (opts?.rateLimitAll) {
       await route.fulfill({
         status: 429,
@@ -124,9 +135,7 @@ async function mockYouTubeApi(page: import('@playwright/test').Page, opts?: {
     }
 
     // Return mock metadata for known videos
-    const items = ids
-      .map(id => MOCK_VIDEOS.find(v => v.id === id))
-      .filter(Boolean)
+    const items = ids.map(id => MOCK_VIDEOS.find(v => v.id === id)).filter(Boolean)
 
     await route.fulfill({
       status: 200,
@@ -139,7 +148,7 @@ async function mockYouTubeApi(page: import('@playwright/test').Page, opts?: {
   })
 
   // Mock oEmbed endpoint (fallback when API quota exceeded)
-  await page.route('**/youtube.com/oembed**', async (route) => {
+  await page.route('**/youtube.com/oembed**', async route => {
     const url = new URL(route.request().url())
     const videoUrl = url.searchParams.get('url') ?? ''
     const videoIdMatch = videoUrl.match(/[?&]v=([^&]+)/)
@@ -163,7 +172,7 @@ async function mockYouTubeApi(page: import('@playwright/test').Page, opts?: {
   })
 
   // Block any real YouTube thumbnail requests
-  await page.route('**/i.ytimg.com/**', async (route) => {
+  await page.route('**/i.ytimg.com/**', async route => {
     // Return a 1x1 transparent PNG to avoid broken image errors
     await route.fulfill({
       status: 200,
@@ -225,7 +234,9 @@ async function advanceToStep3(page: import('@playwright/test').Page) {
 
   // Step 3 shows the chapter editor
   const stepIndicator = page.getByTestId('step-indicator')
-  await expect(stepIndicator.getByText('3 Organize')).toHaveAttribute('aria-current', 'step', { timeout: 5000 })
+  await expect(stepIndicator.getByText('3 Organize')).toHaveAttribute('aria-current', 'step', {
+    timeout: 5000,
+  })
 }
 
 /**
@@ -360,7 +371,9 @@ test.describe('YouTube Course Creation — Error Scenarios (AC3)', () => {
 
     // The video should show error state or unavailable banner
     // (403 is classified as a non-OK response by fetchVideoBatch)
-    const errorOrUnavailable = page.locator('[data-testid="unavailable-banner"], [data-testid^="video-row-"]')
+    const errorOrUnavailable = page.locator(
+      '[data-testid="unavailable-banner"], [data-testid^="video-row-"]'
+    )
     await expect(errorOrUnavailable.first()).toBeVisible({ timeout: 5000 })
   })
 
@@ -460,7 +473,9 @@ test.describe('YouTube Course Creation — Course Detail Verification (AC4)', ()
     await expect(page.getByTestId('youtube-course-detail')).toBeVisible({ timeout: 10000 })
 
     // Verify title
-    await expect(page.getByTestId('course-detail-title')).toContainText('Detail Verification Course')
+    await expect(page.getByTestId('course-detail-title')).toContainText(
+      'Detail Verification Course'
+    )
 
     // Verify video list
     await expect(page.getByTestId('course-content-list')).toBeVisible()

@@ -41,14 +41,8 @@ import {
   Play,
   Sparkles,
 } from 'lucide-react'
-import {
-  parseMultipleYouTubeUrls,
-  type YouTubeUrlParseResult,
-} from '@/lib/youtubeUrlParser'
-import {
-  getVideoMetadataBatch,
-  getPlaylistItems,
-} from '@/lib/youtubeApi'
+import { parseMultipleYouTubeUrls, type YouTubeUrlParseResult } from '@/lib/youtubeUrlParser'
+import { getVideoMetadataBatch, getPlaylistItems } from '@/lib/youtubeApi'
 import {
   useYouTubeImportStore,
   type YouTubeUrlEntry,
@@ -62,7 +56,11 @@ import {
 } from '@/app/components/figma/YouTubeCourseDetailsForm'
 import { isAIAvailable } from '@/lib/aiConfiguration'
 import { useIsPremium } from '@/lib/entitlement/isPremium'
-import { structureCourseWithAI, aiChaptersToVideoChapters, type StructuringVideo } from '@/ai/youtube/courseStructurer'
+import {
+  structureCourseWithAI,
+  aiChaptersToVideoChapters,
+  type StructuringVideo,
+} from '@/ai/youtube/courseStructurer'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useYouTubeTranscriptStore } from '@/stores/useYouTubeTranscriptStore'
 import { toast } from 'sonner'
@@ -190,7 +188,11 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
             r => r.type === 'video' || r.type === 'short' || r.type === 'embed'
           )
 
-          if (playlists.length === 1 && singleVideos.length === 0 && videosInPlaylist.length === 0) {
+          if (
+            playlists.length === 1 &&
+            singleVideos.length === 0 &&
+            videosInPlaylist.length === 0
+          ) {
             store.setFeedback('Playlist detected', 'success')
           } else if (videosInPlaylist.length > 0) {
             // Show playlist choice prompt for the first video-in-playlist
@@ -340,7 +342,8 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
           </DialogTitle>
           <DialogDescription id="youtube-import-description">
             {store.currentStep === 1 && 'Paste YouTube video or playlist URLs to get started.'}
-            {store.currentStep === 2 && 'Preview the detected videos before organizing your course.'}
+            {store.currentStep === 2 &&
+              'Preview the detected videos before organizing your course.'}
             {store.currentStep === 3 &&
               (isAIStructuring
                 ? 'AI is organizing your videos into chapters...'
@@ -356,15 +359,14 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
         {store.currentStep === 1 && (
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <label
-                htmlFor="youtube-url-input"
-                className="text-sm font-medium text-foreground"
-              >
+              <label htmlFor="youtube-url-input" className="text-sm font-medium text-foreground">
                 YouTube URLs
               </label>
               <Textarea
                 id="youtube-url-input"
-                placeholder={'Paste YouTube video or playlist URLs here (one per line)\n\nhttps://youtube.com/watch?v=...\nhttps://youtube.com/playlist?list=...'}
+                placeholder={
+                  'Paste YouTube video or playlist URLs here (one per line)\n\nhttps://youtube.com/watch?v=...\nhttps://youtube.com/playlist?list=...'
+                }
                 value={store.urlInput}
                 onChange={e => handleUrlChange(e.target.value)}
                 className={`min-h-[140px] resize-none font-mono text-sm ${
@@ -416,9 +418,7 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
                 data-testid="playlist-choice-prompt"
                 role="alert"
               >
-                <p className="text-sm text-foreground">
-                  This video is part of a playlist.
-                </p>
+                <p className="text-sm text-foreground">This video is part of a playlist.</p>
                 <div className="flex gap-2">
                   <Button
                     variant="brand"
@@ -481,18 +481,13 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
               className="max-h-[50vh] [mask-image:linear-gradient(to_bottom,transparent_0,black_16px,black_calc(100%-16px),transparent_100%)]"
               data-testid="video-preview-list"
             >
-              <div
-                className="space-y-2 pr-3"
-                role="list"
-                aria-label="Video preview list"
-              >
-                {store.isFetchingMetadata && store.videos.filter(v => v.status === 'pending').length > 0
+              <div className="space-y-2 pr-3" role="list" aria-label="Video preview list">
+                {store.isFetchingMetadata &&
+                store.videos.filter(v => v.status === 'pending').length > 0
                   ? /* Skeleton placeholders */
                     store.videos
                       .filter(v => v.status === 'pending')
-                      .map(v => (
-                        <VideoRowSkeleton key={v.videoId} />
-                      ))
+                      .map(v => <VideoRowSkeleton key={v.videoId} />)
                   : null}
 
                 {activeVideos.map(video => (
@@ -508,7 +503,8 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
             {/* Active video count */}
             {!store.isFetchingMetadata && activeVideos.length > 0 && (
               <p className="text-sm text-muted-foreground text-center">
-                {activeVideos.length} {activeVideos.length === 1 ? 'video' : 'videos'} in import list
+                {activeVideos.length} {activeVideos.length === 1 ? 'video' : 'videos'} in import
+                list
               </p>
             )}
           </div>
@@ -526,11 +522,17 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
                 aria-label="AI is analyzing video metadata"
                 data-testid="ai-structuring-loading"
               >
-                <Sparkles className="size-4 text-brand-soft-foreground motion-safe:animate-pulse" aria-hidden="true" />
+                <Sparkles
+                  className="size-4 text-brand-soft-foreground motion-safe:animate-pulse"
+                  aria-hidden="true"
+                />
                 <p className="text-sm text-brand-soft-foreground font-medium">
                   AI is analyzing video metadata and organizing your course...
                 </p>
-                <Loader2 className="size-4 text-brand-soft-foreground ml-auto motion-safe:animate-spin" aria-hidden="true" />
+                <Loader2
+                  className="size-4 text-brand-soft-foreground ml-auto motion-safe:animate-spin"
+                  aria-hidden="true"
+                />
               </div>
             )}
 
@@ -601,7 +603,9 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
                   handleOpenChange(false)
 
                   // Show success toast
-                  toast.success(`Course created — ${videoCount} ${videoCount === 1 ? 'video' : 'videos'} ready to study`)
+                  toast.success(
+                    `Course created — ${videoCount} ${videoCount === 1 ? 'video' : 'videos'} ready to study`
+                  )
 
                   // Start background transcript extraction (E28-S04 / Story 23.4)
                   if (videoIds.length > 0) {
@@ -616,7 +620,9 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
                       label: 'Retry',
                       onClick: () => {
                         // Re-trigger the button click via the same path
-                        const btn = document.querySelector('[data-testid="wizard-save-btn"]') as HTMLButtonElement
+                        const btn = document.querySelector(
+                          '[data-testid="wizard-save-btn"]'
+                        ) as HTMLButtonElement
                         btn?.click()
                       },
                     },
@@ -729,7 +735,8 @@ export function YouTubeImportDialog({ open, onOpenChange }: YouTubeImportDialogP
                   }
 
                   // Pre-fill description from first video
-                  const defaultDescription = loadedVideos[0]?.metadata?.description?.slice(0, 500) ?? ''
+                  const defaultDescription =
+                    loadedVideos[0]?.metadata?.description?.slice(0, 500) ?? ''
 
                   setCourseDetails({
                     name: defaultName,
@@ -780,10 +787,7 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
         return (
           <div key={step} className="flex items-center">
             {index > 0 && (
-              <ChevronRight
-                className="size-3 text-muted-foreground mx-1"
-                aria-hidden="true"
-              />
+              <ChevronRight className="size-3 text-muted-foreground mx-1" aria-hidden="true" />
             )}
             <span
               className={`text-xs font-medium px-2 py-1 rounded-full transition-colors ${
@@ -826,13 +830,7 @@ function VideoRowSkeleton() {
 }
 
 /** Single video preview row with metadata */
-function VideoPreviewRow({
-  video,
-  onRemove,
-}: {
-  video: YouTubeImportVideo
-  onRemove: () => void
-}) {
+function VideoPreviewRow({ video, onRemove }: { video: YouTubeImportVideo; onRemove: () => void }) {
   const isUnavailable = video.status === 'unavailable'
   const isLoading = video.status === 'loading' || video.status === 'pending'
 
@@ -885,9 +883,7 @@ function VideoPreviewRow({
           {video.metadata?.title || video.videoId}
         </p>
         {video.metadata?.channelTitle && (
-          <p className="text-xs text-muted-foreground truncate">
-            {video.metadata.channelTitle}
-          </p>
+          <p className="text-xs text-muted-foreground truncate">{video.metadata.channelTitle}</p>
         )}
         {video.status === 'error' && video.error && (
           <p className="text-xs text-destructive truncate">{video.error}</p>
@@ -896,10 +892,7 @@ function VideoPreviewRow({
 
       {/* Duration badge */}
       {video.metadata && video.metadata.duration > 0 && (
-        <Badge
-          variant="secondary"
-          className="shrink-0 tabular-nums text-xs"
-        >
+        <Badge variant="secondary" className="shrink-0 tabular-nums text-xs">
           {formatDuration(video.metadata.duration)}
         </Badge>
       )}

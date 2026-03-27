@@ -155,7 +155,10 @@ test.describe('Change Password flow', () => {
 
     // Fill password fields
     await changePasswordSection.getByLabel(/current password/i).fill(TEST_PASSWORD)
-    await changePasswordSection.getByLabel(/new password/i).first().fill(NEW_PASSWORD)
+    await changePasswordSection
+      .getByLabel(/new password/i)
+      .first()
+      .fill(NEW_PASSWORD)
     await changePasswordSection.getByLabel(/confirm.*password/i).fill(NEW_PASSWORD)
 
     // Submit
@@ -178,7 +181,10 @@ test.describe('Change Password flow', () => {
     await expect(changePasswordSection).toBeVisible()
 
     await changePasswordSection.getByLabel(/current password/i).fill(TEST_PASSWORD)
-    await changePasswordSection.getByLabel(/new password/i).first().fill(NEW_PASSWORD)
+    await changePasswordSection
+      .getByLabel(/new password/i)
+      .first()
+      .fill(NEW_PASSWORD)
     await changePasswordSection.getByLabel(/confirm.*password/i).fill('DifferentPassword!')
 
     const submitButton = changePasswordSection.getByRole('button', {
@@ -200,7 +206,10 @@ test.describe('Change Password flow', () => {
     await expect(changePasswordSection).toBeVisible()
 
     await changePasswordSection.getByLabel(/current password/i).fill(TEST_PASSWORD)
-    await changePasswordSection.getByLabel(/new password/i).first().fill('ab')
+    await changePasswordSection
+      .getByLabel(/new password/i)
+      .first()
+      .fill('ab')
     await changePasswordSection.getByLabel(/confirm.*password/i).fill('ab')
 
     const submitButton = changePasswordSection.getByRole('button', {
@@ -209,9 +218,9 @@ test.describe('Change Password flow', () => {
     await submitButton.click()
 
     // Verify validation error for short password
-    await expect(
-      page.getByText(/too short|at least|minimum|characters/i).first()
-    ).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText(/too short|at least|minimum|characters/i).first()).toBeVisible({
+      timeout: 5000,
+    })
   })
 
   test('should show validation errors for empty fields', async ({ page }) => {
@@ -228,9 +237,9 @@ test.describe('Change Password flow', () => {
     await submitButton.click()
 
     // Verify validation error appears
-    await expect(
-      page.getByText(/required|please enter|cannot be empty/i).first()
-    ).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText(/required|please enter|cannot be empty/i).first()).toBeVisible({
+      timeout: 5000,
+    })
   })
 })
 
@@ -352,9 +361,7 @@ test.describe('Profile persistence across sessions', () => {
     await saveButton.click()
 
     // Verify success feedback
-    await expect(
-      page.getByText(/saved|updated|success/i).first()
-    ).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText(/saved|updated|success/i).first()).toBeVisible({ timeout: 5000 })
   })
 })
 

@@ -21,12 +21,7 @@ interface TrailMapProps {
  * - Current: larger pulsing circle with play icon + "CURRENT" label
  * - Upcoming: outlined muted circle with lock icon
  */
-export function TrailMap({
-  totalCourses,
-  completedCount,
-  currentIndex,
-  className,
-}: TrailMapProps) {
+export function TrailMap({ totalCourses, completedCount, currentIndex, className }: TrailMapProps) {
   if (totalCourses === 0) return null
 
   // Calculate waypoint X positions (evenly spaced)
@@ -114,19 +109,8 @@ export function TrailMap({
             return (
               <g key={i}>
                 {/* Pulsing ring */}
-                <circle
-                  cx={wp.x}
-                  cy={cy}
-                  r="22"
-                  fill="var(--brand)"
-                  opacity="0.15"
-                >
-                  <animate
-                    attributeName="r"
-                    values="22;28;22"
-                    dur="2s"
-                    repeatCount="indefinite"
-                  />
+                <circle cx={wp.x} cy={cy} r="22" fill="var(--brand)" opacity="0.15">
+                  <animate attributeName="r" values="22;28;22" dur="2s" repeatCount="indefinite" />
                   <animate
                     attributeName="opacity"
                     values="0.15;0.05;0.15"

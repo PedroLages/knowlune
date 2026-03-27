@@ -147,10 +147,10 @@ describe('youtubeTranscriptPipeline', () => {
 
     it('stores failure for rate-limit without fallback', async () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({ error: 'Rate limited', code: 'rate-limited' }),
-          { status: 429, headers: { 'Content-Type': 'application/json' } }
-        )
+        new Response(JSON.stringify({ error: 'Rate limited', code: 'rate-limited' }), {
+          status: 429,
+          headers: { 'Content-Type': 'application/json' },
+        })
       )
 
       const result = await fetchTranscript('course-1', 'abc12345678')
@@ -207,17 +207,17 @@ Second cue`
       vi.spyOn(globalThis, 'fetch')
         // Tier 1: no captions
         .mockResolvedValueOnce(
-          new Response(
-            JSON.stringify({ error: 'No captions', code: 'no-captions-available' }),
-            { status: 404, headers: { 'Content-Type': 'application/json' } }
-          )
+          new Response(JSON.stringify({ error: 'No captions', code: 'no-captions-available' }), {
+            status: 404,
+            headers: { 'Content-Type': 'application/json' },
+          })
         )
         // Tier 2: success with VTT
         .mockResolvedValueOnce(
-          new Response(
-            JSON.stringify({ vtt: vttContent, language: 'en' }),
-            { status: 200, headers: { 'Content-Type': 'application/json' } }
-          )
+          new Response(JSON.stringify({ vtt: vttContent, language: 'en' }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          })
         )
 
       const result = await fetchTranscript('course-1', 'abc12345678')
@@ -239,14 +239,17 @@ Second cue`
 
       vi.spyOn(globalThis, 'fetch')
         .mockResolvedValueOnce(
-          new Response(
-            JSON.stringify({ error: 'Captions disabled', code: 'captions-disabled' }),
-            { status: 403, headers: { 'Content-Type': 'application/json' } }
-          )
+          new Response(JSON.stringify({ error: 'Captions disabled', code: 'captions-disabled' }), {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' },
+          })
         )
         .mockResolvedValueOnce(
           new Response(
-            JSON.stringify({ vtt: 'WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nTest', language: 'en' }),
+            JSON.stringify({
+              vtt: 'WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nTest',
+              language: 'en',
+            }),
             { status: 200, headers: { 'Content-Type': 'application/json' } }
           )
         )
@@ -264,10 +267,10 @@ Second cue`
       mockGetConfig.mockReturnValue({ ...BASE_CONFIG })
 
       vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({ error: 'No captions', code: 'no-captions-available' }),
-          { status: 404, headers: { 'Content-Type': 'application/json' } }
-        )
+        new Response(JSON.stringify({ error: 'No captions', code: 'no-captions-available' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        })
       )
 
       const result = await fetchTranscript('course-1', 'abc12345678')
@@ -307,24 +310,24 @@ Whisper transcription result`
       vi.spyOn(globalThis, 'fetch')
         // Tier 1: no captions
         .mockResolvedValueOnce(
-          new Response(
-            JSON.stringify({ error: 'No captions', code: 'no-captions-available' }),
-            { status: 404, headers: { 'Content-Type': 'application/json' } }
-          )
+          new Response(JSON.stringify({ error: 'No captions', code: 'no-captions-available' }), {
+            status: 404,
+            headers: { 'Content-Type': 'application/json' },
+          })
         )
         // Tier 2: also fails
         .mockResolvedValueOnce(
-          new Response(
-            JSON.stringify({ error: 'No subtitles', code: 'ytdlp-fetch-error' }),
-            { status: 500, headers: { 'Content-Type': 'application/json' } }
-          )
+          new Response(JSON.stringify({ error: 'No subtitles', code: 'ytdlp-fetch-error' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          })
         )
         // Tier 3: Whisper success
         .mockResolvedValueOnce(
-          new Response(
-            JSON.stringify({ vtt: whisperVtt, language: 'en', duration: 120 }),
-            { status: 200, headers: { 'Content-Type': 'application/json' } }
-          )
+          new Response(JSON.stringify({ vtt: whisperVtt, language: 'en', duration: 120 }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          })
         )
 
       const result = await fetchTranscript('course-1', 'abc12345678')
@@ -346,16 +349,16 @@ Whisper transcription result`
 
       vi.spyOn(globalThis, 'fetch')
         .mockResolvedValueOnce(
-          new Response(
-            JSON.stringify({ error: 'No captions', code: 'no-captions-available' }),
-            { status: 404, headers: { 'Content-Type': 'application/json' } }
-          )
+          new Response(JSON.stringify({ error: 'No captions', code: 'no-captions-available' }), {
+            status: 404,
+            headers: { 'Content-Type': 'application/json' },
+          })
         )
         .mockResolvedValueOnce(
-          new Response(
-            JSON.stringify({ error: 'Failed', code: 'ytdlp-fetch-error' }),
-            { status: 500, headers: { 'Content-Type': 'application/json' } }
-          )
+          new Response(JSON.stringify({ error: 'Failed', code: 'ytdlp-fetch-error' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          })
         )
 
       const result = await fetchTranscript('course-1', 'abc12345678')
@@ -375,16 +378,16 @@ Whisper transcription result`
 
       vi.spyOn(globalThis, 'fetch')
         .mockResolvedValueOnce(
-          new Response(
-            JSON.stringify({ error: 'No captions', code: 'no-captions-available' }),
-            { status: 404, headers: { 'Content-Type': 'application/json' } }
-          )
+          new Response(JSON.stringify({ error: 'No captions', code: 'no-captions-available' }), {
+            status: 404,
+            headers: { 'Content-Type': 'application/json' },
+          })
         )
         .mockResolvedValueOnce(
-          new Response(
-            JSON.stringify({ error: 'Failed', code: 'ytdlp-fetch-error' }),
-            { status: 500, headers: { 'Content-Type': 'application/json' } }
-          )
+          new Response(JSON.stringify({ error: 'Failed', code: 'ytdlp-fetch-error' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          })
         )
         // Tier 3 throws network error
         .mockRejectedValueOnce(new Error('ECONNREFUSED'))
@@ -419,22 +422,22 @@ Whisper transcription result`
 
       vi.spyOn(globalThis, 'fetch')
         .mockResolvedValueOnce(
-          new Response(
-            JSON.stringify({ error: 'No captions', code: 'no-captions-available' }),
-            { status: 404, headers: { 'Content-Type': 'application/json' } }
-          )
+          new Response(JSON.stringify({ error: 'No captions', code: 'no-captions-available' }), {
+            status: 404,
+            headers: { 'Content-Type': 'application/json' },
+          })
         )
         .mockResolvedValueOnce(
-          new Response(
-            JSON.stringify({ error: 'No subs', code: 'ytdlp-fetch-error' }),
-            { status: 500, headers: { 'Content-Type': 'application/json' } }
-          )
+          new Response(JSON.stringify({ error: 'No subs', code: 'ytdlp-fetch-error' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          })
         )
         .mockResolvedValueOnce(
-          new Response(
-            JSON.stringify({ error: 'Whisper failed', code: 'whisper-fetch-error' }),
-            { status: 500, headers: { 'Content-Type': 'application/json' } }
-          )
+          new Response(JSON.stringify({ error: 'Whisper failed', code: 'whisper-fetch-error' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          })
         )
 
       const result = await fetchTranscript('course-1', 'abc12345678')
@@ -459,10 +462,10 @@ Whisper transcription result`
       mockGetConfig.mockReturnValue({ ...BASE_CONFIG })
 
       vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({ error: 'No captions', code: 'no-captions-available' }),
-          { status: 404, headers: { 'Content-Type': 'application/json' } }
-        )
+        new Response(JSON.stringify({ error: 'No captions', code: 'no-captions-available' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        })
       )
 
       const result = await fetchTranscript('course-1', 'abc12345678')
@@ -544,7 +547,7 @@ Whisper transcription result`
       const results = await fetchTranscriptsBatch(
         'course-1',
         ['vid1_______', 'vid2_______'],
-        (progress) => progressUpdates.push({ completed: progress.completed, total: progress.total })
+        progress => progressUpdates.push({ completed: progress.completed, total: progress.total })
       )
 
       expect(results).toHaveLength(2)
@@ -583,10 +586,10 @@ Whisper transcription result`
           )
         )
         .mockResolvedValueOnce(
-          new Response(
-            JSON.stringify({ error: 'No captions', code: 'no-captions-available' }),
-            { status: 404, headers: { 'Content-Type': 'application/json' } }
-          )
+          new Response(JSON.stringify({ error: 'No captions', code: 'no-captions-available' }), {
+            status: 404,
+            headers: { 'Content-Type': 'application/json' },
+          })
         )
 
       const results = await fetchTranscriptsBatch('course-1', ['vid1_______', 'vid2_______'])

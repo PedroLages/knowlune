@@ -136,9 +136,7 @@ export function isIndexedDBQuotaExceeded(error: unknown): boolean {
     }
     // Also check message for Dexie-style wrapped errors
     // Note: only match 'QuotaExceededError' specifically, not generic 'quota' (avoids YouTube quota false positives)
-    return (
-      error.name === 'QuotaExceededError' || error.message.includes('QuotaExceededError')
-    )
+    return error.name === 'QuotaExceededError' || error.message.includes('QuotaExceededError')
   }
   return false
 }

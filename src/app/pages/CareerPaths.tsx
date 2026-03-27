@@ -80,13 +80,7 @@ function PathRowSkeleton() {
   )
 }
 
-function PathRow({
-  path,
-  index,
-}: {
-  path: CareerPath
-  index: number
-}) {
+function PathRow({ path, index }: { path: CareerPath; index: number }) {
   const { getEnrollmentForPath, getPathProgress } = useCareerPathStore()
   const enrollment = getEnrollmentForPath(path.id)
   const progress = getPathProgress(path.id)
@@ -152,19 +146,13 @@ function PathRow({
                 <span className="text-[11px] uppercase tracking-[0.15em] text-muted-foreground font-medium">
                   {totalCourses} Courses
                 </span>
-                <span
-                  className="text-muted-foreground text-[11px]"
-                  aria-hidden="true"
-                >
+                <span className="text-muted-foreground text-[11px]" aria-hidden="true">
                   &bull;
                 </span>
                 <span className="text-[11px] uppercase tracking-[0.15em] text-muted-foreground font-medium">
                   {path.totalEstimatedHours}H
                 </span>
-                <span
-                  className="text-muted-foreground text-[11px]"
-                  aria-hidden="true"
-                >
+                <span className="text-muted-foreground text-[11px]" aria-hidden="true">
                   &bull;
                 </span>
                 <span className="text-[11px] uppercase tracking-[0.15em] text-muted-foreground font-medium">
@@ -238,9 +226,7 @@ export function CareerPaths() {
     if (!search.trim()) return [...paths]
     const q = search.toLowerCase()
     return paths.filter(
-      p =>
-        p.title.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q)
+      p => p.title.toLowerCase().includes(q) || p.description.toLowerCase().includes(q)
     )
   }, [paths, search])
 
@@ -295,8 +281,7 @@ export function CareerPaths() {
             Career Paths
           </h1>
           <p className="text-muted-foreground text-base max-w-xl leading-relaxed">
-            Structured multi-course journeys with staged progression and
-            prerequisite tracking.
+            Structured multi-course journeys with staged progression and prerequisite tracking.
           </p>
         </motion.div>
 

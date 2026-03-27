@@ -253,26 +253,28 @@ test.describe('YouTube Import — URL Input (Step 1)', () => {
 test.describe('YouTube Import — Wizard Navigation', () => {
   test('clicking Next advances to Step 2 (Preview)', async ({ page }) => {
     // Mock YouTube API to avoid real network calls
-    await page.route('**/youtube.googleapis.com/**', (route) => {
+    await page.route('**/youtube.googleapis.com/**', route => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          items: [{
-            id: MOCK_VIDEO_METADATA.videoId,
-            snippet: {
-              title: MOCK_VIDEO_METADATA.title,
-              description: MOCK_VIDEO_METADATA.description,
-              channelTitle: MOCK_VIDEO_METADATA.channelTitle,
-              publishedAt: MOCK_VIDEO_METADATA.publishedAt,
-              thumbnails: {
-                default: { url: MOCK_VIDEO_METADATA.thumbnailUrl },
+          items: [
+            {
+              id: MOCK_VIDEO_METADATA.videoId,
+              snippet: {
+                title: MOCK_VIDEO_METADATA.title,
+                description: MOCK_VIDEO_METADATA.description,
+                channelTitle: MOCK_VIDEO_METADATA.channelTitle,
+                publishedAt: MOCK_VIDEO_METADATA.publishedAt,
+                thumbnails: {
+                  default: { url: MOCK_VIDEO_METADATA.thumbnailUrl },
+                },
+              },
+              contentDetails: {
+                duration: 'PT3M32S',
               },
             },
-            contentDetails: {
-              duration: 'PT3M32S',
-            },
-          }],
+          ],
         }),
       })
     })
@@ -306,7 +308,7 @@ test.describe('YouTube Import — Wizard Navigation', () => {
 
   test('Back button returns to previous step', async ({ page }) => {
     // Mock YouTube API
-    await page.route('**/youtube.googleapis.com/**', (route) => {
+    await page.route('**/youtube.googleapis.com/**', route => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',

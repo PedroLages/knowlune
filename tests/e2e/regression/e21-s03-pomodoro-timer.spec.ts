@@ -78,7 +78,9 @@ test.describe('E21-S03: Pomodoro Focus Timer', () => {
     await page.getByTestId('pomodoro-resume').click()
 
     // Wait for countdown to change from paused value (deterministic polling)
-    await expect(page.getByTestId('pomodoro-countdown')).not.toHaveText(pausedTime!, { timeout: 5000 })
+    await expect(page.getByTestId('pomodoro-countdown')).not.toHaveText(pausedTime!, {
+      timeout: 5000,
+    })
 
     // Time should have decreased from paused value
     const resumedTime = await page.getByTestId('pomodoro-countdown').textContent()

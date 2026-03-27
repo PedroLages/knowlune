@@ -208,9 +208,7 @@ describe('Quiz Workflow: Cross-Store Integration', () => {
     expect(quizState.currentProgress).toBeNull() // cleared after submit
 
     // Verify content progress updated (cross-store)
-    const lessonStatus = useContentProgressStore
-      .getState()
-      .getItemStatus(COURSE_ID, LESSON_ID)
+    const lessonStatus = useContentProgressStore.getState().getItemStatus(COURSE_ID, LESSON_ID)
     expect(lessonStatus).toBe('completed')
 
     // Verify attempt persisted to DB
@@ -244,9 +242,7 @@ describe('Quiz Workflow: Cross-Store Integration', () => {
     expect(quizState.attempts[0].percentage).toBe(0)
 
     // Content progress should NOT have been updated
-    const lessonStatus = useContentProgressStore
-      .getState()
-      .getItemStatus(COURSE_ID, LESSON_ID)
+    const lessonStatus = useContentProgressStore.getState().getItemStatus(COURSE_ID, LESSON_ID)
     expect(lessonStatus).toBe('not-started')
   })
 
@@ -287,9 +283,7 @@ describe('Quiz Workflow: Cross-Store Integration', () => {
     })
 
     // Verify lesson is completed
-    const lessonStatus = useContentProgressStore
-      .getState()
-      .getItemStatus(COURSE_ID, LESSON_ID)
+    const lessonStatus = useContentProgressStore.getState().getItemStatus(COURSE_ID, LESSON_ID)
     expect(lessonStatus).toBe('completed')
 
     // Refresh challenge progress (reads from contentProgress DB)
