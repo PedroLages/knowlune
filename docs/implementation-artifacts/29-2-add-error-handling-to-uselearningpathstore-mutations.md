@@ -1,12 +1,13 @@
 ---
 story_id: E29-S02
 story_name: "Add Error Handling to useLearningPathStore Mutations"
-status: ready-for-dev
+status: done
 started: 2026-03-27
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-03-27
+reviewed: true
+review_started: 2026-03-27
+review_rounds: 1
+review_gates_passed: [build, lint, typecheck, format, unit-tests, e2e-tests, lessons-learned, code-review, test-coverage-review]
 burn_in_validated: false
 ---
 
