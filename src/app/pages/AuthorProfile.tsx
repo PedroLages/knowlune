@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useParams, Link, useNavigate } from 'react-router'
 import {
   BookOpen,
@@ -29,6 +29,7 @@ import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import { useCourseStore } from '@/stores/useCourseStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { useLazyStore } from '@/hooks/useLazyStore'
 import { getMergedAuthors, getAvatarSrc, getInitials, type AuthorView } from '@/lib/authors'
 import { getCourseCompletionPercent } from '@/lib/progress'
 import { AuthorFormDialog } from '@/app/components/authors/AuthorFormDialog'
@@ -45,10 +46,9 @@ export function AuthorProfile() {
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
 
-  useEffect(() => {
-    loadAuthors()
-    loadImportedCourses()
-  }, [loadAuthors, loadImportedCourses])
+  // Lazy-load author + imported course stores on mount (deferred — not critical for initial app load)
+  useLazyStore(loadAuthors)
+  useLazyStore(loadImportedCourses)
 
   // Merge pre-seeded + store authors and find the one matching the URL param
   const allAuthors = useMemo(() => getMergedAuthors(storeAuthors), [storeAuthors])

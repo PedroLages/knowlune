@@ -18,6 +18,7 @@ import { Badge } from '@/app/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
 import { useCourseStore } from '@/stores/useCourseStore'
 import { useAuthorStore } from '@/stores/useAuthorStore'
+import { useLazyStore } from '@/hooks/useLazyStore'
 import { getAvatarSrc } from '@/lib/authors'
 
 const CATEGORY_COLORS: Record<string, { bg: string; text: string; label: string }> = {
@@ -49,9 +50,8 @@ export function CourseOverview() {
     if (!isLoaded) loadCourses()
   }, [isLoaded, loadCourses])
 
-  useEffect(() => {
-    loadAuthors()
-  }, [loadAuthors])
+  // Lazy-load author store on mount (deferred — not critical for initial app load)
+  useLazyStore(loadAuthors)
 
   // Auto-expand first module
   const course = courses.find(c => c.id === courseId)

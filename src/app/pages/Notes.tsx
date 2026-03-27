@@ -42,6 +42,7 @@ import { exportNoteAsMarkdown } from '@/lib/noteExport'
 import { EmptyState } from '@/app/components/EmptyState'
 import { toast } from 'sonner'
 import { useCourseStore } from '@/stores/useCourseStore'
+import { useLazyStore } from '@/hooks/useLazyStore'
 import { formatTimestamp } from '@/lib/format'
 import { stripHtml } from '@/lib/textUtils'
 import { supportsWorkers } from '@/ai/lib/workerCapabilities'
@@ -163,10 +164,8 @@ export function Notes() {
   }, [])
   const semanticSearchAvailable = supportsWorkers() && vectorStoreSize > 0
 
-  // Load all notes on mount
-  useEffect(() => {
-    loadNotes()
-  }, [loadNotes])
+  // Lazy-load notes store on mount (deferred — not critical for initial app load)
+  useLazyStore(loadNotes)
 
   // Scroll to hash anchor (e.g., #note-note-1 from citation clicks)
   useEffect(() => {

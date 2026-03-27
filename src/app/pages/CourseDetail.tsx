@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { useParams, Link } from 'react-router'
 import { Clock, Video, FileText, BookOpen, Play, CheckCircle } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
@@ -23,6 +22,7 @@ import { getAvatarSrc } from '@/lib/authors'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import { getProgress, getCourseCompletionPercent } from '@/lib/progress'
 import { useContentProgressStore } from '@/stores/useContentProgressStore'
+import { useLazyStore } from '@/hooks/useLazyStore'
 
 export function CourseDetail() {
   const allCourses = useCourseStore(s => s.courses)
@@ -32,11 +32,9 @@ export function CourseDetail() {
   // This ensures the progress bar reflects changes made via StatusSelector
   useContentProgressStore(s => s.statusMap)
 
-  // Subscribe to author store reactively and ensure authors are loaded
+  // Lazy-load author store on mount (deferred — not critical for initial app load)
   const { loadAuthors, getAuthorById } = useAuthorStore()
-  useEffect(() => {
-    loadAuthors()
-  }, [loadAuthors])
+  useLazyStore(loadAuthors)
 
   if (!course) {
     return (
