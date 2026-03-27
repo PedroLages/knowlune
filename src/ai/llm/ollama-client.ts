@@ -277,5 +277,4 @@ export class OllamaLLMClient extends BaseLLMClient {
       throw new LLMError(`Failed to list models: ${message}`, 'NETWORK_ERROR', 'ollama')
     }
   }
-
 }
