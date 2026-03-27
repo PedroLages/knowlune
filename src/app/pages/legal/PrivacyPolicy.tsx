@@ -48,7 +48,7 @@ export function PrivacyPolicy() {
             <li key={section.id}>
               <a
                 href={`#${section.id}`}
-                className="text-brand-soft-foreground hover:underline focus-visible:underline focus-visible:outline-none"
+                className="text-brand-soft-foreground hover:underline focus-visible:underline focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
               >
                 {section.title.replace(/^\d+\.\s/, '')}
               </a>
