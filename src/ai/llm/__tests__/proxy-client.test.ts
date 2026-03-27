@@ -10,6 +10,15 @@ import { ProxyLLMClient } from '../proxy-client'
 import { LLMError } from '../types'
 import type { LLMMessage } from '../types'
 
+// Mock useAuthStore to provide access_token for Authorization header
+vi.mock('@/stores/useAuthStore', () => ({
+  useAuthStore: {
+    getState: () => ({
+      session: { access_token: 'test-jwt-token' },
+    }),
+  },
+}))
+
 // Mock global fetch
 global.fetch = vi.fn()
 
@@ -104,7 +113,10 @@ describe('ProxyLLMClient', () => {
         '/api/ai/stream',
         expect.objectContaining({
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer test-jwt-token',
+          },
           signal: expect.any(AbortSignal),
         })
       )
@@ -150,7 +162,7 @@ describe('ProxyLLMClient', () => {
   // ===========================================================================
 
   describe('streamCompletion - error handling', () => {
-    it('should throw LLMError with RATE_LIMIT for HTTP 429', async () => {
+    it('should throw LLMError with RATE_LIMITED for HTTP 429', async () => {
       ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 429,
@@ -163,13 +175,13 @@ describe('ProxyLLMClient', () => {
         expect.unreachable('Should have thrown')
       } catch (error) {
         expect(error).toBeInstanceOf(LLMError)
-        expect((error as LLMError).code).toBe('RATE_LIMIT')
+        expect((error as LLMError).code).toBe('RATE_LIMITED')
         expect((error as LLMError).message).toContain('Rate limit exceeded')
         expect((error as LLMError).providerId).toBe('openai')
       }
     })
 
-    it('should throw LLMError with AUTH_ERROR for HTTP 401', async () => {
+    it('should throw LLMError with AUTH_REQUIRED for HTTP 401', async () => {
       ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 401,
@@ -182,11 +194,11 @@ describe('ProxyLLMClient', () => {
         expect.unreachable('Should have thrown')
       } catch (error) {
         expect(error).toBeInstanceOf(LLMError)
-        expect((error as LLMError).code).toBe('AUTH_ERROR')
+        expect((error as LLMError).code).toBe('AUTH_REQUIRED')
       }
     })
 
-    it('should throw LLMError with AUTH_ERROR for HTTP 403', async () => {
+    it('should throw LLMError with ENTITLEMENT_ERROR for HTTP 403', async () => {
       ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 403,
@@ -199,7 +211,7 @@ describe('ProxyLLMClient', () => {
         expect.unreachable('Should have thrown')
       } catch (error) {
         expect(error).toBeInstanceOf(LLMError)
-        expect((error as LLMError).code).toBe('AUTH_ERROR')
+        expect((error as LLMError).code).toBe('ENTITLEMENT_ERROR')
       }
     })
 
