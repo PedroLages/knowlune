@@ -456,6 +456,53 @@ describe('generatePath', () => {
     )
     expect(useLearningPathStore.getState().isGenerating).toBe(false)
   })
+
+  it('should set error when only 1 course exists', async () => {
+    await db.importedCourses.add({
+      id: 'c1',
+      name: 'Only Course',
+      importedAt: '2026-01-01',
+      category: '',
+      tags: [],
+      status: 'active',
+      videoCount: 1,
+      pdfCount: 0,
+      directoryHandle: null,
+    })
+
+    await act(async () => {
+      await useLearningPathStore.getState().generatePath()
+    })
+
+    expect(useLearningPathStore.getState().error).toBe(
+      'At least 2 courses are needed to generate a learning path'
+    )
+  })
+
+  it('should handle AI generation error', async () => {
+    // Add 2 courses to pass the length check
+    await db.importedCourses.bulkAdd([
+      { id: 'c1', name: 'Course 1', importedAt: '2026-01-01', category: '', tags: [], status: 'active', videoCount: 1, pdfCount: 0, directoryHandle: null },
+      { id: 'c2', name: 'Course 2', importedAt: '2026-01-01', category: '', tags: [], status: 'active', videoCount: 1, pdfCount: 0, directoryHandle: null },
+    ])
+
+    // Create an active path
+    await act(async () => {
+      await useLearningPathStore.getState().createPath('Test Path')
+    })
+
+    // Mock the dynamic import to throw
+    vi.doMock('@/ai/learningPath/generatePath', () => ({
+      generateLearningPath: vi.fn().mockRejectedValue(new Error('AI service unavailable')),
+    }))
+
+    await act(async () => {
+      await useLearningPathStore.getState().generatePath()
+    })
+
+    expect(useLearningPathStore.getState().isGenerating).toBe(false)
+    expect(useLearningPathStore.getState().error).toBe('AI service unavailable')
+  })
 })
 
 describe('regeneratePath', () => {
@@ -472,6 +519,51 @@ describe('regeneratePath', () => {
     expect(useLearningPathStore.getState().error).toBe(
       'At least 2 courses are needed to generate a learning path'
     )
+  })
+})
+
+describe('reorderCourse error handling', () => {
+  it('should set error on DB failure', async () => {
+    await act(async () => {
+      await useLearningPathStore.getState().createPath('Path')
+    })
+    const pathId = useLearningPathStore.getState().paths[0].id
+
+    await act(async () => {
+      await useLearningPathStore.getState().addCourseToPath(pathId, 'c1', 'imported')
+      await useLearningPathStore.getState().addCourseToPath(pathId, 'c2', 'imported')
+    })
+
+    vi.spyOn(db.learningPathEntries, 'update').mockRejectedValue(new Error('fail'))
+
+    await act(async () => {
+      await useLearningPathStore.getState().reorderCourse(pathId, 0, 1)
+    })
+
+    expect(useLearningPathStore.getState().error).toBe('Failed to save reordering')
+  })
+})
+
+describe('applyAIOrder error handling', () => {
+  it('should set error on DB failure', async () => {
+    await act(async () => {
+      await useLearningPathStore.getState().createPath('Path')
+    })
+    const pathId = useLearningPathStore.getState().paths[0].id
+
+    await act(async () => {
+      await useLearningPathStore.getState().addCourseToPath(pathId, 'c1', 'imported')
+    })
+
+    vi.spyOn(db.learningPathEntries, 'update').mockRejectedValue(new Error('fail'))
+
+    await act(async () => {
+      await useLearningPathStore.getState().applyAIOrder(pathId, [
+        { courseId: 'c1', position: 1, justification: 'test' },
+      ])
+    })
+
+    expect(useLearningPathStore.getState().error).toBe('Failed to save AI-suggested order')
   })
 })
 
