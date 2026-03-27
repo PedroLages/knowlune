@@ -24,7 +24,8 @@ import {
   TTL_OPTIONS,
   type RetentionDays,
 } from '@/lib/dataPruning'
-import { toastSuccess, toastError } from '@/lib/toastHelpers'
+import { toast } from 'sonner'
+import { TOAST_DURATION } from '@/lib/toastConfig'
 
 export function DataRetentionSettings() {
   const [settings, setSettings] = useState(() => getRetentionSettings())
@@ -51,15 +52,16 @@ export function DataRetentionSettings() {
       const total =
         result.studySessionsPruned + result.aiUsageEventsPruned + result.embeddingsPruned
       if (total > 0) {
-        toastSuccess.generic(
-          `Pruned ${total} records (${result.studySessionsPruned} sessions, ${result.aiUsageEventsPruned} AI events, ${result.embeddingsPruned} embeddings)`
+        toast.success(
+          `Pruned ${total} records (${result.studySessionsPruned} sessions, ${result.aiUsageEventsPruned} AI events, ${result.embeddingsPruned} embeddings)`,
+          { duration: TOAST_DURATION.SHORT }
         )
       } else {
-        toastSuccess.generic('No old data to prune')
+        toast.success('No old data to prune', { duration: TOAST_DURATION.SHORT })
       }
     } catch (error) {
       console.error('[DataRetention] Manual prune failed:', error)
-      toastError.generic('Failed to prune data. Please try again.')
+      toast.error('Failed to prune data. Please try again.', { duration: TOAST_DURATION.LONG })
     } finally {
       setIsPruning(false)
     }
