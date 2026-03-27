@@ -24,6 +24,7 @@ import { Search, FolderOpen, BookOpen, ChevronDown, Tags, Youtube } from 'lucide
 import { useCourseStore } from '@/stores/useCourseStore'
 import { getCourseCompletionPercent, getProgress } from '@/lib/progress'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { useLazyStore } from '@/hooks/useLazyStore'
 import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
 import { BulkImportDialog } from '@/app/components/figma/BulkImportDialog'
 import { YouTubeImportDialog } from '@/app/components/figma/YouTubeImportDialog'
@@ -80,9 +81,8 @@ export function Courses() {
   const loadImportedCourses = useCourseImportStore(state => state.loadImportedCourses)
   const getAllTags = useCourseImportStore(state => state.getAllTags)
 
-  useEffect(() => {
-    loadImportedCourses()
-  }, [loadImportedCourses])
+  // Lazy-load imported courses on mount (deferred — not critical for initial app load)
+  useLazyStore(loadImportedCourses)
 
   // Auto-collapse when imported courses first appear; auto-expand when all imports removed.
   // useRef prevents re-triggering the initial collapse on subsequent imports during the session.

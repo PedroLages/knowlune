@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { VirtualizedGrid } from '@/app/components/VirtualizedGrid'
 import { Link } from 'react-router'
 import {
@@ -32,6 +32,7 @@ import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
 import { useAuthorStore } from '@/stores/useAuthorStore'
 import { useCourseStore } from '@/stores/useCourseStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
+import { useLazyStore } from '@/hooks/useLazyStore'
 import { getMergedAuthors, getAvatarSrc, getInitials, type AuthorView } from '@/lib/authors'
 import { getCourseCompletionPercent } from '@/lib/progress'
 import { AuthorFormDialog } from '@/app/components/authors/AuthorFormDialog'
@@ -48,9 +49,8 @@ export function Authors() {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortMode, setSortMode] = useState<SortMode>('alphabetical')
 
-  useEffect(() => {
-    loadAuthors()
-  }, [loadAuthors])
+  // Lazy-load author store on mount (deferred — not critical for initial app load)
+  useLazyStore(loadAuthors)
 
   // Merge pre-seeded + imported authors into unified view
   const allAuthors = useMemo(() => getMergedAuthors(storeAuthors), [storeAuthors])
@@ -405,9 +405,8 @@ function FeaturedAuthorProfile({
   const loadImportedCourses = useCourseImportStore(s => s.loadImportedCourses)
   const getAllTags = useCourseImportStore(s => s.getAllTags)
 
-  useEffect(() => {
-    loadImportedCourses()
-  }, [loadImportedCourses])
+  // Lazy-load imported courses (deferred — not critical for initial app load)
+  useLazyStore(loadImportedCourses)
 
   const authorCourses = useMemo(
     () => courses.filter(c => c.authorId === author.id),
