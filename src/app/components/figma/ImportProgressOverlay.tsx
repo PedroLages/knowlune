@@ -217,6 +217,7 @@ export function ImportProgressOverlay() {
                 size="sm"
                 onClick={() => setExpanded(!expanded)}
                 aria-expanded={expanded}
+                aria-controls={expanded ? 'import-details-panel' : undefined}
                 className="size-7 p-0"
                 aria-label={expanded ? 'Collapse details' : 'Expand details'}
               >
@@ -256,6 +257,7 @@ export function ImportProgressOverlay() {
         {/* Per-course progress (expanded view or single import) */}
         {(expanded || !isBulk) && (
           <div
+            id="import-details-panel"
             className="px-4 pb-3 space-y-3 max-h-60 overflow-y-auto"
             data-testid="import-progress-courses"
           >

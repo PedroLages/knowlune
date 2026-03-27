@@ -335,7 +335,7 @@ export function YouTubeCourseDetail() {
               <button
                 className="flex items-center justify-between w-full p-4 text-left hover:bg-accent/50 transition-colors rounded-xl"
                 aria-label="Toggle AI course summary"
-                aria-controls="ai-summary-content"
+                aria-controls={aiSummaryOpen ? 'ai-summary-content' : undefined}
               >
                 <div className="flex items-center gap-2">
                   <Sparkles className="size-4 text-brand" aria-hidden="true" />
