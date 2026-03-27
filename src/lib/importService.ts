@@ -176,9 +176,27 @@ export async function importFullData(json: string): Promise<ImportResult> {
       }
     }
 
+    // E32-S03: Check storage quota after bulk import (fire-and-forget)
+    import('@/lib/storageQuotaMonitor').then(({ checkStorageQuota }) => {
+      checkStorageQuota().catch(() => {
+        // silent-catch-ok: quota check is advisory
+      })
+    })
+
     return { success: true, recordCount: totalRecords }
   } catch (error) {
     console.error('[ImportService] Import failed:', error)
+
+    // E32-S03: Detect QuotaExceededError specifically for user-friendly message
+    const { isIndexedDBQuotaExceeded } = await import('@/lib/storageQuotaMonitor')
+    if (isIndexedDBQuotaExceeded(error)) {
+      return {
+        success: false,
+        recordCount: 0,
+        error: 'Storage is full. Free up space in Settings > Data Management before importing.',
+      }
+    }
+
     return {
       success: false,
       recordCount: 0,
