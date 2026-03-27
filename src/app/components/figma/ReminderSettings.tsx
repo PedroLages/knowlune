@@ -83,6 +83,7 @@ export function ReminderSettings() {
             id="enable-reminders"
             checked={settings.enabled}
             onCheckedChange={handleMasterToggle}
+            aria-label="Enable reminders"
           />
         </div>
 
@@ -123,6 +124,7 @@ export function ReminderSettings() {
                   id="daily-reminder"
                   checked={settings.dailyReminder}
                   onCheckedChange={checked => update({ dailyReminder: checked })}
+                  aria-label="Daily reminder"
                 />
               </div>
               {settings.dailyReminder && (
@@ -157,6 +159,7 @@ export function ReminderSettings() {
                   checked={settings.streakAtRisk}
                   onCheckedChange={checked => update({ streakAtRisk: checked })}
                   disabled={isPaused}
+                  aria-label="Streak at risk"
                 />
               </div>
               {isPaused && (

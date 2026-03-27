@@ -162,6 +162,7 @@ export function QuizPreferencesForm() {
               data-testid="immediate-feedback-toggle"
               checked={prefs.showImmediateFeedback}
               onCheckedChange={checked => update({ showImmediateFeedback: checked })}
+              aria-label="Show immediate feedback"
             />
           </div>
         </div>
@@ -184,6 +185,7 @@ export function QuizPreferencesForm() {
               data-testid="shuffle-questions-toggle"
               checked={prefs.shuffleQuestions}
               onCheckedChange={checked => update({ shuffleQuestions: checked })}
+              aria-label="Shuffle questions"
             />
           </div>
         </div>
