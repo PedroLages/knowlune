@@ -4,7 +4,7 @@
  * Provides streaming completion interface for AI providers.
  */
 
-import type { LLMMessage, LLMStreamChunk } from './types'
+import type { LLMMessage, LLMStreamChunk, LLMErrorCode } from './types'
 
 /**
  * LLM client interface for streaming completions
@@ -66,6 +66,30 @@ export abstract class BaseLLMClient implements LLMClient {
     } catch (error) {
       clearTimeout(timeoutId)
       throw error
+    }
+  }
+
+  /**
+   * Map HTTP status codes to LLM error codes.
+   *
+   * Handles server-side middleware responses:
+   * - 401 -> AUTH_REQUIRED (missing/invalid/expired JWT)
+   * - 403 -> ENTITLEMENT_ERROR (premium subscription required)
+   * - 429 -> RATE_LIMITED (server-side rate limit exceeded)
+   *
+   * @param status - HTTP status code
+   * @returns Corresponding LLM error code
+   */
+  protected mapHttpStatusToLLMErrorCode(status: number): LLMErrorCode {
+    switch (status) {
+      case 401:
+        return 'AUTH_REQUIRED'
+      case 403:
+        return 'ENTITLEMENT_ERROR'
+      case 429:
+        return 'RATE_LIMITED'
+      default:
+        return 'UNKNOWN'
     }
   }
 

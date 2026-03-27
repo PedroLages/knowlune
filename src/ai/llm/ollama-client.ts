@@ -14,6 +14,7 @@ import { BaseLLMClient } from './client'
 import type { LLMMessage, LLMStreamChunk } from './types'
 import { LLMError } from './types'
 import { formatModelSize, type OllamaModel } from '@/lib/aiConfiguration'
+import { useAuthStore } from '@/stores/useAuthStore'
 
 /** Default model for Ollama when none is specified */
 const DEFAULT_OLLAMA_MODEL = 'llama3.2'
@@ -75,22 +76,31 @@ export class OllamaLLMClient extends BaseLLMClient {
         requestBody.ollamaServerUrl = this.serverUrl
       }
 
+      // Build headers: include JWT for proxy mode, placeholder for direct mode
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (this.directConnection) {
+        // Ollama ignores auth but include for OpenAI-compat format
+        headers['Authorization'] = 'Bearer ollama'
+      } else {
+        // Proxy mode: include JWT from auth store for server-side middleware validation
+        const accessToken = useAuthStore.getState().session?.access_token
+        if (accessToken) {
+          headers['Authorization'] = `Bearer ${accessToken}`
+        }
+      }
+
       const response = await this.fetchWithTimeout(
         this.directConnection ? `${baseUrl}/chat/completions` : baseUrl,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            // Ollama ignores auth but include for OpenAI-compat format
-            ...(this.directConnection ? { Authorization: 'Bearer ollama' } : {}),
-          },
+          headers,
           body: JSON.stringify(requestBody),
         },
         OLLAMA_REQUEST_TIMEOUT
       )
 
       if (!response.ok) {
-        const errorCode = this.mapHttpStatusToErrorCode(response.status)
+        const errorCode = this.mapHttpStatusToLLMErrorCode(response.status)
         const errorText = await response.text().catch(() => response.statusText)
         throw new LLMError(
           `Ollama API error (${response.status}): ${errorText}`,
@@ -201,10 +211,17 @@ export class OllamaLLMClient extends BaseLLMClient {
         })
       } else {
         // Proxy: browser -> Express /api/ai/ollama/tags
+        // Include JWT for server-side middleware validation
+        const accessToken = useAuthStore.getState().session?.access_token
+        const headers: Record<string, string> = {}
+        if (accessToken) {
+          headers['Authorization'] = `Bearer ${accessToken}`
+        }
         response = await fetch(
           `/api/ai/ollama/tags?serverUrl=${encodeURIComponent(normalizedUrl)}`,
           {
             method: 'GET',
+            headers,
             signal: AbortSignal.timeout(15_000),
           }
         )
@@ -261,15 +278,4 @@ export class OllamaLLMClient extends BaseLLMClient {
     }
   }
 
-  private mapHttpStatusToErrorCode(status: number): 'RATE_LIMIT' | 'AUTH_ERROR' | 'UNKNOWN' {
-    switch (status) {
-      case 429:
-        return 'RATE_LIMIT'
-      case 401:
-      case 403:
-        return 'AUTH_ERROR'
-      default:
-        return 'UNKNOWN'
-    }
-  }
 }

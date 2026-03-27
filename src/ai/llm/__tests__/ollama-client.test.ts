@@ -10,6 +10,15 @@ import { OllamaLLMClient } from '../ollama-client'
 import { LLMError } from '../types'
 import type { LLMMessage } from '../types'
 
+// Mock useAuthStore to provide access_token for Authorization header
+vi.mock('@/stores/useAuthStore', () => ({
+  useAuthStore: {
+    getState: () => ({
+      session: { access_token: 'test-jwt-token' },
+    }),
+  },
+}))
+
 // Mock global fetch
 global.fetch = vi.fn()
 
@@ -96,7 +105,10 @@ describe('OllamaLLMClient', () => {
         '/api/ai/ollama',
         expect.objectContaining({
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer test-jwt-token',
+          },
         })
       )
     })
