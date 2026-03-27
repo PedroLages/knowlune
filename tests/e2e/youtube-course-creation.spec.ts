@@ -13,7 +13,6 @@
  */
 import { test, expect } from '../support/fixtures'
 import { navigateAndWait } from '../support/helpers/navigation'
-import { FIXED_DATE } from '../utils/test-time'
 
 // --- Constants ---
 
@@ -23,7 +22,6 @@ const THIRD_VIDEO_URL = 'https://www.youtube.com/watch?v=abc123test03'
 const INVALID_URL = 'https://example.com/not-a-video'
 const PRIVATE_VIDEO_URL = 'https://www.youtube.com/watch?v=private_vid_01'
 const DELETED_VIDEO_URL = 'https://www.youtube.com/watch?v=deleted_vid_01'
-const RATE_LIMITED_URL = 'https://www.youtube.com/watch?v=ratelimit_vid1'
 
 // --- Mock Data ---
 
