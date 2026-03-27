@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useSearchParams } from 'react-router'
-import { BookOpen, CheckCircle, FileText, TrendingUp, Clock, Target } from 'lucide-react'
+import { BookOpen, CheckCircle, FileText, TrendingUp, Clock, Target, WifiOff } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card'
 import {
   ChartContainer,
@@ -31,8 +31,10 @@ import {
   getCategoryCompletionForRadar,
   computeSkillsDimensions,
 } from '@/lib/reportStats'
+import { Button } from '@/app/components/ui/button'
 import { StatsCard } from '@/app/components/StatsCard'
 import { EmptyState } from '@/app/components/EmptyState'
+import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
 import StudyTimeAnalytics from '@/app/components/StudyTimeAnalytics'
 import { AIAnalyticsTab } from '@/app/components/reports/AIAnalyticsTab'
 import { QuizAnalyticsDashboard } from '@/app/components/reports/QuizAnalyticsDashboard'
@@ -69,6 +71,28 @@ const areaChartConfig = {
 
 const VALID_TABS = ['study', 'quizzes', 'ai'] as const
 
+function InlineSectionError({
+  error,
+  isOnline,
+  onRetry,
+}: {
+  error: string
+  isOnline: boolean
+  onRetry: () => void
+}) {
+  return (
+    <div className="rounded-[24px] border border-destructive/50 bg-destructive/10 p-6 text-center">
+      {!isOnline && (
+        <WifiOff className="mx-auto mb-2 size-5 text-destructive" aria-hidden="true" />
+      )}
+      <p className="text-sm text-destructive">{error}</p>
+      <Button variant="outline" size="sm" className="mt-3" onClick={onRetry}>
+        Try Again
+      </Button>
+    </div>
+  )
+}
+
 export default function Reports() {
   const [searchParams, setSearchParams] = useSearchParams()
   const rawTab = searchParams.get('tab')
@@ -77,6 +101,7 @@ export default function Reports() {
     : 'study'
 
   const allCourses = useCourseStore(s => s.courses)
+  const isOnline = useOnlineStatus()
 
   const [studyNotes, setStudyNotes] = useState(0)
   const [completionData, setCompletionData] = useState<CompletionRateResult>({
@@ -86,41 +111,54 @@ export default function Reports() {
   })
   const [quizAttemptCount, setQuizAttemptCount] = useState(0)
 
-  useEffect(() => {
-    let ignore = false
+  // Per-section error states
+  const [notesError, setNotesError] = useState<string | null>(null)
+  const [completionError, setCompletionError] = useState<string | null>(null)
+  const [quizCountError, setQuizCountError] = useState<string | null>(null)
 
-    getTotalStudyNotes()
-      .then(notes => {
-        if (!ignore) setStudyNotes(notes)
-      })
-      .catch(err => {
-        console.error('Failed to load study notes:', err)
-        toast.error('Failed to load study notes')
-      })
+  const offlineMsg = "You're offline. Please check your connection and try again."
 
-    calculateCompletionRate()
-      .then(data => {
-        if (!ignore) setCompletionData(data)
-      })
-      .catch(err => {
-        console.error('Failed to load completion rate:', err)
-        toast.error('Failed to load quiz completion data')
-      })
-
-    db.quizAttempts
-      .count()
-      .then(count => {
-        if (!ignore) setQuizAttemptCount(count)
-      })
-      .catch(err => {
-        console.error('Failed to load quiz attempt count:', err)
-        toast.error('Failed to load quiz attempt count')
-      })
-
-    return () => {
-      ignore = true
+  const loadStudyNotes = useCallback(async () => {
+    setNotesError(null)
+    try {
+      const notes = await getTotalStudyNotes()
+      setStudyNotes(notes)
+    } catch (err) {
+      console.error('Failed to load study notes:', err)
+      toast.error('Failed to load study notes')
+      setNotesError(isOnline ? 'Failed to load study notes.' : offlineMsg)
     }
-  }, [])
+  }, [isOnline])
+
+  const loadCompletionRate = useCallback(async () => {
+    setCompletionError(null)
+    try {
+      const data = await calculateCompletionRate()
+      setCompletionData(data)
+    } catch (err) {
+      console.error('Failed to load completion rate:', err)
+      toast.error('Failed to load quiz completion data')
+      setCompletionError(isOnline ? 'Failed to load quiz completion data.' : offlineMsg)
+    }
+  }, [isOnline])
+
+  const loadQuizAttemptCount = useCallback(async () => {
+    setQuizCountError(null)
+    try {
+      const count = await db.quizAttempts.count()
+      setQuizAttemptCount(count)
+    } catch (err) {
+      console.error('Failed to load quiz attempt count:', err)
+      toast.error('Failed to load quiz attempt count')
+      setQuizCountError(isOnline ? 'Failed to load quiz attempt count.' : offlineMsg)
+    }
+  }, [isOnline])
+
+  useEffect(() => {
+    void loadStudyNotes()
+    void loadCompletionRate()
+    void loadQuizAttemptCount()
+  }, [loadStudyNotes, loadCompletionRate, loadQuizAttemptCount])
 
   // ── Memoized data ──
   const lessonsChange = useMemo(() => getWeeklyChange('lessons'), [])
@@ -245,6 +283,12 @@ export default function Reports() {
                   <StatsCard key={stat.label} {...stat} />
                 ))}
               </motion.div>
+
+              {notesError && (
+                <motion.div variants={fadeUp}>
+                  <InlineSectionError error={notesError} isOnline={isOnline} onRetry={loadStudyNotes} />
+                </motion.div>
+              )}
 
               {/* ── Row 2: Weekly Goal Ring + Study Time ── */}
               <motion.div variants={fadeUp} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -437,7 +481,9 @@ export default function Reports() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {completionData.startedCount === 0 ? (
+                    {completionError ? (
+                      <InlineSectionError error={completionError} isOnline={isOnline} onRetry={loadCompletionRate} />
+                    ) : completionData.startedCount === 0 ? (
                       <p
                         className="text-sm text-muted-foreground"
                         data-testid="quiz-completion-empty"
@@ -472,6 +518,12 @@ export default function Reports() {
                   </CardContent>
                 </Card>
               </motion.div>
+
+              {quizCountError && (
+                <motion.div variants={fadeUp}>
+                  <InlineSectionError error={quizCountError} isOnline={isOnline} onRetry={loadQuizAttemptCount} />
+                </motion.div>
+              )}
 
               {/* ── Row 5b: Quiz Export ── */}
               <motion.div variants={fadeUp}>

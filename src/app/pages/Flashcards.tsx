@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { motion, MotionConfig } from 'motion/react'
-import { Layers, CheckCircle2, RotateCcw, ChevronRight, CalendarDays, BookOpen } from 'lucide-react'
+import { Layers, CheckCircle2, RotateCcw, ChevronRight, CalendarDays, BookOpen, WifiOff } from 'lucide-react'
 import { useFlashcardStore } from '@/stores/useFlashcardStore'
 import { useCourseStore } from '@/stores/useCourseStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
@@ -18,6 +18,7 @@ import {
   EmptyDescription,
 } from '@/app/components/ui/empty'
 import { cn } from '@/app/components/ui/utils'
+import { useOnlineStatus } from '@/app/hooks/useOnlineStatus'
 import { fadeUp, scaleIn, staggerContainer } from '@/lib/motion'
 import type { ReviewRating } from '@/data/types'
 import { toast } from 'sonner'
@@ -71,9 +72,11 @@ export function Flashcards() {
   const [phase, setPhase] = useState<FlashcardPhase>('loading')
   const [isFlipped, setIsFlipped] = useState(false)
   const [isRating, setIsRating] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [summary, setSummary] = useState<FlashcardSessionSummary | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
   const now = useMemo(() => new Date(), [phase])
+  const isOnline = useOnlineStatus()
 
   const {
     flashcards,
@@ -101,10 +104,24 @@ export function Flashcards() {
   }, [allCourses, importedCourses])
 
   // Initial data load
+  const handleLoadFlashcards = useCallback(async () => {
+    setLoadError(null)
+    try {
+      await loadFlashcards()
+      await loadImportedCourses()
+    } catch (err) {
+      console.error('[Flashcards] Failed to load flashcards:', err)
+      setLoadError(
+        isOnline
+          ? 'Failed to load flashcards. Please try again.'
+          : "You're offline. Please check your connection and try again."
+      )
+    }
+  }, [loadFlashcards, loadImportedCourses, isOnline])
+
   useEffect(() => {
-    void loadFlashcards()
-    void loadImportedCourses()
-  }, [loadFlashcards, loadImportedCourses])
+    void handleLoadFlashcards()
+  }, [handleLoadFlashcards])
 
   // Transition from loading to dashboard once data arrives
   useEffect(() => {
@@ -207,7 +224,7 @@ export function Flashcards() {
   }, [phase, isFlipped, isRating, handleRate])
 
   // ── Loading skeleton ──
-  if (phase === 'loading') {
+  if (phase === 'loading' && !loadError) {
     return (
       <div className="mx-auto max-w-2xl space-y-6 p-6">
         <Skeleton className="h-8 w-48" />
@@ -215,6 +232,29 @@ export function Flashcards() {
           <Skeleton className="h-24 rounded-[16px]" />
           <Skeleton className="h-24 rounded-[16px]" />
           <Skeleton className="h-24 rounded-[16px]" />
+        </div>
+      </div>
+    )
+  }
+
+  // ── Error state ──
+  if (loadError) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6 p-6">
+        <div className="flex items-center gap-3">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-brand-soft text-brand-soft-foreground">
+            <Layers className="size-5" />
+          </div>
+          <h1 className="font-display text-2xl font-semibold tracking-tight">Flashcards</h1>
+        </div>
+        <div className="rounded-[24px] border border-destructive/50 bg-destructive/10 p-8 text-center">
+          {!isOnline && (
+            <WifiOff className="mx-auto mb-3 size-6 text-destructive" aria-hidden="true" />
+          )}
+          <p className="text-sm text-destructive">{loadError}</p>
+          <Button variant="outline" size="sm" className="mt-4" onClick={handleLoadFlashcards}>
+            Try Again
+          </Button>
         </div>
       </div>
     )
