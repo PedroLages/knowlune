@@ -308,6 +308,13 @@ export function SessionHistory() {
             </div>
           </div>
 
+          {/* Live region for filter result announcements */}
+          <span role="status" aria-live="polite" className="sr-only">
+            {hasActiveFilters
+              ? `${filteredSessions.length} ${filteredSessions.length === 1 ? 'session' : 'sessions'} found`
+              : ''}
+          </span>
+
           {/* Session List */}
           <ul className="space-y-3" data-testid="session-history" aria-label="Study sessions">
             {visibleSessions.map(session => (
