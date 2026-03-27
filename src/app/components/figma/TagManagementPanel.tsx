@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import {
   Sheet,
   SheetContent,
@@ -30,7 +30,8 @@ interface TagManagementPanelProps {
 }
 
 export function TagManagementPanel({ open, onOpenChange, onTagsChanged }: TagManagementPanelProps) {
-  const tagsWithCounts = useCourseImportStore(s => s.getTagsWithCounts())
+  const getTagsWithCounts = useCourseImportStore(s => s.getTagsWithCounts)
+  const tagsWithCounts = useMemo(() => getTagsWithCounts(), [getTagsWithCounts])
   const renameTagGlobally = useCourseImportStore(s => s.renameTagGlobally)
   const deleteTagGlobally = useCourseImportStore(s => s.deleteTagGlobally)
 
