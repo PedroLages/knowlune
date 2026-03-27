@@ -78,6 +78,16 @@ deferInit(() => {
   })
 })
 
+// E32-S03: Check IndexedDB storage quota on startup (deferred — non-critical)
+deferInit(() => {
+  import('@/lib/storageQuotaMonitor').then(({ checkStorageQuota }) => {
+    checkStorageQuota().catch(err => {
+      // silent-catch-ok: quota check is advisory, never block startup
+      console.warn('[StorageQuota] Startup check failed:', err)
+    })
+  })
+})
+
 // AC4: Run Ollama health check on startup if configured (deferred — non-critical)
 deferInit(() => {
   import('@/lib/ollamaHealthCheck').then(({ runStartupHealthCheck }) => {

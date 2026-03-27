@@ -486,6 +486,13 @@ export async function persistScannedCourse(
     })
   }
 
+  // E32-S03: Check storage quota after import (fire-and-forget)
+  import('@/lib/storageQuotaMonitor').then(({ checkStorageQuota }) => {
+    checkStorageQuota().catch(() => {
+      // silent-catch-ok: quota check is advisory
+    })
+  })
+
   // Unlock sidebar items via progressive disclosure
   unlockSidebarItem('course-imported')
 

@@ -930,7 +930,7 @@ export default function Settings() {
         <QuizPreferencesForm />
 
         {/* Data Management */}
-        <Card>
+        <Card id="data-management">
           <CardHeader className="border-b border-border/50 bg-surface-sunken/30">
             <div className="flex items-center gap-3">
               <div className="rounded-full bg-brand-soft p-2">
