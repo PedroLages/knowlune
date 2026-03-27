@@ -752,7 +752,12 @@ export default function Settings() {
           <CardContent>
             <div>
               <Label>Theme</Label>
-              <RadioGroup value={theme} onValueChange={setTheme} aria-label="Theme" className="mt-4">
+              <RadioGroup
+                value={theme}
+                onValueChange={setTheme}
+                aria-label="Theme"
+                className="mt-4"
+              >
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {/* System Theme Card */}
                   <label
