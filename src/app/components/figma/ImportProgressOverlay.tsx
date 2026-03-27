@@ -216,6 +216,7 @@ export function ImportProgressOverlay() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setExpanded(!expanded)}
+                aria-expanded={expanded}
                 className="size-7 p-0"
                 aria-label={expanded ? 'Collapse details' : 'Expand details'}
               >

@@ -335,6 +335,7 @@ export function YouTubeCourseDetail() {
               <button
                 className="flex items-center justify-between w-full p-4 text-left hover:bg-accent/50 transition-colors rounded-xl"
                 aria-label="Toggle AI course summary"
+                aria-controls="ai-summary-content"
               >
                 <div className="flex items-center gap-2">
                   <Sparkles className="size-4 text-brand" aria-hidden="true" />
@@ -353,7 +354,7 @@ export function YouTubeCourseDetail() {
               </button>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <div className="px-4 pb-4 text-sm text-muted-foreground">
+              <div id="ai-summary-content" className="px-4 pb-4 text-sm text-muted-foreground">
                 <p>
                   AI-generated summaries are created from transcript data. Import transcripts
                   for this course to enable AI summaries.
