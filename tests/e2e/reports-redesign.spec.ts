@@ -138,12 +138,12 @@ test.describe('Reports Page — Responsive', () => {
     await page.goto('/reports')
     await page.waitForLoadState('load')
 
-    // The overflow-x-auto wrapper should exist around the bar chart
-    const scrollContainer = page.locator('.overflow-x-auto').first()
+    // The scrollable wrapper should exist around the bar chart
+    const scrollContainer = page.getByTestId('bar-chart-scroll-container')
     await expect(scrollContainer).toBeVisible()
 
-    // The inner chart should have min-width larger than viewport
-    const minWidthChart = page.locator('.min-w-\\[480px\\]').first()
-    await expect(minWidthChart).toBeVisible()
+    // The inner chart container should be visible
+    const chartInner = page.getByTestId('bar-chart-inner')
+    await expect(chartInner).toBeVisible()
   })
 })

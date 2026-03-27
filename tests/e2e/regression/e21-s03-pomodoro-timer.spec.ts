@@ -63,21 +63,22 @@ test.describe('E21-S03: Pomodoro Focus Timer', () => {
     await page.getByTestId('pomodoro-trigger').click()
     await page.getByTestId('pomodoro-start').click()
 
-    // eslint-disable-next-line test-patterns/no-hard-waits -- Intentional: real-time interval ticks needed to decrement countdown
-    await page.waitForTimeout(2100)
+    // Wait for countdown to tick below 25:00 (deterministic polling)
+    await expect(page.getByTestId('pomodoro-countdown')).not.toHaveText('25:00', { timeout: 5000 })
 
     // Pause
     await page.getByTestId('pomodoro-pause').click()
     const pausedTime = await page.getByTestId('pomodoro-countdown').textContent()
 
-    // eslint-disable-next-line test-patterns/no-hard-waits -- Intentional: verifying countdown stays frozen while paused
+    // eslint-disable-next-line test-patterns/no-hard-waits -- Intentional: verifying countdown stays frozen while paused (no deterministic alternative for proving a value does NOT change)
     await page.waitForTimeout(2000)
     await expect(page.getByTestId('pomodoro-countdown')).toHaveText(pausedTime!)
 
     // Resume
     await page.getByTestId('pomodoro-resume').click()
-    // eslint-disable-next-line test-patterns/no-hard-waits -- Intentional: real-time ticks after resume to confirm countdown progresses
-    await page.waitForTimeout(1500)
+
+    // Wait for countdown to change from paused value (deterministic polling)
+    await expect(page.getByTestId('pomodoro-countdown')).not.toHaveText(pausedTime!, { timeout: 5000 })
 
     // Time should have decreased from paused value
     const resumedTime = await page.getByTestId('pomodoro-countdown').textContent()
