@@ -95,6 +95,7 @@ export function EngagementPreferences() {
           <RadioGroup
             value={colorScheme}
             onValueChange={(value: string) => setPreference('colorScheme', value as ColorScheme)}
+            aria-label="Color scheme"
             className="grid grid-cols-1 sm:grid-cols-2 gap-3"
             data-testid="color-scheme-picker"
           >
