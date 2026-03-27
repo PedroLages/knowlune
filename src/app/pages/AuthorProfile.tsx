@@ -187,9 +187,10 @@ export function AuthorProfile() {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-sm text-brand hover:underline capitalize"
+                      aria-label={`${platform} — ${author.name}`}
                     >
                       {platform}
-                      <ExternalLink className="size-3" />
+                      <ExternalLink className="size-3" aria-hidden="true" />
                     </a>
                   ))}
                 </div>
