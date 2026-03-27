@@ -508,4 +508,4 @@ development_status:
   # Epic 35: Server-Side Premium Entitlement Enforcement
   # ──────────────────────────────────────────────────
   epic-35: in-progress
-  35-1-server-middleware-foundation: in-progress
+  35-1-server-middleware-foundation: done
