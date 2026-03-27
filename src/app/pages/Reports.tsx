@@ -251,7 +251,17 @@ export default function Reports() {
             actionHref="/courses"
           />
         ) : (
-          <Tabs
+          <>
+            {/* Live region for tab/filter change announcements */}
+            <span role="status" aria-live="polite" className="sr-only">
+              {activeTab === 'study'
+                ? `Study Analytics: ${completedLessons} lessons completed, ${inProgressCount} in progress`
+                : activeTab === 'quizzes'
+                  ? 'Quiz Analytics displayed'
+                  : 'AI Analytics displayed'}
+            </span>
+
+            <Tabs
             value={activeTab}
             onValueChange={value => setSearchParams({ tab: value }, { replace: true })}
             className="mb-6"
@@ -554,7 +564,8 @@ export default function Reports() {
                 </Card>
               </motion.div>
             </TabsContent>
-          </Tabs>
+            </Tabs>
+          </>
         )}
       </motion.div>
     </MotionConfig>
