@@ -22,15 +22,31 @@ import { useLazyStore } from '@/hooks/useLazyStore'
 import { getAvatarSrc } from '@/lib/authors'
 
 const CATEGORY_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  'behavioral-analysis': { bg: 'bg-success-soft', text: 'text-success', label: 'Behavioral Analysis' },
-  'influence-authority': { bg: 'bg-brand-soft', text: 'text-brand-soft-foreground', label: 'Influence & Authority' },
-  'confidence-mastery': { bg: 'bg-gold-muted', text: 'text-gold-soft-foreground', label: 'Confidence Mastery' },
+  'behavioral-analysis': {
+    bg: 'bg-success-soft',
+    text: 'text-success',
+    label: 'Behavioral Analysis',
+  },
+  'influence-authority': {
+    bg: 'bg-brand-soft',
+    text: 'text-brand-soft-foreground',
+    label: 'Influence & Authority',
+  },
+  'confidence-mastery': {
+    bg: 'bg-gold-muted',
+    text: 'text-gold-soft-foreground',
+    label: 'Confidence Mastery',
+  },
   'operative-training': {
     bg: 'bg-accent-violet-muted',
     text: 'text-accent-violet',
     label: 'Operative Training',
   },
-  'research-library': { bg: 'bg-secondary', text: 'text-secondary-foreground', label: 'Research Library' },
+  'research-library': {
+    bg: 'bg-secondary',
+    text: 'text-secondary-foreground',
+    label: 'Research Library',
+  },
 }
 
 const DIFFICULTY_COLORS: Record<string, string> = {
@@ -126,7 +142,11 @@ export function CourseOverview() {
     <MotionConfig reducedMotion="user">
       <div className="max-w-6xl mx-auto">
         {/* Back navigation */}
-        <motion.div initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }}>
+        <motion.div
+          initial={{ opacity: 0, x: -12 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3 }}
+        >
           <button
             onClick={() => navigate(-1)}
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-5 group"
@@ -216,7 +236,9 @@ export function CourseOverview() {
             >
               <stat.icon className="size-5 text-muted-foreground mx-auto mb-2" />
               <p className="font-semibold text-foreground capitalize">{stat.value}</p>
-              <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground mt-0.5">{stat.label}</p>
+              <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground mt-0.5">
+                {stat.label}
+              </p>
             </div>
           ))}
         </motion.div>
@@ -232,7 +254,9 @@ export function CourseOverview() {
           >
             {/* About */}
             <div className="bg-card rounded-[24px] p-6 md:p-8 shadow-studio border border-border/50">
-              <h2 className="font-display text-lg font-semibold text-foreground mb-4">About This Course</h2>
+              <h2 className="font-display text-lg font-semibold text-foreground mb-4">
+                About This Course
+              </h2>
               <p className="text-muted-foreground leading-relaxed">{course.description}</p>
             </div>
 
@@ -251,7 +275,9 @@ export function CourseOverview() {
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground mb-1">Instructor</p>
+                  <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground mb-1">
+                    Instructor
+                  </p>
                   <p className="font-semibold text-foreground group-hover:text-brand-soft-foreground transition-colors">
                     {authorName}
                   </p>
@@ -276,7 +302,9 @@ export function CourseOverview() {
             {/* What You'll Learn */}
             {course.tags.length > 0 && (
               <div className="bg-card rounded-[24px] p-6 shadow-studio border border-border/50">
-                <h2 className="font-display text-lg font-semibold text-foreground mb-4">What You'll Learn</h2>
+                <h2 className="font-display text-lg font-semibold text-foreground mb-4">
+                  What You'll Learn
+                </h2>
                 <ul className="space-y-3">
                   {course.tags.map(tag => (
                     <li key={tag} className="flex items-start gap-3">
@@ -298,7 +326,9 @@ export function CourseOverview() {
                 background: 'linear-gradient(135deg, var(--brand) 0%, var(--accent-violet) 100%)',
               }}
             >
-              <h3 className="font-display text-lg font-semibold text-brand-foreground mb-1">Ready to Start?</h3>
+              <h3 className="font-display text-lg font-semibold text-brand-foreground mb-1">
+                Ready to Start?
+              </h3>
               <p className="text-brand-foreground/80 text-sm mb-5">Start your learning journey</p>
               {firstLesson ? (
                 <Button
@@ -360,7 +390,9 @@ export function CourseOverview() {
                       {isLocked ? (
                         <Lock className="size-3.5 text-muted-foreground" />
                       ) : (
-                        <span className="text-sm font-semibold text-brand-soft-foreground">{moduleIndex + 1}</span>
+                        <span className="text-sm font-semibold text-brand-soft-foreground">
+                          {moduleIndex + 1}
+                        </span>
                       )}
                     </span>
                     <div className="flex-1 min-w-0">

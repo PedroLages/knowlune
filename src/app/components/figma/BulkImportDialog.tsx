@@ -41,7 +41,14 @@ interface FolderEntry {
   selected: boolean
 }
 
-type ImportItemStatus = 'pending' | 'scanning' | 'importing' | 'success' | 'no-files' | 'error' | 'duplicate'
+type ImportItemStatus =
+  | 'pending'
+  | 'scanning'
+  | 'importing'
+  | 'success'
+  | 'no-files'
+  | 'error'
+  | 'duplicate'
 
 interface ImportItem {
   folderName: string
@@ -66,7 +73,12 @@ interface BulkImportDialogProps {
   onYouTubeImport?: () => void // Delegate to YouTubeImportDialog (E28-S05)
 }
 
-export function BulkImportDialog({ open, onOpenChange, onSingleImport, onYouTubeImport }: BulkImportDialogProps) {
+export function BulkImportDialog({
+  open,
+  onOpenChange,
+  onSingleImport,
+  onYouTubeImport,
+}: BulkImportDialogProps) {
   const [step, setStep] = useState<DialogStep>('choose')
   const [folders, setFolders] = useState<FolderEntry[]>([])
   const [importItems, setImportItems] = useState<ImportItem[]>([])
@@ -135,9 +147,7 @@ export function BulkImportDialog({ open, onOpenChange, onSingleImport, onYouTube
   }, [])
 
   const handleToggleFolder = useCallback((index: number) => {
-    setFolders(prev =>
-      prev.map((f, i) => (i === index ? { ...f, selected: !f.selected } : f))
-    )
+    setFolders(prev => prev.map((f, i) => (i === index ? { ...f, selected: !f.selected } : f)))
   }, [])
 
   const handleSelectAll = useCallback(() => {
@@ -243,7 +253,11 @@ export function BulkImportDialog({ open, onOpenChange, onSingleImport, onYouTube
     const running: Promise<void>[] = []
     let queueIndex = 0
 
-    while (queueIndex < queue.length && !abortRef.current && !useImportProgressStore.getState().cancelRequested) {
+    while (
+      queueIndex < queue.length &&
+      !abortRef.current &&
+      !useImportProgressStore.getState().cancelRequested
+    ) {
       while (running.length < MAX_CONCURRENCY && queueIndex < queue.length) {
         const item = queue[queueIndex++]
         const promise = processFolder(item).then(() => {
@@ -285,9 +299,7 @@ export function BulkImportDialog({ open, onOpenChange, onSingleImport, onYouTube
       if (noFilesCount > 0) issues.push(`${noFilesCount} had no supported files`)
       if (errorCount > 0) issues.push(`${errorCount} failed`)
       if (duplicateCount > 0) issues.push(`${duplicateCount} already imported`)
-      toast.warning(
-        `${successCount} of ${totalAttempted} folders imported. ${issues.join(', ')}.`
-      )
+      toast.warning(`${successCount} of ${totalAttempted} folders imported. ${issues.join(', ')}.`)
     } else {
       toast.error('No folders were imported. Check the results for details.')
     }
@@ -296,82 +308,90 @@ export function BulkImportDialog({ open, onOpenChange, onSingleImport, onYouTube
   }, [folders])
 
   // Retry a single failed item
-  const handleRetry = useCallback(async (folderName: string) => {
-    setImportItems(prev => {
-      const items = [...prev]
-      const idx = items.findIndex(i => i.folderName === folderName)
-      if (idx >= 0) {
-        items[idx] = { ...items[idx], status: 'scanning', error: undefined }
+  const handleRetry = useCallback(
+    async (folderName: string) => {
+      setImportItems(prev => {
+        const items = [...prev]
+        const idx = items.findIndex(i => i.folderName === folderName)
+        if (idx >= 0) {
+          items[idx] = { ...items[idx], status: 'scanning', error: undefined }
+        }
+        return items
+      })
+
+      const item = importItems.find(i => i.folderName === folderName)
+      if (!item) return
+
+      const scanResult = await scanCourseFolderFromHandle(item.handle)
+
+      if (scanResult.status !== 'success') {
+        setImportItems(prev =>
+          prev.map(i =>
+            i.folderName === folderName
+              ? {
+                  ...i,
+                  status: scanResult.status === 'no-files' ? 'no-files' : 'error',
+                  error:
+                    scanResult.status === 'error'
+                      ? scanResult.message
+                      : scanResult.status === 'duplicate'
+                        ? 'Already imported'
+                        : undefined,
+                }
+              : i
+          )
+        )
+        return
       }
-      return items
-    })
 
-    const item = importItems.find(i => i.folderName === folderName)
-    if (!item) return
-
-    const scanResult = await scanCourseFolderFromHandle(item.handle)
-
-    if (scanResult.status !== 'success') {
       setImportItems(prev =>
         prev.map(i =>
           i.folderName === folderName
             ? {
                 ...i,
-                status: scanResult.status === 'no-files' ? 'no-files' : 'error',
-                error:
-                  scanResult.status === 'error'
-                    ? scanResult.message
-                    : scanResult.status === 'duplicate'
-                      ? 'Already imported'
-                      : undefined,
+                status: 'importing' as const,
+                scannedCourse: scanResult.course,
+                videoCount: scanResult.course.videos.length,
+                pdfCount: scanResult.course.pdfs.length,
               }
             : i
         )
       )
-      return
-    }
 
-    setImportItems(prev =>
-      prev.map(i =>
-        i.folderName === folderName
-          ? {
-              ...i,
-              status: 'importing' as const,
-              scannedCourse: scanResult.course,
-              videoCount: scanResult.course.videos.length,
-              pdfCount: scanResult.course.pdfs.length,
-            }
-          : i
-      )
-    )
-
-    try {
-      await persistScannedCourse(scanResult.course)
-      setImportItems(prev =>
-        prev.map(i => (i.folderName === folderName ? { ...i, status: 'success' } : i))
-      )
-      toast.success(`Imported: ${folderName}`)
-    } catch {
-      // silent-catch-ok: persistScannedCourse already shows error toasts, we just update item status
-      setImportItems(prev =>
-        prev.map(i =>
-          i.folderName === folderName
-            ? {
-                ...i,
-                status: 'error',
-                error: 'Failed to import',
-              }
-            : i
+      try {
+        await persistScannedCourse(scanResult.course)
+        setImportItems(prev =>
+          prev.map(i => (i.folderName === folderName ? { ...i, status: 'success' } : i))
         )
-      )
-    }
-  }, [importItems])
+        toast.success(`Imported: ${folderName}`)
+      } catch {
+        // silent-catch-ok: persistScannedCourse already shows error toasts, we just update item status
+        setImportItems(prev =>
+          prev.map(i =>
+            i.folderName === folderName
+              ? {
+                  ...i,
+                  status: 'error',
+                  error: 'Failed to import',
+                }
+              : i
+          )
+        )
+      }
+    },
+    [importItems]
+  )
 
   // Progress calculation
   const completedItems = importItems.filter(
-    i => i.status === 'success' || i.status === 'error' || i.status === 'no-files' || i.status === 'duplicate'
+    i =>
+      i.status === 'success' ||
+      i.status === 'error' ||
+      i.status === 'no-files' ||
+      i.status === 'duplicate'
   ).length
-  const progressPercent = importItems.length > 0 ? Math.round((completedItems / importItems.length) * 100) : 0
+  const progressPercent =
+    importItems.length > 0 ? Math.round((completedItems / importItems.length) * 100) : 0
   const isStillImporting = step === 'importing' && completedItems < importItems.length
 
   // Results summary
@@ -502,7 +522,10 @@ export function BulkImportDialog({ open, onOpenChange, onSingleImport, onYouTube
                       aria-label={`Select ${folder.name}`}
                       data-testid={`bulk-folder-${folder.name}`}
                     />
-                    <FolderOpen className="size-4 text-muted-foreground shrink-0" aria-hidden="true" />
+                    <FolderOpen
+                      className="size-4 text-muted-foreground shrink-0"
+                      aria-hidden="true"
+                    />
                     <span className="text-sm truncate">{folder.name}</span>
                   </label>
                 ))}
@@ -555,11 +578,17 @@ export function BulkImportDialog({ open, onOpenChange, onSingleImport, onYouTube
                     data-testid={`bulk-item-${item.folderName}`}
                   >
                     {/* Status icon */}
-                    {(item.status === 'pending') && (
-                      <div className="size-5 rounded-full border-2 border-muted shrink-0" aria-label="Pending" />
+                    {item.status === 'pending' && (
+                      <div
+                        className="size-5 rounded-full border-2 border-muted shrink-0"
+                        aria-label="Pending"
+                      />
                     )}
                     {(item.status === 'scanning' || item.status === 'importing') && (
-                      <Loader2 className="size-5 text-brand animate-spin shrink-0" aria-label="In progress" />
+                      <Loader2
+                        className="size-5 text-brand animate-spin shrink-0"
+                        aria-label="In progress"
+                      />
                     )}
                     {item.status === 'success' && (
                       <CheckCircle2 className="size-5 text-success shrink-0" aria-label="Success" />
@@ -568,10 +597,16 @@ export function BulkImportDialog({ open, onOpenChange, onSingleImport, onYouTube
                       <XCircle className="size-5 text-destructive shrink-0" aria-label="Error" />
                     )}
                     {item.status === 'no-files' && (
-                      <AlertTriangle className="size-5 text-warning shrink-0" aria-label="No supported files" />
+                      <AlertTriangle
+                        className="size-5 text-warning shrink-0"
+                        aria-label="No supported files"
+                      />
                     )}
                     {item.status === 'duplicate' && (
-                      <AlertTriangle className="size-5 text-warning shrink-0" aria-label="Duplicate" />
+                      <AlertTriangle
+                        className="size-5 text-warning shrink-0"
+                        aria-label="Duplicate"
+                      />
                     )}
 
                     {/* Folder name + details */}
@@ -601,7 +636,7 @@ export function BulkImportDialog({ open, onOpenChange, onSingleImport, onYouTube
                     </div>
 
                     {/* Retry button for failed items */}
-                    {(item.status === 'error') && step === 'results' && (
+                    {item.status === 'error' && step === 'results' && (
                       <Button
                         variant="ghost"
                         size="sm"

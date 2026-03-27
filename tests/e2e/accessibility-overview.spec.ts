@@ -107,7 +107,11 @@ test.describe('Accessibility - Overview Page', () => {
     await page.waitForLoadState('networkidle')
 
     // Press Tab multiple times and verify focus moves through elements
-    const focusableElements: Array<{ tagName: string | undefined; role: string | null; ariaLabel: string | null }> = []
+    const focusableElements: Array<{
+      tagName: string | undefined
+      role: string | null
+      ariaLabel: string | null
+    }> = []
 
     // Start from body
     await page.evaluate(() => document.body.focus())

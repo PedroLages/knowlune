@@ -231,22 +231,26 @@ export function LessonPlayer() {
     if (courseId && lessonId) {
       setCompleted(isLessonComplete(courseId, lessonId))
       setNoteId(undefined)
-      getNotes(courseId, lessonId).then(notes => {
-        const latest = notes[notes.length - 1]
-        setNoteText(latest?.content ?? '')
-        setNoteId(latest?.id)
-      }).catch(() => {
-        toast.error('Failed to load notes')
-      })
+      getNotes(courseId, lessonId)
+        .then(notes => {
+          const latest = notes[notes.length - 1]
+          setNoteText(latest?.content ?? '')
+          setNoteId(latest?.id)
+        })
+        .catch(() => {
+          toast.error('Failed to load notes')
+        })
     }
   }, [courseId, lessonId])
 
   // Update bookmarks when lesson changes
   useEffect(() => {
     if (courseId && lessonId) {
-      getLessonBookmarks(courseId, lessonId).then(setBookmarks).catch(() => {
-        toast.error('Failed to load bookmarks')
-      })
+      getLessonBookmarks(courseId, lessonId)
+        .then(setBookmarks)
+        .catch(() => {
+          toast.error('Failed to load bookmarks')
+        })
     }
   }, [courseId, lessonId])
 

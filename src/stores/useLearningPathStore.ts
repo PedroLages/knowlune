@@ -149,9 +149,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
 
     // Optimistic update
     set(state => ({
-      paths: state.paths.map(p =>
-        p.id === pathId ? { ...p, description, updatedAt: now } : p
-      ),
+      paths: state.paths.map(p => (p.id === pathId ? { ...p, description, updatedAt: now } : p)),
       activePath:
         state.activePath?.id === pathId
           ? { ...state.activePath, description, updatedAt: now }
@@ -272,10 +270,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
 
     // Optimistic update
     set(state => ({
-      entries: [
-        ...state.entries.filter(e => e.pathId !== pathId),
-        ...remaining,
-      ],
+      entries: [...state.entries.filter(e => e.pathId !== pathId), ...remaining],
       paths: state.paths.map(p =>
         p.id === pathId ? { ...p, updatedAt: new Date().toISOString() } : p
       ),
@@ -318,16 +313,12 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
     const updated = reordered.map((entry, index) => ({
       ...entry,
       position: index + 1,
-      isManuallyOrdered:
-        entry.id === movedEntry.id ? true : entry.isManuallyOrdered,
+      isManuallyOrdered: entry.id === movedEntry.id ? true : entry.isManuallyOrdered,
     }))
 
     // Optimistic update
     set(state => ({
-      entries: [
-        ...state.entries.filter(e => e.pathId !== pathId),
-        ...updated,
-      ],
+      entries: [...state.entries.filter(e => e.pathId !== pathId), ...updated],
       error: null,
     }))
 
@@ -395,10 +386,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
         }
         generatedEntries.push(entry)
         set(state => ({
-          entries: [
-            ...state.entries.filter(e => e.pathId !== pathId),
-            ...generatedEntries,
-          ],
+          entries: [...state.entries.filter(e => e.pathId !== pathId), ...generatedEntries],
         }))
       })
 
@@ -428,10 +416,7 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       })
 
       set(state => ({
-        entries: [
-          ...state.entries.filter(e => e.pathId !== pathId),
-          ...finalEntries,
-        ],
+        entries: [...state.entries.filter(e => e.pathId !== pathId), ...finalEntries],
         paths: state.paths.map(p =>
           p.id === pathId ? { ...p, updatedAt: now, isAIGenerated: true } : p
         ),
@@ -490,26 +475,25 @@ export const useLearningPathStore = create<LearningPathState>((set, get) => ({
       .sort((a, b) => a.position - b.position)
 
     // Build updated entries with AI positions and justifications
-    const updated = currentEntries.map(entry => {
-      const aiEntry = orderedEntries.find(o => o.courseId === entry.courseId)
-      if (aiEntry) {
-        return {
-          ...entry,
-          position: aiEntry.position,
-          justification: aiEntry.justification,
-          isManuallyOrdered: false,
+    const updated = currentEntries
+      .map(entry => {
+        const aiEntry = orderedEntries.find(o => o.courseId === entry.courseId)
+        if (aiEntry) {
+          return {
+            ...entry,
+            position: aiEntry.position,
+            justification: aiEntry.justification,
+            isManuallyOrdered: false,
+          }
         }
-      }
-      return entry
-    }).sort((a, b) => a.position - b.position)
+        return entry
+      })
+      .sort((a, b) => a.position - b.position)
 
     // Optimistic update
     const now = new Date().toISOString()
     set(state => ({
-      entries: [
-        ...state.entries.filter(e => e.pathId !== pathId),
-        ...updated,
-      ],
+      entries: [...state.entries.filter(e => e.pathId !== pathId), ...updated],
       paths: state.paths.map(p =>
         p.id === pathId ? { ...p, updatedAt: now, isAIGenerated: true } : p
       ),

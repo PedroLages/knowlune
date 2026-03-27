@@ -141,8 +141,7 @@ export async function structureCourseWithAI(
 
     return { ok: true, proposal }
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Unknown error during AI structuring.'
+    const message = error instanceof Error ? error.message : 'Unknown error during AI structuring.'
 
     if (
       message.includes('abort') ||
@@ -279,9 +278,7 @@ export function parseAIResponse(
   if (chapters.length === 0) return null
 
   // Assign any unassigned videos to an "Other" chapter
-  const unassigned = videos
-    .map(v => v.videoId)
-    .filter(id => !assignedVideoIds.has(id))
+  const unassigned = videos.map(v => v.videoId).filter(id => !assignedVideoIds.has(id))
 
   if (unassigned.length > 0) {
     chapters.push({

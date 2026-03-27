@@ -80,12 +80,7 @@ export interface TranscriptPanelProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export function TranscriptPanel({
-  cues,
-  currentTime,
-  onSeek,
-  loadingState,
-}: TranscriptPanelProps) {
+export function TranscriptPanel({ cues, currentTime, onSeek, loadingState }: TranscriptPanelProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const activeCueRef = useRef<HTMLButtonElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -135,11 +130,7 @@ export function TranscriptPanel({
 
   // Auto-scroll to active cue (unless user is scrolling or searching)
   useEffect(() => {
-    if (
-      activeCueRef.current &&
-      !isUserScrollingRef.current &&
-      !searchQuery.trim()
-    ) {
+    if (activeCueRef.current && !isUserScrollingRef.current && !searchQuery.trim()) {
       scrollIntoViewReducedMotion(activeCueRef.current, {
         behavior: 'smooth',
         block: 'nearest',
@@ -175,15 +166,10 @@ export function TranscriptPanel({
         aria-busy="true"
       >
         <div className="flex items-center gap-2 mb-3">
-          <Loader2
-            className="size-4 text-muted-foreground animate-spin"
-            aria-hidden="true"
-          />
+          <Loader2 className="size-4 text-muted-foreground animate-spin" aria-hidden="true" />
           <h2 className="font-semibold text-sm">Transcript</h2>
         </div>
-        <p className="text-xs text-muted-foreground mb-3">
-          Fetching transcript...
-        </p>
+        <p className="text-xs text-muted-foreground mb-3">Fetching transcript...</p>
         <div className="space-y-3" aria-label="Loading transcript">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="space-y-1.5">
@@ -205,16 +191,13 @@ export function TranscriptPanel({
         role="region"
         aria-label="Transcript"
       >
-        <FileText
-          className="size-10 text-muted-foreground/50"
-          aria-hidden="true"
-        />
+        <FileText className="size-10 text-muted-foreground/50" aria-hidden="true" />
         <p className="text-sm text-muted-foreground text-center">
           No transcript available for this video
         </p>
         <p className="text-xs text-muted-foreground/70 text-center max-w-xs">
-          Transcripts are automatically fetched when available. For videos
-          without captions, consider setting up Whisper for local transcription.
+          Transcripts are automatically fetched when available. For videos without captions,
+          consider setting up Whisper for local transcription.
         </p>
       </div>
     )
@@ -229,13 +212,8 @@ export function TranscriptPanel({
         role="region"
         aria-label="Transcript"
       >
-        <FileText
-          className="size-10 text-destructive/50"
-          aria-hidden="true"
-        />
-        <p className="text-sm text-muted-foreground text-center">
-          Failed to load transcript
-        </p>
+        <FileText className="size-10 text-destructive/50" aria-hidden="true" />
+        <p className="text-sm text-muted-foreground text-center">Failed to load transcript</p>
       </div>
     )
   }
@@ -250,14 +228,9 @@ export function TranscriptPanel({
       {/* Header + Search */}
       <div className="p-3 border-b shrink-0 space-y-2">
         <div className="flex items-center gap-2">
-          <FileText
-            className="size-4 text-muted-foreground"
-            aria-hidden="true"
-          />
+          <FileText className="size-4 text-muted-foreground" aria-hidden="true" />
           <h2 className="font-semibold text-sm">Transcript</h2>
-          <span className="text-xs text-muted-foreground ml-auto">
-            {cues.length} segments
-          </span>
+          <span className="text-xs text-muted-foreground ml-auto">{cues.length} segments</span>
         </div>
         <div className="relative">
           <Search
@@ -275,11 +248,7 @@ export function TranscriptPanel({
           />
         </div>
         {searchQuery.trim() && (
-          <p
-            className="text-xs text-muted-foreground"
-            role="status"
-            aria-live="polite"
-          >
+          <p className="text-xs text-muted-foreground" role="status" aria-live="polite">
             {matchCount} {matchCount === 1 ? 'match' : 'matches'} found
           </p>
         )}
@@ -295,9 +264,7 @@ export function TranscriptPanel({
       >
         {cues.map((cue, idx) => {
           const isActive = idx === activeCueIndex
-          const isMatch = searchQuery.trim()
-            ? cueMatchesQuery(cue, searchQuery)
-            : false
+          const isMatch = searchQuery.trim() ? cueMatchesQuery(cue, searchQuery) : false
           const isSearchActive = searchQuery.trim().length > 0
           // When searching, dim non-matching cues but keep them visible
           const isDimmed = isSearchActive && !isMatch
@@ -329,9 +296,7 @@ export function TranscriptPanel({
               >
                 {formatCueTime(cue.startTime)}
               </span>
-              {isSearchActive
-                ? highlightText(cue.text, searchQuery)
-                : cue.text}
+              {isSearchActive ? highlightText(cue.text, searchQuery) : cue.text}
             </button>
           )
         })}

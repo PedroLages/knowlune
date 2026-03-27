@@ -279,9 +279,7 @@ describe('Session Workflow: Cross-Store Integration', () => {
     })
 
     // Verify both stores reflect the work done
-    const progressStatus = useContentProgressStore
-      .getState()
-      .getItemStatus(COURSE_ID, LESSON_ID)
+    const progressStatus = useContentProgressStore.getState().getItemStatus(COURSE_ID, LESSON_ID)
     expect(progressStatus).toBe('completed')
 
     // Verify session exists in DB with duration

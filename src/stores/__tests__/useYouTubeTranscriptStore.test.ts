@@ -9,7 +9,11 @@ vi.mock('@/lib/youtubeTranscriptPipeline', () => ({
 }))
 
 import { useYouTubeTranscriptStore } from '@/stores/useYouTubeTranscriptStore'
-import { fetchTranscriptsBatch, getTranscript, getCourseTranscripts } from '@/lib/youtubeTranscriptPipeline'
+import {
+  fetchTranscriptsBatch,
+  getTranscript,
+  getCourseTranscripts,
+} from '@/lib/youtubeTranscriptPipeline'
 
 const mockFetchBatch = vi.mocked(fetchTranscriptsBatch)
 const mockGetTranscript = vi.mocked(getTranscript)
@@ -47,7 +51,12 @@ describe('fetchBatch', () => {
 
     await useYouTubeTranscriptStore.getState().fetchBatch('course-1', ['v1', 'v2'])
 
-    expect(mockFetchBatch).toHaveBeenCalledWith('course-1', ['v1', 'v2'], expect.any(Function), undefined)
+    expect(mockFetchBatch).toHaveBeenCalledWith(
+      'course-1',
+      ['v1', 'v2'],
+      expect.any(Function),
+      undefined
+    )
     expect(useYouTubeTranscriptStore.getState().isFetching).toBe(false)
     expect(useYouTubeTranscriptStore.getState().batchProgress).toBeNull()
   })

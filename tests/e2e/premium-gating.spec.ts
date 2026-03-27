@@ -60,7 +60,9 @@ test.describe('Premium Gating — Free User', () => {
     await expect(page.getByText('Premium Feature')).toBeVisible()
 
     // Upgrade button should exist
-    const upgradeBtn = page.getByRole('button', { name: /upgrade|sign in|subscribe|start free trial/i })
+    const upgradeBtn = page.getByRole('button', {
+      name: /upgrade|sign in|subscribe|start free trial/i,
+    })
     await expect(upgradeBtn).toBeVisible()
   })
 
@@ -113,7 +115,7 @@ test.describe('Premium Gating — Trial User', () => {
     ])
 
     // Mock auth store to simulate logged-in user
-    await page.evaluate((userId) => {
+    await page.evaluate(userId => {
       localStorage.setItem(
         'auth-store',
         JSON.stringify({
@@ -142,7 +144,10 @@ test.describe('Premium Gating — Trial User', () => {
     // With seeded entitlement, the gate visibility depends on whether
     // the hook picks up the IndexedDB cache before server validation fails.
     // This test validates the seeding mechanism works.
-    const isGated = await gate.or(preview).isVisible().catch(() => false)
+    const isGated = await gate
+      .or(preview)
+      .isVisible()
+      .catch(() => false)
     // eslint-disable-next-line no-console -- diagnostic assertion
     console.log(`Trial user gate visible: ${isGated}`)
   })
@@ -159,7 +164,7 @@ test.describe('Premium Gating — Trial User', () => {
     ])
 
     // Mock auth
-    await page.evaluate((userId) => {
+    await page.evaluate(userId => {
       localStorage.setItem(
         'auth-store',
         JSON.stringify({
@@ -199,7 +204,7 @@ test.describe('Premium Gating — Premium User', () => {
     ])
 
     // Mock authenticated user
-    await page.evaluate((userId) => {
+    await page.evaluate(userId => {
       localStorage.setItem(
         'auth-store',
         JSON.stringify({
@@ -221,7 +226,10 @@ test.describe('Premium Gating — Premium User', () => {
     const gate = page.getByTestId('premium-gate-cta')
     const preview = page.getByTestId('premium-feature-preview')
 
-    const isGated = await gate.or(preview).isVisible({ timeout: 3000 }).catch(() => false)
+    const isGated = await gate
+      .or(preview)
+      .isVisible({ timeout: 3000 })
+      .catch(() => false)
     // eslint-disable-next-line no-console -- diagnostic
     console.log(`Premium user gate visible: ${isGated}`)
   })
@@ -266,7 +274,7 @@ test.describe('Premium Gating — Stale Entitlement Cache', () => {
       }),
     ])
 
-    await page.evaluate((userId) => {
+    await page.evaluate(userId => {
       localStorage.setItem(
         'auth-store',
         JSON.stringify({

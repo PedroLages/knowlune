@@ -17,10 +17,7 @@ function makeVideo(videoId: string, title: string, duration = 600): GroupingVide
 describe('groupVideosByRules', () => {
   describe('fallback to single chapter', () => {
     it('returns single "All Videos" chapter for fewer than 3 videos', () => {
-      const videos = [
-        makeVideo('v1', 'First Video'),
-        makeVideo('v2', 'Second Video'),
-      ]
+      const videos = [makeVideo('v1', 'First Video'), makeVideo('v2', 'Second Video')]
       const result = groupVideosByRules(videos)
       expect(result).toHaveLength(1)
       expect(result[0].title).toBe('All Videos')
@@ -144,9 +141,7 @@ describe('groupVideosByRules', () => {
       if (result.length > 1) {
         for (const chapter of result) {
           // Check that video indices are ascending (original order preserved)
-          const indices = chapter.videoIds.map(id =>
-            videos.findIndex(v => v.videoId === id)
-          )
+          const indices = chapter.videoIds.map(id => videos.findIndex(v => v.videoId === id))
           for (let i = 1; i < indices.length; i++) {
             expect(indices[i]).toBeGreaterThan(indices[i - 1])
           }

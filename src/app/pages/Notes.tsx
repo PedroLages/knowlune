@@ -677,9 +677,7 @@ export function Notes() {
               <VirtualizedList
                 items={displayedNotes}
                 getItemKey={item => item.note.id}
-                renderItem={item => (
-                  <div className="pb-3">{renderNoteCard(item)}</div>
-                )}
+                renderItem={item => <div className="pb-3">{renderNoteCard(item)}</div>}
                 estimateSize={140}
                 overscan={5}
                 data-testid="notes-virtual-list"
@@ -702,9 +700,7 @@ export function Notes() {
  * Flattens course groups + note cards into a single virtual list
  * with group headers rendered as special items.
  */
-type GroupedItem =
-  | { type: 'header'; courseName: string }
-  | { type: 'note'; item: EnrichedNote }
+type GroupedItem = { type: 'header'; courseName: string } | { type: 'note'; item: EnrichedNote }
 
 function VirtualizedGroupedNotes({
   courseGroups,

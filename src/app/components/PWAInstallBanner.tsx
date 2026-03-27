@@ -25,8 +25,7 @@ export function PWAInstallBanner() {
   const deferredPromptRef = useRef<BeforeInstallPromptEvent | null>(null)
 
   const isStandalone =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(display-mode: standalone)').matches
+    typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches
 
   const handleBeforeInstallPrompt = useCallback(
     (e: Event) => {
@@ -82,12 +81,7 @@ export function PWAInstallBanner() {
           <Button size="sm" variant="brand" onClick={handleInstall}>
             Install
           </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={handleDismiss}
-            aria-label="Dismiss"
-          >
+          <Button size="sm" variant="ghost" onClick={handleDismiss} aria-label="Dismiss">
             <X className="h-4 w-4" />
           </Button>
         </div>

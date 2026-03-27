@@ -135,7 +135,18 @@ export function usePathPlacementSuggestion(
       cancelled = true
       controller.abort()
     }
-  }, [enabled, isAvailable, hasExistingPaths, courseName, retryCount, paths, getEntriesForPath, importedCourses, courseTags, courseDescription])
+  }, [
+    enabled,
+    isAvailable,
+    hasExistingPaths,
+    courseName,
+    retryCount,
+    paths,
+    getEntriesForPath,
+    importedCourses,
+    courseTags,
+    courseDescription,
+  ])
 
   return {
     isAvailable,

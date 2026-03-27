@@ -20,9 +20,7 @@ export function ChangePassword() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const isValid =
-    currentPassword.trim().length > 0 &&
-    newPassword.length >= 8 &&
-    newPassword === confirmPassword
+    currentPassword.trim().length > 0 && newPassword.length >= 8 && newPassword === confirmPassword
 
   function getValidationMessage(): string {
     if (newPassword.length > 0 && newPassword.length < 8) {

@@ -60,13 +60,7 @@ export function PathCardHeader({
     : GRADIENTS[hashString(pathName) % GRADIENTS.length]
 
   return (
-    <div
-      className={cn(
-        'relative h-32 bg-gradient-to-br overflow-hidden',
-        gradient,
-        className
-      )}
-    >
+    <div className={cn('relative h-32 bg-gradient-to-br overflow-hidden', gradient, className)}>
       {/* Subtle radial highlight */}
       <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.8),transparent)]" />
 

@@ -18,10 +18,7 @@ import { toast } from 'sonner'
 
 import type { YouTubeVideoCache, Chapter } from '@/data/types'
 import { db } from '@/db/schema'
-import {
-  getDecryptedYouTubeApiKey,
-  getCacheTtlMs,
-} from '@/lib/youtubeConfiguration'
+import { getDecryptedYouTubeApiKey, getCacheTtlMs } from '@/lib/youtubeConfiguration'
 import { getYouTubeRateLimiter } from '@/lib/youtubeRateLimiter'
 import { recordQuotaUsage, isQuotaExceeded } from '@/lib/youtubeQuotaTracker'
 
@@ -283,10 +280,16 @@ async function apiFetch(url: string): Promise<Response> {
 /**
  * Classify a YouTube API error response.
  */
-function classifyApiError(status: number, body: string): { error: string; code: YouTubeApiErrorCode } {
+function classifyApiError(
+  status: number,
+  body: string
+): { error: string; code: YouTubeApiErrorCode } {
   if (status === 400) {
     if (body.includes('API key not valid') || body.includes('keyInvalid')) {
-      return { error: 'Invalid YouTube API key. Check your configuration in Settings.', code: 'INVALID_API_KEY' }
+      return {
+        error: 'Invalid YouTube API key. Check your configuration in Settings.',
+        code: 'INVALID_API_KEY',
+      }
     }
     return { error: 'Bad request to YouTube API.', code: 'INVALID_RESPONSE' }
   }
@@ -294,7 +297,10 @@ function classifyApiError(status: number, body: string): { error: string; code: 
     if (body.includes('quotaExceeded') || body.includes('dailyLimitExceeded')) {
       return { error: 'YouTube API daily quota exceeded.', code: 'QUOTA_EXCEEDED' }
     }
-    return { error: 'YouTube API access forbidden. Check API key permissions.', code: 'INVALID_API_KEY' }
+    return {
+      error: 'YouTube API access forbidden. Check API key permissions.',
+      code: 'INVALID_API_KEY',
+    }
   }
   if (status === 404) {
     return { error: 'YouTube resource not found.', code: 'NOT_FOUND' }
@@ -333,7 +339,11 @@ export async function getVideoMetadata(
   // Get API key
   const apiKey = await getDecryptedYouTubeApiKey()
   if (!apiKey) {
-    return { ok: false, error: 'YouTube API key not configured. Go to Settings to add one.', code: 'NO_API_KEY' }
+    return {
+      ok: false,
+      error: 'YouTube API key not configured. Go to Settings to add one.',
+      code: 'NO_API_KEY',
+    }
   }
 
   // Fetch from YouTube Data API v3
@@ -603,9 +613,7 @@ function buildPlaylistUrl(playlistId: string, apiKey: string, pageToken?: string
  * oEmbed returns limited data: title, author_name, thumbnail_url.
  * Duration, description, chapters, and channel ID are not available.
  */
-async function tryOEmbedFallback(
-  videoId: string
-): Promise<YouTubeApiResult<YouTubeVideoCache>> {
+async function tryOEmbedFallback(videoId: string): Promise<YouTubeApiResult<YouTubeVideoCache>> {
   try {
     const videoUrl = `https://www.youtube.com/watch?v=${videoId}`
     const url = `${OEMBED_URL}?url=${encodeURIComponent(videoUrl)}&format=json`

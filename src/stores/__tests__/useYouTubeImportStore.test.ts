@@ -221,11 +221,9 @@ describe('computed getters', () => {
   })
 
   it('getValidUrlCount counts valid parsed URLs', () => {
-    useYouTubeImportStore.getState().setParsedUrls([
-      makeParsedUrl(true),
-      makeParsedUrl(false),
-      makeParsedUrl(true),
-    ])
+    useYouTubeImportStore
+      .getState()
+      .setParsedUrls([makeParsedUrl(true), makeParsedUrl(false), makeParsedUrl(true)])
 
     expect(useYouTubeImportStore.getState().getValidUrlCount()).toBe(2)
   })
@@ -284,9 +282,7 @@ describe('saveCourse', () => {
       metadata: meta,
       status: 'loaded',
     })
-    useYouTubeImportStore.getState().setChapters([
-      makeChapter('ch1', 'Intro', ['v1']),
-    ])
+    useYouTubeImportStore.getState().setChapters([makeChapter('ch1', 'Intro', ['v1'])])
 
     const result = await act(async () => {
       return useYouTubeImportStore.getState().saveCourse({
@@ -317,8 +313,12 @@ describe('saveCourse', () => {
     const meta1 = makeVideoMetadata('v1')
     const meta2 = { ...makeVideoMetadata('v2'), thumbnailUrl: 'https://thumb2.jpg' }
     useYouTubeImportStore.getState().setVideosForFetch(['v1', 'v2'])
-    useYouTubeImportStore.getState().updateVideoMetadata('v1', { metadata: meta1, status: 'loaded' })
-    useYouTubeImportStore.getState().updateVideoMetadata('v2', { metadata: meta2, status: 'loaded' })
+    useYouTubeImportStore
+      .getState()
+      .updateVideoMetadata('v1', { metadata: meta1, status: 'loaded' })
+    useYouTubeImportStore
+      .getState()
+      .updateVideoMetadata('v2', { metadata: meta2, status: 'loaded' })
     useYouTubeImportStore.getState().setChapters([])
 
     await act(async () => {
@@ -339,9 +339,16 @@ describe('saveCourse', () => {
     const meta = makeVideoMetadata('v1')
     useYouTubeImportStore.getState().setVideosForFetch(['v1'])
     useYouTubeImportStore.getState().updateVideoMetadata('v1', { metadata: meta, status: 'loaded' })
-    useYouTubeImportStore.getState().setParsedUrls([{
-      parseResult: { originalUrl: 'https://youtube.com/playlist?list=PLabc123', valid: true, type: 'playlist', playlistId: 'PLabc123' },
-    }])
+    useYouTubeImportStore.getState().setParsedUrls([
+      {
+        parseResult: {
+          originalUrl: 'https://youtube.com/playlist?list=PLabc123',
+          valid: true,
+          type: 'playlist',
+          playlistId: 'PLabc123',
+        },
+      },
+    ])
     useYouTubeImportStore.getState().setChapters([])
 
     await act(async () => {
@@ -368,9 +375,7 @@ describe('saveCourse', () => {
     }
     useYouTubeImportStore.getState().setVideosForFetch(['v1'])
     useYouTubeImportStore.getState().updateVideoMetadata('v1', { metadata: meta, status: 'loaded' })
-    useYouTubeImportStore.getState().setChapters([
-      makeChapter('ch1', 'Module 1', ['v1']),
-    ])
+    useYouTubeImportStore.getState().setChapters([makeChapter('ch1', 'Module 1', ['v1'])])
 
     await act(async () => {
       await useYouTubeImportStore.getState().saveCourse({
@@ -437,8 +442,12 @@ describe('saveCourse', () => {
     const meta1 = makeVideoMetadata('v1')
     const meta2 = makeVideoMetadata('v2')
     useYouTubeImportStore.getState().setVideosForFetch(['v1', 'v2'])
-    useYouTubeImportStore.getState().updateVideoMetadata('v1', { metadata: meta1, status: 'loaded' })
-    useYouTubeImportStore.getState().updateVideoMetadata('v2', { metadata: meta2, status: 'loaded' })
+    useYouTubeImportStore
+      .getState()
+      .updateVideoMetadata('v1', { metadata: meta1, status: 'loaded' })
+    useYouTubeImportStore
+      .getState()
+      .updateVideoMetadata('v2', { metadata: meta2, status: 'loaded' })
     useYouTubeImportStore.getState().removeVideo('v2')
     useYouTubeImportStore.getState().setChapters([])
 
@@ -461,10 +470,18 @@ describe('saveCourse', () => {
     const meta = makeVideoMetadata('v1')
     useYouTubeImportStore.getState().setVideosForFetch(['v1'])
     useYouTubeImportStore.getState().updateVideoMetadata('v1', { metadata: meta, status: 'loaded' })
-    useYouTubeImportStore.getState().setParsedUrls([{
-      parseResult: { originalUrl: 'https://youtube.com/watch?v=v1&list=PL999', valid: true, type: 'video', videoId: 'v1', playlistId: 'PL999' },
-      playlistChoice: 'full-playlist',
-    }])
+    useYouTubeImportStore.getState().setParsedUrls([
+      {
+        parseResult: {
+          originalUrl: 'https://youtube.com/watch?v=v1&list=PL999',
+          valid: true,
+          type: 'video',
+          videoId: 'v1',
+          playlistId: 'PL999',
+        },
+        playlistChoice: 'full-playlist',
+      },
+    ])
     useYouTubeImportStore.getState().setChapters([])
 
     await act(async () => {

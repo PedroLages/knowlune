@@ -155,11 +155,11 @@ const initialState = {
 export const useYouTubeImportStore = create<YouTubeImportState>((set, get) => ({
   ...initialState,
 
-  setUrlInput: (input) => set({ urlInput: input }),
-  setParsedUrls: (urls) => set({ parsedUrls: urls }),
+  setUrlInput: input => set({ urlInput: input }),
+  setParsedUrls: urls => set({ parsedUrls: urls }),
   setFeedback: (message, type) => set({ feedbackMessage: message, feedbackType: type }),
-  setCurrentStep: (step) => set({ currentStep: step }),
-  setIsOpen: (open) => {
+  setCurrentStep: step => set({ currentStep: step }),
+  setIsOpen: open => {
     if (!open) {
       // Reset everything when dialog closes
       set({ ...initialState })
@@ -168,7 +168,7 @@ export const useYouTubeImportStore = create<YouTubeImportState>((set, get) => ({
     }
   },
 
-  setVideosForFetch: (videoIds) => {
+  setVideosForFetch: videoIds => {
     const videos: YouTubeImportVideo[] = videoIds.map(id => ({
       videoId: id,
       metadata: null,
@@ -185,9 +185,7 @@ export const useYouTubeImportStore = create<YouTubeImportState>((set, get) => ({
 
   updateVideoMetadata: (videoId, update) => {
     set(state => ({
-      videos: state.videos.map(v =>
-        v.videoId === videoId ? { ...v, ...update } : v
-      ),
+      videos: state.videos.map(v => (v.videoId === videoId ? { ...v, ...update } : v)),
     }))
   },
 
@@ -195,33 +193,29 @@ export const useYouTubeImportStore = create<YouTubeImportState>((set, get) => ({
     set({ metadataFetchedCount: fetched, metadataTotal: total })
   },
 
-  setIsFetchingMetadata: (isFetching) => set({ isFetchingMetadata: isFetching }),
+  setIsFetchingMetadata: isFetching => set({ isFetchingMetadata: isFetching }),
 
-  removeVideo: (videoId) => {
+  removeVideo: videoId => {
     set(state => ({
-      videos: state.videos.map(v =>
-        v.videoId === videoId ? { ...v, removed: true } : v
-      ),
+      videos: state.videos.map(v => (v.videoId === videoId ? { ...v, removed: true } : v)),
     }))
   },
 
   // --- Step 3: Chapter management (E28-S06) ---
 
-  setChapters: (chapters) => set({ chapters }),
+  setChapters: chapters => set({ chapters }),
 
   updateChapter: (chapterId, update) => {
     set(state => ({
-      chapters: state.chapters.map(c =>
-        c.id === chapterId ? { ...c, ...update } : c
-      ),
+      chapters: state.chapters.map(c => (c.id === chapterId ? { ...c, ...update } : c)),
     }))
   },
 
-  addChapter: (chapter) => {
+  addChapter: chapter => {
     set(state => ({ chapters: [...state.chapters, chapter] }))
   },
 
-  removeChapter: (chapterId) => {
+  removeChapter: chapterId => {
     set(state => ({
       chapters: state.chapters.filter(c => c.id !== chapterId),
     }))
@@ -375,5 +369,6 @@ export const useYouTubeImportStore = create<YouTubeImportState>((set, get) => ({
   getActiveVideos: () => get().videos.filter(v => !v.removed),
   getValidUrlCount: () => get().parsedUrls.filter(u => u.parseResult.valid).length,
   canProceedFromStep1: () => get().parsedUrls.some(u => u.parseResult.valid),
-  getUnavailableCount: () => get().videos.filter(v => !v.removed && v.status === 'unavailable').length,
+  getUnavailableCount: () =>
+    get().videos.filter(v => !v.removed && v.status === 'unavailable').length,
 }))

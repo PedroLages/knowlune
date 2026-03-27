@@ -185,7 +185,10 @@ export function YouTubeConfigurationSettings() {
         {/* YouTube API Key */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <Label htmlFor="youtube-api-key" className="text-sm font-medium flex items-center gap-2">
+            <Label
+              htmlFor="youtube-api-key"
+              className="text-sm font-medium flex items-center gap-2"
+            >
               <Key className="size-4 text-muted-foreground" aria-hidden="true" />
               YouTube Data API v3 Key
             </Label>
@@ -351,9 +354,9 @@ export function YouTubeConfigurationSettings() {
                 </TooltipTrigger>
                 <TooltipContent side="top" className="max-w-xs">
                   <p>
-                    URL of your Whisper-compatible transcription server for audio-to-text conversion.
-                    Used as a fallback when YouTube captions are unavailable. Loopback addresses are
-                    blocked for security.
+                    URL of your Whisper-compatible transcription server for audio-to-text
+                    conversion. Used as a fallback when YouTube captions are unavailable. Loopback
+                    addresses are blocked for security.
                   </p>
                 </TooltipContent>
               </Tooltip>

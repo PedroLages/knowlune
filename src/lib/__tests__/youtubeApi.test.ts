@@ -39,7 +39,9 @@ vi.mock('@/db/schema', () => ({
   },
 }))
 
-const mockGetDecryptedYouTubeApiKey = vi.fn().mockResolvedValue('AIzaFakeTestKeyForUnitTesting1234567')
+const mockGetDecryptedYouTubeApiKey = vi
+  .fn()
+  .mockResolvedValue('AIzaFakeTestKeyForUnitTesting1234567')
 const mockIsQuotaExceeded = vi.fn().mockReturnValue(false)
 const mockRecordQuotaUsage = vi.fn()
 
@@ -210,18 +212,20 @@ More text
 
     it('fetches from API when cache miss', async () => {
       const apiResponse = {
-        items: [{
-          id: 'abc123DEF_-',
-          snippet: {
-            title: 'API Video',
-            description: '0:00 Intro\n1:30 Main',
-            channelId: 'UC456',
-            channelTitle: 'API Channel',
-            publishedAt: '2024-06-15T12:00:00Z',
-            thumbnails: { high: { url: 'https://i.ytimg.com/high.jpg' } },
+        items: [
+          {
+            id: 'abc123DEF_-',
+            snippet: {
+              title: 'API Video',
+              description: '0:00 Intro\n1:30 Main',
+              channelId: 'UC456',
+              channelTitle: 'API Channel',
+              publishedAt: '2024-06-15T12:00:00Z',
+              thumbnails: { high: { url: 'https://i.ytimg.com/high.jpg' } },
+            },
+            contentDetails: { duration: 'PT5M30S' },
           },
-          contentDetails: { duration: 'PT5M30S' },
-        }],
+        ],
         pageInfo: { totalResults: 1 },
       }
 
@@ -346,9 +350,7 @@ More text
     })
 
     it('returns NOT_FOUND for non-existent video', async () => {
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response('Not Found', { status: 404 })
-      )
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('Not Found', { status: 404 }))
 
       const result = await getOEmbedMetadata('nonexistent_')
       expect(result.ok).toBe(false)

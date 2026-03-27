@@ -14,9 +14,7 @@ const NOT_CONFIGURED = 'Subscription service is not configured. Please check you
  *
  * @param trial - If true, creates a checkout with 14-day free trial (E19-S08)
  */
-export async function startCheckout(
-  trial?: boolean
-): Promise<{ url: string } | { error: string }> {
+export async function startCheckout(trial?: boolean): Promise<{ url: string } | { error: string }> {
   if (!supabase) return { error: NOT_CONFIGURED }
 
   const session = useAuthStore.getState().session

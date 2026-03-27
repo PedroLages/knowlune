@@ -131,9 +131,7 @@ export function NotificationCenter() {
   const hasUnread = unreadCount > 0
 
   const markAsRead = useCallback((id: string) => {
-    setNotifications(prev =>
-      prev.map(n => (n.id === id ? { ...n, read: true } : n))
-    )
+    setNotifications(prev => prev.map(n => (n.id === id ? { ...n, read: true } : n)))
   }, [])
 
   const markAllAsRead = useCallback(() => {
@@ -152,10 +150,7 @@ export function NotificationCenter() {
         >
           <Bell className="size-5 text-muted-foreground" aria-hidden="true" />
           {hasUnread && (
-            <span
-              className="absolute top-2 right-2 flex size-2.5"
-              aria-hidden="true"
-            >
+            <span className="absolute top-2 right-2 flex size-2.5" aria-hidden="true">
               <span className="absolute inline-flex size-full motion-safe:animate-ping rounded-full bg-destructive opacity-75" />
               <span className="relative inline-flex size-2.5 rounded-full bg-destructive" />
             </span>
@@ -172,7 +167,9 @@ export function NotificationCenter() {
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2.5">
           <div className="flex items-center gap-2">
-            <h3 id="notification-heading" className="text-sm font-semibold">Notifications</h3>
+            <h3 id="notification-heading" className="text-sm font-semibold">
+              Notifications
+            </h3>
             {hasUnread && (
               <span className="flex items-center justify-center rounded-full bg-destructive px-1.5 py-0.5 text-[10px] font-medium text-destructive-foreground leading-none">
                 {unreadCount}
@@ -203,7 +200,7 @@ export function NotificationCenter() {
         ) : (
           <ScrollArea className="h-[350px]">
             <div className="flex flex-col">
-              {notifications.map((notification) => {
+              {notifications.map(notification => {
                 const Icon = notificationIcons[notification.type]
                 const iconColor = notificationIconColors[notification.type]
 
@@ -218,14 +215,21 @@ export function NotificationCenter() {
                     onClick={() => markAsRead(notification.id)}
                   >
                     {/* Icon */}
-                    <div className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-muted ${iconColor}`}>
+                    <div
+                      className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-muted ${iconColor}`}
+                    >
                       <Icon className="size-3.5" aria-hidden="true" />
                     </div>
 
                     {/* Content */}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
-                        <p className={cn('text-sm leading-tight', !notification.read ? 'font-semibold' : 'font-medium text-foreground/80')}>
+                        <p
+                          className={cn(
+                            'text-sm leading-tight',
+                            !notification.read ? 'font-semibold' : 'font-medium text-foreground/80'
+                          )}
+                        >
                           {notification.title}
                         </p>
                         {!notification.read && (
