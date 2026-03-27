@@ -501,5 +501,5 @@ development_status:
   33-3-cross-store-integration-tests-for-import-quiz-session-workflows: done
   33-4-store-branch-coverage-target-80-across-all-22-zustand-stores: done
   33-5-add-e2e-coverage-for-youtube-course-creation-flow: done
-  33-6-add-testable-import-path-drag-and-drop-file-import: backlog
+  33-6-add-testable-import-path-drag-and-drop-file-import: in-progress
   epic-33-retrospective: optional
