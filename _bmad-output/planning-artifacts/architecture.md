@@ -16,6 +16,18 @@ editHistory:
       - '_bmad-output/planning-artifacts/research/technical-youtube-content-handling-research-2026-03-25.md'
       - '_bmad-output/planning-artifacts/research/market-youtube-content-handling-research-2026-03-25.md'
       - 'docs/design/office-hours-2026-03-25-full-platform-youtube-hook.md'
+  - date: '2026-03-27'
+    scope: 'Server-side premium entitlement enforcement (Adversarial Finding #9)'
+    changes:
+      - 'Added Server-Side Premium Entitlement Enforcement Architecture section (10 decision areas)'
+      - 'Added JWT validation middleware design (jose + HS256/JWKS-ready)'
+      - 'Added BYOK authentication strategy (JWT required, entitlement skipped)'
+      - 'Added server-side entitlement cache (lru-cache, 5-min TTL)'
+      - 'Added per-user tier-based rate limiting (rate-limiter-flexible)'
+      - 'Added open relay prevention (4-layer defense)'
+      - 'Added 8-story implementation sequence'
+    researchInput:
+      - 'docs/implementation-artifacts/project-adversarial-review-2026-03-26.md (Finding #9)'
 inputDocuments:
   - '_bmad-output/planning-artifacts/prd.md'
   - '_bmad-output/planning-artifacts/product-brief-Elearningplatformwireframes-2026-03-01.md'
@@ -1853,3 +1865,400 @@ src/app/pages/
 - YouTube API quota exhaustion → oEmbed fallback + aggressive caching
 - COEP blocks YouTube IFrame → `credentialless` header (test in E23-S09)
 - Offline use → metadata + transcripts cached in IndexedDB
+
+## Server-Side Premium Entitlement Enforcement Architecture
+
+_Added 2026-03-27. Addresses Adversarial Finding #9 (Premium Entitlement Bypass) by moving the security boundary from client-side IndexedDB to server-side middleware. Client-side `isPremium()` becomes a UX hint for fast rendering, not the security boundary._
+
+**Input Documents:**
+- Adversarial Review: `docs/implementation-artifacts/project-adversarial-review-2026-03-26.md`, Finding #9
+- Existing entitlement system: `src/lib/entitlement/isPremium.ts` (E19-S03)
+- Stripe integration: `supabase/functions/stripe-webhook/index.ts` (E19-S02)
+- AI proxy: `server/index.ts` (E22)
+
+### Entitlement Enforcement Decision Summary
+
+| Decision Area | Choice | Rationale |
+|---|---|---|
+| BYOK authentication | JWT required, entitlement skipped | Industry standard (Vercel, LiteLLM, OpenRouter, Cloudflare all require platform auth on BYOK). Prevents open relay, enables usage analytics and per-user rate limiting. |
+| Primary enforcement point | Express proxy middleware (`server/middleware/entitlement.ts`) | All Knowlune-hosted AI requests route through Express :3001; single enforcement point, no extra network hops |
+| JWT validation library | `jose` (v6.x, zero-dep, ESM-native) | Industry consensus over `jsonwebtoken` (legacy CJS). No CVEs in v5/v6 line. auth0-maintained. |
+| JWT algorithm | HS256 with `SUPABASE_JWT_SECRET`, JWKS-ready design | Self-hosted Supabase on Unraid defaults to HS256. Middleware accepts either secret or JWKS URL for future asymmetric key migration. |
+| Server-side entitlement cache | `lru-cache` with 5-minute TTL, max 1000 entries | Avoids Supabase DB hit on every request (~50-200ms savings). LRU eviction prevents unbounded memory. |
+| Rate limiting | `rate-limiter-flexible` with per-user token bucket | Supports per-user keying, tier-based rates, memory→Redis migration path. Better than `express-rate-limit` for tier-aware limits. |
+| Open relay prevention | 4-layer defense (JWT + origin check + domain allowlist + rate limit) | Research confirms unauthenticated CORS proxies are exploitable open relays. |
+| Vite dev proxy | Mirror enforcement with `DEV_SKIP_ENTITLEMENT` escape hatch | Dev-prod parity; escape hatch for local development without Supabase |
+| Migration strategy | Immediate enforcement (no phased rollout) | Pre-launch with zero external consumers. Every source warns retrofitting auth is painful — do it now. |
+| Subscription lapse | 403 structured error; client shows re-subscribe CTA | Max 5-minute grace period from cache TTL. Acceptable for learning platform. |
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Browser (Client)                         │
+│                                                                 │
+│  useIsPremium()          getLLMClient()                         │
+│  ┌──────────────┐        ┌──────────────┐                      │
+│  │ IndexedDB    │        │ ProxyLLM /   │──── Authorization:   │
+│  │ cache (UX    │        │ OllamaLLM    │     Bearer <JWT>     │
+│  │ hint only)   │        │ Client       │                      │
+│  └──────────────┘        └──────┬───────┘                      │
+│                                 │                              │
+│                    POST /api/ai/* + Authorization header        │
+└─────────────────────────────────┼──────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Express Proxy (:3001)                         │
+│                                                                 │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │ Middleware Chain (applied to /api/ai/* routes)            │  │
+│  │                                                          │  │
+│  │  1. Origin Check                                         │  │
+│  │     - Verify request origin is an allowed Knowlune       │  │
+│  │       frontend (configurable allowlist)                   │  │
+│  │     - Block requests from unknown origins                 │  │
+│  │                                                          │  │
+│  │  2. JWT Validation (authenticateJWT)                      │  │
+│  │     - Extract Authorization: Bearer <token>               │  │
+│  │     - jose.jwtVerify() with SUPABASE_JWT_SECRET (HS256)  │  │
+│  │     - Verify aud: "authenticated" claim                   │  │
+│  │     - Check exp (reject expired tokens)                   │  │
+│  │     - Attach userId (sub claim) to req                    │  │
+│  │                                                          │  │
+│  │  3. BYOK Detection                                        │  │
+│  │     - Has apiKey in body? → mark req.isBYOK = true       │  │
+│  │     - Has ollamaServerUrl? → mark req.isBYOK = true      │  │
+│  │     - BYOK skips step 4 (entitlement), proceeds to 5     │  │
+│  │                                                          │  │
+│  │  4. Entitlement Check (Knowlune-hosted AI only)           │  │
+│  │     - Check lru-cache (5-min TTL)                         │  │
+│  │     - Cache miss → query Supabase entitlements table      │  │
+│  │     - Reject if tier === 'free' with 403 structured error │  │
+│  │                                                          │  │
+│  │  5. Rate Limiter                                          │  │
+│  │     - rate-limiter-flexible keyed by userId               │  │
+│  │     - Tier-based token bucket (see table below)           │  │
+│  │     - Rejects with 429 + Retry-After header               │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│  Existing route handlers (unchanged):                           │
+│    POST /api/ai/generate    — Non-streaming LLM                 │
+│    POST /api/ai/stream      — SSE streaming LLM                 │
+│    POST /api/ai/ollama      — Ollama streaming (OpenAI-compat)  │
+│    POST /api/ai/ollama/chat — Ollama non-streaming              │
+│    GET  /api/ai/ollama/tags — List models (rate-limited only)   │
+│    GET  /api/ai/ollama/health — Health check (no auth needed)   │
+│                                                                 │
+│  Existing SSRF protection (isAllowedOllamaUrl) unchanged        │
+└─────────────────────────────────────────────────────────────────┘
+                                  │
+              ┌───────────────────┼───────────────────┐
+              ▼                   ▼                   ▼
+  ┌─────────────────┐  ┌──────────────────┐  ┌───────────────┐
+  │ AI Providers    │  │ Supabase DB      │  │ Stripe        │
+  │ (OpenAI, etc.)  │  │ (entitlements    │  │ (webhooks →   │
+  │                 │  │  table, RLS)     │  │  entitlements) │
+  └─────────────────┘  └──────────────────┘  └───────────────┘
+```
+
+### Decision 1: BYOK Authentication Strategy
+
+**Problem:** Currently ALL proxy requests are BYOK (every request has `apiKey` or `ollamaServerUrl` in the body). The proxy is an unauthenticated CORS relay — once deployed, anyone can use it.
+
+**Decision:** Require JWT authentication on all proxy requests. Skip entitlement check for BYOK. Two separate middleware layers, never coupled.
+
+**Why require auth on BYOK (industry validation):**
+- Vercel AI Gateway: Requires team-level auth even with BYOK keys
+- LiteLLM Proxy: Never forwards proxy auth to providers; validates its own auth first
+- OpenRouter: Requires account + credits even for BYOK (first 1M/month free, then 5% fee)
+- Cloudflare AI Gateway: Requires `cf-aig-authorization` on all requests including BYOK
+
+**BYOK detection logic:**
+```
+Request has body.apiKey?        → BYOK (cloud providers: OpenAI, Anthropic, Groq, Gemini, GLM)
+Request has body.ollamaServerUrl? → BYOK (user's Ollama server)
+Neither?                        → Knowlune-hosted AI (requires premium entitlement)
+```
+
+**Critical design rule (Vercel bug lesson):** BYOK rate limiting and hosted-AI entitlement checking are independent middleware layers. A BYOK request must never be rejected because of hosted-AI entitlement state. The middleware chain is:
+```
+authenticateJWT → detectBYOK → [if !BYOK: checkEntitlement] → rateLimitByTier → handler
+```
+
+### Decision 2: JWT Validation Flow
+
+**Problem:** Express proxy has zero authentication. Need to verify Supabase JWTs without adding latency.
+
+**Decision:** Use `jose` library with HS256 symmetric verification (self-hosted Supabase default). Design the middleware to accept either a JWT secret or JWKS URL for future asymmetric key migration.
+
+**Verification steps:**
+1. Extract `Authorization: Bearer <token>` header
+2. `jose.jwtVerify(token, secret, { audience: 'authenticated' })`
+   - Signature verification (HS256 HMAC with `SUPABASE_JWT_SECRET`)
+   - Audience claim: must be `"authenticated"` (Supabase-specific requirement)
+   - Expiration: reject if `exp` is in the past
+3. Extract `sub` claim as `userId`
+4. Attach `{ userId, email, role }` to `req.auth`
+
+**Performance:** ~1ms CPU-bound (no network hop). Negligible compared to AI inference latency.
+
+**Error responses:**
+| Condition | HTTP Status | Error Code | Client Action |
+|---|---|---|---|
+| Missing Authorization header | 401 | `AUTH_REQUIRED` | Prompt sign-in |
+| Invalid/malformed token | 401 | `AUTH_INVALID` | Prompt sign-in |
+| Expired token | 401 | `TOKEN_EXPIRED` | Auto-refresh via `supabase.auth.onAuthStateChange`, retry |
+| Valid token | — | — | Continue to next middleware |
+
+**Environment variables (new):**
+```
+SUPABASE_JWT_SECRET=<from Supabase dashboard: Settings > API > JWT Secret>
+SUPABASE_URL=<existing, for entitlement DB queries>
+SUPABASE_SERVICE_ROLE_KEY=<for server-side entitlement queries bypassing RLS>
+ALLOWED_ORIGINS=http://localhost:5173,https://knowlune.app
+DEV_SKIP_ENTITLEMENT=false
+```
+
+**Future JWKS migration:** When upgrading self-hosted Supabase to asymmetric keys, change configuration to:
+```
+SUPABASE_JWKS_URL=https://<your-supabase>/.well-known/jwks.json
+```
+The middleware detects the presence of `SUPABASE_JWKS_URL` and uses `jose.createRemoteJWKSet()` instead of the shared secret. No code change required.
+
+### Decision 3: Server-Side Entitlement Cache
+
+**Problem:** Querying Supabase on every AI request adds 50-200ms latency. AI streaming is latency-sensitive.
+
+**Decision:** `lru-cache` (v11+, by Isaac Schlueter) with 5-minute TTL and max 1000 entries.
+
+**Why `lru-cache` over raw `Map`:**
+- Native TTL support in milliseconds (no manual `setTimeout` cleanup)
+- LRU eviction prevents unbounded memory growth
+- Max size bound (1000 users = ~50KB memory)
+- Zero dependencies, TypeScript-native
+- Stale-while-revalidate option for non-blocking refresh
+
+**Cache configuration:**
+```typescript
+import { LRUCache } from 'lru-cache'
+
+interface EntitlementCacheEntry {
+  tier: 'free' | 'trial' | 'premium'
+  expiresAt?: string  // Stripe subscription expiry
+}
+
+const entitlementCache = new LRUCache<string, EntitlementCacheEntry>({
+  max: 1000,
+  ttl: 5 * 60 * 1000,  // 5 minutes
+})
+```
+
+**Cache miss flow:**
+1. Cache miss for `userId`
+2. Query Supabase: `supabaseAdmin.from('entitlements').select('tier, expires_at').eq('user_id', userId).single()`
+3. Store result in cache
+4. Return tier for middleware decision
+
+**Cache invalidation:**
+- **Primary:** TTL expiry (5 minutes). Subscription changes propagate within 5 minutes.
+- **Optional future enhancement:** Stripe webhook POSTs to `/api/internal/invalidate-entitlement` (shared secret protected) to force immediate cache eviction. Reduces propagation to seconds.
+- **Process restart:** Cache cleared. First request per user hits Supabase.
+
+**Supabase unreachable handling:**
+- Cache has valid entry → honor it (fail-open for known users)
+- No cache entry → reject with 503 `SERVICE_UNAVAILABLE` (fail-closed for unknown users)
+- Log warning for monitoring
+
+### Decision 4: Open Relay Prevention
+
+**Problem:** An unauthenticated CORS proxy is an exploitable open relay (HTTP Toolkit research). Even with JWT auth, additional layers are needed.
+
+**Decision:** 4-layer defense:
+
+| Layer | Purpose | Implementation |
+|---|---|---|
+| **1. Origin check** | Only allow requests from Knowlune frontends | Check `Origin`/`Referer` header against `ALLOWED_ORIGINS` env var |
+| **2. JWT authentication** | Identity verification — only registered users | `jose.jwtVerify()` (see Decision 2) |
+| **3. Domain allowlist** | Prevent proxying to arbitrary destinations | For non-BYOK: only proxy to known AI provider domains. For BYOK Ollama: existing SSRF protection (`isAllowedOllamaUrl`) blocks loopback/metadata |
+| **4. Rate limiting** | Prevent abuse even by authenticated users | Per-user token bucket (see Decision 5) |
+
+**Origin check details:**
+- `ALLOWED_ORIGINS` env var: comma-separated list of allowed origins
+- Development: `http://localhost:5173,http://localhost:4173`
+- Production: `https://knowlune.app` (or deployed domain)
+- Missing origin header: reject (browser always sends `Origin` on cross-origin requests)
+- Exception: health check endpoint (`/api/ai/ollama/health`) skips origin check
+
+**Domain allowlist for non-BYOK (future Knowlune-hosted AI):**
+- `api.openai.com`
+- `api.anthropic.com`
+- `api.groq.com`
+- `generativelanguage.googleapis.com`
+- `open.bigmodel.cn`
+- Configurable via env var for adding new providers
+
+### Decision 5: Rate Limiting
+
+**Problem:** Even authenticated premium users could abuse the proxy (runaway loops, shared accounts).
+
+**Decision:** `rate-limiter-flexible` with per-user token bucket, tier-based rates.
+
+**Why `rate-limiter-flexible` over `express-rate-limit`:**
+- Supports keying by arbitrary string (userId), not just IP
+- Native tier-based configuration (different limits per group)
+- Per-request point costs (streaming can cost more "points")
+- Memory → Redis migration path without code changes
+- Active maintenance, 5M+ weekly downloads
+
+| Tier | Bucket Size (burst) | Refill Rate | Points per Request |
+|---|---|---|---|
+| Free (authenticated) | 5 | 2/min | 1 (non-stream), 2 (stream) |
+| Trial | 20 | 10/min | 1 (non-stream), 2 (stream) |
+| Premium | 20 | 10/min | 1 (non-stream), 2 (stream) |
+| BYOK (any tier) | 30 | 15/min | 1 (all — user pays provider) |
+
+**Rate limit response:**
+- HTTP 429 Too Many Requests
+- `Retry-After` header with seconds until refill
+- Body: `{ "error": "RATE_LIMITED", "retryAfter": 30 }`
+
+**Critical:** Rate limiting checks happen at request initiation, before streaming begins. Individual SSE chunks are not counted.
+
+### Decision 6: Graceful Degradation
+
+**Scenario: Subscription lapses mid-session**
+1. Stripe webhook fires → updates Supabase `entitlements` table → tier = `'free'`
+2. Server cache TTL (5 min) means at most 5 more minutes of premium access
+3. Next request after cache refresh returns 403:
+   ```json
+   { "error": "ENTITLEMENT_EXPIRED", "message": "Your premium subscription has expired.", "upgradeUrl": "/settings" }
+   ```
+4. Client `ProxyLLMClient` maps 403 to `LLMError` with code `ENTITLEMENT_ERROR`
+5. UI shows re-subscribe CTA via existing `PremiumGate` component
+
+**Scenario: Supabase unreachable during entitlement check**
+- Cached user → honor cache (fail-open)
+- Unknown user → 503 `SERVICE_UNAVAILABLE` (fail-closed)
+- Log warning for monitoring
+
+**Scenario: JWT expired mid-session**
+- 401 `TOKEN_EXPIRED` response
+- Supabase client auto-refreshes token via `onAuthStateChange`
+- Client retries request with new token
+- No user-facing interruption (transparent refresh)
+
+**Scenario: User signed out**
+- No JWT → 401 `AUTH_REQUIRED`
+- UI shows sign-in prompt (existing flow via `AuthDialog`)
+- BYOK features continue to work after sign-in
+
+### Decision 7: Vite Dev Proxy Strategy
+
+**Problem:** Vite dev server has `ollamaDevProxy()` that mirrors Express endpoints. Should it enforce auth?
+
+**Decision:** Mirror enforcement with `DEV_SKIP_ENTITLEMENT=true` escape hatch.
+
+**Implementation:**
+- Extract shared middleware logic into `server/middleware/entitlement.ts`
+- Both Express (`server/index.ts`) and Vite plugin (`vite.config.ts`) import the same middleware
+- `DEV_SKIP_ENTITLEMENT=true` in `.env.local` bypasses all auth checks in dev only
+- Checked against `process.env.NODE_ENV === 'development'` — ignored in production builds
+
+**When Vite proxy vs Express proxy is used:**
+- Express running on :3001 → Vite proxies `/api/ai/*` to Express (Express handles auth)
+- Express NOT running → Vite dev middleware handles requests directly (needs its own auth)
+- Production build → Express only (no Vite)
+
+**Recommendation:** For development, run Express on :3001 with `DEV_SKIP_ENTITLEMENT=true`. The Vite dev proxy (`ollamaDevProxy`) should also respect the flag but log a warning: `"⚠️ Entitlement checks disabled (DEV_SKIP_ENTITLEMENT=true)"`
+
+### Decision 8: Client-Side Changes
+
+**Problem:** `ProxyLLMClient` and `OllamaLLMClient` currently send requests without `Authorization` headers.
+
+**Decision:** All proxy requests include `Authorization: Bearer <JWT>` from the Supabase session.
+
+**Implementation approach:**
+- `getLLMClient()` factory already has access to AI configuration
+- Add session token retrieval: `useAuthStore.getState().session?.access_token`
+- Pass token to client constructors; clients include it in fetch headers
+- If no session (signed out), client throws `LLMError` with `AUTH_REQUIRED` before making request
+
+**Client-side flow change:**
+```
+Before: getLLMClient() → ProxyLLMClient.streamCompletion() → fetch('/api/ai/stream', { body })
+After:  getLLMClient() → ProxyLLMClient.streamCompletion() → fetch('/api/ai/stream', { headers: { Authorization }, body })
+```
+
+**`isPremium()` role change:**
+- Before: Security boundary (gates access to premium features)
+- After: UX hint (drives fast UI rendering, skeleton states, upgrade CTAs)
+- No code removal — `PremiumGate`, `useIsPremium()`, `SubscriptionCard` all continue to work
+- Add JSDoc comment: `/** UX hint for fast rendering. Server-side middleware is the security boundary. */`
+
+### New Files and Modifications
+
+**New files:**
+
+| File | Purpose |
+|---|---|
+| `server/middleware/authenticate.ts` | JWT validation with `jose`. Extracts userId, attaches to req. Supports HS256 secret and future JWKS. |
+| `server/middleware/entitlement.ts` | BYOK detection + entitlement check from `lru-cache` / Supabase fallback. |
+| `server/middleware/rate-limiter.ts` | Per-user token bucket with `rate-limiter-flexible`. Tier-based limits. |
+| `server/middleware/origin-check.ts` | Validates request Origin against `ALLOWED_ORIGINS` allowlist. |
+| `server/middleware/types.ts` | Shared types: `AuthenticatedRequest`, `EntitlementCacheEntry`. |
+| `server/middleware/__tests__/authenticate.test.ts` | Unit tests for JWT validation (valid/expired/missing/malformed tokens). |
+| `server/middleware/__tests__/entitlement.test.ts` | Unit tests for BYOK detection, cache hit/miss, tier check. |
+| `server/middleware/__tests__/rate-limiter.test.ts` | Unit tests for tier-based rate limits, burst behavior, 429 responses. |
+
+**Modified files:**
+
+| File | Change |
+|---|---|
+| `server/index.ts` | Import and apply middleware chain to `/api/ai/*` routes. Health check endpoint excluded from auth. |
+| `src/ai/llm/proxy-client.ts` | Add `Authorization: Bearer` header from auth store session. |
+| `src/ai/llm/ollama-client.ts` | Add `Authorization: Bearer` header in proxy mode (not direct mode). |
+| `src/ai/llm/factory.ts` | Pass session token to client constructors. |
+| `src/ai/llm/types.ts` | Add `ENTITLEMENT_ERROR` and `RATE_LIMITED` to `LLMErrorCode`. |
+| `src/ai/llm/client.ts` | Map 403 → `ENTITLEMENT_ERROR`, 429 → `RATE_LIMITED` in `BaseLLMClient`. |
+| `src/lib/entitlement/isPremium.ts` | Add JSDoc clarifying UX-hint-only role. No logic changes. |
+| `vite.config.ts` | Import shared middleware for `ollamaDevProxy()`, respect `DEV_SKIP_ENTITLEMENT`. |
+| `package.json` | Add `jose`, `lru-cache`, `rate-limiter-flexible` dependencies. |
+| `.env.example` | Add `SUPABASE_JWT_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, `ALLOWED_ORIGINS`, `DEV_SKIP_ENTITLEMENT`. |
+
+### Implementation Sequence
+
+| Story | Scope | Dependencies | Key Files |
+|---|---|---|---|
+| E##-S01 | JWT authentication middleware (`jose` + HS256 + aud verification + JWKS-ready config) | None | `server/middleware/authenticate.ts`, `server/middleware/types.ts`, tests |
+| E##-S02 | Origin check middleware + `ALLOWED_ORIGINS` configuration | None | `server/middleware/origin-check.ts`, `.env.example` |
+| E##-S03 | BYOK detection + entitlement check middleware (`lru-cache` + Supabase fallback) | S01 | `server/middleware/entitlement.ts`, tests |
+| E##-S04 | Per-user tier-based rate limiter (`rate-limiter-flexible` + token bucket) | S01, S03 | `server/middleware/rate-limiter.ts`, tests |
+| E##-S05 | Wire middleware chain into Express proxy + health check exclusion | S01-S04 | `server/index.ts` |
+| E##-S06 | Client-side auth header injection (ProxyLLMClient + OllamaLLMClient proxy mode) | S05 | `src/ai/llm/proxy-client.ts`, `src/ai/llm/ollama-client.ts`, `src/ai/llm/factory.ts` |
+| E##-S07 | Error handling UI (403 → re-subscribe CTA, 401 → auto-refresh, 429 → retry indicator) | S06 | `src/ai/llm/client.ts`, `src/ai/llm/types.ts` |
+| E##-S08 | Vite dev proxy mirroring + `DEV_SKIP_ENTITLEMENT` + `isPremium()` JSDoc update | S01 | `vite.config.ts`, `src/lib/entitlement/isPremium.ts` |
+
+### Entitlement Enforcement Validation
+
+**Coherence with Existing Architecture:**
+- Follows established BYOK philosophy: user-provided keys bypass entitlement (no gate on user's own resources)
+- Extends Express proxy pattern with middleware chain (same layering as SSRF protection via `isAllowedOllamaUrl`)
+- Uses Supabase infrastructure already in place (JWT tokens, entitlements table, RLS)
+- Client-side `isPremium()` retains its role for UI rendering; this addendum adds the server-side security boundary
+- Follows Zod validation pattern already in `server/index.ts` for request body schemas
+
+**Requirements Coverage:**
+- Adversarial Finding #9 fully addressed: server-side enforcement on all Knowlune-hosted AI endpoints
+- BYOK model preserved: user-provided API keys and Ollama servers bypass premium check (but still require auth)
+- Offline UX preserved: `isPremium()` cache drives UI gates; server enforcement only applies to online AI requests
+- Stripe webhook integration reused: `entitlements` table is the single source of truth
+- Open relay prevention: 4-layer defense (origin + JWT + domain allowlist + rate limit)
+
+**Risk Mitigations:**
+- Supabase unreachable → fail-open for cached users, fail-closed for unknown users
+- JWT secret rotation → single env var update, no code change
+- Memory leak in entitlement cache → `lru-cache` handles TTL eviction and max size bounding
+- Rate limiter drift → process restart clears counters (acceptable for single-instance proxy)
+- BYOK/hosted coupling (Vercel bug) → independent middleware layers, never coupled
+- Future JWKS migration → middleware auto-detects `SUPABASE_JWKS_URL` env var
