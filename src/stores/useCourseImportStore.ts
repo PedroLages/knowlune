@@ -232,8 +232,16 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
   loadThumbnailUrls: async (courseIds: string[]) => {
     const entries = await Promise.all(
       courseIds.map(async id => {
-        const url = await loadCourseThumbnailUrl(id)
-        return [id, url] as [string, string | null]
+        try {
+          const url = await loadCourseThumbnailUrl(id)
+          return [id, url] as [string, string | null]
+        } catch (err) {
+          console.warn(
+            `[Thumbnail] Failed to load thumbnail for course ${id}:`,
+            err instanceof Error ? err.message : err
+          )
+          return [id, null] as [string, string | null]
+        }
       })
     )
     const urls: Record<string, string> = {}
@@ -376,7 +384,12 @@ export const useCourseImportStore = create<CourseImportState>((set, get) => ({
       // Load thumbnail object URLs in parallel (non-blocking)
       get()
         .loadThumbnailUrls(courses.map(c => c.id))
-        .catch(() => {})
+        .catch((err: unknown) => {
+          console.warn(
+            '[Thumbnail] Failed to load course thumbnails:',
+            err instanceof Error ? err.message : err
+          )
+        })
     } catch (error) {
       set({ importError: 'Failed to load courses from database' })
       console.error('[Database] Failed to load courses:', error)
