@@ -1,13 +1,13 @@
 ---
 story_id: E31-S07
 story_name: "Add Route-Level Error Boundaries to SuspensePage Wrappers"
-status: in-progress
+status: done
 started: 2026-03-27
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
-review_scope:
+completed: 2026-03-27
+reviewed: true
+review_started: 2026-03-27
+review_gates_passed: [build, lint, type-check, unit-tests-skipped, e2e-tests-skipped, design-review-skipped, code-review, code-review-testing]
+review_scope: lightweight
 burn_in_validated: false
 ---
 
@@ -50,6 +50,8 @@ so that I can still navigate to other pages when one section fails.
   - [x] 2.3 Verify root ErrorBoundary in App.tsx remains unchanged
 - [x] Task 3: Verify build passes
 
-## Lessons Learned
+## Challenges and Lessons Learned
 
-(to be filled after review)
+- **Composition over modification**: Rather than modifying the existing `ErrorBoundary` to accept a fallback prop, creating a separate `RouteErrorBoundary` component kept concerns cleanly separated. The root boundary handles catastrophic app-level failures; the route boundary handles page-level crashes.
+- **SuspensePage as the injection point**: Wrapping `RouteErrorBoundary` around `Suspense` inside the existing `SuspensePage` helper meant zero changes to any route definitions — all 30+ routes get error isolation automatically.
+- **Design token discipline**: The fallback UI uses `bg-card`, `text-card-foreground`, `border-border`, `text-muted-foreground`, `bg-muted`, and `variant="brand"` button — no hardcoded colors, works in both light and dark mode.
