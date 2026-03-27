@@ -480,7 +480,7 @@ export async function persistScannedCourse(
 
   // Auto-generate thumbnail from first video at 10% mark (E1B-S04 AC1)
   // Fire-and-forget: failure shows default placeholder, no error toast (AC3)
-  if (videos.length > 0) {
+  if (videos.length > 0 && videos[0].fileHandle) {
     autoGenerateThumbnail(course.id, videos[0].fileHandle).catch(() => {
       // silent-catch-ok: thumbnail generation failure is non-fatal — card shows placeholder icon (E1B-S04 AC3)
     })
