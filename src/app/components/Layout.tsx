@@ -247,27 +247,39 @@ export function Layout() {
 
   // Tablet sidebar sheet state with localStorage persistence
   const [sidebarOpen, setSidebarOpen] = useState(() => {
-    // Migrate from legacy eduvi key (one-time)
-    const legacy = localStorage.getItem('eduvi-sidebar-v1')
-    if (legacy !== null) {
-      localStorage.setItem('knowlune-sidebar-v1', legacy)
+    try {
+      // Migrate from legacy eduvi key (one-time)
+      const legacy = localStorage.getItem('eduvi-sidebar-v1')
+      if (legacy !== null) {
+        localStorage.setItem('knowlune-sidebar-v1', legacy)
+        localStorage.removeItem('eduvi-sidebar-v1')
+        return JSON.parse(legacy)
+      }
+      const saved = localStorage.getItem('knowlune-sidebar-v1')
+      return saved !== null ? JSON.parse(saved) : true
+    } catch {
       localStorage.removeItem('eduvi-sidebar-v1')
-      return JSON.parse(legacy)
+      localStorage.removeItem('knowlune-sidebar-v1')
+      return true
     }
-    const saved = localStorage.getItem('knowlune-sidebar-v1')
-    return saved !== null ? JSON.parse(saved) : true
   })
 
   // Desktop sidebar collapsed state with localStorage persistence
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    const legacy = localStorage.getItem('eduvi-sidebar-collapsed-v1')
-    if (legacy !== null) {
-      localStorage.setItem('knowlune-sidebar-collapsed-v1', legacy)
+    try {
+      const legacy = localStorage.getItem('eduvi-sidebar-collapsed-v1')
+      if (legacy !== null) {
+        localStorage.setItem('knowlune-sidebar-collapsed-v1', legacy)
+        localStorage.removeItem('eduvi-sidebar-collapsed-v1')
+        return JSON.parse(legacy)
+      }
+      const saved = localStorage.getItem('knowlune-sidebar-collapsed-v1')
+      return saved !== null ? JSON.parse(saved) : false
+    } catch {
       localStorage.removeItem('eduvi-sidebar-collapsed-v1')
-      return JSON.parse(legacy)
+      localStorage.removeItem('knowlune-sidebar-collapsed-v1')
+      return false
     }
-    const saved = localStorage.getItem('knowlune-sidebar-collapsed-v1')
-    return saved !== null ? JSON.parse(saved) : false
   })
 
   const [sidebarHovered, setSidebarHovered] = useState(false)
