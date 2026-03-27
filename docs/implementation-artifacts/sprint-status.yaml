@@ -507,7 +507,8 @@ development_status:
   # ──────────────────────────────────────────────────
   # Epic 35: Server-Side Premium Entitlement Enforcement
   # ──────────────────────────────────────────────────
-  epic-35: in-progress
+  epic-35: done
   35-1-server-middleware-foundation: done
   35-2-express-proxy-entitlement-guard: done
   35-3-byok-pass-through-logic: done
+  35-4-client-side-refactor-dev-proxy: done

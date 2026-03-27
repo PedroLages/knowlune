@@ -134,6 +134,15 @@ export function useChatQA(): UseChatQAResult {
             case 'AUTH_ERROR':
               errorMessage = 'Authentication failed. Please check your AI provider settings.'
               break
+            case 'AUTH_REQUIRED':
+              errorMessage = 'Sign in required. Please sign in to use AI features.'
+              break
+            case 'ENTITLEMENT_ERROR':
+              errorMessage = 'Premium subscription required. Please upgrade to use AI features.'
+              break
+            case 'RATE_LIMITED':
+              errorMessage = 'Server rate limit exceeded. Please wait a moment before trying again.'
+              break
             case 'NETWORK_ERROR':
               errorMessage = 'Network error. Check your connection and try again.'
               break
