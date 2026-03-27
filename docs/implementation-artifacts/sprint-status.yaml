@@ -469,8 +469,8 @@ development_status:
   # Epic 31: Error Handling Hardening
   # Source: epics-audit-hardening.md (P1 — Resilience)
   # ──────────────────────────────────────────────────
-  epic-31: backlog
-  31-1-add-catch-to-fire-and-forget-indexeddb-reads: backlog
+  epic-31: in-progress
+  31-1-add-catch-to-fire-and-forget-indexeddb-reads: done
   31-2-fix-importedcoursedetail-handledelete-missing-try-catch: backlog
   31-3-fix-zustand-state-mutation-in-usesessionstore: backlog
   31-4-fix-unsafe-type-cast-in-useyoutubeimportstore: backlog

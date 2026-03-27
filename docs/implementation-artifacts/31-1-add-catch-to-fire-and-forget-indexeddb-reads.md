@@ -1,12 +1,12 @@
 ---
 story_id: E31-S01
 story_name: "Add .catch() to Fire-and-Forget IndexedDB Reads"
-status: ready-for-dev
+status: done
 started: 2026-03-27
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-03-27
+reviewed: true
+review_started: 2026-03-27
+review_gates_passed: [build, lint, typecheck, format, unit-tests, e2e-tests, code-review]
 burn_in_validated: false
 ---
 
@@ -37,29 +37,29 @@ so that I can understand what went wrong and take action.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add error state and `.catch()` to ImportedLessonPlayer.tsx (AC: 1)
-  - [ ] 1.1 Add `const [error, setError] = useState<string | null>(null)` state
-  - [ ] 1.2 Add `.catch(err => { setError(err.message); toast.error("Failed to load lesson") })` to the Dexie read at line 42
-  - [ ] 1.3 Add error UI branch: when `error` is set, render "Failed to load lesson" message with a retry button
-  - [ ] 1.4 Implement retry by clearing `error` and re-triggering the Dexie read
+- [x] Task 1: Add error state and `.catch()` to ImportedLessonPlayer.tsx (AC: 1)
+  - [x] 1.1 Add `const [error, setError] = useState<string | null>(null)` state
+  - [x] 1.2 Add `.catch(err => { setError(err.message); toast.error("Failed to load lesson") })` to the Dexie read at line 42
+  - [x] 1.3 Add error UI branch: when `error` is set, render "Failed to load lesson" message with a retry button
+  - [x] 1.4 Implement retry by clearing `error` and re-triggering the Dexie read
 
-- [ ] Task 2: Add error state and `.catch()` to YouTubeLessonPlayer.tsx (AC: 2)
-  - [ ] 2.1 Add `const [error, setError] = useState<string | null>(null)` state
-  - [ ] 2.2 Add `.catch(err => { setError(err.message); toast.error("Failed to load video data") })` to the Dexie read at line 89
-  - [ ] 2.3 Add error UI branch: when `error` is set, render error message instead of spinner
-  - [ ] 2.4 Implement retry button
+- [x] Task 2: Add error state and `.catch()` to YouTubeLessonPlayer.tsx (AC: 2)
+  - [x] 2.1 Add `const [error, setError] = useState<string | null>(null)` state
+  - [x] 2.2 Add `.catch(err => { setError(err.message); toast.error("Failed to load video data") })` to the Dexie read at line 89
+  - [x] 2.3 Add error UI branch: when `error` is set, render error message instead of spinner
+  - [x] 2.4 Implement retry button
 
-- [ ] Task 3: Add error state and `.catch()` to LessonPlayer.tsx (AC: 3)
-  - [ ] 3.1 Add `const [error, setError] = useState<string | null>(null)` state
-  - [ ] 3.2 Add `.catch()` to both Dexie reads at lines 234 and 245
-  - [ ] 3.3 Pattern: `.catch(err => { setError(err.message); toast.error("Failed to load lesson data") })`
-  - [ ] 3.4 Add error UI branch with retry button
-  - [ ] 3.5 Ensure both reads handle errors independently (one failing shouldn't prevent the other from displaying)
+- [x] Task 3: Add error state and `.catch()` to LessonPlayer.tsx (AC: 3)
+  - [x] 3.1 Add `const [error, setError] = useState<string | null>(null)` state
+  - [x] 3.2 Add `.catch()` to both Dexie reads at lines 234 and 245
+  - [x] 3.3 Pattern: `.catch(err => { setError(err.message); toast.error("Failed to load lesson data") })`
+  - [x] 3.4 Add error UI branch with retry button
+  - [x] 3.5 Ensure both reads handle errors independently (one failing shouldn't prevent the other from displaying)
 
-- [ ] Task 4: Write E2E tests for error states
-  - [ ] 4.1 Test that when IndexedDB read fails, error message is displayed (not infinite spinner)
-  - [ ] 4.2 Test that retry button re-triggers the read
-  - [ ] 4.3 Test that toast.error is shown on failure
+- [x] Task 4: Write E2E tests for error states
+  - [x] 4.1 Test that when IndexedDB read fails, error message is displayed (not infinite spinner)
+  - [x] 4.2 Test that retry button re-triggers the read
+  - [x] 4.3 Test that toast.error is shown on failure
 
 ## Implementation Notes
 
@@ -83,21 +83,21 @@ so that I can understand what went wrong and take action.
 ## Pre-Review Checklist
 
 Before requesting `/review-story`, verify:
-- [ ] All changes committed (`git status` clean)
-- [ ] No error swallowing — catch blocks log AND surface errors
-- [ ] useEffect hooks have cleanup functions (ignore flags for async, event listener removal)
-- [ ] No optimistic UI updates before persistence — state updates after DB write succeeds
-- [ ] Type guards on all dynamic lookups (e.g., `LABELS[type]` when type can be empty)
-- [ ] E2E afterEach cleanup uses `await` (not fire-and-forget)
-- [ ] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
+- [x] All changes committed (`git status` clean)
+- [x] No error swallowing — catch blocks log AND surface errors
+- [x] useEffect hooks have cleanup functions (ignore flags for async, event listener removal)
+- [x] No optimistic UI updates before persistence — state updates after DB write succeeds
+- [x] Type guards on all dynamic lookups (e.g., `LABELS[type]` when type can be empty)
+- [x] E2E afterEach cleanup uses `await` (not fire-and-forget)
+- [x] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
 
 ## Design Review Feedback
 
-[Populated by /review-story — Playwright MCP findings]
+N/A — error handling hardening story, no visual design changes. Inline review performed.
 
 ## Code Review Feedback
 
-[Populated by /review-story — adversarial code review findings]
+Inline review: 1 round, 1 BLOCKER (unreachable error state) + 1 MEDIUM (retry race condition) — both fixed in commit cfc7aa1a.
 
 ## Challenges and Lessons Learned
 
