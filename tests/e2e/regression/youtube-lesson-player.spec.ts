@@ -12,10 +12,7 @@
 import { test, expect } from '../../support/fixtures'
 import { createImportedCourse } from '../../support/fixtures/factories/imported-course-factory'
 import { navigateAndWait } from '../../support/helpers/navigation'
-import {
-  seedImportedCourses,
-  seedImportedVideos,
-} from '../../support/helpers/seed-helpers'
+import { seedImportedCourses, seedImportedVideos } from '../../support/helpers/seed-helpers'
 import type { Page } from '@playwright/test'
 
 // ---------------------------------------------------------------------------

@@ -11,7 +11,7 @@
  * - Deleting a path
  */
 import { test, expect } from '../../support/fixtures'
-import { seedIndexedDBStore, clearLearningPath } from '../../support/helpers/indexeddb-seed'
+import { seedIndexedDBStore, clearLearningPath } from '../../support/helpers/seed-helpers'
 import { navigateAndWait } from '../../support/helpers/navigation'
 import { FIXED_DATE, getRelativeDate } from '../../utils/test-time'
 
@@ -205,9 +205,7 @@ test.describe('Learning Paths — list with seeded data', () => {
   test('AI-generated path shows AI Generated badge', async ({ page }) => {
     await goToLearningPaths(page)
 
-    const paths = [
-      createLearningPath({ id: 'lp-ai', name: 'AI Path', isAIGenerated: true }),
-    ]
+    const paths = [createLearningPath({ id: 'lp-ai', name: 'AI Path', isAIGenerated: true })]
 
     await clearLearningPath(page)
     await seedPaths(page, paths)
@@ -247,9 +245,7 @@ test.describe('Learning Paths — search', () => {
   test('search with no results shows empty search state', async ({ page }) => {
     await goToLearningPaths(page)
 
-    const paths = [
-      createLearningPath({ id: 'lp-sr1', name: 'Some Path' }),
-    ]
+    const paths = [createLearningPath({ id: 'lp-sr1', name: 'Some Path' })]
 
     await clearLearningPath(page)
     await seedPaths(page, paths)
@@ -295,9 +291,7 @@ test.describe('Learning Paths — navigation', () => {
   test('clicking a path card navigates to its detail page', async ({ page }) => {
     await goToLearningPaths(page)
 
-    const paths = [
-      createLearningPath({ id: 'lp-nav', name: 'Navigate Me' }),
-    ]
+    const paths = [createLearningPath({ id: 'lp-nav', name: 'Navigate Me' })]
 
     await clearLearningPath(page)
     await seedPaths(page, paths)
@@ -311,9 +305,7 @@ test.describe('Learning Paths — navigation', () => {
   test('page heading shows "Learning Paths"', async ({ page }) => {
     await goToLearningPaths(page)
 
-    await expect(
-      page.getByRole('heading', { name: 'Learning Paths', level: 1 })
-    ).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Learning Paths', level: 1 })).toBeVisible()
   })
 })
 
@@ -325,19 +317,13 @@ test.describe('Learning Paths — rename', () => {
   test('renames a path via the dropdown menu', async ({ page }) => {
     await goToLearningPaths(page)
 
-    const paths = [
-      createLearningPath({ id: 'lp-rename', name: 'Old Name' }),
-    ]
+    const paths = [createLearningPath({ id: 'lp-rename', name: 'Old Name' })]
 
     await clearLearningPath(page)
     await seedPaths(page, paths)
     await page.reload({ waitUntil: 'load' })
 
-    // Hover the card to reveal the actions button
-    const card = page.getByText('Old Name').locator('..').locator('..')
-    await card.hover()
-
-    // Open dropdown menu
+    // Open dropdown menu via accessible actions button
     await page.getByRole('button', { name: /Actions for Old Name/ }).click()
     await page.getByRole('menuitem', { name: 'Rename' }).click()
 
@@ -375,11 +361,7 @@ test.describe('Learning Paths — delete', () => {
     await seedPaths(page, paths)
     await page.reload({ waitUntil: 'load' })
 
-    // Hover the card to reveal the actions button
-    const targetCard = page.getByText('Delete This Path').locator('..').locator('..')
-    await targetCard.hover()
-
-    // Open dropdown menu and click Delete
+    // Open dropdown menu via accessible actions button
     await page.getByRole('button', { name: /Actions for Delete This Path/ }).click()
     await page.getByRole('menuitem', { name: 'Delete' }).click()
 
@@ -396,17 +378,13 @@ test.describe('Learning Paths — delete', () => {
   test('cancel in delete confirmation keeps the path', async ({ page }) => {
     await goToLearningPaths(page)
 
-    const paths = [
-      createLearningPath({ id: 'lp-delc', name: 'Cancel Delete Path' }),
-    ]
+    const paths = [createLearningPath({ id: 'lp-delc', name: 'Cancel Delete Path' })]
 
     await clearLearningPath(page)
     await seedPaths(page, paths)
     await page.reload({ waitUntil: 'load' })
 
-    const targetCard = page.getByText('Cancel Delete Path').locator('..').locator('..')
-    await targetCard.hover()
-
+    // Open dropdown menu via accessible actions button
     await page.getByRole('button', { name: /Actions for Cancel Delete Path/ }).click()
     await page.getByRole('menuitem', { name: 'Delete' }).click()
 
