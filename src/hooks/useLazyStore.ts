@@ -4,8 +4,8 @@ import { useEffect, useRef } from 'react'
  * useLazyStore — Defers non-critical Zustand store initialization to page-level.
  *
  * Wraps a store's `loadX()` function to ensure it's called exactly once
- * when the page mounts. Returns { isLoading } so pages can show skeletons
- * while IndexedDB data is being fetched.
+ * when the page mounts. The store's own `isLoading` state drives skeleton
+ * rendering — this hook just guarantees single-execution initialization.
  *
  * Critical stores (useCourseStore, useAuthStore) are loaded eagerly in
  * main.tsx / Layout.tsx. All other stores should use this hook.
