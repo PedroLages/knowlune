@@ -142,10 +142,10 @@ issues:
     severity: medium
     discovered_by: E24-adversarial
     discovered_on: 2026-03-25
-    status: open
+    status: fixed
     scheduled_for: null
-    fixed_by: null
-    notes: "Documented waiver — showDirectoryPicker() cannot be mocked in Playwright. 160+ unit tests cover component logic. Backfill when testable import path exists (drag-and-drop or URL-based)."
+    fixed_by: E33-S06
+    notes: "Fixed: Added ImportDropZone component with drag-and-drop and hidden file input (data-testid='import-file-input') for Playwright setInputFiles() automation. Also added scanFromDroppedFiles() in courseImport.ts."
 
   - id: KI-011
     type: design
