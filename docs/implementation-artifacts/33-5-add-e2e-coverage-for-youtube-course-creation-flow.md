@@ -1,7 +1,7 @@
 ---
 story_id: E33-S05
 story_name: "Add E2E coverage for YouTube course creation flow"
-status: in-progress
+status: done
 started: 2026-03-27
 completed:
 reviewed: false
