@@ -185,6 +185,117 @@ describe('getNoteForLesson', () => {
   })
 })
 
+describe('loadNotes error handling', () => {
+  it('should set error on DB failure', async () => {
+    const { db } = await import('@/db')
+    vi.spyOn(db.notes, 'toArray').mockRejectedValue(new Error('DB crash'))
+
+    await act(async () => {
+      await useNoteStore.getState().loadNotes()
+    })
+
+    expect(useNoteStore.getState().error).toBe('Failed to load notes from database')
+    expect(useNoteStore.getState().isLoading).toBe(false)
+  })
+})
+
+describe('loadNotesByLesson', () => {
+  it('should load notes filtered by course and lesson', async () => {
+    const { db } = await import('@/db')
+    const note1 = makeNote({ courseId: 'c1', videoId: 'v1' })
+    const note2 = makeNote({ courseId: 'c1', videoId: 'v2' })
+    await db.notes.bulkAdd([note1, note2])
+
+    await act(async () => {
+      await useNoteStore.getState().loadNotesByLesson('c1', 'v1')
+    })
+
+    expect(useNoteStore.getState().notes).toHaveLength(1)
+    expect(useNoteStore.getState().notes[0].videoId).toBe('v1')
+  })
+
+  it('should set error on DB failure', async () => {
+    const { db } = await import('@/db')
+    vi.spyOn(db.notes, 'where').mockImplementation(() => {
+      throw new Error('DB error')
+    })
+
+    await act(async () => {
+      await useNoteStore.getState().loadNotesByLesson('c1', 'v1')
+    })
+
+    expect(useNoteStore.getState().error).toBe('Failed to load lesson notes')
+  })
+})
+
+describe('loadNotesByCourse error handling', () => {
+  it('should set error on DB failure', async () => {
+    const { db } = await import('@/db')
+    vi.spyOn(db.notes, 'where').mockImplementation(() => {
+      throw new Error('DB error')
+    })
+
+    await act(async () => {
+      await useNoteStore.getState().loadNotesByCourse('c1')
+    })
+
+    expect(useNoteStore.getState().error).toBe('Failed to load course notes')
+  })
+})
+
+describe('addNote error handling', () => {
+  it('should rollback on DB failure', async () => {
+    const { db } = await import('@/db')
+    vi.spyOn(db.notes, 'add').mockRejectedValue(new Error('Write fail'))
+
+    const note = makeNote()
+    await act(async () => {
+      await useNoteStore.getState().addNote(note)
+    })
+
+    expect(useNoteStore.getState().notes).toHaveLength(0)
+    expect(useNoteStore.getState().error).toBe('Failed to add note')
+  })
+})
+
+describe('saveNote error handling', () => {
+  it('should rollback on DB failure for existing note', async () => {
+    const note = makeNote({ content: 'Original' })
+    await act(async () => {
+      await useNoteStore.getState().addNote(note)
+    })
+
+    const { db } = await import('@/db')
+    vi.spyOn(db.notes, 'put').mockRejectedValue(new Error('fail'))
+
+    await act(async () => {
+      await useNoteStore.getState().saveNote({ ...note, content: 'Updated' })
+    })
+
+    expect(useNoteStore.getState().notes[0].content).toBe('Original')
+    expect(useNoteStore.getState().error).toBe('Failed to save note')
+  })
+})
+
+describe('deleteNote error handling', () => {
+  it('should rollback on DB failure', async () => {
+    const note = makeNote()
+    await act(async () => {
+      await useNoteStore.getState().addNote(note)
+    })
+
+    const { db } = await import('@/db')
+    vi.spyOn(db.notes, 'delete').mockRejectedValue(new Error('fail'))
+
+    await act(async () => {
+      await useNoteStore.getState().deleteNote(note.id)
+    })
+
+    expect(useNoteStore.getState().notes).toHaveLength(1) // rolled back
+    expect(useNoteStore.getState().error).toBe('Failed to delete note')
+  })
+})
+
 describe('softDelete', () => {
   it('should mark note as soft deleted', async () => {
     const note = makeNote({ content: 'To be soft deleted' })

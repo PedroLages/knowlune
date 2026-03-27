@@ -218,6 +218,220 @@ describe('AC3 — queue re-sorts after rating', () => {
   })
 })
 
+describe('loadReviews error handling', () => {
+  it('should set error on DB failure', async () => {
+    vi.spyOn(db.reviewRecords, 'toArray').mockRejectedValue(new Error('DB fail'))
+
+    await useReviewStore.getState().loadReviews()
+
+    expect(useReviewStore.getState().error).toBe('Failed to load reviews')
+    expect(useReviewStore.getState().isLoading).toBe(false)
+  })
+})
+
+describe('startInterleavedSession', () => {
+  it('should initialize interleaved session with due reviews', () => {
+    const review1 = makeReview({
+      id: 'r1',
+      noteId: 'note-1',
+      reviewedAt: new Date(FIXED_DATE.getTime() - 5 * 86400000).toISOString(),
+      nextReviewAt: new Date(FIXED_DATE.getTime() - 86400000).toISOString(),
+    })
+    const review2 = makeReview({
+      id: 'r2',
+      noteId: 'note-2',
+      reviewedAt: new Date(FIXED_DATE.getTime() - 3 * 86400000).toISOString(),
+      nextReviewAt: new Date(FIXED_DATE.getTime() - 86400000).toISOString(),
+    })
+
+    useReviewStore.setState({ allReviews: [review1, review2] })
+
+    const noteMap = new Map([
+      ['note-1', { id: 'note-1', courseId: 'c1', videoId: 'v1', content: '', createdAt: '', updatedAt: '', tags: [] }],
+      ['note-2', { id: 'note-2', courseId: 'c2', videoId: 'v2', content: '', createdAt: '', updatedAt: '', tags: [] }],
+    ])
+
+    useReviewStore.getState().startInterleavedSession(noteMap, FIXED_DATE)
+
+    const state = useReviewStore.getState()
+    expect(state.isInterleavedActive).toBe(true)
+    expect(state.interleavedQueue.length).toBeGreaterThan(0)
+    expect(state.interleavedIndex).toBe(0)
+    expect(state.interleavedRatings).toEqual([])
+    expect(state.interleavedCourseIds.length).toBeGreaterThan(0)
+  })
+})
+
+describe('rateInterleavedNote', () => {
+  it('should advance index on successful rating', async () => {
+    const review = makeReview({ noteId: 'note-1' })
+    useReviewStore.setState({
+      allReviews: [review],
+      interleavedQueue: [review],
+      interleavedIndex: 0,
+      interleavedRatings: [],
+      interleavedCourseIds: [],
+      isInterleavedActive: true,
+      interleavedRetentionsBefore: [0.5],
+    })
+
+    vi.spyOn(db.reviewRecords, 'put').mockResolvedValue(undefined as never)
+
+    const noteMap = new Map([
+      ['note-1', { id: 'note-1', courseId: 'c1', videoId: 'v1', content: '', createdAt: '', updatedAt: '', tags: [] }],
+    ])
+
+    await useReviewStore.getState().rateInterleavedNote('good', noteMap, FIXED_DATE)
+
+    const state = useReviewStore.getState()
+    expect(state.interleavedIndex).toBe(1)
+    expect(state.interleavedRatings).toEqual(['good'])
+    expect(state.interleavedCourseIds).toContain('c1')
+  })
+
+  it('should not advance on rating failure', async () => {
+    const review = makeReview({ noteId: 'note-1' })
+    useReviewStore.setState({
+      allReviews: [review],
+      interleavedQueue: [review],
+      interleavedIndex: 0,
+      interleavedRatings: [],
+      interleavedCourseIds: [],
+      isInterleavedActive: true,
+      interleavedRetentionsBefore: [0.5],
+    })
+
+    vi.spyOn(db.reviewRecords, 'put').mockRejectedValue(new Error('fail'))
+
+    const noteMap = new Map([
+      ['note-1', { id: 'note-1', courseId: 'c1', videoId: 'v1', content: '', createdAt: '', updatedAt: '', tags: [] }],
+    ])
+
+    await useReviewStore.getState().rateInterleavedNote('good', noteMap, FIXED_DATE)
+
+    expect(useReviewStore.getState().interleavedIndex).toBe(0) // Did not advance
+  })
+
+  it('should handle empty queue gracefully', async () => {
+    useReviewStore.setState({
+      interleavedQueue: [],
+      interleavedIndex: 0,
+      isInterleavedActive: true,
+    })
+
+    await useReviewStore.getState().rateInterleavedNote('good', new Map(), FIXED_DATE)
+    // No crash
+  })
+
+  it('should not duplicate courseId in interleavedCourseIds', async () => {
+    const review1 = makeReview({ noteId: 'note-1' })
+    const review2 = makeReview({ noteId: 'note-2' })
+    useReviewStore.setState({
+      allReviews: [review1, review2],
+      interleavedQueue: [review1, review2],
+      interleavedIndex: 0,
+      interleavedRatings: [],
+      interleavedCourseIds: ['c1'], // c1 already tracked
+      isInterleavedActive: true,
+      interleavedRetentionsBefore: [0.5, 0.5],
+    })
+
+    vi.spyOn(db.reviewRecords, 'put').mockResolvedValue(undefined as never)
+
+    const noteMap = new Map([
+      ['note-1', { id: 'note-1', courseId: 'c1', videoId: 'v1', content: '', createdAt: '', updatedAt: '', tags: [] }],
+    ])
+
+    await useReviewStore.getState().rateInterleavedNote('good', noteMap, FIXED_DATE)
+
+    // c1 should not be duplicated
+    expect(useReviewStore.getState().interleavedCourseIds).toEqual(['c1'])
+  })
+})
+
+describe('endInterleavedSession', () => {
+  it('should return summary and reset session state', () => {
+    const review = makeReview({ noteId: 'note-1' })
+    useReviewStore.setState({
+      allReviews: [review],
+      interleavedQueue: [review],
+      interleavedRatings: ['good'],
+      interleavedCourseIds: ['c1'],
+      interleavedRetentionsBefore: [0.8],
+      interleavedIndex: 1,
+      isInterleavedActive: true,
+    })
+
+    const courseNameMap = new Map([['c1', 'React Course']])
+    const summary = useReviewStore.getState().endInterleavedSession(courseNameMap)
+
+    expect(summary.totalReviewed).toBe(1)
+    expect(summary.ratings.good).toBe(1)
+    expect(summary.coursesCount).toBe(1)
+    expect(summary.courseNames).toEqual(['React Course'])
+    expect(summary.averageRetentionBefore).toBe(Math.round(0.8))
+
+    // Session should be reset
+    const state = useReviewStore.getState()
+    expect(state.isInterleavedActive).toBe(false)
+    expect(state.interleavedQueue).toHaveLength(0)
+    expect(state.interleavedRatings).toHaveLength(0)
+  })
+
+  it('should handle empty session', () => {
+    useReviewStore.setState({
+      allReviews: [],
+      interleavedQueue: [],
+      interleavedRatings: [],
+      interleavedCourseIds: [],
+      interleavedRetentionsBefore: [],
+      interleavedIndex: 0,
+      isInterleavedActive: true,
+    })
+
+    const summary = useReviewStore.getState().endInterleavedSession(new Map())
+    expect(summary.totalReviewed).toBe(0)
+    expect(summary.averageRetentionAfter).toBe(95) // default
+  })
+
+  it('should handle unknown courseId in courseNameMap', () => {
+    useReviewStore.setState({
+      allReviews: [],
+      interleavedQueue: [],
+      interleavedRatings: [],
+      interleavedCourseIds: ['unknown-id'],
+      interleavedRetentionsBefore: [],
+      interleavedIndex: 0,
+      isInterleavedActive: true,
+    })
+
+    const summary = useReviewStore.getState().endInterleavedSession(new Map())
+    expect(summary.courseNames).toEqual(['Unknown Course'])
+  })
+})
+
+describe('resetInterleavedSession', () => {
+  it('should reset all interleaved state', () => {
+    useReviewStore.setState({
+      interleavedQueue: [makeReview()],
+      interleavedIndex: 5,
+      interleavedRatings: ['good', 'easy'],
+      interleavedCourseIds: ['c1'],
+      interleavedRetentionsBefore: [0.8],
+      isInterleavedActive: true,
+    })
+
+    useReviewStore.getState().resetInterleavedSession()
+
+    const state = useReviewStore.getState()
+    expect(state.interleavedQueue).toHaveLength(0)
+    expect(state.interleavedIndex).toBe(0)
+    expect(state.interleavedRatings).toHaveLength(0)
+    expect(state.interleavedCourseIds).toHaveLength(0)
+    expect(state.isInterleavedActive).toBe(false)
+  })
+})
+
 describe('getNextReviewDate', () => {
   it('should return earliest nextReviewAt', () => {
     const r1 = makeReview({ nextReviewAt: '2026-03-20T00:00:00Z' })
