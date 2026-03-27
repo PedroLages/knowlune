@@ -1,10 +1,10 @@
 ---
 story_id: E31-S05
 story_name: "Fix Silent .catch(() => {}) in useCourseImportStore"
-status: in-progress
+status: done
 started: 2026-03-27
-completed:
-reviewed: false
+completed: 2026-03-27
+reviewed: true
 review_started:
 review_gates_passed: []
 burn_in_validated: false
