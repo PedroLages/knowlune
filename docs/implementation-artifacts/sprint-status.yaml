@@ -509,3 +509,4 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-35: in-progress
   35-1-server-middleware-foundation: done
+  35-2-express-proxy-entitlement-guard: done

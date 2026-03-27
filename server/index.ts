@@ -17,11 +17,35 @@ import express from 'express'
 import { generateText, streamText } from 'ai'
 import { z } from 'zod'
 import { getProviderModel, getOllamaProviderModel } from './providers.js'
+import { createOriginCheck } from './middleware/origin-check.js'
+import { createAuthMiddleware } from './middleware/authenticate.js'
+import { createEntitlementMiddleware } from './middleware/entitlement.js'
+import { createRateLimiter } from './middleware/rate-limiter.js'
 
 const app = express()
 const PORT = 3001
 
 app.use(express.json({ limit: '1mb' }))
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Middleware Chain Setup
+//
+// Order: 1. Origin check → 2. JWT auth → 3. Entitlement check → 4. Rate limiter
+// Applied to all /api/ai/* routes EXCEPT /api/ai/ollama/health (registered before chain).
+//
+// Environment variables required:
+//   SUPABASE_JWT_SECRET     — JWT verification (from Supabase dashboard)
+//   SUPABASE_SERVICE_ROLE_KEY — Server-side Supabase queries
+//   ALLOWED_ORIGINS         — Comma-separated allowed origins
+//   VITE_SUPABASE_URL       — Supabase project URL (for entitlement lookups)
+// ──────────────────────────────────────────────────────────────────────────────
+
+// Build middleware instances (only if env vars are configured — allows dev without auth)
+const isMiddlewareConfigured =
+  process.env.SUPABASE_JWT_SECRET &&
+  process.env.ALLOWED_ORIGINS &&
+  process.env.VITE_SUPABASE_URL &&
+  process.env.SUPABASE_SERVICE_ROLE_KEY
 
 /**
  * Validates that a URL targets a non-loopback, plausible Ollama server.
@@ -65,65 +89,6 @@ export function isAllowedOllamaUrl(urlString: string): boolean {
 }
 
 /**
- * GET /api/ai/ollama/tags
- *
- * Proxy endpoint for listing available Ollama models via GET /api/tags.
- * Avoids CORS issues when the browser needs to discover models before
- * a full LLM client is configured.
- *
- * Query params:
- *   serverUrl - The Ollama server URL (e.g., http://192.168.2.200:11434)
- */
-app.get('/api/ai/ollama/tags', async (req, res) => {
-  try {
-    const serverUrl = req.query.serverUrl as string
-    if (!serverUrl) {
-      res.status(400).json({ error: 'serverUrl query parameter is required' })
-      return
-    }
-
-    if (!isAllowedOllamaUrl(serverUrl)) {
-      res.status(403).json({ error: 'Ollama server URL targets a disallowed address' })
-      return
-    }
-
-    const normalizedUrl = serverUrl.replace(/\/+$/, '')
-    const response = await fetch(`${normalizedUrl}/api/tags`, {
-      method: 'GET',
-      signal: AbortSignal.timeout(15_000),
-    })
-
-    if (!response.ok) {
-      // eslint-disable-next-line error-handling/no-silent-catch -- server-side error handling
-      const errorText = await response.text().catch(() => response.statusText)
-      res.status(response.status).json({ error: `Ollama returned ${response.status}: ${errorText}` })
-      return
-    }
-
-    const data = await response.json()
-    res.json(data)
-  } catch (error) {
-    // silent-catch-ok — logs to console and returns error response to client
-    console.error('[/api/ai/ollama/tags] Error:', (error as Error).message)
-
-    if ((error as Error).name === 'AbortError' || (error as Error).name === 'TimeoutError') {
-      res.status(504).json({ error: 'Ollama server timed out' })
-      return
-    }
-
-    const msg = (error as Error).message
-    if (msg.includes('fetch failed') || msg.includes('ECONNREFUSED')) {
-      res.status(502).json({
-        error: `Cannot reach Ollama server. Is it running at the specified URL?`,
-      })
-      return
-    }
-
-    res.status(500).json({ error: (error as Error).message })
-  }
-})
-
-/**
  * GET /api/ai/ollama/health
  *
  * Proxy endpoint for Ollama health check. Pings the Ollama server root endpoint
@@ -164,6 +129,105 @@ app.get('/api/ai/ollama/health', async (req, res) => {
   } catch (error) {
     // silent-catch-ok — logs to console and returns error response to client
     console.error('[/api/ai/ollama/health] Error:', (error as Error).message)
+
+    if ((error as Error).name === 'AbortError' || (error as Error).name === 'TimeoutError') {
+      res.status(504).json({ error: 'Ollama server timed out' })
+      return
+    }
+
+    const msg = (error as Error).message
+    if (msg.includes('fetch failed') || msg.includes('ECONNREFUSED')) {
+      res.status(502).json({
+        error: `Cannot reach Ollama server. Is it running at the specified URL?`,
+      })
+      return
+    }
+
+    res.status(500).json({ error: (error as Error).message })
+  }
+})
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Apply middleware chain to all /api/ai/* routes below this point.
+// Health check (above) is intentionally registered first to bypass all auth.
+//
+// Middleware order:
+//   1. Origin check — reject requests from disallowed origins
+//   2. JWT authentication — validate Supabase JWT, attach user to request
+//   3. Entitlement check — verify premium subscription (LRU cache + Supabase)
+//   4. Rate limiter — per-user token bucket rate limiting
+// ──────────────────────────────────────────────────────────────────────────────
+if (isMiddlewareConfigured) {
+  const allowedOrigins = process.env.ALLOWED_ORIGINS!.split(',').map((o) => o.trim())
+
+  // 1. Origin check
+  app.use('/api/ai', createOriginCheck({ allowedOrigins }))
+
+  // 2. JWT authentication
+  app.use('/api/ai', createAuthMiddleware({ jwtSecret: process.env.SUPABASE_JWT_SECRET }))
+
+  // 3. Entitlement check
+  app.use(
+    '/api/ai',
+    createEntitlementMiddleware({
+      supabaseUrl: process.env.VITE_SUPABASE_URL!,
+      supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    })
+  )
+
+  // 4. Rate limiter (100 requests per 60 seconds per user)
+  app.use('/api/ai', createRateLimiter({ points: 100, duration: 60 }))
+
+  console.log('Middleware chain active: origin-check → authenticate → entitlement → rate-limiter')
+} else {
+  console.warn(
+    'Middleware chain DISABLED — missing env vars (SUPABASE_JWT_SECRET, ALLOWED_ORIGINS, VITE_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY). AI endpoints are unprotected.'
+  )
+}
+
+/**
+ * GET /api/ai/ollama/tags
+ *
+ * Proxy endpoint for listing available Ollama models via GET /api/tags.
+ * Avoids CORS issues when the browser needs to discover models before
+ * a full LLM client is configured.
+ *
+ * Note: Registered AFTER middleware chain — requires auth when middleware is active.
+ *
+ * Query params:
+ *   serverUrl - The Ollama server URL (e.g., http://192.168.2.200:11434)
+ */
+app.get('/api/ai/ollama/tags', async (req, res) => {
+  try {
+    const serverUrl = req.query.serverUrl as string
+    if (!serverUrl) {
+      res.status(400).json({ error: 'serverUrl query parameter is required' })
+      return
+    }
+
+    if (!isAllowedOllamaUrl(serverUrl)) {
+      res.status(403).json({ error: 'Ollama server URL targets a disallowed address' })
+      return
+    }
+
+    const normalizedUrl = serverUrl.replace(/\/+$/, '')
+    const response = await fetch(`${normalizedUrl}/api/tags`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(15_000),
+    })
+
+    if (!response.ok) {
+      // eslint-disable-next-line error-handling/no-silent-catch -- server-side error handling
+      const errorText = await response.text().catch(() => response.statusText)
+      res.status(response.status).json({ error: `Ollama returned ${response.status}: ${errorText}` })
+      return
+    }
+
+    const data = await response.json()
+    res.json(data)
+  } catch (error) {
+    // silent-catch-ok — logs to console and returns error response to client
+    console.error('[/api/ai/ollama/tags] Error:', (error as Error).message)
 
     if ((error as Error).name === 'AbortError' || (error as Error).name === 'TimeoutError') {
       res.status(504).json({ error: 'Ollama server timed out' })

@@ -39,6 +39,9 @@ export type LLMErrorCode =
   | 'TIMEOUT' // Request timed out
   | 'RATE_LIMIT' // Rate limit exceeded (HTTP 429)
   | 'AUTH_ERROR' // Authentication failed (HTTP 401)
+  | 'AUTH_REQUIRED' // No auth token present (HTTP 401)
+  | 'ENTITLEMENT_ERROR' // Premium subscription required (HTTP 403)
+  | 'RATE_LIMITED' // Server-side rate limit exceeded (HTTP 429)
   | 'NETWORK_ERROR' // Network failure
   | 'INVALID_RESPONSE' // Malformed response
   | 'UNKNOWN' // Unknown error

@@ -12,6 +12,7 @@ import { BaseLLMClient } from './client'
 import type { LLMMessage, LLMStreamChunk } from './types'
 import { LLMError, LLM_REQUEST_TIMEOUT } from './types'
 import type { AIProviderId } from '@/lib/aiConfiguration'
+import { useAuthStore } from '@/stores/useAuthStore'
 
 /** Local proxy endpoint for streaming completions */
 const PROXY_STREAM_URL = '/api/ai/stream'
@@ -38,11 +39,18 @@ export class ProxyLLMClient extends BaseLLMClient {
 
   async *streamCompletion(messages: LLMMessage[]): AsyncGenerator<LLMStreamChunk, void, unknown> {
     try {
+      // Include JWT from auth store for server-side middleware validation
+      const accessToken = useAuthStore.getState().session?.access_token
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`
+      }
+
       const response = await this.fetchWithTimeout(
         PROXY_STREAM_URL,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({
             provider: this.providerId,
             apiKey: this.apiKey,
@@ -54,7 +62,7 @@ export class ProxyLLMClient extends BaseLLMClient {
       )
 
       if (!response.ok) {
-        const errorCode = this.mapHttpStatusToErrorCode(response.status)
+        const errorCode = this.mapHttpStatusToLLMErrorCode(response.status)
         const errorData = await response.json().catch(() => ({ error: response.statusText }))
         throw new LLMError(
           `AI proxy error: ${errorData.error || response.statusText}`,
@@ -105,15 +113,4 @@ export class ProxyLLMClient extends BaseLLMClient {
     }
   }
 
-  private mapHttpStatusToErrorCode(status: number): 'RATE_LIMIT' | 'AUTH_ERROR' | 'UNKNOWN' {
-    switch (status) {
-      case 429:
-        return 'RATE_LIMIT'
-      case 401:
-      case 403:
-        return 'AUTH_ERROR'
-      default:
-        return 'UNKNOWN'
-    }
-  }
 }

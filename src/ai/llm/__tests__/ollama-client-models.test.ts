@@ -1,6 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { OllamaLLMClient } from '../ollama-client'
 
+// Mock useAuthStore to provide access_token for Authorization header
+vi.mock('@/stores/useAuthStore', () => ({
+  useAuthStore: {
+    getState: () => ({
+      session: { access_token: 'test-jwt-token' },
+    }),
+  },
+}))
+
 // Mock fetch globally
 const mockFetch = vi.fn()
 vi.stubGlobal('fetch', mockFetch)
