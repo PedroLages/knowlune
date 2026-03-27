@@ -145,7 +145,7 @@ export function CourseDetail() {
 
           {/* Progress sidebar */}
           <div className="w-full lg:w-64 bg-muted rounded-2xl p-5">
-            <h3 className="font-semibold text-sm mb-3">Your Progress</h3>
+            <h2 className="font-semibold text-sm mb-3">Your Progress</h2>
             {completionPercent === 100 ? (
               <div className="flex items-center gap-2 mb-3">
                 <CheckCircle className="size-6 text-success" data-testid="completion-badge" />
