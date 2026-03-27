@@ -1,12 +1,12 @@
 ---
 story_id: E30-S04
 story_name: "Add aria-expanded to Module Toggles and Collapsibles"
-status: ready-for-dev
+status: done
 started: 2026-03-27
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-03-27
+reviewed: true
+review_started: 2026-03-27
+review_gates_passed: [build, lint, type-check, format-check, unit-tests-skipped, e2e-tests-skipped, design-review, code-review, code-review-testing]
 burn_in_validated: false
 ---
 
@@ -119,4 +119,7 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document during implementation]
+- Custom toggle buttons (div+onClick) require explicit `aria-expanded` and `aria-controls` — Radix primitives handle this automatically, but hand-rolled toggles silently omit it
+- `aria-controls` should only render when the target element exists in the DOM; conditional rendering avoids referencing non-existent IDs
+- Consistency matters: when fixing one collapsible pattern, audit all similar patterns in the same pass to avoid fragmented fixes across multiple stories
+- The ImportProgressOverlay was an unexpected find — expanding scope slightly to cover it prevented a follow-up story
