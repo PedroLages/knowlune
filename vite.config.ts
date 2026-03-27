@@ -19,6 +19,10 @@ const COURSES_ROOT = process.env.COURSES_ROOT || '';
  * Vite plugin that embeds Ollama proxy endpoints directly into the dev server.
  * Eliminates the need for a separate `npm run server` when using Ollama.
  *
+ * When `DEV_SKIP_ENTITLEMENT=true` is set in `.env.local`, all auth and
+ * entitlement checks are bypassed. A console warning is logged on startup.
+ * Without the flag, requests are proxied to Express on :3001 (which handles auth).
+ *
  * Endpoints:
  *   GET  /api/ai/ollama/tags?serverUrl=...  — List available models
  *   GET  /api/ai/ollama/health?serverUrl=... — Health check
@@ -26,6 +30,16 @@ const COURSES_ROOT = process.env.COURSES_ROOT || '';
  *   POST /api/ai/ollama                      — Chat completions (SSE streaming)
  */
 export function ollamaDevProxy(): Plugin {
+  const skipEntitlement = process.env.DEV_SKIP_ENTITLEMENT === 'true'
+
+  if (skipEntitlement) {
+    console.warn(
+      '\x1b[33m%s\x1b[0m',
+      '⚠️  Entitlement checks disabled (DEV_SKIP_ENTITLEMENT=true). ' +
+      'All auth/entitlement middleware is bypassed. Do NOT use in production.'
+    )
+  }
+
   return {
     name: 'ollama-dev-proxy',
     configureServer(server) {
