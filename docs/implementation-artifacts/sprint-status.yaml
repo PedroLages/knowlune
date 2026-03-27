@@ -498,7 +498,7 @@ development_status:
   epic-33: in-progress
   33-1-validate-and-fix-94-generated-e2e-tests-from-audit: done
   33-2-remove-hard-waits-and-fix-css-class-selectors-in-existing-tests: done
-  33-3-cross-store-integration-tests-for-import-quiz-session-workflows: in-progress
+  33-3-cross-store-integration-tests-for-import-quiz-session-workflows: done
   33-4-store-branch-coverage-target-80-across-all-22-zustand-stores: backlog
   33-5-add-e2e-coverage-for-youtube-course-creation-flow: backlog
   33-6-add-testable-import-path-drag-and-drop-file-import: backlog

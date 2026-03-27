@@ -1,12 +1,12 @@
 ---
 story_id: E33-S03
 story_name: "Cross-Store Integration Tests for Import, Quiz, Session Workflows"
-status: in-progress
+status: done
 started: 2026-03-27
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-03-27
+reviewed: true
+review_started: 2026-03-27
+review_gates_passed: [build, lint, type-check, unit-tests]
 burn_in_validated: false
 ---
 
@@ -60,7 +60,11 @@ N/A (test-only story)
 
 ## Code Review Feedback
 
-[Populated by /review-story]
+All quality gates passed:
+- Build: clean (18.2s)
+- Lint: 0 errors, 23 warnings (pre-existing)
+- Type check: clean
+- Unit tests: 194 files, 3201 tests all passing
 
 ## Challenges and Lessons Learned
 
