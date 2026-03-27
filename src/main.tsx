@@ -88,6 +88,16 @@ deferInit(() => {
   })
 })
 
+// E32-S04: Run data pruning on startup (deferred — non-critical, never blocks first paint)
+deferInit(() => {
+  import('@/lib/dataPruning').then(({ runDataPruning }) => {
+    runDataPruning().catch(err => {
+      // silent-catch-ok: pruning is advisory, never block startup
+      console.warn('[DataPruning] Startup pruning failed:', err)
+    })
+  })
+})
+
 // AC4: Run Ollama health check on startup if configured (deferred — non-critical)
 deferInit(() => {
   import('@/lib/ollamaHealthCheck').then(({ runStartupHealthCheck }) => {
