@@ -1,12 +1,12 @@
 ---
 story_id: E30-S02
 story_name: "Add aria-label to Icon-Only Buttons"
-status: ready-for-dev
+status: done
 started: 2026-03-27
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+completed: 2026-03-27
+reviewed: true
+review_started: 2026-03-27
+review_gates_passed: [build, lint, typecheck, format, unit-tests, e2e-tests, design-review, code-review, test-coverage-review]
 burn_in_validated: false
 ---
 
