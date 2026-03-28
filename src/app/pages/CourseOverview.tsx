@@ -243,7 +243,7 @@ export function CourseOverview() {
       </motion.div>
 
       {/* Two-Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-[var(--content-gap)] mb-8">
         {/* Left Column (2/3) */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}

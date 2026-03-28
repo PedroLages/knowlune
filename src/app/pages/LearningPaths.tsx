@@ -643,7 +643,7 @@ export function LearningPaths() {
         {/* Header */}
         <motion.div
           variants={fadeUp}
-          className="flex flex-col md:flex-row md:items-end justify-between gap-6"
+          className="flex flex-col md:flex-row md:items-end justify-between gap-[var(--content-gap)]"
         >
           <div>
             <h1 className="text-4xl font-extrabold tracking-tight font-display">Learning Paths</h1>

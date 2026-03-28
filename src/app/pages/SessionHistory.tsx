@@ -366,7 +366,7 @@ export function SessionHistory() {
                     id={`session-detail-${session.id}`}
                     className="border-t border-border px-4 pb-4 pt-4 space-y-3"
                   >
-                    <div className="flex gap-6 text-sm">
+                    <div className="flex gap-[var(--content-gap)] text-sm">
                       <div>
                         <span className="text-muted-foreground">Start: </span>
                         <span data-testid="session-start-time">

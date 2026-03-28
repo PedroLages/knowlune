@@ -444,7 +444,7 @@ export function Flashcards() {
       <div className="mx-auto max-w-lg p-6">
         <motion.div variants={scaleIn} initial="hidden" animate="visible">
           <Card className="rounded-[24px]">
-            <CardContent className="flex flex-col items-center gap-6 p-6">
+            <CardContent className="flex flex-col items-center gap-[var(--content-gap)] p-[var(--content-padding)]">
               {/* Header */}
               <div className="flex flex-col items-center gap-2 text-center">
                 <div className="flex size-12 items-center justify-center rounded-full bg-success-soft text-success">

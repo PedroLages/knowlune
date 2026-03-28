@@ -884,7 +884,7 @@ export function LessonPlayer() {
   )
 
   return (
-    <div className="flex gap-6">
+    <div className="flex gap-[var(--content-gap)]">
       {/* Desktop: Resizable split layout */}
       {isDesktop ? (
         <ResizablePanelGroup

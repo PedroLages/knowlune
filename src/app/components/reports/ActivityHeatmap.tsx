@@ -237,7 +237,9 @@ export function ActivityHeatmap() {
           >
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left py-[var(--table-cell-padding)] pr-4 font-medium text-muted-foreground">Month</th>
+                <th className="text-left py-[var(--table-cell-padding)] pr-4 font-medium text-muted-foreground">
+                  Month
+                </th>
                 <th className="text-right py-[var(--table-cell-padding)] pr-4 font-medium text-muted-foreground">
                   Active Days
                 </th>
@@ -250,7 +252,9 @@ export function ActivityHeatmap() {
               {monthlySummary.map(month => (
                 <tr key={month.label} className="border-b border-border/50">
                   <td className="py-[var(--table-cell-padding)] pr-4">{month.label}</td>
-                  <td className="py-[var(--table-cell-padding)] pr-4 text-right tabular-nums">{month.activeDays}</td>
+                  <td className="py-[var(--table-cell-padding)] pr-4 text-right tabular-nums">
+                    {month.activeDays}
+                  </td>
                   <td className="py-[var(--table-cell-padding)] text-right tabular-nums">
                     {formatStudyTime(month.totalSeconds)}
                   </td>

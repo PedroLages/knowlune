@@ -1,7 +1,7 @@
 ---
 story_id: E51-S04
 story_name: "Spacious Content Density Mode"
-status: in-progress
+status: review
 started: 2026-03-28
 completed:
 reviewed: false
@@ -46,9 +46,9 @@ so that I can read with more whitespace and less visual crowding.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add content density CSS tokens to theme.css (AC: 1, 4, 5)
-  - [ ] 1.1 Open `src/styles/theme.css`
-  - [ ] 1.2 Add to `:root` block (after existing variables, before `.dark` block):
+- [x] Task 1: Add content density CSS tokens to theme.css (AC: 1, 4, 5)
+  - [x] 1.1 Open `src/styles/theme.css`
+  - [x] 1.2 Add to `:root` block (after existing variables, before `.dark` block):
     ```css
     /* Content density tokens (E51) */
     --content-padding: 1rem;
@@ -56,7 +56,7 @@ so that I can read with more whitespace and less visual crowding.
     --content-line-height: 1.6;
     --table-cell-padding: 0.75rem;
     ```
-  - [ ] 1.3 Add `.spacious` override (after `.vibrant` block, as a new block):
+  - [x] 1.3 Add `.spacious` override (after `.vibrant` block, as a new block):
     ```css
     html.spacious {
       --content-padding: 1.25rem;
@@ -66,37 +66,37 @@ so that I can read with more whitespace and less visual crowding.
     }
     ```
 
-- [ ] Task 2: Create `useContentDensity` hook (AC: 1, 2, 6)
-  - [ ] 2.1 Create `src/hooks/useContentDensity.ts`
-  - [ ] 2.2 Read `contentDensity` from `getSettings()` on mount
-  - [ ] 2.3 Listen for `settingsUpdated` events (follow `useColorScheme.ts` pattern exactly)
-  - [ ] 2.4 useEffect: toggle `.spacious` class on `document.documentElement` based on `contentDensity === 'spacious'`
-  - [ ] 2.5 Clean up event listeners on unmount
+- [x] Task 2: Create `useContentDensity` hook (AC: 1, 2, 6)
+  - [x] 2.1 Create `src/hooks/useContentDensity.ts`
+  - [x] 2.2 Read `contentDensity` from `getSettings()` on mount
+  - [x] 2.3 Listen for `settingsUpdated` events (follow `useColorScheme.ts` pattern exactly)
+  - [x] 2.4 useEffect: toggle `.spacious` class on `document.documentElement` based on `contentDensity === 'spacious'`
+  - [x] 2.5 Clean up event listeners on unmount
 
-- [ ] Task 3: Wire hook into App.tsx (AC: 6)
-  - [ ] 3.1 Import `useContentDensity` from `@/hooks/useContentDensity`
-  - [ ] 3.2 Call `useContentDensity()` alongside existing hooks in App component
+- [x] Task 3: Wire hook into App.tsx (AC: 6)
+  - [x] 3.1 Import `useContentDensity` from `@/hooks/useContentDensity`
+  - [x] 3.2 Call `useContentDensity()` alongside existing hooks in App component
 
-- [ ] Task 4: Update content-area components to use density tokens (AC: 1, 3, 4, 5)
-  - [ ] 4.1 Audit content-area components (NOT sidebar, NOT header, NOT modals)
-  - [ ] 4.2 Update page-level grid gaps in `src/app/pages/Overview.tsx`: replace hardcoded `gap-6` with `gap-[var(--content-gap)]` where it controls main content grid
-  - [ ] 4.3 Update page-level grid gaps in `src/app/pages/Courses.tsx`: replace `gap-6` with `gap-[var(--content-gap)]` for course card grid
-  - [ ] 4.4 Update page-level grid gaps in `src/app/pages/MyClass.tsx`: replace `gap-6` with `gap-[var(--content-gap)]` for content grid
-  - [ ] 4.5 Update Card content padding in content area cards: replace `p-4`/`p-6` with `p-[var(--content-padding)]` on highest-impact cards
-  - [ ] 4.6 Update table cell padding in `src/app/pages/Reports.tsx`: replace `p-3` with `p-[var(--table-cell-padding)]` for data table cells
-  - [ ] 4.7 Apply `leading-[var(--content-line-height)]` to main content text areas (prose paragraphs, card descriptions)
-  - [ ] 4.8 Verify sidebar (`Layout.tsx` sidebar section) is NOT touched
-  - [ ] 4.9 Verify header is NOT touched
-  - [ ] 4.10 Target 10-15 component touch points across content area
+- [x] Task 4: Update content-area components to use density tokens (AC: 1, 3, 4, 5)
+  - [x] 4.1 Audit content-area components (NOT sidebar, NOT header, NOT modals)
+  - [x] 4.2 Update page-level grid gaps in `src/app/pages/Overview.tsx`: replace hardcoded `gap-6` with `gap-[var(--content-gap)]` where it controls main content grid
+  - [x] 4.3 Update page-level grid gaps in `src/app/pages/Courses.tsx`: replace `gap-6` with `gap-[var(--content-gap)]` for course card grid
+  - [x] 4.4 Update page-level grid gaps in `src/app/pages/MyClass.tsx`: replace `gap-6` with `gap-[var(--content-gap)]` for content grid
+  - [x] 4.5 Update Card content padding in content area cards: replace `p-4`/`p-6` with `p-[var(--content-padding)]` on highest-impact cards
+  - [x] 4.6 Update table cell padding in `src/app/pages/Reports.tsx`: replace `p-3` with `p-[var(--table-cell-padding)]` for data table cells
+  - [x] 4.7 Apply `leading-[var(--content-line-height)]` to main content text areas (prose paragraphs, card descriptions)
+  - [x] 4.8 Verify sidebar (`Layout.tsx` sidebar section) is NOT touched
+  - [x] 4.9 Verify header is NOT touched
+  - [x] 4.10 Target 10-15 component touch points across content area
 
-- [ ] Task 5: Add density toggle to DisplayAccessibilitySection (AC: 1, 2)
-  - [ ] 5.1 Open `src/app/components/settings/DisplayAccessibilitySection.tsx`
-  - [ ] 5.2 Replace the Density subsection placeholder with:
+- [x] Task 5: Add density toggle to DisplayAccessibilitySection (AC: 1, 2)
+  - [x] 5.1 Open `src/app/components/settings/DisplayAccessibilitySection.tsx`
+  - [x] 5.2 Replace the Density subsection placeholder with:
     - Label: "Spacious Mode"
     - Description: "Increase spacing in content areas for easier reading"
     - `<Switch>` bound to `settings.contentDensity === 'spacious'`
     - `aria-label="Enable spacious content density"`
-  - [ ] 5.3 On change: call `onSettingsChange({ contentDensity: settings.contentDensity === 'spacious' ? 'default' : 'spacious' })`
+  - [x] 5.3 On change: call `onSettingsChange({ contentDensity: settings.contentDensity === 'spacious' ? 'default' : 'spacious' })`
 
 ## Design Guidance
 
@@ -143,15 +143,15 @@ so that I can read with more whitespace and less visual crowding.
 
 Before requesting `/review-story`, verify:
 
-- [ ] All changes committed (`git status` clean)
-- [ ] No error swallowing -- catch blocks log AND surface errors
-- [ ] useEffect hooks have cleanup functions (ignore flags for async, event listener removal)
-- [ ] No optimistic UI updates before persistence -- state updates after DB write succeeds
-- [ ] Type guards on all dynamic lookups (e.g., `LABELS[type]` when type can be empty)
-- [ ] E2E afterEach cleanup uses `await` (not fire-and-forget)
-- [ ] Date handling uses `toLocaleDateString('sv-SE')` pattern (not `toISOString().split('T')[0]`)
-- [ ] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
-- [ ] If story calls external APIs: CSP allowlist configured (see engineering-patterns.md CSP Configuration)
+- [x] All changes committed (`git status` clean)
+- [x] No error swallowing -- catch blocks log AND surface errors
+- [x] useEffect hooks have cleanup functions (ignore flags for async, event listener removal)
+- [x] No optimistic UI updates before persistence -- state updates after DB write succeeds
+- [x] Type guards on all dynamic lookups (e.g., `LABELS[type]` when type can be empty)
+- [x] E2E afterEach cleanup uses `await` (not fire-and-forget)
+- [x] Date handling uses `toLocaleDateString('sv-SE')` pattern (not `toISOString().split('T')[0]`)
+- [x] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
+- [x] If story calls external APIs: CSP allowlist configured (see engineering-patterns.md CSP Configuration)
 
 ## Design Review Feedback
 
@@ -163,4 +163,8 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+1. **CSS custom properties for density tokens:** Using `var(--content-gap)` etc. in Tailwind arbitrary values (`gap-[var(--content-gap)]`) lets a single class toggle (`.spacious` on `<html>`) cascade spacing changes across the entire content area without JavaScript re-renders. This is far more performant than prop-drilling a density value into every component.
+
+2. **Scoping density to content area only:** By only converting `gap-6`/`p-4`/`p-6` inside `<Outlet />` children (pages, cards, tables) and deliberately leaving Layout.tsx sidebar/header untouched, the spacious mode avoids destabilizing navigation chrome. The key insight is that sidebar and header spacing are structural (must remain compact), while content spacing is a readability concern.
+
+3. **`var()` in Tailwind arbitrary values:** The pattern `gap-[var(--content-gap)]` works because Tailwind v4 generates the utility class at build time with the CSS variable as the value. The variable resolves at runtime, so the `.spacious` override in theme.css takes effect immediately. No need for conditional Tailwind classes or JS-based class switching per component.
