@@ -43,7 +43,7 @@
 |---|------|--------|---|-------------|
 | 1 | Supabase Data Sync | 🟡 Architecture Ready | 0% impl | E44-E49 planned (37 stories), readiness confirmed. Architecture: `docs/plans/sync-architecture.md` |
 | 2 | Authentication Refinement | 🟡 Mostly Done | 90% | E19 complete. Password reset done (EmailPasswordForm.tsx). Missing: session expiry UI (E43-S04 story ready) |
-| 3 | Standalone Desktop App | ⬜ Deferred | — | Explicitly deferred post-sync |
+| 3 | Standalone Desktop App | ❌ Rejected | — | Rejected 2026-03-28 — PWA sufficient |
 | 4 | CRUD & UX Gaps | 🟡 Partially Done | 70% | Missing: completion % (E43-S05 story ready), bulk ops, soft-delete, data import |
 | 5 | Repository Strategy | 🟡 Infrastructure Done | 60% | `src/premium/` separated, repo split not done |
 | 6 | Video Storage & Offline | 🟡 Infrastructure Done | 40% | Transcripts cached, no download UI |
@@ -58,10 +58,10 @@
 | 15 | Notification System | 🟡 Stories Ready | 30% | UI complete. Architecture decided: Dexie v28 + EventEmitter bus + 5 triggers. Stories E43-S06/S07 ready. |
 | 16 | Onboarding & UX Polish | 🟡 Stories Ready | 90% | E25: onboarding. E54 ready (3 stories — lesson flow wiring). Auto-advance + checkmarks across all course types. |
 | 17 | UI Enhancement (Stitch) | 🟡 Stories Ready | 0% impl | E55 ready (5 stories). Deep Focus Mode SVG timer widget + Streak Calendar month-view. Brainstorm + edge case review (37 findings) complete. |
-| 18 | User Flows & Live Audit | 🔴 Not Started | 0% | 33 per-page flows + 10 cross-page journeys + style compliance. Plan: `docs/plans/user-flow-audit-plan.md` |
-| 19 | Books & Audiobooks Library | ⬜ Future Exploration | — | EPUB reader, audiobook player, highlights, shelves. 5-8 epics. Plan: `docs/plans/2026-03-28-books-audiobooks-exploration.md` |
-| 20 | API & Plugin System | ⬜ Future Exploration | — | REST API + plugin architecture. 3-5 epics. Plan: `docs/plans/2026-03-28-api-plugin-exploration.md` |
-| 21 | Performance Optimization | ⬜ Future Exploration | — | Bundle, runtime, Core Web Vitals, memory. 1-2 epics. Plan: `docs/plans/2026-03-28-performance-optimization-exploration.md` |
+| 18 | User Flows & Live Audit | 🔴 Not Started | 0% | Wave 4 (1st priority). 33 per-page flows + 10 cross-page journeys + style compliance. Plan: `docs/plans/user-flow-audit-plan.md` |
+| 19 | Books & Audiobooks Library | ⬜ Future Exploration | — | Wave 5. EPUB reader, audiobook player, highlights, shelves. 5-8 epics. Plan: `docs/plans/2026-03-28-books-audiobooks-exploration.md` |
+| 20 | API & Plugin System | ⬜ Future Exploration | — | Wave 5. REST API + plugin architecture. 3-5 epics. Plan: `docs/plans/2026-03-28-api-plugin-exploration.md` |
+| 21 | Performance Optimization | ⬜ Future Exploration | — | Wave 4. Bundle, runtime, Core Web Vitals, memory. 1-2 epics. Plan: `docs/plans/2026-03-28-performance-optimization-exploration.md` |
 
 ---
 
@@ -1536,22 +1536,11 @@ Before Phase 1: "Have users reported slowness, or is this premature optimization
                   │
        ┌──────────┼──────────┬──────────┐
        ▼          ▼          ▼          ▼
-  ┌─────────┐ ┌────────┐ ┌──────────┐ ┌──────────────┐
-  │ Cloud   │ │ Repo   │ │ Offline  │ │ Desktop App  │
-  │ Storage │ │ Split  │ │ UX (9)   │ │ (Tauri)      │
-  │ (7)     │ │ (5)    │ │ sync UI  │ │ (3)          │
-  └─────────┘ └────────┘ └──────────┘ └──────┬───────┘
-                                              │
-                                              ▼
-                                       ┌──────────────┐
-                                       │ Offline/     │
-                                       │ Downloads (6)│
-                                       └──────┬───────┘
-                                              │
-                                              ▼
-                                       ┌──────────────┐
-                                       │ Books (19)   │ ← Needs desktop + sync for full value
-                                       └──────────────┘
+  ┌─────────┐ ┌────────┐ ┌──────────┐
+  │ Cloud   │ │ Repo   │ │ Offline  │
+  │ Storage │ │ Split  │ │ UX (9)   │
+  │ (7)     │ │ (5)    │ │ sync UI  │
+  └─────────┘ └────────┘ └──────────┘
 
      INDEPENDENT TRACKS (no blockers, run anytime):
 
@@ -1597,14 +1586,12 @@ Before Phase 1: "Have users reported slowness, or is this premature optimization
 
 1. **Test health (E43) → Everything** — Don't build on a broken foundation
 2. **Auth (E43-S04) + CRUD (E43-S05) → Data Sync (E44)** — Sync needs stable schemas and auth
-3. **Data Sync (E44-E46) → Desktop App (3)** — Desktop must sync with web version
-4. **Data Sync → Cloud Storage (7)** — Same sync engine can target multiple backends
-5. **Data Sync → Offline UX (9)** — Sync status indicator needs sync engine
-6. **Desktop App → Full Offline (6) → Books (19)** — Full library needs persistent file access
-7. **E52 hybrid → E52 full** — 2-week validation gate between hybrid and full ML pipeline
-8. **Auth → Calendar phase 3+** — Google Calendar OAuth needs Supabase token storage
-9. **FSRS → Knowledge Map phase 3 (E56)** — Decay predictions use FSRS stability estimates
-10. **Knowledge Map (E56) → AI Tutoring phase 4 (E57)** — Learner profile needs knowledge scores
+3. **Data Sync → Cloud Storage (7)** — Same sync engine can target multiple backends
+4. **Data Sync → Offline UX (9)** — Sync status indicator needs sync engine
+5. **E52 hybrid → E52 full** — 2-week validation gate between hybrid and full ML pipeline
+6. **Auth → Calendar phase 3+** — Google Calendar OAuth needs Supabase token storage
+7. **FSRS → Knowledge Map phase 3 (E56)** — Decay predictions use FSRS stability estimates
+8. **Knowledge Map (E56) → AI Tutoring phase 4 (E57)** — Learner profile needs knowledge scores
 
 ### Independent Tracks (can run in parallel — Tier 1 + 2)
 
@@ -1626,20 +1613,20 @@ Before Phase 1: "Have users reported slowness, or is this premature optimization
 
 > **Execution priority:** [`docs/plans/execution-priority.md`](execution-priority.md) — 5-tier order with rationale, parallelization notes, and decision gates.
 
-### Wave 1: Foundation (E43 — 7 stories ready)
+### Wave 1: Foundation (E43 nearly complete, E43-S08 in progress)
 > Fix what's broken, fill critical gaps, ship quick wins
-> **Epic:** `docs/implementation-artifacts/stories/E43-S01..S07` | **Execution guide:** `_bmad-output/planning-artifacts/execution-guide-wave1-e44.md`
+> **Epic:** `docs/implementation-artifacts/stories/E43-S01..S08` | **Execution guide:** `_bmad-output/planning-artifacts/execution-guide-wave1-e44.md`
 
 - [x] ~~Fix failing tests~~ — All 3,429 unit tests passing (202 suites). E43-S01/S02/S03 resolved.
 - [x] ~~Add password reset flow~~ (already implemented in EmailPasswordForm.tsx:30-51)
-- [ ] Session expiry handling — story ready: E43-S04 (useAuthLifecycle hook + banner)
-- [ ] Fix imported course completion % — story ready: E43-S05 (wire callers to existing function)
-- [ ] Add data import/restore (`.knowlune` portable bundle) — unblocked by E44-S01/S02 (export fix)
-- [ ] **Calendar phase 1-2 (E50):** 6 stories ready — StudySchedule model, iCal feed endpoint, feed URL management, Settings UI, schedule editor, SRS events widget
-- [ ] **Accessibility phase 1 (E51):** 4 stories ready — Settings infrastructure, reduced motion toggle, Atkinson Hyperlegible font, spacious density mode. **Priority: implement first**
-- [ ] **PKM Export phase 1 (E53):** 3 stories ready — Flashcard/bookmark Markdown + Anki .apkg + batch ZIP export UI
-- [ ] **Notifications phases 1-2:** stories ready: E43-S06 (Dexie + store), E43-S07 (triggers + wiring)
+- [x] ~~Session expiry handling~~ — E43-S04 done (PR #143)
+- [x] ~~Fix imported course completion %~~ — E43-S05 done (PR #144)
+- [ ] E43-S08: Auth UX polish — **in progress**
+- [x] ~~**Accessibility phase 1 (E51):**~~ 4 stories done + retrospective complete
+- [x] ~~**Notifications phases 1-2:**~~ E43-S06 done (PR #145), E43-S07 done (PR #146)
 - [x] ~~**Onboarding phases 1-3:** Quick bug fixes + Getting Started checklist + empty state component~~ (E25 — complete)
+- [ ] **Calendar phase 1-2 (E50):** 6 stories ready — StudySchedule model, iCal feed endpoint, feed URL management, Settings UI, schedule editor, SRS events widget
+- [ ] **PKM Export phase 1 (E53):** 3 stories ready — Flashcard/bookmark Markdown + Anki .apkg + batch ZIP export UI
 - [ ] **Lesson flow (E54):** 3 stories ready — Auto-advance wiring for imported/YouTube players + completion checkmarks
 - [ ] **Stitch UI phase 1 (E55):** 5 stories ready — Pomodoro Zustand store, SVG timer widget, focus stats, month-view calendar, streak header
 
@@ -1649,63 +1636,64 @@ Before Phase 1: "Have users reported slowness, or is this premature optimization
 - [ ] **ML Phase 1 hybrid (E52):** 4 stories ready — Simplified quiz generation (MCQ+T/F, no Bloom's), quiz UI, basic QC (Zod+dedup), tag-based recommendations (Jaccard similarity). 2-week validation gate before full pipeline.
 - [ ] **ML Phase 2 (E52 full):** Deferred — Bloom's Taxonomy, transcript chunker, embedding-based recs, LLM abstraction, auto-generate. Only after hybrid validates usage.
 - [x] ~~Lesson summarization with RAG~~ (E9B — AI summaries complete)
-- [ ] Upgrade spaced repetition from SM-2 to FSRS
-- [ ] **Calendar:** SRS review reminders in iCal feed (connects FSRS to calendar)
+- [ ] Upgrade spaced repetition from SM-2 to FSRS *(needs epic)*
+- [ ] **Calendar:** SRS review reminders in iCal feed — connects FSRS to calendar *(needs epic)*
 - [ ] **AI Tutoring Phase 1-2 (E57):** 5 stories ready — Tutor tab in LessonPlayer, streaming hook, conversation persistence (Dexie v29), Socratic hint ladder, RAG-grounded answers
 - [ ] **Knowledge Map Phase 1 (E56):** 4 stories ready — Topic resolution, knowledge scoring, Overview treemap widget, dedicated /knowledge-map page
-- [ ] **PKM Export phases 2-3:** Obsidian vault export (wikilinks, folder structure) — builds on E53
-- [ ] **Notifications phase 3:** SRS due reminders + study block alerts (ties into FSRS + calendar)
-- [ ] **Notifications phase 4:** Preferences UI in Settings (per-type toggles, quiet hours)
-- [ ] **Stitch UI phase 2:** Activity Timeline + Vertical Path Timeline + Progress Composites (Section 17)
+- [ ] **PKM Export phases 2-3:** Obsidian vault export (wikilinks, folder structure) — builds on E53 *(needs epic)*
+- [ ] **Notifications phase 3:** SRS due reminders + study block alerts — ties into FSRS + calendar *(needs epic)*
+- [ ] **Notifications phase 4:** Preferences UI in Settings (per-type toggles, quiet hours) *(needs epic)*
+- [ ] **Stitch UI phase 2:** Activity Timeline + Vertical Path Timeline + Progress Composites *(needs epic)*
 
 ### Wave 3: Sync (6 epics — E44-E49)
 > Multi-device experience — architecture: [`docs/plans/sync-architecture.md`](sync-architecture.md) | epics: [`epics-sync.md`](../_bmad-output/planning-artifacts/epics-sync.md)
 
 **Phase 1 (MVP — 18 stories):**
 - [ ] **E44:** Sync Pre-Requisites — export v2, import compat, multi-user scoping, ESLint rule (4 stories)
+- [ ] Data import/restore (`.knowlune` portable bundle) — builds on E44-S01/S02 (export v2)
 - [ ] **E45:** Sync Infrastructure — Dexie v28, syncQueue, syncableWrite(), engine core, Supabase migrations (6 stories)
 - [ ] **E46:** P0 Sync Live — wire stores, triggers, offline queue, auth backfill, sync UI (8 stories)
 
-**Phase 2 (deferred until Phase 1 validated — 19 stories):**
+**Phase 2 — Sync completion (deferred until Phase 1 validated):**
 - [ ] **E47:** P1 Tables — Dexie v29, flashcardReviews, note conflict UI, review log replay
 - [ ] **E48:** P2-P3 Tables — Dexie v30, remaining stores, non-serializable field stripping
 - [ ] **E49:** Sync Polish — Realtime subscriptions, upload wizard, sync log, chaos testing
 - [ ] **Offline UX:** Sync status indicator + offline mode banner
 - [ ] Offline content caching (transcripts, thumbnails, PWA)
 - [ ] Soft-delete/archive with sync support
+
+**Unlocked by sync completion (feature phases that need Supabase):**
 - [ ] **Calendar phase 3:** Google Calendar two-way sync (OAuth, needs Supabase auth)
-- [ ] **Knowledge Map phase 3:** Decay predictions ("you'll forget X by date Y") — needs FSRS
-- [ ] **AI Tutoring phase 4:** Learner profile injection (quiz history, weak areas, knowledge score)
-- [ ] **Accessibility phase 3:** Screen reader audit + VoiceOver fixes
-- [ ] **PKM phase 3:** Obsidian vault export (folder structure with wikilinks)
 - [ ] **Notifications phase 5:** Smart triggers (knowledge decay alerts, recommendations)
 - [ ] **Notifications phase 6:** PWA push notifications (Service Worker, browser permission)
 
-### Wave 4: Polish & Platform (2-3 epics)
-> Prepare for public launch
+**Unlocked by Wave 2 features (not sync-dependent):**
+- [ ] **Knowledge Map phase 3:** Decay predictions ("you'll forget X by date Y") — needs FSRS (Wave 2)
+- [ ] **AI Tutoring phase 4:** Learner profile injection (quiz history, weak areas, knowledge score) — needs Knowledge Map (Wave 2)
+- [ ] **Accessibility phase 3:** Screen reader audit + VoiceOver fixes — independent, can run anytime
 
+### Wave 4: Pre-Launch Polish (5-8 epics)
+> Audit, optimize, and prepare for public launch
+
+- [ ] **User Flow & Live Design Audit (Section 18):** Run `/app-audit`, triage findings, create fix stories. 33 per-page flows + 10 cross-page journeys + style compliance. Plan: `docs/plans/user-flow-audit-plan.md`
+- [ ] **Performance Optimization (Section 21):** Bundle splitting, runtime optimization, Core Web Vitals, memory profiling (1-2 epics). Plan: `docs/plans/2026-03-28-performance-optimization-exploration.md`
+- [ ] **Accessibility phases 4-5:** Reading mode, focus mode, WCAG 2.2 compliance audit
 - [ ] Repo split (core open / premium private)
 - [ ] Bulk operations (multi-select delete, archive)
-- [ ] Google Drive integration (premium feature)
 - [ ] On-device embeddings (Transformers.js — remove OpenAI dependency for free tier)
 - [ ] **Offline UX:** Storage management dashboard in Settings
-- [ ] **Calendar phase 4:** Smart scheduling ("find time for this course" — ML + free/busy)
+- [ ] **Calendar phase 4:** Smart scheduling ("find time for this course" — ML + free/busy) *(requires Waves 1+3)*
 - [ ] **Knowledge Map phase 4:** Action suggestions ("review these flashcards", "take refresher quiz")
 - [ ] **AI Tutoring phases 5-6:** Conversation memory + tutoring modes (ELI5, Quiz Me, Debug)
-- [ ] **Accessibility phases 4-5:** Reading mode, focus mode, WCAG 2.2 compliance audit
 - [ ] **PKM phases 4-5:** Notion API integration, Readwise sync
-- [ ] **Notifications phase 7:** Email digest (weekly summary via Supabase Edge Functions)
+- [ ] **Notifications phase 7:** Email digest (weekly summary via Supabase Edge Functions) *(requires Wave 3)*
+- [ ] Google Drive integration (premium feature) *(requires Wave 3)*
 
-### Wave 5: Desktop (6-8 epics) — Future
-> Only if adoption signals justify it
+### Wave 5: Post-Launch Growth (8-13 epics)
+> Expand platform capabilities after launch
 
-- [ ] Tauri app shell with existing React app
-- [ ] Bundle yt-dlp + whisper.cpp as local tools
-- [ ] Local file downloads for offline library
-- [ ] Mac App Store submission (requires Apple Sign-In)
-- [ ] **Offline UX:** Background sync, full offline downloads
-- [ ] **Calendar:** Native macOS EventKit integration
-- [ ] **Knowledge Map phase 5:** Full concept-level knowledge graph (ML concept extraction)
+- [ ] **API & Plugin System (Section 20):** REST API + plugin architecture for extensibility (3-5 epics). Plan: `docs/plans/2026-03-28-api-plugin-exploration.md`
+- [ ] **Books & Audiobooks Library (Section 19):** EPUB reader, audiobook player, highlights, shelves (5-8 epics). Plan: `docs/plans/2026-03-28-books-audiobooks-exploration.md`
 
 ### Decision Gates
 
@@ -1713,13 +1701,12 @@ Before Phase 1: "Have users reported slowness, or is this premature optimization
 |------|------|----------|----------|---------|
 | E52 validation | 2 weeks after E52 ships | "Did users use generated quizzes?" | Plan E52 full scope (8 stories) | Deprioritize ML Phase 2 |
 | E57 validation | 2 weeks after E57 ships | "Is Socratic better than direct explanation?" | Plan Phase 3-6 | Keep Explain mode only |
-| Sync decision | Before E44 | "Do I use Knowlune on multiple devices?" | Start E44 | Skip to Tier 5 |
+| Sync decision | Before E44 | "Do I use Knowlune on multiple devices?" | Start E44 | Skip to Wave 5 |
 | E46 validation | 2-4 weeks after E46 | "Does P0 sync work reliably?" | Start E47 | Fix issues first |
 | Calendar phase 3 | After E50 validated | "Is iCal feed sufficient, or need two-way sync?" | Plan Google Calendar epic | Keep iCal only |
 | PKM phase 4 | After E53 validated | "Are users exporting to Notion, or is Markdown enough?" | Plan Notion API epic | Keep Markdown/Anki |
 | Knowledge Map phase 5 | After E56 validated | "Is topic-level sufficient, or need concept-level?" | Plan ML concept extraction | Keep topic-level |
-| Desktop decision | Before Wave 5 | "Is Docker blocking adoption?" | Start Tauri app | Keep PWA only |
-| Books decision | Before Wave 4-5 | "Do I read enough to justify this?" | Start Phase 1 (shelves) | Park indefinitely |
+| Books decision | Before Wave 5 | "Do I read enough to justify this?" | Start Phase 1 (shelves) | Park indefinitely |
 | Wave 4 | Before repo split | "Am I ready for public contributors?" | Split repos | Keep monorepo |
 
 ---
