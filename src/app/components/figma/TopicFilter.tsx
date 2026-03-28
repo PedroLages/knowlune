@@ -67,9 +67,10 @@ export function TopicFilter({
           data-testid="topic-filter-toggle"
           onClick={() => setExpanded(prev => !prev)}
           aria-expanded={expanded}
-          aria-label={expanded
-            ? `Show fewer tags, currently showing all ${availableTags.length}`
-            : `Show all ${availableTags.length} tags, currently showing ${visibleTags.length}`
+          aria-label={
+            expanded
+              ? `Show fewer tags, currently showing all ${availableTags.length}`
+              : `Show all ${availableTags.length} tags, currently showing ${visibleTags.length}`
           }
           className="flex items-center gap-1 min-h-[44px] px-3 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors rounded-full cursor-pointer"
         >

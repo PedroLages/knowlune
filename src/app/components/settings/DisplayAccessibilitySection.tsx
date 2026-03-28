@@ -99,23 +99,25 @@ export function DisplayAccessibilitySection({
             aria-label="Motion preference"
             className="mt-1 flex flex-col gap-2"
           >
-            {([
-              {
-                value: 'system',
-                label: 'Follow system',
-                description: 'Uses your device\u2019s motion preference',
-              },
-              {
-                value: 'on',
-                label: 'Reduce motion',
-                description: 'Minimize animations and transitions',
-              },
-              {
-                value: 'off',
-                label: 'Allow all motion',
-                description: 'Enable all animations regardless of system setting',
-              },
-            ] as const).map((option) => (
+            {(
+              [
+                {
+                  value: 'system',
+                  label: 'Follow system',
+                  description: 'Uses your device\u2019s motion preference',
+                },
+                {
+                  value: 'on',
+                  label: 'Reduce motion',
+                  description: 'Minimize animations and transitions',
+                },
+                {
+                  value: 'off',
+                  label: 'Allow all motion',
+                  description: 'Enable all animations regardless of system setting',
+                },
+              ] as const
+            ).map(option => (
               <Label
                 key={option.value}
                 htmlFor={`motion-${option.value}`}
@@ -125,15 +127,10 @@ export function DisplayAccessibilitySection({
                     : 'border-border'
                 }`}
               >
-                <RadioGroupItem
-                  value={option.value}
-                  id={`motion-${option.value}`}
-                />
+                <RadioGroupItem value={option.value} id={`motion-${option.value}`} />
                 <div>
                   <p className="text-sm font-medium">{option.label}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {option.description}
-                  </p>
+                  <p className="text-xs text-muted-foreground">{option.description}</p>
                 </div>
               </Label>
             ))}

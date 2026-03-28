@@ -242,8 +242,7 @@ export function Courses() {
   useEffect(() => {
     if (!sampleCollapsed) return
     const hasActiveFilter =
-      debouncedSearch.trim() !== '' ||
-      (selectedCategory !== 'all' && selectedCategory !== '')
+      debouncedSearch.trim() !== '' || (selectedCategory !== 'all' && selectedCategory !== '')
     if (hasActiveFilter && filtered.length > 0) {
       setSampleCollapsed(false)
       try {

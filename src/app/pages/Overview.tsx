@@ -420,56 +420,56 @@ export function Overview() {
   }
 
   return (
-      <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={staggerContainer}
-        className="space-y-12 pb-12"
-      >
-        {/* ── Hero Zone (fixed, never reordered) ── */}
-        <motion.section variants={fadeUp} className="space-y-6">
-          <div>
-            <p className="text-sm text-muted-foreground tracking-wide uppercase font-medium">
-              {getGreeting()}
-            </p>
-            <h1 className="text-3xl lg:text-4xl mt-1">Your Learning Studio</h1>
-          </div>
-          <ContinueLearning />
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={staggerContainer}
+      className="space-y-12 pb-12"
+    >
+      {/* ── Hero Zone (fixed, never reordered) ── */}
+      <motion.section variants={fadeUp} className="space-y-6">
+        <div>
+          <p className="text-sm text-muted-foreground tracking-wide uppercase font-medium">
+            {getGreeting()}
+          </p>
+          <h1 className="text-3xl lg:text-4xl mt-1">Your Learning Studio</h1>
+        </div>
+        <ContinueLearning />
+      </motion.section>
+
+      {/* ── Dashboard Customizer ── */}
+      <DashboardCustomizer
+        sectionOrder={sectionOrder}
+        pinnedSections={pinnedSections}
+        isManuallyOrdered={isManuallyOrdered}
+        isOpen={isCustomizing}
+        onToggle={setIsCustomizing}
+        onPin={handlePin}
+        onUnpin={handleUnpin}
+        onReorder={handleReorder}
+        onReset={handleReset}
+      />
+
+      {/* ── Reorderable Sections ── */}
+      {sectionOrder.map(sectionId => sectionRenderers[sectionId]())}
+
+      {/* ── Import Course Empty State (fixed, never reordered) ── */}
+      {importedCourses.length === 0 && (
+        <motion.section variants={fadeUp}>
+          <EmptyState
+            data-testid="empty-state-courses"
+            icon={BookOpen}
+            title="Import your first course to get started"
+            description="Add a folder with videos, PDFs, or documents to begin learning"
+            actionLabel="Import Course"
+            onAction={() => {
+              importCourseFromFolder().catch(() => {
+                // silent-catch-ok — user cancelled file picker or permission denied
+              })
+            }}
+          />
         </motion.section>
-
-        {/* ── Dashboard Customizer ── */}
-        <DashboardCustomizer
-          sectionOrder={sectionOrder}
-          pinnedSections={pinnedSections}
-          isManuallyOrdered={isManuallyOrdered}
-          isOpen={isCustomizing}
-          onToggle={setIsCustomizing}
-          onPin={handlePin}
-          onUnpin={handleUnpin}
-          onReorder={handleReorder}
-          onReset={handleReset}
-        />
-
-        {/* ── Reorderable Sections ── */}
-        {sectionOrder.map(sectionId => sectionRenderers[sectionId]())}
-
-        {/* ── Import Course Empty State (fixed, never reordered) ── */}
-        {importedCourses.length === 0 && (
-          <motion.section variants={fadeUp}>
-            <EmptyState
-              data-testid="empty-state-courses"
-              icon={BookOpen}
-              title="Import your first course to get started"
-              description="Add a folder with videos, PDFs, or documents to begin learning"
-              actionLabel="Import Course"
-              onAction={() => {
-                importCourseFromFolder().catch(() => {
-                  // silent-catch-ok — user cancelled file picker or permission denied
-                })
-              }}
-            />
-          </motion.section>
-        )}
-      </motion.div>
+      )}
+    </motion.div>
   )
 }

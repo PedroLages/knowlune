@@ -300,101 +300,101 @@ export function Flashcards() {
     }
 
     return (
-        <motion.div
-          variants={staggerContainer}
-          initial="hidden"
-          animate="visible"
-          className="mx-auto max-w-2xl space-y-6 p-6"
-        >
-          {/* Page header */}
-          <motion.div variants={fadeUp} className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-brand-soft text-brand-soft-foreground">
-              <Layers className="size-5" />
-            </div>
-            <div>
-              <h1 className="font-display text-2xl font-semibold tracking-tight">Flashcards</h1>
-              <p className="text-sm text-muted-foreground">Spaced repetition review</p>
-            </div>
-          </motion.div>
-
-          {/* Stats grid */}
-          <motion.div variants={fadeUp} className="grid grid-cols-3 gap-4">
-            <StatCard label="Total Cards" value={stats.total} data-testid="flashcard-stats-total" />
-            <StatCard
-              label="Due Today"
-              value={stats.dueToday}
-              highlight={stats.dueToday > 0}
-              data-testid="flashcard-stats-due"
-            />
-            <StatCard
-              label="Next Review"
-              value={formatNextReviewDate(stats.nextReviewDate)}
-              data-testid="flashcard-stats-next"
-            />
-          </motion.div>
-
-          {/* Start Review CTA */}
-          {stats.dueToday > 0 && (
-            <motion.div variants={fadeUp}>
-              <Button
-                variant="brand"
-                size="lg"
-                className="w-full"
-                onClick={handleStartReview}
-                data-testid="start-review-button"
-              >
-                Start Review
-                <ChevronRight className="ml-1 size-4" />
-              </Button>
-              <p className="mt-2 text-center text-xs text-muted-foreground">
-                {stats.dueToday} card{stats.dueToday !== 1 ? 's' : ''} due for review
-              </p>
-            </motion.div>
-          )}
-
-          {/* Upcoming schedule */}
-          {upcomingSchedule.length > 0 && (
-            <motion.div variants={fadeUp}>
-              <Card className="rounded-[20px]">
-                <CardContent className="p-5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <CalendarDays className="size-4 text-muted-foreground" />
-                    <h2 className="text-sm font-medium">Upcoming Reviews</h2>
-                  </div>
-                  <div className="space-y-2">
-                    {upcomingSchedule.map(({ label, count }) => (
-                      <div key={label} className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">{label}</span>
-                        <Badge variant="secondary" className="tabular-nums">
-                          {count} card{count !== 1 ? 's' : ''}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-
-          {/* No cards due state */}
-          {stats.dueToday === 0 && (
-            <motion.div variants={fadeUp}>
-              <Card className="rounded-[20px]">
-                <CardContent className="flex items-center gap-4 p-5">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-success-soft text-success">
-                    <BookOpen className="size-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">All caught up!</p>
-                    <p className="text-xs text-muted-foreground">
-                      Next review: {formatNextReviewDate(stats.nextReviewDate)}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        animate="visible"
+        className="mx-auto max-w-2xl space-y-6 p-6"
+      >
+        {/* Page header */}
+        <motion.div variants={fadeUp} className="flex items-center gap-3">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-brand-soft text-brand-soft-foreground">
+            <Layers className="size-5" />
+          </div>
+          <div>
+            <h1 className="font-display text-2xl font-semibold tracking-tight">Flashcards</h1>
+            <p className="text-sm text-muted-foreground">Spaced repetition review</p>
+          </div>
         </motion.div>
+
+        {/* Stats grid */}
+        <motion.div variants={fadeUp} className="grid grid-cols-3 gap-4">
+          <StatCard label="Total Cards" value={stats.total} data-testid="flashcard-stats-total" />
+          <StatCard
+            label="Due Today"
+            value={stats.dueToday}
+            highlight={stats.dueToday > 0}
+            data-testid="flashcard-stats-due"
+          />
+          <StatCard
+            label="Next Review"
+            value={formatNextReviewDate(stats.nextReviewDate)}
+            data-testid="flashcard-stats-next"
+          />
+        </motion.div>
+
+        {/* Start Review CTA */}
+        {stats.dueToday > 0 && (
+          <motion.div variants={fadeUp}>
+            <Button
+              variant="brand"
+              size="lg"
+              className="w-full"
+              onClick={handleStartReview}
+              data-testid="start-review-button"
+            >
+              Start Review
+              <ChevronRight className="ml-1 size-4" />
+            </Button>
+            <p className="mt-2 text-center text-xs text-muted-foreground">
+              {stats.dueToday} card{stats.dueToday !== 1 ? 's' : ''} due for review
+            </p>
+          </motion.div>
+        )}
+
+        {/* Upcoming schedule */}
+        {upcomingSchedule.length > 0 && (
+          <motion.div variants={fadeUp}>
+            <Card className="rounded-[20px]">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <CalendarDays className="size-4 text-muted-foreground" />
+                  <h2 className="text-sm font-medium">Upcoming Reviews</h2>
+                </div>
+                <div className="space-y-2">
+                  {upcomingSchedule.map(({ label, count }) => (
+                    <div key={label} className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">{label}</span>
+                      <Badge variant="secondary" className="tabular-nums">
+                        {count} card{count !== 1 ? 's' : ''}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* No cards due state */}
+        {stats.dueToday === 0 && (
+          <motion.div variants={fadeUp}>
+            <Card className="rounded-[20px]">
+              <CardContent className="flex items-center gap-4 p-5">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-success-soft text-success">
+                  <BookOpen className="size-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">All caught up!</p>
+                  <p className="text-xs text-muted-foreground">
+                    Next review: {formatNextReviewDate(stats.nextReviewDate)}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </motion.div>
     )
   }
 
@@ -441,88 +441,88 @@ export function Flashcards() {
     const totalRatings = summary.ratings.hard + summary.ratings.good + summary.ratings.easy
 
     return (
-        <div className="mx-auto max-w-lg p-6">
-          <motion.div variants={scaleIn} initial="hidden" animate="visible">
-            <Card className="rounded-[24px]">
-              <CardContent className="flex flex-col items-center gap-6 p-6">
-                {/* Header */}
-                <div className="flex flex-col items-center gap-2 text-center">
-                  <div className="flex size-12 items-center justify-center rounded-full bg-success-soft text-success">
-                    <CheckCircle2 className="size-6" />
-                  </div>
-                  <h2 className="font-display text-xl tracking-tight">Session Complete</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Great work reviewing your flashcards!
+      <div className="mx-auto max-w-lg p-6">
+        <motion.div variants={scaleIn} initial="hidden" animate="visible">
+          <Card className="rounded-[24px]">
+            <CardContent className="flex flex-col items-center gap-6 p-6">
+              {/* Header */}
+              <div className="flex flex-col items-center gap-2 text-center">
+                <div className="flex size-12 items-center justify-center rounded-full bg-success-soft text-success">
+                  <CheckCircle2 className="size-6" />
+                </div>
+                <h2 className="font-display text-xl tracking-tight">Session Complete</h2>
+                <p className="text-sm text-muted-foreground">
+                  Great work reviewing your flashcards!
+                </p>
+              </div>
+
+              {/* Stats grid */}
+              <div className="grid w-full grid-cols-2 gap-4">
+                <div className="rounded-xl bg-brand-soft p-4">
+                  <p className="text-xs font-medium text-muted-foreground">Cards Reviewed</p>
+                  <p
+                    data-testid="summary-total-reviewed"
+                    className="mt-1 text-2xl font-semibold tabular-nums text-foreground"
+                  >
+                    {summary.totalReviewed}
                   </p>
                 </div>
 
-                {/* Stats grid */}
-                <div className="grid w-full grid-cols-2 gap-4">
-                  <div className="rounded-xl bg-brand-soft p-4">
-                    <p className="text-xs font-medium text-muted-foreground">Cards Reviewed</p>
-                    <p
-                      data-testid="summary-total-reviewed"
-                      className="mt-1 text-2xl font-semibold tabular-nums text-foreground"
-                    >
-                      {summary.totalReviewed}
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl bg-muted/50 p-4">
-                    <p className="text-xs font-medium text-muted-foreground">Next Review</p>
-                    <p
-                      data-testid="summary-next-review"
-                      className="mt-1 text-sm font-semibold text-foreground"
-                    >
-                      {formatNextReviewDate(summary.nextReviewDate)}
-                    </p>
-                  </div>
-
-                  {/* Ratings distribution */}
-                  <div className="col-span-2 rounded-xl bg-muted/50 p-4">
-                    <p className="mb-2 text-xs font-medium text-muted-foreground">
-                      Rating Distribution
-                    </p>
-                    <div className="space-y-1.5">
-                      <RatingBar
-                        label="Hard"
-                        count={summary.ratings.hard}
-                        total={totalRatings}
-                        className="bg-destructive/60"
-                        testId="rating-hard-count"
-                      />
-                      <RatingBar
-                        label="Good"
-                        count={summary.ratings.good}
-                        total={totalRatings}
-                        className="bg-brand"
-                        testId="rating-good-count"
-                      />
-                      <RatingBar
-                        label="Easy"
-                        count={summary.ratings.easy}
-                        total={totalRatings}
-                        className="bg-success"
-                        testId="rating-easy-count"
-                      />
-                    </div>
-                  </div>
+                <div className="rounded-xl bg-muted/50 p-4">
+                  <p className="text-xs font-medium text-muted-foreground">Next Review</p>
+                  <p
+                    data-testid="summary-next-review"
+                    className="mt-1 text-sm font-semibold text-foreground"
+                  >
+                    {formatNextReviewDate(summary.nextReviewDate)}
+                  </p>
                 </div>
 
-                {/* Actions */}
-                <div className="flex w-full gap-3">
-                  <Button variant="outline" className="flex-1" onClick={handleBackToDashboard}>
-                    Back to Dashboard
-                  </Button>
-                  <Button variant="brand" className="flex-1" onClick={handleReviewMore}>
-                    <RotateCcw className="mr-2 size-4" />
-                    Review More
-                  </Button>
+                {/* Ratings distribution */}
+                <div className="col-span-2 rounded-xl bg-muted/50 p-4">
+                  <p className="mb-2 text-xs font-medium text-muted-foreground">
+                    Rating Distribution
+                  </p>
+                  <div className="space-y-1.5">
+                    <RatingBar
+                      label="Hard"
+                      count={summary.ratings.hard}
+                      total={totalRatings}
+                      className="bg-destructive/60"
+                      testId="rating-hard-count"
+                    />
+                    <RatingBar
+                      label="Good"
+                      count={summary.ratings.good}
+                      total={totalRatings}
+                      className="bg-brand"
+                      testId="rating-good-count"
+                    />
+                    <RatingBar
+                      label="Easy"
+                      count={summary.ratings.easy}
+                      total={totalRatings}
+                      className="bg-success"
+                      testId="rating-easy-count"
+                    />
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex w-full gap-3">
+                <Button variant="outline" className="flex-1" onClick={handleBackToDashboard}>
+                  Back to Dashboard
+                </Button>
+                <Button variant="brand" className="flex-1" onClick={handleReviewMore}>
+                  <RotateCcw className="mr-2 size-4" />
+                  Review More
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
     )
   }
 

@@ -45,109 +45,109 @@ export function RetentionDashboard() {
   const hasData = allReviews.length > 0
 
   return (
-      <motion.div
-        variants={staggerContainer}
-        initial="hidden"
-        animate="visible"
-        data-testid="retention-dashboard"
-      >
-        <motion.h1 variants={fadeUp} className="text-2xl font-bold mb-6">
-          Knowledge Retention
-        </motion.h1>
+    <motion.div
+      variants={staggerContainer}
+      initial="hidden"
+      animate="visible"
+      data-testid="retention-dashboard"
+    >
+      <motion.h1 variants={fadeUp} className="text-2xl font-bold mb-6">
+        Knowledge Retention
+      </motion.h1>
 
-        {isLoading ? (
-          <div className="space-y-4" aria-busy="true" aria-label="Loading retention data">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Array.from({ length: 3 }, (_, i) => (
-                <div key={i} className="h-28 rounded-2xl bg-muted animate-pulse" />
-              ))}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Array.from({ length: 3 }, (_, i) => (
-                <div key={i} className="h-40 rounded-[24px] bg-muted animate-pulse" />
-              ))}
-            </div>
+      {isLoading ? (
+        <div className="space-y-4" aria-busy="true" aria-label="Loading retention data">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 3 }, (_, i) => (
+              <div key={i} className="h-28 rounded-2xl bg-muted animate-pulse" />
+            ))}
           </div>
-        ) : !hasData ? (
-          <EmptyState
-            data-testid="retention-empty-state"
-            icon={Brain}
-            title="No review data yet"
-            description="Start reviewing notes in the Review Queue to see your knowledge retention dashboard."
-            actionLabel="Go to Review Queue"
-            actionHref="/review"
-          />
-        ) : (
-          <div className="space-y-6">
-            {/* Row 1: Stats Cards */}
-            <motion.div
-              variants={fadeUp}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-              data-testid="retention-stats"
-            >
-              <StatsCard
-                label="Notes at Risk"
-                value={stats.notesAtRisk}
-                icon={AlertTriangle}
-                testId="stat-notes-at-risk"
-              />
-              <StatsCard
-                label="Due Today"
-                value={stats.dueToday}
-                icon={Calendar}
-                testId="stat-due-today"
-              />
-              <StatsCard
-                label="Avg Retention"
-                value={`${stats.avgRetention}%`}
-                icon={ShieldCheck}
-                testId="stat-avg-retention"
-              />
-            </motion.div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 3 }, (_, i) => (
+              <div key={i} className="h-40 rounded-[24px] bg-muted animate-pulse" />
+            ))}
+          </div>
+        </div>
+      ) : !hasData ? (
+        <EmptyState
+          data-testid="retention-empty-state"
+          icon={Brain}
+          title="No review data yet"
+          description="Start reviewing notes in the Review Queue to see your knowledge retention dashboard."
+          actionLabel="Go to Review Queue"
+          actionHref="/review"
+        />
+      ) : (
+        <div className="space-y-6">
+          {/* Row 1: Stats Cards */}
+          <motion.div
+            variants={fadeUp}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+            data-testid="retention-stats"
+          >
+            <StatsCard
+              label="Notes at Risk"
+              value={stats.notesAtRisk}
+              icon={AlertTriangle}
+              testId="stat-notes-at-risk"
+            />
+            <StatsCard
+              label="Due Today"
+              value={stats.dueToday}
+              icon={Calendar}
+              testId="stat-due-today"
+            />
+            <StatsCard
+              label="Avg Retention"
+              value={`${stats.avgRetention}%`}
+              icon={ShieldCheck}
+              testId="stat-avg-retention"
+            />
+          </motion.div>
 
-            {/* Row 2: Topic Retention Cards */}
-            {topicRetention.length > 0 && (
-              <motion.section variants={fadeUp} aria-labelledby="retention-by-topic-heading">
-                <Card className="rounded-[24px]">
-                  <CardHeader>
-                    <h2
-                      id="retention-by-topic-heading"
-                      className="text-base font-semibold flex items-center gap-2"
-                    >
-                      <Brain className="size-4 text-muted-foreground" aria-hidden="true" />
-                      Retention by Topic
-                    </h2>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {topicRetention.map(topic => (
-                        <TopicRetentionCard key={topic.topic} topic={topic} now={now} />
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.section>
-            )}
-
-            {/* Row 3: Engagement Status */}
-            <motion.section variants={fadeUp} aria-labelledby="engagement-health-heading">
+          {/* Row 2: Topic Retention Cards */}
+          {topicRetention.length > 0 && (
+            <motion.section variants={fadeUp} aria-labelledby="retention-by-topic-heading">
               <Card className="rounded-[24px]">
                 <CardHeader>
                   <h2
-                    id="engagement-health-heading"
+                    id="retention-by-topic-heading"
                     className="text-base font-semibold flex items-center gap-2"
                   >
-                    <ShieldCheck className="size-4 text-muted-foreground" aria-hidden="true" />
-                    Engagement Health
+                    <Brain className="size-4 text-muted-foreground" aria-hidden="true" />
+                    Retention by Topic
                   </h2>
                 </CardHeader>
                 <CardContent>
-                  <EngagementDecayAlerts alerts={decayAlerts} />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {topicRetention.map(topic => (
+                      <TopicRetentionCard key={topic.topic} topic={topic} now={now} />
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             </motion.section>
-          </div>
-        )}
-      </motion.div>
+          )}
+
+          {/* Row 3: Engagement Status */}
+          <motion.section variants={fadeUp} aria-labelledby="engagement-health-heading">
+            <Card className="rounded-[24px]">
+              <CardHeader>
+                <h2
+                  id="engagement-health-heading"
+                  className="text-base font-semibold flex items-center gap-2"
+                >
+                  <ShieldCheck className="size-4 text-muted-foreground" aria-hidden="true" />
+                  Engagement Health
+                </h2>
+              </CardHeader>
+              <CardContent>
+                <EngagementDecayAlerts alerts={decayAlerts} />
+              </CardContent>
+            </Card>
+          </motion.section>
+        </div>
+      )}
+    </motion.div>
   )
 }
