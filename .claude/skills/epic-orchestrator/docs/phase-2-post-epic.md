@@ -138,3 +138,19 @@ git add docs/implementation-artifacts/ docs/reviews/ tests/
 git commit -m "docs(Epic {N}): add post-epic validation reports and test coverage fixes"
 git push
 ```
+
+After each post-epic command completes, **update the tracking file** Post-Epic Validation table with status, result, and notes.
+
+## Parallel Dispatch Option
+
+**Default:** Sequential (current behavior — safe, commands may depend on prior results).
+
+**When user requests parallel execution** ("run post-epic in parallel where possible"):
+
+| Group | Commands | Constraint |
+|-------|----------|-----------|
+| A (sequential) | Sprint Status → Mark Epic Done | Must confirm done before marking |
+| B (sequential) | Testarch Trace (+ fix cycle) → Testarch NFR (+ fix cycle) | Trace fixes may add tests NFR evaluates |
+| C (independent) | Adversarial Review, Retrospective | No dependencies on each other |
+
+**Parallel strategy:** Run Group A first. Then dispatch Group B and Group C concurrently (up to 3 agents simultaneously). Within each group, commands remain sequential.

@@ -4,6 +4,30 @@
 
 Select the target epic, extract its stories, check current status, and create the master TodoWrite that drives the entire pipeline.
 
+## Step 0: Check for Resume
+
+Before starting fresh, check if an in-progress tracking file exists:
+
+```bash
+ls docs/implementation-artifacts/epic-*-tracking-*.md
+```
+
+**If found:**
+1. Read the tracking file to determine epic number and current state
+2. Identify stories already marked `done` — skip them
+3. Identify the first non-done story — resume from there
+4. Reconstruct the in-context tracking table from the file
+5. Output resume banner:
+   ```
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   RESUMING Epic {N}: {NAME}
+   Completed: {X}/{Y} stories — Resuming from {STORY_ID}
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ```
+6. Skip to Phase 1 with the remaining stories list
+
+**If no tracking file found** → proceed with Step 1 (fresh start).
+
 ## Step 1: Determine Epic
 
 **If argument provided** (e.g., `/epic-orchestrator 20`):
@@ -98,6 +122,61 @@ Start the in-context coordinator tracking table:
 ```
 | Story | Status | PR URL | Review Rounds | Issues Fixed |
 |-------|--------|--------|---------------|--------------|
+```
+
+## Step 7: Create Persistent Tracking File
+
+Write the initial tracking file to `docs/implementation-artifacts/epic-{EPIC_NUMBER}-tracking-{DATE}.md`:
+
+```markdown
+# Epic {EPIC_NUMBER}: {EPIC_NAME} — Execution Tracker
+
+Generated: {DATE}
+Last Updated: {DATE}
+
+## Progress Summary
+
+| Story | Status | PR URL | Review Rounds | Issues Fixed |
+|-------|--------|--------|---------------|--------------|
+| {STORY_ID} | queued | — | — | — |
+(one row per story)
+
+## Story Details
+
+### {STORY_ID}: {Story Name}
+**Status:** queued
+#### Errors
+_(none yet)_
+#### Review Findings
+_(none yet)_
+#### Fixes Applied
+_(none yet)_
+#### Notes
+_(none yet)_
+
+---
+(repeat per story)
+
+## Post-Epic Validation
+
+| Command | Status | Result | Notes |
+|---------|--------|--------|-------|
+| Sprint Status | pending | — | — |
+| Mark Epic Done | pending | — | — |
+| Testarch Trace | pending | — | — |
+| Testarch NFR | pending | — | — |
+| Adversarial Review | pending | — | — |
+| Retrospective | pending | — | — |
+
+## Non-Issues (False Positives)
+_(none yet)_
+
+## Epic Summary
+- Started: {DATE}
+- Completed: --
+- Total Stories: {STORY_COUNT}
+- Total Review Rounds: --
+- Total Issues Fixed: --
 ```
 
 Proceed to Phase 1 with the first story in `{STORIES_TO_PROCESS}`.

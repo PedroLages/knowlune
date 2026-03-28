@@ -193,6 +193,17 @@ In addition to the in-context table, write a persistent markdown tracking file:
 
 Updated after every major step (story start, review round, fix, finish, merge, post-epic command). This file survives context overflow and feeds the Report Agent. See [docs/phase-0-epic-selection.md](docs/phase-0-epic-selection.md) for the template.
 
+### Observed Patterns
+
+Throughout execution, note patterns for the Suggestions section of the final report:
+- Issue types that repeat across stories
+- Stories that needed 2+ review rounds (and likely causes)
+- Review agents that consistently found zero issues
+- Pre-existing issues that cluster in specific directories
+- Fix agents that introduced new issues
+
+Pass these as `{PASTE_OBSERVED_PATTERNS}` to the Report Agent.
+
 ## Verification
 
 After full execution:

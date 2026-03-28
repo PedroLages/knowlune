@@ -99,6 +99,27 @@ PRE-EXISTING ISSUES (deferred):
 
 This list is passed to the Report Agent to include in the final completion report as "Deferred Issues for Future Fix."
 
+## Classifying Non-Issues
+
+When the Fix Agent reports an item as "could NOT be fixed" with explanation that it's a false positive, or when a subsequent Review round does not re-flag the same item, classify it as NON-ISSUE.
+
+Track separately from real issues:
+```
+NON-ISSUES (false positives):
+- [ORIGINAL_SEVERITY] description — reason it's not an issue (found during E##-S##)
+```
+
+**NON-ISSUES do NOT count toward the "zero issues" threshold.** The review loop targets zero *real* issues, not zero flagged items. Non-issues are included in the final report for transparency.
+
+## Update Tracking File
+
+After each review/fix round, update the persistent tracking file (`docs/implementation-artifacts/epic-{N}-tracking-{DATE}.md`):
+- Story status (reviewing, fixing)
+- Review findings counts per round
+- Fixes applied with descriptions
+- Non-issues identified
+- Any errors encountered
+
 ## If Story-Related Issues Found: Fix Agent
 
 Spawn a **new general-purpose sub-agent** with the Fix Agent prompt from [agent-prompt-templates.md](agent-prompt-templates.md). **Use `run_in_background: true`**.

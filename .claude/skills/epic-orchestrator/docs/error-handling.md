@@ -20,6 +20,7 @@ The coordinator must handle failures gracefully — fix what's fixable, park wha
 | **Dev server won't start** | Port 5173 not responding after kill + restart | `lsof -ti:5173 | xargs kill -9`, retry. If still fails, review runs without design review (adds `design-review-skipped` gate) |
 | **Sub-agent runs out of context** | Agent returns truncated or incomplete output | Spawn continuation agent with summary of what was done. For Story Agents, this means summarizing what was already implemented |
 | **Post-epic command fails** | Sub-agent returns error | Retry once. If still fails, note in final report as incomplete |
+| **Coordinator session interrupted** | Tracking file exists but epic incomplete | Next `/epic-orchestrator` invocation detects tracking file in Phase 0 Step 0 and resumes from last completed story |
 
 ## Parking a Story
 
@@ -69,7 +70,24 @@ git commit -m "merge: resolve conflicts with main ({STORY_ID})"
 
 If the coordinator session approaches context limits:
 
-1. The tracking table is the critical state — it's small and portable
+1. The **persistent tracking file** (`docs/implementation-artifacts/epic-{N}-tracking-{DATE}.md`) is the primary recovery source — it survives context overflow with full per-story details
 2. TodoWrite persists across context compressions
 3. If context is compressed, re-read the plan from `docs/plans/epic-orchestrator-coordinator-playbook.md`
 4. Resume from the last completed TodoWrite item
+5. Re-read the tracking file to reconstruct the in-context tracking table
+6. If starting a new session, Phase 0 Step 0 auto-detects the tracking file and resumes
+
+## Proactive Context Health Check
+
+After completing each story (Step 4: Merge), the coordinator evaluates whether to continue or suggest a session break:
+
+**Heuristic:** If more than 5 stories have been processed in this session, or if 3+ stories each needed 2+ review rounds, output a warning:
+
+```
+⚠️ CONTEXT HEALTH: {N} stories processed, {R} total review rounds.
+The tracking file is committed and up-to-date.
+If context feels constrained, you can safely start a new session —
+`/epic-orchestrator` will auto-resume from {NEXT_STORY_ID}.
+```
+
+This is informational only — the orchestrator continues unless the user intervenes. The tracking file commit (after each merge) ensures no data is lost.

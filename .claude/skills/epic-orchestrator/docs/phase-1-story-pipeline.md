@@ -29,7 +29,7 @@ The agent will:
 3. Commit with descriptive messages
 4. Return summary of what was built
 
-**Coordinator after**: Output completion banner with agent's summary, update TodoWrite, note the summary in tracking table, print progress dashboard.
+**Coordinator after**: Output completion banner with agent's summary, update TodoWrite, note the summary in tracking table, print progress dashboard. **Update tracking file**: story status → implementing, add key files list.
 
 ### Step 2: Review Loop
 
@@ -40,6 +40,25 @@ Key points:
 - Fix ALL issues at every severity (BLOCKER, HIGH, MEDIUM, LOW, NITS)
 - Loop until zero issues found
 - Max 3 rounds before escalation
+
+#### Adaptive Review Scope
+
+Before dispatching the Review Agent, the coordinator checks `git diff --name-only main...HEAD` to determine file types changed:
+
+| Files Changed | Skip | Reason |
+|--------------|------|--------|
+| Only `.md`, `.yaml`, `.json` (no `.tsx`, `.ts`, `.css`) | Design review, Exploratory QA | No UI to test |
+| Only test files (`tests/**`) | Design review, Exploratory QA | No production UI changes |
+| Only `.ts` (no `.tsx`) | Design review (keep Exploratory QA) | No visual components, but behavior may affect routes |
+
+Pass the skip list to the Review Agent prompt:
+```
+SKIP THESE REVIEW AGENTS (no relevant changes):
+- design-review (no .tsx/.css changes)
+- exploratory-qa (no UI changes)
+```
+
+The Review Agent still runs ALL pre-checks (build, lint, type-check, tests) regardless — only the agent swarm is scoped.
 
 ### Step 3: Finish + PR (Finish Agent)
 
@@ -59,7 +78,7 @@ The agent will:
 4. Commit, push, create PR
 5. Return PR URL
 
-**Coordinator after**: Output completion banner with PR URL, update tracking table, print progress dashboard.
+**Coordinator after**: Output completion banner with PR URL, update tracking table, print progress dashboard. **Update tracking file**: PR URL, story status → finishing.
 
 ### Step 4: Merge + Sync (Coordinator Directly)
 
@@ -78,7 +97,14 @@ Update the tracking table:
 | {STORY_ID} | done | {PR_URL} | {ROUNDS} | {ISSUES_FIXED} |
 ```
 
-Mark story as complete in TodoWrite.
+Mark story as complete in TodoWrite. **Update tracking file**: story status → done, review rounds count, total issues fixed, update Epic Summary totals.
+
+```bash
+# Commit tracking file to protect against session crashes
+git add docs/implementation-artifacts/epic-{N}-tracking-*.md
+git commit -m "chore: update epic tracking after {STORY_ID}"
+git push
+```
 
 ### Step 5: Prepare Next Story (Coordinator Directly)
 

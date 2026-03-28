@@ -8,7 +8,7 @@ After all phases complete, spawn a **Report Agent** to compile a comprehensive e
 
 Spawn a **general-purpose sub-agent** with the Report Agent template from [agent-prompt-templates.md](agent-prompt-templates.md).
 
-**Critical**: Pass the coordinator's tracking table to the report agent. This table contains PR URLs, review round counts, and issue counts that the agent can't derive from files alone.
+**Critical**: Pass the coordinator's tracking table to the report agent. Also reference the **persistent tracking file** (`docs/implementation-artifacts/epic-{N}-tracking-{DATE}.md`) as the primary data source — it contains PR URLs, review round counts, issue counts, per-story findings, fixes applied, and non-issues that the agent can't derive from files alone.
 
 ```
 {PASTE_TRACKING_TABLE_HERE}
@@ -38,18 +38,28 @@ Aggregate across all stories:
 ### 4. Deferred Issues (Pre-Existing)
 Issues found in files NOT changed by any story during this epic. These exist on `main` already and should be addressed in a future sprint. Listed with severity, description, file:line, and which story's review discovered them.
 
+### 4b. Non-Issues (False Positives)
+Items flagged by review agents that were verified as not actual problems. Listed for transparency with original severity, description, and reason for classification.
+
 ### 5. Post-Epic Validation Results
 - Testarch trace: coverage percentage, gaps, gate decision
 - Testarch NFR: assessment summary, gate decision
 - Adversarial review: key findings count, critical issues
 
-### 5. Lessons Learned
+### 6. Lessons Learned
 From retrospective:
 - Top insights
 - Action items for next epic
 - Patterns to repeat / avoid
 
-### 6. Build Verification
+### 7. Suggestions for Next Epic
+Based on patterns observed during execution:
+- Process improvements derived from recurring issues
+- Review pipeline tuning based on agent effectiveness
+- Story sizing feedback for stories that needed excessive rounds
+- Codebase health recommendations from clustered pre-existing issues
+
+### 8. Build Verification
 The report agent runs `npm run build` on main to confirm the final state builds successfully.
 
 ## Save Location

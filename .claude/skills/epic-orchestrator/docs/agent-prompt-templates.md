@@ -9,6 +9,8 @@ Copy-paste ready templates with `{VARIABLES}` to fill. Each template produces a 
 ```
 You are implementing story {STORY_ID} for the Knowlune learning platform.
 
+STEP 0: Activate `/auto-answer autopilot` to handle plan mode questions autonomously without blocking.
+
 STEP 1: Run `/start-story {STORY_ID}` which will:
 - Create branch feature/{STORY_ID_LOWER}-{slug}
 - Create story file from template
@@ -69,6 +71,10 @@ TOTAL: [count]
 - [SEVERITY] [description] — [file:line]
 ...
 
+NON-ISSUES (verified false positives — not actual problems):
+TOTAL: [count]
+- [ORIGINAL_SEVERITY] [description] — [why it's not an issue]
+
 REPORT PATHS:
 - Design: [path or "skipped"]
 - Code: [path]
@@ -96,6 +102,9 @@ For each issue:
 2. Understand the root cause
 3. Implement the correct fix following project conventions
 4. Ensure the fix doesn't break anything else
+
+If an issue is a FALSE POSITIVE (not actually a problem), do NOT change code for it.
+Instead, explain WHY it's not an issue in your return. The coordinator will classify it as NON-ISSUE.
 
 After fixing ALL issues:
 1. Run `npm run build` — must pass
@@ -125,9 +134,7 @@ This will:
 5. Push branch to remote
 6. Create PR with description
 
-When `/finish-story` asks interactive questions:
-- "PR merge status?" → Answer: "Done — I'll cleanup manually later"
-- "Lessons learned?" → Answer: "Claude, write them"
+Activate `/auto-answer autopilot` before running /finish-story to handle any interactive questions automatically.
 
 RETURN:
 - PR URL
@@ -275,6 +282,8 @@ RETURN:
 ```
 Run `/retrospective` for Epic {EPIC_NUMBER}: {EPIC_NAME}.
 
+Activate `/auto-answer autopilot` to handle retrospective dialogue autonomously.
+
 IMPORTANT: You are acting as Pedro (the developer/project owner) in the party mode dialogue.
 
 Before answering ANY question during the retrospective:
@@ -303,6 +312,7 @@ RETURN:
 Create a comprehensive epic completion report for Epic {EPIC_NUMBER}: {EPIC_NAME}.
 
 GATHER INFORMATION FROM:
+- Persistent tracking file: docs/implementation-artifacts/epic-{EPIC_NUMBER}-tracking-{DATE}.md (primary data source)
 - Story files: docs/implementation-artifacts/*{EPIC_NUMBER}*.md
 - Design review reports: docs/reviews/design/
 - Code review reports: docs/reviews/code/
@@ -317,13 +327,29 @@ REPORT STRUCTURE:
 4. **Deferred Issues (Pre-Existing)** — Issues found in files NOT changed by any story. These exist on main and were NOT introduced by this epic. List each with severity, description, file:line, and which story's review discovered it. These should be fixed in a future sprint.
 5. **Post-Epic Validation** — Trace coverage, NFR assessment, adversarial findings summary
 6. **Lessons Learned** — Key insights from retrospective
-7. **Build Verification** — Run `npm run build` on main, confirm success
+7. **Suggestions for Next Epic** — Actionable recommendations based on observed patterns:
+   - Process improvements (e.g., "add error boundary boilerplate to /start-story template")
+   - Review pipeline tuning (e.g., "security review found 0 issues across all stories — consider skipping for UI-only epics")
+   - Spec quality feedback (e.g., "E60-S04 took 3 rounds — story may have been too large")
+   - Codebase health (e.g., "pre-existing issues cluster in src/stores/ — consider a cleanup epic")
+8. **Build Verification** — Run `npm run build` on main, confirm success
 
 COORDINATOR DATA (use this for the stories table):
 {PASTE_TRACKING_TABLE}
 
 PRE-EXISTING ISSUES (deferred — include in section 4):
 {PASTE_PRE_EXISTING_ISSUES_LIST}
+
+OBSERVED PATTERNS (coordinator passes these for the Suggestions section):
+{PASTE_OBSERVED_PATTERNS}
+
+Example patterns to look for:
+- Common issue types across stories (e.g., "3/5 stories had missing error boundaries")
+- Stories with 2+ review rounds and why (complexity, unclear spec, cascading fixes)
+- Recurring false positives (indicates over-sensitive review rules)
+- Fix agent effectiveness (how often fixes introduced new issues)
+- Review agents that consistently found nothing (may be skippable for similar epics)
+- Patterns in pre-existing issues (clustered in specific areas of codebase)
 
 SAVE TO: docs/implementation-artifacts/epic-{EPIC_NUMBER}-completion-report-{DATE}.md
 
