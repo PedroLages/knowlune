@@ -1,12 +1,12 @@
 ---
-stepsCompleted: ['step-01-validate-prerequisites', 'step-02-design-epics', 'step-03-create-stories', 'step-04-final-validation']
+stepsCompleted: ['step-01-validate-prerequisites', 'step-02-design-epics', 'step-03-create-stories', 'step-04-final-validation', 'step-04-ads-final-validation']
 inputDocuments:
   - '_bmad-output/planning-artifacts/prd.md'
   - '_bmad-output/planning-artifacts/architecture.md'
   - '_bmad-output/planning-artifacts/ux-design-specification.md'
 updateMode: 'incremental'
-updateDate: '2026-03-26'
-updateReason: 'YouTube Course Builder promoted to MVP (Epic 23): FR112-FR123, NFR69-NFR74, architecture addendum with 3-tier BYOK infrastructure'
+updateDate: '2026-03-28'
+updateReason: 'AI Tutoring Phase 1-2 (Epic 57): 5 stories — tutor chat UI + context injection, tutor hook + streaming, conversation persistence, Socratic prompt + hint ladder, RAG-grounded answers'
 editHistory:
   - date: '2026-03-07'
     scope: 'Architecture + UX updated to local-first AI'
@@ -20,6 +20,43 @@ editHistory:
       - 'Added 6 UX Design Requirements (UX-DR1 to UX-DR6) from YouTube UX specification'
       - 'Added YouTube Architecture requirements from architecture addendum'
       - 'Added Epic 23 with stories to Epic List and FR Coverage Map'
+  - date: '2026-03-28'
+    scope: 'AI Deep Strategy (Epics 36-43) incremental addition'
+    changes:
+      - 'Added 71 AI Deep Strategy FRs (ADS-FR1 to ADS-FR71) to Requirements Inventory'
+      - 'Added 29 AI Deep Strategy NFRs (ADS-NFR1 to ADS-NFR29) to Requirements Inventory'
+      - 'Added AI Deep Strategy Architecture requirements from architecture addendum'
+      - 'Added Epics 36-43 (8 epics, 33 stories) to Epic List and FR Coverage Map'
+      - 'Source: PRD (prd.md), Architecture (architecture.md), AI Deep Strategy plan (adaptive-petting-unicorn.md)'
+  - date: '2026-03-28'
+    scope: 'Lesson Flow Improvements (Epic 54) incremental addition'
+    changes:
+      - 'Added 5 Lesson Flow FRs (LF-FR1 to LF-FR5) to Requirements Inventory'
+      - 'Added 2 Lesson Flow NFRs (LF-NFR1 to LF-NFR2) to Requirements Inventory'
+      - 'Added Epic 54 with 3 stories (E54-S01, E54-S02, E54-S03) to Epic List'
+      - 'Source: tech-spec-lesson-flow-improvements.md, product-roadmap Section 16 Phase 4'
+  - date: '2026-03-28'
+    scope: 'PKM Export Phase 1 (Epic 53) incremental addition'
+    changes:
+      - 'Added 7 PKM Export FRs (PKM-FR1 to PKM-FR7) to Requirements Inventory'
+      - 'Added 3 PKM Export NFRs (PKM-NFR1 to PKM-NFR3) to Requirements Inventory'
+      - 'Added Epic 53 with 3 stories (E53-S01, E53-S02, E53-S03) to Epic List and FR Coverage Map'
+      - 'Source: tech-spec-pkm-export-phase-1.md, product-roadmap Section 12'
+  - date: '2026-03-28'
+    scope: 'Knowledge Map Phase 1 (Epic 56) incremental addition'
+    changes:
+      - 'Added 10 Knowledge Map FRs (KM-FR1 to KM-FR10) to Requirements Inventory'
+      - 'Added 5 Knowledge Map NFRs (KM-NFR1 to KM-NFR5) to Requirements Inventory'
+      - 'Added Epic 56 with 4 stories (E56-S01, E56-S02, E56-S03, E56-S04) to Epic List and FR Coverage Map'
+  - date: '2026-03-28'
+    scope: 'AI Tutoring Phase 1-2 (Epic 57) incremental addition'
+    changes:
+      - 'Added 15 AI Tutoring FRs (TU-FR1 to TU-FR15) to Requirements Inventory'
+      - 'Added 6 AI Tutoring NFRs (TU-NFR1 to TU-NFR6) to Requirements Inventory'
+      - 'Added AI Tutoring Architecture requirements from architecture addendum (lines 3644-4740)'
+      - 'Added Epic 57 with 5 stories (E57-S01 to E57-S05) to Epic List and FR Coverage Map'
+      - 'Source: architecture.md (AI Tutoring addendum), brainstorming session, technical research, product-roadmap Section 14'
+      - 'Source: architecture.md (Knowledge Map addendum), brainstorming session, technical research, product-roadmap Section 13'
 ---
 
 # Elearningplatformwireframes - Epic Breakdown
@@ -185,6 +222,29 @@ This document provides the complete epic and story breakdown for Elearningplatfo
 - FR122: User can view synchronized transcript panel alongside YouTube video, search within transcripts, and click segments to seek video (Free)
 - FR123: System generates AI-powered course and per-video summaries from transcript data (Premium — extends FR48 to YouTube content)
 
+**PKM Export Pipeline (7 Requirements — Epic 53):**
+
+- PKM-FR1: User can export flashcards as Markdown files with YAML frontmatter (type, deck, tags, SRS metadata) and Q/A body format, organized by course folders
+- PKM-FR2: User can export bookmarks as Markdown files grouped by course with video headings and timestamped entries sorted ascending
+- PKM-FR3: Flashcard tags are derived from course name (kebab-case) and linked note tags via noteId, without requiring schema migration
+- PKM-FR4: User can export flashcards as Anki-compatible .apkg file with single "Knowlune Export" deck and course-name tags per card
+- PKM-FR5: Anki .apkg generation uses dynamic import() for anki-apkg-export to keep main bundle lean (~500KB for sql.js)
+- PKM-FR6: User can export a PKM batch ZIP containing notes/, flashcards/, and bookmarks/ folders per course with a root README.md
+- PKM-FR7: User can trigger PKM Export (Obsidian) and Flashcard Export (Anki) from Settings Data Management section with progress feedback and toast notifications
+
+**Knowledge Map Phase 1 (10 Requirements):**
+
+- KM-FR1: System extracts topics from Lesson.keyTopics[] across all courses, normalizes via lowercase/trim/space-collapse, filters noise patterns (dates, meta-topics like "weekly session", "course overview"), and deduplicates via canonical synonym map
+- KM-FR2: Topic resolution produces ~40-60 meaningful topics grouped by Course.category, with each topic tracking associated lessonIds, courseIds, and matching Question.topic values
+- KM-FR3: System calculates a 0-100 knowledge score per topic using dynamic weight redistribution across 4 signals: quiz (30%), flashcard (30%), completion (20%), recency (20%), where unavailable signals redistribute proportionally to available ones
+- KM-FR4: Each topic score includes tier classification (strong >= 70, fading 40-69, weak < 40), confidence level (high/medium/low based on signal count), and effective weight breakdown
+- KM-FR5: Knowledge Map Zustand store aggregates data from useContentProgressStore, useFlashcardStore, db.quizAttempts, and db.studySessions to compute scores on-demand without persisting to Dexie
+- KM-FR6: Overview dashboard includes a Knowledge Map widget registered as 'knowledge-map' DashboardSectionId, showing category-level Recharts Treemap (5 cells) and a Focus Areas panel (top 3 urgent topics with action buttons)
+- KM-FR7: Focus Areas panel ranks topics by urgency formula combining (100 - score) * 0.6 + min(100, daysSinceEngagement * 2) * 0.4, showing topic name, score, tier badge, days since engagement, and 1-2 action buttons
+- KM-FR8: Dedicated /knowledge-map route displays topic-level Recharts Treemap (40-60 cells) with cells color-coded by tier (success/warning/destructive design tokens) and sized by lesson count
+- KM-FR9: Clicking a treemap cell opens TopicDetailPopover showing score breakdown (quiz/flashcard/completion/recency with effective weights), confidence level, last engagement date, and contextual action buttons (review flashcards, retake quiz, rewatch lesson)
+- KM-FR10: Knowledge Map pages provide mobile fallback below 640px replacing treemap with a sorted topic list using Card/Progress/Badge/Accordion components, grouped by category and sorted worst-first
+
 ### Non-Functional Requirements
 
 **Performance (7 Requirements):**
@@ -291,6 +351,29 @@ This document provides the complete epic and story breakdown for Elearningplatfo
 - NFR73: When YouTube API unavailable, cached metadata and transcripts remain accessible offline
 - NFR74: YouTube course data stored entirely in IndexedDB; no transmission except to configured AI/Whisper endpoints
 
+**PKM Export (3 Requirements — Epic 53):**
+
+- PKM-NFR1: Flashcard and bookmark Markdown export completes within 2s for up to 500 items with yieldToUI() every 20 items to prevent UI freezing
+- PKM-NFR2: Anki .apkg bundle loaded via dynamic import() adds 0 bytes to initial bundle; only fetched on first Anki export click
+- PKM-NFR3: All new export UI cards meet WCAG 2.1 AA (4.5:1 contrast, 44x44px touch targets, proper aria-labels)
+
+**Knowledge Map Phase 1 (5 Requirements):**
+
+- KM-NFR1: Topic resolution completes in < 5ms for 8 courses / 170 lessons; score computation completes in < 10ms for 60 topics
+- KM-NFR2: All treemap cell colors use design tokens (--success, --warning, --destructive) with no hardcoded colors; full dark mode support
+- KM-NFR3: Treemap cells include text labels (topic name + score) for colorblind accessibility; screen reader announces "Topic: [name], knowledge score: [score] percent, status: [tier]"
+- KM-NFR4: Mobile fallback (< 640px) replaces treemap with touch-friendly sorted list meeting 44x44px touch targets
+- KM-NFR5: No new runtime dependencies — uses existing Recharts (Treemap), Zustand, shadcn/ui (Popover, Card, Progress, Badge, Accordion)
+
+**AI Tutoring Phase 1-2 (6 Requirements — Epic 57):**
+
+- TU-NFR1: System prompt fits within 4K Ollama context window (1,490 tokens for slots 1-4, 650 for conversation history, 200 for user message, 1,620 reserved for generation)
+- TU-NFR2: Transcript context extraction completes in < 5ms for position-based strategies (no embedding required in Phase 1)
+- TU-NFR3: All tutor UI components use design tokens (text-success, text-warning, text-destructive for badges; bg-brand for mode chips); full dark mode support
+- TU-NFR4: Tutor tab accessible via keyboard navigation; TranscriptBadge and TutorModeChips have proper ARIA labels; message list announces new messages to screen readers
+- TU-NFR5: No new runtime dependencies — reuses existing chat components, Zustand, Dexie, Vercel AI SDK streaming, getLLMClient factory
+- TU-NFR6: Streaming failure preserves partial content with "[Response interrupted]" suffix instead of discarding streamed text
+
 ### Additional Requirements
 
 **From Architecture Document:**
@@ -346,6 +429,18 @@ This document provides the complete epic and story breakdown for Elearningplatfo
 - SSRF protection: generalized `isAllowedProxyUrl()` shared between Ollama and YouTube server endpoints
 - Transcript cleanup via existing `getLLMClient()` factory (proper punctuation, paragraph breaks, ASR error correction)
 - Existing `TranscriptCue`, `TranscriptPanel`, `parseVTT()`, `useCaptionLoader`, `Chapter` types reused directly
+
+**From Architecture Document (AI Tutoring Phase 1-2 Addendum — 2026-03-28):**
+
+- Tutor tab as 6th tab in LessonPlayer's existing Tabs component (alongside Materials, Notes, Bookmarks, Transcript, Summary)
+- New `src/app/components/tutor/` directory: TutorChat.tsx orchestrator, TranscriptBadge.tsx, TutorModeChips.tsx (Phase 2)
+- New `src/ai/tutor/` module: types.ts, tutorPromptBuilder.ts (6-slot system), transcriptContext.ts (3-strategy injection), hintLadder.ts (state machine + frustration detection)
+- New `src/ai/hooks/useTutor.ts` (6-stage pipeline) + `src/stores/useTutorStore.ts` (Zustand + Dexie persistence)
+- Dexie v29 migration: `chatConversations: 'id, [courseId+videoId], courseId, updatedAt'` — v28 reserved for E50 StudySchedule
+- ChatConversation type: id, courseId, videoId, mode (socratic|explain), hintLevel, messages[] (blob), createdAt, updatedAt
+- Same middleware chain as ChatQA: Origin → JWT → BYOK → Entitlement → Rate Limit (no new server code)
+- Token budget: 4K Ollama (1,490 system + 650 history + 200 user + 1,620 generation); 128K models get expanded slots
+- Phase 2 extends ragCoordinator with transcript chunk retrieval, lazy embedding on first tutor interaction, position-aware boosting
 
 ### UX Design Requirements
 
@@ -461,6 +556,38 @@ FR120: Epic 23 - Full feature parity with local courses (progress, notes, streak
 FR121: Epic 23 - Cache YouTube metadata in IndexedDB with configurable TTL (7-day default)
 FR122: Epic 23 - Synchronized transcript panel with search and click-to-seek
 FR123: Epic 23 - AI-powered course and per-video summaries from transcript data (Premium)
+PKM-FR1: Epic 53 - Export flashcards as Markdown with YAML frontmatter and Q/A body
+PKM-FR2: Epic 53 - Export bookmarks as Markdown grouped by course/video with timestamps
+PKM-FR3: Epic 53 - Derive flashcard tags from course name + linked note tags
+PKM-FR4: Epic 53 - Export flashcards as Anki .apkg file with course-name tags
+PKM-FR5: Epic 53 - Dynamic import for anki-apkg-export (bundle optimization)
+PKM-FR6: Epic 53 - PKM batch ZIP export with notes/flashcards/bookmarks folder structure
+PKM-FR7: Epic 53 - PKM Export and Anki Export buttons in Settings Data Management
+KM-FR1: Epic 56 - Extract and normalize topics from Lesson.keyTopics[] with noise filtering and canonical map
+KM-FR2: Epic 56 - Produce ~40-60 meaningful topics grouped by Course.category
+KM-FR3: Epic 56 - Calculate 0-100 knowledge score with dynamic weight redistribution (30/30/20/20)
+KM-FR4: Epic 56 - Topic score includes tier, confidence, and effective weight breakdown
+KM-FR5: Epic 56 - Zustand store aggregates from multiple stores/tables, computes on-demand
+KM-FR6: Epic 56 - Overview Knowledge Map widget with category treemap + Focus Areas panel
+KM-FR7: Epic 56 - Focus Areas panel ranks top 3 urgent topics with action buttons
+KM-FR8: Epic 56 - Dedicated /knowledge-map route with topic-level treemap
+KM-FR9: Epic 56 - TopicDetailPopover with score breakdown and contextual actions
+KM-FR10: Epic 56 - Mobile fallback sorted topic list below 640px
+TU-FR1: Epic 57 - Add "Tutor" as 6th tab in LessonPlayer, conditionally rendered when AI provider is configured
+TU-FR2: Epic 57 - Reuse MessageList, ChatInput, CitationLink, MessageBubble from src/app/components/chat/ in TutorChat orchestrator
+TU-FR3: Epic 57 - Position-based transcript context injection with 3 strategies: full transcript (<2K tokens), chapter-based, or 512-token window around video position
+TU-FR4: Epic 57 - 6-slot priority system prompt builder (base instructions, mode rules, course context, transcript excerpt, learner profile, resume context) with auto budget under 4K pressure
+TU-FR5: Epic 57 - TranscriptBadge component showing "Transcript-grounded" (green), "General mode" (yellow), or "Offline" (red)
+TU-FR6: Epic 57 - useTutor hook with 6-stage pipeline: frustration detection → transcript context → prompt build → message array → LLM stream → persist conversation
+TU-FR7: Epic 57 - Zustand store (useTutorStore) for conversation state with Dexie persistence
+TU-FR8: Epic 57 - Streaming LLM responses via getLLMClient('tutor') reusing existing factory and middleware chain
+TU-FR9: Epic 57 - Same premium gating as ChatQA (premium or BYOK required), no capability differentiation
+TU-FR10: Epic 57 - 3-tier graceful degradation: Full (transcript + LLM), Limited (no transcript, LLM available), Offline (past conversations read-only)
+TU-FR11: Epic 57 - Dexie v29 chatConversations table with compound index [courseId+videoId], blob message storage
+TU-FR12: Epic 57 - Save conversation after each exchange, load on lesson visit, show past messages in UI, 3-exchange sliding window for LLM context
+TU-FR13: Epic 57 - TypeScript hint ladder state machine (Levels 0-4) with client-side frustration detection (message length, keywords, explicit patterns)
+TU-FR14: Epic 57 - TutorModeChips component with Socratic (default) and Explain mode selector; mode switch resets hint ladder to 0
+TU-FR15: Epic 57 - Lazy transcript embedding on first tutor interaction, RAG retrieval with position-aware boosting (+0.2 similarity for chunks within 60s of playhead)
 
 ## Epic List
 
@@ -590,6 +717,108 @@ Users can paste YouTube video URLs or playlist URLs to create structured courses
 **Phase:** MVP (Feature 12 — promoted from Vision 2026-03-25)
 **Depends on:** Epic 1 (course data model), Epic 2 (player infrastructure), Epic 9 (AI infrastructure — for Premium features only)
 **Architecture:** 3-tier BYOK server (youtube-transcript → yt-dlp → Whisper), source discriminator on shared Dexie tables, react-youtube IFrame wrapper, new useYouTubeImportStore
+
+### Epic 36: Model Selection + Per-Feature Overrides
+
+Enable users to browse, select, and assign AI models per provider and per feature, connecting the disconnected model parameter wire through the LLM pipeline. Foundation for all subsequent AI Deep Strategy epics.
+**FRs covered:** ADS-FR1, ADS-FR2, ADS-FR3, ADS-FR4, ADS-FR5, ADS-FR6
+**Stories:** 4 (S01 Model Registry, S02 Model Picker UI, S03 Wire LLM Pipeline, S04 Per-Feature Overrides)
+**Depends on:** None (foundation)
+**Phase:** MVP
+
+### Epic 37: AI Socratic Tutor
+
+Socratic tutoring system that probes student understanding through questions, identifies misconceptions, adapts difficulty, and feeds data into the intelligence loop.
+**FRs covered:** ADS-FR9, ADS-FR10, ADS-FR11, ADS-FR12, ADS-FR13, ADS-FR14, ADS-FR15, ADS-FR16, ADS-FR17
+**Stories:** 5 (S01 Data Model, S02 Socratic Prompts, S03 Tutor UI, S04 Misconception Tracking, S05 Knowledge Gaps Integration)
+**Depends on:** Epic 36
+**Phase:** MVP
+
+### Epic 38: Token Metering + Usage Dashboard
+
+Server-side token counting, Supabase usage tracking, and client-side usage dashboard — billing infrastructure foundation. Ships in parallel with Epic 37.
+**FRs covered:** ADS-FR48, ADS-FR49, ADS-FR50, ADS-FR51, ADS-FR52, ADS-FR53, ADS-FR54
+**Stories:** 4 (S01 Token Counting Middleware, S02 Supabase Usage Tables, S03 Usage Dashboard UI, S04 Budget Warnings)
+**Depends on:** Epic 36 (parallel with E37)
+**Phase:** MVP (S01-S02), Post-MVP (S03-S04)
+
+### Epic 39: Smart Flashcard Generator + Spaced Repetition
+
+AI-powered flashcard generation with FSRS (Free Spaced Repetition Scheduler) for scientifically-optimized review scheduling.
+**FRs covered:** ADS-FR18, ADS-FR19, ADS-FR21, ADS-FR22, ADS-FR23, ADS-FR24, ADS-FR25, ADS-FR26, ADS-FR27, ADS-FR28, ADS-FR29, ADS-FR30, ADS-FR31
+**Stories:** 5 (S01 FSRS Algorithm, S02 AI Generation, S03 Review UI, S04 Deck Management, S05 Dashboard + Notifications)
+**Depends on:** Epic 36
+**Phase:** MVP
+
+### Epic 40: Adaptive Quiz Engine
+
+AI-powered quiz generation with 5 question types, adaptive difficulty per concept, and Knowledge Gaps integration.
+**FRs covered:** ADS-FR32, ADS-FR33, ADS-FR34, ADS-FR35, ADS-FR36, ADS-FR37, ADS-FR38, ADS-FR39
+**Stories:** 4 (S01 Data Model, S02 AI Generation + Difficulty, S03 Quiz UI, S04 Knowledge Gaps Feed)
+**Depends on:** Epic 36
+**Phase:** Post-MVP (Phase 2)
+
+### Epic 41: Subscription Tier Enforcement
+
+Enforce Free/Premium/BYOK tier structure across providers, models, and features.
+**FRs covered:** ADS-FR7, ADS-FR8, ADS-FR55, ADS-FR56, ADS-FR57, ADS-FR58, ADS-FR59, ADS-FR60, ADS-FR61, ADS-FR62
+**Stories:** 3 (S01 Provider + Model Restrictions, S02 Feature Gating, S03 Upgrade Flow + BYOK)
+**Depends on:** Epic 38
+**Phase:** Post-MVP (Phase 2)
+
+### Epic 42: AI Study Buddy
+
+Context-aware conversational AI overlay — always available, understands courses/notes/tutor history/quiz results/flashcards, can invoke any feature conversationally.
+**FRs covered:** ADS-FR40, ADS-FR41, ADS-FR42, ADS-FR43, ADS-FR44, ADS-FR45, ADS-FR46, ADS-FR47
+**Stories:** 5 (S01 Chat Overlay + Context, S02 Conversational RAG, S03 Intent Detection, S04 Proactive Suggestions, S05 Personality + Preferences)
+**Depends on:** Epics 37, 39, 40
+**Phase:** Post-MVP (Phase 2)
+
+### Epic 43: Cross-Feature Intelligence Loop
+
+Connect all AI features into a feedback loop — tutor misconceptions generate flashcards, quiz wrong answers feed knowledge gaps, comprehension data reorders learning paths.
+**FRs covered:** ADS-FR20, ADS-FR63, ADS-FR64, ADS-FR65, ADS-FR66, ADS-FR67
+**Stories:** 3 (S01 Misconception->Flashcard Pipeline, S02 Quiz+Tutor->Gap Aggregation, S03 Comprehension-Driven Path Reordering)
+**Depends on:** Epics 37, 39, 40, 42
+**Phase:** Post-MVP (Phase 2)
+
+**AI Deep Strategy Dependency Graph:**
+```
+E36 ──┬──> E37 ──┬────────────────────────> E42 ──> E43
+      ├──> E38 ──┼──> E41                    ^        ^
+      ├──> E39 ──┤                            |        |
+      └──> E40 ──┘────────────────────────────┘────────┘
+```
+
+### Epic 53: PKM Export Phase 1 — Flashcard/Bookmark Markdown + Anki .apkg
+
+Users can export flashcards as Markdown Q/A pairs with YAML frontmatter, bookmarks as Markdown lists grouped by course/video, and flashcard decks as Anki .apkg files — unlocking learning data for Obsidian, Anki, and other PKM tools.
+
+**FRs covered:** PKM-FR1, PKM-FR2, PKM-FR3, PKM-FR4, PKM-FR5, PKM-FR6, PKM-FR7
+**NFRs addressed:** PKM-NFR1, PKM-NFR2, PKM-NFR3
+**Phase:** Post-MVP (PKM Export Pipeline — Roadmap Section 12, Phases 1-2)
+**Depends on:** Epic 11 (existing export infrastructure: exportService.ts, noteExport.ts, fileDownload.ts)
+**Stories:** 3 (S01 Flashcard & Bookmark Markdown, S02 Anki .apkg, S03 Batch Export + Settings UI)
+
+### Epic 56: Knowledge Map Phase 1 — Topic Scoring & Treemap Visualization
+
+Learners can see a visual map of their knowledge strength across all topics, identifying what's strong, fading, or weak. The system extracts topics from lesson data, computes dynamic knowledge scores from quiz/flashcard/completion/recency signals, and renders an interactive Recharts Treemap with drill-down popovers and actionable study suggestions.
+
+**FRs covered:** KM-FR1, KM-FR2, KM-FR3, KM-FR4, KM-FR5, KM-FR6, KM-FR7, KM-FR8, KM-FR9, KM-FR10
+**NFRs addressed:** KM-NFR1, KM-NFR2, KM-NFR3, KM-NFR4, KM-NFR5
+**Phase:** Post-MVP (Knowledge Map & Decay Visualization — Roadmap Section 13, Phase 1)
+**Depends on:** Existing stores (useCourseStore, useContentProgressStore, useFlashcardStore), Dexie tables (quizAttempts, studySessions), Recharts, dashboardOrder.ts
+**Stories:** 4 (S01 Topic Resolution Service, S02 Knowledge Score + Store, S03 Overview Widget, S04 Dedicated Page)
+
+### Epic 57: AI Tutoring Phase 1-2 — Lesson-Aware Chat + Socratic Mode
+
+Learners can access an AI tutor directly within the LessonPlayer that understands the current lesson context, provides transcript-grounded answers with video timestamp citations, persists conversations across sessions, and offers Socratic questioning with adaptive hint escalation alongside a direct Explain mode.
+
+**FRs covered:** TU-FR1, TU-FR2, TU-FR3, TU-FR4, TU-FR5, TU-FR6, TU-FR7, TU-FR8, TU-FR9, TU-FR10, TU-FR11, TU-FR12, TU-FR13, TU-FR14, TU-FR15
+**NFRs addressed:** TU-NFR1, TU-NFR2, TU-NFR3, TU-NFR4, TU-NFR5, TU-NFR6
+**Phase:** Post-MVP (AI Tutoring Socratic Mode — Roadmap Section 14, Phases 1-2)
+**Depends on:** Existing chat components (src/app/components/chat/), getLLMClient factory, LessonPlayer tab architecture, youtubeTranscripts data, existing RAG pipeline (ragCoordinator, promptBuilder, embeddings)
+**Stories:** 5 (S01 Tutor Chat UI + Context Injection, S02 Tutor Hook + Streaming, S03 Conversation Persistence, S04 Socratic System Prompt + Hint Ladder, S05 RAG-Grounded Answers)
 
 ---
 
@@ -4666,6 +4895,249 @@ src/
 - Screen reader announcements for dynamic content
 - Timer warnings at 75%, 90% announced to screen readers
 - Error identification with `aria-invalid` and text (not color alone)
+
+### AI Deep Strategy Functional Requirements (ADS-FR1 to ADS-FR71)
+
+**Model Selection & Configuration (ADS-FR1 to ADS-FR8):**
+
+- ADS-FR1: User can view all available AI models for each configured provider, grouped by tier (economy/balanced/premium)
+- ADS-FR2: User can select a default model per provider
+- ADS-FR3: User can assign a specific model to each AI feature independently (per-feature override), including different models from the same provider
+- ADS-FR4: System uses the per-feature model override when invoking AI for that feature, falling back to the provider's default model if no override is set
+- ADS-FR5: User can view cost, speed, and capability indicators for each model before selecting
+- ADS-FR6: System applies model selection changes immediately without requiring page reload
+- ADS-FR7: Free-tier user can only select models marked as `freeTierAllowed: true` in the model registry
+- ADS-FR8: Free-tier user can only select providers allowed on the free tier (Ollama, Groq, Gemini, GLM)
+
+**Socratic Tutor (ADS-FR9 to ADS-FR17):**
+
+- ADS-FR9: User can start a Socratic tutoring session after completing (or during) a lesson
+- ADS-FR10: System conducts Socratic questioning — probing understanding through questions rather than providing direct answers
+- ADS-FR11: System uses lesson content and user notes as context (RAG) when generating tutor questions
+- ADS-FR12: System identifies and records misconceptions from user responses during tutor sessions
+- ADS-FR13: User can select tutor difficulty mode (Guided / Challenging / Expert)
+- ADS-FR14: System adapts difficulty based on session history — harder questions when user answers well, more scaffolding when struggling
+- ADS-FR15: User can resume a previous tutor session for the same lesson
+- ADS-FR16: System persists tutor session history including all messages and identified misconceptions
+- ADS-FR17: Tutor-identified misconceptions feed into the Knowledge Gaps feature
+
+**Smart Flashcard Generator (ADS-FR18 to ADS-FR24):**
+
+- ADS-FR18: System can auto-generate flashcards from lesson content (transcripts, notes, or both)
+- ADS-FR19: System generates multiple flashcard types: Q&A, cloze deletion, concept definition, true/false
+- ADS-FR20: System auto-generates targeted flashcards from tutor-identified misconceptions
+- ADS-FR21: User can accept or reject individual auto-generated flashcards before they enter a deck
+- ADS-FR22: User can manually create, edit, and delete flashcards
+- ADS-FR23: User can organize flashcards into decks associated with lessons or courses
+- ADS-FR24: System deduplicates generated flashcards against existing decks
+
+**Spaced Repetition / FSRS (ADS-FR25 to ADS-FR31):**
+
+- ADS-FR25: System schedules flashcard reviews using the FSRS algorithm based on card state and user performance
+- ADS-FR26: User can rate each flashcard during review (Again / Hard / Good / Easy)
+- ADS-FR27: System tracks card state across reviews: New -> Learning -> Review -> Relearning
+- ADS-FR28: User can view cards due for review today across all decks
+- ADS-FR29: User can see a "Due Today" widget on the Overview dashboard
+- ADS-FR30: System tracks and displays flashcard review streaks
+- ADS-FR31: User can configure desired retention rate (default 0.85)
+
+**Adaptive Quiz Engine (ADS-FR32 to ADS-FR39):**
+
+- ADS-FR32: System can generate quizzes from lesson content with specified format mix
+- ADS-FR33: System supports five question types: multiple-choice, fill-in-blank, short-answer, true/false, concept-matching
+- ADS-FR34: System scales quiz difficulty per concept based on user's historical performance
+- ADS-FR35: System generates plausible distractors for multiple-choice questions based on common misconceptions
+- ADS-FR36: User receives immediate feedback with explanations for incorrect answers
+- ADS-FR37: User can review mistakes at the end of a quiz
+- ADS-FR38: Quiz wrong answers feed into Knowledge Gap Detection
+- ADS-FR39: User can take a focused quiz on specific weak concepts from the Knowledge Gaps page
+
+**AI Study Buddy (ADS-FR40 to ADS-FR47):**
+
+- ADS-FR40: User can access a persistent conversational AI overlay from any page in the application
+- ADS-FR41: System detects the user's current page, lesson, and course context for relevant responses
+- ADS-FR42: System classifies user intent and routes to appropriate features
+- ADS-FR43: Study Buddy can answer questions about any course content using RAG
+- ADS-FR44: Study Buddy provides citations linking answers back to specific lessons or notes
+- ADS-FR45: Study Buddy offers proactive suggestions based on context (due flashcards, recommended quizzes, knowledge gaps)
+- ADS-FR46: User can configure Study Buddy personality tone (Encouraging / Neutral / Challenging)
+- ADS-FR47: Study Buddy conversation persists across page navigation within a session
+
+**Token Metering & Usage (ADS-FR48 to ADS-FR54):**
+
+- ADS-FR48: System counts tokens consumed per AI request (input + output)
+- ADS-FR49: System tracks usage per user, per provider, per model, and per feature
+- ADS-FR50: User can view their token usage summary (used/remaining) in AI Settings
+- ADS-FR51: User can view per-feature usage breakdown
+- ADS-FR52: System displays a warning when user reaches 80% of their monthly token budget
+- ADS-FR53: System completes the current response when budget is exhausted, then shows an upgrade prompt
+- ADS-FR54: System suggests cheaper model alternatives when budget is running low
+
+**Subscription & Tier Enforcement (ADS-FR55 to ADS-FR62):**
+
+- ADS-FR55: System enforces provider restrictions by tier — free tier limited to Ollama, Groq, Gemini, GLM
+- ADS-FR56: System enforces model restrictions by tier — free tier limited to economy models
+- ADS-FR57: System enforces monthly usage limits per feature for free-tier users
+- ADS-FR58: System displays contextual upgrade CTAs when usage limits are hit
+- ADS-FR59: System detects BYOK users and bypasses all tier restrictions
+- ADS-FR60: Premium users can access all providers, all models, and per-feature model overrides
+- ADS-FR61: User can upgrade from Free to Premium via Stripe checkout
+- ADS-FR62: System displays a BYOK setup option alongside the upgrade CTA
+
+**Cross-Feature Intelligence Loop (ADS-FR63 to ADS-FR67):**
+
+- ADS-FR63: Tutor-identified misconceptions auto-generate targeted flashcards (user confirms/rejects)
+- ADS-FR64: Quiz wrong answers create targeted review suggestions in Knowledge Gaps
+- ADS-FR65: System aggregates knowledge gap signals from tutor misconceptions, quiz results, and study patterns into unified gap scoring
+- ADS-FR66: AI Learning Path considers actual comprehension data when suggesting lesson order
+- ADS-FR67: System suggests revisiting earlier lessons when knowledge gaps are detected in dependent concepts
+
+**Error Handling & Quality (ADS-FR68 to ADS-FR71):**
+
+- ADS-FR68: System displays user-friendly error messages when AI provider calls fail, with retry guidance
+- ADS-FR69: User can report incorrect AI-generated content (tutor responses, flashcards, quiz questions)
+- ADS-FR70: Lesson progress is preserved independently of AI feature failures
+- ADS-FR71: System logs rejected flashcards and reported quiz questions for quality metrics
+
+### AI Deep Strategy Non-Functional Requirements (ADS-NFR1 to ADS-NFR29)
+
+**Performance (ADS-NFR1 to ADS-NFR8):**
+
+- ADS-NFR1: Tutor first token <2s economy, <4s premium
+- ADS-NFR2: Flashcard generation (10 cards) <5s with loading indicator
+- ADS-NFR3: Quiz generation (10 questions) <8s with progress feedback
+- ADS-NFR4: FSRS scheduling <50ms for 1,000 cards (local, no network)
+- ADS-NFR5: Model picker render <100ms
+- ADS-NFR6: New route pages load <200ms via lazy loading
+- ADS-NFR7: FCP must not regress beyond 1.5s baseline
+- ADS-NFR8: `ts-fsrs` bundle <50KB gzipped, loaded only on flashcard routes
+
+**Security (ADS-NFR9 to ADS-NFR14):**
+
+- ADS-NFR9: AI prompts stateless — no user PII in system prompts
+- ADS-NFR10: All learning data stored locally in IndexedDB (no server transmission without consent)
+- ADS-NFR11: Supabase usage data exportable in <30s (GDPR Art. 20)
+- ADS-NFR12: Account deletion cascades to all Supabase records
+- ADS-NFR13: Independent AI consent toggles per new feature
+- ADS-NFR14: Tutor safety boundaries — no medical/legal/financial advice
+
+**Accessibility (ADS-NFR15 to ADS-NFR21):**
+
+- ADS-NFR15: All new UI meets WCAG 2.1 AA (keyboard, ARIA, 4.5:1 contrast)
+- ADS-NFR16: Flashcard review: Enter/Space flip, number keys rate, Tab navigate
+- ADS-NFR17: Quiz Player: keyboard-only for all 5 question types
+- ADS-NFR18: Study Buddy: no focus trap, Escape dismisses, ARIA label on FAB
+- ADS-NFR19: Tutor messages announced via ARIA live regions
+- ADS-NFR20: Progress indicators use `role="progressbar"` with aria-valuenow
+- ADS-NFR21: Animations respect `prefers-reduced-motion`
+
+**Reliability (ADS-NFR22 to ADS-NFR25):**
+
+- ADS-NFR22: AI failures don't affect lesson progress, flashcard review, or quiz state
+- ADS-NFR23: FSRS works entirely offline
+- ADS-NFR24: Token metering accurate within +/-5%
+- ADS-NFR25: Dexie migrations non-destructive (new tables only)
+
+**Integration (ADS-NFR26 to ADS-NFR29):**
+
+- ADS-NFR26: Per-feature model override propagates <1s
+- ADS-NFR27: `ts-fsrs` pinned version (lockfile)
+- ADS-NFR28: Supabase usage tracking handles intermittent connectivity (local queue + retry)
+- ADS-NFR29: Stripe subscription changes reflected <30s
+
+### AI Deep Strategy Additional Requirements (from Architecture)
+
+- Model Registry (`src/lib/modelRegistry.ts`) with `ModelInfo` interface extending existing `AI_PROVIDERS` pattern
+- Per-feature model override resolution chain: feature override -> global selection -> provider default (3-tier in `getLLMClient`)
+- Dexie schema version bump with 7 new tables: `tutorSessions`, `tutorMisconceptions`, `flashcardDecks`, `flashcards`, `reviewSessions`, `quizzes`, `quizAttempts`
+- Token counting middleware in Express proxy server (`server/middleware/tokenCounter.ts`)
+- Supabase tables: `ai_usage` (per-request logging), `ai_budgets` (tier-based monthly limits)
+- Study Buddy floating overlay in `Layout.tsx` following existing overlay pattern
+- FSRS algorithm via `ts-fsrs` npm package (pinned version, lazy-loaded on flashcard routes only)
+- Ollama model picker generalization into universal `ModelPicker.tsx`
+- Socratic prompt strategy with 3 difficulty modes using RAG coordinator for content grounding
+- New Zustand stores: `useTutorStore`, `useFlashcardStore`, `useQuizStore`, `useStudyBuddyStore`
+- New routes: `/flashcards`, `/flashcards/:deckId/review`, `/quiz/:quizId`
+- Code splitting: lazy-load new route pages, `ts-fsrs` per-route, Tutor Panel within LessonPlayer
+- AI consent toggles extended for new features
+- Safety boundaries in Socratic Tutor system prompts
+- Content filtering for quiz generation
+
+### AI Deep Strategy FR Coverage Map
+
+| FR | Epic | Story | Notes |
+|----|------|-------|-------|
+| ADS-FR1 | E36 | S01, S02 | Model registry catalog + picker UI |
+| ADS-FR2 | E36 | S02 | Model picker with per-provider default selection |
+| ADS-FR3 | E36 | S04 | Per-feature override UI + config |
+| ADS-FR4 | E36 | S03, S04 | getLLMClient resolution chain |
+| ADS-FR5 | E36 | S02 | Cost/speed/capability indicators in picker |
+| ADS-FR6 | E36 | S03 | Immediate propagation without reload |
+| ADS-FR7 | E41 | S01 | Free tier model filtering |
+| ADS-FR8 | E41 | S01 | Free tier provider restrictions |
+| ADS-FR9 | E37 | S03 | Start tutoring button in LessonPlayer |
+| ADS-FR10 | E37 | S02 | Socratic prompts |
+| ADS-FR11 | E37 | S02 | RAG context from lesson content + notes |
+| ADS-FR12 | E37 | S04 | Misconception detection from responses |
+| ADS-FR13 | E37 | S03 | Difficulty mode selector in UI |
+| ADS-FR14 | E37 | S04 | Adaptive difficulty engine |
+| ADS-FR15 | E37 | S03 | Resume previous session |
+| ADS-FR16 | E37 | S01 | Dexie persistence for sessions + messages |
+| ADS-FR17 | E37 | S05 | Misconceptions feed into Knowledge Gaps |
+| ADS-FR18 | E39 | S02 | AI generation from lesson content |
+| ADS-FR19 | E39 | S02 | Multiple card types |
+| ADS-FR20 | E43 | S01 | Auto-generation from tutor misconceptions |
+| ADS-FR21 | E39 | S02 | Accept/reject individual cards |
+| ADS-FR22 | E39 | S04 | Manual CRUD for flashcards |
+| ADS-FR23 | E39 | S04 | Deck management + organization |
+| ADS-FR24 | E39 | S02 | Deduplication against existing decks |
+| ADS-FR25 | E39 | S01 | FSRS scheduling algorithm |
+| ADS-FR26 | E39 | S03 | Rating buttons (Again/Hard/Good/Easy) |
+| ADS-FR27 | E39 | S01 | Card state machine |
+| ADS-FR28 | E39 | S03 | Cards due today across all decks |
+| ADS-FR29 | E39 | S05 | "Due Today" widget on Overview |
+| ADS-FR30 | E39 | S05 | Review streak tracking |
+| ADS-FR31 | E39 | S01 | Configurable retention rate |
+| ADS-FR32 | E40 | S02 | Quiz generation from lesson content |
+| ADS-FR33 | E40 | S01 | Five question types with unified interface |
+| ADS-FR34 | E40 | S02 | Difficulty scaling per concept |
+| ADS-FR35 | E40 | S02 | Plausible MCQ distractors |
+| ADS-FR36 | E40 | S03 | Immediate feedback with explanations |
+| ADS-FR37 | E40 | S03 | Review mistakes mode |
+| ADS-FR38 | E40 | S04 | Quiz results feed Knowledge Gaps |
+| ADS-FR39 | E40 | S04 | Focused quiz from Knowledge Gaps |
+| ADS-FR40 | E42 | S01 | Persistent overlay from any page |
+| ADS-FR41 | E42 | S01 | Context engine (page, lesson, course) |
+| ADS-FR42 | E42 | S03 | Intent detection + feature routing |
+| ADS-FR43 | E42 | S02 | RAG across all course content |
+| ADS-FR44 | E42 | S02 | Citation links to lessons/notes |
+| ADS-FR45 | E42 | S04 | Proactive suggestions |
+| ADS-FR46 | E42 | S05 | Configurable personality tone |
+| ADS-FR47 | E42 | S01 | Session persistence across navigation |
+| ADS-FR48 | E38 | S01 | Token counting per request |
+| ADS-FR49 | E38 | S02 | Usage tracking per user/provider/model/feature |
+| ADS-FR50 | E38 | S03 | Usage summary in AI Settings |
+| ADS-FR51 | E38 | S03 | Per-feature usage breakdown |
+| ADS-FR52 | E38 | S04 | Warning at 80% budget |
+| ADS-FR53 | E38 | S04 | Complete response then upgrade prompt at 100% |
+| ADS-FR54 | E38 | S04 | Suggest cheaper model alternatives |
+| ADS-FR55 | E41 | S01 | Provider restrictions by tier |
+| ADS-FR56 | E41 | S01 | Model restrictions by tier |
+| ADS-FR57 | E41 | S02 | Monthly per-feature usage limits |
+| ADS-FR58 | E41 | S03 | Contextual upgrade CTAs |
+| ADS-FR59 | E41 | S01 | BYOK detection bypasses restrictions |
+| ADS-FR60 | E41 | S01 | Premium access to all providers/models |
+| ADS-FR61 | E41 | S03 | Stripe checkout upgrade flow |
+| ADS-FR62 | E41 | S03 | BYOK setup alongside upgrade CTA |
+| ADS-FR63 | E43 | S01 | Misconception -> flashcard auto-generation |
+| ADS-FR64 | E43 | S02 | Quiz wrong answers -> Knowledge Gaps |
+| ADS-FR65 | E43 | S02 | Unified gap scoring from multiple sources |
+| ADS-FR66 | E43 | S03 | Comprehension-driven lesson ordering |
+| ADS-FR67 | E43 | S03 | Revisit earlier lessons for dependent concepts |
+| ADS-FR68 | All | Cross-cutting | Error handling in all AI features |
+| ADS-FR69 | All | Cross-cutting | Report incorrect AI content |
+| ADS-FR70 | All | Cross-cutting | Lesson progress independence |
+| ADS-FR71 | E39, E40 | S02, S02 | Rejection/report logging |
 
 ### FR Coverage Map
 
@@ -10460,3 +10932,2151 @@ So that I can study notes and transcripts without internet and remain compliant 
 - Key files: `src/lib/youtubeMetadataRefresh.ts`, `vite.config.ts` (CSP headers)
 
 ---
+
+## Epic 36: Model Selection + Per-Feature Overrides
+
+**Goal:** Enable users to browse, select, and assign AI models per provider and per feature, connecting the disconnected model parameter wire through the LLM pipeline. This is the foundation for all subsequent epics — every new AI feature depends on model routing.
+
+**Why:** Users are locked into hardcoded defaults (Haiku 4.5, GPT-4-turbo). Different AI tasks have 5-10x cost differences — summaries work on economy models, tutoring needs premium reasoning. Per-feature overrides let users optimize cost vs. quality per task.
+
+**Current State:** `ProxyLLMClient` accepts `model` param (proxy-client.ts:29) and sends it to proxy (line 58). `getProviderModel()` accepts optional `model` override (line 30). But `factory.ts:95` creates `ProxyLLMClient(providerId, apiKey)` — never passes model. The wire is disconnected.
+
+### Story 36.1: Model Registry + Provider Model Catalog
+
+As a developer building AI features,
+I want a typed model registry with cost, speed, and capability metadata for all providers,
+So that the UI and pipeline can make informed model selection decisions.
+
+**Acceptance Criteria:**
+
+**Given** the application initializes
+**When** `getModelsForProvider('anthropic')` is called
+**Then** it returns an array of `ModelInfo` objects for Anthropic models (Haiku 4.5, Sonnet 4.6, Opus 4.6) with correct tier, pricing, speed, and bestFor fields
+
+**Given** a cloud provider (OpenAI, Anthropic, Groq, Gemini, GLM)
+**When** `getDefaultModel(providerId)` is called
+**Then** it returns exactly one model with `isDefault: true` for that provider
+
+**Given** the model registry
+**When** `getFreeTierModels()` is called
+**Then** it returns only models from free providers (Ollama, Groq, Gemini, GLM) with `freeTierAllowed: true`
+
+**Given** the Ollama provider
+**When** `getModelsForProvider('ollama')` is called
+**Then** it returns a placeholder entry indicating dynamic model fetching (actual models come from user's Ollama server)
+
+**Given** any model in the registry
+**When** its `ModelInfo` is accessed
+**Then** it contains: id, name, provider, tier (economy/balanced/premium), inputCostPer1M, outputCostPer1M, contextWindow, speed (fast/medium/slow), bestFor[], isDefault?, freeTierAllowed?
+
+**Technical Notes:**
+- Create `src/lib/modelRegistry.ts` (NEW)
+- Extends existing `AI_PROVIDERS` pattern from `src/lib/aiConfiguration.ts`
+- Catalog for 5 cloud providers (2-4 models each) + Ollama placeholder
+- Export: `getModelsForProvider()`, `getDefaultModel()`, `getModelById()`, `getFreeTierModels()`, `getModelsForFeature()`
+- Unit tests for all exported functions
+
+### Story 36.2: Model Picker Component + Settings Integration
+
+As a user configuring AI settings,
+I want to browse and select models for each provider with clear cost, speed, and capability indicators,
+So that I can make informed choices about which model to use.
+
+**Acceptance Criteria:**
+
+**Given** the user opens AI Settings and has a provider selected
+**When** the Model Picker renders below the provider selector
+**Then** it displays models grouped by tier (Economy / Balanced / Premium) with name, cost badge, speed indicator, "best for" tags, and context window size
+
+**Given** the user selects a model from the picker
+**When** the selection is confirmed
+**Then** the `selectedModels[providerId]` config value is updated and persisted in Dexie
+
+**Given** the user has Ollama as their provider
+**When** the Model Picker renders
+**Then** it fetches available models from the Ollama server (reusing `OllamaModelPicker` behavior) and displays them within the universal picker shell
+
+**Given** the user switches providers in AI Settings
+**When** the provider changes
+**Then** the Model Picker updates to show the new provider's models, preserving previous selections for other providers
+
+**Technical Notes:**
+- Create `src/app/components/figma/ModelPicker.tsx` (NEW) — universal model selector
+- Generalize existing `OllamaModelPicker.tsx` pattern into the new component
+- Uses shadcn Popover + Command pattern (searchable combobox)
+- Integrate into `AIConfigurationSettings.tsx` below provider selector
+- Add `selectedModels: Partial<Record<AIProviderId, string>>` to config interface in `aiConfiguration.ts`
+
+### Story 36.3: Wire Model Selection Through LLM Pipeline
+
+As a user who selected a specific model,
+I want my selection to be used when the system makes AI calls,
+So that I get responses from the model I chose.
+
+**Acceptance Criteria:**
+
+**Given** the user has selected a model for their current provider
+**When** any AI feature invokes `getLLMClient()`
+**Then** the returned client uses the selected model (not the hardcoded default)
+
+**Given** the user has NOT selected a model (no `selectedModels` entry)
+**When** `getLLMClient()` is invoked
+**Then** the system falls back to `getDefaultModel(provider).id` from the registry
+
+**Given** the user changes their model selection in Settings
+**When** an AI feature is next invoked (without page reload)
+**Then** the new model selection is used immediately
+**And** the change propagates within 1 second
+
+**Given** an Ollama user
+**When** `getLLMClient()` is invoked
+**Then** the Ollama client receives the selected model parameter
+
+**Technical Notes:**
+- Modify `factory.ts:getLLMClient()` to read `config.selectedModels[provider]` and pass to `ProxyLLMClient`
+- Modify `factory.ts:getLLMClientForProvider()` similarly
+- Fix the disconnected wire at `factory.ts:95` — pass model to `new ProxyLLMClient(providerId, apiKey, model)`
+- Verify `server/providers.ts:getProviderModel()` correctly uses the model override
+- Update `DEFAULT_MODELS` map to latest versions (claude-sonnet-4-6, gpt-4.1, etc.)
+- Files: `src/ai/llm/factory.ts`, `server/providers.ts`
+
+### Story 36.4: Per-Feature Model Overrides
+
+As a power user with multiple AI features,
+I want to assign different models to different features (e.g., premium for tutoring, economy for flashcards),
+So that I can optimize cost vs. quality per task.
+
+**Acceptance Criteria:**
+
+**Given** the user expands "Advanced: Per-Feature Models" in AI Settings
+**When** the section renders
+**Then** it shows each AI feature (videoSummary, noteQA, learningPath, knowledgeGaps, noteOrganization, analytics, tutor, flashcards, quiz) with its current model (inherited or overridden) and a dropdown to override
+
+**Given** the user sets a per-feature override for "tutor" to Opus 4.6
+**When** the Socratic Tutor invokes `getLLMClient('tutor')`
+**Then** the client uses Opus 4.6 regardless of the global provider model selection
+
+**Given** no per-feature override is set for a feature
+**When** that feature invokes `getLLMClient(featureId)`
+**Then** it falls back to the global model selection, then to the provider default
+
+**Given** the user clicks "Reset to Default" on a per-feature override
+**When** the reset completes
+**Then** the override is removed and the feature resumes using the global model
+
+**Technical Notes:**
+- Add `featureModelOverrides: Partial<Record<AIFeatureId, string>>` to config
+- Define `AIFeatureId` type: `'videoSummary' | 'noteQA' | 'learningPath' | 'knowledgeGaps' | 'noteOrganization' | 'analytics' | 'tutor' | 'flashcards' | 'quiz' | 'studyBuddy'`
+- UI: Collapsible section in `AIConfigurationSettings.tsx` with per-feature dropdown
+- Modify `getLLMClient(featureId?)` — 3-tier resolution: featureOverride -> globalSelection -> registryDefault
+- Files: `aiConfiguration.ts`, `AIConfigurationSettings.tsx`, `factory.ts`, each AI feature hook
+
+---
+
+## Epic 37: AI Socratic Tutor
+
+**Goal:** Build a Socratic tutoring system that probes student understanding through questions rather than providing answers, identifies misconceptions, and adapts difficulty — the #1 differentiator for Knowlune.
+
+**Why:** Research shows 40% comprehension gains over passive learning. No competing personal learning platform has AI Socratic tutoring integrated with course content.
+
+**Architecture:**
+```
+LessonPlayer.tsx
+  └── TutorPanel (collapsible sidebar)
+        ├── TutorConversation (message list)
+        ├── TutorInput (user responses)
+        └── TutorControls (difficulty, topic focus)
+
+src/ai/tutor/
+  ├── types.ts          (TutorSession, TutorMessage, MisconceptionRecord)
+  ├── prompts.ts        (Socratic system prompts, difficulty-scaled)
+  ├── sessionManager.ts (create/resume/close sessions)
+  ├── adaptiveEngine.ts (difficulty adjustment, misconception tracking)
+  └── hooks/
+      └── useTutor.ts   (React hook orchestrating the tutor flow)
+
+Dexie tables:
+  - tutorSessions: { id, lessonId, courseId, startedAt, messages[], difficulty, misconceptions[] }
+  - tutorMisconceptions: { id, sessionId, concept, description, resolvedAt? }
+```
+
+### Story 37.1: Tutor Data Model + Dexie Storage
+
+As a developer building the tutor feature,
+I want typed data models and Dexie persistence for tutor sessions, messages, and misconceptions,
+So that tutor state persists across sessions and misconception data can feed other features.
+
+**Acceptance Criteria:**
+
+**Given** the Dexie schema is upgraded
+**When** the database initializes
+**Then** `tutorSessions` and `tutorMisconceptions` tables exist with correct indexes (lessonId, courseId, sessionId, concept)
+
+**Given** a tutor session is created via `createSession(lessonId, courseId, difficulty)`
+**When** the operation completes
+**Then** a `TutorSession` record is stored with status 'active', startedAt timestamp, and difficulty mode
+
+**Given** a message is added via `addMessage(sessionId, message)`
+**When** the operation completes
+**Then** the message (role, content, timestamp, misconceptionDetected?) is persisted and the session's messageCount is incremented
+
+**Given** a misconception is detected
+**When** it is recorded via `addMisconception(sessionId, concept, description)`
+**Then** a `MisconceptionRecord` is stored with detectedAt timestamp and no resolvedAt
+
+**Given** an existing session for a lesson
+**When** `getSessionsForLesson(lessonId)` is called
+**Then** it returns all sessions ordered by startedAt descending
+
+**Technical Notes:**
+- Define types in `src/ai/tutor/types.ts`: `TutorSession`, `TutorMessage`, `MisconceptionRecord`, `TutorDifficulty`
+- Add Dexie tables: `tutorSessions` (`++id, lessonId, courseId, startedAt, difficulty, status`), `tutorMisconceptions` (`++id, sessionId, concept, detectedAt, resolvedAt`)
+- CRUD: createSession, addMessage, closeSession, getMisconceptions, getSessionsForLesson
+- Schema version bump — non-destructive migration (new tables only, ADS-NFR25)
+- Files: `src/ai/tutor/types.ts` (NEW), `src/db/` (schema update)
+
+### Story 37.2: Socratic Prompt Engineering + LLM Integration
+
+As a learner using the tutor,
+I want the AI to ask probing questions that reveal my understanding rather than giving me answers,
+So that I actively engage with the material and discover my own misconceptions.
+
+**Acceptance Criteria:**
+
+**Given** a tutor session in "Guided" mode
+**When** the system generates a tutor response
+**Then** the response asks simple, scaffolded questions with hints within 2 exchanges if the student struggles
+
+**Given** a tutor session in "Challenging" mode
+**When** the system generates a tutor response
+**Then** the response asks probing questions, does NOT give direct answers, and provides hints only after 3+ exchanges of struggling
+
+**Given** a tutor session in "Expert" mode
+**When** the system generates a tutor response
+**Then** the response challenges every answer (even correct ones), probes edge cases, and only confirms mastery after the student defends reasoning from multiple angles
+
+**Given** a lesson with notes and transcript content
+**When** the tutor generates a question
+**Then** the question is grounded in the lesson content via RAG (uses `ragCoordinator.retrieveContext()`) — not hallucinated generic questions
+
+**Given** a student response that reveals a misconception
+**When** the AI processes the response
+**Then** the response includes a structured misconception tag that the system can extract and record
+
+**Technical Notes:**
+- Create system prompts for 3 difficulty modes in `src/ai/tutor/prompts.ts`
+- Session management in `src/ai/tutor/sessionManager.ts` — orchestrates prompt construction, RAG context retrieval, and LLM calls
+- Reuses `ragCoordinator.ts` for content retrieval
+- Uses `getLLMClient('tutor')` for model selection
+- Safety boundary in all prompts: no medical/legal/financial advice (ADS-NFR14)
+- Files: `src/ai/tutor/prompts.ts` (NEW), `src/ai/tutor/sessionManager.ts` (NEW)
+
+### Story 37.3: Tutor UI (Chat Panel in Lesson Player)
+
+As a learner watching a lesson,
+I want a chat-style tutor panel where I can start and resume Socratic tutoring sessions,
+So that I can actively test my understanding alongside course content.
+
+**Acceptance Criteria:**
+
+**Given** the user is on a lesson page
+**When** they click "Start Tutoring"
+**Then** a collapsible tutor panel opens (right sidebar on desktop) with a chat interface and difficulty selector
+
+**Given** the user is in an active tutor session
+**When** they type a response and submit
+**Then** the message appears in the chat, the AI streams a response with a typing indicator, and the response renders progressively
+
+**Given** the user has a previous tutor session for this lesson
+**When** they open the tutor panel
+**Then** they can choose to resume the previous session or start a new one
+
+**Given** the tutor panel is open on desktop
+**When** the user clicks the collapse button
+**Then** the panel closes and the lesson content area expands to full width
+
+**Given** the user is on a tablet viewport (768px-1024px)
+**When** the tutor panel opens
+**Then** it renders as a bottom drawer instead of a right sidebar
+
+**Technical Notes:**
+- Create `src/app/components/figma/TutorPanel.tsx` (NEW) — collapsible chat panel
+- Reuse chat UI patterns from `ChatQA` page (message list, input, streaming)
+- Integrate into `LessonPlayer.tsx` as optional right sidebar
+- Difficulty selector (Guided/Challenging/Expert) in panel header
+- Session history dropdown to resume previous sessions
+- SSE streaming with typing indicator (existing `AsyncGenerator<LLMStreamChunk>` pattern)
+- Accessibility: ARIA live regions for messages (ADS-NFR19), keyboard navigation, focus management
+- Files: `TutorPanel.tsx` (NEW), `LessonPlayer.tsx`
+
+### Story 37.4: Misconception Tracking + Adaptive Difficulty
+
+As a learner using the tutor over multiple sessions,
+I want the system to track my misconceptions and automatically adjust question difficulty,
+So that I'm always challenged at the right level and my weak areas are revisited.
+
+**Acceptance Criteria:**
+
+**Given** the AI identifies a misconception in a student response
+**When** the misconception is processed
+**Then** it is stored in `tutorMisconceptions` with concept tag and description, and the session's misconceptionCount is incremented
+
+**Given** the student answers 3+ questions correctly in a row at the current difficulty
+**When** the adaptive engine evaluates the session
+**Then** difficulty automatically increases (e.g., Guided -> Challenging)
+
+**Given** the student struggles with 2+ consecutive questions
+**When** the adaptive engine evaluates
+**Then** more scaffolding is provided (additional hints, simpler sub-questions) without dropping the named difficulty mode
+
+**Given** a misconception was identified in a previous session
+**When** the user starts a new session for the same course
+**Then** the tutor revisits the past misconception with a targeted follow-up question within the first 3 exchanges
+
+**Given** a previously-identified misconception
+**When** the student demonstrates correct understanding in a subsequent session
+**Then** the misconception's `resolvedAt` timestamp is set
+
+**Technical Notes:**
+- Create `src/ai/tutor/adaptiveEngine.ts` (NEW)
+- Misconception detection: AI response includes structured tags; engine parses and stores
+- Difficulty adjustment: tracks consecutive correct/incorrect within session
+- Cross-session persistence: queries `tutorMisconceptions` for unresolved items at session start
+- Resolution detection: compares student responses against previously-flagged concepts
+
+### Story 37.5: Integration with Knowledge Gaps
+
+As a learner reviewing my knowledge gaps,
+I want tutor-identified misconceptions to appear in my Knowledge Gaps dashboard,
+So that I have a unified view of what I need to work on and can practice targeted concepts.
+
+**Acceptance Criteria:**
+
+**Given** the tutor identifies a misconception in a session
+**When** the Knowledge Gaps page loads
+**Then** the misconception appears as a knowledge gap with source "Socratic Tutor" and concept details
+
+**Given** the user views a tutor-sourced gap on the Knowledge Gaps page
+**When** they click "Practice with Tutor"
+**Then** a new tutor session opens focused on that specific concept
+
+**Given** misconceptions are resolved (student demonstrates understanding)
+**When** the Knowledge Gaps page refreshes
+**Then** the resolved gap shows a "Resolved" status with the resolution date
+
+**Given** the Knowledge Gaps page shows gaps from multiple sources (tutor, study patterns)
+**When** gaps are displayed
+**Then** each gap shows its source type and all sources are weighted appropriately in the gap severity score
+
+**Technical Notes:**
+- Extend `src/ai/knowledgeGaps/detectGaps.ts` to query `tutorMisconceptions` Dexie table
+- Modify `src/app/pages/KnowledgeGaps.tsx` to display tutor-sourced gaps with "Practice with Tutor" action
+- Navigation: "Practice with Tutor" opens LessonPlayer with tutor panel pre-opened and focused on the concept
+- Files: `detectGaps.ts`, `KnowledgeGaps.tsx`
+
+---
+
+## Epic 38: Token Metering + Usage Dashboard
+
+**Goal:** Implement server-side token counting, Supabase usage tracking, and a client-side usage dashboard — the billing infrastructure foundation. Ships in parallel with Epic 37.
+
+**Why:** Usage metering is required before enforcing subscription tiers and free-tier limits (Epic 41). Must be in place before restricting model access.
+
+**Architecture:**
+```
+Proxy Server Middleware:
+  request → entitlement check → AI provider call → count tokens → log to Supabase → respond
+
+Supabase tables:
+  - ai_usage: { id, user_id, provider, model, feature, input_tokens, output_tokens, cost_estimate, created_at }
+  - ai_budgets: { user_id, tier, monthly_limit, used_this_month, reset_date }
+```
+
+### Story 38.1: Token Counting Middleware
+
+As the system processing AI requests,
+I want to count tokens consumed per request (input + output),
+So that usage can be tracked for billing and budget enforcement.
+
+**Acceptance Criteria:**
+
+**Given** an AI request is processed through the proxy server
+**When** the provider response includes usage metadata (token counts)
+**Then** the middleware extracts input_tokens and output_tokens from the response
+
+**Given** an AI provider response that does NOT include usage metadata
+**When** the response is processed
+**Then** the middleware estimates tokens using tiktoken as a fallback
+
+**Given** an SSE streaming response
+**When** the stream completes
+**Then** the total token count is extracted from the final SSE event's usage field (or accumulated from stream chunks)
+
+**Given** the token counting middleware
+**When** any error occurs during counting
+**Then** the response is still delivered to the client (counting failure must not block AI responses)
+
+**Technical Notes:**
+- Add middleware to proxy server response handler in `server/index.ts`
+- Create `server/middleware/tokenCounter.ts` (NEW)
+- Parse SSE stream for usage metadata (most providers return token counts in final chunk)
+- Fallback: `tiktoken` package for providers that don't report counts
+- Accuracy target: within +/-5% of provider-reported tokens (ADS-NFR24)
+- Non-blocking: counting errors logged but never block response delivery
+
+### Story 38.2: Usage Tracking Supabase Tables
+
+As the system tracking AI usage,
+I want per-request usage logged to Supabase with user, provider, model, and feature dimensions,
+So that usage data supports billing, analytics, and budget enforcement.
+
+**Acceptance Criteria:**
+
+**Given** an AI request completes with token counts
+**When** the token counter fires
+**Then** a row is inserted into `ai_usage` with: user_id, provider, model, feature, input_tokens, output_tokens, cost_estimate, created_at
+
+**Given** the `ai_budgets` table
+**When** a usage event is logged
+**Then** `used_this_month` is incremented by the total tokens consumed
+
+**Given** a new month begins
+**When** the budget reset runs
+**Then** `used_this_month` resets to 0 for all users and `reset_date` updates
+
+**Given** intermittent Supabase connectivity
+**When** a usage event fails to log
+**Then** the event is queued locally and retried on next successful connection (ADS-NFR28)
+
+**Technical Notes:**
+- Create Supabase migration for `ai_usage` and `ai_budgets` tables
+- Create `server/middleware/usageLogger.ts` (NEW)
+- Daily/monthly aggregation: Supabase edge function or cron for budget resets
+- Queue mechanism for intermittent connectivity (local buffer with retry)
+- Files: Supabase migrations, `usageLogger.ts` (NEW)
+
+### Story 38.3: Usage Dashboard UI
+
+As a user monitoring my AI usage,
+I want a visual dashboard showing my token consumption by feature, provider, and time period,
+So that I can understand my usage patterns and manage my budget.
+
+**Acceptance Criteria:**
+
+**Given** the user navigates to AI Settings
+**When** the Usage Dashboard section renders
+**Then** it displays a token budget bar showing used/remaining tokens for the current month
+
+**Given** the usage dashboard is visible
+**When** the user views the per-feature breakdown
+**Then** it shows token consumption per AI feature (tutor, flashcards, quiz, etc.) as a chart or table
+
+**Given** the usage dashboard is visible
+**When** the user views the per-model breakdown
+**Then** it shows estimated cost per model used during the current period
+
+**Given** a BYOK user views the dashboard
+**When** the budget section renders
+**Then** it shows "Unlimited (BYOK)" instead of a budget bar, but still shows usage analytics
+
+**Technical Notes:**
+- Create `src/app/components/figma/UsageDashboard.tsx` (NEW)
+- Integrate into Settings page under AI Configuration section
+- Budget bar: `role="progressbar"` with `aria-valuenow/min/max` (ADS-NFR20)
+- Chart: use existing recharts/chart component from shadcn/ui
+- Data fetched from Supabase `ai_usage` table (aggregated)
+- Files: `UsageDashboard.tsx` (NEW), Settings page integration
+
+### Story 38.4: Budget Warnings + Graceful Degradation
+
+As a user approaching my token budget limit,
+I want clear warnings and helpful suggestions before hitting the limit,
+So that I can take action to avoid service interruption.
+
+**Acceptance Criteria:**
+
+**Given** the user has consumed 80% of their monthly token budget
+**When** they invoke any AI feature
+**Then** a non-blocking warning toast appears: "You've used 80% of your monthly AI budget"
+
+**Given** the user has consumed 100% of their budget
+**When** they invoke an AI feature
+**Then** the system completes the current response, then shows an upgrade CTA with "Switch to a cheaper model" and "Upgrade to Premium" options
+
+**Given** the budget is running low (>80%)
+**When** the warning displays
+**Then** it includes a suggestion to switch specific high-cost features to economy models with estimated savings
+
+**Given** a BYOK user
+**When** they use AI features
+**Then** no budget warnings or limits apply — the warning system is entirely bypassed
+
+**Technical Notes:**
+- Create `src/ai/hooks/useBudgetCheck.ts` (NEW)
+- Integrate into all AI feature hooks (existing + new)
+- Toast warnings via Sonner (existing toast system)
+- Budget data fetched from Supabase `ai_budgets` table
+- BYOK detection: check for valid API key in config
+- Files: `useBudgetCheck.ts` (NEW), integration into all AI feature hooks
+
+---
+
+## Epic 39: Smart Flashcard Generator + Spaced Repetition
+
+**Goal:** Build AI-powered flashcard generation from lesson content with FSRS (Free Spaced Repetition Scheduler) for scientifically-optimized review scheduling.
+
+**Why:** Spaced repetition produces 80% recall at one week vs. 36% with passive re-study — a 44-percentage-point gap. Auto-generation from course content removes the barrier of manual card creation.
+
+**Architecture:**
+```
+src/ai/flashcards/
+  ├── types.ts         (Flashcard, FlashcardDeck, ReviewSession, ReviewSchedule)
+  ├── generator.ts     (LLM-based card generation from content)
+  ├── scheduler.ts     (FSRS algorithm for review scheduling)
+  ├── hooks/
+  │   ├── useFlashcardGenerator.ts
+  │   └── useReviewSession.ts
+  └── prompts.ts       (Card generation system prompts)
+
+Dexie tables:
+  - flashcardDecks: { id, lessonId, courseId, title, createdAt }
+  - flashcards: { id, deckId, type, front, back, clozeText?, difficulty, nextReview, interval, easeFactor }
+  - reviewSessions: { id, deckId, startedAt, cardsReviewed, correctCount }
+```
+
+### Story 39.1: Flashcard Data Model + FSRS Scheduling Algorithm
+
+As a developer building the flashcard system,
+I want typed data models and the FSRS algorithm implemented for scientifically-accurate review scheduling,
+So that flashcard reviews are scheduled based on memory science, not arbitrary intervals.
+
+**Acceptance Criteria:**
+
+**Given** the Dexie schema is upgraded
+**When** the database initializes
+**Then** `flashcardDecks`, `flashcards`, and `reviewSessions` tables exist with correct indexes
+
+**Given** a new flashcard is created
+**When** the FSRS scheduler evaluates it
+**Then** it is assigned state "New" with initial interval and ease factor
+
+**Given** a card in "Review" state rated "Again"
+**When** the scheduler processes the rating
+**Then** the card transitions to "Relearning" with a shortened interval
+
+**Given** a card rated "Good" in "Learning" state
+**When** the scheduler processes the rating
+**Then** the card transitions to "Review" with interval calculated by FSRS algorithm
+
+**Given** up to 1,000 cards in a user's collection
+**When** the scheduler calculates next review dates
+**Then** all calculations complete within 50ms (ADS-NFR4)
+
+**Given** the user has not configured a custom retention rate
+**When** the scheduler runs
+**Then** it uses the default target retention of 0.85
+
+**Technical Notes:**
+- Define types in `src/ai/flashcards/types.ts`: `Flashcard`, `FlashcardDeck`, `ReviewSchedule`, `ReviewSession`
+- Implement FSRS via `ts-fsrs` npm package (pinned version, ADS-NFR27)
+- Card state machine: New -> Learning -> Review -> Relearning
+- Ratings: Again / Hard / Good / Easy
+- Configurable retention rate (default 0.85)
+- Dexie tables: `flashcardDecks` (`++id, lessonId, courseId, title, createdAt`), `flashcards` (`++id, deckId, type, difficulty, nextReview, interval, easeFactor`), `reviewSessions` (`++id, deckId, startedAt, cardsReviewed, correctCount`)
+- Lazy-load `ts-fsrs` only on flashcard routes (ADS-NFR8: <50KB gzipped)
+- Files: `src/ai/flashcards/types.ts` (NEW), `src/ai/flashcards/scheduler.ts` (NEW)
+
+### Story 39.2: AI Flashcard Generation from Lesson Content
+
+As a learner who just finished a lesson,
+I want AI-generated flashcards based on the lesson content I studied,
+So that I can review key concepts without manually creating cards.
+
+**Acceptance Criteria:**
+
+**Given** the user clicks "Generate Flashcards" on a lesson
+**When** the generation completes
+**Then** a set of flashcards is created with multiple types: Q&A, cloze deletion, concept definition, and/or true/false
+
+**Given** the lesson has both transcript and user notes
+**When** flashcards are generated
+**Then** the AI uses both sources to create more targeted cards
+
+**Given** existing flashcard decks for the same course
+**When** new cards are generated
+**Then** the system deduplicates — cards for concepts already in existing decks are excluded
+
+**Given** a set of generated cards
+**When** presented to the user
+**Then** each card has an accept/reject button, and only accepted cards enter the deck
+
+**Given** a card is rejected by the user
+**When** the rejection is processed
+**Then** it is logged for quality metrics (ADS-FR71)
+
+**Given** the generation process
+**When** it runs
+**Then** it completes within 5 seconds for a 10-card deck with a visible loading indicator (ADS-NFR2)
+
+**Technical Notes:**
+- Create `src/ai/flashcards/generator.ts` (NEW)
+- Create `src/ai/flashcards/prompts.ts` (NEW)
+- Uses `getLLMClient('flashcards')` for model selection
+- LLM outputs structured JSON -> parsed into Flashcard objects
+- Deduplication: compare concept tags against existing deck cards
+- Content filtering: no offensive/biased content in generated cards
+- Files: `generator.ts` (NEW), `prompts.ts` (NEW)
+
+### Story 39.3: Flashcard Review UI
+
+As a learner reviewing flashcards,
+I want an interactive review interface with flip-to-reveal cards and spaced repetition rating,
+So that I can efficiently review due cards and track my progress.
+
+**Acceptance Criteria:**
+
+**Given** the user navigates to a flashcard review session
+**When** the review UI loads
+**Then** it shows the front of the first due card with a "Show Answer" button/gesture
+
+**Given** the user reveals the answer
+**When** the back of the card is shown
+**Then** four rating buttons appear: Again / Hard / Good / Easy
+
+**Given** the user rates a card
+**When** the rating is submitted
+**Then** the FSRS scheduler updates the card's interval and next review date, and the next card is shown
+
+**Given** an active review session
+**When** cards are being reviewed
+**Then** a progress bar shows cards remaining in the session
+
+**Given** the user completes all due cards
+**When** the session ends
+**Then** a summary shows: accuracy (% correct on first try), time spent, and cards due tomorrow
+
+**Given** the review UI
+**When** the user uses keyboard only
+**Then** Enter/Space flips the card, number keys (1-4) select ratings, and Tab navigates between elements (ADS-NFR16)
+
+**Technical Notes:**
+- Create `src/app/pages/FlashcardReview.tsx` (NEW)
+- Add route `/flashcards/:deckId/review` in `routes.tsx`
+- Flip animation with card front/back
+- Rating buttons trigger FSRS scheduler
+- Progress bar with `role="progressbar"` (ADS-NFR20)
+- Screen reader support: card content announced, rating buttons labeled
+- Lazy-loaded route (ADS-NFR6: <200ms load)
+
+### Story 39.4: Deck Management + Auto-Generation Triggers
+
+As a learner managing my flashcard collection,
+I want to organize decks, trigger generation from lessons, and manually edit cards,
+So that I have full control over my study materials.
+
+**Acceptance Criteria:**
+
+**Given** the user navigates to the Flashcard Decks page
+**When** the page loads
+**Then** it shows all decks with: title, card count, due card count, last reviewed date
+
+**Given** a lesson has been completed
+**When** the lesson completion UI renders
+**Then** a "Generate Flashcards" button is prominently displayed
+
+**Given** the user opens a specific deck
+**When** the deck detail view renders
+**Then** they can add new cards manually, edit existing cards, and delete cards
+
+**Given** the user has multiple decks
+**When** they select deck management actions
+**Then** they can merge decks and archive completed decks
+
+**Given** the Flashcard Decks page
+**When** the user views due card counts
+**Then** each deck shows the number of cards due today and total cards
+
+**Technical Notes:**
+- Create `src/app/pages/FlashcardDecks.tsx` (NEW)
+- Add route `/flashcards` in `routes.tsx`
+- Manual card CRUD: add, edit, delete individual cards
+- Bulk actions: merge decks, archive
+- "Generate Flashcards" button on lesson completion (integrate with LessonPlayer)
+- Lazy-loaded route
+
+### Story 39.5: Spaced Repetition Dashboard + Notifications
+
+As a learner building a review habit,
+I want to see my due cards on the Overview dashboard and track my review streak,
+So that I stay motivated and never miss a review session.
+
+**Acceptance Criteria:**
+
+**Given** the user has flashcard decks with due cards
+**When** the Overview page loads
+**Then** a "Due Today" widget shows the total number of cards due across all decks with a "Start Review" button
+
+**Given** the user reviews cards daily
+**When** the review streak is calculated
+**Then** the streak count displays on the Overview and integrates with the existing study streak system
+
+**Given** the user misses a day of reviews
+**When** the streak resets
+**Then** the "Due Today" widget shows an increased due count and encourages resumption
+
+**Given** the Overview dashboard
+**When** the "Due Today" widget is shown
+**Then** it uses `role="progressbar"` for the streak indicator with accessible text (ADS-NFR20)
+
+**Technical Notes:**
+- Modify `src/app/pages/Overview.tsx` — add "Due Today" widget
+- Integrate flashcard streak with existing study streak system
+- Query all `flashcards` where `nextReview <= today` for due count
+- Optional: notification system for reminders (future enhancement)
+
+---
+
+## Epic 40: Adaptive Quiz Engine
+
+**Goal:** Build an AI-powered quiz generation system with 5 question types, adaptive difficulty per concept, and integration with Knowledge Gaps.
+
+**Why:** Quizzes provide active recall practice — the most effective learning strategy. Adaptive difficulty ensures questions match the learner's current understanding, preventing boredom (too easy) or frustration (too hard).
+
+**Architecture:**
+```
+src/ai/quiz/
+  ├── types.ts        (Quiz, Question, QuizAttempt, QuestionType)
+  ├── generator.ts    (LLM quiz generation with difficulty scaling)
+  ├── scorer.ts       (Scoring + adaptive difficulty adjustment)
+  ├── prompts.ts      (Quiz generation system prompts per format)
+  └── hooks/
+      └── useQuiz.ts  (React hook for quiz flow)
+
+Question types: MCQ, FillBlank, ShortAnswer, TrueFalse, ConceptMatching
+Difficulty: 1-5 scale, adapts per concept based on history
+```
+
+### Story 40.1: Quiz Data Model + Question Types
+
+As a developer building the quiz engine,
+I want typed data models supporting 5 question types with a unified scoring interface,
+So that the quiz system is extensible and all question types are graded consistently.
+
+**Acceptance Criteria:**
+
+**Given** the Dexie schema is upgraded
+**When** the database initializes
+**Then** `quizzes` and `quizAttempts` tables exist with correct indexes
+
+**Given** a quiz is created
+**When** questions are added
+**Then** each question has a `type` field matching one of: `mcq`, `fillBlank`, `shortAnswer`, `trueFalse`, `conceptMatching`
+
+**Given** any question type
+**When** the scoring interface evaluates a user's answer
+**Then** it returns a consistent result: `{ correct: boolean, explanation: string, correctAnswer: string }`
+
+**Given** a quiz attempt
+**When** it is recorded
+**Then** it stores: quizId, startedAt, completedAt, answers per question, total score, per-concept scores
+
+**Technical Notes:**
+- Define types in `src/ai/quiz/types.ts`: `Quiz`, `Question`, `QuestionType`, `QuizAttempt`, `QuizAnswer`
+- Dexie tables: `quizzes` (`++id, lessonId, courseId, createdAt, difficulty`), `quizAttempts` (`++id, quizId, startedAt, completedAt, score`)
+- Unified scoring interface: `scoreAnswer(question: Question, userAnswer: string): ScoringResult`
+- 5 question types with type-specific validation logic
+- Files: `src/ai/quiz/types.ts` (NEW), Dexie schema update
+
+### Story 40.2: AI Quiz Generation + Difficulty Scaling
+
+As a learner wanting to test my knowledge,
+I want AI-generated quizzes that adapt to my skill level per concept,
+So that I'm always challenged appropriately.
+
+**Acceptance Criteria:**
+
+**Given** the user requests a quiz for a lesson
+**When** the quiz is generated
+**Then** it produces a mix of question types (MCQ, fill-blank, short-answer, true/false, concept-matching) based on the lesson content
+
+**Given** a user's past quiz performance shows strength in concept A (90% correct) and weakness in concept B (40% correct)
+**When** a new quiz is generated
+**Then** concept A questions are at difficulty 4-5 and concept B questions are at difficulty 1-2
+
+**Given** an MCQ question is generated
+**When** the distractors are created
+**Then** they are plausible but clearly wrong — testing common misconceptions, not trick answers
+
+**Given** quiz generation
+**When** it runs
+**Then** it completes within 8 seconds for 10 questions with progress feedback (ADS-NFR3)
+
+**Given** any generated quiz content
+**When** it is produced
+**Then** it contains no offensive, biased, or culturally insensitive material
+
+**Technical Notes:**
+- Create `src/ai/quiz/generator.ts` (NEW)
+- Create `src/ai/quiz/prompts.ts` (NEW)
+- Difficulty scale 1-5 per concept, adapts based on `quizAttempts` history
+- Distractor generation: prompt instructs AI to use common misconceptions
+- Content filtering: safety check on generated content
+- Uses `getLLMClient('quiz')` for model selection
+- Files: `generator.ts` (NEW), `prompts.ts` (NEW), `src/ai/quiz/scorer.ts` (NEW)
+
+### Story 40.3: Quiz UI + Interactive Answering
+
+As a learner taking a quiz,
+I want an interactive quiz interface with per-question feedback and a mistakes review mode,
+So that I learn from my errors immediately.
+
+**Acceptance Criteria:**
+
+**Given** the user starts a quiz
+**When** the Quiz Player loads
+**Then** it shows the first question with a progress indicator (X of Y)
+
+**Given** an MCQ question
+**When** the user selects an answer and submits
+**Then** immediate feedback shows: correct/incorrect, the correct answer, and an explanation
+
+**Given** a fill-in-blank question
+**When** the user types their answer and submits
+**Then** the answer is evaluated (case-insensitive, fuzzy matching for minor typos) with feedback
+
+**Given** the user completes all questions
+**When** the quiz ends
+**Then** a results screen shows: total score, per-question results, and a "Review Mistakes" button
+
+**Given** the user clicks "Review Mistakes"
+**When** the review mode loads
+**Then** only incorrectly-answered questions are shown with the correct answer and detailed explanation
+
+**Given** the Quiz Player
+**When** the user uses keyboard only
+**Then** all 5 question types are fully operable via keyboard (ADS-NFR17)
+
+**Technical Notes:**
+- Create `src/app/pages/QuizPlayer.tsx` (NEW)
+- Add route `/quiz/:quizId` in `routes.tsx`
+- Per-question-type UI: radio buttons (MCQ), text input (fill-blank, short-answer), toggle (true/false), drag-drop with keyboard alternative (concept-matching)
+- Immediate feedback after each question
+- "Review Mistakes" mode at end
+- Accessibility: keyboard-operable for all types, concept-matching has single-pointer alternative (ADS-NFR17)
+- Lazy-loaded route (ADS-NFR6)
+
+### Story 40.4: Quiz Results -> Knowledge Gaps Feed
+
+As a learner who completed a quiz,
+I want my wrong answers to feed into my Knowledge Gaps dashboard,
+So that the system tracks what I need to improve and suggests targeted practice.
+
+**Acceptance Criteria:**
+
+**Given** the user answers a quiz question incorrectly
+**When** the quiz completes
+**Then** the wrong answer creates a knowledge gap entry with source "Quiz" and the associated concept
+
+**Given** the Knowledge Gaps page
+**When** it displays quiz-sourced gaps
+**Then** each gap shows the concept, the question that was missed, and the correct answer
+
+**Given** a quiz-sourced gap on the Knowledge Gaps page
+**When** the user clicks "Practice Quiz"
+**Then** a new quiz is generated focused specifically on that weak concept
+
+**Given** quiz performance data over multiple attempts
+**When** the Knowledge Gaps scoring runs
+**Then** improvement trends are visible (e.g., concept X went from 30% to 70% over 4 quizzes)
+
+**Given** the Reports page
+**When** quiz data is displayed
+**Then** quiz history and per-concept improvement trends are shown
+
+**Technical Notes:**
+- Extend `src/ai/knowledgeGaps/detectGaps.ts` to query `quizAttempts` for wrong answers
+- Modify `KnowledgeGaps.tsx` to display quiz-sourced gaps with "Practice Quiz" action
+- "Practice Quiz" generates a focused quiz on weak concepts
+- Integration with Reports page for quiz history trends
+- Files: `detectGaps.ts`, `KnowledgeGaps.tsx`, `src/app/components/reports/`
+
+---
+
+## Epic 41: Subscription Tier Enforcement
+
+**Goal:** Enforce the Free/Premium/BYOK tier structure across providers, models, and features — making the subscription meaningful.
+
+**Why:** With usage metering (E38) and AI features (E37-E40) in place, the tier structure needs enforcement. Free users experience the full feature set at limited volume; Premium unlocks everything; BYOK bypasses all restrictions.
+
+**Tier Structure:**
+```
+FREE ($0):
+  - Providers: Ollama, Groq, Gemini, GLM only
+  - Models: Economy tier only (freeTierAllowed: true in registry)
+  - Features: All basic AI features (summaries, tagging, note org)
+  - No token budget (provider handles limits)
+
+PREMIUM ($9.99/mo):
+  - Providers: All 6
+  - Models: All tiers (economy, balanced, premium)
+  - Features: All including Tutor, Flashcards, Quizzes, Chat Q&A, Learning Path
+  - Token budget: 500K tokens/month (managed keys)
+  - BYOK: unlimited
+
+BYOK OVERLAY ($0 addon to any tier):
+  - Own API key bypasses all provider/model/budget restrictions
+  - Per-feature model overrides unlocked
+  - Unlimited usage
+```
+
+### Story 41.1: Provider + Model Restrictions by Tier
+
+As the system enforcing subscription tiers,
+I want free-tier users limited to free providers and economy models, with BYOK detection bypassing all restrictions,
+So that the tier structure creates meaningful conversion pressure.
+
+**Acceptance Criteria:**
+
+**Given** a free-tier user opens AI Settings
+**When** the provider selector renders
+**Then** OpenAI and Anthropic are disabled with an "Upgrade to Premium" badge
+
+**Given** a free-tier user viewing the Model Picker
+**When** models are displayed
+**Then** only models with `freeTierAllowed: true` are selectable; premium models show a lock icon
+
+**Given** a user with a valid BYOK API key configured
+**When** the provider/model selectors render
+**Then** all providers and all models are available regardless of subscription tier
+
+**Given** a Premium user
+**When** the provider/model selectors render
+**Then** all providers and all model tiers (economy/balanced/premium) are available
+
+**Technical Notes:**
+- Extend `aiConfiguration.ts` with tier-aware filtering
+- Modify `ModelPicker.tsx` to filter based on tier + BYOK status
+- Modify `AIConfigurationSettings.tsx` to show upgrade CTAs on restricted providers
+- BYOK detection: check for valid API key in config (existing pattern)
+- Files: `aiConfiguration.ts`, `ModelPicker.tsx`, `AIConfigurationSettings.tsx`
+
+### Story 41.2: Feature Gating for New AI Features
+
+As the system enforcing premium features,
+I want Tutor, Flashcards, and Quizzes gated behind Premium (or BYOK),
+So that these flagship features drive conversion.
+
+**Acceptance Criteria:**
+
+**Given** a free-tier user navigates to Flashcard Decks or Quiz Player
+**When** the page renders
+**Then** the `PremiumFeaturePage` wrapper shows the upgrade CTA instead of the feature
+
+**Given** a free-tier user clicks "Start Tutoring" in a lesson
+**When** the tutor panel attempts to open
+**Then** a premium feature modal appears with upgrade/BYOK options instead
+
+**Given** a free-tier user with monthly usage limits
+**When** they hit their per-feature limit (e.g., 3 tutor sessions/month)
+**Then** a contextual CTA shows: "You've used 3 of 3 sessions. Upgrade for unlimited."
+
+**Given** a BYOK user on the free tier
+**When** they access premium features
+**Then** all features are fully accessible (BYOK bypasses feature gating)
+
+**Technical Notes:**
+- Wrap new feature routes with `PremiumFeaturePage` component (existing pattern)
+- Extend `isPremium.ts` to check new feature IDs
+- Monthly per-feature limits for free tier (stored in Supabase `ai_budgets`)
+- BYOK check before feature gate
+- Files: Route pages for each feature, `isPremium.ts`
+
+### Story 41.3: Upgrade Flow + BYOK Escape Hatch
+
+As a free-tier user who wants more,
+I want a clear upgrade path to Premium and an alternative BYOK option,
+So that I can choose the best way to unlock full access.
+
+**Acceptance Criteria:**
+
+**Given** a free user hits a premium feature gate
+**When** the upgrade CTA renders
+**Then** it shows two paths: "Upgrade to Premium ($9.99/mo)" and "Use Your Own API Key (Free)"
+
+**Given** the user clicks "Upgrade to Premium"
+**When** the Stripe checkout opens
+**Then** it processes the subscription and the user's tier updates within 30 seconds (ADS-NFR29)
+
+**Given** the user clicks "Use Your Own API Key"
+**When** the BYOK setup wizard opens
+**Then** it walks them through: select provider -> enter API key -> test connection -> confirm
+
+**Given** the user clicks "Why am I limited?"
+**When** the explanatory dialog opens
+**Then** it clearly explains the tier differences and the value proposition
+
+**Technical Notes:**
+- Enhance `PremiumFeaturePage.tsx` with dual-path CTA (Stripe + BYOK)
+- Create `src/app/components/figma/BYOKSetupWizard.tsx` (NEW) — guided BYOK setup
+- Stripe checkout integration (existing Stripe setup)
+- "Why am I limited?" dialog component
+- Files: `PremiumFeaturePage.tsx`, `BYOKSetupWizard.tsx` (NEW)
+
+---
+
+## Epic 42: AI Study Buddy
+
+**Goal:** Build a context-aware conversational AI overlay that ties all learning features together — always available, understands your courses, notes, tutor history, quiz results, and flashcard progress.
+
+**Why:** The Study Buddy is the conversational interface that unifies the intelligence loop. It's always present (not per-feature), knows everything about the user's learning context, and can invoke any feature conversationally.
+
+**Architecture:**
+```
+Always-present overlay (like Copilot/ChatGPT sidebar):
+  - Floating action button → expandable chat panel
+  - Context engine: current page, current lesson, recent activity
+  - Multi-tool: can invoke any AI feature conversationally
+    "Quiz me on Chapter 3" → triggers quiz generation
+    "What should I study today?" → triggers study planner logic
+    "Explain this concept" → RAG search + Socratic follow-up
+```
+
+### Story 42.1: Chat Overlay Shell + Context Engine
+
+As a learner on any page,
+I want a persistent chat overlay that understands my current context (page, lesson, course),
+So that I can ask questions and get help without leaving what I'm doing.
+
+**Acceptance Criteria:**
+
+**Given** the user is on any page in the application
+**When** they click the floating chat button (bottom-right)
+**Then** an expandable chat panel opens with an input field and conversation history
+
+**Given** the user is on a specific lesson page
+**When** they open the Study Buddy
+**Then** the context engine automatically detects the current lesson and course, and the first message acknowledges this context
+
+**Given** the user navigates to a different page
+**When** the Study Buddy panel stays open
+**Then** the conversation persists and the context updates to reflect the new page
+
+**Given** the Study Buddy panel is open
+**When** the user presses Escape
+**Then** the panel dismisses without trapping focus (ADS-NFR18)
+
+**Given** the floating chat button
+**When** it renders
+**Then** it has a descriptive ARIA label (e.g., "Open Study Buddy chat") and is keyboard-accessible
+
+**Technical Notes:**
+- Create `src/app/components/figma/StudyBuddy.tsx` (NEW)
+- Integrate into `Layout.tsx` following existing overlay pattern (SearchCommandPalette at Layout.tsx lines 615-639)
+- Context engine: reads current route, extracts lessonId/courseId from URL params
+- Session persistence: Zustand store (`useStudyBuddyStore`) survives navigation
+- Responsive: floating button + expandable panel
+- Focus management: Escape dismisses, focus returns to trigger
+- Files: `StudyBuddy.tsx` (NEW), `Layout.tsx`
+
+### Story 42.2: Conversational RAG (Unified Knowledge Base)
+
+As a learner asking the Study Buddy a question,
+I want answers grounded in my actual course content with citations back to specific lessons,
+So that I get accurate, relevant answers — not generic AI responses.
+
+**Acceptance Criteria:**
+
+**Given** the user asks "What is dependency injection?"
+**When** the Study Buddy processes the query
+**Then** it searches across ALL course content via RAG and returns an answer grounded in the user's actual curriculum
+
+**Given** the Study Buddy answers a question using RAG
+**When** the response renders
+**Then** it includes citation links (e.g., "From: React Fundamentals, Lesson 4") that the user can click to navigate to the source
+
+**Given** no relevant content exists in the user's courses
+**When** the Study Buddy is asked about an unrelated topic
+**Then** it responds with "I couldn't find relevant content in your courses" rather than hallucinating
+
+**Given** the Study Buddy processes a query
+**When** it uses the RAG coordinator
+**Then** the context window includes expanded scope (all courses, not just current lesson)
+
+**Technical Notes:**
+- Extend `src/ai/rag/ragCoordinator.ts` for broader context retrieval (all courses, not just current)
+- Create `src/ai/studyBuddy/` module (NEW)
+- Citation generation: RAG results include source metadata (lessonId, courseId)
+- Uses `getLLMClient('studyBuddy')` for model selection
+- Streaming responses with typing indicator
+- Files: `ragCoordinator.ts` (extend), `src/ai/studyBuddy/` (NEW)
+
+### Story 42.3: Intent Detection + Feature Routing
+
+As a learner talking to the Study Buddy,
+I want natural language commands to trigger features ("quiz me", "make flashcards", "help me understand X"),
+So that I can access any feature conversationally without navigating to different pages.
+
+**Acceptance Criteria:**
+
+**Given** the user says "Quiz me on chapter 3"
+**When** the intent classifier processes the message
+**Then** the system routes to quiz generation for that chapter and presents the quiz inline or navigates to the Quiz Player
+
+**Given** the user says "Make flashcards from this lesson"
+**When** the intent classifier processes the message
+**Then** the system triggers flashcard generation for the current lesson content
+
+**Given** the user says "Help me understand recursion"
+**When** the intent classifier processes the message
+**Then** the system enters Socratic tutor mode within the Study Buddy chat
+
+**Given** the user says "What's my progress?"
+**When** the intent classifier processes the message
+**Then** the system returns a summary of their learning analytics
+
+**Given** an ambiguous intent
+**When** the classifier has low confidence
+**Then** the Study Buddy asks a clarifying question before routing
+
+**Technical Notes:**
+- Create `src/ai/studyBuddy/intentRouter.ts` (NEW)
+- Intent categories: quiz, flashcards, tutor, analytics, rag_query, general_chat
+- Classification uses a lightweight prompt (not a separate LLM call if possible)
+- Routes to appropriate feature module after classification
+- Confidence threshold: >85% for auto-routing, else clarify
+- Files: `intentRouter.ts` (NEW)
+
+### Story 42.4: Proactive Suggestions
+
+As a learner using the platform,
+I want the Study Buddy to offer helpful suggestions based on my context,
+So that I'm reminded of learning opportunities I might otherwise miss.
+
+**Acceptance Criteria:**
+
+**Given** the user finishes a lesson
+**When** the Study Buddy detects lesson completion
+**Then** it offers: "Want me to quiz you on what you just learned?" or "Generate flashcards from this lesson?"
+
+**Given** the user has flashcard decks with due cards
+**When** the Study Buddy detects inactivity or page idle
+**Then** it suggests: "You have 12 flashcards due for review"
+
+**Given** the user is on the Knowledge Gaps page
+**When** the Study Buddy detects the context
+**Then** it offers: "I noticed you're struggling with X — want to practice with the tutor?"
+
+**Given** the proactive suggestion system
+**When** it generates suggestions
+**Then** suggestions are non-intrusive (subtle indicator on the floating button, not automatic popup)
+
+**Technical Notes:**
+- Create `src/ai/studyBuddy/proactiveSuggestions.ts` (NEW)
+- Trigger-based: lesson completion, idle time, page context changes
+- Suggestions appear as a badge/indicator on the floating button, not interrupting popups
+- Query Dexie for: due flashcards, unresolved misconceptions, recent quiz performance
+- Files: `proactiveSuggestions.ts` (NEW)
+
+### Story 42.5: Study Buddy Personality + Preferences
+
+As a learner using the Study Buddy regularly,
+I want to configure its personality tone and have it remember my preferences,
+So that interactions feel personalized and aligned with my learning style.
+
+**Acceptance Criteria:**
+
+**Given** the user opens Study Buddy settings (in AI Settings)
+**When** the personality selector renders
+**Then** they can choose: Encouraging / Neutral / Challenging
+
+**Given** the user selects "Challenging" tone
+**When** the Study Buddy responds
+**Then** responses are more direct, push the user to think harder, and include challenging follow-ups
+
+**Given** the user says "I prefer short answers"
+**When** the preference is processed
+**Then** subsequent Study Buddy responses are more concise, and the preference persists across sessions
+
+**Given** the user has conversation history
+**When** they return to the Study Buddy in a new session
+**Then** previous conversations are accessible via a history view
+
+**Technical Notes:**
+- Create `src/ai/studyBuddy/personality.ts` (NEW)
+- Personality options: Encouraging (warm, supportive), Neutral (factual, balanced), Challenging (direct, pushing)
+- Preference storage: Dexie or Zustand store with persistence
+- Conversation history: stored in Dexie, accessible via Study Buddy panel
+- Settings integration in AI Configuration page
+- Files: `personality.ts` (NEW), Settings integration
+
+---
+
+## Epic 43: Cross-Feature Intelligence Loop
+
+**Goal:** Connect all AI features into a feedback loop where each feature's output improves the others — the core innovation that differentiates Knowlune from competitors.
+
+**Why:** Individual AI learning features exist in competing products. None connect them. Knowlune's intelligence loop creates a compounding learning advantage: tutor misconceptions generate flashcards, quiz wrong answers feed knowledge gaps, comprehension data reorders learning paths.
+
+**Architecture:**
+```
+Tutor identifies misconceptions
+    ↓
+Flashcard generator creates targeted cards for misconceptions
+    ↓
+Quiz engine focuses questions on weak concepts
+    ↓
+Knowledge Gaps aggregates all sources
+    ↓
+Study Buddy surfaces actionable recommendations
+    ↓
+Learning Path reorders based on actual comprehension (not just completion)
+```
+
+### Story 43.1: Misconception -> Flashcard Pipeline
+
+As a learner whose tutor identified a misconception,
+I want targeted flashcards auto-generated from my specific misconceptions,
+So that I review exactly what I got wrong through spaced repetition.
+
+**Acceptance Criteria:**
+
+**Given** the Socratic Tutor identifies a misconception during a session
+**When** the misconception is recorded
+**Then** the system auto-generates 1-3 targeted flashcards addressing that specific misconception
+
+**Given** auto-generated misconception flashcards
+**When** they are presented to the user
+**Then** the user can confirm or reject each card before it enters their deck
+
+**Given** a confirmed misconception flashcard
+**When** it enters a deck
+**Then** it is tagged with source "tutor_misconception" and linked to the original misconception record
+
+**Given** the misconception is later resolved (student demonstrates understanding)
+**When** the FSRS scheduler evaluates the linked flashcard
+**Then** the card's interval may be extended (but the card remains for long-term retention)
+
+**Technical Notes:**
+- Pipeline: `src/ai/tutor/adaptiveEngine.ts` detects misconception -> triggers `src/ai/flashcards/generator.ts`
+- Misconception-specific generation prompt (focused cards, not generic lesson cards)
+- User confirmation UI: toast/modal with accept/reject per card
+- Tagging: `Flashcard.source = 'tutor_misconception'`, `Flashcard.sourceId = misconceptionId`
+- Files: `adaptiveEngine.ts` -> `generator.ts` pipeline
+
+### Story 43.2: Quiz + Tutor -> Knowledge Gap Aggregation
+
+As a learner with data from multiple AI features,
+I want a unified knowledge gap score that weighs signals from quizzes, tutor sessions, and study patterns,
+So that my Knowledge Gaps dashboard reflects a complete picture of my understanding.
+
+**Acceptance Criteria:**
+
+**Given** a concept with quiz data (3 wrong answers), tutor data (1 misconception), and study pattern data (low engagement)
+**When** the unified gap scorer evaluates it
+**Then** it produces a weighted confidence score that reflects all three signal sources
+
+**Given** quiz wrong answers for a concept
+**When** the gap scorer processes them
+**Then** they carry higher weight than study pattern signals (active recall is more diagnostic than passive metrics)
+
+**Given** a tutor-resolved misconception for a concept
+**When** the gap scorer evaluates it
+**Then** the gap severity decreases (but doesn't fully resolve until quiz performance confirms understanding)
+
+**Given** the Knowledge Gaps page
+**When** it renders with aggregated data
+**Then** each gap shows contributing signals (quiz, tutor, study patterns) with source-specific details
+
+**Technical Notes:**
+- Major enhancement to `src/ai/knowledgeGaps/detectGaps.ts`
+- Weighted scoring: quiz_wrong_answers (weight: 0.4) + tutor_misconceptions (weight: 0.35) + study_patterns (weight: 0.25)
+- Aggregation: group by concept tag across all three sources
+- Resolution tracking: misconceptions resolved in tutor reduce gap score; quiz improvement confirms resolution
+- Files: `detectGaps.ts` (major enhancement)
+
+### Story 43.3: Intelligence-Driven Learning Path Reordering
+
+As a learner following an AI-generated learning path,
+I want the path to reorder based on my actual comprehension (not just completion),
+So that I revisit foundational concepts when knowledge gaps appear in dependent topics.
+
+**Acceptance Criteria:**
+
+**Given** an AI-generated learning path for a course
+**When** knowledge gaps are detected in Lesson 8 that depend on concepts from Lesson 3
+**Then** the learning path suggests revisiting Lesson 3 before continuing to Lesson 9
+
+**Given** the user has strong comprehension data (high quiz scores, no misconceptions) for early lessons
+**When** the learning path evaluates ordering
+**Then** it advances the user faster through mastered content and allocates more time to weak areas
+
+**Given** the learning path reorders based on comprehension data
+**When** the user views the updated path
+**Then** they see an explanation: "Moved up because you may want to review [concept] before continuing"
+
+**Given** the learning path suggestion
+**When** it recommends revisiting a lesson
+**Then** the recommendation includes the specific knowledge gap that triggered it and a "Practice with Tutor" or "Take Quiz" action
+
+**Technical Notes:**
+- Enhance `src/ai/learningPath/suggestOrder.ts`
+- Input: unified knowledge gap scores (from Story 43.2) + lesson dependency graph
+- Dependency detection: concept tags from flashcards/quizzes mapped to lessons
+- Reordering logic: if gap in dependent concept -> promote prerequisite lesson
+- Explanation generation: brief text explaining why the path changed
+- Files: `suggestOrder.ts` (enhance)
+
+---
+
+## Epic 55: Stitch UI Phase 1 — Deep Focus Mode + Streak Calendar
+
+Upgrade the Overview dashboard with two high-impact Stitch-designed widgets: a full inline Focus Timer with SVG ring animation and companion stats card, and an enhanced Streak Calendar with month-view mode and prominent streak header. These visual upgrades transform the dashboard from functional to immersive, reinforcing daily engagement through richer visual feedback.
+
+**Design References:**
+- `docs/plans/stitch-designs/focus/deep-focus-mode.html` — Focus timer variations (Variation A = target)
+- `docs/plans/stitch-designs/focus/streak-calendar.html` — Streak calendar variations (Variation A = target)
+- `_bmad-output/brainstorming/brainstorming-session-2026-03-28-stitch-ui-upgrades.md` — Full analysis
+
+**Constraints:**
+- All colors must use design tokens from `src/styles/theme.css` — no hardcoded Tailwind colors
+- Lucide icons only (substitute for Material Symbols in Stitch designs)
+- System fonts (no Manrope/Inter imports)
+
+### Story 55.1: Lift Pomodoro State to Zustand Store with localStorage Persistence
+
+As a learner using the Pomodoro timer,
+I want my timer state to persist across page navigation and be shared between UI contexts,
+So that switching between the Overview dashboard and the lesson player does not interrupt my focus session.
+
+**Acceptance Criteria:**
+
+**Given** the existing `usePomodoroTimer` hook manages all timer state locally
+**When** I create a new `usePomodoroStore` Zustand store
+**Then** the store exposes the same state interface (`PomodoroState`) and actions (`PomodoroActions`) as the current hook
+
+**Given** the timer is running on the Overview page
+**When** I navigate to a lesson page where the popover timer lives
+**Then** both UIs reflect the same timer state (time remaining, phase, session count)
+
+**Given** the timer is running
+**When** I close the browser tab and reopen it within the session duration
+**Then** the timer resumes from the correct wall-clock position (using the persisted `endTime`)
+
+**Given** the timer was running but the session has expired while the tab was closed
+**When** I reopen the app
+**Then** the timer shows the session as completed and increments the session counter appropriately
+
+**Given** the store writes to localStorage
+**When** the timer state changes (start, pause, resume, reset, phase transition)
+**Then** the state is persisted within 1 second of the transition (not on every tick)
+
+**Given** `PomodoroTimer.tsx` (existing popover component)
+**When** it is refactored to consume from `usePomodoroStore`
+**Then** all existing popover functionality remains identical (start, pause, resume, skip, reset, preferences, audio chimes)
+
+### Story 55.2: Focus Timer Dashboard Widget
+
+As a learner on the Overview dashboard,
+I want a large, immersive focus timer widget with animated SVG ring, phase tabs, and session counter,
+So that I can start and manage focus sessions directly from my dashboard without opening a popover.
+
+**Acceptance Criteria:**
+
+**Given** the Overview dashboard
+**When** the FocusTimerWidget is rendered
+**Then** it displays a large SVG circular timer ring (~192px) with the time remaining centered inside
+
+**Given** the timer is running
+**When** time progresses
+**Then** the SVG ring stroke depletes smoothly using CSS `stroke-dashoffset` transition (1s linear), and respects `prefers-reduced-motion` by disabling the transition
+
+**Given** the widget
+**When** I view the tab selector
+**Then** I see three tabs: "25m Work", "5m Break", "15m Break" (matching the user's Pomodoro preferences for durations)
+
+**Given** the timer is idle or stopped
+**When** I click a different duration tab
+**Then** the timer resets to that duration and phase (focus or break)
+
+**Given** the widget
+**When** I view the control row
+**Then** I see Start/Pause (toggle), and Reset (`RotateCcw` icon) buttons
+
+**Given** the timer is running
+**When** I click Pause
+**Then** the ring animation freezes and the button toggles to a Play icon
+
+**Given** the widget
+**When** sessions are completed
+**Then** I see "N of M sessions completed" text below the controls (M = 4 default, configurable)
+
+**Given** the widget renders on the Overview page
+**When** the timer state changes
+**Then** it reads from and writes to `usePomodoroStore` (shared with the popover timer from E55-S01)
+
+**Given** the ring in different phases
+**When** the phase is "focus"
+**Then** the ring stroke uses `stroke: var(--brand)` color
+
+**Given** the ring in different phases
+**When** the phase is "break"
+**Then** the ring stroke uses `stroke: var(--success)` color
+
+### Story 55.3: Today's Focus Stats Card
+
+As a learner reviewing my daily progress,
+I want a companion card showing my focus session statistics for today,
+So that I can see my total focus time, deep work percentage, and break efficiency at a glance.
+
+**Acceptance Criteria:**
+
+**Given** the Overview dashboard with the Focus Timer Widget
+**When** the FocusStatsCard is rendered alongside it
+**Then** it displays three stat rows: "Total Focus" (with `Clock` icon), "Deep Work" (with `Brain` icon), "Break Efficiency" (with `Coffee` icon)
+
+**Given** I have completed 3 focus sessions totaling 75 minutes today
+**When** I view the Total Focus stat
+**Then** it displays "1h 15m" formatted as hours and minutes
+
+**Given** I have spent 75 minutes in focus and 15 minutes in break today
+**When** I view the Deep Work percentage
+**Then** it displays "83%" (focus time / (focus time + break time) * 100, rounded)
+
+**Given** I completed 3 breaks and skipped 1 break early (before 80% of configured duration elapsed)
+**When** I view the Break Efficiency stat
+**Then** it displays "75%" (3 full breaks out of 4 total breaks)
+
+**Given** no focus sessions have been completed today
+**When** I view the FocusStatsCard
+**Then** all stats show zero/default values: "0m", "0%", "—"
+
+**Given** focus session data
+**When** a new day begins (midnight crossing)
+**Then** the daily stats reset to zero (keyed by `toLocaleDateString('sv-SE')` date string)
+
+**Given** the stats card needs daily session data
+**When** a Pomodoro focus session completes
+**Then** the session is recorded in the Zustand store with `{ startedAt, duration, phase, completedAt, wasSkipped }` and persisted to localStorage under a `pomodoro-daily-stats` key
+
+**Given** the card layout
+**When** rendered
+**Then** each stat row has an icon (design token color), label, and bold value aligned to the right, separated by a subtle border, matching the Stitch Variation A layout
+
+### Story 55.4: Streak Calendar Month-View Mode
+
+As a learner tracking my study habits,
+I want a month-view calendar showing which days I studied with a binary visual (studied vs not),
+So that I can quickly see my consistency for the current month at a glance.
+
+**Acceptance Criteria:**
+
+**Given** the StudyStreakCalendar component
+**When** I click the view toggle (CalendarDays icon for month-view, Grid3x3 icon for heatmap)
+**Then** the view switches between the existing heatmap grid and the new month-view calendar
+
+**Given** the month-view is active
+**When** rendered
+**Then** it shows a 7-column grid with day-of-week headers (M T W T F S S), day numbers for the current month, and overflow days from previous/next months in dimmed text (`text-muted-foreground/30`)
+
+**Given** a day where I completed at least one study action
+**When** rendered in the month-view
+**Then** that day cell has `bg-brand text-brand-foreground rounded-2xl` styling (binary: studied = brand, not studied = default)
+
+**Given** today's date has not yet had study activity
+**When** rendered in the month-view
+**Then** today's cell has a `ring-2 ring-brand ring-offset-2` outline to highlight it without filling
+
+**Given** a freeze day (rest day that doesn't break streak)
+**When** rendered in the month-view
+**Then** the cell shows `bg-brand-soft text-freeze-day-text` background with a small `Snowflake` icon in the top-right corner
+
+**Given** the month-view
+**When** I click the left/right chevron arrows (`ChevronLeft`/`ChevronRight`)
+**Then** the calendar navigates to the previous/next month
+
+**Given** the existing confetti milestone functionality
+**When** a milestone is reached while in month-view mode
+**Then** confetti and milestone toasts still fire (position anchored to the streak header)
+
+**Given** the view toggle preference
+**When** I switch to month-view and navigate away then return
+**Then** the preference is persisted in localStorage and restored on mount
+
+**Given** a day cell in the month-view
+**When** I hover over it
+**Then** a tooltip shows the same information as the heatmap tooltip (date, lesson count, study minutes, courses)
+
+### Story 55.5: Streak Header Upgrade
+
+As a learner motivated by streaks,
+I want a large, prominent streak counter with flame icon and a "Longest Streak" trophy badge,
+So that my streak achievement is visually celebrated and motivates continued daily study.
+
+**Acceptance Criteria:**
+
+**Given** the StudyStreakCalendar component header area
+**When** rendered (in either view mode)
+**Then** it displays a large streak counter: `Flame` icon (in an orange-to-red gradient circular container) + bold "N Day Streak" text (large heading size, e.g. `text-3xl font-black`)
+
+**Given** the current streak is 0
+**When** the header renders
+**Then** it shows "0 Day Streak" with the flame icon in a muted/inactive state (`text-muted-foreground`)
+
+**Given** the current streak is > 0
+**When** the header renders
+**Then** the flame icon uses a warm gradient background (`from-warning to-destructive` or equivalent design tokens) and the text uses `text-foreground`
+
+**Given** the streak header
+**When** rendered
+**Then** below the calendar (in the footer area), a "Longest Streak: N Days" badge is displayed with a `Trophy` icon, using warm/gold design tokens (`bg-gold-muted text-gold-soft-foreground`)
+
+**Given** the current streak equals or exceeds the longest streak
+**When** the header renders
+**Then** the longest streak badge shows a "New Record!" label or animation to celebrate the achievement
+
+**Given** the existing freeze token display
+**When** the header is upgraded
+**Then** freeze tokens remain visible in the header area (card with `Snowflake` icon + count), positioned to the right of the streak counter
+
+**Given** the upgraded header
+**When** viewed on mobile (< 640px)
+**Then** the layout stacks vertically: streak counter on top, freeze tokens below, maintaining touch target sizes >= 44x44px
+
+**Given** all design tokens
+**When** the header is implemented
+**Then** no hardcoded Tailwind colors are used (enforced by ESLint `design-tokens/no-hardcoded-colors` rule)
+
+## Epic 53: PKM Export Phase 1 — Flashcard/Bookmark Markdown + Anki .apkg
+
+Users can export flashcards as Markdown Q/A pairs with YAML frontmatter, bookmarks as Markdown lists grouped by course/video, and flashcard decks as Anki .apkg files — unlocking learning data for Obsidian, Anki, and other PKM tools.
+
+### Story 53.1: Flashcard & Bookmark Markdown Export
+
+As a learner using Obsidian or other PKM tools,
+I want to export my flashcards as Markdown Q/A files and bookmarks as Markdown lists with YAML frontmatter,
+So that I can integrate my learning artifacts into my personal knowledge management system.
+
+**Acceptance Criteria:**
+
+**Given** flashcards exist in IndexedDB
+**When** `exportFlashcardsAsMarkdown()` is called
+**Then** each flashcard produces a `.md` file with YAML frontmatter containing `type: "flashcard"`, `deck`, `tags`, `interval`, `ease_factor`, `review_count`, `created`, and body with `# Q: {front}` heading followed by `{back}`
+
+**Given** flashcards span 3 courses
+**When** exported
+**Then** files are organized under `flashcards/{course-name}/` folder paths (3 distinct course folders)
+
+**Given** a flashcard has `noteId` linking to a Note with tags `["react", "hooks"]` in course "React Mastery"
+**When** exported
+**Then** tags include `["react-mastery", "react", "hooks"]` (course name kebab-cased + linked note tags, deduplicated)
+
+**Given** a flashcard has `reviewedAt: undefined` and `lastRating: undefined`
+**When** exported
+**Then** those YAML lines are omitted entirely (not `reviewed_at: "undefined"`)
+
+**Given** bookmarks exist across 2 courses with 3 videos each
+**When** `exportBookmarksAsMarkdown()` is called
+**Then** 2 Markdown files are generated (one per course), each with bookmarks grouped by video heading, sorted by timestamp ascending
+
+**Given** a bookmark has timestamp 3725 seconds
+**When** exported
+**Then** the formatted timestamp is `1:02:05`
+
+**Given** no flashcards exist
+**When** `exportFlashcardsAsMarkdown()` is called
+**Then** an empty array is returned without error
+**And** the same applies to `exportBookmarksAsMarkdown()` when no bookmarks exist
+
+### Story 53.2: Anki .apkg Export
+
+As a learner using Anki for spaced repetition,
+I want to export my flashcards as an Anki-compatible .apkg file,
+So that I can review my Knowlune flashcards in Anki with proper deck organization and tags.
+
+**Acceptance Criteria:**
+
+**Given** flashcards exist in IndexedDB
+**When** `exportFlashcardsAsAnki()` is called
+**Then** a Blob is returned with MIME-compatible `.apkg` content
+
+**Given** flashcards span multiple courses
+**When** exported to Anki
+**Then** all cards are in one deck named "Knowlune Export" with course-name tags per card
+
+**Given** a flashcard linked to a note with tags `["react", "hooks"]` in course "React Mastery"
+**When** exported to Anki
+**Then** the Anki card has tags `["react-mastery", "react", "hooks"]` (reusing `deriveFlashcardTags()` from E53-S01)
+
+**Given** no flashcards exist
+**When** `exportFlashcardsAsAnki()` is called
+**Then** `null` is returned without error (caller handles empty state)
+
+**Given** the `anki-apkg-export` package
+**When** loaded during Anki export
+**Then** it is loaded via dynamic `import()` to keep the main bundle lean (~500KB sql.js excluded from initial load)
+
+### Story 53.3: PKM Batch Export & Settings UI
+
+As a learner who wants a complete knowledge export,
+I want to trigger PKM and Anki exports from the Settings page with progress feedback,
+So that I can easily download all my learning data in formats compatible with Obsidian and Anki.
+
+**Acceptance Criteria:**
+
+**Given** the Settings page
+**When** viewing the Data Management section
+**Then** "PKM Export (Obsidian)" and "Flashcard Export (Anki)" cards are visible below existing export cards and above the progress indicator
+
+**Given** notes, flashcards, and bookmarks exist in IndexedDB
+**When** clicking the Obsidian export button
+**Then** a ZIP downloads with folder structure `notes/`, `flashcards/{course}/`, `bookmarks/{course}/`, and a root `README.md` containing export date and file counts
+
+**Given** flashcards exist in IndexedDB
+**When** clicking the Anki export button
+**Then** a `.apkg` file downloads with filename `knowlune-flashcards-{date}.apkg`
+
+**Given** an export is in progress (`isExporting` is true)
+**When** any export button is clicked
+**Then** it does nothing (all export buttons show `disabled` state)
+
+**Given** the Obsidian export completes successfully
+**When** the download triggers
+**Then** a success toast shows the file count (e.g., "PKM bundle (47 files)")
+
+**Given** no flashcards exist
+**When** clicking the Anki export button
+**Then** a toast shows "No flashcards to export — create flashcards first" without error
+
+**Given** the export fails (exception thrown)
+**When** the error is caught
+**Then** an error toast appears ("Export failed — try freeing disk space") and `isExporting` resets to false
+
+**Given** both new export cards
+**When** rendered
+**Then** they have proper `aria-label` attributes and meet 44x44px touch target minimum on mobile
+
+## Epic 54: Lesson Flow Improvements — Auto-Advance, Celebrations & Completion Checkmarks
+
+Bring ImportedLessonPlayer and YouTubeLessonPlayer up to the same standard as the regular LessonPlayer by wiring in auto-advance countdown, completion celebration modals, and prev/next lesson navigation. Add completion status indicators to ImportedCourseDetail sidebar (YouTubeCourseDetail already has them). All components already exist — this is a wiring and consistency effort.
+
+**Source:** [Tech Spec](../../_bmad-output/implementation-artifacts/tech-spec-lesson-flow-improvements.md) | [Product Roadmap Section 16, Phase 4](../../docs/plans/2026-03-28-product-roadmap.md)
+
+**Reference Implementation:** `src/app/pages/LessonPlayer.tsx` (1085 lines) — gold standard with all features fully wired
+
+**Constraints:**
+- Reuse existing components as-is (AutoAdvanceCountdown, CompletionModal, StatusIndicator)
+- Follow LessonPlayer patterns exactly for state management
+- Imported/YouTube courses use flat video lists (no module hierarchy) — no ModuleAccordion adoption
+- All colors must use design tokens from `src/styles/theme.css`
+
+### Story 54.1: Wire Lesson Flow to ImportedLessonPlayer
+
+As a learner studying an imported course,
+I want auto-advance countdown, completion celebrations, and prev/next navigation when I finish a video,
+So that I have the same seamless learning flow as regular courses without manually hunting for the next lesson.
+
+**Acceptance Criteria:**
+
+**Given** an imported course with multiple videos
+**When** a video finishes playing (onEnded fires)
+**Then** the lesson is marked complete in useContentProgressStore and a lesson completion celebration modal appears
+
+**Given** an imported course video finishes and a next video exists
+**When** the celebration modal is dismissed
+**Then** an auto-advance countdown (5 seconds) appears showing the next video title with a cancel button
+
+**Given** the auto-advance countdown is active
+**When** the countdown reaches 0
+**Then** the player navigates to the next video in the course
+
+**Given** the auto-advance countdown is active
+**When** the user clicks "Cancel"
+**Then** the countdown is dismissed and the user stays on the current video
+
+**Given** an imported course with multiple videos
+**When** viewing any video
+**Then** prev/next navigation buttons are visible; prev is disabled on the first video, next is disabled on the last video
+
+**Given** the user is on the last video of an imported course
+**When** that video finishes
+**Then** a course-level completion celebration (type='course') appears instead of a lesson-level one
+
+**Given** an imported video is playing
+**When** the user clicks the manual completion toggle
+**Then** the lesson status toggles between completed and not-started, and a celebration appears on mark-complete
+
+**Given** the auto-advance countdown is showing
+**When** the user presses Tab and Enter on the Cancel button
+**Then** the countdown is dismissed (keyboard accessibility)
+
+### Story 54.2: Wire Lesson Flow to YouTubeLessonPlayer
+
+As a learner studying a YouTube course,
+I want auto-advance countdown, completion celebrations, and prev/next navigation after a video auto-completes at 90%,
+So that my YouTube course experience matches the flow of regular and imported courses.
+
+**Acceptance Criteria:**
+
+**Given** a YouTube course with multiple videos
+**When** a video auto-completes (>90% watched)
+**Then** a celebration modal appears and (if next video exists) auto-advance countdown shows after modal dismissal
+
+**Given** a YouTube course
+**When** viewing any video
+**Then** prev/next navigation buttons are visible and functional, navigating to `/youtube-courses/${courseId}/lessons/${videoId}`
+
+**Given** the user manually sets status to "Completed" via the dropdown
+**When** the status changes
+**Then** a celebration modal appears; if it is the last video in the course, a course-level celebration appears
+
+**Given** the auto-advance countdown reaches 0
+**When** the next video exists
+**Then** the player navigates to the next YouTube video
+
+### Story 54.3: Completion Checkmarks in ImportedCourseDetail
+
+As a learner browsing my imported course,
+I want to see completion checkmarks and a progress bar in the course detail sidebar,
+So that I can quickly identify which videos I have watched and track my overall course progress.
+
+**Acceptance Criteria:**
+
+**Given** an imported course detail page
+**When** videos have been completed via the lesson player
+**Then** a colored StatusIndicator (green check) appears next to each completed video in the list
+
+**Given** an imported course detail page with some videos completed
+**When** the page renders
+**Then** an "Overall Progress" summary shows "{completed}/{total} completed" with a progress bar
+
+**Given** an imported course where no videos have been watched
+**When** the page renders
+**Then** all StatusIndicators show as not-started (gray circle) and the progress bar shows 0%
+
+## Epic 56: Knowledge Map Phase 1 — Topic Scoring & Treemap Visualization
+
+Learners can see a visual map of their knowledge strength across all topics, identifying what's strong, fading, or weak. The system extracts topics from lesson data, computes dynamic knowledge scores from quiz/flashcard/completion/recency signals, and renders an interactive Recharts Treemap with drill-down popovers and actionable study suggestions.
+
+**Source:** [Architecture Addendum](../../_bmad-output/planning-artifacts/architecture.md) (Knowledge Map Phase 1 section) | [Brainstorming](../../_bmad-output/brainstorming/brainstorming-session-2026-03-28-knowledge-map-phase1.md) | [Technical Research](../../_bmad-output/planning-artifacts/research/technical-knowledge-visualization-decay-modeling-research-2026-03-28.md) | [Product Roadmap Section 13](../../docs/plans/2026-03-28-product-roadmap.md)
+
+**Constraints:**
+- Pure function modules for topic resolution and score calculation (follows qualityScore.ts pattern)
+- No new runtime dependencies — Recharts Treemap, Zustand, shadcn/ui already installed
+- Design tokens only for all colors (--success, --warning, --destructive for tier visualization)
+- Scores computed on-demand via Zustand store — no Dexie table (decay makes cached scores stale)
+- Mobile fallback: sorted topic list below 640px (treemap cells too small for touch targets)
+
+### Story 56.1: Topic Resolution Service
+
+As a learner with courses containing topic metadata,
+I want the system to extract, normalize, and deduplicate topics from my course data,
+So that the Knowledge Map has a clean, meaningful set of ~40-60 topics to score and visualize.
+
+**Acceptance Criteria:**
+
+**Given** courses exist in useCourseStore with lessons containing keyTopics arrays
+**When** resolveTopics(courses) is called
+**Then** it returns ResolvedTopic[] with each topic having name, canonicalName, category, lessonIds[], courseIds[], and questionTopics[]
+
+**Given** lesson keyTopics contain noise entries like "October 2023", "weekly session", "course overview", "getting started", "key takeaways"
+**When** topics are resolved
+**Then** all noise entries matching NOISE_PATTERNS regexes are filtered out and do not appear in the output
+
+**Given** lesson keyTopics contain synonyms like "lie detection" and "deception detection", or "nonverbal communication" and "body language"
+**When** topics are resolved
+**Then** synonyms are merged into a single canonical topic via CANONICAL_MAP, with lessonIds and courseIds from all variants combined
+
+**Given** a topic like "body language" appears in lessons across two courses with different Course.category values
+**When** topics are resolved
+**Then** the topic is assigned the category from the course with more matching lessons
+
+**Given** raw keyTopics with mixed casing, extra whitespace, and hyphens ("Body  Language", "body-language", "BODY LANGUAGE")
+**When** normalization runs
+**Then** all variants resolve to the same canonical name with a title-cased display name
+
+**Given** the full set of 8 courses with ~170 lessons in the Knowlune dataset
+**When** resolveTopics() processes all courses
+**Then** the output contains between 30 and 80 unique topics (after noise filtering and deduplication)
+
+**Given** a topic "deception detection" exists and quiz questions have Question.topic matching "deception detection" or its synonyms
+**When** topics are resolved
+**Then** the ResolvedTopic.questionTopics[] contains the matching Question.topic values for quiz score mapping
+
+### Story 56.2: Knowledge Score Calculation + Zustand Store
+
+As a learner who has engaged with courses through lessons, quizzes, and flashcards,
+I want the system to compute a per-topic knowledge score combining all available signals,
+So that I can see an honest assessment of what I know, what's fading, and what needs review.
+
+**Acceptance Criteria:**
+
+**Given** a topic with all 4 signals available (quiz score 80, flashcard retention 70, completion 100%, 3 days since engagement)
+**When** calculateTopicScore() is called
+**Then** it returns a score using effective weights 30/30/20/20, tier "strong" (>= 70), confidence "high", and all 4 factors populated
+
+**Given** a topic with no quiz data and no flashcard data (null for both)
+**When** calculateTopicScore() is called
+**Then** completion and recency weights redistribute to 50/50, and the topic can still reach score 100
+**And** confidence is "low" (only 2 signals)
+
+**Given** a topic with quiz data but no flashcard data
+**When** calculateTopicScore() is called
+**Then** effective weights are quiz 43%, completion 29%, recency 29% (proportional redistribution)
+**And** confidence is "medium" (3 signals)
+
+**Given** daysSinceLastEngagement is 7 or less
+**When** calculateRecencyScore() is called
+**Then** recency score is 100
+
+**Given** daysSinceLastEngagement is 90 or more
+**When** calculateRecencyScore() is called
+**Then** recency score is 10 (floor, never zero)
+
+**Given** daysSinceLastEngagement is 48 (midpoint of 7-90 range)
+**When** calculateRecencyScore() is called
+**Then** recency score is approximately 56 (linear decay from 100 to 10 over 83 days)
+
+**Given** a score of 70
+**When** getKnowledgeTier() is called
+**Then** tier is "strong"
+
+**Given** a score of 39
+**When** getKnowledgeTier() is called
+**Then** tier is "weak"
+
+**Given** useKnowledgeMapStore.computeScores() is called
+**When** course data, content progress, flashcard data, quiz attempts, and study sessions exist
+**Then** the store populates topics[] (ScoredTopic[]), categories[] (CategoryGroup[]), and focusAreas[] (top 3 by urgency)
+
+**Given** the store has computed scores
+**When** getTopicsByCategory("behavioral-analysis") is called
+**Then** it returns only ScoredTopic[] belonging to that category, sorted by score ascending
+
+**Given** computeScores() runs
+**When** urgency is calculated per topic
+**Then** urgency = (100 - score) * 0.6 + min(100, daysSinceEngagement * 2) * 0.4, and focusAreas contains the 3 highest-urgency topics
+
+**Given** a topic has flashcard data in useFlashcardStore for its courseIds
+**When** avgFlashcardRetention is computed
+**Then** it uses predictRetention() from spacedRepetition.ts for each flashcard, averaged across cards in the topic's courses
+
+**Given** a topic has suggestedActions computed
+**When** the topic has flashcard data, quiz data, and lessons
+**Then** suggestedActions includes "Review Flashcards", "Retake Quiz", and "Rewatch Lesson" sorted by priority (lowest-scoring signal gets highest priority)
+
+### Story 56.3: Knowledge Map Overview Widget
+
+As a learner viewing my Overview dashboard,
+I want to see a Knowledge Map widget showing my category-level knowledge and top focus areas,
+So that I can quickly understand my overall knowledge health and know what needs attention without leaving the dashboard.
+
+**Acceptance Criteria:**
+
+**Given** the Overview page renders with dashboard sections
+**When** 'knowledge-map' is registered as a DashboardSectionId
+**Then** it appears in the section list with label "Knowledge Map", positioned after 'skill-proficiency' in DEFAULT_ORDER
+
+**Given** knowledge scores have been computed for topics across 5 categories
+**When** the KnowledgeMapWidget renders
+**Then** a category-level Recharts Treemap displays with 5 cells, each showing category name and average score, colored by tier (success/warning/destructive design tokens)
+
+**Given** the Knowledge Map widget is rendered
+**When** Focus Areas panel is visible below the treemap
+**Then** it shows the top 3 most urgent topics with: topic name, score + tier badge, days since engagement, and 1-2 action buttons (e.g., "Review Flashcards", "Retake Quiz")
+
+**Given** the widget is rendered on a viewport below 640px
+**When** the mobile fallback activates
+**Then** the treemap is replaced by a sorted topic list using Card, Progress, and Badge components, grouped by category via Accordion, sorted worst-first within each group
+
+**Given** the widget uses design tokens for all colors
+**When** dark mode is active
+**Then** treemap cells, tier badges, and text all render correctly with proper contrast (no hardcoded colors)
+
+**Given** the KnowledgeMapWidget is rendered
+**When** the user clicks "See full map" link
+**Then** navigation goes to /knowledge-map
+
+**Given** no course data exists (empty state)
+**When** the widget renders
+**Then** a friendly empty state message is shown (e.g., "Import courses to build your Knowledge Map")
+
+**Given** the widget's Focus Areas action buttons
+**When** clicked
+**Then** they navigate to the appropriate route (flashcard review filtered by course, quiz page, or lesson player)
+
+### Story 56.4: Dedicated Knowledge Map Page
+
+As a learner who wants a detailed view of all my topic knowledge,
+I want a full-screen Knowledge Map page with topic-level treemap, score popovers, and category filtering,
+So that I can explore every topic in depth and take targeted action on fading or weak areas.
+
+**Acceptance Criteria:**
+
+**Given** the route /knowledge-map is registered in routes.tsx
+**When** navigating to /knowledge-map
+**Then** the KnowledgeMap page loads with a topic-level Recharts Treemap showing all ~40-60 topics, grouped by category, colored by tier
+
+**Given** the treemap renders with topic cells
+**When** cell size is determined
+**Then** it reflects the topic's lesson count (more lessons = larger cell), and color reflects tier (--success for strong, --warning for fading, --destructive for weak)
+
+**Given** the treemap is rendered
+**When** the user clicks a topic cell
+**Then** a TopicDetailPopover opens showing: topic name + tier badge, score breakdown (quiz %, flashcard retention %, completion %, recency score with effective weights), confidence level indicator, last engagement date (relative: "45 days ago"), and suggested action buttons
+
+**Given** TopicDetailPopover action buttons are displayed
+**When** "Review Flashcards" is clicked
+**Then** navigation goes to flashcard review filtered by the topic's course
+**And** "Retake Quiz" navigates to the quiz for the course containing the topic
+**And** "Rewatch Lesson" navigates to the first incomplete lesson in the topic
+
+**Given** the Knowledge Map page is rendered
+**When** category filter chips/sidebar are visible
+**Then** clicking a category chip filters the treemap to show only topics in that category, with an "All Categories" option to reset
+
+**Given** the page is viewed on a viewport below 640px
+**When** the mobile fallback activates
+**Then** the treemap is replaced by a sorted topic list with Card/Progress/Badge/Accordion components, grouped by category, sorted worst-first, with tap to expand topic details
+
+**Given** the page is rendered on desktop
+**When** treemap cells are small (width < 60px or height < 30px)
+**Then** the topic label is hidden but the score number still shows if width > 40px; hovering shows full details via tooltip
+
+**Given** the Knowledge Map page
+**When** the FocusAreasPanel renders
+**Then** it shows the same top 3 urgent topics as the Overview widget (reused component)
+
+**Given** a sidebar navigation entry for "Knowledge Map"
+**When** the user is on the /knowledge-map route
+**Then** the sidebar item shows active state
+
+**Given** the treemap cells
+**When** navigated via keyboard (Tab)
+**Then** cells receive visible focus indicators and pressing Enter opens the TopicDetailPopover (accessibility)
+
+## Epic 57: AI Tutoring Phase 1-2 — Lesson-Aware Chat + Socratic Mode
+
+Learners can access an AI tutor directly within the LessonPlayer that understands the current lesson context, provides transcript-grounded answers with video timestamp citations, persists conversations across sessions, and offers Socratic questioning with adaptive hint escalation alongside a direct Explain mode.
+
+### Story 57.1: Tutor Chat UI + Context Injection
+
+As a learner watching a video lesson,
+I want a "Tutor" tab in the LessonPlayer with a chat interface that understands my current lesson context,
+So that I can ask questions about the material I'm studying and get relevant, transcript-grounded answers.
+
+**Acceptance Criteria:**
+
+**Given** an AI provider is configured in Settings (Ollama, OpenAI, Groq, or BYOK)
+**When** the LessonPlayer loads for any course lesson
+**Then** a "Tutor" tab appears as the 6th tab (after Materials, Notes, Bookmarks, Transcript, Summary)
+**And** the tab is not rendered when no AI provider is configured
+
+**Given** the user clicks the Tutor tab
+**When** the TutorChat component renders
+**Then** it displays a TranscriptBadge at the top indicating transcript availability, a MessageList area (reused from src/app/components/chat/), and a ChatInput component (reused from src/app/components/chat/)
+**And** the empty state shows a prompt like "Ask about this lesson..."
+
+**Given** the lesson has a transcript with status 'done' and fullText < 2,000 tokens
+**When** the user sends a message
+**Then** the full transcript is injected as context into the system prompt (strategy: full)
+**And** the TranscriptBadge shows "Transcript-grounded" with success styling
+
+**Given** the lesson has a transcript with chapters (youtubeChapters table)
+**When** the user sends a message at video position 5:30
+**Then** the transcript context is the chapter containing timestamp 5:30 (strategy: chapter)
+**And** the chapter title is included in the context
+
+**Given** the lesson has a long transcript (>2K tokens) without chapters
+**When** the user sends a message at video position 10:00
+**Then** a 512-token window centered on the transcript cues nearest to 10:00 is injected (strategy: window)
+**And** the excerpt includes [MM:SS - MM:SS] time range header
+
+**Given** the lesson has no transcript available
+**When** the Tutor tab renders
+**Then** the TranscriptBadge shows "General mode" with warning styling
+**And** the system prompt includes only course title, lesson title, and lesson position metadata (no transcript excerpt)
+
+**Given** the 6-slot priority prompt builder
+**When** building the system prompt for a 4K Ollama model
+**Then** slots are filled in priority order (base instructions, mode rules, course context, transcript excerpt, learner profile, resume context) and lower-priority optional slots are omitted if token budget is exceeded
+**And** required slots (base, mode, course) are never omitted
+
+**Given** the Tutor tab is rendered on a mobile viewport
+**When** the TabsList scrolls horizontally to show the 6th tab
+**Then** the Tutor tab is accessible without any additional responsive layout changes
+
+### Story 57.2: Tutor Hook + Streaming
+
+As a learner asking questions in the tutor chat,
+I want my questions answered via streaming LLM responses using the existing AI infrastructure,
+So that I see responses appear in real-time with the same quality and provider support as ChatQA.
+
+**Acceptance Criteria:**
+
+**Given** the useTutor hook is initialized with courseId and lessonId from route params
+**When** the hook mounts
+**Then** it initializes the useTutorStore (Zustand) with default state: mode 'socratic', hintLevel 0, isGenerating false, empty messages array
+
+**Given** the user types a message and clicks send in the Tutor tab
+**When** the useTutor hook processes the message
+**Then** it executes the 6-stage pipeline: (1) process frustration detection, (2) get transcript context based on video position, (3) build system prompt with slot priority, (4) assemble LLM message array with system prompt + conversation history + user message, (5) stream LLM response via getLLMClient('tutor'), (6) persist conversation to store
+
+**Given** the LLM is streaming a response
+**When** text chunks arrive
+**Then** the assistant message in the MessageList updates in real-time (same streaming behavior as ChatQA)
+**And** the ChatInput is disabled during generation
+
+**Given** the LLM stream fails mid-response after some content has been streamed
+**When** the error is caught
+**Then** the partial content is preserved with " [Response interrupted]" appended (not discarded)
+**And** the error message appears below the chat input
+
+**Given** the user is a free-tier user without BYOK configured
+**When** they attempt to send a tutor message
+**Then** they receive the same premium gating message as ChatQA ("Premium subscription required" or "Configure an AI provider in Settings")
+
+**Given** the LLM is completely unavailable (network error, provider down)
+**When** the Tutor tab is opened
+**Then** the TranscriptBadge shows "Offline" with destructive styling
+**And** the ChatInput is disabled with a banner: "AI provider offline. Configure a provider in Settings to use tutoring."
+**And** past conversation messages (if any) are displayed read-only
+
+**Given** the conversation history has more than 3 exchanges (6 messages)
+**When** building the LLM message array
+**Then** only the last 3 exchanges (6 most recent messages) are included as conversation context
+**And** the full message history is still displayed in the UI MessageList
+
+**Given** an error from the LLM (timeout, rate limit, auth error)
+**When** the error is mapped
+**Then** the same user-friendly error messages as ChatQA are shown (reusing the error mapping pattern)
+
+### Story 57.3: Conversation Persistence
+
+As a learner who wants to continue a tutoring conversation later,
+I want my tutor conversations saved and restored automatically when I return to a lesson,
+So that I can pick up where I left off without re-asking previous questions.
+
+**Acceptance Criteria:**
+
+**Given** the Dexie schema is at version 28 or earlier
+**When** the app loads after this story is deployed
+**Then** Dexie migrates to v29 with a new `chatConversations` table indexed by `id, [courseId+videoId], courseId, updatedAt`
+**And** the CHECKPOINT_VERSION in checkpoint.ts is updated to 29 with chatConversations in CHECKPOINT_SCHEMA
+
+**Given** a ChatConversation type is added to src/data/types.ts
+**When** referenced in the codebase
+**Then** it has fields: id (string UUID), courseId (string), videoId (string), mode (TutorMode: 'socratic' | 'explain'), hintLevel (number 0-4), messages (TutorMessage[] blob), createdAt (number), updatedAt (number)
+**And** TutorMessage has fields: role ('user' | 'assistant'), content (string), timestamp (number)
+
+**Given** the user sends their first message in a lesson that has no existing conversation
+**When** the assistant response completes
+**Then** a new ChatConversation record is created in Dexie with courseId, videoId, mode, hintLevel, and the 2-message array
+**And** the record has a UUID id, createdAt, and updatedAt set to Date.now()
+
+**Given** the user sends a follow-up message in an existing conversation
+**When** the assistant response completes
+**Then** the existing ChatConversation record is updated: messages array is appended with the new user + assistant messages, updatedAt is bumped
+
+**Given** the user navigates away from a lesson and later returns
+**When** the Tutor tab loads
+**Then** the existing conversation for [courseId+videoId] is loaded from Dexie
+**And** all past messages are displayed in the MessageList (full history, scrollable)
+**And** the last exchange (2 messages) is injected as LLM context for natural continuation
+
+**Given** the user clicks a "Clear conversation" button in the TutorChat header
+**When** confirmed
+**Then** the chatConversation record for this lesson is deleted from Dexie
+**And** the MessageList is cleared and the empty state is shown
+
+**Given** the user has conversations for multiple lessons
+**When** navigating between lessons
+**Then** each lesson loads its own conversation independently via the [courseId+videoId] compound index
+**And** switching lessons does not affect other conversations
+
+### Story 57.4: Socratic System Prompt + Hint Ladder
+
+As a learner who wants guided learning rather than direct answers,
+I want the tutor to use Socratic questioning by default with progressive hint escalation when I'm stuck,
+So that I develop deeper understanding through guided discovery while still getting help when I need it.
+
+**Acceptance Criteria:**
+
+**Given** the tutor is in Socratic mode (default)
+**When** the user asks a question about the lesson material
+**Then** the system prompt includes MODE: Socratic Questioning rules instructing the LLM to ask guiding questions rather than provide direct answers
+**And** the hint level instruction for the current level is injected (e.g., Level 0: "Ask an open-ended guiding question about the concept.")
+
+**Given** a TutorModeChips component renders below the TranscriptBadge
+**When** the user views the Tutor tab
+**Then** two mode chips are displayed: "Socratic" (default, selected) and "Explain"
+**And** clicking "Explain" switches the mode and updates the system prompt to use direct explanation rules
+**And** clicking "Socratic" switches back to Socratic mode
+
+**Given** the user switches from Socratic to Explain mode (or vice versa)
+**When** the mode change is applied
+**Then** the hint ladder resets to Level 0
+**And** the mode is persisted in the ChatConversation record
+**And** subsequent messages use the new mode's prompt rules
+
+**Given** the hint ladder state machine processes a user message
+**When** the message matches explicit frustration patterns ("just tell me", "give me the answer", "I give up", "stop asking", "explain it")
+**Then** the hint level escalates by 2 (capped at Level 4)
+**And** the next LLM response uses the escalated hint instruction
+
+**Given** the hint ladder processes a user message
+**When** the message matches implicit frustration signals (message < 15 chars without a question mark, contains "I don't know", "help", "idk", "no idea", "what?", "huh?")
+**Then** the hint level escalates by 1
+
+**Given** the user has been at the same hint level for 2 consecutive exchanges without apparent progress
+**When** the third exchange begins
+**Then** the hint level auto-escalates by 1
+
+**Given** the hint level reaches Level 4 (direct explanation)
+**When** the LLM generates a response
+**Then** the system prompt instructs: "Explain directly and clearly. The student needs a direct answer."
+**And** after the direct explanation, the tutor asks a brief check-for-understanding question
+
+**Given** the tutor is in Explain mode
+**When** the user asks a question
+**Then** the system prompt instructs clear, structured explanations using lesson material examples
+**And** the hint ladder is not active (no escalation)
+**And** after explaining, the LLM asks a brief check-for-understanding question
+
+### Story 57.5: RAG-Grounded Answers (Phase 2)
+
+As a learner who asks questions beyond the current video position,
+I want the tutor to search across the full lesson transcript using semantic retrieval with position-aware relevance,
+So that I get accurate, citation-rich answers grounded in the actual lesson material even for content I haven't watched yet.
+
+**Acceptance Criteria:**
+
+**Given** the user opens the Tutor tab for a lesson for the first time
+**When** the first tutor interaction is initiated
+**Then** a background task lazily embeds the lesson's transcript into 512-token chunks with 20% overlap
+**And** embeddings are stored in the existing `embeddings` table with `sourceType: 'transcript'` discriminator
+**And** the tutor chat remains functional during embedding (falls back to position-based injection until embeddings complete)
+
+**Given** the lesson's transcript has been embedded
+**When** the user asks a question
+**Then** the ragCoordinator performs semantic search across transcript chunks (not just notes)
+**And** retrieved chunks are ranked by similarity score
+
+**Given** the video is at position 15:00 and the user asks a question
+**When** transcript chunks are retrieved via RAG
+**Then** chunks within 60 seconds of the current playhead position receive a +0.2 similarity boost
+**And** position-boosted chunks appear higher in the results even if their raw similarity is slightly lower
+
+**Given** the RAG retrieves transcript chunks as context
+**When** the LLM generates a response referencing specific lesson content
+**Then** citations include timestamps in [MM:SS] format
+**And** clicking a citation timestamp in the chat seeks the video player to that position via CitationLink
+
+**Given** the lesson has both notes and transcript embeddings
+**When** the tutor retrieves context
+**Then** both note chunks and transcript chunks are searched
+**And** transcript chunks are prioritized (authoritative source material) with notes as supplementary context
+
+**Given** transcript embedding fails (e.g., embedding provider unavailable)
+**When** the user sends a tutor message
+**Then** the tutor falls back to Phase 1 position-based injection (chapter/window strategies)
+**And** no error is shown to the user — degradation is transparent

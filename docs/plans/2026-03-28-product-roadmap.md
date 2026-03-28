@@ -1455,24 +1455,28 @@ Before starting: "Do I read/listen to enough books to justify this? Is the PDF v
 
 ## 20. Cross-Cutting Dependencies
 
+> **Execution priority document:** [`docs/plans/execution-priority.md`](execution-priority.md) — tier-based order with rationale and decision gates.
+
 ```
-                    ┌─────────────────┐
-                    │  Test Health (4) │ ← Fix FIRST — everything depends on reliable tests
-                    └────────┬────────┘
+                    ┌──────────────────────┐
+                    │  Test Health (E43)    │ ← Fix FIRST — everything depends on reliable tests
+                    │  S01-S03: 55+ tests  │
+                    └────────┬─────────────┘
                              │
               ┌──────────────┼──────────────┐
               ▼              ▼              ▼
-     ┌────────────┐  ┌────────────┐  ┌──────────┐
-     │ Auth (2)   │  │ CRUD (4)   │  │ ML 1-4   │
-     │ pwd reset  │  │ completion │  │ auto-quiz │
-     │ session    │  │ soft-delete│  │ recommend │
-     └─────┬──────┘  └─────┬──────┘  └──────────┘
-           │               │
-           ▼               ▼
-     ┌─────────────────────────┐
-     │   Data Sync (1)         │ ← Needs auth polish + CRUD stability
-     │   Supabase tables       │
-     └────────────┬────────────┘
+     ┌────────────┐  ┌────────────┐  ┌───────────────┐
+     │ Auth (2)   │  │ CRUD (4)   │  │ ML hybrid     │
+     │ E43-S04    │  │ E43-S05    │  │ E52 (4 stories│
+     │ session exp│  │ completion │  │ quiz + recs)  │
+     └─────┬──────┘  └─────┬──────┘  └───────┬───────┘
+           │               │                  │
+           ▼               ▼                  │ 2-week validation
+     ┌─────────────────────────┐              ▼
+     │   Data Sync (1)         │       ┌──────────────┐
+     │   E44-E46 Phase 1       │       │ ML Full (E52)│
+     │   E47-E49 Phase 2       │       │ 8 stories    │
+     └────────────┬────────────┘       └──────────────┘
                   │
        ┌──────────┼──────────┬──────────┐
        ▼          ▼          ▼          ▼
@@ -1485,62 +1489,86 @@ Before starting: "Do I read/listen to enough books to justify this? Is the PDF v
                                               ▼
                                        ┌──────────────┐
                                        │ Offline/     │
-                                       │ Downloads (6)│ ← Full offline needs desktop
+                                       │ Downloads (6)│
+                                       └──────┬───────┘
+                                              │
+                                              ▼
+                                       ┌──────────────┐
+                                       │ Books (19)   │ ← Needs desktop + sync for full value
                                        └──────────────┘
 
-     ┌──────────────────┐
-     │ Calendar (10)    │ ← Phase 1 (iCal feed) is independent
-     │ iCal → GCal     │   Phase 3+ needs Auth (2) for OAuth token storage
+     INDEPENDENT TRACKS (no blockers, run anytime):
+
+     ┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+     │ Calendar (10)    │     │ Accessibility     │     │ PKM Export (12)  │
+     │ E50 (6 stories)  │     │ E51 (4 stories)   │     │ E53 (3 stories)  │
+     │ Phase 1-2 indep. │     │ (11) font/density │     │ Markdown/Anki    │
+     │ Phase 3+ → Auth  │     └──────────────────┘     └──────────────────┘
      └──────────────────┘
+                              ┌──────────────────┐     ┌──────────────────┐
+     ┌──────────────────┐     │ Lesson Flow (16)  │     │ Stitch UI (17)   │
+     │ Notifications    │     │ E54 (3 stories)   │     │ E55 (5 stories)  │
+     │ E43-S06/S07      │     │ CTA + checkmarks  │     │ Focus + Streak   │
+     └──────────────────┘     └──────────────────┘     └──────────────────┘
+
+     DEPENDENCY CHAINS:
 
      ┌──────────────────┐     ┌──────────────────┐
-     │ Accessibility    │     │ PKM Export (12)   │ ← Both independent
-     │ (11) a11y prefs  │     │ Markdown/Anki     │   No external deps
-     └──────────────────┘     └──────────────────┘
+     │ FSRS (ML ph. 3)  │────▶│ Knowledge Map    │
+     │ (not yet planned)│     │ E56 (4 stories)   │
+     └──────────────────┘     │ Ph.1-2 independent│
+                              │ Ph.3 needs FSRS   │
+                              └────────┬──────────┘
+                                       │
+                                       ▼
+                              ┌──────────────────┐
+                              │ AI Tutoring (14)  │
+                              │ E57 (5 stories)   │
+                              │ Ph.1-3 independent│
+                              │ Ph.4 → Knowl. Map │
+                              └──────────────────┘
 
-     ┌──────────────────┐     ┌──────────────────┐
-     │ Knowledge Map    │ ←── │ FSRS (ML phase 3)│   Decay predictions need FSRS
-     │ (13) heatmap     │     └──────────────────┘
-     └────────┬─────────┘
-              │
-              ▼
+     QUALITY GATES (run before releases):
+
      ┌──────────────────┐
-     │ AI Tutoring (14) │ ← Phase 4 needs knowledge map for learner profile
-     │ Socratic mode    │   Phases 1-3 are independent (existing AI infra)
+     │ User Flows (18)  │ ← Run before major releases, not a feature dependency
+     │ 33 pages + 10    │
+     │ journeys + audit │
      └──────────────────┘
 ```
 
 ### Key Dependency Chains
 
-1. **Test health → Everything** — Don't build on a broken foundation
-2. **Auth + CRUD → Data Sync** — Sync needs stable schemas and auth
-3. **Data Sync → Desktop App** — Desktop must sync with web version
-4. **Data Sync → Cloud Storage** — Same sync engine can target multiple backends
+1. **Test health (E43) → Everything** — Don't build on a broken foundation
+2. **Auth (E43-S04) + CRUD (E43-S05) → Data Sync (E44)** — Sync needs stable schemas and auth
+3. **Data Sync (E44-E46) → Desktop App (3)** — Desktop must sync with web version
+4. **Data Sync → Cloud Storage (7)** — Same sync engine can target multiple backends
 5. **Data Sync → Offline UX (9)** — Sync status indicator needs sync engine
-6. **Desktop App → Full Offline** — Web can cache; desktop can download permanently
-7. **ML phases 1-4 → ML phases 5-8** — Early phases validate the pipeline
-8. **Auth → Calendar phase 3+** — Google Calendar OAuth needs token storage in Supabase
-9. **FSRS → Knowledge Map phase 3** — Decay predictions use FSRS stability estimates
-10. **Knowledge Map → AI Tutoring phase 4** — Learner profile injection needs knowledge scores
+6. **Desktop App → Full Offline (6) → Books (19)** — Full library needs persistent file access
+7. **E52 hybrid → E52 full** — 2-week validation gate between hybrid and full ML pipeline
+8. **Auth → Calendar phase 3+** — Google Calendar OAuth needs Supabase token storage
+9. **FSRS → Knowledge Map phase 3 (E56)** — Decay predictions use FSRS stability estimates
+10. **Knowledge Map (E56) → AI Tutoring phase 4 (E57)** — Learner profile needs knowledge scores
 
-### Independent Tracks (can run in parallel)
+### Independent Tracks (can run in parallel — Tier 1 + 2)
 
-- ML phases 1-4 (auto-quiz, recommendations) — uses existing infrastructure
-- Repo strategy — organizational, not technical
-- Export/import bundles — no dependencies
-- Auth password reset — small, isolated
-- Calendar phase 1 (iCal feed) — no dependencies, can ship anytime
-- Calendar phase 2 (study planner UI) — only needs CRUD table, no external deps
-- Accessibility phase 1-2 (dyslexia font, content density, settings page) — pure frontend, no deps
-- PKM export phases 1-3 (Markdown, Anki, Obsidian) — uses existing data, no external deps
-- AI Tutoring phases 1-2 (lesson-aware chat, Socratic mode) — uses existing AI infra
-- Knowledge Map phases 1-2 (topic scores, dashboard widget) — uses existing quiz/progress data
-- Notification phases 1-2 (data model + core triggers) — replaces existing mock data, pure frontend
-- Onboarding & UX polish (section 16) — all items are independent, pure frontend fixes
+| Epic | Area | Stories | Dependencies |
+|------|------|---------|-------------|
+| E51 | Accessibility Phase 1 | 4 | None — pure frontend |
+| E50 | Calendar Phase 1-2 | 6 | None — Phases 1-2 independent |
+| E43-S06/S07 | Notifications data layer | 2 | None — replaces mock data |
+| E52 | ML Phase 1 (hybrid) | 4 | None — uses existing AI infra |
+| E53 | PKM Export Phase 1 | 3 | None — uses existing export |
+| E54 | Lesson Flow | 3 | None — pure frontend |
+| E55 | Stitch UI Phase 1 | 5 | None — pure frontend |
+| E56 | Knowledge Map Phase 1-2 | 4 | None for Ph.1-2 (Ph.3 needs FSRS) |
+| E57 | AI Tutoring Phase 1-3 | 5 | None for Ph.1-3 (Ph.4 needs E56) |
 
 ---
 
 ## 21. Recommended Sequencing
+
+> **Execution priority:** [`docs/plans/execution-priority.md`](execution-priority.md) — 5-tier order with rationale, parallelization notes, and decision gates.
 
 ### Wave 1: Foundation (E43 — 7 stories ready)
 > Fix what's broken, fill critical gaps, ship quick wins
@@ -1625,14 +1653,18 @@ Before starting: "Do I read/listen to enough books to justify this? Is the PDF v
 
 ### Decision Gates
 
-| Before Wave | Ask Yourself |
-|-------------|-------------|
-| Wave 3 | "Do I actually use Knowlune on multiple devices?" |
-| Wave 4 | "Am I ready for public contributors?" |
-| Wave 5 | "Are users asking for a desktop app? Is Docker a barrier?" |
-| Calendar phase 3 | "Is iCal feed sufficient, or do I actually need two-way sync?" |
-| PKM phase 4 | "Are users actually exporting to Notion, or is Markdown enough?" |
-| Knowledge Map phase 5 | "Is topic-level granularity sufficient, or do users need concept-level?" |
+| Gate | When | Question | If Yes → | If No → |
+|------|------|----------|----------|---------|
+| E52 validation | 2 weeks after E52 ships | "Did users use generated quizzes?" | Plan E52 full scope (8 stories) | Deprioritize ML Phase 2 |
+| E57 validation | 2 weeks after E57 ships | "Is Socratic better than direct explanation?" | Plan Phase 3-6 | Keep Explain mode only |
+| Sync decision | Before E44 | "Do I use Knowlune on multiple devices?" | Start E44 | Skip to Tier 5 |
+| E46 validation | 2-4 weeks after E46 | "Does P0 sync work reliably?" | Start E47 | Fix issues first |
+| Calendar phase 3 | After E50 validated | "Is iCal feed sufficient, or need two-way sync?" | Plan Google Calendar epic | Keep iCal only |
+| PKM phase 4 | After E53 validated | "Are users exporting to Notion, or is Markdown enough?" | Plan Notion API epic | Keep Markdown/Anki |
+| Knowledge Map phase 5 | After E56 validated | "Is topic-level sufficient, or need concept-level?" | Plan ML concept extraction | Keep topic-level |
+| Desktop decision | Before Wave 5 | "Is Docker blocking adoption?" | Start Tauri app | Keep PWA only |
+| Books decision | Before Wave 4-5 | "Do I read enough to justify this?" | Start Phase 1 (shelves) | Park indefinitely |
+| Wave 4 | Before repo split | "Am I ready for public contributors?" | Split repos | Keep monorepo |
 
 ---
 
