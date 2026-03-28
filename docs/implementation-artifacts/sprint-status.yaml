@@ -534,7 +534,7 @@ development_status:
   43-2-component-mock-fixes: done  # resolved during E33
   43-3-e2e-test-fixes: done  # resolved during E33
   43-4-session-expiry-handling: backlog
-  43-5-course-completion-pct-fix: backlog
+  43-5-course-completion-pct-fix: done
   43-6-notifications-data-layer: backlog
   43-7-notifications-triggers-wiring: backlog
 

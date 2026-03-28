@@ -21,7 +21,11 @@ import { StatusFilter } from '@/app/components/figma/StatusFilter'
 import { ToggleGroup, ToggleGroupItem } from '@/app/components/ui/toggle-group'
 import { Search, FolderOpen, BookOpen, ChevronDown, Youtube } from 'lucide-react'
 import { useCourseStore } from '@/stores/useCourseStore'
-import { getCourseCompletionPercent, getProgress } from '@/lib/progress'
+import {
+  getCourseCompletionPercent,
+  getImportedCourseCompletionPercent,
+  getProgress,
+} from '@/lib/progress'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { useLazyStore } from '@/hooks/useLazyStore'
 import { ImportWizardDialog } from '@/app/components/figma/ImportWizardDialog'
@@ -61,6 +65,7 @@ export function Courses() {
   const [momentumMap, setMomentumMap] = useState<Map<string, MomentumScore>>(new Map())
   const [atRiskMap, setAtRiskMap] = useState<Map<string, AtRiskStatus>>(new Map())
   const [estimateMap, setEstimateMap] = useState<Map<string, CompletionEstimate>>(new Map())
+  const [importedCompletionMap, setImportedCompletionMap] = useState<Map<string, number>>(new Map())
 
   // Collapse state for sample courses section — persisted to localStorage
   const [sampleCollapsed, setSampleCollapsed] = useState(() => {
@@ -150,21 +155,28 @@ export function Courses() {
           estimateMap.set(course.id, estimate)
         }
 
-        // Calculate momentum for imported courses (AC: E07-S01)
+        // Calculate momentum + completion for imported courses (AC: E07-S01, E43-S05)
+        const completionMap = new Map<string, number>()
         for (const course of importedCourses) {
           const courseSessions = sessionsByCourse.get(course.id) ?? []
 
-          // For imported courses: use videoCount as totalLessons, default completion to 0
-          // Momentum driven primarily by study sessions (recency + frequency)
+          // Compute actual completion % from Dexie progress table
+          const completionPercent = await getImportedCourseCompletionPercent(
+            course.id,
+            course.videoCount
+          )
+          completionMap.set(course.id, completionPercent)
+
           const momentum = calculateMomentumScore({
             courseId: course.id,
             totalLessons: course.videoCount,
-            completionPercent: 0, // TODO: Calculate from contentProgress when implemented
+            completionPercent,
             sessions: courseSessions,
           })
           momentumMap.set(course.id, momentum)
         }
 
+        setImportedCompletionMap(completionMap)
         setMomentumMap(momentumMap)
         setAtRiskMap(atRiskMap)
         setEstimateMap(estimateMap)
@@ -450,6 +462,7 @@ export function Courses() {
                     <ImportedCourseCard
                       course={course}
                       allTags={allTags}
+                      completionPercent={importedCompletionMap.get(course.id) ?? 0}
                       momentumScore={momentumMap.get(course.id)}
                     />
                   )}

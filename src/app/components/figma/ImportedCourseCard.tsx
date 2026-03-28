@@ -61,6 +61,8 @@ import {
 } from '@/app/components/ui/tooltip'
 import { formatCourseDuration, formatFileSize, getResolutionLabel } from '@/lib/format'
 import { MomentumBadge } from './MomentumBadge'
+import { ProgressRing } from './ProgressRing'
+import { Progress } from '@/app/components/ui/progress'
 import type { ImportedCourse, ImportedVideo, LearnerCourseStatus } from '@/data/types'
 import type { MomentumScore } from '@/lib/momentum'
 
@@ -88,10 +90,16 @@ const statusConfig: Record<
 interface ImportedCourseCardProps {
   course: ImportedCourse
   allTags: string[]
+  completionPercent?: number
   momentumScore?: MomentumScore
 }
 
-export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedCourseCardProps) {
+export function ImportedCourseCard({
+  course,
+  allTags,
+  completionPercent = 0,
+  momentumScore,
+}: ImportedCourseCardProps) {
   const updateCourseTags = useCourseImportStore(state => state.updateCourseTags)
   const updateCourseStatus = useCourseImportStore(state => state.updateCourseStatus)
   const removeImportedCourse = useCourseImportStore(state => state.removeImportedCourse)
@@ -289,6 +297,21 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
                 )}
               />
             )}
+            {/* Completion overlay — top-left (E43-S05) */}
+            {completionPercent === 100 ? (
+              <div
+                className="absolute top-3 left-3 z-20 bg-success text-success-foreground rounded-full px-3 py-1 text-xs font-bold shadow-lg flex items-center gap-1"
+                data-testid="completion-badge"
+              >
+                <CheckCircle2 className="size-3" aria-hidden="true" />
+                Complete
+              </div>
+            ) : completionPercent > 0 ? (
+              <div className="absolute top-3 left-3 z-20" data-testid="completion-ring">
+                <ProgressRing percent={completionPercent} size={40} strokeWidth={3} />
+              </div>
+            ) : null}
+
             <div className="absolute top-3 right-3 z-20">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -542,6 +565,11 @@ export function ImportedCourseCard({ course, allTags, momentumScore }: ImportedC
                 </Badge>
               )}
             </div>
+            {completionPercent > 0 && (
+              <div className="mt-2" data-testid="completion-progress-bar">
+                <Progress value={completionPercent} showLabel className="h-1.5" />
+              </div>
+            )}
             {momentumScore && momentumScore.score > 0 && (
               <div className="mt-2">
                 <MomentumBadge score={momentumScore.score} tier={momentumScore.tier} />

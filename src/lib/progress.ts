@@ -379,6 +379,20 @@ export function getCourseCompletionPercent(courseId: string, totalLessons: numbe
   return Math.round((progress.completedLessons.length / totalLessons) * 100)
 }
 
+/**
+ * Compute completion % for imported courses by querying the Dexie `progress` table.
+ * A video counts as completed when its completionPercentage >= 90.
+ */
+export async function getImportedCourseCompletionPercent(
+  courseId: string,
+  videoCount: number
+): Promise<number> {
+  if (videoCount === 0) return 0
+  const rows = await db.progress.where('courseId').equals(courseId).toArray()
+  const completedCount = rows.filter(r => r.completionPercentage >= 90).length
+  return Math.round((completedCount / videoCount) * 100)
+}
+
 export function isLessonComplete(courseId: string, lessonId: string): boolean {
   const progress = getProgress(courseId)
   return progress.completedLessons.includes(lessonId)
