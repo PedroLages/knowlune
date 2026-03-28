@@ -14,20 +14,26 @@ Last Updated: 2026-03-28
 | E43-S05 | done | #144 | — | — |
 | E43-S06 | done | #145 | — | — |
 | E43-S07 | done | #146 | — | — |
-| E43-S08 | queued | — | — | — |
+| E43-S08 | done | #147 | 2 | 3 |
 
 ## Story Details
 
 ### E43-S08: Auth UX Polish
-**Status:** queued
+**Status:** done
 #### Errors
-_(none yet)_
+_(none)_
 #### Review Findings
-_(none yet)_
+Round 1 (3 story-related issues):
+- [HIGH] useAuthLifecycle tests broken — missing getSession mock (6 test failures)
+- [MEDIUM] Invalid eslint-disable-next-line in Login.tsx:37
+- [LOW] Prettier formatting in settings.ts and settings.test.ts
+Round 2: PASS (0 story-related issues)
 #### Fixes Applied
-_(none yet)_
+- Added getSession mock to useAuthLifecycle test suite
+- Removed invalid ESLint disable comment from Login.tsx
+- Applied Prettier formatting to 4 files
 #### Notes
-Only remaining story in Epic 43. Auth UX polish for Google OAuth login flow.
+5 fixes shipped: auth state getSession fallback, Google metadata mapping, avatar ternary fix, CSP updates, Login back-nav. 12 new unit tests.
 
 ---
 
@@ -35,8 +41,8 @@ Only remaining story in Epic 43. Auth UX polish for Google OAuth login flow.
 
 | Command | Status | Result | Notes |
 |---------|--------|--------|-------|
-| Sprint Status | pending | — | — |
-| Mark Epic Done | pending | — | — |
+| Sprint Status | pending | — | Finish agent confirmed all done |
+| Mark Epic Done | done | epic-43: done | Set by Finish Agent in PR #147 |
 | Testarch Trace | pending | — | — |
 | Testarch NFR | pending | — | — |
 | Adversarial Review | pending | — | — |
@@ -46,11 +52,15 @@ Only remaining story in Epic 43. Auth UX polish for Google OAuth login flow.
 _(none yet)_
 
 ## Pre-Existing Issues (Deferred)
-_(none yet)_
+- [HIGH] TypeScript errors in src/services/__tests__/NotificationService.test.ts (3 TS errors)
+- [HIGH] Unit test failures in src/lib/entitlement/__tests__/isPremium.test.ts (8 failures)
+- [MEDIUM] Unit test failure in src/app/pages/__tests__/Courses.test.tsx
+- [LOW] ESLint no-silent-catch warnings in Layout.tsx:275,307
+- [LOW] ESLint unused-var warnings across 5 E2E test files
 
 ## Epic Summary
 - Started: 2026-03-28
-- Completed: --
-- Total Stories: 8 (7 previously done, 1 remaining)
-- Total Review Rounds: --
-- Total Issues Fixed: --
+- Completed: 2026-03-28
+- Total Stories: 8 (7 previously done, 1 orchestrated)
+- Total Review Rounds: 2
+- Total Issues Fixed: 3
