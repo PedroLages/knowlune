@@ -37,7 +37,8 @@ export function useAuthLifecycle(): void {
 
       // Clear sessionExpired on successful re-authentication
       if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-        useAuthStore.setState({ sessionExpired: false, _userInitiatedSignOut: false })
+        state.clearSessionExpired()
+        useAuthStore.setState({ _userInitiatedSignOut: false })
       }
 
       // Always update session state (handles all events including TOKEN_REFRESHED)

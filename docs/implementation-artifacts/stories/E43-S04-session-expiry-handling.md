@@ -111,15 +111,15 @@ so that I know sync stopped but can continue using the app offline.
 
 Before requesting `/review-story`, verify:
 
-- [ ] All changes committed (`git status` clean)
-- [ ] No error swallowing -- catch blocks log AND surface errors
-- [ ] useEffect hooks have cleanup functions (ignore flags for async, event listener removal)
-- [ ] No optimistic UI updates before persistence -- state updates after DB write succeeds
-- [ ] Type guards on all dynamic lookups (e.g., `LABELS[type]` when type can be empty)
-- [ ] E2E afterEach cleanup uses `await` (not fire-and-forget)
-- [ ] Date handling uses `toLocaleDateString('sv-SE')` pattern (not `toISOString().split('T')[0]`)
-- [ ] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
-- [ ] If story calls external APIs: CSP allowlist configured (see engineering-patterns.md CSP Configuration)
+- [x] All changes committed (`git status` clean)
+- [x] No error swallowing -- catch blocks log AND surface errors
+- [x] useEffect hooks have cleanup functions (ignore flags for async, event listener removal)
+- [x] No optimistic UI updates before persistence -- state updates after DB write succeeds
+- [x] Type guards on all dynamic lookups (e.g., `LABELS[type]` when type can be empty)
+- [x] E2E afterEach cleanup uses `await` (not fire-and-forget)
+- [x] Date handling uses `toLocaleDateString('sv-SE')` pattern (not `toISOString().split('T')[0]`)
+- [x] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
+- [x] If story calls external APIs: CSP allowlist configured (see engineering-patterns.md CSP Configuration)
 
 ## Design Review Feedback
 
@@ -131,4 +131,11 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+1. **`_userInitiatedSignOut` flag pattern for distinguishing system vs user sign-out:**
+   The Supabase `onAuthStateChange` listener fires `SIGNED_OUT` for both user-initiated sign-outs and system-initiated token expiry. We set `_userInitiatedSignOut = true` on the auth store *before* calling `supabase.auth.signOut()` in the profile dropdown. The `useAuthLifecycle` hook checks this flag to decide whether to show the expiry banner (system) or silently clear state (user). The flag is reset after consumption to prevent stale state.
+
+2. **Return-to-route approach using `sessionStorage`:**
+   When the session-expired banner's "Sign in" link is clicked, the current route (`pathname + search + hash`) is stored in `sessionStorage` under `knowlune-auth-return-to`. After successful authentication on the Login page, this key is read, the user is navigated back, and the key is cleared. `sessionStorage` was chosen over `localStorage` because the return-to intent should not persist across browser sessions — it is inherently ephemeral.
+
+3. **Offline banner priority design:**
+   When both offline and session-expired states are true, the offline banner takes visual priority. This is the correct UX because a session cannot be refreshed while offline anyway, so showing the session-expired banner would be misleading. The `SessionExpiredBanner` component accepts an `isOffline` prop and returns `null` when offline, rather than relying on CSS visibility toggling, to keep the DOM clean and accessibility tree accurate.

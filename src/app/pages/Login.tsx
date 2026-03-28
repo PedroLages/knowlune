@@ -22,19 +22,23 @@ export function Login() {
   const [activeTab, setActiveTab] = useState('email')
   const [resetKey, setResetKey] = useState(0)
 
-  // Redirect authenticated users away from /login (with return-to-route support)
-  useEffect(() => {
-    if (initialized && user) {
-      const returnTo = sessionStorage.getItem(RETURN_TO_KEY)
-      sessionStorage.removeItem(RETURN_TO_KEY)
-      navigate(returnTo || '/', { replace: true })
-    }
-  }, [initialized, user, navigate])
-
-  function handleSuccess() {
+  /** Navigate to the stored return-to route (or fallback to '/'), clearing the sessionStorage key. */
+  function navigateToReturnRoute() {
     const returnTo = sessionStorage.getItem(RETURN_TO_KEY)
     sessionStorage.removeItem(RETURN_TO_KEY)
     navigate(returnTo || '/', { replace: true })
+  }
+
+  // Redirect authenticated users away from /login (with return-to-route support)
+  useEffect(() => {
+    if (initialized && user) {
+      navigateToReturnRoute()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialized, user, navigate])
+
+  function handleSuccess() {
+    navigateToReturnRoute()
   }
 
   function toggleMode() {
