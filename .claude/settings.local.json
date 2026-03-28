@@ -18,7 +18,11 @@
       "Bash(# Find any python virtual envs find /Volumes/SSD/Dev -maxdepth 4 -name \"\"pyvenv.cfg\"\")",
       "Bash(lsof:*)",
       "Bash(curl:*)",
-      "Bash(BASE_URL=http://localhost:5174 npx playwright test:*)"
+      "Bash(BASE_URL=http://localhost:5174 npx playwright test:*)",
+      "Bash(python -m scripts.aggregate_benchmark /Volumes/SSD/Dev/Apps/Knowlune/.claude/skills/auto-answer-workspace/iteration-1 --skill-name auto-answer)",
+      "Bash(kill 48486)",
+      "Bash(git status:*)",
+      "Bash(git add:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
