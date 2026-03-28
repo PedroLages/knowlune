@@ -1,6 +1,6 @@
 # Knowlune Product Roadmap — Strategic Exploration
 
-> **Purpose:** Strategic exploration of 19 areas with implementation status tracking. Informs future epic planning.
+> **Purpose:** Strategic exploration of 21 areas with implementation status tracking. Informs future epic planning.
 >
 > **Date:** 2026-03-28 | **Last Status Update:** 2026-03-28
 
@@ -27,8 +27,10 @@
 17. [UI Enhancement — Stitch Design Upgrades](#17-ui-enhancement--stitch-design-upgrades)
 18. [User Flow Documentation & Live Design Audit](#18-user-flow-documentation--live-design-audit)
 19. [Books & Audiobooks Library](#19-books--audiobooks-library)
-20. [Cross-Cutting Dependencies](#20-cross-cutting-dependencies)
-21. [Recommended Sequencing](#21-recommended-sequencing)
+20. [API & Plugin System](#20-api--plugin-system)
+21. [Performance Optimization](#21-performance-optimization)
+22. [Cross-Cutting Dependencies](#22-cross-cutting-dependencies)
+23. [Recommended Sequencing](#23-recommended-sequencing)
 
 ---
 
@@ -58,6 +60,8 @@
 | 17 | UI Enhancement (Stitch) | 🟡 Stories Ready | 0% impl | E55 ready (5 stories). Deep Focus Mode SVG timer widget + Streak Calendar month-view. Brainstorm + edge case review (37 findings) complete. |
 | 18 | User Flows & Live Audit | 🔴 Not Started | 0% | 33 per-page flows + 10 cross-page journeys + style compliance. Plan: `docs/plans/user-flow-audit-plan.md` |
 | 19 | Books & Audiobooks Library | ⬜ Future Exploration | — | EPUB reader, audiobook player, highlights, shelves. 5-8 epics. Plan: `docs/plans/2026-03-28-books-audiobooks-exploration.md` |
+| 20 | API & Plugin System | ⬜ Future Exploration | — | REST API + plugin architecture. 3-5 epics. Plan: `docs/plans/2026-03-28-api-plugin-exploration.md` |
+| 21 | Performance Optimization | ⬜ Future Exploration | — | Bundle, runtime, Core Web Vitals, memory. 1-2 epics. Plan: `docs/plans/2026-03-28-performance-optimization-exploration.md` |
 
 ---
 
@@ -1453,7 +1457,85 @@ Before starting: "Do I read/listen to enough books to justify this? Is the PDF v
 
 ---
 
-## 20. Cross-Cutting Dependencies
+## 20. API & Plugin System
+
+> **Status:** ⬜ Future Exploration (Wave 4-5)
+> **Plan:** [`docs/plans/2026-03-28-api-plugin-exploration.md`](2026-03-28-api-plugin-exploration.md)
+> **Priority:** Low — needs Data Sync (Section 1) for API, Repo Split (Section 5) for plugins
+> **Last Updated:** 2026-03-28
+
+### Idea
+
+Expose Knowlune data via REST API and enable third-party extensions via a plugin architecture. Transforms Knowlune from standalone app to platform.
+
+### Two Components
+
+**REST API** — Express endpoints for courses, progress, notes, flashcards, sessions, stats. Auth via Supabase JWT. OpenAPI spec. Use cases: external dashboards, automation (Zapier/n8n), mobile app backend, CLI tools.
+
+**Plugin Architecture** — Third-party extensions: content importers (Coursera, Udemy, podcast RSS), export formats (Readwise, Notion), UI widgets, AI providers, themes, study methods. Plugin manifest, permission model, UI slots.
+
+### Dependencies
+
+- API Phase 1+ needs **Data Sync** (Section 1) — API reads from Supabase, not IndexedDB
+- Plugin Phase 3+ needs **Repo Split** (Section 5) — plugins need stable public API surface
+
+### Phases
+
+| Phase | What | Effort |
+|-------|------|--------|
+| 1 | Internal REST API (read endpoints) | Medium (1 epic) |
+| 2 | Write API + OpenAPI spec | Medium (1 epic) |
+| 3 | Plugin manifest + loader | Large (1-2 epics) |
+| 4 | Plugin marketplace | Large (1-2 epics) |
+
+### Decision Gate
+
+Before starting: "Is there a concrete consumer for the API? Is there community demand for plugins?"
+
+### Effort: Large (3-5 epics total across Waves 4-5)
+
+---
+
+## 21. Performance Optimization
+
+> **Status:** ⬜ Future Exploration (ongoing concern)
+> **Plan:** [`docs/plans/2026-03-28-performance-optimization-exploration.md`](2026-03-28-performance-optimization-exploration.md)
+> **Priority:** Medium — audit after Wave 1, optimize before public launch
+> **Last Updated:** 2026-03-28
+
+### Current State
+
+Already in place: lazy route loading, virtualized lists, performance benchmark agent (Playwright MCP during `/review-story`), bundle regression check (>25% blocks review), memory profiling E2E test.
+
+Not measured: actual bundle size baseline, Lighthouse scores on key pages, IndexedDB query performance with large datasets, re-render frequency.
+
+### Four Areas
+
+| Area | Key Targets |
+|------|-------------|
+| **Bundle size** | Lazy load Tiptap (~200KB) and recharts (~100KB), verify tree shaking for date-fns/Lucide |
+| **Runtime** | Zustand selector optimization, Overview widget staggering, Lesson Player code-splitting |
+| **Core Web Vitals** | Baseline TTFB/FCP/LCP/CLS/INP on 5 key pages, track per-epic |
+| **Memory** | Long session profiling, IndexedDB data pagination, Tiptap history limits |
+
+### Phases
+
+| Phase | What | Effort | When |
+|-------|------|--------|------|
+| 1 | Audit — baselines for bundle, Lighthouse, runtime, memory | Small (2-3 stories) | After Wave 1 |
+| 2 | Quick wins — lazy load heavy libs, fix re-renders | Small (2-3 stories) | After audit |
+| 3 | IndexedDB optimization — query profiling, indexes, pagination | Medium (3-4 stories) | Post-sync |
+| 4 | CI monitoring — bundle check in pre-push, Lighthouse in review | Small (2 stories) | Pre-launch |
+
+### Decision Gate
+
+Before Phase 1: "Have users reported slowness, or is this premature optimization?"
+
+### Effort: Small-Medium (1-2 epics for audit + quick wins). Ongoing.
+
+---
+
+## 22. Cross-Cutting Dependencies
 
 > **Execution priority document:** [`docs/plans/execution-priority.md`](execution-priority.md) — tier-based order with rationale and decision gates.
 
@@ -1566,7 +1648,7 @@ Before starting: "Do I read/listen to enough books to justify this? Is the PDF v
 
 ---
 
-## 21. Recommended Sequencing
+## 23. Recommended Sequencing
 
 > **Execution priority:** [`docs/plans/execution-priority.md`](execution-priority.md) — 5-tier order with rationale, parallelization notes, and decision gates.
 

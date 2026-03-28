@@ -95,6 +95,8 @@ Not yet scheduled. Requires decision gates.
 | Area | Epic | Gate Question |
 |------|------|-------------|
 | Books & Audiobooks (19) | TBD | "Do I read/listen to enough books to justify this?" |
+| API & Plugin System (20) | TBD | "Is there a concrete consumer for the API? Community demand for plugins?" |
+| Performance Optimization (21) | TBD | "Have users reported slowness? Audit after Wave 1, optimize pre-launch." |
 | Desktop App (3) | TBD | "Are users asking for a desktop app? Is Docker a barrier?" |
 | User Flows Audit (18) | TBD | Run before major releases or public launch |
 | FSRS Upgrade | TBD | "Is SM-2 insufficient? Do I have enough review data for FSRS?" |
