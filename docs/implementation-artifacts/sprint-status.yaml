@@ -612,3 +612,10 @@ development_status:
   57-3-conversation-persistence: backlog
   57-4-socratic-prompt-hint-ladder: backlog
   57-5-rag-grounded-answers: backlog
+
+  # ──────────────────────────────────────────────────
+  # Epic 58: Notifications Page
+  # Source: E43 adversarial review C-03 (dead-end "View all" button)
+  # ──────────────────────────────────────────────────
+  epic-58: backlog
+  58-1-notifications-page: ready-for-dev
