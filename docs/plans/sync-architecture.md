@@ -2,8 +2,9 @@
 
 > **Purpose:** Implementation blueprint for cross-device data synchronization via Supabase.
 > **Date:** 2026-03-28
-> **Scope:** 4 epics, 28-36 stories
-> **Status:** Architecture — not yet scheduled for implementation
+> **Scope:** 6 epics (E44-E49), 37 stories — MVP-first (Phase 1: 18 stories, Phase 2: 19 stories)
+> **Status:** ✅ READY — adversarial review complete, all decisions resolved, implementation readiness confirmed
+> **Readiness Report:** [`implementation-readiness-report-2026-03-28-sync.md`](../_bmad-output/planning-artifacts/implementation-readiness-report-2026-03-28-sync.md)
 
 ---
 
@@ -19,7 +20,10 @@
 8. [Testing Strategy](#8-testing-strategy)
 9. [Implementation Sequence](#9-implementation-sequence)
 10. [Minimum Viable Sync](#10-minimum-viable-sync)
-11. [Open Questions](#11-open-questions)
+11. [Open Questions (Resolved)](#11-open-questions-resolved-2026-03-28)
+12. [Multi-User Data Filtering Architecture](#12-multi-user-data-filtering-architecture)
+13. [Adversarial Review Findings (2026-03-28)](#13-adversarial-review-findings-2026-03-28)
+14. [Appendix A: Edge Cases & Mitigations](#appendix-a-edge-cases--mitigations)
 
 ---
 
@@ -44,10 +48,18 @@ Sync adds cross-device continuity while preserving the local-first architecture.
 
 | Data Type | Strategy | Rationale |
 |-----------|----------|-----------|
-| Structured records (progress, sessions, bookmarks) | Last-Write-Wins (LWW) | Simple, conflicts are low-stakes |
+| contentProgress | LWW with status precedence | `completed > in-progress > not-started` — prevents regression |
+| studySessions | INSERT-only merge | Sessions are log entries, not mutable state — keep all, dedup by id |
+| bookmarks | Last-Write-Wins (LWW) | Simple, conflicts are low-stakes |
 | Notes (Tiptap rich text) | LWW + conflict preservation | Both versions saved, user chooses |
 | Flashcard SRS state | Review log replay | Merge review histories, replay through SM-2 |
+| quizAttempts (P4) | INSERT-only merge | Immutable log entries — scores, timestamps, learning history |
 | Derived/cache data | Not synced | Regenerate on each device |
+
+> **Change log (2026-03-28 adversarial review):**
+> - studySessions changed from LWW to INSERT-only merge (LWW destroys valid sessions — they're log entries, not mutable state)
+> - contentProgress LWW now includes status precedence rule to prevent completion regression
+> - quizAttempts added as P4 sync candidate (INSERT-only, learning history value)
 
 ### Infrastructure
 
@@ -223,8 +235,8 @@ async function syncableWrite<T extends SyncableRecord>(
     await db.table(table).delete(getRecordId(record))
   }
 
-  // 3. Queue for sync (skip if currently applying remote changes)
-  if (!syncEngine.isSyncing) {
+  // 3. Queue for sync (skip if applying remote changes OR unauthenticated)
+  if (!syncEngine.isSyncing && userId) {
     await db.syncQueue.add({
       id: crypto.randomUUID(),
       table,
@@ -235,6 +247,7 @@ async function syncableWrite<T extends SyncableRecord>(
       synced: false,
     })
   }
+  // Unauthenticated writes are local-only — queued on first login via backfill
 }
 ```
 
@@ -269,31 +282,44 @@ interface SyncQueueEntry {
 
 ### 3.4 Upload / Download / Apply Phases
 
+**Concurrency guard:** All sync cycles are serialized via `navigator.locks.request('knowlune-sync', ...)`. If a trigger fires while a cycle is running, it queues behind the lock. This prevents concurrent cycles from processing the same queue entries.
+
 **UPLOAD Phase:**
 
-1. Query `syncQueue WHERE synced = false ORDER BY timestamp ASC`
-2. Coalesce: group by `(table, recordId)`, keep latest per group
-3. For each group: re-read current record from Dexie
-4. Batch upsert to Supabase REST API (max 100 records per request)
-5. On success: mark queue entries `synced = true`, set record `syncedAt = now()`
-6. On failure: increment `attempts`, log `lastError`, retry with exponential backoff (1s, 2s, 4s, 8s, 16s)
+1. Skip if `getCurrentUserId()` is null (unauthenticated users don't sync)
+2. Query `syncQueue WHERE synced = false ORDER BY timestamp ASC`
+3. Coalesce: group by `(table, recordId)`, keep latest per group
+4. For each group: re-read current record from Dexie
+   - If re-read returns `undefined` and operation is `put` → convert to `delete` (record was deleted between queue and upload)
+   - If re-read returns `undefined` and operation is `delete` → proceed (server DELETE is idempotent)
+5. Batch upsert to Supabase REST API (max 100 records per request)
+6. On success: diff returned rows against sent rows — only mark **confirmed** rows `synced = true`. Store server-returned `updated_at` as the record's `updatedAt` (server-authoritative timestamps).
+7. On partial failure: mark successful rows synced, increment `attempts` on failed rows, log `lastError`, retry with exponential backoff (1s, 2s, 4s, 8s, 16s)
 
 **DOWNLOAD Phase:**
 
-1. Query Supabase: `SELECT * FROM {table} WHERE updated_at > {lastSyncTimestamp} AND user_id = auth.uid()`
-2. `lastSyncTimestamp` stored per table in `syncMetadata` (Dexie table)
-3. For each remote record:
+1. Query Supabase: `SELECT * FROM {table} WHERE updated_at >= {lastSyncTimestamp} AND user_id = auth.uid()`
+2. `lastSyncTimestamp` stored per table in `syncMetadata` (Dexie table) — always derived from `max(updated_at)` of the downloaded batch (server-authoritative, never client clock)
+3. Deduplicate: skip records already in Dexie with matching `syncedAt` (handles the `>=` overlap window)
+4. For each remote record:
    - No local record → INSERT into Dexie
    - Local record exists, no pending queue entry → UPDATE local (LWW: remote wins)
    - Local record exists WITH pending queue entry → CONFLICT (see Section 5)
 
 **APPLY Phase:**
 
-1. Set `syncEngine.isSyncing = true` (prevents re-queuing)
-2. Write downloaded records to Dexie
-3. Update Zustand store state to reflect new data
-4. Set `syncEngine.isSyncing = false`
-5. Update `syncMetadata.lastSyncTimestamp` for each table
+```
+try {
+  syncEngine.isSyncing = true   // prevents re-queuing
+  // 1. Write downloaded records to Dexie
+  // 2. Update Zustand store state to reflect new data
+} finally {
+  syncEngine.isSyncing = false  // always reset, even on error
+}
+// 3. Update syncMetadata.lastSyncTimestamp for each table
+```
+
+**Note:** `isSyncing` is also reset to `false` on sync engine startup as a safety net (handles prior crash).
 
 ### 3.5 Realtime + Offline Handling
 
@@ -301,12 +327,16 @@ interface SyncQueueEntry {
 
 - Subscribe to Postgres changes on synced tables via Supabase Realtime channels
 - Filter: `user_id=eq.{currentUserId}`
-- On receive: apply remote change to Dexie + Zustand (same as APPLY phase)
+- **Before applying:** compare incoming `updated_at` against local `updatedAt`. If incoming ≤ local, discard the event (handles out-of-order delivery)
+- **Client-side validation:** verify `record.userId === currentUserId` before applying (defense against filter bypass)
+- If a Realtime event arrives during the APPLY phase, queue it and apply after the current batch completes (prevents double-apply with download phase)
 - Near-instant on LAN (titan.local), ~100ms remotely
+- **Health check:** if no event or heartbeat received in 2 minutes, force-reconnect the channel
+- **Token refresh:** listen for `onAuthStateChange`; on token refresh, unsubscribe and re-subscribe all channels
 
 **Polling fallback (secondary — mobile/unstable):**
 
-- Every 60 seconds, run DOWNLOAD phase for all synced tables
+- Every 30 seconds, run DOWNLOAD phase for all synced tables (aligned with upload interval)
 - Used when Realtime connection drops or on metered connections
 
 **Reconnection after offline:**
@@ -614,6 +644,13 @@ const FIELD_MAP: Record<string, Record<string, string>> = {
 
 **On first login (user was previously unauthenticated):**
 
+Before backfill, show a confirmation dialog:
+> "All existing data on this device will be linked to your account ({email}). If other people use this device, they won't be able to access this data. [Link my data] [Start fresh]"
+
+"Start fresh" skips backfill — records remain `userId = null` (invisible to the new user). "Link my data" runs backfill.
+
+**Startup safety net:** On every authenticated app launch, check if any synced table has records with `userId = null`. If so, re-run backfill prompt. This handles interrupted backfills.
+
 ```typescript
 async function backfillUserId(userId: string): Promise<void> {
   const tables = ['contentProgress', 'studySessions', 'notes', 'bookmarks', 'flashcards', ...]
@@ -629,38 +666,55 @@ async function backfillUserId(userId: string): Promise<void> {
 ```
 
 **On user switch (different account logs in):**
+- **Cancel in-flight sync:** abort all pending requests via `AbortController`, wait for current cycle to release the navigator lock
+- **Park other user's queue entries:** filter `syncQueue` — entries where `userId !== newUserId` are left in queue but skipped during sync (they'll resume when that user logs back in)
 - Previous user's data stays in IndexedDB (NOT deleted)
 - All Dexie queries filter by `userId = currentUserId`
 - Zustand stores reset state on user change
 - Next login re-populates stores from Dexie filtered by new userId
 
 **On logout:**
+- Cancel in-flight sync (AbortController)
+- Force-unsubscribe all Realtime channels (try/catch — don't block logout on failure)
+- Sync engine stops, `isSyncing` reset to false
 - Data persists locally
-- Sync engine stops
-- Realtime subscriptions closed
 - Re-login restores access to local data + resumes sync
 
 ---
 
 ## 5. Conflict Resolution
 
-### 5.1 LWW for Structured Data (P0 + bookmarks)
+### 5.1 Structured Data Sync Strategies
 
-**Tables:** contentProgress, studySessions, bookmarks
+> **Updated after adversarial review (Finding #1, #2)** — studySessions changed from LWW to INSERT-only; contentProgress got status precedence logic. See [adversarial review](../reviews/adversarial/adversarial-review-2026-03-28-sync-architecture.md).
 
-**Detection:**
-- Local record has pending syncQueue entry AND remote `updated_at` > local `syncedAt`
-- Both sides changed since last sync
+**Timestamp authority:** All `updatedAt` comparisons use **server-assigned timestamps** (returned from Supabase on upload). Client clocks are never compared across devices. This eliminates clock-skew as a conflict source.
 
-**Resolution:**
+#### studySessions — INSERT-only merge (not LWW)
+
+Sessions are append-only events, not mutable state. Two devices creating sessions simultaneously should keep *both*, not overwrite one.
+
+- Upload all local sessions, download all remote sessions
+- Deduplicate by session `id` — each session is unique
+- No conflict possible for new sessions
+- **Edge case:** Active session (no `endTime`) gets updated when it ends → LWW on `endTime` field only
+
+#### contentProgress — LWW with status precedence
+
 ```
-IF local.updatedAt > remote.updatedAt:
-  KEEP local, queue re-upload
+IF local.status == 'completed' AND remote.status != 'completed':
+  KEEP local (status never regresses)
+ELIF remote.status == 'completed' AND local.status != 'completed':
+  APPLY remote (completed wins regardless of timestamp)
 ELSE:
-  APPLY remote, discard local queue entry
+  Standard LWW (latest updatedAt wins; remote wins ties)
 ```
 
-**No conflict UI.** These records are independently valid (watching lesson 7 on laptop and lesson 8 on phone are both correct).
+Rationale: Once a lesson is marked completed, it stays completed even if another device has an older "in-progress" state.
+
+#### bookmarks — LWW
+
+Simple records, conflicts are low-stakes. Latest `updatedAt` wins. No conflict UI.
 
 ### 5.2 Conflict Preservation for Notes
 
@@ -766,33 +820,52 @@ BOTH COME ONLINE:
 
 ### 6.2 Resumability
 
-Track upload progress in `syncMetadata` table:
+Track upload progress in `syncMetadata` table. **Important:** Tables with compound primary keys (e.g., `contentProgress` with `[courseId+itemId]`) don't have a single `id` field. The cursor must match the table's PK shape.
 
 ```typescript
+// SyncMetadata stores a serialized cursor key, not just an id
+interface SyncMetadata {
+  table: string
+  lastUploadedKey: string | null  // JSON-serialized PK (e.g., '["courseA","lesson3"]')
+  uploadedRecords: number
+  totalRecords: number
+  status: 'idle' | 'syncing' | 'complete' | 'error'
+}
+
 // On upload start:
 await db.syncMetadata.put({
   table: 'contentProgress',
-  lastUploadedId: null,
+  lastUploadedKey: null,
   uploadedRecords: 0,
   totalRecords: await db.contentProgress.count(),
   status: 'syncing',
 })
 
 // After each batch (100 records):
+const lastKey = lastBatchRecord.courseId + '::' + lastBatchRecord.itemId
 await db.syncMetadata.update('contentProgress', {
-  lastUploadedId: lastBatchRecord.id,
+  lastUploadedKey: lastKey,
   uploadedRecords: prev + batchSize,
 })
 
 // On resume after interruption:
 const meta = await db.syncMetadata.get('contentProgress')
-if (meta?.status === 'syncing') {
-  // Continue from lastUploadedId
+if (meta?.status === 'syncing' && meta.lastUploadedKey) {
+  // Compound PK: use .above() with key array
+  const [courseId, itemId] = meta.lastUploadedKey.split('::')
   const remaining = await db.contentProgress
-    .where('id').above(meta.lastUploadedId)
+    .where('[courseId+itemId]').above([courseId, itemId])
     .toArray()
+} else if (meta?.status === 'syncing') {
+  // First batch — start from beginning
+  const remaining = await db.contentProgress.toArray()
 }
+
+// Tables with simple `id` PK (e.g., studySessions, notes):
+// Use .where('id').above(meta.lastUploadedKey) directly
 ```
+
+**Navigation during upload:** The wizard should run as a background task. If the user navigates away from Settings, show a persistent banner ("Initial sync: 68% — 2,196 / 3,229 records") in the header area until complete.
 
 ### 6.3 Idempotent Upserts
 
@@ -806,10 +879,10 @@ DO UPDATE SET
   status = EXCLUDED.status,
   updated_at = EXCLUDED.updated_at,
   synced_at = now()
-WHERE content_progress.updated_at < EXCLUDED.updated_at;
+WHERE content_progress.updated_at <= EXCLUDED.updated_at;
 ```
 
-The `WHERE` clause ensures that only newer data overwrites existing data. Safe to retry indefinitely.
+The `WHERE` clause uses `<=` (not `<`) so that retries with identical `updated_at` still refresh `synced_at`. This prevents the client from seeing a record as "unsynced" after a successful retry. Safe to retry indefinitely — `synced_at = now()` always advances.
 
 ### 6.4 New Device Download
 
@@ -934,6 +1007,8 @@ test('sync progress across devices', async ({ browser }) => {
 
 ## 9. Implementation Sequence
 
+> **Edge case AC:** Each story below includes edge-case-derived acceptance criteria (marked with ⚠️). These come from the edge case analysis in Appendix A.
+
 ### Epic 1: Sync Infrastructure (8-10 stories)
 
 | Story | Scope |
@@ -949,6 +1024,16 @@ test('sync progress across devices', async ({ browser }) => {
 | S09 | Sync settings UI (enable toggle, status indicator in header) |
 | S10 | Unit tests for sync engine, queue coalescing, field mapping |
 
+**Edge case AC for Epic 1:**
+
+| Story | ⚠️ Additional AC |
+|-------|-----------------|
+| S01 | Migration guard: if `getCurrentUserId()` is null, records get `userId = null`. Startup check re-prompts backfill if null records exist after auth. |
+| S03 | `syncableWrite()` is a no-op for the sync queue when `userId` is null (local-only write). |
+| S04 | Upload tracks per-record success from Supabase response; only marks confirmed rows as synced. Download uses `>=` with dedup (not `>`). Apply phase uses try/finally for `isSyncing`. Sync cycles serialized via `navigator.locks`. |
+| S05 | Upsert WHERE clause uses `<=` (not `<`) so retries with identical `updated_at` still refresh `synced_at`. |
+| S06 | Unit test: every key in each `SyncableFields` interface has a corresponding entry in `FIELD_MAP`. Fail on missing mappings. |
+
 ### Epic 2: P0 Sync Live (6-8 stories)
 
 | Story | Scope |
@@ -961,6 +1046,14 @@ test('sync progress across devices', async ({ browser }) => {
 | S06 | LWW conflict resolution for P0 |
 | S07 | Integration tests against Supabase |
 | S08 | Multi-device E2E test |
+
+**Edge case AC for Epic 2:**
+
+| Story | ⚠️ Additional AC |
+|-------|-----------------|
+| S03 | Compare `updated_at` before applying Realtime events; discard stale (out-of-order). Re-subscribe on token refresh. Health-check: force-reconnect if no heartbeat in 2min. Validate `userId` client-side before applying. |
+| S04 | Resume uses compound PK cursor for `contentProgress` (not `.where('id').above()`). Progress bar shows "~N records" and caps at 99% until verification. Background banner if user navigates away. |
+| S05 | On user switch: cancel in-flight sync via AbortController. Park other user's queue entries. On logout: force-unsubscribe all Realtime channels. |
 
 ### Epic 3: P1 Tables (8-10 stories)
 
@@ -977,6 +1070,12 @@ test('sync progress across devices', async ({ browser }) => {
 | S09 | Update initial upload wizard for P1 |
 | S10 | Integration + multi-device tests for P1 |
 
+**Edge case AC for Epic 3:**
+
+| Story | ⚠️ Additional AC |
+|-------|-----------------|
+| S08 | Replay skips reviews for deleted flashcards (logs warning). Sort reviews by `reviewedAt ASC, id ASC` (stable tiebreaker). |
+
 ### Epic 4: P2-P3 + Polish (6-8 stories)
 
 | Story | Scope |
@@ -990,7 +1089,12 @@ test('sync progress across devices', async ({ browser }) => {
 | S07 | Chaos testing suite |
 | S08 | Performance optimization (batch tuning, connection pooling) |
 
-**Total: 28-36 stories across 4 epics**
+**Original estimate: 28-36 stories across 4 epics**
+
+> **Updated:** After adversarial review + brainstorming, this section was superseded by a formal 6-epic plan (E44-E49, 37 stories) with MVP-first phasing. See [`_bmad-output/planning-artifacts/epics-sync.md`](../_bmad-output/planning-artifacts/epics-sync.md) for the authoritative epic/story breakdown.
+>
+> **Phase 1 (E44-E46, 18 stories):** Pre-requisites + Infrastructure + P0 Live
+> **Phase 2 (E47-E49, 19 stories):** P1 tables + P2-P3 + Polish (deferred until Phase 1 validated)
 
 ---
 
@@ -1011,17 +1115,25 @@ If time is limited, a stripped-down P0-only sync can ship in ~half an epic (4-5 
 
 ---
 
-## 11. Open Questions
+## 11. Open Questions (Resolved 2026-03-28)
 
-1. **Sync quizzes + quizAttempts?** Currently in "skip" list, but quiz data has learning value (knowledge decay, tutoring). Consider moving to P3 or later.
+> All questions resolved via adversarial review + brainstorming session. See artifacts:
+> - Adversarial review: `docs/reviews/adversarial/adversarial-review-2026-03-28-sync-architecture.md`
+> - Brainstorming: `_bmad-output/brainstorming/brainstorming-session-2026-03-28-sync-decisions.md`
 
-2. **Sync screenshots?** Binary data (potentially large). Could sync metadata only (timestamp, course, lesson) and regenerate/re-capture on other devices.
+1. **~~Sync quizzes + quizAttempts?~~** RESOLVED: Sync quizAttempts only as P4 (INSERT-only merge). Quizzes are regenerable; attempts are learning history that feeds knowledge decay and AI tutoring features. Move quizAttempts from "Skip" to P4 in §2.3.
 
-3. **Bandwidth limits for remote access?** On LAN via titan.local, bandwidth is unlimited. Via supabase.pedrolages.net over the internet, should there be a sync size limit or throttling?
+2. **~~Sync screenshots?~~** RESOLVED: Defer. Screenshots are binary data. Not worth the complexity for MVP. Revisit post-Phase 2 if multi-device screenshot sharing is needed.
 
-4. **Per-table sync opt-in?** Should users be able to choose "sync notes but not sessions"? Adds UI complexity but respects user preferences.
+3. **~~Bandwidth limits for remote access?~~** RESOLVED: No throttling for MVP. Self-hosted Supabase on LAN has unlimited bandwidth. Remote access via supabase.pedrolages.net is personal use only. Monitor during MVP usage — add throttling if needed in Phase 2.
 
-5. **exportService version reconciliation?** Currently at v14 vs Dexie v27. Should be updated before sync to ensure export/import format matches current schema.
+4. **~~Per-table sync opt-in?~~** RESOLVED: Single "Sync enabled" toggle for V1 (all-or-nothing). Self-hosted means no privacy concern with third parties. Upgrade to per-priority-tier toggles (P0/P1/P2/P3) in V2 only if requested.
+
+5. **~~exportService version reconciliation?~~** RESOLVED: Pre-requisite story. Quick spec created: `_bmad-output/planning-artifacts/quick-spec-export-service-reconciliation.md`. Decouples export format version from Dexie schema version. 2 stories, ~5-7 hours. Must complete before Sync MVP.
+
+6. **~~Multi-user store filtering?~~** RESOLVED: `scopedTable()` query helper + `scopedWrite()` stamp helper + ESLint rule `no-direct-db-access`. Architecture: `_bmad-output/planning-artifacts/architecture-multi-user-filtering.md`. 5 stories, ~15-21 hours across 14 stores.
+
+7. **~~MVP vs full architecture?~~** RESOLVED: MVP-first approach. Phase 1 (P0 tables only, polling, no Realtime, no SyncQueue) in ~8-10 stories. Phase 2 (P1-P3, conflict UI, Realtime) deferred until MVP is validated in real usage (2-4 weeks). See §10 Minimum Viable Sync.
 
 ---
 
@@ -1041,3 +1153,150 @@ If time is limited, a stripped-down P0-only sync can ship in ~half an epic (4-5 
 | `src/stores/useContentProgressStore.ts` | Wrap with syncableWrite() |
 | `supabase/migrations/001_entitlements.sql` | RLS template |
 | `server/middleware/entitlement.ts` | LRU cache pattern |
+| `src/db/scopedQuery.ts` | Multi-user query scoping (new) |
+| `src/db/scopedWrite.ts` | Multi-user write stamping (new) |
+| `src/lib/auth/currentUser.ts` | userId source for scoping (new) |
+| `eslint-plugin-data-scoping.js` | ESLint no-direct-db-access rule (new) |
+
+---
+
+## 12. Multi-User Data Filtering Architecture
+
+> **Added:** 2026-03-28. Full design: `_bmad-output/planning-artifacts/architecture-multi-user-filtering.md`
+
+### 12.1 Problem
+
+Adding `userId` to tables without enforcing query-level filtering creates a data leak by default. All 78 current Dexie read operations are unscoped — `db.notes.toArray()` returns ALL notes from ALL users.
+
+### 12.2 Solution: Scoped Helpers + ESLint Safety Net
+
+**Three layers of defense:**
+
+| Layer | Mechanism | Enforcement |
+|-------|-----------|-------------|
+| Structural | `scopedTable()` auto-injects userId into queries | By design — can't forget |
+| Structural | `scopedWrite()` auto-stamps userId + updatedAt | By design — can't omit |
+| Static | ESLint `no-direct-db-access` flags raw `db.table` access | Save-time warning |
+| Reactive | Auth-change handler resets all stores on user switch | Automatic cleanup |
+
+### 12.3 Key Patterns
+
+```typescript
+// READ: Before
+db.notes.where({courseId}).toArray()
+// READ: After
+scopedTable('notes').where({courseId}).toArray()
+
+// WRITE: Before
+db.notes.put(note)
+// WRITE: After
+scopedPut('notes', note)
+
+// Unauthenticated (userId = null): no filter applied — same as current behavior
+```
+
+### 12.4 Migration Effort
+
+| Phase | Stores | Effort |
+|-------|--------|--------|
+| Foundation | Helpers + ESLint rule + auth handler | ~4-6 hours |
+| P0 stores | contentProgress, sessions | ~2-3 hours |
+| P1 stores | notes, bookmarks, flashcards, reviews | ~3-4 hours |
+| P2-P3 stores | courses, paths, challenges, authors | ~3-4 hours |
+| Transaction stores | courseImport, learningPaths, youtubeImport | ~3-4 hours |
+| **Total** | **14 stores, 78 reads, 89 writes** | **~15-21 hours** |
+
+Store migration aligns with sync epic phasing — migrate each store when it gets `syncableWrite()` wrapping.
+
+---
+
+## 13. Adversarial Review Findings (2026-03-28)
+
+> **Full report:** `docs/reviews/adversarial/adversarial-review-2026-03-28-sync-architecture.md`
+
+### HIGH Severity (Applied to Architecture)
+
+| Finding | Resolution | Section Updated |
+|---------|-----------|-----------------|
+| studySessions LWW destroys valid sessions | Changed to INSERT-only merge | §1 Sync Strategy |
+| ~40-50 write actions to wrap (not ~15) | Documented accurately; ESLint safety net added | §12 |
+| exportService at v14 missing 16 tables | Pre-requisite story created | §11.5 |
+| No rollback compounds with export gap | Fixed by exportService reconciliation | §11.5 |
+
+### MEDIUM Severity (Accepted or Deferred)
+
+| Finding | Resolution |
+|---------|-----------|
+| contentProgress LWW ignores status regression | Added status precedence rule (§1) |
+| SM-2 replay loses interval context | Accepted — self-corrects over 5+ reviews. Document as known limitation. |
+| Story estimate optimistic | Revised to MVP-first approach (§10, §11.7) |
+| No post-sync data integrity verification | Add periodic count reconciliation in Phase 2 |
+| No "sync breaks" failure documentation | Deferred to Phase 2 — MVP is simple enough |
+
+### LOW Severity (Deferred)
+
+Field mapping maintenance, orphaned data cleanup, Realtime complexity — all deferred per MVP-first approach.
+
+---
+
+## Appendix A: Edge Cases & Mitigations
+
+> Generated via exhaustive path analysis of this architecture document. 33 edge cases across 7 categories. Tier 1 fixes are already applied inline above. Tier 2 items are captured as story AC in Section 9. Tier 3 items are accepted risks documented here.
+
+### Tier 1 — Fixed in Architecture (Critical)
+
+These structural changes are embedded in the relevant sections above.
+
+| ID | Edge Case | Section Fixed |
+|----|-----------|---------------|
+| 1.3 | Concurrent sync cycles — no mutex | §3.4 (navigator.locks) |
+| 1.5 | Apply crash leaves `isSyncing = true` forever | §3.4 (try/finally) |
+| 1.8 | `lastSyncTimestamp` from client clock causes missed records | §3.4 (server-authoritative) |
+| 2.1 | LWW with device clock skew | §5.1 (server timestamps) |
+| 2.2 | LWW tie behavior undocumented | §5.1 (remote wins ties) |
+| 3.5 / 5.1 | Compound PK cursor incompatible with `.where('id')` | §6.2 (compound key cursor) |
+| 4.1 | First login claims all pre-existing records silently | §4.6 (confirmation dialog) |
+| 4.2 | Sync queue from previous user uploaded with wrong auth | §4.6 (park other user's entries) |
+| 4.3 | Auth change during active sync cycle | §4.6 (AbortController) |
+| 5.5 | Idempotent upsert `<` prevents `synced_at` refresh on retry | §6.3 (`<=` fix) |
+| 6.3 | Out-of-order Realtime events overwrite fresh data | §3.5 (timestamp compare) |
+| 6.2 | JWT expires on open Realtime connection | §3.5 (health check + re-subscribe) |
+| X.2 | Unauthenticated writes pollute sync queue | §3.2 (`syncableWrite` userId guard) |
+
+### Tier 2 — Story Acceptance Criteria (Important)
+
+These are captured as ⚠️ AC items in Section 9 story tables.
+
+| ID | Edge Case | Story |
+|----|-----------|-------|
+| 1.2 | Partial batch failure marks all 100 as synced | Epic 1 S04 |
+| 1.7 | Download `>` misses records at exact timestamp | Epic 1 S04 |
+| 2.5 | Deleted flashcard + orphan reviews crash replay | Epic 3 S08 |
+| 2.7 | Identical `reviewedAt` timestamps → unstable sort | Epic 3 S08 |
+| 5.2 | Records added during initial upload → stale count | Epic 2 S04 |
+| 6.5 | Realtime filter bypass delivers other user's data | Epic 2 S03 |
+| X.4 | Field map incompleteness silently drops fields | Epic 1 S06 |
+
+### Tier 3 — Accepted Risks (Monitor)
+
+These are low-likelihood or self-correcting. Revisit if assumptions change.
+
+| ID | Edge Case | Why Accepted | Revisit Trigger |
+|----|-----------|-------------|-----------------|
+| 1.4 | Write during upload between re-read and upsert | Self-corrects next sync cycle (30s). Only affects same record edited twice in <1s window. | If sync interval increases beyond 60s |
+| 1.6 | Apply-triggered store action creates untracked derived write | Rare: most Zustand updates don't trigger side-effect writes. Document which store actions are "sync-safe" during implementation. | If derived writes (streak recalc, badge awards) are added to synced stores |
+| 2.3 | Cascading note conflict copies accumulate | Single-user app; simultaneous offline edits to the same note are rare. | If multi-user editing is added, or users report copy spam |
+| 2.4 | Conflict copy appears on other device without context toast | The `conflict-copy` tag makes it identifiable. Minor UX annoyance. | If user feedback indicates confusion |
+| 2.6 | SM-2 algorithm version drift across app versions | All devices auto-update; version skew window is small. `calculateNextReview()` is stable. | If FSRS migration changes the algorithm |
+| 3.2 | Large dataset IndexedDB transaction timeout during migration | Current max table is ~10K records. Dexie transactions handle this fine. | If any table exceeds 100K records |
+| 3.3 | No rollback mechanism for Dexie migrations | Standard Dexie limitation. Export service provides data recovery path. | If migration corrupts data in testing |
+| 3.4 | Mid-migration crash between v28 and v29 | Each version is independent — v28 works without v29. Sync engine checks for field presence. | Never (by design) |
+| 5.3 | Verification step undefined in wizard | Implement count comparison during Epic 2 S04. Not architectural. | Story implementation |
+| 5.4 | User navigates away mid-wizard | Fixed in §6.2 (background banner). Remaining UX detail for story. | Story implementation |
+| 5.6 | Storage estimate inaccuracy on new device download | Cosmetic. Estimate is directionally correct for small datasets. | If users report >10x estimate errors |
+| 6.1 | Reconnection gap shows stale data | Window is seconds. Post-reconnect download fills the gap quickly. | If reconnect download takes >10s |
+| 6.4 | Realtime event overlaps with download phase apply | Timestamp comparison (§3.5 fix) prevents stale overwrites. Minor duplicate-apply is idempotent. | Never (mitigated by Tier 1 fix) |
+| 6.6 | Stale Realtime subscription after failed unsubscribe | Defensive try/catch added in §4.6 logout flow. Worst case: resource leak until page reload. | If memory profiling shows channel accumulation |
+| 6.7 | Polling fallback asymmetry (upload 30s, download 60s) | Fixed in §3.5 (aligned to 30s). | Already fixed |
+| X.1 | No schema version negotiation between client and server | All tables deployed before client upgrade. Self-hosted = controlled rollout. | If client/server deploy independently |
+| X.3 | Dead-letter queue grows unbounded | Add 30-day TTL + "Clear all failed" button in Epic 4 S05 (sync log UI). | Epic 4 implementation |
