@@ -6,7 +6,8 @@ started: 2026-03-28
 completed:
 reviewed: in-progress
 review_started: 2026-03-28
-review_gates_passed: []
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, code-review, code-review-testing, security-review, design-review-skipped, performance-benchmark-skipped, exploratory-qa-skipped]
+review_scope: full
 burn_in_validated: false
 ---
 
@@ -137,12 +138,30 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story -- Playwright MCP findings]
+- NotificationCenter UI unchanged structurally -- only data source replaced (mock -> store)
+- Icon mapping updated to match new NotificationType enum (GraduationCap, Flame, Download, Trophy, Clock)
+- Fallback icon/color for unknown types is defensive but harmless
+- Click-to-navigate properly closes popover before routing
+- Accessibility: aria-live region preserved for screen reader announcements
 
 ## Code Review Feedback
 
-[Populated by /review-story -- adversarial code review findings]
+- **H1:** Streak milestone emitted for every positive streak, not just thresholds -- filter should be in store
+- **H2:** Date dedup in `hasReviewDueToday()` uses ISO string comparison which is fragile across timezones
+- **M1:** `getCurrentStreak()` is synchronous localStorage read in async chain -- acceptable but worth noting
+- **M2:** Module-level mutable state in NotificationService -- works but fragile for testing
+- **M3:** `console.log` in production code (NotificationService init) should be `console.debug`
+- **M4:** Record type + fallback is redundant but harmless
+- **TESTING:** 0/7 ACs have test coverage -- Task 6 unit tests were not implemented
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Event bus pattern works well for decoupling stores from notification logic.** Each store emits a single domain event at the right point (2-5 lines per store), and the NotificationService maps events to notifications independently. This keeps stores focused on their domain and avoids circular dependencies.
+
+- **Deduplication for review-due requires careful date handling.** The `hasReviewDueToday()` function queries Dexie by type and date, but ISO string comparison for "today" boundaries is fragile. The `toLocaleDateString('sv-SE')` pattern from engineering-patterns.md would be more reliable for day-boundary comparisons.
+
+- **Streak milestone filtering is split across two layers.** The store emits for any positive streak, and the service filters for milestone values. This creates unnecessary event traffic and could confuse future subscribers. Better pattern: emit only at thresholds, keeping the event semantically meaningful.
+
+- **Mock data removal was clean because the UI was well-separated from data.** The NotificationCenter component had its data source isolated in `createMockNotifications()`, making the swap to `useNotificationStore` straightforward. Good separation of concerns in the original Figma component.
+
+- **No tests were written despite Task 6 being defined.** The unit test subtasks (6.1-6.6) were planned but not implemented. This is a significant gap given the story introduces new infrastructure (event bus, notification service) that should be tested in isolation.
