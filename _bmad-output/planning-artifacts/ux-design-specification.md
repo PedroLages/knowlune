@@ -2665,3 +2665,633 @@ After (revised):
 ### Design Thinking Source
 
 Full session artifact with empathy maps, HMW questions, 30 ideas, and 8-screen prototype storyboard: [design-thinking-2026-03-26.md](../../_bmad-output/design-thinking-2026-03-26.md)
+
+## AI Deep Strategy (Epics 36-43)
+
+**Added 2026-03-28**
+
+The AI Deep Strategy transforms Knowlune from a content organization tool into an adaptive learning system with four flagship features — Socratic Tutor, Smart Flashcard Generator (FSRS), Adaptive Quiz Engine, and AI Study Buddy — connected by a cross-feature intelligence loop. Users configure model selection per feature, track usage against budgets, and experience a compounding learning advantage where each feature's output improves the others.
+
+**PRD Requirements:** ADS-FR1–FR71 (AI Deep Strategy PRD)
+**Architecture Decisions:** Decisions 1-7 in architecture.md (AI Deep Strategy section)
+**Design Principle:** Intelligence is invisible — features feel like a thoughtful tutor, not an AI chatbot. Every AI interaction is grounded in the user's actual course content.
+
+### 1. Model Picker & Per-Feature Overrides (E36)
+
+**Model Picker Component (AI Settings Page):**
+
+Replaces the current `OllamaModelPicker` with a universal `ModelPicker` for all providers. Appears below the provider selector in AI Settings.
+
+```
+┌───────────────────────────────────────────────────┐
+│  AI Configuration                                  │
+│───────────────────────────────────────────────────│
+│                                                    │
+│  Provider: [Anthropic ▼]                           │
+│                                                    │
+│  Model                                             │
+│  ┌───────────────────────────────────────────┐     │
+│  │  🔍 Search models...                      │     │
+│  ├───────────────────────────────────────────┤     │
+│  │  Premium                                   │     │
+│  │  ○ Opus 4.6       $15/1M  ⚡ slow  best for: tutoring, analysis │
+│  │  Balanced                                  │     │
+│  │  ● Sonnet 4.6     $3/1M   ⚡ medium  best for: chat, summaries │
+│  │  Economy                                   │     │
+│  │  ○ Haiku 4.5      $0.25/1M ⚡ fast  best for: simple tasks     │
+│  └───────────────────────────────────────────┘     │
+│                                                    │
+│  ▸ Advanced: Per-Feature Models                    │
+│                                                    │
+└───────────────────────────────────────────────────┘
+```
+
+**Model Picker Behavior:**
+- Searchable combobox using shadcn `Popover` + `Command` pattern (existing codebase pattern)
+- Models grouped by tier: Economy, Balanced, Premium — with tier badge coloring (`text-success`, `text-warning`, `text-destructive`)
+- Each model row shows: name, cost per 1M tokens, speed indicator, "best for" tags
+- Selected model has radio indicator; default model has "(default)" label
+- Free-tier users see only `freeTierAllowed: true` models; restricted models are hidden (not greyed out — avoid frustration)
+- Ollama: dynamic model list fetched from server; tier badges omitted (user self-manages)
+
+**Per-Feature Overrides (Collapsible Section):**
+
+```
+┌───────────────────────────────────────────────────┐
+│  ▾ Advanced: Per-Feature Models                    │
+│───────────────────────────────────────────────────│
+│                                                    │
+│  Socratic Tutor     Opus 4.6 (override)    [Reset] │
+│  Flashcard Gen      Sonnet 4.6 (inherited)  [Set]  │
+│  Quiz Generation    Sonnet 4.6 (inherited)  [Set]  │
+│  Video Summaries    Haiku 4.5 (override)   [Reset] │
+│  Note Q&A           Sonnet 4.6 (inherited)  [Set]  │
+│  Study Buddy        Haiku 4.5 (override)   [Reset] │
+│                                                    │
+│  Overridden features use the specified model.       │
+│  Others inherit the provider default above.         │
+│                                                    │
+└───────────────────────────────────────────────────┘
+```
+
+**Per-Feature Override Behavior:**
+- Each row: feature name + current model (with "(override)" or "(inherited)" label) + action button
+- "Set" opens `ModelPicker` scoped to current provider, allows selecting different model
+- "Reset" removes override, reverts to inherited default
+- Changes apply immediately (NFR26: <1s propagation, no page reload)
+- Collapsed by default — only power users expand (following architecture Decision 2 recommendation)
+
+**Responsive:**
+- Desktop (1024px+): full-width within Settings card
+- Tablet (768px+): same layout, model list scrollable
+- Model Picker popover: max-height 400px with scroll, positioned below trigger
+
+**Accessibility:**
+- Combobox pattern: `role="combobox"`, `aria-expanded`, `aria-activedescendant`
+- Tier group headers: `role="group"` with `aria-label`
+- Cost/speed badges: text alternatives via `aria-label` (not icon-only)
+- Keyboard: Arrow keys navigate models, Enter selects, Escape closes
+
+### 2. Socratic Tutor Panel (E37)
+
+**Layout: Collapsible Panel in Lesson Player**
+
+The tutor panel is a right sidebar within the existing Lesson Player, replacing/alongside the existing note panel.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  ← Back to Course    Lesson 5: React Hooks                   │
+│──────────────────────────────────────────────────────────────│
+│                                │                              │
+│                                │  Socratic Tutor              │
+│                                │  Difficulty: [Guided ▼]      │
+│   ┌─────────────────────┐     │──────────────────────────────│
+│   │                     │     │                              │
+│   │   Video Player      │     │  🤖 Let's explore useEffect. │
+│   │                     │     │  When does the cleanup        │
+│   │                     │     │  function run?                │
+│   └─────────────────────┘     │                              │
+│                                │  👤 When the component       │
+│   [Notes] [Tutor] [Transcript] │  unmounts.                   │
+│                                │                              │
+│                                │  🤖 Only when it unmounts?   │
+│                                │  What about when the         │
+│                                │  dependency array changes?   │
+│                                │                              │
+│                                │  ⚠️ Misconception detected:  │
+│                                │  cleanup-on-rerender         │
+│                                │  [2 flashcards created]      │
+│                                │                              │
+│                                │──────────────────────────────│
+│                                │  Type your answer...    [→]  │
+│                                │                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Panel Behavior:**
+- Tab-based switching between Notes, Tutor, and Transcript in the right panel area
+- "Start Tutoring" button appears when switching to Tutor tab (or as a CTA after lesson completion)
+- Chat-style message list with alternating user/assistant messages (reuse message patterns from existing `ChatQA.tsx`)
+- SSE streaming: assistant messages appear token-by-token with typing indicator
+- Misconception notifications appear inline as system messages with a highlighted border (`border-warning`)
+- Flashcard generation notification: clickable "N flashcards created" links to flashcard deck
+
+**Difficulty Selector:**
+- Dropdown at top of tutor panel: Guided / Challenging / Expert
+- Each option has a one-line description tooltip: "Heavy scaffolding" / "Probing questions" / "Devil's advocate"
+- Selection persists per lesson via Dexie `tutorSessions`
+
+**Session Management:**
+- Resume banner: "You have an active session from [date]. [Resume] or [Start New]"
+- Session auto-saves on page navigation (no data loss)
+- Session history accessible via panel header menu (recent sessions list)
+
+**Responsive:**
+- Desktop (1024px+): right sidebar, ~40% width (resizable via drag handle, matching existing panel pattern)
+- Tablet (768px+): bottom drawer, swipe up to expand, 50% height
+- Below 768px: full-screen overlay with back button
+
+**Accessibility:**
+- Chat messages: `role="log"` with `aria-live="polite"` for new messages (NFR19)
+- Input: `aria-label="Type your answer"`, Enter to send, Shift+Enter for newline
+- Difficulty selector: standard `<select>` with `aria-label`
+- Misconception alerts: `role="alert"` for screen reader announcement
+- Panel open/close: focus management — focus moves to input on open, returns to trigger on close
+- Keyboard: Tab cycles through messages, input, and controls
+
+### 3. Flashcard Review Session (E39)
+
+**Review Session Page (`/flashcards/:deckId/review`):**
+
+Mochi-inspired card review with FSRS scheduling. Full-page focused experience.
+
+```
+┌───────────────────────────────────────────────────────────────┐
+│  ← Back to Deck    React Hooks Deck    Progress: 5/12         │
+│───────────────────────────────────────────────────────────────│
+│                                                                │
+│                                                                │
+│           ┌─────────────────────────────────────┐              │
+│           │                                     │              │
+│           │                                     │              │
+│           │   When does a useEffect cleanup     │              │
+│           │   function execute?                  │              │
+│           │                                     │              │
+│           │                                     │              │
+│           │              [Tap to flip]           │              │
+│           │                                     │              │
+│           └─────────────────────────────────────┘              │
+│                                                                │
+│                                                                │
+│   ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐        │
+│   │  Again   │ │   Hard   │ │   Good   │ │   Easy   │        │
+│   │  <1min   │ │   6min   │ │   1day   │ │   4days  │        │
+│   └──────────┘ └──────────┘ └──────────┘ └──────────┘        │
+│                                                                │
+│  Streak: 🔥 7 days    Today: 5 reviewed    Remaining: 7       │
+│───────────────────────────────────────────────────────────────│
+└───────────────────────────────────────────────────────────────┘
+```
+
+**Card Behavior:**
+- Card shows front (question) initially
+- Click/tap or Enter/Space flips to back (answer) with CSS 3D flip animation
+- After flip, rating buttons appear below
+- Each rating button shows the FSRS-computed next interval (e.g., "<1min", "6min", "1day")
+- After rating, next due card slides in from right (or "Session Complete" if no more cards)
+
+**Rating Buttons:**
+- 4 ratings: Again (1) / Hard (2) / Good (3) / Easy (4)
+- Color coding: Again = `bg-destructive-soft`, Hard = `bg-warning-soft`, Good = `bg-brand-soft`, Easy = `bg-success-soft`
+- Keyboard shortcuts: 1/2/3/4 for ratings (displayed as small hints on buttons)
+- Next review interval shown below each button label
+
+**Session Progress:**
+- Top bar: deck name + "Progress: X/Y" (cards reviewed / total due)
+- Bottom bar: review streak, today's count, remaining cards
+- Progress bar under header showing completion percentage
+
+**Session Complete Screen:**
+```
+┌───────────────────────────────────────────────────┐
+│                                                    │
+│  Session Complete! 🎉                              │
+│                                                    │
+│  12 cards reviewed                                 │
+│  Accuracy: 75% (9 correct, 3 again)               │
+│  Time: 8 minutes                                   │
+│                                                    │
+│  Next review: 3 cards due tomorrow                 │
+│                                                    │
+│  [Back to Deck]    [Review Again]                  │
+│                                                    │
+└───────────────────────────────────────────────────┘
+```
+
+**Flashcard Decks Page (`/flashcards`):**
+
+```
+┌───────────────────────────────────────────────────────────────┐
+│  Flashcard Decks                        [+ Create Deck]       │
+│───────────────────────────────────────────────────────────────│
+│                                                                │
+│  📋 Due Today: 15 cards across 3 decks   [Review All Due]     │
+│                                                                │
+│  ┌───────────────────────┐  ┌───────────────────────┐         │
+│  │ React Hooks            │  │ TypeScript Generics    │         │
+│  │ 24 cards · 8 due       │  │ 12 cards · 3 due      │         │
+│  │ Created from tutor     │  │ Manual deck            │         │
+│  │ Last reviewed: Today   │  │ Last reviewed: 2d ago  │         │
+│  │ [Review] [Edit]        │  │ [Review] [Edit]        │         │
+│  └───────────────────────┘  └───────────────────────┘         │
+│                                                                │
+│  ┌───────────────────────┐                                     │
+│  │ System Design          │                                     │
+│  │ 36 cards · 4 due       │                                     │
+│  │ AI-generated           │                                     │
+│  │ Last reviewed: 5d ago  │                                     │
+│  │ [Review] [Edit]        │                                     │
+│  └───────────────────────┘                                     │
+│                                                                │
+└───────────────────────────────────────────────────────────────┘
+```
+
+**Responsive:**
+- Desktop (1024px+): centered card (max-width 640px), rating buttons in row
+- Tablet (768px+): full-width card with padding, rating buttons in row
+- Below 768px: full-width card, rating buttons stack 2x2 grid
+- Card flip animation: respects `prefers-reduced-motion` (instant swap instead of 3D flip)
+
+**Accessibility (NFR16):**
+- Card flip: Enter or Space to flip (announced: "Card flipped. Answer: [content]")
+- Rating buttons: `aria-label="Rate as [rating], next review in [interval]"`
+- Keyboard shortcuts: 1-4 for ratings, displayed as hints
+- Progress: `role="progressbar"` with `aria-valuenow`
+- Review streak: announced as part of session summary
+- Focus order: Card → (flip) → Rating buttons (left to right) → Next card
+
+### 4. Adaptive Quiz Engine (E40)
+
+**Quiz Player Page (`/quiz/:quizId`):**
+
+```
+┌───────────────────────────────────────────────────────────────┐
+│  ← Back    React Hooks Quiz    Question 3 of 10    ⏱ 4:32    │
+│  ████████░░░░░░░░░░░░░░░░░░░░░ 30%                           │
+│───────────────────────────────────────────────────────────────│
+│                                                                │
+│  Which of the following correctly describes when              │
+│  a useEffect cleanup function executes?                       │
+│                                                                │
+│  Difficulty: ██░░░ Level 2 (Scaffolded)                       │
+│                                                                │
+│  ┌─────────────────────────────────────────────────┐          │
+│  │ ○  Only when the component unmounts              │          │
+│  ├─────────────────────────────────────────────────┤          │
+│  │ ● Before every re-render AND on unmount          │ ← selected
+│  ├─────────────────────────────────────────────────┤          │
+│  │ ○  Only on the first render                      │          │
+│  ├─────────────────────────────────────────────────┤          │
+│  │ ○  Whenever setState is called                   │          │
+│  └─────────────────────────────────────────────────┘          │
+│                                                                │
+│  [◄ Previous]     [Flag for Review ⚑]     [Next ►]           │
+│                                                                │
+└───────────────────────────────────────────────────────────────┘
+```
+
+**Question Types (5):**
+
+| Type | UI Pattern | Keyboard |
+|------|-----------|----------|
+| Multiple Choice | Radio group (single select) | Arrow keys to navigate, Space to select |
+| Fill-in-Blank | Text input with inline blank markers | Tab to blank, type answer |
+| Short Answer | Textarea (3 rows) | Standard text input |
+| True/False | Two large toggle buttons | Left/Right arrows |
+| Concept Matching | Two columns with line-drawing or dropdown selectors (no drag-drop for accessibility) | Tab between columns, dropdown select |
+
+**Immediate Feedback (after answer submission):**
+```
+┌───────────────────────────────────────────────────┐
+│  ✅ Correct!                                       │
+│                                                    │
+│  The cleanup function runs before each re-render   │
+│  with changed dependencies, AND when the component │
+│  unmounts. This prevents stale closures and        │
+│  memory leaks.                                     │
+│                                                    │
+│  📚 Source: React Hooks lesson, 12:34              │
+│                                                    │
+│  [Next Question ►]                                 │
+│                                                    │
+└───────────────────────────────────────────────────┘
+```
+
+**Difficulty Indicator:**
+- Visible per-question difficulty bar (1-5 scale)
+- Tooltip explains: "Difficulty adapts to your performance on this concept"
+- Scaling is transparent — user understands why difficulty changed (NFR: quiz difficulty visible)
+
+**Quiz Results:**
+```
+┌───────────────────────────────────────────────────────────────┐
+│  Quiz Complete!                                                │
+│                                                                │
+│  Score: 8/10 (80%)                     Time: 6:42             │
+│  ██████████████████████████████████████░░░░░░░░░░             │
+│                                                                │
+│  Strongest: State Management (3/3)                             │
+│  Needs Work: Lifecycle Methods (1/3)                           │
+│                                                                │
+│  ┌─────────────────────────────────────────────┐              │
+│  │  ❌ Q3: useEffect cleanup        [Review]   │              │
+│  │  ❌ Q7: Component lifecycle       [Review]   │              │
+│  └─────────────────────────────────────────────┘              │
+│                                                                │
+│  📊 Added to Knowledge Gaps: "Lifecycle Methods"               │
+│                                                                │
+│  [Retake Quiz]    [Review Mistakes]    [Back to Lesson]        │
+│                                                                │
+└───────────────────────────────────────────────────────────────┘
+```
+
+**Responsive:**
+- Desktop (1024px+): centered content (max-width 800px), answer options full-width
+- Tablet (768px+): same layout with adjusted padding
+- Timer: optional, with pause accommodation (150%, 200%, untimed modes)
+
+**Accessibility (NFR17):**
+- All 5 question types keyboard-operable without mouse
+- Concept matching: dropdown alternative to drag-drop (single-pointer, NFR57 SC 2.5.7)
+- Timer: `aria-live="assertive"` for 1-minute warning; pause via button + keyboard shortcut (P)
+- Question navigation: visible question number, `aria-current="step"` on active question
+- Flag for review: toggle button with `aria-pressed` state
+- Results table: proper `<table>` with `<th>` headers
+
+### 5. Token Usage & Budget Dashboard (E38)
+
+**Usage Section in AI Settings:**
+
+```
+┌───────────────────────────────────────────────────────────────┐
+│  Token Usage                                   March 2026      │
+│───────────────────────────────────────────────────────────────│
+│                                                                │
+│  ████████████████████████████████░░░░░░░░░  342K / 500K       │
+│  68% of monthly budget used                                    │
+│                                                                │
+│  Per-Feature Breakdown                                         │
+│  ┌─────────────────────────────────────────────────┐          │
+│  │  Socratic Tutor    ████████████████░░░  205K (60%)│         │
+│  │  Flashcard Gen     ████████░░░░░░░░░░   86K (25%)│         │
+│  │  Quiz Generation   ████░░░░░░░░░░░░░░   51K (15%)│         │
+│  │  Video Summaries   ░░░░░░░░░░░░░░░░░░    0K (0%) │         │
+│  └─────────────────────────────────────────────────┘          │
+│                                                                │
+│  💡 Switch flashcard generation to an economy model            │
+│     to save ~40% of tokens                                     │
+│                                                                │
+│  Est. cost: $1.02 this month                                   │
+│  Resets: April 1, 2026                                         │
+│                                                                │
+└───────────────────────────────────────────────────────────────┘
+```
+
+**Budget Warning States:**
+- **80% used**: Yellow banner appears in AI Settings + toast notification on next AI action: "You've used 80% of your monthly token budget"
+- **95% used**: Red banner with live counter: "X tokens remaining this month"
+- **100% exhausted**: Current response completes (no mid-response cutoff), then upgrade modal:
+
+```
+┌───────────────────────────────────────────┐
+│  Monthly Token Budget Reached              │
+│                                            │
+│  You've used all 500K tokens this month.   │
+│  Tokens reset on April 1.                  │
+│                                            │
+│  Options:                                  │
+│  • Switch to economy models (save ~60%)    │
+│  • Upgrade to Premium (unlimited)          │
+│  • Add your own API key (unlimited)        │
+│                                            │
+│  [Switch Models]  [Upgrade]  [Add API Key] │
+│                                            │
+└───────────────────────────────────────────┘
+```
+
+**BYOK Users:**
+- Budget bar replaced with: "BYOK Mode — Unlimited usage. Estimated cost this month: $X.XX"
+- Per-feature breakdown still shown (cost visibility)
+- No upgrade CTAs shown
+
+**Responsive:**
+- Desktop/Tablet: full-width within Settings card
+- Budget bar: `role="progressbar"` with `aria-valuenow`, `aria-valuemin="0"`, `aria-valuemax="500000"`
+- Per-feature bars: same pattern, nested within a `<dl>` (definition list)
+
+**Accessibility (NFR20):**
+- All progress bars: `role="progressbar"` with numeric values + visible text equivalents
+- Budget warnings: `role="alert"` for screen reader announcement
+- Feature breakdown: `<table>` or `<dl>` with proper semantics (not div-based bars)
+- Cost estimate: text, not icon-only
+
+### 6. AI Study Buddy Overlay (E42)
+
+**Floating Action Button + Chat Panel:**
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  [Any Knowlune page content]                                  │
+│                                                                │
+│                                                                │
+│                                                                │
+│                                                                │
+│                              ┌──────────────────────────┐     │
+│                              │  Study Buddy        [_][×]│     │
+│                              │──────────────────────────│     │
+│                              │                          │     │
+│                              │  🤖 Hi! You're on the    │     │
+│                              │  React Hooks lesson.     │     │
+│                              │  Want me to quiz you?    │     │
+│                              │                          │     │
+│                              │  👤 Make flashcards for  │     │
+│                              │  this lesson             │     │
+│                              │                          │     │
+│                              │  🤖 Creating 8 flashcards│     │
+│                              │  from React Hooks...     │     │
+│                              │  ████████░░ 80%          │     │
+│                              │                          │     │
+│                              │  ┌────────────────────┐  │     │
+│                              │  │ Quiz me on this     │  │     │
+│                              │  │ Review flashcards   │  │     │
+│                              │  └────────────────────┘  │     │
+│                              │──────────────────────────│     │
+│                              │  Ask anything...    [→]  │     │
+│                              └──────────────────────────┘     │
+│                                                          [💬]  │
+│                                                                │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**FAB (Floating Action Button):**
+- Position: bottom-right corner, 56x56px (touch target compliant)
+- Icon: chat bubble (lucide-react `MessageCircle`)
+- Badge: notification dot when proactive suggestions available
+- Click expands chat panel; click again or Escape collapses
+- `aria-label="Open Study Buddy"`
+
+**Chat Panel:**
+- Position: anchored to bottom-right, 380px wide × 500px tall (desktop)
+- Header: "Study Buddy" title + minimize button + close button
+- Message list: same patterns as ChatQA / Tutor (reuse components)
+- Proactive suggestion chips: 1-2 contextual prompts above the input field (dismissible)
+- Input: text field with send button, Enter to send, Shift+Enter for newline
+
+**Context-Aware Behavior:**
+- Panel header shows current context: "📍 React Hooks lesson" or "📍 Flashcard Decks"
+- Proactive suggestions change by page:
+  - Lesson Player: "Quiz me on this" / "Make flashcards"
+  - Flashcard Decks: "Review due cards" / "What should I study?"
+  - Analytics: "Explain my progress" / "Where am I weakest?"
+  - Overview: "What should I study today?"
+
+**Intent Routing (transparent to user):**
+- User says "quiz me" → Study Buddy generates quiz inline, shows first question
+- User says "make flashcards" → Shows generation progress, then deck link
+- User says "explain recursion" → Enters Socratic tutoring mode within chat
+- User asks a question → RAG-grounded answer with source citations
+
+**Personality Tone (configurable in Settings):**
+- Encouraging: Supportive language, emoji, celebration of progress
+- Neutral: Direct, informational, minimal editorial
+- Challenging: Pushes harder, asks follow-ups, higher expectations
+
+**Session Persistence:**
+- Conversation persists across page navigation (Zustand, ephemeral)
+- New browser session = fresh conversation
+- "Save to Notes" action in panel header menu
+
+**Responsive:**
+- Desktop (1024px+): floating panel, 380px × 500px, bottom-right
+- Tablet (768px+): floating panel, 340px × 450px, bottom-right
+- Below 768px: full-screen overlay with back button (no floating panel)
+
+**Accessibility (NFR18):**
+- Panel does NOT trap focus — Tab exits the panel to page content
+- Escape dismisses the panel
+- FAB: `aria-label`, `aria-expanded` reflecting panel state
+- Messages: `aria-live="polite"` for new messages
+- Suggestion chips: `role="group"` with `aria-label="Suggestions"`, each chip is a button
+- Minimize vs close distinction: minimize keeps conversation, close discards
+
+### 7. Upgrade CTAs & Tier Enforcement (E41)
+
+**Design Pattern:** Extends the existing E19 upgrade CTA pattern to AI features.
+
+**When Free-Tier User Hits Usage Limit:**
+
+```
+┌───────────────────────────────────────────────────┐
+│                                                    │
+│  You've used 3 of 3 Socratic Tutor sessions       │
+│  this month.                                       │
+│                                                    │
+│  Upgrade to Premium for unlimited AI features      │
+│  — $9.99/month                                     │
+│                                                    │
+│  Or bring your own API key for unlimited access.   │
+│                                                    │
+│  [Upgrade to Premium]    [Set Up API Key]          │
+│                                                    │
+│  Sessions reset on April 1, 2026                   │
+│                                                    │
+└───────────────────────────────────────────────────┘
+```
+
+**Behavior:**
+- CTAs appear contextually (not as a hard wall) — the current action completes first
+- Usage counter visible: "X of Y [feature] this month" shown in subtle text before hitting limit
+- BYOK escape hatch always shown alongside upgrade CTA
+- After dismissal, the CTA doesn't reappear until next AI action attempt
+
+**Provider Restrictions (Free Tier):**
+- Free-tier users see only: Ollama, Groq, Gemini, GLM in provider dropdown
+- Restricted providers (OpenAI, Anthropic) hidden from dropdown — not shown as locked/greyed
+- Economy models only: `freeTierAllowed: true` filter on model picker
+
+### 8. Cross-Content Unified Search (Cross-Content Search PRD)
+
+**Extended Cmd+K Command Palette:**
+
+```
+┌─────────────────────────────────────────────────┐
+│  🔍 Search Knowlune...                     ⌘K  │
+├─────────────────────────────────────────────────┤
+│                                                  │
+│  📝 Notes                                        │
+│    "React hooks allow you to use state..."       │
+│    Introduction to React · 2:34                  │
+│                                                  │
+│  ▶️ Transcripts                                   │
+│    "...hooks are functions that let you..."      │
+│    React Fundamentals · 12:45                    │
+│                                                  │
+│  📑 PDFs                                         │
+│    "Chapter 3: Advanced Hook Patterns"           │
+│    React Design Patterns.pdf · Page 42           │
+│                                                  │
+│  🧠 Flashcards                                   │
+│    Q: "What is the Rules of Hooks?"              │
+│    React Hooks Deck                              │
+│                                                  │
+│  📋 Quizzes                                      │
+│    "Which hook replaces componentDidMount?"      │
+│    React Lifecycle Quiz                          │
+│                                                  │
+│  📚 Courses                                      │
+│    "React Hooks Masterclass"                     │
+│    12 lessons · 4h 30m                           │
+│                                                  │
+└─────────────────────────────────────────────────┘
+```
+
+**Behavior:**
+- Extends existing `SearchCommandPalette.tsx` (not a replacement)
+- Results grouped by content type with type-specific icons (lucide-react)
+- Flat-ranked by MiniSearch relevance score within each group
+- Max 30 results total, 5 per content type; empty groups hidden
+- 150ms input debounce (matching existing behavior)
+- AbortController cancels in-flight searches on query change
+
+**Deep Linking:**
+- Transcript result → navigates to lesson, video seeks to timestamp, cue highlighted
+- PDF result → navigates to lesson, PDF viewer opens at page number
+- Note result → navigates to notes page, note scrolled into view with pulse highlight
+- Flashcard result → navigates to deck page, card focused
+- Quiz result → navigates to quiz review, question scrolled into view
+- Course result → navigates to course detail page
+
+**Indexing Status Indicator:**
+- During first-ever index build or rebuild: subtle "Indexing..." text below search input
+- Progressive: course metadata indexed first (instant), then notes + flashcards, then transcripts + PDFs (background)
+
+**Responsive:**
+- Same responsive behavior as existing SearchCommandPalette
+- Result groups collapse on narrow viewports (title + first result visible)
+
+**Accessibility:**
+- Inherits existing Cmd+K accessibility (keyboard navigation, ARIA)
+- New result types: each has `aria-label` with type prefix ("Transcript result: ...")
+- Deep link navigation: focus moves to target element after navigation
+
+### Responsive Breakpoints (Canonical)
+
+**Reconciled from UX doc (375/768/1440) and PRD (640/1024/1536):**
+
+| Breakpoint | CSS | Use |
+|-----------|-----|-----|
+| Mobile | <768px | Full-screen overlays, stacked layouts, 2x2 rating grids |
+| Tablet | 768px-1023px | Bottom drawers for panels, floating panels for Study Buddy |
+| Desktop | 1024px+ | Side-by-side panels, floating overlays, full component layouts |
+
+AI Deep Strategy features follow the existing UX doc breakpoints (768px for tablet, 1024px for desktop) matching the patterns established in the base platform.

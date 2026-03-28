@@ -651,6 +651,33 @@ export function LearningPathDetail() {
     }
   }, [pathId, orderSuggestion, applyAIOrder])
 
+  // Derived data — must be above early returns to satisfy React Rules of Hooks
+  const completedEntries = useMemo(
+    () => courseEntries.filter(e => (courseInfo.get(e.courseId)?.completionPct ?? 0) >= 100),
+    [courseEntries, courseInfo]
+  )
+  const currentEntry = useMemo(
+    () =>
+      courseEntries.find(e => {
+        const pct = courseInfo.get(e.courseId)?.completionPct ?? 0
+        return pct > 0 && pct < 100
+      }) ??
+      (courseEntries.length > completedEntries.length
+        ? courseEntries[completedEntries.length]
+        : null),
+    [courseEntries, courseInfo, completedEntries.length]
+  )
+  const upcomingEntries = useMemo(
+    () =>
+      courseEntries.filter(e => {
+        const pct = courseInfo.get(e.courseId)?.completionPct ?? 0
+        return pct === 0 && e !== currentEntry
+      }),
+    [courseEntries, courseInfo, currentEntry]
+  )
+  const currentIndex = currentEntry ? courseEntries.indexOf(currentEntry) : -1
+  const [showReorderList, setShowReorderList] = useState(false)
+
   // Loading state
   if (!isLoaded) {
     return (
@@ -692,35 +719,6 @@ export function LearningPathDetail() {
       </div>
     )
   }
-
-  // Derived data for the new layout
-  const completedEntries = useMemo(
-    () => courseEntries.filter(e => (courseInfo.get(e.courseId)?.completionPct ?? 0) >= 100),
-    [courseEntries, courseInfo]
-  )
-  const currentEntry = useMemo(
-    () =>
-      courseEntries.find(e => {
-        const pct = courseInfo.get(e.courseId)?.completionPct ?? 0
-        return pct > 0 && pct < 100
-      }) ??
-      (courseEntries.length > completedEntries.length
-        ? courseEntries[completedEntries.length]
-        : null),
-    [courseEntries, courseInfo, completedEntries.length]
-  )
-  const upcomingEntries = useMemo(
-    () =>
-      courseEntries.filter(e => {
-        const pct = courseInfo.get(e.courseId)?.completionPct ?? 0
-        return pct === 0 && e !== currentEntry
-      }),
-    [courseEntries, courseInfo, currentEntry]
-  )
-  const currentIndex = currentEntry ? courseEntries.indexOf(currentEntry) : -1
-
-  // State for toggling reorder mode
-  const [showReorderList, setShowReorderList] = useState(false)
 
   return (
     <MotionConfig reducedMotion="user">
