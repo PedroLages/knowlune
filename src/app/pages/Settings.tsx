@@ -64,6 +64,7 @@ import { QuizPreferencesForm } from '@/app/components/settings/QuizPreferencesFo
 import { AvatarCropDialog } from '@/app/components/ui/avatar-crop-dialog'
 import { AvatarUploadZone } from '@/app/components/settings/avatar-upload-zone'
 import { EngagementPreferences } from '@/app/components/settings/EngagementPreferences'
+import { DisplayAccessibilitySection } from '@/app/components/settings/DisplayAccessibilitySection'
 import { SubscriptionCard } from '@/app/components/settings/SubscriptionCard'
 import { AccountDeletion } from '@/app/components/settings/AccountDeletion'
 import { ChangePassword } from '@/app/components/settings/ChangePassword'
@@ -909,6 +910,17 @@ export default function Settings() {
             saveSettings(updated)
             window.dispatchEvent(new Event('settingsUpdated'))
             toastSuccess.saved('Age-specific defaults re-applied')
+          }}
+        />
+
+        {/* Display & Accessibility */}
+        <DisplayAccessibilitySection
+          settings={settings}
+          onSettingsChange={(updates) => {
+            const updated = { ...settings, ...updates }
+            setSettings(updated)
+            saveSettings(updated)
+            window.dispatchEvent(new Event('settingsUpdated'))
           }}
         />
 

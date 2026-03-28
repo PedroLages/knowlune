@@ -1,8 +1,8 @@
 ---
 story_id: E51-S01
 story_name: "Settings Infrastructure & Display Section Shell"
-status: draft
-started:
+status: in-progress
+started: 2026-03-28
 completed:
 reviewed: false
 review_started:
@@ -102,6 +102,10 @@ so that I have a dedicated place to control how content looks and moves.
   - Verify section appears on Settings page between Age Range and Engagement Preferences
   - Verify reset flow: click reset -> dialog appears -> confirm -> fields reset -> toast shown
   - Verify mobile layout: controls stack, reset button full-width at 375px viewport
+
+## Implementation Plan
+
+See [plan](../plans/e51-s01-settings-infrastructure-display-section-shell.md) for implementation approach.
 
 ## Dependencies
 
