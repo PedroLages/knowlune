@@ -529,11 +529,11 @@ development_status:
   # Source: epics-wave1-foundation.md
   # NOTE: S01-S03 resolved informally during E33 test paydown
   # ──────────────────────────────────────────────────
-  epic-43: backlog
+  epic-43: in-progress
   43-1-store-mock-fixes: done  # resolved during E33 — all 3,429 tests passing
   43-2-component-mock-fixes: done  # resolved during E33
   43-3-e2e-test-fixes: done  # resolved during E33
-  43-4-session-expiry-handling: backlog
+  43-4-session-expiry-handling: done  # PR #143 merged
   43-5-course-completion-pct-fix: done
   43-6-notifications-data-layer: done
   43-7-notifications-triggers-wiring: done
