@@ -70,11 +70,7 @@ export function useAuthLifecycle(): void {
 
     // Clean hash fragment after OAuth redirect (cosmetic — Supabase cleanup is unreliable)
     if (window.location.hash.includes('access_token')) {
-      window.history.replaceState(
-        null,
-        '',
-        window.location.pathname + window.location.search
-      )
+      window.history.replaceState(null, '', window.location.pathname + window.location.search)
     }
 
     return () => {
