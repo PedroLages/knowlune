@@ -12,7 +12,7 @@ import {
   Lock,
   PlayCircle,
 } from 'lucide-react'
-import { motion, MotionConfig } from 'motion/react'
+import { motion } from 'motion/react'
 import { Button } from '@/app/components/ui/button'
 import { Badge } from '@/app/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/app/components/ui/avatar'
@@ -139,7 +139,6 @@ export function CourseOverview() {
       .join(' ')
 
   return (
-    <MotionConfig reducedMotion="user">
       <div className="max-w-6xl mx-auto">
         {/* Back navigation */}
         <motion.div
@@ -444,6 +443,5 @@ export function CourseOverview() {
           </div>
         </motion.div>
       </div>
-    </MotionConfig>
   )
 }

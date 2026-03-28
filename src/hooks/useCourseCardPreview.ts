@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useHoverPreview } from './useHoverPreview'
+import { shouldReduceMotion } from '@/lib/settings'
 
 export function useCourseCardPreview() {
   const { active: previewActive, handlers: previewHandlers } = useHoverPreview(1000)
@@ -7,8 +8,7 @@ export function useCourseCardPreview() {
   const [previewOpen, setPreviewOpen] = useState(false)
   const [infoOpen, setInfoOpen] = useState(false)
 
-  const prefersReducedMotion =
-    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const prefersReducedMotion = shouldReduceMotion()
   const showPreview = previewActive && !prefersReducedMotion
 
   useEffect(() => {

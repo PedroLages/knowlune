@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Link } from 'react-router'
-import { MotionConfig, motion } from 'motion/react'
+import { motion } from 'motion/react'
 import {
   Plus,
   Search,
@@ -633,7 +633,7 @@ export function LearningPaths() {
   }
 
   return (
-    <MotionConfig reducedMotion="user">
+    <>
       <motion.div
         variants={staggerContainer}
         initial="hidden"
@@ -760,6 +760,6 @@ export function LearningPaths() {
           if (!open) setDeletePath(null)
         }}
       />
-    </MotionConfig>
+    </>
   )
 }

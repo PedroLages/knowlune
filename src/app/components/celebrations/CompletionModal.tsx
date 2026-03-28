@@ -10,6 +10,7 @@ import {
   DialogDescription,
 } from '@/app/components/ui/dialog'
 import { Button } from '@/app/components/ui/button'
+import { shouldReduceMotion } from '@/lib/settings'
 
 export type CelebrationType = 'lesson' | 'module' | 'course'
 
@@ -32,9 +33,8 @@ interface CompletionModalProps {
  * Respects prefers-reduced-motion for accessibility
  */
 function triggerConfetti(type: CelebrationType) {
-  // Check if user prefers reduced motion
-  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  if (prefersReducedMotion) {
+  // Check app-level motion setting (respects app override + OS preference)
+  if (shouldReduceMotion()) {
     return // Skip animation if user prefers reduced motion
   }
 

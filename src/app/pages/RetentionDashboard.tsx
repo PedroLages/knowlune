@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { AlertTriangle, Brain, Calendar, ShieldCheck } from 'lucide-react'
-import { MotionConfig, motion } from 'motion/react'
+import { motion } from 'motion/react'
 import { Card, CardContent, CardHeader } from '@/app/components/ui/card'
 import { StatsCard } from '@/app/components/StatsCard'
 import { EmptyState } from '@/app/components/EmptyState'
@@ -45,7 +45,6 @@ export function RetentionDashboard() {
   const hasData = allReviews.length > 0
 
   return (
-    <MotionConfig reducedMotion="user">
       <motion.div
         variants={staggerContainer}
         initial="hidden"
@@ -150,6 +149,5 @@ export function RetentionDashboard() {
           </div>
         )}
       </motion.div>
-    </MotionConfig>
   )
 }

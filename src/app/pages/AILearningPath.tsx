@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Link } from 'react-router'
-import { motion, MotionConfig } from 'motion/react'
+import { motion } from 'motion/react'
 import {
   DndContext,
   closestCenter,
@@ -182,7 +182,6 @@ export function AILearningPath() {
   const canGenerate = courseCount >= 2 && !isGenerating
 
   return (
-    <MotionConfig reducedMotion="user">
       <div className="container mx-auto max-w-3xl px-4 py-12">
         {/* Page Header */}
         <header className="mb-12 text-center">
@@ -334,6 +333,5 @@ export function AILearningPath() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </MotionConfig>
   )
 }

@@ -7,6 +7,7 @@ import {
   type ChartConfig,
 } from '@/app/components/ui/chart'
 import { useIsMobile } from '@/app/hooks/useMediaQuery'
+import { shouldReduceMotion } from '@/lib/settings'
 
 interface ScoreTrajectoryChartProps {
   attempts: Array<{ attemptNumber: number; percentage: number }>
@@ -44,12 +45,7 @@ export function ScoreTrajectoryChart({ attempts, passingScore }: ScoreTrajectory
   // which would cause recharts to re-mount all dot elements unnecessarily.
   const customDot = useMemo(() => makeCustomDot(passingScore), [passingScore])
 
-  const prefersReducedMotion = useMemo(
-    () =>
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-    []
-  )
+  const prefersReducedMotion = useMemo(() => shouldReduceMotion(), [])
 
   // AC3: Require at least 2 data points
   if (attempts.length < 2) return null

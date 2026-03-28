@@ -10,7 +10,7 @@ import {
   type RetakeFrequencyResult,
 } from '@/lib/analytics'
 import { toast } from 'sonner'
-import { MotionConfig, motion } from 'motion/react'
+import { motion } from 'motion/react'
 import { staggerContainer, fadeUp } from '@/lib/motion'
 
 interface QuizPerformance {
@@ -165,7 +165,6 @@ export function QuizAnalyticsTab() {
   }
 
   return (
-    <MotionConfig reducedMotion="user">
       <motion.div variants={staggerContainer} initial="hidden" animate="visible">
         <section aria-labelledby="quiz-analytics-heading" className="space-y-6">
           <h2 id="quiz-analytics-heading" className="sr-only">
@@ -297,6 +296,5 @@ export function QuizAnalyticsTab() {
           )}
         </section>
       </motion.div>
-    </MotionConfig>
   )
 }

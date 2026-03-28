@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, Link } from 'react-router'
-import { MotionConfig, motion } from 'motion/react'
+import { motion } from 'motion/react'
 import {
   DndContext,
   closestCenter,
@@ -721,7 +721,7 @@ export function LearningPathDetail() {
   }
 
   return (
-    <MotionConfig reducedMotion="user">
+    <>
       <motion.div
         variants={staggerContainer}
         initial="hidden"
@@ -1159,6 +1159,6 @@ export function LearningPathDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </MotionConfig>
+    </>
   )
 }

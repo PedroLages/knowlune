@@ -1,4 +1,4 @@
-import { motion, MotionConfig } from 'motion/react'
+import { motion } from 'motion/react'
 import { CheckCircle2, ArrowUpRight, RotateCcw } from 'lucide-react'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
@@ -22,7 +22,6 @@ export function InterleavedSummary({
   const totalRatings = summary.ratings.hard + summary.ratings.good + summary.ratings.easy
 
   return (
-    <MotionConfig reducedMotion="user">
       <motion.div
         variants={scaleIn}
         initial="hidden"
@@ -135,7 +134,6 @@ export function InterleavedSummary({
           </CardContent>
         </Card>
       </motion.div>
-    </MotionConfig>
   )
 }
 

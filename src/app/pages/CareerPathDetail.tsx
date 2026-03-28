@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { MotionConfig, motion } from 'motion/react'
+import { motion } from 'motion/react'
 import { BookOpen, Clock, ChevronLeft, Check, Lock, Play, ArrowRight } from 'lucide-react'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
@@ -330,7 +330,6 @@ export function CareerPathDetail() {
   }
 
   return (
-    <MotionConfig reducedMotion="user">
       <motion.div
         variants={staggerContainer}
         initial="hidden"
@@ -451,6 +450,5 @@ export function CareerPathDetail() {
           </motion.div>
         )}
       </motion.div>
-    </MotionConfig>
   )
 }

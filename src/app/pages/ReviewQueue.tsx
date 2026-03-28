@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useCallback, useState, useRef } from 'react'
 import { Link } from 'react-router'
 import { RotateCcw, CalendarClock, Shuffle } from 'lucide-react'
-import { motion, MotionConfig, AnimatePresence } from 'motion/react'
+import { motion, AnimatePresence } from 'motion/react'
 import { format } from 'date-fns'
 import { useReviewStore } from '@/stores/useReviewStore'
 import { useNoteStore } from '@/stores/useNoteStore'
@@ -133,7 +133,6 @@ export function ReviewQueue() {
   }
 
   return (
-    <MotionConfig reducedMotion="user">
       <div className="space-y-6 p-1" data-testid="review-queue">
         {/* Page heading */}
         <div className="flex items-center justify-between">
@@ -198,7 +197,6 @@ export function ReviewQueue() {
           </motion.div>
         )}
       </div>
-    </MotionConfig>
   )
 }
 

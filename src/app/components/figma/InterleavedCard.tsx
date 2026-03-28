@@ -1,4 +1,4 @@
-import { motion, MotionConfig } from 'motion/react'
+import { motion } from 'motion/react'
 import { RotateCcw, FileText } from 'lucide-react'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { Badge } from '@/app/components/ui/badge'
@@ -76,7 +76,7 @@ export function InterleavedCard({
   }
 
   return (
-    <MotionConfig reducedMotion="user">
+    <>
       {/* Perspective container for 3D card-flip — no Tailwind equivalents for
           perspective, transformStyle, or backfaceVisibility (CSS 3D transform properties) */}
       {/* eslint-disable react-best-practices/no-inline-styles */}
@@ -191,6 +191,6 @@ export function InterleavedCard({
         )}
       </div>
       {/* eslint-enable react-best-practices/no-inline-styles */}
-    </MotionConfig>
+    </>
   )
 }

@@ -7,7 +7,8 @@ import {
   type ChartConfig,
 } from '@/app/components/ui/chart'
 import { Badge } from '@/app/components/ui/badge'
-import { useIsMobile, useMediaQuery } from '@/app/hooks/useMediaQuery'
+import { useIsMobile } from '@/app/hooks/useMediaQuery'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { detectLearningTrajectory, type TrajectoryResult } from '@/lib/analytics'
 import type { QuizAttempt } from '@/types/quiz'
 
@@ -37,7 +38,7 @@ export function ImprovementChart({ attempts }: ImprovementChartProps) {
     [attempts]
   )
 
-  const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
+  const { shouldReduceMotion: prefersReducedMotion } = useReducedMotion()
 
   if (!trajectory) return null
 

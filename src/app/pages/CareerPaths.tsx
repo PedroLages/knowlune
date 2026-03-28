@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Link } from 'react-router'
-import { MotionConfig, motion } from 'motion/react'
+import { motion } from 'motion/react'
 import {
   Brain,
   Shield,
@@ -268,7 +268,6 @@ export function CareerPaths() {
   }
 
   return (
-    <MotionConfig reducedMotion="user">
       <motion.div
         variants={staggerContainer}
         initial="hidden"
@@ -336,6 +335,5 @@ export function CareerPaths() {
           </motion.div>
         )}
       </motion.div>
-    </MotionConfig>
   )
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
-import { motion, MotionConfig } from 'motion/react'
+import { motion } from 'motion/react'
 import {
   Layers,
   CheckCircle2,
@@ -300,7 +300,6 @@ export function Flashcards() {
     }
 
     return (
-      <MotionConfig reducedMotion="user">
         <motion.div
           variants={staggerContainer}
           initial="hidden"
@@ -396,7 +395,6 @@ export function Flashcards() {
             </motion.div>
           )}
         </motion.div>
-      </MotionConfig>
     )
   }
 
@@ -443,7 +441,6 @@ export function Flashcards() {
     const totalRatings = summary.ratings.hard + summary.ratings.good + summary.ratings.easy
 
     return (
-      <MotionConfig reducedMotion="user">
         <div className="mx-auto max-w-lg p-6">
           <motion.div variants={scaleIn} initial="hidden" animate="visible">
             <Card className="rounded-[24px]">
@@ -526,7 +523,6 @@ export function Flashcards() {
             </Card>
           </motion.div>
         </div>
-      </MotionConfig>
     )
   }
 

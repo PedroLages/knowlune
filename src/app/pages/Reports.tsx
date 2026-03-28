@@ -11,7 +11,7 @@ import {
 import { Progress } from '@/app/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area } from 'recharts'
-import { MotionConfig, motion } from 'motion/react'
+import { motion } from 'motion/react'
 import { format } from 'date-fns'
 import { db } from '@/db'
 import { useCourseStore } from '@/stores/useCourseStore'
@@ -235,7 +235,6 @@ export default function Reports() {
     quizAttemptCount > 0
 
   return (
-    <MotionConfig reducedMotion="user">
       <motion.div variants={staggerContainer} initial="hidden" animate="visible">
         <motion.h1 variants={fadeUp} className="text-2xl font-bold mb-6">
           Reports
@@ -596,6 +595,5 @@ export default function Reports() {
           </>
         )}
       </motion.div>
-    </MotionConfig>
   )
 }

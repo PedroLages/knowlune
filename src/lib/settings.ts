@@ -152,6 +152,25 @@ export function hydrateSettingsFromSupabase(
   }
 }
 
+/**
+ * Resolves whether motion should be reduced based on app setting + OS preference.
+ * Usable from non-React contexts (plain functions, event handlers, etc.).
+ * For React components, prefer the `useReducedMotion` hook.
+ *
+ * - 'on': always reduce (app override)
+ * - 'off': never reduce (app override)
+ * - 'system': follow OS `prefers-reduced-motion` media query
+ */
+export function shouldReduceMotion(): boolean {
+  const pref = getSettings().reduceMotion
+  if (pref === 'on') return true
+  if (pref === 'off') return false
+  // 'system' — follow OS
+  return typeof window !== 'undefined'
+    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    : false
+}
+
 export function exportAllData(): string {
   const data: Record<string, unknown> = {}
   for (let i = 0; i < localStorage.length; i++) {

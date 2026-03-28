@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { BookOpen, CheckCircle, FileText, Clock, ArrowRight } from 'lucide-react'
-import { motion, MotionConfig } from 'motion/react'
+import { motion } from 'motion/react'
 import { useSessionStore } from '@/stores/useSessionStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { importCourseFromFolder } from '@/lib/courseImport'
@@ -131,7 +131,6 @@ export function Overview() {
   // Engagement preference toggles
   const showAchievements = useEngagementVisible('achievements')
   const showStreaks = useEngagementVisible('streaks')
-  const showAnimations = useEngagementVisible('animations')
 
   // Memoize stats cards array to prevent recreation on every render
   const statsCards = useMemo(
@@ -421,7 +420,6 @@ export function Overview() {
   }
 
   return (
-    <MotionConfig reducedMotion={showAnimations ? 'user' : 'always'}>
       <motion.div
         initial="hidden"
         animate="visible"
@@ -473,6 +471,5 @@ export function Overview() {
           </motion.section>
         )}
       </motion.div>
-    </MotionConfig>
   )
 }

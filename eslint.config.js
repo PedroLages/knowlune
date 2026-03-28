@@ -19,6 +19,7 @@ export default tseslint.config(eslint.configs.recommended, ...tseslint.configs.r
     '.worktrees/', // Git worktree directories with build artifacts
     '**/experiments/', // Experimental code - not production quality
     'docs/', // Documentation files
+    'public/', // Static assets (plain JS, not TypeScript)
     'StudyGy-Dashboard/', // External reference implementation
   ],
 }, {

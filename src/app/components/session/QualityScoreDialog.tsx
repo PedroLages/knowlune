@@ -1,4 +1,3 @@
-import { MotionConfig } from 'motion/react'
 import {
   Dialog,
   DialogContent,
@@ -38,7 +37,7 @@ function ScoreContent({
   onClose: () => void
 }) {
   return (
-    <MotionConfig reducedMotion="user">
+    <>
       <div className="flex flex-col items-center gap-6 py-4">
         <QualityScoreRing score={score} />
         <div className="w-full">
@@ -50,7 +49,7 @@ function ScoreContent({
           Continue
         </Button>
       </div>
-    </MotionConfig>
+    </>
   )
 }
 
