@@ -9,6 +9,7 @@ import { GoogleAuthButton } from '@/app/components/auth/GoogleAuthButton'
 import { GoogleIcon } from '@/app/components/auth/GoogleIcon'
 import { KnowluneLogo } from '@/app/components/figma/KnowluneLogo'
 import { useAuthStore } from '@/stores/useAuthStore'
+import { RETURN_TO_KEY } from '@/app/components/figma/SessionExpiredBanner'
 
 type AuthMode = 'sign-in' | 'sign-up'
 
@@ -21,15 +22,23 @@ export function Login() {
   const [activeTab, setActiveTab] = useState('email')
   const [resetKey, setResetKey] = useState(0)
 
-  // Redirect authenticated users away from /login
+  /** Navigate to the stored return-to route (or fallback to '/'), clearing the sessionStorage key. */
+  function navigateToReturnRoute() {
+    const returnTo = sessionStorage.getItem(RETURN_TO_KEY)
+    sessionStorage.removeItem(RETURN_TO_KEY)
+    navigate(returnTo || '/', { replace: true })
+  }
+
+  // Redirect authenticated users away from /login (with return-to-route support)
   useEffect(() => {
     if (initialized && user) {
-      navigate('/', { replace: true })
+      navigateToReturnRoute()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialized, user, navigate])
 
   function handleSuccess() {
-    navigate('/', { replace: true })
+    navigateToReturnRoute()
   }
 
   function toggleMode() {
