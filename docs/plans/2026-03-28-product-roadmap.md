@@ -1,8 +1,8 @@
 # Knowlune Product Roadmap — Strategic Exploration
 
-> **Purpose:** Pure exploration of 16 strategic areas. No implementation timeline — this is a decision-making document to inform future epic planning.
+> **Purpose:** Strategic exploration of 17 areas with implementation status tracking. Informs future epic planning.
 >
-> **Date:** 2026-03-28
+> **Date:** 2026-03-28 | **Last Status Update:** 2026-03-28
 
 ---
 
@@ -24,12 +24,46 @@
 14. [AI Tutoring (Socratic Mode)](#14-ai-tutoring-socratic-mode)
 15. [Notification System](#15-notification-system)
 16. [Onboarding & UX Polish](#16-onboarding--ux-polish)
-17. [Cross-Cutting Dependencies](#17-cross-cutting-dependencies)
-18. [Recommended Sequencing](#18-recommended-sequencing)
+17. [UI Enhancement — Stitch Design Upgrades](#17-ui-enhancement--stitch-design-upgrades)
+18. [Cross-Cutting Dependencies](#18-cross-cutting-dependencies)
+19. [Recommended Sequencing](#19-recommended-sequencing)
+
+---
+
+## Implementation Status Summary
+
+> **Baseline:** 35 epics completed (E1-E35), ~200+ stories delivered.
+> **Known issues:** 55+ failing tests (KI-016 through KI-025 in `docs/known-issues.yaml`)
+
+| # | Area | Status | % | Key Evidence |
+|---|------|--------|---|-------------|
+| 1 | Supabase Data Sync | 🔴 Not Started | 0% | Auth only (E19). Architecture doc: `docs/plans/sync-architecture.md` |
+| 2 | Authentication Refinement | 🟡 Mostly Done | 85% | E19 complete. Missing: password reset, session expiry UI |
+| 3 | Standalone Desktop App | ⬜ Deferred | — | Explicitly deferred post-sync |
+| 4 | CRUD & UX Gaps | 🟡 Partially Done | 70% | Missing: completion %, bulk ops, soft-delete, data import |
+| 5 | Repository Strategy | 🟡 Infrastructure Done | 60% | `src/premium/` separated, repo split not done |
+| 6 | Video Storage & Offline | 🟡 Infrastructure Done | 40% | Transcripts cached, no download UI |
+| 7 | Cloud Storage | 🔴 Not Started | 5% | Only `exportService.ts` exists |
+| 8 | Machine Learning | 🟡 Partially Done | 50% | E9/E9B: embeddings, vector search, AI summaries. Pending: auto-quiz, FSRS |
+| 9 | Offline & Multi-Device | 🟡 Infrastructure Done | 40% | Service worker + IDB, no sync status UI |
+| 10 | Calendar Integration | 🔴 Not Started | 0% | shadcn Calendar component only |
+| 11 | Accessibility & Cognitive UX | 🟡 Partially Done | 70% | E30: WCAG 2.1 AA. Missing: settings page, dyslexia font |
+| 12 | PKM Export Pipeline | 🟡 Partially Done | 50% | JSON/CSV/MD export. Pending: Anki, Obsidian |
+| 13 | Knowledge Map & Decay | 🔴 Not Started | 0% | Data sources exist, no visualization |
+| 14 | AI Tutoring (Socratic) | 🔴 Not Started | 0% | LLM + transcripts exist, no Socratic mode |
+| 15 | Notification System | 🟡 UI Done, Data Missing | 30% | UI shell complete, hardcoded `createMockNotifications()` |
+| 16 | Onboarding & UX Polish | 🟢 Mostly Done | 90% | E25: onboarding flow, empty states, sidebar |
+| 17 | UI Enhancement (Stitch) | 🔴 Not Started | 0% | 12-page catalog (50+ concepts), 5 focus pages ready, 7 pages to explore |
 
 ---
 
 ## 1. Supabase Data Sync
+
+> **Status:** 🔴 Not Started (0%)
+> **Completed:** Auth + entitlements (E19)
+> **Remaining:** Full sync infrastructure, 4 epics planned
+> **Architecture:** [`docs/plans/sync-architecture.md`](sync-architecture.md)
+> **Last Updated:** 2026-03-28
 
 ### Current State
 - Auth + entitlements only (Epic 19)
@@ -82,6 +116,12 @@
 
 ## 2. Authentication Refinement
 
+> **Status:** 🟡 Mostly Done (85%)
+> **Completed:** Email/password, magic link, Google OAuth, JWT middleware, BYOK, GDPR deletion, profile sync (E19)
+> **Remaining:** Password reset flow, session expiry UI
+> **Blockers:** None
+> **Last Updated:** 2026-03-28
+
 ### Current State (Already Built)
 - Email/password, magic link, Google OAuth
 - JWT middleware on Express proxy
@@ -111,6 +151,10 @@
 ---
 
 ## 3. Standalone Desktop App
+
+> **Status:** ⬜ Deferred
+> **Rationale:** PWA covers 90% of use cases. Web app not feature-complete yet. Revisit after data sync.
+> **Last Updated:** 2026-03-28
 
 ### The Core Question
 Should Knowlune become a native Mac app? What would it unlock?
@@ -162,6 +206,12 @@ The PWA handles daily use well. Build a desktop app when:
 ---
 
 ## 4. CRUD & UX Gaps
+
+> **Status:** 🟡 Partially Done (70%)
+> **Completed:** Import (file/YouTube/bulk), edit metadata, delete courses, learning path CRUD, notes export, AI ordering
+> **Remaining:** Completion % fix (hardcoded to 0), bulk delete, soft-delete/archive, data import/restore, Anki import
+> **Blockers:** 55+ failing tests (KI-016 through KI-025) undermine CI
+> **Last Updated:** 2026-03-28
 
 ### Current Inventory
 
@@ -232,6 +282,12 @@ The PWA handles daily use well. Build a desktop app when:
 
 ## 5. Repository Strategy
 
+> **Status:** 🟡 Infrastructure Done (60%)
+> **Completed:** Premium code separation (`src/premium/`), separate build config, import guards, AGPL-3.0
+> **Remaining:** Actual repo split, CI/CD for two repos
+> **Blockers:** None — not urgent until external contributors or public premium launch
+> **Last Updated:** 2026-03-28
+
 ### Current State
 - Single public GitHub repo
 - License: AGPL-3.0 (in `package.json`)
@@ -276,6 +332,12 @@ The split is already architected. Extract `src/premium/` into a private repo, pu
 ---
 
 ## 6. Video Storage & Offline Downloads
+
+> **Status:** 🟡 Infrastructure Done (40%)
+> **Completed:** YouTube transcript pipeline (E28), Whisper fallback, video playback, metadata caching
+> **Remaining:** Progressive download cache, "download for offline" UI, storage quota management
+> **Blockers:** None
+> **Last Updated:** 2026-03-28
 
 ### The Problem Space
 
@@ -328,6 +390,12 @@ No video content is stored or downloadable for offline viewing.
 
 ## 7. Cloud Storage Integration (Google Drive, etc.)
 
+> **Status:** 🔴 Not Started (5%)
+> **Completed:** `exportService.ts` serializes all tables to JSON/CSV (proves data is portable)
+> **Remaining:** `.knowlune` portable bundle, Google Drive API, WebDAV
+> **Blockers:** None — can start with export bundles immediately
+> **Last Updated:** 2026-03-28
+
 ### Use Cases
 
 | Use Case | Service | Value |
@@ -375,6 +443,12 @@ Start with portable export/import bundles (`.knowlune` format). This solves the 
 ---
 
 ## 8. Machine Learning
+
+> **Status:** 🟡 Partially Done (50%)
+> **Completed:** Ollama integration (E22), OpenAI embeddings (E9), vector search (E9B-S03), AI summaries, Q&A/RAG, knowledge gap detection, note organization, feature analytics
+> **Remaining:** Auto-quiz generation, content-based recommendations, FSRS upgrade, on-device embeddings, knowledge graph
+> **Blockers:** None — existing infrastructure supports phases 1-4
+> **Last Updated:** 2026-03-28
 
 ### Current ML/AI State
 - Ollama integration (local LLM via self-hosted server)
@@ -462,6 +536,12 @@ Start with portable export/import bundles (`.knowlune` format). This solves the 
 ---
 
 ## 9. Offline & Multi-Device Experience
+
+> **Status:** 🟡 Infrastructure Done (40%)
+> **Completed:** Service worker + app shell caching, IndexedDB local-first (29 tables), offline notes/quiz/flashcards
+> **Remaining:** Sync status indicator, "download for offline" toggles, offline mode banner, device-specific settings
+> **Blockers:** Depends on data sync (Section 1) for status indicator
+> **Last Updated:** 2026-03-28
 
 > This section answers: "What should a Knowlune user be able to do without internet, and what should they see when switching between devices?"
 
@@ -572,6 +652,12 @@ Being explicit about limitations prevents frustration:
 
 ## 10. Calendar Integration
 
+> **Status:** 🔴 Not Started (0%)
+> **Completed:** shadcn/ui Calendar component available
+> **Remaining:** iCal feed generation, study planner UI, Google Calendar sync, smart scheduling
+> **Blockers:** None for phases 1-2. Phase 3+ needs Supabase auth for OAuth token storage
+> **Last Updated:** 2026-03-28
+
 ### The Problem Space
 
 Knowlune tracks study sessions, streaks, and course deadlines — but none of this connects to the user's actual calendar. Users have to mentally juggle "when should I study?" with their real schedule. Calendar integration bridges this gap.
@@ -651,6 +737,12 @@ Knowlune tracks study sessions, streaks, and course deadlines — but none of th
 
 ## 11. Accessibility & Cognitive UX
 
+> **Status:** 🟡 Partially Done (70%)
+> **Completed:** WCAG 2.1 AA architecture, 4.5:1 contrast, touch targets (E30-S01), ARIA labels (E30-S02), heading hierarchy (E30-S03), aria-expanded (E30-S04), aria-live (E30-S06)
+> **Remaining:** Dyslexia font toggle, content density, reduced motion UI, accessibility settings page, screen reader audit, WCAG 2.2
+> **Blockers:** None
+> **Last Updated:** 2026-03-28
+
 ### Current State
 
 Knowlune already targets WCAG 2.1 AA (per styling.md): 4.5:1 contrast, keyboard navigation, semantic HTML, ARIA labels, 44x44px touch targets. But there's no explicit accessibility settings UI, no cognitive accessibility features, and no accessibility audit has been run.
@@ -702,6 +794,12 @@ Knowlune already targets WCAG 2.1 AA (per styling.md): 4.5:1 contrast, keyboard 
 ---
 
 ## 12. PKM Export Pipeline
+
+> **Status:** 🟡 Partially Done (50%)
+> **Completed:** Data export JSON/CSV/MD (E11-S04), note export
+> **Remaining:** YAML frontmatter Markdown, Anki `.apkg`, Obsidian vault export, Notion API, Readwise
+> **Blockers:** None
+> **Last Updated:** 2026-03-28
 
 ### The Problem Space
 
@@ -760,6 +858,12 @@ Learners don't just consume content — they build a personal knowledge base fro
 ---
 
 ## 13. Knowledge Map & Decay Visualization
+
+> **Status:** 🔴 Not Started (0%)
+> **Completed:** Data sources exist: quiz scores, flashcard retention, study sessions, content progress
+> **Remaining:** Knowledge score calculation, dashboard heatmap, decay predictions, action suggestions, concept graph
+> **Blockers:** Phase 3 needs FSRS upgrade (Wave 2)
+> **Last Updated:** 2026-03-28
 
 ### The Problem Space
 
@@ -857,6 +961,12 @@ The map isn't just pretty — it should **drive behavior:**
 ---
 
 ## 14. AI Tutoring (Socratic Mode)
+
+> **Status:** 🔴 Not Started (0%)
+> **Completed:** LLM access (Ollama/OpenAI/Groq), streaming completions, course transcripts, embeddings + vector search
+> **Remaining:** Lesson-aware context injection, Socratic prompting, RAG-grounded answers, learner profile, conversation memory, tutoring modes
+> **Blockers:** Phase 4 needs knowledge map (Section 13 phase 1)
+> **Last Updated:** 2026-03-28
 
 ### The Problem Space
 
@@ -965,6 +1075,12 @@ This prevents the AI from contradicting the course material or teaching concepts
 ---
 
 ## 15. Notification System
+
+> **Status:** 🟡 UI Done, Data Missing (30%)
+> **Completed:** Popover UI, 6 notification types, icon mapping, read/unread state, "Mark all read" (NotificationCenter.tsx)
+> **Remaining:** `notifications` Dexie table, trigger logic, persistence, preferences UI, push notifications, email digest
+> **Blockers:** None — data layer replaces existing `createMockNotifications()` hardcoded data
+> **Last Updated:** 2026-03-28
 
 ### Current State
 
@@ -1077,6 +1193,12 @@ The notification bell UI already exists in [NotificationCenter.tsx](src/app/comp
 
 ## 16. Onboarding & UX Polish
 
+> **Status:** 🟢 Mostly Done (90%)
+> **Completed:** 4-step onboarding flow (E25-S07), empty state guidance (E25-S09), progressive sidebar (E25-S08)
+> **Remaining:** Polish iterations based on user feedback, accessibility audit of onboarding
+> **Blockers:** None
+> **Last Updated:** 2026-03-28
+
 > Surfaced by the [Interactive App Audit (2026-03-28)](../reviews/design/app-visual-audit-2026-03-28.md). These are cross-cutting UX gaps that don't fit cleanly into any single technical area.
 
 ### The Problem Space
@@ -1112,7 +1234,102 @@ The app audit revealed that Knowlune has strong features but **new users land in
 
 ---
 
-## 17. Cross-Cutting Dependencies
+## 17. UI Enhancement — Stitch Design Upgrades
+
+> **Status:** 🔴 Not Started (0%)
+> **Source:** [`docs/plans/2026-03-28-stitch-design-exploration.md`](2026-03-28-stitch-design-exploration.md)
+> **Completed:** Full design exploration — 12-page catalog (50+ concepts), 5 implementation-ready focus pages
+> **Remaining:** All implementation
+> **Blockers:** None — all upgrades are visual layer changes on existing data infrastructure
+> **Last Updated:** 2026-03-28
+
+### Design Assets
+
+| Asset | Location | Content |
+|-------|----------|---------|
+| **12-page design catalog** | [`docs/plans/stitch-designs/index.html`](stitch-designs/index.html) (~260KB) | Full catalog: 12 pages × 4-5 variations = ~50 design concepts |
+| **5 focus pages** | [`docs/plans/stitch-designs/focus/index.html`](stitch-designs/focus/index.html) (~112KB) | Implementation-ready: current vs proposed, variations, component close-ups |
+| **Exploration doc** | [`docs/plans/2026-03-28-stitch-design-exploration.md`](2026-03-28-stitch-design-exploration.md) | Analysis, widget candidates, design principles, priority ranking |
+
+### Full Catalog — 12 Pages
+
+| # | Page | Knowlune Target | Readiness | Potential |
+|---|------|----------------|-----------|-----------|
+| 01 | Charts & Data Visualization | Reports page, analytics dashboard | Explore | Sparklines, gradient area charts, dark mode variants |
+| 02 | Radar & Skill Maps | Knowledge Map (Section 13) | Explore | Radar chart for skill proficiency across course categories |
+| 03 | **Progress Indicators** | Course cards, Overview | **Focus page ready** | Segmented chapter bars, milestone bars, hero metrics |
+| 04 | **Activity Visualizations** | Overview dashboard | **Focus page ready** | Streak calendar, activity timeline, heatmaps |
+| 05 | Course Cards & Grids | Courses page, My Class | Explore | Thumbnail grids, bento layout, list views, state variants |
+| 06 | Dashboard Widgets | Overview page | Explore | KPI strips, goal trackers, study schedule widgets |
+| 07 | **Learning Path Visualizations** | Learning Path Detail | **Focus page ready** | Vertical timeline, roadmap, node graph alternatives |
+| 08 | Quiz & Flashcard UI | Flashcard review, quiz taking | Explore | Flip cards, timed challenges, score displays, split views |
+| 09 | Media Player Layouts | Lesson Player | Explore | Cinema mode, split panel with transcript, PiP |
+| 10 | Dialogs & Forms | Import wizard, Settings | Explore | Wizard improvements, sheet patterns, inline editing |
+| 11 | **Gamification & Engagement** | Overview, Pomodoro | **Focus page ready** | Badges, XP/levels, celebrations, deep focus mode |
+| 12 | Landing Page Sections | Public-facing marketing | Explore | Hero variants, feature bento, comparison cards, CTAs |
+
+### Phase 1: Implementation-Ready Widgets (5 focus pages)
+
+| # | Widget | Current Component | Stitch Upgrade | Focus Page | Effort |
+|---|--------|------------------|----------------|------------|--------|
+| 1 | **Deep Focus Mode** | `PomodoroTimer.tsx` | Large SVG ring, session counter, "Today's Focus Stats" card | `focus/deep-focus-mode.html` | Medium (2-3 stories) |
+| 2 | **Streak Calendar** | `StudyStreakCalendar.tsx` | Month-view mode, large streak header, trophy badge | `focus/streak-calendar.html` | Small (1-2 stories) |
+| 3 | **Activity Timeline** | `RecentActivity.tsx` | Vertical timeline, typed icons, day grouping | `focus/activity-timeline.html` | Small (2-3 stories) |
+| 4 | **Learning Path Timeline** | `TrailMap.tsx` | Clean vertical timeline as alternative view | `focus/learning-path-timeline.html` | Small (2 stories) |
+| 5 | **Progress Composites** | `ProgressRing.tsx`, `StatsCard.tsx` | Segmented chapter bar, metrics strip, richer cards | `focus/progress-composites.html` | Medium (3-4 stories) |
+
+### Phase 2: Exploration Candidates (7 remaining catalog pages)
+
+These pages have design ideas worth exploring but need a focus-page treatment before implementation:
+
+| Page | Opportunity | When to Explore | Synergy |
+|------|------------|-----------------|---------|
+| 01 Charts & Data Viz | Upgrade Reports page with gradient charts, sparklines | When fixing Reports data aggregation (Section 4) | Wave 1 Reports fix |
+| 02 Radar & Skill Maps | Skill radar for knowledge map visualization | When building Knowledge Map (Section 13) | Wave 2 Knowledge Map |
+| 05 Course Cards & Grids | Richer course card layouts, bento grid option | When doing CRUD/UX polish (Section 4) | Wave 1 CRUD gaps |
+| 06 Dashboard Widgets | KPI strip, goal tracker, study schedule for Overview | When adding calendar/scheduling (Section 10) | Wave 1 Calendar |
+| 08 Quiz & Flashcard UI | Flip card animation, timed challenges, score display | When upgrading to FSRS (Section 8) | Wave 2 ML |
+| 09 Media Player Layouts | Split panel with transcript, cinema mode, PiP | Standalone UI polish pass | Wave 4 polish |
+| 10 Dialogs & Forms | Improved import wizard, inline editing | When doing CRUD polish (Section 4) | Wave 1 CRUD gaps |
+| 12 Landing Page | Public marketing site | When preparing public launch | Wave 4 |
+
+### Design Principles from Stitch
+
+1. **Tonal layering** — definition through background color shifts instead of borders
+2. **Ambient shadows** — multi-layer shadows with indigo tint: `0px 20px 40px rgba(29,28,24,0.06)`
+3. **Label hierarchy** — `10px uppercase tracking-widest` for category labels above bold headlines
+4. **Icon circles** — icons inside colored circular backgrounds (not bare icons)
+5. **Gradient CTAs** — `linear-gradient(135deg, primary, primary-container)` for primary buttons
+
+### Implementation Notes
+
+- All upgrades are **visual layer changes** on existing data infrastructure
+- Each is independent and can be a separate story/PR
+- Must use design tokens from `src/styles/theme.css` — no hardcoded colors
+- Stitch used Manrope/Inter fonts → adapt to system fonts
+- Stitch used Material Symbols → substitute Lucide equivalents
+- Focus pages include "Current vs Proposed" comparisons — use as implementation specs
+
+### Suggested Priority
+
+**Phase 1 (Wave 1-2):**
+1. Deep Focus Mode — most dramatic upgrade, explicitly requested
+2. Streak Calendar — high visibility on Overview
+3. Activity Timeline — new visual pattern
+4. Vertical Path Timeline — alternative view
+5. Progress Composites — polish pass
+
+**Phase 2 (as synergies arise):**
+- Charts & Reports — when fixing Reports page
+- Radar/Skill Maps — when building Knowledge Map
+- Quiz/Flashcard UI — when upgrading to FSRS
+- Course Cards — when doing CRUD polish
+
+### Effort: Phase 1 = Small-Medium (1-2 epics), Phase 2 = spread across feature epics
+
+---
+
+## 18. Cross-Cutting Dependencies
 
 ```
                     ┌─────────────────┐
@@ -1199,12 +1416,12 @@ The app audit revealed that Knowlune has strong features but **new users land in
 
 ---
 
-## 18. Recommended Sequencing
+## 19. Recommended Sequencing
 
 ### Wave 1: Foundation (next 2-3 epics)
 > Fix what's broken, fill critical gaps, ship quick wins
 
-- [ ] Fix 67 failing unit tests + 217 ESLint warnings
+- [ ] Fix 55+ failing tests (KI-016 through KI-025) + ESLint warnings
 - [ ] Add password reset flow + session expiry handling
 - [ ] Fix imported course completion % (hardcoded to 0)
 - [ ] Add data import/restore (`.knowlune` portable bundle)
@@ -1214,15 +1431,16 @@ The app audit revealed that Knowlune has strong features but **new users land in
 - [ ] **Accessibility phase 2:** Display & Accessibility settings page
 - [ ] **PKM phase 1:** Enhanced Markdown export (notes + flashcards with YAML frontmatter)
 - [ ] **Notifications phases 1-2:** Data model + store, streak/completion/import triggers (replaces mock data)
-- [ ] **Onboarding phases 1-3:** Quick bug fixes + Getting Started checklist + empty state component (audit-surfaced)
+- [x] ~~**Onboarding phases 1-3:** Quick bug fixes + Getting Started checklist + empty state component~~ (E25 — complete)
 - [ ] **Lesson flow:** Next Lesson CTA + completion checkmarks in sidebar (audit-surfaced)
+- [ ] **Stitch UI phase 1:** Deep Focus Mode widget + Streak Calendar upgrade (Section 17)
 
 ### Wave 2: Intelligence (next 2-3 epics)
 > Ship high-value ML + AI features using existing infrastructure
 
 - [ ] Auto-quiz generation from transcripts (LLM structured output)
 - [ ] Content-based course recommendations (embedding similarity)
-- [ ] Lesson summarization with RAG
+- [x] ~~Lesson summarization with RAG~~ (E9B — AI summaries complete)
 - [ ] Upgrade spaced repetition from SM-2 to FSRS
 - [ ] **Calendar:** SRS review reminders in iCal feed (connects FSRS to calendar)
 - [ ] **AI Tutoring phases 1-2:** Lesson-aware AI chat + Socratic mode (system prompt engineering)
@@ -1231,12 +1449,15 @@ The app audit revealed that Knowlune has strong features but **new users land in
 - [ ] **PKM phase 2:** Anki `.apkg` export for flashcard decks
 - [ ] **Notifications phase 3:** SRS due reminders + study block alerts (ties into FSRS + calendar)
 - [ ] **Notifications phase 4:** Preferences UI in Settings (per-type toggles, quiet hours)
+- [ ] **Stitch UI phase 2:** Activity Timeline + Vertical Path Timeline + Progress Composites (Section 17)
 
 ### Wave 3: Sync (3-4 epics)
-> Multi-device experience
+> Multi-device experience — architecture: [`docs/plans/sync-architecture.md`](sync-architecture.md)
 
-- [ ] Supabase data sync phase 1 (progress + sessions)
-- [ ] Supabase data sync phase 2 (notes + bookmarks + flashcards)
+- [ ] Supabase data sync Epic 1: Infrastructure (syncQueue, engine, v28, Supabase tables)
+- [ ] Supabase data sync Epic 2: P0 Live (contentProgress + studySessions)
+- [ ] Supabase data sync Epic 3: P1 (notes + bookmarks + flashcards + review log)
+- [ ] Supabase data sync Epic 4: P2-P3 + polish
 - [ ] **Offline UX:** Sync status indicator + offline mode banner
 - [ ] Offline content caching (transcripts, thumbnails, PWA)
 - [ ] Soft-delete/archive with sync support
