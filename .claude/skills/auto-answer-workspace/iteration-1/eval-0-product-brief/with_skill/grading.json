@@ -1,0 +1,26 @@
+{
+  "eval_id": 0,
+  "run_type": "with_skill",
+  "expectations": [
+    {
+      "text": "All 4 questions are answered directly — none are asked back to the user",
+      "passed": true,
+      "evidence": "All 4 questions answered in full with clear Recommendation sections. No questions asked back."
+    },
+    {
+      "text": "Answers reference Knowlune-specific features or context (not generic product advice)",
+      "passed": true,
+      "evidence": "References Epics 4, 5, 7, 9B, 11, 20, 21 by number. Mentions momentum scores, IndexedDB infrastructure, Ollama on Unraid server, open-core strategy ($12/month), specific files like E07-S02."
+    },
+    {
+      "text": "Each answer includes reasoning explaining WHY the recommendation is made",
+      "passed": true,
+      "evidence": "Every answer has an explicit 'Why' section with detailed reasoning."
+    },
+    {
+      "text": "At least 2 answers mention trade-offs or alternatives considered",
+      "passed": true,
+      "evidence": "All 4 answers have explicit 'Trade-offs' sections discussing alternatives (instructors vs solo learners, heuristic vs AI, smaller vs larger MVP, A/B testing rejection)."
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "eval_id": 1,
+  "run_type": "with_skill",
+  "expectations": [
+    {
+      "text": "Answers use the review format with clear Recommendation, Why, and Trade-offs sections",
+      "passed": true,
+      "evidence": "All 3 answers use bold 'Recommendation:', 'Why:', and 'Trade-offs:' headers consistently."
+    },
+    {
+      "text": "Answers reference the existing Knowlune tech stack (React, Vite, Tailwind, or specific patterns found in codebase)",
+      "passed": true,
+      "evidence": "References Vite + React 19 SPA, createBrowserRouter, 22 zustand stores, Dexie, useLiveQuery, PWA/ServiceWorker, vite-plugin-pwa, specific files (Reports.tsx, vite.config.ts)."
+    },
+    {
+      "text": "Explicitly indicates waiting for user approval before proceeding (review mode behavior)",
+      "passed": false,
+      "evidence": "The output is formatted as a review document but does not explicitly say 'waiting for your approval' or similar. It presents the answers but doesn't pause for confirmation."
+    },
+    {
+      "text": "Answers demonstrate technical depth — not surface-level generic advice",
+      "passed": true,
+      "evidence": "Mentions specific store counts (22), specific caching strategies in the codebase (CacheFirst, StaleWhileRevalidate), Web Workers for heavy computation, lru-cache dependency."
+    }
+  ]
+}

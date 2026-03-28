@@ -1,0 +1,26 @@
+{
+  "eval_id": 1,
+  "run_type": "without_skill",
+  "expectations": [
+    {
+      "text": "Answers use the review format with clear Recommendation, Why, and Trade-offs sections",
+      "passed": false,
+      "evidence": "Uses 'Recommendation / Rationale / What to watch for / What to avoid' structure. Different from the review format. No explicit 'Trade-offs' sections — alternatives discussed under 'What to avoid'."
+    },
+    {
+      "text": "Answers reference the existing Knowlune tech stack (React, Vite, Tailwind, or specific patterns found in codebase)",
+      "passed": true,
+      "evidence": "Deeply references 27+ Dexie tables, 22 zustand stores, PWA/Workbox caching config, lru-cache v11.2.7, specific files and functions."
+    },
+    {
+      "text": "Explicitly indicates waiting for user approval before proceeding (review mode behavior)",
+      "passed": false,
+      "evidence": "No review mode behavior — baseline had no skill instructing it to wait for approval."
+    },
+    {
+      "text": "Answers demonstrate technical depth — not surface-level generic advice",
+      "passed": true,
+      "evidence": "References specific Workbox cache configs (200 entries/30-day TTL), module-level _progressCache pattern, specific table names (youtubeVideoCache, courseThumbnails)."
+    }
+  ]
+}

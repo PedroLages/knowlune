@@ -1,0 +1,26 @@
+{
+  "eval_id": 0,
+  "run_type": "without_skill",
+  "expectations": [
+    {
+      "text": "All 4 questions are answered directly — none are asked back to the user",
+      "passed": true,
+      "evidence": "All 4 questions answered in full. No questions asked back."
+    },
+    {
+      "text": "Answers reference Knowlune-specific features or context (not generic product advice)",
+      "passed": true,
+      "evidence": "References Epics 20, 21, specific files (src/lib/recommendations.ts, src/ai/learningPath/generatePath.ts), existing stores, open-core strategy, Epic 9B features."
+    },
+    {
+      "text": "Each answer includes reasoning explaining WHY the recommendation is made",
+      "passed": true,
+      "evidence": "Each answer has rationale sections. Q2 has a detailed table of existing features and their limitations."
+    },
+    {
+      "text": "At least 2 answers mention trade-offs or alternatives considered",
+      "passed": false,
+      "evidence": "Q2 mentions alternatives (existing features table) but doesn't frame them as trade-offs. Q3 has an architecture note but no trade-offs section. Q1 and Q4 lack explicit trade-off discussion. The answers are thorough but don't systematically address trade-offs."
+    }
+  ]
+}

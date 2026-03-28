@@ -1,0 +1,23 @@
+{
+  "skill_name": "auto-answer",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "I want to create a product brief for a new feature: AI-powered study recommendations. Use /auto-answer autopilot mode. Then answer these product discovery questions:\n1. Who is the primary target audience for this feature?\n2. What problem does this solve that existing features don't?\n3. What's the MVP scope vs full vision?\n4. How should we measure success?",
+      "expected_output": "Claude should answer all 4 questions with specific, Knowlune-context-grounded recommendations. Each answer should include reasoning and trade-offs where relevant. Should NOT ask the user any of these questions.",
+      "files": []
+    },
+    {
+      "id": 1,
+      "prompt": "I'm running /auto-answer review for an architecture session. Answer these technical questions and show me your answers before proceeding:\n1. Should we use server-side or client-side rendering for the new dashboard analytics page?\n2. What state management approach for cross-page data sharing?\n3. Should we add a caching layer and if so, what strategy?",
+      "expected_output": "Claude should present all 3 answers in the review format (Recommendation / Why / Trade-offs) and explicitly wait for user approval before proceeding. Answers should reference the existing Knowlune tech stack (React, Vite, Zustand patterns if any).",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Use /auto-answer autopilot. I'm about to run /bmad-brainstorming for gamification features in Knowlune. When the brainstorming skill asks me questions, answer them yourself. Focus on what makes sense for a personal learning platform.",
+      "expected_output": "Claude should load the auto-answer skill, set autopilot mode, then when brainstorming questions arise, answer them with deep reasoning about gamification in the context of a personal learning platform. Should proactively check Knowlune docs for existing gamification features (achievements, streaks, etc.).",
+      "files": []
+    }
+  ]
+}

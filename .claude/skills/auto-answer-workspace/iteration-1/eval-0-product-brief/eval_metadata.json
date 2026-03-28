@@ -1,0 +1,27 @@
+{
+  "eval_id": 0,
+  "eval_name": "product-brief-autopilot",
+  "prompt": "I want to create a product brief for a new feature: AI-powered study recommendations. Use /auto-answer autopilot mode. Then answer these product discovery questions:\n1. Who is the primary target audience for this feature?\n2. What problem does this solve that existing features don't?\n3. What's the MVP scope vs full vision?\n4. How should we measure success?",
+  "assertions": [
+    {
+      "id": "answers-all-questions",
+      "text": "All 4 questions are answered directly — none are asked back to the user",
+      "type": "boolean"
+    },
+    {
+      "id": "knowlune-context",
+      "text": "Answers reference Knowlune-specific features or context (not generic product advice)",
+      "type": "boolean"
+    },
+    {
+      "id": "includes-reasoning",
+      "text": "Each answer includes reasoning explaining WHY the recommendation is made",
+      "type": "boolean"
+    },
+    {
+      "id": "mentions-tradeoffs",
+      "text": "At least 2 answers mention trade-offs or alternatives considered",
+      "type": "boolean"
+    }
+  ]
+}
