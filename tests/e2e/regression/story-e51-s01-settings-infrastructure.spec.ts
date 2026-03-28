@@ -8,8 +8,8 @@
  * - AC4: getSettings() returns correct defaults for new fields
  * - AC5: Mobile layout — touch targets and responsive reset button
  */
-import { test, expect } from '../support/fixtures'
-import { navigateAndWait } from '../support/helpers/navigation'
+import { test, expect } from '../../support/fixtures'
+import { navigateAndWait } from '../../support/helpers/navigation'
 
 // ---------------------------------------------------------------------------
 // Helpers
