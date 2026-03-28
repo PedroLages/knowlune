@@ -51,6 +51,7 @@ import { OnboardingOverlay } from './onboarding/OnboardingOverlay'
 import { TrialIndicator } from './trial/TrialIndicator'
 import { TrialReminderBanner } from './trial/TrialReminderBanner'
 import { ImportProgressOverlay } from './figma/ImportProgressOverlay'
+import { SessionExpiredBanner } from './figma/SessionExpiredBanner'
 
 // Individual nav link — wraps in Tooltip when collapsed
 function NavLink({
@@ -210,6 +211,7 @@ export function Layout() {
 
   const signOut = useAuthStore(s => s.signOut)
   const authUser = useAuthStore(s => s.user)
+  const sessionExpired = useAuthStore(s => s.sessionExpired)
 
   const isOnline = useOnlineStatus()
   const isInitialRender = useRef(true)
@@ -520,19 +522,29 @@ export function Layout() {
                     className="flex items-center gap-3 pl-4 border-l border-border cursor-pointer rounded-lg p-1 -m-1 min-h-[44px] transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     aria-label="User menu"
                   >
-                    <Avatar className="size-10 ring-2 ring-transparent transition-all duration-200 hover:ring-brand/30 hover:shadow-md">
-                      {settings.profilePhotoDataUrl ? (
-                        <AvatarImage
-                          src={settings.profilePhotoDataUrl}
-                          alt={settings.displayName}
-                          className="object-cover"
+                    <div className="relative">
+                      <Avatar className="size-10 ring-2 ring-transparent transition-all duration-200 hover:ring-brand/30 hover:shadow-md">
+                        {settings.profilePhotoDataUrl ? (
+                          <AvatarImage
+                            src={settings.profilePhotoDataUrl}
+                            alt={settings.displayName}
+                            className="object-cover"
+                          />
+                        ) : (
+                          <AvatarFallback className="bg-brand-soft text-brand-soft-foreground font-semibold transition-colors duration-200 hover:bg-brand hover:text-white">
+                            {getInitials(settings.displayName)}
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
+                      {/* E43-S04: Warning dot when session expired (visible even after banner dismiss) */}
+                      {sessionExpired && (
+                        <span
+                          className="absolute -top-0.5 -right-0.5 size-3 rounded-full bg-warning border-2 border-card"
+                          aria-label="Session expired"
+                          role="status"
                         />
-                      ) : (
-                        <AvatarFallback className="bg-brand-soft text-brand-soft-foreground font-semibold transition-colors duration-200 hover:bg-brand hover:text-white">
-                          {getInitials(settings.displayName)}
-                        </AvatarFallback>
                       )}
-                    </Avatar>
+                    </div>
                     <div className="text-left hidden sm:block">
                       <div className="font-semibold text-sm">{settings.displayName}</div>
                     </div>
@@ -607,6 +619,7 @@ export function Layout() {
               You are offline. Some features may be limited.
             </div>
           )}
+          <SessionExpiredBanner isOffline={!isOnline} />
           <TrialReminderBanner />
           <Outlet />
         </main>

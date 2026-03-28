@@ -9,6 +9,7 @@ import { GoogleAuthButton } from '@/app/components/auth/GoogleAuthButton'
 import { GoogleIcon } from '@/app/components/auth/GoogleIcon'
 import { KnowluneLogo } from '@/app/components/figma/KnowluneLogo'
 import { useAuthStore } from '@/stores/useAuthStore'
+import { RETURN_TO_KEY } from '@/app/components/figma/SessionExpiredBanner'
 
 type AuthMode = 'sign-in' | 'sign-up'
 
@@ -21,15 +22,19 @@ export function Login() {
   const [activeTab, setActiveTab] = useState('email')
   const [resetKey, setResetKey] = useState(0)
 
-  // Redirect authenticated users away from /login
+  // Redirect authenticated users away from /login (with return-to-route support)
   useEffect(() => {
     if (initialized && user) {
-      navigate('/', { replace: true })
+      const returnTo = sessionStorage.getItem(RETURN_TO_KEY)
+      sessionStorage.removeItem(RETURN_TO_KEY)
+      navigate(returnTo || '/', { replace: true })
     }
   }, [initialized, user, navigate])
 
   function handleSuccess() {
-    navigate('/', { replace: true })
+    const returnTo = sessionStorage.getItem(RETURN_TO_KEY)
+    sessionStorage.removeItem(RETURN_TO_KEY)
+    navigate(returnTo || '/', { replace: true })
   }
 
   function toggleMode() {

@@ -7,6 +7,10 @@ interface AuthState {
   session: Session | null
   /** True after first session check completes — prevents flash of unauthenticated state */
   initialized: boolean
+  /** True when session expired due to system-initiated sign-out (not user action) */
+  sessionExpired: boolean
+  /** Internal flag: set true before calling supabase.auth.signOut() to distinguish user vs system sign-out */
+  _userInitiatedSignOut: boolean
 }
 
 interface AuthActions {
@@ -17,6 +21,8 @@ interface AuthActions {
   signOut: () => Promise<{ error?: string }>
   /** Called by onAuthStateChange listener — do not call directly */
   setSession: (session: Session | null) => void
+  /** Clear session expired state (e.g., after dismiss or re-auth) */
+  clearSessionExpired: () => void
 }
 
 type AuthStore = AuthState & AuthActions
@@ -56,6 +62,8 @@ export const useAuthStore = create<AuthStore>(set => ({
   user: null,
   session: null,
   initialized: false,
+  sessionExpired: false,
+  _userInitiatedSignOut: false,
 
   signUp: async (email, password) => {
     if (!supabase) return { error: NOT_CONFIGURED_MESSAGE }
@@ -116,13 +124,16 @@ export const useAuthStore = create<AuthStore>(set => ({
   signOut: async () => {
     if (!supabase) return { error: NOT_CONFIGURED_MESSAGE }
     try {
+      set({ _userInitiatedSignOut: true })
       const { error } = await supabase.auth.signOut()
       if (error) {
+        set({ _userInitiatedSignOut: false })
         return { error: mapSupabaseError(error.message) }
       }
-      set({ user: null, session: null })
+      set({ user: null, session: null, sessionExpired: false })
       return {}
     } catch {
+      set({ _userInitiatedSignOut: false })
       return { error: NETWORK_ERROR_MESSAGE }
     }
   },
@@ -133,5 +144,9 @@ export const useAuthStore = create<AuthStore>(set => ({
       user: session?.user ?? null,
       initialized: true,
     })
+  },
+
+  clearSessionExpired: () => {
+    set({ sessionExpired: false })
   },
 }))

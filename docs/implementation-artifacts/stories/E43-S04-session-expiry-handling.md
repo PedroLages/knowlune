@@ -1,8 +1,8 @@
 ---
 story_id: E43-S04
 story_name: "Session Expiry Handling"
-status: draft
-started:
+status: in-progress
+started: 2026-03-28
 completed:
 reviewed: false
 review_started:
@@ -50,34 +50,34 @@ so that I know sync stopped but can continue using the app offline.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create `useAuthLifecycle` hook (AC: 1, 4, 5)
-  - [ ] 1.1 Create `src/app/hooks/useAuthLifecycle.ts`
-  - [ ] 1.2 Move `onAuthStateChange` logic from `App.tsx` lines 44-57 into the new hook
-  - [ ] 1.3 Detect system vs user sign-out using `_userInitiatedSignOut` flag on auth store
-  - [ ] 1.4 Set `sessionExpired` flag on system-initiated `SIGNED_OUT` only
-  - [ ] 1.5 Handle `TOKEN_REFRESHED` silently (no UI)
-  - [ ] 1.6 Hydrate settings on `SIGNED_IN`/`INITIAL_SESSION` (preserve existing behavior from App.tsx)
-- [ ] Task 2: Add auth store fields (AC: 1, 3, 4)
-  - [ ] 2.1 Add `sessionExpired: boolean` to auth store
-  - [ ] 2.2 Add `clearSessionExpired()` action
-  - [ ] 2.3 Add `_userInitiatedSignOut: boolean` flag
-  - [ ] 2.4 Set `_userInitiatedSignOut = true` before calling `supabase.auth.signOut()` in profile dropdown
-- [ ] Task 3: Create `SessionExpiredBanner` component (AC: 1, 2, 3, 6)
-  - [ ] 3.1 Create `src/app/components/figma/SessionExpiredBanner.tsx` (~30 lines)
-  - [ ] 3.2 Render persistent banner below header: "Session expired. Sign in to resume syncing."
-  - [ ] 3.3 Include "Sign in" link that stores current route in `sessionStorage` under `knowlune-auth-return-to`
-  - [ ] 3.4 Include dismiss button that sets `sessionStorage` flag to prevent reappearance
-  - [ ] 3.5 After dismiss, show subtle warning indicator on header avatar area
-  - [ ] 3.6 Hide banner when offline banner is showing (offline takes priority)
-- [ ] Task 4: Wire return-to-route after authentication (AC: 2)
-  - [ ] 4.1 After successful sign-in, read `knowlune-auth-return-to` from `sessionStorage`
-  - [ ] 4.2 Navigate to stored route and clear the `sessionStorage` key
-- [ ] Task 5: Update App.tsx (AC: all)
-  - [ ] 5.1 Replace the `useEffect` at lines 44-57 with `useAuthLifecycle()` hook call
-  - [ ] 5.2 Verify existing auth behavior is preserved
-- [ ] Task 6: Add banner to Layout (AC: 1, 6)
-  - [ ] 6.1 Add `<SessionExpiredBanner />` to `Layout.tsx` below the header
-  - [ ] 6.2 Ensure offline banner takes visual priority when both conditions are true
+- [x] Task 1: Create `useAuthLifecycle` hook (AC: 1, 4, 5)
+  - [x] 1.1 Create `src/app/hooks/useAuthLifecycle.ts`
+  - [x] 1.2 Move `onAuthStateChange` logic from `App.tsx` lines 44-57 into the new hook
+  - [x] 1.3 Detect system vs user sign-out using `_userInitiatedSignOut` flag on auth store
+  - [x] 1.4 Set `sessionExpired` flag on system-initiated `SIGNED_OUT` only
+  - [x] 1.5 Handle `TOKEN_REFRESHED` silently (no UI)
+  - [x] 1.6 Hydrate settings on `SIGNED_IN`/`INITIAL_SESSION` (preserve existing behavior from App.tsx)
+- [x] Task 2: Add auth store fields (AC: 1, 3, 4)
+  - [x] 2.1 Add `sessionExpired: boolean` to auth store
+  - [x] 2.2 Add `clearSessionExpired()` action
+  - [x] 2.3 Add `_userInitiatedSignOut: boolean` flag
+  - [x] 2.4 Set `_userInitiatedSignOut = true` before calling `supabase.auth.signOut()` in profile dropdown
+- [x] Task 3: Create `SessionExpiredBanner` component (AC: 1, 2, 3, 6)
+  - [x] 3.1 Create `src/app/components/figma/SessionExpiredBanner.tsx` (~30 lines)
+  - [x] 3.2 Render persistent banner below header: "Session expired. Sign in to resume syncing."
+  - [x] 3.3 Include "Sign in" link that stores current route in `sessionStorage` under `knowlune-auth-return-to`
+  - [x] 3.4 Include dismiss button that sets `sessionStorage` flag to prevent reappearance
+  - [x] 3.5 After dismiss, show subtle warning indicator on header avatar area
+  - [x] 3.6 Hide banner when offline banner is showing (offline takes priority)
+- [x] Task 4: Wire return-to-route after authentication (AC: 2)
+  - [x] 4.1 After successful sign-in, read `knowlune-auth-return-to` from `sessionStorage`
+  - [x] 4.2 Navigate to stored route and clear the `sessionStorage` key
+- [x] Task 5: Update App.tsx (AC: all)
+  - [x] 5.1 Replace the `useEffect` at lines 44-57 with `useAuthLifecycle()` hook call
+  - [x] 5.2 Verify existing auth behavior is preserved
+- [x] Task 6: Add banner to Layout (AC: 1, 6)
+  - [x] 6.1 Add `<SessionExpiredBanner />` to `Layout.tsx` below the header
+  - [x] 6.2 Ensure offline banner takes visual priority when both conditions are true
 
 ## Design Guidance
 

@@ -20,9 +20,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useAccessibilityFont } from '@/hooks/useAccessibilityFont'
 import { useContentDensity } from '@/hooks/useContentDensity'
 import { MotionConfig } from 'motion/react'
-import { supabase } from '@/lib/auth/supabase'
-import { useAuthStore } from '@/stores/useAuthStore'
-import { hydrateSettingsFromSupabase } from '@/lib/settings'
+import { useAuthLifecycle } from '@/app/hooks/useAuthLifecycle'
 
 // Register global error handlers (window.onerror, unhandledrejection)
 initErrorTracking()
@@ -63,20 +61,8 @@ export default function App() {
     initWizard()
   }, [initWizard])
 
-  // E19-S01: Subscribe to Supabase auth state changes (session restore, token refresh, cross-tab sync)
-  useEffect(() => {
-    if (!supabase) return
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      useAuthStore.getState().setSession(session)
-      // Hydrate localStorage settings from Supabase user_metadata on sign-in
-      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
-        hydrateSettingsFromSupabase(session.user.user_metadata)
-      }
-    })
-    return () => subscription.unsubscribe()
-  }, [])
+  // E43-S04: Auth lifecycle hook — session expiry detection, token refresh, settings hydration
+  useAuthLifecycle()
 
   // Load vector embeddings from IndexedDB on startup
   useEffect(() => {
