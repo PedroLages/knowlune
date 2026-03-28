@@ -20,12 +20,10 @@ export interface AppSettings {
   bio: string
   theme: 'light' | 'dark' | 'system'
   /**
-   * Base64-encoded data URL or object URL of the user's profile photo.
-   * Stored as a data URL (e.g., "data:image/png;base64,...") for persistence,
-   * or as an object URL for temporary session storage.
+   * Profile photo URL — data URL (uploads), object URL (temp), or HTTPS URL (Google OAuth).
    * @optional - undefined if no profile photo has been set
    */
-  profilePhotoDataUrl?: string
+  profilePhotoUrl?: string
   /** User-selected font size for proportional scaling. Default: 'medium' (16px) */
   fontSize?: FontSize
   /** Age range selected in welcome wizard. Stored locally, never sent to server. */
@@ -56,7 +54,7 @@ const defaults: AppSettings = {
   displayName: 'Student',
   bio: '',
   theme: 'system',
-  profilePhotoDataUrl: undefined,
+  profilePhotoUrl: undefined,
   colorScheme: 'professional',
   accessibilityFont: false,
   contentDensity: 'default',
@@ -129,12 +127,14 @@ export function hydrateSettingsFromSupabase(
   const updates: Partial<AppSettings> = {}
 
   // Only hydrate if Supabase has data AND localStorage is at defaults (or empty)
-  if (
-    typeof userMetadata.displayName === 'string' &&
-    userMetadata.displayName.length > 0 &&
-    (current.displayName === defaults.displayName || current.displayName === '')
-  ) {
-    updates.displayName = userMetadata.displayName
+
+  // displayName: custom metadata 'displayName' > Google 'full_name' > default "Student"
+  if (current.displayName === defaults.displayName || current.displayName === '') {
+    if (typeof userMetadata.displayName === 'string' && userMetadata.displayName.length > 0) {
+      updates.displayName = userMetadata.displayName
+    } else if (typeof userMetadata.full_name === 'string' && userMetadata.full_name.length > 0) {
+      updates.displayName = userMetadata.full_name as string
+    }
   }
 
   if (
@@ -143,6 +143,16 @@ export function hydrateSettingsFromSupabase(
     (current.bio === defaults.bio || current.bio === '')
   ) {
     updates.bio = userMetadata.bio
+  }
+
+  // profilePhotoUrl: custom upload (data: URL) > Google avatar (https: URL) > initials fallback
+  // Only hydrate if no custom photo is set (custom photos use data: URLs)
+  if (!current.profilePhotoUrl || !current.profilePhotoUrl.startsWith('data:')) {
+    // Try avatar_url first, then fall back to picture (both are Google-provided)
+    const avatarUrl = userMetadata.avatar_url ?? userMetadata.picture
+    if (typeof avatarUrl === 'string' && avatarUrl.startsWith('https://')) {
+      updates.profilePhotoUrl = avatarUrl
+    }
   }
 
   if (Object.keys(updates).length > 0) {

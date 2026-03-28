@@ -524,17 +524,15 @@ export function Layout() {
                   >
                     <div className="relative">
                       <Avatar className="size-10 ring-2 ring-transparent transition-all duration-200 hover:ring-brand/30 hover:shadow-md">
-                        {settings.profilePhotoDataUrl ? (
-                          <AvatarImage
-                            src={settings.profilePhotoDataUrl}
-                            alt={settings.displayName}
-                            className="object-cover"
-                          />
-                        ) : (
-                          <AvatarFallback className="bg-brand-soft text-brand-soft-foreground font-semibold transition-colors duration-200 hover:bg-brand hover:text-white">
-                            {getInitials(settings.displayName)}
-                          </AvatarFallback>
-                        )}
+                        <AvatarImage
+                          src={settings.profilePhotoUrl || undefined}
+                          alt={settings.displayName}
+                          className="object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                        <AvatarFallback className="bg-brand-soft text-brand-soft-foreground font-semibold transition-colors duration-200 hover:bg-brand hover:text-white">
+                          {getInitials(settings.displayName)}
+                        </AvatarFallback>
                       </Avatar>
                       {/* E43-S04: Warning dot when session expired (visible even after banner dismiss) */}
                       {sessionExpired && (

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { Mail, Link2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/app/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs'
@@ -34,7 +34,6 @@ export function Login() {
     if (initialized && user) {
       navigateToReturnRoute()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialized, user, navigate])
 
   function handleSuccess() {
@@ -64,7 +63,9 @@ export function Login() {
       <div className="w-full max-w-md space-y-6">
         {/* Logo */}
         <div className="flex flex-col items-center gap-2">
-          <KnowluneLogo />
+          <Link to="/" aria-label="Back to app">
+            <KnowluneLogo />
+          </Link>
           <p className="text-xs tracking-wide text-muted-foreground">Illuminate Your Path</p>
         </div>
 

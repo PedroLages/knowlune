@@ -17,6 +17,7 @@ vi.mock('@/lib/auth/supabase', () => ({
         authChangeCallback = cb
         return { data: { subscription: { unsubscribe: mockUnsubscribe } } }
       }),
+      getSession: vi.fn(() => Promise.resolve({ data: { session: null }, error: null })),
     },
   },
 }))

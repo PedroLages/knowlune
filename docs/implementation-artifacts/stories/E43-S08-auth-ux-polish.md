@@ -1,12 +1,24 @@
 ---
 story_id: E43-S08
 story_name: "Auth UX Polish"
-status: ready-for-dev
-started:
-completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+status: done
+started: 2026-03-28
+completed: 2026-03-28
+reviewed: true
+review_started: 2026-03-28
+review_gates_passed:
+  - build
+  - lint
+  - type-check
+  - format-check
+  - unit-tests
+  - e2e-tests
+  - design-review-skipped
+  - code-review
+  - code-review-testing
+  - performance-benchmark-skipped
+  - security-review-skipped
+  - exploratory-qa-skipped
 burn_in_validated: false
 ---
 
