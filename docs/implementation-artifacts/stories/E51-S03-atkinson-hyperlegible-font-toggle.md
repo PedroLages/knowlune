@@ -1,8 +1,8 @@
 ---
 story_id: E51-S03
 story_name: "Atkinson Hyperlegible Font Toggle with Lazy Loading"
-status: draft
-started:
+status: in-progress
+started: 2026-03-28
 completed:
 reviewed: false
 review_started:

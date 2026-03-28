@@ -17,6 +17,7 @@ import { useFontScale } from '@/hooks/useFontScale'
 import { useWelcomeWizardStore } from '@/stores/useWelcomeWizardStore'
 import { useColorScheme } from '@/hooks/useColorScheme'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { useAccessibilityFont } from '@/hooks/useAccessibilityFont'
 import { MotionConfig } from 'motion/react'
 import { supabase } from '@/lib/auth/supabase'
 import { useAuthStore } from '@/stores/useAuthStore'
@@ -33,6 +34,9 @@ export default function App() {
 
   // Apply font scaling from persisted settings
   useFontScale()
+
+  // E51-S03: Apply accessibility font (Atkinson Hyperlegible) if enabled
+  useAccessibilityFont()
 
   // E51-S02: Toggle .reduce-motion class on <html> based on app setting
   useEffect(() => {

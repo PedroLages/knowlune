@@ -54,15 +54,35 @@ export function DisplayAccessibilitySection({
           <div>
             <p className="text-sm font-medium">Accessibility Font</p>
             <p className="text-xs text-muted-foreground">
-              Use Atkinson Hyperlegible for improved readability
+              Use Atkinson Hyperlegible for improved readability (dyslexia, low vision)
             </p>
           </div>
           <Switch
             checked={settings.accessibilityFont}
-            disabled
-            aria-label="Toggle accessibility font"
+            onCheckedChange={(checked: boolean) =>
+              onSettingsChange({ accessibilityFont: checked })
+            }
+            aria-label="Enable accessibility font"
           />
         </div>
+
+        {/* Font preview panel — shown when accessibility font is enabled */}
+        {settings.accessibilityFont && (
+          <div
+            className="animate-in fade-in-0 slide-in-from-top-1 mt-3 rounded-xl border border-border/50 bg-surface-sunken/30 p-4 duration-200"
+            data-testid="accessibility-font-preview"
+          >
+            <p className="text-base">
+              The quick brown fox jumps over the lazy dog
+            </p>
+            <p className="mt-1 text-base text-muted-foreground">
+              0123456789 AaBbCcDdEeFf
+            </p>
+            <p className="mt-2 text-xs italic text-muted-foreground">
+              Atkinson Hyperlegible &mdash; Braille Institute
+            </p>
+          </div>
+        )}
 
         <Separator className="my-4" />
 
