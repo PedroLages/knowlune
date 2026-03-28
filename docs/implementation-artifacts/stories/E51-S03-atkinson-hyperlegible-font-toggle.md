@@ -1,8 +1,8 @@
 ---
 story_id: E51-S03
 story_name: "Atkinson Hyperlegible Font Toggle with Lazy Loading"
-status: draft
-started:
+status: in-progress
+started: 2026-03-28
 completed:
 reviewed: false
 review_started:
@@ -46,40 +46,40 @@ so that I can read course content more comfortably.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create `accessibilityFont.ts` utility (AC: 1, 2)
-  - [ ] 1.1 Create `src/lib/accessibilityFont.ts`
-  - [ ] 1.2 Export `async function loadAccessibilityFont(): Promise<void>` that:
+- [x] Task 1: Create `accessibilityFont.ts` utility (AC: 1, 2)
+  - [x] 1.1 Create `src/lib/accessibilityFont.ts`
+  - [x] 1.2 Export `async function loadAccessibilityFont(): Promise<void>` that:
     - Dynamically imports `@fontsource/atkinson-hyperlegible`
     - Dynamically imports `@fontsource/atkinson-hyperlegible/700.css`
     - Sets `--font-body` on `document.documentElement` to `'Atkinson Hyperlegible', system-ui, -apple-system, sans-serif`
-  - [ ] 1.3 Export `function unloadAccessibilityFont(): void` that restores `--font-body` to `'DM Sans', system-ui, -apple-system, sans-serif`
+  - [x] 1.3 Export `function unloadAccessibilityFont(): void` that restores `--font-body` to `'DM Sans', system-ui, -apple-system, sans-serif`
 
-- [ ] Task 2: Create `useAccessibilityFont` hook (AC: 1, 2, 3, 5)
-  - [ ] 2.1 Create `src/hooks/useAccessibilityFont.ts`
-  - [ ] 2.2 Read `accessibilityFont` from `getSettings()` on mount
-  - [ ] 2.3 Listen for `settingsUpdated` events (follow `useFontScale.ts` pattern)
-  - [ ] 2.4 When enabled: call `loadAccessibilityFont()` (async, with try/catch)
-  - [ ] 2.5 When disabled: call `unloadAccessibilityFont()`
-  - [ ] 2.6 On mount, if setting is already true, load the font
-  - [ ] 2.7 On load failure: revert setting via `saveSettings({ accessibilityFont: false })`, dispatch `settingsUpdated` event, show error toast "Could not load accessibility font. Please try again."
+- [x] Task 2: Create `useAccessibilityFont` hook (AC: 1, 2, 3, 5)
+  - [x] 2.1 Create `src/hooks/useAccessibilityFont.ts`
+  - [x] 2.2 Read `accessibilityFont` from `getSettings()` on mount
+  - [x] 2.3 Listen for `settingsUpdated` events (follow `useFontScale.ts` pattern)
+  - [x] 2.4 When enabled: call `loadAccessibilityFont()` (async, with try/catch)
+  - [x] 2.5 When disabled: call `unloadAccessibilityFont()`
+  - [x] 2.6 On mount, if setting is already true, load the font
+  - [x] 2.7 On load failure: revert setting via `saveSettings({ accessibilityFont: false })`, dispatch `settingsUpdated` event, show error toast "Could not load accessibility font. Please try again."
 
-- [ ] Task 3: Wire hook into App.tsx (AC: 3)
-  - [ ] 3.1 Import `useAccessibilityFont` from `@/hooks/useAccessibilityFont`
-  - [ ] 3.2 Call `useAccessibilityFont()` alongside existing `useFontScale()` and `useColorScheme()`
+- [x] Task 3: Wire hook into App.tsx (AC: 3)
+  - [x] 3.1 Import `useAccessibilityFont` from `@/hooks/useAccessibilityFont`
+  - [x] 3.2 Call `useAccessibilityFont()` alongside existing `useFontScale()` and `useColorScheme()`
 
-- [ ] Task 4: Add font toggle to DisplayAccessibilitySection (AC: 1, 6)
-  - [ ] 4.1 Open `src/app/components/settings/DisplayAccessibilitySection.tsx`
-  - [ ] 4.2 Replace the Font subsection placeholder with:
+- [x] Task 4: Add font toggle to DisplayAccessibilitySection (AC: 1, 6)
+  - [x] 4.1 Open `src/app/components/settings/DisplayAccessibilitySection.tsx`
+  - [x] 4.2 Replace the Font subsection placeholder with:
     - Label: "Accessibility Font"
     - Description: "Use Atkinson Hyperlegible for improved readability (dyslexia, low vision)"
     - `<Switch>` bound to `settings.accessibilityFont`
     - `aria-label="Enable accessibility font"`
-  - [ ] 4.3 Add font preview panel (shown conditionally when enabled):
+  - [x] 4.3 Add font preview panel (shown conditionally when enabled):
     - Container: `rounded-xl border border-border/50 bg-surface-sunken/30 p-4 mt-3`
     - Sample text: "The quick brown fox jumps over the lazy dog" + "0123456789 AaBbCcDdEeFf"
     - Attribution: "Atkinson Hyperlegible -- Braille Institute" in `text-xs text-muted-foreground`
     - Animate in: `animate-in fade-in-0 slide-in-from-top-1 duration-200` (respects reduced motion)
-  - [ ] 4.4 On change: call `onSettingsChange({ accessibilityFont: !settings.accessibilityFont })`
+  - [x] 4.4 On change: call `onSettingsChange({ accessibilityFont: !settings.accessibilityFont })`
 
 ## Design Guidance
 
@@ -146,4 +146,18 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+### Dynamic Font Loading via CSS Variable Swap
+
+The `@fontsource/atkinson-hyperlegible` package is code-split by Vite -- the CSS and font files are only fetched when `loadAccessibilityFont()` first calls `import()`. The CSS injection adds `@font-face` rules to the document, and the actual font swap happens by overriding the `--font-body` CSS custom property on `document.documentElement`. This approach means zero font payload in the main bundle when the toggle is off (AC4), and instant swaps on subsequent toggles since the `@font-face` rules persist in the document.
+
+### Error Handling with Revert Strategy
+
+When the dynamic import fails (network error, corrupt bundle, etc.), the hook must revert the `accessibilityFont` setting to `false`, dispatch a `settingsUpdated` event so the UI switch flips back, and show a `toast.error()`. The revert-then-notify pattern prevents the UI from showing an enabled state while the font is not actually loaded. This is tested explicitly in `useAccessibilityFont.test.ts` via a mocked rejection.
+
+### @font-face Rules Persist After Disable (Acceptable)
+
+When the user disables the accessibility font, `unloadAccessibilityFont()` restores `--font-body` to DM Sans but does not remove the injected `@font-face` rules from the document. This is harmless -- the browser only downloads/renders fonts that are actively referenced by computed styles. Removing `<style>` elements injected by `@fontsource` would require tracking them, adding complexity for no user-facing benefit.
+
+### Font CSS in PWA Precache (Acceptable)
+
+The Vite PWA plugin may include the font CSS chunk in its precache manifest since it is a static asset produced by the build. This is acceptable behavior -- the precached CSS is small (a few hundred bytes of `@font-face` rules), and the actual font files are only fetched when the CSS is applied to the document. Users who never enable the toggle pay only the manifest entry cost, not the font download.
