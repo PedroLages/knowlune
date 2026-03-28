@@ -50,12 +50,12 @@
 | 9 | Offline & Multi-Device | 🟡 Infrastructure Done | 40% | Service worker + IDB, no sync status UI |
 | 10 | Calendar Integration | 🟡 Stories Ready | 0% impl | E50 ready (6 stories, 31 AC). Stories amended with edge case findings (Cache-Control, Web Crypto, graceful degradation). Implementation priority: 2nd. |
 | 11 | Accessibility & Cognitive UX | 🟡 Stories Ready | 70% | E30: WCAG 2.1 AA. E51 ready (4 stories, 23 AC). Stories amended with 6 HIGH edge cases (17 MotionConfig overrides, 5 confetti components, blocking script, animations toggle conflict). Implementation priority: 1st. |
-| 12 | PKM Export Pipeline | 🟡 Partially Done | 50% | JSON/CSV/MD export. Pending: Anki, Obsidian |
-| 13 | Knowledge Map & Decay | 🔴 Not Started | 0% | Data sources exist, no visualization |
-| 14 | AI Tutoring (Socratic) | 🔴 Not Started | 0% | LLM + transcripts exist, no Socratic mode |
+| 12 | PKM Export Pipeline | 🟡 Stories Ready | 50% | E53 ready (3 stories, 20 AC). Flashcard/bookmark MD export + Anki .apkg. Edge case review: 44 findings (14 HIGH). Amended with WASM loading, HTML stripping, package fallback. |
+| 13 | Knowledge Map & Decay | 🟡 Stories Ready | 0% impl | E56 ready (4 stories, 38 AC). Topic resolution + knowledge scoring + Recharts Treemap + dedicated page. Research + architecture + edge case review (35 findings) complete. |
+| 14 | AI Tutoring (Socratic) | 🟡 Stories Ready | 0% impl | E57 ready (5 stories — 3 Phase 1 + 2 Phase 2). Tutor tab in LessonPlayer, slot-based prompts, hint ladder, Dexie v29 conversations. Research + architecture + edge case review (29 findings, 11 HIGH) complete. |
 | 15 | Notification System | 🟡 Stories Ready | 30% | UI complete. Architecture decided: Dexie v28 + EventEmitter bus + 5 triggers. Stories E43-S06/S07 ready. |
-| 16 | Onboarding & UX Polish | 🟢 Mostly Done | 90% | E25: onboarding flow, empty states, sidebar |
-| 17 | UI Enhancement (Stitch) | 🔴 Not Started | 0% | 12-page catalog (50+ concepts), 5 focus pages ready, 7 pages to explore |
+| 16 | Onboarding & UX Polish | 🟡 Stories Ready | 90% | E25: onboarding. E54 ready (3 stories — lesson flow wiring). Auto-advance + checkmarks across all course types. |
+| 17 | UI Enhancement (Stitch) | 🟡 Stories Ready | 0% impl | E55 ready (5 stories). Deep Focus Mode SVG timer widget + Streak Calendar month-view. Brainstorm + edge case review (37 findings) complete. |
 | 18 | User Flows & Live Audit | 🔴 Not Started | 0% | 33 per-page flows + 10 cross-page journeys + style compliance. Plan: `docs/plans/user-flow-audit-plan.md` |
 | 19 | Books & Audiobooks Library | ⬜ Future Exploration | — | EPUB reader, audiobook player, highlights, shelves. 5-8 epics. Plan: `docs/plans/2026-03-28-books-audiobooks-exploration.md` |
 
@@ -1553,11 +1553,11 @@ Before starting: "Do I read/listen to enough books to justify this? Is the PDF v
 - [ ] Add data import/restore (`.knowlune` portable bundle) — unblocked by E44-S01/S02 (export fix)
 - [ ] **Calendar phase 1-2 (E50):** 6 stories ready — StudySchedule model, iCal feed endpoint, feed URL management, Settings UI, schedule editor, SRS events widget
 - [ ] **Accessibility phase 1 (E51):** 4 stories ready — Settings infrastructure, reduced motion toggle, Atkinson Hyperlegible font, spacious density mode. **Priority: implement first**
-- [ ] **PKM phase 1:** Enhanced Markdown export (notes + flashcards with YAML frontmatter)
+- [ ] **PKM Export phase 1 (E53):** 3 stories ready — Flashcard/bookmark Markdown + Anki .apkg + batch ZIP export UI
 - [ ] **Notifications phases 1-2:** stories ready: E43-S06 (Dexie + store), E43-S07 (triggers + wiring)
 - [x] ~~**Onboarding phases 1-3:** Quick bug fixes + Getting Started checklist + empty state component~~ (E25 — complete)
-- [ ] **Lesson flow:** Next Lesson CTA + completion checkmarks in sidebar (audit-surfaced)
-- [ ] **Stitch UI phase 1:** Deep Focus Mode widget + Streak Calendar upgrade (Section 17)
+- [ ] **Lesson flow (E54):** 3 stories ready — Auto-advance wiring for imported/YouTube players + completion checkmarks
+- [ ] **Stitch UI phase 1 (E55):** 5 stories ready — Pomodoro Zustand store, SVG timer widget, focus stats, month-view calendar, streak header
 
 ### Wave 2: Intelligence (next 2-3 epics)
 > Ship high-value ML + AI features using existing infrastructure
@@ -1567,10 +1567,9 @@ Before starting: "Do I read/listen to enough books to justify this? Is the PDF v
 - [x] ~~Lesson summarization with RAG~~ (E9B — AI summaries complete)
 - [ ] Upgrade spaced repetition from SM-2 to FSRS
 - [ ] **Calendar:** SRS review reminders in iCal feed (connects FSRS to calendar)
-- [ ] **AI Tutoring phases 1-2:** Lesson-aware AI chat + Socratic mode (system prompt engineering)
-- [ ] **AI Tutoring phase 3:** RAG-grounded answers from transcript chunks
-- [ ] **Knowledge Map phases 1-2:** Topic-level knowledge score + dashboard heatmap widget
-- [ ] **PKM phase 2:** Anki `.apkg` export for flashcard decks
+- [ ] **AI Tutoring Phase 1-2 (E57):** 5 stories ready — Tutor tab in LessonPlayer, streaming hook, conversation persistence (Dexie v29), Socratic hint ladder, RAG-grounded answers
+- [ ] **Knowledge Map Phase 1 (E56):** 4 stories ready — Topic resolution, knowledge scoring, Overview treemap widget, dedicated /knowledge-map page
+- [ ] **PKM Export phases 2-3:** Obsidian vault export (wikilinks, folder structure) — builds on E53
 - [ ] **Notifications phase 3:** SRS due reminders + study block alerts (ties into FSRS + calendar)
 - [ ] **Notifications phase 4:** Preferences UI in Settings (per-type toggles, quiet hours)
 - [ ] **Stitch UI phase 2:** Activity Timeline + Vertical Path Timeline + Progress Composites (Section 17)
