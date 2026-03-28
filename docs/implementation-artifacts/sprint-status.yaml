@@ -43,7 +43,7 @@
 # - E18-S03 detected story file → ready-for-dev
 
 generated: 2026-03-15
-last_updated: 2026-03-28  # E51 (Accessibility & Display Settings) marked done — all 4 stories merged
+last_updated: 2026-03-29  # E43 retrospective completed
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -538,6 +538,7 @@ development_status:
   43-6-notifications-data-layer: done
   43-7-notifications-triggers-wiring: done
   43-8-auth-ux-polish: done
+  epic-43-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 50: Calendar Integration Phase 1-2

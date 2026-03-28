@@ -41,12 +41,12 @@ Round 2: PASS (0 story-related issues)
 
 | Command | Status | Result | Notes |
 |---------|--------|--------|-------|
-| Sprint Status | pending | — | Finish agent confirmed all done |
+| Sprint Status | done | All 8 stories done | Confirmed via /sprint-status |
 | Mark Epic Done | done | epic-43: done | Set by Finish Agent in PR #147 |
-| Testarch Trace | pending | — | — |
-| Testarch NFR | pending | — | — |
-| Adversarial Review | pending | — | — |
-| Retrospective | pending | — | — |
+| Testarch Trace | done | 82% coverage — PASS | 8 gaps (mostly OAuth UI) |
+| Testarch NFR | done | PASS | +0.17% bundle, clean security |
+| Adversarial Review | done | 14 findings (3C/5H/4M/2L) | [Report](../reviews/adversarial/adversarial-review-2026-03-28-epic-43.md) |
+| Retrospective | done | 3 lessons, 4 actions | [Report](epic-43-retro-2026-03-29.md) |
 
 ## Non-Issues (False Positives)
 _(none yet)_
