@@ -1,4 +1,4 @@
-import { motion, MotionConfig } from 'motion/react'
+import { motion } from 'motion/react'
 import { RotateCcw, Layers } from 'lucide-react'
 import { Card, CardContent } from '@/app/components/ui/card'
 import { cn } from '@/app/components/ui/utils'
@@ -36,7 +36,7 @@ export function FlashcardReviewCard({
   }
 
   return (
-    <MotionConfig reducedMotion="user">
+    <>
       {/* Perspective container for 3D card-flip — no Tailwind equivalents for
           perspective, transformStyle, or backfaceVisibility (CSS 3D transform properties) */}
       {/* eslint-disable react-best-practices/no-inline-styles */}
@@ -147,6 +147,6 @@ export function FlashcardReviewCard({
         )}
       </div>
       {/* eslint-enable react-best-practices/no-inline-styles */}
-    </MotionConfig>
+    </>
   )
 }

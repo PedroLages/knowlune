@@ -1,6 +1,7 @@
 import { Extension } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
+import { shouldReduceMotion } from '@/lib/settings'
 
 export interface SearchReplaceOptions {
   searchClass: string
@@ -16,9 +17,9 @@ export interface SearchReplaceStorage {
 
 const searchReplacePluginKey = new PluginKey('searchReplace')
 
-/** Respects `prefers-reduced-motion` for programmatic scrolling. */
+/** Respects app-level motion setting for programmatic scrolling. */
 export function getScrollBehavior(): ScrollBehavior {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'
+  return shouldReduceMotion() ? 'instant' : 'smooth'
 }
 
 function findMatches(

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { animate } from 'motion'
+import { shouldReduceMotion } from '@/lib/settings'
 
 interface AnimatedCounterProps {
   value: number | string
@@ -31,10 +32,7 @@ export function AnimatedCounter({
   useEffect(() => {
     if (!ref.current || isNaN(numericValue) || hasAnimated.current) return
 
-    const prefersReducedMotion =
-      typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-    if (prefersReducedMotion) {
+    if (shouldReduceMotion()) {
       ref.current.textContent = stringValue
       hasAnimated.current = true
       return

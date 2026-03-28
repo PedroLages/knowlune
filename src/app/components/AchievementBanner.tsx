@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/app/components/ui/card'
 import { Trophy } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { useEngagementPrefsStore } from '@/stores/useEngagementPrefsStore'
+import { shouldReduceMotion } from '@/lib/settings'
 
 interface AchievementBannerProps {
   completedLessons: number
@@ -49,8 +50,7 @@ export function AchievementBanner({ completedLessons }: AchievementBannerProps) 
       reachedMilestoneIndex >= 0 &&
       reachedMilestoneIndex > prevMilestoneRef.current
     ) {
-      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      if (!prefersReducedMotion && animationsEnabled) {
+      if (!shouldReduceMotion() && animationsEnabled) {
         confetti({
           particleCount: 80,
           spread: 60,

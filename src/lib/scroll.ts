@@ -1,10 +1,11 @@
+import { shouldReduceMotion } from '@/lib/settings'
+
 /**
- * scrollIntoView wrapper that respects prefers-reduced-motion.
- * Falls back to { behavior: 'auto' } (instant jump) when the user
- * has enabled reduced-motion at OS level.
+ * scrollIntoView wrapper that respects the app-level motion setting.
+ * Falls back to { behavior: 'auto' } (instant jump) when motion is reduced.
  */
 export function scrollIntoViewReducedMotion(el: Element, options?: ScrollIntoViewOptions): void {
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const reducedMotion = shouldReduceMotion()
   el.scrollIntoView({
     ...options,
     behavior: reducedMotion ? 'auto' : (options?.behavior ?? 'smooth'),

@@ -16,6 +16,8 @@ import { refreshStaleMetadata } from '@/lib/youtubeMetadataRefresh'
 import { useFontScale } from '@/hooks/useFontScale'
 import { useWelcomeWizardStore } from '@/stores/useWelcomeWizardStore'
 import { useColorScheme } from '@/hooks/useColorScheme'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { MotionConfig } from 'motion/react'
 import { supabase } from '@/lib/auth/supabase'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { hydrateSettingsFromSupabase } from '@/lib/settings'
@@ -25,11 +27,23 @@ initErrorTracking()
 
 export default function App() {
   useColorScheme() // Applies .vibrant class on <html> based on settings (E21-S04)
+  const { shouldReduceMotion } = useReducedMotion()
   const { recoverOrphanedSessions } = useSessionStore()
   const { initialize: initWizard } = useWelcomeWizardStore()
 
   // Apply font scaling from persisted settings
   useFontScale()
+
+  // E51-S02: Toggle .reduce-motion class on <html> based on app setting
+  useEffect(() => {
+    const root = document.documentElement
+    if (shouldReduceMotion) {
+      root.classList.add('reduce-motion')
+    } else {
+      root.classList.remove('reduce-motion')
+    }
+    return () => root.classList.remove('reduce-motion')
+  }, [shouldReduceMotion])
 
   // AC5: Recover orphaned sessions on app init
   useEffect(() => {
@@ -77,12 +91,14 @@ export default function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-        <RouterProvider router={router} />
-        <Toaster />
-        <WelcomeWizard />
-        {import.meta.env.PROD && <PWAUpdatePrompt />}
-        <PWAInstallBanner />
-        {process.env.NODE_ENV === 'development' && <Agentation />}
+        <MotionConfig reducedMotion={shouldReduceMotion ? 'always' : 'never'}>
+          <RouterProvider router={router} />
+          <Toaster />
+          <WelcomeWizard />
+          {import.meta.env.PROD && <PWAUpdatePrompt />}
+          <PWAInstallBanner />
+          {process.env.NODE_ENV === 'development' && <Agentation />}
+        </MotionConfig>
       </ThemeProvider>
     </ErrorBoundary>
   )

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useCallback, useState, useRef } from 'react'
 import { Link } from 'react-router'
 import { RotateCcw, CalendarClock, Shuffle } from 'lucide-react'
-import { motion, MotionConfig, AnimatePresence } from 'motion/react'
+import { motion, AnimatePresence } from 'motion/react'
 import { format } from 'date-fns'
 import { useReviewStore } from '@/stores/useReviewStore'
 import { useNoteStore } from '@/stores/useNoteStore'
@@ -133,72 +133,70 @@ export function ReviewQueue() {
   }
 
   return (
-    <MotionConfig reducedMotion="user">
-      <div className="space-y-6 p-1" data-testid="review-queue">
-        {/* Page heading */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-brand-soft text-brand">
-              <RotateCcw className="size-5" />
-            </div>
-            <div>
-              <h1
-                ref={headingRef}
-                tabIndex={-1}
-                className="font-display text-2xl tracking-tight outline-none"
-              >
-                Review Queue
-              </h1>
-              <p className="text-sm text-muted-foreground" aria-live="polite">
-                {validReviews.length > 0
-                  ? `${validReviews.length} note${validReviews.length === 1 ? '' : 's'} due for review`
-                  : 'No reviews due'}
-              </p>
-            </div>
+    <div className="space-y-6 p-1" data-testid="review-queue">
+      {/* Page heading */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex size-10 items-center justify-center rounded-lg bg-brand-soft text-brand">
+            <RotateCcw className="size-5" />
           </div>
-          <Link
-            to="/review/interleaved"
-            className="inline-flex items-center gap-2 rounded-xl bg-brand-soft px-4 py-2 text-sm font-medium text-brand transition-colors hover:bg-brand-muted"
-            data-testid="interleaved-mode-link"
-          >
-            <Shuffle className="size-4" />
-            Interleaved Mode
-          </Link>
+          <div>
+            <h1
+              ref={headingRef}
+              tabIndex={-1}
+              className="font-display text-2xl tracking-tight outline-none"
+            >
+              Review Queue
+            </h1>
+            <p className="text-sm text-muted-foreground" aria-live="polite">
+              {validReviews.length > 0
+                ? `${validReviews.length} note${validReviews.length === 1 ? '' : 's'} due for review`
+                : 'No reviews due'}
+            </p>
+          </div>
         </div>
-
-        {/* Content */}
-        {validReviews.length === 0 ? (
-          <ReviewEmptyState nextReviewDate={nextReviewDate} />
-        ) : (
-          <motion.div
-            ref={cardListRef}
-            variants={staggerContainer}
-            initial="hidden"
-            animate="visible"
-            className="mx-auto max-w-2xl space-y-4"
-          >
-            <AnimatePresence mode="popLayout">
-              {validReviews.map(record => {
-                const note = noteMap.get(record.noteId)
-                if (!note) return null
-
-                return (
-                  <motion.div key={record.id} variants={fadeUp}>
-                    <ReviewCard
-                      record={record}
-                      note={note}
-                      now={now}
-                      courseName={getCourseName(note.courseId)}
-                      onRate={handleRate}
-                    />
-                  </motion.div>
-                )
-              })}
-            </AnimatePresence>
-          </motion.div>
-        )}
+        <Link
+          to="/review/interleaved"
+          className="inline-flex items-center gap-2 rounded-xl bg-brand-soft px-4 py-2 text-sm font-medium text-brand transition-colors hover:bg-brand-muted"
+          data-testid="interleaved-mode-link"
+        >
+          <Shuffle className="size-4" />
+          Interleaved Mode
+        </Link>
       </div>
-    </MotionConfig>
+
+      {/* Content */}
+      {validReviews.length === 0 ? (
+        <ReviewEmptyState nextReviewDate={nextReviewDate} />
+      ) : (
+        <motion.div
+          ref={cardListRef}
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+          className="mx-auto max-w-2xl space-y-4"
+        >
+          <AnimatePresence mode="popLayout">
+            {validReviews.map(record => {
+              const note = noteMap.get(record.noteId)
+              if (!note) return null
+
+              return (
+                <motion.div key={record.id} variants={fadeUp}>
+                  <ReviewCard
+                    record={record}
+                    note={note}
+                    now={now}
+                    courseName={getCourseName(note.courseId)}
+                    onRate={handleRate}
+                  />
+                </motion.div>
+              )
+            })}
+          </AnimatePresence>
+        </motion.div>
+      )}
+    </div>
   )
 }
 

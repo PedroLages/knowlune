@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { BookOpen, CheckCircle, FileText, Clock, ArrowRight } from 'lucide-react'
-import { motion, MotionConfig } from 'motion/react'
+import { motion } from 'motion/react'
 import { useSessionStore } from '@/stores/useSessionStore'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
 import { importCourseFromFolder } from '@/lib/courseImport'
@@ -131,7 +131,6 @@ export function Overview() {
   // Engagement preference toggles
   const showAchievements = useEngagementVisible('achievements')
   const showStreaks = useEngagementVisible('streaks')
-  const showAnimations = useEngagementVisible('animations')
 
   // Memoize stats cards array to prevent recreation on every render
   const statsCards = useMemo(
@@ -421,58 +420,56 @@ export function Overview() {
   }
 
   return (
-    <MotionConfig reducedMotion={showAnimations ? 'user' : 'always'}>
-      <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={staggerContainer}
-        className="space-y-12 pb-12"
-      >
-        {/* ── Hero Zone (fixed, never reordered) ── */}
-        <motion.section variants={fadeUp} className="space-y-6">
-          <div>
-            <p className="text-sm text-muted-foreground tracking-wide uppercase font-medium">
-              {getGreeting()}
-            </p>
-            <h1 className="text-3xl lg:text-4xl mt-1">Your Learning Studio</h1>
-          </div>
-          <ContinueLearning />
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={staggerContainer}
+      className="space-y-12 pb-12"
+    >
+      {/* ── Hero Zone (fixed, never reordered) ── */}
+      <motion.section variants={fadeUp} className="space-y-6">
+        <div>
+          <p className="text-sm text-muted-foreground tracking-wide uppercase font-medium">
+            {getGreeting()}
+          </p>
+          <h1 className="text-3xl lg:text-4xl mt-1">Your Learning Studio</h1>
+        </div>
+        <ContinueLearning />
+      </motion.section>
+
+      {/* ── Dashboard Customizer ── */}
+      <DashboardCustomizer
+        sectionOrder={sectionOrder}
+        pinnedSections={pinnedSections}
+        isManuallyOrdered={isManuallyOrdered}
+        isOpen={isCustomizing}
+        onToggle={setIsCustomizing}
+        onPin={handlePin}
+        onUnpin={handleUnpin}
+        onReorder={handleReorder}
+        onReset={handleReset}
+      />
+
+      {/* ── Reorderable Sections ── */}
+      {sectionOrder.map(sectionId => sectionRenderers[sectionId]())}
+
+      {/* ── Import Course Empty State (fixed, never reordered) ── */}
+      {importedCourses.length === 0 && (
+        <motion.section variants={fadeUp}>
+          <EmptyState
+            data-testid="empty-state-courses"
+            icon={BookOpen}
+            title="Import your first course to get started"
+            description="Add a folder with videos, PDFs, or documents to begin learning"
+            actionLabel="Import Course"
+            onAction={() => {
+              importCourseFromFolder().catch(() => {
+                // silent-catch-ok — user cancelled file picker or permission denied
+              })
+            }}
+          />
         </motion.section>
-
-        {/* ── Dashboard Customizer ── */}
-        <DashboardCustomizer
-          sectionOrder={sectionOrder}
-          pinnedSections={pinnedSections}
-          isManuallyOrdered={isManuallyOrdered}
-          isOpen={isCustomizing}
-          onToggle={setIsCustomizing}
-          onPin={handlePin}
-          onUnpin={handleUnpin}
-          onReorder={handleReorder}
-          onReset={handleReset}
-        />
-
-        {/* ── Reorderable Sections ── */}
-        {sectionOrder.map(sectionId => sectionRenderers[sectionId]())}
-
-        {/* ── Import Course Empty State (fixed, never reordered) ── */}
-        {importedCourses.length === 0 && (
-          <motion.section variants={fadeUp}>
-            <EmptyState
-              data-testid="empty-state-courses"
-              icon={BookOpen}
-              title="Import your first course to get started"
-              description="Add a folder with videos, PDFs, or documents to begin learning"
-              actionLabel="Import Course"
-              onAction={() => {
-                importCourseFromFolder().catch(() => {
-                  // silent-catch-ok — user cancelled file picker or permission denied
-                })
-              }}
-            />
-          </motion.section>
-        )}
-      </motion.div>
-    </MotionConfig>
+      )}
+    </motion.div>
   )
 }

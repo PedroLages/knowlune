@@ -1,8 +1,10 @@
 import { Eye, RotateCcw } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '@/app/components/ui/card'
-import { Button } from '@/app/components/ui/button'
+import { Button, buttonVariants } from '@/app/components/ui/button'
 import { Switch } from '@/app/components/ui/switch'
 import { Separator } from '@/app/components/ui/separator'
+import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group'
+import { Label } from '@/app/components/ui/label'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,7 +17,7 @@ import {
   AlertDialogTrigger,
 } from '@/app/components/ui/alert-dialog'
 import { toastSuccess } from '@/lib/toastHelpers'
-import { DISPLAY_DEFAULTS, type AppSettings } from '@/lib/settings'
+import { DISPLAY_DEFAULTS, type AppSettings, type ReduceMotion } from '@/lib/settings'
 
 interface DisplayAccessibilitySectionProps {
   settings: AppSettings
@@ -82,20 +84,57 @@ export function DisplayAccessibilitySection({
         <Separator className="my-4" />
 
         {/* Motion Preference */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2">
           <div>
             <p className="text-sm font-medium">Motion Preference</p>
             <p className="text-xs text-muted-foreground">
               Control whether animations play on the page
             </p>
           </div>
-          <span className="text-xs text-muted-foreground">
-            {settings.reduceMotion === 'system'
-              ? 'Follow system'
-              : settings.reduceMotion === 'on'
-                ? 'Reduced'
-                : 'All motion'}
-          </span>
+          <RadioGroup
+            value={settings.reduceMotion}
+            onValueChange={(value: string) =>
+              onSettingsChange({ reduceMotion: value as ReduceMotion })
+            }
+            aria-label="Motion preference"
+            className="mt-1 flex flex-col gap-2"
+          >
+            {(
+              [
+                {
+                  value: 'system',
+                  label: 'Follow system',
+                  description: 'Uses your device\u2019s motion preference',
+                },
+                {
+                  value: 'on',
+                  label: 'Reduce motion',
+                  description: 'Minimize animations and transitions',
+                },
+                {
+                  value: 'off',
+                  label: 'Allow all motion',
+                  description: 'Enable all animations regardless of system setting',
+                },
+              ] as const
+            ).map(option => (
+              <Label
+                key={option.value}
+                htmlFor={`motion-${option.value}`}
+                className={`flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl border-2 p-4 transition-colors focus-within:ring-2 focus-within:ring-ring ${
+                  settings.reduceMotion === option.value
+                    ? 'border-brand bg-brand-soft'
+                    : 'border-border'
+                }`}
+              >
+                <RadioGroupItem value={option.value} id={`motion-${option.value}`} />
+                <div>
+                  <p className="text-sm font-medium">{option.label}</p>
+                  <p className="text-xs text-muted-foreground">{option.description}</p>
+                </div>
+              </Label>
+            ))}
+          </RadioGroup>
         </div>
 
         <Separator className="my-4" />
@@ -124,7 +163,7 @@ export function DisplayAccessibilitySection({
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleReset}
-                className="bg-brand text-brand-foreground hover:bg-brand-hover"
+                className={buttonVariants({ variant: 'brand' })}
               >
                 Reset
               </AlertDialogAction>

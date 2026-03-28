@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { MotionConfig, motion } from 'motion/react'
+import { motion } from 'motion/react'
 import { BookOpen, Clock, ChevronLeft, Check, Lock, Play, ArrowRight } from 'lucide-react'
 import { Badge } from '@/app/components/ui/badge'
 import { Button } from '@/app/components/ui/button'
@@ -330,127 +330,125 @@ export function CareerPathDetail() {
   }
 
   return (
-    <MotionConfig reducedMotion="user">
-      <motion.div
-        variants={staggerContainer}
-        initial="hidden"
-        animate="visible"
-        className="space-y-10 max-w-5xl pb-16"
-      >
-        {/* ── Top Section ── */}
-        <motion.div variants={fadeUp} className="space-y-6">
-          {/* Back arrow + badge row */}
-          <div className="flex items-center gap-3">
-            <Link
-              to="/career-paths"
-              data-testid="back-link"
-              className="size-10 rounded-full border border-border bg-card flex items-center justify-center hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-              aria-label="Back to career paths"
-            >
-              <ChevronLeft className="size-5 text-foreground" aria-hidden="true" />
-            </Link>
-            <Badge
-              variant="secondary"
-              className="text-[10px] uppercase tracking-[0.2em] font-semibold"
-            >
-              Career Path
-            </Badge>
-          </div>
-
-          {/* Title area + progress display */}
-          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-8">
-            {/* Left: title + description */}
-            <div className="flex-1 min-w-0 space-y-3">
-              <h1 className="text-3xl sm:text-4xl font-display font-bold tracking-tight leading-tight">
-                {path.title}
-              </h1>
-              <p className="text-muted-foreground text-base sm:text-lg leading-relaxed max-w-2xl">
-                {path.description}
-              </p>
-
-              {/* Drop path button for enrolled users */}
-              {isEnrolled && (
-                <Button variant="outline" size="sm" onClick={handleDrop} className="mt-2">
-                  Leave path
-                </Button>
-              )}
-            </div>
-
-            {/* Right: progress display or enroll CTA */}
-            <div className="shrink-0">
-              {isEnrolled ? (
-                <div className="text-right space-y-3">
-                  <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-semibold">
-                    Progress
-                  </span>
-                  <div
-                    className="text-5xl sm:text-6xl font-display font-bold tracking-tight"
-                    role="status"
-                    aria-label={`${progress.percentage}% of path complete`}
-                  >
-                    {progress.percentage}%
-                  </div>
-                  <div className="h-px bg-border w-full" aria-hidden="true" />
-                  <div className="flex gap-8 justify-end">
-                    <div className="text-right">
-                      <div className="text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
-                        Courses
-                      </div>
-                      <div className="text-sm font-semibold">
-                        {progress.completedCourses}/{progress.totalCourses}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
-                        Duration
-                      </div>
-                      <div className="text-sm font-semibold">{path.totalEstimatedHours}h</div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <Button
-                  variant="brand"
-                  size="lg"
-                  onClick={handleEnroll}
-                  data-testid="enroll-button"
-                  className="gap-2"
-                >
-                  Start Path
-                  <ArrowRight className="size-4" aria-hidden="true" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </motion.div>
-
-        {/* ── Syllabus Section ── */}
-        <motion.div variants={fadeUp}>
-          <div className="flex items-center gap-4">
-            <h2 className="text-xl font-display font-semibold tracking-tight whitespace-nowrap">
-              Syllabus
-            </h2>
-            <div className="flex-1 h-px bg-border" aria-hidden="true" />
-          </div>
-        </motion.div>
-
-        {/* ── Module List ── */}
-        <div role="list" aria-label="Learning stages" className="space-y-2">
-          {flatModules.map(mod => (
-            <div key={mod.courseId} role="listitem">
-              <ModuleRow module={mod} />
-            </div>
-          ))}
+    <motion.div
+      variants={staggerContainer}
+      initial="hidden"
+      animate="visible"
+      className="space-y-10 max-w-5xl pb-16"
+    >
+      {/* ── Top Section ── */}
+      <motion.div variants={fadeUp} className="space-y-6">
+        {/* Back arrow + badge row */}
+        <div className="flex items-center gap-3">
+          <Link
+            to="/career-paths"
+            data-testid="back-link"
+            className="size-10 rounded-full border border-border bg-card flex items-center justify-center hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            aria-label="Back to career paths"
+          >
+            <ChevronLeft className="size-5 text-foreground" aria-hidden="true" />
+          </Link>
+          <Badge
+            variant="secondary"
+            className="text-[10px] uppercase tracking-[0.2em] font-semibold"
+          >
+            Career Path
+          </Badge>
         </div>
 
-        {/* ── Empty state (no modules) ── */}
-        {flatModules.length === 0 && (
-          <motion.div variants={fadeUp} className="text-center py-16 text-muted-foreground">
-            <BookOpen className="size-12 mx-auto mb-4 opacity-30" aria-hidden="true" />
-            <p className="text-lg font-medium">No modules in this path yet.</p>
-          </motion.div>
-        )}
+        {/* Title area + progress display */}
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-8">
+          {/* Left: title + description */}
+          <div className="flex-1 min-w-0 space-y-3">
+            <h1 className="text-3xl sm:text-4xl font-display font-bold tracking-tight leading-tight">
+              {path.title}
+            </h1>
+            <p className="text-muted-foreground text-base sm:text-lg leading-relaxed max-w-2xl">
+              {path.description}
+            </p>
+
+            {/* Drop path button for enrolled users */}
+            {isEnrolled && (
+              <Button variant="outline" size="sm" onClick={handleDrop} className="mt-2">
+                Leave path
+              </Button>
+            )}
+          </div>
+
+          {/* Right: progress display or enroll CTA */}
+          <div className="shrink-0">
+            {isEnrolled ? (
+              <div className="text-right space-y-3">
+                <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-semibold">
+                  Progress
+                </span>
+                <div
+                  className="text-5xl sm:text-6xl font-display font-bold tracking-tight"
+                  role="status"
+                  aria-label={`${progress.percentage}% of path complete`}
+                >
+                  {progress.percentage}%
+                </div>
+                <div className="h-px bg-border w-full" aria-hidden="true" />
+                <div className="flex gap-8 justify-end">
+                  <div className="text-right">
+                    <div className="text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+                      Courses
+                    </div>
+                    <div className="text-sm font-semibold">
+                      {progress.completedCourses}/{progress.totalCourses}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+                      Duration
+                    </div>
+                    <div className="text-sm font-semibold">{path.totalEstimatedHours}h</div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <Button
+                variant="brand"
+                size="lg"
+                onClick={handleEnroll}
+                data-testid="enroll-button"
+                className="gap-2"
+              >
+                Start Path
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </Button>
+            )}
+          </div>
+        </div>
       </motion.div>
-    </MotionConfig>
+
+      {/* ── Syllabus Section ── */}
+      <motion.div variants={fadeUp}>
+        <div className="flex items-center gap-4">
+          <h2 className="text-xl font-display font-semibold tracking-tight whitespace-nowrap">
+            Syllabus
+          </h2>
+          <div className="flex-1 h-px bg-border" aria-hidden="true" />
+        </div>
+      </motion.div>
+
+      {/* ── Module List ── */}
+      <div role="list" aria-label="Learning stages" className="space-y-2">
+        {flatModules.map(mod => (
+          <div key={mod.courseId} role="listitem">
+            <ModuleRow module={mod} />
+          </div>
+        ))}
+      </div>
+
+      {/* ── Empty state (no modules) ── */}
+      {flatModules.length === 0 && (
+        <motion.div variants={fadeUp} className="text-center py-16 text-muted-foreground">
+          <BookOpen className="size-12 mx-auto mb-4 opacity-30" aria-hidden="true" />
+          <p className="text-lg font-medium">No modules in this path yet.</p>
+        </motion.div>
+      )}
+    </motion.div>
   )
 }

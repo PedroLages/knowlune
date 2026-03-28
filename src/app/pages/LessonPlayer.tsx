@@ -43,6 +43,7 @@ import { NoteEditor } from '../components/notes/NoteEditor'
 import { CompletionModal, type CelebrationType } from '../components/celebrations/CompletionModal'
 import { BookmarksList } from '../components/BookmarksList'
 import { useCourseStore } from '@/stores/useCourseStore'
+import { shouldReduceMotion } from '@/lib/settings'
 import { getResourceUrl } from '@/lib/media'
 import {
   getProgress,
@@ -217,9 +218,8 @@ export function LessonPlayer() {
   }, [isTheaterMode])
 
   const handleMiniPlayerClick = () => {
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     videoWrapperRef.current?.scrollIntoView({
-      behavior: reduceMotion ? 'instant' : 'smooth',
+      behavior: shouldReduceMotion() ? 'instant' : 'smooth',
       block: 'start',
     })
   }

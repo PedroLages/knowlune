@@ -3,6 +3,7 @@ import confetti from 'canvas-confetti'
 import type { ChallengeTierConfig } from '@/lib/challengeMilestones'
 import { cn } from '@/app/components/ui/utils'
 import { useEngagementPrefsStore } from '@/stores/useEngagementPrefsStore'
+import { shouldReduceMotion } from '@/lib/settings'
 
 interface ChallengeMilestoneToastProps {
   challengeName: string
@@ -23,8 +24,7 @@ export function ChallengeMilestoneToast({
   useEffect(() => {
     if (hasFiredRef.current) return
     hasFiredRef.current = true
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (!prefersReducedMotion && animationsEnabled) {
+    if (!shouldReduceMotion() && animationsEnabled) {
       confetti({
         particleCount: tierConfig.particleCount,
         spread: tierConfig.spread,

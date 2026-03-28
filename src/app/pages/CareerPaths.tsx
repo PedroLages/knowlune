@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Link } from 'react-router'
-import { MotionConfig, motion } from 'motion/react'
+import { motion } from 'motion/react'
 import {
   Brain,
   Shield,
@@ -268,74 +268,72 @@ export function CareerPaths() {
   }
 
   return (
-    <MotionConfig reducedMotion="user">
-      <motion.div
-        variants={staggerContainer}
-        initial="hidden"
-        animate="visible"
-        className="space-y-8"
-      >
-        {/* Page header — editorial display type */}
-        <motion.div variants={fadeUp} className="space-y-4">
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight font-display text-foreground">
-            Career Paths
-          </h1>
-          <p className="text-muted-foreground text-base max-w-xl leading-relaxed">
-            Structured multi-course journeys with staged progression and prerequisite tracking.
-          </p>
-        </motion.div>
-
-        {/* Search bar — underline style */}
-        <motion.div variants={fadeUp}>
-          <div className="relative max-w-md">
-            <Search
-              className="absolute left-0 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search paths..."
-              aria-label="Search career paths"
-              className={cn(
-                'w-full bg-transparent border-0 border-b border-border pl-7 pr-2 py-2',
-                'text-sm text-foreground placeholder:text-muted-foreground',
-                'focus:outline-none focus:border-brand transition-colors'
-              )}
-            />
-          </div>
-        </motion.div>
-
-        {/* Path list */}
-        {filteredPaths.length === 0 && search.trim() ? (
-          <motion.div variants={fadeUp}>
-            <EmptyState
-              icon={Search}
-              title="No paths match your search"
-              description={`No career paths found for "${search}". Try a different search term.`}
-            />
-          </motion.div>
-        ) : filteredPaths.length === 0 ? (
-          <EmptyState
-            icon={Route}
-            title="No career paths available"
-            description="Curated career paths will appear here once they are available."
-          />
-        ) : (
-          <motion.div
-            variants={staggerContainer}
-            initial="hidden"
-            animate="visible"
-            role="list"
-            aria-label="Career paths"
-          >
-            {filteredPaths.map((path, index) => (
-              <PathRow key={path.id} path={path} index={index} />
-            ))}
-          </motion.div>
-        )}
+    <motion.div
+      variants={staggerContainer}
+      initial="hidden"
+      animate="visible"
+      className="space-y-8"
+    >
+      {/* Page header — editorial display type */}
+      <motion.div variants={fadeUp} className="space-y-4">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight font-display text-foreground">
+          Career Paths
+        </h1>
+        <p className="text-muted-foreground text-base max-w-xl leading-relaxed">
+          Structured multi-course journeys with staged progression and prerequisite tracking.
+        </p>
       </motion.div>
-    </MotionConfig>
+
+      {/* Search bar — underline style */}
+      <motion.div variants={fadeUp}>
+        <div className="relative max-w-md">
+          <Search
+            className="absolute left-0 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search paths..."
+            aria-label="Search career paths"
+            className={cn(
+              'w-full bg-transparent border-0 border-b border-border pl-7 pr-2 py-2',
+              'text-sm text-foreground placeholder:text-muted-foreground',
+              'focus:outline-none focus:border-brand transition-colors'
+            )}
+          />
+        </div>
+      </motion.div>
+
+      {/* Path list */}
+      {filteredPaths.length === 0 && search.trim() ? (
+        <motion.div variants={fadeUp}>
+          <EmptyState
+            icon={Search}
+            title="No paths match your search"
+            description={`No career paths found for "${search}". Try a different search term.`}
+          />
+        </motion.div>
+      ) : filteredPaths.length === 0 ? (
+        <EmptyState
+          icon={Route}
+          title="No career paths available"
+          description="Curated career paths will appear here once they are available."
+        />
+      ) : (
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+          role="list"
+          aria-label="Career paths"
+        >
+          {filteredPaths.map((path, index) => (
+            <PathRow key={path.id} path={path} index={index} />
+          ))}
+        </motion.div>
+      )}
+    </motion.div>
   )
 }

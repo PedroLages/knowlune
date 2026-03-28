@@ -1,12 +1,13 @@
 ---
 story_id: E51-S02
 story_name: "Reduced Motion Toggle with Global MotionConfig"
-status: draft
-started:
+status: in-progress
+started: 2026-03-28
 completed:
-reviewed: false
-review_started:
-review_gates_passed: []
+reviewed: true
+review_started: 2026-03-28
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, performance-benchmark, security-review, exploratory-qa]
+review_scope: full
 burn_in_validated: false
 ---
 
@@ -170,12 +171,31 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story -- Playwright MCP findings]
+**2026-03-28 Review:**
+- MEDIUM: No focus-visible styling on radio card labels — consider `focus-within:ring-2 focus-within:ring-brand`
+- MEDIUM: "Follow system" description could hint at how to change OS setting
+- PASS: Design tokens used throughout, ARIA labels correct, touch targets 44px+, keyboard nav via Radix
+- Report: `docs/reviews/design/design-review-2026-03-28-E51-S02.md`
 
 ## Code Review Feedback
 
-[Populated by /review-story -- adversarial code review findings]
+**2026-03-28 Review:**
+- HIGH: `useCourseCardPreview.ts:11` uses `shouldReduceMotion()` (non-reactive) instead of `useReducedMotion()` hook — won't update when setting changes
+- HIGH (Testing): No E2E spec file (`tests/e51-s02-reduced-motion.spec.ts`) — story testing notes specified one
+- HIGH (Testing): No unit tests for `useReducedMotion` hook
+- MEDIUM: `reduce-motion-init.js` doesn't handle `system` + OS reduced motion — brief flash for system-preference users
+- MEDIUM: AlertDialogAction uses raw `bg-brand` classes instead of `variant="brand"`
+- MEDIUM: "animations" toggle vs "Motion Preference" RadioGroup may confuse users
+- Reports: `docs/reviews/code/code-review-2026-03-28-E51-S02.md`, `docs/reviews/code/code-review-testing-2026-03-28-E51-S02.md`
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Scope of local MotionConfig removal**: Removing 17 local `MotionConfig reducedMotion="user"` wrappers across the codebase was the highest-impact change. Each component had its own wrapper that would shadow the root-level config, making a global toggle impossible. The lesson: motion config should always be centralized at the app root, not scattered per-component.
+
+- **Flash prevention requires synchronous script**: The `reduce-motion-init.js` script in `index.html` must run synchronously before any stylesheet loads. Without this, users with "Reduce motion" saved in localStorage would see a 50-200ms flash of animations before React hydrates and applies the setting. This is the same pattern used for dark mode flash prevention.
+
+- **Consolidating the animations toggle**: The existing "animations" toggle in EngagementPreferences had to be reconciled with the new 3-state motion RadioGroup. Rather than maintaining two competing controls, the old toggle was wired to delegate to the new `reduceMotion` setting, preventing user confusion.
+
+- **Hook pattern reuse from useColorScheme**: The `useReducedMotion` hook follows the same event-driven pattern as `useColorScheme.ts` -- listening to both `settingsUpdated` custom events and `storage` events for cross-tab sync. This pattern is now established for all settings-derived hooks.
+
+- **Confetti/canvas components need special handling**: Five components that used `window.matchMedia('(prefers-reduced-motion: reduce)')` directly had to be updated to use the hook instead. Direct media query checks bypass the app-level setting entirely, so any animation component must use `useReducedMotion()` or the `shouldReduceMotion()` utility.

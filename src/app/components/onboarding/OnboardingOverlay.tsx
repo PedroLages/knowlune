@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router'
 import { motion, AnimatePresence } from 'motion/react'
 import confetti from 'canvas-confetti'
+import { shouldReduceMotion } from '@/lib/settings'
 import { X } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { useOnboardingStore } from '@/stores/useOnboardingStore'
@@ -11,8 +12,7 @@ import { useChallengeStore } from '@/stores/useChallengeStore'
 import { OnboardingStepContent, StepIndicator } from './OnboardingStep'
 
 function triggerOnboardingConfetti() {
-  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  if (prefersReducedMotion) return
+  if (shouldReduceMotion()) return
 
   confetti({
     particleCount: 120,

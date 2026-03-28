@@ -519,7 +519,7 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-51: in-progress
   51-1-settings-infrastructure-display-section-shell: done
-  51-2-reduced-motion-toggle-global-motionconfig: backlog
+  51-2-reduced-motion-toggle-global-motionconfig: in-progress
   51-3-atkinson-hyperlegible-font-toggle: backlog
   51-4-spacious-content-density-mode: backlog
 

@@ -4,6 +4,7 @@ import type { StreakMilestone } from '@/data/types'
 import { getTierConfig } from '@/lib/streakMilestones'
 import { cn } from '@/app/components/ui/utils'
 import { useEngagementPrefsStore } from '@/stores/useEngagementPrefsStore'
+import { shouldReduceMotion } from '@/lib/settings'
 
 // ── Toast component ──────────────────────────────────────────
 
@@ -19,8 +20,7 @@ export function StreakMilestoneToast({ milestone }: StreakMilestoneToastProps) {
   // Key on milestone.id (unique per achievement), NOT milestoneValue —
   // the same milestone value can be earned multiple times after streak resets.
   useEffect(() => {
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (!prefersReducedMotion && animationsEnabled) {
+    if (!shouldReduceMotion() && animationsEnabled) {
       confetti({
         particleCount: tier.particleCount,
         spread: tier.spread,
