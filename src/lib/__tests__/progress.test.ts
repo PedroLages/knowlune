@@ -7,6 +7,7 @@ import {
   markLessonComplete,
   markLessonIncomplete,
   getCourseCompletionPercent,
+  getImportedCourseCompletionPercent,
   isLessonComplete,
   saveNote,
   getNote,
@@ -31,6 +32,7 @@ import {
   getTimeRemaining,
   invalidateProgressCache,
 } from '@/lib/progress'
+import { db } from '@/db/schema'
 import type { Course } from '@/data/types'
 
 function makeCourse(overrides: Partial<Course> = {}): Course {
@@ -818,6 +820,45 @@ describe('progress', () => {
         },
       }
       expect(getTotalCompletedLessons(allProgress)).toBe(3)
+    })
+  })
+
+  describe('getImportedCourseCompletionPercent', () => {
+    it('returns 0 when videoCount is 0 (division-by-zero guard)', async () => {
+      expect(await getImportedCourseCompletionPercent('course-1', 0)).toBe(0)
+    })
+
+    it('returns 0 when no progress records exist for the course', async () => {
+      expect(await getImportedCourseCompletionPercent('course-1', 5)).toBe(0)
+    })
+
+    it('returns correct percentage when some videos are completed (>= 90%)', async () => {
+      await db.progress.bulkPut([
+        { courseId: 'yt-course-1', videoId: 'v1', currentTime: 100, completionPercentage: 95 },
+        { courseId: 'yt-course-1', videoId: 'v2', currentTime: 50, completionPercentage: 45 },
+        { courseId: 'yt-course-1', videoId: 'v3', currentTime: 100, completionPercentage: 90 },
+        { courseId: 'yt-course-1', videoId: 'v4', currentTime: 20, completionPercentage: 10 },
+      ])
+      // 2 out of 4 videos completed (95% and 90% both >= 90)
+      expect(await getImportedCourseCompletionPercent('yt-course-1', 4)).toBe(50)
+    })
+
+    it('returns 100 when all videos completed', async () => {
+      await db.progress.bulkPut([
+        { courseId: 'yt-course-2', videoId: 'v1', currentTime: 100, completionPercentage: 100 },
+        { courseId: 'yt-course-2', videoId: 'v2', currentTime: 100, completionPercentage: 92 },
+        { courseId: 'yt-course-2', videoId: 'v3', currentTime: 100, completionPercentage: 90 },
+      ])
+      expect(await getImportedCourseCompletionPercent('yt-course-2', 3)).toBe(100)
+    })
+
+    it('does not count videos from other courses', async () => {
+      await db.progress.bulkPut([
+        { courseId: 'yt-course-a', videoId: 'v1', currentTime: 100, completionPercentage: 95 },
+        { courseId: 'yt-course-b', videoId: 'v2', currentTime: 100, completionPercentage: 95 },
+      ])
+      // Only 1 video belongs to yt-course-a
+      expect(await getImportedCourseCompletionPercent('yt-course-a', 2)).toBe(50)
     })
   })
 })

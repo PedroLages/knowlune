@@ -65,9 +65,7 @@ export function Courses() {
   const [momentumMap, setMomentumMap] = useState<Map<string, MomentumScore>>(new Map())
   const [atRiskMap, setAtRiskMap] = useState<Map<string, AtRiskStatus>>(new Map())
   const [estimateMap, setEstimateMap] = useState<Map<string, CompletionEstimate>>(new Map())
-  const [importedCompletionMap, setImportedCompletionMap] = useState<Map<string, number>>(
-    new Map()
-  )
+  const [importedCompletionMap, setImportedCompletionMap] = useState<Map<string, number>>(new Map())
 
   // Collapse state for sample courses section — persisted to localStorage
   const [sampleCollapsed, setSampleCollapsed] = useState(() => {

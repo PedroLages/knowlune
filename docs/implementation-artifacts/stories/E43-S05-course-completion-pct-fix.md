@@ -79,15 +79,15 @@ so that I can track my progress accurately.
 
 Before requesting `/review-story`, verify:
 
-- [ ] All changes committed (`git status` clean)
-- [ ] No error swallowing -- catch blocks log AND surface errors
-- [ ] useEffect hooks have cleanup functions (ignore flags for async, event listener removal)
-- [ ] No optimistic UI updates before persistence -- state updates after DB write succeeds
-- [ ] Type guards on all dynamic lookups (e.g., `LABELS[type]` when type can be empty)
-- [ ] E2E afterEach cleanup uses `await` (not fire-and-forget)
-- [ ] Date handling uses `toLocaleDateString('sv-SE')` pattern (not `toISOString().split('T')[0]`)
-- [ ] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
-- [ ] If story calls external APIs: CSP allowlist configured (see engineering-patterns.md CSP Configuration)
+- [x] All changes committed (`git status` clean)
+- [x] No error swallowing -- catch blocks log AND surface errors
+- [x] useEffect hooks have cleanup functions (ignore flags for async, event listener removal)
+- [x] No optimistic UI updates before persistence -- state updates after DB write succeeds
+- [x] Type guards on all dynamic lookups (e.g., `LABELS[type]` when type can be empty)
+- [x] E2E afterEach cleanup uses `await` (not fire-and-forget)
+- [x] Date handling uses `toLocaleDateString('sv-SE')` pattern (not `toISOString().split('T')[0]`)
+- [x] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
+- [x] If story calls external APIs: CSP allowlist configured (see engineering-patterns.md CSP Configuration)
 
 ## Design Review Feedback
 
