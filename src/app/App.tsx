@@ -21,6 +21,7 @@ import { useAccessibilityFont } from '@/hooks/useAccessibilityFont'
 import { useContentDensity } from '@/hooks/useContentDensity'
 import { MotionConfig } from 'motion/react'
 import { useAuthLifecycle } from '@/app/hooks/useAuthLifecycle'
+import { initNotificationService, destroyNotificationService } from '@/services/NotificationService'
 
 // Register global error handlers (window.onerror, unhandledrejection)
 initErrorTracking()
@@ -63,6 +64,12 @@ export default function App() {
 
   // E43-S04: Auth lifecycle hook — session expiry detection, token refresh, settings hydration
   useAuthLifecycle()
+
+  // E43-S07: Initialize notification service (subscribe to domain events)
+  useEffect(() => {
+    initNotificationService()
+    return () => destroyNotificationService()
+  }, [])
 
   // Load vector embeddings from IndexedDB on startup
   useEffect(() => {

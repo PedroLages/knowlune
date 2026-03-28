@@ -24,7 +24,7 @@ describe('accessibilityFont', () => {
 
       expect(setPropertySpy).toHaveBeenCalledWith(
         '--font-body',
-        "'Atkinson Hyperlegible', system-ui, -apple-system, sans-serif",
+        "'Atkinson Hyperlegible', system-ui, -apple-system, sans-serif"
       )
     })
 
@@ -42,7 +42,7 @@ describe('accessibilityFont', () => {
 
       expect(setPropertySpy).toHaveBeenCalledWith(
         '--font-body',
-        "'DM Sans', system-ui, -apple-system, sans-serif",
+        "'DM Sans', system-ui, -apple-system, sans-serif"
       )
     })
   })

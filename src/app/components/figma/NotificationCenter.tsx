@@ -1,54 +1,49 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { useNavigate } from 'react-router'
 import {
   Bell,
   Trophy,
   Flame,
-  BookOpen,
   Clock,
   Sparkles,
   GraduationCap,
   CheckCheck,
+  Download,
 } from 'lucide-react'
 import { cn } from '@/app/components/ui/utils'
 import { Button } from '@/app/components/ui/button'
 import { Popover, PopoverTrigger, PopoverContent } from '@/app/components/ui/popover'
 import { ScrollArea } from '@/app/components/ui/scroll-area'
 import { Separator } from '@/app/components/ui/separator'
-
-// --- Types ---
-
-interface Notification {
-  id: string
-  type: 'achievement' | 'streak' | 'recommendation' | 'reminder' | 'new-content' | 'course-complete'
-  title: string
-  message: string
-  timestamp: Date
-  read: boolean
-}
+import { useNotificationStore } from '@/stores/useNotificationStore'
+import type { NotificationType } from '@/data/types'
 
 // --- Icon mapping ---
 
-const notificationIcons: Record<Notification['type'], typeof Trophy> = {
-  achievement: Trophy,
-  streak: Flame,
-  recommendation: BookOpen,
-  reminder: Clock,
-  'new-content': Sparkles,
+const notificationIcons: Record<NotificationType, typeof Trophy> = {
   'course-complete': GraduationCap,
+  'streak-milestone': Flame,
+  'import-finished': Download,
+  'achievement-unlocked': Trophy,
+  'review-due': Clock,
 }
 
-const notificationIconColors: Record<Notification['type'], string> = {
-  achievement: 'text-warning',
-  streak: 'text-destructive',
-  recommendation: 'text-brand',
-  reminder: 'text-muted-foreground',
-  'new-content': 'text-success',
+const notificationIconColors: Record<NotificationType, string> = {
   'course-complete': 'text-brand',
+  'streak-milestone': 'text-destructive',
+  'import-finished': 'text-success',
+  'achievement-unlocked': 'text-warning',
+  'review-due': 'text-muted-foreground',
 }
+
+// Fallback icons for unknown types
+const DEFAULT_ICON = Sparkles
+const DEFAULT_ICON_COLOR = 'text-muted-foreground'
 
 // --- Relative time helper ---
 
-function relativeTime(date: Date): string {
+function relativeTime(dateIso: string): string {
+  const date = new Date(dateIso)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffMin = Math.floor(diffMs / 60_000)
@@ -63,81 +58,41 @@ function relativeTime(date: Date): string {
   return date.toLocaleDateString()
 }
 
-// --- Initial mock data (timestamps relative to now) ---
-// TODO(notifications): Replace with real notification data source (store or API)
-
-function createMockNotifications(): Notification[] {
-  const now = Date.now()
-  return [
-    {
-      id: '1',
-      type: 'achievement',
-      title: 'Achievement Unlocked!',
-      message: 'You earned the "Quick Learner" badge for completing 5 lessons in one day.',
-      timestamp: new Date(now - 2 * 60_000), // 2 min ago
-      read: false,
-    },
-    {
-      id: '2',
-      type: 'streak',
-      title: '7-Day Streak!',
-      message: 'Incredible! You have studied 7 days in a row. Keep the momentum going!',
-      timestamp: new Date(now - 45 * 60_000), // 45 min ago
-      read: false,
-    },
-    {
-      id: '3',
-      type: 'new-content',
-      title: 'New Course Available',
-      message: '"Advanced TypeScript Patterns" has just been added to the catalog.',
-      timestamp: new Date(now - 3 * 3_600_000), // 3 hours ago
-      read: false,
-    },
-    {
-      id: '4',
-      type: 'recommendation',
-      title: 'Recommended for You',
-      message: 'Based on your progress, try "React Performance Optimization" next.',
-      timestamp: new Date(now - 8 * 3_600_000), // 8 hours ago
-      read: true,
-    },
-    {
-      id: '5',
-      type: 'reminder',
-      title: 'Study Reminder',
-      message: 'You have not studied today yet. A quick 15-minute session can make a difference!',
-      timestamp: new Date(now - 24 * 3_600_000), // 1 day ago
-      read: true,
-    },
-    {
-      id: '6',
-      type: 'course-complete',
-      title: 'Course Completed',
-      message: 'Congratulations! You finished "Intro to Machine Learning" with a 92% score.',
-      timestamp: new Date(now - 3 * 86_400_000), // 3 days ago
-      read: true,
-    },
-  ]
-}
-
 // --- Component ---
 
 export function NotificationCenter() {
-  const [notifications, setNotifications] = useState<Notification[]>(createMockNotifications)
+  const notifications = useNotificationStore(s => s.notifications)
+  const unreadCount = useNotificationStore(s => s.unreadCount)
+  const storeMarkRead = useNotificationStore(s => s.markRead)
+  const storeMarkAllRead = useNotificationStore(s => s.markAllRead)
+  const storeInit = useNotificationStore(s => s.init)
+
   const [open, setOpen] = useState(false)
   const [liveMessage, setLiveMessage] = useState('')
+  const navigate = useNavigate()
 
-  const unreadCount = notifications.filter(n => !n.read).length
   const hasUnread = unreadCount > 0
 
-  const markAsRead = useCallback((id: string) => {
-    setNotifications(prev => prev.map(n => (n.id === id ? { ...n, read: true } : n)))
-  }, [])
+  // Initialize notification store on mount (load from Dexie)
+  useEffect(() => {
+    storeInit()
+  }, [storeInit])
+
+  const handleNotificationClick = useCallback(
+    (id: string, actionUrl?: string) => {
+      storeMarkRead(id)
+      if (actionUrl) {
+        setOpen(false)
+        navigate(actionUrl)
+      }
+    },
+    [storeMarkRead, navigate]
+  )
 
   const markAllAsRead = useCallback(() => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+    storeMarkAllRead()
     setLiveMessage('All notifications marked as read')
-  }, [])
+  }, [storeMarkAllRead])
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -201,8 +156,9 @@ export function NotificationCenter() {
           <ScrollArea className="h-[350px]">
             <div className="flex flex-col">
               {notifications.map(notification => {
-                const Icon = notificationIcons[notification.type]
-                const iconColor = notificationIconColors[notification.type]
+                const Icon = notificationIcons[notification.type] ?? DEFAULT_ICON
+                const iconColor = notificationIconColors[notification.type] ?? DEFAULT_ICON_COLOR
+                const isUnread = notification.readAt === null
 
                 return (
                   <button
@@ -210,9 +166,9 @@ export function NotificationCenter() {
                     type="button"
                     className={cn(
                       'flex items-start gap-2.5 px-3 py-2 text-left transition-colors hover:bg-accent/50 cursor-pointer',
-                      !notification.read && 'bg-brand-soft/30'
+                      isUnread && 'bg-brand-soft/30'
                     )}
-                    onClick={() => markAsRead(notification.id)}
+                    onClick={() => handleNotificationClick(notification.id, notification.actionUrl)}
                   >
                     {/* Icon */}
                     <div
@@ -227,12 +183,12 @@ export function NotificationCenter() {
                         <p
                           className={cn(
                             'text-sm leading-tight',
-                            !notification.read ? 'font-semibold' : 'font-medium text-foreground/80'
+                            isUnread ? 'font-semibold' : 'font-medium text-foreground/80'
                           )}
                         >
                           {notification.title}
                         </p>
-                        {!notification.read && (
+                        {isUnread && (
                           <span
                             className="mt-1 flex size-1.5 shrink-0 rounded-full bg-brand"
                             aria-hidden="true"
@@ -243,7 +199,7 @@ export function NotificationCenter() {
                         {notification.message}
                       </p>
                       <p className="mt-0.5 text-xs text-muted-foreground/70">
-                        {relativeTime(notification.timestamp)}
+                        {relativeTime(notification.createdAt)}
                       </p>
                     </div>
                   </button>

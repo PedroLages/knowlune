@@ -6,6 +6,7 @@ import { persistWithRetry } from '@/lib/persistWithRetry'
 import { calculateProgress } from '@/lib/challengeProgress'
 import { detectChallengeMilestones } from '@/lib/challengeMilestones'
 import { toastWithUndo, toastError } from '@/lib/toastHelpers'
+import { appEventBus } from '@/lib/eventBus'
 
 interface NewChallengeData {
   name: string
@@ -54,10 +55,17 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
         challenges.map(async challenge => {
           const raw = await calculateProgress(challenge)
           const currentProgress = Math.min(raw, challenge.targetValue)
-          const completedAt =
-            currentProgress >= challenge.targetValue && !challenge.completedAt
-              ? new Date().toISOString()
-              : challenge.completedAt
+          const justCompleted = currentProgress >= challenge.targetValue && !challenge.completedAt
+          const completedAt = justCompleted ? new Date().toISOString() : challenge.completedAt
+
+          // E43-S07: Emit achievement event for newly completed challenges
+          if (justCompleted) {
+            appEventBus.emit({
+              type: 'achievement:unlocked',
+              achievementId: challenge.id,
+              achievementName: challenge.name,
+            })
+          }
 
           const newMilestones = detectChallengeMilestones(challenge, currentProgress)
           if (newMilestones.length > 0) {
