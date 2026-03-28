@@ -120,9 +120,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
       // Update store state after successful persistence
       set(state => ({
-        notifications: state.notifications.map(n =>
-          n.id === id ? { ...n, readAt: now } : n
-        ),
+        notifications: state.notifications.map(n => (n.id === id ? { ...n, readAt: now } : n)),
         unreadCount: Math.max(0, state.unreadCount - 1),
       }))
     } catch (error) {
@@ -140,10 +138,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
     try {
       await persistWithRetry(async () => {
-        await db.notifications
-          .where('id')
-          .anyOf(unreadIds)
-          .modify({ readAt: now })
+        await db.notifications.where('id').anyOf(unreadIds).modify({ readAt: now })
       })
 
       // Update store state after successful persistence
@@ -189,28 +184,26 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       const cutoff = new Date(now - TTL_MS).toISOString()
 
       // TTL cleanup: delete notifications older than 30 days
-      const expired = await db.notifications
-        .where('createdAt')
-        .below(cutoff)
-        .primaryKeys()
+      const expired = await db.notifications.where('createdAt').below(cutoff).primaryKeys()
 
       if (expired.length > 0) {
         await db.notifications.bulkDelete(expired)
-        console.log(`[NotificationStore] TTL cleanup: deleted ${expired.length} expired notifications`)
+        console.log(
+          `[NotificationStore] TTL cleanup: deleted ${expired.length} expired notifications`
+        )
       }
 
       // Cap cleanup: if > 100 remaining, delete oldest to bring to 100
       const remaining = await db.notifications.count()
       if (remaining > MAX_NOTIFICATIONS) {
         const excess = remaining - MAX_NOTIFICATIONS
-        const oldest = await db.notifications
-          .orderBy('createdAt')
-          .limit(excess)
-          .primaryKeys()
+        const oldest = await db.notifications.orderBy('createdAt').limit(excess).primaryKeys()
 
         if (oldest.length > 0) {
           await db.notifications.bulkDelete(oldest)
-          console.log(`[NotificationStore] Cap cleanup: deleted ${oldest.length} oldest notifications (${remaining} > ${MAX_NOTIFICATIONS})`)
+          console.log(
+            `[NotificationStore] Cap cleanup: deleted ${oldest.length} oldest notifications (${remaining} > ${MAX_NOTIFICATIONS})`
+          )
         }
       }
     } catch (error) {
