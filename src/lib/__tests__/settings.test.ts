@@ -20,6 +20,9 @@ describe('settings', () => {
         bio: '',
         theme: 'system',
         colorScheme: 'professional',
+        accessibilityFont: false,
+        contentDensity: 'default',
+        reduceMotion: 'system',
       })
     })
 
@@ -31,6 +34,9 @@ describe('settings', () => {
         bio: '',
         theme: 'system',
         colorScheme: 'professional',
+        accessibilityFont: false,
+        contentDensity: 'default',
+        reduceMotion: 'system',
       })
     })
 
@@ -89,6 +95,9 @@ describe('settings', () => {
         bio: 'Field agent',
         theme: 'dark',
         colorScheme: 'vibrant',
+        accessibilityFont: false,
+        contentDensity: 'default',
+        reduceMotion: 'system',
       })
     })
 
