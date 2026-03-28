@@ -7,7 +7,7 @@ import {
 
 // ── Mocks ──────────────────────────────────────────────────────
 
-const mockCreate = vi.fn<[], Promise<void>>().mockResolvedValue(undefined)
+const mockCreate = vi.fn().mockResolvedValue(undefined)
 
 vi.mock('@/stores/useNotificationStore', () => ({
   useNotificationStore: {
@@ -26,7 +26,7 @@ const mockWhere = vi.fn(() => ({ equals: mockEquals }))
 vi.mock('@/db', () => ({
   db: {
     notifications: {
-      where: (...args: unknown[]) => mockWhere(...args),
+      where: (...args: Parameters<typeof mockWhere>) => mockWhere(...args),
     },
   },
 }))
