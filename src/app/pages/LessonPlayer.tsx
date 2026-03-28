@@ -690,7 +690,8 @@ export function LessonPlayer() {
               </SheetTrigger>
               <SheetContent side="bottom" className="h-[80vh] overflow-y-auto">
                 <SheetHeader>
-                  <SheetTitle className="text-sm">Course Content</SheetTitle>
+                  <SheetTitle className="text-sm">{course.shortTitle}</SheetTitle>
+                  <p className="text-xs text-muted-foreground">Course Content</p>
                 </SheetHeader>
                 <div data-testid="mobile-course-accordion">
                   <ModuleAccordion
@@ -995,9 +996,10 @@ export function LessonPlayer() {
         )}
       >
         <div className="px-4 py-3 border-b border-border flex-shrink-0">
-          <h3 className="text-sm font-semibold">Course Content</h3>
+          <h3 className="text-sm font-semibold truncate">{course.shortTitle}</h3>
+          <p className="text-xs text-muted-foreground">Course Content</p>
         </div>
-        <ScrollArea className="flex-1" data-testid="course-sidebar-accordion">
+        <ScrollArea className="flex-1 [&_[data-slot=scroll-area-viewport]>div]:!block" data-testid="course-sidebar-accordion">
           <div className="p-3">
             <ModuleAccordion
               modules={course.modules}

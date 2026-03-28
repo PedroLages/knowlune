@@ -89,7 +89,7 @@ export function ModuleAccordion({
           <AccordionItem
             key={module.id}
             value={module.id}
-            className="rounded-[24px] border border-border bg-card px-5 shadow-sm"
+            className="rounded-[24px] border border-border bg-card px-5 shadow-sm overflow-hidden"
           >
             <AccordionTrigger className="hover:no-underline">
               <div className="flex items-center gap-2">
