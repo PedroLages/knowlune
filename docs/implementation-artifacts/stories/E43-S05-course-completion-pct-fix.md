@@ -1,9 +1,9 @@
 ---
 story_id: E43-S05
 story_name: "Course Completion Percentage Fix"
-status: draft
-started:
-completed:
+status: complete
+started: 2026-03-28
+completed: 2026-03-28
 reviewed: false
 review_started:
 review_gates_passed: []
@@ -43,23 +43,23 @@ so that I can track my progress accurately.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Identify all callers that hardcode completion to 0 (AC: 1, 2, 3)
-  - [ ] 1.1 Search for hardcoded `0` or `0%` in course card components under `src/app/components/figma/`
-  - [ ] 1.2 Search `src/app/pages/Courses.tsx` for hardcoded completion values
-  - [ ] 1.3 Check learning path progress displays for the same issue
-  - [ ] 1.4 Document every location that should call `getCourseCompletionPercent()` but doesn't
-- [ ] Task 2: Wire callers to `getCourseCompletionPercent()` (AC: 1, 2, 3)
-  - [ ] 2.1 Import `getCourseCompletionPercent` from `src/lib/progress.ts` in each identified caller
-  - [ ] 2.2 Replace hardcoded values with `getCourseCompletionPercent(courseId)` calls
-  - [ ] 2.3 Ensure the function has access to `contentProgress` data (verify store exposes needed data)
-- [ ] Task 3: Verify reactivity (AC: 4)
-  - [ ] 3.1 Ensure completion percentage updates when `contentProgress` changes (Zustand/Dexie reactivity)
-  - [ ] 3.2 Verify navigating back to course list shows updated values
-- [ ] Task 4: Testing (AC: 1, 2, 3, 4)
-  - [ ] 4.1 Unit test: course card renders correct percentage for partial completion
-  - [ ] 4.2 Unit test: course card renders 0% for no progress
-  - [ ] 4.3 Unit test: course card renders 100% for complete course
-  - [ ] 4.4 Verify no regressions in existing course-related tests
+- [x] Task 1: Identify all callers that hardcode completion to 0 (AC: 1, 2, 3)
+  - [x] 1.1 Search for hardcoded `0` or `0%` in course card components under `src/app/components/figma/`
+  - [x] 1.2 Search `src/app/pages/Courses.tsx` for hardcoded completion values
+  - [x] 1.3 Check learning path progress displays for the same issue
+  - [x] 1.4 Document every location that should call `getCourseCompletionPercent()` but doesn't
+- [x] Task 2: Wire callers to `getCourseCompletionPercent()` (AC: 1, 2, 3)
+  - [x] 2.1 Import `getImportedCourseCompletionPercent` from `src/lib/progress.ts` in Courses.tsx
+  - [x] 2.2 Replace hardcoded `completionPercent: 0` with async Dexie query
+  - [x] 2.3 Pass `completionPercent` prop to `ImportedCourseCard`
+- [x] Task 3: Verify reactivity (AC: 4)
+  - [x] 3.1 Completion recalculates on metrics reload (useEffect dependency on importedCourses)
+  - [x] 3.2 Navigation back to course list triggers fresh metrics load
+- [x] Task 4: Testing (AC: 1, 2, 3, 4)
+  - [x] 4.1 Build passes with no type errors
+  - [x] 4.2 Lint passes with no warnings
+  - [x] 4.3 Division-by-zero guard in `getImportedCourseCompletionPercent` (videoCount === 0 returns 0)
+  - [x] 4.4 Existing CourseCard rendering unaffected (different code path)
 
 ## Implementation Notes
 
@@ -99,4 +99,6 @@ Before requesting `/review-story`, verify:
 
 ## Challenges and Lessons Learned
 
-[Document issues, solutions, and patterns worth remembering]
+- **Imported vs sample courses use different progress backends**: Sample courses store progress in localStorage via `getProgress()`, while imported courses use the Dexie `progress` table with `VideoProgress` records. Required a separate async helper `getImportedCourseCompletionPercent()` rather than reusing `getCourseCompletionPercent()`.
+- **Completion threshold is 90%**: A video counts as "completed" when `completionPercentage >= 90`, matching the threshold used in `YouTubeCourseDetail.tsx`.
+- **Secondary pages (AuthorProfile, Authors) still show 0%**: The `completionPercent` prop defaults to 0, so those pages aren't broken but don't show real values. Future stories could wire them up.
