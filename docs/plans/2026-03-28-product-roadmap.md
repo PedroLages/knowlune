@@ -1,6 +1,6 @@
 # Knowlune Product Roadmap — Strategic Exploration
 
-> **Purpose:** Pure exploration of 14 strategic areas. No implementation timeline — this is a decision-making document to inform future epic planning.
+> **Purpose:** Pure exploration of 16 strategic areas. No implementation timeline — this is a decision-making document to inform future epic planning.
 >
 > **Date:** 2026-03-28
 
@@ -22,8 +22,10 @@
 12. [PKM Export Pipeline](#12-pkm-export-pipeline)
 13. [Knowledge Map & Decay Visualization](#13-knowledge-map--decay-visualization)
 14. [AI Tutoring (Socratic Mode)](#14-ai-tutoring-socratic-mode)
-15. [Cross-Cutting Dependencies](#15-cross-cutting-dependencies)
-16. [Recommended Sequencing](#16-recommended-sequencing)
+15. [Notification System](#15-notification-system)
+16. [Onboarding & UX Polish](#16-onboarding--ux-polish)
+17. [Cross-Cutting Dependencies](#17-cross-cutting-dependencies)
+18. [Recommended Sequencing](#18-recommended-sequencing)
 
 ---
 
@@ -962,7 +964,155 @@ This prevents the AI from contradicting the course material or teaching concepts
 
 ---
 
-## 15. Cross-Cutting Dependencies
+## 15. Notification System
+
+### Current State
+
+The notification bell UI already exists in [NotificationCenter.tsx](src/app/components/figma/NotificationCenter.tsx) with:
+- Popover with bell icon + unread badge count
+- 6 notification types: `achievement`, `streak`, `recommendation`, `reminder`, `new-content`, `course-complete`
+- Icon mapping, color coding, relative timestamps, read/unread state
+- "Mark all as read" button
+- **But:** All data is hardcoded mock (`createMockNotifications()` at line 69). There's a TODO: "Replace with real notification data source (store or API)"
+
+### What's Missing
+
+| Layer | Status | What Needs Building |
+|-------|--------|-------------------|
+| **UI shell** | ✅ Done | Popover, icons, read/unread — already built |
+| **Data model** | ❌ Missing | `notifications` table in Dexie schema |
+| **Notification triggers** | ❌ Missing | Logic that creates notifications from app events |
+| **Persistence** | ❌ Missing | Store in IndexedDB, sync via Supabase (later) |
+| **Preferences** | ❌ Missing | Per-type enable/disable in Settings |
+| **Push notifications** | ❌ Missing | PWA push via Service Worker, or native (desktop) |
+| **Email digest** | ❌ Missing | Requires Supabase Edge Functions + email provider |
+
+### Notification Triggers (What Generates Them)
+
+| Trigger | Type | When | Data Source |
+|---------|------|------|-------------|
+| **Streak milestone** | `streak` | 7, 14, 30, 60, 100 day streaks | `studySessions` table |
+| **Streak at risk** | `streak` | No session today and streak > 3 days | `studySessions` + current time |
+| **Achievement unlocked** | `achievement` | Badge criteria met (5 lessons/day, first quiz 100%, etc.) | Achievement engine (existing) |
+| **Course completed** | `course-complete` | All lessons in a course marked done | `contentProgress` table |
+| **SRS cards due** | `reminder` | Flashcards due today (FSRS schedule) | `flashcards` table (nextReviewDate) |
+| **Study reminder** | `reminder` | Scheduled study block approaching (calendar phase 2) | `studySchedule` table |
+| **Knowledge decay alert** | `recommendation` | Topic drops below threshold (knowledge map phase 3) | Knowledge score calculation |
+| **Course recommendation** | `recommendation` | New recommendation generated | ML recommendation engine |
+| **Import finished** | `new-content` | Course import completes (can take minutes for YouTube) | Import pipeline events |
+| **Quiz results** | `achievement` | Quiz completed — show score + improvement | `quizAttempts` table |
+
+### Architecture
+
+```
+┌─────────────────────────────────┐
+│  Notification Triggers          │
+│  (streak, SRS, import, etc.)    │
+└──────────────┬──────────────────┘
+               │ creates
+               ▼
+┌─────────────────────────────────┐
+│  notifications table (Dexie)    │
+│  { id, type, title, message,    │
+│    timestamp, read, dismissed,  │
+│    actionUrl?, metadata? }      │
+└──────────────┬──────────────────┘
+               │ reads
+               ▼
+┌─────────────────────────────────┐      ┌──────────────────┐
+│  useNotificationStore (Zustand) │─────▶│ NotificationCenter│
+│  unreadCount, notifications,    │      │ (existing UI)     │
+│  markRead(), dismiss()          │      └──────────────────┘
+└──────────────┬──────────────────┘
+               │ optional
+               ▼
+┌─────────────────────────────────┐
+│  Push / Email (future)          │
+│  Service Worker push API        │
+│  Supabase Edge Functions        │
+└─────────────────────────────────┘
+```
+
+### Notification Preferences (Settings UI)
+
+**Settings → Notifications:**
+
+| Setting | Default | Notes |
+|---------|---------|-------|
+| Enable notifications | On | Master toggle |
+| Streak milestones | On | 7, 14, 30, 60, 100 day celebrations |
+| Streak at risk warnings | On | "Your streak expires in 3 hours!" |
+| Study reminders | On | From scheduled study blocks (calendar) |
+| SRS due cards | On | "12 flashcards due today" |
+| Knowledge decay alerts | Off | Can be noisy — opt-in |
+| Course recommendations | On | Weekly, not per-recommendation |
+| Achievement unlocks | On | Badges, milestones |
+| Import completion | On | Useful for long YouTube imports |
+| Quiet hours | Off | e.g., no notifications 10pm-8am |
+| Push notifications (PWA) | Off | Requires explicit browser permission |
+
+### Key Design Decisions
+
+- **In-app first, push later.** The existing popover UI is the primary channel. Push notifications (PWA Service Worker) are opt-in and come in a later phase. Email digest is the furthest out.
+- **Don't over-notify.** Learning apps that spam notifications lose users. Rate limit: max 5 notifications per day for low-priority types. High-priority (streak at risk) always shows.
+- **Actionable notifications.** Every notification should link to something: "12 cards due" → opens flashcard review. "Streak at risk" → opens any lesson. "Course complete" → shows certificate/next course.
+- **Batch similar notifications.** "3 achievements unlocked today" instead of 3 separate notifications. Group by type within a time window.
+- **Notification lifecycle:** Created → Unread → Read → Dismissed. Auto-dismiss after 30 days. Don't accumulate forever.
+
+### Recommended Phased Approach
+
+| Phase | What | Depends On | Effort |
+|-------|------|------------|--------|
+| 1 | **Data model + store** — `notifications` table, `useNotificationStore`, wire to existing UI | Nothing — replaces mock data | Small (2-3 stories) |
+| 2 | **Core triggers** — streak milestones/warnings, course completion, import finished | Phase 1 | Small (2-3 stories) |
+| 3 | **SRS + study reminders** — flashcard due notifications, scheduled study block alerts | FSRS (Wave 2) + Calendar (section 10) | Small (2 stories) |
+| 4 | **Preferences UI** — per-type toggles in Settings, quiet hours | Phase 2 | Small (2 stories) |
+| 5 | **Smart triggers** — knowledge decay alerts, course recommendations | Knowledge Map (section 13) + ML recommendations | Medium (3-4 stories) |
+| 6 | **Push notifications** — PWA Service Worker push, browser permission flow | Phase 4 | Medium (3-4 stories) |
+| 7 | **Email digest** — weekly summary email via Supabase Edge Functions | Supabase sync (section 1) + email provider | Medium (1 epic) |
+
+### Effort: Phases 1-2 are Small (1 epic), Full system including push + email is Medium (2 epics)
+
+---
+
+## 16. Onboarding & UX Polish
+
+> Surfaced by the [Interactive App Audit (2026-03-28)](../reviews/design/app-visual-audit-2026-03-28.md). These are cross-cutting UX gaps that don't fit cleanly into any single technical area.
+
+### The Problem Space
+
+The app audit revealed that Knowlune has strong features but **new users land in a confusing state**: all stats at zero, no guidance, mock notification data, empty pages with minimal explanation. The app assumes users already know what to do. This is a "last mile" problem — the features exist but the experience of discovering and using them needs work.
+
+### What Needs Building
+
+| Feature | Problem It Solves | Effort |
+|---------|-------------------|--------|
+| **First-run onboarding checklist** | New users see all zeros and no guidance. A "Getting Started" widget guides: import course → start lesson → take note → set goal | Small (2-3 stories) |
+| **Empty state design system** | 6+ pages show minimal empty states. Reusable component with illustration, explanation, CTA, and optional preview | Small (2-3 stories) |
+| **Next Lesson CTA** | After finishing a video, user must manually find next lesson. Add "Up Next: [Lesson Name]" button | Tiny (1 story) |
+| **Lesson completion checkmarks** | Course sidebar shows lessons with durations but no completion indicators | Tiny (1 story) |
+| **Settings section navigation** | 15+ sections in one scrollable page. Add tabs or sidebar nav | Small (2 stories) |
+| **Sign Up clarity** | Login form only says "Sign in" — new users don't know they can create an account. Add "Don't have an account? Sign up" | Tiny (1 story) |
+| **Course ID → title display** | Session History and Career Path detail show raw IDs ("authority") instead of full course titles | Tiny (1 story) |
+| **Reports data aggregation fix** | Reports shows empty state despite existing session data. Stats aren't aggregating from existing records | Small (2-3 stories) |
+| **Pricing/plan comparison** | Premium gates say "Upgrade" with no pricing info. Add plan comparison page or in-gate comparison | Small (2 stories) |
+
+### Recommended Phased Approach
+
+| Phase | What | Effort |
+|-------|------|--------|
+| 1 | **Quick bug fixes** — Course ID display, sign up link, password validation timing | Tiny (1-2 stories) |
+| 2 | **Onboarding checklist** — "Getting Started" widget on Overview, auto-dismisses after user completes steps | Small (2-3 stories) |
+| 3 | **Empty state component** — Create reusable component, apply to Learning Paths, Challenges, Notes, Reports, Bookmarks | Small (2-3 stories) |
+| 4 | **Lesson flow improvements** — Next Lesson CTA, completion checkmarks, progress indicators | Small (2-3 stories) |
+| 5 | **Settings UX** — Section navigation, settings search | Small (2 stories) |
+| 6 | **Reports fix** — Ensure analytics aggregate from all data sources | Small (2-3 stories) |
+
+### Effort: Small (1 epic for phases 1-4, most items are tiny fixes)
+
+---
+
+## 17. Cross-Cutting Dependencies
 
 ```
                     ┌─────────────────┐
@@ -1044,10 +1194,12 @@ This prevents the AI from contradicting the course material or teaching concepts
 - PKM export phases 1-3 (Markdown, Anki, Obsidian) — uses existing data, no external deps
 - AI Tutoring phases 1-2 (lesson-aware chat, Socratic mode) — uses existing AI infra
 - Knowledge Map phases 1-2 (topic scores, dashboard widget) — uses existing quiz/progress data
+- Notification phases 1-2 (data model + core triggers) — replaces existing mock data, pure frontend
+- Onboarding & UX polish (section 16) — all items are independent, pure frontend fixes
 
 ---
 
-## 16. Recommended Sequencing
+## 18. Recommended Sequencing
 
 ### Wave 1: Foundation (next 2-3 epics)
 > Fix what's broken, fill critical gaps, ship quick wins
@@ -1061,6 +1213,9 @@ This prevents the AI from contradicting the course material or teaching concepts
 - [ ] **Accessibility phase 1:** Dyslexia font toggle, reduced motion, content density control
 - [ ] **Accessibility phase 2:** Display & Accessibility settings page
 - [ ] **PKM phase 1:** Enhanced Markdown export (notes + flashcards with YAML frontmatter)
+- [ ] **Notifications phases 1-2:** Data model + store, streak/completion/import triggers (replaces mock data)
+- [ ] **Onboarding phases 1-3:** Quick bug fixes + Getting Started checklist + empty state component (audit-surfaced)
+- [ ] **Lesson flow:** Next Lesson CTA + completion checkmarks in sidebar (audit-surfaced)
 
 ### Wave 2: Intelligence (next 2-3 epics)
 > Ship high-value ML + AI features using existing infrastructure
@@ -1074,6 +1229,8 @@ This prevents the AI from contradicting the course material or teaching concepts
 - [ ] **AI Tutoring phase 3:** RAG-grounded answers from transcript chunks
 - [ ] **Knowledge Map phases 1-2:** Topic-level knowledge score + dashboard heatmap widget
 - [ ] **PKM phase 2:** Anki `.apkg` export for flashcard decks
+- [ ] **Notifications phase 3:** SRS due reminders + study block alerts (ties into FSRS + calendar)
+- [ ] **Notifications phase 4:** Preferences UI in Settings (per-type toggles, quiet hours)
 
 ### Wave 3: Sync (3-4 epics)
 > Multi-device experience
@@ -1088,6 +1245,8 @@ This prevents the AI from contradicting the course material or teaching concepts
 - [ ] **AI Tutoring phase 4:** Learner profile injection (quiz history, weak areas, knowledge score)
 - [ ] **Accessibility phase 3:** Screen reader audit + VoiceOver fixes
 - [ ] **PKM phase 3:** Obsidian vault export (folder structure with wikilinks)
+- [ ] **Notifications phase 5:** Smart triggers (knowledge decay alerts, recommendations)
+- [ ] **Notifications phase 6:** PWA push notifications (Service Worker, browser permission)
 
 ### Wave 4: Polish & Platform (2-3 epics)
 > Prepare for public launch
@@ -1102,6 +1261,7 @@ This prevents the AI from contradicting the course material or teaching concepts
 - [ ] **AI Tutoring phases 5-6:** Conversation memory + tutoring modes (ELI5, Quiz Me, Debug)
 - [ ] **Accessibility phases 4-5:** Reading mode, focus mode, WCAG 2.2 compliance audit
 - [ ] **PKM phases 4-5:** Notion API integration, Readwise sync
+- [ ] **Notifications phase 7:** Email digest (weekly summary via Supabase Edge Functions)
 
 ### Wave 5: Desktop (6-8 epics) — Future
 > Only if adoption signals justify it
