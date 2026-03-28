@@ -104,6 +104,11 @@ export async function clearCachedEntitlement(userId: string): Promise<void> {
  * - Network error: honors existing fresh cache, silent retry next launch
  */
 export function useIsPremium(): EntitlementStatus {
+  // Dev bypass: skip entitlement check entirely in development
+  if (import.meta.env.VITE_DEV_PREMIUM === 'true') {
+    return { isPremium: true, loading: false, tier: 'premium', isStale: false, error: null, trialEnd: null, hadTrial: false }
+  }
+
   const user = useAuthStore(s => s.user)
   const initialized = useAuthStore(s => s.initialized)
   const [tier, setTier] = useState<EntitlementTier>('free')
