@@ -5,6 +5,7 @@ import {
   exportAllData,
   importAllData,
   resetAllData,
+  hydrateSettingsFromSupabase,
 } from '@/lib/settings'
 
 describe('settings', () => {
@@ -412,6 +413,117 @@ describe('settings', () => {
       expect(result.colorScheme).toBe('vibrant')
       // Non-overridden defaults preserved
       expect(result.theme).toBe('system')
+    })
+  })
+
+  // ---------------------------------------------------------------------------
+  // hydrateSettingsFromSupabase — Google OAuth metadata mapping (E43-S08)
+  // ---------------------------------------------------------------------------
+
+  describe('hydrateSettingsFromSupabase — Google OAuth metadata', () => {
+    it('maps full_name to displayName for fresh user', () => {
+      hydrateSettingsFromSupabase({ full_name: 'John Doe' })
+      expect(getSettings().displayName).toBe('John Doe')
+    })
+
+    it('maps avatar_url to profilePhotoUrl for fresh user', () => {
+      hydrateSettingsFromSupabase({
+        avatar_url: 'https://lh3.googleusercontent.com/a/photo123',
+      })
+      expect(getSettings().profilePhotoUrl).toBe(
+        'https://lh3.googleusercontent.com/a/photo123'
+      )
+    })
+
+    it('falls back to picture field when avatar_url missing', () => {
+      hydrateSettingsFromSupabase({
+        picture: 'https://lh3.googleusercontent.com/a/fallback',
+      })
+      expect(getSettings().profilePhotoUrl).toBe(
+        'https://lh3.googleusercontent.com/a/fallback'
+      )
+    })
+
+    it('rejects non-HTTPS avatar URLs (e.g., javascript:alert(1))', () => {
+      hydrateSettingsFromSupabase({
+        avatar_url: 'javascript:alert(1)',
+      })
+      expect(getSettings().profilePhotoUrl).toBeUndefined()
+    })
+
+    it('rejects http:// avatar URLs', () => {
+      hydrateSettingsFromSupabase({
+        avatar_url: 'http://example.com/photo.jpg',
+      })
+      expect(getSettings().profilePhotoUrl).toBeUndefined()
+    })
+
+    it('rejects data: avatar URLs', () => {
+      hydrateSettingsFromSupabase({
+        avatar_url: 'data:image/png;base64,abc',
+      })
+      expect(getSettings().profilePhotoUrl).toBeUndefined()
+    })
+
+    it('custom displayName preserved over Google full_name', () => {
+      saveSettings({ displayName: 'CustomName' })
+      hydrateSettingsFromSupabase({ full_name: 'Google Name' })
+      expect(getSettings().displayName).toBe('CustomName')
+    })
+
+    it('custom avatar (data: URL) preserved over Google avatar (https: URL)', () => {
+      saveSettings({
+        profilePhotoUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==',
+      })
+      hydrateSettingsFromSupabase({
+        avatar_url: 'https://lh3.googleusercontent.com/a/photo',
+      })
+      expect(getSettings().profilePhotoUrl).toBe(
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg=='
+      )
+    })
+
+    it('custom displayName metadata key wins over full_name', () => {
+      hydrateSettingsFromSupabase({
+        displayName: 'MetadataName',
+        full_name: 'Google Name',
+      })
+      expect(getSettings().displayName).toBe('MetadataName')
+    })
+
+    it('handles undefined metadata gracefully (no crash, no-op)', () => {
+      saveSettings({ displayName: 'Safe' })
+      hydrateSettingsFromSupabase(undefined)
+      expect(getSettings().displayName).toBe('Safe')
+    })
+
+    it('handles empty metadata object (no crash, no-op)', () => {
+      saveSettings({ displayName: 'Safe' })
+      hydrateSettingsFromSupabase({})
+      expect(getSettings().displayName).toBe('Safe')
+    })
+
+    it('dispatches settingsUpdated event when updates occur', () => {
+      const handler = vi.fn()
+      window.addEventListener('settingsUpdated', handler)
+      try {
+        hydrateSettingsFromSupabase({ full_name: 'Event Test' })
+        expect(handler).toHaveBeenCalledTimes(1)
+      } finally {
+        window.removeEventListener('settingsUpdated', handler)
+      }
+    })
+
+    it('does not dispatch settingsUpdated event when no updates needed', () => {
+      saveSettings({ displayName: 'Already Set' })
+      const handler = vi.fn()
+      window.addEventListener('settingsUpdated', handler)
+      try {
+        hydrateSettingsFromSupabase({ full_name: 'Ignored' })
+        expect(handler).not.toHaveBeenCalled()
+      } finally {
+        window.removeEventListener('settingsUpdated', handler)
+      }
     })
   })
 })
