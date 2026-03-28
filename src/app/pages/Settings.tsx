@@ -916,7 +916,7 @@ export default function Settings() {
         {/* Display & Accessibility */}
         <DisplayAccessibilitySection
           settings={settings}
-          onSettingsChange={(updates) => {
+          onSettingsChange={updates => {
             const updated = { ...settings, ...updates }
             setSettings(updated)
             saveSettings(updated)

@@ -43,19 +43,14 @@ export function DisplayAccessibilitySection({
             <Eye className="size-5 text-brand" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-lg font-display leading-none">
-              Display & Accessibility
-            </h2>
+            <h2 className="text-lg font-display leading-none">Display & Accessibility</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Customize how content looks and moves
             </p>
           </div>
         </div>
       </CardHeader>
-      <CardContent
-        className="p-6"
-        data-testid="display-accessibility-section"
-      >
+      <CardContent className="p-6" data-testid="display-accessibility-section">
         {/* Accessibility Font */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -125,15 +120,13 @@ export function DisplayAccessibilitySection({
             <AlertDialogHeader>
               <AlertDialogTitle>Reset display settings?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will reset accessibility font, spacious mode, and motion
-                preference to their default values.
+                This will reset accessibility font, spacious mode, and motion preference to their
+                default values.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleReset}>
-                Reset
-              </AlertDialogAction>
+              <AlertDialogAction onClick={handleReset}>Reset</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

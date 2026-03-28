@@ -43,9 +43,7 @@ test.describe('E51-S01: Display & Accessibility section', () => {
     await expect(heading).toBeVisible()
 
     // Section description
-    await expect(
-      page.getByText('Customize how content looks and moves'),
-    ).toBeVisible()
+    await expect(page.getByText('Customize how content looks and moves')).toBeVisible()
 
     // Eye icon present (lucide renders as SVG)
     const section = page.locator('[data-testid="display-accessibility-section"]')
@@ -68,18 +66,14 @@ test.describe('E51-S01: Display & Accessibility section', () => {
     // AlertDialog should appear
     const dialog = page.getByRole('alertdialog')
     await expect(dialog).toBeVisible()
-    await expect(
-      dialog.getByText('Reset display settings?'),
-    ).toBeVisible()
+    await expect(dialog.getByText('Reset display settings?')).toBeVisible()
   })
 
   // ---------------------------------------------------------------------------
   // AC3: Confirming reset reverts fields + shows toast
   // ---------------------------------------------------------------------------
 
-  test('AC3 — confirming reset reverts all settings and shows toast', async ({
-    page,
-  }) => {
+  test('AC3 — confirming reset reverts all settings and shows toast', async ({ page }) => {
     // Pre-set non-default values + dismiss onboarding/wizard
     await page.addInitScript(() => {
       const stored = localStorage.getItem('app-settings')
@@ -101,18 +95,14 @@ test.describe('E51-S01: Display & Accessibility section', () => {
     await page.goto('/settings', { waitUntil: 'domcontentloaded' })
 
     // Open reset dialog
-    await page
-      .getByRole('button', { name: /reset display settings/i })
-      .click()
+    await page.getByRole('button', { name: /reset display settings/i }).click()
 
     // Confirm reset
     const dialog = page.getByRole('alertdialog')
     await dialog.getByRole('button', { name: /^reset$/i }).click()
 
     // Toast confirmation
-    await expect(
-      page.getByText('Display settings reset to defaults'),
-    ).toBeVisible()
+    await expect(page.getByText('Display settings reset to defaults')).toBeVisible()
 
     // Verify localStorage was reset
     const settings = await page.evaluate(() => {
@@ -128,9 +118,7 @@ test.describe('E51-S01: Display & Accessibility section', () => {
   // AC4: Default values for new fields
   // ---------------------------------------------------------------------------
 
-  test('AC4 — fresh app returns correct defaults for new settings fields', async ({
-    page,
-  }) => {
+  test('AC4 — fresh app returns correct defaults for new settings fields', async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.removeItem('app-settings')
       localStorage.setItem('knowlune-sidebar-v1', 'false')
@@ -161,9 +149,7 @@ test.describe('E51-S01: Display & Accessibility section', () => {
   // AC5: Mobile responsiveness
   // ---------------------------------------------------------------------------
 
-  test('AC5 — mobile layout has proper touch targets and full-width reset', async ({
-    page,
-  }) => {
+  test('AC5 — mobile layout has proper touch targets and full-width reset', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 })
     await goToSettings(page)
 
