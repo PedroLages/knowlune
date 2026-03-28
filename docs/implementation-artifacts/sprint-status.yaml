@@ -43,7 +43,7 @@
 # - E18-S03 detected story file → ready-for-dev
 
 generated: 2026-03-15
-last_updated: 2026-03-27  # Added E29-E33 (audit hardening epics, 29 stories) to backlog
+last_updated: 2026-03-28  # E51 (Accessibility & Display Settings) marked done — all 4 stories merged
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -517,11 +517,12 @@ development_status:
   # Epic 51: Accessibility & Display Settings
   # Source: epics-accessibility-display.md
   # ──────────────────────────────────────────────────
-  epic-51: in-progress
+  epic-51: done
   51-1-settings-infrastructure-display-section-shell: done
-  51-2-reduced-motion-toggle-global-motionconfig: in-progress
-  51-3-atkinson-hyperlegible-font-toggle: backlog
-  51-4-spacious-content-density-mode: backlog
+  51-2-reduced-motion-toggle-global-motionconfig: done
+  51-3-atkinson-hyperlegible-font-toggle: done
+  51-4-spacious-content-density-mode: done
+  epic-51-retrospective: done
 
   # ──────────────────────────────────────────────────
   # Epic 43: Wave 1 Foundation Fixes
