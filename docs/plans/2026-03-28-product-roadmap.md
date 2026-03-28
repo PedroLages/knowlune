@@ -1,6 +1,6 @@
 # Knowlune Product Roadmap — Strategic Exploration
 
-> **Purpose:** Strategic exploration of 17 areas with implementation status tracking. Informs future epic planning.
+> **Purpose:** Strategic exploration of 19 areas with implementation status tracking. Informs future epic planning.
 >
 > **Date:** 2026-03-28 | **Last Status Update:** 2026-03-28
 
@@ -25,8 +25,10 @@
 15. [Notification System](#15-notification-system)
 16. [Onboarding & UX Polish](#16-onboarding--ux-polish)
 17. [UI Enhancement — Stitch Design Upgrades](#17-ui-enhancement--stitch-design-upgrades)
-18. [Cross-Cutting Dependencies](#18-cross-cutting-dependencies)
-19. [Recommended Sequencing](#19-recommended-sequencing)
+18. [User Flow Documentation & Live Design Audit](#18-user-flow-documentation--live-design-audit)
+19. [Books & Audiobooks Library](#19-books--audiobooks-library)
+20. [Cross-Cutting Dependencies](#20-cross-cutting-dependencies)
+21. [Recommended Sequencing](#21-recommended-sequencing)
 
 ---
 
@@ -44,16 +46,18 @@
 | 5 | Repository Strategy | 🟡 Infrastructure Done | 60% | `src/premium/` separated, repo split not done |
 | 6 | Video Storage & Offline | 🟡 Infrastructure Done | 40% | Transcripts cached, no download UI |
 | 7 | Cloud Storage | 🔴 Not Started | 5% | Only `exportService.ts` exists |
-| 8 | Machine Learning | 🟡 Partially Done | 50% | E9/E9B: embeddings, vector search, AI summaries. Pending: auto-quiz, FSRS |
+| 8 | Machine Learning | 🟡 Stories Ready | 50% | E9/E9B: embeddings, vector search, AI summaries. E52 planned (8 stories, NOT READY — adversarial review recommends 4-story hybrid scope). Pending: auto-quiz, FSRS |
 | 9 | Offline & Multi-Device | 🟡 Infrastructure Done | 40% | Service worker + IDB, no sync status UI |
-| 10 | Calendar Integration | 🔴 Not Started | 0% | shadcn Calendar component only |
-| 11 | Accessibility & Cognitive UX | 🟡 Partially Done | 70% | E30: WCAG 2.1 AA. Missing: settings page, dyslexia font |
+| 10 | Calendar Integration | 🟡 Stories Ready | 0% impl | E50 planned (6 stories, 31 AC, READY WITH NOTES). Research + brainstorm + UX + spec + edge cases + readiness complete. |
+| 11 | Accessibility & Cognitive UX | 🟡 Stories Ready | 70% | E30: WCAG 2.1 AA. E51 planned (4 stories, 23 AC, READY WITH NOTES). Atkinson Hyperlegible font, 2-level density, 3-state motion toggle. |
 | 12 | PKM Export Pipeline | 🟡 Partially Done | 50% | JSON/CSV/MD export. Pending: Anki, Obsidian |
 | 13 | Knowledge Map & Decay | 🔴 Not Started | 0% | Data sources exist, no visualization |
 | 14 | AI Tutoring (Socratic) | 🔴 Not Started | 0% | LLM + transcripts exist, no Socratic mode |
 | 15 | Notification System | 🟡 Stories Ready | 30% | UI complete. Architecture decided: Dexie v28 + EventEmitter bus + 5 triggers. Stories E43-S06/S07 ready. |
 | 16 | Onboarding & UX Polish | 🟢 Mostly Done | 90% | E25: onboarding flow, empty states, sidebar |
 | 17 | UI Enhancement (Stitch) | 🔴 Not Started | 0% | 12-page catalog (50+ concepts), 5 focus pages ready, 7 pages to explore |
+| 18 | User Flows & Live Audit | 🔴 Not Started | 0% | 33 per-page flows + 10 cross-page journeys + style compliance. Plan: `docs/plans/user-flow-audit-plan.md` |
+| 19 | Books & Audiobooks Library | ⬜ Future Exploration | — | EPUB reader, audiobook player, highlights, shelves. 5-8 epics. Plan: `docs/plans/2026-03-28-books-audiobooks-exploration.md` |
 
 ---
 
@@ -1362,7 +1366,90 @@ The Pomodoro timer currently uses Web Audio API oscillators (`pomodoroAudio.ts`)
 
 ---
 
-## 18. Cross-Cutting Dependencies
+## 18. User Flow Documentation & Live Design Audit
+
+> **Status:** 🔴 Not Started (0%)
+> **Plan:** [`docs/plans/user-flow-audit-plan.md`](user-flow-audit-plan.md)
+> **Completed:** Plan created with full page inventory, template, and batch prompts
+> **Remaining:** All 4 batches (33 per-page flows + 10 cross-page journeys)
+> **Blockers:** None — independent of all other areas
+> **Last Updated:** 2026-03-28
+
+### What This Covers
+
+Comprehensive documentation + live browser audit of all 33 pages, serving as:
+- **QA testing reference** — step-by-step "click X, expect Y" for each page
+- **E2E test specs** — identify gaps in the 100+ existing test specs
+- **Product documentation** — onboard contributors to how the app works
+- **Style compliance audit** — verify design tokens, WCAG, responsive design per page
+
+### Scope
+
+| Deliverable | Count |
+|-------------|-------|
+| Per-page flow docs (with style compliance checklist) | 33 |
+| Cross-page journey docs (live-tested) | 10 |
+| Index | 1 |
+| Screenshots | ~100+ |
+
+### Execution: 4 Batches
+
+| Batch | Pages | Scope |
+|-------|-------|-------|
+| 1 | 1-13 | Library + Course Detail group |
+| 2 | 14-25 | Study + Track groups (incl. premium gates) |
+| 3 | 26-33 | Settings, Auth, Detail pages, Utility |
+| 4 | — | 10 cross-page journeys (live testing only) |
+
+Each batch: read code → draft flows → live browser verification via Playwright MCP → fix minor issues → flag major issues.
+
+### Effort: Medium (1-2 epics, or run as a quality gate before major releases)
+
+---
+
+## 19. Books & Audiobooks Library
+
+> **Status:** ⬜ Future Exploration (Wave 4-5)
+> **Plan:** [`docs/plans/2026-03-28-books-audiobooks-exploration.md`](2026-03-28-books-audiobooks-exploration.md)
+> **Priority:** Low — explore after core platform is solid (sync, ML, calendar done)
+> **Last Updated:** 2026-03-28
+
+### Idea
+
+Extend Knowlune from video courses into a comprehensive learning library: books (EPUB/PDF) + audiobooks (M4B/MP3) with unified progress tracking, notes, flashcards, and spaced repetition.
+
+### Why It Fits
+
+- ~70% of infrastructure already exists (progress tracking, notes, flashcards, PDF viewer, export, AI/RAG)
+- Books are a primary learning medium — natural extension
+- Self-hosted book manager with spaced repetition is a unique niche
+
+### Why It's Deferred
+
+- 5-8 epics of effort (same scale as sync)
+- EPUB reader is a product in itself
+- Existing tools (Calibre, Kindle, Apple Books) handle reading well
+- Core features (sync, ML, calendar, a11y) should ship first
+
+### Phases (if pursued)
+
+| Phase | What | Effort |
+|-------|------|--------|
+| 1 | Book metadata + library shelves (reading list tracker) | Medium (1 epic) |
+| 2 | EPUB reader (epub.js, pagination, themes) | Large (1-2 epics) |
+| 3 | Audiobook player (chapter nav, speed, sleep timer) | Medium (1 epic) |
+| 4 | Highlights & annotations (inline in EPUB) | Large (1 epic) |
+| 5 | Study tool integration (flashcards from highlights, book notes) | Medium (1 epic) |
+| 6 | Metadata enrichment (Google Books/Open Library API) | Small |
+| 7 | Calibre/OPDS integration | Medium (1 epic) |
+
+### Decision Gate
+
+Before starting: "Do I read/listen to enough books to justify this? Is the PDF viewer sufficient for ebooks?"
+
+---
+
+## 20. Cross-Cutting Dependencies
 
 ```
                     ┌─────────────────┐
@@ -1449,7 +1536,7 @@ The Pomodoro timer currently uses Web Audio API oscillators (`pomodoroAudio.ts`)
 
 ---
 
-## 19. Recommended Sequencing
+## 21. Recommended Sequencing
 
 ### Wave 1: Foundation (E43 — 7 stories ready)
 > Fix what's broken, fill critical gaps, ship quick wins

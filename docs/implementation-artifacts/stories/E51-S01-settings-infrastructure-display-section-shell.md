@@ -1,0 +1,134 @@
+---
+story_id: E51-S01
+story_name: "Settings Infrastructure & Display Section Shell"
+status: draft
+started:
+completed:
+reviewed: false
+review_started:
+review_gates_passed: []
+burn_in_validated: false
+---
+
+# Story 51.1: Settings Infrastructure & Display Section Shell
+
+## Story
+
+As a learner,
+I want a "Display & Accessibility" section on the Settings page with reset-to-defaults,
+so that I have a dedicated place to control how content looks and moves.
+
+## Acceptance Criteria
+
+**Given** a user on the Settings page
+**When** they scroll past the Age Range section
+**Then** they see a "Display & Accessibility" section with Eye icon, title "Display & Accessibility", and description "Customize how content looks and moves"
+
+**Given** the Display & Accessibility section is visible
+**When** the user clicks "Reset display settings to defaults"
+**Then** an AlertDialog appears with title "Reset display settings?" and description "This will reset accessibility font, spacious mode, and motion preference to their default values."
+
+**Given** the reset confirmation dialog is open
+**When** the user clicks "Reset"
+**Then** accessibilityFont reverts to false, contentDensity to 'default', reduceMotion to 'system'
+**And** a toast confirms "Display settings reset to defaults"
+
+**Given** a fresh app with no saved settings
+**When** getSettings() is called
+**Then** accessibilityFont is false, contentDensity is 'default', and reduceMotion is 'system'
+
+**Given** the section on mobile (<640px)
+**When** viewed
+**Then** all controls have minimum 44x44px touch targets and the reset button is full-width
+
+## Tasks / Subtasks
+
+- [ ] Task 1: Install `@fontsource/atkinson-hyperlegible` npm dependency (AC: 4)
+  - [ ] 1.1 Run `npm install @fontsource/atkinson-hyperlegible`
+  - [ ] 1.2 Verify package appears in `package.json` dependencies
+  - [ ] 1.3 Do NOT add static import to `src/styles/fonts.css` -- this package is loaded dynamically only when the font toggle is enabled
+
+- [ ] Task 2: Extend AppSettings interface in `src/lib/settings.ts` (AC: 4)
+  - [ ] 2.1 Add `accessibilityFont: boolean` to the `AppSettings` interface
+  - [ ] 2.2 Add `contentDensity: 'default' | 'spacious'` to the `AppSettings` interface
+  - [ ] 2.3 Add `reduceMotion: 'system' | 'on' | 'off'` to the `AppSettings` interface
+  - [ ] 2.4 Export type aliases: `type ContentDensity = 'default' | 'spacious'` and `type ReduceMotion = 'system' | 'on' | 'off'`
+  - [ ] 2.5 Add defaults: `accessibilityFont: false`, `contentDensity: 'default'`, `reduceMotion: 'system'`
+
+- [ ] Task 3: Create `DisplayAccessibilitySection` component shell (AC: 1, 2, 3)
+  - [ ] 3.1 Create `src/app/components/settings/DisplayAccessibilitySection.tsx`
+  - [ ] 3.2 Follow AgeRangeSection pattern: Card + CardHeader (Eye icon in `rounded-full bg-brand-soft p-2`) + CardContent
+  - [ ] 3.3 Title: "Display & Accessibility", Description: "Customize how content looks and moves"
+  - [ ] 3.4 Add placeholder subsections for Font, Density, and Motion separated by `<Separator />`
+  - [ ] 3.5 Add Reset to Defaults button with `RotateCcw` icon (ghost variant, `min-h-[44px]`, `w-full sm:w-auto`)
+  - [ ] 3.6 Add AlertDialog confirmation for reset: title "Reset display settings?", description listing what resets
+  - [ ] 3.7 Reset handler: set `accessibilityFont: false, contentDensity: 'default', reduceMotion: 'system'`
+  - [ ] 3.8 Props: `settings: AppSettings`, `onSettingsChange: (updates: Partial<AppSettings>) => void`
+
+- [ ] Task 4: Integrate section into Settings page (AC: 1, 5)
+  - [ ] 4.1 Import `DisplayAccessibilitySection` in `src/app/pages/Settings.tsx`
+  - [ ] 4.2 Place between AgeRangeSection (line ~913) and EngagementPreferences (line ~916)
+  - [ ] 4.3 Pass `settings` state and an `onSettingsChange` handler that calls `saveSettings()` + dispatches `settingsUpdated` event
+  - [ ] 4.4 Verify mobile responsiveness: controls stack on <640px, reset button full-width
+
+## Design Guidance
+
+- **Section pattern:** Follow AgeRangeSection at `src/app/pages/Settings.tsx:85-150` exactly
+- **Icon badge:** `<div className="rounded-full bg-brand-soft p-2"><Eye className="h-5 w-5 text-brand" /></div>`
+- **Header background:** `border-b border-border/50 bg-surface-sunken/30`
+- **Card content padding:** `p-6`
+- **Subsection layout:** Label + description on left, control on right via `flex justify-between items-center`
+- **Mobile:** `flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2`
+- **Reset button:** `<Button variant="ghost" className="min-h-[44px] w-full sm:w-auto">` with RotateCcw icon
+- **AlertDialog actions:** Cancel (outline) + Reset (brand variant)
+- **All colors must use design tokens** -- no hardcoded Tailwind colors
+
+## Implementation Notes
+
+- **Settings persistence pattern:** `src/lib/settings.ts` uses `getSettings()` / `saveSettings()` with localStorage. New fields extend `AppSettings` interface with defaults in the `defaults` object. Settings page calls `saveSettings(updated)` then `window.dispatchEvent(new Event('settingsUpdated'))`.
+- **Insertion point:** Between AgeRangeSection (~line 913) and EngagementPreferences (~line 916) in Settings.tsx
+- **Existing components used:** Card, CardHeader, CardContent, Button, AlertDialog, Separator, Label, Switch, RadioGroup -- all from `@/app/components/ui/`
+- **No new routes needed** -- inline section within existing Settings page
+- **Placeholder subsections:** Font, Density, and Motion subsections should show label + description + disabled control (Switch for Font/Density, RadioGroup for Motion). S02-S04 will wire them up.
+
+## Testing Notes
+
+- **Unit test:** `getSettings()` returns correct defaults for new fields when no saved settings exist
+- **Unit test:** `saveSettings()` persists new fields to localStorage
+- **Unit test:** DisplayAccessibilitySection renders with correct title, description, and icon
+- **Unit test:** Reset button triggers AlertDialog; confirming resets all 3 fields to defaults
+- **E2E test:** `tests/e51-s01-settings-infrastructure.spec.ts`
+  - Verify section appears on Settings page between Age Range and Engagement Preferences
+  - Verify reset flow: click reset -> dialog appears -> confirm -> fields reset -> toast shown
+  - Verify mobile layout: controls stack, reset button full-width at 375px viewport
+
+## Dependencies
+
+- **Depends on:** None (foundation story)
+- **Enables:** E51-S02, E51-S03, E51-S04 (all depend on AppSettings fields + section shell)
+
+## Pre-Review Checklist
+
+Before requesting `/review-story`, verify:
+
+- [ ] All changes committed (`git status` clean)
+- [ ] No error swallowing -- catch blocks log AND surface errors
+- [ ] useEffect hooks have cleanup functions (ignore flags for async, event listener removal)
+- [ ] No optimistic UI updates before persistence -- state updates after DB write succeeds
+- [ ] Type guards on all dynamic lookups (e.g., `LABELS[type]` when type can be empty)
+- [ ] E2E afterEach cleanup uses `await` (not fire-and-forget)
+- [ ] Date handling uses `toLocaleDateString('sv-SE')` pattern (not `toISOString().split('T')[0]`)
+- [ ] Read [engineering-patterns.md](../engineering-patterns.md) for full patterns reference
+- [ ] If story calls external APIs: CSP allowlist configured (see engineering-patterns.md CSP Configuration)
+
+## Design Review Feedback
+
+[Populated by /review-story -- Playwright MCP findings]
+
+## Code Review Feedback
+
+[Populated by /review-story -- adversarial code review findings]
+
+## Challenges and Lessons Learned
+
+[Document issues, solutions, and patterns worth remembering]
