@@ -34,7 +34,7 @@ So that I can create, edit, and delete recurring study blocks that persist acros
 
 - [ ] Task 1: Add `StudySchedule` interface to types (AC: 1, 2)
   - [ ] 1.1 Add `StudySchedule` interface after `CourseReminder` (line ~399) in `src/data/types.ts`
-  - [ ] 1.2 Fields: id (string UUID), courseId? (string), learningPathId? (string), title (string), days (DayOfWeek[]), startTime (string "HH:MM"), durationMinutes (number, default 60), recurrence ('weekly' | 'daily' | 'once'), reminderMinutes (number, default 15), enabled (boolean), timezone (string IANA), createdAt (string ISO), updatedAt (string ISO)
+  - [ ] 1.2 Fields: id (string UUID), courseId? (string), learningPathId? (string), title (string), days (DayOfWeek[]), startTime (string "HH:MM"), durationMinutes (number, default 60), recurrence ('weekly' | 'daily'), reminderMinutes (number, default 15), enabled (boolean), timezone (string IANA), createdAt (string ISO), updatedAt (string ISO). NOTE: `'once'` recurrence removed from Phase 1-2 — one-time events need a `date` field which is deferred to Phase 3 (Edge case review HIGH EC-34)
   - [ ] 1.3 Reuse existing `DayOfWeek` type from `src/data/types.ts:381-388`
 
 - [ ] Task 2: Add `studySchedules` table to Dexie v28 (AC: 1)

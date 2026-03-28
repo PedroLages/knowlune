@@ -53,6 +53,9 @@ So that I can see my study blocks in Google Calendar, Apple Calendar, or Outlook
   - [ ] 3.7 Query user's study schedules from Supabase (synced from Dexie)
   - [ ] 3.8 Generate iCal using `ical-generator`: VCALENDAR with PRODID, X-WR-CALNAME, per-schedule VEVENTs with RRULE and VALARM
   - [ ] 3.9 Return with `Content-Type: text/calendar; charset=utf-8` and `Content-Disposition: attachment; filename="knowlune.ics"`
+  - [ ] 3.10 Set response headers: `Cache-Control: no-cache, no-store, must-revalidate`, `Pragma: no-cache`, `Expires: 0` — prevents calendar apps or proxies from aggressively caching stale feed data (Edge case review HIGH EC-07)
+  - [ ] 3.11 Wrap all Supabase queries in try-catch: on failure return `503 Service Unavailable` with `Retry-After: 300` header (Edge case review HIGH EC-27)
+  - [ ] 3.12 If token lookup succeeds but schedule/flashcard query fails, return feed with available data (graceful degradation — partial feed is better than 500 error)
 
 - [ ] Task 4: Mount calendar route in Express server (AC: 1)
   - [ ] 4.1 Import `calendarRouter` in `server/index.ts`
@@ -63,7 +66,7 @@ So that I can see my study blocks in Google Calendar, Apple Calendar, or Outlook
 
 **Architecture decisions:**
 - Calendar route uses a different auth model than the rest of the API: token-in-URL, no JWT. This matches industry patterns (Google Calendar, Todoist, Canvas LMS).
-- The route is registered BEFORE the JWT/entitlement middleware chain so it's not subject to those checks.
+- **CRITICAL:** The route MUST be registered BEFORE the JWT/entitlement middleware chain so it's not subject to those checks. Add an integration test that verifies: request feed without JWT → expect 200. Add `// MUST BE BEFORE JWT MIDDLEWARE` comment at mount point. (Edge case review HIGH EC-30)
 - `ical-generator` handles VTIMEZONE auto-generation, which is critical for DST-correct recurring events.
 - UID format `schedule-{id}@knowlune.app` ensures calendar apps can update existing events when the feed is re-fetched.
 - SRS event generation is stubbed in this story — full implementation in E50-S06.
@@ -105,7 +108,7 @@ friday → FR, saturday → SA, sunday → SU
 **Edge cases:**
 - User with 0 study schedules — feed should still be valid VCALENDAR with no VEVENTs
 - Schedule with `recurrence: 'daily'` — RRULE should be `FREQ=DAILY` (no BYDAY)
-- Schedule with `recurrence: 'once'` — no RRULE at all
+- ~~Schedule with `recurrence: 'once'`~~ — removed from Phase 1-2 (see E50-S01 amendment)
 - Schedule with `reminderMinutes: 0` — no VALARM
 
 ## Pre-Review Checklist

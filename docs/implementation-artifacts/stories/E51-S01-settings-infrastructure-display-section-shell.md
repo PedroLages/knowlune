@@ -54,6 +54,7 @@ so that I have a dedicated place to control how content looks and moves.
   - [ ] 2.3 Add `reduceMotion: 'system' | 'on' | 'off'` to the `AppSettings` interface
   - [ ] 2.4 Export type aliases: `type ContentDensity = 'default' | 'spacious'` and `type ReduceMotion = 'system' | 'on' | 'off'`
   - [ ] 2.5 Add defaults: `accessibilityFont: false`, `contentDensity: 'default'`, `reduceMotion: 'system'`
+  - [ ] 2.6 Add Zod validation for persisted settings: validate localStorage values on read, fallback to defaults if corrupted (e.g., `reduceMotion: 'invalid'` → `'system'`). Prevents crashes from manually edited or corrupted localStorage. (Edge case review HIGH #4)
 
 - [ ] Task 3: Create `DisplayAccessibilitySection` component shell (AC: 1, 2, 3)
   - [ ] 3.1 Create `src/app/components/settings/DisplayAccessibilitySection.tsx`

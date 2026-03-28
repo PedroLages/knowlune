@@ -45,7 +45,8 @@ So that I can subscribe in my calendar app and revoke access if the URL is compr
   - [ ] 2.3 Implement `regenerateFeedToken()` — deletes old row, inserts new token (old URL instantly invalidated)
   - [ ] 2.4 Implement `loadFeedToken()` — queries Supabase for current user's token
   - [ ] 2.5 Implement `disableFeed()` — deletes token row from Supabase (disables subscription)
-  - [ ] 2.6 Token generation: `crypto.randomBytes(20).toString('hex')` for 160-bit entropy (or use Supabase RPC if browser crypto unavailable for randomBytes)
+  - [ ] 2.6 Token generation: Use Web Crypto API (NOT Node's crypto.randomBytes which crashes in browser): `Array.from(crypto.getRandomValues(new Uint8Array(20)), b => b.toString(16).padStart(2, '0')).join('')` for 160-bit entropy (Edge case review HIGH EC-36)
+  - [ ] 2.7 Add debounce/disable on feed toggle Switch during async Supabase operations to prevent race condition from rapid on/off toggling (Edge case review HIGH EC-38)
 
 - [ ] Task 3: Add client-side `.ics` download function (AC: 3)
   - [ ] 3.1 Add `generateIcsDownload(schedules: StudySchedule[])` to `src/lib/icalFeedGenerator.ts`
@@ -59,7 +60,7 @@ So that I can subscribe in my calendar app and revoke access if the URL is compr
 **Architecture decisions:**
 - Token stored in Supabase (server-side data), not Dexie — feed tokens must be accessible by the Express server for validation.
 - One active token per user enforced by `unique_user_token` constraint — regeneration replaces the old token atomically.
-- Token generation uses `crypto.randomBytes(20).toString('hex')` for 160-bit entropy — sufficient for unguessable URLs.
+- Token generation uses Web Crypto API `crypto.getRandomValues(new Uint8Array(20))` for 160-bit entropy — sufficient for unguessable URLs. Do NOT use Node's `crypto.randomBytes` (crashes in browser).
 - Client-side `.ics` download reads from Dexie (offline-capable) but does NOT include SRS events (those require server-side flashcard aggregation).
 - `URL.revokeObjectURL()` must be called after download to prevent memory leaks.
 

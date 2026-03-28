@@ -82,8 +82,29 @@ so that I can use Knowlune comfortably without triggering motion sickness.
   - [ ] 3.2 Import `MotionConfig` from `motion/react`
   - [ ] 3.3 Call `const { shouldReduceMotion } = useReducedMotion()` in App component
   - [ ] 3.4 Add useEffect that toggles `.reduce-motion` class on `document.documentElement` based on `shouldReduceMotion`
-  - [ ] 3.5 Wrap `<RouterProvider>` (and siblings) in `<MotionConfig reducedMotion={shouldReduceMotion ? 'always' : 'never'}>`
-  - [ ] 3.6 Place MotionConfig inside ThemeProvider but wrapping RouterProvider
+  - [ ] 3.5 Wrap `<RouterProvider>`, `<Toaster>`, AND `<WelcomeWizard>` in `<MotionConfig reducedMotion={shouldReduceMotion ? 'always' : 'never'}>` — MotionConfig must cover ALL animated siblings, not just RouterProvider (Edge case review HIGH #6)
+  - [ ] 3.6 Place MotionConfig inside ThemeProvider but wrapping ALL children
+
+- [ ] Task 5: Remove local MotionConfig overrides across codebase (AC: 3, 4)
+  - [ ] 5.1 Search for all `MotionConfig reducedMotion="user"` instances — there are 17 across the codebase that will shadow the root-level config (Edge case review HIGH #1)
+  - [ ] 5.2 Remove each local `MotionConfig` wrapper, leaving only the root-level one in App.tsx
+  - [ ] 5.3 If any component needs a specific motion behavior, use `useReducedMotion()` hook directly instead
+
+- [ ] Task 6: Update confetti/canvas components to respect app setting (AC: 3)
+  - [ ] 6.1 Find 5 confetti/canvas components that check `window.matchMedia('(prefers-reduced-motion: reduce)')` directly instead of the app-level setting (Edge case review HIGH #2)
+  - [ ] 6.2 Replace OS media query check with `useReducedMotion()` hook's `shouldReduceMotion` value
+  - [ ] 6.3 When `shouldReduceMotion` is true, skip confetti/canvas animations entirely
+
+- [ ] Task 7: Add blocking script in index.html for flash prevention (AC: 6)
+  - [ ] 7.1 Add inline `<script>` in `index.html` `<head>` BEFORE any stylesheet links
+  - [ ] 7.2 Script reads `reduceMotion` from localStorage settings, applies `.reduce-motion` class to `<html>` synchronously
+  - [ ] 7.3 This prevents the 50-200ms flash of animations before React hydrates (Edge case review HIGH #3)
+  - [ ] 7.4 Pattern: `try { const s = JSON.parse(localStorage.getItem('knowlune-settings')); if (s?.reduceMotion === 'on') document.documentElement.classList.add('reduce-motion'); } catch {}`
+
+- [ ] Task 8: Resolve conflict with existing "animations" toggle (AC: 3)
+  - [ ] 8.1 Review the existing "animations" toggle in Engagement Preferences section of Settings
+  - [ ] 8.2 Decide: either remove the old toggle (replace with new 3-state motion control) or wire it to delegate to the new `reduceMotion` setting (Edge case review HIGH #5)
+  - [ ] 8.3 Add implementation note in code explaining the consolidation
 
 - [ ] Task 4: Add motion RadioGroup to DisplayAccessibilitySection (AC: 5)
   - [ ] 4.1 Open `src/app/components/settings/DisplayAccessibilitySection.tsx`
