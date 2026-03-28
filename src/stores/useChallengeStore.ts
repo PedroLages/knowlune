@@ -55,8 +55,7 @@ export const useChallengeStore = create<ChallengeState>((set, get) => ({
         challenges.map(async challenge => {
           const raw = await calculateProgress(challenge)
           const currentProgress = Math.min(raw, challenge.targetValue)
-          const justCompleted =
-            currentProgress >= challenge.targetValue && !challenge.completedAt
+          const justCompleted = currentProgress >= challenge.targetValue && !challenge.completedAt
           const completedAt = justCompleted ? new Date().toISOString() : challenge.completedAt
 
           // E43-S07: Emit achievement event for newly completed challenges

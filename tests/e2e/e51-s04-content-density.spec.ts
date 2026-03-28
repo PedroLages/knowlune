@@ -43,10 +43,7 @@ async function goToSettingsWithSpaciousEnabled(page: import('@playwright/test').
 }
 
 /** Navigate to a page with spacious mode already enabled */
-async function goToPageWithSpaciousEnabled(
-  page: import('@playwright/test').Page,
-  path: string
-) {
+async function goToPageWithSpaciousEnabled(page: import('@playwright/test').Page, path: string) {
   await page.addInitScript(() => {
     const stored = localStorage.getItem('app-settings')
     const settings = stored ? JSON.parse(stored) : {}
@@ -206,9 +203,7 @@ test.describe('E51-S04: Spacious Content Density Mode', () => {
     expect(spaciousPadding).toBe('1rem')
   })
 
-  test('AC6 — page reload with spacious enabled re-applies .spacious class', async ({
-    page,
-  }) => {
+  test('AC6 — page reload with spacious enabled re-applies .spacious class', async ({ page }) => {
     await goToSettingsWithSpaciousEnabled(page)
 
     // Verify .spacious is applied on initial load

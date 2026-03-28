@@ -143,8 +143,6 @@ describe('useAccessibilityFont', () => {
       expect(saveSettings).toHaveBeenCalledWith({ accessibilityFont: false })
     })
 
-    expect(toast.error).toHaveBeenCalledWith(
-      'Could not load accessibility font. Please try again.',
-    )
+    expect(toast.error).toHaveBeenCalledWith('Could not load accessibility font. Please try again.')
   })
 })

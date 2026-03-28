@@ -13,12 +13,10 @@ const mockUnsubscribe = vi.fn()
 vi.mock('@/lib/auth/supabase', () => ({
   supabase: {
     auth: {
-      onAuthStateChange: vi.fn(
-        (cb: (event: AuthChangeEvent, session: Session | null) => void) => {
-          authChangeCallback = cb
-          return { data: { subscription: { unsubscribe: mockUnsubscribe } } }
-        }
-      ),
+      onAuthStateChange: vi.fn((cb: (event: AuthChangeEvent, session: Session | null) => void) => {
+        authChangeCallback = cb
+        return { data: { subscription: { unsubscribe: mockUnsubscribe } } }
+      }),
     },
   },
 }))

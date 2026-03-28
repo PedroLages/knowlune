@@ -87,9 +87,7 @@ test.describe('E51-S03: Atkinson Hyperlegible Font Toggle', () => {
     expect(fontBody).toContain('DM Sans')
   })
 
-  test('AC3 — page reload with font enabled re-applies Atkinson Hyperlegible', async ({
-    page,
-  }) => {
+  test('AC3 — page reload with font enabled re-applies Atkinson Hyperlegible', async ({ page }) => {
     await goToSettingsWithFontEnabled(page)
 
     // Wait for font to load on initial navigation

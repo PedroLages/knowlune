@@ -38,13 +38,17 @@ describe('SessionExpiredBanner', () => {
 
   it('does NOT render when sessionExpired is false', () => {
     renderBanner(false)
-    expect(screen.queryByText('Session expired. Sign in to resume syncing.')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('Session expired. Sign in to resume syncing.')
+    ).not.toBeInTheDocument()
   })
 
   it('does NOT render when offline (offline banner takes priority)', () => {
     useAuthStore.setState({ sessionExpired: true })
     renderBanner(true)
-    expect(screen.queryByText('Session expired. Sign in to resume syncing.')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('Session expired. Sign in to resume syncing.')
+    ).not.toBeInTheDocument()
   })
 
   it('dismiss button sets sessionStorage flag', async () => {
@@ -56,7 +60,9 @@ describe('SessionExpiredBanner', () => {
 
     expect(sessionStorage.getItem(SESSION_DISMISSED_KEY)).toBe('true')
     // Banner should disappear after dismiss
-    expect(screen.queryByText('Session expired. Sign in to resume syncing.')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('Session expired. Sign in to resume syncing.')
+    ).not.toBeInTheDocument()
   })
 
   it('"Sign in" link stores current route in sessionStorage', async () => {
@@ -74,6 +80,8 @@ describe('SessionExpiredBanner', () => {
     useAuthStore.setState({ sessionExpired: true })
     renderBanner(false)
 
-    expect(screen.queryByText('Session expired. Sign in to resume syncing.')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('Session expired. Sign in to resume syncing.')
+    ).not.toBeInTheDocument()
   })
 })

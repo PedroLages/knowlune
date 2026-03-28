@@ -168,9 +168,7 @@ export function NotificationCenter() {
                       'flex items-start gap-2.5 px-3 py-2 text-left transition-colors hover:bg-accent/50 cursor-pointer',
                       isUnread && 'bg-brand-soft/30'
                     )}
-                    onClick={() =>
-                      handleNotificationClick(notification.id, notification.actionUrl)
-                    }
+                    onClick={() => handleNotificationClick(notification.id, notification.actionUrl)}
                   >
                     {/* Icon */}
                     <div
