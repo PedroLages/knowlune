@@ -36,18 +36,7 @@ function makeNotification(overrides: Partial<Notification> = {}): Notification {
 beforeEach(async () => {
   await Dexie.delete('ElearningDB')
   vi.resetModules()
-  // Freeze Date.now and new Date() to FIXED_DATE
-  vi.spyOn(Date, 'now').mockReturnValue(FIXED_DATE.getTime())
-  vi.spyOn(globalThis, 'Date').mockImplementation((...args: ConstructorParameters<typeof Date>) => {
-    if (args.length === 0)
-      return new (
-        vi.mocked(Date).getMockImplementation?.() ?? (Date as unknown as { new (): Date })
-      )(FIXED_DATE.getTime())
-    // @ts-expect-error -- spread into Date constructor
-    return new (Object.getPrototypeOf(FIXED_DATE).constructor)(...args)
-  })
-  // Restore real Date for internal use but mock the return
-  vi.restoreAllMocks()
+  // Freeze Date.now to FIXED_DATE for deterministic timestamps
   vi.spyOn(Date, 'now').mockReturnValue(FIXED_DATE.getTime())
 
   // Re-mock persistWithRetry after resetModules
