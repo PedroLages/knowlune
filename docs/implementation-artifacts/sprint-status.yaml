@@ -519,3 +519,93 @@ development_status:
   # ──────────────────────────────────────────────────
   epic-51: in-progress
   51-1-settings-infrastructure-display-section-shell: done
+  51-2-reduced-motion-toggle-global-motionconfig: backlog
+  51-3-atkinson-hyperlegible-font-toggle: backlog
+  51-4-spacious-content-density-mode: backlog
+
+  # ──────────────────────────────────────────────────
+  # Epic 43: Wave 1 Foundation Fixes
+  # Source: epics-wave1-foundation.md
+  # NOTE: S01-S03 resolved informally during E33 test paydown
+  # ──────────────────────────────────────────────────
+  epic-43: backlog
+  43-1-store-mock-fixes: done  # resolved during E33 — all 3,429 tests passing
+  43-2-component-mock-fixes: done  # resolved during E33
+  43-3-e2e-test-fixes: done  # resolved during E33
+  43-4-session-expiry-handling: backlog
+  43-5-course-completion-pct-fix: backlog
+  43-6-notifications-data-layer: backlog
+  43-7-notifications-triggers-wiring: backlog
+
+  # ──────────────────────────────────────────────────
+  # Epic 50: Calendar Integration Phase 1-2
+  # Source: epics-calendar.md
+  # ──────────────────────────────────────────────────
+  epic-50: backlog
+  50-1-study-schedule-data-model: backlog
+  50-2-ical-feed-generation-endpoint: backlog
+  50-3-feed-url-management: backlog
+  50-4-calendar-settings-ui: backlog
+  50-5-schedule-editor-course-integration: backlog
+  50-6-srs-events-overview-widget: backlog
+
+  # ──────────────────────────────────────────────────
+  # Epic 53: PKM Export Phase 1
+  # Source: epics.md
+  # ──────────────────────────────────────────────────
+  epic-53: backlog
+  53-1-flashcard-bookmark-markdown-export: backlog
+  53-2-anki-apkg-export: backlog
+  53-3-pkm-batch-export-settings-ui: backlog
+
+  # ──────────────────────────────────────────────────
+  # Epic 54: Lesson Flow Improvements
+  # Source: epics.md
+  # ──────────────────────────────────────────────────
+  epic-54: backlog
+  54-1-wire-lesson-flow-imported-player: backlog
+  54-2-wire-lesson-flow-youtube-player: backlog
+  54-3-completion-checkmarks-imported-course-detail: backlog
+
+  # ──────────────────────────────────────────────────
+  # Epic 55: Stitch UI Phase 1
+  # Source: epics-ux-overhaul.md
+  # ──────────────────────────────────────────────────
+  epic-55: backlog
+  55-1-pomodoro-zustand-store: backlog
+  55-2-focus-timer-dashboard-widget: backlog
+  55-3-todays-focus-stats-card: backlog
+  55-4-streak-calendar-month-view: backlog
+  55-5-streak-header-upgrade: backlog
+
+  # ──────────────────────────────────────────────────
+  # Epic 52: ML Phase 1 Hybrid
+  # Source: epics-ml-phase1-hybrid.md (4 stories — simplified scope)
+  # NOTE: Story files created by /start-story from epic definition
+  # ──────────────────────────────────────────────────
+  epic-52: backlog
+  52-1-simplified-quiz-generation: backlog
+  52-2-quiz-generation-ui: backlog
+  52-3-basic-quiz-quality-control: backlog
+  52-4-tag-based-recommendations: backlog
+
+  # ──────────────────────────────────────────────────
+  # Epic 56: Knowledge Map Phase 1
+  # Source: epics.md
+  # ──────────────────────────────────────────────────
+  epic-56: backlog
+  56-1-topic-resolution-service: backlog
+  56-2-knowledge-score-calculation-zustand-store: backlog
+  56-3-knowledge-map-overview-widget: backlog
+  56-4-dedicated-knowledge-map-page: backlog
+
+  # ──────────────────────────────────────────────────
+  # Epic 57: AI Tutoring Phase 1-2
+  # Source: epics.md
+  # ──────────────────────────────────────────────────
+  epic-57: backlog
+  57-1-tutor-chat-ui-context-injection: backlog
+  57-2-tutor-hook-streaming: backlog
+  57-3-conversation-persistence: backlog
+  57-4-socratic-prompt-hint-ladder: backlog
+  57-5-rag-grounded-answers: backlog
