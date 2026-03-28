@@ -217,9 +217,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
           })
         )
 
-        // E43-S07: Check if streak hit a milestone threshold
+        // E43-S07: Only emit streak:milestone for meaningful thresholds.
+        // The service also filters, but the store is the first gate to avoid
+        // unnecessary event traffic for every positive streak.
+        const STREAK_THRESHOLDS = [7, 14, 30, 60, 100, 365] as const
         const currentStreak = getCurrentStreak()
-        if (currentStreak > 0) {
+        if (currentStreak > 0 && STREAK_THRESHOLDS.includes(currentStreak as (typeof STREAK_THRESHOLDS)[number])) {
           appEventBus.emit({ type: 'streak:milestone', days: currentStreak })
         }
       })

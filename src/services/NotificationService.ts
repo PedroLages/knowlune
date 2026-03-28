@@ -17,7 +17,15 @@ import { db } from '@/db'
 /** Streak milestones that trigger notifications */
 const STREAK_MILESTONES = [7, 14, 30, 60, 100, 365] as const
 
-/** Active unsubscribe functions (populated by init, cleared by destroy) */
+/**
+ * Active unsubscribe functions (populated by init, cleared by destroy).
+ *
+ * Module-level mutable state is intentional here: NotificationService is a
+ * singleton that lives for the app's lifetime. `initNotificationService()`
+ * is idempotent (calls destroy first), so there is no risk of leaked
+ * subscriptions. Tests should call `destroyNotificationService()` in
+ * afterEach to reset state.
+ */
 let unsubscribers: Array<() => void> = []
 
 /**
@@ -25,14 +33,14 @@ let unsubscribers: Array<() => void> = []
  * Uses the Dexie `notifications` table to avoid duplicates.
  */
 async function hasReviewDueToday(): Promise<boolean> {
-  const todayStart = new Date()
-  todayStart.setHours(0, 0, 0, 0)
-  const todayIso = todayStart.toISOString()
+  // Use local-time YYYY-MM-DD comparison to avoid timezone boundary issues.
+  // toLocaleDateString('sv-SE') produces 'YYYY-MM-DD' in the user's local timezone.
+  const todayStr = new Date().toLocaleDateString('sv-SE')
 
   const existing = await db.notifications
     .where('type')
     .equals('review-due')
-    .filter(n => n.createdAt >= todayIso)
+    .filter(n => new Date(n.createdAt).toLocaleDateString('sv-SE') === todayStr)
     .first()
 
   return existing !== undefined
@@ -70,6 +78,9 @@ async function handleEvent(event: AppEvent): Promise<void> {
       await store.create({
         type: 'import-finished',
         title: 'Course Imported',
+        // Note: lessonCount reflects items detected at import time. Future lesson
+        // types (e.g., interactive exercises) may not be counted if the import
+        // pipeline doesn't recognise them yet.
         message: `"${event.courseName}" is ready with ${event.lessonCount} lesson${event.lessonCount === 1 ? '' : 's'}.`,
         actionUrl: `/courses/${event.courseId}`,
         metadata: {
@@ -133,7 +144,7 @@ export function initNotificationService(): void {
     unsubscribers.push(unsub)
   }
 
-  console.log('[NotificationService] Initialized with', eventTypes.length, 'event subscriptions')
+  console.debug('[NotificationService] Initialized with', eventTypes.length, 'event subscriptions')
 }
 
 /** Destroy the notification service — unsubscribe from all events. */
