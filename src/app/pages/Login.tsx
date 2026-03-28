@@ -34,7 +34,6 @@ export function Login() {
     if (initialized && user) {
       navigateToReturnRoute()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialized, user, navigate])
 
   function handleSuccess() {

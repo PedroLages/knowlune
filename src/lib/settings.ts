@@ -130,15 +130,9 @@ export function hydrateSettingsFromSupabase(
 
   // displayName: custom metadata 'displayName' > Google 'full_name' > default "Student"
   if (current.displayName === defaults.displayName || current.displayName === '') {
-    if (
-      typeof userMetadata.displayName === 'string' &&
-      userMetadata.displayName.length > 0
-    ) {
+    if (typeof userMetadata.displayName === 'string' && userMetadata.displayName.length > 0) {
       updates.displayName = userMetadata.displayName
-    } else if (
-      typeof userMetadata.full_name === 'string' &&
-      userMetadata.full_name.length > 0
-    ) {
+    } else if (typeof userMetadata.full_name === 'string' && userMetadata.full_name.length > 0) {
       updates.displayName = userMetadata.full_name as string
     }
   }

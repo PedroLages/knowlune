@@ -430,18 +430,14 @@ describe('settings', () => {
       hydrateSettingsFromSupabase({
         avatar_url: 'https://lh3.googleusercontent.com/a/photo123',
       })
-      expect(getSettings().profilePhotoUrl).toBe(
-        'https://lh3.googleusercontent.com/a/photo123'
-      )
+      expect(getSettings().profilePhotoUrl).toBe('https://lh3.googleusercontent.com/a/photo123')
     })
 
     it('falls back to picture field when avatar_url missing', () => {
       hydrateSettingsFromSupabase({
         picture: 'https://lh3.googleusercontent.com/a/fallback',
       })
-      expect(getSettings().profilePhotoUrl).toBe(
-        'https://lh3.googleusercontent.com/a/fallback'
-      )
+      expect(getSettings().profilePhotoUrl).toBe('https://lh3.googleusercontent.com/a/fallback')
     })
 
     it('rejects non-HTTPS avatar URLs (e.g., javascript:alert(1))', () => {
@@ -478,9 +474,7 @@ describe('settings', () => {
       hydrateSettingsFromSupabase({
         avatar_url: 'https://lh3.googleusercontent.com/a/photo',
       })
-      expect(getSettings().profilePhotoUrl).toBe(
-        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg=='
-      )
+      expect(getSettings().profilePhotoUrl).toBe('data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==')
     })
 
     it('custom displayName metadata key wins over full_name', () => {
