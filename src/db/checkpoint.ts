@@ -1,8 +1,8 @@
 /**
- * Dexie Migration Checkpoint — v27
+ * Dexie Migration Checkpoint — v28
  *
- * This file provides a frozen snapshot of the complete IndexedDB schema at version 27.
- * Fresh installs skip the 27 incremental version declarations and create the full
+ * This file provides a frozen snapshot of the complete IndexedDB schema at version 28.
+ * Fresh installs skip the 28 incremental version declarations and create the full
  * schema in a single step. Existing users at lower versions still run incremental
  * migrations through the legacy version chain in schema.ts.
  *
@@ -20,14 +20,14 @@
  * a single `db.version(CHECKPOINT_VERSION).stores(CHECKPOINT_SCHEMA)` call
  * for fresh installs.
  */
-export const CHECKPOINT_VERSION = 27
+export const CHECKPOINT_VERSION = 28
 
 /**
  * Complete schema snapshot at CHECKPOINT_VERSION.
- * This is the result of applying all migrations v1–v27 on a fresh database.
+ * This is the result of applying all migrations v1–v28 on a fresh database.
  *
  * IMPORTANT: This must exactly match the schema produced by running all
- * 27 incremental migrations. The unit test `schema-checkpoint.test.ts`
+ * 28 incremental migrations. The unit test `schema-checkpoint.test.ts`
  * enforces this invariant.
  */
 export const CHECKPOINT_SCHEMA: Record<string, string> = {
@@ -60,4 +60,5 @@ export const CHECKPOINT_SCHEMA: Record<string, string> = {
   youtubeVideoCache: 'videoId, expiresAt',
   youtubeTranscripts: '[courseId+videoId], courseId, videoId, status',
   youtubeChapters: 'id, courseId, order',
+  notifications: 'id, type, createdAt, readAt, dismissedAt',
 }

@@ -33,7 +33,7 @@
 
 **"Learn on any device, continue everywhere."**
 
-Knowlune is local-first — all user data lives in 29 IndexedDB tables (Dexie v27). This means data is fast, works offline, and stays private. But it also means your study progress, notes, and flashcards are trapped on a single device.
+Knowlune is local-first — all user data lives in 30 IndexedDB tables (Dexie v28). This means data is fast, works offline, and stays private. But it also means your study progress, notes, and flashcards are trapped on a single device.
 
 Sync adds cross-device continuity while preserving the local-first architecture.
 
@@ -373,11 +373,13 @@ try {
 
 **Key insight: No compound PK changes needed.** `userId` is added as a regular indexed field, not part of primary keys. This avoids table recreation and data loss risk.
 
-**v28 — P0 Tables (Sync Epic 1):**
+**Note:** v28 is claimed by the notifications data layer (E43-S06). Sync migrations start at v29.
+
+**v29 — P0 Tables (Sync Epic 1):**
 
 ```typescript
 // src/db/schema.ts
-db.version(28).stores({
+db.version(29).stores({
   // Add userId + syncedAt indexes to P0 tables
   contentProgress: '[courseId+itemId], courseId, itemId, status, userId, syncedAt',
   studySessions: 'id, [courseId+contentItemId], courseId, contentItemId, startTime, endTime, userId, syncedAt',
@@ -404,10 +406,10 @@ db.version(28).stores({
 })
 ```
 
-**v29 — P1 Tables (Sync Epic 3):**
+**v30 — P1 Tables (Sync Epic 3):**
 
 ```typescript
-db.version(29).stores({
+db.version(30).stores({
   notes: 'id, [courseId+videoId], courseId, *tags, createdAt, updatedAt, userId, syncedAt',
   bookmarks: 'id, [courseId+lessonId], courseId, lessonId, createdAt, userId, syncedAt',
   flashcards: 'id, courseId, noteId, nextReviewAt, createdAt, userId, syncedAt',
@@ -429,10 +431,10 @@ db.version(29).stores({
 })
 ```
 
-**v30 — P2-P3 Tables (Sync Epic 4):**
+**v31 — P2-P3 Tables (Sync Epic 4):**
 
 ```typescript
-db.version(30).stores({
+db.version(31).stores({
   importedCourses: 'id, name, importedAt, status, *tags, source, userId, syncedAt',
   importedVideos: 'id, courseId, filename, youtubeVideoId, userId, syncedAt',
   importedPdfs: 'id, courseId, filename, userId, syncedAt',
@@ -454,7 +456,7 @@ db.version(30).stores({
 
 **Checkpoint update (`src/db/checkpoint.ts`):**
 
-Update `CHECKPOINT_VERSION` to 30 and `CHECKPOINT_SCHEMA` to include all sync fields + new tables. Fresh installs skip v1-v29 migrations entirely.
+Update `CHECKPOINT_VERSION` to 31 and `CHECKPOINT_SCHEMA` to include all sync fields + new tables. Fresh installs skip v1-v30 migrations entirely.
 
 ### 4.2 TypeScript Interface Updates
 
@@ -1013,7 +1015,7 @@ test('sync progress across devices', async ({ browser }) => {
 
 | Story | Scope |
 |-------|-------|
-| S01 | Dexie v28 migration — add sync fields to P0 tables |
+| S01 | Dexie v29 migration — add sync fields to P0 tables |
 | S02 | Add syncQueue + syncMetadata tables to Dexie |
 | S03 | Create `syncableWrite()` wrapper function |
 | S04 | Build sync engine core (upload/download/apply phases) |
@@ -1059,7 +1061,7 @@ test('sync progress across devices', async ({ browser }) => {
 
 | Story | Scope |
 |-------|-------|
-| S01 | Dexie v29 migration — add sync fields to P1 tables |
+| S01 | Dexie v30 migration — add sync fields to P1 tables |
 | S02 | Create flashcardReviews table (Dexie + Postgres) |
 | S03 | Supabase migrations: P1 tables + RLS |
 | S04 | Wire useNoteStore to syncableWrite() |
@@ -1080,7 +1082,7 @@ test('sync progress across devices', async ({ browser }) => {
 
 | Story | Scope |
 |-------|-------|
-| S01 | Dexie v30 migration — add sync fields to P2-P3 tables |
+| S01 | Dexie v31 migration — add sync fields to P2-P3 tables |
 | S02 | Supabase migrations: P2-P3 tables + RLS |
 | S03 | Wire remaining stores (courses, videos, pdfs, paths, challenges) |
 | S04 | Strip non-serializable fields (directoryHandle, fileHandle) on sync |
@@ -1104,7 +1106,7 @@ If time is limited, a stripped-down P0-only sync can ship in ~half an epic (4-5 
 
 | What | How |
 |------|-----|
-| v28 migration | Add userId + syncedAt to contentProgress + studySessions |
+| v29 migration | Add userId + syncedAt to contentProgress + studySessions |
 | 2 Postgres tables | content_progress + study_sessions with RLS |
 | Simple sync | On app startup: upload unsynced records, download all server records, LWW merge |
 | No Realtime | Polling only (on startup + manual trigger) |
@@ -1141,7 +1143,7 @@ If time is limited, a stripped-down P0-only sync can ship in ~half an epic (4-5 
 
 | File | Purpose |
 |------|---------|
-| `src/db/schema.ts` | Dexie migration chain — add v28-v30 |
+| `src/db/schema.ts` | Dexie migration chain — add v29-v31 (v28 = notifications) |
 | `src/db/checkpoint.ts` | Checkpoint schema — update for sync fields |
 | `src/data/types.ts` | TypeScript interfaces — add SyncableFields mixin |
 | `src/lib/spacedRepetition.ts` | SM-2 pure functions — reuse for review replay |
@@ -1290,7 +1292,7 @@ These are low-likelihood or self-correcting. Revisit if assumptions change.
 | 2.6 | SM-2 algorithm version drift across app versions | All devices auto-update; version skew window is small. `calculateNextReview()` is stable. | If FSRS migration changes the algorithm |
 | 3.2 | Large dataset IndexedDB transaction timeout during migration | Current max table is ~10K records. Dexie transactions handle this fine. | If any table exceeds 100K records |
 | 3.3 | No rollback mechanism for Dexie migrations | Standard Dexie limitation. Export service provides data recovery path. | If migration corrupts data in testing |
-| 3.4 | Mid-migration crash between v28 and v29 | Each version is independent — v28 works without v29. Sync engine checks for field presence. | Never (by design) |
+| 3.4 | Mid-migration crash between v29 and v30 | Each version is independent — v29 works without v30. Sync engine checks for field presence. | Never (by design) |
 | 5.3 | Verification step undefined in wizard | Implement count comparison during Epic 2 S04. Not architectural. | Story implementation |
 | 5.4 | User navigates away mid-wizard | Fixed in §6.2 (background banner). Remaining UX detail for story. | Story implementation |
 | 5.6 | Storage estimate inaccuracy on new device download | Cosmetic. Estimate is directionally correct for small datasets. | If users report >10x estimate errors |
