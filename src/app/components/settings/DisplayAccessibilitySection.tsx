@@ -85,13 +85,17 @@ export function DisplayAccessibilitySection({
           <div>
             <p className="text-sm font-medium">Spacious Mode</p>
             <p className="text-xs text-muted-foreground">
-              Increase padding and line height for easier reading
+              Increase spacing in content areas for easier reading
             </p>
           </div>
           <Switch
             checked={settings.contentDensity === 'spacious'}
-            disabled
-            aria-label="Toggle spacious content density"
+            onCheckedChange={() =>
+              onSettingsChange({
+                contentDensity: settings.contentDensity === 'spacious' ? 'default' : 'spacious',
+              })
+            }
+            aria-label="Enable spacious content density"
           />
         </div>
 

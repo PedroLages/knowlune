@@ -18,6 +18,7 @@ import { useWelcomeWizardStore } from '@/stores/useWelcomeWizardStore'
 import { useColorScheme } from '@/hooks/useColorScheme'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { useAccessibilityFont } from '@/hooks/useAccessibilityFont'
+import { useContentDensity } from '@/hooks/useContentDensity'
 import { MotionConfig } from 'motion/react'
 import { supabase } from '@/lib/auth/supabase'
 import { useAuthStore } from '@/stores/useAuthStore'
@@ -37,6 +38,9 @@ export default function App() {
 
   // E51-S03: Apply accessibility font (Atkinson Hyperlegible) if enabled
   useAccessibilityFont()
+
+  // E51-S04: Toggle .spacious class on <html> based on content density setting
+  useContentDensity()
 
   // E51-S02: Toggle .reduce-motion class on <html> based on app setting
   useEffect(() => {

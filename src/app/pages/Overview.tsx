@@ -210,7 +210,7 @@ export function Overview() {
           variants={fadeUp}
           data-testid="section-metrics-strip"
         >
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-6 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-[var(--content-gap)] items-start">
             <div
               data-testid="stats-grid"
               className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3"
@@ -238,7 +238,7 @@ export function Overview() {
           key="engagement-zone"
           ref={createSectionRef('engagement-zone')}
           {...viewportAnimation}
-          className={`grid grid-cols-1 ${showStreaks ? 'lg:grid-cols-[3fr_2fr]' : ''} gap-6`}
+          className={`grid grid-cols-1 ${showStreaks ? 'lg:grid-cols-[3fr_2fr]' : ''} gap-[var(--content-gap)]`}
           data-testid="section-engagement-zone"
         >
           {showStreaks && (
@@ -247,7 +247,7 @@ export function Overview() {
               <StudyStreakCalendar weeks={26} />
             </div>
           )}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-[var(--content-gap)]">
             <StudyGoalsWidget />
             <RecentActivity activities={recentActivity} />
           </div>
@@ -258,7 +258,7 @@ export function Overview() {
           key="study-history"
           ref={createSectionRef('study-history')}
           {...viewportAnimation}
-          className="rounded-[24px] border border-border/50 bg-card p-6"
+          className="rounded-[24px] border border-border/50 bg-card p-[var(--content-padding)]"
           data-testid="section-study-history"
         >
           <h2 className="text-xl font-semibold mb-4">Study History</h2>
@@ -270,7 +270,7 @@ export function Overview() {
           key="study-schedule"
           ref={createSectionRef('study-schedule')}
           {...viewportAnimation}
-          className="rounded-[24px] border border-border/50 bg-card p-6"
+          className="rounded-[24px] border border-border/50 bg-card p-[var(--content-padding)]"
           data-testid="section-study-schedule"
         >
           <h2 className="text-xl font-semibold mb-4">Suggested Study Time</h2>
@@ -282,7 +282,7 @@ export function Overview() {
           key="insight-action"
           ref={createSectionRef('insight-action')}
           {...viewportAnimation}
-          className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6"
+          className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-[var(--content-gap)]"
           data-testid="section-insight-action"
         >
           <ProgressChart data={chartData} />
@@ -299,7 +299,7 @@ export function Overview() {
             key="skill-proficiency"
             ref={createSectionRef('skill-proficiency')}
             {...viewportAnimation}
-            className="rounded-[24px] border border-border/50 bg-card p-6"
+            className="rounded-[24px] border border-border/50 bg-card p-[var(--content-padding)]"
             data-testid="section-skill-proficiency"
           >
             <h2 className="text-xl font-semibold mb-4">Skill Proficiency</h2>
@@ -397,7 +397,7 @@ export function Overview() {
         </div>
 
         {/* Engagement skeleton */}
-        <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-[var(--content-gap)]">
           <Skeleton className="h-[280px] rounded-2xl" />
           <Skeleton className="h-[280px] rounded-2xl" />
         </div>

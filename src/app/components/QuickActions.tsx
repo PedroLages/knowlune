@@ -49,7 +49,7 @@ export function QuickActions({
             <Link
               key={action.label}
               to={action.href}
-              className="flex items-center gap-3 p-4 rounded-2xl bg-surface-elevated border border-border/50 hover:border-brand-muted hover:bg-brand-soft/30 dark:hover:bg-brand-soft/10 motion-safe:transition-[background-color,border-color] motion-safe:duration-200 group"
+              className="flex items-center gap-3 p-[var(--content-padding)] rounded-2xl bg-surface-elevated border border-border/50 hover:border-brand-muted hover:bg-brand-soft/30 dark:hover:bg-brand-soft/10 motion-safe:transition-[background-color,border-color] motion-safe:duration-200 group"
             >
               <div className="size-10 rounded-xl bg-brand-soft dark:bg-brand-soft flex items-center justify-center group-hover:bg-brand-muted motion-safe:transition-colors flex-shrink-0">
                 <Icon className="size-5 text-brand" aria-hidden="true" />

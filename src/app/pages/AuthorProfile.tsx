@@ -119,7 +119,7 @@ export function AuthorProfile() {
       {/* Hero Section */}
       <Card className="rounded-3xl border-0 shadow-sm mb-6">
         <CardContent className="p-6 sm:p-8">
-          <div className="flex flex-col sm:flex-row gap-6">
+          <div className="flex flex-col sm:flex-row gap-[var(--content-gap)]">
             {/* Avatar */}
             <Avatar className="size-28 sm:size-32 shrink-0 ring-2 ring-border/50 self-center sm:self-start">
               <AvatarImage {...getAvatarSrc(author.avatar, 128)} alt={author.name} />

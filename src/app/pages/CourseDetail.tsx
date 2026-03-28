@@ -74,7 +74,7 @@ export function CourseDetail() {
 
       {/* Course Header */}
       <div className="bg-card rounded-3xl shadow-sm p-8 mb-6">
-        <div className="flex flex-col lg:flex-row lg:items-start gap-6">
+        <div className="flex flex-col lg:flex-row lg:items-start gap-[var(--content-gap)]">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-3">
               <Badge className={`border-0 text-xs ${categoryColors[course.category]}`}>

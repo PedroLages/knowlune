@@ -454,7 +454,7 @@ export function Courses() {
                     />
                   )}
                   data-testid="imported-courses-grid"
-                  gridClassName="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
+                  gridClassName="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[var(--content-gap)]"
                 />
               )}
             </div>
@@ -551,7 +551,7 @@ export function Courses() {
                       />
                     )}
                     data-testid="sample-courses-grid"
-                    gridClassName="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
+                    gridClassName="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[var(--content-gap)]"
                   />
                 )}
               </CollapsibleContent>

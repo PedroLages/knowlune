@@ -91,7 +91,7 @@ export function Authors() {
           <Skeleton className="h-10 flex-1" />
           <Skeleton className="h-10 w-44" />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[var(--content-gap)]">
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-72 rounded-[24px]" />
           ))}
@@ -242,7 +242,7 @@ export function Authors() {
               }
             />
           )}
-          gridClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+          gridClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[var(--content-gap)]"
           estimateRowHeight={320}
           data-testid="authors-virtual-grid"
         />

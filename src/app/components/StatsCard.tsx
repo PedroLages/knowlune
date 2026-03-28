@@ -126,7 +126,7 @@ export function StatsCard({
     <Sheet>
       <SheetTrigger asChild>
         <button
-          className="group relative p-4 rounded-2xl bg-surface-elevated border border-border/50 hover:border-brand-muted motion-safe:hover:shadow-studio-hover motion-safe:transition-[box-shadow,border-color] motion-safe:duration-300 overflow-hidden w-full text-left cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          className="group relative p-[var(--content-padding)] rounded-2xl bg-surface-elevated border border-border/50 hover:border-brand-muted motion-safe:hover:shadow-studio-hover motion-safe:transition-[box-shadow,border-color] motion-safe:duration-300 overflow-hidden w-full text-left cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           aria-label={`View details for ${label}`}
         >
           {/* Subtle gradient on hover */}

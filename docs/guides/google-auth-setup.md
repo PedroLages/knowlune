@@ -2,7 +2,7 @@
 
 > **Prerequisite:** Self-hosted Supabase running on Unraid (`titan.local:8000` / `supabase.pedrolages.net`)
 >
-> **Time:** ~15 minutes
+> **Time:** ~10 minutes
 >
 > **Result:** "Continue with Google" button on the login page works
 
@@ -16,14 +16,9 @@
 4. Click **Create**
 5. Select the new project from the dropdown
 
-## Step 2: Enable the Google Identity API
+## Step 2: Configure OAuth Consent Screen
 
-1. Go to **APIs & Services** → **Library**
-2. Search for **"Google Identity"** or **"Google+ API"**
-3. Click **Google Identity Services** (or Google+ API if Identity isn't available)
-4. Click **Enable**
-
-## Step 3: Configure OAuth Consent Screen
+> **Note:** No API needs to be enabled. Supabase uses standard OAuth 2.0 which works out of the box. The Google+ API results you may see are deprecated — ignore them.
 
 1. Go to **APIs & Services** → **OAuth consent screen**
 2. Select **External** user type → **Create**
@@ -40,7 +35,7 @@
 
 > **Note:** While in "Testing" mode, only test users you add can sign in. Move to "Production" when ready for all users (requires Google verification for apps with >100 users).
 
-## Step 4: Create OAuth 2.0 Credentials
+## Step 3: Create OAuth 2.0 Credentials
 
 1. Go to **APIs & Services** → **Credentials**
 2. Click **+ Create Credentials** → **OAuth client ID**
@@ -68,47 +63,57 @@
    ```
 
 7. Click **Create**
-8. **Copy the Client ID and Client Secret** — you'll need these in Step 5
+8. **Copy the Client ID and Client Secret** — you'll need these in Step 4
 
-## Step 5: Configure Supabase Google Provider
+## Step 4: Configure Supabase Google Provider (Self-Hosted on Unraid)
 
-### Option A: Via Supabase Dashboard UI
+Since Supabase is self-hosted on Unraid (`titan.local`), configure the GoTrue (auth) service directly via Docker environment variables.
 
-1. Open your Supabase dashboard:
-   - Self-hosted: `http://titan.local:8000` → Studio (usually port 3000 or via Kong)
-   - Or: `https://supabase.pedrolages.net` if you have Studio exposed
-2. Go to **Authentication** → **Providers**
-3. Find **Google** → click to expand
-4. Toggle **Enable Sign in with Google** → ON
-5. Paste:
-   - **Client ID:** from Step 4
-   - **Client Secret:** from Step 4
-6. Click **Save**
+### Option A: Via Docker Compose env vars (recommended)
 
-### Option B: Via Supabase config.toml (self-hosted)
-
-If your Supabase Studio isn't exposed, edit the config directly:
-
-1. SSH into your Unraid server
-2. Find your Supabase config (usually in the Docker volume):
+1. SSH into your Unraid server or open the terminal
+2. Find your Supabase Docker Compose file:
    ```bash
-   # Location varies by setup — check your Docker compose
-   nano /path/to/supabase/volumes/api/kong.yml
-   # Or edit the gotrue config directly
+   # Common locations on Unraid:
+   # /mnt/user/appdata/supabase/docker-compose.yml
+   # Or wherever you installed Supabase
    ```
-3. Set these environment variables for the GoTrue (auth) service:
-   ```env
-   GOTRUE_EXTERNAL_GOOGLE_ENABLED=true
-   GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID=your-client-id-here
-   GOTRUE_EXTERNAL_GOOGLE_SECRET=your-client-secret-here
-   GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=http://titan.local:8000/auth/v1/callback
+3. In the `auth` (GoTrue) service section, add these environment variables:
+   ```yaml
+   auth:
+     environment:
+       GOTRUE_EXTERNAL_GOOGLE_ENABLED: "true"
+       GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID: "your-client-id-from-step-3"
+       GOTRUE_EXTERNAL_GOOGLE_SECRET: "your-client-secret-from-step-3"
+       GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI: "http://titan.local:8000/auth/v1/callback"
    ```
-4. Restart the GoTrue container:
+4. Restart the auth container:
    ```bash
-   docker restart supabase-auth
+   docker compose restart auth
+   # Or if using older Docker:
+   docker-compose restart auth
    ```
 
-## Step 6: Configure Supabase Redirect URLs
+### Option B: Via Supabase Studio UI (if exposed)
+
+If you have Supabase Studio running (usually port 3000):
+1. Open `http://titan.local:3000` (or your Studio port)
+2. Go to **Authentication** → **Providers** → **Google**
+3. Toggle ON, paste Client ID + Secret from Step 3
+4. Click **Save**
+
+### Option C: Via .env file
+
+If your Supabase setup uses a `.env` file:
+```env
+GOTRUE_EXTERNAL_GOOGLE_ENABLED=true
+GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID=your-client-id-here
+GOTRUE_EXTERNAL_GOOGLE_SECRET=your-client-secret-here
+GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI=http://titan.local:8000/auth/v1/callback
+```
+Then restart: `docker compose restart auth`
+
+## Step 5: Configure Supabase Redirect URLs
 
 1. In Supabase Dashboard → **Authentication** → **URL Configuration**
 2. **Site URL:** `http://localhost:5173` (or your production URL)
@@ -128,7 +133,7 @@ If your Supabase Studio isn't exposed, edit the config directly:
    ```
 4. Click **Save**
 
-## Step 7: Test Locally
+## Step 6: Test Locally
 
 1. Start the dev server:
    ```bash

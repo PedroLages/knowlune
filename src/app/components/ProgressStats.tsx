@@ -25,7 +25,7 @@ export function ProgressStats({ courses }: ProgressStatsProps) {
   const showStreaks = useEngagementVisible('streaks')
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[var(--content-gap)] mb-6">
       <StatsCard
         label="Average Progress"
         value={`${avgProgress}%`}
