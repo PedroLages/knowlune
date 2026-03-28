@@ -596,7 +596,7 @@ export function Layout() {
         <main
           id="main-content"
           data-testid="main-scroll-container"
-          className="flex-1 overflow-auto p-6 pt-6 pb-20 sm:pb-6"
+          className="flex-1 overflow-auto p-6 pt-6 pb-20 sm:pb-6 leading-[var(--content-line-height)]"
         >
           {!isOnline && (
             <div

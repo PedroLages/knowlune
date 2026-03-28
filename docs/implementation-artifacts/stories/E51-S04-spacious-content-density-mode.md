@@ -1,8 +1,8 @@
 ---
 story_id: E51-S04
 story_name: "Spacious Content Density Mode"
-status: draft
-started:
+status: in-progress
+started: 2026-03-28
 completed:
 reviewed: false
 review_started:

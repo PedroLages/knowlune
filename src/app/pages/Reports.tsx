@@ -286,7 +286,7 @@ export default function Reports() {
               <AIAnalyticsTab />
             </TabsContent>
 
-            <TabsContent value="study" className="mt-6 space-y-6">
+            <TabsContent value="study" className="mt-6 space-y-[var(--content-gap)]">
               <h2 className="sr-only">Study Analytics</h2>
               {/* ── Row 1: Hero Stat Cards ── */}
               <motion.div
