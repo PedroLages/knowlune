@@ -251,11 +251,11 @@ describe('settings', () => {
       expect(raw.theme).toBe('dark')
     })
 
-    it('stores profilePhotoDataUrl in localStorage', () => {
+    it('stores profilePhotoUrl in localStorage', () => {
       const dataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg=='
-      saveSettings({ profilePhotoDataUrl: dataUrl })
+      saveSettings({ profilePhotoUrl: dataUrl })
       const raw = JSON.parse(localStorage.getItem('app-settings')!)
-      expect(raw.profilePhotoDataUrl).toBe(dataUrl)
+      expect(raw.profilePhotoUrl).toBe(dataUrl)
     })
 
     it('stores fontSize in localStorage', () => {

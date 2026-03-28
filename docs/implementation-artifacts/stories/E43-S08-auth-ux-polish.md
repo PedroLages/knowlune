@@ -1,8 +1,8 @@
 ---
 story_id: E43-S08
 story_name: "Auth UX Polish"
-status: ready-for-dev
-started:
+status: in-progress
+started: 2026-03-28
 completed:
 reviewed: false
 review_started:

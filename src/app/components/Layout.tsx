@@ -524,9 +524,9 @@ export function Layout() {
                   >
                     <div className="relative">
                       <Avatar className="size-10 ring-2 ring-transparent transition-all duration-200 hover:ring-brand/30 hover:shadow-md">
-                        {settings.profilePhotoDataUrl ? (
+                        {settings.profilePhotoUrl ? (
                           <AvatarImage
-                            src={settings.profilePhotoDataUrl}
+                            src={settings.profilePhotoUrl}
                             alt={settings.displayName}
                             className="object-cover"
                           />

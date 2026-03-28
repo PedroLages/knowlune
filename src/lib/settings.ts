@@ -20,12 +20,10 @@ export interface AppSettings {
   bio: string
   theme: 'light' | 'dark' | 'system'
   /**
-   * Base64-encoded data URL or object URL of the user's profile photo.
-   * Stored as a data URL (e.g., "data:image/png;base64,...") for persistence,
-   * or as an object URL for temporary session storage.
+   * Profile photo URL — data URL (uploads), object URL (temp), or HTTPS URL (Google OAuth).
    * @optional - undefined if no profile photo has been set
    */
-  profilePhotoDataUrl?: string
+  profilePhotoUrl?: string
   /** User-selected font size for proportional scaling. Default: 'medium' (16px) */
   fontSize?: FontSize
   /** Age range selected in welcome wizard. Stored locally, never sent to server. */
@@ -56,7 +54,7 @@ const defaults: AppSettings = {
   displayName: 'Student',
   bio: '',
   theme: 'system',
-  profilePhotoDataUrl: undefined,
+  profilePhotoUrl: undefined,
   colorScheme: 'professional',
   accessibilityFont: false,
   contentDensity: 'default',

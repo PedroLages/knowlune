@@ -437,10 +437,10 @@ export default function Settings() {
 
       // Update settings (90% progress)
       setUploadProgress(90)
-      setSettings({ ...settings, profilePhotoDataUrl: dataUrl })
+      setSettings({ ...settings, profilePhotoUrl: dataUrl })
 
       // Auto-save (100% progress)
-      saveSettings({ ...settings, profilePhotoDataUrl: dataUrl })
+      saveSettings({ ...settings, profilePhotoUrl: dataUrl })
       setUploadProgress(100)
       setSaved(true)
       setTimeout(() => {
@@ -470,9 +470,9 @@ export default function Settings() {
   }
 
   function handleRemovePhoto() {
-    setSettings({ ...settings, profilePhotoDataUrl: undefined })
+    setSettings({ ...settings, profilePhotoUrl: undefined })
     setUploadError('')
-    saveSettings({ ...settings, profilePhotoDataUrl: undefined })
+    saveSettings({ ...settings, profilePhotoUrl: undefined })
     window.dispatchEvent(new Event('settingsUpdated'))
   }
 
@@ -602,7 +602,7 @@ export default function Settings() {
             <div className="space-y-6">
               {/* Avatar Upload Zone */}
               <AvatarUploadZone
-                currentAvatar={settings.profilePhotoDataUrl || null}
+                currentAvatar={settings.profilePhotoUrl || null}
                 onFileSelect={handleFileSelect}
                 onRemove={handleRemovePhoto}
                 isLoading={isUploading}
@@ -635,7 +635,7 @@ export default function Settings() {
               )}
 
               {/* Success Indicator */}
-              {saved && settings.profilePhotoDataUrl && uploadProgress === 100 && (
+              {saved && settings.profilePhotoUrl && uploadProgress === 100 && (
                 <div
                   className="text-xs text-success bg-success-soft border border-success/20 rounded-lg px-3 py-2.5 animate-in fade-in slide-in-from-top-1 duration-300 flex items-center gap-2"
                   aria-live="polite"
@@ -734,7 +734,7 @@ export default function Settings() {
                     <Save className="size-4" />
                     {saved ? 'Saved Successfully!' : 'Save Profile Changes'}
                   </Button>
-                  {saved && !settings.profilePhotoDataUrl && (
+                  {saved && !settings.profilePhotoUrl && (
                     <p className="text-xs text-success mt-2 flex items-center gap-1.5 animate-in fade-in slide-in-from-left-1 duration-300">
                       <div className="w-1.5 h-1.5 rounded-full bg-success" />
                       Profile updated successfully
