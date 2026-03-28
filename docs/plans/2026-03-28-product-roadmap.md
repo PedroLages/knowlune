@@ -160,58 +160,32 @@
 
 ---
 
-## 3. Standalone Desktop App
+## 3. ~~Standalone Desktop App~~ — REJECTED
 
-> **Status:** ⬜ Deferred
-> **Rationale:** PWA covers 90% of use cases. Web app not feature-complete yet. Revisit after data sync.
-> **Last Updated:** 2026-03-28
+> **Status:** ❌ Rejected (2026-03-28)
+> **Decision:** Do not build. PWA is sufficient. Invest in onboarding UX instead.
+> **Brainstorming session:** `_bmad-output/brainstorming/brainstorming-session-2026-03-28-tauri-desktop-decision.md`
 
-### The Core Question
-Should Knowlune become a native Mac app? What would it unlock?
+### Decision Summary
 
-### Arguments FOR a Desktop App
+Deep analysis (2026-03-28) concluded the cost-benefit doesn't justify a desktop app:
 
-| Argument | Strength | Notes |
-|----------|----------|-------|
-| Bundle yt-dlp + Whisper locally | Strong | Eliminates Docker requirement for course creation |
-| Persistent file system access | Strong | Current `directoryHandle`/`fileHandle` (File System Access API) expires across sessions, Chromium-only |
-| Mac App Store distribution | Medium | Revenue channel, discoverability |
-| Background processing | Medium | Sync, downloads, transcription while app is closed |
-| Native UX (Dock, menu bar, notifications) | Low | PWA already handles most of this |
+1. **File permission friction is minor** — one click per session, not a real blocker
+2. **Docker isn't required for basic use** — local folder import is purely in-browser; Docker is only for YouTube transcript fallback (Tier 2/3)
+3. **No background processing need** — sync is event-driven, not scheduled
+4. **WKWebView (Tauri on macOS) doesn't support File System Access API** — would require rewriting all file access code through Rust bridge
+5. **Development cost: 6-8 epics** — better spent on Knowledge Maps, AI Tutoring, Books
+6. **Data sync eliminates the cross-device argument** — metadata syncs via Supabase, file handles can't sync regardless
 
-### Arguments AGAINST (for now)
+### The Real Problem
 
-| Argument | Strength | Notes |
-|----------|----------|-------|
-| PWA covers 90% of use cases | Strong | Already configured, works today, zero maintenance |
-| Massive development effort | Strong | 6-8 epics for Tauri, maintaining two platforms |
-| Web app isn't feature-complete yet | Strong | CRUD gaps, data sync, test debt — fix these first |
-| Small user base | Medium | Premature optimization for distribution channels |
+The actual new-user friction is **missing onboarding UX**, not platform limitations:
+- YouTube import silently fails without API key (no error message, infinite loading)
+- No setup guidance for Ollama, yt-dlp, or Whisper configuration
+- No first-run wizard or getting-started flow
+- YouTube API key dependency could be eliminated via oEmbed + ytdl-core for basic imports
 
-### Framework Comparison
-
-| | Tauri | Electron | PWA (current) |
-|---|---|---|---|
-| Binary size | ~10-15MB + bundled tools | ~150MB+ | 0 (web) |
-| RAM usage | ~50-100MB | ~200-400MB | Browser tab |
-| Rendering engine | WKWebView (Safari) | Chromium | User's browser |
-| Bundle yt-dlp/Whisper | Yes (Rust child process) | Yes (Node child process) | No |
-| File system access | Full native | Full native | Limited (FSAA) |
-| Auto-update | Built-in | Built-in | Service worker |
-| Mac App Store | Yes | Difficult (Apple discourages) | No |
-| Development effort | XLarge (Rust backend) | XLarge (familiar Node) | Done |
-
-### Recommendation: Not yet — revisit after data sync
-
-The PWA handles daily use well. Build a desktop app when:
-1. User feedback shows Docker requirement blocks adoption
-2. You want Mac App Store distribution
-3. File System Access API limitations cause real complaints
-4. Data sync is complete (desktop MUST sync with web)
-
-**If building later: Tauri > Electron** — smaller binary, native macOS integration, can bundle yt-dlp/whisper.cpp as Rust child processes.
-
-### Effort: XLarge (6-8 epics) — defer
+**Solution:** Onboarding & setup UX improvements (Section 16), not a new platform.
 
 ---
 

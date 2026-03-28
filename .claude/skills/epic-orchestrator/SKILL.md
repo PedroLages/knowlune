@@ -29,10 +29,11 @@ Execute an entire epic autonomously — `/start-story` through implementation, `
 4. **TodoWrite is the state machine** — all progress tracked there
 5. **Template prompts** — fill variables from [docs/agent-prompt-templates.md](docs/agent-prompt-templates.md)
 6. **Fresh agent per task** — never reuse agents across rounds or stories
+7. **Use `/auto-answer autopilot`** — sub-agents invoking interactive skills (`/start-story`, `/finish-story`, `/retrospective`) must activate auto-answer to prevent blocking on Q&A
 
 ### Quality Standard
 
-**ALL issues must be fixed** — BLOCKER, HIGH, MEDIUM, LOW, NITS. No exceptions. The review loop continues until `/review-story` returns zero findings. Zero tolerance. Everything perfect.
+**ALL issues must be fixed** — BLOCKER, HIGH, MEDIUM, LOW, NITS. No exceptions. Items verified as false positives are classified as NON-ISSUE and excluded from the fix requirement. The review loop continues until `/review-story` returns zero real findings. Zero tolerance. Everything perfect.
 
 ## Output Discipline
 
@@ -137,6 +138,7 @@ digraph epic_flow {
 
 **See:** [docs/phase-2-post-epic.md](docs/phase-2-post-epic.md) for:
 - Sequential: `/sprint-status` → mark epic done → `/testarch-trace` → `/testarch-nfr` → `/review-adversarial` → `/retrospective`
+- Supports parallel dispatch for independent commands — see phase-2-post-epic.md
 - Retrospective agent acts as Pedro (developer) in party mode dialogue
 
 ## Phase 3: Final Report
@@ -183,6 +185,13 @@ PRE-EXISTING ISSUES (deferred):
 ```
 
 These are the ONLY state in-context. Everything else is in TodoWrite or sub-agent output.
+
+### Persistent Tracking File
+
+In addition to the in-context table, write a persistent markdown tracking file:
+`docs/implementation-artifacts/epic-{N}-tracking-{DATE}.md`
+
+Updated after every major step (story start, review round, fix, finish, merge, post-epic command). This file survives context overflow and feeds the Report Agent. See [docs/phase-0-epic-selection.md](docs/phase-0-epic-selection.md) for the template.
 
 ## Verification
 

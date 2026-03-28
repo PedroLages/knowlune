@@ -537,6 +537,7 @@ development_status:
   43-5-course-completion-pct-fix: done
   43-6-notifications-data-layer: done
   43-7-notifications-triggers-wiring: done
+  43-8-auth-ux-polish: ready-for-dev
 
   # ──────────────────────────────────────────────────
   # Epic 50: Calendar Integration Phase 1-2
