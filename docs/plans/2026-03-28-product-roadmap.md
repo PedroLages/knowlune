@@ -37,10 +37,10 @@
 
 | # | Area | Status | % | Key Evidence |
 |---|------|--------|---|-------------|
-| 1 | Supabase Data Sync | 🔴 Not Started | 0% | Auth only (E19). Architecture doc: `docs/plans/sync-architecture.md` |
-| 2 | Authentication Refinement | 🟡 Mostly Done | 85% | E19 complete. Missing: password reset, session expiry UI |
+| 1 | Supabase Data Sync | 🟡 Architecture Ready | 0% impl | E44-E49 planned (37 stories), readiness confirmed. Architecture: `docs/plans/sync-architecture.md` |
+| 2 | Authentication Refinement | 🟡 Mostly Done | 90% | E19 complete. Password reset done (EmailPasswordForm.tsx). Missing: session expiry UI (E43-S04 story ready) |
 | 3 | Standalone Desktop App | ⬜ Deferred | — | Explicitly deferred post-sync |
-| 4 | CRUD & UX Gaps | 🟡 Partially Done | 70% | Missing: completion %, bulk ops, soft-delete, data import |
+| 4 | CRUD & UX Gaps | 🟡 Partially Done | 70% | Missing: completion % (E43-S05 story ready), bulk ops, soft-delete, data import |
 | 5 | Repository Strategy | 🟡 Infrastructure Done | 60% | `src/premium/` separated, repo split not done |
 | 6 | Video Storage & Offline | 🟡 Infrastructure Done | 40% | Transcripts cached, no download UI |
 | 7 | Cloud Storage | 🔴 Not Started | 5% | Only `exportService.ts` exists |
@@ -51,7 +51,7 @@
 | 12 | PKM Export Pipeline | 🟡 Partially Done | 50% | JSON/CSV/MD export. Pending: Anki, Obsidian |
 | 13 | Knowledge Map & Decay | 🔴 Not Started | 0% | Data sources exist, no visualization |
 | 14 | AI Tutoring (Socratic) | 🔴 Not Started | 0% | LLM + transcripts exist, no Socratic mode |
-| 15 | Notification System | 🟡 UI Done, Data Missing | 30% | UI shell complete, hardcoded `createMockNotifications()` |
+| 15 | Notification System | 🟡 Stories Ready | 30% | UI complete. Architecture decided: Dexie v28 + EventEmitter bus + 5 triggers. Stories E43-S06/S07 ready. |
 | 16 | Onboarding & UX Polish | 🟢 Mostly Done | 90% | E25: onboarding flow, empty states, sidebar |
 | 17 | UI Enhancement (Stitch) | 🔴 Not Started | 0% | 12-page catalog (50+ concepts), 5 focus pages ready, 7 pages to explore |
 
@@ -59,10 +59,12 @@
 
 ## 1. Supabase Data Sync
 
-> **Status:** 🔴 Not Started (0%)
-> **Completed:** Auth + entitlements (E19)
-> **Remaining:** Full sync infrastructure, 4 epics planned
+> **Status:** 🟡 Architecture Ready (0% implemented)
+> **Completed:** Auth + entitlements (E19). Architecture designed, adversarial review passed, all decisions resolved, implementation readiness confirmed.
+> **Epics:** E44-E49 (37 stories) — Phase 1: E44-E46 (18 stories), Phase 2: E47-E49 (19 stories, deferred until Phase 1 validated)
 > **Architecture:** [`docs/plans/sync-architecture.md`](sync-architecture.md)
+> **Epics breakdown:** [`_bmad-output/planning-artifacts/epics-sync.md`](../_bmad-output/planning-artifacts/epics-sync.md)
+> **Adversarial review:** [`docs/reviews/adversarial/adversarial-review-2026-03-28-sync-architecture.md`](../reviews/adversarial/adversarial-review-2026-03-28-sync-architecture.md) — 14 findings, 4 HIGH resolved
 > **Last Updated:** 2026-03-28
 
 ### Current State
@@ -1327,6 +1329,37 @@ These pages have design ideas worth exploring but need a focus-page treatment be
 
 ### Effort: Phase 1 = Small-Medium (1-2 epics), Phase 2 = spread across feature epics
 
+### Future Explorations
+
+Items to investigate when implementing the widgets above:
+
+#### Audio & Sound Design
+
+The Pomodoro timer currently uses Web Audio API oscillators (`pomodoroAudio.ts`) to generate a two-tone chime (C5→E5). Functional but robotic. Needs exploration:
+
+| Option | Pros | Cons |
+|--------|------|------|
+| **Bundled audio files** (Freesound, Mixkit, Pixabay — free licensed) | Rich, warm, satisfying sounds; users expect this quality | ~100KB added to bundle; licensing per file |
+| **Synthesized (current)** | Zero file size, works offline, no licensing | Sounds clinical/robotic, limited palette |
+| **System native** (Notification API) | Familiar OS sounds, zero bundle | Can't choose which sound; needs permission; background tabs only |
+
+**Recommended:** Hybrid — bundle 4-6 small `.mp3` files (~100KB total) for key events, keep oscillator as fallback, system notification when tab is backgrounded.
+
+**Sound events to design for:**
+
+| Event | Sound Style | Current State |
+|-------|------------|---------------|
+| Focus session complete | Meditation bell / singing bowl | Two-tone oscillator chime |
+| Break complete | Gentle chime / xylophone | Same oscillator chime |
+| Break warning (1 min left) | Soft tick / subtle alert | None |
+| Session start | Brief positive tone | None |
+| Achievement unlocked | Celebration / level-up | None (NotificationCenter has no audio) |
+| Streak milestone | Fanfare snippet | None |
+
+**Future:** Sound themes (Zen, Minimal, Playful, Silent) as a settings option. Ties into Accessibility (Section 11) for reduced-audio preference.
+
+**Key files:** `src/lib/pomodoroAudio.ts`, `src/lib/pomodoroPreferences.ts`, `src/app/components/figma/PomodoroTimer.tsx`
+
 ---
 
 ## 18. Cross-Cutting Dependencies
@@ -1418,19 +1451,21 @@ These pages have design ideas worth exploring but need a focus-page treatment be
 
 ## 19. Recommended Sequencing
 
-### Wave 1: Foundation (next 2-3 epics)
+### Wave 1: Foundation (E43 — 7 stories ready)
 > Fix what's broken, fill critical gaps, ship quick wins
+> **Epic:** `docs/implementation-artifacts/stories/E43-S01..S07` | **Execution guide:** `_bmad-output/planning-artifacts/execution-guide-wave1-e44.md`
 
-- [ ] Fix 55+ failing tests (KI-016 through KI-025) + ESLint warnings
-- [ ] Add password reset flow + session expiry handling
-- [ ] Fix imported course completion % (hardcoded to 0)
-- [ ] Add data import/restore (`.knowlune` portable bundle)
+- [ ] Fix 55+ failing tests — stories ready: E43-S01 (store mocks), E43-S02 (component mocks), E43-S03 (E2E)
+- [x] ~~Add password reset flow~~ (already implemented in EmailPasswordForm.tsx:30-51)
+- [ ] Session expiry handling — story ready: E43-S04 (useAuthLifecycle hook + banner)
+- [ ] Fix imported course completion % — story ready: E43-S05 (wire callers to existing function)
+- [ ] Add data import/restore (`.knowlune` portable bundle) — unblocked by E44-S01/S02 (export fix)
 - [ ] **Calendar phase 1:** iCal feed generation (subscribe URL in Settings)
 - [ ] **Calendar phase 2:** Study planner UI (schedule weekly blocks per course)
 - [ ] **Accessibility phase 1:** Dyslexia font toggle, reduced motion, content density control
 - [ ] **Accessibility phase 2:** Display & Accessibility settings page
 - [ ] **PKM phase 1:** Enhanced Markdown export (notes + flashcards with YAML frontmatter)
-- [ ] **Notifications phases 1-2:** Data model + store, streak/completion/import triggers (replaces mock data)
+- [ ] **Notifications phases 1-2:** stories ready: E43-S06 (Dexie + store), E43-S07 (triggers + wiring)
 - [x] ~~**Onboarding phases 1-3:** Quick bug fixes + Getting Started checklist + empty state component~~ (E25 — complete)
 - [ ] **Lesson flow:** Next Lesson CTA + completion checkmarks in sidebar (audit-surfaced)
 - [ ] **Stitch UI phase 1:** Deep Focus Mode widget + Streak Calendar upgrade (Section 17)
@@ -1451,13 +1486,18 @@ These pages have design ideas worth exploring but need a focus-page treatment be
 - [ ] **Notifications phase 4:** Preferences UI in Settings (per-type toggles, quiet hours)
 - [ ] **Stitch UI phase 2:** Activity Timeline + Vertical Path Timeline + Progress Composites (Section 17)
 
-### Wave 3: Sync (3-4 epics)
-> Multi-device experience — architecture: [`docs/plans/sync-architecture.md`](sync-architecture.md)
+### Wave 3: Sync (6 epics — E44-E49)
+> Multi-device experience — architecture: [`docs/plans/sync-architecture.md`](sync-architecture.md) | epics: [`epics-sync.md`](../_bmad-output/planning-artifacts/epics-sync.md)
 
-- [ ] Supabase data sync Epic 1: Infrastructure (syncQueue, engine, v28, Supabase tables)
-- [ ] Supabase data sync Epic 2: P0 Live (contentProgress + studySessions)
-- [ ] Supabase data sync Epic 3: P1 (notes + bookmarks + flashcards + review log)
-- [ ] Supabase data sync Epic 4: P2-P3 + polish
+**Phase 1 (MVP — 18 stories):**
+- [ ] **E44:** Sync Pre-Requisites — export v2, import compat, multi-user scoping, ESLint rule (4 stories)
+- [ ] **E45:** Sync Infrastructure — Dexie v28, syncQueue, syncableWrite(), engine core, Supabase migrations (6 stories)
+- [ ] **E46:** P0 Sync Live — wire stores, triggers, offline queue, auth backfill, sync UI (8 stories)
+
+**Phase 2 (deferred until Phase 1 validated — 19 stories):**
+- [ ] **E47:** P1 Tables — Dexie v29, flashcardReviews, note conflict UI, review log replay
+- [ ] **E48:** P2-P3 Tables — Dexie v30, remaining stores, non-serializable field stripping
+- [ ] **E49:** Sync Polish — Realtime subscriptions, upload wizard, sync log, chaos testing
 - [ ] **Offline UX:** Sync status indicator + offline mode banner
 - [ ] Offline content caching (transcripts, thumbnails, PWA)
 - [ ] Soft-delete/archive with sync support
