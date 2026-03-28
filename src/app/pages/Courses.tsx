@@ -427,7 +427,7 @@ export function Courses() {
                   type="text"
                   name="course-search"
                   autoComplete="off"
-                  placeholder="Search for courses\u2026"
+                  placeholder="Search for courses…"
                   aria-label="Search courses"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}

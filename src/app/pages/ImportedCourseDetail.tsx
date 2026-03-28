@@ -311,7 +311,7 @@ export function ImportedCourseDetail() {
           <Input
             data-testid="content-search-input"
             type="search"
-            placeholder="Search videos and PDFs\u2026"
+            placeholder="Search videos and PDFs…"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="pl-9 pr-9 rounded-xl"
