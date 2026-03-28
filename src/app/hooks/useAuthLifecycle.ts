@@ -19,9 +19,13 @@ export function useAuthLifecycle(): void {
   useEffect(() => {
     if (!supabase) return
 
+    let ignore = false
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
+      if (ignore) return
+
       const state = useAuthStore.getState()
 
       if (event === 'SIGNED_OUT') {
@@ -50,6 +54,32 @@ export function useAuthLifecycle(): void {
       }
     })
 
-    return () => subscription.unsubscribe()
+    // Safety net: getSession() reads from localStorage (no network request).
+    // Catches sessions established before React mounts (e.g., OAuth redirect
+    // where tokens are extracted from URL hash before useEffect runs).
+    // IMPORTANT: subscription MUST be established BEFORE getSession() so that
+    // any session change during getSession() is not missed.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (ignore) return
+      const state = useAuthStore.getState()
+      state.setSession(session)
+      if (session?.user) {
+        hydrateSettingsFromSupabase(session.user.user_metadata)
+      }
+    })
+
+    // Clean hash fragment after OAuth redirect (cosmetic — Supabase cleanup is unreliable)
+    if (window.location.hash.includes('access_token')) {
+      window.history.replaceState(
+        null,
+        '',
+        window.location.pathname + window.location.search
+      )
+    }
+
+    return () => {
+      ignore = true
+      subscription.unsubscribe()
+    }
   }, [])
 }

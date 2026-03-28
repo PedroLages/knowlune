@@ -434,7 +434,7 @@ export default defineConfig({
       // CSP: allow YouTube IFrame embeds, thumbnails, and API access (E28-S09)
       'Content-Security-Policy': [
         "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
-        "img-src 'self' data: blob: https://images.unsplash.com https://i.ytimg.com https://img.youtube.com",
+        "img-src 'self' data: blob: https://images.unsplash.com https://i.ytimg.com https://img.youtube.com https://*.googleusercontent.com",
         "connect-src 'self' https://www.googleapis.com/youtube/ ws://localhost:* http://localhost:*",
       ].join('; '),
     },
