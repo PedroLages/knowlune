@@ -1,12 +1,12 @@
 ---
 story_id: E43-S05
 story_name: "Course Completion Percentage Fix"
-status: complete
+status: done
 started: 2026-03-28
 completed: 2026-03-28
-reviewed: false
-review_started:
-review_gates_passed: []
+reviewed: true
+review_started: 2026-03-28
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests-skipped, design-review-skipped, code-review, code-review-testing, performance-benchmark-skipped, security-review, exploratory-qa-skipped]
 burn_in_validated: false
 ---
 
