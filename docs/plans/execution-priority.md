@@ -10,16 +10,16 @@
 
 Independent epics with stories ready. No blockers. These form the foundation for everything else.
 
-| Order | Epic | Area | Stories | Why First |
-|-------|------|------|---------|-----------|
-| **1** | E43-S01/S02/S03 | Fix Failing Tests | 3 | Everything depends on reliable CI. 55+ tests failing. |
-| **2** | E51 | Accessibility Phase 1 | 4 | Quick wins (font, density, motion), settings infrastructure used by future features. Marked priority 1 in roadmap. |
-| **3** | E50 | Calendar Phase 1-2 | 6 | High user value (iCal feed + study planner), independent. Marked priority 2 in roadmap. |
-| **4** | E43-S04/S05/S06/S07 | Foundation Remaining | 4 | Session expiry, completion %, notifications data layer. Unblocks normal app usage. |
+| Order | Epic | Area | Stories | Status |
+|-------|------|------|---------|--------|
+| ~~1~~ | ~~E43-S01/S02/S03~~ | ~~Fix Failing Tests~~ | ~~3~~ | ✅ **DONE** — 3,429 tests passing (202 suites) |
+| **1** | E51 | Accessibility Phase 1 | 4 | Ready — quick wins (font, density, motion), settings infrastructure |
+| **2** | E50 | Calendar Phase 1-2 | 6 | Ready — high user value (iCal feed + study planner) |
+| **3** | E43-S04/S05/S06/S07 | Foundation Remaining | 4 | Ready — session expiry, completion %, notifications data layer |
 
-**Total: 17 stories**
+**Total: 14 stories remaining** (3 test stories already done)
 
-**Parallelization:** E51 and E50 are fully independent — can run in parallel sessions. E43 test fixes should be first since other epics may add tests.
+**Parallelization:** E51 and E50 are fully independent — can run in parallel sessions.
 
 ---
 

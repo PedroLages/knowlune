@@ -35,7 +35,7 @@
 ## Implementation Status Summary
 
 > **Baseline:** 35 epics completed (E1-E35), ~200+ stories delivered.
-> **Known issues:** 55+ failing tests (KI-016 through KI-025 in `docs/known-issues.yaml`)
+> **Known issues:** ~~55+ failing tests~~ → All 3,429 unit tests passing (202 suites). KI-016 through KI-025 resolved.
 
 | # | Area | Status | % | Key Evidence |
 |---|------|--------|---|-------------|
@@ -216,7 +216,7 @@ The PWA handles daily use well. Build a desktop app when:
 > **Status:** 🟡 Partially Done (70%)
 > **Completed:** Import (file/YouTube/bulk), edit metadata, delete courses, learning path CRUD, notes export, AI ordering
 > **Remaining:** Completion % fix (hardcoded to 0), bulk delete, soft-delete/archive, data import/restore, Anki import
-> **Blockers:** 55+ failing tests (KI-016 through KI-025) undermine CI
+> **Blockers:** None — all tests passing
 > **Last Updated:** 2026-03-28
 
 ### Current Inventory
@@ -1459,8 +1459,8 @@ Before starting: "Do I read/listen to enough books to justify this? Is the PDF v
 
 ```
                     ┌──────────────────────┐
-                    │  Test Health (E43)    │ ← Fix FIRST — everything depends on reliable tests
-                    │  S01-S03: 55+ tests  │
+                    │  Test Health (E43)    │ ✅ DONE — 3,429 tests passing
+                    │  S01-S03: resolved   │
                     └────────┬─────────────┘
                              │
               ┌──────────────┼──────────────┐
@@ -1574,7 +1574,7 @@ Before starting: "Do I read/listen to enough books to justify this? Is the PDF v
 > Fix what's broken, fill critical gaps, ship quick wins
 > **Epic:** `docs/implementation-artifacts/stories/E43-S01..S07` | **Execution guide:** `_bmad-output/planning-artifacts/execution-guide-wave1-e44.md`
 
-- [ ] Fix 55+ failing tests — stories ready: E43-S01 (store mocks), E43-S02 (component mocks), E43-S03 (E2E)
+- [x] ~~Fix failing tests~~ — All 3,429 unit tests passing (202 suites). E43-S01/S02/S03 resolved.
 - [x] ~~Add password reset flow~~ (already implemented in EmailPasswordForm.tsx:30-51)
 - [ ] Session expiry handling — story ready: E43-S04 (useAuthLifecycle hook + banner)
 - [ ] Fix imported course completion % — story ready: E43-S05 (wire callers to existing function)
