@@ -46,6 +46,12 @@ export interface AppSettings {
   reduceMotion: ReduceMotion
 }
 
+export const DISPLAY_DEFAULTS = {
+  accessibilityFont: false as const,
+  contentDensity: 'default' as ContentDensity,
+  reduceMotion: 'system' as ReduceMotion,
+}
+
 const defaults: AppSettings = {
   displayName: 'Student',
   bio: '',

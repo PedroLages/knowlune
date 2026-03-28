@@ -15,7 +15,7 @@ import {
   AlertDialogTrigger,
 } from '@/app/components/ui/alert-dialog'
 import { toastSuccess } from '@/lib/toastHelpers'
-import type { AppSettings } from '@/lib/settings'
+import { DISPLAY_DEFAULTS, type AppSettings } from '@/lib/settings'
 
 interface DisplayAccessibilitySectionProps {
   settings: AppSettings
@@ -27,11 +27,7 @@ export function DisplayAccessibilitySection({
   onSettingsChange,
 }: DisplayAccessibilitySectionProps) {
   function handleReset() {
-    onSettingsChange({
-      accessibilityFont: false,
-      contentDensity: 'default',
-      reduceMotion: 'system',
-    })
+    onSettingsChange(DISPLAY_DEFAULTS)
     toastSuccess.saved('Display settings reset to defaults')
   }
 
@@ -93,7 +89,7 @@ export function DisplayAccessibilitySection({
               Control whether animations play on the page
             </p>
           </div>
-          <span className="text-xs text-muted-foreground capitalize">
+          <span className="text-xs text-muted-foreground">
             {settings.reduceMotion === 'system'
               ? 'Follow system'
               : settings.reduceMotion === 'on'
@@ -126,7 +122,12 @@ export function DisplayAccessibilitySection({
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleReset}>Reset</AlertDialogAction>
+              <AlertDialogAction
+                onClick={handleReset}
+                className="bg-brand text-brand-foreground hover:bg-brand-hover"
+              >
+                Reset
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

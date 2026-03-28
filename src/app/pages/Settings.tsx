@@ -917,10 +917,12 @@ export default function Settings() {
         <DisplayAccessibilitySection
           settings={settings}
           onSettingsChange={updates => {
-            const updated = { ...settings, ...updates }
-            setSettings(updated)
-            saveSettings(updated)
-            window.dispatchEvent(new Event('settingsUpdated'))
+            setSettings(prev => {
+              const updated = { ...prev, ...updates }
+              saveSettings(updated)
+              window.dispatchEvent(new Event('settingsUpdated'))
+              return updated
+            })
           }}
         />
 

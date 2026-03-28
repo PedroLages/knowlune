@@ -48,6 +48,21 @@ describe('settings', () => {
       expect(settings.theme).toBe('system')
     })
 
+    it('sanitizes corrupted reduceMotion to default', () => {
+      localStorage.setItem('app-settings', JSON.stringify({ reduceMotion: 'invalid' }))
+      expect(getSettings().reduceMotion).toBe('system')
+    })
+
+    it('sanitizes corrupted contentDensity to default', () => {
+      localStorage.setItem('app-settings', JSON.stringify({ contentDensity: 'compact' }))
+      expect(getSettings().contentDensity).toBe('default')
+    })
+
+    it('sanitizes non-boolean accessibilityFont to default', () => {
+      localStorage.setItem('app-settings', JSON.stringify({ accessibilityFont: 'yes' }))
+      expect(getSettings().accessibilityFont).toBe(false)
+    })
+
     it('returns a new object each time (not a reference)', () => {
       const s1 = getSettings()
       const s2 = getSettings()
