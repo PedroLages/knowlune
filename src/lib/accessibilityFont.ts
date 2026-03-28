@@ -1,5 +1,4 @@
-const ACCESSIBILITY_FONT_FAMILY =
-  "'Atkinson Hyperlegible', system-ui, -apple-system, sans-serif"
+const ACCESSIBILITY_FONT_FAMILY = "'Atkinson Hyperlegible', system-ui, -apple-system, sans-serif"
 const DEFAULT_FONT_FAMILY = "'DM Sans', system-ui, -apple-system, sans-serif"
 
 /**
