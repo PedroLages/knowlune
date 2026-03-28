@@ -17,10 +17,9 @@ import {
 } from '@/app/components/ui/collapsible'
 import { CourseCard, categoryLabels } from '@/app/components/figma/CourseCard'
 import { ImportedCourseCard } from '@/app/components/figma/ImportedCourseCard'
-import { TopicFilter } from '@/app/components/figma/TopicFilter'
 import { StatusFilter } from '@/app/components/figma/StatusFilter'
 import { ToggleGroup, ToggleGroupItem } from '@/app/components/ui/toggle-group'
-import { Search, FolderOpen, BookOpen, ChevronDown, Tags, Youtube } from 'lucide-react'
+import { Search, FolderOpen, BookOpen, ChevronDown, Youtube } from 'lucide-react'
 import { useCourseStore } from '@/stores/useCourseStore'
 import { getCourseCompletionPercent, getProgress } from '@/lib/progress'
 import { useCourseImportStore } from '@/stores/useCourseImportStore'
@@ -32,7 +31,6 @@ import { db } from '@/db'
 import { calculateMomentumScore } from '@/lib/momentum'
 import { calculateAtRiskStatus } from '@/lib/atRisk'
 
-import { TagManagementPanel } from '@/app/components/figma/TagManagementPanel'
 import { calculateCompletionEstimate } from '@/lib/completionEstimate'
 import type { LearnerCourseStatus } from '@/data/types'
 import type { MomentumScore } from '@/lib/momentum'
@@ -55,13 +53,11 @@ export function Courses() {
     return () => clearTimeout(timer)
   }, [searchQuery])
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
-  const [selectedTopics, setSelectedTopics] = useState<string[]>([])
   const [selectedStatuses, setSelectedStatuses] = useState<LearnerCourseStatus[]>([])
   const [sortMode, setSortMode] = useState<SortMode>('recent')
   const [wizardOpen, setWizardOpen] = useState(false)
   const [bulkImportOpen, setBulkImportOpen] = useState(false)
   const [youtubeImportOpen, setYoutubeImportOpen] = useState(false)
-  const [tagManagementOpen, setTagManagementOpen] = useState(false)
   const [momentumMap, setMomentumMap] = useState<Map<string, MomentumScore>>(new Map())
   const [atRiskMap, setAtRiskMap] = useState<Map<string, AtRiskStatus>>(new Map())
   const [estimateMap, setEstimateMap] = useState<Map<string, CompletionEstimate>>(new Map())
@@ -211,15 +207,8 @@ export function Courses() {
       )
     }
 
-    // AC3: Apply topic filter to pre-seeded courses too
-    if (selectedTopics.length > 0) {
-      courses = courses.filter(c =>
-        selectedTopics.every(topic => c.tags.some(t => t.toLowerCase() === topic))
-      )
-    }
-
     return courses
-  }, [allCourses, selectedCategory, debouncedSearch, selectedTopics])
+  }, [allCourses, selectedCategory, debouncedSearch])
 
   const sortedCourses = useMemo(() => {
     if (sortMode !== 'momentum') return filtered
@@ -227,35 +216,6 @@ export function Courses() {
       (a, b) => (momentumMap.get(b.id)?.score ?? 0) - (momentumMap.get(a.id)?.score ?? 0)
     )
   }, [filtered, sortMode, momentumMap])
-
-  // AC1+AC2: Merge tags from both pre-seeded and imported courses,
-  // deduplicate, and sort by frequency (most courses first)
-  const { mergedTags, tagCounts } = useMemo(() => {
-    const counts = new Map<string, number>()
-
-    // Count tags from pre-seeded courses
-    for (const course of allCourses) {
-      for (const tag of course.tags) {
-        const normalized = tag.trim().toLowerCase()
-        if (normalized) counts.set(normalized, (counts.get(normalized) ?? 0) + 1)
-      }
-    }
-
-    // Count tags from imported courses (AI-generated tags)
-    for (const course of importedCourses) {
-      for (const tag of course.tags) {
-        const normalized = tag.trim().toLowerCase()
-        if (normalized) counts.set(normalized, (counts.get(normalized) ?? 0) + 1)
-      }
-    }
-
-    // Sort by frequency descending, then alphabetically for ties
-    const sorted = [...counts.entries()]
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .map(([tag]) => tag)
-
-    return { mergedTags: sorted, tagCounts: counts }
-  }, [allCourses, importedCourses])
 
   // Keep legacy allTags for ImportedCourseCard (imported-only tags)
   const allTags = useMemo(() => getAllTags(), [getAllTags])
@@ -267,12 +227,6 @@ export function Courses() {
       const q = debouncedSearch.toLowerCase()
       courses = courses.filter(
         c => c.name.toLowerCase().includes(q) || c.tags.some(t => t.toLowerCase().includes(q))
-      )
-    }
-
-    if (selectedTopics.length > 0) {
-      courses = courses.filter(c =>
-        selectedTopics.every(topic => c.tags.some(t => t.toLowerCase() === topic))
       )
     }
 
@@ -288,7 +242,6 @@ export function Courses() {
   useEffect(() => {
     if (!sampleCollapsed) return
     const hasActiveFilter =
-      selectedTopics.length > 0 ||
       debouncedSearch.trim() !== '' ||
       (selectedCategory !== 'all' && selectedCategory !== '')
     if (hasActiveFilter && filtered.length > 0) {
@@ -299,7 +252,7 @@ export function Courses() {
         // silent-catch-ok: localStorage unavailable — auto-expand still works for the session
       }
     }
-  }, [sampleCollapsed, selectedTopics, debouncedSearch, selectedCategory, filtered.length])
+  }, [sampleCollapsed, debouncedSearch, selectedCategory, filtered.length])
 
   // AC1-AC4 (E1C-S05): Sort imported courses by momentum or importedAt
   const sortedImportedCourses = useMemo(() => {
@@ -316,15 +269,6 @@ export function Courses() {
       return new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime()
     })
   }, [filteredImportedCourses, sortMode, momentumMap])
-
-  function handleTagsChanged() {
-    // After a global rename/delete, selected topic filters may reference
-    // stale tag names. Clear them so the user sees the refreshed tag list
-    // without ghost filters. They can re-select from the updated pills.
-    if (selectedTopics.length > 0) {
-      setSelectedTopics([])
-    }
-  }
 
   function handleOpenBulkImport() {
     setBulkImportOpen(true)
@@ -447,15 +391,8 @@ export function Courses() {
             </div>
           </Card>
 
-          {/* AC1: Show unified topic filter with merged tags from both course types */}
           {/* AC5 (E1C-S05): Sort dropdown alongside filters — applies to both sections */}
           <div className="flex flex-wrap gap-x-6 gap-y-2 items-start">
-            <TopicFilter
-              availableTags={mergedTags}
-              selectedTags={selectedTopics}
-              onSelectedTagsChange={setSelectedTopics}
-              tagCounts={tagCounts}
-            />
             {importedCourses.length > 0 && (
               <StatusFilter
                 selectedStatuses={selectedStatuses}
@@ -475,26 +412,7 @@ export function Courses() {
                 <SelectItem value="momentum">Sort by Momentum</SelectItem>
               </SelectContent>
             </Select>
-            {mergedTags.length > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="min-h-[44px] text-xs text-muted-foreground hover:text-foreground"
-                onClick={() => setTagManagementOpen(true)}
-                data-testid="manage-tags-btn"
-                aria-label="Manage tags"
-              >
-                <Tags className="size-4 mr-1.5" aria-hidden="true" />
-                Manage Tags
-              </Button>
-            )}
           </div>
-
-          <TagManagementPanel
-            open={tagManagementOpen}
-            onOpenChange={setTagManagementOpen}
-            onTagsChanged={handleTagsChanged}
-          />
 
           {/* Imported Courses Section */}
           {(importedCourses.length > 0 || !searchQuery.trim()) && (
@@ -523,7 +441,7 @@ export function Courses() {
               ) : filteredImportedCourses.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   No imported courses match your{' '}
-                  {selectedTopics.length > 0 || selectedStatuses.length > 0 ? 'filters' : 'search'}
+                  {selectedStatuses.length > 0 ? 'filters' : 'search'}
                 </div>
               ) : (
                 <VirtualizedGrid
