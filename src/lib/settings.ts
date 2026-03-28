@@ -4,6 +4,8 @@ const STORAGE_KEY = 'app-settings'
 
 export type FontSize = 'small' | 'medium' | 'large' | 'extra-large'
 export type AgeRange = 'gen-z' | 'millennial' | 'boomer' | 'prefer-not-to-say'
+export type ContentDensity = 'default' | 'spacious'
+export type ReduceMotion = 'system' | 'on' | 'off'
 
 /** Maps font size labels to root font-size pixel values */
 export const FONT_SIZE_PX: Record<FontSize, number> = {
@@ -36,6 +38,18 @@ export interface AppSettings {
    * UI toggle ships in E21-S05; this story (E21-S04) provides the tokens + hook.
    */
   colorScheme: 'professional' | 'vibrant'
+  /** Whether to use Atkinson Hyperlegible font for improved readability. */
+  accessibilityFont: boolean
+  /** Content area density: 'default' or 'spacious' (increased padding/gap/line-height). */
+  contentDensity: ContentDensity
+  /** Motion preference: 'system' (follow OS), 'on' (reduce), 'off' (allow all). */
+  reduceMotion: ReduceMotion
+}
+
+export const DISPLAY_DEFAULTS = {
+  accessibilityFont: false as const,
+  contentDensity: 'default' as ContentDensity,
+  reduceMotion: 'system' as ReduceMotion,
 }
 
 const defaults: AppSettings = {
@@ -44,12 +58,30 @@ const defaults: AppSettings = {
   theme: 'system',
   profilePhotoDataUrl: undefined,
   colorScheme: 'professional',
+  accessibilityFont: false,
+  contentDensity: 'default',
+  reduceMotion: 'system',
 }
+
+const VALID_CONTENT_DENSITY: ContentDensity[] = ['default', 'spacious']
+const VALID_REDUCE_MOTION: ReduceMotion[] = ['system', 'on', 'off']
 
 export function getSettings(): AppSettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? { ...defaults, ...JSON.parse(raw) } : { ...defaults }
+    if (!raw) return { ...defaults }
+    const parsed = { ...defaults, ...JSON.parse(raw) }
+    // Sanitize enum-like fields to prevent corrupted localStorage from propagating
+    if (!VALID_REDUCE_MOTION.includes(parsed.reduceMotion)) {
+      parsed.reduceMotion = defaults.reduceMotion
+    }
+    if (!VALID_CONTENT_DENSITY.includes(parsed.contentDensity)) {
+      parsed.contentDensity = defaults.contentDensity
+    }
+    if (typeof parsed.accessibilityFont !== 'boolean') {
+      parsed.accessibilityFont = defaults.accessibilityFont
+    }
+    return parsed
   } catch {
     return { ...defaults }
   }

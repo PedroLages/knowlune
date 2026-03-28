@@ -56,6 +56,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@fontsource-variable/dm-sans": "^5.2.8",
     "@fontsource-variable/space-grotesk": "^5.2.10",
+    "@fontsource/atkinson-hyperlegible": "^5.2.8",
     "@fontsource/dm-serif-display": "^5.2.8",
     "@mlc-ai/web-llm": "^0.2.81",
     "@number-flow/react": "^0.6.0",

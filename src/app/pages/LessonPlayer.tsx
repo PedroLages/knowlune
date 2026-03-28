@@ -999,7 +999,10 @@ export function LessonPlayer() {
           <h3 className="text-sm font-semibold truncate">{course.shortTitle}</h3>
           <p className="text-xs text-muted-foreground">Course Content</p>
         </div>
-        <ScrollArea className="flex-1 [&_[data-slot=scroll-area-viewport]>div]:!block" data-testid="course-sidebar-accordion">
+        <ScrollArea
+          className="flex-1 [&_[data-slot=scroll-area-viewport]>div]:!block"
+          data-testid="course-sidebar-accordion"
+        >
           <div className="p-3">
             <ModuleAccordion
               modules={course.modules}

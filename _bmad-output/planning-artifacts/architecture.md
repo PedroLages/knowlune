@@ -28,6 +28,49 @@ editHistory:
       - 'Added 8-story implementation sequence'
     researchInput:
       - 'docs/implementation-artifacts/project-adversarial-review-2026-03-26.md (Finding #9)'
+  - date: '2026-03-28'
+    scope: 'AI Deep Strategy architecture addendum (Epics 36-43)'
+    changes:
+      - 'Added AI Deep Strategy Architecture section (7 decision areas, 8 epics)'
+      - 'Added Model Registry pattern with ModelInfo interface and provider catalog'
+      - 'Added per-feature model overrides with getLLMClient(featureId?) enhancement'
+      - 'Added Socratic Tutor architecture (prompts, sessionManager, adaptiveEngine, Dexie tables)'
+      - 'Added FSRS flashcard scheduling algorithm with card state machine'
+      - 'Added token metering middleware with Supabase usage tracking'
+      - 'Added Study Buddy floating overlay with intent detection routing'
+      - 'Added cross-feature intelligence loop (misconception→flashcard→quiz→gaps→path)'
+      - 'Added 33-story implementation sequence across 8 epics'
+    researchInput:
+      - '/Users/pedro/.claude/plans/adaptive-petting-unicorn.md (AI Deep Strategy plan)'
+  - date: '2026-03-28'
+    scope: 'Knowledge Map Phase 1 architecture addendum'
+    changes:
+      - 'Added Knowledge Map Phase 1 Architecture section (5 decision areas, 4 stories)'
+      - 'Added Topic Resolution Service with noise filter + canonical map + category grouping'
+      - 'Added Knowledge Score Calculation with dynamic weight redistribution 30/30/20/20'
+      - 'Added Knowledge Map Zustand store with cross-store aggregation (no new Dexie table)'
+      - 'Added UI architecture: Overview widget + dedicated /knowledge-map page + Recharts Treemap'
+      - 'Added data flow from Dexie tables through score pipeline to visualization'
+      - 'Added 4-story implementation sequence'
+    researchInput:
+      - '_bmad-output/planning-artifacts/research/technical-knowledge-visualization-decay-modeling-research-2026-03-28.md'
+      - '_bmad-output/brainstorming/brainstorming-session-2026-03-28-knowledge-map-phase1.md'
+      - 'docs/plans/2026-03-28-product-roadmap.md (Section 13)'
+  - date: '2026-03-28'
+    scope: 'AI Tutoring Phase 1-2 architecture addendum (lesson-aware chat + Socratic mode)'
+    changes:
+      - 'Added AI Tutoring Phase 1-2 Architecture section (7 decision areas, 5 stories)'
+      - 'Added Tutor tab in LessonPlayer with reusable chat components (MessageList, ChatInput, CitationLink)'
+      - 'Added slot-based prompt builder (tutorPromptBuilder.ts) with 6-slot priority system and auto token budget'
+      - 'Added TypeScript hint ladder state machine (Levels 0-4) with client-side frustration detection'
+      - 'Added position-based transcript context injection (Phase 1) with 3 strategies: full/chapter/window'
+      - 'Added Dexie v29 chatConversations table with blob storage and sliding window (3 exchanges)'
+      - 'Added useTutor hook with 6-stage pipeline and 3-tier graceful degradation'
+      - 'Added 5-story implementation sequence across Phase 1-2'
+    researchInput:
+      - '_bmad-output/planning-artifacts/research/technical-socratic-tutoring-llm-research-2026-03-28.md'
+      - '_bmad-output/brainstorming/brainstorming-session-2026-03-28-ai-tutoring-phase1-2.md'
+      - 'docs/plans/2026-03-28-product-roadmap.md (Section 14)'
 inputDocuments:
   - '_bmad-output/planning-artifacts/prd.md'
   - '_bmad-output/planning-artifacts/product-brief-Elearningplatformwireframes-2026-03-01.md'
@@ -2262,3 +2305,2447 @@ After:  getLLMClient() → ProxyLLMClient.streamCompletion() → fetch('/api/ai/
 - Rate limiter drift → process restart clears counters (acceptable for single-instance proxy)
 - BYOK/hosted coupling (Vercel bug) → independent middleware layers, never coupled
 - Future JWKS migration → middleware auto-detects `SUPABASE_JWKS_URL` env var
+
+---
+
+## AI Deep Strategy Architecture (Epics 36-43)
+
+_Added 2026-03-28. This section extends the architecture for the AI Deep Strategy — 8 epics covering model selection, Socratic tutoring, token metering, flashcards, quizzes, subscription tiers, Study Buddy, and cross-feature intelligence. Three strategic gaps drove this work: (1) users can select a provider but not a model (wire disconnected at factory.ts:95), (2) no subscription/billing for non-BYOK users, (3) AI features should go deeper with tutoring, flashcards, quizzes, and a conversational study buddy._
+
+**Input Documents:**
+- AI Deep Strategy plan: `/Users/pedro/.claude/plans/adaptive-petting-unicorn.md`
+- Existing AI Layer Architecture: this document, line 1249
+- Existing Entitlement Architecture: this document, line 1869
+
+### AI Deep Strategy Decision Summary
+
+| Decision Area | Choice | Rationale |
+|---|---|---|
+| Model registry | `src/lib/modelRegistry.ts` with `ModelInfo` interface (id, provider, tier, pricing, speed, bestFor, freeTierAllowed) | Extends existing `AI_PROVIDERS` pattern; enables per-feature cost optimization (5-10x cost differences between summary vs. tutoring models) |
+| Per-feature model overrides | `featureModelOverrides` in config + `getLLMClient(featureId?)` | Wire exists end-to-end (`ProxyLLMClient` model param line 29, `getProviderModel()` override line 30) — just needs connecting at `factory.ts:95` |
+| Tutor architecture | `src/ai/tutor/` module with Socratic prompts, sessionManager, adaptiveEngine, Dexie tables | Reuses RAG coordinator for context, ChatQA UI patterns for chat interface, streaming from `BaseLLMClient` |
+| FSRS flashcard scheduling | `src/ai/flashcards/scheduler.ts` implementing Free Spaced Repetition Scheduler | FSRS outperforms SM-2 by ~15% retention accuracy (trained on 300M+ Anki reviews). Card state machine: New → Learning → Review → Relearning |
+| Token metering | Proxy middleware counting tokens per SSE response + Supabase `ai_usage` table | Extends existing entitlement middleware chain (`server/middleware/`). tiktoken fallback for providers without usage metadata |
+| Study Buddy overlay | Floating chat in `Layout.tsx` with LLM-based intent detection → feature routing | Follows Layout overlay pattern (SearchCommandPalette, OnboardingOverlay at lines 615-639). Context engine for page/lesson/course awareness |
+| Intelligence loop | Misconception → flashcard pipeline, quiz → gap aggregation, comprehension → path reordering | Cross-feature data flow connecting tutor, flashcards, quizzes, knowledge gaps, and learning paths into a feedback loop |
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           Browser (Client)                                   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │                    Model Selection Layer (E36)                       │    │
+│  │                                                                     │    │
+│  │  ModelRegistry              AIConfigurationSettings                  │    │
+│  │  ┌──────────────────┐       ┌──────────────────────────────┐        │    │
+│  │  │ ModelInfo[]       │       │ selectedModels: per-provider  │        │    │
+│  │  │ per provider,     │◄─────│ featureModelOverrides:        │        │    │
+│  │  │ tier, cost, speed │       │   per-feature model choice    │        │    │
+│  │  └────────┬─────────┘       └──────────────┬───────────────┘        │    │
+│  │           │                                │                        │    │
+│  │           ▼                                ▼                        │    │
+│  │  getLLMClient(featureId?)                                           │    │
+│  │  ┌──────────────────────────────────────────────┐                   │    │
+│  │  │ 1. Check featureModelOverrides[featureId]     │                   │    │
+│  │  │ 2. Fall back to selectedModels[provider]      │                   │    │
+│  │  │ 3. Fall back to getDefaultModel(provider)     │                   │    │
+│  │  │ 4. Pass model to ProxyLLMClient constructor   │                   │    │
+│  │  └──────────────────────┬───────────────────────┘                   │    │
+│  └─────────────────────────┼───────────────────────────────────────────┘    │
+│                            │                                                │
+│  ┌─────────────────────────┼───────────────────────────────────────────┐    │
+│  │                    AI Feature Layer                                  │    │
+│  │                         │                                           │    │
+│  │  ┌─────────────┐  ┌────┴────────┐  ┌──────────────┐  ┌─────────┐  │    │
+│  │  │ Tutor (E37) │  │ Flashcards  │  │ Quiz (E40)   │  │ Existing│  │    │
+│  │  │ Socratic    │  │ (E39)       │  │ Adaptive     │  │ Features│  │    │
+│  │  │ prompts,    │  │ FSRS sched, │  │ difficulty,  │  │ Summary │  │    │
+│  │  │ adaptive    │  │ AI gen,     │  │ 5 Q types,   │  │ Chat QA │  │    │
+│  │  │ difficulty  │  │ spaced rep  │  │ concept-map  │  │ L.Path  │  │    │
+│  │  └──────┬──────┘  └──────┬──────┘  └──────┬───────┘  │ K.Gaps  │  │    │
+│  │         │                │                │          │ Notes   │  │    │
+│  │         │    ┌───────────┼────────────────┘          └─────────┘  │    │
+│  │         │    │           │                                        │    │
+│  │         ▼    ▼           ▼                                        │    │
+│  │  ┌──────────────────────────────────┐                             │    │
+│  │  │   Intelligence Loop (E43)         │                             │    │
+│  │  │                                   │                             │    │
+│  │  │  Tutor misconceptions             │                             │    │
+│  │  │    → auto-generate flashcards     │                             │    │
+│  │  │  Quiz wrong answers               │                             │    │
+│  │  │    → weighted knowledge gaps      │                             │    │
+│  │  │  Comprehension data               │                             │    │
+│  │  │    → learning path reordering     │                             │    │
+│  │  └──────────────────────────────────┘                             │    │
+│  └───────────────────────────────────────────────────────────────────┘    │
+│                                                                             │
+│  ┌───────────────────────────────────────────────────────────────────┐    │
+│  │                    Study Buddy Overlay (E42)                       │    │
+│  │  Floating FAB → expandable chat panel                              │    │
+│  │  Context engine: current page, lesson, course                      │    │
+│  │  Intent detection → routes to tutor/flashcards/quiz/RAG/analytics  │    │
+│  └───────────────────────────────────────────────────────────────────┘    │
+│                                                                             │
+│  ┌───────────────────────────────────────────────────────────────────┐    │
+│  │  Dexie Storage (new tables)                                        │    │
+│  │  tutorSessions | tutorMisconceptions | flashcardDecks | flashcards │    │
+│  │  reviewSessions | quizzes | quizAttempts                           │    │
+│  └───────────────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                     POST /api/ai/* + Authorization: Bearer <JWT>
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        Express Proxy (:3001)                                 │
+│                                                                             │
+│  Existing middleware chain (from Entitlement Architecture):                   │
+│    Origin Check → JWT Auth → BYOK Detection → Entitlement → Rate Limit      │
+│                                                                             │
+│  NEW: Token Counting Middleware (E38)                                        │
+│  ┌───────────────────────────────────────────────────────┐                  │
+│  │  ... → Rate Limit → [handler] → Token Counter → respond                  │
+│  │                                                       │                  │
+│  │  1. Parse SSE stream for usage metadata               │                  │
+│  │  2. Fallback: estimate via tiktoken                   │                  │
+│  │  3. Log to Supabase ai_usage table                    │                  │
+│  │  4. Deduct from ai_budgets.used_this_month            │                  │
+│  └───────────────────────────────────────────────────────┘                  │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                   │
+                    ┌──────────────┼──────────────┐
+                    ▼              ▼              ▼
+          ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+          │ AI Providers │ │ Supabase DB  │ │ Supabase DB  │
+          │ (6 cloud +   │ │ (ai_usage,   │ │ (entitlements│
+          │  Ollama)     │ │  ai_budgets) │ │  table)      │
+          └──────────────┘ └──────────────┘ └──────────────┘
+```
+
+### Decision 1: Model Registry Pattern
+
+**Problem:** Users are locked into hardcoded defaults (Haiku 4.5, GPT-4-turbo). Different AI tasks have 5-10x cost differences — summaries work on economy models, tutoring needs premium reasoning. There's no way to browse available models or understand cost/quality tradeoffs.
+
+**Decision:** Create `src/lib/modelRegistry.ts` with a typed model catalog, extending the existing `AI_PROVIDERS` registry pattern in `src/lib/aiConfiguration.ts`.
+
+**ModelInfo interface:**
+```typescript
+interface ModelInfo {
+  id: string                // API model ID (e.g., 'claude-sonnet-4-6')
+  name: string              // Display name (e.g., 'Claude Sonnet 4.6')
+  provider: AIProviderId    // Reuses existing type from aiConfiguration.ts
+  tier: 'economy' | 'balanced' | 'premium'
+  inputCostPer1M: number    // USD per 1M input tokens
+  outputCostPer1M: number   // USD per 1M output tokens
+  contextWindow: number     // Max tokens (e.g., 200000)
+  speed: 'fast' | 'medium' | 'slow'
+  bestFor: string[]         // ['summaries', 'chat', 'analysis', 'tutoring']
+  isDefault?: boolean       // One per provider
+  freeTierAllowed?: boolean // true for economy models on free providers (Ollama, Groq, Gemini, GLM)
+}
+```
+
+**Catalog structure (all 6 providers):**
+
+| Provider | Economy | Balanced | Premium |
+|---|---|---|---|
+| OpenAI | GPT-4.1-mini | GPT-4.1 | o3 |
+| Anthropic | Haiku 4.5 | Sonnet 4.6 | Opus 4.6 |
+| Groq | Llama 3.3 70B | Llama 4 Scout | DeepSeek R1 (via Groq) |
+| Gemini | Gemini 2.0 Flash | Gemini 2.5 Pro | Gemini 2.5 Pro (high thinking) |
+| GLM | GLM-4-Flash | GLM-4-Plus | GLM-4-Long |
+| Ollama | (dynamic from API) | (dynamic from API) | (dynamic from API) |
+
+**Ollama special case:** Ollama models are fetched dynamically via `OllamaLLMClient.fetchModels()`. The registry stores a placeholder entry for Ollama; actual model list comes from the user's server. Tier classification for Ollama models is omitted (user self-manages).
+
+**Exported functions:**
+```
+getModelsForProvider(id: AIProviderId): ModelInfo[]     — Filter catalog by provider
+getDefaultModel(id: AIProviderId): ModelInfo            — Return isDefault=true entry
+getModelById(id: string): ModelInfo | undefined         — Lookup by API model ID
+getFreeTierModels(): ModelInfo[]                        — Filter freeTierAllowed=true
+getModelsForFeature(feature: string): ModelInfo[]       — Filter by bestFor tag
+```
+
+**Relationship to `AI_PROVIDERS`:** The model registry is a separate module that imports `AIProviderId` from `aiConfiguration.ts`. It does NOT replace `AI_PROVIDERS` — that registry handles provider-level concerns (validation patterns, connection testing, display names). The model registry adds model-level concerns (pricing, capabilities, tier classification).
+
+**Update cadence:** Model catalog is hardcoded with a `CATALOG_VERSION` string. Updated when new models are released. Future enhancement: fetch latest catalog from a CDN endpoint.
+
+### Decision 2: Per-Feature Model Overrides + getLLMClient Enhancement
+
+**Problem:** All AI features use the same model. Summaries (low stakes, high volume) should use economy models while tutoring (high stakes, interactive) should use premium reasoning models. The `getLLMClient()` factory creates clients without passing the model parameter, even though `ProxyLLMClient` already accepts it.
+
+**Decision:** Add `featureModelOverrides` to config and enhance `getLLMClient()` with a 3-tier resolution: feature override → global selection → provider default.
+
+**Config schema extension (in `src/lib/aiConfiguration.ts`):**
+```typescript
+type AIFeatureId =
+  | 'videoSummary'
+  | 'noteQA'
+  | 'learningPath'
+  | 'knowledgeGaps'
+  | 'noteOrganization'
+  | 'analytics'
+  | 'tutor'
+  | 'flashcards'
+  | 'quiz'
+  | 'studyBuddy'
+
+interface AIConfigurationSettings {
+  // ... existing fields ...
+  selectedModels?: Partial<Record<AIProviderId, string>>       // Global per-provider model
+  featureModelOverrides?: Partial<Record<AIFeatureId, string>> // Per-feature model ID
+}
+```
+
+**getLLMClient resolution flow (modified `src/ai/llm/factory.ts`):**
+```
+getLLMClient(featureId?: AIFeatureId)
+  │
+  ├─ Test injection? → return window.__mockLLMClient
+  │
+  ├─ Read config = getAIConfiguration()
+  │
+  ├─ Resolve model:
+  │   1. featureId && config.featureModelOverrides?.[featureId]  → use that model
+  │   2. config.selectedModels?.[config.provider]                → use global selection
+  │   3. getDefaultModel(config.provider).id                     → use registry default
+  │
+  ├─ Ollama path: OllamaLLMClient(serverUrl, { model })
+  │
+  └─ Cloud path: ProxyLLMClient(providerId, apiKey, model)
+                                                         ↑ currently missing at line 95
+```
+
+**The existing wire (connecting the disconnected pieces):**
+- `ProxyLLMClient` constructor already stores `this.model = model` (proxy-client.ts:29)
+- `ProxyLLMClient.streamCompletion()` already sends `model` in request body (proxy-client.ts:58)
+- `server/providers.ts:getProviderModel()` already accepts optional `model` override (line 30)
+- **Only missing piece:** `factory.ts:95` calls `new ProxyLLMClient(providerId, apiKey)` without passing model
+
+**UI approach (in `AIConfigurationSettings.tsx`):**
+- Below provider selector: add `ModelPicker` component (replaces `OllamaModelPicker` for all providers)
+- Collapsible "Advanced: Per-Feature Models" section at bottom of AI Settings
+- Shows feature name + current model (inherited or overridden) + dropdown to override
+- "Reset to Default" button per feature
+- ModelPicker component shows: model name, tier badge (Economy/Balanced/Premium), cost per 1M tokens, speed indicator, "best for" tags
+
+**Generalizing OllamaModelPicker:**
+- Current `OllamaModelPicker.tsx` is Ollama-specific (fetches from server, shows sizes)
+- New `ModelPicker.tsx`: generic component that accepts `ModelInfo[]` and `onModelSelect`
+- For Ollama: wraps OllamaModelPicker behavior (dynamic fetch) inside ModelPicker shell
+- For cloud providers: reads from ModelRegistry catalog (static)
+- Shared UI: searchable combobox (same shadcn Popover + Command pattern)
+
+### Decision 3: Tutor Architecture
+
+**Problem:** No AI tutoring exists. Research shows 40% comprehension gains from Socratic tutoring over passive learning. This is Knowlune's #1 differentiator — no competing personal learning platform has AI Socratic tutoring integrated with course content.
+
+**Decision:** Create `src/ai/tutor/` module with Socratic prompt engineering, adaptive difficulty, misconception tracking, and Dexie persistence. Reuse RAG coordinator for content retrieval and ChatQA patterns for UI.
+
+**Module structure:**
+```
+src/ai/tutor/
+  ├── types.ts           TutorSession, TutorMessage, MisconceptionRecord, TutorDifficulty
+  ├── prompts.ts         Socratic system prompts, difficulty-scaled templates
+  ├── sessionManager.ts  CRUD: create/resume/close sessions, add messages
+  ├── adaptiveEngine.ts  Difficulty adjustment, misconception detection, cross-session tracking
+  └── hooks/
+      └── useTutor.ts    React hook: session state, send message, streaming, difficulty control
+```
+
+**Socratic prompt strategy (3 difficulty modes):**
+
+| Mode | Behavior | System Prompt Instruction |
+|---|---|---|
+| **Guided** | Heavy scaffolding, leading questions, immediate hints | "Ask one simple question at a time. If the student struggles, provide a hint within 2 exchanges. Break complex concepts into small steps." |
+| **Challenging** | Probing questions, Socratic questioning, delayed hints | "Ask questions that reveal understanding. Do not give answers. If the student struggles after 3 exchanges, provide a subtle hint. Challenge correct answers with 'why' follow-ups." |
+| **Expert** | Devil's advocate, edge cases, conceptual depth | "Challenge every answer, even correct ones. Probe edge cases and implications. Only confirm mastery after the student defends their reasoning from multiple angles." |
+
+**RAG integration:** The tutor uses `ragCoordinator.retrieveContext(query)` to ground questions in course content. The system prompt includes retrieved note chunks as context. This prevents hallucination and ensures questions relate to material the student has studied.
+
+**Dexie schema additions:**
+```typescript
+// Added to schema.ts at next version increment
+tutorSessions: '++id, lessonId, courseId, startedAt, difficulty, status'
+tutorMisconceptions: '++id, sessionId, concept, detectedAt, resolvedAt'
+```
+
+**TutorSession type:**
+```typescript
+interface TutorSession {
+  id?: number
+  lessonId: string
+  courseId: string
+  startedAt: Date
+  closedAt?: Date
+  difficulty: 'guided' | 'challenging' | 'expert'
+  status: 'active' | 'completed' | 'abandoned'
+  messageCount: number
+  misconceptionCount: number
+}
+
+interface TutorMessage {
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  timestamp: Date
+  misconceptionDetected?: string  // concept tag if AI detected a misconception
+}
+
+interface MisconceptionRecord {
+  id?: number
+  sessionId: number
+  concept: string           // e.g., "recursion base case"
+  description: string       // AI's description of the misconception
+  detectedAt: Date
+  resolvedAt?: Date         // Set when student demonstrates understanding
+  feedsInto?: 'flashcard' | 'quiz'  // Intelligence loop tracking
+}
+```
+
+**UI placement:** Collapsible tutor panel in `LessonPlayer.tsx` (right sidebar on desktop, bottom drawer on mobile). Chat-style interface reusing message list/input patterns from `ChatQA.tsx`. "Start Tutoring" button appears on lesson pages. Session history accessible via tutor panel header.
+
+**Streaming:** Uses same `AsyncGenerator<LLMStreamChunk>` pattern as all existing features. The `useTutor` hook wraps `getLLMClient('tutor')` with session management.
+
+### Decision 4: FSRS Flashcard Scheduling
+
+**Problem:** Knowlune needs spaced repetition for long-term retention. The existing `reviewRecords` and `flashcards` Dexie tables exist but lack a scheduling algorithm.
+
+**Decision:** Implement FSRS (Free Spaced Repetition Scheduler) — the successor to SM-2, used by modern Anki (adopted 2023). FSRS uses a 4-parameter model trained on 300M+ Anki reviews, achieving ~15% better retention prediction than SM-2.
+
+**FSRS algorithm core (`src/ai/flashcards/scheduler.ts`):**
+
+```typescript
+interface FSRSParameters {
+  w: [number, number, number, number]  // 4 weights (default: [0.4, 0.6, 2.4, 5.8])
+  requestRetention: number              // Target retention rate (default: 0.9 = 90%)
+  maximumInterval: number               // Max days between reviews (default: 36500)
+}
+
+interface CardSchedulingState {
+  stability: number      // How long the memory lasts (days)
+  difficulty: number     // 0-10, how hard the card is for this user
+  elapsedDays: number    // Days since last review
+  scheduledDays: number  // Days until next review
+  reps: number           // Total review count
+  lapses: number         // Times card was forgotten (rated Again)
+  state: CardState       // New | Learning | Review | Relearning
+  lastReview?: Date
+}
+
+type CardState = 'new' | 'learning' | 'review' | 'relearning'
+type Rating = 'again' | 'hard' | 'good' | 'easy'  // Maps to 1-4
+```
+
+**State machine:**
+```
+                 ┌─────────────────────────────────┐
+                 │                                  │
+    ┌────────┐   │  ┌──────────┐   ┌──────────┐   │
+    │  New   │───┴──│ Learning │───│ Review   │───┘
+    └────────┘      └──────────┘   └────┬─────┘
+                         ▲              │ (Again)
+                         │              ▼
+                         │         ┌──────────────┐
+                         └─────────│ Relearning   │
+                                   └──────────────┘
+```
+
+- **New → Learning:** First review of a new card
+- **Learning → Review:** Good/Easy rating during learning
+- **Review → Review:** Good/Easy rating (interval increases)
+- **Review → Relearning:** Again rating (card forgotten, lapse counted)
+- **Relearning → Review:** Good/Easy rating (shorter interval than before lapse)
+
+**Key functions:**
+```
+scheduleCard(card: CardSchedulingState, rating: Rating): CardSchedulingState
+getNextReviewDate(card: CardSchedulingState): Date
+getDueCards(deck: FlashcardDeck): Flashcard[]     // Cards where nextReview <= now
+getRetentionEstimate(card: CardSchedulingState): number  // Current retrievability 0-1
+```
+
+**AI card generation (`src/ai/flashcards/generator.ts`):**
+- Input: lesson transcript + user notes (via RAG coordinator)
+- Output: structured JSON → parsed into Flashcard objects
+- Card types: Q&A, Cloze deletion, Concept definition, True/False
+- Deduplication: check existing deck concepts before generating
+- LLM prompt outputs: `{ cards: [{ type, front, back, clozeText?, concept }] }`
+
+**Dexie schema additions:**
+```typescript
+flashcardDecks: '++id, courseId, lessonId, title, createdAt'
+flashcards: '++id, deckId, type, difficulty, state, nextReview, [deckId+nextReview]'
+reviewSessions: '++id, deckId, startedAt, cardsReviewed, correctCount'
+```
+
+**Compound index `[deckId+nextReview]`** enables efficient "get due cards for deck" queries without scanning all flashcards.
+
+### Decision 5: Token Metering
+
+**Problem:** No way to track AI usage per user. Subscription tiers need usage limits, BYOK users need visibility into their API costs, and Knowlune needs cost data to set sustainable pricing.
+
+**Decision:** Add token counting middleware to the Express proxy (post-response), log to Supabase `ai_usage` table, and enforce budgets via `ai_budgets` table. Extends the existing entitlement middleware chain.
+
+**Middleware placement in the chain:**
+```
+Origin Check → JWT Auth → BYOK Detection → Entitlement → Rate Limit
+  → [handler: AI provider call] → Token Counter (post-response) → respond
+```
+
+**Token counting strategy:**
+1. **Primary:** Parse SSE stream for provider-supplied usage metadata
+   - OpenAI: `usage` field in final stream chunk (`prompt_tokens`, `completion_tokens`)
+   - Anthropic: `message_delta` event with `usage` object
+   - Groq: `x-groq` header with token counts
+   - Gemini: `usageMetadata` in response
+   - GLM: `usage` field in response
+2. **Fallback:** Estimate via `tiktoken` (cl100k_base tokenizer) for providers that don't return counts
+3. **Ollama:** Ollama API returns `eval_count` and `prompt_eval_count` natively
+
+**Implementation approach:** The token counter is a response interceptor, not a request middleware. It wraps the response stream, watches for usage metadata in the final chunk, and fires an async log to Supabase after the response completes. This ensures zero added latency to the user-facing response.
+
+**Supabase tables:**
+```sql
+-- Per-request usage log
+CREATE TABLE ai_usage (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  provider TEXT NOT NULL,
+  model TEXT NOT NULL,
+  feature TEXT,                    -- AIFeatureId or null
+  input_tokens INTEGER NOT NULL,
+  output_tokens INTEGER NOT NULL,
+  cost_estimate NUMERIC(10,6),     -- USD, computed from model registry pricing
+  is_byok BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_ai_usage_user_month ON ai_usage (user_id, created_at);
+
+-- Monthly budget tracking
+CREATE TABLE ai_budgets (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id),
+  tier TEXT NOT NULL DEFAULT 'free',
+  monthly_token_limit INTEGER,     -- null = unlimited (BYOK)
+  used_this_month INTEGER DEFAULT 0,
+  reset_date DATE NOT NULL,        -- 1st of next month
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+**Budget enforcement flow:**
+1. Pre-request: check `ai_budgets.used_this_month < monthly_token_limit`
+2. If over budget: return 402 `BUDGET_EXCEEDED` with upgrade CTA
+3. Post-response: increment `used_this_month` by actual token count
+4. BYOK users: `monthly_token_limit = null` (no enforcement, log-only)
+
+**Budget warnings (client-side):**
+- 80% usage: yellow banner in AI Settings + toast notification
+- 95% usage: red banner with "X tokens remaining" counter
+- 100%: complete current response, then show upgrade CTA with model downgrade suggestion
+- Fetched via `GET /api/ai/usage/budget` endpoint (cached 5 min client-side)
+
+**Cost estimation:** `cost_estimate = (input_tokens / 1M) * model.inputCostPer1M + (output_tokens / 1M) * model.outputCostPer1M`. Uses model registry pricing data.
+
+### Decision 6: Study Buddy Overlay
+
+**Problem:** Each AI feature is siloed in its own page. Users must navigate to ChatQA for Q&A, to a lesson for tutoring, to Settings for configuration. A conversational overlay that's always available and context-aware would unify the AI experience.
+
+**Decision:** Floating chat overlay in `Layout.tsx` with LLM-based intent detection that routes to existing feature modules. Follows the Layout overlay pattern established by `SearchCommandPalette`, `OnboardingOverlay`, and `ImportProgressOverlay`.
+
+**Overlay architecture:**
+```
+Layout.tsx
+  └── <StudyBuddy />                    (new component, inserted alongside existing overlays)
+        ├── <StudyBuddyFAB />           (floating action button, bottom-right)
+        ├── <StudyBuddyPanel />         (expandable chat panel)
+        │     ├── <StudyBuddyHeader />  (title, minimize, settings)
+        │     ├── <MessageList />       (reuse from ChatQA patterns)
+        │     ├── <ChatInput />         (reuse from ChatQA patterns)
+        │     └── <ProactiveSuggestion /> (contextual prompts)
+        └── Context Engine
+              ├── useCurrentRoute()     (detect current page)
+              ├── useCurrentLesson()    (detect active lesson)
+              └── useRecentActivity()   (recent study actions)
+```
+
+**Context engine:** The Study Buddy knows where the user is and what they're doing. Context is assembled from:
+- **Current route:** React Router's `useLocation()` → determines page context
+- **Current lesson:** If on LessonPlayer, extract `lessonId` and `courseId` from route params
+- **Recent activity:** Last 5 study sessions from Dexie `studySessions` table
+- **Flashcard status:** Due card count from `flashcards` table
+- **Knowledge gaps:** Active gaps from `detectGaps.ts`
+
+Context is injected into the Study Buddy's system prompt as structured data, not as conversation history.
+
+**Intent detection + feature routing (`src/ai/studyBuddy/intentRouter.ts`):**
+
+| User Intent | Detection Pattern | Routes To |
+|---|---|---|
+| "Quiz me on Chapter 3" | quiz/test/assess keywords + content reference | `src/ai/quiz/generator.ts` |
+| "Make flashcards for this lesson" | flashcard/card keywords + content scope | `src/ai/flashcards/generator.ts` |
+| "Help me understand recursion" | explain/understand/why keywords | `src/ai/tutor/` (Socratic mode) |
+| "What should I study today?" | study/plan/schedule keywords | Study planner logic (due cards + weak areas) |
+| "What's my progress?" | progress/stats/how am I doing | Analytics summary from Dexie |
+| General question | No specific intent detected | RAG coordinator (default fallback) |
+
+**Intent classification approach:** Single LLM call with structured output:
+```typescript
+interface IntentClassification {
+  intent: 'quiz' | 'flashcard' | 'tutor' | 'planner' | 'analytics' | 'rag'
+  confidence: number      // 0-1
+  contentScope?: string   // extracted course/lesson reference
+  parameters?: Record<string, string>  // e.g., { difficulty: 'hard', count: '10' }
+}
+```
+
+If confidence < 0.7, treat as RAG (general knowledge query). The intent classifier uses a small/fast model (economy tier) to minimize latency and cost.
+
+**Session persistence:** Study Buddy conversation persists across page navigation within the same browser session. Stored in Zustand (not Dexie) — ephemeral by design. Users can optionally save a conversation to notes.
+
+**Proactive suggestions (non-blocking):**
+- After lesson completion: "Want me to quiz you on what you just learned?"
+- When flashcards are due: "You have {N} flashcards due for review"
+- On Knowledge Gaps page: "I noticed you're struggling with {concept} — want to practice?"
+- Suggestions appear as subtle chips above the chat input, dismissible with one click
+
+### Decision 7: Intelligence Loop
+
+**Problem:** Each AI feature generates data in isolation. Tutor misconceptions don't inform flashcard generation. Quiz results don't update knowledge gaps. Learning paths don't consider actual comprehension. The feedback loop that makes each feature smarter from the others' data is missing.
+
+**Decision:** Three cross-feature data flows connecting tutor, flashcards, quizzes, knowledge gaps, and learning paths into a closed feedback loop.
+
+**Flow 1: Misconception → Flashcard Pipeline (E43-S01)**
+
+```
+Tutor Session
+  │  AI detects misconception (stored in tutorMisconceptions)
+  │
+  ▼
+adaptiveEngine.ts: getMisconceptionsForFlashcards()
+  │  Filters: unresolved misconceptions not yet linked to a flashcard
+  │
+  ▼
+flashcards/generator.ts: generateFromMisconceptions(misconceptions[])
+  │  Creates targeted flashcards addressing each misconception
+  │  Sets feedsInto: 'flashcard' on the MisconceptionRecord
+  │
+  ▼
+User Confirmation
+  │  Auto-generated cards presented for review (accept/reject/edit)
+  │  Accepted cards added to relevant deck with state: 'new'
+```
+
+**Trigger:** Batch process after tutor session closes. Not real-time (avoid generating cards mid-conversation).
+
+**Flow 2: Quiz + Tutor → Knowledge Gap Aggregation (E43-S02)**
+
+```
+Knowledge Gap Sources (unified scoring):
+  ├── Study patterns (existing):        weight 0.3
+  │   - Low watch % on lessons
+  │   - Few notes on topics
+  │   - Long gaps between study sessions
+  │
+  ├── Tutor misconceptions (new):       weight 0.4
+  │   - Unresolved misconceptions → high gap confidence
+  │   - Resolved misconceptions → reduced gap score
+  │   - Frequency of misconception across sessions
+  │
+  └── Quiz performance (new):           weight 0.3
+      - Wrong answers per concept
+      - Concept difficulty trend (improving vs declining)
+      - Question type weakness (MCQ vs short answer)
+```
+
+**Enhanced `detectGaps.ts`:**
+```typescript
+interface KnowledgeGap {
+  concept: string
+  confidence: number           // 0-1 weighted composite
+  sources: GapSource[]         // Which signals contributed
+  suggestedActions: GapAction[] // tutor, flashcard, quiz, rewatch
+}
+
+type GapSource =
+  | { type: 'study-pattern'; metric: string; value: number }
+  | { type: 'tutor-misconception'; misconceptionId: number; resolved: boolean }
+  | { type: 'quiz-result'; quizId: number; questionType: string; wasCorrect: boolean }
+
+type GapAction = 'practice-tutor' | 'review-flashcards' | 'take-quiz' | 'rewatch-lesson'
+```
+
+**Flow 3: Comprehension-Driven Learning Path Reordering (E43-S03)**
+
+```
+Current: suggestOrder.ts uses completion status + AI-inferred prerequisites
+Enhanced: suggestOrder.ts also considers:
+  │
+  ├── Knowledge gap severity per concept
+  │   - High gap in prerequisite → suggest reviewing before advancing
+  │
+  ├── Tutor session outcomes
+  │   - Poor tutor performance on topic X → recommend X's prerequisite
+  │
+  └── Quiz/flashcard mastery
+      - Concept mastered (high flashcard retention + quiz accuracy) → skip review
+      - Concept weak → insert targeted review lesson
+```
+
+**Implementation:** `suggestOrder.ts` receives a `ComprehensionData` object alongside the existing completion data:
+```typescript
+interface ComprehensionData {
+  conceptMastery: Map<string, number>  // concept → 0-1 mastery score
+  activeGaps: KnowledgeGap[]
+  recentTutorOutcomes: TutorSessionSummary[]
+}
+```
+
+The ordering algorithm weights comprehension data at 40% (completion remains 60%) to avoid jarring reorderings that contradict the user's mental model of their progress.
+
+### New Files and Modifications
+
+**New files (across Epics 36-43):**
+
+| File | Epic | Purpose |
+|---|---|---|
+| `src/lib/modelRegistry.ts` | E36 | Model catalog with ModelInfo interface, provider queries |
+| `src/app/components/figma/ModelPicker.tsx` | E36 | Universal model selector (generalizes OllamaModelPicker) |
+| `src/ai/tutor/types.ts` | E37 | TutorSession, TutorMessage, MisconceptionRecord types |
+| `src/ai/tutor/prompts.ts` | E37 | Socratic system prompts (3 difficulty modes) |
+| `src/ai/tutor/sessionManager.ts` | E37 | CRUD for tutor sessions in Dexie |
+| `src/ai/tutor/adaptiveEngine.ts` | E37 | Difficulty adjustment, misconception tracking |
+| `src/ai/tutor/hooks/useTutor.ts` | E37 | React hook for tutor flow |
+| `src/app/components/figma/TutorPanel.tsx` | E37 | Collapsible tutor chat in LessonPlayer |
+| `server/middleware/tokenCounter.ts` | E38 | Post-response token counting + Supabase logging |
+| `server/middleware/usageLogger.ts` | E38 | Async usage logging to Supabase ai_usage |
+| `src/app/components/figma/UsageDashboard.tsx` | E38 | Token budget bar, usage charts, cost breakdown |
+| `src/ai/hooks/useBudgetCheck.ts` | E38 | Budget warning hook for all AI features |
+| `src/ai/flashcards/types.ts` | E39 | Flashcard, FlashcardDeck, ReviewSchedule types |
+| `src/ai/flashcards/scheduler.ts` | E39 | FSRS algorithm implementation |
+| `src/ai/flashcards/generator.ts` | E39 | AI card generation from content |
+| `src/ai/flashcards/prompts.ts` | E39 | Card generation system prompts |
+| `src/ai/flashcards/hooks/useFlashcardGenerator.ts` | E39 | Card generation hook |
+| `src/ai/flashcards/hooks/useReviewSession.ts` | E39 | Review session hook with FSRS scheduling |
+| `src/app/pages/FlashcardReview.tsx` | E39 | Swipeable card review UI |
+| `src/app/pages/FlashcardDecks.tsx` | E39 | Deck management page |
+| `src/ai/quiz/types.ts` | E40 | Quiz, Question, QuizAttempt types |
+| `src/ai/quiz/generator.ts` | E40 | AI quiz generation with difficulty scaling |
+| `src/ai/quiz/scorer.ts` | E40 | Scoring + adaptive difficulty adjustment |
+| `src/ai/quiz/prompts.ts` | E40 | Quiz generation system prompts per format |
+| `src/ai/quiz/hooks/useQuiz.ts` | E40 | React hook for quiz flow |
+| `src/app/pages/QuizPlayer.tsx` | E40 | Quiz-taking UI with per-question-type components |
+| `src/app/components/figma/StudyBuddy.tsx` | E42 | Floating overlay shell + context engine |
+| `src/ai/studyBuddy/intentRouter.ts` | E42 | LLM-based intent classification → feature routing |
+| `src/ai/studyBuddy/proactiveSuggestions.ts` | E42 | Context-aware suggestion generation |
+| `src/ai/studyBuddy/personality.ts` | E42 | Tone configuration + preference memory |
+
+**Modified files (across Epics 36-43):**
+
+| File | Epic | Change |
+|---|---|---|
+| `src/lib/aiConfiguration.ts` | E36 | Add `selectedModels`, `featureModelOverrides`, `AIFeatureId` type |
+| `src/app/components/figma/AIConfigurationSettings.tsx` | E36 | Add ModelPicker, per-feature override UI |
+| `src/ai/llm/factory.ts` | E36 | `getLLMClient(featureId?)` with 3-tier model resolution |
+| `server/providers.ts` | E36 | Verify model override flows correctly |
+| `src/db/schema.ts` | E37, E39, E40 | Add tutorSessions, tutorMisconceptions, flashcardDecks, flashcards, reviewSessions tables |
+| `src/app/pages/LessonPlayer.tsx` | E37 | Add TutorPanel integration |
+| `src/ai/rag/ragCoordinator.ts` | E37, E42 | Extended context retrieval for tutor + study buddy |
+| `server/index.ts` | E38 | Add token counting middleware to chain |
+| `src/app/pages/Overview.tsx` | E39 | "Due Today" flashcard widget |
+| `src/app/routes.tsx` | E39, E40 | Add routes for FlashcardReview, FlashcardDecks, QuizPlayer |
+| `src/lib/entitlement/isPremium.ts` | E41 | Extend for new feature IDs (tutor, flashcards, quiz) |
+| `src/app/components/PremiumFeaturePage.tsx` | E41 | Add pre-configured entries for new features |
+| `src/app/components/Layout.tsx` | E42 | Insert `<StudyBuddy />` overlay |
+| `src/ai/knowledgeGaps/detectGaps.ts` | E43 | Unified gap scoring from tutor + quiz + study patterns |
+| `src/ai/learningPath/suggestOrder.ts` | E43 | Comprehension-weighted reordering |
+
+### Implementation Sequence
+
+```
+E36: Model Selection + Per-Feature Overrides (4 stories)
+  ├── E36-S01: Model Registry + Provider Catalog        (no deps)
+  ├── E36-S02: ModelPicker Component + Settings          (depends: S01)
+  ├── E36-S03: Wire Model Selection Through Pipeline     (depends: S01)
+  └── E36-S04: Per-Feature Model Overrides               (depends: S02, S03)
+
+E37: AI Socratic Tutor (5 stories)                       (depends: E36)
+  ├── E37-S01: Tutor Data Model + Dexie Storage          (no deps)
+  ├── E37-S02: Socratic Prompts + LLM Integration        (depends: S01)
+  ├── E37-S03: Tutor UI (Chat Panel in LessonPlayer)     (depends: S02)
+  ├── E37-S04: Misconception Tracking + Adaptive Diff    (depends: S02)
+  └── E37-S05: Integration with Knowledge Gaps           (depends: S04)
+
+E38: Token Metering + Usage Dashboard (4 stories)        (parallel with E37)
+  ├── E38-S01: Token Counting Middleware                  (no deps)
+  ├── E38-S02: Usage Tracking Supabase Tables             (depends: S01)
+  ├── E38-S03: Usage Dashboard UI                         (depends: S02)
+  └── E38-S04: Budget Warnings + Graceful Degradation     (depends: S03)
+
+E39: Smart Flashcard Generator (5 stories)               (depends: E36)
+  ├── E39-S01: Flashcard Data Model + FSRS Algorithm      (no deps)
+  ├── E39-S02: AI Flashcard Generation from Content       (depends: S01)
+  ├── E39-S03: Flashcard Review UI                        (depends: S01)
+  ├── E39-S04: Deck Management + Auto-Generation          (depends: S02, S03)
+  └── E39-S05: Spaced Repetition Dashboard                (depends: S04)
+
+E40: Adaptive Quiz Engine (4 stories)                    (depends: E36)
+  ├── E40-S01: Quiz Data Model + Question Types           (no deps)
+  ├── E40-S02: AI Quiz Generation + Difficulty Scaling    (depends: S01)
+  ├── E40-S03: Quiz UI + Interactive Answering            (depends: S02)
+  └── E40-S04: Quiz Results → Knowledge Gaps Feed         (depends: S03)
+
+E41: Subscription Tier Enforcement (3 stories)           (depends: E36, E38)
+  ├── E41-S01: Provider + Model Restrictions by Tier      (depends: E36-S04, E38-S02)
+  ├── E41-S02: Feature Gating for New AI Features         (depends: E37, E39, E40 for features to gate)
+  └── E41-S03: Upgrade Flow + BYOK Escape Hatch           (depends: S01, S02)
+
+E42: AI Study Buddy (5 stories)                          (depends: E37, E39, E40)
+  ├── E42-S01: Chat Overlay Shell + Context Engine        (no deps beyond Layout)
+  ├── E42-S02: Conversational RAG (Unified Knowledge)     (depends: S01)
+  ├── E42-S03: Intent Detection + Feature Routing         (depends: S02, E37, E39, E40)
+  ├── E42-S04: Proactive Suggestions                      (depends: S03)
+  └── E42-S05: Study Buddy Personality + Preferences      (depends: S04)
+
+E43: Cross-Feature Intelligence Loop (3 stories)         (depends: E37, E39, E40)
+  ├── E43-S01: Misconception → Flashcard Pipeline         (depends: E37-S04, E39-S02)
+  ├── E43-S02: Quiz + Tutor → Knowledge Gap Aggregation   (depends: E37-S05, E40-S04)
+  └── E43-S03: Intelligence-Driven Path Reordering        (depends: S02)
+```
+
+**Parallelization opportunities:**
+- E37 (Tutor) and E38 (Metering) can run in parallel
+- E39 (Flashcards) and E40 (Quizzes) can run in parallel after E36
+- E41 (Tier Enforcement) must wait for E36 + E38
+- E42 (Study Buddy) and E43 (Intelligence Loop) must wait for E37 + E39 + E40
+
+### AI Deep Strategy Validation
+
+**Coherence with Existing Architecture:**
+- Extends `getLLMClient()` factory pattern (not a new abstraction — connects existing disconnected wire)
+- Follows Dexie schema versioning pattern (v27+ → v28+ with checkpoint schema)
+- Uses established middleware chain pattern from Entitlement Architecture addendum
+- Reuses RAG coordinator, ChatQA UI patterns, PremiumFeaturePage gating, Layout overlay pattern
+- Model registry complements (not replaces) existing `AI_PROVIDERS` in `aiConfiguration.ts`
+- Token metering integrates into existing Express proxy middleware chain
+- Study Buddy follows same overlay insertion pattern as SearchCommandPalette/OnboardingOverlay
+
+**Requirements Coverage:**
+- Gap 1 (model selection): Fully addressed by E36 — model registry + per-feature overrides
+- Gap 2 (subscription billing): Addressed by E38 (metering) + E41 (tier enforcement)
+- Gap 3 (deeper AI features): Addressed by E37 (tutor) + E39 (flashcards) + E40 (quizzes) + E42 (study buddy) + E43 (intelligence loop)
+- BYOK philosophy preserved: BYOK users get unlimited usage, no model restrictions, per-feature overrides
+- Free tier defined: Ollama + free API providers (Groq, Gemini, GLM) with economy models only
+
+**Risk Mitigations:**
+- FSRS complexity → pure TypeScript implementation, no external dependency; default parameters from Anki's trained values
+- Token counting accuracy → primary (provider metadata) + fallback (tiktoken estimation); log both for comparison
+- Intent detection latency → use economy model for classifier; cache recent classifications
+- Intelligence loop data quality → weighted scoring prevents single-source domination; user confirmation on auto-generated flashcards
+- Dexie schema growth → compound indexes for performance-critical queries; checkpoint schema for fresh installs
+- Study Buddy context window → context engine sends structured summary (not raw history); capped at ~2000 tokens of context
+
+## Knowledge Map Phase 1 Architecture
+
+_Added 2026-03-28. This section defines the architecture for Knowledge Map Phase 1 (Roadmap Section 13): topic-level knowledge scoring with dashboard treemap visualization. The Knowledge Map answers "What do I actually know right now?" by computing per-topic scores from quiz, flashcard, completion, and recency data, then visualizing them as an interactive Recharts Treemap._
+
+**Input Documents:**
+- Brainstorming: `_bmad-output/brainstorming/brainstorming-session-2026-03-28-knowledge-map-phase1.md`
+- Technical research: `_bmad-output/planning-artifacts/research/technical-knowledge-visualization-decay-modeling-research-2026-03-28.md`
+- Roadmap: `docs/plans/2026-03-28-product-roadmap.md` (Section 13)
+- Reference patterns: `src/lib/qualityScore.ts`, `src/lib/spacedRepetition.ts`, `src/lib/reportStats.ts`, `src/lib/dashboardOrder.ts`
+
+### Knowledge Map Decision Summary
+
+| Decision Area | Choice | Rationale |
+|---|---|---|
+| Topic granularity | `Lesson.keyTopics[]` with noise filter + canonical map | 40-60 meaningful topics after filtering; direct data mapping to lessons/quizzes/flashcards |
+| Category grouping | `Course.category` as treemap parent nodes | 5 categories give visual structure without added complexity |
+| Score formula | Dynamic weight redistribution (30/30/20/20 base) | Handles sparse data gracefully; every topic can reach 100 |
+| Confidence metadata | `high` / `medium` / `low` based on signal count | Communicates data quality without misleading users |
+| Decay model | Existing `predictRetention()` exponential curve | Production-ready, already tested; FSRS upgrade is Phase 2 |
+| Visualization | Recharts Treemap (desktop) + sorted list (mobile) | Zero new dependencies; Recharts already installed with 12+ chart instances |
+| Overview widget | Category-level treemap + Focus Areas panel | Lightweight summary; links to full page |
+| Dedicated page | `/knowledge-map` with topic-level treemap + popovers | Full-screen real estate for drill-down |
+| State management | Zustand store, computed on-demand (no Dexie table) | Scores change daily due to decay; caching stale scores is worse than recomputing |
+| Action suggestions | Contextual based on available signals per topic | Flashcard review, quiz retake, or lesson rewatch depending on what exists |
+
+### Decision 1: Topic Resolution Service
+
+**File:** `src/lib/topicResolver.ts`
+
+**Purpose:** Extract, normalize, filter, and group topics from course data into a canonical set suitable for scoring and visualization.
+
+**Why a dedicated module:** Topic resolution is a pure data transformation that multiple consumers need (the score service, the store, and potentially future features like study suggestions). Isolating it as a pure function module makes it testable, composable, and independent of React/Zustand.
+
+**Input:** `Course[]` (from `useCourseStore`)
+**Output:** `ResolvedTopic[]`
+
+```typescript
+// src/lib/topicResolver.ts
+
+export interface ResolvedTopic {
+  name: string              // Display name (title-cased canonical form)
+  canonicalName: string     // Normalized key for deduplication
+  category: string          // Course.category (parent group)
+  lessonIds: string[]       // All lessons teaching this topic
+  courseIds: string[]        // All courses containing this topic
+  questionTopics: string[]  // Matching Question.topic values (for quiz mapping)
+}
+
+/** Noise patterns to exclude from topic extraction */
+const NOISE_PATTERNS = [
+  /^(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}$/i,
+  /^(week|session)\s+\d+$/i,
+  /^weekly session$/i,
+  /^course (overview|summary|introduction)$/i,
+  /^(getting started|next steps|key takeaways|what to expect|q&a|wrap[- ]?up)$/i,
+  /^\d{4}[-/]\d{2}[-/]\d{2}$/,  // ISO date patterns
+]
+
+/** Canonical synonym map — grows over time as new courses are added */
+const CANONICAL_MAP: Record<string, string> = {
+  'body language': 'body language',
+  'nonverbal communication': 'body language',
+  'nonverbal cues': 'body language',
+  'micro expressions': 'micro-expressions',
+  'microexpressions': 'micro-expressions',
+  'lie detection': 'deception detection',
+  'deception': 'deception detection',
+  // Extend as course data reveals new synonyms
+}
+```
+
+**Processing pipeline:**
+1. Iterate all `Course.modules[].lessons[].keyTopics[]`
+2. Normalize each topic: `toLowerCase().trim().replace(/[-_]/g, ' ').replace(/\s+/g, ' ')`
+3. Filter noise: reject topics matching any `NOISE_PATTERNS` entry
+4. Canonicalize: map through `CANONICAL_MAP` (passthrough if no synonym found)
+5. Deduplicate: group by canonical name, merge `lessonIds[]` and `courseIds[]`
+6. Associate category: inherit from parent `Course.category` (if topic spans multiple categories, use the category with more lessons)
+7. Generate display name: title-case the canonical name
+
+**Key design choices:**
+- **Pure function, no side effects** — follows `qualityScore.ts` pattern
+- **Deterministic canonical map over fuzzy matching** — debuggable, no false positives (e.g., "authority" vs. "authoring" would be incorrectly merged by Levenshtein)
+- **Noise filter uses regex patterns** — extensible without code changes to the algorithm
+- **~40-60 topics expected** after filtering (ideal for Recharts Treemap per research)
+
+**Integration with quiz data:** `Question.topic` (optional string, added in E15-S05) maps to topics via canonicalization. If `Question.topic` is not set, inherit from the parent lesson's `keyTopics[0]`.
+
+### Decision 2: Knowledge Score Calculation Service
+
+**File:** `src/lib/knowledgeScore.ts`
+
+**Purpose:** Calculate a 0-100 knowledge score per topic using dynamic weight redistribution across available signals.
+
+**Pattern:** Follows `src/lib/qualityScore.ts` (158 lines) — WEIGHTS object, individual factor functions, composite calculation, tier classification.
+
+```typescript
+// src/lib/knowledgeScore.ts
+
+export const BASE_WEIGHTS = {
+  quiz: 0.30,
+  flashcard: 0.30,
+  completion: 0.20,
+  recency: 0.20,
+} as const
+
+export type KnowledgeTier = 'strong' | 'fading' | 'weak'
+export type ConfidenceLevel = 'high' | 'medium' | 'low'
+
+export interface TopicScoreInput {
+  avgQuizScore: number | null       // 0-100, null if no quiz data
+  avgFlashcardRetention: number | null  // 0-100, null if no flashcard data
+  completionPercent: number         // 0-100, always available
+  daysSinceLastEngagement: number   // Always available (from timestamps)
+}
+
+export interface TopicScoreResult {
+  score: number                     // 0-100 composite
+  tier: KnowledgeTier               // strong >= 70, fading 40-69, weak < 40
+  confidence: ConfidenceLevel       // high (3-4 signals), medium (2), low (1)
+  factors: {
+    quiz: number | null
+    flashcard: number | null
+    completion: number
+    recency: number
+  }
+  signalsUsed: string[]
+  effectiveWeights: Record<string, number>
+}
+```
+
+**Dynamic weight redistribution algorithm:**
+
+When a signal is unavailable (null), its base weight is redistributed proportionally to available signals. This ensures every topic can reach 100 regardless of data availability.
+
+```typescript
+export function calculateTopicScore(input: TopicScoreInput): TopicScoreResult {
+  const signals: Array<{ key: string; value: number; baseWeight: number }> = []
+
+  // Always available
+  signals.push({ key: 'completion', value: input.completionPercent, baseWeight: BASE_WEIGHTS.completion })
+  signals.push({ key: 'recency', value: calculateRecencyScore(input.daysSinceLastEngagement), baseWeight: BASE_WEIGHTS.recency })
+
+  // Conditionally available
+  if (input.avgQuizScore !== null) {
+    signals.push({ key: 'quiz', value: input.avgQuizScore, baseWeight: BASE_WEIGHTS.quiz })
+  }
+  if (input.avgFlashcardRetention !== null) {
+    signals.push({ key: 'flashcard', value: input.avgFlashcardRetention, baseWeight: BASE_WEIGHTS.flashcard })
+  }
+
+  // Redistribute: normalize weights to sum to 1.0
+  const totalWeight = signals.reduce((sum, s) => sum + s.baseWeight, 0)
+  const effectiveWeights: Record<string, number> = {}
+  let score = 0
+
+  for (const signal of signals) {
+    const effective = signal.baseWeight / totalWeight
+    effectiveWeights[signal.key] = effective
+    score += signal.value * effective
+  }
+
+  score = Math.round(Math.min(100, Math.max(0, score)))
+
+  return {
+    score,
+    tier: getKnowledgeTier(score),
+    confidence: getConfidenceLevel(signals.length),
+    factors: {
+      quiz: input.avgQuizScore,
+      flashcard: input.avgFlashcardRetention,
+      completion: input.completionPercent,
+      recency: calculateRecencyScore(input.daysSinceLastEngagement),
+    },
+    signalsUsed: signals.map(s => s.key),
+    effectiveWeights,
+  }
+}
+```
+
+**Weight redistribution examples:**
+
+| Available Signals | Effective Weights | Max Possible Score |
+|---|---|---|
+| All 4 (quiz + flashcard + completion + recency) | 30/30/20/20 | 100 |
+| No flashcards (quiz + completion + recency) | 43/29/29 | 100 |
+| No quizzes (flashcard + completion + recency) | 43/29/29 | 100 |
+| Completion + recency only | 50/50 | 100 |
+
+**Recency score function:**
+
+```typescript
+export function calculateRecencyScore(daysSinceEngagement: number): number {
+  if (daysSinceEngagement <= 7) return 100     // Full score within 7 days
+  if (daysSinceEngagement >= 90) return 10     // Floor at 10 (learner did engage at some point)
+  // Linear decay from 100 to 10 over days 7-90
+  return Math.round(100 - ((daysSinceEngagement - 7) / 83) * 90)
+}
+```
+
+**Design choice: linear recency (not exponential):** The recency component is a weight in the composite, not the decay model itself. The exponential `predictRetention()` is used for flashcard retention signals. Using exponential for both would double-penalize old topics. Linear recency provides a gentler, more intuitive degradation.
+
+**Tier classification:**
+
+| Tier | Range | Label | Design Token |
+|---|---|---|---|
+| Strong | >= 70 | "Strong" | `--success` / `--chart-2` |
+| Fading | 40-69 | "Fading" | `--warning` / `--chart-4` |
+| Weak | < 40 | "Weak" | `--destructive` / `--chart-5` |
+
+**Confidence classification:**
+
+| Level | Condition | UI Indicator |
+|---|---|---|
+| High | 3-4 signals (quiz + flashcard available) | Solid fill |
+| Medium | 2 signals (quiz or flashcard, not both) | Standard fill with subtle indicator |
+| Low | Completion + recency only | Striped/dashed pattern or "?" icon |
+
+### Decision 3: Knowledge Map Store
+
+**File:** `src/stores/useKnowledgeMapStore.ts`
+
+**Purpose:** Zustand store that computes and caches topic scores by aggregating data from multiple existing stores and Dexie tables.
+
+**Why Zustand (not a Dexie table):** Knowledge scores change daily due to the recency decay component. Storing precomputed scores in Dexie would require daily recomputation jobs and introduce stale data risk. Computing on-demand from live data ensures scores are always current. The computation is cheap (~5ms for 60 topics against cached store data).
+
+**Store interface:**
+
+```typescript
+// src/stores/useKnowledgeMapStore.ts
+
+import { create } from 'zustand'
+import type { ResolvedTopic } from '@/lib/topicResolver'
+import type { TopicScoreResult } from '@/lib/knowledgeScore'
+
+export interface ScoredTopic extends ResolvedTopic {
+  scoreResult: TopicScoreResult
+  urgency: number                    // 0-100, higher = more urgent to review
+  lastEngagementDate: Date | null
+  suggestedActions: SuggestedAction[]
+}
+
+export interface SuggestedAction {
+  type: 'flashcard-review' | 'retake-quiz' | 'rewatch-lesson'
+  label: string
+  route: string
+  priority: number                   // 1 = most urgent
+}
+
+export interface CategoryGroup {
+  category: string
+  label: string                      // Title-cased display label
+  topics: ScoredTopic[]
+  avgScore: number                   // Average of topic scores in this category
+  topicCount: number
+}
+
+interface KnowledgeMapState {
+  // Computed data
+  topics: ScoredTopic[]
+  categories: CategoryGroup[]
+  focusAreas: ScoredTopic[]          // Top 3 most urgent topics
+  isLoading: boolean
+  lastComputedAt: Date | null
+
+  // Actions
+  computeScores: () => Promise<void>
+  getTopicsByCategory: (category: string) => ScoredTopic[]
+  getTopicByName: (canonicalName: string) => ScoredTopic | undefined
+}
+```
+
+**Data aggregation sources:**
+
+| Data Source | Store/Table | What It Provides |
+|---|---|---|
+| Course structure + `keyTopics` | `useCourseStore` | Topic extraction input, lesson metadata |
+| Lesson completion | `useContentProgressStore` | `status` per lesson (for completion %) |
+| Flashcard retention | `useFlashcardStore` | `interval`, `easeFactor`, `reviewedAt` per card |
+| Quiz scores | `db.quizAttempts` (Dexie) | `percentage` per attempt, `answers[].isCorrect` |
+| Study sessions | `db.studySessions` (Dexie) | Timestamps for recency calculation |
+
+**Computation flow:**
+
+```
+computeScores()
+  │
+  ├─ 1. resolveTopics(courses)              // topicResolver.ts
+  │     → ResolvedTopic[] (~40-60 topics)
+  │
+  ├─ 2. For each topic, aggregate signals:
+  │     ├─ completionPercent: count completed lessons / total lessons for topic
+  │     ├─ avgQuizScore: average percentage across quizAttempts matching topic's questions
+  │     ├─ avgFlashcardRetention: average predictRetention() across flashcards in topic's courses
+  │     └─ daysSinceLastEngagement: most recent timestamp across all signals
+  │
+  ├─ 3. calculateTopicScore(input)           // knowledgeScore.ts
+  │     → TopicScoreResult per topic
+  │
+  ├─ 4. computeUrgency(score, daysSince)     // Urgency ranking
+  │     → urgency = (100 - score) * 0.6 + min(100, daysSince * 2) * 0.4
+  │
+  ├─ 5. suggestActions(topic)                // Contextual action suggestions
+  │     → SuggestedAction[] sorted by priority
+  │
+  ├─ 6. Group by category                    // CategoryGroup[] for treemap hierarchy
+  │
+  └─ 7. Select top 3 by urgency              // focusAreas for widget panel
+```
+
+**Recalculation triggers:**
+- On mount (initial page load or navigation to Knowledge Map)
+- On store dependency changes (content progress updated, flashcard reviewed, quiz completed)
+- No periodic timer — recalculation is fast enough to run on every relevant navigation
+
+**Flashcard-to-topic mapping:** Flashcards have `courseId` but no direct topic tag. Mapping strategy: flashcard.courseId -> course.modules[].lessons[].keyTopics[] -> spread flashcard retention across all topics in that course. This is an approximation but acceptable for Phase 1. Phase 2 could add a `topicTag` field to `Flashcard`.
+
+**Quiz-to-topic mapping:** `Question.topic` (optional) provides direct mapping when available. Fallback: quiz belongs to a course -> spread quiz scores across all topics in that course's lessons, weighted by lesson count.
+
+### Decision 4: UI Architecture
+
+#### Component Hierarchy
+
+```
+Overview.tsx
+  └─ KnowledgeMapWidget.tsx              (DashboardSectionId = 'knowledge-map')
+       ├─ TopicTreemap.tsx               (category-level, 5 cells)
+       └─ FocusAreasPanel.tsx            (top 3 urgent topics)
+
+/knowledge-map route
+  └─ KnowledgeMap.tsx                    (page component)
+       ├─ TopicTreemap.tsx               (topic-level, 40-60 cells, grouped by category)
+       ├─ TopicDetailPopover.tsx          (score breakdown + action buttons)
+       └─ FocusAreasPanel.tsx            (top 3 urgent, reused)
+```
+
+#### New Files
+
+| File | Purpose | Estimated Size |
+|---|---|---|
+| `src/lib/topicResolver.ts` | Topic extraction, noise filter, canonical map | ~120 lines |
+| `src/lib/knowledgeScore.ts` | Score calculation, tiers, confidence | ~130 lines |
+| `src/stores/useKnowledgeMapStore.ts` | Zustand store with cross-store aggregation | ~200 lines |
+| `src/app/components/knowledge/TopicTreemap.tsx` | Recharts Treemap wrapper with custom cell renderer | ~150 lines |
+| `src/app/components/knowledge/TopicDetailPopover.tsx` | Score breakdown popover with action buttons | ~120 lines |
+| `src/app/components/knowledge/FocusAreasPanel.tsx` | Top 3 urgent topics with action suggestions | ~100 lines |
+| `src/app/components/knowledge/KnowledgeMapWidget.tsx` | Overview dashboard section | ~80 lines |
+| `src/app/pages/KnowledgeMap.tsx` | Dedicated page with topic treemap | ~150 lines |
+
+#### Dashboard Section Registration
+
+Add to `src/lib/dashboardOrder.ts`:
+
+```typescript
+// Add to DashboardSectionId type:
+| 'knowledge-map'
+
+// Add to SECTION_LABELS:
+'knowledge-map': 'Knowledge Map',
+
+// Add to DEFAULT_ORDER (after 'skill-proficiency'):
+'skill-proficiency',
+'knowledge-map',    // NEW — placed after skill proficiency (related: knowledge depth)
+'insight-action',
+```
+
+**Why after `skill-proficiency`:** The Knowledge Map is a deeper view of the same concept the Skill Proficiency Radar covers at category level. Placing them adjacent creates a natural drill-down flow: radar (category overview) -> treemap (topic detail).
+
+#### Route Registration
+
+Add to `src/app/routes.tsx`:
+
+```typescript
+{
+  path: 'knowledge-map',
+  lazy: () => import('./pages/KnowledgeMap'),
+}
+```
+
+Add sidebar nav entry in `Layout.tsx` (after Reports or Settings, depending on navigation density assessment).
+
+#### TopicTreemap Component
+
+**Recharts Treemap configuration:**
+
+```typescript
+// src/app/components/knowledge/TopicTreemap.tsx
+
+interface TreemapData {
+  name: string
+  children: Array<{
+    name: string            // Category label
+    children: Array<{
+      name: string          // Topic display name
+      size: number          // Lesson count (determines cell area)
+      score: number         // 0-100 (determines cell color)
+      tier: KnowledgeTier
+      confidence: ConfidenceLevel
+    }>
+  }>
+}
+
+// Custom cell renderer for color-coded cells
+function KnowledgeMapCell({ x, y, width, height, name, score, tier }: CustomCellProps) {
+  const fill = getTierColor(tier)
+  // Only render label if cell is large enough (width > 60, height > 30)
+  const showLabel = width > 60 && height > 30
+  const showScore = width > 40 && height > 20
+
+  return (
+    <g>
+      <rect x={x} y={y} width={width} height={height}
+        fill={fill} stroke="var(--border)" strokeWidth={1}
+        rx={4} className="cursor-pointer hover:opacity-90 transition-opacity" />
+      {showLabel && <text ...>{name}</text>}
+      {showScore && <text ...>{score}%</text>}
+    </g>
+  )
+}
+```
+
+**Color mapping using design tokens:**
+
+```typescript
+function getTierColor(tier: KnowledgeTier): string {
+  switch (tier) {
+    case 'strong': return 'var(--success)'
+    case 'fading': return 'var(--warning)'
+    case 'weak': return 'var(--destructive)'
+  }
+}
+```
+
+**Mobile fallback (< 640px):** Replace treemap with a sorted topic list using existing shadcn/ui components (`Card`, `Progress`, `Badge`, `Accordion`). Topics grouped by category via `Accordion`, sorted worst-first within each group. This provides full accessibility and touch-friendly interaction on small screens.
+
+#### TopicDetailPopover
+
+Click any treemap cell (or list item on mobile) to open a `Popover` (shadcn/ui) showing:
+
+1. **Topic name** + tier badge
+2. **Score breakdown**: quiz %, flashcard retention %, completion %, recency score — each with effective weight shown
+3. **Confidence level** indicator
+4. **Last engagement date** ("45 days ago")
+5. **Suggested actions**: 1-3 contextual buttons (Review Flashcards, Retake Quiz, Rewatch Lesson)
+
+**Action routing:**
+- Flashcard review: navigates to flashcard review filtered by course
+- Quiz retake: navigates to quiz for the course containing this topic
+- Lesson rewatch: navigates to the first incomplete lesson in this topic
+
+#### FocusAreasPanel
+
+Standalone panel showing top 3 most urgent topics. Used in both the Overview widget and the dedicated page.
+
+**Urgency ranking formula:**
+
+```typescript
+function computeUrgency(score: number, daysSinceEngagement: number): number {
+  const scoreUrgency = 100 - score                             // 0-100, higher = more urgent
+  const recencyUrgency = Math.min(100, daysSinceEngagement * 2) // Caps at 50 days -> 100
+  return scoreUrgency * 0.6 + recencyUrgency * 0.4
+}
+```
+
+Each focus area item displays: topic name, score + tier badge, days since engagement, and 1-2 action buttons.
+
+### Decision 5: Data Flow Architecture
+
+**End-to-end data flow from Dexie tables to rendered visualization:**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Data Sources (Dexie + Zustand)                                  │
+│                                                                 │
+│  useCourseStore ──── Course[].modules[].lessons[].keyTopics[]  │
+│  useContentProgressStore ── ContentProgress[].status            │
+│  useFlashcardStore ──────── Flashcard[].interval/reviewedAt    │
+│  db.quizAttempts ─────────── QuizAttempt[].percentage/answers  │
+│  db.studySessions ────────── StudySession[].startTime          │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ topicResolver.ts                                                │
+│                                                                 │
+│  resolveTopics(courses) → ResolvedTopic[]                      │
+│    1. Extract keyTopics from all lessons                        │
+│    2. Normalize (lowercase, trim, collapse spaces)              │
+│    3. Filter noise (dates, "weekly session", meta-topics)       │
+│    4. Canonicalize (synonym map)                                │
+│    5. Deduplicate + merge lesson/course IDs                     │
+│    6. Group by Course.category                                  │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ knowledgeScore.ts                                               │
+│                                                                 │
+│  For each ResolvedTopic:                                        │
+│    1. Aggregate completion % from contentProgress               │
+│    2. Aggregate quiz scores from quizAttempts (via Question.topic│
+│       or course-level fallback)                                 │
+│    3. Aggregate flashcard retention via predictRetention()       │
+│    4. Calculate daysSinceLastEngagement from most recent signal  │
+│    5. calculateTopicScore() → TopicScoreResult                  │
+│       (dynamic weight redistribution, tier, confidence)         │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ useKnowledgeMapStore.ts                                         │
+│                                                                 │
+│  computeScores() orchestrates the full pipeline:                │
+│    1. resolveTopics() → topics                                  │
+│    2. For each topic: aggregate signals → calculateTopicScore() │
+│    3. computeUrgency() → rank topics                            │
+│    4. suggestActions() → contextual actions per topic            │
+│    5. Group by category → CategoryGroup[]                       │
+│    6. Select top 3 → focusAreas                                 │
+│                                                                 │
+│  Exposes: topics, categories, focusAreas, isLoading             │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │
+                    ┌──────────┴──────────┐
+                    ▼                     ▼
+┌──────────────────────────┐  ┌──────────────────────────┐
+│ KnowledgeMapWidget.tsx   │  │ KnowledgeMap.tsx (page)   │
+│ (Overview section)       │  │ (/knowledge-map route)    │
+│                          │  │                          │
+│ TopicTreemap (category)  │  │ TopicTreemap (topic)     │
+│ FocusAreasPanel (top 3)  │  │ TopicDetailPopover       │
+│ "See full map" link      │  │ FocusAreasPanel (top 3)  │
+│                          │  │ Mobile list fallback     │
+└──────────────────────────┘  └──────────────────────────┘
+```
+
+**Performance considerations:**
+- Topic resolution: one-time on mount, ~1ms for 8 courses / 170 lessons
+- Score computation: ~5ms for 60 topics (Dexie reads are cached in Zustand stores)
+- Recharts Treemap rendering: ~50 SVG rects, well within Recharts' performance ceiling
+- No waterfalls: all data sources are queried in parallel via `Promise.all()`
+
+**Accessibility:**
+- Treemap cells include text labels (topic name + score) — not color-only
+- Custom cell has `role="button"` and keyboard focus support
+- Mobile list fallback is fully accessible: `Progress` + `Badge` components with ARIA labels
+- Screen reader: "Topic: Body Language, knowledge score: 78 percent, status: Strong"
+- Focus Areas panel uses semantic `<ol>` with descriptive text
+
+### Knowledge Map Implementation Sequence
+
+**4 stories, sequential with clear boundaries:**
+
+```
+E??-S01: Topic Resolution Service                    (no deps)
+  ├── src/lib/topicResolver.ts (noise filter, canonical map, normalization)
+  ├── Unit tests for topic extraction pipeline
+  └── Validates ~40-60 meaningful topics from current course data
+
+E??-S02: Knowledge Score Calculation                  (depends: S01)
+  ├── src/lib/knowledgeScore.ts (dynamic weights, tiers, confidence)
+  ├── src/stores/useKnowledgeMapStore.ts (cross-store aggregation)
+  ├── Unit tests for score calculation + weight redistribution
+  └── Integration test: store computes scores from seeded Dexie data
+
+E??-S03: Overview Widget — Category Treemap           (depends: S02)
+  ├── src/app/components/knowledge/KnowledgeMapWidget.tsx
+  ├── src/app/components/knowledge/TopicTreemap.tsx (shared, category-level)
+  ├── src/app/components/knowledge/FocusAreasPanel.tsx
+  ├── Register 'knowledge-map' in DashboardSectionId + DEFAULT_ORDER
+  └── E2E test: widget renders on Overview with correct sections
+
+E??-S04: Knowledge Map Page — Topic Treemap           (depends: S03)
+  ├── src/app/pages/KnowledgeMap.tsx
+  ├── src/app/components/knowledge/TopicDetailPopover.tsx
+  ├── Route registration in routes.tsx, sidebar nav entry in Layout.tsx
+  ├── Mobile responsive: sorted list fallback below 640px
+  └── E2E test: page renders, popover shows score breakdown, actions navigate
+```
+
+**Parallelization:** S01 and S02 could theoretically be a single story, but separating them isolates the pure data transformation (S01) from the cross-store aggregation (S02), making each more focused and testable.
+
+### Knowledge Map Validation
+
+**Coherence with Existing Architecture:**
+- Follows pure function pattern from `qualityScore.ts` (WEIGHTS object, individual factor functions, composite calculation)
+- Reuses `predictRetention()` from `spacedRepetition.ts` for flashcard retention signals
+- Extends `DashboardSectionId` type and `DEFAULT_ORDER` array from `dashboardOrder.ts`
+- Uses existing Recharts library (12+ chart instances across the app, zero new dependencies)
+- Zustand store follows established patterns from `useFlashcardStore`, `useContentProgressStore`
+- Design tokens (`--success`, `--warning`, `--destructive`) for tier colors match existing conventions
+- Component naming follows project convention: `src/app/components/knowledge/` directory
+
+## AI Tutoring Phase 1-2 Architecture (Lesson-Aware Chat + Socratic Mode)
+
+_Added 2026-03-28. This section defines the implementation-ready architecture for AI Tutoring Phase 1 (lesson-aware chat) and Phase 2 (Socratic mode), corresponding to Roadmap Section 14. Phase 1 delivers lesson-context-aware tutoring with zero new AI infrastructure (position-based transcript injection from existing data). Phase 2 adds Socratic questioning with a TypeScript hint ladder and client-side frustration detection. This addendum refines the high-level Tutor architecture from the AI Deep Strategy section (Decision 3) into concrete file structures, type definitions, and implementation sequences._
+
+**Input Documents:**
+- Brainstorming: `_bmad-output/brainstorming/brainstorming-session-2026-03-28-ai-tutoring-phase1-2.md`
+- Technical research: `_bmad-output/planning-artifacts/research/technical-socratic-tutoring-llm-research-2026-03-28.md`
+- Roadmap: `docs/plans/2026-03-28-product-roadmap.md` (Section 14)
+- Reference patterns: `src/ai/hooks/useChatQA.ts`, `src/ai/rag/promptBuilder.ts`, `src/ai/rag/ragCoordinator.ts`, `src/ai/llm/factory.ts`, `src/app/pages/LessonPlayer.tsx`, `src/db/schema.ts`
+
+**Relationship to AI Deep Strategy (Decision 3):**
+The AI Deep Strategy addendum defined the Tutor module at the strategic level: `src/ai/tutor/` with prompts, sessionManager, adaptiveEngine, and Dexie tables (`tutorSessions`, `tutorMisconceptions`). This addendum supersedes that design for Phase 1-2 scope with several refinements:
+- **Simpler persistence:** Single `chatConversations` table (Dexie v29) with blob messages instead of separate `tutorSessions` + `tutorMisconceptions` tables. Misconception tracking deferred to Phase 3+.
+- **Adaptive difficulty deferred:** The 3-level adaptive engine (Guided/Challenging/Expert) is replaced by a 2-mode system (Socratic/Explain) with a 5-level hint ladder. Full adaptive difficulty is Phase 6.
+- **UI placement refined:** Tutor tab in LessonPlayer's existing Tabs component (not a collapsible ResizablePanel). Simpler, zero responsive work.
+- **File location refined:** `src/ai/tutor/` directory (same as strategic plan), but different internal structure optimized for Phase 1-2 scope.
+
+### AI Tutoring Phase 1-2 Decision Summary
+
+| Decision Area | Choice | Rationale |
+|---|---|---|
+| UI placement | 6th tab ("Tutor") in LessonPlayer's existing Tabs | Reuses chat components, has lesson context via route params, zero responsive work (tabs already collapse on mobile) |
+| Prompt architecture | 6-slot system prompt with priority ordering | Graceful degradation under 4K Ollama pressure: optional slots auto-omitted |
+| Hint ladder | TypeScript state machine (Levels 0-4) in `hintLadder.ts` | Saves ~100 tokens vs prompt-encoded ladder; more reliable than LLM self-managing escalation |
+| Frustration detection | Client-side heuristics (message length, keywords, patterns) | Zero token cost; works identically across all models |
+| Transcript context (Phase 1) | Position-based injection: full/chapter/window strategies | Zero new infrastructure; no embedding pipeline needed |
+| Transcript context (Phase 2) | Lazy embedding on first tutor interaction + RAG retrieval | Progressive enhancement; embedding only when tutor is actually used |
+| Conversation persistence | Dexie v29, `chatConversations` table, blob messages, 3-exchange sliding window | KISS; 2-5 KB per conversation; resume via message history display |
+| Modes | 2 modes only: Socratic (default) + Explain | Testing 5 modes across multiple LLM providers is not "Small" scope |
+| Degradation | 3 tiers: Full / Limited / Offline | Reuses ChatQA banner patterns; consistent UX |
+| Premium gating | Same as ChatQA (premium or BYOK required) | No premature monetization complexity; same middleware chain |
+
+### Decision 1: Tutor Chat UI
+
+**Problem:** Users need AI tutoring while watching lessons, with full lesson context awareness. The tutor must live inside the LessonPlayer to access `courseId`, `lessonId`, video playback position, and transcript data.
+
+**Decision:** Add a "Tutor" tab as the 6th tab in LessonPlayer's existing `<Tabs>` component, reusing chat components from `src/app/components/chat/`.
+
+**Current LessonPlayer tabs (5):** Materials, Notes, Bookmarks, Transcript, Summary
+**New tab:** Tutor (6th, conditionally rendered like Summary — requires AI provider configured)
+
+**Component structure:**
+
+```
+src/app/components/tutor/
+  ├── TutorChat.tsx           Orchestrator: wraps MessageList + ChatInput + mode selector + badges
+  ├── TutorModeChips.tsx      Socratic/Explain mode selector (Phase 2)
+  └── TranscriptBadge.tsx     "Transcript-grounded" (green) or "General mode" (yellow) indicator
+```
+
+**TutorChat.tsx orchestrator:**
+
+```typescript
+// src/app/components/tutor/TutorChat.tsx
+
+interface TutorChatProps {
+  courseId: string
+  lessonId: string           // videoId for YouTube courses
+  videoPosition?: number     // Current playback position in seconds (from video player ref)
+}
+
+export function TutorChat({ courseId, lessonId, videoPosition }: TutorChatProps) {
+  const { messages, isGenerating, sendMessage, error, mode, setMode, transcriptStatus } =
+    useTutor({ courseId, lessonId, videoPosition })
+
+  return (
+    <div className="flex flex-col h-[400px]">
+      <div className="flex items-center gap-2 mb-3">
+        <TranscriptBadge status={transcriptStatus} />
+        <TutorModeChips mode={mode} onModeChange={setMode} />  {/* Phase 2 */}
+      </div>
+      <MessageList messages={messages} className="flex-1 overflow-y-auto" />
+      <ChatInput
+        onSend={sendMessage}
+        disabled={isGenerating || transcriptStatus === 'offline'}
+        placeholder={getPlaceholder(mode, transcriptStatus)}
+      />
+      {error && <p className="text-sm text-destructive mt-1">{error}</p>}
+    </div>
+  )
+}
+```
+
+**Reused components from `src/app/components/chat/`:**
+- `MessageList` — renders conversation bubbles (user + assistant)
+- `ChatInput` — text input with send button
+- `CitationLink` — renders `[timestamp]` links that seek video to that position
+- `MessageBubble` — individual message rendering
+- `EmptyState` — shown when no messages yet (customized prompt: "Ask about this lesson...")
+
+**LessonPlayer.tsx modification:**
+
+```typescript
+// Add to imports
+import { TutorChat } from '../components/tutor/TutorChat'
+
+// Add to TabsList (after Summary tab, conditionally on AI provider configured)
+{aiConfigured && <TabsTrigger value="tutor">Tutor</TabsTrigger>}
+
+// Add TabsContent
+{aiConfigured && (
+  <TabsContent value="tutor" className="mt-4">
+    <div className="bg-card rounded-2xl shadow-sm p-5">
+      <TutorChat
+        courseId={courseId}
+        lessonId={currentVideoId}
+        videoPosition={videoRef.current?.currentTime}
+      />
+    </div>
+  </TabsContent>
+)}
+```
+
+**Video position propagation:** The `videoPosition` prop is passed from `LessonPlayer`'s video element ref. It does not need real-time streaming — the position is sampled when the user sends a message (not on every frame). The `useTutor` hook reads `videoPosition` at message-send time to determine transcript context.
+
+**Mobile behavior:** LessonPlayer's `<TabsList>` already handles overflow with horizontal scrolling on mobile. Adding a 6th tab requires no responsive changes.
+
+**CitationLink enhancement for timestamps:** Existing `CitationLink` navigates to note sources. For the tutor, citations reference transcript timestamps. The component accepts an `onClick` handler — for tutor mode, this handler calls `videoRef.current.seekTo(timestamp)` to jump to the relevant video position.
+
+### Decision 2: Tutor Prompt Architecture
+
+**File:** `src/ai/tutor/tutorPromptBuilder.ts`
+
+**Problem:** The system prompt must work within Ollama's 4K default context window while providing rich lesson context on larger models. The existing `promptBuilder.ts` is note-focused and not extensible for tutoring slots.
+
+**Decision:** New dedicated prompt builder with 6 slots filled in priority order. Under token pressure, optional slots are omitted automatically from lowest to highest priority.
+
+**Slot architecture (priority order, highest first):**
+
+| Slot | Priority | Tokens (4K) | Tokens (128K) | Content |
+|---|---|---|---|---|
+| `BASE_INSTRUCTIONS` | 1 (required) | 150 | 300 | Tutor identity, rules, citation format |
+| `MODE_RULES` | 2 (required) | 100 | 150 | Socratic or Explain behavior rules |
+| `COURSE_CONTEXT` | 3 (required) | 40 | 80 | Course title, lesson title, lesson position (e.g., "5 of 12") |
+| `TRANSCRIPT_EXCERPT` | 4 (high) | 1,200 | 4,000 | Position-based transcript injection |
+| `LEARNER_PROFILE` | 5 (optional) | 40 | 100 | Progress %, lesson position, streak count |
+| `RESUME_CONTEXT` | 6 (optional) | 100 | 200 | Last exchange from prior conversation |
+
+**Token budget allocation (4K Ollama):**
+
+| Component | Tokens |
+|---|---|
+| System prompt (slots 1-4) | 1,490 |
+| Learner profile (slot 5) | 40 |
+| Conversation history (sliding window) | 650 |
+| User message | 200 |
+| Reserved for generation | **1,620** |
+| **Total** | **4,000** |
+
+**Token budget allocation (128K model):**
+
+| Component | Tokens |
+|---|---|
+| System prompt (slots 1-6) | 4,830 |
+| Conversation history (last 5 exchanges) | 2,000 |
+| User message | 300 |
+| Reserved for generation | **2,000** |
+| **Total** | **~9,130** (conservative, well within 128K) |
+
+**Implementation:**
+
+```typescript
+// src/ai/tutor/tutorPromptBuilder.ts
+
+import type { TutorMode, TutorContext } from './types'
+
+interface PromptSlot {
+  priority: number      // 1 = highest, never dropped
+  key: string
+  content: string
+  estimatedTokens: number
+  required: boolean     // If true, never omitted
+}
+
+interface TutorPromptOptions {
+  mode: TutorMode
+  courseTitle: string
+  lessonTitle: string
+  lessonPosition: string        // e.g., "5 of 12"
+  transcriptExcerpt?: string
+  learnerProfile?: string
+  resumeContext?: string
+  hintLevel: number
+  maxSystemTokens: number       // Budget for system prompt portion
+}
+
+export function buildTutorSystemPrompt(options: TutorPromptOptions): string {
+  const slots: PromptSlot[] = [
+    {
+      priority: 1,
+      key: 'base',
+      content: BASE_INSTRUCTIONS,
+      estimatedTokens: estimateTokens(BASE_INSTRUCTIONS),
+      required: true,
+    },
+    {
+      priority: 2,
+      key: 'mode',
+      content: getModeRules(options.mode, options.hintLevel),
+      estimatedTokens: 100,
+      required: true,
+    },
+    {
+      priority: 3,
+      key: 'course',
+      content: `CURRENT CONTEXT:\nCourse: ${options.courseTitle}\nLesson: ${options.lessonTitle} (${options.lessonPosition})`,
+      estimatedTokens: 40,
+      required: true,
+    },
+    ...(options.transcriptExcerpt ? [{
+      priority: 4,
+      key: 'transcript',
+      content: `LESSON MATERIAL:\n${options.transcriptExcerpt}`,
+      estimatedTokens: estimateTokens(options.transcriptExcerpt),
+      required: false,
+    }] : []),
+    ...(options.learnerProfile ? [{
+      priority: 5,
+      key: 'profile',
+      content: `LEARNER PROFILE:\n${options.learnerProfile}`,
+      estimatedTokens: 40,
+      required: false,
+    }] : []),
+    ...(options.resumeContext ? [{
+      priority: 6,
+      key: 'resume',
+      content: `PREVIOUS CONVERSATION:\n${options.resumeContext}`,
+      estimatedTokens: estimateTokens(options.resumeContext),
+      required: false,
+    }] : []),
+  ]
+
+  // Fill slots in priority order, respecting budget
+  let remainingBudget = options.maxSystemTokens
+  const includedSlots: PromptSlot[] = []
+
+  for (const slot of slots.sort((a, b) => a.priority - b.priority)) {
+    if (slot.estimatedTokens <= remainingBudget || slot.required) {
+      includedSlots.push(slot)
+      remainingBudget -= slot.estimatedTokens
+    }
+  }
+
+  return includedSlots.map(s => s.content).join('\n\n')
+}
+
+function estimateTokens(text: string): number {
+  // Rough estimate: ~4 chars per token (English text)
+  return Math.ceil(text.length / 4)
+}
+```
+
+**Base instructions template:**
+
+```
+You are a learning tutor for the course and lesson described below. Your role is
+to help the student understand the material deeply.
+
+RULES:
+1. Base your responses ONLY on the provided lesson material
+2. When referencing specific content, cite timestamps in [MM:SS] format
+3. Be encouraging — confusion is a normal part of learning
+4. Match vocabulary complexity to the student's demonstrated level
+5. Keep responses concise (2-4 sentences) unless asked to elaborate
+```
+
+**Mode-specific rules:**
+
+```typescript
+const MODE_RULES: Record<TutorMode, string> = {
+  socratic: `MODE: Socratic Questioning
+- Ask ONE guiding question at a time — never give the answer directly
+- If the student answers correctly, probe deeper with "why" or "what if" follow-ups
+- {hintLevelInstruction}
+- If the student explicitly asks "just tell me", switch to Explain mode for this answer`,
+
+  explain: `MODE: Direct Explanation
+- Provide clear, structured explanations
+- Use examples from the lesson material when possible
+- After explaining, ask a brief check-for-understanding question`,
+}
+```
+
+**Why a new prompt builder (not extending `promptBuilder.ts`):** The existing `PromptBuilder` class is tightly coupled to note-based RAG context (`RetrievedContext.notes[]`). The tutor needs transcript context, mode rules, hint levels, and learner profiles — a fundamentally different prompt structure. A dedicated builder avoids polluting the ChatQA prompt path with tutor-specific logic.
+
+### Decision 3: Hint Ladder State Machine
+
+**File:** `src/ai/tutor/hintLadder.ts`
+
+**Problem:** Socratic tutoring that never gives answers frustrates students. Research shows 3-4 failed hints should trigger escalation to direct explanation. Encoding the full ladder in the system prompt wastes ~100 tokens. LLMs are unreliable at self-managing escalation state.
+
+**Decision:** TypeScript state machine tracks hint level (0-4). Only one instruction line injected per turn. Client-side frustration heuristics auto-escalate the level.
+
+**Hint levels:**
+
+| Level | Instruction Injected into System Prompt | Behavior |
+|---|---|---|
+| 0 | "Ask an open-ended guiding question about the concept." | Pure Socratic — no hints |
+| 1 | "Ask about a specific part of the lesson material related to the student's question." | Narrowing question |
+| 2 | "Give a strong hint referencing a specific concept from the lesson." | Scaffolded hint |
+| 3 | "Provide a near-complete explanation with one gap for the student to fill." | Near-answer |
+| 4 | "Explain directly and clearly. The student needs a direct answer." | Full explanation fallback |
+
+**State machine implementation:**
+
+```typescript
+// src/ai/tutor/hintLadder.ts
+
+export interface HintLadderState {
+  level: number             // 0-4
+  consecutiveStuck: number  // Exchanges at same level without progress
+  escalationHistory: number[] // Record of level changes for analytics
+}
+
+export function createHintLadder(): HintLadderState {
+  return { level: 0, consecutiveStuck: 0, escalationHistory: [0] }
+}
+
+export function processUserMessage(
+  state: HintLadderState,
+  message: string
+): HintLadderState {
+  const frustration = detectFrustration(message)
+
+  if (frustration === 'explicit') {
+    // User explicitly asked for help — jump to level 4
+    return {
+      ...state,
+      level: Math.min(4, state.level + 2),
+      consecutiveStuck: 0,
+      escalationHistory: [...state.escalationHistory, Math.min(4, state.level + 2)],
+    }
+  }
+
+  if (frustration === 'implicit') {
+    // Implicit frustration signal — escalate by 1
+    return {
+      ...state,
+      level: Math.min(4, state.level + 1),
+      consecutiveStuck: 0,
+      escalationHistory: [...state.escalationHistory, Math.min(4, state.level + 1)],
+    }
+  }
+
+  // No frustration — increment stuck counter
+  const newStuck = state.consecutiveStuck + 1
+  if (newStuck >= 2) {
+    // 2 exchanges without progress at this level — auto-escalate
+    return {
+      ...state,
+      level: Math.min(4, state.level + 1),
+      consecutiveStuck: 0,
+      escalationHistory: [...state.escalationHistory, Math.min(4, state.level + 1)],
+    }
+  }
+
+  return { ...state, consecutiveStuck: newStuck }
+}
+
+export function resetHintLadder(state: HintLadderState): HintLadderState {
+  // Reset when user asks a new topic (detected by topic change)
+  return { level: 0, consecutiveStuck: 0, escalationHistory: [...state.escalationHistory, 0] }
+}
+
+export function getHintInstruction(level: number): string {
+  return HINT_INSTRUCTIONS[Math.min(4, Math.max(0, level))]
+}
+```
+
+**Client-side frustration detection:**
+
+```typescript
+// src/ai/tutor/hintLadder.ts (continued)
+
+type FrustrationSignal = 'explicit' | 'implicit' | 'none'
+
+const EXPLICIT_PATTERNS = [
+  /just tell me/i,
+  /give me the answer/i,
+  /i give up/i,
+  /stop asking/i,
+  /explain it/i,
+]
+
+const IMPLICIT_KEYWORDS = [
+  "i don't know",
+  "i don't understand",
+  "i'm confused",
+  "i'm lost",
+  "help",
+  "idk",
+  "no idea",
+  "what?",
+  "huh?",
+]
+
+export function detectFrustration(message: string): FrustrationSignal {
+  const trimmed = message.trim()
+
+  // Explicit: user directly asks for answer
+  if (EXPLICIT_PATTERNS.some(p => p.test(trimmed))) return 'explicit'
+
+  // Implicit signals
+  const isShort = trimmed.length < 15
+  const hasImplicitKeyword = IMPLICIT_KEYWORDS.some(kw =>
+    trimmed.toLowerCase().includes(kw)
+  )
+
+  if (hasImplicitKeyword) return 'implicit'
+  if (isShort && !trimmed.includes('?')) return 'implicit' // Short non-question after Socratic prompt
+
+  return 'none'
+}
+```
+
+**Why client-side (not LLM-based) frustration detection:**
+- Zero token cost — frustration analysis happens in TypeScript, not in the prompt
+- Deterministic behavior — same input always produces same escalation, regardless of LLM model
+- Works identically on Ollama 3B and GPT-4o — critical for consistent UX across providers
+- No latency — instant detection before the LLM call
+
+### Decision 4: Transcript Context Injection
+
+**File:** `src/ai/tutor/transcriptContext.ts`
+
+**Problem:** The tutor needs lesson-specific context to provide grounded answers. The existing RAG pipeline embeds notes, not transcripts. Phase 1 must work without any new embedding infrastructure.
+
+**Decision:** Phase 1 uses position-based transcript injection (zero new infrastructure). Phase 2 adds lazy embedding with RAG retrieval.
+
+**Phase 1: Position-based injection (3 strategies):**
+
+```typescript
+// src/ai/tutor/transcriptContext.ts
+
+import type { YouTubeTranscriptRecord, YouTubeCourseChapter, TranscriptCue } from '@/data/types'
+
+export type TranscriptStatus = 'full' | 'limited' | 'offline'
+
+interface TranscriptContextResult {
+  excerpt: string           // The transcript text to inject
+  status: TranscriptStatus  // For UI badge
+  strategy: 'full' | 'chapter' | 'window' | 'none'
+  tokenEstimate: number
+}
+
+/**
+ * Extract relevant transcript context based on lesson data and video position.
+ *
+ * Strategy selection:
+ * 1. Short lessons (<2K tokens): inject full transcript
+ * 2. Lessons with chapters: inject current chapter
+ * 3. Long lessons without chapters: inject 512-token window around position
+ * 4. No transcript: return empty with 'limited' status
+ */
+export function getTranscriptContext(
+  transcript: YouTubeTranscriptRecord | null,
+  chapters: YouTubeCourseChapter[],
+  videoPositionSeconds: number,
+  maxTokens: number = 1200
+): TranscriptContextResult {
+  if (!transcript || transcript.status !== 'done' || !transcript.fullText) {
+    return { excerpt: '', status: 'limited', strategy: 'none', tokenEstimate: 0 }
+  }
+
+  const fullTextTokens = estimateTokens(transcript.fullText)
+
+  // Strategy 1: Short lessons — inject full transcript
+  if (fullTextTokens <= maxTokens) {
+    return {
+      excerpt: transcript.fullText,
+      status: 'full',
+      strategy: 'full',
+      tokenEstimate: fullTextTokens,
+    }
+  }
+
+  // Strategy 2: Lessons with chapters — inject current chapter
+  if (chapters.length > 0) {
+    const currentChapter = findCurrentChapter(chapters, videoPositionSeconds)
+    if (currentChapter) {
+      const chapterText = extractChapterText(transcript.cues, currentChapter)
+      const chapterTokens = estimateTokens(chapterText)
+      if (chapterTokens <= maxTokens) {
+        return {
+          excerpt: formatChapterContext(chapterText, currentChapter.title),
+          status: 'full',
+          strategy: 'chapter',
+          tokenEstimate: chapterTokens,
+        }
+      }
+      // Chapter too long — fall through to window strategy
+    }
+  }
+
+  // Strategy 3: Window around current position
+  const windowText = extractWindowAroundPosition(
+    transcript.cues,
+    videoPositionSeconds,
+    maxTokens
+  )
+  return {
+    excerpt: windowText,
+    status: 'full',
+    strategy: 'window',
+    tokenEstimate: estimateTokens(windowText),
+  }
+}
+
+/**
+ * Find the chapter containing the current video position.
+ */
+function findCurrentChapter(
+  chapters: YouTubeCourseChapter[],
+  positionSeconds: number
+): YouTubeCourseChapter | null {
+  // Chapters are sorted by startTime
+  for (let i = chapters.length - 1; i >= 0; i--) {
+    if (chapters[i].startTime <= positionSeconds) {
+      return chapters[i]
+    }
+  }
+  return chapters[0] ?? null
+}
+
+/**
+ * Extract transcript cues that fall within a chapter's time range.
+ */
+function extractChapterText(
+  cues: TranscriptCue[],
+  chapter: YouTubeCourseChapter
+): string {
+  const endTime = chapter.endTime ?? Infinity
+  return cues
+    .filter(c => c.startTime >= chapter.startTime && c.startTime < endTime)
+    .map(c => c.text)
+    .join(' ')
+}
+
+/**
+ * Extract a token-limited window of transcript text around the video position.
+ * Centers on the cue nearest to positionSeconds, expands outward until token budget is reached.
+ */
+function extractWindowAroundPosition(
+  cues: TranscriptCue[],
+  positionSeconds: number,
+  maxTokens: number
+): string {
+  if (cues.length === 0) return ''
+
+  // Find nearest cue
+  let nearestIdx = 0
+  let minDist = Math.abs(cues[0].startTime - positionSeconds)
+  for (let i = 1; i < cues.length; i++) {
+    const dist = Math.abs(cues[i].startTime - positionSeconds)
+    if (dist < minDist) {
+      minDist = dist
+      nearestIdx = i
+    }
+  }
+
+  // Expand outward from center
+  let left = nearestIdx
+  let right = nearestIdx
+  let text = cues[nearestIdx].text
+  let tokens = estimateTokens(text)
+
+  while (tokens < maxTokens) {
+    const canExpandLeft = left > 0
+    const canExpandRight = right < cues.length - 1
+
+    if (!canExpandLeft && !canExpandRight) break
+
+    if (canExpandLeft) {
+      left--
+      const added = cues[left].text + ' '
+      if (estimateTokens(added) + tokens > maxTokens) { left++; break }
+      text = added + text
+      tokens = estimateTokens(text)
+    }
+
+    if (canExpandRight && tokens < maxTokens) {
+      right++
+      const added = ' ' + cues[right].text
+      if (estimateTokens(added) + tokens > maxTokens) { right--; break }
+      text = text + added
+      tokens = estimateTokens(text)
+    }
+  }
+
+  const startTime = formatTimestamp(cues[left].startTime)
+  const endTime = formatTimestamp(cues[right].endTime)
+  return `[${startTime} - ${endTime}]\n${text}`
+}
+
+function formatTimestamp(seconds: number): string {
+  const m = Math.floor(seconds / 60)
+  const s = Math.floor(seconds % 60)
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+function formatChapterContext(text: string, chapterTitle: string): string {
+  return `Chapter: ${chapterTitle}\n${text}`
+}
+
+function estimateTokens(text: string): number {
+  return Math.ceil(text.length / 4)
+}
+```
+
+**Phase 2: Lazy embedding + RAG (future addendum):**
+1. On first tutor interaction for a lesson, trigger background embedding of that lesson's transcript chunks (512 tokens, 20% overlap)
+2. Store embeddings in existing `embeddings` table with a `sourceType: 'transcript'` discriminator
+3. RAG retrieval via `ragCoordinator.retrieveContext()` with transcript source filter
+4. Position-aware boosting: +0.2 similarity for chunks within 60 seconds of playhead
+
+Phase 2 RAG will be detailed in a separate addendum when Phase 1 is complete and validated.
+
+### Decision 5: Conversation Storage
+
+**Problem:** Tutor conversations need to persist across page navigations and browser sessions so users can resume where they left off. The conversation also needs to provide context to the LLM for coherent multi-turn dialogue.
+
+**Decision:** Dexie v29 with `chatConversations` table, blob message storage, 3-exchange sliding window for LLM context, and resume via message history display.
+
+**Dexie v29 migration:**
+
+```typescript
+// src/db/schema.ts — add after v27 (v28 reserved for E50 StudySchedule)
+
+database.version(29).stores({
+  chatConversations: 'id, [courseId+videoId], courseId, updatedAt',
+})
+```
+
+**Type definition:**
+
+```typescript
+// src/data/types.ts
+
+export type TutorMode = 'socratic' | 'explain'
+
+export interface TutorMessage {
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: number         // Date.now()
+}
+
+export interface ChatConversation {
+  id: string                // UUID
+  courseId: string           // FK to ImportedCourse.id
+  videoId: string           // YouTube video ID or local video filename
+  mode: TutorMode           // Current mode
+  hintLevel: number         // Current hint ladder level (0-4)
+  messages: TutorMessage[]  // JSON blob — full history
+  createdAt: number         // Date.now()
+  updatedAt: number         // Date.now()
+}
+```
+
+**Add to ElearningDatabase type:**
+
+```typescript
+chatConversations: EntityTable<ChatConversation, 'id'>
+```
+
+**Compound index `[courseId+videoId]`:** Enables fast lookup of the conversation for the current lesson. One conversation per course+lesson pair (latest wins). If mode changes, update the existing conversation.
+
+**Sliding window for LLM context (3 exchanges = 6 messages):**
+
+```typescript
+function getConversationContext(messages: TutorMessage[], maxExchanges: number = 3): TutorMessage[] {
+  // An "exchange" is a user message + assistant response pair
+  const lastN = messages.slice(-(maxExchanges * 2))
+  return lastN
+}
+```
+
+**Why 3 exchanges (not more):**
+- 3 exchanges = ~650 tokens at average message length
+- Fits comfortably in 4K Ollama budget alongside transcript context
+- Research shows recent context is far more valuable than older context for tutoring
+- Full message history is shown in UI (user can scroll) — only LLM context is windowed
+
+**Resume behavior:**
+- On navigation to lesson: load existing `chatConversation` for `[courseId+videoId]`
+- Show all messages in `MessageList` (full history, scrollable)
+- Inject last exchange (2 messages) as LLM context for continuity
+- No special "resume" UI — conversation appears as if user never left
+
+**Conversation lifecycle:**
+- Created on first message in a lesson
+- Updated (messages appended, `updatedAt` bumped) on each exchange
+- No explicit "close" — conversation persists indefinitely
+- No auto-delete — user can clear via button in TutorChat header
+
+### Decision 6: Tutor Hook (useTutor)
+
+**File:** `src/ai/hooks/useTutor.ts`
+
+**Problem:** The tutor needs to orchestrate: loading/creating conversations, building context, building prompts, streaming LLM responses, processing frustration signals, updating hint levels, and persisting messages. This mirrors the `useChatQA` pattern but with lesson-awareness and state management.
+
+**Decision:** New `useTutor` hook following the same 5-stage pipeline pattern as `useChatQA` but extended with context injection and hint ladder management. Paired with a Zustand store for conversation state.
+
+**Zustand store:**
+
+```typescript
+// src/stores/useTutorStore.ts
+
+import { create } from 'zustand'
+import type { ChatConversation, TutorMessage, TutorMode } from '@/data/types'
+import db from '@/db/schema'
+
+interface TutorState {
+  conversation: ChatConversation | null
+  messages: TutorMessage[]
+  isGenerating: boolean
+  error: string | null
+  mode: TutorMode
+  hintLevel: number
+  transcriptStatus: 'full' | 'limited' | 'offline'
+
+  // Actions
+  loadConversation: (courseId: string, videoId: string) => Promise<void>
+  addMessage: (message: TutorMessage) => void
+  updateLastMessage: (content: string) => void
+  setMode: (mode: TutorMode) => void
+  setHintLevel: (level: number) => void
+  setTranscriptStatus: (status: 'full' | 'limited' | 'offline') => void
+  setIsGenerating: (generating: boolean) => void
+  setError: (error: string | null) => void
+  persistConversation: () => Promise<void>
+  clearConversation: () => Promise<void>
+}
+```
+
+**useTutor hook — 6-stage pipeline:**
+
+```typescript
+// src/ai/hooks/useTutor.ts
+
+import { useCallback, useEffect } from 'react'
+import { v4 as uuid } from 'uuid'
+import { useTutorStore } from '@/stores/useTutorStore'
+import { getLLMClient } from '@/ai/llm/factory'
+import { buildTutorSystemPrompt } from '@/ai/tutor/tutorPromptBuilder'
+import { getTranscriptContext } from '@/ai/tutor/transcriptContext'
+import { processUserMessage, getHintInstruction, createHintLadder } from '@/ai/tutor/hintLadder'
+import type { TutorMode } from '@/data/types'
+import { LLMError } from '@/ai/llm/types'
+
+interface UseTutorOptions {
+  courseId: string
+  lessonId: string
+  videoPosition?: number
+}
+
+export function useTutor({ courseId, lessonId, videoPosition }: UseTutorOptions) {
+  const store = useTutorStore()
+
+  // Stage 0: Load existing conversation on mount
+  useEffect(() => {
+    store.loadConversation(courseId, lessonId)
+  }, [courseId, lessonId])
+
+  const sendMessage = useCallback(async (query: string) => {
+    if (store.isGenerating) return
+
+    store.setIsGenerating(true)
+    store.setError(null)
+
+    // Stage 1: Process frustration + update hint ladder
+    const hintState = processUserMessage(
+      { level: store.hintLevel, consecutiveStuck: 0, escalationHistory: [] },
+      query
+    )
+    store.setHintLevel(hintState.level)
+
+    // Add user message
+    const userMsg = { role: 'user' as const, content: query, timestamp: Date.now() }
+    store.addMessage(userMsg)
+
+    try {
+      // Stage 2: Get transcript context
+      const transcript = await loadTranscript(courseId, lessonId)
+      const chapters = await loadChapters(courseId, lessonId)
+      const transcriptCtx = getTranscriptContext(
+        transcript,
+        chapters,
+        videoPosition ?? 0,
+        1200 // maxTokens for transcript
+      )
+      store.setTranscriptStatus(transcriptCtx.status)
+
+      // Stage 3: Build system prompt
+      const courseInfo = await loadCourseInfo(courseId, lessonId)
+      const systemPrompt = buildTutorSystemPrompt({
+        mode: store.mode,
+        courseTitle: courseInfo.courseTitle,
+        lessonTitle: courseInfo.lessonTitle,
+        lessonPosition: courseInfo.lessonPosition,
+        transcriptExcerpt: transcriptCtx.excerpt || undefined,
+        learnerProfile: buildLearnerProfile(courseId),
+        hintLevel: hintState.level,
+        maxSystemTokens: getSystemTokenBudget(),
+      })
+
+      // Stage 4: Build message array for LLM
+      const conversationContext = getConversationContext(store.messages, 3)
+      const llmMessages = [
+        { role: 'system' as const, content: systemPrompt },
+        ...conversationContext.map(m => ({ role: m.role, content: m.content })),
+        { role: 'user' as const, content: query },
+      ]
+
+      // Stage 5: Stream LLM response
+      const aiMsg = { role: 'assistant' as const, content: '', timestamp: Date.now() }
+      store.addMessage(aiMsg)
+
+      const llmClient = await getLLMClient('tutor')
+      let fullResponse = ''
+
+      for await (const chunk of llmClient.streamCompletion(llmMessages)) {
+        if (chunk.content) {
+          fullResponse += chunk.content
+          store.updateLastMessage(fullResponse)
+        }
+        if (chunk.finishReason) break
+      }
+
+      // Stage 6: Persist conversation
+      await store.persistConversation()
+
+    } catch (err) {
+      const errorMessage = err instanceof LLMError
+        ? mapLLMErrorToMessage(err)
+        : 'Failed to process your request. Please try again.'
+      store.setError(errorMessage)
+      store.addMessage({
+        role: 'assistant',
+        content: errorMessage,
+        timestamp: Date.now(),
+      })
+    } finally {
+      store.setIsGenerating(false)
+    }
+  }, [courseId, lessonId, videoPosition, store.isGenerating, store.mode, store.hintLevel, store.messages])
+
+  return {
+    messages: store.messages,
+    isGenerating: store.isGenerating,
+    sendMessage,
+    error: store.error,
+    mode: store.mode,
+    setMode: store.setMode,
+    transcriptStatus: store.transcriptStatus,
+    clearConversation: store.clearConversation,
+  }
+}
+```
+
+**Error mapping (reuses ChatQA pattern):**
+
+```typescript
+function mapLLMErrorToMessage(err: LLMError): string {
+  switch (err.code) {
+    case 'TIMEOUT': return 'Request timed out. Please try again.'
+    case 'RATE_LIMIT': return 'Rate limit exceeded. Please wait a moment.'
+    case 'AUTH_ERROR': return 'Authentication failed. Check your AI provider settings.'
+    case 'AUTH_REQUIRED': return 'Sign in required to use AI tutoring.'
+    case 'ENTITLEMENT_ERROR': return 'Premium subscription required for AI tutoring.'
+    case 'RATE_LIMITED': return 'Server rate limit exceeded. Please wait a moment.'
+    case 'NETWORK_ERROR': return 'Network error. Check your connection.'
+    default: return `AI provider error: ${err.message}`
+  }
+}
+```
+
+**Streaming failure recovery (improvement over ChatQA):**
+If the LLM stream fails mid-response, the partial content is preserved in the message with an " [Response interrupted]" suffix appended. The user sees what was generated rather than losing it. This addresses brainstorming idea #29.
+
+### Decision 7: Graceful Degradation
+
+**Problem:** The tutor must function meaningfully across varying conditions: transcript availability, LLM availability, and different model capabilities.
+
+**Decision:** 3-tier degradation with consistent banner UI, reusing ChatQA patterns.
+
+**Degradation tiers:**
+
+| Tier | Condition | Tutor Behavior | UI Indicator |
+|---|---|---|---|
+| **Full** | Transcript + LLM available | Lesson-aware Socratic tutoring with transcript citations | TranscriptBadge: "Transcript-grounded" (green) |
+| **Limited** | No transcript, LLM available | General tutoring scoped to course title/description only | TranscriptBadge: "General mode" (yellow); banner: "Transcript not available for this lesson. Tutoring is limited to general course context." |
+| **Offline** | LLM unavailable | Past conversations read-only, input disabled | Banner: "AI provider offline. Configure a provider in Settings to use tutoring." (same pattern as ChatQA lines 46-71) |
+
+**TranscriptBadge component:**
+
+```typescript
+// src/app/components/tutor/TranscriptBadge.tsx
+
+import { Badge } from '@/app/components/ui/badge'
+import type { TranscriptStatus } from '@/ai/tutor/transcriptContext'
+
+interface TranscriptBadgeProps {
+  status: TranscriptStatus
+}
+
+export function TranscriptBadge({ status }: TranscriptBadgeProps) {
+  switch (status) {
+    case 'full':
+      return <Badge variant="outline" className="text-success border-success">Transcript-grounded</Badge>
+    case 'limited':
+      return <Badge variant="outline" className="text-warning border-warning">General mode</Badge>
+    case 'offline':
+      return <Badge variant="outline" className="text-destructive border-destructive">Offline</Badge>
+  }
+}
+```
+
+**Premium gating:** The tutor follows the same gating as ChatQA. The `getLLMClient('tutor')` call goes through the existing middleware chain: origin check, JWT auth, BYOK detection, entitlement check, rate limit. No new endpoints, no new middleware. BYOK users and premium subscribers both get full tutor functionality with no capability differentiation in Phase 1-2.
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      LessonPlayer.tsx                                        │
+│                                                                             │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐         │
+│  │Materials │ │  Notes   │ │Bookmarks │ │Transcript│ │ Summary  │         │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘         │
+│                                                                             │
+│  ┌──────────────────────────────────────────────────────────────────┐      │
+│  │ Tutor Tab (NEW)                                                   │      │
+│  │                                                                   │      │
+│  │  ┌─────────────────────────────────────────────────────────────┐ │      │
+│  │  │ TutorChat.tsx                                                │ │      │
+│  │  │                                                              │ │      │
+│  │  │  TranscriptBadge ── "Transcript-grounded" / "General mode"  │ │      │
+│  │  │  TutorModeChips ─── [Socratic] [Explain]  (Phase 2)        │ │      │
+│  │  │                                                              │ │      │
+│  │  │  MessageList ──────── (reused from chat/)                   │ │      │
+│  │  │    MessageBubble ──── User and assistant messages            │ │      │
+│  │  │    CitationLink ───── [MM:SS] links → video seek            │ │      │
+│  │  │                                                              │ │      │
+│  │  │  ChatInput ────────── (reused from chat/)                   │ │      │
+│  │  └─────────────────────────────────────────────────────────────┘ │      │
+│  └──────────────────────────────────────────────────────────────────┘      │
+└──────────────────────────────────────────────┬──────────────────────────────┘
+                                               │
+                                 useTutor hook │
+                                               │
+┌──────────────────────────────────────────────┴──────────────────────────────┐
+│                      AI Tutor Module (src/ai/tutor/)                         │
+│                                                                             │
+│  ┌────────────────────┐  ┌─────────────────────┐  ┌──────────────────────┐ │
+│  │ tutorPromptBuilder │  │ transcriptContext.ts │  │ hintLadder.ts        │ │
+│  │                    │  │                      │  │                      │ │
+│  │ 6-slot system      │  │ 3 strategies:        │  │ Levels 0-4           │ │
+│  │ prompt with        │  │  - full transcript   │  │ Frustration          │ │
+│  │ auto budget        │  │  - chapter-based     │  │ detection            │ │
+│  │                    │  │  - position window   │  │ Auto-escalation      │ │
+│  └────────┬───────────┘  └──────────┬───────────┘  └──────────┬───────────┘ │
+│           │                         │                         │             │
+│           └─────────────┬───────────┘                         │             │
+│                         │                                     │             │
+│                         ▼                                     │             │
+│  ┌────────────────────────────────────────────────────────────┘             │
+│  │                                                                          │
+│  ▼                                                                          │
+│  useTutor.ts (6-stage pipeline)                                             │
+│    1. Process frustration → update hint level                               │
+│    2. Get transcript context (position-based)                               │
+│    3. Build system prompt (6 slots, auto budget)                            │
+│    4. Build LLM message array (system + history + query)                    │
+│    5. Stream LLM response (reuses getLLMClient)                             │
+│    6. Persist conversation (Dexie v29)                                      │
+│                                                                             │
+│  ┌──────────────────────┐  ┌──────────────────────┐                        │
+│  │ useTutorStore.ts     │  │ Dexie v29             │                        │
+│  │ (Zustand)            │◄─│ chatConversations     │                        │
+│  │ Session state +      │  │ [courseId+videoId]     │                        │
+│  │ UI reactivity        │──►│ Blob messages        │                        │
+│  └──────────────────────┘  └──────────────────────┘                        │
+└─────────────────────────────────────┬───────────────────────────────────────┘
+                                      │
+                     getLLMClient('tutor') │
+                                      │
+                    Same middleware chain as ChatQA:
+                    Origin → JWT → BYOK → Entitlement → Rate Limit
+                                      │
+                           ┌──────────┴──────────┐
+                           ▼                     ▼
+                    ┌──────────────┐      ┌──────────────┐
+                    │ AI Providers │      │ Ollama       │
+                    │ (6 cloud)    │      │ (local)      │
+                    └──────────────┘      └──────────────┘
+```
+
+### New Files Summary
+
+| File | Purpose | Phase | Est. Lines |
+|---|---|---|---|
+| `src/app/components/tutor/TutorChat.tsx` | Orchestrator: MessageList + ChatInput + badges + mode chips | 1 | ~80 |
+| `src/app/components/tutor/TranscriptBadge.tsx` | Transcript availability indicator | 1 | ~25 |
+| `src/app/components/tutor/TutorModeChips.tsx` | Socratic/Explain mode selector chips | 2 | ~35 |
+| `src/ai/tutor/types.ts` | TutorMode, TutorContext, PromptSlot types | 1 | ~40 |
+| `src/ai/tutor/tutorPromptBuilder.ts` | 6-slot system prompt builder with auto budget | 1 | ~120 |
+| `src/ai/tutor/transcriptContext.ts` | Position-based transcript extraction (3 strategies) | 1 | ~150 |
+| `src/ai/tutor/hintLadder.ts` | Hint level state machine + frustration detection | 2 | ~120 |
+| `src/ai/hooks/useTutor.ts` | 6-stage pipeline hook | 1 | ~140 |
+| `src/stores/useTutorStore.ts` | Zustand conversation state + Dexie persistence | 1 | ~120 |
+
+### Files to Modify
+
+| File | Change | Phase |
+|---|---|---|
+| `src/app/pages/LessonPlayer.tsx` | Add Tutor TabsTrigger + TabsContent (6th tab) | 1 |
+| `src/db/schema.ts` | Add v29 migration with `chatConversations` table | 1 |
+| `src/db/checkpoint.ts` | Update `CHECKPOINT_VERSION` to 29 and add `chatConversations` to `CHECKPOINT_SCHEMA` | 1 |
+| `src/data/types.ts` | Add `ChatConversation`, `TutorMessage`, `TutorMode` types | 1 |
+
+### Implementation Sequence
+
+**5 stories across Phase 1-2:**
+
+```
+Phase 1: Lesson-Aware Chat (3 stories)
+
+E??-S01: Tutor Data Layer + Prompt Builder                   (no deps)
+  ├── src/ai/tutor/types.ts (TutorMode, TutorContext, PromptSlot)
+  ├── src/ai/tutor/tutorPromptBuilder.ts (6-slot builder, auto budget)
+  ├── src/ai/tutor/transcriptContext.ts (3-strategy position injection)
+  ├── src/db/schema.ts v29 migration (chatConversations table)
+  ├── src/db/checkpoint.ts (update to v29)
+  ├── src/data/types.ts (ChatConversation, TutorMessage, TutorMode)
+  ├── Unit tests: prompt builder slot priority, transcript context strategies
+  └── Unit tests: Dexie v29 migration, conversation CRUD
+
+E??-S02: Tutor Hook + Store                                  (depends: S01)
+  ├── src/stores/useTutorStore.ts (Zustand store with Dexie persistence)
+  ├── src/ai/hooks/useTutor.ts (6-stage pipeline)
+  ├── Streaming integration with getLLMClient('tutor')
+  ├── Conversation load/save/resume lifecycle
+  ├── Error handling (reuses ChatQA error mapping pattern)
+  └── Integration test: mock LLM, verify full pipeline
+
+E??-S03: Tutor Tab UI + Integration                          (depends: S02)
+  ├── src/app/components/tutor/TutorChat.tsx (orchestrator)
+  ├── src/app/components/tutor/TranscriptBadge.tsx
+  ├── LessonPlayer.tsx modification (6th tab)
+  ├── 3-tier graceful degradation (Full/Limited/Offline)
+  ├── CitationLink → video seek integration
+  └── E2E test: tutor tab visible, send message, response streams, badge shows
+
+Phase 2: Socratic Mode (2 stories)
+
+E??-S04: Hint Ladder + Frustration Detection                 (depends: S03)
+  ├── src/ai/tutor/hintLadder.ts (state machine + frustration detection)
+  ├── Integration with useTutor pipeline (Stage 1: process frustration)
+  ├── Hint level instruction injection into prompt builder
+  ├── Unit tests: escalation paths, frustration patterns, reset on topic change
+  └── Integration test: mock LLM, verify hint level progresses through exchanges
+
+E??-S05: Mode Selector + Socratic Prompts                    (depends: S04)
+  ├── src/app/components/tutor/TutorModeChips.tsx (Socratic/Explain chips)
+  ├── Mode-specific prompt templates (socratic vs explain rules)
+  ├── Mode persistence in chatConversation record
+  ├── Mode switch mid-conversation behavior (reset hint ladder to 0)
+  └── E2E test: mode switch changes prompt behavior, hint ladder escalates visually
+```
+
+**Parallelization:** S01 and S02 are sequential (S02 depends on S01 types and data layer). S03 depends on S02 for the hook. S04 and S05 are sequential within Phase 2. Phase 1 (S01-S03) must be complete before Phase 2 starts.
+
+### AI Tutoring Phase 1-2 Validation
+
+**Coherence with Existing Architecture:**
+- Follows `useChatQA` 5-stage pipeline pattern (extended to 6 stages with frustration processing)
+- Reuses `getLLMClient()` factory with `'tutor'` feature ID (enables per-feature model selection from AI Deep Strategy)
+- Reuses chat components (`MessageList`, `ChatInput`, `CitationLink`, `MessageBubble`, `EmptyState`) from `src/app/components/chat/`
+- Follows Zustand store pattern from `useQAChatStore`, `useFlashcardStore`
+- Follows Dexie versioning convention (v29, compound index pattern from `youtubeTranscripts`)
+- Uses design tokens (`text-success`, `text-warning`, `text-destructive`) for TranscriptBadge
+- LessonPlayer tab pattern matches existing 5 tabs with conditional rendering
+- Same middleware chain as ChatQA (no new endpoints, no new server code)
+
+**Relationship to AI Deep Strategy Decisions:**
+- **Model Registry (Decision 1):** `getLLMClient('tutor')` resolves model via feature overrides — users can assign premium models to tutoring
+- **Token Metering (Decision 5):** Tutor requests flow through the same proxy middleware and will be counted in `ai_usage` table
+- **Study Buddy (Decision 6):** The Study Buddy's intent router will route "help me understand X" to the tutor module in Phase 6+
+- **Intelligence Loop (Decision 7):** Misconception tracking (deferred to Phase 3+) will feed into the flashcard generation pipeline
+
+**What This Addendum Does NOT Cover:**
+- Phase 3+: RAG retrieval with lazy transcript embeddings (separate addendum when Phase 1-2 validated)
+- Phase 4: Learner profile injection from Knowledge Map (depends on Section 13)
+- Phase 5: Cross-lesson conversation memory with summarization
+- Phase 6: Additional modes (ELI5, Quiz Me, Debug My Thinking)
+- Misconception tracking and intelligence loop integration
+- Post-hoc consistency checking for hallucination prevention
+
+**Requirements Coverage:**
+- Roadmap Section 13 goals: knowledge score calculation (done), dashboard heatmap/treemap (done), decay estimation (done via recency + predictRetention), action suggestions (done)
+- Deferred to Phase 2: FSRS upgrade, historical trend tracking, self-assessment signal, concept graph
+- Deferred to Phase 3: cross-topic correlation, study recommendations engine
+
+**Risk Mitigations:**
+- Sparse quiz/flashcard data → dynamic weight redistribution ensures fair scoring; confidence level communicates data quality
+- Topic noise → regex-based noise filter + canonical map; extensible without algorithm changes
+- Treemap readability on mobile → sorted list fallback below 640px breakpoint
+- Flashcard-to-topic mapping imprecision → course-level spread is acceptable for Phase 1; Phase 2 adds `topicTag` to Flashcard
+- Score staleness → computed on-demand (no cache), recency component ensures time-awareness

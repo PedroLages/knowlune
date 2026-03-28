@@ -512,3 +512,10 @@ development_status:
   35-2-express-proxy-entitlement-guard: done
   35-3-byok-pass-through-logic: done
   35-4-client-side-refactor-dev-proxy: done
+
+  # ──────────────────────────────────────────────────
+  # Epic 51: Accessibility & Display Settings
+  # Source: epics-accessibility-display.md
+  # ──────────────────────────────────────────────────
+  epic-51: in-progress
+  51-1-settings-infrastructure-display-section-shell: done

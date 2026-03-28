@@ -64,9 +64,9 @@ export function QualityScoreRing({ score, size = 160 }: QualityScoreRingProps) {
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
         />
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 px-4">
         <motion.span
-          className="font-heading text-4xl font-bold"
+          className="font-heading text-4xl font-bold leading-none"
           data-testid="quality-score-value"
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -75,7 +75,7 @@ export function QualityScoreRing({ score, size = 160 }: QualityScoreRingProps) {
           {score}
         </motion.span>
         <motion.span
-          className={cn('text-sm font-medium', TIER_COLORS[tier])}
+          className={cn('text-xs font-medium text-center leading-tight', TIER_COLORS[tier])}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.4, delay: 0.5 }}
