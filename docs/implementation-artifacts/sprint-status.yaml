@@ -43,7 +43,7 @@
 # - E18-S03 detected story file → ready-for-dev
 
 generated: 2026-03-15
-last_updated: 2026-03-28  # Added E51 (Accessibility Phase 1, 4 stories) — first Wave 1 epic
+last_updated: 2026-03-27  # Added E29-E33 (audit hardening epics, 29 stories) to backlog
 project: Elearningplatformwireframes
 project_key: NOKEY  # deliberate: file-system tracking only, no external tool integration planned
 tracking_system: file-system
@@ -514,11 +514,8 @@ development_status:
   35-4-client-side-refactor-dev-proxy: done
 
   # ──────────────────────────────────────────────────
-  # Epic 51: Display & Accessibility Settings
-  # Source: epics-accessibility.md (Accessibility Phase 1)
+  # Epic 51: Accessibility & Display Settings
+  # Source: epics-accessibility-display.md
   # ──────────────────────────────────────────────────
   epic-51: in-progress
-  51-1-settings-infrastructure-display-section-shell: in-progress
-  51-2-reduced-motion-toggle-global-motionconfig: backlog
-  51-3-atkinson-hyperlegible-font-toggle: backlog
-  51-4-spacious-content-density-mode: backlog
+  51-1-settings-infrastructure-display-section-shell: done

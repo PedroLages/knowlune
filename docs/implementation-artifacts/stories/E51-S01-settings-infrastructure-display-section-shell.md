@@ -1,9 +1,9 @@
 ---
 story_id: E51-S01
 story_name: "Settings Infrastructure & Display Section Shell"
-status: in-progress
+status: done
 started: 2026-03-28
-completed:
+completed: 2026-03-28
 reviewed: true
 review_started: 2026-03-28
 review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, performance-benchmark, security-review, exploratory-qa]
