@@ -1,8 +1,8 @@
 ---
 story_id: E43-S06
 story_name: "Notifications Data Layer — Infrastructure"
-status: draft
-started:
+status: in-progress
+started: 2026-03-28
 completed:
 reviewed: false
 review_started:

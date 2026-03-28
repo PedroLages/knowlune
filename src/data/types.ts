@@ -421,6 +421,27 @@ export interface ImportedAuthor {
   updatedAt: string // ISO 8601
 }
 
+// --- Notifications (E43-S06) ---
+
+export type NotificationType =
+  | 'course-complete'
+  | 'streak-milestone'
+  | 'import-finished'
+  | 'achievement-unlocked'
+  | 'review-due'
+
+export interface Notification {
+  id: string // ULID (time-sortable, unique)
+  type: NotificationType
+  title: string
+  message: string
+  createdAt: string // ISO 8601
+  readAt: string | null
+  dismissedAt: string | null
+  actionUrl?: string // Deep link (e.g., '/courses/react-101')
+  metadata?: Record<string, unknown>
+}
+
 export type ReviewRating = 'hard' | 'good' | 'easy'
 
 export interface ReviewRecord {
