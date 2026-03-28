@@ -39,6 +39,24 @@ npm run lint
 - **After automation (Epic 8+):** <10% (caught at save-time before commit)
 - **Research validation:** Automated feedback reduces review rounds by ~33% (2-3 → 1-2)
 
+## 🔵 Always-On Hooks (Claude Code Settings)
+
+Session-scoped hooks that warn before destructive operations. Active in every Claude Code session via `.claude/settings.json`.
+
+| Hook | What It Catches | Response | File |
+|------|----------------|----------|------|
+| `safety-guardrail` | `rm -rf` (non-build), `DROP TABLE`, `git push --force`, `git reset --hard`, `git checkout .`, `git clean -f` | ASK (user confirms) | [.claude/hooks/safety-guardrail.sh](../../hooks/safety-guardrail.sh) |
+
+**Safe exceptions** (allowed without warning): `rm -rf` of build artifacts (node_modules, dist, .next, .cache, build, .turbo, coverage, playwright-report, test-results).
+
+**Configuration:** [.claude/settings.json](../../settings.json)
+
+**Test:**
+```bash
+echo '{"tool_name":"Bash","tool_input":{"command":"rm -rf src/"}}' | bash .claude/hooks/safety-guardrail.sh
+# Expected: {"decision":"ask","reason":"..."}
+```
+
 ## 🟡 Commit-Time Enforcement (Git Hooks)
 
 These hooks **block operations** if quality gates fail — ensuring clean working tree and committed code.
@@ -77,6 +95,9 @@ These agents provide **deep analysis** during `/review-story` — catching issue
 | `design-review` | UI/UX via Playwright browser automation (mobile/tablet/desktop) | BLOCKER/HIGH/MEDIUM/LOW | [.claude/agents/design-review.md](../../agents/design-review.md) |
 | `code-review` | Architecture, security, silent failures, test anti-patterns | BLOCKER/HIGH/MEDIUM/LOW | [.claude/agents/code-review.md](../../agents/code-review.md) |
 | `code-review-testing` | Acceptance criteria coverage, test quality, edge cases | ADVISORY (gaps reported) | [.claude/agents/code-review-testing.md](../../agents/code-review-testing.md) |
+| `performance-benchmark` | Real browser page metrics (TTFB, FCP, LCP, DOM Complete) via Playwright MCP | HIGH/MEDIUM (regressions) | [.claude/agents/performance-benchmark.md](../../agents/performance-benchmark.md) |
+| `security-review` | OWASP Top 10, secrets scan, STRIDE, attack surface (diff-scoped) | BLOCKER/HIGH/MEDIUM/INFO | [.claude/agents/security-review.md](../../agents/security-review.md) |
+| `exploratory-qa` | Functional QA via Playwright MCP — buttons, forms, flows, console errors | BLOCKER/HIGH/MEDIUM/LOW | [.claude/agents/exploratory-qa.md](../../agents/exploratory-qa.md) |
 
 **Trigger:** `/review-story` automatically dispatches all three agents in parallel (if applicable)
 
@@ -93,15 +114,19 @@ These agents provide **deep analysis** during `/review-story` — catching issue
 - Design reviews: `docs/reviews/design/design-review-{date}-{story-id}.md`
 - Code reviews: `docs/reviews/code/code-review-{date}-{story-id}.md`
 - Test coverage: `docs/reviews/code/code-review-testing-{date}-{story-id}.md`
+- Performance benchmarks: `docs/reviews/performance/performance-benchmark-{date}-{story-id}.md`
+- Security reviews: `docs/reviews/security/security-review-{date}-{story-id}.md`
+- Exploratory QA: `docs/reviews/qa/exploratory-qa-{date}-{story-id}.md`
 
 ## 📊 Automation Coverage Summary
 
 | Stage | Rules | Catches | When |
 |-------|-------|---------|------|
 | **Save-Time** | 8 ESLint rules | Hardcoded colors, test anti-patterns, async cleanup, imports, silent catches | As you type/save in IDE |
+| **Always-On** | 1 Claude Code hook | Destructive commands (rm -rf, force push, hard reset) | Every Claude Code session |
 | **Commit-Time** | 2 git hooks | Dirty working tree, uncommitted changes | Before `/review-story` or `git push` |
-| **Review-Time** | 3 Claude agents | Architecture, UX, accessibility, edge cases, AC coverage | During `/review-story` workflow |
-| **Total** | **13 mechanisms** | 11 automated + 2 agent-based | Multi-layered enforcement |
+| **Review-Time** | 6 Claude agents | Architecture, UX, accessibility, edge cases, AC coverage, performance, security, functional QA | During `/review-story` workflow |
+| **Total** | **17 mechanisms** | 11 automated + 6 agent-based | Multi-layered enforcement |
 
 ## 🎯 Effectiveness Metrics (Research-Backed)
 

@@ -85,7 +85,7 @@ Use comprehensive mode when:
 - `reviewed: true` in story frontmatter
 - Reviews were completed in a previous session
 - Story file has review reports saved
-- All required gates are present in `review_gates_passed`
+- All 12 required gates are present in `review_gates_passed` (including performance-benchmark, security-review, exploratory-qa)
 
 ## Advantages
 

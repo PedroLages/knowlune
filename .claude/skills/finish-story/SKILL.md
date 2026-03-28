@@ -66,10 +66,13 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
    **If NOT reviewed (streamlined mode) — expanded:**
    ```
    [ ] Identify story and check status
-   [ ] Pre-checks: dependency audit, format, lint, type-check, build, tests
+   [ ] Pre-checks: dependency audit, format, lint, type-check, build, bundle analysis, tests
    [ ] Design review (Agent)
    [ ] Code review — architecture (Agent)
    [ ] Code review — testing (Agent)
+   [ ] Performance benchmark (Agent)
+   [ ] Security review (Agent)
+   [ ] Exploratory QA (Agent) [if UI changes]
    [ ] Consolidate review findings
    [ ] Validate all required gates present
    [ ] Update story file and sprint status
@@ -108,7 +111,7 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
 
    - Inform the user: "Previous `/review-story` was interrupted. Checking what completed."
    - Read `review_gates_passed` from frontmatter. Check for existing report files.
-   - **If agent reviews completed** (`design-review` or `design-review-skipped`, `code-review`, and `code-review-testing` all in gates, reports exist):
+   - **If agent reviews completed** (`design-review` or `design-review-skipped`, `code-review`, `code-review-testing`, `performance-benchmark` or `performance-benchmark-skipped`, `security-review`, and `exploratory-qa` or `exploratory-qa-skipped` all in gates, reports exist):
      - Treat as comprehensive mode — run blocker cross-check + lightweight validation (step 5).
    - **If agent reviews incomplete**:
      - Inform the user: "Review was interrupted before completion. Running full review inline."
@@ -137,10 +140,11 @@ Adaptive shipping skill. Detects whether `/review-story` was already run and adj
    - **5a. Blocker cross-check**: Run `./scripts/workflow/validate-blockers.sh` or manually check code review report. If unresolved blockers found → STOP.
    - **5b. Lightweight validation**: Run `./scripts/workflow/run-prechecks.sh --mode=lightweight --skip-commit-check`. If any fail → STOP.
 
-6. **Validate all required gates**: Before proceeding to PR creation, check that `review_gates_passed` contains all 9 canonical gates (base or `-skipped` variant):
+6. **Validate all required gates**: Before proceeding to PR creation, check that `review_gates_passed` contains all 12 canonical gates (base or `-skipped` variant):
    - `build`, `lint` (or `lint-skipped`), `type-check`, `format-check`
    - `unit-tests` (or `unit-tests-skipped`), `e2e-tests` (or `e2e-tests-skipped`)
    - `design-review` (or `design-review-skipped`), `code-review`, `code-review-testing`
+   - `performance-benchmark` (or `performance-benchmark-skipped`), `security-review`, `exploratory-qa` (or `exploratory-qa-skipped`)
 
    **Missing gates** → STOP with error:
    ```

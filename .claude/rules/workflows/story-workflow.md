@@ -54,6 +54,7 @@ git stash push -u -m "WIP before E##-S##"
 
 1. **Pre-checks** (fast validation):
    - Build (`npm run build`)
+   - Bundle analysis (compare against performance baseline — blocks on >25% regression)
    - Lint (`npm run lint` with auto-fix)
    - Type check (`npx tsc --noEmit` with auto-fix)
    - Format check (`npx prettier --check` with auto-fix)
@@ -66,6 +67,9 @@ git stash push -u -m "WIP before E##-S##"
    - Design review agent (Playwright MCP - UI/UX/accessibility)
    - Code review agent (architecture, security, silent failures)
    - Test coverage agent (AC mapping, edge cases, test quality)
+   - Performance benchmark agent (Playwright MCP - TTFB, FCP, LCP, bundle size)
+   - Security review agent (OWASP Top 10, secrets scan, STRIDE, attack surface)
+   - Exploratory QA agent (Playwright MCP - functional testing, console errors)
 
 ## Burn-In Testing (Optional)
 
@@ -100,5 +104,9 @@ When all stories in an epic are done, run in order:
 | `.claude/agents/design-review.md`                 | Playwright MCP design reviewer               |
 | `docs/implementation-artifacts/story-template.md` | Story file template                          |
 | `docs/implementation-artifacts/sprint-status.yaml` | Sprint tracking                             |
+| `.claude/agents/performance-benchmark.md`          | Playwright MCP performance metrics            |
+| `.claude/agents/security-review.md`                | Diff-scoped security reviewer                 |
+| `.claude/agents/exploratory-qa.md`                 | Playwright MCP functional QA                  |
+| `.claude/hooks/safety-guardrail.sh`                | Destructive command guardrail                 |
 | `docs/reviews/design/`                            | Design review reports                        |
 | `docs/reviews/code/`                              | Code review reports                          |

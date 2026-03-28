@@ -75,10 +75,12 @@ GATES[type-check]="pending"
 GATES[format-check]="pending"
 GATES[unit-tests]="pending"
 GATES[e2e-tests]="pending"
+GATES[bundle-analysis]="pending"
 HAS_UI_CHANGES=false
 LINT_AUTO_FIXED=0
 FORMAT_AUTO_FIXED=0
 TEST_PATTERN_FINDINGS=""
+BUNDLE_STATUS="pending"
 
 # Helper functions
 log_info() {
@@ -116,8 +118,10 @@ output_results() {
     "type-check": "${GATES[type-check]}",
     "format-check": "${GATES[format-check]}",
     "unit-tests": "${GATES[unit-tests]}",
-    "e2e-tests": "${GATES[e2e-tests]}"
+    "e2e-tests": "${GATES[e2e-tests]}",
+    "bundle-analysis": "${GATES[bundle-analysis]}"
   },
+  "bundle_status": "$BUNDLE_STATUS",
   "ui_changes": $HAS_UI_CHANGES,
   "auto_fixes": {
     "lint": $LINT_AUTO_FIXED,
@@ -161,6 +165,40 @@ log_section "Build Check"
 if npm run build >&2 2>&1; then
   GATES[build]="passed"
   log_success "Build passed"
+
+  # Bundle analysis (after build)
+  log_section "Bundle Analysis"
+
+  if [ -f "${BASE_PATH}/docs/reviews/performance/baseline.json" ]; then
+    BUNDLE_OUTPUT=$(bash "${BASE_PATH}/scripts/workflow/analyze-bundle.sh" \
+      --dist-dir="${BASE_PATH}/dist" \
+      --baseline="${BASE_PATH}/docs/reviews/performance/baseline.json" 2>&2)
+    BUNDLE_EXIT=$?
+
+    if [ $BUNDLE_EXIT -eq 0 ]; then
+      BUNDLE_STATUS=$(echo "$BUNDLE_OUTPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','pass'))" 2>/dev/null || echo "pass")
+      if [ "$BUNDLE_STATUS" = "warning" ]; then
+        log_warning "Bundle size increased >15% — review recommended"
+      else
+        log_success "Bundle analysis passed"
+      fi
+      GATES[bundle-analysis]="passed"
+    elif [ $BUNDLE_EXIT -eq 1 ]; then
+      log_error "Bundle REGRESSION detected (>25% increase or chunk >100KB growth)"
+      BUNDLE_STATUS="regression"
+      GATES[bundle-analysis]="failed"
+      output_results 1
+      exit 1
+    fi
+  else
+    log_warning "No performance baseline found — creating initial baseline"
+    bash "${BASE_PATH}/scripts/workflow/analyze-bundle.sh" \
+      --dist-dir="${BASE_PATH}/dist" \
+      --create-baseline="${BASE_PATH}/docs/reviews/performance/baseline.json" >&2
+    BUNDLE_STATUS="baseline-created"
+    GATES[bundle-analysis]="passed"
+    log_success "Performance baseline created"
+  fi
 else
   GATES[build]="failed"
   log_error "Build failed"

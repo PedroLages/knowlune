@@ -31,6 +31,9 @@ All gates must use these exact names in `review_gates_passed`. No variants (e.g.
 | `design-review` | Design review agent completes | Yes (or `design-review-skipped` if no UI changes) |
 | `code-review` | Code review agent completes | Yes |
 | `code-review-testing` | Test coverage agent completes | Yes |
+| `performance-benchmark` | Bundle pre-check + page metrics agent complete | Yes (or `performance-benchmark-skipped` if lightweight review) |
+| `security-review` | Security review agent completes | Yes |
+| `exploratory-qa` | Exploratory QA agent completes | Yes (or `exploratory-qa-skipped` if no UI changes) |
 
 The `-skipped` suffix indicates the gate was intentionally skipped (no lint script, no test files, no UI changes). Both the base name and `-skipped` variant satisfy the requirement.
 
@@ -69,6 +72,9 @@ The orchestrator should NOT:
 [ ] Design review (Agent)
 [ ] Code review — architecture (Agent)
 [ ] Code review — testing (Agent)
+[ ] Performance benchmark — page metrics (Agent)
+[ ] Security review (Agent)
+[ ] Exploratory QA (Agent) [if UI changes]
 [ ] Consolidate findings and verdict
 ```
 
@@ -385,6 +391,9 @@ Mark the first todo as `in_progress` and proceed:
    - **Code review**: Skip if resuming AND `code-review` in `review_gates_passed` AND report file exists.
    - **Code review testing**: Skip if resuming AND `code-review-testing` in `review_gates_passed` AND report file exists.
    - **Edge case review**: Skip if resuming AND `edge-case-review` in `review_gates_passed` AND report file exists.
+   - **Performance benchmark**: Skip page metrics if (a) resuming AND `performance-benchmark` in `review_gates_passed` AND report file exists, OR (b) lightweight review (<50 lines, no UI/src changes). If skipping for lightweight review, add `performance-benchmark-skipped` to gates.
+   - **Security review**: Skip if resuming AND `security-review` in `review_gates_passed` AND report file exists. Never has a `-skipped` variant — always runs (secrets scan is always relevant).
+   - **Exploratory QA**: Skip if (a) resuming AND `exploratory-qa` in `review_gates_passed` AND report file exists, OR (b) no UI changes (`HAS_UI_CHANGES=false`). If skipping for no UI changes, add `exploratory-qa-skipped` to gates.
 
    **Design review pre-requisite** (only if design review will run):
    - Check dev server: `curl -s -o /dev/null -w "%{http_code}" http://localhost:5173`.
@@ -426,6 +435,24 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
      prompt: "Use the bmad-review-edge-case-hunter skill on story E##-S##. Run `git diff main...HEAD` to get the changed code. Pass the diff as the content to review. After the skill completes, format the JSON findings into a markdown report saved to ${BASE_PATH}/docs/reviews/code/edge-case-review-{YYYY-MM-DD}-{story-id}.md using this format:\n\n## Edge Case Review — E##-S## ({YYYY-MM-DD})\n\n### Unhandled Edge Cases\n\nFor each finding:\n**[location]** — `[trigger_condition]`\n> Consequence: [potential_consequence]\n> Guard: `[guard_snippet]`\n\n---\n**Total:** N unhandled edge cases found.",
      description: "Edge case review E##-S##"
    })
+
+   Task({
+     subagent_type: "performance-benchmark",
+     prompt: "Benchmark performance for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Dev server running at http://localhost:5173. Baseline at ${BASE_PATH}/docs/reviews/performance/baseline.json. Write report to ${BASE_PATH}/docs/reviews/performance/performance-benchmark-{YYYY-MM-DD}-{story-id}.md.",
+     description: "Performance benchmark E##-S##"
+   })
+
+   Task({
+     subagent_type: "security-review",
+     prompt: "Security review for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Run git diff main...HEAD for changed files. Stack: React 19 + TypeScript, Vite 6, Dexie.js (IndexedDB), Zustand, BYOK AI keys, YouTube embeds, File System Access API. Write report to ${BASE_PATH}/docs/reviews/security/security-review-{YYYY-MM-DD}-{story-id}.md.",
+     description: "Security review E##-S##"
+   })
+
+   Task({
+     subagent_type: "exploratory-qa",
+     prompt: "Exploratory QA for story E##-S## at ${BASE_PATH}/docs/implementation-artifacts/{key}.md. Dev server at http://localhost:5173. Test affected routes functionally — click buttons, fill forms, check console errors. Write report to ${BASE_PATH}/docs/reviews/qa/exploratory-qa-{YYYY-MM-DD}-{story-id}.md.",
+     description: "Exploratory QA E##-S##"
+   })
    ```
 
    **Note**: The code-review agent has selective WebFetch access for deprecated APIs, security issues, and framework bugs. It will use this sparingly (max 1-2 fetches) for high-severity findings only. This may add 10-30s to code review time but provides authoritative fix guidance.
@@ -441,12 +468,17 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
    - `${BASE_PATH}/docs/reviews/code/code-review-{YYYY-MM-DD}-{story-id}.md`
    - `${BASE_PATH}/docs/reviews/code/code-review-testing-{YYYY-MM-DD}-{story-id}.md`
    - `${BASE_PATH}/docs/reviews/code/edge-case-review-{YYYY-MM-DD}-{story-id}.md`
+   - `${BASE_PATH}/docs/reviews/performance/performance-benchmark-{YYYY-MM-DD}-{story-id}.md`
+   - `${BASE_PATH}/docs/reviews/security/security-review-{YYYY-MM-DD}-{story-id}.md`
+   - `${BASE_PATH}/docs/reviews/qa/exploratory-qa-{YYYY-MM-DD}-{story-id}.md`
 
    **Deduplicate with consensus scoring**: If code-review and code-review-testing flag the same file:line:
    - Keep the finding with the higher confidence score
    - **Boost severity by one level** (Nit→Medium, Medium→High, High→Blocker) — independent agents converging on the same location is stronger signal than a single detection
    - Tag as `[Consensus: N agents]` in the consolidated report
    - Prefix with source agents (e.g., "[code-review + code-review-testing]")
+
+   Security review findings also participate in consensus scoring: if security-review and code-review flag the same file:line, apply the same severity boost.
 
    Edge case review findings are additive (different format — location + trigger condition), so include them in the consolidated report under a dedicated "Edge Cases" section. Treat each edge case finding as HIGH severity for blocker assessment.
 
@@ -484,6 +516,18 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
    [AC coverage summary: N/N ACs covered, N gaps. Finding counts by severity or "Reused from previous run — [path]"]
    Report: ${BASE_PATH}/docs/reviews/code/code-review-testing-{date}-{id}.md
 
+   ### Performance Benchmark
+   [Bundle: pass/warning/regression | Page metrics: N routes tested, N regressions, N warnings]
+   Report: ${BASE_PATH}/docs/reviews/performance/performance-benchmark-{date}-{id}.md
+
+   ### Security Review
+   [Phases: N/7 executed | Findings: N total (N blockers, N high)]
+   Report: ${BASE_PATH}/docs/reviews/security/security-review-{date}-{id}.md
+
+   ### Exploratory QA
+   [Health: N/100 | Bugs: N found | ACs: N/N verified | or "Skipped — no UI changes"]
+   Report: ${BASE_PATH}/docs/reviews/qa/exploratory-qa-{date}-{id}.md
+
    ### Consolidated Findings
 
    #### Blockers (must fix)
@@ -507,7 +551,7 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
 
 10. **Mark reviewed** (with gate validation):
 
-   **Validate all required gates** before marking `reviewed: true`. Check that `review_gates_passed` contains one entry (base or `-skipped` variant) for each of the 9 canonical gates: `build`, `lint`, `type-check`, `format-check`, `unit-tests`, `e2e-tests`, `design-review`, `code-review`, `code-review-testing`.
+   **Validate all required gates** before marking `reviewed: true`. Check that `review_gates_passed` contains one entry (base or `-skipped` variant) for each of the 12 canonical gates: `build`, `lint`, `type-check`, `format-check`, `unit-tests`, `e2e-tests`, `design-review`, `code-review`, `code-review-testing`, `performance-benchmark`, `security-review`, `exploratory-qa`.
 
    **Note**: The `web-design-guidelines` gate was removed (consolidated into design-review). For backward compatibility, existing stories with `web-design-guidelines` in their `review_gates_passed` are still valid — simply ignore that entry during validation.
 
@@ -542,6 +586,9 @@ Focus on architecture, security, correctness, silent failures, test anti-pattern
     | Design review         | [pass/N warnings/skipped] |
     | Code review           | [pass/N warnings]         |
     | Code review (testing) | [N/N ACs covered/N warnings] |
+    | Performance benchmark | [pass/N warnings/regression/skipped] |
+    | Security review       | [pass/N findings]                    |
+    | Exploratory QA        | [N/100 health, N bugs/skipped]       |
 
     **Verdict: PASS** — Story is ready to ship.
 

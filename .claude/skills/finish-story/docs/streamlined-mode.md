@@ -132,12 +132,18 @@ Dispatch ALL applicable agents in a **single message** for maximum parallelism:
 Task({ subagent_type: "design-review", ... })
 Task({ subagent_type: "code-review", ... })
 Task({ subagent_type: "code-review-testing", ... })
+Task({ subagent_type: "performance-benchmark", ... })
+Task({ subagent_type: "security-review", ... })
+Task({ subagent_type: "exploratory-qa", ... })
 ```
 
 **Skip conditions:**
 - **Design review**: Skip if no UI changes (`git diff --name-only main...HEAD` has no `src/app/` files). Add `design-review-skipped` to gates.
 - **Code review**: Never skip
 - **Test coverage**: Never skip
+- **Performance benchmark**: Skip page metrics if lightweight review. Bundle analysis runs in pre-checks regardless.
+- **Security review**: Never skip (secrets scan always relevant)
+- **Exploratory QA**: Skip if no UI changes. Add `exploratory-qa-skipped` to gates.
 
 **As each agent returns:**
 - Validate result (check for errors, empty reports)
