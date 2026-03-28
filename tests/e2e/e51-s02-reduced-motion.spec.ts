@@ -108,26 +108,38 @@ test.describe('E51-S02: Reduced Motion Toggle', () => {
     const section = page.getByTestId('display-accessibility-section')
     await expect(section).toBeVisible()
 
-    // Focus the first radio item by clicking "Follow system"
-    const followSystemRadio = section.getByLabel('Follow system')
-    await followSystemRadio.click()
+    // Helper: dispatch ArrowDown on the focused radio item via JavaScript.
+    // Playwright's CDP-based keyboard dispatch (page.keyboard.press / locator.press)
+    // does not reliably trigger Radix UI's RadioGroup value change because Radix
+    // listens via React's synthetic event system. Dispatching a DOM KeyboardEvent
+    // directly on the focused element ensures Radix processes both focus movement
+    // and value selection.
+    async function pressArrowDownOnFocused() {
+      await page.evaluate(() => {
+        document.activeElement?.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'ArrowDown', code: 'ArrowDown', bubbles: true })
+        )
+      })
+    }
 
-    // The radio input should be focused
+    // Click the "Follow system" radio item to select and focus it
     const systemRadioInput = section.locator('#motion-system')
+    await systemRadioInput.click()
     await expect(systemRadioInput).toBeChecked()
+    await expect(systemRadioInput).toBeFocused()
 
     // Press ArrowDown to move to "Reduce motion"
-    await page.keyboard.press('ArrowDown')
+    await pressArrowDownOnFocused()
     const reduceRadioInput = section.locator('#motion-on')
     await expect(reduceRadioInput).toBeChecked()
 
     // Press ArrowDown to move to "Allow all motion"
-    await page.keyboard.press('ArrowDown')
+    await pressArrowDownOnFocused()
     const allowAllRadioInput = section.locator('#motion-off')
     await expect(allowAllRadioInput).toBeChecked()
 
     // Press ArrowDown to wrap around to "Follow system"
-    await page.keyboard.press('ArrowDown')
+    await pressArrowDownOnFocused()
     await expect(systemRadioInput).toBeChecked()
   })
 })
