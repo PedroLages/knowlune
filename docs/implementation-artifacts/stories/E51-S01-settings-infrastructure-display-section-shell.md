@@ -4,9 +4,10 @@ story_name: "Settings Infrastructure & Display Section Shell"
 status: in-progress
 started: 2026-03-28
 completed:
-reviewed: in-progress
+reviewed: true
 review_started: 2026-03-28
-review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests]
+review_gates_passed: [build, lint, type-check, format-check, unit-tests, e2e-tests, design-review, code-review, code-review-testing, performance-benchmark, security-review, exploratory-qa]
+review_scope: full
 burn_in_validated: false
 ---
 
@@ -128,11 +129,21 @@ Before requesting `/review-story`, verify:
 
 ## Design Review Feedback
 
-[Populated by /review-story -- Playwright MCP findings]
+- **M1**: AlertDialog "Reset" button uses default variant instead of `brand` — spec says "Reset (brand variant)". Fix: add `className="bg-brand text-brand-foreground hover:bg-brand-hover"` on AlertDialogAction.
+- **M2**: Switch controls missing `aria-describedby` — defer to S02/S03 when wired up.
+- **N1**: `toastSuccess.saved` could use `toastSuccess.reset` (more idiomatic).
+- **N2**: Motion Preference row renders text instead of disabled RadioGroup stub — minor visual inconsistency with Switch rows above.
+- Zero console errors, correct heading hierarchy, exact pattern adherence confirmed via computed styles.
 
 ## Code Review Feedback
 
-[Populated by /review-story -- adversarial code review findings]
+- **HIGH [Consensus: 2 agents]**: No unit tests for validation/sanitization logic in `getSettings()` (settings.ts:69-77). Task 2.6 added enum validation but no tests exercise corrupted values. Fix: add tests for `reduceMotion: 'invalid'`, `contentDensity: 'garbage'`, `accessibilityFont: 'yes'`.
+- **HIGH [Consensus: 3 agents]**: AC4 E2E test has dead code — `defaults` variable assigned but never asserted. AC4 covered by unit tests but E2E test is misleading.
+- **HIGH [Consensus: 2 agents]**: Reset AlertDialogAction missing brand variant (spec divergence).
+- **HIGH**: Stale closure in `onSettingsChange` — captures `settings` from render closure. Safe now (only reset calls it) but risky for S02-S04 live toggles. Fix: use `setSettings(prev => ...)`.
+- **MEDIUM**: Hardcoded reset defaults in component — should import from shared constant.
+- **MEDIUM**: `text-brand` on `bg-brand-soft` — pre-existing project-wide inconsistency, not a regression.
+- Security review: clean (0 findings). Performance: /settings FCP 336ms (budget 1800ms). Exploratory QA: 96/100 health.
 
 ## Challenges and Lessons Learned
 

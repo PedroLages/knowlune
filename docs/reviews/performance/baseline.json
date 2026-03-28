@@ -679,5 +679,36 @@
       }
     }
   },
-  "page_metrics": {}
+  "page_metrics": {
+    "/": {
+      "captured_at": "2026-03-28",
+      "commit": "10159bb6",
+      "story": "E51-S01",
+      "environment": "dev",
+      "ttfb": 1,
+      "dom_interactive": 34,
+      "dom_complete": 222,
+      "load_complete": 222,
+      "fcp": 352,
+      "resource_count": 238,
+      "js_resource_count": 232,
+      "total_transfer_bytes": 14877289,
+      "js_transfer_bytes": 14817629
+    },
+    "/settings": {
+      "captured_at": "2026-03-28",
+      "commit": "10159bb6",
+      "story": "E51-S01",
+      "environment": "dev",
+      "ttfb": 2,
+      "dom_interactive": 32,
+      "dom_complete": 206,
+      "load_complete": 206,
+      "fcp": 336,
+      "resource_count": 202,
+      "js_resource_count": 201,
+      "total_transfer_bytes": 12649610,
+      "js_transfer_bytes": 12627022
+    }
+  }
 }
