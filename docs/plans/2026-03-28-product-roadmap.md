@@ -46,10 +46,10 @@
 | 5 | Repository Strategy | 🟡 Infrastructure Done | 60% | `src/premium/` separated, repo split not done |
 | 6 | Video Storage & Offline | 🟡 Infrastructure Done | 40% | Transcripts cached, no download UI |
 | 7 | Cloud Storage | 🔴 Not Started | 5% | Only `exportService.ts` exists |
-| 8 | Machine Learning | 🟡 Stories Ready | 50% | E9/E9B: embeddings, vector search, AI summaries. E52 planned (8 stories, NOT READY — adversarial review recommends 4-story hybrid scope). Pending: auto-quiz, FSRS |
+| 8 | Machine Learning | 🟡 Stories Ready | 50% | E9/E9B: embeddings, vector search, AI summaries. E52 hybrid scope ready (4 stories — simplified quiz + tag-based recs). Full 8-story scope deferred to Phase 2 after 2-week validation. Pending: FSRS |
 | 9 | Offline & Multi-Device | 🟡 Infrastructure Done | 40% | Service worker + IDB, no sync status UI |
-| 10 | Calendar Integration | 🟡 Stories Ready | 0% impl | E50 planned (6 stories, 31 AC, READY WITH NOTES). Research + brainstorm + UX + spec + edge cases + readiness complete. |
-| 11 | Accessibility & Cognitive UX | 🟡 Stories Ready | 70% | E30: WCAG 2.1 AA. E51 planned (4 stories, 23 AC, READY WITH NOTES). Atkinson Hyperlegible font, 2-level density, 3-state motion toggle. |
+| 10 | Calendar Integration | 🟡 Stories Ready | 0% impl | E50 ready (6 stories, 31 AC). Stories amended with edge case findings (Cache-Control, Web Crypto, graceful degradation). Implementation priority: 2nd. |
+| 11 | Accessibility & Cognitive UX | 🟡 Stories Ready | 70% | E30: WCAG 2.1 AA. E51 ready (4 stories, 23 AC). Stories amended with 6 HIGH edge cases (17 MotionConfig overrides, 5 confetti components, blocking script, animations toggle conflict). Implementation priority: 1st. |
 | 12 | PKM Export Pipeline | 🟡 Partially Done | 50% | JSON/CSV/MD export. Pending: Anki, Obsidian |
 | 13 | Knowledge Map & Decay | 🔴 Not Started | 0% | Data sources exist, no visualization |
 | 14 | AI Tutoring (Socratic) | 🔴 Not Started | 0% | LLM + transcripts exist, no Socratic mode |
@@ -658,10 +658,12 @@ Being explicit about limitations prevents frustration:
 
 ## 10. Calendar Integration
 
-> **Status:** 🔴 Not Started (0%)
-> **Completed:** shadcn/ui Calendar component available
-> **Remaining:** iCal feed generation, study planner UI, Google Calendar sync, smart scheduling
-> **Blockers:** None for phases 1-2. Phase 3+ needs Supabase auth for OAuth token storage
+> **Status:** 🟡 Stories Ready (0% impl)
+> **Completed:** Research, brainstorming, UX design, spec, edge case review, readiness check. E50 epic: 6 stories, 31 AC, all amended with HIGH edge case findings.
+> **Remaining:** Implementation (E50-S01 → S06). Google Calendar sync (Phase 3+), smart scheduling (Phase 4)
+> **Stories:** [`docs/implementation-artifacts/stories/E50-S01..S06`](../implementation-artifacts/stories/) | **Epic:** [`epics-calendar.md`](../../_bmad-output/planning-artifacts/epics-calendar.md)
+> **Blockers:** None for Phase 1-2. Phase 3+ needs Supabase auth for OAuth token storage
+> **Implementation Priority:** 2nd (after E51 Accessibility)
 > **Last Updated:** 2026-03-28
 
 ### The Problem Space
@@ -737,16 +739,18 @@ Knowlune tracks study sessions, streaks, and course deadlines — but none of th
 - "Today's study plan" widget showing scheduled blocks
 - "Upcoming deadlines" timeline
 
-### Effort: Phase 1 is Small (2 stories), Full integration is Medium (1 epic)
+### Effort: Phase 1-2 is E50 (6 stories ready), Phase 3+ deferred
 
 ---
 
 ## 11. Accessibility & Cognitive UX
 
-> **Status:** 🟡 Partially Done (70%)
-> **Completed:** WCAG 2.1 AA architecture, 4.5:1 contrast, touch targets (E30-S01), ARIA labels (E30-S02), heading hierarchy (E30-S03), aria-expanded (E30-S04), aria-live (E30-S06)
-> **Remaining:** Dyslexia font toggle, content density, reduced motion UI, accessibility settings page, screen reader audit, WCAG 2.2
+> **Status:** 🟡 Stories Ready (70%)
+> **Completed:** WCAG 2.1 AA architecture, 4.5:1 contrast, touch targets (E30-S01), ARIA labels (E30-S02), heading hierarchy (E30-S03), aria-expanded (E30-S04), aria-live (E30-S06). E51 planning complete: research, brainstorming, UX design, spec, edge case review, readiness check. Stories amended with 6 HIGH edge cases.
+> **Remaining:** Implementation (E51-S01 → S04). Screen reader audit (Phase 3), WCAG 2.2 (Phase 5)
+> **Stories:** [`docs/implementation-artifacts/stories/E51-S01..S04`](../implementation-artifacts/stories/) | **Epic:** [`epics-accessibility.md`](../../_bmad-output/planning-artifacts/epics-accessibility.md)
 > **Blockers:** None
+> **Implementation Priority:** 1st (smallest scope, no schema migration, highest readiness)
 > **Last Updated:** 2026-03-28
 
 ### Current State
@@ -758,7 +762,7 @@ Knowlune already targets WCAG 2.1 AA (per styling.md): 4.5:1 contrast, keyboard 
 | Feature | Category | Impact | Effort |
 |---------|----------|--------|--------|
 | **Accessibility settings page** — centralized a11y controls | Infrastructure | High | Small |
-| **Dyslexia-friendly font toggle** — OpenDyslexic or Lexie Readable | Cognitive | High | Tiny |
+| **Dyslexia-friendly font toggle** — Atkinson Hyperlegible (chosen over OpenDyslexic — better readability evidence, ~40KB lazy-loaded) | Cognitive | High | Tiny |
 | **Content density control** — compact / comfortable / spacious | Cognitive | Medium | Small |
 | **Reduced motion toggle** — respects `prefers-reduced-motion` + manual override | Motor/Vestibular | Medium | Tiny |
 | **Reading mode** — adjustable line height, max-width, font size | Cognitive | High | Small |
@@ -782,8 +786,8 @@ Knowlune already targets WCAG 2.1 AA (per styling.md): 4.5:1 contrast, keyboard 
 
 | Phase | What | Effort |
 |-------|------|--------|
-| 1 | **Quick wins:** Reduced motion, dyslexia font toggle, content density control | Small (3-4 stories) |
-| 2 | **Settings page:** Centralized accessibility preferences, persisted to localStorage/Supabase | Small (2 stories) |
+| 1 | **E51 (4 stories ready):** Settings infrastructure + Atkinson Hyperlegible font toggle + 3-state reduced motion + spacious density mode. Settings page and features combined into single phase. | Small (4 stories) |
+| 2 | ~~**Settings page:** Centralized accessibility preferences~~ — merged into Phase 1 (E51-S01) | — |
 | 3 | **Screen reader audit:** VoiceOver testing, fix landmarks, ARIA enhancements | Medium (1 epic) |
 | 4 | **Reading mode + focus mode:** Distraction-free study experience | Small (3-4 stories) |
 | 5 | **WCAG 2.2 compliance:** Full audit + fix pass | Medium (1 epic) |
@@ -793,7 +797,7 @@ Knowlune already targets WCAG 2.1 AA (per styling.md): 4.5:1 contrast, keyboard 
 - **Respect OS preferences first:** Read `prefers-reduced-motion`, `prefers-contrast`, `prefers-color-scheme` via CSS media queries. Then let users override in-app.
 - **Don't hide accessibility:** Put the settings page in the main Settings nav, not buried. Label it "Display & Accessibility" (like iOS).
 - **Store preferences in theme system:** Knowlune's CSS variable theme system (`theme.css`) is perfect for this — add `--font-family-reading`, `--content-max-width`, `--content-density` tokens.
-- **Dyslexia font loading:** Load OpenDyslexic only when toggled (don't bundle in main CSS). Use `@font-face` with `font-display: swap`.
+- **Dyslexia font loading:** Load Atkinson Hyperlegible only when toggled (~40KB, lazy-loaded via `@fontsource/atkinson-hyperlegible`). Use `@font-face` with `font-display: swap`.
 
 ### Effort: Phase 1-2 are Small (1 epic), Full WCAG 2.2 is Medium (2 epics total)
 
@@ -1547,10 +1551,8 @@ Before starting: "Do I read/listen to enough books to justify this? Is the PDF v
 - [ ] Session expiry handling — story ready: E43-S04 (useAuthLifecycle hook + banner)
 - [ ] Fix imported course completion % — story ready: E43-S05 (wire callers to existing function)
 - [ ] Add data import/restore (`.knowlune` portable bundle) — unblocked by E44-S01/S02 (export fix)
-- [ ] **Calendar phase 1:** iCal feed generation (subscribe URL in Settings)
-- [ ] **Calendar phase 2:** Study planner UI (schedule weekly blocks per course)
-- [ ] **Accessibility phase 1:** Dyslexia font toggle, reduced motion, content density control
-- [ ] **Accessibility phase 2:** Display & Accessibility settings page
+- [ ] **Calendar phase 1-2 (E50):** 6 stories ready — StudySchedule model, iCal feed endpoint, feed URL management, Settings UI, schedule editor, SRS events widget
+- [ ] **Accessibility phase 1 (E51):** 4 stories ready — Settings infrastructure, reduced motion toggle, Atkinson Hyperlegible font, spacious density mode. **Priority: implement first**
 - [ ] **PKM phase 1:** Enhanced Markdown export (notes + flashcards with YAML frontmatter)
 - [ ] **Notifications phases 1-2:** stories ready: E43-S06 (Dexie + store), E43-S07 (triggers + wiring)
 - [x] ~~**Onboarding phases 1-3:** Quick bug fixes + Getting Started checklist + empty state component~~ (E25 — complete)
@@ -1560,8 +1562,8 @@ Before starting: "Do I read/listen to enough books to justify this? Is the PDF v
 ### Wave 2: Intelligence (next 2-3 epics)
 > Ship high-value ML + AI features using existing infrastructure
 
-- [ ] Auto-quiz generation from transcripts (LLM structured output)
-- [ ] Content-based course recommendations (embedding similarity)
+- [ ] **ML Phase 1 hybrid (E52):** 4 stories ready — Simplified quiz generation (MCQ+T/F, no Bloom's), quiz UI, basic QC (Zod+dedup), tag-based recommendations (Jaccard similarity). 2-week validation gate before full pipeline.
+- [ ] **ML Phase 2 (E52 full):** Deferred — Bloom's Taxonomy, transcript chunker, embedding-based recs, LLM abstraction, auto-generate. Only after hybrid validates usage.
 - [x] ~~Lesson summarization with RAG~~ (E9B — AI summaries complete)
 - [ ] Upgrade spaced repetition from SM-2 to FSRS
 - [ ] **Calendar:** SRS review reminders in iCal feed (connects FSRS to calendar)
